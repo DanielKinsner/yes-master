@@ -4,6 +4,8 @@ This repo is a clean, source-free build space for Claude Code to take a from-zer
 
 It intentionally starts with product canon, research, and build guidance, not inherited implementation code. The goal is not to clone the existing Codex/Tauri/Python repo. The goal is to build the best private Windows desktop mastering app that satisfies the product mission.
 
+This is a parallel independent build, not a competition brief and not a porting task. Claude should reason from the product canon, research, and its own architecture evidence.
+
 ## Start Here
 
 1. Read `docs/PRODUCT.md`.
@@ -11,7 +13,8 @@ It intentionally starts with product canon, research, and build guidance, not in
 3. Read `docs/CLAUDE_BUILD_BRIEF.md`.
 4. Read `docs/CLAUDE_WORK_LOOP.md`.
 5. Use the research files in `docs/research/` when making mastering, DSP, metering, preset, delivery, or architecture decisions.
-6. Treat `docs/reference/codex-implementation-plan.md` as optional context from the Codex path, not binding architecture.
+
+Do not read the Codex reference docs by default. They are available only if the user explicitly asks for Codex context or Claude needs a specific historical detail.
 
 ## Product Shape
 

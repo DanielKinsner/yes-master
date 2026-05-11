@@ -19,7 +19,7 @@ Optional context:
 - `docs/reference/codex-implementation-plan.md`
 - `docs/reference/codex-research-implementation-notes.md`
 
-The Codex reference docs are not binding. They exist to preserve product thinking and avoid losing useful constraints across machines and tools.
+The Codex reference docs are not binding and should not be read by default. They exist only if the user explicitly asks for Codex context or Claude needs a narrow historical detail.
 
 ## Loop Format
 

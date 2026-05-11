@@ -2,6 +2,8 @@
 
 This is a from-zero build repo for Album Mastering Studio. Do not import source code from the existing Codex repo unless the user explicitly asks for it.
 
+This repo is meant to be an independent parallel build. Do not treat Codex's implementation plan as the default path, and do not look at Codex reference docs unless the user explicitly asks or a specific historical detail is required.
+
 ## Required Reading
 
 Before planning or coding:
@@ -10,7 +12,8 @@ Before planning or coding:
 2. Read `docs/CLAUDE_BUILD_BRIEF.md`.
 3. Read `docs/CLAUDE_WORK_LOOP.md`.
 4. Skim `docs/research/README.md`.
-5. Use `docs/reference/codex-implementation-plan.md` only as optional context.
+
+Do not read `docs/reference/` by default. Those files are optional Codex-path context, not startup reading.
 
 ## Product Non-Negotiables
 
