@@ -2,6 +2,70 @@ use std::path::{Path, PathBuf};
 
 use album_mastering_studio_lib::*;
 
+#[test]
+fn position_nudge_promotes_unsure_first_and_last() {
+    let mut first = stub_analysis_with(TrackRole::AlbumTrack, InferenceConfidence::Unsure);
+    engine::nudge_role_by_position(&mut first, 0, 5);
+    assert_eq!(first.inferred_role, Some(TrackRole::Opener));
+    assert_eq!(first.role_confidence, Some(InferenceConfidence::Moderate));
+
+    let mut last = stub_analysis_with(TrackRole::AlbumTrack, InferenceConfidence::Unsure);
+    engine::nudge_role_by_position(&mut last, 4, 5);
+    assert_eq!(last.inferred_role, Some(TrackRole::Closer));
+    assert_eq!(last.role_confidence, Some(InferenceConfidence::Moderate));
+
+    let mut middle = stub_analysis_with(TrackRole::AlbumTrack, InferenceConfidence::Unsure);
+    engine::nudge_role_by_position(&mut middle, 2, 5);
+    assert_eq!(middle.inferred_role, Some(TrackRole::AlbumTrack));
+}
+
+#[test]
+fn position_nudge_respects_strong_inference() {
+    // A clearly-strong Single at track 1 should NOT be rewritten as Opener.
+    let mut strong_single =
+        stub_analysis_with(TrackRole::Single, InferenceConfidence::Strong);
+    engine::nudge_role_by_position(&mut strong_single, 0, 5);
+    assert_eq!(strong_single.inferred_role, Some(TrackRole::Single));
+
+    // A moderate Ballad at track 1 should also be left alone (only weak inferences
+    // get position-overridden).
+    let mut mod_ballad = stub_analysis_with(TrackRole::Ballad, InferenceConfidence::Moderate);
+    engine::nudge_role_by_position(&mut mod_ballad, 0, 5);
+    assert_eq!(mod_ballad.inferred_role, Some(TrackRole::Ballad));
+}
+
+#[test]
+fn position_nudge_promotes_moderate_album_track() {
+    // A Moderate AlbumTrack is fallback territory — the position nudge IS
+    // strong enough signal to override.
+    let mut middling = stub_analysis_with(TrackRole::AlbumTrack, InferenceConfidence::Moderate);
+    engine::nudge_role_by_position(&mut middling, 0, 5);
+    assert_eq!(middling.inferred_role, Some(TrackRole::Opener));
+}
+
+fn stub_analysis_with(role: TrackRole, confidence: InferenceConfidence) -> AnalysisResult {
+    AnalysisResult {
+        track_id: TrackId("stub".to_string()),
+        lufs_integrated: -14.0,
+        lufs_short_term_max: -10.0,
+        true_peak_dbtp: -1.0,
+        dynamic_range_lu: 8.0,
+        spectral_balance: SpectralBalance {
+            low: 0.33,
+            mid: 0.34,
+            high: 0.33,
+        },
+        transient_density: 0.5,
+        stereo_width: 0.5,
+        recommended_universal: default_settings(),
+        measured_at_iso: "2026-05-11T00:00:00Z".to_string(),
+        inferred_role: Some(role),
+        role_confidence: Some(confidence),
+        inferred_character: Some(TrackCharacter::Balanced),
+        character_confidence: Some(InferenceConfidence::Unsure),
+    }
+}
+
 #[tokio::test]
 async fn analyze_tracks_populates_role_and_character_inference() {
     let tmp = tempfile::tempdir().expect("tempdir");

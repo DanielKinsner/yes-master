@@ -27,11 +27,45 @@ pub struct AlbumRenderRequest {
 
 #[tauri::command]
 pub async fn analyze_tracks(tracks: Vec<AnalyzeRequest>) -> CommandResult<Vec<AnalysisResult>> {
-    let mut out = Vec::with_capacity(tracks.len());
-    for req in tracks {
-        out.push(analyze_one(req.id, Path::new(&req.path))?);
+    let total = tracks.len();
+    let mut out = Vec::with_capacity(total);
+    for (index, req) in tracks.into_iter().enumerate() {
+        let mut result = analyze_one(req.id, Path::new(&req.path))?;
+        nudge_role_by_position(&mut result, index, total);
+        out.push(result);
     }
     Ok(out)
+}
+
+/// Phase 9.2: when a track's per-track role inference is weak, nudge first/
+/// last positions toward Opener/Closer respectively. Strong-confidence roles
+/// (e.g. an obvious Single at track 1) are left alone — the per-track signal
+/// dominates when it's clear.
+pub fn nudge_role_by_position(
+    result: &mut AnalysisResult,
+    index: usize,
+    total: usize,
+) {
+    if total <= 1 {
+        return;
+    }
+    let weak = matches!(
+        result.role_confidence,
+        Some(InferenceConfidence::Unsure) | None
+    );
+    let mid_default = matches!(result.role_confidence, Some(InferenceConfidence::Moderate))
+        && matches!(result.inferred_role, Some(TrackRole::AlbumTrack));
+    let eligible = weak || mid_default;
+    if !eligible {
+        return;
+    }
+    if index == 0 {
+        result.inferred_role = Some(TrackRole::Opener);
+        result.role_confidence = Some(InferenceConfidence::Moderate);
+    } else if index == total - 1 {
+        result.inferred_role = Some(TrackRole::Closer);
+        result.role_confidence = Some(InferenceConfidence::Moderate);
+    }
 }
 
 pub fn analyze_one(track_id: TrackId, path: &Path) -> CommandResult<AnalysisResult> {
