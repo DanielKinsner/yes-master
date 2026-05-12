@@ -3,13 +3,23 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use ebur128::{EbuR128, Mode};
-use serde::Deserialize;
-use tauri::Manager;
+use serde::{Deserialize, Serialize};
+use tauri::{Emitter, Manager};
 
 #[derive(Debug, Deserialize)]
 pub struct AnalyzeRequest {
     pub id: TrackId,
     pub path: String,
+}
+
+/// Phase 12.1 export progress — emitted on the "render:progress" Tauri event
+/// channel during `render_track_master` / `render_track_preview` so the
+/// frontend can render a real progress bar.
+#[derive(Debug, Serialize, Clone)]
+pub struct RenderProgress {
+    pub track_id: TrackId,
+    pub kind: RenderKind,
+    pub fraction: f32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -356,12 +366,25 @@ pub async fn render_track_preview(
     app: tauri::AppHandle,
 ) -> CommandResult<RenderJob> {
     let out_dir = render_output_dir(&app, RenderKind::Preview)?;
-    mastering_render(
+    let track_id_for_progress = track_id.clone();
+    let app_for_progress = app.clone();
+    let on_progress = move |fraction: f32| {
+        let _ = app_for_progress.emit(
+            "render:progress",
+            RenderProgress {
+                track_id: track_id_for_progress.clone(),
+                kind: RenderKind::Preview,
+                fraction,
+            },
+        );
+    };
+    mastering_render_with_progress(
         track_id,
         Path::new(&track_path),
         &settings,
         &out_dir,
         RenderKind::Preview,
+        Some(&on_progress),
     )
 }
 
@@ -373,12 +396,25 @@ pub async fn render_track_master(
     app: tauri::AppHandle,
 ) -> CommandResult<RenderJob> {
     let out_dir = render_output_dir(&app, RenderKind::Master)?;
-    mastering_render(
+    let track_id_for_progress = track_id.clone();
+    let app_for_progress = app.clone();
+    let on_progress = move |fraction: f32| {
+        let _ = app_for_progress.emit(
+            "render:progress",
+            RenderProgress {
+                track_id: track_id_for_progress.clone(),
+                kind: RenderKind::Master,
+                fraction,
+            },
+        );
+    };
+    mastering_render_with_progress(
         track_id,
         Path::new(&track_path),
         &settings,
         &out_dir,
         RenderKind::Master,
+        Some(&on_progress),
     )
 }
 
@@ -584,6 +620,23 @@ pub fn mastering_render(
     out_dir: &Path,
     kind: RenderKind,
 ) -> CommandResult<RenderJob> {
+    mastering_render_with_progress(track_id, source_path, settings, out_dir, kind, None)
+}
+
+/// Same as `mastering_render` but accepts an optional progress callback that
+/// fires after each ~4096-frame chunk with the current 0.0–1.0 fraction.
+/// Phase 12.1 perf — `render_track_master` / `render_track_preview` /
+/// `render_album_master` thread an AppHandle-emitting closure through here so
+/// the frontend can render a real progress bar instead of an indeterminate
+/// "Rendering…" message. Contract tests pass `None` and ignore progress.
+pub fn mastering_render_with_progress(
+    track_id: TrackId,
+    source_path: &Path,
+    settings: &MasteringSettings,
+    out_dir: &Path,
+    kind: RenderKind,
+    on_progress: Option<&dyn Fn(f32)>,
+) -> CommandResult<RenderJob> {
     let source_path_str = source_path.to_string_lossy().to_string();
     if source_path_str.is_empty() {
         return Err(CommandError::InvalidPath("empty path".to_string()));
@@ -606,14 +659,38 @@ pub fn mastering_render(
         ));
     }
     let channels = pcm.channels as usize;
+    let channels_max = channels.max(1);
     let mut samples = pcm.samples;
     let mut chain =
-        crate::dsp::MasteringChain::new(pcm.sample_rate, channels.max(1), settings);
-    chain.process_interleaved(&mut samples, channels.max(1));
+        crate::dsp::MasteringChain::new(pcm.sample_rate, channels_max, settings);
+
+    // Process in 4096-frame chunks (~93 ms at 44.1 kHz) so progress callbacks
+    // fire ~10 times per second. The chain's per-frame state (limiter
+    // lookahead, biquad memory) flows through chunk boundaries because we
+    // call into the same `chain` instance for each chunk.
+    const CHUNK_FRAMES: usize = 4096;
+    let chunk_samples = CHUNK_FRAMES * channels_max;
+    let total_samples = samples.len();
+    let mut processed = 0;
+    if let Some(cb) = on_progress {
+        cb(0.0);
+    }
+    while processed < total_samples {
+        let end = (processed + chunk_samples).min(total_samples);
+        chain.process_interleaved(&mut samples[processed..end], channels_max);
+        processed = end;
+        if let Some(cb) = on_progress {
+            let fraction = processed as f32 / total_samples.max(1) as f32;
+            cb(fraction.min(1.0));
+        }
+    }
 
     let bit_depth = settings.advanced.bit_depth.unwrap_or(24);
     let out_path = unique_output_path(out_dir, source_path, &track_id, kind)?;
     write_wav(&out_path, &samples, pcm.sample_rate, pcm.channels, bit_depth)?;
+    if let Some(cb) = on_progress {
+        cb(1.0);
+    }
 
     Ok(RenderJob {
         id: uuid::Uuid::new_v4().to_string(),

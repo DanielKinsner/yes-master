@@ -174,3 +174,17 @@ export function onPlaybackTick(
 ): Promise<UnlistenFn> {
   return listen<PlaybackTick>("playback:tick", (event) => handler(event.payload));
 }
+
+export interface RenderProgressEvent {
+  track_id: TrackId;
+  kind: "preview" | "master" | "album";
+  fraction: number;
+}
+
+export function onRenderProgress(
+  handler: (event: RenderProgressEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<RenderProgressEvent>("render:progress", (event) =>
+    handler(event.payload),
+  );
+}

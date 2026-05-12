@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { api, onPlaybackTick } from "../lib/api";
+import { api, onPlaybackTick, onRenderProgress } from "../lib/api";
 import type {
   AdvancedSettings,
   AnalysisResult,
@@ -100,6 +100,13 @@ export function useTrackMaster() {
     applied: number;
     lastAt: number | null;
   }>({ attempts: 0, applied: 0, lastAt: null });
+  // Phase 12.1 render progress: backend emits "render:progress" with a 0-1
+  // fraction during render_track_preview / render_track_master. Used to
+  // render a real progress bar instead of an indeterminate "Rendering…".
+  const [renderProgress, setRenderProgress] = useState<{
+    fraction: number;
+    kind: "preview" | "master" | "album";
+  } | null>(null);
   // Phase 7.4 undo/redo: snapshot-based history of the undoable state pieces.
   // Refs (not state) so commitToHistory mutations don't trigger re-renders by
   // themselves; we bump `historyVersion` separately when undo/redo state
@@ -119,7 +126,8 @@ export function useTrackMaster() {
   const HISTORY_COALESCE_MS = 300;
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
+    let unlistenTick: (() => void) | undefined;
+    let unlistenProgress: (() => void) | undefined;
     onPlaybackTick((tick) => {
       setLoadedTrackId(tick.is_loaded ? tick.track_id : null);
       setTransport((t) => ({
@@ -128,10 +136,20 @@ export function useTrackMaster() {
         isPlaying: tick.is_playing,
       }));
     }).then((fn) => {
-      unlisten = fn;
+      unlistenTick = fn;
+    });
+    onRenderProgress((evt) => {
+      setRenderProgress({ fraction: evt.fraction, kind: evt.kind });
+      // Clear the bar shortly after reaching 1.0 so it doesn't linger.
+      if (evt.fraction >= 1.0) {
+        setTimeout(() => setRenderProgress(null), 600);
+      }
+    }).then((fn) => {
+      unlistenProgress = fn;
     });
     return () => {
-      unlisten?.();
+      unlistenTick?.();
+      unlistenProgress?.();
     };
   }, []);
 
@@ -1118,6 +1136,7 @@ export function useTrackMaster() {
     advancedOpen,
     lastExportReceipt,
     liveUpdateStats,
+    renderProgress,
     undo,
     redo,
     canUndo,

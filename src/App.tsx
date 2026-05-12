@@ -326,6 +326,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         isRendering={tm.isRendering}
         onUpdate={tm.updatePreview}
         liveUpdateStats={tm.liveUpdateStats}
+        renderProgress={tm.renderProgress}
       />
       <ExportSection
         canExport={!!tm.selectedAnalysis}
@@ -1137,20 +1138,42 @@ function StaleBar({
   isRendering,
   onUpdate,
   liveUpdateStats,
+  renderProgress,
 }: {
   stale: boolean;
   isRendering: boolean;
   onUpdate: () => void;
   liveUpdateStats: { attempts: number; applied: number; lastAt: number | null };
+  renderProgress: { fraction: number; kind: "preview" | "master" | "album" } | null;
 }) {
+  const progressPct =
+    renderProgress !== null
+      ? Math.round(Math.max(0, Math.min(1, renderProgress.fraction)) * 100)
+      : null;
   return (
     <section className="stale-bar">
       <span className="stale-dot live" aria-hidden />
       <span className="stale-text">
         {isRendering
-          ? "Rendering preview WAV…"
+          ? progressPct !== null
+            ? `Rendering ${renderProgress!.kind} WAV… ${progressPct}%`
+            : "Rendering preview WAV…"
           : "Mastered playback is live — drag controls and hear the change immediately."}
       </span>
+      {progressPct !== null && (
+        <div
+          className="render-progress"
+          role="progressbar"
+          aria-valuenow={progressPct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div
+            className="render-progress-fill"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      )}
       {/* Phase 12.1 live-update counter — increments every time the frontend
           sends api.updateChain to the backend. If you make adjustments and
           this counter doesn't change, the frontend isn't firing live updates
