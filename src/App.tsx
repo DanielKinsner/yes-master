@@ -317,6 +317,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         stale={tm.previewStale}
         isRendering={tm.isRendering}
         onUpdate={tm.updatePreview}
+        liveUpdateStats={tm.liveUpdateStats}
       />
       <ExportSection
         canExport={!!tm.selectedAnalysis}
@@ -1052,10 +1053,12 @@ function StaleBar({
   stale,
   isRendering,
   onUpdate,
+  liveUpdateStats,
 }: {
   stale: boolean;
   isRendering: boolean;
   onUpdate: () => void;
+  liveUpdateStats: { attempts: number; applied: number; lastAt: number | null };
 }) {
   return (
     <section className="stale-bar">
@@ -1064,6 +1067,20 @@ function StaleBar({
         {isRendering
           ? "Rendering preview WAV…"
           : "Mastered playback is live — drag controls and hear the change immediately."}
+      </span>
+      {/* Phase 12.1 live-update counter — increments every time the frontend
+          sends api.updateChain to the backend. If you make adjustments and
+          this counter doesn't change, the frontend isn't firing live updates
+          (look at this number to verify without DevTools). */}
+      <span
+        className="live-update-badge"
+        title={`Live coeff updates sent / resolved since session start${
+          liveUpdateStats.lastAt
+            ? `. Last fired ${Math.round((Date.now() - liveUpdateStats.lastAt) / 1000)} s ago.`
+            : ". None fired yet."
+        }`}
+      >
+        live: {liveUpdateStats.applied}/{liveUpdateStats.attempts}
       </span>
       <button
         type="button"

@@ -464,6 +464,18 @@ button.primary:disabled {
   white-space: nowrap;
 }
 
+.live-update-badge {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-2);
+  color: var(--text-2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 .analysis-summary {
   margin-top: 0.5rem;
   font-size: 0.78rem;

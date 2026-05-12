@@ -92,6 +92,14 @@ export function useTrackMaster() {
   const [loadedTrackId, setLoadedTrackId] = useState<TrackId | null>(null);
   const [loadedKindByTrack, setLoadedKindByTrack] = useState<Record<TrackId, PlaybackKindUI>>({});
   const [regionByTrack, setRegionByTrack] = useState<Record<TrackId, LoopRegion | null>>({});
+  // Phase 12.1 live-update visibility: tracks how many api.updateChain calls
+  // have been attempted and applied. Rendered as a small badge in the UI so
+  // Dan can confirm live updates are firing without opening DevTools.
+  const [liveUpdateStats, setLiveUpdateStats] = useState<{
+    attempts: number;
+    applied: number;
+    lastAt: number | null;
+  }>({ attempts: 0, applied: 0, lastAt: null });
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -242,77 +250,69 @@ export function useTrackMaster() {
   const updateSettings = useCallback(
     (id: TrackId, mutate: (prev: MasteringSettings) => MasteringSettings) => {
       const editingAlbumIntent = mode === "album" && !overrideAlbum.has(id);
-      let nextSettings: MasteringSettings | undefined;
+      // Compute `nextSettings` from the CURRENT-RENDER closure values, not
+      // from inside a setState updater. React 18's batched-updates model
+      // makes side-effect assignments inside `setState((prev) => ...)`
+      // unreliable when the call site needs to read the result synchronously;
+      // pulling the current state into a local variable here removes that
+      // hazard entirely so the api.updateChain call below always has a
+      // defined value.
+      let nextSettings: MasteringSettings;
       if (editingAlbumIntent) {
-        // Mutating the album intent affects every track that's following it.
-        setAlbumIntent((prev) => {
-          nextSettings = mutate(prev);
-          return nextSettings;
-        });
+        nextSettings = mutate(albumIntent);
+        setAlbumIntent(nextSettings);
       } else {
-        setSettingsMap((prev) => {
-          nextSettings = mutate(prev[id] ?? DEFAULT_SETTINGS);
-          return { ...prev, [id]: nextSettings };
-        });
+        const current = settingsMap[id] ?? DEFAULT_SETTINGS;
+        nextSettings = mutate(current);
+        setSettingsMap((prev) => ({ ...prev, [id]: nextSettings }));
         markStale(id);
       }
-      // Phase 5 live chain: push fresh coeffs whenever the edit affects a track
-      // that's currently loaded as Mastered playback. `loadedKindByTrack` is
-      // set synchronously in `playWithKind`, so it's the authoritative "is
-      // this track playing as master right now?" signal from React's POV.
-      if (!nextSettings) return;
+
+      // Push to live chain when the edit reaches the currently-playing master.
+      // We accept either the synchronous `loadedKindByTrack` map (set in
+      // playWithKind) or the tick-driven `loadedTrackId` as evidence — a track
+      // is "playing as master" if EITHER signal agrees. Belt-and-suspenders
+      // covers the case where one signal is briefly stale.
       let shouldPush = false;
       if (editingAlbumIntent) {
-        // Album intent edit: push if any track currently loaded as master is
-        // following the album intent (not overriding).
         shouldPush = Object.entries(loadedKindByTrack).some(
           ([tid, kind]) =>
             kind === "master" && !overrideAlbum.has(tid as TrackId),
         );
       } else {
-        // Per-track edit: push if THIS track is currently loaded as master.
-        shouldPush = loadedKindByTrack[id] === "master";
+        const kindForId = loadedKindByTrack[id];
+        shouldPush =
+          kindForId === "master" || (loadedTrackId === id && kindForId !== "source");
       }
-      // Phase 12.1 diagnostic — Dan reports live updates not landing on his
-      // machine despite spacebar/double-click working. Logging the full
-      // decision chain here so a F12 DevTools console pass tells us exactly
-      // which leg of the pipeline drops the update.
-      // eslint-disable-next-line no-console
-      console.log(
-        "[updateSettings]",
-        JSON.stringify({
-          id,
-          editingAlbumIntent,
-          loadedKindByTrack,
-          shouldPush,
-          preset: nextSettings.preset,
-          intensity: nextSettings.intensity,
-          eq: [nextSettings.eq_low_db, nextSettings.eq_mid_db, nextSettings.eq_high_db],
-        }),
-      );
       if (shouldPush) {
-        // eslint-disable-next-line no-console
-        console.log("[updateSettings] calling api.updateChain");
+        setLiveUpdateStats((s) => ({
+          attempts: s.attempts + 1,
+          applied: s.applied,
+          lastAt: Date.now(),
+        }));
         api
           .updateChain(nextSettings)
           .then(() => {
-            // eslint-disable-next-line no-console
-            console.log("[updateSettings] api.updateChain resolved");
+            setLiveUpdateStats((s) => ({
+              attempts: s.attempts,
+              applied: s.applied + 1,
+              lastAt: Date.now(),
+            }));
           })
           .catch((err) => {
-            // eslint-disable-next-line no-console
-            console.error("[updateSettings] api.updateChain FAILED:", err);
             setError(String(err));
           });
-      } else {
-        // eslint-disable-next-line no-console
-        console.log(
-          "[updateSettings] shouldPush=false; not calling api.updateChain. loadedKindByTrack[id]=",
-          loadedKindByTrack[id],
-        );
       }
     },
-    [mode, overrideAlbum, markStale, loadedKindByTrack],
+    [
+      mode,
+      overrideAlbum,
+      markStale,
+      loadedKindByTrack,
+      loadedTrackId,
+      albumIntent,
+      settingsMap,
+    ],
   );
 
   const toggleOverrideAlbum = useCallback(
@@ -834,8 +834,8 @@ export function useTrackMaster() {
         markStale(selectedTrackId);
       }
       // Push to live chain if currently playing the affected master. Same
-      // shouldPush logic as updateSettings — `loadedKindByTrack` is the
-      // synchronous source of truth, not the tick-driven `loadedTrackId`.
+      // belt-and-suspenders signal as updateSettings: accept either the
+      // synchronous loadedKindByTrack map or the tick-driven loadedTrackId.
       let shouldPush = false;
       if (mode === "album" && !selectedIsOverriding) {
         shouldPush = Object.entries(loadedKindByTrack).some(
@@ -843,10 +843,27 @@ export function useTrackMaster() {
             kind === "master" && !overrideAlbum.has(tid as TrackId),
         );
       } else if (selectedTrackId) {
-        shouldPush = loadedKindByTrack[selectedTrackId] === "master";
+        const kindForId = loadedKindByTrack[selectedTrackId];
+        shouldPush =
+          kindForId === "master" ||
+          (loadedTrackId === selectedTrackId && kindForId !== "source");
       }
       if (shouldPush) {
-        api.updateChain(preset.settings).catch((err) => setError(String(err)));
+        setLiveUpdateStats((s) => ({
+          attempts: s.attempts + 1,
+          applied: s.applied,
+          lastAt: Date.now(),
+        }));
+        api
+          .updateChain(preset.settings)
+          .then(() => {
+            setLiveUpdateStats((s) => ({
+              attempts: s.attempts,
+              applied: s.applied + 1,
+              lastAt: Date.now(),
+            }));
+          })
+          .catch((err) => setError(String(err)));
       }
     },
     [
@@ -855,6 +872,7 @@ export function useTrackMaster() {
       selectedTrackId,
       markStale,
       loadedKindByTrack,
+      loadedTrackId,
       overrideAlbum,
     ],
   );
@@ -938,6 +956,7 @@ export function useTrackMaster() {
     transport,
     advancedOpen,
     lastExportReceipt,
+    liveUpdateStats,
 
     openImportDialog,
     importFiles,
