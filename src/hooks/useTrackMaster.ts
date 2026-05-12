@@ -100,6 +100,23 @@ export function useTrackMaster() {
     applied: number;
     lastAt: number | null;
   }>({ attempts: 0, applied: 0, lastAt: null });
+  // Phase 7.4 undo/redo: snapshot-based history of the undoable state pieces.
+  // Refs (not state) so commitToHistory mutations don't trigger re-renders by
+  // themselves; we bump `historyVersion` separately when undo/redo state
+  // changes so canUndo/canRedo derived values re-evaluate.
+  type HistorySnapshot = {
+    settingsMap: Record<string, MasteringSettings>;
+    albumIntent: MasteringSettings;
+    overrideAlbum: string[];
+  };
+  const historyPast = useRef<HistorySnapshot[]>([]);
+  const historyFuture = useRef<HistorySnapshot[]>([]);
+  // Coalesce window: consecutive commits within this many ms collapse into the
+  // first snapshot, so a slider drag becomes ONE undo step rather than N.
+  const lastCommitAt = useRef<number>(0);
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const HISTORY_MAX = 100;
+  const HISTORY_COALESCE_MS = 300;
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -247,9 +264,120 @@ export function useTrackMaster() {
     });
   }, []);
 
+  // Phase 7.4 — snapshot the undoable state pieces and push onto the past
+  // stack. Called BEFORE each mutation so the popped state on undo is the
+  // pre-mutation state. Coalesces consecutive commits within
+  // HISTORY_COALESCE_MS into a single snapshot (the FIRST one in the burst)
+  // so a slider drag is one undo step, not N. New commits always clear the
+  // redo stack (standard undo/redo semantics).
+  const commitToHistory = useCallback(() => {
+    const now = Date.now();
+    if (now - lastCommitAt.current < HISTORY_COALESCE_MS) {
+      // Inside a drag burst — extend the window but don't add a new snapshot.
+      lastCommitAt.current = now;
+      return;
+    }
+    lastCommitAt.current = now;
+    const snapshot: HistorySnapshot = {
+      settingsMap: { ...settingsMap },
+      albumIntent: { ...albumIntent },
+      overrideAlbum: Array.from(overrideAlbum),
+    };
+    const past = historyPast.current;
+    historyPast.current = past.length >= HISTORY_MAX
+      ? [...past.slice(past.length - HISTORY_MAX + 1), snapshot]
+      : [...past, snapshot];
+    historyFuture.current = [];
+    setHistoryVersion((v) => v + 1);
+  }, [settingsMap, albumIntent, overrideAlbum]);
+
+  // Restore a snapshot. Helper used by both undo and redo.
+  const restoreSnapshot = useCallback(
+    (snapshot: HistorySnapshot) => {
+      setSettingsMap(snapshot.settingsMap);
+      setAlbumIntent(snapshot.albumIntent);
+      setOverrideAlbum(new Set(snapshot.overrideAlbum as TrackId[]));
+      // After restoring state, push the restored settings to the live audio
+      // chain if the affected track is currently playing as Mastered. Without
+      // this, undo would change the UI state but the audible output would lag
+      // until the user toggled Original/Master or made another adjustment.
+      const id = selectedTrackId;
+      if (
+        id &&
+        (loadedKindByTrack[id] === "master" ||
+          (loadedTrackId === id && loadedKindByTrack[id] !== "source"))
+      ) {
+        const followingAlbum =
+          mode === "album" && !snapshot.overrideAlbum.includes(id as string);
+        const effective = followingAlbum
+          ? snapshot.albumIntent
+          : snapshot.settingsMap[id as string] ?? DEFAULT_SETTINGS;
+        setLiveUpdateStats((s) => ({
+          attempts: s.attempts + 1,
+          applied: s.applied,
+          lastAt: Date.now(),
+        }));
+        api
+          .updateChain(effective)
+          .then(() => {
+            setLiveUpdateStats((s) => ({
+              attempts: s.attempts,
+              applied: s.applied + 1,
+              lastAt: Date.now(),
+            }));
+          })
+          .catch((err) => setError(String(err)));
+      }
+    },
+    [selectedTrackId, loadedKindByTrack, loadedTrackId, mode],
+  );
+
+  const undo = useCallback(() => {
+    const past = historyPast.current;
+    if (past.length === 0) return;
+    const snapshot = past[past.length - 1];
+    const current: HistorySnapshot = {
+      settingsMap: { ...settingsMap },
+      albumIntent: { ...albumIntent },
+      overrideAlbum: Array.from(overrideAlbum),
+    };
+    historyPast.current = past.slice(0, -1);
+    historyFuture.current = [...historyFuture.current, current];
+    // Reset the coalesce window so the NEXT user edit always commits a new
+    // snapshot rather than collapsing into the just-restored state.
+    lastCommitAt.current = 0;
+    restoreSnapshot(snapshot);
+    setHistoryVersion((v) => v + 1);
+  }, [settingsMap, albumIntent, overrideAlbum, restoreSnapshot]);
+
+  const redo = useCallback(() => {
+    const future = historyFuture.current;
+    if (future.length === 0) return;
+    const snapshot = future[future.length - 1];
+    const current: HistorySnapshot = {
+      settingsMap: { ...settingsMap },
+      albumIntent: { ...albumIntent },
+      overrideAlbum: Array.from(overrideAlbum),
+    };
+    historyFuture.current = future.slice(0, -1);
+    historyPast.current = [...historyPast.current, current];
+    lastCommitAt.current = 0;
+    restoreSnapshot(snapshot);
+    setHistoryVersion((v) => v + 1);
+  }, [settingsMap, albumIntent, overrideAlbum, restoreSnapshot]);
+
+  const canUndo = historyPast.current.length > 0;
+  const canRedo = historyFuture.current.length > 0;
+  // historyVersion intentionally referenced here so the closures above
+  // re-evaluate canUndo / canRedo on each render after a history change.
+  void historyVersion;
+
   const updateSettings = useCallback(
     (id: TrackId, mutate: (prev: MasteringSettings) => MasteringSettings) => {
       const editingAlbumIntent = mode === "album" && !overrideAlbum.has(id);
+      // Phase 7.4: capture pre-mutation state for undo. Coalesces within
+      // HISTORY_COALESCE_MS so slider drags are one undo step.
+      commitToHistory();
       // Compute `nextSettings` from the CURRENT-RENDER closure values, not
       // from inside a setState updater. React 18's batched-updates model
       // makes side-effect assignments inside `setState((prev) => ...)`
@@ -312,11 +440,13 @@ export function useTrackMaster() {
       loadedTrackId,
       albumIntent,
       settingsMap,
+      commitToHistory,
     ],
   );
 
   const toggleOverrideAlbum = useCallback(
     (id: TrackId) => {
+      commitToHistory();
       const wasOverriding = overrideAlbum.has(id);
       setOverrideAlbum((prev) => {
         const next = new Set(prev);
@@ -330,7 +460,7 @@ export function useTrackMaster() {
         setSettingsMap((prev) => ({ ...prev, [id]: { ...albumIntent } }));
       }
     },
-    [overrideAlbum, albumIntent],
+    [overrideAlbum, albumIntent, commitToHistory],
   );
 
   // Stable-ref to importFiles so the drag-drop listener effect doesn't
@@ -687,6 +817,35 @@ export function useTrackMaster() {
     return () => window.removeEventListener("keydown", handler);
   }, [togglePlay]);
 
+  // Phase 7.4 — Ctrl/Cmd+Z = undo, Ctrl/Cmd+Shift+Z (or Ctrl/Cmd+Y) = redo.
+  // Skips when focus is in a text-editable field so the system-native
+  // undo in those inputs still works.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isCtrl = e.ctrlKey || e.metaKey;
+      if (!isCtrl) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const isTextField =
+        tag === "TEXTAREA" ||
+        (tag === "INPUT" &&
+          (target as HTMLInputElement | null)?.type !== "range") ||
+        (target?.isContentEditable ?? false);
+      if (isTextField) return;
+      const key = e.key.toLowerCase();
+      if (key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+      } else if (key === "y") {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo]);
+
   const setPlaybackKind = useCallback(
     async (kind: PlaybackKindUI) => {
       if (!selectedTrackId) return;
@@ -823,6 +982,7 @@ export function useTrackMaster() {
 
   const applyUserPreset = useCallback(
     (preset: UserPreset) => {
+      commitToHistory();
       if (mode === "album" && !selectedIsOverriding) {
         // Apply to album intent.
         setAlbumIntent(preset.settings);
@@ -874,6 +1034,7 @@ export function useTrackMaster() {
       loadedKindByTrack,
       loadedTrackId,
       overrideAlbum,
+      commitToHistory,
     ],
   );
 
@@ -957,6 +1118,10 @@ export function useTrackMaster() {
     advancedOpen,
     lastExportReceipt,
     liveUpdateStats,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
 
     openImportDialog,
     importFiles,

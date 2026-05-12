@@ -464,6 +464,17 @@ button.primary:disabled {
   white-space: nowrap;
 }
 
+.undo-redo-bar {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.undo-redo-bar .ghost-btn {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+}
+
 .live-update-badge {
   font-size: 0.7rem;
   letter-spacing: 0.04em;

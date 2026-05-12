@@ -313,6 +313,12 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         onIntensity={tm.setIntensity}
         onEq={tm.setEqBand}
       />
+      <UndoRedoBar
+        canUndo={tm.canUndo}
+        canRedo={tm.canRedo}
+        onUndo={tm.undo}
+        onRedo={tm.redo}
+      />
       <StaleBar
         stale={tm.previewStale}
         isRendering={tm.isRendering}
@@ -1046,6 +1052,41 @@ function Slider({
         {format(value)}
       </span>
     </div>
+  );
+}
+
+function UndoRedoBar({
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+}: {
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+}) {
+  return (
+    <section className="undo-redo-bar">
+      <button
+        type="button"
+        className="ghost-btn"
+        onClick={onUndo}
+        disabled={!canUndo}
+        title="Undo last edit (Ctrl+Z)"
+      >
+        ↶ Undo
+      </button>
+      <button
+        type="button"
+        className="ghost-btn"
+        onClick={onRedo}
+        disabled={!canRedo}
+        title="Redo (Ctrl+Shift+Z or Ctrl+Y)"
+      >
+        ↷ Redo
+      </button>
+    </section>
   );
 }
 
