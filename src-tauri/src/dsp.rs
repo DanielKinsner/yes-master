@@ -135,6 +135,13 @@ pub struct ChainCoeffs {
     pub input_gain_lin: f32,
     pub saturation_amount: f32,
     pub ceiling_lin: f32,
+    /// Post-chain output gain used to align mastered playback loudness with
+    /// the unprocessed source. 1.0 = no adjustment (Volume Match off).
+    /// When on, set to the inverse of the input gain stage so the master
+    /// comes back down to roughly the source's level for fair A/B. Approximate
+    /// — doesn't account for EQ/saturation contributions, but close enough
+    /// for tone judgment. Tooltip in the UI is honest about this.
+    pub volume_match_gain_lin: f32,
 }
 
 impl ChainCoeffs {
@@ -172,6 +179,19 @@ impl ChainCoeffs {
             .clamp(-6.0, 0.0);
         let ceiling_lin = 10.0_f32.powf(ceiling_db / 20.0);
 
+        let volume_match_gain_lin = if settings.volume_match {
+            // Undo the input-gain boost so mastered playback meets the source
+            // at roughly equal loudness. Limiter has already shaped the peaks
+            // to the ceiling; we just trim level here.
+            if input_gain_lin > 0.0 {
+                1.0 / input_gain_lin
+            } else {
+                1.0
+            }
+        } else {
+            1.0
+        };
+
         Self {
             low,
             mid,
@@ -179,6 +199,7 @@ impl ChainCoeffs {
             input_gain_lin,
             saturation_amount,
             ceiling_lin,
+            volume_match_gain_lin,
         }
     }
 }
@@ -404,6 +425,15 @@ impl MasteringChain {
             frame[ch] = y;
         }
         self.limiter.process_frame_inplace(frame);
+        // Volume Match: applied AFTER the limiter so the limiter still sees
+        // the full post-gain peaks (and bounds them to the ceiling). The VM
+        // scalar then attenuates the limited output down to source-matched
+        // level for fair A/B comparison.
+        if (self.coeffs.volume_match_gain_lin - 1.0).abs() > 1.0e-4 {
+            for s in frame.iter_mut() {
+                *s *= self.coeffs.volume_match_gain_lin;
+            }
+        }
     }
 
     pub fn process_interleaved(&mut self, samples: &mut [f32], channels: usize) {

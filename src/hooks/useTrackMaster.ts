@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { api, onPlaybackTick } from "../lib/api";
 import type {
   AdvancedSettings,
@@ -87,6 +88,7 @@ export function useTrackMaster() {
   const [overrideAlbum, setOverrideAlbum] = useState<Set<TrackId>>(new Set());
   const [userPresets, setUserPresets] = useState<UserPreset[]>([]);
   const [savingPreset, setSavingPreset] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [loadedTrackId, setLoadedTrackId] = useState<TrackId | null>(null);
   const [loadedKindByTrack, setLoadedKindByTrack] = useState<Record<TrackId, PlaybackKindUI>>({});
   const [regionByTrack, setRegionByTrack] = useState<Record<TrackId, LoopRegion | null>>({});
@@ -295,6 +297,10 @@ export function useTrackMaster() {
     [overrideAlbum, albumIntent],
   );
 
+  // Stable-ref to importFiles so the drag-drop listener effect doesn't
+  // re-attach on every render of the hook.
+  const importFilesRef = useRef<(paths: string[]) => Promise<void>>(async () => {});
+
   const importFiles = useCallback(
     async (paths: string[]) => {
       if (paths.length === 0) return;
@@ -356,6 +362,60 @@ export function useTrackMaster() {
     },
     [selectedTrackId, markStale],
   );
+
+  // Keep the ref in sync with the latest importFiles closure so the long-lived
+  // drag-drop listener always calls the freshest version (with the current
+  // `selectedTrackId` selection logic etc.).
+  importFilesRef.current = importFiles;
+
+  // Tauri's window-level drag/drop listener. Attaches once on mount, lives for
+  // the lifetime of the hook. Filters dropped paths by audio extension so we
+  // ignore non-audio files quietly instead of failing import.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    getCurrentWebview()
+      .onDragDropEvent((event) => {
+        if (cancelled) return;
+        const payload = event.payload as {
+          type: "enter" | "over" | "drop" | "leave";
+          paths?: string[];
+        };
+        if (payload.type === "enter") {
+          setIsDragOver(true);
+        } else if (payload.type === "leave") {
+          setIsDragOver(false);
+        } else if (payload.type === "drop") {
+          setIsDragOver(false);
+          const all = payload.paths ?? [];
+          const audio = all.filter((p) => {
+            const dot = p.lastIndexOf(".");
+            if (dot < 0) return false;
+            const ext = p.slice(dot + 1).toLowerCase();
+            return AUDIO_EXTENSIONS.includes(ext);
+          });
+          if (audio.length > 0) {
+            importFilesRef.current(audio).catch((err) => {
+              console.warn("drag-drop import failed", err);
+            });
+          }
+        }
+      })
+      .then((fn) => {
+        if (cancelled) {
+          fn();
+        } else {
+          unlisten = fn;
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to attach drag-drop listener", err);
+      });
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, []);
 
   const openImportDialog = useCallback(async () => {
     try {
@@ -648,9 +708,22 @@ export function useTrackMaster() {
     }
   }, [selectedTrackId, transport.loop]);
 
-  const setVolumeMatch = useCallback((on: boolean) => {
-    setTransport((t) => ({ ...t, volumeMatch: on }));
-  }, []);
+  const setVolumeMatch = useCallback(
+    (on: boolean) => {
+      setTransport((t) => ({ ...t, volumeMatch: on }));
+      // Route through updateSettings so the DSP chain picks up the change
+      // (live for Mastered playback via api.updateChain, persisted to
+      // settingsMap or albumIntent depending on mode). Source playback is
+      // unaffected — it never goes through the chain.
+      if (selectedTrackId) {
+        updateSettings(selectedTrackId, (prev) => ({
+          ...prev,
+          volume_match: on,
+        }));
+      }
+    },
+    [selectedTrackId, updateSettings],
+  );
 
   const toggleAdvanced = useCallback(() => {
     setAdvancedOpen((v) => !v);
@@ -846,5 +919,6 @@ export function useTrackMaster() {
     saveUserPreset,
     deleteUserPreset,
     applyUserPreset,
+    isDragOver,
   };
 }

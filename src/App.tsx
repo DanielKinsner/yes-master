@@ -61,6 +61,16 @@ function App() {
           <EmptyState onAdd={tm.openImportDialog} />
         )}
       </main>
+      {tm.isDragOver && (
+        <div className="drop-overlay" aria-hidden>
+          <div className="drop-overlay-card">
+            <div className="drop-overlay-title">Drop to import</div>
+            <div className="drop-overlay-hint">
+              WAV · AIFF · FLAC · MP3 · M4A · AAC · OGG · Opus
+            </div>
+          </div>
+        </div>
+      )}
       {tm.error && <Toast message={tm.error} onClose={tm.clearError} />}
       {tm.lastExportReceipt && (
         <ExportReceiptCard

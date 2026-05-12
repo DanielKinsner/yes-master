@@ -1004,6 +1004,42 @@ button.primary:disabled {
   border-color: var(--accent);
 }
 
+/* Drag-drop overlay */
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 13, 0.78);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  pointer-events: none;
+}
+
+.drop-overlay-card {
+  padding: 2.5rem 3.5rem;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius);
+  background: rgba(107, 158, 255, 0.06);
+  text-align: center;
+  box-shadow: 0 0 0 1px rgba(107, 158, 255, 0.2);
+}
+
+.drop-overlay-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text-0);
+  letter-spacing: -0.01em;
+  margin-bottom: 0.4rem;
+}
+
+.drop-overlay-hint {
+  font-size: 0.85rem;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Toast */
 .toast {
   position: fixed;
