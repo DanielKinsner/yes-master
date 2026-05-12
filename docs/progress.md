@@ -1551,3 +1551,56 @@ The HANDOFF P0 list still has four wired-controls slices ahead. In order of "sma
 4. **Wire `compression_density`** — the biggest of the four because it's a real envelope-following compressor (~300-500 lines per HANDOFF estimate). Worth a focused brainstorm + plan before coding.
 
 If Dan returns and asks for the live clipping meter to drive an automatic Input-Gain trim (the auto-trim follow-up), that's a P0-adjacent slice that builds directly on this one.
+
+## 2026-05-12 — Phase 12.2 (cont): wire `width` (Advanced) via M/S processing
+
+Goal:
+
+Continue knocking off the HANDOFF's P0 wiring backlog. `width` is the cleanest of the five unwired Advanced controls — a textbook M/S stereo transformation with deterministic synthetic-signal tests. Removes one "(coming soon)" label.
+
+What changed:
+
+Backend (Rust, `src-tauri/src/dsp.rs`):
+
+- **`ChainCoeffs`**: new `width_side_scale: f32` field. `ChainCoeffs::from_settings` reads `settings.advanced.width.unwrap_or(1.0).clamp(0.0, 2.0)`. Clamp range matches the wide end of typical mastering plugins; 0 = mono, 1 = neutral, 2 = double-wide.
+- **New module-level helper `apply_width_stereo(frame, side_scale)`**: textbook lossless M/S decode/encode. Caller-tested in isolation so the math is pinned without driving samples through the full limiter lookahead. Guards against short frames (mono is a no-op).
+- **`MasteringChain::process_frame_inplace` refactor**: previously a single per-channel loop running `gain → EQ → saturation`. Now split into pass 1 (`gain → EQ`), an optional width transform (only when `channels == 2` AND `(side_scale - 1.0).abs() > 1e-5`), then pass 2 (`saturation`). Limiter, volume-match, and output-gain stages unchanged. Order rationale documented in the doc-comment: widening then saturating preserves the chosen stereo image; the opposite order would smear the non-linearity across mid/side and pull the result back toward mono.
+- **Frontend (`src/App.tsx`)**: `AdvancedPanel` Width label dropped "(coming soon)". Slider range stays at 0..1.5 (matches PRODUCT.md guidance; chain clamps to 2.0 in case a future UI exposes more).
+
+Tests (backend, `src-tauri/src/dsp.rs::mod tests` — new module):
+
+1. `apply_width_stereo_zero_collapses_to_mono` — L=0.5, R=-0.5 → both 0 after width=0 (pure side, mid is zero).
+2. `apply_width_stereo_one_is_identity` — width=1.0 leaves L, R untouched exactly.
+3. `apply_width_stereo_one_point_five_amplifies_side` — hand-computed expected values: L=0.3 R=-0.7 with width=1.5 → L=0.55 R=-0.95 (mid=-0.2, side after 1.5× = 0.75).
+4. `apply_width_stereo_does_not_touch_pure_mid_signal` — for L=R input, every width value preserves both channels (proves width only scales side).
+5. `apply_width_stereo_no_op_on_mono_frame` — mono input doesn't panic or alias past the end.
+6. `chain_coeffs_default_width_is_neutral` — untouched `Advanced.width == None` maps to 1.0 in `ChainCoeffs`. Backward-compatibility guarantee for existing sessions.
+7. `chain_coeffs_clamps_width_into_safe_range` — user values 5.0 and -1.0 both clamp into [0, 2].
+8. `process_frame_applies_width_inside_full_chain` — end-to-end: chain with `width=0`, neutral preset, neutral EQ, no saturation; driven with L=+sine R=-sine; after limiter lookahead settles, the output is silent (M/S collapse worked).
+9. `process_frame_with_neutral_width_preserves_side_signal` — same signal with `width=1.0` produces audible non-zero peak on both channels (proves the silence in test 8 is from width=0, not an upstream bug).
+
+Verification:
+
+- `cargo test --lib`: **19/19 pass** in 0.24 s (9 new dsp tests + 10 audio tests from the prior slice and earlier work).
+- `cargo test` (full suite): **53/53 pass** in 246 s (was 44). 34 contract tests untouched and still pass — confirming the `process_frame_inplace` chain-order refactor is signal-equivalent for the existing presets (none use a non-neutral width, and the `≈ 1.0` skip-guard preserves byte-for-byte behavior on the no-width path).
+- `npm run build`: clean, **253.66 KB / 77.57 KB gzipped** (-0.02 KB raw, same gzipped vs prior slice — frontend touch was 13 characters removed from one label).
+- `cargo check --tests`: clean.
+- `npm run tauri dev`: not run by agents.
+
+Real-audio fixture used: none. Both the unit tests and the integration test use synthetic L=+sine, R=-sine signals. Real-fixture tests (`mastering_render_processes_real_fixture_if_present`, `phase_12_1_real_fixture_metering_snapshot`) still pass — the chain order refactor doesn't perturb their numerical outputs at the default (untouched) width.
+
+What failed or remains partial:
+
+- **Volume-match interaction**: width affects per-channel post-EQ amplitude, which the volume-match scalar (computed from input gain only) doesn't account for. For widening, this is a mild over-attenuation; for `width=0` (mono collapse), it's a mild under-attenuation. Not worth fixing yet — the volume-match math is "approximate by design" per its existing doc-comment, and width values away from 1.0 are deliberately user-chosen.
+- **No automated frontend test for the slider** — vitest infra still deferred per the HANDOFF infra list. The slider behavior is the same `NumberField` component the other Advanced controls use, so the risk is bounded.
+- **Saturation linkage to width is still per-channel post-width**: a stronger M/S design would saturate mid and side separately. Future polish slice if the audible result feels uneven on heavily-widened material.
+
+Next recommended slice:
+
+The HANDOFF's P0 list now has three remaining wired-controls items, in increasing order of scope:
+
+1. **`render_album_master` progress events** — `mastering_render` already supports a progress callback; `render_album_master` loops it without threading the callback. ~30-line backend change + 1 contract test. Pure mechanical.
+2. **`lufs_offset_db` post-render LUFS landing** — measure post-render integrated LUFS via `ebur128`, apply one-pass gain delta to hit the user's target. ~50-line backend change, touches `engine::mastering_render`. Removes a "(coming soon)" label.
+3. **`compression_density`** — real envelope-following compressor before the limiter. Larger slice (~300-500 lines, per HANDOFF). Probably worth a brainstorm/plan before coding.
+
+If listening notes come in from Dan first, those take precedence — preset rebalancing is the listening-driven P2.

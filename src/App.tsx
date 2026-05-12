@@ -1372,7 +1372,7 @@ function AdvancedPanel({
           onChange={(v) => update("ceiling_dbtp", v)}
         />
         <NumberField
-          label="Width (coming soon)"
+          label="Width"
           value={a.width}
           step={0.05}
           min={0}

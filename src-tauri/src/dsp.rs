@@ -147,6 +147,12 @@ pub struct ChainCoeffs {
     /// — doesn't account for EQ/saturation contributions, but close enough
     /// for tone judgment. Tooltip in the UI is honest about this.
     pub volume_match_gain_lin: f32,
+    /// Phase 12.2 — stereo width via M/S processing. Scales the side
+    /// component between EQ and saturation; 0 = mono (collapse side to zero),
+    /// 1 = neutral (no-op), > 1 widens. Only consulted when the chain is
+    /// running on a stereo frame. Clamped to [0.0, 2.0] in `from_settings`
+    /// so an out-of-range user value can't flip phase or destabilize gain.
+    pub width_side_scale: f32,
 }
 
 impl ChainCoeffs {
@@ -242,6 +248,15 @@ impl ChainCoeffs {
             1.0
         };
 
+        // Width: None means "neutral" (1.0 = leave the stereo image alone).
+        // Clamp to [0, 2] so a stray slider value can't invert phase or push
+        // the side past 2× — typical mastering plugins cap M/S widening here.
+        let width_side_scale = settings
+            .advanced
+            .width
+            .unwrap_or(1.0)
+            .clamp(0.0, 2.0);
+
         Self {
             low,
             mid,
@@ -251,8 +266,31 @@ impl ChainCoeffs {
             ceiling_lin,
             user_output_gain_lin,
             volume_match_gain_lin,
+            width_side_scale,
         }
     }
+}
+
+/// Apply an in-place M/S width transform to a stereo frame. `frame` must be
+/// at least length 2; channels beyond index 1 are untouched. `side_scale`
+/// scales the L-R component (0 collapses to mono, 1 is a no-op, > 1 widens).
+///
+/// Energy budgeting: this is the textbook lossless M/S decode/encode pair, so
+/// `side_scale = 1` is exactly identity, and other scales redistribute energy
+/// between mid and side without introducing gain on the post-transform signal
+/// when summed across both channels. The limiter downstream catches any peak
+/// excursions that widening introduces on individual channels.
+#[inline]
+pub(crate) fn apply_width_stereo(frame: &mut [f32], side_scale: f32) {
+    if frame.len() < 2 {
+        return;
+    }
+    let l = frame[0];
+    let r = frame[1];
+    let mid = 0.5 * (l + r);
+    let side = 0.5 * (l - r) * side_scale;
+    frame[0] = mid + side;
+    frame[1] = mid - side;
 }
 
 #[derive(Debug, Clone, Default)]
@@ -477,24 +515,41 @@ impl MasteringChain {
     }
 
     /// Process one interleaved frame in place. Runs gain → 3-band EQ →
-    /// saturation per channel, then the linked-stereo lookahead limiter
-    /// across the frame.
+    /// (optional stereo width) → saturation per channel, then the
+    /// linked-stereo lookahead limiter across the frame. Width is inserted
+    /// between EQ and saturation so the M/S decode sees the equalized signal
+    /// but isn't fed through the non-linear stage twice; widening then
+    /// saturating preserves the chosen stereo image instead of having the
+    /// non-linearity smear it back toward mono.
     pub fn process_frame_inplace(&mut self, frame: &mut [f32]) {
         let channels = frame.len().min(self.states.len());
         if channels == 0 {
             return;
         }
+        // Pass 1: per-channel input gain + 3-band EQ.
         for ch in 0..channels {
             let state = &mut self.states[ch];
             let mut y = frame[ch] * self.coeffs.input_gain_lin;
             y = state.low.process(&self.coeffs.low, y);
             y = state.mid.process(&self.coeffs.mid, y);
             y = state.high.process(&self.coeffs.high, y);
-            if self.coeffs.saturation_amount > 0.0 {
-                let drive = 1.0 + self.coeffs.saturation_amount * 2.0;
-                y = (y * drive).tanh() / drive.tanh().max(1.0e-3);
-            }
             frame[ch] = y;
+        }
+        // Width: only meaningful for stereo. The `≈ 1` guard skips the M/S
+        // dance when the user hasn't touched the slider, keeping the
+        // mono-summed signal mathematically identical to the pre-Phase-12.2
+        // chain output for backward compatibility with existing tests.
+        if channels == 2 && (self.coeffs.width_side_scale - 1.0).abs() > 1.0e-5 {
+            apply_width_stereo(frame, self.coeffs.width_side_scale);
+        }
+        // Pass 2: per-channel saturation. Pulled out of pass 1 so width can
+        // sit between EQ and the non-linear stage.
+        if self.coeffs.saturation_amount > 0.0 {
+            let drive = 1.0 + self.coeffs.saturation_amount * 2.0;
+            let denom = drive.tanh().max(1.0e-3);
+            for ch in 0..channels {
+                frame[ch] = (frame[ch] * drive).tanh() / denom;
+            }
         }
         self.limiter.process_frame_inplace(frame);
         // Volume Match: applied AFTER the limiter so the limiter still sees
@@ -559,5 +614,238 @@ impl MasteringChain {
             *state = ChannelState::default();
         }
         self.limiter.reset();
+    }
+}
+
+// ============================================================================
+// Tests — Phase 12.2 stereo width / M-S processing.
+// `apply_width_stereo` is tested directly so the M/S math is pinned without
+// having to drive samples through the full limiter lookahead. A separate
+// integration test exercises the wiring inside `process_frame_inplace`.
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn approx_eq(a: f32, b: f32, tol: f32) -> bool {
+        (a - b).abs() <= tol
+    }
+
+    /// Width 0 collapses the stereo image to mono. For an L = sine, R = -sine
+    /// input (pure-side signal), this means both channels go to zero.
+    #[test]
+    fn apply_width_stereo_zero_collapses_to_mono() {
+        let mut frame = [0.5f32, -0.5];
+        apply_width_stereo(&mut frame, 0.0);
+        assert!(
+            approx_eq(frame[0], frame[1], 1e-6),
+            "width=0 must produce L == R, got L={} R={}",
+            frame[0],
+            frame[1],
+        );
+        // Mid of (0.5, -0.5) is 0, so the mono signal is zero.
+        assert!(
+            frame[0].abs() < 1e-6,
+            "L=-R input + width=0 should be silence, got {}",
+            frame[0]
+        );
+    }
+
+    /// Width 1.0 is exactly identity for any stereo input.
+    #[test]
+    fn apply_width_stereo_one_is_identity() {
+        let mut frame = [0.3f32, -0.7];
+        apply_width_stereo(&mut frame, 1.0);
+        assert!(approx_eq(frame[0], 0.3, 1e-6), "L drift at width=1: got {}", frame[0]);
+        assert!(approx_eq(frame[1], -0.7, 1e-6), "R drift at width=1: got {}", frame[1]);
+    }
+
+    /// Width 1.5 amplifies the side component. Hand-computed expected values
+    /// pinned: L=0.3, R=-0.7 → mid=-0.2, side=0.5; after 1.5× → side=0.75 →
+    /// L=0.55, R=-0.95.
+    #[test]
+    fn apply_width_stereo_one_point_five_amplifies_side() {
+        let mut frame = [0.3f32, -0.7];
+        apply_width_stereo(&mut frame, 1.5);
+        assert!(
+            approx_eq(frame[0], 0.55, 1e-6),
+            "L at width=1.5: expected 0.55, got {}",
+            frame[0]
+        );
+        assert!(
+            approx_eq(frame[1], -0.95, 1e-6),
+            "R at width=1.5: expected -0.95, got {}",
+            frame[1]
+        );
+    }
+
+    /// Mid-only signal (L = R) must be unchanged regardless of width.
+    /// Confirms width adjusts only the side component.
+    #[test]
+    fn apply_width_stereo_does_not_touch_pure_mid_signal() {
+        for &w in &[0.0_f32, 0.5, 1.0, 1.5, 2.0] {
+            let mut frame = [0.42f32, 0.42];
+            apply_width_stereo(&mut frame, w);
+            assert!(
+                approx_eq(frame[0], 0.42, 1e-6) && approx_eq(frame[1], 0.42, 1e-6),
+                "pure-mid signal changed under width={}, got L={} R={}",
+                w,
+                frame[0],
+                frame[1],
+            );
+        }
+    }
+
+    /// Mono frame (length 1) is a no-op — guard prevents indexing past the
+    /// frame's length.
+    #[test]
+    fn apply_width_stereo_no_op_on_mono_frame() {
+        let mut frame = [0.7f32];
+        apply_width_stereo(&mut frame, 0.0);
+        assert!(approx_eq(frame[0], 0.7, 1e-6));
+    }
+
+    /// ChainCoeffs maps `Advanced.width = None` to a neutral side scale of 1.0
+    /// — the slider being untouched must never alter the stereo image.
+    #[test]
+    fn chain_coeffs_default_width_is_neutral() {
+        let settings = MasteringSettings {
+            preset: Preset::Custom { id: "t".to_string() },
+            intensity: 0.0,
+            eq_low_db: 0.0,
+            eq_mid_db: 0.0,
+            eq_high_db: 0.0,
+            volume_match: false,
+            input_gain_db: 0.0,
+            output_gain_db: 0.0,
+            advanced: AdvancedSettings::default(),
+        };
+        let c = ChainCoeffs::from_settings(44_100, &settings);
+        assert!(
+            approx_eq(c.width_side_scale, 1.0, 1e-6),
+            "untouched Advanced.width should map to 1.0, got {}",
+            c.width_side_scale
+        );
+    }
+
+    /// Out-of-range user width values are clamped, not honored — a 5.0 user
+    /// value can't push the side past 2× (which is already the wide end of
+    /// what mastering plugins typically expose).
+    #[test]
+    fn chain_coeffs_clamps_width_into_safe_range() {
+        let base = MasteringSettings {
+            preset: Preset::Custom { id: "t".to_string() },
+            intensity: 0.0,
+            eq_low_db: 0.0,
+            eq_mid_db: 0.0,
+            eq_high_db: 0.0,
+            volume_match: false,
+            input_gain_db: 0.0,
+            output_gain_db: 0.0,
+            advanced: AdvancedSettings {
+                width: Some(5.0),
+                ..AdvancedSettings::default()
+            },
+        };
+        let c = ChainCoeffs::from_settings(44_100, &base);
+        assert!(
+            approx_eq(c.width_side_scale, 2.0, 1e-6),
+            "user width=5.0 should clamp to 2.0, got {}",
+            c.width_side_scale
+        );
+
+        let mut neg = base.clone();
+        neg.advanced.width = Some(-1.0);
+        let c_neg = ChainCoeffs::from_settings(44_100, &neg);
+        assert!(
+            approx_eq(c_neg.width_side_scale, 0.0, 1e-6),
+            "user width=-1.0 should clamp to 0.0, got {}",
+            c_neg.width_side_scale
+        );
+    }
+
+    /// End-to-end: drive a stereo (L=sine, R=-sine) signal through the chain
+    /// with width=0, neutral preset, neutral EQ, no saturation. After the
+    /// limiter lookahead, the output should be silent because the M/S
+    /// transform collapsed the pure-side signal to mono and mid is zero.
+    #[test]
+    fn process_frame_applies_width_inside_full_chain() {
+        let settings = MasteringSettings {
+            preset: Preset::Custom { id: "t".to_string() },
+            intensity: 0.0,
+            eq_low_db: 0.0,
+            eq_mid_db: 0.0,
+            eq_high_db: 0.0,
+            volume_match: false,
+            input_gain_db: 0.0,
+            output_gain_db: 0.0,
+            advanced: AdvancedSettings {
+                width: Some(0.0),
+                ..AdvancedSettings::default()
+            },
+        };
+        let mut chain = MasteringChain::new(44_100, 2, &settings);
+        let mut last = [0.0f32, 0.0];
+        for n in 0..2_048 {
+            // Pure-side signal: L = +sine, R = -sine.
+            let s = 0.4 * (n as f32 * 2.0 * std::f32::consts::PI * 1000.0 / 44_100.0).sin();
+            let mut frame = [s, -s];
+            chain.process_frame_inplace(&mut frame);
+            last = [frame[0], frame[1]];
+        }
+        // After the limiter's 3 ms lookahead (~132 frames) the chain's output
+        // should reflect the M/S collapse: both channels at silence.
+        assert!(
+            last[0].abs() < 1e-3,
+            "width=0 inside chain should silence pure-side signal, got L={}",
+            last[0]
+        );
+        assert!(
+            last[1].abs() < 1e-3,
+            "width=0 inside chain should silence pure-side signal, got R={}",
+            last[1]
+        );
+    }
+
+    /// Companion: with width=1.0 the same pure-side signal must NOT be
+    /// silenced — proves the silence in the prior test is from width=0, not
+    /// some upstream bug.
+    #[test]
+    fn process_frame_with_neutral_width_preserves_side_signal() {
+        let settings = MasteringSettings {
+            preset: Preset::Custom { id: "t".to_string() },
+            intensity: 0.0,
+            eq_low_db: 0.0,
+            eq_mid_db: 0.0,
+            eq_high_db: 0.0,
+            volume_match: false,
+            input_gain_db: 0.0,
+            output_gain_db: 0.0,
+            advanced: AdvancedSettings {
+                width: Some(1.0),
+                ..AdvancedSettings::default()
+            },
+        };
+        let mut chain = MasteringChain::new(44_100, 2, &settings);
+        let mut peak_l = 0.0f32;
+        let mut peak_r = 0.0f32;
+        for n in 0..2_048 {
+            let s = 0.4 * (n as f32 * 2.0 * std::f32::consts::PI * 1000.0 / 44_100.0).sin();
+            let mut frame = [s, -s];
+            chain.process_frame_inplace(&mut frame);
+            if frame[0].abs() > peak_l {
+                peak_l = frame[0].abs();
+            }
+            if frame[1].abs() > peak_r {
+                peak_r = frame[1].abs();
+            }
+        }
+        assert!(
+            peak_l > 0.1 && peak_r > 0.1,
+            "width=1 must pass the side signal through, got peak L={} R={}",
+            peak_l,
+            peak_r
+        );
     }
 }
