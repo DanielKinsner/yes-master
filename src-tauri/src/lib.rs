@@ -54,6 +54,8 @@ pub fn run() {
             audio::prepare_ab_preview,
             audio::prepare_waveform,
             audio::play_track,
+            audio::play_master,
+            audio::update_chain,
             audio::pause_playback,
             audio::resume_playback,
             audio::stop_playback,

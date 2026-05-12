@@ -134,6 +134,22 @@ export const api = {
       start_position_sec: startPositionSec ?? null,
     }),
 
+  playMaster: (
+    trackId: TrackId,
+    trackPath: string,
+    settings: MasteringSettings,
+    startPositionSec?: number,
+  ) =>
+    invoke<null>("play_master", {
+      track_id: trackId,
+      track_path: trackPath,
+      settings,
+      start_position_sec: startPositionSec ?? null,
+    }),
+
+  updateChain: (settings: MasteringSettings) =>
+    invoke<null>("update_chain", { settings }),
+
   pausePlayback: () => invoke<null>("pause_playback"),
   resumePlayback: () => invoke<null>("resume_playback"),
   stopPlayback: () => invoke<null>("stop_playback"),

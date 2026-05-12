@@ -77,7 +77,6 @@ export function useTrackMaster() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [lastExportReceipt, setLastExportReceipt] = useState<ExportReceipt | null>(null);
   const [loadedTrackId, setLoadedTrackId] = useState<TrackId | null>(null);
-  const [masterPathByTrack, setMasterPathByTrack] = useState<Record<TrackId, string>>({});
   const [loadedKindByTrack, setLoadedKindByTrack] = useState<Record<TrackId, PlaybackKindUI>>({});
   const [regionByTrack, setRegionByTrack] = useState<Record<TrackId, LoopRegion | null>>({});
 
@@ -129,13 +128,26 @@ export function useTrackMaster() {
 
   const updateSettings = useCallback(
     (id: TrackId, mutate: (prev: MasteringSettings) => MasteringSettings) => {
-      setSettingsMap((prev) => ({
-        ...prev,
-        [id]: mutate(prev[id] ?? DEFAULT_SETTINGS),
-      }));
+      let nextSettings: MasteringSettings | undefined;
+      setSettingsMap((prev) => {
+        nextSettings = mutate(prev[id] ?? DEFAULT_SETTINGS);
+        return { ...prev, [id]: nextSettings };
+      });
       markStale(id);
+      // Phase 5 live chain: if we're listening to the Mastered version of this
+      // track, push the fresh coeffs to the audio thread so changes are audible
+      // without re-rendering or re-loading.
+      if (
+        nextSettings &&
+        loadedTrackId === id &&
+        loadedKindByTrack[id] === "master"
+      ) {
+        api.updateChain(nextSettings).catch((err) => {
+          setError(String(err));
+        });
+      }
     },
-    [markStale],
+    [markStale, loadedTrackId, loadedKindByTrack],
   );
 
   const importFiles = useCallback(
@@ -253,11 +265,6 @@ export function useTrackMaster() {
         next.delete(id);
         return next;
       });
-      setMasterPathByTrack((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
       setLoadedKindByTrack((prev) => {
         const next = { ...prev };
         delete next[id];
@@ -314,52 +321,23 @@ export function useTrackMaster() {
     [selectedTrackId, updateSettings],
   );
 
-  const renderPreviewForSelected = useCallback(async (): Promise<string | null> => {
-    if (!selectedTrackId || !selectedTrack) return null;
-    const job = await api.renderTrackPreview(
-      selectedTrackId,
-      selectedTrack.path,
-      selectedSettings,
-    );
-    const path = job.output_paths[0] ?? null;
-    if (path) {
-      setMasterPathByTrack((prev) => ({ ...prev, [selectedTrackId]: path }));
-    }
-    markFresh(selectedTrackId);
-    return path;
-  }, [selectedTrackId, selectedTrack, selectedSettings, markFresh]);
-
   const updatePreview = useCallback(async () => {
-    if (!selectedTrackId) return;
+    if (!selectedTrackId || !selectedTrack) return;
     setIsRendering(true);
     setError(null);
     try {
-      const newPath = await renderPreviewForSelected();
-      // If the user is currently listening to the Mastered version, swap to the
-      // fresh render in-place so the new settings are audible without a manual reload.
-      if (
-        newPath &&
-        loadedTrackId === selectedTrackId &&
-        loadedKindByTrack[selectedTrackId] === "master"
-      ) {
-        try {
-          await api.playTrack(selectedTrackId, newPath, transport.currentTimeSec);
-        } catch (err) {
-          setError(String(err));
-        }
-      }
+      // Phase 5: Mastered playback runs through the live chain, so a "preview
+      // render" no longer needs to swap the audio source. The button still
+      // produces an offline WAV (useful when auditing the would-be master in
+      // another player) and clears the stale flag for export bookkeeping.
+      await api.renderTrackPreview(selectedTrackId, selectedTrack.path, selectedSettings);
+      markFresh(selectedTrackId);
     } catch (err) {
       setError(String(err));
     } finally {
       setIsRendering(false);
     }
-  }, [
-    selectedTrackId,
-    renderPreviewForSelected,
-    loadedTrackId,
-    loadedKindByTrack,
-    transport.currentTimeSec,
-  ]);
+  }, [selectedTrackId, selectedTrack, selectedSettings, markFresh]);
 
   const exportMaster = useCallback(async () => {
     if (!selectedTrackId || !selectedAnalysis) return;
@@ -394,31 +372,25 @@ export function useTrackMaster() {
     }
   }, [selectedTrackId, selectedAnalysis, selectedSettings, selectedTrack]);
 
-  const resolvePathForKind = useCallback(
-    async (kind: PlaybackKindUI): Promise<string | null> => {
-      if (!selectedTrack || !selectedTrackId) return null;
-      if (kind === "source") return selectedTrack.path;
-      const existing = masterPathByTrack[selectedTrackId];
-      if (existing && !staleSet.has(selectedTrackId)) return existing;
-      setIsRendering(true);
-      try {
-        return await renderPreviewForSelected();
-      } finally {
-        setIsRendering(false);
-      }
-    },
-    [selectedTrack, selectedTrackId, masterPathByTrack, staleSet, renderPreviewForSelected],
-  );
-
   const playWithKind = useCallback(
     async (kind: PlaybackKindUI, positionSec: number) => {
       if (!selectedTrack || !selectedTrackId) return;
-      const path = await resolvePathForKind(kind);
-      if (!path) return;
-      await api.playTrack(selectedTrackId, path, positionSec);
+      if (kind === "source") {
+        await api.playTrack(selectedTrackId, selectedTrack.path, positionSec);
+      } else {
+        // Phase 5: mastered playback streams the source through the live DSP
+        // chain — no offline render required, settings changes are audible
+        // immediately via updateChain.
+        await api.playMaster(
+          selectedTrackId,
+          selectedTrack.path,
+          selectedSettings,
+          positionSec,
+        );
+      }
       setLoadedKindByTrack((prev) => ({ ...prev, [selectedTrackId]: kind }));
     },
-    [selectedTrack, selectedTrackId, resolvePathForKind],
+    [selectedTrack, selectedTrackId, selectedSettings],
   );
 
   const togglePlay = useCallback(async () => {

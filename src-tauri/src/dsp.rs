@@ -218,24 +218,38 @@ impl MasteringChain {
         let last_state_idx = self.states.len() - 1;
         for frame in samples.chunks_mut(channels) {
             for (ch, sample) in frame.iter_mut().enumerate() {
-                let state = &mut self.states[ch.min(last_state_idx)];
-                let mut y = *sample * self.coeffs.input_gain_lin;
-                y = state.low.process(&self.coeffs.low, y);
-                y = state.mid.process(&self.coeffs.mid, y);
-                y = state.high.process(&self.coeffs.high, y);
-                if self.coeffs.saturation_amount > 0.0 {
-                    let drive = 1.0 + self.coeffs.saturation_amount * 2.0;
-                    y = (y * drive).tanh() / drive.tanh().max(1.0e-3);
-                }
-                // Soft-clip ceiling (Phase 11 will replace with a true-peak limiter)
-                let ceiling = self.coeffs.ceiling_lin;
-                if y.abs() > ceiling {
-                    let over = y.abs() - ceiling;
-                    let shaped = ceiling + over.tanh() * 0.05;
-                    y = y.signum() * shaped;
-                }
-                *sample = y;
+                *sample = self.process_sample(*sample, ch.min(last_state_idx));
             }
+        }
+    }
+
+    pub fn process_sample(&mut self, sample: f32, channel: usize) -> f32 {
+        let idx = if self.states.is_empty() {
+            return sample;
+        } else {
+            channel.min(self.states.len() - 1)
+        };
+        let state = &mut self.states[idx];
+        let mut y = sample * self.coeffs.input_gain_lin;
+        y = state.low.process(&self.coeffs.low, y);
+        y = state.mid.process(&self.coeffs.mid, y);
+        y = state.high.process(&self.coeffs.high, y);
+        if self.coeffs.saturation_amount > 0.0 {
+            let drive = 1.0 + self.coeffs.saturation_amount * 2.0;
+            y = (y * drive).tanh() / drive.tanh().max(1.0e-3);
+        }
+        let ceiling = self.coeffs.ceiling_lin;
+        if y.abs() > ceiling {
+            let over = y.abs() - ceiling;
+            let shaped = ceiling + over.tanh() * 0.05;
+            y = y.signum() * shaped;
+        }
+        y
+    }
+
+    pub fn reset_states(&mut self) {
+        for state in self.states.iter_mut() {
+            *state = ChannelState::default();
         }
     }
 }

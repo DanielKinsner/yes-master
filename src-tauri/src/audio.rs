@@ -100,6 +100,34 @@ pub async fn play_track(
 }
 
 #[tauri::command]
+pub async fn play_master(
+    track_id: TrackId,
+    track_path: String,
+    settings: MasteringSettings,
+    start_position_sec: Option<f64>,
+    player: tauri::State<'_, Arc<AudioPlayer>>,
+) -> CommandResult<()> {
+    if track_path.is_empty() {
+        return Err(CommandError::InvalidPath("empty path".to_string()));
+    }
+    let path = Path::new(&track_path);
+    if crate::files::has_parent_dir_component(path) {
+        return Err(CommandError::InvalidPath(format!(
+            "path traversal not allowed: {track_path}"
+        )));
+    }
+    player.play_master(track_id, path, settings, start_position_sec.unwrap_or(0.0))
+}
+
+#[tauri::command]
+pub async fn update_chain(
+    settings: MasteringSettings,
+    player: tauri::State<'_, Arc<AudioPlayer>>,
+) -> CommandResult<()> {
+    player.update_chain(settings)
+}
+
+#[tauri::command]
 pub async fn pause_playback(
     player: tauri::State<'_, Arc<AudioPlayer>>,
 ) -> CommandResult<()> {
@@ -379,6 +407,16 @@ enum AudioCommand {
         start_position_sec: f64,
         reply: Sender<Result<(), String>>,
     },
+    PlayMaster {
+        track_id: TrackId,
+        path: PathBuf,
+        settings: MasteringSettings,
+        start_position_sec: f64,
+        reply: Sender<Result<(), String>>,
+    },
+    UpdateChain {
+        settings: MasteringSettings,
+    },
     Pause,
     Resume,
     Stop,
@@ -439,6 +477,36 @@ impl AudioPlayer {
                 "audio thread reply timeout".to_string(),
             )),
         }
+    }
+
+    pub fn play_master(
+        &self,
+        track_id: TrackId,
+        path: &Path,
+        settings: MasteringSettings,
+        start_position_sec: f64,
+    ) -> CommandResult<()> {
+        let (reply_tx, reply_rx) = mpsc::channel();
+        self.send(AudioCommand::PlayMaster {
+            track_id,
+            path: path.to_path_buf(),
+            settings,
+            start_position_sec: start_position_sec.max(0.0),
+            reply: reply_tx,
+        })
+        .map_err(CommandError::Other)?;
+        match reply_rx.recv_timeout(Duration::from_secs(15)) {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(e)) => Err(CommandError::Other(e)),
+            Err(_) => Err(CommandError::Other(
+                "audio thread reply timeout".to_string(),
+            )),
+        }
+    }
+
+    pub fn update_chain(&self, settings: MasteringSettings) -> CommandResult<()> {
+        self.send(AudioCommand::UpdateChain { settings })
+            .map_err(CommandError::Other)
     }
 
     pub fn pause(&self) {
@@ -510,6 +578,8 @@ struct AudioThreadState {
     sink: rodio::Sink,
     current_track: Option<TrackId>,
     loop_region: Option<LoopRegion>,
+    live_coeffs_tx: Option<Sender<crate::dsp::ChainCoeffs>>,
+    live_sample_rate: u32,
 }
 
 fn audio_thread(rx: mpsc::Receiver<AudioCommand>, snapshot: Arc<RwLock<PlaybackSnapshot>>) {
@@ -524,6 +594,26 @@ fn audio_thread(rx: mpsc::Receiver<AudioCommand>, snapshot: Arc<RwLock<PlaybackS
             }) => {
                 let outcome = handle_play(&mut state, track_id, &path, start_position_sec);
                 let _ = reply.send(outcome);
+            }
+            Ok(AudioCommand::PlayMaster {
+                track_id,
+                path,
+                settings,
+                start_position_sec,
+                reply,
+            }) => {
+                let outcome =
+                    handle_play_master(&mut state, track_id, &path, &settings, start_position_sec);
+                let _ = reply.send(outcome);
+            }
+            Ok(AudioCommand::UpdateChain { settings }) => {
+                if let Some(s) = state.as_ref() {
+                    if let Some(tx) = s.live_coeffs_tx.as_ref() {
+                        let coeffs =
+                            crate::dsp::ChainCoeffs::from_settings(s.live_sample_rate, &settings);
+                        let _ = tx.send(coeffs);
+                    }
+                }
             }
             Ok(AudioCommand::Pause) => {
                 if let Some(s) = state.as_ref() {
@@ -610,6 +700,8 @@ fn handle_play(
             sink,
             current_track: None,
             loop_region: None,
+            live_coeffs_tx: None,
+            live_sample_rate: 44_100,
         });
     }
     let s = state.as_mut().expect("state just inserted");
@@ -623,5 +715,147 @@ fn handle_play(
     new_sink.play();
     s.sink = new_sink;
     s.current_track = Some(track_id);
+    s.live_coeffs_tx = None;
     Ok(())
+}
+
+fn handle_play_master(
+    state: &mut Option<AudioThreadState>,
+    track_id: TrackId,
+    path: &Path,
+    settings: &MasteringSettings,
+    start_position_sec: f64,
+) -> Result<(), String> {
+    let pcm = crate::audio::decode_full(path).map_err(|e| format!("{e}"))?;
+    if pcm.samples.is_empty() {
+        return Err("no samples decoded for master playback".to_string());
+    }
+
+    if state.is_none() {
+        let (stream, handle) = rodio::OutputStream::try_default()
+            .map_err(|e| format!("audio device unavailable: {e}"))?;
+        let sink = rodio::Sink::try_new(&handle).map_err(|e| e.to_string())?;
+        *state = Some(AudioThreadState {
+            _stream: stream,
+            handle,
+            sink,
+            current_track: None,
+            loop_region: None,
+            live_coeffs_tx: None,
+            live_sample_rate: pcm.sample_rate,
+        });
+    }
+    let s = state.as_mut().expect("state just inserted");
+    s.sink.stop();
+
+    let (coeffs_tx, coeffs_rx) = mpsc::channel::<crate::dsp::ChainCoeffs>();
+    let chain = crate::dsp::MasteringChain::new(pcm.sample_rate, pcm.channels as usize, settings);
+    let mastering_source = MasteringSource::new(pcm.samples, pcm.channels, pcm.sample_rate, chain, coeffs_rx);
+
+    let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
+    new_sink.append(mastering_source);
+    if start_position_sec > 0.0 {
+        let _ = new_sink.try_seek(Duration::from_secs_f64(start_position_sec));
+    }
+    new_sink.play();
+    s.sink = new_sink;
+    s.current_track = Some(track_id);
+    s.live_coeffs_tx = Some(coeffs_tx);
+    s.live_sample_rate = pcm.sample_rate;
+    Ok(())
+}
+
+// ============================================================================
+// MasteringSource — a rodio Source that streams interleaved PCM through the
+// DSP chain. Coefficient updates flow in via mpsc; samples picked up at most
+// every COEFFS_CHECK_INTERVAL samples (~6 ms at 44.1 kHz / 2ch).
+// ============================================================================
+
+const COEFFS_CHECK_INTERVAL: usize = 256;
+
+struct MasteringSource {
+    samples: Vec<f32>,
+    position: usize,
+    channels: u16,
+    sample_rate: u32,
+    chain: crate::dsp::MasteringChain,
+    coeffs_rx: mpsc::Receiver<crate::dsp::ChainCoeffs>,
+    samples_since_check: usize,
+}
+
+impl MasteringSource {
+    fn new(
+        samples: Vec<f32>,
+        channels: u16,
+        sample_rate: u32,
+        chain: crate::dsp::MasteringChain,
+        coeffs_rx: mpsc::Receiver<crate::dsp::ChainCoeffs>,
+    ) -> Self {
+        Self {
+            samples,
+            position: 0,
+            channels,
+            sample_rate,
+            chain,
+            coeffs_rx,
+            samples_since_check: 0,
+        }
+    }
+}
+
+impl Iterator for MasteringSource {
+    type Item = f32;
+
+    fn next(&mut self) -> Option<f32> {
+        if self.position >= self.samples.len() {
+            return None;
+        }
+        self.samples_since_check += 1;
+        if self.samples_since_check >= COEFFS_CHECK_INTERVAL {
+            self.samples_since_check = 0;
+            while let Ok(new_coeffs) = self.coeffs_rx.try_recv() {
+                self.chain.coeffs = new_coeffs;
+            }
+        }
+        let channels = self.channels.max(1) as usize;
+        let ch = self.position % channels;
+        let raw = self.samples[self.position];
+        self.position += 1;
+        Some(self.chain.process_sample(raw, ch))
+    }
+}
+
+impl rodio::Source for MasteringSource {
+    fn current_frame_len(&self) -> Option<usize> {
+        None
+    }
+
+    fn channels(&self) -> u16 {
+        self.channels.max(1)
+    }
+
+    fn sample_rate(&self) -> u32 {
+        self.sample_rate
+    }
+
+    fn total_duration(&self) -> Option<Duration> {
+        let total_frames = self.samples.len() / self.channels.max(1) as usize;
+        if self.sample_rate == 0 {
+            None
+        } else {
+            Some(Duration::from_secs_f64(
+                total_frames as f64 / self.sample_rate as f64,
+            ))
+        }
+    }
+
+    fn try_seek(&mut self, pos: Duration) -> Result<(), rodio::source::SeekError> {
+        let channels = self.channels.max(1) as usize;
+        let target_frame = (pos.as_secs_f64() * self.sample_rate as f64) as usize;
+        let target_sample = target_frame.saturating_mul(channels);
+        self.position = target_sample.min(self.samples.len());
+        // Drop accumulated biquad state to avoid clicks across discontinuities.
+        self.chain.reset_states();
+        Ok(())
+    }
 }

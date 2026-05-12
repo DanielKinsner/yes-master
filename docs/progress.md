@@ -456,3 +456,51 @@ What failed or remains partial:
 Next recommended slice:
 
 Phase 5 (real-time audition engine) or Phase 11 (DSP audit — real compressor + lookahead limiter + sample-accurate loop). Phase 5 is the bigger product unlock (controls audible without "Update preview"); Phase 11 is the bigger quality unlock (Loud preset actually compresses, limiter is true-peak-safe). Dan's call. If he wants the next session to be tight, Phase 4.4 (small): wire `tauri-plugin-shell` so `open_output` actually opens the export folder when the receipt modal is clicked.
+
+## 2026-05-11 — Phase 5: real-time audition engine
+
+Goal:
+
+Toggle to Mastered while playing and hear the DSP chain on the source live. Move intensity, EQ bands, change presets — all audible immediately, without rendering a preview file first. No more "Update preview to hear it."
+
+What changed:
+
+Backend:
+
+- `dsp::MasteringChain::process_sample(sample, channel) -> f32` extracted from `process_interleaved` so the chain can run per-sample in a streaming context. `process_interleaved` now delegates to it.
+- `dsp::MasteringChain::reset_states()` zeroes biquad memory across all channels (called on seek to avoid clicks at the seek discontinuity).
+- `audio::MasteringSource` — a `rodio::Source` that owns an interleaved `Vec<f32>` PCM buffer, position cursor, mastering chain state, and an `mpsc::Receiver<ChainCoeffs>` for live parameter updates. Every 256 samples (~3 ms stereo @ 44.1 kHz) it drains the channel and swaps in fresh coefficients. Implements `Iterator<Item = f32>` and `rodio::Source::{channels, sample_rate, total_duration, try_seek}`. `try_seek` updates the position cursor and resets filter state.
+- `AudioCommand::PlayMaster { track_id, path, settings, start_position_sec, reply }` — audio thread decodes the source PCM (no offline render), builds `MasteringChain` + `MasteringSource`, appends to a fresh `Sink`, seeks if needed, stores the chain's coefficient `Sender` in `AudioThreadState.live_coeffs_tx` for later updates.
+- `AudioCommand::UpdateChain { settings }` — audio thread rebuilds `ChainCoeffs::from_settings` using the live sample rate and pushes them through `live_coeffs_tx`. Lock-free from the audio callback's perspective.
+- New Tauri commands: `play_master(track_id, track_path, settings, start_position_sec)` and `update_chain(settings)`.
+- `AudioPlayer::play_master` and `AudioPlayer::update_chain` methods.
+- `AudioThreadState` extended with `live_coeffs_tx: Option<Sender<ChainCoeffs>>` and `live_sample_rate: u32`. Cleared when source playback resumes (no live chain on Original side).
+
+Frontend:
+
+- `api.ts`: `playMaster(trackId, trackPath, settings, startPositionSec?)` and `updateChain(settings)`.
+- `useTrackMaster.ts`:
+  - `playWithKind("master", pos)` now calls `api.playMaster` with the source path + current settings instead of rendering a preview WAV first. The DSP chain lives in the audio thread.
+  - `updateSettings` (the central state-change funnel for preset/intensity/EQ/advanced) now also pushes the fresh settings to the audio thread via `api.updateChain` when the loaded kind for that track is `"master"`. So any slider drag is audible at the next coefficient-check window (~3–6 ms).
+  - Removed the dead `masterPathByTrack` state — Phase 4.2's render-and-swap pattern is replaced by live playback, so cached preview paths are no longer needed for audition. The Update preview button still renders an offline WAV (useful when auditing the would-be export in another player and for clearing the stale flag for export bookkeeping).
+
+Verification:
+
+- `npm run build`: clean. Bundle 217 KB (68 KB gzipped).
+- `cargo build`: clean.
+- `cargo test` (from `src-tauri/`): 16/16 still pass in 28.73s. No regressions; the existing offline-render and metering tests still cover the offline DSP, while real-time tests would require a virtual audio device.
+- `npm run tauri dev`: deferred (manual — toggle to Mastered, drag the intensity slider, expect the sound to change immediately).
+
+Real-audio fixture used: same MP3 — the live chain consumes whatever's decoded.
+
+What failed or remains partial:
+
+- Coefficient updates have a ~3–6 ms latency from the 256-sample check interval. Below human "instant" threshold (~30 ms). Phase 11 can reduce further with lock-free atomic coefficient swaps if needed.
+- Preset changes rebuild the entire chain's coefficients, which means biquad filter states carry over with new coefficients — the EBU R128 / industry-standard fix is to crossfade between old and new chains. Currently you may hear brief transients on preset changes. Acceptable for Phase 5 first cut.
+- The "preview stale" indicator still pulses when settings change, because we still mark stale for export bookkeeping. With live playback this is misleading — the audio is fresh, only the exported WAV would be. Phase 5.1 can rename/recontextualize the indicator ("Export will reflect current settings" vs the previous "Preview is stale").
+- No fade-out on Source/Master swap — the audio thread does a hard `Sink::stop` then `Sink::append`. There's a brief click at the swap; should be ≤ 20 ms.
+- Loop region works for Source playback (rodio decoder's `try_seek` is reliable) and for `MasteringSource` (custom `try_seek` impl with state reset). Verified at compile time; needs a manual ear test.
+
+Next recommended slice:
+
+Phase 4.4 (small) — wire `tauri-plugin-shell` so `exports::open_output` actually opens Explorer / Finder pointed at the export folder, and make the receipt modal path clickable. Then Phase 11 (DSP audit — real compressor with attack/release, lookahead true-peak limiter, fade-out on Sink swaps, crossfade on preset changes). Or Phase 8 if Dan wants Album Master scaffolding next.
