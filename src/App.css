@@ -898,6 +898,32 @@ button.primary:disabled {
   text-align: right;
 }
 
+.slider-number {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  color: var(--text-1);
+  background: var(--bg-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0.2rem 0.4rem;
+  width: 100%;
+  text-align: right;
+  font-family: inherit;
+  -moz-appearance: textfield;
+}
+
+.slider-number::-webkit-outer-spin-button,
+.slider-number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.slider-number:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: 0;
+  border-color: var(--accent);
+}
+
 /* Stale bar */
 .stale-bar {
   display: flex;

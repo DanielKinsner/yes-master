@@ -1,4 +1,6 @@
 import {
+  useEffect,
+  useRef,
   useState,
   type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
@@ -1021,6 +1023,32 @@ function Slider({
       onChange(defaultValue);
     }
   };
+  // Phase 12.1: editable numeric input mirrors the slider. We keep a local
+  // string while editing so the user can type "1." or "-" mid-edit without
+  // the parent state forcing a re-format. On commit (blur / Enter), parse
+  // and clamp. Escape cancels. Sync local state to value when value changes
+  // externally and the input is NOT focused.
+  const [draft, setDraft] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (
+      draft !== null &&
+      inputRef.current &&
+      document.activeElement !== inputRef.current
+    ) {
+      setDraft(null);
+    }
+  }, [value, draft]);
+  const commitDraft = (raw: string) => {
+    const parsed = parseFloat(raw);
+    if (!Number.isFinite(parsed)) {
+      setDraft(null);
+      return;
+    }
+    const clamped = Math.max(min, Math.min(max, parsed));
+    if (clamped !== value) onChange(clamped);
+    setDraft(null);
+  };
   return (
     <div className="slider-row">
       <label className="slider-label">{label}</label>
@@ -1039,18 +1067,32 @@ function Slider({
             : undefined
         }
       />
-      <span
-        className="slider-value"
+      <input
+        ref={inputRef}
+        type="number"
+        className="slider-number"
+        min={min}
+        max={max}
+        step={step}
+        value={draft !== null ? draft : value}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={(e) => commitDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            commitDraft((e.target as HTMLInputElement).value);
+            (e.target as HTMLInputElement).blur();
+          } else if (e.key === "Escape") {
+            setDraft(null);
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
         onDoubleClick={handleReset}
-        style={defaultValue !== undefined ? { cursor: "pointer" } : undefined}
         title={
           defaultValue !== undefined
-            ? `Double-click to reset to ${format(defaultValue)}`
-            : undefined
+            ? `Type a value or double-click to reset to ${format(defaultValue)}`
+            : "Type a value to set precisely"
         }
-      >
-        {format(value)}
-      </span>
+      />
     </div>
   );
 }
