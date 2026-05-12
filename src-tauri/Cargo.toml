@@ -1,0 +1,23 @@
+[package]
+name = "album-mastering-studio"
+version = "0.0.0"
+description = "Album Mastering Studio (Claude build)"
+authors = ["Daniel Kinsner"]
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "album_mastering_studio_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

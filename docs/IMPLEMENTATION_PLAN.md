@@ -1,0 +1,603 @@
+# Album Mastering Studio Implementation Plan (Claude Build)
+
+Last updated: 2026-05-11
+
+This is the execution map for the Claude-build repo of Album Mastering Studio (`album-mastering-studio-claude-build`). `docs/PRODUCT.md` is the product canon; this file is the living implementation plan. If anything below conflicts with `docs/PRODUCT.md`, treat `PRODUCT.md` as authoritative and flag the drift.
+
+This repo is a clean, independent parallel build. A sibling Codex/Tauri/Python repo has working engine, Tauri shell, sidecar, reports, and smoke tests. That work proves the product is buildable but no Codex source is imported here unless the user explicitly asks. The plan below assumes a zero-state repo and is written so a long-running Claude session can pick up at any phase without depending on Codex artifacts.
+
+## Current Strategic Direction
+
+Build a top-tier private Windows desktop mastering app around two modes:
+
+1. Track Master.
+2. Album Master.
+
+Track Master ships first as the core vertical slice, but Album Master is a required near-term path because the user's personal project needs full-album mastering. Track Master is the first proof of the shared foundation, not the final destination.
+
+The product must support real-time or near-real-time audition before Track Master can be called release-candidate. Non-real-time preview rendering is allowed only as temporary scaffolding while the real-time path is being built and proven.
+
+## Non-Negotiable Product Gates
+
+Track Master cannot be considered top-tier until it has:
+
+- Drag/drop audio import.
+- Analyze.
+- Safe Universal settings.
+- Large waveform.
+- Waveform zoom.
+- Region selection.
+- Loop selected region.
+- Original/Mastered toggle at the same playhead.
+- Optional Volume Match, off by default.
+- Functional preset tiles.
+- Functional Intensity macro.
+- Functional Low/Mid/High EQ.
+- Whole-track mastered preview.
+- Stale preview state when controls change.
+- Real-time or near-real-time audition for basic ear-facing controls.
+- One obvious Export Master action.
+- Advisory post-render quality checks.
+- Non-overwriting output.
+- Autosave.
+- Undo/redo for non-destructive state.
+
+Album Master cannot be considered top-tier until it has:
+
+- Track ordering.
+- Analyze.
+- Global album intent plus per-track adaptation.
+- Track Roles / Story step after analysis.
+- Editable role/character decisions.
+- Individual masters.
+- Continuous album WAV by default.
+- Preserved source boundaries by default.
+- Gap/crossfade/boundary primitives.
+- Generated transitions off by default.
+- Cue/split data when appropriate.
+- Album dashboard/report.
+- Album-level quality checks.
+
+## Workstream Overview
+
+1. Phase 0  — Workspace scaffold and architecture ADR.
+2. Phase 1  — Rust/Tauri typed app foundation.
+3. Phase 2  — Track Master frontend skeleton.
+4. Phase 3  — Source playback, waveform, and A/B foundation.
+5. Phase 4  — Offline universal mastering chain and stale-preview state.
+6. Phase 5  — Real-time audition engine.
+7. Phase 6  — Track Master export and quality checks.
+8. Phase 7  — Presets, custom settings, autosave, undo.
+9. Phase 8  — Album Master mode (sequence, intent, per-track adaptation).
+10. Phase 9  — Album Story / Roles step.
+11. Phase 10 — Transition primitives.
+12. Phase 11 — DSP audit and modernization.
+13. Phase 12 — Private real-audio fixture loop.
+14. Phase 13 — Performance budgets.
+15. Phase 14 — Release and installer hardening.
+
+These streams can overlap, but every phase must end with a no-victory-lap check against `docs/PRODUCT.md` and an entry in `docs/progress.md`.
+
+## Phase 0: Workspace Scaffold And Architecture ADR
+
+Goal: take this repo from zero-state to a buildable Tauri app shell, with the architecture decision recorded.
+
+Tasks:
+
+- Write `docs/adr/0001-tauri-rust-stack.md`. Compare Tauri+Rust audio, JUCE, Rust-native UI/audio, and hybrid shells against `docs/PRODUCT.md` gates: real-time audition, export parity, Windows packaging, offline rendering quality, file safety, testability. Recommend Tauri 2.x shell + Rust audio engine (`cpal` for output, `symphonia` for decode, `hound` for WAV write, hand-rolled DSP initially). Note JUCE and Rust-native UI as reversible fallbacks if the Phase 5 real-time spike misses latency targets. List risks and what stays reversible.
+- Scaffold workspace structure:
+  - Root: `package.json`, `vite.config.ts`, `tsconfig.json`, `index.html`.
+  - Frontend in `src/`: React + TypeScript + Vite, with a placeholder `App.tsx` and a single CSS file.
+  - Tauri app in `src-tauri/`: `Cargo.toml`, `tauri.conf.json`, `build.rs`, `src/main.rs`, `src/lib.rs`, empty `audio/`, `engine/`, `files/`, `project/`, `exports/`, `jobs/`, `settings/` module folders.
+  - `docs/adr/` directory containing the ADR above.
+  - `docs/progress.md` seeded with the Phase 0 session entry.
+- Confirm baseline commands work on a clean machine.
+
+Baseline verification commands:
+
+```powershell
+npm install
+npm run tauri dev        # opens a placeholder window
+cd src-tauri
+cargo check
+cargo test               # zero tests, must pass
+```
+
+No-victory-lap check:
+
+- An empty Tauri window is not the product; it is just a baseline.
+- The architecture choice is reversible per the ADR; do not act as if Tauri-forever has been decided.
+
+## Phase 1: Rust/Tauri Typed App Foundation
+
+Goal: make the backend speak product concepts, not raw shell strings, before any DSP work.
+
+Desired modules in `src-tauri/src/`:
+
+- `engine`: DSP entry points; in-process Rust initially. External sidecar deferred.
+- `jobs`: analyze/render job queue with progress and cancel.
+- `files`: import validation, source metadata, path safety, format-neutral handling.
+- `project`: autosave, project files, recent sessions.
+- `settings`: user presets and settings chains.
+- `audio`: playback, A/B preview state, waveform prep.
+- `exports`: output versioning and quality-check orchestration.
+
+Typed commands to introduce as Tauri `#[tauri::command]` handlers (stubbed where DSP is not ready, returning typed errors):
+
+- `analyze_tracks`
+- `render_track_preview`
+- `render_track_master`
+- `render_album_master`
+- `prepare_source_playback`
+- `prepare_master_playback`
+- `prepare_ab_preview`
+- `prepare_waveform`
+- `run_export_checks`
+- `save_project`
+- `autosave_session`
+- `load_recent_session`
+- `save_user_preset`
+- `list_user_presets`
+- `open_output`
+
+Rules:
+
+- Define shared types in a `types` module and surface them to the frontend via TS bindings. Prefer `specta` (or equivalent) for codegen; hand-written bindings acceptable for the first slice.
+- The frontend must never construct CLI argument arrays. Only typed command calls.
+- Stubs must return realistic shapes so frontend phases can proceed without DSP being ready.
+- Path safety: refuse to write into directories the user did not authorize; reject `..` traversal in any user-supplied path.
+
+Verification:
+
+- Each command is callable from the frontend via `@tauri-apps/api`.
+- Schema/contract tests in `src-tauri/tests/` cover at least `analyze_tracks` and `prepare_waveform` response shapes.
+- `npm run tauri dev` still launches; `cargo test` passes.
+
+## Phase 2: Track Master Frontend Skeleton
+
+Goal: build the reference-style Track Master workstation as a UI shell, fed by stub backend data.
+
+Required screen structure:
+
+- Left rail of imported songs.
+- Main waveform/audition area (placeholder canvas at this phase).
+- Play/pause/seek controls.
+- Loop control.
+- Original/Mastered toggle.
+- Optional Volume Match toggle, off by default.
+- Preset tile row (Universal, Clarity, Tape, Spatial, Oomph, Warmth, Punch, Loud).
+- Intensity macro.
+- Low/Mid/High EQ.
+- Preview-stale indicator slot.
+- Export Master button.
+- Advanced section, collapsed by default.
+
+State behavior at this phase:
+
+- Drag/drop adds tracks via `files.import` typed command.
+- Analyze button calls `analyze_tracks` stub and renders dummy values.
+- Export button is disabled until analyze has run.
+- Changing any control marks the mastered preview stale.
+
+No-victory-lap check:
+
+- A pretty screen is not enough.
+- Preset tiles must connect to typed state, even if the audio chain is not yet wired.
+- The stale-preview indicator must change when controls change.
+- The UI must not appear to play a master it cannot actually produce.
+
+## Phase 3: Source Playback, Waveform, A/B Foundation
+
+Goal: get real source audio playing and rendering as a waveform inside the Tauri app.
+
+Required:
+
+- Decode imported audio via `symphonia` (WAV, AIFF, FLAC, MP3, M4A/AAC, OGG, Opus).
+- Render a downsampled waveform overview (multi-resolution peak cache) for the imported track.
+- Cache decoded PCM and peak data per source in the Tauri app data directory.
+- Source playback through `cpal` on a Rust audio thread; transport state surfaced to the frontend.
+- Waveform zoom.
+- Region selection by dragging.
+- Region loop.
+- Seek-on-click.
+- Original/Mastered toggle as a state flag (initially toggles between source and a placeholder identity-master copy; real mastered playback arrives in Phase 4/5).
+- Volume Match optional/off by default.
+- Playhead preservation across A/B and Volume Match toggles.
+
+Native audio requirement:
+
+- Real-time playback uses the Rust audio thread, not browser audio.
+- Web Audio is acceptable only for scaffolding visualization, not as the playback path.
+
+Verification:
+
+- A real WAV imports, renders a waveform, and plays without dropouts on the dev machine.
+- Lossy formats (MP3, M4A, OGG, Opus, AAC) decode and play.
+- Region loop holds the selected region cleanly without clicks.
+- Source file is never modified.
+- `cargo test` covers waveform peak generation and decode-error handling.
+
+## Phase 4: Offline Universal Mastering Chain + Stale Preview
+
+Goal: produce a first credible mastered preview using an offline-rendered output, with safe-by-default behavior. This is temporary scaffolding for Phase 5's real-time engine; quality has to be honest, not toy-grade.
+
+Initial chain (subject to DSP audit in Phase 11):
+
+- Input gain.
+- Low/Mid/High EQ; choose filter type (minimum-phase vs. linear-phase) per research docs.
+- Optional soft saturation/glue (Tape preset only at this phase).
+- Compression/density stage (Universal default: very light).
+- Brick-wall limiter with true-peak detection and oversampling; document any simplification.
+- Output ceiling.
+
+Universal-first behavior:
+
+- Analyze computes LUFS, true-peak, dynamic range, basic spectral balance, transient density.
+- Safe Universal settings derive from analysis, not from genre guesses.
+- Preset tiles can produce different chain settings, but Universal remains the confident default.
+- "Apply to all" is supported but not required.
+
+Stale-preview behavior:
+
+- Any control change marks the preview stale.
+- The UI visibly indicates stale state.
+- A new offline render is triggered (manual button or auto-debounced); the master is audible only once the render completes.
+
+Verification:
+
+- Universal preset improves or at least does not obviously harm a `clean-full-mix` fixture, judged by ear and by post-render metering.
+- Preset changes produce expected audible/measurable direction (e.g. Tape adds warmth; Punch raises transient impact).
+- LUFS, true-peak, and dynamic range numbers reported after a render match an independent measurement on a known reference tone.
+
+## Phase 5: Real-Time Audition Engine
+
+Goal: prove the app can support responsive controls by ear. Mandatory for release-candidate Track Master.
+
+Targets:
+
+- Gain, light EQ, width, and Volume Match changes audible in under ~150 ms.
+- Heavier macro changes audible in under ~500 ms.
+- No clicks, zipper noise, glitches, or unstable playback.
+- Preview and export must match in audible intent.
+
+Approach:
+
+- Primary: the Rust audio thread runs a real-time chain that mirrors the offline DSP.
+- Parameter smoothing for all audible controls.
+- Block-based DSP with low-latency buffer sizes appropriate for the host.
+- Hot-swap of preset/parameter state without restarting the audio thread.
+
+Controls to prove first:
+
+- Gain.
+- 3-band EQ.
+- Width.
+- Volume Match.
+- Basic Intensity subset.
+
+Then extend to:
+
+- Full Intensity macro.
+- Preset parity (real-time matches offline export).
+- Advanced controls.
+
+Deliverable:
+
+- `docs/adr/0002-realtime-audition.md` capturing:
+  - Latency measurements.
+  - CPU/memory observations.
+  - Fidelity/export-parity risks.
+  - Packaging implications.
+  - Decision: stay with Rust real-time, add a JUCE/native lane, or supplement with a Python offline R&D lane.
+  - What is temporary vs final.
+
+No-victory-lap check:
+
+- Basic real-time controls are a milestone, not the finish line.
+- Do not stop after one slider works.
+- Non-real-time preview is temporary scaffolding, not final quality.
+
+## Phase 6: Track Master Export And Quality Checks
+
+Goal: make export safe, obvious, and honest.
+
+Required:
+
+- One Export Master button.
+- Output folder: timestamped or versioned, never overwriting prior renders by default.
+- Default delivery: 24-bit WAV; 16-bit dithered WAV available; sample-rate-converted variants optional.
+- Post-render checks run automatically.
+- Advisory warnings; Export Anyway allowed when the issue is non-fatal.
+- Compact receipt or report with output paths.
+- Open output action.
+
+Quality checks:
+
+- True-peak / ceiling risk.
+- Clipping risk.
+- Extremely loud/flat warning.
+- Codec preview risk when enabled.
+- Non-finite-value guards on analysis.
+- Source/master sanity comparisons (energy delta, LUFS delta, spectral delta sanity).
+
+Quality language:
+
+- Plain language.
+- No scare warnings for MP3/lossy source format alone.
+- Warnings based on measured problems.
+
+Verification:
+
+- Export never modifies the source file.
+- Export never overwrites a prior render by default.
+- Risky settings produce advisory checks.
+- Normal settings can pass quietly.
+
+## Phase 7: Presets, Custom Settings, Autosave, Undo
+
+Goal: make experimentation safe and reusable.
+
+Required:
+
+- Custom user presets / settings chains.
+- Shared presets across Track Master and Album Master, with mode-specific fields.
+- Autosave session state (Tauri app data dir, JSON).
+- Explicit Save Project action.
+- Undo/redo for non-destructive state.
+
+Undo/redo coverage:
+
+- Presets.
+- Intensity.
+- EQ.
+- Advanced tuning.
+- Track order.
+- Album roles.
+- Transition settings.
+- Metadata.
+
+Shortcuts:
+
+- Ctrl+Z undo.
+- Ctrl+Shift+Z redo.
+
+No-victory-lap check:
+
+- Rendered files do not need undo.
+- Source files are never changed.
+- Autosave must not corrupt explicit project files.
+
+## Phase 8: Album Master Mode
+
+Goal: build the album workflow on the Track Master foundation.
+
+Required:
+
+- Album Master mode toggle.
+- Track reorder.
+- Analyze sequence as a whole, in addition to per-track analysis.
+- Global album intent (master settings shared across the album).
+- Per-track adaptation (each track can deviate from the album intent where needed).
+- Export Album action.
+- Individual masters.
+- Continuous album WAV by default.
+- Preserve original boundaries by default.
+- Album dashboard / report.
+- Album-level quality checks.
+
+No-victory-lap check:
+
+- Album Master is not batch Track Master with a different button.
+- It must show sequence/story awareness.
+- It must preserve distinct track identities.
+
+## Phase 9: Album Story / Roles Step
+
+Goal: give the user a humble, reviewable view of inferred track roles.
+
+Required:
+
+- After analysis, present inferred roles (e.g. opener, single, interlude, ballad, closer) and rough character (e.g. dense, sparse, bright, dark).
+- Roles use humble language: "likely role" or "appears to be", never "detected".
+- Confidence labels: Strong, Moderate, Unsure. If confidence is low, stay with Universal album intent.
+- User can accept all defaults and export without editing.
+- User can edit any role/character per track.
+- Roles influence per-track adaptation parameters where appropriate, with audible mappings documented.
+
+No-victory-lap check:
+
+- The step must be skippable but visibly reviewable.
+- Edits must persist through undo/redo and autosave.
+
+## Phase 10: Transition Primitives
+
+Goal: provide reliable album boundary tools before any generated musical transitions.
+
+Default:
+
+- Generated transitions off.
+- Preserve source boundaries.
+
+Primitives to implement, in order of priority:
+
+- Direct boundaries.
+- Timed gaps.
+- Equal-power crossfades.
+- Fade out / fade in.
+- Ring-out.
+- Reverse swell only if it sounds genuinely useful.
+
+Generated interludes:
+
+- Optional later.
+- Must not be default until they sound genuinely good.
+- Not marketed as core quality until listening tests support it.
+
+## Phase 11: DSP Audit And Modernization
+
+Goal: improve actual mastering quality, not just UI.
+
+Audit topics:
+
+- BS.1770-compliant LUFS measurement.
+- True-peak detection and oversampled limiter behavior.
+- Limiter design (lookahead, release, transient handling).
+- EQ/filter phase behavior (minimum-phase vs. linear-phase trade-offs).
+- Compression behavior (program-dependent release, knee, density).
+- Saturation models.
+- Stereo processing (M/S width, mono compatibility).
+- Dither (TPDF, noise-shaped, configurable).
+- Sample-rate conversion (high-quality SRC for delivery profiles).
+- Codec preview (AAC, MP3, Opus simulation).
+- Preset numeric mappings.
+
+Use the research files in `docs/research/`:
+
+- `audio-mastering-technical-research.md`
+- `deep-research-report.md`
+- `mastering-settings-reference.md`
+- `compass-artifact-e83b62aa.md`
+
+Modernization rule:
+
+- Rewrite/migrate DSP when evidence shows better sound, speed, reliability, real-time behavior, or maintainability.
+- Do not rewrite only because native code seems prestigious.
+- Consider Rust-native crates (e.g. `fundsp`, `nih-plug`-derived primitives, custom biquads) before pulling C++ via FFI. C++/JUCE is acceptable if it materially improves a Phase 5 latency target.
+
+## Phase 12: Private Real-Audio Fixture Loop
+
+Goal: test on music that matters.
+
+Use the convention in `docs/PRIVATE_AUDIO_FIXTURES.md`:
+
+- `private-audio-fixtures/` is ignored by git.
+- `private-audio-fixtures/manifest.json` describes purpose, quick vs. slow test suitability, listening notes, known problem areas.
+
+Rules:
+
+- Automated local tests may use fixtures.
+- Manual listening remains required for quality calls.
+- Never commit private/copyrighted audio, rendered masters from private audio, waveform images derived from private audio, or fixture-specific generated artifacts.
+
+Listening loop per session:
+
+1. Pick a fixture from the manifest.
+2. Run the current pipeline (Analyze → Universal → Preview → A/B → Export).
+3. Note ear impressions.
+4. Note measured deltas (LUFS, TP, DR, spectral balance).
+5. Note bugs or weak points.
+6. Feed observations into the next phase's adjustments.
+
+## Phase 13: Performance Budgets
+
+Goal: measure rather than guess.
+
+Initial rough targets (refine with evidence on the dev machine):
+
+- App launch: prompt; first window paint under ~2 s on warm boot.
+- Import: does not block UI; visible progress for files over a few seconds to decode.
+- Analyze: visible progress; cancellable.
+- Waveform: first overview render under ~1 s for a 4-minute track on the dev machine.
+- Lightweight real-time controls: under ~150 ms perceived latency.
+- Heavier macro controls: under ~500 ms perceived latency.
+- Preview/export: progress visible; cancellable when safe.
+- 8-track album export: meaningful progress reporting.
+
+Establish baselines, then refine budgets per phase.
+
+## Phase 14: Release And Installer Hardening
+
+Goal: make the app usable outside the repo.
+
+Required:
+
+- Installed/release build launches.
+- No user-managed Python required (audio engine is in-process Rust by default).
+- FFmpeg/FFprobe or equivalent only if/when needed; bundle or detect.
+- Sensible default render folder.
+- Open output / report works.
+- App handles missing/corrupt files gracefully.
+- Startup overhead measured and documented.
+
+Build command target:
+
+```powershell
+npm run tauri build
+```
+
+The release build should produce a Windows installer (NSIS or MSI per Tauri config), signed if and when distribution is decided.
+
+## Public Release Risk Notes
+
+The app is private for now. Do not slow private development with public-product anxiety.
+
+If it ever ships publicly, revisit:
+
+- Branding.
+- UX similarity to commercial products.
+- Copied assets or icons.
+- Claims about mastering quality.
+- Metering/certification claims.
+- Third-party library licenses.
+- Codec/tool redistribution rights.
+- Handling copyrighted audio fixtures.
+
+## Agent Completion Rules
+
+Every meaningful implementation pass must end with:
+
+- What changed.
+- What was verified.
+- What failed.
+- What remains partial.
+- What should happen next.
+- Whether `docs/PRODUCT.md` still matches the work.
+
+Update locations:
+
+- `docs/progress.md`: detailed evidence and session notes per `docs/CLAUDE_WORK_LOOP.md`.
+- `docs/IMPLEMENTATION_PLAN.md`: concise phase status changes or plan changes.
+- `docs/PRODUCT.md`: only after human-approved product canon changes.
+- `docs/PRIVATE_AUDIO_FIXTURES.md`: fixture convention if it evolves.
+- `docs/PARALLEL_BUILD_NOTES.md`: independence rules if the cross-repo posture changes.
+
+No phase is complete just because something visually resembles the goal. It must satisfy the relevant product behavior and verification gates.
+
+## Long-Running Claude Sessions
+
+Follow `docs/CLAUDE_WORK_LOOP.md`:
+
+1. Restate the current slice in one paragraph.
+2. Identify which product requirement from `docs/PRODUCT.md` it serves.
+3. Inspect relevant research or architecture docs before choosing an implementation.
+4. Build one vertical slice, not a disconnected demo.
+5. Add or update tests/smoke checks where behavior is testable.
+6. Run verification.
+7. Write a concise progress note in `docs/progress.md`.
+8. List what remains partial or unproven.
+
+Good session candidates:
+
+- "Build the Phase 3 source-playback slice and verify on `clean-full-mix` fixture."
+- "Implement Phase 1 typed commands `analyze_tracks` and `prepare_waveform` with stub data and contract tests."
+- "Run the Phase 5 real-time audition spike and write ADR 0002."
+- "Add private fixture manifest support to the Phase 12 listening loop."
+
+Bad session candidates:
+
+- "Make the app good."
+- "Finish mastering."
+- "Rewrite the engine" without acceptance criteria.
+- Anything that requires subjective listening but provides no fixture or evaluation notes.
+
+Use long-running sessions as an execution loop for a clear verified slice, not as a substitute for product planning.
+
+## Immediate Next Questions For Humans
+
+These are not blockers for executing Phase 0, but they should be answered before or during early phases:
+
+1. Are the architecture spike candidates limited to Tauri+Rust audio for now, or should JUCE/native be benchmarked in Phase 5 if real-time targets are missed?
+2. What real audio fixtures will be provided first (Phase 12)?
+3. Should the audio engine commit fully to Rust, or should a Python offline lane be preserved for DSP R&D and offline render parity testing?
+4. How often should long-running sessions update progress: every phase, every day, or every meaningful verified slice?
+5. Does Album Master need to ship before any release-candidate claim, or is "Track Master release-candidate with Album Master near-complete" acceptable?
