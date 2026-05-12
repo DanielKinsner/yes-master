@@ -1094,3 +1094,51 @@ Phase 12.1 — work-machine real-audio smoke and listening checkpoint, the momen
 4. Phase 14.x — installer / icon polish for portability to another machine.
 
 Pick (1) or (2) next; (1) has the larger Track Master quality return, (2) is the last remaining Album Master non-negotiable user-visible refinement.
+
+## 2026-05-12 — Phase 6.x: streaming-headroom advisory in run_export_checks
+
+Goal:
+
+Add a meaningful export-receipt advisory between the existing critical `true_peak_high` warning (fires above -0.1 dBTP) and absolute silence (today: anything below -0.1 dBTP passes quietly even at -0.5). The gray zone -1.0 < tp ≤ -0.1 dBTP is risky for lossy-codec delivery because AAC/MP3/Opus quantization can boost decoded peaks by up to ~1 dB, so a master at -0.5 dBTP can clip after streaming-platform encoding. This slice gives users an honest, non-blocking nudge in that zone. Scoped intentionally as a headroom advisory, NOT an actual codec simulation; a real codec round-trip (encode → decode → measure) was considered but the value-to-complexity ratio was too low without an integration with a shipped AAC/Opus encoder, which itself is a separate slice.
+
+What changed:
+
+`src-tauri/src/exports.rs`:
+
+- Added an `else if` branch after the existing `true_peak_high` critical check: when `measured_true_peak_dbtp` is in (-1.0, -0.1], a Warning-level `streaming_headroom_low` check is emitted. The comment block above the new branch is explicit that this is a headroom advisory and not an encode/decode simulation, so future readers don't expect it to be a real codec QC.
+- Threshold rationale (in code comment): -0.1 is the existing critical floor; -1.0 is the typical streaming-platform ceiling (Spotify, Apple Music, Tidal, YouTube all reject above -1.0 dBTP for AAC/Opus delivery). Masters between -1.0 and -0.1 are digitally safe but codec-risky, which is exactly the zone the new advisory targets.
+
+`src-tauri/tests/contracts.rs`:
+
+- New test `run_export_checks_warns_on_low_streaming_headroom`: report with `measured_true_peak_dbtp = -0.5` (gray zone). Asserts `streaming_headroom_low` advisory fires AND `true_peak_high` does NOT fire (so the two tiers don't double-warn at the same level).
+- New test `run_export_checks_streaming_headroom_quiet_at_streaming_ceiling`: report with `measured_true_peak_dbtp = -1.0` (boundary). Asserts the advisory does NOT fire. This pins the threshold so a future refactor that lifts the cutoff to -1.5 or drops it to -0.5 fails loudly.
+- Existing `run_export_checks_passes_silently_when_clean` (true peak -1.2 dBTP) is unchanged — still silent. The new advisory's threshold (-1.0) is intentionally above the existing test's value so the suite stays consistent.
+- Existing `run_export_checks_warns_on_high_true_peak` (true peak +0.5 dBTP) is unchanged — still fires the critical tier. The two tiers are mutually exclusive by construction (else-if chain), so no test had to be edited for double-fire avoidance.
+
+Verification:
+
+- `cargo test` (from `src-tauri/`): **30/30** pass in 0.62 s. The new advisory and boundary tests pass; all 28 prior tests (including Phase 11.2.c's two limiter tests) remain green.
+- `npm run build`: clean. Bundle 245 KB / 75 KB gzipped (no change — the existing `CheckRow` component renders any `QualityCheck` generically, so no frontend code needed editing for the new code).
+- `npm run tauri dev`: not run. The new advisory is a plain-text message rendered through the existing receipt UI; manual smoke can confirm wording but no UI logic changed.
+
+Real-audio fixture used:
+
+- None. No `private-audio-fixtures/` on this work machine. The advisory's behavior is fully testable on synthetic export reports.
+
+What failed or remains partial:
+
+- This is a headroom advisory, not a real codec preview. A signal at -0.5 dBTP could still pass through AAC at low bitrates without overshoot (depending on spectral content), and a signal at -1.2 dBTP could conceivably clip after extreme codec settings — the advisory captures the typical case, not every edge. A Phase 6.x-bis with a real encode/decode round-trip would be more accurate but needs a shipped codec; explicitly out of scope here.
+- The advisory message references "AAC, MP3, Opus" as a flat list. A future refinement could let the user pick a delivery profile (Spotify, Apple, Tidal, YouTube, Bandcamp) and surface platform-specific recommendations. The product canon mentions "Platform or delivery-specific profiles" as a later specialty drawer; this would be the natural follow-up.
+- The new advisory's threshold (-1.0 dBTP) coincides with the default `ceiling_dbtp` value, so users who keep the default ceiling and let the limiter target -1.0 will see the advisory fire when the post-limiter true-peak measurement comes back at e.g. -0.95 dBTP. This is intentional — the limiter targets the ceiling, and small inter-sample-peak overshoot above the configured ceiling IS the case we're flagging. But the advisory's UX may feel noisy until users see it once and either lower the ceiling or learn to ignore it. Phase 12.1 (real listening) will confirm whether the fire rate is appropriate on real material.
+- Undo/redo remains the only Track Master non-negotiable from `IMPLEMENTATION_PLAN.md` that's still not structurally present (no `Ctrl+Z`/`Ctrl+Shift+Z` handlers anywhere in `src/`, no history stack in `useTrackMaster.ts`). It's frontend-heavy and the repo has no frontend test infrastructure (no `vitest`/`jest`), which makes autonomous verification weaker than what's possible for backend slices. A Phase 7.4 slice that adds (a) a minimal `vitest` setup, (b) a pure-function history reducer with unit tests, (c) wires it into `useTrackMaster`, and (d) adds `Ctrl+Z`/`Ctrl+Shift+Z` shortcuts is the cleanest path. Estimated ~300–500 lines across the new test setup + the integration.
+
+Next recommended slice:
+
+Phase 12.1 — real-audio smoke and listening on Dan's private fixtures (still blocked on a fixture being placed in `private-audio-fixtures/` on this work machine). Until then, in priority order:
+
+1. Phase 7.4 — undo/redo + minimal `vitest` infrastructure. The last Track Master non-negotiable from the implementation plan. Best done in a session where Dan can do a UI smoke pass after `npm run build` clears, since the integration verification will rely on manual testing in addition to the new unit tests.
+2. Phase 9.2 — editable inferred-role UI for Album Master. Mostly frontend; same verification caveat as 7.4 about UI smoke.
+3. Phase 11.2.d — polyphase FIR true-peak. Pure DSP, fully testable. Lower value than 7.4 because the Lagrange-4 estimator is already a very good 4× approximation in practice.
+4. Phase 14.x — installer / icon polish for portability.
+
+Track Master release-candidate is now blocked on (1) Phase 7.4 (undo/redo) and (2) Phase 12.1 (real listening). The remaining DSP and Album Master items are quality refinements, not release-candidate gates.

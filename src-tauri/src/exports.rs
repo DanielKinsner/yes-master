@@ -13,6 +13,24 @@ pub async fn run_export_checks(report: ExportReport) -> CommandResult<Vec<Qualit
                 report.measured_true_peak_dbtp
             ),
         });
+    } else if report.measured_true_peak_dbtp > -1.0 {
+        // Streaming-headroom advisory for the narrow gray zone between the
+        // critical -0.1 dBTP threshold above and the typical -1.0 dBTP
+        // streaming ceiling below. Lossy codecs (AAC, MP3, Opus) can boost
+        // decoded peaks by up to ~1 dB relative to the source true peak due
+        // to quantization noise added inside the codec's spectral bands, so a
+        // master at e.g. -0.5 dBTP can clip after AAC encoding on dense
+        // pop/rock material. This is a headroom-based advisory, NOT an actual
+        // codec simulation; a real Phase 6.x-bis could add an encode/decode
+        // round-trip if codec QC ever needs to be more precise.
+        checks.push(QualityCheck {
+            level: QualityLevel::Warning,
+            code: "streaming_headroom_low".to_string(),
+            message: format!(
+                "True peak is {:.2} dBTP. Within safe digital range, but lossy delivery (AAC, MP3, Opus) can overshoot by up to ~1 dB after encoding. Consider lowering the ceiling for comfortable streaming masters.",
+                report.measured_true_peak_dbtp
+            ),
+        });
     }
 
     if report.measured_lufs > -8.0 {

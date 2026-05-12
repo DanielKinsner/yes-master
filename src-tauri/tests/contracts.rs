@@ -440,6 +440,60 @@ async fn run_export_checks_passes_silently_when_clean() {
     assert_eq!(checks[0].code, "export_ok");
 }
 
+#[tokio::test]
+async fn run_export_checks_warns_on_low_streaming_headroom() {
+    // True peak sits in the gray zone between the -0.1 dBTP critical
+    // threshold and the typical -1.0 dBTP streaming ceiling. Should fire the
+    // new `streaming_headroom_low` advisory but NOT the critical
+    // `true_peak_high` warning.
+    let report = ExportReport {
+        track_id: TrackId("t".to_string()),
+        output_path: "out.wav".to_string(),
+        measured_lufs: -14.0,
+        measured_true_peak_dbtp: -0.5,
+        measured_dynamic_range_lu: 8.0,
+        source_format: "wav".to_string(),
+        destination_format: "wav".to_string(),
+        sample_rate: 44_100,
+        bit_depth: 24,
+        checks: Vec::new(),
+    };
+    let checks = exports::run_export_checks(report).await.expect("checks ok");
+    assert!(
+        checks.iter().any(|c| c.code == "streaming_headroom_low"),
+        "expected streaming_headroom_low advisory, got: {:?}",
+        checks.iter().map(|c| &c.code).collect::<Vec<_>>()
+    );
+    assert!(
+        !checks.iter().any(|c| c.code == "true_peak_high"),
+        "should NOT also fire the critical true_peak_high; -0.5 is below -0.1"
+    );
+}
+
+#[tokio::test]
+async fn run_export_checks_streaming_headroom_quiet_at_streaming_ceiling() {
+    // At exactly -1.0 dBTP the advisory should NOT fire — the user has hit
+    // the default streaming ceiling and the master is acceptable. The cutoff
+    // is `> -1.0`, so the boundary case stays silent.
+    let report = ExportReport {
+        track_id: TrackId("t".to_string()),
+        output_path: "out.wav".to_string(),
+        measured_lufs: -14.0,
+        measured_true_peak_dbtp: -1.0,
+        measured_dynamic_range_lu: 8.0,
+        source_format: "wav".to_string(),
+        destination_format: "wav".to_string(),
+        sample_rate: 44_100,
+        bit_depth: 24,
+        checks: Vec::new(),
+    };
+    let checks = exports::run_export_checks(report).await.expect("checks ok");
+    assert!(
+        !checks.iter().any(|c| c.code == "streaming_headroom_low"),
+        "advisory should not fire at exactly the streaming ceiling -1.0 dBTP"
+    );
+}
+
 #[test]
 fn mastering_render_writes_processed_wav() {
     let tmp = tempfile::tempdir().expect("tempdir");
