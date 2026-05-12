@@ -984,3 +984,59 @@ What failed or remains partial:
 Next recommended slice:
 
 Phase 9.2 (editable role inference + position-aware nudges), Phase 6.x (codec preview — AAC encoder estimate in `run_export_checks`), or Phase 14.x (installer / icon polish). All three are roughly the same effort. Phase 9.2 is the most user-visible; 6.x adds export safety; 14.x makes the app portable.
+
+## 2026-05-12 - Work-machine progress reconciliation after stale progress log
+
+Goal:
+
+Reconcile `docs/progress.md` with the actual pushed Claude-build repo state on Dan's work machine. The progress log had stopped at Phase 11.2.b even though later verified implementation commits existed on `origin/master`.
+
+What changed:
+
+- No product behavior changed in this pass.
+- `docs/SCHEDULE_PROMPT.md` was fixed in commit `77e5b76` so the copied `/schedule create` prompt points at this work-machine path: `C:\Users\SM - Dan\Documents\GitHub\album-mastering-studio-claude-build`.
+- This progress entry records the actual current state through commit `ed21990` plus the schedule-path fix.
+
+Current repo state:
+
+- Latest commit before this note: `77e5b76 Fix Claude schedule workdir`.
+- Working tree was clean before this progress update.
+- The app is a Tauri 2 + React + Rust build with Track Master and Album Master modes.
+- Track Master has import, drag/drop import, analyze, waveform, source playback, mastered playback, live Rust-chain audition, Original/Mastered toggle, optional Volume Match off by default, region selection, loop gating, preset/intensity/EQ controls, preview WAV rendering, export, export checks, autosave, user presets, and non-overwriting output behavior.
+- Album Master has mode toggle, track ordering, real album render, individual masters plus continuous album WAV, album intent, per-track override, role/character inference, and position-aware opener/closer nudging.
+- DSP now includes real analysis/meters, EQ/saturation/limiter chain work, linked-stereo lookahead limiting, click-free coefficient crossfade, and 2x midpoint Lagrange inter-sample peak protection. This is useful but not a final 4x standards-grade true-peak implementation.
+
+Unlogged implementation commits reconciled:
+
+- `fc44b40` - Phase 9.2(a): `analyze_tracks` now nudges weak first/last-track role guesses toward Opener/Closer while preserving stronger per-track inference.
+- `eb7cbce` - Phase 11.3 hotfix: frontend Tauri invoke calls use camelCase keys so multi-word Rust command parameters resolve correctly.
+- `542e72a` - Phase 11.4: `analyze_tracks` now keeps partial successes instead of failing the whole batch when one source fails; loop button is disabled until a region exists.
+- `f89547d` - Phase 11.5 + 11.6: window drag/drop import works; Volume Match now affects the live mastered chain by attenuating monitored output after limiting.
+- `ed21990` - Phase 11.7: stale-preview copy was corrected to say mastered playback is live; offline WAV render button is framed as an audit/export-parity tool rather than required for live audition.
+- `77e5b76` - setup docs: `/schedule` workdir now matches this work machine.
+
+Verification:
+
+- First `npm run build` failed because this work machine did not have `node_modules`; `tsc` was not available.
+- First `cargo test` failed because Tauri's `frontendDist` points at `../dist`, and `dist/` did not exist before the frontend build.
+- Ran `npm install` locally to hydrate dependencies. It temporarily normalized `package-lock.json`; that generated lockfile churn was reverted because it was not a product change.
+- `npm run build`: pass. Vite built `dist/` successfully.
+- `cargo test` from `src-tauri/`: pass, 27/27 contract tests.
+- `npm run tauri dev`: not run in this pass. Manual app listening/UI smoke is still required.
+
+Real-audio fixture used:
+
+- None on this work machine in this pass.
+- Existing fixture-aware tests ran in their skip-if-absent/default mode. This does not prove listening quality.
+
+What failed or remains partial:
+
+- `docs/progress.md` drifted behind git history. This entry repairs the tail, but future Claude sessions must append progress after every verified slice.
+- Manual interactive smoke is still deferred for multiple important claims: drag/drop import, live A/B feel, Volume Match audibility, looped region behavior, export/open-output flow, and Album Master usability.
+- Real audio listening approval is still not present. Synthetic tests and contract tests are useful, but they do not answer "would Dan trust this on his album?"
+- True-peak protection is still a 2x midpoint Lagrange estimate, not a full 4x true-peak implementation.
+- Album Master is structurally present, but it still needs hands-on album workflow validation with real songs.
+
+Next recommended slice:
+
+Phase 12.1 - work-machine real-audio smoke and listening checkpoint. Run the app interactively on Dan's provided fixture(s) and verify the core Track Master path by ear and behavior: drag/drop/import, Analyze, waveform, source playback, mastered playback live controls, Original/Mastered toggle at the same playhead, Volume Match off by default and audible when enabled, region selection, loop, preview WAV render, Export Master, quality receipt, and open output. Record failures honestly in this file. If no private fixture is available, do not claim listening progress; instead choose a small non-listening slice such as codec-preview warnings or 4x true-peak improvement.
