@@ -950,21 +950,24 @@ function StaleBar({
 }) {
   return (
     <section className="stale-bar">
-      <span className={"stale-dot " + (stale ? "stale" : "fresh")} aria-hidden />
+      <span className="stale-dot live" aria-hidden />
       <span className="stale-text">
         {isRendering
-          ? "Rendering preview…"
-          : stale
-            ? "Preview is stale — settings changed since last render."
-            : "Preview matches current settings."}
+          ? "Rendering preview WAV…"
+          : "Mastered playback is live — drag controls and hear the change immediately."}
       </span>
       <button
         type="button"
         className="ghost-btn"
         onClick={onUpdate}
-        disabled={isRendering || !stale}
+        disabled={isRendering}
+        title={
+          stale
+            ? "Render an offline preview WAV with current settings (for auditing in another player)"
+            : "Re-render the offline preview WAV"
+        }
       >
-        Update preview
+        {stale ? "Render preview WAV" : "Re-render preview"}
       </button>
     </section>
   );
