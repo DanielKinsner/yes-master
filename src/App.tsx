@@ -1394,6 +1394,29 @@ function NumberField({
   onChange: (v: number | null) => void;
 }) {
   const effective = value ?? min;
+  // Same draft-while-editing pattern as Slider so the user can type "1." or
+  // "-" mid-value without the parent re-formatting on every keystroke.
+  const [draft, setDraft] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (
+      draft !== null &&
+      inputRef.current &&
+      document.activeElement !== inputRef.current
+    ) {
+      setDraft(null);
+    }
+  }, [value, draft]);
+  const commitDraft = (raw: string) => {
+    const parsed = parseFloat(raw);
+    if (!Number.isFinite(parsed)) {
+      setDraft(null);
+      return;
+    }
+    const clamped = Math.max(min, Math.min(max, parsed));
+    if (clamped !== value) onChange(clamped);
+    setDraft(null);
+  };
   return (
     <div className="adv-field">
       <span className="adv-label">{label}</span>
@@ -1414,7 +1437,31 @@ function NumberField({
         >
           {value === null ? "Set" : "Auto"}
         </button>
-        <span className="adv-value">{value === null ? "Auto" : format(value)}</span>
+        {value === null ? (
+          <span className="adv-value">Auto</span>
+        ) : (
+          <input
+            ref={inputRef}
+            type="number"
+            className="adv-number"
+            min={min}
+            max={max}
+            step={step}
+            value={draft !== null ? draft : value}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={(e) => commitDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                commitDraft((e.target as HTMLInputElement).value);
+                (e.target as HTMLInputElement).blur();
+              } else if (e.key === "Escape") {
+                setDraft(null);
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+            title={`Type a value or click Auto to reset. Format: ${format(value)}`}
+          />
+        )}
       </div>
     </div>
   );

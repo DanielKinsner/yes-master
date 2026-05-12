@@ -929,6 +929,31 @@ button.primary:disabled {
   text-align: right;
 }
 
+.adv-number {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: var(--text-1);
+  background: var(--bg-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0.18rem 0.35rem;
+  width: 72px;
+  text-align: right;
+  font-family: inherit;
+  -moz-appearance: textfield;
+}
+
+.adv-number::-webkit-outer-spin-button,
+.adv-number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.adv-number:focus {
+  outline: 1px solid var(--accent);
+  border-color: var(--accent);
+}
+
 .slider-number {
   font-variant-numeric: tabular-nums;
   font-size: 0.8rem;
