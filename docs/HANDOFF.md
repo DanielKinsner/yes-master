@@ -2,6 +2,8 @@
 
 This document is the entry point for any Claude session — interactive or scheduled — picking up work on this repo. Read this first, then start the loop below.
 
+> **Current snapshot: `docs/HANDOFF_2026-05-12.md`** — a comprehensive end-of-session handoff covering all 19 commits shipped in the Phase 12.1 listening-response session, current verification state, Dan's listening feedback verbatim, pitfalls discovered, prioritized open work, file map, and the suggested next slice. Read it after `docs/PRODUCT.md` and before continuing here. The next dated snapshot supersedes it when written.
+
 ## Read first (in order)
 
 1. `CLAUDE.md` — repo rules, non-negotiables, working style.

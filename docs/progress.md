@@ -1406,6 +1406,39 @@ Next slice when Dan returns will depend on what he finds. Most likely candidates
 - If presets are still too subtle: bump the preset character values.
 - If everything sounds right: continue with Phase 9.2 (editable role UI) or Phase 8.x (Album Master refinements) toward Album Master release-candidate.
 
+## 2026-05-12 — Session-end handoff snapshot (`docs/HANDOFF_2026-05-12.md`)
+
+After Dan's afternoon listening pass + four follow-up slices (I/O gain, "coming soon" Advanced labels, NumberField type-in editing, this entry), wrote a comprehensive end-of-session handoff at `docs/HANDOFF_2026-05-12.md`. It covers:
+
+- All 19 commits shipped this session (`7b35e34` → `ed777e1`) with one-line summaries
+- Dan's listening notes verbatim with status per item
+- How to operate (required reading order, the work loop, commit convention, autonomy boundaries, /loop and /goal usage)
+- Eight pitfalls discovered this session (cargo test lock when dev app running; eprintln invisible in Dan's terminal; React 18 batched-update trap; serde-default requirement; cmd.exe line-ending churn; DevTools unreliable; AdvancedPanel placeholder fields; decode cache single-slot LRU; chunked mastering_render state continuity)
+- Where to look for things — file map across backend (types/dsp/audio/engine/exports/files/project/settings/jobs/lib/main), frontend (bindings/api/useTrackMaster/App), docs, tests
+- Build / verification command reference
+- Current verification state (33/33 contract tests + 6/6 audio unit tests + npm build clean; real-audio metering numbers captured)
+- Track Master gate review (all 20 non-negotiables ✓; real-time audition has a ⚠ pending Dan's ear confirmation of the latest defensive rewrite)
+- Open work prioritized: P0 (live clipping indicator, wire width / compression_density / lufs_offset_db / warmth+presence_air); P1 (album export progress, typography, SVG preset icons); P2 (Phase 9.2, Phase 8.x, Phase 11.2.d, preset rebalancing); deferred infra (vitest, multi-slot decode cache)
+- Suggested next slice with reasoning (live clipping indicator) + alternatives (wire width / typography)
+- Operating philosophy: what worked (small commits, tests-first when bug is unclear, in-app diagnostics, honest labels) and what didn't (eprintln, assumed React 17 semantics, asking Dan to use DevTools mid-work)
+
+Updated `docs/HANDOFF.md` to point at the dated snapshot at the top.
+
+### Verification
+
+- `npm run build`: clean.
+- No code changed in this entry — docs only.
+
+### What's pending
+
+All blockers from prior entries remain: Dan's listening confirmation of the live-update fix + preset character + decode cache toggle improvement; UX confirmation of the Input/Output gain + AdvancedPanel changes from `4076596` and `ed777e1`. Plus the listed P0 slices waiting for a next agent or session.
+
+### Next recommended slice
+
+**Live clipping / output peak indicator.** Stream the post-output-gain peak from the audio thread via an Arc<AtomicU32> shared with MasteringSource. Snapshot loop in audio_thread reads-and-resets via swap. New field on PlaybackTick. Frontend renders a "CLIPPING" pill in the StaleBar that turns red when peak > -0.1 dBFS. Bounded ~150 lines, synthetic-test-verifiable. Detailed design notes in `docs/HANDOFF_2026-05-12.md` under "P0 — next slice candidates".
+
+If preset rebalancing comes back ahead of the clipping indicator, that's Dan-listening-driven — wait for him to flag specific presets ("Tape feels too dark"), then adjust the values in `dsp.rs::ChainCoeffs::from_settings` (the per-preset `match` block around line 175).
+
 ## 2026-05-12 — Phase 7.4 + Phase 12.1 snapshot numbers + number-input fields
 
 Goal:
