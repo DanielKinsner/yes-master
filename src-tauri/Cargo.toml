@@ -31,10 +31,10 @@ symphonia = { version = "0.5", features = [
     "vorbis",
 ] }
 rodio = { version = "0.20", features = ["symphonia-all"] }
+hound = "3"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }
-hound = "3"
 tempfile = "3"
 
 [features]

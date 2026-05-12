@@ -292,21 +292,31 @@ export function useTrackMaster() {
     setIsRendering(true);
     setError(null);
     try {
-      await api.renderTrackPreview(selectedTrackId, selectedSettings);
+      if (!selectedTrack) return;
+      await api.renderTrackPreview(
+        selectedTrackId,
+        selectedTrack.path,
+        selectedSettings,
+      );
       markFresh(selectedTrackId);
     } catch (err) {
       setError(String(err));
     } finally {
       setIsRendering(false);
     }
-  }, [selectedTrackId, selectedSettings, markFresh]);
+  }, [selectedTrackId, selectedTrack, selectedSettings, markFresh]);
 
   const exportMaster = useCallback(async () => {
     if (!selectedTrackId || !selectedAnalysis) return;
     setIsExporting(true);
     setError(null);
     try {
-      const job = await api.renderTrackMaster(selectedTrackId, selectedSettings);
+      if (!selectedTrack) return;
+      const job = await api.renderTrackMaster(
+        selectedTrackId,
+        selectedTrack.path,
+        selectedSettings,
+      );
       const outputPath = job.output_paths[0] ?? "";
       const report: ExportReport = {
         track_id: selectedTrackId,

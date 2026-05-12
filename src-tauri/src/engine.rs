@@ -1,4 +1,8 @@
 use crate::types::*;
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use tauri::Manager;
 
 #[tauri::command]
 pub async fn analyze_tracks(track_ids: Vec<TrackId>) -> CommandResult<Vec<AnalysisResult>> {
@@ -41,19 +45,35 @@ fn mock_analysis(track_id: TrackId) -> AnalysisResult {
 #[tauri::command]
 pub async fn render_track_preview(
     track_id: TrackId,
+    track_path: String,
     settings: MasteringSettings,
+    app: tauri::AppHandle,
 ) -> CommandResult<RenderJob> {
-    let _ = settings;
-    Ok(mock_job(RenderKind::Preview, vec![track_id]))
+    let out_dir = render_output_dir(&app, RenderKind::Preview)?;
+    mastering_render(
+        track_id,
+        Path::new(&track_path),
+        &settings,
+        &out_dir,
+        RenderKind::Preview,
+    )
 }
 
 #[tauri::command]
 pub async fn render_track_master(
     track_id: TrackId,
+    track_path: String,
     settings: MasteringSettings,
+    app: tauri::AppHandle,
 ) -> CommandResult<RenderJob> {
-    let _ = settings;
-    Ok(mock_job(RenderKind::Master, vec![track_id]))
+    let out_dir = render_output_dir(&app, RenderKind::Master)?;
+    mastering_render(
+        track_id,
+        Path::new(&track_path),
+        &settings,
+        &out_dir,
+        RenderKind::Master,
+    )
 }
 
 #[tauri::command]
@@ -77,4 +97,164 @@ fn mock_job(kind: RenderKind, target_tracks: Vec<TrackId>) -> RenderJob {
         started_at_iso: ISO_PLACEHOLDER.to_string(),
         output_paths: vec!["renders/mock-output.wav".to_string()],
     }
+}
+
+pub fn render_output_dir(app: &tauri::AppHandle, kind: RenderKind) -> CommandResult<PathBuf> {
+    let app_data = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| CommandError::Other(format!("app_data_dir: {e}")))?;
+    let leaf = match kind {
+        RenderKind::Preview => "previews",
+        RenderKind::Master => "masters",
+        RenderKind::Album => "albums",
+    };
+    let dir = app_data.join("renders").join(leaf);
+    std::fs::create_dir_all(&dir).map_err(|e| CommandError::Io(e.to_string()))?;
+    Ok(dir)
+}
+
+pub fn mastering_render(
+    track_id: TrackId,
+    source_path: &Path,
+    settings: &MasteringSettings,
+    out_dir: &Path,
+    kind: RenderKind,
+) -> CommandResult<RenderJob> {
+    let source_path_str = source_path.to_string_lossy().to_string();
+    if source_path_str.is_empty() {
+        return Err(CommandError::InvalidPath("empty path".to_string()));
+    }
+    if crate::files::has_parent_dir_component(source_path) {
+        return Err(CommandError::InvalidPath(format!(
+            "path traversal not allowed: {source_path_str}"
+        )));
+    }
+    if !source_path.exists() {
+        return Err(CommandError::Io(format!(
+            "source file not found: {source_path_str}"
+        )));
+    }
+
+    let pcm = crate::audio::decode_full(source_path)?;
+    if pcm.samples.is_empty() {
+        return Err(CommandError::Decode(
+            "no samples decoded from source".to_string(),
+        ));
+    }
+    let channels = pcm.channels as usize;
+    let mut samples = pcm.samples;
+    let mut chain =
+        crate::dsp::MasteringChain::new(pcm.sample_rate, channels.max(1), settings);
+    chain.process_interleaved(&mut samples, channels.max(1));
+
+    let bit_depth = settings.advanced.bit_depth.unwrap_or(24);
+    let out_path = unique_output_path(out_dir, source_path, &track_id, kind)?;
+    write_wav(&out_path, &samples, pcm.sample_rate, pcm.channels, bit_depth)?;
+
+    Ok(RenderJob {
+        id: uuid::Uuid::new_v4().to_string(),
+        kind,
+        target_tracks: vec![track_id],
+        status: JobStatus::Done,
+        progress: 1.0,
+        started_at_iso: ISO_PLACEHOLDER.to_string(),
+        output_paths: vec![out_path.to_string_lossy().to_string()],
+    })
+}
+
+fn unique_output_path(
+    out_dir: &Path,
+    source: &Path,
+    track_id: &TrackId,
+    kind: RenderKind,
+) -> CommandResult<PathBuf> {
+    let stem = source
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("track");
+    let kind_tag = match kind {
+        RenderKind::Preview => "preview",
+        RenderKind::Master => "master",
+        RenderKind::Album => "album",
+    };
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let id_short = track_id.as_str().chars().take(8).collect::<String>();
+    let filename = format!("{stem}__{kind_tag}__{id_short}__{ts}.wav");
+    let candidate = out_dir.join(&filename);
+    if !candidate.exists() {
+        return Ok(candidate);
+    }
+    // Suffix to guarantee non-overwrite if same-second collision happens
+    for n in 1..1000 {
+        let alt = out_dir.join(format!(
+            "{stem}__{kind_tag}__{id_short}__{ts}__{n}.wav"
+        ));
+        if !alt.exists() {
+            return Ok(alt);
+        }
+    }
+    Err(CommandError::Io(
+        "could not generate unique output path".to_string(),
+    ))
+}
+
+fn write_wav(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    bit_depth: u16,
+) -> CommandResult<()> {
+    let (bits, fmt) = match bit_depth {
+        16 => (16u16, hound::SampleFormat::Int),
+        24 => (24u16, hound::SampleFormat::Int),
+        32 => (32u16, hound::SampleFormat::Float),
+        other => {
+            return Err(CommandError::Other(format!(
+                "unsupported bit depth: {other}"
+            )))
+        }
+    };
+    let spec = hound::WavSpec {
+        channels,
+        sample_rate,
+        bits_per_sample: bits,
+        sample_format: fmt,
+    };
+    let mut writer =
+        hound::WavWriter::create(path, spec).map_err(|e| CommandError::Io(e.to_string()))?;
+    match bit_depth {
+        16 => {
+            for &s in samples {
+                let v = (s.clamp(-1.0, 1.0) * 32767.0).round() as i16;
+                writer
+                    .write_sample(v)
+                    .map_err(|e| CommandError::Io(e.to_string()))?;
+            }
+        }
+        24 => {
+            for &s in samples {
+                let v = (s.clamp(-1.0, 1.0) * 8_388_607.0).round() as i32;
+                writer
+                    .write_sample(v)
+                    .map_err(|e| CommandError::Io(e.to_string()))?;
+            }
+        }
+        32 => {
+            for &s in samples {
+                writer
+                    .write_sample(s.clamp(-1.0, 1.0))
+                    .map_err(|e| CommandError::Io(e.to_string()))?;
+            }
+        }
+        _ => unreachable!(),
+    }
+    writer
+        .finalize()
+        .map_err(|e| CommandError::Io(e.to_string()))?;
+    Ok(())
 }

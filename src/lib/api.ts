@@ -24,15 +24,25 @@ export const api = {
   analyzeTracks: (trackIds: TrackId[]) =>
     invoke<AnalysisResult[]>("analyze_tracks", { track_ids: trackIds }),
 
-  renderTrackPreview: (trackId: TrackId, settings: MasteringSettings) =>
+  renderTrackPreview: (
+    trackId: TrackId,
+    trackPath: string,
+    settings: MasteringSettings,
+  ) =>
     invoke<RenderJob>("render_track_preview", {
       track_id: trackId,
+      track_path: trackPath,
       settings,
     }),
 
-  renderTrackMaster: (trackId: TrackId, settings: MasteringSettings) =>
+  renderTrackMaster: (
+    trackId: TrackId,
+    trackPath: string,
+    settings: MasteringSettings,
+  ) =>
     invoke<RenderJob>("render_track_master", {
       track_id: trackId,
+      track_path: trackPath,
       settings,
     }),
 

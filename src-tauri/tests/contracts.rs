@@ -98,6 +98,39 @@ async fn prepare_waveform_rejects_empty_path() {
     assert!(matches!(err, CommandError::InvalidPath(_)));
 }
 
+#[test]
+fn mastering_render_processes_real_fixture_if_present() {
+    let Some(path) = real_fixture_path() else {
+        eprintln!("Skipping: no real-audio fixture");
+        return;
+    };
+    let abs = path.canonicalize().expect("canonicalize fixture");
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let job = engine::mastering_render(
+        TrackId("real-render".to_string()),
+        &abs,
+        &default_settings(),
+        tmp.path(),
+        RenderKind::Master,
+    )
+    .expect("render real fixture");
+
+    assert!(matches!(job.status, JobStatus::Done));
+    let out_path = Path::new(&job.output_paths[0]);
+    assert!(out_path.exists(), "real-fixture master not written");
+    let reader = hound::WavReader::open(out_path).expect("read output wav");
+    let spec = reader.spec();
+    assert!(spec.channels >= 1);
+    assert!(spec.sample_rate >= 44_100);
+    let frame_count = reader.duration();
+    assert!(
+        frame_count > spec.sample_rate * 10,
+        "expected at least 10s of audio in mastered output, got {} frames @ {} Hz",
+        frame_count,
+        spec.sample_rate
+    );
+}
+
 #[tokio::test]
 async fn decode_real_fixture_if_present() {
     let Some(path) = real_fixture_path() else {
@@ -167,15 +200,121 @@ async fn run_export_checks_passes_silently_when_clean() {
     assert_eq!(checks[0].code, "export_ok");
 }
 
-#[tokio::test]
-async fn render_track_master_returns_done_with_output_path() {
-    let job = engine::render_track_master(TrackId("t".to_string()), default_settings())
-        .await
-        .expect("render ok");
+#[test]
+fn mastering_render_writes_processed_wav() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let in_path = tmp.path().join("input.wav");
+    write_sine_wav(&in_path, 44_100, 0.5, 440.0, 2);
+
+    let job = engine::mastering_render(
+        TrackId("test-master".to_string()),
+        &in_path,
+        &default_settings(),
+        tmp.path(),
+        RenderKind::Master,
+    )
+    .expect("render ok");
+
     assert!(matches!(job.status, JobStatus::Done));
     assert_eq!(job.progress, 1.0);
-    assert!(!job.output_paths.is_empty());
     assert!(matches!(job.kind, RenderKind::Master));
+    assert_eq!(job.output_paths.len(), 1);
+
+    let out_path = Path::new(&job.output_paths[0]);
+    assert!(out_path.exists(), "output file not written");
+
+    let reader = hound::WavReader::open(out_path).expect("read output wav");
+    let spec = reader.spec();
+    assert_eq!(spec.channels, 2);
+    assert_eq!(spec.sample_rate, 44_100);
+    assert_eq!(spec.bits_per_sample, 24);
+}
+
+#[test]
+fn mastering_render_creates_unique_paths_on_collision() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let in_path = tmp.path().join("input.wav");
+    write_sine_wav(&in_path, 44_100, 0.25, 440.0, 1);
+
+    let first = engine::mastering_render(
+        TrackId("test-collision".to_string()),
+        &in_path,
+        &default_settings(),
+        tmp.path(),
+        RenderKind::Master,
+    )
+    .expect("first render");
+    let second = engine::mastering_render(
+        TrackId("test-collision".to_string()),
+        &in_path,
+        &default_settings(),
+        tmp.path(),
+        RenderKind::Master,
+    )
+    .expect("second render");
+
+    assert_ne!(
+        first.output_paths[0], second.output_paths[0],
+        "second render must not overwrite first"
+    );
+    assert!(Path::new(&first.output_paths[0]).exists());
+    assert!(Path::new(&second.output_paths[0]).exists());
+}
+
+#[test]
+fn dsp_chain_applies_input_gain_at_default_intensity() {
+    let settings = default_settings();
+    let mut chain = album_mastering_studio_lib::dsp::MasteringChain::new(44_100, 1, &settings);
+    let original = vec![0.1_f32, 0.2, 0.3, -0.1, -0.2, -0.3, 0.15, -0.25];
+    let mut samples = original.clone();
+    chain.process_interleaved(&mut samples, 1);
+
+    assert!(samples.iter().all(|s| s.is_finite()));
+    let input_rms = rms(&original);
+    let output_rms = rms(&samples);
+    assert!(
+        output_rms > input_rms,
+        "expected mastered RMS {output_rms} > input RMS {input_rms} due to input gain stage"
+    );
+    let ceiling_lin = 10.0_f32.powf(-1.0 / 20.0);
+    let max_abs = samples.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
+    assert!(
+        max_abs <= ceiling_lin + 0.05,
+        "expected soft-clip to bound output near ceiling, got max {max_abs}"
+    );
+}
+
+#[test]
+fn dsp_low_shelf_boost_raises_low_frequency_energy() {
+    let mut settings = default_settings();
+    settings.eq_low_db = 6.0;
+    let mut chain = album_mastering_studio_lib::dsp::MasteringChain::new(44_100, 1, &settings);
+    let low_freq_signal: Vec<f32> = (0..4_096)
+        .map(|i| 0.2 * (i as f32 / 44_100.0 * 2.0 * std::f32::consts::PI * 80.0).sin())
+        .collect();
+    let baseline_chain_settings = default_settings();
+    let mut baseline_chain = album_mastering_studio_lib::dsp::MasteringChain::new(
+        44_100,
+        1,
+        &baseline_chain_settings,
+    );
+    let mut boosted = low_freq_signal.clone();
+    let mut baseline = low_freq_signal.clone();
+    chain.process_interleaved(&mut boosted, 1);
+    baseline_chain.process_interleaved(&mut baseline, 1);
+
+    assert!(
+        rms(&boosted) > rms(&baseline),
+        "expected low-shelf boost (+6 dB at 200 Hz) to raise RMS of an 80 Hz sine"
+    );
+}
+
+fn rms(samples: &[f32]) -> f32 {
+    if samples.is_empty() {
+        return 0.0;
+    }
+    let sum_sq: f32 = samples.iter().map(|s| s * s).sum();
+    (sum_sq / samples.len() as f32).sqrt()
 }
 
 #[tokio::test]

@@ -100,7 +100,7 @@ pub struct WaveformPeaks {
     pub sample_rate: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum PlaybackKind {
     Source,
@@ -123,7 +123,7 @@ pub struct AbPreview {
     pub volume_match_offset_db: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum RenderKind {
     Preview,

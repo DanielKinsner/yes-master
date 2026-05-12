@@ -261,3 +261,54 @@ What failed or remains partial:
 Next recommended slice:
 
 Phase 3.4 — region selection by drag + region loop. Drag on the waveform defines `[start, end]`; clicking the loop button activates region playback that repeats `start → end`. Backend: `AudioCommand::SetLoop(Option<(f64, f64)>)` + audio thread monitors position and seeks back to `start` when crossing `end`. Visual: shaded range on the waveform, plus a "loop on" indicator next to the loop button.
+
+## 2026-05-11 — Phase 4.1: real DSP mastering chain + mastered WAV export
+
+Goal:
+
+The Export Master button must actually produce a mastered file, not a mock. End to end: decode source → gain → 3-band biquad EQ → optional saturation (Tape/Warmth) → soft-clip ceiling → write WAV to versioned output dir under the Tauri app data folder. The user's MP3 round-trips through it.
+
+What changed:
+
+Backend:
+
+- `src-tauri/Cargo.toml`: moved `hound = "3"` from dev-deps to main deps (needed at runtime for WAV writing).
+- `src-tauri/src/dsp.rs` (new): `BiquadCoeffs` (RBJ Audio EQ Cookbook coefficients for `low_shelf`, `peaking`, `high_shelf`, plus identity passthrough when gain ≈ 0), `BiquadState` (direct-form II transposed), `ChainCoeffs::from_settings` mapping `MasteringSettings` to numbers (preset-specific base gain plus `intensity * 4.5 dB` headroom; Tape adds tanh saturation, Warmth adds a gentler one; ceiling defaults to -1 dBFS), `MasteringChain` with per-channel state owning the three biquads.
+- `src-tauri/src/audio.rs`: added `decode_full(path) -> DecodedPcm` that streams the full interleaved f32 PCM into a `Vec<f32>` for offline processing (existing streaming peak generator stays untouched).
+- `src-tauri/src/engine.rs`: replaced the mock `render_track_master` / `render_track_preview` with `mastering_render(track_id, source_path, settings, out_dir, kind) -> RenderJob` which: validates path safety, decodes via `audio::decode_full`, builds a `MasteringChain`, processes the interleaved buffer in place, then writes a 16/24/32-bit WAV via `hound`. Tauri command thin wrappers resolve the output directory via `AppHandle::path().app_data_dir()` and call `mastering_render`. Bit depth comes from `settings.advanced.bit_depth` (default 24). `unique_output_path` guarantees non-overwrite by suffixing `__<N>` if a same-second collision would occur.
+- `src-tauri/src/types.rs`: added `Copy + PartialEq + Eq` to `RenderKind` and `PlaybackKind` (unit-variant enums; needed for ergonomic use in functions that take them by value and return them in the response).
+- `src-tauri/src/lib.rs`: `pub mod dsp;` registered.
+
+Frontend:
+
+- `src/lib/api.ts`: `renderTrackPreview` and `renderTrackMaster` now take `(trackId, trackPath, settings)`.
+- `src/hooks/useTrackMaster.ts`: `updatePreview` and `exportMaster` pass `selectedTrack.path` through.
+
+Tests (in `src-tauri/tests/contracts.rs`):
+
+- `mastering_render_writes_processed_wav`: synthetic stereo sine → render → assert `.wav` file exists, channel count, sample rate, bit depth match expectations.
+- `mastering_render_creates_unique_paths_on_collision`: render the same source twice into the same dir → output paths differ → both files exist (PRODUCT.md "exports never overwrite by default").
+- `dsp_chain_applies_input_gain_at_default_intensity`: confirms output RMS > input RMS at default settings (Universal preset, 0.5 intensity = +3.75 dB input gain), and the soft-clip ceiling bounds peaks near -1 dBFS.
+- `dsp_low_shelf_boost_raises_low_frequency_energy`: feeds an 80 Hz sine through a baseline chain and a `+6 dB low_shelf @ 200 Hz` chain → boosted RMS > baseline RMS (verifies the EQ does what its label says).
+- `mastering_render_processes_real_fixture_if_present`: end-to-end real MP3 → mastered WAV in a tempdir, asserts ≥ 10s of audio in the output. Runs only when `private-audio-fixtures/lay-the-money-on-the-desk.mp3` exists; skipped silently otherwise.
+- Replaced the old mock `render_track_master_returns_done_with_output_path` test.
+
+Verification:
+
+- `npm run build`: clean. Bundle 215 KB.
+- `cargo test` (from `src-tauri/`): 15/15 pass in 6.80s. The real-MP3 mastering test runs in ~1 second on the dev machine.
+- `npm run tauri dev`: deferred (manual verification — Dan can now click Export and find a `.wav` under `%APPDATA%\com.albummasteringstudio.app\renders\masters\`).
+
+Real-audio fixture used: `private-audio-fixtures/lay-the-money-on-the-desk.mp3` — decoded, mastered, written to a tempdir WAV during cargo test.
+
+What failed or remains partial:
+
+- No real LUFS / true-peak measurement yet — `analyze_tracks` still returns mock metering, so `run_export_checks` is operating on mock numbers. Phase 11 (DSP audit) wires real BS.1770 K-weighting + 4× oversampled true-peak.
+- No compressor with attack/release — saturation does most of the loudness lift for Tape/Warmth; Loud preset will need a real compressor + limiter to live up to its name. Deferred to Phase 11.
+- The Mastered side of the A/B toggle still plays the source file. Wiring the mastered WAV into the playback path means swapping the rodio source when the toggle hits Mastered. Phase 4.2.
+- No live preview during slider drag — the user has to click "Update preview" then "Export" to hear changes. That's by-design until Phase 5 (real-time audition engine), which is the actual hard problem.
+- Output directory uses Tauri's `app_data_dir`, which is platform-specific (`%APPDATA%\com.albummasteringstudio.app\renders\masters\` on Windows). A user-facing "Open output" flow exists in `exports::open_output` but is a no-op stub — wiring it through `tauri-plugin-shell` would make the receipt path clickable.
+
+Next recommended slice:
+
+Phase 4.2 — Mastered A/B playback. When the user toggles the playback kind to "Mastered", play the rendered preview WAV instead of the source. Pipeline: on the first Mastered-toggle for a track with stale preview, auto-render the preview, then swap the audio thread to play it. Position should preserve across A/B toggles (per PRODUCT.md "Playhead preservation"). Backend: new `play_kind` field on the audio state, or a second loaded source. Frontend: A/B toggle calls a new command instead of just flipping local state.
