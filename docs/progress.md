@@ -1189,3 +1189,91 @@ The Phase 12.1 *listening half* is the next slice. Concretely:
 Subordinate next step (low priority, can wait until Dan closes the app):
 
 - Run `cargo test --test contracts phase_12_1_real_fixture_metering_snapshot -- --nocapture` once the dev app is not running. Capture the eprintln output and append concrete metering numbers to this entry as a follow-up.
+
+## 2026-05-12 — Phase 12.1 listening response: initial fix batch (5 slices)
+
+Goal:
+
+Address the bugs / UI / DSP feedback Dan flagged during his Phase 12.1 listening session on "It's a coat (Remastered).wav". Each slice was scoped narrowly and shipped as a separate commit so Dan can roll back individually if anything is wrong. Verification is split: code/type-safety checks land here; audible/UI verification is on Dan's next `npm run tauri dev` rebuild.
+
+Dan's listening notes (quoted for the record):
+
+> "the switch between 'mastered' and 'original' is so minute that i cant be sure it applied anything, only when volume match is off do i hear the difference and thats more of a volume thing."
+
+> "i just found that if you make ANY adjustments while on the mastered 'view'... they dont take effect until i switch to 'original' and then back again to 'master' and even then it can take a second or two. this make it impossible to do a 'slider' type process to incrementally change things subtly."
+
+> "when using volume match, the difference between the 2 tracks on just a preset is so minimal, on every preset i can barely tell. infact turning a preset to max such as clarity where it increases high frequencies was still difficult to tell."
+
+> "id start closer to a dramaticized version of the preset with the intensity slider still at 50% and if its a bit much then i can dial it back or up, or use eq or advanced."
+
+> "hotkeys such as spacebar to play are mandatory"
+
+> "being able to type in your values instead of just sliders, double clicking a slider to return it to default or auto suggestions"
+
+> "A more prominant assesment of what was done after analyzation, even perhaps in plain english in a dropdown underneath the stats"
+
+> "progress bars for both live render and export"
+
+> "also unsure what live preview does"
+
+What changed (5 separate commits, in order):
+
+1. **`18332e9` — P0: live update push no longer gates on backend tick.** The `shouldPush` check in `useTrackMaster.ts` (both `updateSettings` and `applyUserPreset`) used to require `loadedTrackId !== null` — a value sourced from the backend playback-tick event (~50 ms async round-trip). Right after starting Mastered playback, or during fast slider drags between React batches, that gate could be falsy and the `api.updateChain` push silently no-op'd. Fix derives `shouldPush` from `loadedKindByTrack` (set synchronously in `playWithKind`) instead. Added `eprintln!` diagnostics in `audio.rs` on both the `UpdateChain` command path and inside `MasteringSource`'s coefficient-arming branch so the `npm run tauri dev` console shows three lines per slider tick when wiring is healthy. If only the first line fires, `live_coeffs_tx` is missing. If none fires, the frontend never invoked. Verification: `cargo check --tests` + `npm run build` clean. Behavioral confirmation pending Dan's rebuild.
+
+2. **`d585cb1` — Spacebar play, double-click slider reset.** Window-level keydown handler in `useTrackMaster.ts` routes Space (key + code) to `togglePlay` with `preventDefault` so the page doesn't also scroll. Skips when focus is in `INPUT`/`TEXTAREA`/`SELECT`/`contentEditable` so future number-input fields don't capture spacebar. `Slider` component (`App.tsx`) now takes an optional `defaultValue`; when supplied, double-click on the range or the displayed value snaps back. Tooltip on hover spells out the gesture. Macros wired: Intensity → 0.5, Low/Mid/High EQ → 0 dB.
+
+3. **`b896054` — Preset character dramatization.** The root cause of Dan's "presets are too subtle" call: each preset was just a small input-gain push (1.0–3.5 dB) with optional Tape/Warmth saturation; EQ was fully user-driven, so presets had no signature sound. Rewrote `ChainCoeffs::from_settings` so each preset has a baseline EQ curve, saturation amount, and gain push. `Intensity` scales the whole preset character via `preset_scale = 0.4 + 1.2 * intensity` (0.5 = full preset, 0 = ~40%, 1.0 = ~160%). User EQ adds on top of the preset baseline. First-cut values per preset (low/mid/high dB, gain dB, sat):
+   - Universal: 0/0/+0.5, +1.5 dB, 0
+   - Clarity:  -0.5/+1.0/+2.5, +1.5 dB, 0
+   - Tape:     +1.5/0/-1.5, +1.0 dB, 0.45
+   - Spatial:  0/-1.0/+1.5, +1.5 dB, 0
+   - Oomph:    +2.5/-0.5/0, +2.0 dB, 0.15
+   - Warmth:   +1.5/+0.5/-2.0, +1.0 dB, 0.30
+   - Punch:    +1.0/+2.0/+1.0, +2.0 dB, 0.20
+   - Loud:     +0.5/+0.5/+0.5, +3.5 dB, 0.10
+
+   Two new contract tests: `presets_produce_distinct_chain_coefficients` (Loud gain > Universal by ≥ 10%, Tape sat > 0.20, high-shelf b0 distinct across Universal/Clarity/Tape, Oomph low-shelf b0 distinct from Universal) and `intensity_scales_preset_character` (Tape saturation and gain at intensity 1.0 substantially above intensity 0.0). Pins regressions. Full `cargo test` deferred until Dan closes the dev app — currently locked.
+
+4. **`bc30aff` — Audit-WAV rename + plain-English analysis summary.** `StaleBar` button renamed "Render preview WAV" → "Render audit WAV"; tooltip explains the WAV is a temporary file for external audit, not required for live audition. Dan flagged "unsure what live preview does" — this should resolve. New `<AnalysisSummary>` component renders a collapsible `<details>` block under the metering row with one-line plain-English commentary per dimension: loudness band, dynamic range, spectrum, stereo width, true peak. Numbers stay; the summary adds the "what this means" layer.
+
+5. **(this entry's commit) — progress.md catch-up.** Documents the four slices above and the open verification items.
+
+Verification:
+
+- `cargo check --tests` (after each Rust slice): clean.
+- `npm run build` (after each TS/CSS slice): clean. Final bundle 247.27 KB / 75.66 KB gzipped (was 245.07 KB before this batch — +2.2 KB for spacebar handler, double-click wiring, audit-WAV rename, AnalysisSummary, and CSS).
+- `cargo test`: blocked all session by the running `npm run tauri dev` keeping the main `.exe` locked. **Full suite (including the two new preset tests and the Phase 12.1 snapshot test) needs Dan to close the dev app once and run `cargo test` from `src-tauri/`.** Until then, the type-safety + frontend-build checks above are the autonomous verification.
+- `npm run tauri dev`: not run by Claude. Dan rebuilds and confirms by ear/eye.
+
+Real-audio fixture used:
+
+- Same private WAV as the prior Phase 12.1 partial entry (still gitignored; not referenced by name here).
+
+What failed or remains partial:
+
+- **Live-update fix is a candidate, not confirmed.** Dan needs to rebuild and test (a) play Mastered, drag the intensity slider, hear the change without toggling — if so, fixed. (b) Check the `npm run tauri dev` console: when adjusting sliders during Mastered playback, three diagnostic lines should fire per edit. If only the first or none fire, we have a more specific lead.
+- **Preset dramatization is a candidate direction, not confirmed.** Numbers chosen are first-cut conservative-but-audibly-distinct. Dan may find them too aggressive (dial back) or still too subtle (push further). Specifically: he should A/B Universal vs Clarity at default intensity with Volume Match ON. Audible high-end difference = fix landed. Still too subtle = increase the preset_high_db values (try Clarity from +2.5 to +3.5, etc.).
+- **`npm run tauri dev` rebuild is required to test any of the above.** Each slice is on master; a single `git pull` + close-and-restart of the dev app picks all of them up at once.
+- **The new diagnostic `eprintln!`s in `audio.rs` are intentionally permanent for this slice; they emit one line per slider tick during Mastered playback.** Cheap but slightly chatty. Will gate behind a `--features debug-audio-trace` or remove once Dan confirms the live-update bug is gone.
+- **Number-input fields next to sliders are NOT shipped this batch.** Adding `<input type="number">` alongside each Slider is straightforward UI plumbing but it changes layout in 5 places; deferred to keep this batch testable in isolation.
+- **Progress bars for live render + export are NOT shipped.** Export currently runs as a synchronous Tauri command without progress events. Adding progress requires backend changes (emit a stream of progress events during render) plus a frontend listener and a bar component. Real slice on its own.
+- **Visual hierarchy pass is NOT shipped.** Dan asked for "a bit more visual hierarchy with the text"; that's typography and layout work that warrants a dedicated CSS slice and a visual review.
+- **`mastering_render_processes_real_fixture_if_present` runtime on Dan's WAV was 166.73 s in debug mode** (from the partial entry above). That's the decode time Dan called out as the "1–2 second" delay on toggle. The toggle re-decodes the entire file from disk before swapping the sink. Mitigation candidate: cache the decoded PCM keyed by `(path, mtime)` in the audio thread state so subsequent `play_master` calls on the same file are O(1). Not shipped this batch; tracked as a follow-up.
+
+Next recommended slice:
+
+1. **Dan's verification pass on the current batch.** Close the dev app, `git pull`, run `npm run tauri dev`, reproduce the original tests, report back. Specifically:
+   a. **Live-update bug fixed?** Drag intensity while on Mastered playback — hear change immediately?
+   b. **Presets distinct enough?** Click between Universal / Clarity / Tape / Oomph at intensity 0.5 with Volume Match ON — are they meaningfully different by ear now? (If still subtle, push the preset values higher.)
+   c. **Spacebar plays/pauses?** Outside any input field, hit space — toggles play?
+   d. **Double-click EQ slider snaps to 0?** Pull the High slider to +4 dB, double-click — back to 0?
+   e. **Audit-WAV button label clearer?** And does it still actually render an offline WAV?
+   f. **Analysis summary readable?** Under the LUFS/TP/DR row, click "What this means" — does the prose match what the numbers actually say about the track?
+
+2. **If 1.a, 1.b are positive: next batch.** Decode cache (kills the 1–2 s toggle delay regardless of live update), number-input fields, export progress bar.
+
+3. **If 1.a is still broken: read the diagnostic eprintln output.** The three lines tell us exactly where the live-update pipeline fails, so the next fix is targeted.
+
+4. **If 1.b is still subtle: bump preset values.** First push Clarity (+3.5 high), Tape (+2.5 low / -2.5 high, sat 0.55), Oomph (+3.5 low). Re-test.
+
+Track Master release-candidate is now blocked on: (a) Dan's confirmation that the live-update bug is fixed and presets are distinct enough, (b) Phase 7.4 undo/redo (still the only Track Master non-negotiable that hasn't been built structurally), (c) ongoing Phase 12.1 listening iteration. The remaining UI polish items (number inputs, progress bars, visual hierarchy) are now refinements, not release-candidate gates.
