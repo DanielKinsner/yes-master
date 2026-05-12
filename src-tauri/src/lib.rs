@@ -68,6 +68,7 @@ pub fn run() {
             project::load_recent_session,
             settings::save_user_preset,
             settings::list_user_presets,
+            settings::delete_user_preset,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

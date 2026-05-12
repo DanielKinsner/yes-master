@@ -9,11 +9,13 @@ import type {
   LoopRegion,
   MasteringSettings,
   Preset,
+  PresetKind,
   ProjectMode,
   ProjectState,
   QualityCheck,
   RenderJob,
   TrackId,
+  UserPreset,
   WaveformPeaks,
 } from "../bindings";
 
@@ -83,6 +85,8 @@ export function useTrackMaster() {
   const [albumIntent, setAlbumIntent] = useState<MasteringSettings>(DEFAULT_SETTINGS);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [overrideAlbum, setOverrideAlbum] = useState<Set<TrackId>>(new Set());
+  const [userPresets, setUserPresets] = useState<UserPreset[]>([]);
+  const [savingPreset, setSavingPreset] = useState(false);
   const [loadedTrackId, setLoadedTrackId] = useState<TrackId | null>(null);
   const [loadedKindByTrack, setLoadedKindByTrack] = useState<Record<TrackId, PlaybackKindUI>>({});
   const [regionByTrack, setRegionByTrack] = useState<Record<TrackId, LoopRegion | null>>({});
@@ -101,6 +105,23 @@ export function useTrackMaster() {
     });
     return () => {
       unlisten?.();
+    };
+  }, []);
+
+  // Phase 7.3: load user presets on mount; subsequent saves/deletes refresh
+  // the list directly so we don't need to re-fetch.
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .listUserPresets()
+      .then((presets) => {
+        if (!cancelled) setUserPresets(presets);
+      })
+      .catch((err) => {
+        console.warn("Failed to load user presets", err);
+      });
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -638,6 +659,76 @@ export function useTrackMaster() {
   const clearError = useCallback(() => setError(null), []);
   const clearExportReceipt = useCallback(() => setLastExportReceipt(null), []);
 
+  const saveUserPreset = useCallback(
+    async (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) {
+        setError("Preset name cannot be empty");
+        return;
+      }
+      setSavingPreset(true);
+      setError(null);
+      try {
+        const kind: PresetKind = mode === "album" ? "album" : "track";
+        const snapshot = followingAlbumIntent ? albumIntent : selectedSettings;
+        const created = await api.saveUserPreset(trimmed, kind, snapshot);
+        setUserPresets((prev) => [...prev, created]);
+      } catch (err) {
+        setError(String(err));
+      } finally {
+        setSavingPreset(false);
+      }
+    },
+    [mode, followingAlbumIntent, albumIntent, selectedSettings],
+  );
+
+  const deleteUserPreset = useCallback(async (id: string) => {
+    try {
+      await api.deleteUserPreset(id);
+      setUserPresets((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      setError(String(err));
+    }
+  }, []);
+
+  const applyUserPreset = useCallback(
+    (preset: UserPreset) => {
+      if (mode === "album" && !selectedIsOverriding) {
+        // Apply to album intent.
+        setAlbumIntent(preset.settings);
+      } else if (selectedTrackId) {
+        setSettingsMap((prev) => ({
+          ...prev,
+          [selectedTrackId]: preset.settings,
+        }));
+        markStale(selectedTrackId);
+      }
+      // Push to live chain if currently playing the affected master.
+      if (
+        loadedTrackId !== null &&
+        loadedKindByTrack[loadedTrackId] === "master"
+      ) {
+        const loadedFollowsAlbum =
+          mode === "album" && !overrideAlbum.has(loadedTrackId);
+        const targets = mode === "album" && !selectedIsOverriding
+          ? loadedFollowsAlbum
+          : loadedTrackId === selectedTrackId;
+        if (targets) {
+          api.updateChain(preset.settings).catch((err) => setError(String(err)));
+        }
+      }
+    },
+    [
+      mode,
+      selectedIsOverriding,
+      selectedTrackId,
+      markStale,
+      loadedTrackId,
+      loadedKindByTrack,
+      overrideAlbum,
+    ],
+  );
+
   const [isExportingAlbum, setIsExportingAlbum] = useState(false);
 
   const exportAlbum = useCallback(async () => {
@@ -750,5 +841,10 @@ export function useTrackMaster() {
     selectedIsOverriding,
     followingAlbumIntent,
     toggleOverrideAlbum,
+    userPresets,
+    savingPreset,
+    saveUserPreset,
+    deleteUserPreset,
+    applyUserPreset,
   };
 }

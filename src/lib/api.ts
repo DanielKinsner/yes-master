@@ -125,6 +125,9 @@ export const api = {
 
   listUserPresets: () => invoke<UserPreset[]>("list_user_presets"),
 
+  deleteUserPreset: (id: string) =>
+    invoke<null>("delete_user_preset", { id }),
+
   playTrack: (
     trackId: TrackId,
     trackPath: string,

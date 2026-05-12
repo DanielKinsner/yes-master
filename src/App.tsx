@@ -11,6 +11,7 @@ import type {
   LoopRegion,
   MasteringSettings,
   Preset,
+  UserPreset,
   WaveformPeaks,
   QualityCheck,
   QualityLevel,
@@ -288,6 +289,13 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
       <PresetTiles
         selected={tm.selectedSettings.preset}
         onChange={tm.setPreset}
+      />
+      <UserPresetSection
+        presets={tm.userPresets}
+        savingPreset={tm.savingPreset}
+        onSave={tm.saveUserPreset}
+        onDelete={tm.deleteUserPreset}
+        onApply={tm.applyUserPreset}
       />
       <Macros
         settings={tm.selectedSettings}
@@ -736,6 +744,89 @@ function PresetTiles({
           );
         })}
       </div>
+    </section>
+  );
+}
+
+function UserPresetSection({
+  presets,
+  savingPreset,
+  onSave,
+  onDelete,
+  onApply,
+}: {
+  presets: UserPreset[];
+  savingPreset: boolean;
+  onSave: (name: string) => void;
+  onDelete: (id: string) => void;
+  onApply: (preset: UserPreset) => void;
+}) {
+  const [name, setName] = useState("");
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    onSave(name);
+    setName("");
+  };
+
+  return (
+    <section className="user-presets">
+      <div className="section-head">
+        <span className="section-label">My presets</span>
+      </div>
+      <div className="user-preset-row">
+        {presets.length === 0 && (
+          <span className="user-preset-empty">
+            Save the current settings as a preset to reuse later.
+          </span>
+        )}
+        {presets.map((p) => (
+          <div key={p.id} className="user-preset-chip">
+            <button
+              type="button"
+              className="user-preset-apply"
+              onClick={() => onApply(p)}
+              title={`Apply "${p.name}"`}
+            >
+              {p.name}
+              <span className="user-preset-kind"> · {p.kind}</span>
+            </button>
+            <button
+              type="button"
+              className="user-preset-delete"
+              onClick={() => onDelete(p.id)}
+              aria-label={`Delete preset ${p.name}`}
+              title="Delete preset"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+      <form
+        className="user-preset-save"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSave();
+        }}
+      >
+        <input
+          type="text"
+          className="user-preset-name"
+          placeholder="Save current as…"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={64}
+          disabled={savingPreset}
+        />
+        <button
+          type="submit"
+          className="ghost-btn"
+          disabled={savingPreset || !name.trim()}
+        >
+          {savingPreset ? "Saving…" : "Save preset"}
+        </button>
+      </form>
     </section>
   );
 }

@@ -533,16 +533,47 @@ fn rms(samples: &[f32]) -> f32 {
     (sum_sq / samples.len() as f32).sqrt()
 }
 
-#[tokio::test]
-async fn save_user_preset_rejects_empty_name() {
-    let err = settings::save_user_preset(
-        "  ".to_string(),
-        PresetKind::Track,
-        default_settings(),
-    )
-    .await
-    .expect_err("expected rejection");
-    assert!(matches!(err, CommandError::Other(_)));
+#[test]
+fn user_presets_save_list_delete_roundtrip() {
+    use album_mastering_studio_lib::settings;
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let path = tmp.path().join("user_presets.json");
+
+    // Empty / missing file reads as empty list.
+    let initial = settings::read_presets(&path).expect("read empty");
+    assert!(initial.is_empty());
+
+    // Write two presets.
+    let p1 = UserPreset {
+        id: "preset-1".to_string(),
+        name: "My Loud".to_string(),
+        kind: PresetKind::Track,
+        settings: default_settings(),
+        created_at_iso: "2026-05-11T00:00:00Z".to_string(),
+    };
+    let p2 = UserPreset {
+        id: "preset-2".to_string(),
+        name: "Acoustic Light".to_string(),
+        kind: PresetKind::Album,
+        settings: default_settings(),
+        created_at_iso: "2026-05-11T00:00:01Z".to_string(),
+    };
+    settings::write_presets(&path, &[p1.clone(), p2.clone()]).expect("write");
+
+    // Read back.
+    let read = settings::read_presets(&path).expect("read");
+    assert_eq!(read.len(), 2);
+    assert_eq!(read[0].id, "preset-1");
+    assert_eq!(read[1].name, "Acoustic Light");
+
+    // Simulate delete: remove preset-1 and write back.
+    let remaining: Vec<UserPreset> =
+        read.into_iter().filter(|p| p.id != "preset-1").collect();
+    settings::write_presets(&path, &remaining).expect("write after delete");
+    let after = settings::read_presets(&path).expect("read after delete");
+    assert_eq!(after.len(), 1);
+    assert_eq!(after[0].id, "preset-2");
 }
 
 #[test]

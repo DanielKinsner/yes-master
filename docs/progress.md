@@ -889,3 +889,57 @@ What failed or remains partial:
 Next recommended slice:
 
 Phase 11.2.b — 4× oversampled true-peak inside the limiter (closes the inter-sample-peak loophole for streaming delivery). Or Phase 9.2 — let users edit the inferred role + position-aware nudges (Opener for track 1, Closer for last). Or Phase 14.x — installer build / icon polish if Dan wants to put the app on a different machine. Or Phase 6.x — codec preview (AAC/Opus simulation in `run_export_checks` so the receipt warns about codec-specific clipping risk).
+
+## 2026-05-11 — Phase 7.3: user-saved custom presets that persist + apply
+
+Goal:
+
+Save the current settings as a named user preset. Saved presets persist on disk, show up across restarts, and apply to the active track (or album intent) with one click. The mock backend from Phase 1 is replaced with real persistence.
+
+What changed:
+
+Backend (`settings.rs`):
+
+- Replaced the in-memory stubs with file-backed persistence to `app_data_dir/user_presets.json`. Same atomic-write pattern as Phase 7.2's session file (write `.tmp`, then `fs::rename`). Malformed files / missing files degrade gracefully — load returns an empty list rather than erroring.
+- `save_user_preset(name, kind, settings, app)` validates non-empty name (trimmed), appends a new `UserPreset` (uuid id, ISO timestamp placeholder), and writes back.
+- `list_user_presets(app)` returns the on-disk list (empty if the file doesn't exist).
+- `delete_user_preset(id, app)` filters the entry by id and writes back; idempotent (deleting a missing id is a successful no-op so the UI can race retry-clicks without surfacing fake errors).
+- `lib.rs`: `delete_user_preset` registered in `invoke_handler`.
+
+Frontend:
+
+- `api.ts`: `deleteUserPreset(id)`.
+- `useTrackMaster.ts`:
+  - `userPresets: UserPreset[]` state, loaded on mount via `api.listUserPresets`.
+  - `savingPreset: boolean` flag for the save button's spinner state.
+  - `saveUserPreset(name)` — snapshots the **currently visible** settings (album intent when following album in album mode; per-track settings otherwise), picks `kind` from the current mode, calls the backend, prepends the result to local state.
+  - `deleteUserPreset(id)` — calls backend, optimistically removes from local state.
+  - `applyUserPreset(preset)` — assigns the preset's settings to (a) `albumIntent` if in album mode + following, otherwise (b) `settingsMap[selectedTrackId]`. Pushes live coeffs to the audio thread when the affected track is the one playing Mastered.
+- `App.tsx`:
+  - `UserPresetSection` rendered below the standard `PresetTiles` row.
+  - Empty state: "Save the current settings as a preset to reuse later."
+  - Each saved preset is a chip with the name + `kind` annotation and a × button. Click the chip body → apply. Click ×  → delete.
+  - Below the chips: an inline form (`Save current as…` text input + Save button) that calls `saveUserPreset` on submit.
+- `App.css`: `.user-presets`, `.user-preset-row`, `.user-preset-chip`, `.user-preset-apply`, `.user-preset-delete`, `.user-preset-save`, `.user-preset-name`.
+
+Tests:
+
+- Replaced `save_user_preset_rejects_empty_name` (per-Tauri-command unit test) with `user_presets_save_list_delete_roundtrip` (file-level integration test): empty list → write two presets → read back → remove one → read confirms only the survivor remains.
+
+Verification:
+
+- `npm run build`: clean. Bundle 227 KB (71 KB gzipped).
+- `cargo test` (from `src-tauri/`): **23/23** pass in 20.52s.
+- `npm run tauri dev`: deferred (manual — dial in a preset, click Save preset, restart the app, expect the preset to still be there and re-apply correctly).
+
+What failed or remains partial:
+
+- No "favorite" / reorder / rename for user presets. They're append-only. Phase 7.3.x can add inline rename + drag-reorder.
+- `created_at_iso` is the same `ISO_PLACEHOLDER` stub used throughout — Phase 7.3.x can pull in a real timestamp (or `chrono`) once we care about preset history.
+- The chip width doesn't truncate long names. A really long preset name will push the row to wrap. Acceptable for now.
+- When applying a preset in album mode while following album intent, the snapshot is taken from albumIntent — that's the right behavior for editing the album. If the user wants to apply a preset to just one track, they need to toggle Override first, then apply. The UI doesn't currently hint at this; could add a "Apply to this track only" submenu later.
+- No "track-only vs album-intent" filter on the preset row. All saved presets show regardless of mode/kind. Phase 7.3.x could filter by current mode.
+
+Next recommended slice:
+
+Phase 11.2.b (true-peak inside the limiter — pure DSP, streaming-grade quality), Phase 9.2 (editable role + position-aware role nudges), or Phase 6.x (codec preview for export checks — simulate the LUFS/peak change from AAC/Opus encoding before the user ships).
