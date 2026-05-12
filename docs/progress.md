@@ -1492,3 +1492,62 @@ After that: **render/export progress events** (the StaleBar already has a placeh
 Track Master release-candidate is now structurally complete except for:
 - ✅ All non-negotiables from IMPLEMENTATION_PLAN.md ship-listed: drag/drop, analyze, universal settings, waveform, zoom, region select, loop, A/B, volume match, presets, intensity, EQ, stale-preview, real-time audition (the v2 fix needs Dan's confirmation), one export button, advisory checks, non-overwriting output, autosave, **undo/redo (Phase 7.4, this slice)**.
 - ❌ Phase 12.1 real-listening confirmation that the audible direction is right.
+
+## 2026-05-12 — Phase 12.2: Live clipping / output peak indicator
+
+Goal:
+
+Close the P0 UX gap Dan called out — "a preset starts clipping on already-mastered audio with no warning until the export receipt." Surface a live, post-output-gain peak meter so the user can see in real time whether the current settings produce clipping during slider drags, before any export round-trip.
+
+What changed:
+
+Backend (Rust, single-file slice — `src-tauri/src/audio.rs` plus 3 small touch-points elsewhere):
+
+- **`audio.rs::MasteringSource`**: new `peak_linear: Arc<AtomicU32>` field. Inside `Iterator::next`, after the crossfade resolves into `frame_main`, fold the per-channel post-output-gain peak via `peak_linear.fetch_max(frame_peak.to_bits(), Relaxed)`. The bits-compare is valid because we only ever store non-negative finite f32, where IEEE 754 bit ordering matches numeric ordering. NaN/inf are filtered upstream of `fetch_max` so a DSP bug can't poison the slot with a non-finite value.
+- **`audio.rs::AudioThreadState`**: parallel `peak_linear` field. Cloned into each new `MasteringSource` constructed inside `handle_play_master`, and `store(0, Relaxed)`'d both there and in `handle_play` so source playback or a track swap doesn't leak the tail peak from a prior session.
+- **`audio.rs::audio_thread`** snapshot construction: `swap(0, Relaxed)` consumes the "peak since last tick" and resets the slot atomically. The linear value is converted to dBFS via the new `linear_to_dbfs` helper (silence sentinel `-120.0` because JSON can't carry `-inf`).
+- **`audio.rs::PlaybackSnapshot`**: gained a `peak_dbfs: f32` field, default `SILENCE_DBFS`. Custom `Default` impl since the struct can no longer derive it.
+- **`types.rs::PlaybackTick`**: same new field, with `#[serde(default = "default_silence_dbfs")]` so older payloads/frontends parse cleanly per HANDOFF lesson #4.
+- **`lib.rs`**: forward `snap.peak_dbfs` into the emitted `PlaybackTick`.
+
+Frontend (TypeScript + React + CSS):
+
+- **`bindings.ts::PlaybackTick`**: new `peak_dbfs: number` field.
+- **`useTrackMaster.ts`**: `transport` state extended with `peakDbfs: number` (init `-120`), updated from every `onPlaybackTick`.
+- **`App.tsx`**: new `ClippingIndicator` component rendered inside `StaleBar`. Three states: `idle` (not playing — "PEAK —"), `silent` (< -80 dBFS in the window — "PEAK —" muted), `ok` (live dB readout in green), `clip` (peak ≥ -0.1 dBFS — "CLIP" pill in red, pulsing). Tooltips explain how to back off the chain when clipping (Output Gain / Intensity / Input Gain). Aligned with the streaming-headroom advisory floor introduced in `7dbf132` for consistency between the live meter and the post-render check.
+- **`App.css`**: new `.clip-indicator` styles + `clip-pulse` keyframe animation. Tabular-nums on the dB readout so the chip doesn't shift horizontally as the value jitters.
+
+Tests (backend, `audio.rs::mod tests`):
+
+- **`mastering_source_peak_atomic_reflects_clipping_above_ceiling`**: synthetic 1 kHz sine + Universal preset + `output_gain_db = +20`. After draining, the atomic must report a linear peak > 1.0 (above 0 dBFS). Catches the "fold is silently writing 0" failure mode.
+- **`mastering_source_peak_atomic_reflects_clean_signal_below_ceiling`**: same synthetic sine through Universal at intensity 0. Peak must be > 0 (signal is flowing) and < 1.0 (limiter held the line). Catches both "atomic never written" and "fold reads a pre-final stage".
+- **`mastering_source_peak_atomic_resets_on_swap`**: confirms swap-and-reset semantics so the next 50 ms window starts at 0.
+- **`linear_to_dbfs_returns_silence_sentinel_for_zero`**: tiny conversion sanity (zero → `SILENCE_DBFS`; 1.0 → 0 dBFS; 0.5 → -6.02 dBFS).
+- **Three existing `MasteringSource::new` call sites** updated to pass the new peak handle. The existing `mastering_source_applies_live_coeff_updates_via_channel` and `mastering_source_output_differs_after_live_update` tests still pass — confirming the peak fold didn't perturb the crossfade/coeff-swap behavior in the same `next()` hot loop.
+
+Verification:
+
+- `cargo check --tests`: clean in 2.20 s.
+- `cargo test` (full suite): **44/44 pass** in 264 s (was 39). 34 contract tests + 10 audio module tests; my 4 new tests pass; existing 6 audio tests + 34 contract tests unaffected. Real-fixture tests (`mastering_render_processes_real_fixture_if_present`, `phase_12_1_real_fixture_metering_snapshot`) still pass — peak fold doesn't disturb render output.
+- `npm run build`: clean, **253.68 KB / 77.57 KB gzipped** (+0.8 KB raw, +0.33 KB gzipped over the prior `252.88 / 77.24`). Bundle growth tracks the ~50 lines of new component + ~50 lines of new CSS.
+- `npm run tauri dev`: not run by the agent. Dan's manual smoke verifies the integration layer (the dB readout will start flowing on the next master playback he kicks off).
+
+Real-audio fixture used: none in this slice. The clipping test relies on synthetic signals with deterministic gain staging, exactly the kind of "objective slice" the goal directive flagged as agent-autonomous.
+
+What failed or remains partial:
+
+- **Frontend integration not exercised by automated test.** No vitest yet (still on the deferred list per HANDOFF). The ClippingIndicator's state machine logic is pure-function and small; it's the kind of thing the deferred vitest setup would cover cleanly. For now, the synthetic backend tests cover the data path, and Dan's manual smoke covers the React side.
+- **Meter is read-only.** No "click to add Input Gain" or auto-trim affordance yet. The tooltip tells the user what to adjust, but they have to do it themselves. Auto-trim on clip is a separate slice (HANDOFF P0 #4-ish — analyze-aware gain staging when source LUFS > -10).
+- **Single peak number, not per-channel.** The fold collapses across channels with `max`. A balance meter (separate L/R bars) is a future polish slice; for "is anything clipping anywhere?" the single number is the right granularity at 50 ms cadence.
+- **`tauri dev` Cargo lock pitfall** from HANDOFF #1 didn't bite this session because Dan's dev app wasn't running. If a future agent hits the lock, `cargo check --tests` is the fallback.
+
+Next recommended slice:
+
+The HANDOFF P0 list still has four wired-controls slices ahead. In order of "smallest objective win with no listening required":
+
+1. **Wire `width` (Advanced)** — clean M/S transform between EQ and saturation; ~80 lines + 2 tests; removes one "(coming soon)" label.
+2. **Render-progress for album export** — `render_album_master` already loops `mastering_render` per track but never forwards the per-track progress callback. Thread it through to emit `RenderProgress { kind: "album", fraction }`. Mostly mechanical.
+3. **Wire `lufs_offset_db` post-render LUFS landing** — measure post-render integrated LUFS, apply one-pass gain delta to hit the user's target. Touches `engine::mastering_render` only.
+4. **Wire `compression_density`** — the biggest of the four because it's a real envelope-following compressor (~300-500 lines per HANDOFF estimate). Worth a focused brainstorm + plan before coding.
+
+If Dan returns and asks for the live clipping meter to drive an automatic Input-Gain trim (the auto-trim follow-up), that's a P0-adjacent slice that builds directly on this one.

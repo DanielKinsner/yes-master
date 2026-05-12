@@ -1,8 +1,24 @@
 use crate::types::*;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
+
+/// Sentinel dBFS value reported when the peak window saw no signal. JSON can't
+/// round-trip -inf, so we use a finite "well below audible" floor instead.
+pub const SILENCE_DBFS: f32 = -120.0;
+
+/// Convert a non-negative linear sample magnitude to dBFS, with a silence
+/// sentinel for inputs at or below 0. Caller is responsible for ensuring the
+/// input is finite (filter NaN/inf before calling).
+fn linear_to_dbfs(linear: f32) -> f32 {
+    if linear > 0.0 {
+        20.0 * linear.log10()
+    } else {
+        SILENCE_DBFS
+    }
+}
 
 use symphonia::core::audio::{AudioBufferRef, SampleBuffer};
 use symphonia::core::codecs::{DecoderOptions, CODEC_TYPE_NULL};
@@ -428,12 +444,29 @@ enum AudioCommand {
     Shutdown,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct PlaybackSnapshot {
     pub track_id: Option<TrackId>,
     pub position_sec: f64,
     pub is_playing: bool,
     pub is_loaded: bool,
+    /// Post-output-gain peak across all channels since the last snapshot tick.
+    /// `SILENCE_DBFS` when there was no signal in the window (e.g. source
+    /// playback, idle, or pure silence). Computed inside the audio thread by
+    /// swap-and-converting the shared peak atomic.
+    pub peak_dbfs: f32,
+}
+
+impl Default for PlaybackSnapshot {
+    fn default() -> Self {
+        Self {
+            track_id: None,
+            position_sec: 0.0,
+            is_playing: false,
+            is_loaded: false,
+            peak_dbfs: SILENCE_DBFS,
+        }
+    }
 }
 
 pub struct AudioPlayer {
@@ -586,6 +619,12 @@ struct AudioThreadState {
     /// Single-entry LRU is sufficient because the typical Track Master flow
     /// hammers one fixture; album mode keeps the most-recently-played track.
     decoded_cache: Option<DecodedCacheEntry>,
+    /// Shared post-output-gain peak slot. `MasteringSource` writes via
+    /// `fetch_max` per frame; the audio thread `swap`s to 0 each snapshot
+    /// cycle to compute "peak since last tick." Bits are an f32 magnitude;
+    /// valid because we only ever store non-negative finite values, where
+    /// IEEE 754 bit ordering matches numeric ordering.
+    peak_linear: Arc<AtomicU32>,
 }
 
 #[derive(Clone)]
@@ -692,12 +731,27 @@ fn audio_thread(rx: mpsc::Receiver<AudioCommand>, snapshot: Arc<RwLock<PlaybackS
         }
 
         let next_snap = match state.as_ref() {
-            Some(s) if s.current_track.is_some() => PlaybackSnapshot {
-                track_id: s.current_track.clone(),
-                position_sec: s.sink.get_pos().as_secs_f64(),
-                is_playing: !s.sink.is_paused() && !s.sink.empty(),
-                is_loaded: true,
-            },
+            Some(s) if s.current_track.is_some() => {
+                // Atomic swap consumes the "peak since last tick" and resets
+                // the slot to 0 in one step — the writer (MasteringSource) and
+                // reader can't race to drop a sample's peak. NaN-poisoned bits
+                // (which the source-side guard already filters) would only
+                // surface as a one-tick anomaly here, never persistent state.
+                let peak_bits = s.peak_linear.swap(0, Ordering::Relaxed);
+                let peak_linear = f32::from_bits(peak_bits);
+                let peak_dbfs = if peak_linear.is_finite() {
+                    linear_to_dbfs(peak_linear)
+                } else {
+                    SILENCE_DBFS
+                };
+                PlaybackSnapshot {
+                    track_id: s.current_track.clone(),
+                    position_sec: s.sink.get_pos().as_secs_f64(),
+                    is_playing: !s.sink.is_paused() && !s.sink.empty(),
+                    is_loaded: true,
+                    peak_dbfs,
+                }
+            }
             _ => PlaybackSnapshot::default(),
         };
         if let Ok(mut w) = snapshot.write() {
@@ -729,6 +783,7 @@ fn handle_play(
             live_coeffs_tx: None,
             live_sample_rate: 44_100,
             decoded_cache: None,
+            peak_linear: Arc::new(AtomicU32::new(0)),
         });
     }
     let s = state.as_mut().expect("state just inserted");
@@ -743,6 +798,9 @@ fn handle_play(
     s.sink = new_sink;
     s.current_track = Some(track_id);
     s.live_coeffs_tx = None;
+    // Source playback bypasses MasteringSource — clear the peak slot so the
+    // meter doesn't keep showing whatever the prior master playback left.
+    s.peak_linear.store(0, Ordering::Relaxed);
     Ok(())
 }
 
@@ -793,6 +851,7 @@ fn handle_play_master(
             live_coeffs_tx: None,
             live_sample_rate: pcm.sample_rate,
             decoded_cache: None,
+            peak_linear: Arc::new(AtomicU32::new(0)),
         });
     }
     let s = state.as_mut().expect("state just inserted");
@@ -806,9 +865,21 @@ fn handle_play_master(
         pcm: pcm.clone(),
     });
 
+    // Reset the peak slot so the meter starts fresh for this playback. Without
+    // this, a swap from a prior session would leak its tail peak into the
+    // first tick of the new one.
+    s.peak_linear.store(0, Ordering::Relaxed);
+
     let (coeffs_tx, coeffs_rx) = mpsc::channel::<crate::dsp::ChainCoeffs>();
     let chain = crate::dsp::MasteringChain::new(pcm.sample_rate, pcm.channels as usize, settings);
-    let mastering_source = MasteringSource::new(pcm.samples, pcm.channels, pcm.sample_rate, chain, coeffs_rx);
+    let mastering_source = MasteringSource::new(
+        pcm.samples,
+        pcm.channels,
+        pcm.sample_rate,
+        chain,
+        coeffs_rx,
+        s.peak_linear.clone(),
+    );
 
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(mastering_source);
@@ -855,6 +926,9 @@ struct MasteringSource {
     frame_main: Vec<f32>,
     frame_pending: Vec<f32>,
     frame_out_pos: usize,
+    /// Shared post-output-gain peak slot. Per-frame max of |frame_main[i]| is
+    /// atomic-max'd into this slot. The audio thread consumes it via swap.
+    peak_linear: Arc<AtomicU32>,
 }
 
 impl MasteringSource {
@@ -864,6 +938,7 @@ impl MasteringSource {
         sample_rate: u32,
         chain: crate::dsp::MasteringChain,
         coeffs_rx: mpsc::Receiver<crate::dsp::ChainCoeffs>,
+        peak_linear: Arc<AtomicU32>,
     ) -> Self {
         let channels_usize = channels.max(1) as usize;
         Self {
@@ -883,6 +958,7 @@ impl MasteringSource {
             // Setting to `channels_usize` triggers the fetch on the first
             // `next()` call rather than requiring a separate "primed" flag.
             frame_out_pos: channels_usize,
+            peak_linear,
         }
     }
 }
@@ -960,6 +1036,23 @@ impl Iterator for MasteringSource {
                     self.crossfade_total = 0;
                 }
             }
+
+            // Phase 12.2 — fold the post-output-gain frame peak into the shared
+            // atomic for the live clipping meter. Per-frame instead of
+            // per-sample: cheaper, and the meter only needs ~50 ms resolution
+            // (the snapshot loop's tick rate). NaN/inf are filtered so a DSP
+            // bug can't poison the atomic with a non-finite value.
+            let mut frame_peak = 0.0f32;
+            for i in 0..channels {
+                let v = self.frame_main[i].abs();
+                if v.is_finite() && v > frame_peak {
+                    frame_peak = v;
+                }
+            }
+            // Bits comparison is safe here because we only ever store
+            // non-negative finite f32, where IEEE 754 ordering matches numeric.
+            self.peak_linear
+                .fetch_max(frame_peak.to_bits(), Ordering::Relaxed);
 
             self.frame_out_pos = 0;
         }
@@ -1078,12 +1171,14 @@ mod tests {
         let initial_chain =
             MasteringChain::new(sample_rate, channels as usize, &initial_settings);
         let (coeffs_tx, coeffs_rx) = mpsc::channel::<ChainCoeffs>();
+        let peak = Arc::new(AtomicU32::new(0));
         let mut source = MasteringSource::new(
             samples,
             channels,
             sample_rate,
             initial_chain,
             coeffs_rx,
+            peak,
         );
 
         // Drain the first half at the initial chain.
@@ -1237,8 +1332,15 @@ mod tests {
         let ref_chain =
             MasteringChain::new(sample_rate, channels as usize, &initial_settings);
         let (_ref_tx, ref_rx) = mpsc::channel::<ChainCoeffs>();
-        let mut ref_source =
-            MasteringSource::new(samples_a, channels, sample_rate, ref_chain, ref_rx);
+        let ref_peak = Arc::new(AtomicU32::new(0));
+        let mut ref_source = MasteringSource::new(
+            samples_a,
+            channels,
+            sample_rate,
+            ref_chain,
+            ref_rx,
+            ref_peak,
+        );
         let ref_output: Vec<f32> = (0..total_frames * channels as usize)
             .filter_map(|_| ref_source.next())
             .collect();
@@ -1247,8 +1349,15 @@ mod tests {
         let live_chain =
             MasteringChain::new(sample_rate, channels as usize, &initial_settings);
         let (live_tx, live_rx) = mpsc::channel::<ChainCoeffs>();
-        let mut live_source =
-            MasteringSource::new(samples_b, channels, sample_rate, live_chain, live_rx);
+        let live_peak = Arc::new(AtomicU32::new(0));
+        let mut live_source = MasteringSource::new(
+            samples_b,
+            channels,
+            sample_rate,
+            live_chain,
+            live_rx,
+            live_peak,
+        );
         let half = total_frames * channels as usize / 2;
         let mut live_output: Vec<f32> = Vec::with_capacity(total_frames * channels as usize);
         for _ in 0..half {
@@ -1293,5 +1402,150 @@ mod tests {
              (mean_abs_diff={mean_abs_diff:.5}). If this is near 0, MasteringSource \
              is silently dropping coeff updates."
         );
+    }
+
+    /// Phase 12.2 — the post-output-gain peak atomic must reflect clipping
+    /// when a chain pushes the signal above 0 dBFS. Output gain is post-
+    /// limiter, so dialing it well above 0 dB is the simplest way to force a
+    /// clip from inside a deterministic test.
+    #[test]
+    fn mastering_source_peak_atomic_reflects_clipping_above_ceiling() {
+        let sample_rate = 44_100;
+        let channels: u16 = 2;
+        let total_frames = 4_096;
+        let samples = sine_signal(total_frames, sample_rate, channels);
+
+        // +20 dB post-limiter output gain on a 0.3-amplitude sine guarantees
+        // the peak ends up well above 1.0 linear (≈ +9.5 dBFS in steady state).
+        let mut settings = settings_with_intensity(0.0);
+        settings.output_gain_db = 20.0;
+
+        let chain = MasteringChain::new(sample_rate, channels as usize, &settings);
+        let (_tx, rx) = mpsc::channel::<ChainCoeffs>();
+        let peak = Arc::new(AtomicU32::new(0));
+        let mut source = MasteringSource::new(
+            samples,
+            channels,
+            sample_rate,
+            chain,
+            rx,
+            peak.clone(),
+        );
+
+        for _ in 0..(total_frames * channels as usize) {
+            if source.next().is_none() {
+                break;
+            }
+        }
+
+        let peak_linear = f32::from_bits(peak.load(Ordering::Relaxed));
+        assert!(
+            peak_linear.is_finite(),
+            "peak must be finite, got {peak_linear}"
+        );
+        assert!(
+            peak_linear > 1.0,
+            "expected post-output peak > 1.0 (above 0 dBFS) with +20 dB output gain, \
+             got {peak_linear}. If this fails, MasteringSource is not folding peak \
+             into the shared atomic, or the fold is reading pre-output-gain."
+        );
+    }
+
+    /// Companion to the clipping test: a clean chain at neutral settings must
+    /// produce a non-zero peak (audio is flowing) but must stay below 0 dBFS
+    /// (limiter holds the line). Catches the failure mode where the peak fold
+    /// is silently writing 0.
+    #[test]
+    fn mastering_source_peak_atomic_reflects_clean_signal_below_ceiling() {
+        let sample_rate = 44_100;
+        let channels: u16 = 2;
+        let total_frames = 4_096;
+        // Modest amplitude; Universal at intensity 0 adds ~0.6 dB gain.
+        let samples = sine_signal(total_frames, sample_rate, channels);
+
+        let settings = settings_with_intensity(0.0);
+        let chain = MasteringChain::new(sample_rate, channels as usize, &settings);
+        let (_tx, rx) = mpsc::channel::<ChainCoeffs>();
+        let peak = Arc::new(AtomicU32::new(0));
+        let mut source = MasteringSource::new(
+            samples,
+            channels,
+            sample_rate,
+            chain,
+            rx,
+            peak.clone(),
+        );
+
+        for _ in 0..(total_frames * channels as usize) {
+            if source.next().is_none() {
+                break;
+            }
+        }
+
+        let peak_linear = f32::from_bits(peak.load(Ordering::Relaxed));
+        assert!(
+            peak_linear > 0.0,
+            "expected non-zero peak on real signal, got {peak_linear}. \
+             The atomic was never written — peak fold is broken."
+        );
+        assert!(
+            peak_linear < 1.0,
+            "expected peak below 0 dBFS on clean signal through Universal/intensity-0, \
+             got {peak_linear}. Either the limiter is misbehaving or the fold is reading \
+             a non-final stage."
+        );
+    }
+
+    /// Swap-and-reset semantics: after consuming a window of audio, swapping
+    /// the atomic must return the peak from that window AND leave the slot at
+    /// zero so a follow-up window starts fresh.
+    #[test]
+    fn mastering_source_peak_atomic_resets_on_swap() {
+        let sample_rate = 44_100;
+        let channels: u16 = 2;
+        let total_frames = 2_048;
+        let samples = sine_signal(total_frames, sample_rate, channels);
+
+        let settings = settings_with_intensity(0.0);
+        let chain = MasteringChain::new(sample_rate, channels as usize, &settings);
+        let (_tx, rx) = mpsc::channel::<ChainCoeffs>();
+        let peak = Arc::new(AtomicU32::new(0));
+        let mut source = MasteringSource::new(
+            samples,
+            channels,
+            sample_rate,
+            chain,
+            rx,
+            peak.clone(),
+        );
+
+        for _ in 0..(total_frames * channels as usize) {
+            if source.next().is_none() {
+                break;
+            }
+        }
+
+        let first = f32::from_bits(peak.swap(0, Ordering::Relaxed));
+        let second = f32::from_bits(peak.load(Ordering::Relaxed));
+
+        assert!(first > 0.0, "first window saw signal, expected >0, got {first}");
+        assert_eq!(
+            second.to_bits(),
+            0u32,
+            "after swap, the slot must be exactly zero so the next window starts fresh \
+             (got {second} = bits {:#x})",
+            second.to_bits()
+        );
+    }
+
+    /// Tiny conversion sanity: linear→dBFS should hand back the silence
+    /// sentinel for zero input (JSON can't carry -inf cleanly).
+    #[test]
+    fn linear_to_dbfs_returns_silence_sentinel_for_zero() {
+        assert_eq!(linear_to_dbfs(0.0), SILENCE_DBFS);
+        // Spot-check a known dBFS landmark: 1.0 linear == 0 dBFS exactly.
+        assert!((linear_to_dbfs(1.0) - 0.0).abs() < 1e-5);
+        // -6 dBFS ≈ 0.5012 linear (within rounding).
+        assert!((linear_to_dbfs(0.5) - (-6.020599)).abs() < 1e-4);
     }
 }

@@ -305,6 +305,16 @@ pub struct PlaybackTick {
     pub position_sec: f64,
     pub is_playing: bool,
     pub is_loaded: bool,
+    /// Post-output-gain peak across all channels since the last tick, in dBFS.
+    /// `-120.0` is the silence sentinel (no signal in the window). Values
+    /// above `-0.1` indicate clipping risk; values above `0.0` are clipping.
+    /// Defaulted so older sessions/frontends parse cleanly as "no info."
+    #[serde(default = "default_silence_dbfs")]
+    pub peak_dbfs: f32,
+}
+
+fn default_silence_dbfs() -> f32 {
+    -120.0
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]

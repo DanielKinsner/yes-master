@@ -333,6 +333,8 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         onUpdate={tm.updatePreview}
         liveUpdateStats={tm.liveUpdateStats}
         renderProgress={tm.renderProgress}
+        peakDbfs={tm.transport.peakDbfs}
+        isPlaying={tm.transport.isPlaying}
       />
       <ExportSection
         canExport={!!tm.selectedAnalysis}
@@ -1182,12 +1184,16 @@ function StaleBar({
   onUpdate,
   liveUpdateStats,
   renderProgress,
+  peakDbfs,
+  isPlaying,
 }: {
   stale: boolean;
   isRendering: boolean;
   onUpdate: () => void;
   liveUpdateStats: { attempts: number; applied: number; lastAt: number | null };
   renderProgress: { fraction: number; kind: "preview" | "master" | "album" } | null;
+  peakDbfs: number;
+  isPlaying: boolean;
 }) {
   const progressPct =
     renderProgress !== null
@@ -1217,6 +1223,7 @@ function StaleBar({
           />
         </div>
       )}
+      <ClippingIndicator peakDbfs={peakDbfs} isPlaying={isPlaying} />
       {/* Phase 12.1 live-update counter — increments every time the frontend
           sends api.updateChain to the backend. If you make adjustments and
           this counter doesn't change, the frontend isn't firing live updates
@@ -1241,6 +1248,58 @@ function StaleBar({
         {stale ? "Render audit WAV" : "Re-render audit WAV"}
       </button>
     </section>
+  );
+}
+
+// Phase 12.2 — live clipping / output peak indicator. Reads the dBFS peak
+// streamed via PlaybackTick (audio thread → atomic → snapshot → tick) and
+// renders one of three states: silent (no signal), OK (peak below threshold),
+// or CLIP (peak above -0.1 dBFS, the streaming-headroom warning floor).
+// Idle (not playing) collapses to a neutral "—" so the meter doesn't read as
+// "OK" when there's nothing actually being measured.
+const CLIP_THRESHOLD_DBFS = -0.1;
+const SILENCE_FLOOR_DBFS = -80;
+
+function ClippingIndicator({
+  peakDbfs,
+  isPlaying,
+}: {
+  peakDbfs: number;
+  isPlaying: boolean;
+}) {
+  let state: "idle" | "silent" | "ok" | "clip";
+  if (!isPlaying) {
+    state = "idle";
+  } else if (peakDbfs >= CLIP_THRESHOLD_DBFS) {
+    state = "clip";
+  } else if (peakDbfs < SILENCE_FLOOR_DBFS) {
+    state = "silent";
+  } else {
+    state = "ok";
+  }
+  const label = ((): string => {
+    if (state === "idle") return "PEAK —";
+    if (state === "silent") return "PEAK —";
+    if (state === "clip") return "CLIP";
+    return `PEAK ${peakDbfs.toFixed(1)} dB`;
+  })();
+  const title =
+    state === "clip"
+      ? `Output peak ${peakDbfs.toFixed(2)} dBFS — clipping risk. Lower Output Gain, Intensity, or pull Input Gain down to back off the chain.`
+      : state === "ok"
+      ? `Output peak ${peakDbfs.toFixed(2)} dBFS (safe headroom).`
+      : state === "silent"
+      ? "Below -80 dBFS — effectively silent in the last window."
+      : "No mastered playback in progress; meter is idle.";
+  return (
+    <span
+      className={`clip-indicator clip-${state}`}
+      role="status"
+      aria-live="polite"
+      title={title}
+    >
+      {label}
+    </span>
   );
 }
 

@@ -518,6 +518,56 @@ button.primary:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+/* Phase 12.2 — live clipping / peak indicator chip. Sits in the stale-bar
+   alongside the live-update badge. Idle/silent renders muted; ok shows a
+   live dB readout in green; clip flashes red so the eye catches it during
+   slider drags without DevTools or an export round-trip. Tabular-nums keeps
+   the dB readout from shifting horizontally as the value jitters. */
+.clip-indicator {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-2);
+  color: var(--text-2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 6.5rem;
+  text-align: center;
+}
+
+.clip-indicator.clip-idle,
+.clip-indicator.clip-silent {
+  color: var(--text-2);
+  opacity: 0.7;
+}
+
+.clip-indicator.clip-ok {
+  color: #6cd08a;
+  border-color: rgba(108, 208, 138, 0.5);
+  background: rgba(108, 208, 138, 0.08);
+}
+
+.clip-indicator.clip-clip {
+  color: #fff;
+  background: #c0392b;
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.25);
+  animation: clip-pulse 0.6s ease-in-out infinite;
+}
+
+@keyframes clip-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(231, 76, 60, 0.45);
+  }
+}
+
 .analysis-summary {
   margin-top: 0.5rem;
   font-size: 0.78rem;

@@ -37,6 +37,7 @@ pub fn run() {
                         position_sec: snap.position_sec,
                         is_playing: snap.is_playing,
                         is_loaded: snap.is_loaded,
+                        peak_dbfs: snap.peak_dbfs,
                     };
                     let _ = app_handle.emit("playback:tick", tick);
                 }

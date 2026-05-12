@@ -186,6 +186,10 @@ export interface PlaybackTick {
   position_sec: number;
   is_playing: boolean;
   is_loaded: boolean;
+  /// Post-output-gain peak across all channels since the last tick, in dBFS.
+  /// `-120` is the silence sentinel (no signal seen in the window). Values
+  /// above `-0.1` indicate clipping risk; values above `0` are clipping.
+  peak_dbfs: number;
 }
 
 export interface LoopRegion {

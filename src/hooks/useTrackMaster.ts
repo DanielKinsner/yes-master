@@ -81,6 +81,11 @@ export function useTrackMaster() {
     playbackKind: "source" as PlaybackKindUI,
     loop: false,
     volumeMatch: false,
+    // Phase 12.2 live clipping meter — post-output-gain peak since the last
+    // tick, in dBFS. -120 means "no signal" (silence sentinel from backend).
+    // Stored here so the StaleBar's indicator can flash red on clipping
+    // without DevTools or an export round-trip.
+    peakDbfs: -120,
   });
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [lastExportReceipt, setLastExportReceipt] = useState<ExportReceipt | null>(null);
@@ -136,6 +141,7 @@ export function useTrackMaster() {
         ...t,
         currentTimeSec: tick.position_sec,
         isPlaying: tick.is_playing,
+        peakDbfs: tick.peak_dbfs,
       }));
     }).then((fn) => {
       unlistenTick = fn;
