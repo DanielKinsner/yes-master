@@ -257,13 +257,9 @@ export function useTrackMaster() {
         markStale(id);
       }
       // Phase 5 live chain: push fresh coeffs whenever the edit affects a track
-      // that's currently loaded as Mastered playback. The previous version of
-      // this check gated on `loadedTrackId` (from the backend playback tick),
-      // which has a ~50 ms round-trip latency from `playMaster` returning; that
-      // window let live edits silently no-op right after starting playback or
-      // during fast slider drags. `loadedKindByTrack` is set synchronously in
-      // `playWithKind`, so it's the authoritative "is this track playing as
-      // master right now?" signal from React's POV.
+      // that's currently loaded as Mastered playback. `loadedKindByTrack` is
+      // set synchronously in `playWithKind`, so it's the authoritative "is
+      // this track playing as master right now?" signal from React's POV.
       if (!nextSettings) return;
       let shouldPush = false;
       if (editingAlbumIntent) {
@@ -277,10 +273,43 @@ export function useTrackMaster() {
         // Per-track edit: push if THIS track is currently loaded as master.
         shouldPush = loadedKindByTrack[id] === "master";
       }
+      // Phase 12.1 diagnostic — Dan reports live updates not landing on his
+      // machine despite spacebar/double-click working. Logging the full
+      // decision chain here so a F12 DevTools console pass tells us exactly
+      // which leg of the pipeline drops the update.
+      // eslint-disable-next-line no-console
+      console.log(
+        "[updateSettings]",
+        JSON.stringify({
+          id,
+          editingAlbumIntent,
+          loadedKindByTrack,
+          shouldPush,
+          preset: nextSettings.preset,
+          intensity: nextSettings.intensity,
+          eq: [nextSettings.eq_low_db, nextSettings.eq_mid_db, nextSettings.eq_high_db],
+        }),
+      );
       if (shouldPush) {
-        api.updateChain(nextSettings).catch((err) => {
-          setError(String(err));
-        });
+        // eslint-disable-next-line no-console
+        console.log("[updateSettings] calling api.updateChain");
+        api
+          .updateChain(nextSettings)
+          .then(() => {
+            // eslint-disable-next-line no-console
+            console.log("[updateSettings] api.updateChain resolved");
+          })
+          .catch((err) => {
+            // eslint-disable-next-line no-console
+            console.error("[updateSettings] api.updateChain FAILED:", err);
+            setError(String(err));
+          });
+      } else {
+        // eslint-disable-next-line no-console
+        console.log(
+          "[updateSettings] shouldPush=false; not calling api.updateChain. loadedKindByTrack[id]=",
+          loadedKindByTrack[id],
+        );
       }
     },
     [mode, overrideAlbum, markStale, loadedKindByTrack],
