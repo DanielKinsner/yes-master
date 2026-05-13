@@ -328,6 +328,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         settings={tm.selectedSettings}
         onIntensity={tm.setIntensity}
         onEq={tm.setEqBand}
+        onAdvanced={tm.setAdvanced}
       />
       <UndoRedoBar
         canUndo={tm.canUndo}
@@ -1002,10 +1003,12 @@ function Macros({
   settings,
   onIntensity,
   onEq,
+  onAdvanced,
 }: {
   settings: MasteringSettings;
   onIntensity: (v: number) => void;
   onEq: (band: "low" | "mid" | "high", db: number) => void;
+  onAdvanced: (adv: MasteringSettings["advanced"]) => void;
 }) {
   return (
     <section className="macros knobs-row">
@@ -1063,7 +1066,70 @@ function Macros({
           />
         </div>
       </div>
+      <LoudnessTarget settings={settings} onAdvanced={onAdvanced} />
     </section>
+  );
+}
+
+// Delivery profiles — short names + their canonical LUFS targets. Matched on
+// the current `lufs_offset_db` so the dropdown reflects what the chain is
+// actually doing. Anything outside the known set reads as "Custom".
+const LOUDNESS_PROFILES: { id: string; label: string; lufs: number | null }[] = [
+  { id: "streaming", label: "Streaming (-14)", lufs: -14 },
+  { id: "loud-streaming", label: "Loud streaming (-11)", lufs: -11 },
+  { id: "cd-master", label: "CD master (-9)", lufs: -9 },
+  { id: "off", label: "Off / Natural", lufs: null },
+];
+
+function profileIdFor(lufs: number | null): string {
+  if (lufs === null) return "off";
+  for (const p of LOUDNESS_PROFILES) {
+    if (p.lufs !== null && Math.abs(p.lufs - lufs) < 1e-3) return p.id;
+  }
+  return "custom";
+}
+
+function LoudnessTarget({
+  settings,
+  onAdvanced,
+}: {
+  settings: MasteringSettings;
+  onAdvanced: (adv: MasteringSettings["advanced"]) => void;
+}) {
+  const current = settings.advanced.lufs_offset_db;
+  const profileId = profileIdFor(current ?? null);
+
+  const handleProfileChange = (id: string) => {
+    if (id === "custom") return; // Custom stays at current value (Advanced edits).
+    const profile = LOUDNESS_PROFILES.find((p) => p.id === id);
+    if (!profile) return;
+    onAdvanced({ ...settings.advanced, lufs_offset_db: profile.lufs });
+  };
+
+  const display = current !== null && current !== undefined
+    ? `${current.toFixed(1)}`
+    : "—";
+
+  return (
+    <div className="loudness-target-block">
+      <span className="section-label">LOUDNESS TARGET</span>
+      <div className="loudness-readout">
+        <span className="loudness-number">{display}</span>
+        <span className="loudness-unit">LUFS</span>
+      </div>
+      <select
+        className="loudness-profile-select"
+        value={profileId}
+        onChange={(e) => handleProfileChange(e.target.value)}
+      >
+        {LOUDNESS_PROFILES.map((p) => (
+          <option key={p.id} value={p.id}>{p.label}</option>
+        ))}
+        {profileId === "custom" && (
+          <option value="custom">Custom ({display} LUFS)</option>
+        )}
+      </select>
+    </div>
   );
 }
 

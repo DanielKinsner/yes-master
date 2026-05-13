@@ -1794,7 +1794,7 @@ button.primary:disabled {
 
 .knobs-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(280px, 2fr);
+  grid-template-columns: minmax(160px, 0.9fr) minmax(280px, 1.8fr) minmax(160px, 0.9fr);
   gap: 1.4rem;
   align-items: stretch;
   padding: 1rem 1.1rem;
@@ -1804,11 +1804,49 @@ button.primary:disabled {
 }
 
 .intensity-block,
-.tone-shape-block {
+.tone-shape-block,
+.loudness-target-block {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
   align-items: center;
+}
+
+.loudness-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  margin-top: 0.4rem;
+}
+
+.loudness-number {
+  font-size: 2.2rem;
+  font-weight: 600;
+  color: var(--text-0);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.loudness-unit {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  letter-spacing: 0.04em;
+}
+
+.loudness-profile-select {
+  background: var(--bg-3);
+  color: var(--text-0);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.78rem;
+  width: 100%;
+  cursor: pointer;
+}
+
+.loudness-profile-select:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: 0;
 }
 
 .tone-shape-knobs {
