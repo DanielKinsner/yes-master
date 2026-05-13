@@ -107,6 +107,130 @@ pub enum Preset {
     Custom { id: String },
 }
 
+/// Phase A3: Delivery profile presets ported from
+/// `../album-mastering-studio/src/album_mastering_studio/standards.py`.
+///
+/// Each non-`Custom` variant carries a complete (target LUFS, ceiling,
+/// sample-rate hint, bit-depth) bundle for a specific delivery target.
+/// At render time, when `delivery_profile != Custom`, the profile's
+/// values shadow the corresponding fields in `AdvancedSettings`. `Custom`
+/// means "use the user's explicit `lufs_offset_db` / `ceiling_dbtp` /
+/// `bit_depth` / `target_sample_rate` exactly as set."
+///
+/// Sample rate is captured per profile but resampling is deferred to a
+/// later phase — A3 honors `bit_depth`, `target_lufs`, and `ceiling_dbtp`
+/// but writes WAVs at the source sample rate regardless. The captured
+/// rate is exposed via `output_sample_rate()` for future use.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum DeliveryProfile {
+    /// -14 LUFS, -1 dBTP, 48 kHz, 24-bit. Spotify / YouTube / Tidal / Amazon.
+    StreamingUniversal,
+    /// -16 LUFS, -1 dBTP, 48 kHz, 24-bit. Apple Music's tighter target.
+    AppleMusic,
+    /// -14 LUFS, -1 dBTP, 44.1 kHz, 16-bit. Red Book CD.
+    Cd,
+    /// -18 LUFS, -3 dBTP, 48 kHz, 24-bit. Generous headroom for the
+    /// cutting engineer / RIAA pre-emphasis.
+    VinylPremaster,
+    /// -10.5 LUFS, -1 dBTP, 48 kHz, 24-bit. Rock / metal masters that
+    /// don't translate well at the streaming -14 target.
+    LoudRock,
+    /// -23 LUFS, -1 dBTP, 48 kHz, 24-bit. EBU R128 broadcast.
+    BroadcastEu,
+    /// -24 LUFS, -2 dBTP, 48 kHz, 24-bit. ATSC A/85 broadcast.
+    BroadcastUs,
+    /// No shadowing — render uses the user's explicit `lufs_offset_db`,
+    /// `ceiling_dbtp`, `bit_depth`, and `target_sample_rate` fields
+    /// from `AdvancedSettings` verbatim.
+    Custom,
+}
+
+impl Default for DeliveryProfile {
+    fn default() -> Self {
+        Self::StreamingUniversal
+    }
+}
+
+impl DeliveryProfile {
+    /// Target integrated LUFS for non-Custom profiles. `None` when
+    /// `Custom` (engine falls back to `AdvancedSettings::lufs_offset_db`).
+    pub fn target_lufs(&self) -> Option<f32> {
+        match self {
+            Self::StreamingUniversal => Some(-14.0),
+            Self::AppleMusic => Some(-16.0),
+            Self::Cd => Some(-14.0),
+            Self::VinylPremaster => Some(-18.0),
+            Self::LoudRock => Some(-10.5),
+            Self::BroadcastEu => Some(-23.0),
+            Self::BroadcastUs => Some(-24.0),
+            Self::Custom => None,
+        }
+    }
+
+    /// True-peak ceiling in dBTP for non-Custom profiles. `None` for
+    /// `Custom`.
+    pub fn ceiling_dbtp(&self) -> Option<f32> {
+        match self {
+            Self::StreamingUniversal
+            | Self::AppleMusic
+            | Self::Cd
+            | Self::LoudRock
+            | Self::BroadcastEu => Some(-1.0),
+            Self::VinylPremaster => Some(-3.0),
+            Self::BroadcastUs => Some(-2.0),
+            Self::Custom => None,
+        }
+    }
+
+    /// Recommended output sample rate. Captured for future resampling
+    /// support — A3 does NOT resample; the renderer writes at the
+    /// source's sample rate regardless of this value.
+    pub fn output_sample_rate(&self) -> Option<u32> {
+        match self {
+            Self::Cd => Some(44_100),
+            Self::StreamingUniversal
+            | Self::AppleMusic
+            | Self::VinylPremaster
+            | Self::LoudRock
+            | Self::BroadcastEu
+            | Self::BroadcastUs => Some(48_000),
+            Self::Custom => None,
+        }
+    }
+
+    /// Output bit depth for non-Custom profiles. Honored by the WAV writer.
+    pub fn output_bit_depth(&self) -> Option<u16> {
+        match self {
+            Self::Cd => Some(16),
+            Self::StreamingUniversal
+            | Self::AppleMusic
+            | Self::VinylPremaster
+            | Self::LoudRock
+            | Self::BroadcastEu
+            | Self::BroadcastUs => Some(24),
+            Self::Custom => None,
+        }
+    }
+
+    pub fn is_custom(&self) -> bool {
+        matches!(self, Self::Custom)
+    }
+
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Self::StreamingUniversal => "Streaming (Spotify / YouTube / Tidal / Amazon)",
+            Self::AppleMusic => "Apple Music",
+            Self::Cd => "CD (16-bit)",
+            Self::VinylPremaster => "Vinyl Premaster",
+            Self::LoudRock => "Loud Rock / Aggressive",
+            Self::BroadcastEu => "Broadcast EU (EBU R128)",
+            Self::BroadcastUs => "Broadcast US (ATSC A/85)",
+            Self::Custom => "Custom",
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MasteringSettings {
     pub preset: Preset,
@@ -134,7 +258,46 @@ pub struct MasteringSettings {
     /// catch the result.
     #[serde(default)]
     pub output_gain_db: f32,
+    /// Phase A3 — delivery profile preset. When non-`Custom`, shadows
+    /// `lufs_offset_db`, `ceiling_dbtp`, and `bit_depth` at render time
+    /// with the profile's values. `Custom` means "use the explicit
+    /// advanced fields as-is." `#[serde(default)]` so older `.ams.json`
+    /// projects load with the streaming-universal default.
+    #[serde(default)]
+    pub delivery_profile: DeliveryProfile,
     pub advanced: AdvancedSettings,
+}
+
+impl MasteringSettings {
+    /// Phase A3 — effective target LUFS for the post-chain landing stage.
+    /// When `delivery_profile` is non-`Custom`, the profile's target wins;
+    /// `Custom` falls back to `advanced.lufs_offset_db`. Used by the render
+    /// pipeline in `engine.rs`.
+    pub fn effective_target_lufs(&self) -> Option<f32> {
+        self.delivery_profile
+            .target_lufs()
+            .or(self.advanced.lufs_offset_db)
+    }
+
+    /// Phase A3 — effective true-peak ceiling in dBTP. Profile shadows the
+    /// user-set value when non-`Custom`. Falls back to `-1.0` when no
+    /// value is set anywhere (matches the prior default).
+    pub fn effective_ceiling_dbtp(&self) -> f32 {
+        self.delivery_profile
+            .ceiling_dbtp()
+            .or(self.advanced.ceiling_dbtp)
+            .unwrap_or(-1.0)
+    }
+
+    /// Phase A3 — effective output bit depth. Profile shadows the user-
+    /// set value when non-`Custom`. Falls back to `24` when no value is
+    /// set anywhere (matches the prior default).
+    pub fn effective_bit_depth(&self) -> u16 {
+        self.delivery_profile
+            .output_bit_depth()
+            .or(self.advanced.bit_depth)
+            .unwrap_or(24)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

@@ -44,6 +44,7 @@ fn main() {
         volume_match: false,
         input_gain_db: 0.0,
         output_gain_db: 0.0,
+        delivery_profile: DeliveryProfile::default(),
         advanced: AdvancedSettings::default(),
     };
 

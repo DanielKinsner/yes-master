@@ -662,11 +662,9 @@ impl ChainCoeffs {
 
         let saturation_amount = preset_sat * preset_scale;
 
-        let ceiling_db = settings
-            .advanced
-            .ceiling_dbtp
-            .unwrap_or(-1.0)
-            .clamp(-6.0, 0.0);
+        // Phase A3 — effective ceiling: delivery profile shadows the user's
+        // explicit advanced.ceiling_dbtp when the profile is non-Custom.
+        let ceiling_db = settings.effective_ceiling_dbtp().clamp(-6.0, 0.0);
         let ceiling_lin = 10.0_f32.powf(ceiling_db / 20.0);
 
         // Post-limiter user-trim. Clamped to the same ±24 dB range as input
@@ -1495,11 +1493,7 @@ impl MasteringChain {
     pub fn new(sample_rate: u32, channels: usize, settings: &MasteringSettings) -> Self {
         let coeffs = ChainCoeffs::from_settings(sample_rate, settings);
         let states = (0..channels).map(|_| ChannelState::default()).collect();
-        let ceiling_dbfs = settings
-            .advanced
-            .ceiling_dbtp
-            .unwrap_or(-1.0)
-            .clamp(-6.0, 0.0);
+        let ceiling_dbfs = settings.effective_ceiling_dbtp().clamp(-6.0, 0.0);
         let limiter = Limiter::new(
             sample_rate,
             channels,
@@ -1981,6 +1975,7 @@ mod tests {
             volume_match: false,
             input_gain_db: 0.0,
             output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
             advanced: AdvancedSettings::default(),
         };
         let c = ChainCoeffs::from_settings(44_100, &settings);
@@ -2006,6 +2001,7 @@ mod tests {
             volume_match: false,
             input_gain_db: 0.0,
             output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
             advanced: AdvancedSettings {
                 width: Some(5.0),
                 ..AdvancedSettings::default()
@@ -2044,6 +2040,7 @@ mod tests {
             volume_match: false,
             input_gain_db: 0.0,
             output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
             advanced: AdvancedSettings {
                 width: Some(0.0),
                 ..AdvancedSettings::default()
@@ -2087,6 +2084,7 @@ mod tests {
             volume_match: false,
             input_gain_db: 0.0,
             output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
             advanced: AdvancedSettings {
                 width: Some(1.0),
                 ..AdvancedSettings::default()
@@ -2129,6 +2127,7 @@ mod tests {
             volume_match: false,
             input_gain_db: 0.0,
             output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
             advanced: AdvancedSettings::default(),
         };
         let c = ChainCoeffs::from_settings(44_100, &settings);
@@ -2154,6 +2153,7 @@ mod tests {
             volume_match: false,
             input_gain_db: 0.0,
             output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
             advanced: AdvancedSettings {
                 warmth: Some(1.0),
                 ..AdvancedSettings::default()
@@ -2191,6 +2191,7 @@ mod tests {
             volume_match: false,
             input_gain_db: 0.0,
             output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
             advanced: AdvancedSettings {
                 warmth: Some(w),
                 ..AdvancedSettings::default()
@@ -2223,6 +2224,7 @@ mod tests {
             volume_match: false,
             input_gain_db: 0.0,
             output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
             advanced: AdvancedSettings::default(),
         };
         let c = ChainCoeffs::from_settings(44_100, &settings);
@@ -2249,6 +2251,7 @@ mod tests {
             volume_match: false,
             input_gain_db: 0.0,
             output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
             advanced: AdvancedSettings {
                 presence_air: Some(1.0),
                 ..AdvancedSettings::default()
@@ -2288,6 +2291,7 @@ mod tests {
             volume_match: false,
             input_gain_db: 0.0,
             output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
             advanced: AdvancedSettings::default(),
         }
     }
@@ -2854,6 +2858,96 @@ mod tests {
             "1500 Hz (above band): expected ~0 dB, got {:.3}",
             at_1500
         );
+    }
+
+    // ========================================================================
+    // Phase A3: DeliveryProfile shadowing.
+    // ========================================================================
+
+    /// When the user picks a non-Custom profile, the chain's effective
+    /// ceiling and effective target LUFS must come from the profile,
+    /// not from the user's explicit advanced fields. This verifies the
+    /// shadow flows all the way to ChainCoeffs.
+    #[test]
+    fn delivery_profile_shadows_ceiling_in_chain() {
+        let mut s = default_master_settings();
+        // User set ceiling to -3.0 explicitly, but BroadcastUs profile says
+        // -2.0 — the profile should win since it's non-Custom.
+        s.advanced.ceiling_dbtp = Some(-3.0);
+        s.delivery_profile = DeliveryProfile::BroadcastUs;
+        let c = ChainCoeffs::from_settings(48_000, &s);
+        let expected = 10.0_f32.powf(-2.0 / 20.0);
+        assert!(
+            (c.ceiling_lin - expected).abs() < 1.0e-4,
+            "BroadcastUs profile should shadow ceiling to -2.0 dBTP; got ceiling_lin = {} (expected {})",
+            c.ceiling_lin,
+            expected
+        );
+    }
+
+    /// Custom profile must NOT shadow — the user's explicit advanced
+    /// fields pass through unchanged.
+    #[test]
+    fn delivery_profile_custom_preserves_user_ceiling() {
+        let mut s = default_master_settings();
+        s.advanced.ceiling_dbtp = Some(-3.0);
+        s.delivery_profile = DeliveryProfile::Custom;
+        let c = ChainCoeffs::from_settings(48_000, &s);
+        let expected = 10.0_f32.powf(-3.0 / 20.0);
+        assert!(
+            (c.ceiling_lin - expected).abs() < 1.0e-4,
+            "Custom profile should NOT shadow; user's -3.0 dBTP must pass through; got ceiling_lin = {} (expected {})",
+            c.ceiling_lin,
+            expected
+        );
+    }
+
+    /// effective_target_lufs returns the profile's value when non-Custom
+    /// even if the user has set lufs_offset_db explicitly.
+    #[test]
+    fn delivery_profile_target_lufs_shadows_user_value() {
+        let mut s = default_master_settings();
+        s.advanced.lufs_offset_db = Some(-9.0);
+        s.delivery_profile = DeliveryProfile::AppleMusic;
+        assert_eq!(s.effective_target_lufs(), Some(-16.0));
+    }
+
+    /// effective_bit_depth returns the profile's value when non-Custom.
+    #[test]
+    fn delivery_profile_bit_depth_shadow() {
+        let mut s = default_master_settings();
+        s.advanced.bit_depth = Some(24);
+        s.delivery_profile = DeliveryProfile::Cd;
+        assert_eq!(s.effective_bit_depth(), 16);
+    }
+
+    /// Serde round-trip: a DeliveryProfile-bearing MasteringSettings
+    /// serializes and deserializes back to the same value.
+    #[test]
+    fn delivery_profile_serde_round_trip() {
+        let mut s = default_master_settings();
+        s.delivery_profile = DeliveryProfile::VinylPremaster;
+        let json = serde_json::to_string(&s).expect("serialize");
+        let parsed: MasteringSettings = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(parsed.delivery_profile, DeliveryProfile::VinylPremaster);
+    }
+
+    /// Backward compatibility: an older .ams.json that lacks the field
+    /// loads with the StreamingUniversal default.
+    #[test]
+    fn delivery_profile_serde_default_for_older_files() {
+        let json = r#"{
+            "preset": {"kind": "universal"},
+            "intensity": 0.5,
+            "eq_low_db": 0.0,
+            "eq_mid_db": 0.0,
+            "eq_high_db": 0.0,
+            "volume_match": false,
+            "advanced": {}
+        }"#;
+        let parsed: MasteringSettings = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(parsed.delivery_profile, DeliveryProfile::StreamingUniversal);
+        assert_eq!(parsed.eq_low_mid_db, 0.0);
     }
 
     /// Heavy presets (Punch / Loud / Oomph) must carry low-mid CUTS in the

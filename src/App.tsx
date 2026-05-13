@@ -13,6 +13,7 @@ import { Knob, intensityLabel } from "./components/Knob";
 import { SignalChain } from "./components/SignalChain";
 import type {
   AnalysisResult,
+  DeliveryProfile,
   ImportedTrack,
   LoopRegion,
   MasteringSettings,
@@ -21,6 +22,10 @@ import type {
   WaveformPeaks,
   QualityCheck,
   QualityLevel,
+} from "./bindings";
+import {
+  DELIVERY_PROFILE_DISPLAY,
+  DELIVERY_PROFILE_TARGET_LUFS,
 } from "./bindings";
 import type { ExportReceipt, PlaybackKindUI } from "./hooks/useTrackMaster";
 import "./App.css";
@@ -93,6 +98,7 @@ function App() {
               onAdvanced={tm.setAdvanced}
               onInputGain={tm.setInputGain}
               onOutputGain={tm.setOutputGain}
+              onDeliveryProfile={tm.setDeliveryProfile}
             />
           ) : undefined
         }
@@ -1723,11 +1729,13 @@ function AdvancedPanel({
   onAdvanced,
   onInputGain,
   onOutputGain,
+  onDeliveryProfile,
 }: {
   settings: MasteringSettings;
   onAdvanced: (adv: MasteringSettings["advanced"]) => void;
   onInputGain: (db: number) => void;
   onOutputGain: (db: number) => void;
+  onDeliveryProfile: (profile: DeliveryProfile) => void;
 }) {
   const a = settings.advanced;
   const update = (
@@ -1736,10 +1744,42 @@ function AdvancedPanel({
   ) => {
     onAdvanced({ ...a, [field]: value });
   };
+  const profile = settings.delivery_profile;
+  const profileTargetLufs = DELIVERY_PROFILE_TARGET_LUFS[profile];
   return (
     <section className="advanced">
       <div className="section-head">
         <span className="section-label">Advanced</span>
+      </div>
+      <div className="advanced-delivery-row">
+        <label className="adv-label" htmlFor="delivery-profile-select">
+          Delivery profile
+        </label>
+        <select
+          id="delivery-profile-select"
+          className="loudness-profile-select"
+          value={profile}
+          onChange={(e) =>
+            onDeliveryProfile(e.target.value as DeliveryProfile)
+          }
+        >
+          {(Object.keys(DELIVERY_PROFILE_DISPLAY) as DeliveryProfile[]).map(
+            (p) => (
+              <option key={p} value={p}>
+                {DELIVERY_PROFILE_DISPLAY[p]}
+                {DELIVERY_PROFILE_TARGET_LUFS[p] !== null
+                  ? ` · ${DELIVERY_PROFILE_TARGET_LUFS[p]} LUFS`
+                  : ""}
+              </option>
+            ),
+          )}
+        </select>
+        {profile !== "custom" && profileTargetLufs !== null && (
+          <span className="adv-profile-hint">
+            Shadows LUFS / ceiling / bit-depth at render. Pick Custom to use the
+            explicit values below.
+          </span>
+        )}
       </div>
       <div className="advanced-grid">
         <GainField

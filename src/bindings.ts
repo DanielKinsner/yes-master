@@ -59,6 +59,45 @@ export interface AdvancedSettings {
   target_sample_rate: number | null;
 }
 
+/// Phase A3 — delivery profile presets. Mirrors `types::DeliveryProfile`
+/// in the Rust crate. Serializes as kebab-case so it round-trips through
+/// the .ams.json schema.
+export type DeliveryProfile =
+  | "streaming-universal"
+  | "apple-music"
+  | "cd"
+  | "vinyl-premaster"
+  | "loud-rock"
+  | "broadcast-eu"
+  | "broadcast-us"
+  | "custom";
+
+export const DELIVERY_PROFILE_DISPLAY: Record<DeliveryProfile, string> = {
+  "streaming-universal":
+    "Streaming (Spotify / YouTube / Tidal / Amazon)",
+  "apple-music": "Apple Music",
+  "cd": "CD (16-bit)",
+  "vinyl-premaster": "Vinyl Premaster",
+  "loud-rock": "Loud Rock / Aggressive",
+  "broadcast-eu": "Broadcast EU (EBU R128)",
+  "broadcast-us": "Broadcast US (ATSC A/85)",
+  "custom": "Custom",
+};
+
+/// Target LUFS for each non-`custom` profile. Used by the UI to display
+/// the implied value next to the profile name, and to detect "user
+/// deviated from profile, flip to Custom" in the settings editor.
+export const DELIVERY_PROFILE_TARGET_LUFS: Record<DeliveryProfile, number | null> = {
+  "streaming-universal": -14.0,
+  "apple-music": -16.0,
+  "cd": -14.0,
+  "vinyl-premaster": -18.0,
+  "loud-rock": -10.5,
+  "broadcast-eu": -23.0,
+  "broadcast-us": -24.0,
+  "custom": null,
+};
+
 export interface MasteringSettings {
   preset: Preset;
   intensity: number;
@@ -75,6 +114,9 @@ export interface MasteringSettings {
   /// Post-limiter output trim in dB. Default 0. Boosting may reintroduce
   /// peaks above the ceiling.
   output_gain_db: number;
+  /// Phase A3 — delivery profile preset. Shadows lufs_offset_db /
+  /// ceiling_dbtp / bit_depth at render time when non-`custom`.
+  delivery_profile: DeliveryProfile;
   advanced: AdvancedSettings;
 }
 

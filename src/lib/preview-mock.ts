@@ -60,6 +60,7 @@ const DEFAULT_SETTINGS: MasteringSettings = {
   volume_match: false,
   input_gain_db: 0,
   output_gain_db: 0,
+  delivery_profile: "streaming-universal",
   advanced: DEFAULT_ADVANCED,
 };
 

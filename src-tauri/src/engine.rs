@@ -170,6 +170,7 @@ pub fn analyze_one(track_id: TrackId, path: &Path) -> CommandResult<AnalysisResu
         volume_match: false,
         input_gain_db: 0.0,
         output_gain_db: 0.0,
+        delivery_profile: DeliveryProfile::default(),
         advanced: AdvancedSettings {
             lufs_offset_db: Some(-14.0 - lufs_integrated),
             ceiling_dbtp: Some(-1.0),
@@ -499,7 +500,7 @@ pub fn album_render_with_progress(
     out_dir: &Path,
     on_progress: Option<&dyn Fn(f32)>,
 ) -> CommandResult<RenderJob> {
-    let bit_depth = req.album_intent.advanced.bit_depth.unwrap_or(24);
+    let bit_depth = req.album_intent.effective_bit_depth();
     let album_path = unique_album_path(out_dir)?;
 
     let mut album_writer: Option<hound::WavWriter<std::io::BufWriter<std::fs::File>>> = None;
@@ -791,7 +792,7 @@ pub fn mastering_render_with_progress(
     // unchanged and let the user re-render with more Intensity / Input Gain.
     // See `docs/research/most-recent-mastering-app-research.md` for the
     // industry-survey notes behind this decision.
-    if let Some(target_lufs) = settings.advanced.lufs_offset_db {
+    if let Some(target_lufs) = settings.effective_target_lufs() {
         if target_lufs.is_finite() {
             let measured =
                 measure_integrated_lufs(&samples, pcm.sample_rate, pcm.channels)?;
@@ -811,7 +812,7 @@ pub fn mastering_render_with_progress(
         }
     }
 
-    let bit_depth = settings.advanced.bit_depth.unwrap_or(24);
+    let bit_depth = settings.effective_bit_depth();
     let out_path = unique_output_path(out_dir, source_path, &track_id, kind)?;
     write_wav(&out_path, &samples, pcm.sample_rate, pcm.channels, bit_depth)?;
     if let Some(cb) = on_progress {

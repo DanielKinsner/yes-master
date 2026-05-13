@@ -29,6 +29,7 @@ const DEFAULT_SETTINGS: MasteringSettings = {
   volume_match: false,
   input_gain_db: 0,
   output_gain_db: 0,
+  delivery_profile: "streaming-universal",
   advanced: {
     lufs_offset_db: null,
     ceiling_dbtp: null,
@@ -763,6 +764,20 @@ export function useTrackMaster() {
     [selectedTrackId, updateSettings],
   );
 
+  /// Phase A3 — pick a delivery profile. Replaces lufs_offset_db /
+  /// ceiling_dbtp / bit_depth at render time when non-`custom`. Picking
+  /// `custom` doesn't touch the user's existing advanced fields.
+  const setDeliveryProfile = useCallback(
+    (profile: MasteringSettings["delivery_profile"]) => {
+      if (!selectedTrackId) return;
+      updateSettings(selectedTrackId, (prev) => ({
+        ...prev,
+        delivery_profile: profile,
+      }));
+    },
+    [selectedTrackId, updateSettings],
+  );
+
   const updatePreview = useCallback(async () => {
     if (!selectedTrackId || !selectedTrack) return;
     setIsRendering(true);
@@ -1328,6 +1343,7 @@ export function useTrackMaster() {
     setAdvanced,
     setInputGain,
     setOutputGain,
+    setDeliveryProfile,
     updatePreview,
     exportMaster,
     togglePlay,
