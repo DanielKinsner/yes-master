@@ -112,6 +112,12 @@ pub struct MasteringSettings {
     pub preset: Preset,
     pub intensity: f32,
     pub eq_low_db: f32,
+    /// Phase A2: low-mid peaking EQ (400 Hz, Q=0.9). User offset on top of
+    /// the preset's baseline `low_mid_db`. `#[serde(default)]` so projects
+    /// saved before this field existed load with a 0.0 value (matching the
+    /// chain's identity behavior at neutral gain).
+    #[serde(default)]
+    pub eq_low_mid_db: f32,
     pub eq_mid_db: f32,
     pub eq_high_db: f32,
     pub volume_match: bool,

@@ -826,15 +826,21 @@ fn presets_produce_distinct_chain_coefficients() {
         cu.input_gain_lin
     );
 
-    // Tape must have audible saturation; Universal must have none.
+    // Tape must carry meaningfully more saturation than Universal. Phase A2
+    // ported the Codex `warmth` values (Tape 0.095, Universal 0.03) which are
+    // on a different absolute scale than the previous Claude calibration
+    // (Tape 0.25, Universal 0.0); the *relative* assertion still holds and
+    // is what the listening test actually cares about.
     assert!(
-        ct.saturation_amount > 0.20,
-        "Tape saturation ({}) should be audible at default intensity",
-        ct.saturation_amount
+        ct.saturation_amount > cu.saturation_amount * 2.0,
+        "Tape ({}) should saturate noticeably more than Universal ({})",
+        ct.saturation_amount,
+        cu.saturation_amount
     );
-    assert_eq!(
-        cu.saturation_amount, 0.0,
-        "Universal must have no saturation"
+    assert!(
+        ct.saturation_amount > 0.05,
+        "Tape saturation ({}) should be audible (post-A2 Codex calibration)",
+        ct.saturation_amount
     );
 
     // The shelf filters must differ measurably between presets. b0 alone is a
@@ -876,15 +882,58 @@ fn presets_produce_distinct_chain_coefficients() {
         ct_high_nyq
     );
 
-    // Low-shelf DC gain: Universal 0 dB (=1.0x), Oomph +2.5 dB (≈1.33x).
+    // Low-shelf DC gain: Universal 0 dB (=1.0x). Post-A2 Codex calibration:
+    // Tape's low_shelf is +1.2 dB (Codex `warm-glue`), which is the largest
+    // low-shelf push among our 8 presets — Oomph's low_shelf is only +0.6 dB
+    // in the new calibration because Codex's heavy-rock-metal achieves "bass
+    // weight" via low-mid cut rather than low-shelf boost.
     let cu_low_dc = dc_gain(&cu.low);
-    let co_low_dc = dc_gain(&co.low);
+    let ct_low_dc = dc_gain(&ct.low);
     assert!(
-        (co_low_dc - cu_low_dc).abs() > 0.1,
-        "Oomph low-shelf DC gain ({:.4}) should differ from Universal ({:.4})",
-        co_low_dc,
+        (ct_low_dc - cu_low_dc).abs() > 0.1,
+        "Tape low-shelf DC gain ({:.4}) should differ from Universal ({:.4}) — \
+         Tape carries the largest low-shelf push in the new calibration",
+        ct_low_dc,
         cu_low_dc
     );
+
+    // Phase A2 specifically: heavy presets (Punch / Loud / Oomph) carry
+    // negative low_mid gain (the mud-zone cut) where Universal sits at 0 dB.
+    // Verify the new 400 Hz band differentiates Punch from Universal.
+    let mut punch = default_settings();
+    punch.preset = Preset::Punch;
+    let cp = ChainCoeffs::from_settings(sample_rate, &punch);
+    let cu_lowmid_400 = magnitude_db_at(&cu.low_mid, 400.0, sample_rate as f32);
+    let cp_lowmid_400 = magnitude_db_at(&cp.low_mid, 400.0, sample_rate as f32);
+    assert!(
+        cu_lowmid_400 - cp_lowmid_400 > 1.0,
+        "Punch low-mid @ 400 Hz ({:.2} dB) should be ≥1 dB below Universal ({:.2} dB) — \
+         mud-zone cut is the heavy-preset signature",
+        cp_lowmid_400,
+        cu_lowmid_400
+    );
+}
+
+/// Magnitude (dB) of a biquad's frequency response at `freq_hz`. Replicated
+/// from the lib's internal helper because tests can't reach into the private
+/// `tests` module.
+fn magnitude_db_at(
+    c: &album_mastering_studio_lib::dsp::BiquadCoeffs,
+    freq_hz: f32,
+    sample_rate: f32,
+) -> f32 {
+    let omega = 2.0 * std::f32::consts::PI * freq_hz / sample_rate;
+    let z1_re = omega.cos();
+    let z1_im = -omega.sin();
+    let z2_re = z1_re * z1_re - z1_im * z1_im;
+    let z2_im = 2.0 * z1_re * z1_im;
+    let num_re = c.b0 + c.b1 * z1_re + c.b2 * z2_re;
+    let num_im = c.b1 * z1_im + c.b2 * z2_im;
+    let den_re = 1.0 + c.a1 * z1_re + c.a2 * z2_re;
+    let den_im = c.a1 * z1_im + c.a2 * z2_im;
+    let num_mag = (num_re * num_re + num_im * num_im).sqrt();
+    let den_mag = (den_re * den_re + den_im * den_im).sqrt();
+    20.0 * (num_mag / den_mag).log10()
 }
 
 /// Phase 12.1 Dan feedback — already-mastered audio clips because the preset
@@ -1555,6 +1604,7 @@ fn default_settings() -> MasteringSettings {
         preset: Preset::Universal,
         intensity: 0.5,
         eq_low_db: 0.0,
+        eq_low_mid_db: 0.0,
         eq_mid_db: 0.0,
         eq_high_db: 0.0,
         volume_match: false,

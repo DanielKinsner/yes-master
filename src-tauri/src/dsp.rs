@@ -238,9 +238,278 @@ impl BiquadState {
 // Those land in Phase 11 (DSP audit).
 // ============================================================================
 
+// ============================================================================
+// Phase A2: per-preset calibration ported from Codex.
+//
+// Each preset carries the 13 listening-tested numbers from
+// `../album-mastering-studio/src/album_mastering_studio/mastering.py`. The
+// numerical values were dialed during ~36 hours of test runs on the Codex
+// side; we adopt them wholesale. Mapping was chosen by character match
+// (our preset names are character-oriented; Codex's are genre-oriented):
+//
+//   Universal  -> streaming
+//   Clarity    -> bright-air
+//   Tape       -> warm-glue
+//   Spatial    -> album-cohesion-cinematic
+//   Oomph      -> heavy-rock-metal
+//   Warmth     -> dark-smooth
+//   Punch      -> djent-modern-metal
+//   Loud       -> loud-aggressive
+//   Custom     -> neutral (no Codex source)
+//
+// User-facing EQ knobs (`eq_low_db`, `eq_low_mid_db`, `eq_mid_db`,
+// `eq_high_db`) add ON TOP of these preset baselines.
+//
+// Some fields are CAPTURED but not yet APPLIED in A2:
+//   * compressor_threshold_dbfs / compressor_ratio — wiring these into
+//     the multiband compressor would activate compression-by-default per
+//     preset, which would break existing parity tests that assume
+//     "default settings = identity chain". Deferred to Phase A3 alongside
+//     the delivery profile.
+//   * target_lufs — needs a measure-and-target loop that doesn't exist
+//     yet. Documented per-preset.
+//   * transient_punch — needs a transient shaper (Phase A5).
+//   * highpass_hz — not in the A2 plan; deferred.
+// ============================================================================
+
+#[derive(Debug, Clone, Copy)]
+pub struct PresetCalibration {
+    /// 200 Hz low-shelf baseline gain in dB. Adds to `eq_low_db`.
+    pub low_shelf_db: f32,
+    /// 400 Hz peaking baseline gain in dB. NEW band in Phase A2. Heavy
+    /// presets carry significant CUTS here (the "mud zone" between 250
+    /// and 800 Hz that muddies dense arrangements). Adds to `eq_low_mid_db`.
+    pub low_mid_db: f32,
+    /// 1.5 kHz peaking baseline gain in dB (Codex `presence_db`). Adds
+    /// to `eq_mid_db`.
+    pub presence_db: f32,
+    /// 6 kHz high-shelf baseline gain in dB (Codex `air_db`). Adds to
+    /// `eq_high_db`.
+    pub air_db: f32,
+    /// Saturation drive amount (Codex `warmth`, 0..1 unitless). Drives
+    /// the post-EQ tanh stage.
+    pub warmth: f32,
+    /// Baseline M/S widener default (Codex `stereo_width`). 1.0 = neutral,
+    /// > 1 widens, < 1 narrows. The user's `advanced.width` slider takes
+    /// precedence when set; this is what the preset uses out of the box.
+    pub stereo_width: f32,
+    /// Captured for the future transient shaper (Phase A5). Not applied
+    /// in A2 since the shaper doesn't exist.
+    pub transient_punch: f32,
+    /// Captured target integrated LUFS. Not applied in A2 — we don't
+    /// yet have a measure-and-target loop. Documented per-preset.
+    pub target_lufs: f32,
+    /// Captured recommended true-peak ceiling. Not applied in A2 (would
+    /// change the limiter's behavior on existing tests). Phase A3 wires
+    /// this through the delivery-profile shadow.
+    pub ceiling_dbfs: f32,
+    /// Captured uniform multiband compressor threshold. Not applied in A2.
+    pub compressor_threshold_dbfs: f32,
+    /// Captured uniform multiband compressor ratio. Not applied in A2.
+    pub compressor_ratio: f32,
+    /// Codex science note — terse rationale for the calibration.
+    pub science_note: &'static str,
+    /// Static input-gain push in dB. Codex doesn't have a direct
+    /// equivalent (they target loudness via measure-and-target on
+    /// `target_lufs`); we keep this as the preset's loudness intent in
+    /// the absence of a true target loop, so existing real-fixture
+    /// parity tests continue to land on the same dBFS as before.
+    pub baseline_gain_push_db: f32,
+}
+
+const PRESET_UNIVERSAL: PresetCalibration = PresetCalibration {
+    // Codex `streaming`. Conservative defaults for cross-genre material.
+    low_shelf_db: 0.0,
+    low_mid_db: 0.0,
+    presence_db: 0.0,
+    air_db: 0.8,
+    warmth: 0.03,
+    stereo_width: 1.04,
+    transient_punch: 0.04,
+    target_lufs: -14.0,
+    ceiling_dbfs: -1.0,
+    compressor_threshold_dbfs: -18.0,
+    compressor_ratio: 2.0,
+    science_note:
+        "LUFS-aligned with conservative ceiling and light program compression.",
+    baseline_gain_push_db: 1.5,
+};
+
+const PRESET_CLARITY: PresetCalibration = PresetCalibration {
+    // Codex `bright-air`. Vocal / detail / definition.
+    low_shelf_db: -0.2,
+    low_mid_db: -0.7,
+    presence_db: 0.9,
+    air_db: 2.2,
+    warmth: 0.025,
+    stereo_width: 1.12,
+    transient_punch: 0.05,
+    target_lufs: -13.4,
+    ceiling_dbfs: -1.0,
+    compressor_threshold_dbfs: -18.7,
+    compressor_ratio: 2.0,
+    science_note:
+        "Presence and air shelves reveal detail while moderate compression \
+         avoids brittle over-density.",
+    baseline_gain_push_db: 1.5,
+};
+
+const PRESET_TAPE: PresetCalibration = PresetCalibration {
+    // Codex `warm-glue`. Saturation, glue, softened top, fuller low body.
+    low_shelf_db: 1.2,
+    low_mid_db: 0.25,
+    presence_db: -0.65,
+    air_db: -0.15,
+    warmth: 0.095,
+    stereo_width: 0.98,
+    transient_punch: -0.03,
+    target_lufs: -13.8,
+    ceiling_dbfs: -1.1,
+    compressor_threshold_dbfs: -20.5,
+    compressor_ratio: 2.25,
+    science_note:
+        "Extra saturation and slightly narrowed image make varied songs feel \
+         like the same record.",
+    baseline_gain_push_db: 1.0,
+};
+
+const PRESET_SPATIAL: PresetCalibration = PresetCalibration {
+    // Codex `album-cohesion-cinematic`. Wide, dimensional, controlled lows.
+    low_shelf_db: 0.9,
+    low_mid_db: -0.65,
+    presence_db: -0.15,
+    air_db: 1.35,
+    warmth: 0.07,
+    stereo_width: 1.13,
+    transient_punch: 0.03,
+    target_lufs: -13.1,
+    ceiling_dbfs: -1.0,
+    compressor_threshold_dbfs: -19.2,
+    compressor_ratio: 2.15,
+    science_note:
+        "Moderate loudness, wide image, and controlled low mids favor \
+         whole-album continuity over singles loudness.",
+    baseline_gain_push_db: 2.5,
+};
+
+const PRESET_OOMPH: PresetCalibration = PresetCalibration {
+    // Codex `heavy-rock-metal`. Forward guitars, controlled low-mids.
+    // NOTE: low_mid_db = -1.25 — first of the heavy-preset mud-zone cuts.
+    low_shelf_db: 0.6,
+    low_mid_db: -1.25,
+    presence_db: 1.1,
+    air_db: 0.85,
+    warmth: 0.045,
+    stereo_width: 1.07,
+    transient_punch: 0.08,
+    target_lufs: -12.0,
+    ceiling_dbfs: -0.9,
+    compressor_threshold_dbfs: -20.5,
+    compressor_ratio: 2.85,
+    science_note:
+        "Low-mid cleanup, assertive density, and presence support distorted \
+         guitars without burying drums.",
+    baseline_gain_push_db: 2.0,
+};
+
+const PRESET_WARMTH: PresetCalibration = PresetCalibration {
+    // Codex `dark-smooth`. Rounded presence, softer top, less fatiguing.
+    low_shelf_db: 0.8,
+    low_mid_db: 0.1,
+    presence_db: -1.2,
+    air_db: -0.9,
+    warmth: 0.075,
+    stereo_width: 0.97,
+    transient_punch: -0.05,
+    target_lufs: -14.7,
+    ceiling_dbfs: -1.2,
+    compressor_threshold_dbfs: -20.0,
+    compressor_ratio: 1.9,
+    science_note:
+        "Reduced presence and air tame edge while light saturation keeps the \
+         master from feeling dull.",
+    baseline_gain_push_db: 1.0,
+};
+
+const PRESET_PUNCH: PresetCalibration = PresetCalibration {
+    // Codex `djent-modern-metal`. Tight low end, sharp pick definition.
+    // NOTE: low_mid_db = -1.9 — deepest of the heavy-preset mud-zone cuts.
+    low_shelf_db: 1.0,
+    low_mid_db: -1.9,
+    presence_db: 1.8,
+    air_db: 1.2,
+    warmth: 0.035,
+    stereo_width: 1.08,
+    transient_punch: 0.14,
+    target_lufs: -10.9,
+    ceiling_dbfs: -0.8,
+    compressor_threshold_dbfs: -22.5,
+    compressor_ratio: 3.35,
+    science_note:
+        "Aggressive low-mid discipline and transient emphasis keep palm-muted \
+         riffs clear and compact.",
+    baseline_gain_push_db: 2.0,
+};
+
+const PRESET_LOUD: PresetCalibration = PresetCalibration {
+    // Codex `loud-aggressive`. Dense, forward, intentionally assertive.
+    // NOTE: low_mid_db = -1.5 — third of the heavy-preset mud-zone cuts.
+    low_shelf_db: 0.4,
+    low_mid_db: -1.5,
+    presence_db: 1.7,
+    air_db: 1.35,
+    warmth: 0.055,
+    stereo_width: 1.08,
+    transient_punch: 0.12,
+    target_lufs: -10.4,
+    ceiling_dbfs: -0.8,
+    compressor_threshold_dbfs: -23.0,
+    compressor_ratio: 3.8,
+    science_note:
+        "Stronger compression and transient shaping increase urgency while \
+         limiter headroom remains explicit.",
+    baseline_gain_push_db: 3.5,
+};
+
+const PRESET_CUSTOM_NEUTRAL: PresetCalibration = PresetCalibration {
+    // No Codex source. Neutral baseline — user drives everything.
+    low_shelf_db: 0.0,
+    low_mid_db: 0.0,
+    presence_db: 0.0,
+    air_db: 0.0,
+    warmth: 0.0,
+    stereo_width: 1.0,
+    transient_punch: 0.0,
+    target_lufs: -14.0,
+    ceiling_dbfs: -1.0,
+    compressor_threshold_dbfs: -18.0,
+    compressor_ratio: 2.0,
+    science_note: "Neutral baseline — user drives the chain.",
+    baseline_gain_push_db: 1.5,
+};
+
+pub fn preset_calibration(preset: &Preset) -> PresetCalibration {
+    match preset {
+        Preset::Universal => PRESET_UNIVERSAL,
+        Preset::Clarity => PRESET_CLARITY,
+        Preset::Tape => PRESET_TAPE,
+        Preset::Spatial => PRESET_SPATIAL,
+        Preset::Oomph => PRESET_OOMPH,
+        Preset::Warmth => PRESET_WARMTH,
+        Preset::Punch => PRESET_PUNCH,
+        Preset::Loud => PRESET_LOUD,
+        Preset::Custom { .. } => PRESET_CUSTOM_NEUTRAL,
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct ChainCoeffs {
     pub low: BiquadCoeffs,
+    /// Phase A2: low-mid peaking @ 400 Hz, Q=0.9. Heavy presets cut this
+    /// band to clean up the mud zone (250–800 Hz). Identity biquad when
+    /// preset baseline + user offset = 0 dB, so the chain stays
+    /// byte-equivalent to the pre-A2 output for any neutral configuration.
+    pub low_mid: BiquadCoeffs,
     pub mid: BiquadCoeffs,
     pub high: BiquadCoeffs,
     /// Phase 12.2 — surgical low-mid warmth shelf, additive on top of the
@@ -332,57 +601,33 @@ impl ChainCoeffs {
         // first pass — Phase 12.1 listening on real material will calibrate.
         let preset_scale = 0.4 + 1.2 * intensity;
 
-        // (low_db, mid_db, high_db, gain_db, saturation_amount, default_width)
-        // EQ values are the preset's signature curve before user EQ adds on.
-        // Gain in dB is the preset's loudness push before Intensity scaling.
-        // Saturation is a unitless drive parameter consumed by the tanh stage.
-        // default_width is the preset's baseline M/S width (1.0 = neutral).
-        // The user's Advanced.width slider takes precedence when set; this is
-        // the "if you haven't touched it" default for each preset.
-        let (
-            preset_low_db,
-            preset_mid_db,
-            preset_high_db,
-            preset_gain_db,
-            preset_sat,
-            preset_width,
-        ) = match settings.preset {
-            // Universal: well-rounded, mostly transparent, gentle air on top.
-            Preset::Universal => (0.0, 0.0, 0.5, 1.5, 0.0, 1.0),
-            // Clarity: cut low mud, lift presence + air for vocal/detail.
-            Preset::Clarity => (-0.5, 1.0, 2.5, 1.5, 0.0, 1.0),
-            // Tape: low-mid body, softened top, audible saturation glue.
-            // Dan listening note 2026-05-12: Tape was substantially louder
-            // than other presets — saturation drives perceived loudness up,
-            // so trimmed sat 0.45 -> 0.25 (still audibly saturated, less
-            // aggressive). Gain push stays at 1.0 dB so intensity-scaling
-            // contracts keep firing on the input-gain ratio.
-            Preset::Tape => (1.5, 0.0, -1.5, 1.0, 0.25, 1.0),
-            // Spatial: cut mids, lift highs — open, V-ish for width feel.
-            // Dan listening note 2026-05-12: was very quiet and didn't widen
-            // enough — bumped gain 1.5 -> 2.5 dB and added a 1.3 default
-            // width so the preset reads as audibly wider out of the box.
-            Preset::Spatial => (0.0, -1.0, 1.5, 2.5, 0.0, 1.3),
-            // Oomph: heavy low boost for bass-forward material.
-            Preset::Oomph => (2.5, -0.5, 0.0, 2.0, 0.15, 1.0),
-            // Warmth: fuller body, softer top, moderate saturation.
-            Preset::Warmth => (1.5, 0.5, -2.0, 1.0, 0.30, 1.0),
-            // Punch: mid emphasis for transient impact + presence.
-            Preset::Punch => (1.0, 2.0, 1.0, 2.0, 0.20, 1.0),
-            // Loud: broadband density + gain push for streaming targets.
-            Preset::Loud => (0.5, 0.5, 0.5, 3.5, 0.10, 1.0),
-            // Custom: neutral baseline — user controls drive everything.
-            Preset::Custom { .. } => (0.0, 0.0, 0.0, 1.5, 0.0, 1.0),
-        };
+        // Phase A2: per-preset baselines come from the PresetCalibration table
+        // (ported from Codex's 36-hour listening calibration). EQ map:
+        //   preset.low_shelf_db  → 200 Hz low-shelf
+        //   preset.low_mid_db    → 400 Hz peaking  (NEW band in A2)
+        //   preset.presence_db   → 1.5 kHz peaking (our "mid")
+        //   preset.air_db        → 6 kHz high-shelf (our "high")
+        // The user's eq_low_db / eq_low_mid_db / eq_mid_db / eq_high_db
+        // sliders add ON TOP of the scaled preset values.
+        let preset = preset_calibration(&settings.preset);
 
-        // Effective EQ = scaled preset EQ + user EQ.
-        let effective_low_db = preset_low_db * preset_scale + settings.eq_low_db;
-        let effective_mid_db = preset_mid_db * preset_scale + settings.eq_mid_db;
-        let effective_high_db = preset_high_db * preset_scale + settings.eq_high_db;
+        let effective_low_db = preset.low_shelf_db * preset_scale + settings.eq_low_db;
+        let effective_low_mid_db =
+            preset.low_mid_db * preset_scale + settings.eq_low_mid_db;
+        let effective_mid_db = preset.presence_db * preset_scale + settings.eq_mid_db;
+        let effective_high_db = preset.air_db * preset_scale + settings.eq_high_db;
 
         let low = BiquadCoeffs::low_shelf(sr, 200.0, effective_low_db, 0.7);
+        let low_mid = BiquadCoeffs::peaking(sr, 400.0, 0.9, effective_low_mid_db);
         let mid = BiquadCoeffs::peaking(sr, 1500.0, 0.8, effective_mid_db);
         let high = BiquadCoeffs::high_shelf(sr, 6000.0, effective_high_db, 0.7);
+
+        // Compatibility shims for the rest of from_settings, which expects
+        // legacy names. preset_gain_db / preset_sat / preset_width map to
+        // PresetCalibration fields directly.
+        let preset_gain_db = preset.baseline_gain_push_db;
+        let preset_sat = preset.warmth;
+        let preset_width = preset.stereo_width;
 
         // Phase 12.2 — Advanced warmth (low-shelf @ 300 Hz). Slider value clamped
         // into [0, 1] then scaled to a 0..+4 dB lift. When the slider is None or
@@ -588,6 +833,7 @@ impl ChainCoeffs {
 
         Self {
             low,
+            low_mid,
             mid,
             high,
             warmth,
@@ -652,6 +898,8 @@ pub(crate) fn apply_width_stereo(frame: &mut [f32], side_scale: f32) {
 #[derive(Debug, Clone, Default)]
 pub struct ChannelState {
     low: BiquadState,
+    /// Phase A2: state for the 400 Hz peaking band.
+    low_mid: BiquadState,
     mid: BiquadState,
     high: BiquadState,
     warmth: BiquadState,
@@ -1307,11 +1555,14 @@ impl MasteringChain {
         if channels == 0 {
             return;
         }
-        // Pass 1: per-channel input gain + 3-band EQ.
+        // Pass 1: per-channel input gain + 4-band EQ.
+        // Phase A2: low-mid peaking band inserted between low and mid so the
+        // mud-zone cleanup (250–800 Hz) sits in the natural frequency order.
         for ch in 0..channels {
             let state = &mut self.states[ch];
             let mut y = frame[ch] * self.coeffs.input_gain_lin;
             y = state.low.process(&self.coeffs.low, y);
+            y = state.low_mid.process(&self.coeffs.low_mid, y);
             y = state.mid.process(&self.coeffs.mid, y);
             y = state.high.process(&self.coeffs.high, y);
             y = state.warmth.process(&self.coeffs.warmth, y);
@@ -1724,6 +1975,7 @@ mod tests {
             preset: Preset::Custom { id: "t".to_string() },
             intensity: 0.0,
             eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
             eq_mid_db: 0.0,
             eq_high_db: 0.0,
             volume_match: false,
@@ -1748,6 +2000,7 @@ mod tests {
             preset: Preset::Custom { id: "t".to_string() },
             intensity: 0.0,
             eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
             eq_mid_db: 0.0,
             eq_high_db: 0.0,
             volume_match: false,
@@ -1785,6 +2038,7 @@ mod tests {
             preset: Preset::Custom { id: "t".to_string() },
             intensity: 0.0,
             eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
             eq_mid_db: 0.0,
             eq_high_db: 0.0,
             volume_match: false,
@@ -1827,6 +2081,7 @@ mod tests {
             preset: Preset::Custom { id: "t".to_string() },
             intensity: 0.0,
             eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
             eq_mid_db: 0.0,
             eq_high_db: 0.0,
             volume_match: false,
@@ -1868,6 +2123,7 @@ mod tests {
             preset: Preset::Custom { id: "t".to_string() },
             intensity: 0.0,
             eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
             eq_mid_db: 0.0,
             eq_high_db: 0.0,
             volume_match: false,
@@ -1892,6 +2148,7 @@ mod tests {
             preset: Preset::Custom { id: "t".to_string() },
             intensity: 0.0,
             eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
             eq_mid_db: 0.0,
             eq_high_db: 0.0,
             volume_match: false,
@@ -1928,6 +2185,7 @@ mod tests {
             preset: Preset::Custom { id: "t".to_string() },
             intensity: 0.0,
             eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
             eq_mid_db: 0.0,
             eq_high_db: 0.0,
             volume_match: false,
@@ -1959,6 +2217,7 @@ mod tests {
             preset: Preset::Custom { id: "t".to_string() },
             intensity: 0.0,
             eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
             eq_mid_db: 0.0,
             eq_high_db: 0.0,
             volume_match: false,
@@ -1984,6 +2243,7 @@ mod tests {
             preset: Preset::Custom { id: "t".to_string() },
             intensity: 0.0,
             eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
             eq_mid_db: 0.0,
             eq_high_db: 0.0,
             volume_match: false,
@@ -2022,6 +2282,7 @@ mod tests {
             preset: Preset::Custom { id: "t".to_string() },
             intensity: 0.0,
             eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
             eq_mid_db: 0.0,
             eq_high_db: 0.0,
             volume_match: false,
@@ -2559,6 +2820,62 @@ mod tests {
         assert!(
             (reading - (-23.0)).abs() < 0.5,
             "pink at -23 dBFS RMS (L-channel only) should read -23 LUFS ± 0.5 LU, got {reading}"
+        );
+    }
+
+    // ========================================================================
+    // Phase A2: low-mid band frequency response sanity check.
+    // ========================================================================
+
+    /// New 400 Hz Q=0.9 peaking biquad should produce ~+6 dB at 400 Hz when
+    /// configured at +6 dB gain, and ~0 dB at 100 Hz and 1500 Hz (well below
+    /// and above the band centre). Verifies the band lives in the mud zone
+    /// without bleeding into the existing low-shelf (200 Hz) or peaking-mid
+    /// (1500 Hz) bands.
+    #[test]
+    fn low_mid_band_centred_at_400hz_with_q_point_9() {
+        let sr = 48_000.0_f32;
+        let coeffs = BiquadCoeffs::peaking(sr, 400.0, 0.9, 6.0);
+        let at_400 = biquad_magnitude_db_at(&coeffs, 400.0, sr);
+        let at_100 = biquad_magnitude_db_at(&coeffs, 100.0, sr);
+        let at_1500 = biquad_magnitude_db_at(&coeffs, 1500.0, sr);
+        assert!(
+            (at_400 - 6.0).abs() < 0.3,
+            "400 Hz @ +6 dB gain: expected ~+6 dB, got {:.3}",
+            at_400
+        );
+        assert!(
+            at_100.abs() < 1.5,
+            "100 Hz (well below band): expected ~0 dB, got {:.3}",
+            at_100
+        );
+        assert!(
+            at_1500.abs() < 1.5,
+            "1500 Hz (above band): expected ~0 dB, got {:.3}",
+            at_1500
+        );
+    }
+
+    /// Heavy presets (Punch / Loud / Oomph) must carry low-mid CUTS in the
+    /// 1.25–2.2 dB range to clean up the mud zone. Reads the calibration
+    /// values directly from the const table so a future numeric tweak
+    /// breaks this test and forces a re-think.
+    #[test]
+    fn heavy_presets_cut_low_mid_band() {
+        assert!(
+            PRESET_PUNCH.low_mid_db <= -1.5 && PRESET_PUNCH.low_mid_db >= -2.5,
+            "Punch should cut low-mid; got {}",
+            PRESET_PUNCH.low_mid_db
+        );
+        assert!(
+            PRESET_LOUD.low_mid_db <= -1.0 && PRESET_LOUD.low_mid_db >= -2.0,
+            "Loud should cut low-mid; got {}",
+            PRESET_LOUD.low_mid_db
+        );
+        assert!(
+            PRESET_OOMPH.low_mid_db <= -1.0 && PRESET_OOMPH.low_mid_db >= -2.0,
+            "Oomph should cut low-mid; got {}",
+            PRESET_OOMPH.low_mid_db
         );
     }
 

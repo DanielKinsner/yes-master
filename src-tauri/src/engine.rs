@@ -164,6 +164,7 @@ pub fn analyze_one(track_id: TrackId, path: &Path) -> CommandResult<AnalysisResu
         preset: Preset::Universal,
         intensity: 0.5,
         eq_low_db: 0.0,
+        eq_low_mid_db: 0.0,
         eq_mid_db: 0.0,
         eq_high_db: 0.0,
         volume_match: false,

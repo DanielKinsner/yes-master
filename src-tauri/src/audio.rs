@@ -1255,6 +1255,7 @@ mod tests {
             preset: Preset::Universal,
             intensity,
             eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
             eq_mid_db: 0.0,
             eq_high_db: 0.0,
             volume_match: false,
