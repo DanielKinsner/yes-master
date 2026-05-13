@@ -1120,21 +1120,25 @@ button.primary:disabled {
 
 .tile-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   gap: 0.5rem;
 }
 
 .tile {
-  background: var(--bg-1);
+  background: linear-gradient(180deg, rgba(31, 37, 51, 0.4) 0%, var(--bg-2) 100%);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.75rem 0.85rem;
-  text-align: left;
+  border-radius: 6px;
+  padding: 0.6rem 0.55rem 0.65rem;
+  text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
   color: var(--text-1);
-  transition: all 0.1s;
+  transition: border-color 80ms, background 80ms, box-shadow 120ms, transform 80ms;
+  cursor: pointer;
+  position: relative;
 }
 
 .tile:hover {
@@ -1159,9 +1163,27 @@ button.primary:disabled {
 }
 
 .tile-blurb {
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   color: var(--text-2);
-  line-height: 1.3;
+  line-height: 1.25;
+  /* Default: collapsed on the chip. Surfaces on hover / active state via
+     the rule below so the card stays compact at rest. */
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 140ms ease, opacity 140ms ease;
+}
+
+.tile:hover .tile-blurb,
+.tile.active .tile-blurb {
+  max-height: 3em;
+  opacity: 1;
+}
+
+.tile:hover {
+  border-color: var(--border-strong);
+  background: linear-gradient(180deg, rgba(31, 37, 51, 0.6) 0%, var(--bg-3) 100%);
+  transform: translateY(-1px);
 }
 
 .tile-icon {
