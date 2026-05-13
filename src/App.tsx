@@ -9,6 +9,7 @@ import { api } from "./lib/api";
 import { useTrackMaster } from "./hooks/useTrackMaster";
 import { PresetIcon } from "./components/PresetIcon";
 import { RightRail } from "./components/RightRail";
+import { Knob, intensityLabel } from "./components/Knob";
 import type {
   AnalysisResult,
   ImportedTrack,
@@ -1007,47 +1008,61 @@ function Macros({
   onEq: (band: "low" | "mid" | "high", db: number) => void;
 }) {
   return (
-    <section className="macros">
-      <Slider
-        label="Intensity"
-        value={settings.intensity}
-        min={0}
-        max={1}
-        step={0.01}
-        format={(v) => v.toFixed(2)}
-        onChange={onIntensity}
-        defaultValue={0.5}
-      />
-      <Slider
-        label="Low"
-        value={settings.eq_low_db}
-        min={-6}
-        max={6}
-        step={0.1}
-        format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
-        onChange={(v) => onEq("low", v)}
-        defaultValue={0}
-      />
-      <Slider
-        label="Mid"
-        value={settings.eq_mid_db}
-        min={-6}
-        max={6}
-        step={0.1}
-        format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
-        onChange={(v) => onEq("mid", v)}
-        defaultValue={0}
-      />
-      <Slider
-        label="High"
-        value={settings.eq_high_db}
-        min={-6}
-        max={6}
-        step={0.1}
-        format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
-        onChange={(v) => onEq("high", v)}
-        defaultValue={0}
-      />
+    <section className="macros knobs-row">
+      <div className="intensity-block">
+        <span className="section-label">INTENSITY</span>
+        <Knob
+          label=""
+          size="lg"
+          value={settings.intensity}
+          min={0}
+          max={1}
+          step={0.01}
+          defaultValue={0.5}
+          format={(v) => `${Math.round(v * 100)}%`}
+          caption={intensityLabel(settings.intensity)}
+          onChange={onIntensity}
+          centerValue
+        />
+      </div>
+      <div className="tone-shape-block">
+        <span className="section-label">TONE SHAPE</span>
+        <div className="tone-shape-knobs">
+          <Knob
+            label="Low"
+            size="md"
+            value={settings.eq_low_db}
+            min={-12}
+            max={12}
+            step={0.1}
+            defaultValue={0}
+            format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
+            onChange={(v) => onEq("low", v)}
+          />
+          <Knob
+            label="Mid"
+            size="md"
+            value={settings.eq_mid_db}
+            min={-12}
+            max={12}
+            step={0.1}
+            defaultValue={0}
+            format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
+            onChange={(v) => onEq("mid", v)}
+          />
+          <Knob
+            label="High"
+            size="md"
+            value={settings.eq_high_db}
+            min={-12}
+            max={12}
+            step={0.1}
+            defaultValue={0}
+            format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
+            onChange={(v) => onEq("high", v)}
+          />
+        </div>
+      </div>
     </section>
   );
 }
