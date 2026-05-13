@@ -63,6 +63,12 @@ fn stub_analysis_with(role: TrackRole, confidence: InferenceConfidence) -> Analy
         role_confidence: Some(confidence),
         inferred_character: Some(TrackCharacter::Balanced),
         character_confidence: Some(InferenceConfidence::Unsure),
+        spectral_balance_6band: None,
+        transient_flux: None,
+        stereo_correlation: None,
+        dynamic_range_p95_p10_db: None,
+        lufs_short_term_max_3s: None,
+        energy_density_score: None,
     }
 }
 
@@ -815,7 +821,7 @@ fn presets_produce_distinct_chain_coefficients() {
     let cu = ChainCoeffs::from_settings(sample_rate, &universal);
     let cc = ChainCoeffs::from_settings(sample_rate, &clarity);
     let ct = ChainCoeffs::from_settings(sample_rate, &tape);
-    let co = ChainCoeffs::from_settings(sample_rate, &oomph);
+    let _co = ChainCoeffs::from_settings(sample_rate, &oomph);
     let cl = ChainCoeffs::from_settings(sample_rate, &loud);
 
     // Loud must have the largest input gain push.
@@ -1525,6 +1531,12 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         role_confidence: None,
         inferred_character: None,
         character_confidence: None,
+        spectral_balance_6band: None,
+        transient_flux: None,
+        stereo_correlation: None,
+        dynamic_range_p95_p10_db: None,
+        lufs_short_term_max_3s: None,
+        energy_density_score: None,
     };
     let mut settings = default_settings();
     settings.advanced.compression_density = Some(0.5);
@@ -1586,6 +1598,12 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         role_confidence: None,
         inferred_character: None,
         character_confidence: None,
+        spectral_balance_6band: None,
+        transient_flux: None,
+        stereo_correlation: None,
+        dynamic_range_p95_p10_db: None,
+        lufs_short_term_max_3s: None,
+        energy_density_score: None,
     };
     let checks2 = exports::run_export_checks(report2, Some(analysis2), Some(settings2))
         .await

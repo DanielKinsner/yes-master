@@ -137,6 +137,15 @@ export type TrackCharacter =
 
 export type InferenceConfidence = "strong" | "moderate" | "unsure";
 
+export interface SpectralBalance6 {
+  sub: number;
+  low: number;
+  low_mid: number;
+  mid: number;
+  presence: number;
+  air: number;
+}
+
 export interface AnalysisResult {
   track_id: TrackId;
   lufs_integrated: number;
@@ -152,6 +161,14 @@ export interface AnalysisResult {
   role_confidence?: InferenceConfidence | null;
   inferred_character?: TrackCharacter | null;
   character_confidence?: InferenceConfidence | null;
+  /// Phase A5: richer analysis measurements (optional — older
+  /// serialized analyses lack them and `null` falls through).
+  spectral_balance_6band?: SpectralBalance6 | null;
+  transient_flux?: number | null;
+  stereo_correlation?: number | null;
+  dynamic_range_p95_p10_db?: number | null;
+  lufs_short_term_max_3s?: number | null;
+  energy_density_score?: number | null;
 }
 
 export interface WaveformPeaks {

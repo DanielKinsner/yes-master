@@ -40,6 +40,25 @@ pub struct SpectralBalance {
     pub high: f32,
 }
 
+/// Phase A5 — finer-grained spectral split via FFT. Bands (approx.):
+///   sub      20–80 Hz
+///   low      80–250 Hz
+///   low_mid  250–800 Hz
+///   mid      800–2500 Hz
+///   presence 2500–6500 Hz
+///   air      6500–min(sr/2, 16000) Hz
+/// Fractional values sum to ~1.0. None when the signal is too short or
+/// silent for a meaningful FFT.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SpectralBalance6 {
+    pub sub: f32,
+    pub low: f32,
+    pub low_mid: f32,
+    pub mid: f32,
+    pub presence: f32,
+    pub air: f32,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AnalysisResult {
     pub track_id: TrackId,
@@ -62,6 +81,33 @@ pub struct AnalysisResult {
     pub inferred_character: Option<TrackCharacter>,
     #[serde(default)]
     pub character_confidence: Option<InferenceConfidence>,
+    // Phase A5: richer analysis measurements ported from Codex's
+    // analysis.py. All optional so older serialized analyses still load.
+    /// 6-band spectral balance via FFT (Hann-windowed, up to 30 s of mono).
+    #[serde(default)]
+    pub spectral_balance_6band: Option<SpectralBalance6>,
+    /// Spectral-flux-based transient density. Higher = more percussive.
+    /// 40 ms windows, 10 ms hop, positive flux normalized to mean RMS.
+    #[serde(default)]
+    pub transient_flux: Option<f32>,
+    /// Pearson correlation between L and R channels. `[-1.0, +1.0]`.
+    /// `None` for mono input.
+    #[serde(default)]
+    pub stereo_correlation: Option<f32>,
+    /// Dynamic range as P95 minus P10 of RMS-block dB values. Better
+    /// "how dynamic does this track feel" than crest factor. 100 ms
+    /// windows at 50 ms hop.
+    #[serde(default)]
+    pub dynamic_range_p95_p10_db: Option<f32>,
+    /// Maximum short-term (3 s sliding) LUFS via ebur128 Mode::S. True
+    /// measurement, replaces the integrated+LRA*0.5 estimate.
+    #[serde(default)]
+    pub lufs_short_term_max_3s: Option<f32>,
+    /// Composite "how hot does this mix feel" score in `[0, 1]`. Weighted
+    /// combination of loudness, brightness, density, transient flux per
+    /// Codex's analysis.py formula.
+    #[serde(default)]
+    pub energy_density_score: Option<f32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
