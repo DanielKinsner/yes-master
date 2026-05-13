@@ -1257,6 +1257,30 @@ pub fn render_album_plan_impl(
     })
 }
 
+#[derive(Debug, Deserialize)]
+pub struct PlanAlbumRequest {
+    pub title: String,
+    pub analyses: Vec<AnalysisResult>,
+    pub durations: Vec<f64>,
+    pub arc: AlbumArc,
+    pub intensity: f32,
+}
+
+/// Phase B Step 4: thin Tauri wrapper around `album::build_album_plan`.
+/// Lets the frontend pick (arc, intensity) and immediately receive the
+/// per-track plan without duplicating the math in TypeScript.
+#[tauri::command]
+pub async fn plan_album(request: PlanAlbumRequest) -> CommandResult<AlbumPlan> {
+    let refs: Vec<&AnalysisResult> = request.analyses.iter().collect();
+    Ok(crate::album::build_album_plan(
+        request.title,
+        &refs,
+        &request.durations,
+        request.arc,
+        request.intensity,
+    ))
+}
+
 #[tauri::command]
 pub async fn render_album_plan(
     request: AlbumPlanRenderRequest,
