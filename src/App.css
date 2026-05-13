@@ -1005,18 +1005,29 @@ button.primary:disabled {
 }
 
 .play-btn {
-  background: var(--bg-3);
-  color: var(--text-0);
-  border: 1px solid var(--border-strong);
-  padding: 0.35rem 0.8rem;
-  border-radius: var(--radius-sm);
-  font-size: 1rem;
-  min-width: 2.4rem;
+  background: linear-gradient(180deg, var(--accent-bright) 0%, var(--accent-deep) 100%);
+  color: #fff;
+  border: 1px solid var(--accent);
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.05rem;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--accent-glow-soft);
+  transition: box-shadow 120ms, filter 120ms, transform 80ms;
+  cursor: pointer;
 }
 
 .play-btn:hover {
-  background: var(--bg-4);
-  border-color: var(--accent);
+  filter: brightness(1.08);
+  box-shadow: var(--accent-glow);
+}
+
+.play-btn:active {
+  transform: scale(0.96);
 }
 
 .time {
@@ -1065,9 +1076,15 @@ button.primary:disabled {
   font-size: 0.8rem;
 }
 
+.ab-toggle button:hover {
+  color: var(--text-0);
+}
+
 .ab-toggle button.on {
-  background: var(--accent);
-  color: #0a0a14;
+  background: linear-gradient(180deg, var(--accent-bright) 0%, var(--accent-deep) 100%);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: var(--accent-glow-soft);
 }
 
 .ab-toggle button:not(.on):hover {
