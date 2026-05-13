@@ -5,6 +5,10 @@ description = "Album Mastering Studio (Claude build)"
 authors = ["Daniel Kinsner"]
 edition = "2021"
 rust-version = "1.77"
+# Required because `src/bin/produce_dialog_smoke.rs` introduced a second
+# binary target — without this, `cargo run` (and Tauri's dev command) fails
+# with "could not determine which binary to run."
+default-run = "album-mastering-studio"
 
 [lib]
 name = "album_mastering_studio_lib"
