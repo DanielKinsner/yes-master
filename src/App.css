@@ -1988,6 +1988,141 @@ button.primary:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+/* Track header — metadata chips. */
+
+.track-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.track-meta-chips {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.meta-chip {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  padding: 0.18rem 0.5rem;
+  background: var(--bg-3);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  color: var(--text-1);
+  text-transform: uppercase;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bottom status bar — slim 32 px strip spanning the full window below
+   the three-column .app. Live readouts of peak, loudness, processing. */
+
+.bottom-status {
+  height: 36px;
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 1rem;
+  background: var(--bg-1);
+  border-top: 1px solid var(--border);
+  gap: 1rem;
+  font-size: 0.78rem;
+}
+
+.bottom-status-left {
+  display: flex;
+  gap: 1.1rem;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+.bottom-status-center {
+  display: flex;
+  gap: 1.4rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom-status-right {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.status-dot-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-dot-glyph {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-2);
+  flex-shrink: 0;
+}
+
+.status-dot-ok .status-dot-glyph {
+  background: #6cd08a;
+  box-shadow: 0 0 6px rgba(108, 208, 138, 0.65);
+}
+
+.status-dot-warn .status-dot-glyph {
+  background: #f5c842;
+  box-shadow: 0 0 6px rgba(245, 200, 66, 0.55);
+}
+
+.status-dot-bad .status-dot-glyph {
+  background: #ff7676;
+  box-shadow: 0 0 6px rgba(255, 118, 118, 0.65);
+}
+
+.status-dot-idle .status-dot-glyph {
+  background: var(--text-2);
+}
+
+.status-readout {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.status-readout-label {
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.7rem;
+}
+
+.status-readout-value {
+  color: var(--text-0);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.status-processing-label {
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.7rem;
+}
+
+.status-idle {
+  color: var(--text-2);
+  background: var(--bg-3);
+  border-color: var(--border-strong);
+}
+
 /* Advanced panel embedded in right rail. */
 .advanced-panel-slot summary.panel-head-summary {
   cursor: pointer;

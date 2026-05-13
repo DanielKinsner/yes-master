@@ -101,7 +101,100 @@ function App() {
         />
       )}
     </div>
+    <BottomStatusBar tm={tm} />
     </div>
+  );
+}
+
+function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
+  const analysis = tm.selectedAnalysis;
+  const peak = tm.transport.peakDbfs;
+  const isPlaying = tm.transport.isPlaying;
+
+  const peakDisplay = isPlaying && peak > -80 ? `${peak.toFixed(1)} dBFS` : "—";
+  const lufsDisplay = analysis ? `${analysis.lufs_integrated.toFixed(1)} LUFS` : "—";
+
+  let processing: { tone: "idle" | "busy" | "ok"; text: string };
+  if (tm.isExporting) {
+    processing = { tone: "busy", text: "Exporting…" };
+  } else if (tm.isRendering) {
+    processing = { tone: "busy", text: "Rendering audit…" };
+  } else if (tm.isAnalyzing) {
+    processing = { tone: "busy", text: "Analyzing…" };
+  } else if (tm.isLoadingWaveform) {
+    processing = { tone: "busy", text: "Decoding…" };
+  } else if (tm.selectedTrack) {
+    processing = { tone: "ok", text: "Ready" };
+  } else {
+    processing = { tone: "idle", text: "Idle" };
+  }
+
+  return (
+    <footer className="bottom-status">
+      <div className="bottom-status-left">
+        <StatusDot
+          tone={tm.selectedTrack ? (analysis ? "ok" : "warn") : "idle"}
+          label={
+            !tm.selectedTrack
+              ? "No track"
+              : analysis
+              ? "Analyzed"
+              : "Awaiting analysis"
+          }
+        />
+        <StatusDot
+          tone={
+            tm.lastExportReceipt
+              ? tm.lastExportReceipt.checks.some((c) => c.level === "critical")
+                ? "bad"
+                : tm.lastExportReceipt.checks.some((c) => c.level === "warning")
+                ? "warn"
+                : "ok"
+              : "idle"
+          }
+          label={
+            tm.lastExportReceipt
+              ? tm.lastExportReceipt.checks.some((c) => c.level === "critical")
+                ? "Quality checks failed"
+                : tm.lastExportReceipt.checks.some((c) => c.level === "warning")
+                ? "Quality checks (review)"
+                : "Quality checks passed"
+              : "Quality checks not run"
+          }
+        />
+      </div>
+      <div className="bottom-status-center">
+        <span className="status-readout">
+          <span className="status-readout-label">Peak</span>
+          <span className="status-readout-value">{peakDisplay}</span>
+        </span>
+        <span className="status-readout">
+          <span className="status-readout-label">Loudness</span>
+          <span className="status-readout-value">{lufsDisplay}</span>
+        </span>
+      </div>
+      <div className="bottom-status-right">
+        <span className="status-processing-label">Processing</span>
+        <span className={`status-pill status-${processing.tone === "busy" ? "warn" : processing.tone === "ok" ? "ok" : "idle"}`}>
+          {processing.text}
+        </span>
+      </div>
+    </footer>
+  );
+}
+
+function StatusDot({
+  tone,
+  label,
+}: {
+  tone: "idle" | "ok" | "warn" | "bad";
+  label: string;
+}) {
+  return (
+    <span className={`status-dot-row status-dot-${tone}`} title={label}>
+      <span className="status-dot-glyph" aria-hidden />
+      <span className="status-dot-label">{label}</span>
+    </span>
   );
 }
 
@@ -463,35 +556,50 @@ function TrackHeader({
   isAnalyzing: boolean;
   showStoryTags: boolean;
 }) {
+  const chips: { key: string; label: string }[] = [];
+  if (track.source_format) {
+    chips.push({ key: "fmt", label: track.source_format.toUpperCase() });
+  }
+  if (track.sample_rate) {
+    const sr = track.sample_rate;
+    const label = sr >= 1000 ? `${(sr / 1000).toFixed(sr % 1000 === 0 ? 0 : 1)} kHz` : `${sr} Hz`;
+    chips.push({ key: "sr", label });
+  }
+  if (track.channels) {
+    chips.push({
+      key: "ch",
+      label: track.channels === 1 ? "Mono" : track.channels === 2 ? "Stereo" : `${track.channels}ch`,
+    });
+  }
+  if (track.duration_seconds) {
+    chips.push({ key: "dur", label: formatDuration(track.duration_seconds) });
+  }
   return (
     <section className="track-header">
-      <div>
+      <div className="track-header-main">
         <h1 className="track-title">{track.display_name}</h1>
-        <div className="track-sub">
-          <span>.{track.source_format}</span>
-          {analysis && (
-            <>
-              <span className="dot">•</span>
-              <span>LUFS {analysis.lufs_integrated.toFixed(1)}</span>
-              <span className="dot">•</span>
-              <span>TP {analysis.true_peak_dbtp.toFixed(2)} dBTP</span>
-              <span className="dot">•</span>
-              <span>DR {analysis.dynamic_range_lu.toFixed(1)} LU</span>
-              <span className="dot">•</span>
-              <span>W {analysis.stereo_width.toFixed(2)}</span>
-            </>
-          )}
+        <div className="track-meta-chips">
+          {chips.map((c) => (
+            <span key={c.key} className="meta-chip">{c.label}</span>
+          ))}
         </div>
         {analysis && <AnalysisSummary analysis={analysis} />}
         {showStoryTags && analysis && (
           <StoryTags analysis={analysis} />
         )}
       </div>
-      <div className="track-badge">
+      <div className={`track-badge status-pill ${isAnalyzing ? "status-warn" : analysis ? "status-ok" : ""}`}>
         {isAnalyzing ? "Analyzing…" : analysis ? "Analyzed" : "Pending"}
       </div>
     </section>
   );
+}
+
+function formatDuration(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 /// Plain-English commentary on the analysis numbers — one line per dimension.
