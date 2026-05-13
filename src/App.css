@@ -1,17 +1,21 @@
 :root {
-  --bg-0: #0a0a0d;
-  --bg-1: #14141a;
-  --bg-2: #1a1a22;
-  --bg-3: #22222c;
-  --bg-4: #2c2c38;
-  --border: #25252e;
-  --border-strong: #34343f;
-  --text-0: #e6e6ea;
-  --text-1: #b0b0bc;
-  --text-2: #707080;
-  --accent: #6b9eff;
+  --bg-0: #07080d;
+  --bg-1: #10131a;
+  --bg-2: #161a24;
+  --bg-3: #1f2533;
+  --bg-4: #2a3142;
+  --border: #232a3a;
+  --border-strong: #313a4f;
+  --text-0: #ecf0fa;
+  --text-1: #b0b8d0;
+  --text-2: #6f7795;
+  --accent: #4d8bff;
+  --accent-bright: #6fa3ff;
+  --accent-deep: #2a6bf2;
   --accent-warm: #ffb86b;
   --accent-danger: #ff7676;
+  --accent-glow: 0 0 18px rgba(77, 139, 255, 0.45);
+  --accent-glow-soft: 0 0 10px rgba(77, 139, 255, 0.3);
   --radius: 8px;
   --radius-sm: 5px;
   --shadow-1: 0 6px 24px rgba(0, 0, 0, 0.3);
@@ -75,9 +79,10 @@ select {
 }
 
 .brand-mark {
-  color: var(--accent-warm);
+  color: var(--accent-bright);
   display: inline-flex;
   align-items: center;
+  filter: drop-shadow(0 0 6px rgba(111, 163, 255, 0.4));
 }
 
 .brand-name {
@@ -116,9 +121,10 @@ select {
 }
 
 .top-tab.is-active {
-  background: var(--bg-4);
-  color: var(--accent-warm);
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
+  color: #fff;
   font-weight: 600;
+  box-shadow: var(--accent-glow-soft);
 }
 
 .top-header-right {
@@ -415,23 +421,31 @@ select {
 }
 
 button.primary {
-  background: var(--accent);
-  color: #0a0a14;
+  background: linear-gradient(180deg, var(--accent-bright) 0%, var(--accent-deep) 100%);
+  color: #fff;
   border: none;
   padding: 0.6rem 1.4rem;
   border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: 0.9rem;
+  box-shadow: var(--accent-glow-soft);
+  transition: box-shadow 120ms ease, transform 80ms ease, filter 80ms ease;
 }
 
 button.primary:hover:not(:disabled) {
-  background: #7da9ff;
+  filter: brightness(1.07);
+  box-shadow: var(--accent-glow);
+}
+
+button.primary:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 button.primary:disabled {
   background: var(--bg-3);
   color: var(--text-2);
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Album header */
@@ -1031,8 +1045,9 @@ button.primary:disabled {
 
 .tile.active {
   border-color: var(--accent);
-  background: rgba(107, 158, 255, 0.08);
+  background: rgba(77, 139, 255, 0.12);
   color: var(--text-0);
+  box-shadow: var(--accent-glow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .tile-label {
@@ -1618,13 +1633,14 @@ button.primary:disabled {
 }
 
 .panel {
-  background: var(--bg-2);
+  background: linear-gradient(180deg, rgba(31, 37, 51, 0.6) 0%, var(--bg-2) 100%);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 0.85rem 0.95rem;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .panel-head {
@@ -1819,6 +1835,87 @@ button.primary:disabled {
   font-size: 0.75rem;
   color: var(--text-1);
   line-height: 1.4;
+}
+
+/* LEVELS — live post-output peak + worst-band GR readout (replaces the
+   reference's QUALITY SUMMARY card with metrics we actually meter). */
+
+.levels-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem 0.85rem;
+}
+
+.level-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.level-label {
+  font-size: 0.68rem;
+  color: var(--text-2);
+  letter-spacing: 0.02em;
+}
+
+.level-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.2rem;
+}
+
+.level-number {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-0);
+  font-variant-numeric: tabular-nums;
+}
+
+.level-unit {
+  font-size: 0.7rem;
+  color: var(--text-2);
+}
+
+.status-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.14rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-3);
+  color: var(--text-2);
+}
+
+.status-ok {
+  color: #6cd08a;
+  background: rgba(108, 208, 138, 0.14);
+  border-color: rgba(108, 208, 138, 0.4);
+  box-shadow: 0 0 8px rgba(108, 208, 138, 0.25);
+}
+
+.status-warn {
+  color: #f5c842;
+  background: rgba(245, 200, 66, 0.14);
+  border-color: rgba(245, 200, 66, 0.4);
+  box-shadow: 0 0 8px rgba(245, 200, 66, 0.25);
+}
+
+.status-clip {
+  color: #fff;
+  background: #c0392b;
+  border-color: #e74c3c;
+  box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+  animation: clip-pulse 0.7s ease-in-out infinite;
+}
+
+.levels-hint {
+  font-size: 0.72rem;
+  color: var(--text-1);
+  line-height: 1.35;
+  margin: 0;
 }
 
 /* QUALITY CHECK */
@@ -2030,8 +2127,17 @@ button.primary:disabled {
   outline: none;
 }
 
+.knob-vis svg {
+  filter: drop-shadow(0 0 4px rgba(77, 139, 255, 0.18));
+  transition: filter 100ms ease;
+}
+
 .knob-vis svg.is-dragging {
-  filter: drop-shadow(0 0 4px rgba(107, 158, 255, 0.4));
+  filter: drop-shadow(0 0 8px rgba(111, 163, 255, 0.55));
+}
+
+.knob-vis svg:hover {
+  filter: drop-shadow(0 0 6px rgba(111, 163, 255, 0.35));
 }
 
 .knob-fallback {

@@ -12,20 +12,42 @@ type RightRailProps = {
   analysis: AnalysisResult | undefined;
   isAnalyzing: boolean;
   lastChecks: QualityCheck[] | undefined;
+  // Live signals from PlaybackTick / snapshot. Drive the "Levels" panel that
+  // replaces the static Quality Summary in the reference — the readouts here
+  // are what we actually meter today (post-output peak + per-band gain
+  // reduction); fake-grade language is gone.
+  peakDbfs: number;
+  isPlaying: boolean;
+  compressionGr: { low: number; mid: number; high: number };
   // Slot for the AdvancedPanel content. Wrapped in a collapsible details/
-  // summary container so it sits between the quality summary and quality
-  // check panels (matches the reference layout).
+  // summary container so it sits between the levels and quality check
+  // panels (matches the reference layout).
   advancedSlot?: ReactNode;
 };
 
 const LUFS_SCALE_MIN = -36;
 const LUFS_SCALE_MAX = -6;
+const CLIP_THRESHOLD_DBFS = -0.1;
+const HEADROOM_WARN_DBFS = -1.0;
+const SILENCE_FLOOR_DBFS = -80;
 
-export function RightRail({ analysis, isAnalyzing, lastChecks, advancedSlot }: RightRailProps) {
+export function RightRail({
+  analysis,
+  isAnalyzing,
+  lastChecks,
+  peakDbfs,
+  isPlaying,
+  compressionGr,
+  advancedSlot,
+}: RightRailProps) {
   return (
     <aside className="right-rail">
       <MasterOutPanel analysis={analysis} isAnalyzing={isAnalyzing} />
-      <QualitySummaryCard analysis={analysis} />
+      <LevelsPanel
+        peakDbfs={peakDbfs}
+        isPlaying={isPlaying}
+        compressionGr={compressionGr}
+      />
       {advancedSlot && (
         <details className="panel advanced-panel-slot" open>
           <summary className="panel-head panel-head-summary">
@@ -155,70 +177,76 @@ function Readout({
   );
 }
 
-function QualitySummaryCard({
-  analysis,
+function LevelsPanel({
+  peakDbfs,
+  isPlaying,
+  compressionGr,
 }: {
-  analysis: AnalysisResult | undefined;
+  peakDbfs: number;
+  isPlaying: boolean;
+  compressionGr: { low: number; mid: number; high: number };
 }) {
-  const grade = gradeAnalysis(analysis);
+  // Status reads off the post-output peak we already meter live (no fake
+  // grading): idle when not playing, silent when peak is at sentinel,
+  // clipping when above -0.1, hot when above -1.0, otherwise safe.
+  let tone: "idle" | "silent" | "ok" | "warn" | "clip";
+  if (!isPlaying) tone = "idle";
+  else if (peakDbfs <= SILENCE_FLOOR_DBFS) tone = "silent";
+  else if (peakDbfs >= CLIP_THRESHOLD_DBFS) tone = "clip";
+  else if (peakDbfs >= HEADROOM_WARN_DBFS) tone = "warn";
+  else tone = "ok";
+
+  const peakDisplay = !isPlaying || peakDbfs <= SILENCE_FLOOR_DBFS
+    ? "—"
+    : peakDbfs.toFixed(1);
+
+  // Worst (most-negative) GR across the three bands while playing.
+  const grValues = [compressionGr.low, compressionGr.mid, compressionGr.high]
+    .filter((v) => Number.isFinite(v) && v > SILENCE_FLOOR_DBFS);
+  const worstGr = grValues.length > 0 ? Math.min(...grValues) : 0;
+  const grDisplay = !isPlaying || grValues.length === 0
+    ? "—"
+    : worstGr.toFixed(1);
+
+  const label = {
+    idle: "Idle",
+    silent: "Silent",
+    ok: "Safe headroom",
+    warn: "Low headroom",
+    clip: "Clipping",
+  }[tone];
+
   return (
-    <section className={`panel quality-summary quality-${grade.tone}`}>
+    <section className={`panel levels levels-${tone}`}>
       <header className="panel-head">
-        <span className="panel-title">QUALITY SUMMARY</span>
+        <span className="panel-title">LEVELS</span>
+        <span className={`status-pill status-${tone}`}>{label}</span>
       </header>
-      <div className="quality-summary-body">
-        <span className={`quality-icon quality-icon-${grade.tone}`} aria-hidden>
-          {grade.icon}
-        </span>
-        <div className="quality-summary-text">
-          <strong className="quality-grade">{grade.label}</strong>
-          <p className="quality-blurb">{grade.blurb}</p>
+      <div className="levels-body">
+        <div className="level-readout">
+          <span className="level-label">Output peak</span>
+          <span className="level-value">
+            <span className="level-number">{peakDisplay}</span>
+            <span className="level-unit">dBFS</span>
+          </span>
         </div>
+        <div className="level-readout">
+          <span className="level-label">Worst GR</span>
+          <span className="level-value">
+            <span className="level-number">{grDisplay}</span>
+            <span className="level-unit">dB</span>
+          </span>
+        </div>
+      </div>
+      <div className="levels-hint">
+        {tone === "idle" && "Press play to start metering."}
+        {tone === "silent" && "Output is below -80 dBFS in the last window."}
+        {tone === "ok" && "Peaks stay safely under streaming ceiling."}
+        {tone === "warn" && "Peaks are pushing the streaming ceiling — back off output."}
+        {tone === "clip" && "Output is clipping. Drop intensity or output gain."}
       </div>
     </section>
   );
-}
-
-function gradeAnalysis(analysis: AnalysisResult | undefined): {
-  tone: "info" | "ok" | "warn" | "bad";
-  icon: string;
-  label: string;
-  blurb: string;
-} {
-  if (!analysis) {
-    return {
-      tone: "info",
-      icon: "…",
-      label: "Awaiting analysis",
-      blurb: "Drop a track and press Analyze to see master metering.",
-    };
-  }
-  const tp = analysis.true_peak_dbtp;
-  const lufs = analysis.lufs_integrated;
-  const dr = analysis.dynamic_range_lu;
-
-  if (tp > -0.1 || !Number.isFinite(lufs)) {
-    return {
-      tone: "bad",
-      icon: "!",
-      label: "Critical issue",
-      blurb: "True peak is clipping or loudness is non-finite. Back off the chain before exporting.",
-    };
-  }
-  if (tp > -1.0 || dr < 5.0 || lufs > -8.0) {
-    return {
-      tone: "warn",
-      icon: "△",
-      label: "Needs attention",
-      blurb: "Low streaming headroom, very compressed, or extremely loud. Review before exporting.",
-    };
-  }
-  return {
-    tone: "ok",
-    icon: "✓",
-    label: "Excellent",
-    blurb: "Balanced tonality, controlled dynamics, and within streaming-target headroom.",
-  };
 }
 
 function QualityCheckPanel({

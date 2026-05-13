@@ -71,6 +71,9 @@ function App() {
         analysis={tm.selectedAnalysis}
         isAnalyzing={tm.isAnalyzing}
         lastChecks={tm.lastExportReceipt?.checks}
+        peakDbfs={tm.transport.peakDbfs}
+        isPlaying={tm.transport.isPlaying}
+        compressionGr={tm.transport.compressionGr}
         advancedSlot={
           tm.selectedTrack ? (
             <AdvancedPanel
