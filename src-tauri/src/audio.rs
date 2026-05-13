@@ -1262,7 +1262,6 @@ mod tests {
             input_gain_db: 0.0,
             output_gain_db: 0.0,
             delivery_profile: DeliveryProfile::Custom,
-            album: None,
             advanced: AdvancedSettings::default(),
         }
     }
