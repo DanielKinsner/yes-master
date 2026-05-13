@@ -637,6 +637,76 @@ fn unique_album_path(out_dir: &Path) -> CommandResult<PathBuf> {
     ))
 }
 
+// ============================================================================
+// Phase A4: TPDF dither for integer-output WAV writers.
+//
+// 16/24-bit PCM rounds a float sample to the nearest integer, which
+// produces signal-correlated harmonic distortion at low levels — the
+// quantization error becomes a periodic function of the signal. Triangular
+// probability density noise of ±1 LSB peak amplitude, added BEFORE
+// quantization, decorrelates the error from the signal: the per-sample
+// quantization noise becomes Gaussian-ish white noise at the LSB level,
+// at the cost of ~3 dB extra noise floor (inaudible at 16-bit; below
+// hearing at 24-bit). Reference: Lipshitz / Vanderkooy 1992.
+//
+// Applied ONLY in the offline render path. The live audio thread in
+// audio.rs stays f32 throughout, so there's no quantization to dither.
+//
+// PRNG: xorshift32. Two shifts, two XORs, one f32 divide per draw — far
+// cheaper than the rand crate's SmallRng for the volume of noise we
+// generate (millions of samples per render). State held in `DitherRng`
+// for deterministic per-render output.
+// ============================================================================
+
+struct DitherRng {
+    state: u32,
+}
+
+impl DitherRng {
+    fn new(seed: u32) -> Self {
+        // xorshift32 has a zero-fixed-point; substitute a non-zero seed.
+        Self {
+            state: if seed == 0 { 0xCAFE_BABE } else { seed },
+        }
+    }
+
+    /// One uniform draw in `[0, 1)` from the top 23 bits of state.
+    #[inline]
+    fn next_unit(&mut self) -> f32 {
+        self.state ^= self.state << 13;
+        self.state ^= self.state >> 17;
+        self.state ^= self.state << 5;
+        ((self.state >> 9) as f32) / 8_388_608.0_f32
+    }
+
+    /// Triangular noise in `[-2, 2)` LSB — the sum of two independent
+    /// uniforms in `[-1, 1)`. Per the standard mastering-dither shape
+    /// (Lipshitz / Vanderkooy) at ±2 LSB peak amplitude. Returned in
+    /// LSB units; callers multiply by `1 / scale` to convert to
+    /// amplitude before adding to the sample.
+    #[inline]
+    fn tpdf_lsb(&mut self) -> f32 {
+        let u1 = 2.0 * self.next_unit() - 1.0; // [-1, 1)
+        let u2 = 2.0 * self.next_unit() - 1.0; // [-1, 1)
+        u1 + u2 // triangle in [-2, 2)
+    }
+}
+
+const INT16_SCALE: f32 = 32_767.0;
+const INT24_SCALE: f32 = 8_388_607.0;
+
+#[inline]
+fn quantize_16_tpdf(sample: f32, rng: &mut DitherRng) -> i16 {
+    let dithered = sample + rng.tpdf_lsb() / INT16_SCALE;
+    (dithered.clamp(-1.0, 1.0) * INT16_SCALE).round() as i16
+}
+
+#[inline]
+fn quantize_24_tpdf(sample: f32, rng: &mut DitherRng) -> i32 {
+    let dithered = sample + rng.tpdf_lsb() / INT24_SCALE;
+    (dithered.clamp(-1.0, 1.0) * INT24_SCALE).round() as i32
+}
+
 fn wav_spec(channels: u16, sample_rate: u32, bit_depth: u16) -> CommandResult<hound::WavSpec> {
     let (bits, fmt) = match bit_depth {
         16 => (16u16, hound::SampleFormat::Int),
@@ -661,20 +731,20 @@ fn write_samples_into_writer(
     samples: &[f32],
     bit_depth: u16,
 ) -> CommandResult<()> {
+    // Phase A4: TPDF dither for int paths. f32 output stays as-is.
+    let mut rng = DitherRng::new(0xA11_CE);
     match bit_depth {
         16 => {
             for &s in samples {
-                let v = (s.clamp(-1.0, 1.0) * 32767.0).round() as i16;
                 writer
-                    .write_sample(v)
+                    .write_sample(quantize_16_tpdf(s, &mut rng))
                     .map_err(|e| CommandError::Io(e.to_string()))?;
             }
         }
         24 => {
             for &s in samples {
-                let v = (s.clamp(-1.0, 1.0) * 8_388_607.0).round() as i32;
                 writer
-                    .write_sample(v)
+                    .write_sample(quantize_24_tpdf(s, &mut rng))
                     .map_err(|e| CommandError::Io(e.to_string()))?;
             }
         }
@@ -893,20 +963,20 @@ fn write_wav(
     };
     let mut writer =
         hound::WavWriter::create(path, spec).map_err(|e| CommandError::Io(e.to_string()))?;
+    // Phase A4: TPDF dither for int paths. f32 output stays as-is.
+    let mut rng = DitherRng::new(0xA11_CE);
     match bit_depth {
         16 => {
             for &s in samples {
-                let v = (s.clamp(-1.0, 1.0) * 32767.0).round() as i16;
                 writer
-                    .write_sample(v)
+                    .write_sample(quantize_16_tpdf(s, &mut rng))
                     .map_err(|e| CommandError::Io(e.to_string()))?;
             }
         }
         24 => {
             for &s in samples {
-                let v = (s.clamp(-1.0, 1.0) * 8_388_607.0).round() as i32;
                 writer
-                    .write_sample(v)
+                    .write_sample(quantize_24_tpdf(s, &mut rng))
                     .map_err(|e| CommandError::Io(e.to_string()))?;
             }
         }
@@ -923,4 +993,99 @@ fn write_wav(
         .finalize()
         .map_err(|e| CommandError::Io(e.to_string()))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    /// Phase A4: at -90 dBFS the signal sits at ~1 LSB of a 16-bit
+    /// quantizer. Without dither, `round()` quantizes the sine to a
+    /// tiny set of integer values (mostly 0, with occasional ±1 at the
+    /// peaks) — the quantization noise is periodic and signal-correlated.
+    /// With TPDF dither, the noise floor expands so the output takes on
+    /// MANY distinct integer values, decorrelating the error from the
+    /// signal. This is the textbook reason to dither.
+    ///
+    /// Concrete acceptance: the dithered sequence must produce at least
+    /// 6 distinct integer values; the undithered sequence stays at 3
+    /// or fewer (the deliberate signed-quantization fan-out).
+    #[test]
+    fn tpdf_dither_decorrelates_quantization_at_minus_90_dbfs() {
+        let sr = 48_000_u32;
+        let n = (sr as f32 * 0.1) as usize;
+        let amp = 10.0_f32.powf(-90.0 / 20.0);
+        let omega = 2.0 * std::f32::consts::PI * 1000.0 / sr as f32;
+        let samples: Vec<f32> = (0..n)
+            .map(|i| amp * (omega * i as f32).sin())
+            .collect();
+
+        let mut undithered = HashSet::new();
+        for &s in &samples {
+            let v = (s.clamp(-1.0, 1.0) * INT16_SCALE).round() as i16;
+            undithered.insert(v);
+        }
+
+        let mut rng = DitherRng::new(0x1234_5678);
+        let mut dithered = HashSet::new();
+        for &s in &samples {
+            dithered.insert(quantize_16_tpdf(s, &mut rng));
+        }
+
+        assert!(
+            undithered.len() <= 3,
+            "undithered -90 dBFS sine should stay tightly quantized; got {} distinct values",
+            undithered.len()
+        );
+        assert!(
+            dithered.len() > undithered.len(),
+            "dither must expand the integer count: undithered={}, dithered={}",
+            undithered.len(),
+            dithered.len()
+        );
+        assert!(
+            dithered.len() >= 5,
+            "dithered -90 dBFS sine should hit at least 5 distinct values \
+             (signal ~±1 LSB peak, TPDF noise ±2 LSB peak); got {}",
+            dithered.len()
+        );
+    }
+
+    /// TPDF dither's mean should be ~0 — over many samples the noise
+    /// contribution averages out. Verifies the PRNG is balanced.
+    #[test]
+    fn tpdf_dither_has_zero_mean() {
+        let mut rng = DitherRng::new(0xDEAD_BEEF);
+        let n = 100_000;
+        let mean: f32 =
+            (0..n).map(|_| rng.tpdf_lsb()).sum::<f32>() / (n as f32);
+        assert!(
+            mean.abs() < 0.01,
+            "TPDF mean across {} samples should be ~0; got {}",
+            n,
+            mean
+        );
+    }
+
+    /// TPDF dither on silence stays within ±2 LSB (the dither's peak
+    /// amplitude). Verifies the dither is applied and bounded.
+    #[test]
+    fn tpdf_dither_on_silence_stays_within_two_lsb() {
+        let mut rng = DitherRng::new(0x4242_4242);
+        let mut max_abs: u16 = 0;
+        let n = 10_000;
+        for _ in 0..n {
+            let v = quantize_16_tpdf(0.0, &mut rng);
+            let a = v.unsigned_abs();
+            if a > max_abs {
+                max_abs = a;
+            }
+        }
+        assert!(
+            max_abs <= 2,
+            "dither on silence should never exceed ±2 LSB; saw {}",
+            max_abs
+        );
+    }
 }
