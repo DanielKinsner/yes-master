@@ -2,7 +2,7 @@
 
 This document is the entry point for any Claude session — interactive or scheduled — picking up work on this repo. Read this first, then start the loop below.
 
-> **Current snapshot: `docs/HANDOFF_2026-05-12_evening.md`** — comprehensive end-of-session handoff covering the four Phase 12.2 wired-controls slices shipped this session (live clipping, width, album progress, LUFS landing) plus one fully-designed-and-planned slice ready for execution (warmth + presence_air). Includes long-term goal from PRODUCT.md, doc map, boundaries, "ask if unsure" guidance, and full verification state. Supersedes `docs/HANDOFF_2026-05-12.md` for forward direction; that earlier file is still authoritative for Phase 12.1 back-context. Read the new snapshot end-to-end before touching anything.
+> **Current snapshot: `docs/HANDOFF_2026-05-12_night.md`** — late-night supplement: warmth + presence_air shipped (commit `2777411`, 61/61 tests), compression_density brainstorm pinned (commit `17ea086`), and three /goal-ready plans queued at `docs/superpowers/plans/` (commit `0b8785d`). Order: compression → typography → SVG icons → stop for Dan's next direction. The night file is a delta-only follow-on to **`docs/HANDOFF_2026-05-12_evening.md`** (still authoritative for the file map, pitfalls, design notes, and full Phase 12.2 context), which itself supersedes **`docs/HANDOFF_2026-05-12.md`** (still authoritative for Phase 12.1 back-context). Read in this order: night → evening → (morning only if needed). Then read the specific plan you're executing.
 
 ## Read first (in order)
 
