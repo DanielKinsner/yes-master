@@ -2216,6 +2216,33 @@ button.primary:disabled {
   padding: 0.9rem 1.1rem 0.7rem;
 }
 
+/* Sidebar footer parks the prominent Import Audio CTA below the track
+   list (matches the reference's full-width blue button). */
+.sidebar-footer {
+  margin-top: auto;
+  padding: 0.85rem 0.85rem 0.9rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebar-import-btn {
+  width: 100%;
+  padding: 0.7rem;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+}
+
+.sidebar-import-btn svg {
+  flex-shrink: 0;
+}
+
 .sidebar-head-titles {
   display: flex;
   flex-direction: column;
