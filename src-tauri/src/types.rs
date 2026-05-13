@@ -358,6 +358,10 @@ pub struct PlaybackTick {
     pub gr_mid_db: f32,
     #[serde(default = "default_silence_dbfs")]
     pub gr_high_db: f32,
+    /// Phase 12.2 P3 — live BS.1770 momentary LUFS (400 ms K-weighted
+    /// sliding window). `-120.0` is the silence sentinel.
+    #[serde(default = "default_silence_dbfs")]
+    pub lufs_momentary: f32,
 }
 
 fn default_silence_dbfs() -> f32 {

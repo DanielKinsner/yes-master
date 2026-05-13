@@ -866,6 +866,103 @@ fn alpha_from_time_ms(sample_rate: f32, time_ms: f32) -> f32 {
     (-1.0_f32 / (time_ms * 0.001 * sample_rate)).exp()
 }
 
+// ============================================================================
+// Phase 12.2 P3 — BS.1770 momentary LUFS meter.
+//
+// K-weighting prefilter: a 1500 Hz high-shelf (+4 dB, RBJ shelving) followed
+// by a 38 Hz high-pass. We share the existing BiquadCoeffs / BiquadState
+// infrastructure. Following the prefilter, the meter maintains a 400 ms
+// sliding window of mean-squared energy across channels and converts to LUFS
+// per the BS.1770 formula: LUFS = -0.691 + 10·log10(mean_squared).
+//
+// Stereo channel weights are 1.0 / 1.0 (no surround compensation).  Energy
+// gating (-70 LUFS absolute / -10 LU relative) is skipped — that's needed
+// for INTEGRATED loudness measurements over a whole track, not for a live
+// momentary readout which by definition shows whatever is playing right now.
+// ============================================================================
+
+const LUFS_PREFILTER_HIGHSHELF_HZ: f32 = 1500.0;
+const LUFS_PREFILTER_HIGHSHELF_GAIN_DB: f32 = 4.0;
+const LUFS_PREFILTER_HIGHSHELF_SLOPE: f32 = 0.4;
+const LUFS_PREFILTER_HP_HZ: f32 = 38.0;
+const LUFS_MOMENTARY_WINDOW_MS: f32 = 400.0;
+const LUFS_BS1770_OFFSET: f32 = -0.691;
+
+#[derive(Debug, Clone)]
+pub struct MomentaryLufs {
+    /// K-weighting prefilter: high-shelf then high-pass, per channel.
+    hs_coeffs: BiquadCoeffs,
+    hp_coeffs: BiquadCoeffs,
+    hs_state: [BiquadState; 2],
+    hp_state: [BiquadState; 2],
+    /// Single-pole sliding mean-squared accumulator. We approximate the
+    /// 400 ms rectangular window with a one-pole exponential decay tuned
+    /// so the time constant matches — same numeric behavior for live UI
+    /// purposes without keeping a 17k-sample ring buffer per channel.
+    mean_sq: f64,
+    alpha: f32,
+    primed_samples: u32,
+}
+
+impl MomentaryLufs {
+    pub fn new(sample_rate: u32) -> Self {
+        let sr = sample_rate as f32;
+        let hs_coeffs = BiquadCoeffs::high_shelf(
+            sr,
+            LUFS_PREFILTER_HIGHSHELF_HZ,
+            LUFS_PREFILTER_HIGHSHELF_GAIN_DB,
+            LUFS_PREFILTER_HIGHSHELF_SLOPE,
+        );
+        let hp_coeffs = BiquadCoeffs::butter_hp(sr, LUFS_PREFILTER_HP_HZ, 0.7071);
+        // alpha tuned so the 1-pole time-constant matches the 400 ms window.
+        let alpha = (-1.0_f32 / (LUFS_MOMENTARY_WINDOW_MS * 0.001 * sr)).exp();
+        Self {
+            hs_coeffs,
+            hp_coeffs,
+            hs_state: [BiquadState::default(); 2],
+            hp_state: [BiquadState::default(); 2],
+            mean_sq: 0.0,
+            alpha,
+            primed_samples: 0,
+        }
+    }
+
+    /// Feed one stereo frame (left, right) and return the current momentary
+    /// LUFS estimate. For mono input pass the same value for both channels.
+    #[inline]
+    pub fn process_frame(&mut self, left: f32, right: f32) -> f32 {
+        let l_hs = self.hs_state[0].process(&self.hs_coeffs, left);
+        let l_hp = self.hp_state[0].process(&self.hp_coeffs, l_hs);
+        let r_hs = self.hs_state[1].process(&self.hs_coeffs, right);
+        let r_hp = self.hp_state[1].process(&self.hp_coeffs, r_hs);
+        // Sum-of-channels mean-square energy per BS.1770 (channel weights 1.0).
+        let energy = (l_hp as f64) * (l_hp as f64) + (r_hp as f64) * (r_hp as f64);
+        let a = self.alpha as f64;
+        self.mean_sq = a * self.mean_sq + (1.0 - a) * energy;
+        if self.primed_samples < 100_000 {
+            self.primed_samples = self.primed_samples.saturating_add(1);
+        }
+        self.lufs()
+    }
+
+    /// Current LUFS readout. Returns -120.0 while the meter is still
+    /// settling (first ~10 ms of audio) so the UI doesn't flash a junk
+    /// number at the start of playback.
+    pub fn lufs(&self) -> f32 {
+        if self.primed_samples < 480 || self.mean_sq <= 1.0e-12 {
+            return -120.0;
+        }
+        (LUFS_BS1770_OFFSET as f64 + 10.0 * self.mean_sq.log10()) as f32
+    }
+
+    pub fn reset(&mut self) {
+        self.hs_state = [BiquadState::default(); 2];
+        self.hp_state = [BiquadState::default(); 2];
+        self.mean_sq = 0.0;
+        self.primed_samples = 0;
+    }
+}
+
 /// Phase 12.2 — per-band gain-reduction snapshots. `MasteringChain` writes
 /// per-frame max-|reduction_db| into these atomics; the audio thread reads
 /// via `swap` on the 50 ms snapshot cycle, mirroring the existing

@@ -213,6 +213,9 @@ export interface PlaybackTick {
   gr_low_db: number;
   gr_mid_db: number;
   gr_high_db: number;
+  /// Phase 12.2 P3 — live BS.1770 momentary LUFS (400 ms K-weighted
+  /// sliding window). `-120` is the silence sentinel.
+  lufs_momentary: number;
 }
 
 export interface LoopRegion {

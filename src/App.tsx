@@ -75,6 +75,7 @@ function App() {
         peakDbfs={tm.transport.peakDbfs}
         isPlaying={tm.transport.isPlaying}
         compressionGr={tm.transport.compressionGr}
+        lufsMomentary={tm.transport.lufsMomentary}
         advancedSlot={
           tm.selectedTrack ? (
             <AdvancedPanel

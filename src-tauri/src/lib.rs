@@ -41,6 +41,7 @@ pub fn run() {
                         gr_low_db: snap.gr_low_db,
                         gr_mid_db: snap.gr_mid_db,
                         gr_high_db: snap.gr_high_db,
+                        lufs_momentary: snap.lufs_momentary,
                     };
                     let _ = app_handle.emit("playback:tick", tick);
                 }

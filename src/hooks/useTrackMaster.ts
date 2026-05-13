@@ -103,6 +103,8 @@ export function useTrackMaster() {
     // ("no reduction in the window"). Driven by PlaybackTick → snapshot →
     // atomic-swap on the backend audio thread.
     compressionGr: { low: -120, mid: -120, high: -120 },
+    // Phase 12.2 P3 — live BS.1770 momentary LUFS. -120 = silence sentinel.
+    lufsMomentary: -120,
   });
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [lastExportReceipt, setLastExportReceipt] = useState<ExportReceipt | null>(null);
@@ -164,6 +166,7 @@ export function useTrackMaster() {
           mid: tick.gr_mid_db,
           high: tick.gr_high_db,
         },
+        lufsMomentary: tick.lufs_momentary,
       }));
     }).then((fn) => {
       unlistenTick = fn;
