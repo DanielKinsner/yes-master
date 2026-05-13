@@ -8,6 +8,7 @@ import {
 import { api } from "./lib/api";
 import { useTrackMaster } from "./hooks/useTrackMaster";
 import { PresetIcon } from "./components/PresetIcon";
+import { RightRail } from "./components/RightRail";
 import type {
   AnalysisResult,
   ImportedTrack,
@@ -64,6 +65,11 @@ function App() {
           <EmptyState onAdd={tm.openImportDialog} />
         )}
       </main>
+      <RightRail
+        analysis={tm.selectedAnalysis}
+        isAnalyzing={tm.isAnalyzing}
+        lastChecks={tm.lastExportReceipt?.checks}
+      />
       {tm.isDragOver && (
         <div className="drop-overlay" aria-hidden>
           <div className="drop-overlay-card">
