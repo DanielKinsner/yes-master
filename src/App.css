@@ -1678,11 +1678,25 @@ button.primary:disabled {
 
 .drop-overlay-card {
   padding: 2.5rem 3.5rem;
-  border: 2px dashed var(--accent);
-  border-radius: var(--radius);
-  background: rgba(107, 158, 255, 0.06);
+  border: 2px dashed var(--accent-bright);
+  border-radius: 12px;
+  background: rgba(77, 139, 255, 0.10);
   text-align: center;
-  box-shadow: 0 0 0 1px rgba(107, 158, 255, 0.2);
+  box-shadow:
+    0 0 0 1px rgba(111, 163, 255, 0.25),
+    0 0 32px rgba(77, 139, 255, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.drop-overlay-card::before {
+  content: "";
+  display: block;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 0.8rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(111, 163, 255, 0.4) 0%, transparent 70%);
+  filter: blur(6px);
 }
 
 .drop-overlay-title {
