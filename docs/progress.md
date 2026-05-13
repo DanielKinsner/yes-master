@@ -2046,3 +2046,88 @@ Next recommended slice:
 - **Dan's Phase 12 listening pass** with the new live integrated readout in hand. The most-likely-impactful next slice; the integrated readout was the missing tool for evaluating preset loudness consistency in real time.
 - Otherwise, the next non-Dan-blocking item from the original queue: knob-range audit (compare ±12 dB Tone Shape against a few mastering plugins) or another visual-polish iteration.
 
+## 2026-05-14 — Codex port plan v2: Phases A1–A5 + Phase B Steps 1–7 done
+
+Across one extended session Dan and Claude executed every phase in
+`album-mastering-port-plan-v2.md` (see Dan's local file at
+`C:\Users\SM - Dan\Downloads\album-mastering-port-plan-v2.md` — not in
+the repo) and the post-plan Phase B+ extensions Claude proposed after
+auditing the gap in our character-system port.
+
+Master HEAD after all merges: `e947751`.
+
+Phase summary (each link is the commit hash):
+
+* **A1 `185fb13`** — BS.1770-4 K-weighting reference + rectangular 400 ms
+  sliding window in `MomentaryLufs`. Coefficient match within 1e-6 at
+  48 kHz; pink noise at -23 dBFS reads -23 LUFS ± 0.5 LU.
+* **A2 `af3f605`** — New 4th EQ band (400 Hz Q=0.9 peaking) + per-preset
+  13-number calibration ported from Codex's `mastering.py`. Heavy
+  presets (Punch / Loud / Oomph) carry the mud-zone -1.25 to -1.9 dB
+  cuts that give them their tight feel.
+* **A3 `313fea0`** — DeliveryProfile enum (8 variants:
+  StreamingUniversal, AppleMusic, Cd, VinylPremaster, LoudRock,
+  BroadcastEu, BroadcastUs, Custom). MasteringSettings.delivery_profile
+  shadows lufs_offset_db / ceiling_dbtp / bit_depth at render time when
+  non-Custom.
+* **A4 `004eb28`** — TPDF dither (±2 LSB peak triangular) in 16/24-bit
+  WAV writers via inline xorshift32 PRNG. Live audio thread untouched.
+* **A5 `3661fe4`** — 6-band FFT spectral balance, transient flux,
+  stereo correlation, P95-P10 dynamic range, true 3 s short-term max
+  LUFS, energy-density composite. + `rustfft` dependency.
+* **B Steps 1–5 (`b820f9c`–`2c9e9ef`, merge `d8cda7a`)** — Album
+  Master mode: AlbumPlan / AlbumArc / TransitionSpec / AlbumTrackEntry
+  types, arc resample + character offset math, render_album_plan
+  end-to-end pipeline with manifest.json, AlbumPanel frontend.
+* **B+ Step 6 `80eafe8`** — Position-aware AlbumCharacter inference
+  (HeavyDjent / AcousticFolk / Transition / ReturnAcoustic) with the
+  album-position promotion that flips back-half acoustic-after-heavy
+  to ReturnAcoustic. Unlocked the full Codex per-character LUFS pull
+  table.
+* **B+ Step 7 `f6e1d31`** — Per-character mastering_bias EQ moves
+  (low_end_db / low_mid_db / presence_db / air_db / width_offset /
+  warmth_offset / intensity_offset). Heavy presets get +0.35 / -0.55
+  / +0.35 air / +0.035 width; ReturnAcoustic gets -0.45 presence /
+  +0.055 warmth / -0.22 intensity; energy- and curve-gated where the
+  Codex source had branches.
+
+Tests at this snapshot:
+* `cargo test --lib`: 74/74 pass (was 32 at A1 start).
+* `cargo test`: 115/115 including the ~4-minute real-fixture metering
+  snapshot.
+* `npm run build`: clean.
+
+Listening verification: Dan confirmed "hell ya it sounds really good"
+after running the dev binary on master post-Step 7. No specific
+preset re-tunes flagged.
+
+What failed or remains partial:
+
+- **Step 8 of the post-plan extension is unstarted.** Step 8 is the
+  validation-sound-test suite: 7 integration tests that catch
+  numerical regressions in the per-preset character signatures,
+  inter-preset loudness balance, delivery-profile end-to-end LUFS
+  landing, album arc curve trace, album character bias landing, TPDF
+  dither absence-of-harmonics, and K-weighting reference curve. Full
+  spec in `docs/PHASE_B_STEP_8_PLAN.md`.
+- **Album mode UI polish is minimal.** AlbumPanel has the arc
+  dropdown, album intensity slider, title input, track lane, Export
+  Album button. Missing: per-transition Gap-seconds spinner,
+  drag-to-reorder from inside the panel, Custom-arc lufs_offsets
+  editor, per-track "Album: -1.05 LUFS / ×0.94 intensity" badge on
+  the workspace.
+- **Sample-rate resampling** is captured in DeliveryProfile but not
+  applied — renders still write at source SR regardless of profile
+  hint. Separate phase.
+
+Next recommended slice:
+
+→ **Phase B+ Step 8 validation sound tests.** See
+`docs/PHASE_B_STEP_8_PLAN.md` for the full spec — 7 test files, each
+synthesizes its own input + asserts a measurable property of the
+output. Start on a `phase-b-step-8-validation` branch off master.
+After that, the open queue is empty and the next direction is Dan's
+listening pass.
+
+
+
