@@ -1720,3 +1720,48 @@ The HANDOFF's P0 wired-controls list is shrinking. Remaining:
 3. **Album-mode LUFS landing** — `album_render_with_progress` doesn't apply LUFS landing per track or album-wide. The per-track decision is the same as Track Master; the album-wide question (apply target to the continuous album WAV vs per-track) is a product decision per HANDOFF's Phase 8.x refinement list.
 
 If Dan returns with listening notes, those override the queue. The session has now shipped 4 slices on origin/master.
+
+## 2026-05-12 — Phase 12.2 (cont): wire warmth and presence_air (Advanced)
+
+Goal:
+
+Close the fifth P0 slice of the session. Both `warmth` and `presence_air` Advanced controls existed in the UI and the type schema but did nothing. Design grounded in `docs/research/most-recent-mastering-app-research.md` (Sonible smart:limit, LANDR, BandLab, Ozone — pure-EQ shelves, one-sided, additive on top of the 3-band EQ). Spec at `docs/superpowers/specs/2026-05-12-warmth-presence-air-design.md`, plan at `docs/superpowers/plans/2026-05-12-warmth-presence-air.md`.
+
+What changed:
+
+Backend (Rust, `src-tauri/src/dsp.rs`):
+
+- **`ChainCoeffs`**: new `warmth: BiquadCoeffs` and `presence_air: BiquadCoeffs` fields.
+- **`ChannelState`**: parallel `warmth: BiquadState` and `presence_air: BiquadState` fields for filter memory.
+- **`ChainCoeffs::from_settings`**: maps `Advanced.warmth` slider value `[0..1]` → low-shelf @ 300 Hz, slope 0.7, `[0..+4 dB]`. Same shape for `Advanced.presence_air` → high-shelf @ 10 kHz. Clamped on read; defaults to None → 0 dB → identity biquad (via `BiquadCoeffs::low_shelf`/`high_shelf`'s built-in early-return).
+- **`MasteringChain::process_frame_inplace`**: warmth + presence_air biquads applied per-channel inside Pass 1, after the existing low/mid/high biquads, before the width transform.
+- **`MasteringChain::process_sample`** (legacy path): same two biquads applied in the same order.
+- **Tests**: 5 new in `mod tests` (helper `biquad_magnitude_db_at` for closed-form response checks):
+  - `warmth_default_is_identity` — `Advanced.warmth = None` produces identity biquad.
+  - `warmth_at_one_lifts_300hz_band` — slider 1.0 gives >+3 dB at 100 Hz and ~0 dB at 5 kHz (pins both magnitude and shelf shape).
+  - `chain_coeffs_clamps_warmth_into_range` — values 5.0 and -1.0 clamp to 1.0 and 0.0 respectively.
+  - `presence_air_default_is_identity` — mirror-image of warmth default.
+  - `presence_air_at_one_lifts_10khz_band` — slider 1.0 gives >+3 dB at 18 kHz and ~0 dB at 1 kHz.
+
+Frontend (`src/App.tsx`):
+
+- `AdvancedPanel`: "(coming soon)" dropped from Warmth and Presence/Air labels. Slider config unchanged.
+
+Verification:
+
+- `cargo test --lib`: 24/24 pass (was 19).
+- `cargo test` (full): **61/61 pass** (was 56). Real-fixture tests unchanged — both new biquads default to identity on `default_settings()` and on every existing preset.
+- `npm run build`: clean (253.62 KB / 77.57 KB gzipped — flat).
+
+Real-audio fixture used: none. Tests use closed-form biquad-response math + the existing real-fixture render tests as a backward-compatibility guarantee.
+
+What failed or remains partial:
+
+- **No frontend test** for the slider's new behavior (vitest infra still deferred).
+- **Warmth/Presence_air interaction with the Warmth preset**: stacks additively (no special handling). If users find the Warmth preset + Warmth slider feels redundant or harsh, future polish could either rename the preset or add a per-preset baseline.
+- **Adaptive air (Ozone Clarity-style STFT-domain shaping)**: out of scope per spec; static shelf shipped here.
+
+Next recommended slice:
+
+The HANDOFF P0 wired-controls list is now down to one: `compression_density` (real envelope-following compressor before the limiter, ~300-500 lines per HANDOFF). Worth a brainstorm/plan before coding. If listening notes from Dan come in first, those override the queue.
+

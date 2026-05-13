@@ -1381,7 +1381,7 @@ function AdvancedPanel({
           onChange={(v) => update("width", v)}
         />
         <NumberField
-          label="Warmth (coming soon)"
+          label="Warmth"
           value={a.warmth}
           step={0.05}
           min={0}
@@ -1390,7 +1390,7 @@ function AdvancedPanel({
           onChange={(v) => update("warmth", v)}
         />
         <NumberField
-          label="Presence/Air (coming soon)"
+          label="Presence/Air"
           value={a.presence_air}
           step={0.05}
           min={0}
