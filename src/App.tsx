@@ -322,14 +322,24 @@ function Sidebar({
     setDragOverIndex(null);
   };
 
+  // Sum of every track's duration (seconds) — surfaces the album/queue total
+  // alongside the count, the way the reference shows "9 tracks · 42:18".
+  const totalSeconds = tracks.reduce(
+    (acc, t) => acc + (t.duration_seconds ?? 0),
+    0,
+  );
+  const totalLabel = totalSeconds > 0 ? `${tracks.length} tracks · ${formatDuration(totalSeconds)}` : `${tracks.length} tracks`;
   return (
     <aside className="sidebar">
-      <div className="sidebar-section">
-        <span className="section-label">
-          {mode === "album" ? `Album order (${tracks.length})` : `Tracks (${tracks.length})`}
-        </span>
-        <button type="button" className="add-btn" onClick={onAdd}>
-          + Add files
+      <div className="sidebar-section sidebar-head-strip">
+        <div className="sidebar-head-titles">
+          <span className="section-label">
+            {mode === "album" ? "Album order" : "Tracks"}
+          </span>
+          <span className="sidebar-count">{totalLabel}</span>
+        </div>
+        <button type="button" className="add-btn" onClick={onAdd} title="Import audio">
+          + Import
         </button>
       </div>
 
@@ -358,11 +368,9 @@ function Sidebar({
               onDragEnd={handleDragEnd}
               onDragLeave={() => setDragOverIndex(null)}
             >
-              {albumReorderable && (
-                <span className="track-index" aria-hidden>
-                  {index + 1}
-                </span>
-              )}
+              <span className="track-index" aria-hidden>
+                {(index + 1).toString().padStart(2, "0")}
+              </span>
               <button
                 type="button"
                 className="track-pick"
@@ -377,7 +385,9 @@ function Sidebar({
                     </span>
                   )}
                 </span>
-                <span className="track-meta">.{t.source_format}</span>
+                <span className="track-meta">
+                  {t.duration_seconds ? formatDuration(t.duration_seconds) : `.${t.source_format}`}
+                </span>
               </button>
               <button
                 type="button"

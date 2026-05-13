@@ -293,7 +293,8 @@ select {
 }
 
 .track-row.active {
-  background: var(--bg-3);
+  background: rgba(77, 139, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(77, 139, 255, 0.35);
 }
 
 .track-row.active .track-name {
@@ -2001,6 +2002,54 @@ button.primary:disabled {
   display: flex;
   gap: 0.35rem;
   flex-wrap: wrap;
+}
+
+/* Sidebar head: count + total duration. */
+
+.sidebar-head-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.9rem 1.1rem 0.7rem;
+}
+
+.sidebar-head-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.sidebar-count {
+  font-size: 0.7rem;
+  color: var(--text-2);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Track index — always visible 2-digit prefix. */
+.track-row > .track-index {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.7rem;
+  color: var(--text-2);
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.track-row.active > .track-index {
+  color: var(--accent-bright);
+  text-shadow: 0 0 4px rgba(111, 163, 255, 0.5);
+}
+
+/* Workspace section labels — used above presets, etc. for cohesion with the
+   right-rail panel labels and the macros row. */
+.workspace-section-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  font-weight: 600;
+  margin: 0.5rem 0 0;
 }
 
 .meta-chip {
