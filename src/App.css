@@ -3659,11 +3659,60 @@ button.primary:disabled {
   color: var(--text-0);
 }
 
-/* Slice C: per-stage detail (e.g. "Density 30% · -7…") removed from
-   the breadcrumb — the same values live in the Macros knobs and the
-   right-rail readouts. Stage hover-title still surfaces the detail. */
+/* Slice C + L5 polish: per-stage detail hidden by default so the
+   chain reads as a slim status strip. When the chevron at the right
+   end of the chain is clicked, the parent .signal-chain gains
+   .is-expanded and the details surface for an at-a-glance readout
+   without opening Advanced. */
 .chain-stage-detail {
   display: none;
+  font-size: 0.6rem;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  max-width: 86px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.signal-chain.is-expanded .chain-stage-detail {
+  display: block;
+}
+
+.signal-chain.is-expanded .chain-stage.is-active .chain-stage-detail {
+  color: var(--text-1);
+}
+
+.signal-chain-toggle {
+  background: transparent;
+  border: 1px solid rgba(111, 163, 255, 0.12);
+  color: var(--text-2);
+  border-radius: var(--radius-sm);
+  padding: 0.15rem 0.4rem;
+  margin-left: 0.4rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 80ms, color 80ms, border-color 80ms, transform 120ms;
+}
+
+.signal-chain-toggle:hover {
+  color: var(--text-0);
+  border-color: rgba(111, 163, 255, 0.28);
+  background: rgba(13, 16, 24, 0.55);
+}
+
+.signal-chain-toggle-chevron {
+  font-size: 0.85rem;
+  line-height: 1;
+  transition: transform 120ms ease;
+  transform: translateY(-1px);
+}
+
+.signal-chain.is-expanded .signal-chain-toggle-chevron {
+  transform: translateY(-1px) rotate(180deg);
 }
 
 .chain-link {

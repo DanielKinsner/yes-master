@@ -168,6 +168,8 @@ function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
   return (
     <footer className="bottom-status">
       <div className="bottom-status-left">
+        {/* L5 polish — terser labels so the bottom bar reads quiet
+            rather than debug-flavored. Full text in tooltip if needed. */}
         <StatusDot
           tone={tm.selectedTrack ? (analysis ? "ok" : "warn") : "idle"}
           label={
@@ -175,7 +177,7 @@ function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
               ? "No track"
               : analysis
               ? "Analyzed"
-              : "Awaiting analysis"
+              : "Analyzing"
           }
         />
         <StatusDot
@@ -191,11 +193,11 @@ function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           label={
             tm.lastExportReceipt
               ? tm.lastExportReceipt.checks.some((c) => c.level === "critical")
-                ? "Quality checks failed"
+                ? "Quality failed"
                 : tm.lastExportReceipt.checks.some((c) => c.level === "warning")
-                ? "Quality checks (review)"
-                : "Quality checks passed"
-              : "Quality checks not run"
+                ? "Quality review"
+                : "Quality OK"
+              : "Quality —"
           }
         />
       </div>
