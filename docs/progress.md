@@ -2639,3 +2639,78 @@ reduced text clutter. After that: slice 4 (console controls
 rebalance), slice 4b (VisualEqPanel v1), slice 6 (responsive
 check).
 
+
+
+## 2026-05-14 — UI restyle slice 3: preset tiles
+
+Goal: Per `docs/UI_CSS_RESTYLE_PLAN_2026-05-14.md` — make the
+selected preset feel like a chosen mastering direction, not just
+a bordered card. The existing tiles already had per-preset
+`--tile-accent`, radial accent wash, and screen-blend imagery —
+slice 3 amplifies what's there with row consistency, larger
+responsive imagery, and a layered active-state shadow stack.
+
+What changed (App.css only — no JSX needed):
+
+- `.tile`: `min-height: 136px` so the eight tiles read as one
+  uniform console strip. Background switched to the plan's
+  deeper deck gradient (`rgba(31,37,51,.84)` →
+  `rgba(13,16,24,.96)`) to match the waveform-deck surface.
+  Border now uses `color-mix(--tile-accent 18%, --border)` so
+  every tile inherits a subtle tint of its character color even
+  at rest. Radial accent wash tightened
+  (`circle at 50% 28%, transparent 46%`) so the color sits
+  closer to the imagery rather than spreading across the whole
+  tile. Removed a duplicate `position: relative` declaration
+  that was in the previous version.
+- `.tile-icon`: responsive sizing — `clamp(64px, 5.8vw, 92px)`
+  so the imagery scales with the row width. Filter bumped from
+  `brightness(0.9) saturate(0.95)` →
+  `brightness(0.95) saturate(1.05) contrast(1.04)` for a richer
+  read against the deeper deck.
+- `.tile.active`: three layered shadows for real "chosen
+  mastering direction" presence:
+    1. Inner accent ring (`0 0 0 1px tile-accent 28%`) — tile
+       pops off the row.
+    2. Floor shadow (`0 18px 38px rgba(0,0,0,.34)`) — lifts the
+       tile up.
+    3. Outer halo (`0 0 32px tile-accent 24%`) — colored glow
+       underneath, the "this is the master direction" cue.
+  Border tightens to `color-mix(--tile-accent 72%, white 8%)`
+  so it pops at any tile-accent hue without losing definition.
+  Active background gradient deepens to match the deck.
+- `.tile:hover`: background updated to match the new deeper
+  deck gradient + tighter radial accent (32% from 28%) so the
+  hover state reads as a stronger version of the resting tile,
+  consistent with the selected-state aesthetic.
+
+Verification:
+
+- `npm run build`: clean. CSS chunk barely moved (slice's
+  changes were swap-and-replace).
+- Rust untouched.
+
+Real-audio fixture used: None — pure UI/CSS change.
+
+What failed or remains partial:
+
+- The plan also mentioned "reduce text clutter inside each
+  tile." Current behavior already collapses the `.tile-blurb`
+  on inactive tiles and only surfaces it on hover/active. No
+  further reduction needed — labels alone are clean.
+- The plan's optional WebP/AVIF conversion of preset PNGs
+  (250-500 KB target per tile) was NOT done in this slice. Each
+  preset PNG is currently 1.0–1.8 MB. Worth a follow-up pass if
+  bundle size matters; functionally unaffected.
+- Subjective: "premium and intentional" is hard to verify in an
+  autonomous session. The structural changes are objectively
+  there (min-height, layered shadows, color-mix borders); Dan's
+  eyeball pass is the final acceptance check.
+
+Next recommended slice: **Restyle slice 4 — console controls**
+per `UI_CSS_RESTYLE_PLAN_2026-05-14.md`. Rebalance intensity +
+EQ knobs into one console panel, give the intensity knob a
+stronger cockpit role, use per-band knob tone colors (cyan/
+green/purple/pink/gold). After that: slice 4b (VisualEqPanel v1
+— new component, not just CSS), slice 6 (responsive check).
+
