@@ -109,6 +109,11 @@ export function useTrackMaster() {
     // Phase 12.2 P3+ — live BS.1770-4 integrated LUFS over the current
     // playback session.  Resets when a new playback starts.
     lufsIntegrated: -120,
+    // L4b — live FFT spectrum, log-binned dB values. Empty array
+    // means no spectrum yet (idle / Original playback / pre-L4b
+    // backend). The frontend EQ panel uses this to draw bars under
+    // the response curve.
+    spectrumDb: [] as number[],
   });
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [lastExportReceipt, setLastExportReceipt] = useState<ExportReceipt | null>(null);
@@ -172,6 +177,7 @@ export function useTrackMaster() {
         },
         lufsMomentary: tick.lufs_momentary,
         lufsIntegrated: tick.lufs_integrated,
+        spectrumDb: tick.spectrum_db ?? t.spectrumDb,
       }));
     }).then((fn) => {
       unlistenTick = fn;

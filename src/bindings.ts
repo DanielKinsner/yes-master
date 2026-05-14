@@ -327,6 +327,10 @@ export interface PlaybackTick {
   /// playback session. Updates every 100 ms; resets when a new playback
   /// starts. `-120` is the silence sentinel.
   lufs_integrated: number;
+  /// UI L4b — live FFT spectrum from the audio thread, log-binned to
+  /// ~32 dB values (-60 floor, +6 ceil). Empty array means "no spectrum
+  /// data for this tick" (idle / Original playback / pre-L4b backend).
+  spectrum_db?: number[];
 }
 
 export interface LoopRegion {

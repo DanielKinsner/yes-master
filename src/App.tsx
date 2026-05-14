@@ -609,6 +609,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         onIntensity={tm.setIntensity}
         onEq={tm.setEqBand}
         onAdvanced={tm.setAdvanced}
+        spectrumDb={tm.transport.spectrumDb}
       />
       <UndoRedoBar
         canUndo={tm.canUndo}
@@ -1494,6 +1495,7 @@ function Macros({
   onIntensity,
   onEq,
   onAdvanced,
+  spectrumDb,
 }: {
   settings: MasteringSettings;
   onIntensity: (v: number) => void;
@@ -1501,6 +1503,10 @@ function Macros({
   // can drive eq_low_mid_db via the same setter the knobs use.
   onEq: (band: "low" | "low-mid" | "mid" | "high", db: number) => void;
   onAdvanced: (adv: MasteringSettings["advanced"]) => void;
+  // L4b — live FFT spectrum forwarded from PlaybackTick. Empty array
+  // means no spectrum yet (idle / Original playback); VisualEqPanel
+  // simply omits the spectrum layer in that case.
+  spectrumDb: number[];
 }) {
   return (
     <section className="macros knobs-row">
@@ -1570,7 +1576,12 @@ function Macros({
           show the curve, nodes, and grid cleanly. */}
       <div className="equalizer-block">
         <span className="section-label">EQUALIZER (Dynamic)</span>
-        <VisualEqPanel settings={settings} onEq={onEq} compact />
+        <VisualEqPanel
+          settings={settings}
+          onEq={onEq}
+          compact
+          spectrumDb={spectrumDb}
+        />
       </div>
       <LoudnessTarget settings={settings} onAdvanced={onAdvanced} />
     </section>

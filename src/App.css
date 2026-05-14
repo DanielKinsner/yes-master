@@ -1872,6 +1872,15 @@ button.primary:disabled {
   fill: rgba(77, 139, 255, 0.12);
 }
 
+/* L4b — live FFT spectrum bars / area. Sits BEHIND the response
+   curve and node fill so the EQ shape stays the visual anchor;
+   spectrum reads as live texture beneath. Soft grey-blue so it
+   blends with the panel surface even on very loud passages. */
+.eq-spectrum-fill {
+  fill: rgba(132, 154, 205, 0.18);
+  pointer-events: none;
+}
+
 .eq-response-line {
   fill: none;
   stroke: var(--accent-bright, #6fa3ff);

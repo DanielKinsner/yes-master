@@ -780,6 +780,12 @@ pub struct PlaybackTick {
     /// Defaulted so older sessions/frontends parse cleanly as "no info."
     #[serde(default = "default_silence_dbfs")]
     pub lufs_integrated: f32,
+    /// L4b — live FFT spectrum, log-binned to ~32 dB values. The
+    /// frontend EQ panel renders these as a filled area under the
+    /// response curve. Defaulted to an empty vec for back-compat;
+    /// the frontend treats empty as "no spectrum data yet."
+    #[serde(default)]
+    pub spectrum_db: Vec<f32>,
 }
 
 fn default_silence_dbfs() -> f32 {

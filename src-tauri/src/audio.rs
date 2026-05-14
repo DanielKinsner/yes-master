@@ -28,6 +28,180 @@ use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::Hint;
 
+use std::sync::atomic::AtomicUsize;
+use rustfft::num_complex::Complex;
+
+/// UI_LAYOUT_REVISION_1600x940 L4b — live FFT spectrum for the EQ panel.
+///
+/// Architecture: MasteringSource (on the audio thread) pushes the mono
+/// mix of each post-chain output frame into `SpectrumRing` via
+/// lock-free atomic stores. The audio thread's own snapshot loop runs
+/// `SpectrumAnalyzer::compute()` once per snapshot tick (~50 ms), which
+/// snapshots the ring, applies a Hann window + 2048-point real-FFT,
+/// log-bins the magnitudes into 32 bands, smooths exponentially in dB,
+/// and packs the result into `PlaybackSnapshot::spectrum_db`. The
+/// frontend reads it through the existing `playback:tick` event channel
+/// and renders bars under the EQ response curve.
+pub const SPECTRUM_N_SAMPLES: usize = 2048;
+pub const SPECTRUM_N_BINS: usize = 32;
+const SPECTRUM_F_MIN_HZ: f32 = 20.0;
+const SPECTRUM_F_MAX_HZ: f32 = 20_000.0;
+const SPECTRUM_FLOOR_DB: f32 = -60.0;
+const SPECTRUM_CEIL_DB: f32 = 6.0;
+const SPECTRUM_SMOOTHING_ALPHA: f32 = 0.55; // new-sample weight
+
+/// Lock-free ring buffer of recent post-chain mono samples.
+/// Per-slot atomic f32-bits + atomic cursor — the audio thread can
+/// push at full sample rate with Relaxed ordering, and the snapshot
+/// thread reads a coherent snapshot of the cursor + slot values
+/// without ever blocking the audio thread.
+pub struct SpectrumRing {
+    samples: Vec<AtomicU32>,
+    cursor: AtomicUsize,
+}
+
+impl SpectrumRing {
+    pub fn new() -> Self {
+        let samples = (0..SPECTRUM_N_SAMPLES).map(|_| AtomicU32::new(0)).collect();
+        Self {
+            samples,
+            cursor: AtomicUsize::new(0),
+        }
+    }
+
+    /// Audio thread — append one mono sample.
+    pub fn push(&self, sample: f32) {
+        let idx = self.cursor.fetch_add(1, Ordering::Relaxed) % SPECTRUM_N_SAMPLES;
+        self.samples[idx].store(sample.to_bits(), Ordering::Relaxed);
+    }
+
+    /// Snapshot the ring's current contents into `out` (length must be
+    /// `SPECTRUM_N_SAMPLES`). Time-ordered so [0] is the oldest sample
+    /// in the window and [N-1] is the most recent.
+    fn snapshot_into(&self, out: &mut [f32]) {
+        debug_assert_eq!(out.len(), SPECTRUM_N_SAMPLES);
+        let start = self.cursor.load(Ordering::Relaxed) % SPECTRUM_N_SAMPLES;
+        for i in 0..SPECTRUM_N_SAMPLES {
+            let src = (start + i) % SPECTRUM_N_SAMPLES;
+            out[i] = f32::from_bits(self.samples[src].load(Ordering::Relaxed));
+        }
+    }
+}
+
+impl Default for SpectrumRing {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Holds the FFT planner + reusable scratch buffers + per-bin
+/// smoothing state. Owned by `AudioThreadState`; runs on the audio
+/// thread's snapshot tick path.
+pub struct SpectrumAnalyzer {
+    fft: std::sync::Arc<dyn rustfft::Fft<f32>>,
+    scratch: Vec<Complex<f32>>,
+    time_domain: Vec<f32>,
+    window: Vec<f32>,
+    bin_starts: Vec<usize>,
+    bin_ends: Vec<usize>,
+    prev_db: Vec<f32>,
+}
+
+impl SpectrumAnalyzer {
+    pub fn new(sample_rate: u32) -> Self {
+        let mut planner = rustfft::FftPlanner::<f32>::new();
+        let fft = planner.plan_fft_forward(SPECTRUM_N_SAMPLES);
+        // Hann window — cheap rolloff at the buffer edges so the FFT
+        // doesn't read low-level discontinuity noise as broadband content.
+        let window: Vec<f32> = (0..SPECTRUM_N_SAMPLES)
+            .map(|i| {
+                let x = (i as f32) / ((SPECTRUM_N_SAMPLES - 1) as f32);
+                0.5 - 0.5 * (2.0 * std::f32::consts::PI * x).cos()
+            })
+            .collect();
+        // Log-spaced bin edges in FFT bin index. Each visual bar
+        // averages magnitude across its assigned FFT bins.
+        let nyquist = (sample_rate as f32) / 2.0;
+        let f_max = SPECTRUM_F_MAX_HZ.min(nyquist);
+        let log_min = SPECTRUM_F_MIN_HZ.log10();
+        let log_max = f_max.log10();
+        let n_half = SPECTRUM_N_SAMPLES / 2;
+        let mut bin_starts = vec![0usize; SPECTRUM_N_BINS];
+        let mut bin_ends = vec![0usize; SPECTRUM_N_BINS];
+        for b in 0..SPECTRUM_N_BINS {
+            let t_lo = (b as f32) / (SPECTRUM_N_BINS as f32);
+            let t_hi = ((b + 1) as f32) / (SPECTRUM_N_BINS as f32);
+            let f_lo = 10.0_f32.powf(log_min + (log_max - log_min) * t_lo);
+            let f_hi = 10.0_f32.powf(log_min + (log_max - log_min) * t_hi);
+            let bin_lo = ((f_lo / (sample_rate as f32)) * (SPECTRUM_N_SAMPLES as f32)) as usize;
+            let bin_hi = ((f_hi / (sample_rate as f32)) * (SPECTRUM_N_SAMPLES as f32)) as usize;
+            let s = bin_lo.clamp(1, n_half.saturating_sub(1));
+            let e = bin_hi.clamp(s + 1, n_half);
+            bin_starts[b] = s;
+            bin_ends[b] = e;
+        }
+        Self {
+            fft,
+            scratch: vec![Complex::new(0.0, 0.0); SPECTRUM_N_SAMPLES],
+            time_domain: vec![0.0; SPECTRUM_N_SAMPLES],
+            window,
+            bin_starts,
+            bin_ends,
+            prev_db: vec![SPECTRUM_FLOOR_DB; SPECTRUM_N_BINS],
+        }
+    }
+
+    /// Run one analysis pass and return a fresh Vec<f32> of N_BINS dB
+    /// values (`SPECTRUM_FLOOR_DB` floor, `SPECTRUM_CEIL_DB` ceil),
+    /// smoothed against the previous tick via exponential filter.
+    pub fn compute(&mut self, ring: &SpectrumRing) -> Vec<f32> {
+        ring.snapshot_into(&mut self.time_domain);
+        // Window + pack into complex scratch.
+        for i in 0..SPECTRUM_N_SAMPLES {
+            self.scratch[i] = Complex::new(self.time_domain[i] * self.window[i], 0.0);
+        }
+        self.fft.process(&mut self.scratch);
+        // Normalization: divide the magnitude sum by N_SAMPLES / 2 so a
+        // sine of amplitude 1.0 reads near 0 dB at its bin.
+        let inv_norm = 2.0 / (SPECTRUM_N_SAMPLES as f32);
+        let mut out = vec![SPECTRUM_FLOOR_DB; SPECTRUM_N_BINS];
+        for b in 0..SPECTRUM_N_BINS {
+            let s = self.bin_starts[b];
+            let e = self.bin_ends[b];
+            let count = (e - s).max(1) as f32;
+            let mut sum_pow = 0.0_f32;
+            for k in s..e {
+                let c = self.scratch[k];
+                sum_pow += c.re * c.re + c.im * c.im;
+            }
+            // RMS magnitude of the bin, scaled.
+            let rms = ((sum_pow / count).sqrt()) * inv_norm;
+            let db = if rms > 1.0e-12 { 20.0 * rms.log10() } else { SPECTRUM_FLOOR_DB };
+            // Exponential smoothing in dB so the visual stays calm.
+            let prev = self.prev_db[b];
+            let smoothed = prev * (1.0 - SPECTRUM_SMOOTHING_ALPHA) + db * SPECTRUM_SMOOTHING_ALPHA;
+            let clamped = smoothed.clamp(SPECTRUM_FLOOR_DB, SPECTRUM_CEIL_DB);
+            self.prev_db[b] = clamped;
+            out[b] = clamped;
+        }
+        out
+    }
+
+    /// Silent (all-floor) spectrum used when no MasteringSource is
+    /// producing samples (Original playback or idle).
+    pub fn silent() -> Vec<f32> {
+        vec![SPECTRUM_FLOOR_DB; SPECTRUM_N_BINS]
+    }
+
+    /// Reset smoothing state — called when a new playback starts so
+    /// the bars don't bleed over from the previous track.
+    pub fn reset(&mut self) {
+        for v in &mut self.prev_db {
+            *v = SPECTRUM_FLOOR_DB;
+        }
+    }
+}
+
 const DEFAULT_TARGET_PIXELS: u32 = 1000;
 const MIN_TARGET_PIXELS: u32 = 64;
 
@@ -424,6 +598,12 @@ pub struct PlaybackSnapshot {
     /// session. Updates every 100 ms as new 400 ms blocks complete. Resets
     /// to `SILENCE_DBFS` on each new `play_master`.
     pub lufs_integrated: f32,
+    /// L4b — live FFT spectrum, log-binned to `SPECTRUM_N_BINS` dB
+    /// values from `SPECTRUM_FLOOR_DB` (~-60) to `SPECTRUM_CEIL_DB`
+    /// (~+6). Only populated for Mastered playback; Original playback
+    /// and idle states return all-floor. The frontend draws the bins
+    /// as a filled area under the EQ response curve.
+    pub spectrum_db: Vec<f32>,
 }
 
 impl Default for PlaybackSnapshot {
@@ -439,6 +619,7 @@ impl Default for PlaybackSnapshot {
             gr_high_db: SILENCE_DBFS,
             lufs_momentary: SILENCE_DBFS,
             lufs_integrated: SILENCE_DBFS,
+            spectrum_db: SpectrumAnalyzer::silent(),
         }
     }
 }
@@ -617,6 +798,13 @@ struct AudioThreadState {
     /// `i32::MIN` on each `handle_play` / `handle_play_master` so each new
     /// playback session integrates from zero.
     integrated_lufs_x100: Arc<AtomicI32>,
+    /// L4b — lock-free ring of post-chain mono samples shared with
+    /// MasteringSource. Only populated during Mastered playback; the
+    /// rodio decoder used for Original playback doesn't feed this.
+    spectrum_ring: Arc<SpectrumRing>,
+    /// L4b — FFT analyzer that runs once per snapshot tick and turns
+    /// the ring into 32 log-binned dB values for the EQ panel.
+    spectrum_analyzer: SpectrumAnalyzer,
 }
 
 #[derive(Clone)]
@@ -722,7 +910,7 @@ fn audio_thread(rx: mpsc::Receiver<AudioCommand>, snapshot: Arc<RwLock<PlaybackS
             }
         }
 
-        let next_snap = match state.as_ref() {
+        let next_snap = match state.as_mut() {
             Some(s) if s.current_track.is_some() => {
                 // Atomic swap consumes the "peak since last tick" and resets
                 // the slot to 0 in one step — the writer (MasteringSource) and
@@ -759,10 +947,22 @@ fn audio_thread(rx: mpsc::Receiver<AudioCommand>, snapshot: Arc<RwLock<PlaybackS
                 let lufs_momentary = to_lufs(s.lufs_x100.load(Ordering::Relaxed));
                 let lufs_integrated =
                     to_lufs(s.integrated_lufs_x100.load(Ordering::Relaxed));
+                let is_playing = !s.sink.is_paused() && !s.sink.empty();
+                // L4b — run the FFT analyzer over the ring's current
+                // contents. When idle / paused / playing Original (no
+                // MasteringSource pushing), the ring still holds the
+                // last batch of samples but the FFT reads them as
+                // stale; we return the floor instead so the EQ
+                // panel's bars decay to silence rather than freezing.
+                let spectrum_db = if is_playing {
+                    s.spectrum_analyzer.compute(&s.spectrum_ring)
+                } else {
+                    SpectrumAnalyzer::silent()
+                };
                 PlaybackSnapshot {
                     track_id: s.current_track.clone(),
                     position_sec: s.sink.get_pos().as_secs_f64(),
-                    is_playing: !s.sink.is_paused() && !s.sink.empty(),
+                    is_playing,
                     is_loaded: true,
                     peak_dbfs,
                     gr_low_db: to_gr_db(gr_u(&s.gr_low)),
@@ -770,6 +970,7 @@ fn audio_thread(rx: mpsc::Receiver<AudioCommand>, snapshot: Arc<RwLock<PlaybackS
                     gr_high_db: to_gr_db(gr_u(&s.gr_high)),
                     lufs_momentary,
                     lufs_integrated,
+                    spectrum_db,
                 }
             }
             _ => PlaybackSnapshot::default(),
@@ -809,10 +1010,13 @@ fn handle_play(
             gr_high: Arc::new(AtomicU32::new(0)),
             lufs_x100: Arc::new(AtomicI32::new(i32::MIN)),
             integrated_lufs_x100: Arc::new(AtomicI32::new(i32::MIN)),
+            spectrum_ring: Arc::new(SpectrumRing::new()),
+            spectrum_analyzer: SpectrumAnalyzer::new(44_100),
         });
     }
     let s = state.as_mut().expect("state just inserted");
     s.sink.stop();
+    s.spectrum_analyzer.reset();
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(source);
     if start_position_sec > 0.0 {
@@ -887,10 +1091,13 @@ fn handle_play_master(
             gr_high: Arc::new(AtomicU32::new(0)),
             lufs_x100: Arc::new(AtomicI32::new(i32::MIN)),
             integrated_lufs_x100: Arc::new(AtomicI32::new(i32::MIN)),
+            spectrum_ring: Arc::new(SpectrumRing::new()),
+            spectrum_analyzer: SpectrumAnalyzer::new(pcm.sample_rate),
         });
     }
     let s = state.as_mut().expect("state just inserted");
     s.sink.stop();
+    s.spectrum_analyzer.reset();
 
     // Update the cache (replace any prior entry — single-slot LRU is fine
     // for the typical "one or two fixtures" Track Master workflow).
@@ -931,6 +1138,7 @@ fn handle_play_master(
         s.peak_linear.clone(),
         s.lufs_x100.clone(),
         s.integrated_lufs_x100.clone(),
+        s.spectrum_ring.clone(),
     );
 
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
@@ -992,6 +1200,11 @@ struct MasteringSource {
     /// Shared atomic slot for the integrated readout. Same storage convention
     /// as `lufs_x100`.
     integrated_lufs_x100: Arc<AtomicI32>,
+    /// L4b — lock-free ring of post-chain mono mix samples. The audio
+    /// thread pushes one sample per output frame; the snapshot tick
+    /// reads it and runs an FFT to produce the EQ panel's live
+    /// spectrum.
+    spectrum_ring: Arc<SpectrumRing>,
 }
 
 impl MasteringSource {
@@ -1004,6 +1217,7 @@ impl MasteringSource {
         peak_linear: Arc<AtomicU32>,
         lufs_x100: Arc<AtomicI32>,
         integrated_lufs_x100: Arc<AtomicI32>,
+        spectrum_ring: Arc<SpectrumRing>,
     ) -> Self {
         let channels_usize = channels.max(1) as usize;
         Self {
@@ -1028,6 +1242,7 @@ impl MasteringSource {
             lufs_x100,
             integrated_lufs_meter: crate::dsp::IntegratedLufs::new(sample_rate),
             integrated_lufs_x100,
+            spectrum_ring,
         }
     }
 }
@@ -1142,6 +1357,14 @@ impl Iterator for MasteringSource {
             let integrated = self.integrated_lufs_meter.process_frame(l, r);
             self.integrated_lufs_x100
                 .store(to_x100(integrated), Ordering::Relaxed);
+
+            // L4b — push post-chain mono mix into the spectrum ring.
+            // Lock-free atomic store; the snapshot tick FFTs the latest
+            // 2048 samples to drive the EQ panel's live bars.
+            let mono = (l + r) * 0.5;
+            if mono.is_finite() {
+                self.spectrum_ring.push(mono);
+            }
 
             self.frame_out_pos = 0;
         }
@@ -1276,6 +1499,7 @@ mod tests {
             peak,
             lufs,
             integrated_lufs,
+            Arc::new(SpectrumRing::new()),
         );
 
         // Drain the first half at the initial chain.
@@ -1441,6 +1665,7 @@ mod tests {
             ref_peak,
             ref_lufs,
             ref_integrated_lufs,
+            Arc::new(SpectrumRing::new()),
         );
         let ref_output: Vec<f32> = (0..total_frames * channels as usize)
             .filter_map(|_| ref_source.next())
@@ -1462,6 +1687,7 @@ mod tests {
             live_peak,
             live_lufs,
             live_integrated_lufs,
+            Arc::new(SpectrumRing::new()),
         );
         let half = total_frames * channels as usize / 2;
         let mut live_output: Vec<f32> = Vec::with_capacity(total_frames * channels as usize);
@@ -1539,6 +1765,7 @@ mod tests {
             peak.clone(),
             lufs,
             integrated_lufs,
+            Arc::new(SpectrumRing::new()),
         );
 
         for _ in 0..(total_frames * channels as usize) {
@@ -1587,6 +1814,7 @@ mod tests {
             peak.clone(),
             lufs,
             integrated_lufs,
+            Arc::new(SpectrumRing::new()),
         );
 
         for _ in 0..(total_frames * channels as usize) {
@@ -1634,6 +1862,7 @@ mod tests {
             peak.clone(),
             lufs,
             integrated_lufs,
+            Arc::new(SpectrumRing::new()),
         );
 
         for _ in 0..(total_frames * channels as usize) {

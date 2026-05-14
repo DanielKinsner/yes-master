@@ -61,6 +61,14 @@ const LOG_F_MIN = Math.log10(F_MIN);
 const LOG_F_MAX = Math.log10(F_MAX);
 const LOG_F_SPAN = LOG_F_MAX - LOG_F_MIN;
 
+// L4b — separate y mapping for the live spectrum so very-quiet signal
+// (e.g. -50 dBFS) still parks the bar near the bottom rather than way
+// below the EQ panel's -12 dB floor. Range tuned to match the Rust
+// SPECTRUM_FLOOR_DB / SPECTRUM_CEIL_DB published from the audio thread.
+const SPECTRUM_FLOOR_DB = -60;
+const SPECTRUM_CEIL_DB = 6;
+const SPECTRUM_DB_SPAN = SPECTRUM_CEIL_DB - SPECTRUM_FLOOR_DB;
+
 function freqToX(hz: number, width: number): number {
   return ((Math.log10(hz) - LOG_F_MIN) / LOG_F_SPAN) * width;
 }
@@ -115,9 +123,19 @@ interface VisualEqPanelProps {
    * outer header, no per-node value labels, smaller viewBox
    * so it sits beside the L/M/H knobs without dominating. */
   compact?: boolean;
+  /** L4b — live FFT spectrum bins from the audio thread. Length
+   * should be `SPECTRUM_N_BINS` (32) on the Rust side; we accept
+   * any non-empty array and map proportionally. Empty array =
+   * draw no spectrum (idle / Original playback). */
+  spectrumDb?: number[];
 }
 
-export function VisualEqPanel({ settings, onEq, compact = false }: VisualEqPanelProps) {
+export function VisualEqPanel({
+  settings,
+  onEq,
+  compact = false,
+  spectrumDb,
+}: VisualEqPanelProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   // Drag state: which band is being dragged, and the pixel-space y where
   // the pointer is. We don't capture frequency drag at all in v1.
@@ -287,6 +305,42 @@ export function VisualEqPanel({ settings, onEq, compact = false }: VisualEqPanel
             {db > 0 ? `+${db}` : `${db}`}
           </text>
         ))}
+        {/* L4b — live FFT spectrum, drawn BEFORE the response curve so
+            the curve renders on top. Each bin contributes a stepped
+            segment from its left x to its right x at the bin's dB y.
+            Spectrum uses its own y range (-60..+6 dBFS) so quiet signal
+            parks near the bottom of the plot, independent of the EQ
+            gain axis on top. */}
+        {spectrumDb && spectrumDb.length > 1 && (() => {
+          const n = spectrumDb.length;
+          const bottom = PAD_TOP + plotH;
+          const spectrumDbToY = (db: number) =>
+            PAD_TOP +
+            plotH *
+              (1 - (Math.max(SPECTRUM_FLOOR_DB, Math.min(SPECTRUM_CEIL_DB, db)) - SPECTRUM_FLOOR_DB) /
+                SPECTRUM_DB_SPAN);
+          // Bin frequency edges match the Rust side: log-spaced between
+          // SPECTRUM_F_MIN_HZ (20) and SPECTRUM_F_MAX_HZ (20k).
+          const binX = (i: number) => {
+            const t = i / n;
+            const logHz = LOG_F_MIN + t * LOG_F_SPAN;
+            const hz = Math.pow(10, logHz);
+            return PAD_LEFT + freqToX(hz, plotW);
+          };
+          // Build a stepped area path: start at bottom-left of bin 0,
+          // step up to bin 0's dB y, then walk along each bin's top
+          // edge, then close to bottom-right.
+          let d = `M ${binX(0).toFixed(2)} ${bottom.toFixed(2)} `;
+          for (let i = 0; i < n; i++) {
+            const xL = binX(i);
+            const xR = binX(i + 1);
+            const y = spectrumDbToY(spectrumDb[i]);
+            d += `L ${xL.toFixed(2)} ${y.toFixed(2)} `;
+            d += `L ${xR.toFixed(2)} ${y.toFixed(2)} `;
+          }
+          d += `L ${binX(n).toFixed(2)} ${bottom.toFixed(2)} Z`;
+          return <path className="eq-spectrum-fill" d={d} />;
+        })()}
         {/* Response curve: fill under, then line on top. */}
         <path className="eq-response-fill" d={fillPath} />
         <path className="eq-response-line" d={curvePath} />
