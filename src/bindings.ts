@@ -256,6 +256,14 @@ export type JobStatus =
   | { status: "failed"; reason: string }
   | { status: "cancelled" };
 
+export interface RenderedMeasurements {
+  lufs_integrated: number;
+  true_peak_dbtp: number;
+  dynamic_range_lu: number;
+  sample_rate: number;
+  bit_depth: number;
+}
+
 export interface RenderJob {
   id: string;
   kind: RenderKind;
@@ -264,6 +272,7 @@ export interface RenderJob {
   progress: number;
   started_at_iso: string;
   output_paths: string[];
+  measurements?: RenderedMeasurements | null;
 }
 
 export type QualityLevel = "info" | "warning" | "critical";

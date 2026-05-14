@@ -943,6 +943,12 @@ pub fn album_render_with_progress(
         progress: 1.0,
         started_at_iso: ISO_PLACEHOLDER.to_string(),
         output_paths,
+        // Album-master measurements are not yet plumbed; the album writer
+        // streams per-track segments through the chain and concatenates them,
+        // so a single post-render measurement requires either reading the
+        // composed file back or adding an EbuR128 collector that spans every
+        // segment. Tracked separately from the Codex audit P0 fix.
+        measurements: None,
     })
 }
 
@@ -1587,38 +1593,85 @@ pub fn mastering_render_with_progress(
         }
     }
 
+    // Single full BS.1770 pass over the post-chain samples — used both to
+    // decide LUFS landing and to populate the rendered-output measurements
+    // for the export receipt (Codex audit 2026-05-13 P0: the receipt must
+    // describe the rendered output, not the source analysis).
+    //
+    // We measure once and shift the result mathematically if landing applies.
+    // Under a uniform linear gain `g`, integrated LUFS and true-peak both
+    // shift by exactly `20·log10(g)` dB, and LRA (a range between gated
+    // loudness percentiles) is preserved. So we never need to re-run the
+    // ~25 MB-per-track ebur128 pass after scaling.
+    let channels_u32 = u32::from(pcm.channels.max(1));
+    let mut ebu = EbuR128::new(
+        channels_u32,
+        pcm.sample_rate,
+        Mode::I | Mode::LRA | Mode::TRUE_PEAK,
+    )
+    .map_err(|e| CommandError::Render(format!("ebur128 init: {e}")))?;
+    ebu.add_frames_f32(&samples)
+        .map_err(|e| CommandError::Render(format!("ebur128 feed: {e}")))?;
+    let mut measured_lufs = sanitize_lufs(
+        ebu.loudness_global()
+            .map_err(|e| CommandError::Render(format!("ebur128 global: {e}")))?
+            as f32,
+    );
+    let lra = ebu
+        .loudness_range()
+        .map_err(|e| CommandError::Render(format!("ebur128 lra: {e}")))?
+        as f32;
+    let mut peak_lin: f64 = 0.0;
+    for ch in 0..channels_u32 {
+        let tp = ebu
+            .true_peak(ch)
+            .map_err(|e| CommandError::Render(format!("ebur128 tp: {e}")))?;
+        if tp > peak_lin {
+            peak_lin = tp;
+        }
+    }
+    let mut measured_true_peak_dbtp = if peak_lin > 0.0 {
+        (20.0 * peak_lin.log10()) as f32
+    } else {
+        -60.0
+    };
+
     // Phase 12.2 — LUFS landing. When the user has set `lufs_offset_db` as a
-    // target loudness, measure the post-chain integrated LUFS via BS.1770 and
-    // attenuate the rendered samples to meet the target. Refuse-upward
-    // policy: we only ever scale DOWN. Scaling up post-chain would push the
-    // already-limited peaks past the user's true-peak ceiling, which no
-    // mastering tool the research surveyed (Sonible smart:limit, Ozone
-    // Maximizer, Mastering The Mix LIMITER) is willing to do silently. When
-    // the chain produced quieter audio than the target, we leave the samples
-    // unchanged and let the user re-render with more Intensity / Input Gain.
-    // See `docs/research/most-recent-mastering-app-research.md` for the
-    // industry-survey notes behind this decision.
+    // target loudness, attenuate the rendered samples to meet the target.
+    // Refuse-upward policy: we only ever scale DOWN. Scaling up post-chain
+    // would push the already-limited peaks past the user's true-peak ceiling,
+    // which no mastering tool the research surveyed (Sonible smart:limit,
+    // Ozone Maximizer, Mastering The Mix LIMITER) is willing to do silently.
+    // When the chain produced quieter audio than the target, we leave the
+    // samples unchanged and let the user re-render with more Intensity /
+    // Input Gain. See `docs/research/most-recent-mastering-app-research.md`
+    // for the industry-survey notes behind this decision.
     if let Some(target_lufs) = settings.effective_target_lufs() {
-        if target_lufs.is_finite() {
-            let measured =
-                measure_integrated_lufs(&samples, pcm.sample_rate, pcm.channels)?;
-            if measured.is_finite() && measured > -70.0 {
-                let delta_db = target_lufs - measured;
-                if delta_db < 0.0 {
-                    let gain_lin = 10.0_f32.powf(delta_db / 20.0);
-                    for s in samples.iter_mut() {
-                        *s *= gain_lin;
-                    }
+        if target_lufs.is_finite() && measured_lufs.is_finite() && measured_lufs > -70.0 {
+            let delta_db = target_lufs - measured_lufs;
+            if delta_db < 0.0 {
+                let gain_lin = 10.0_f32.powf(delta_db / 20.0);
+                for s in samples.iter_mut() {
+                    *s *= gain_lin;
                 }
-                // delta_db >= 0 → refuse-upward, samples unchanged. The
-                // rendered file's measured LUFS will reveal the gap when the
-                // user re-imports it; future polish can add a
-                // "lufs_target_unmet" advisory to the export receipt.
+                // Uniform-gain shift of pre-scale measurements onto the
+                // post-scale samples that are about to be written.
+                measured_lufs += delta_db;
+                measured_true_peak_dbtp += delta_db;
             }
+            // delta_db >= 0 → refuse-upward, samples and measurements
+            // unchanged. The receipt's measured LUFS will surface the gap.
         }
     }
 
     let bit_depth = settings.effective_bit_depth();
+    let measurements = RenderedMeasurements {
+        lufs_integrated: measured_lufs,
+        true_peak_dbtp: measured_true_peak_dbtp,
+        dynamic_range_lu: if lra.is_finite() { lra } else { 0.0 },
+        sample_rate: pcm.sample_rate,
+        bit_depth,
+    };
     let out_path = unique_output_path(out_dir, source_path, &track_id, kind)?;
     write_wav(&out_path, &samples, pcm.sample_rate, pcm.channels, bit_depth)?;
     if let Some(cb) = on_progress {
@@ -1633,6 +1686,7 @@ pub fn mastering_render_with_progress(
         progress: 1.0,
         started_at_iso: ISO_PLACEHOLDER.to_string(),
         output_paths: vec![out_path.to_string_lossy().to_string()],
+        measurements: Some(measurements),
     })
 }
 

@@ -2204,3 +2204,91 @@ What failed or remains partial:
 Next recommended slice: Unchanged — **Phase B+ Step 8 validation
 sound tests** is still the open queue item.
 
+
+
+## 2026-05-14 — Codex audit slice 1: export receipt reflects rendered output
+
+Goal: Kill the Codex 2026-05-13 audit P0 — `exportMaster` was
+building the `ExportReport` (measured LUFS / true peak / dynamic
+range / sample rate) from `selectedAnalysis`, i.e. the *source*
+track's analysis, not the rendered master. The receipt was lying
+about what the user just exported.
+
+What changed:
+
+- `src-tauri/src/types.rs`: New `RenderedMeasurements` struct
+  (lufs_integrated, true_peak_dbtp, dynamic_range_lu, sample_rate,
+  bit_depth) and `measurements: Option<RenderedMeasurements>` field
+  on `RenderJob` with `#[serde(default)]` for back-compat with any
+  persisted RenderJob blobs.
+- `src-tauri/src/engine.rs::mastering_render_with_progress`:
+  Replaced the conditional pre-landing `measure_integrated_lufs`
+  call with a single full `EbuR128::new(Mode::I|LRA|TRUE_PEAK)`
+  pass over the post-chain samples. The landing math now mutates
+  `measured_lufs` and `measured_true_peak_dbtp` mathematically when
+  uniform attenuation fires (uniform-gain shift is exact for both
+  integrated LUFS and TP; LRA is preserved). The renderer now
+  always returns post-render measurements for single-track preview
+  + master paths; album path still returns `None` (out of scope —
+  album writer streams per-track segments and would need an EbuR128
+  collector spanning every segment).
+- `src/bindings.ts`: Mirrored `RenderedMeasurements` interface and
+  `measurements?: RenderedMeasurements | null` on `RenderJob`.
+- `src/hooks/useTrackMaster.ts::exportMaster`: Reads
+  `job.measurements` and uses those values for `measured_lufs`,
+  `measured_true_peak_dbtp`, `measured_dynamic_range_lu`,
+  `sample_rate`, `bit_depth`. Falls back to `selectedAnalysis` only
+  when measurements are absent (album path). Hardcoded
+  `sample_rate: 44_100` is gone.
+- `src-tauri/tests/contracts.rs`: New
+  `rendered_measurements_reflect_landed_output_not_source` —
+  synthesizes a 3 s stereo 1 kHz 0.5-amp sine (≈ -7 LUFS-K),
+  renders with `DeliveryProfile::StreamingUniversal` (-14 LUFS),
+  asserts the receipt lands within ±1 LU of target and >4 LU from
+  the source estimate (would fail loudly if the receipt regressed
+  to quoting source analysis).
+
+Verification:
+
+- `cargo test --lib`: 79/79 pass.
+- `cargo test`: 121/121 (79 lib + 40 contracts + 2 album_render) —
+  +1 contract test (`rendered_measurements_reflect_landed_output_not_source`).
+- `npm run build`: clean.
+- `cargo check --tests`: clean.
+
+Real-audio fixture used: None — the new test is fully synthetic
+(stereo 1 kHz sine) so it runs everywhere without
+`private-audio-fixtures/`. The existing real-fixture tests
+(`mastering_render_processes_real_fixture_if_present`,
+`phase_12_1_real_fixture_metering_snapshot`) still pass and now
+exercise the new measurement path on Dan's actual song too.
+
+What failed or remains partial:
+
+- Album master export receipt: still falls back to source analysis
+  for LUFS/TP/DR because `render_album_master` returns
+  `measurements: None`. Wiring a multi-segment EbuR128 collector
+  into the album writer is a separate slice — only Track Master
+  currently exposes a user-facing export receipt anyway.
+- The TS bindings file is still hand-maintained (header note says
+  "Phase 1.2 will replace this file with auto-generated bindings via
+  tauri-specta"). Auto-binding is unchanged by this slice.
+
+Next recommended slice: **Codex audit slice 2 — sample-rate
+honesty.** `App.tsx:1878-1888` exposes 44.1 / 48 / 88.2 / 96 kHz
+options that the renderer ignores (per `types.rs:166-168`,
+"A3 does NOT resample"). Either disable the select with an inline
+"Source SR only — SRC coming later" note or remove the non-`Source`
+options until SRC ships. Small UI/wiring change, prevents a user
+delivering a "96 kHz" file at 44.1.
+
+After that, the Codex audit slice queue continues: slice 3 (delete
+unused `prepare_ab_preview` / `prepare_master_playback`), slice 4
+(Phase B+ Step 8 remaining 6 validation tests — slice 1's contract
+test discharges the 7th), slice 5 (UI strip cleanup), slice 6
+(test split into fast/slow lanes), slice 7 (background decode for
+first Mastered click). Slice 8 (startup auto-restore) is *not*
+P1 for Dan's workflow — demoted to a Tools menu "New project"
+action rather than a default change. Full plan + pushback notes
+live in the chat that produced this slice.
+

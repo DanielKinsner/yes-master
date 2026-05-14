@@ -903,16 +903,25 @@ export function useTrackMaster() {
         selectedSettings,
       );
       const outputPath = job.output_paths[0] ?? "";
+      // Codex audit 2026-05-13 P0 fix: the receipt must describe the
+      // rendered output, not the source analysis. The Rust renderer now
+      // measures the post-chain samples and returns them on job.measurements;
+      // we only fall back to the source analysis when a render path didn't
+      // supply measurements (e.g. album masters, which haven't been wired
+      // through this slice yet).
+      const m = job.measurements ?? null;
       const report: ExportReport = {
         track_id: selectedTrackId,
         output_path: outputPath,
-        measured_lufs: selectedAnalysis.lufs_integrated,
-        measured_true_peak_dbtp: selectedAnalysis.true_peak_dbtp,
-        measured_dynamic_range_lu: selectedAnalysis.dynamic_range_lu,
+        measured_lufs: m?.lufs_integrated ?? selectedAnalysis.lufs_integrated,
+        measured_true_peak_dbtp:
+          m?.true_peak_dbtp ?? selectedAnalysis.true_peak_dbtp,
+        measured_dynamic_range_lu:
+          m?.dynamic_range_lu ?? selectedAnalysis.dynamic_range_lu,
         source_format: selectedTrack?.source_format ?? "unknown",
         destination_format: "wav",
-        sample_rate: 44_100,
-        bit_depth: selectedSettings.advanced.bit_depth ?? 24,
+        sample_rate: m?.sample_rate ?? 44_100,
+        bit_depth: m?.bit_depth ?? selectedSettings.advanced.bit_depth ?? 24,
         checks: [],
       };
       const checks = await api.runExportChecks(report, selectedAnalysis, selectedSettings);

@@ -654,6 +654,24 @@ pub struct RenderJob {
     pub progress: f32,
     pub started_at_iso: String,
     pub output_paths: Vec<String>,
+    // Phase B+ Step 8 prep / Codex audit 2026-05-13 P0: measurements taken on
+    // the rendered output samples, not on the source. `None` for render paths
+    // that don't measure yet (album master). Single-track preview and master
+    // populate this so the export receipt can stop quoting source analysis.
+    #[serde(default)]
+    pub measurements: Option<RenderedMeasurements>,
+}
+
+/// Post-render measurements taken on the final f32 sample buffer immediately
+/// before WAV write. The receipt these feed shows the user what was actually
+/// produced, not what the source looked like before the chain ran.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RenderedMeasurements {
+    pub lufs_integrated: f32,
+    pub true_peak_dbtp: f32,
+    pub dynamic_range_lu: f32,
+    pub sample_rate: u32,
+    pub bit_depth: u16,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

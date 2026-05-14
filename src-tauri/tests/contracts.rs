@@ -762,6 +762,71 @@ fn mastering_render_writes_processed_wav() {
     assert_eq!(spec.bits_per_sample, 24);
 }
 
+/// Codex audit 2026-05-13 P0 regression: the export receipt must describe
+/// the rendered output, not the source analysis. Synthesizes a loud sine,
+/// renders with a known LUFS target (StreamingUniversal → -14 LUFS), and
+/// asserts that the RenderJob carries post-render measurements which land
+/// near the target, not near the much-louder source.
+///
+/// Stereo 0.5-amplitude 1 kHz sine measures ≈ -7 LUFS-K (K-weighted +
+/// stereo channel sum). Target is -14 LUFS. If the receipt is correct the
+/// integrated reading sits near -14; if the receipt regresses to quoting
+/// source analysis it would sit near -7.
+#[test]
+fn rendered_measurements_reflect_landed_output_not_source() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let in_path = tmp.path().join("loud_sine.wav");
+    // 3 s is long enough for ebur128's gated integration; 0.5 amplitude puts
+    // source ~7 LU above the streaming target so attenuation must fire.
+    write_sine_wav_at_amplitude(&in_path, 44_100, 3.0, 1_000.0, 2, 0.5);
+
+    let mut settings = default_settings();
+    settings.delivery_profile = types::DeliveryProfile::StreamingUniversal;
+
+    let job = engine::mastering_render(
+        TrackId("test-receipt".to_string()),
+        &in_path,
+        &settings,
+        tmp.path(),
+        RenderKind::Master,
+    )
+    .expect("render ok");
+
+    let m = job
+        .measurements
+        .clone()
+        .expect("single-track master must carry post-render measurements");
+    let target = -14.0_f32;
+    let source_lufs_approx = -7.0_f32;
+
+    assert!(
+        (m.lufs_integrated - target).abs() < 1.0,
+        "rendered LUFS should land near target ({target} LUFS); got {} (would sit near {source_lufs_approx} if quoting source)",
+        m.lufs_integrated,
+    );
+    assert!(
+        (m.lufs_integrated - source_lufs_approx).abs() > 4.0,
+        "rendered LUFS {} sits within 4 LU of source {} — receipt appears to be quoting source analysis",
+        m.lufs_integrated,
+        source_lufs_approx,
+    );
+    // StreamingUniversal pins -1 dBTP ceiling and 24-bit output; the chain
+    // plus landing should respect both. Sample rate stays at source SR until
+    // SRC ships (see DeliveryProfile::output_sample_rate doc).
+    assert!(
+        m.true_peak_dbtp < -1.0,
+        "rendered TP {} should be under StreamingUniversal ceiling -1.0 dBTP",
+        m.true_peak_dbtp,
+    );
+    assert_eq!(m.sample_rate, 44_100, "writer SR matches source until SRC");
+    assert_eq!(m.bit_depth, 24, "StreamingUniversal shadows bit_depth=24");
+    assert!(
+        m.dynamic_range_lu >= 0.0 && m.dynamic_range_lu.is_finite(),
+        "LRA must be finite and non-negative; got {}",
+        m.dynamic_range_lu,
+    );
+}
+
 #[test]
 fn mastering_render_creates_unique_paths_on_collision() {
     let tmp = tempfile::tempdir().expect("tempdir");
