@@ -2786,6 +2786,51 @@ mod tests {
         );
     }
 
+    /// Phase B+ Step 8.7 — K-weighting transfer-function lock.
+    ///
+    /// Asserts the BS.1770-4 K-weighting cascade (pre-filter + RLB
+    /// high-pass, applied in series so their dB magnitudes add) holds
+    /// at canonical test frequencies. A future filter-form change can't
+    /// silently shift the curve without firing this test.
+    ///
+    /// Targets here are the *measured* response of our existing
+    /// BS.1770-4-compliant coefficients at 48 kHz (verified bit-exact
+    /// against the published reference by
+    /// `k_weighting_pre_matches_bs1770_reference_at_48k` and the RLB
+    /// sibling test). The plan v1's "0 dB at 1 kHz" pitched targets
+    /// conflated the *filter* response with the *LUFS reading* (which
+    /// subtracts the standard -0.691 dB gating offset); the actual
+    /// filter cascade at 1 kHz inherently sits near +0.7 dB, and the
+    /// -0.691 offset is applied later in the LUFS formula, not in the
+    /// filter. So these targets lock our true response.
+    #[test]
+    fn k_weighting_cascade_matches_bs1770_reference_at_48k() {
+        let sr = 48_000_f32;
+        let pre = BiquadCoeffs::k_weighting_pre(48_000);
+        let rlb = BiquadCoeffs::k_weighting_rlb(48_000);
+        // (frequency Hz, target cascade gain dB) — values measured on
+        // our coefficients at 48 kHz; tolerance covers small f32 rounding.
+        let cases: &[(f32, f32)] = &[
+            (20.0, -13.28),
+            (60.0, -2.90),
+            (100.0, -1.13),
+            (1_000.0, 0.70),
+            (2_000.0, 3.07),
+            (6_000.0, 4.03),
+            (10_000.0, 4.04),
+        ];
+        for &(f, expected_db) in cases {
+            let pre_db = biquad_magnitude_db_at(&pre, f, sr);
+            let rlb_db = biquad_magnitude_db_at(&rlb, f, sr);
+            let cascade_db = pre_db + rlb_db;
+            let delta = cascade_db - expected_db;
+            assert!(
+                delta.abs() < 0.3,
+                "K-weight cascade @{f:.0} Hz: expected {expected_db:+.2} dB ±0.3, got {cascade_db:+.3} dB (pre={pre_db:+.3}, rlb={rlb_db:+.3}, delta={delta:+.3})",
+            );
+        }
+    }
+
     /// Momentary meter must hold the silence sentinel until the rectangular
     /// 400 ms window has filled. Feed 200 ms of -20 dBFS audio (well above
     /// silence floor); meter should still report -120 because the ring isn't
