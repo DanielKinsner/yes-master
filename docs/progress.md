@@ -2340,3 +2340,80 @@ hooks/App.tsx callers; only `preview-mock.ts` references remain.
 After deleting commands, scan `contracts.rs` for any tests touching
 them and either remove or repoint.
 
+
+
+## 2026-05-14 — Codex audit slice 3: delete unused playback-prep stubs
+
+Goal: Kill the Codex 2026-05-13 audit P2 (#2) — `prepare_ab_preview`
+returned synthetic `PlaybackHandle`s and a hardcoded `-2.4 dB`
+volume-match offset. The audit's principle (delete unused contract
+surface) extended naturally to `prepare_master_playback` and
+`prepare_source_playback`, which are the same shape (stubs that
+return synthetic handles, no live caller). Real playback uses
+`play_track` + `play_master`. Asked Dan first because `PRODUCT.md`
+listed `prepare_ab_preview` as a desired typed command —
+greenlit on 2026-05-14 with "delete stubs + update canon docs."
+
+What changed:
+
+Rust:
+- `src-tauri/src/audio.rs`: removed the three `#[tauri::command]`
+  stubs (`prepare_source_playback`, `prepare_master_playback`,
+  `prepare_ab_preview`) and the local `handle()` helper they
+  shared. Updated the doc comment on `PlaybackSnapshot.lufs_integrated`
+  to reference `play_master` instead of `prepare_master_playback`.
+- `src-tauri/src/types.rs`: removed the `PlaybackKind` enum, the
+  `PlaybackHandle` struct, and the `AbPreview` struct. None had
+  consumers outside the deleted commands. (`PlaybackKindUI` in
+  `src/hooks/useTrackMaster.ts` is a separate, locally-defined
+  type with `"source" | "master"` — still in use.)
+- `src-tauri/src/lib.rs`: removed the three registry entries in
+  `tauri::generate_handler!`.
+
+TypeScript:
+- `src/lib/api.ts`: removed `AbPreview` + `PlaybackHandle` type
+  imports and the three wrapper functions (`prepareSourcePlayback`,
+  `prepareMasterPlayback`, `prepareAbPreview`).
+- `src/bindings.ts`: removed `PlaybackKind` type, `PlaybackHandle`
+  interface, and `AbPreview` interface.
+- `src/lib/preview-mock.ts`: removed `AbPreview` + `PlaybackHandle`
+  imports and the two case branches that handled
+  `prepare_source_playback` / `prepare_master_playback` /
+  `prepare_ab_preview` invocations in the browser-preview mock.
+  The mock chunk shrunk from 5.29 kB to 4.75 kB.
+
+Docs:
+- `docs/PRODUCT.md`: removed the `prepare_ab_preview` bullet from
+  the "Desired typed commands" list (line 446).
+- `docs/IMPLEMENTATION_PLAN.md`: removed the three `prepare_*_playback`
+  / `prepare_ab_preview` bullets from the typed-commands list
+  (lines 131-133).
+
+Verification:
+
+- `cargo check --tests`: clean.
+- `cargo test --lib`: 79/79 (no change from slice 1).
+- `cargo test`: 121/121 (79 lib + 40 contracts + 2 album_render).
+  No test depended on the deleted commands.
+- `npm run build`: clean. `preview-mock-*.js` bundle dropped from
+  5.29 kB to 4.75 kB (visible dead-code prune).
+
+Real-audio fixture used: None — pure dead-code deletion.
+
+What failed or remains partial:
+
+- None for this slice. The deleted commands had no behavioral
+  responsibility — they returned synthetic handles that no live
+  UI path consumed. Removing them simplifies the Tauri contract
+  surface without changing any user-visible behavior.
+
+Next recommended slice: **Codex audit slice 4 — Phase B+ Step 8
+validation sound tests.** Slice 1's
+`rendered_measurements_reflect_landed_output_not_source` already
+discharges one of the seven planned tests; the remaining six are
+spec'd in `docs/PHASE_B_STEP_8_PLAN.md`. After that: slice 5 (UI
+strip cleanup), slice 6 (test split into fast/slow lanes), slice 7
+(background decode for first Mastered click). Slice 8 (startup
+auto-restore) is *not* P1 for Dan's workflow — demoted to a Tools
+menu "New project" action rather than a default change.
+

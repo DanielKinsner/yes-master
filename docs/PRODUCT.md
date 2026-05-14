@@ -443,7 +443,6 @@ Desired typed commands include:
 - analyze_tracks.
 - render_track_master.
 - render_album_master.
-- prepare_ab_preview.
 - prepare_waveform.
 - save_project.
 - autosave_session.

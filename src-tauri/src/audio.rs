@@ -32,43 +32,6 @@ const DEFAULT_TARGET_PIXELS: u32 = 1000;
 const MIN_TARGET_PIXELS: u32 = 64;
 
 #[tauri::command]
-pub async fn prepare_source_playback(
-    track_id: TrackId,
-    track_path: String,
-) -> CommandResult<PlaybackHandle> {
-    let _ = track_path;
-    Ok(handle(track_id, PlaybackKind::Source))
-}
-
-#[tauri::command]
-pub async fn prepare_master_playback(
-    track_id: TrackId,
-    track_path: String,
-    settings: MasteringSettings,
-) -> CommandResult<PlaybackHandle> {
-    let _ = (track_path, settings);
-    Ok(handle(track_id, PlaybackKind::Master))
-}
-
-#[tauri::command]
-pub async fn prepare_ab_preview(
-    track_id: TrackId,
-    track_path: String,
-    settings: MasteringSettings,
-    volume_match: bool,
-) -> CommandResult<AbPreview> {
-    let _ = (track_path, settings);
-    let source_handle = handle(track_id.clone(), PlaybackKind::Source);
-    let master_handle = handle(track_id.clone(), PlaybackKind::Master);
-    Ok(AbPreview {
-        track_id,
-        source_handle,
-        master_handle,
-        volume_match_offset_db: if volume_match { -2.4 } else { 0.0 },
-    })
-}
-
-#[tauri::command]
 pub async fn prepare_waveform(
     track_id: TrackId,
     track_path: String,
@@ -203,15 +166,6 @@ pub async fn set_loop_region(
         }
     }
     player.set_loop(region)
-}
-
-fn handle(track_id: TrackId, kind: PlaybackKind) -> PlaybackHandle {
-    PlaybackHandle {
-        id: uuid::Uuid::new_v4().to_string(),
-        track_id,
-        kind,
-        duration_seconds: 180.0,
-    }
 }
 
 pub struct DecodedPeaks {
@@ -468,7 +422,7 @@ pub struct PlaybackSnapshot {
     pub lufs_momentary: f32,
     /// Phase 12.2 P3+ — BS.1770-4 integrated LUFS over the current playback
     /// session. Updates every 100 ms as new 400 ms blocks complete. Resets
-    /// to `SILENCE_DBFS` on each new `prepare_master_playback`.
+    /// to `SILENCE_DBFS` on each new `play_master`.
     pub lufs_integrated: f32,
 }
 

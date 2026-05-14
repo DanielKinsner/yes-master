@@ -10,11 +10,9 @@
 // ~50 Hz with bouncing meter values so the live readouts animate.
 
 import type {
-  AbPreview,
   AnalysisResult,
   ImportedTrack,
   MasteringSettings,
-  PlaybackHandle,
   PlaybackTick,
   ProjectState,
   TrackId,
@@ -175,37 +173,6 @@ export async function mockInvoke<T>(
     case "prepare_waveform": {
       const pixels = (args?.targetPixels as number | null) ?? 1600;
       return syntheticWaveform(pixels) as unknown as T;
-    }
-
-    case "prepare_source_playback":
-    case "prepare_master_playback": {
-      const handle: PlaybackHandle = {
-        id: `mock-${Date.now()}`,
-        track_id: (args?.trackId as TrackId) ?? PREVIEW_TRACK_ID,
-        kind: cmd === "prepare_master_playback" ? "master" : "source",
-        duration_seconds: PREVIEW_DURATION,
-      };
-      return handle as unknown as T;
-    }
-
-    case "prepare_ab_preview": {
-      const preview: AbPreview = {
-        track_id: (args?.trackId as TrackId) ?? PREVIEW_TRACK_ID,
-        source_handle: {
-          id: `mock-source-${Date.now()}`,
-          track_id: (args?.trackId as TrackId) ?? PREVIEW_TRACK_ID,
-          kind: "source",
-          duration_seconds: PREVIEW_DURATION,
-        },
-        master_handle: {
-          id: `mock-master-${Date.now()}`,
-          track_id: (args?.trackId as TrackId) ?? PREVIEW_TRACK_ID,
-          kind: "master",
-          duration_seconds: PREVIEW_DURATION,
-        },
-        volume_match_offset_db: 0,
-      };
-      return preview as unknown as T;
     }
 
     case "play_track":

@@ -606,29 +606,6 @@ pub struct WaveformPeaks {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum PlaybackKind {
-    Source,
-    Master,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct PlaybackHandle {
-    pub id: String,
-    pub track_id: TrackId,
-    pub kind: PlaybackKind,
-    pub duration_seconds: f64,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct AbPreview {
-    pub track_id: TrackId,
-    pub source_handle: PlaybackHandle,
-    pub master_handle: PlaybackHandle,
-    pub volume_match_offset_db: f32,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
 pub enum RenderKind {
     Preview,
     Master,

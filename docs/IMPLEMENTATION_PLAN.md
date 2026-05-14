@@ -128,9 +128,6 @@ Typed commands to introduce as Tauri `#[tauri::command]` handlers (stubbed where
 - `render_track_preview`
 - `render_track_master`
 - `render_album_master`
-- `prepare_source_playback`
-- `prepare_master_playback`
-- `prepare_ab_preview`
 - `prepare_waveform`
 - `run_export_checks`
 - `save_project`

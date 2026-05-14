@@ -1,7 +1,6 @@
 import { invoke, listen } from "./tauri-runtime";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type {
-  AbPreview,
   AlbumArc,
   AlbumPlan,
   AnalysisResult,
@@ -9,7 +8,6 @@ import type {
   ImportedTrack,
   LoopRegion,
   MasteringSettings,
-  PlaybackHandle,
   PlaybackTick,
   PresetKind,
   ProjectState,
@@ -85,36 +83,6 @@ export const api = {
         album_intent: albumIntent,
         per_track_overrides: perTrackOverrides ?? null,
       },
-    }),
-
-  prepareSourcePlayback: (trackId: TrackId, trackPath: string) =>
-    invoke<PlaybackHandle>("prepare_source_playback", {
-      trackId,
-      trackPath,
-    }),
-
-  prepareMasterPlayback: (
-    trackId: TrackId,
-    trackPath: string,
-    settings: MasteringSettings,
-  ) =>
-    invoke<PlaybackHandle>("prepare_master_playback", {
-      trackId,
-      trackPath,
-      settings,
-    }),
-
-  prepareAbPreview: (
-    trackId: TrackId,
-    trackPath: string,
-    settings: MasteringSettings,
-    volumeMatch: boolean,
-  ) =>
-    invoke<AbPreview>("prepare_ab_preview", {
-      trackId,
-      trackPath,
-      settings,
-      volumeMatch,
     }),
 
   prepareWaveform: (

@@ -231,22 +231,6 @@ export interface WaveformPeaks {
   sample_rate: number;
 }
 
-export type PlaybackKind = "source" | "master";
-
-export interface PlaybackHandle {
-  id: string;
-  track_id: TrackId;
-  kind: PlaybackKind;
-  duration_seconds: number;
-}
-
-export interface AbPreview {
-  track_id: TrackId;
-  source_handle: PlaybackHandle;
-  master_handle: PlaybackHandle;
-  volume_match_offset_db: number;
-}
-
 export type RenderKind = "preview" | "master" | "album";
 
 export type JobStatus =
