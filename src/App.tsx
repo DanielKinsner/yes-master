@@ -546,30 +546,36 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         analysis={tm.selectedAnalysis}
         isAnalyzing={tm.isAnalyzing}
         showStoryTags={tm.mode === "album"}
-      />
-      <WaveformView
-        peaks={tm.selectedWaveform}
-        isLoading={tm.isLoadingWaveform}
-        currentTimeSec={tm.transport.currentTimeSec}
-        durationSec={track.duration_seconds ?? 180}
-        region={tm.selectedRegion}
-        onSeek={tm.seek}
-        onSetRegion={tm.setRegion}
-        onClearRegion={tm.clearRegion}
-      />
-      <Transport
-        isPlaying={tm.transport.isPlaying}
         playbackKind={tm.transport.playbackKind}
-        loop={tm.transport.loop}
         volumeMatch={tm.transport.volumeMatch}
-        durationSec={track.duration_seconds ?? 180}
-        currentSec={tm.transport.currentTimeSec}
-        loopEnabled={!!tm.selectedRegion}
-        onPlayPause={tm.togglePlay}
         onPlaybackKindChange={tm.setPlaybackKind}
-        onLoopToggle={tm.toggleLoop}
         onVolumeMatchChange={tm.setVolumeMatch}
       />
+      {/* UI_LAYOUT_REVISION_1600x940 L1 — waveform + transport as one
+          mastering-deck module. Transport is the left column (play btn
+          + time + loop); waveform is the right column. The mockup
+          treats this pair as the single workspace anchor. */}
+      <section className="wf-deck">
+        <Transport
+          isPlaying={tm.transport.isPlaying}
+          loop={tm.transport.loop}
+          durationSec={track.duration_seconds ?? 180}
+          currentSec={tm.transport.currentTimeSec}
+          loopEnabled={!!tm.selectedRegion}
+          onPlayPause={tm.togglePlay}
+          onLoopToggle={tm.toggleLoop}
+        />
+        <WaveformView
+          peaks={tm.selectedWaveform}
+          isLoading={tm.isLoadingWaveform}
+          currentTimeSec={tm.transport.currentTimeSec}
+          durationSec={track.duration_seconds ?? 180}
+          region={tm.selectedRegion}
+          onSeek={tm.seek}
+          onSetRegion={tm.setRegion}
+          onClearRegion={tm.clearRegion}
+        />
+      </section>
       <PresetTiles
         selected={tm.selectedSettings.preset}
         onChange={tm.setPreset}
@@ -648,11 +654,22 @@ function TrackHeader({
   analysis,
   isAnalyzing,
   showStoryTags,
+  playbackKind,
+  volumeMatch,
+  onPlaybackKindChange,
+  onVolumeMatchChange,
 }: {
   track: ImportedTrack;
   analysis: AnalysisResult | undefined;
   isAnalyzing: boolean;
   showStoryTags: boolean;
+  // UI_LAYOUT_REVISION_1600x940 L1: A/B comparison toggles and Volume
+  // Match moved from the separate Transport section into the track
+  // header so the waveform module below can be the workspace anchor.
+  playbackKind: PlaybackKindUI;
+  volumeMatch: boolean;
+  onPlaybackKindChange: (kind: PlaybackKindUI) => void;
+  onVolumeMatchChange: (on: boolean) => void;
 }) {
   const chips: { key: string; label: string }[] = [];
   if (track.source_format) {
@@ -686,8 +703,39 @@ function TrackHeader({
           <StoryTags analysis={analysis} />
         )}
       </div>
-      <div className={`track-badge status-pill ${isAnalyzing ? "status-warn" : analysis ? "status-ok" : ""}`}>
-        {isAnalyzing ? "Analyzing…" : analysis ? "Analyzed" : "Pending"}
+      <div className="track-header-controls">
+        <div className="ab-toggle">
+          <button
+            type="button"
+            className={playbackKind === "source" ? "on" : ""}
+            onClick={() => onPlaybackKindChange("source")}
+          >
+            Original
+          </button>
+          <button
+            type="button"
+            className={playbackKind === "master" ? "on" : ""}
+            onClick={() => onPlaybackKindChange("master")}
+          >
+            Mastered
+          </button>
+        </div>
+        <label
+          className="vm-toggle"
+          title="Aligns playback loudness for fair tone comparison. Export level is unchanged."
+        >
+          <input
+            type="checkbox"
+            checked={volumeMatch}
+            onChange={(e) => onVolumeMatchChange(e.target.checked)}
+          />
+          <span>Volume Match</span>
+        </label>
+        <div
+          className={`track-badge status-pill ${isAnalyzing ? "status-warn" : analysis ? "status-ok" : ""}`}
+        >
+          {isAnalyzing ? "Analyzing…" : analysis ? "Analyzed" : "Pending"}
+        </div>
       </div>
     </section>
   );
@@ -1150,86 +1198,56 @@ function WaveformOverview({
   );
 }
 
+/// UI_LAYOUT_REVISION_1600x940 L1 — slim Transport.
+/// Original/Mastered + Volume Match moved to TrackHeader (their natural
+/// home alongside the track title and analysis chips), so this component
+/// is now only play/pause + time + loop. Rendered as the left column of
+/// the new `.wf-deck` waveform module rather than its own row.
 function Transport({
   isPlaying,
-  playbackKind,
   loop,
-  volumeMatch,
   durationSec,
   currentSec,
   loopEnabled,
   onPlayPause,
-  onPlaybackKindChange,
   onLoopToggle,
-  onVolumeMatchChange,
 }: {
   isPlaying: boolean;
-  playbackKind: PlaybackKindUI;
   loop: boolean;
-  volumeMatch: boolean;
   durationSec: number;
   currentSec: number;
   loopEnabled: boolean;
   onPlayPause: () => void;
-  onPlaybackKindChange: (kind: PlaybackKindUI) => void;
   onLoopToggle: () => void;
-  onVolumeMatchChange: (on: boolean) => void;
 }) {
   return (
-    <section className="transport">
-      <div className="transport-left">
-        <button
-          type="button"
-          className="play-btn"
-          onClick={onPlayPause}
-          aria-label={isPlaying ? "Pause" : "Play"}
-        >
-          {isPlaying ? "⏸" : "▶"}
-        </button>
-        <span className="time">
-          {formatTime(currentSec)} <span className="dim">/ {formatTime(durationSec)}</span>
-        </span>
-        <button
-          type="button"
-          className={"icon-btn " + (loop ? "on" : "")}
-          onClick={onLoopToggle}
-          disabled={!loopEnabled}
-          title={
-            loopEnabled
-              ? "Loop region"
-              : "Shift+drag the waveform to define a region first"
-          }
-        >
-          ⟲
-        </button>
-      </div>
-      <div className="transport-right">
-        <div className="ab-toggle">
-          <button
-            type="button"
-            className={playbackKind === "source" ? "on" : ""}
-            onClick={() => onPlaybackKindChange("source")}
-          >
-            Original
-          </button>
-          <button
-            type="button"
-            className={playbackKind === "master" ? "on" : ""}
-            onClick={() => onPlaybackKindChange("master")}
-          >
-            Mastered
-          </button>
-        </div>
-        <label className="vm-toggle" title="Aligns playback loudness for fair tone comparison. Export level is unchanged.">
-          <input
-            type="checkbox"
-            checked={volumeMatch}
-            onChange={(e) => onVolumeMatchChange(e.target.checked)}
-          />
-          <span>Volume Match</span>
-        </label>
-      </div>
-    </section>
+    <div className="wf-deck-transport">
+      <button
+        type="button"
+        className="play-btn"
+        onClick={onPlayPause}
+        aria-label={isPlaying ? "Pause" : "Play"}
+      >
+        {isPlaying ? "⏸" : "▶"}
+      </button>
+      <span className="time">
+        {formatTime(currentSec)}
+        <span className="dim"> / {formatTime(durationSec)}</span>
+      </span>
+      <button
+        type="button"
+        className={"icon-btn " + (loop ? "on" : "")}
+        onClick={onLoopToggle}
+        disabled={!loopEnabled}
+        title={
+          loopEnabled
+            ? "Loop region"
+            : "Shift+drag the waveform to define a region first"
+        }
+      >
+        ⟲
+      </button>
+    </div>
   );
 }
 
