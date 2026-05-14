@@ -1520,53 +1520,55 @@ function Macros({
       </div>
       <div className="tone-shape-block">
         <span className="section-label">TONE SHAPE</span>
-        {/* Restructure 2026-05-14 — the Visual EQ used to live above
-            the Macros row as a full-width panel; per Dan's UX review
-            the layout was too vertical, so EQ now sits beside the
-            three precision knobs INSIDE Tone Shape. The compact mode
-            drops the panel chrome + header + per-node labels so it
-            embeds cleanly. */}
-        <div className="tone-shape-content">
-          <div className="tone-shape-knobs">
-            <Knob
-              label="Low"
-              size="md"
-              tone="cyan"
-              value={settings.eq_low_db}
-              min={-12}
-              max={12}
-              step={0.1}
-              defaultValue={0}
-              format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
-              onChange={(v) => onEq("low", v)}
-            />
-            <Knob
-              label="Mid"
-              size="md"
-              tone="green"
-              value={settings.eq_mid_db}
-              min={-12}
-              max={12}
-              step={0.1}
-              defaultValue={0}
-              format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
-              onChange={(v) => onEq("mid", v)}
-            />
-            <Knob
-              label="High"
-              size="md"
-              tone="purple"
-              value={settings.eq_high_db}
-              min={-12}
-              max={12}
-              step={0.1}
-              defaultValue={0}
-              format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
-              onChange={(v) => onEq("high", v)}
-            />
-          </div>
-          <VisualEqPanel settings={settings} onEq={onEq} compact />
+        <div className="tone-shape-knobs">
+          <Knob
+            label="Low"
+            size="md"
+            tone="cyan"
+            value={settings.eq_low_db}
+            min={-12}
+            max={12}
+            step={0.1}
+            defaultValue={0}
+            format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
+            onChange={(v) => onEq("low", v)}
+          />
+          <Knob
+            label="Mid"
+            size="md"
+            tone="green"
+            value={settings.eq_mid_db}
+            min={-12}
+            max={12}
+            step={0.1}
+            defaultValue={0}
+            format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
+            onChange={(v) => onEq("mid", v)}
+          />
+          <Knob
+            label="High"
+            size="md"
+            tone="purple"
+            value={settings.eq_high_db}
+            min={-12}
+            max={12}
+            step={0.1}
+            defaultValue={0}
+            format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
+            onChange={(v) => onEq("high", v)}
+          />
         </div>
+      </div>
+      {/* UI_LAYOUT_REVISION_1600x940 L4a — EQ promotes out of Tone Shape
+          into its own deck cell so it reads as the workspace's primary
+          tone-shaping surface. Takes the 1fr column in the deck row;
+          the three precision knobs sit to its left, Loudness to its
+          right. Compact mode stays on (no header, no node labels),
+          but the panel itself now has the horizontal real estate to
+          show the curve, nodes, and grid cleanly. */}
+      <div className="equalizer-block">
+        <span className="section-label">EQUALIZER (Dynamic)</span>
+        <VisualEqPanel settings={settings} onEq={onEq} compact />
       </div>
       <LoudnessTarget settings={settings} onAdvanced={onAdvanced} />
     </section>

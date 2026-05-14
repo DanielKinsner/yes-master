@@ -3694,16 +3694,17 @@ button.primary:disabled {
 
 /* Phase 12.2 P2 — Intensity + Tone Shape as knobs. */
 
-/* Macros row: one mastering console panel — Intensity (big) | Tone Shape
-   (3 small) | Loudness Target. UI restyle 2026-05-14 slice 4: deck-style
-   gradient surface, soft accent-tinted border, layered shadow so the row
-   reads as one console panel rather than a flat strip — matches the
-   waveform-deck aesthetic introduced in slice 2. */
+/* Macros row: one mastering console panel.
+   UI_LAYOUT_REVISION_1600x940 L4a — four columns now:
+     [ Intensity ][ Tone Shape ][ EQUALIZER (1fr) ][ Loudness ]
+   The EQ takes the flexible column so the deck row reads as
+   "knobs left, curve in the middle, target right" — matching the
+   mockup's deck composition. */
 .knobs-row {
   display: grid;
-  grid-template-columns: auto minmax(240px, 1fr) minmax(170px, auto);
-  gap: 1.5rem;
-  align-items: center;
+  grid-template-columns: auto auto minmax(280px, 1fr) minmax(170px, auto);
+  gap: 1.25rem;
+  align-items: stretch;
   padding: 1rem 1.15rem;
   background:
     linear-gradient(180deg, rgba(24, 29, 41, 0.94) 0%, rgba(12, 15, 23, 0.98) 100%);
@@ -3712,6 +3713,22 @@ button.primary:disabled {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 20px 42px rgba(0, 0, 0, 0.28);
+}
+
+.equalizer-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+  align-self: stretch;
+}
+
+/* EQ in the deck takes the full vertical room of the macros row and
+   the 1fr horizontal column, so the curve, nodes, and grid all have
+   space to breathe. Slightly taller than the original embedded inset. */
+.equalizer-block .visual-eq-panel-compact {
+  flex: 1;
+  min-height: clamp(150px, 16vh, 200px);
 }
 
 .intensity-block,
@@ -3770,17 +3787,11 @@ button.primary:disabled {
   outline-offset: 0;
 }
 
-/* Slice A restructure 2026-05-14: tone-shape contains both the
-   precision knobs AND an embedded compact Visual EQ. Side-by-side
-   so the deck row stays one strip; at narrower viewports the EQ
-   wraps below the knobs so neither gets squeezed. */
-.tone-shape-content {
-  display: flex;
-  align-items: stretch;
-  gap: 0.8rem;
-  min-width: 0;
-}
-
+/* UI_LAYOUT_REVISION_1600x940 L4a — Visual EQ moved out of
+   tone-shape-block into its own .equalizer-block column. The
+   tone-shape-block is back to just the three precision knobs;
+   `.tone-shape-content` is no longer rendered, only its
+   `.tone-shape-knobs` child. */
 .tone-shape-knobs {
   display: flex;
   gap: 1rem;
