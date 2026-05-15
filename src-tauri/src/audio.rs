@@ -955,6 +955,37 @@ fn live_preview_coeffs(
     Ok(coeffs)
 }
 
+/// Split a buffered batch of audio commands into (in-order non-UpdateChain
+/// commands, latest UpdateChain). Used by the audio command loop to
+/// coalesce knob-spam: redundant intermediate UpdateChains have stale
+/// settings the user has already moved past, and dropping them keeps
+/// latency-sensitive commands (Seek / Play / Pause) from being trapped
+/// behind preview-LUFS measurements.
+///
+/// Properties:
+/// * Non-UpdateChain commands retain their submission order.
+/// * Among UpdateChains, only the LAST one in the buffer survives (its
+///   payload is the freshest settings snapshot).
+/// * Empty input yields `(vec![], None)`.
+///
+/// Exposed at module scope (rather than inline in `audio_thread`) so
+/// the partition logic is testable in isolation without spinning up
+/// a real audio device.
+fn partition_for_coalescing(
+    buffered: Vec<AudioCommand>,
+) -> (Vec<AudioCommand>, Option<AudioCommand>) {
+    let mut latest_update: Option<AudioCommand> = None;
+    let mut in_order: Vec<AudioCommand> = Vec::with_capacity(buffered.len());
+    for c in buffered {
+        if matches!(c, AudioCommand::UpdateChain { .. }) {
+            latest_update = Some(c);
+        } else {
+            in_order.push(c);
+        }
+    }
+    (in_order, latest_update)
+}
+
 /// Dispatch a single audio command. Returns `true` when Shutdown is
 /// received so the caller can break the loop. Extracted from the
 /// original inline match so the command loop can buffer + coalesce
@@ -1099,15 +1130,7 @@ fn audio_thread(rx: mpsc::Receiver<AudioCommand>, snapshot: Arc<RwLock<PlaybackS
                 buffered.push(more);
             }
 
-            let mut latest_update: Option<AudioCommand> = None;
-            let mut in_order: Vec<AudioCommand> = Vec::with_capacity(buffered.len());
-            for c in buffered {
-                if matches!(c, AudioCommand::UpdateChain { .. }) {
-                    latest_update = Some(c);
-                } else {
-                    in_order.push(c);
-                }
-            }
+            let (in_order, latest_update) = partition_for_coalescing(buffered);
 
             for c in in_order {
                 if process_audio_command(c, &mut state) {
@@ -1922,6 +1945,197 @@ mod tests {
         let raw_coeffs = live_preview_coeffs(sample_rate, channels, &samples, &settings, false)
             .expect("raw preview coeffs");
         assert_eq!(raw_coeffs.export_landing_gain_lin, 1.0);
+    }
+
+    // ========================================================================
+    // Coalescing partition — mechanical gate for the "audio seek reply
+    // timeout" fix. partition_for_coalescing() is the entire knob-spam
+    // protection layer; if it ever stops dropping intermediate UpdateChains
+    // or starts losing non-UpdateChain commands, Seeks will stall behind
+    // expensive preview-LUFS measurements again. These tests are the
+    // regression gate, no human listening required.
+    // ========================================================================
+
+    /// Empty input never panics and returns the canonical empty result.
+    #[test]
+    fn partition_handles_empty_buffer() {
+        let (in_order, latest_update) = partition_for_coalescing(vec![]);
+        assert!(in_order.is_empty());
+        assert!(latest_update.is_none());
+    }
+
+    /// A single non-UpdateChain command passes through unmodified.
+    #[test]
+    fn partition_single_non_update_chain_passes_through() {
+        let (in_order, latest_update) = partition_for_coalescing(vec![AudioCommand::Pause]);
+        assert!(latest_update.is_none());
+        assert_eq!(in_order.len(), 1);
+        assert!(matches!(in_order[0], AudioCommand::Pause));
+    }
+
+    /// A single UpdateChain ends up as latest_update with no
+    /// non-UpdateChain output. Verifies the trivial case isn't
+    /// accidentally dropping the command.
+    #[test]
+    fn partition_single_update_chain_becomes_latest() {
+        let buffered = vec![AudioCommand::UpdateChain {
+            settings: settings_with_intensity(0.42),
+            preview_lufs_landing: true,
+        }];
+        let (in_order, latest_update) = partition_for_coalescing(buffered);
+        assert!(in_order.is_empty());
+        let latest = latest_update.expect("single UpdateChain should land in latest_update");
+        match latest {
+            AudioCommand::UpdateChain { settings, preview_lufs_landing } => {
+                assert!((settings.intensity - 0.42).abs() < 1e-6);
+                assert!(preview_lufs_landing);
+            }
+            _ => panic!("latest_update should be the UpdateChain"),
+        }
+    }
+
+    /// The core coalescing contract: intermediate UpdateChains are dropped,
+    /// the LATEST UpdateChain payload wins, and non-UpdateChain commands
+    /// retain submission order. This is exactly the queue shape that
+    /// produced the "audio seek reply timeout" toast — knob-spam +
+    /// interleaved seeks — and verifies the drained queue dispatches
+    /// in the order [non-UpdateChain commands in submission order,
+    /// latest UpdateChain].
+    #[test]
+    fn partition_drops_intermediate_update_chains_and_keeps_seeks_in_order() {
+        // Simulate Dan's repro: rapid knob nudges (UpdateChain payloads
+        // with intensity 0.1 -> 0.5 -> 0.9) interleaved with a Seek and
+        // a Pause. Pre-fix, all three UpdateChains plus the Seek and
+        // Pause would dispatch in submission order, with the Seek waiting
+        // behind two expensive preview-LUFS measurements before its
+        // reply went out and the frontend's 2 s timeout fired. Post-fix,
+        // the Seek and Pause go through first (immediate reply), and
+        // only the LATEST UpdateChain (intensity 0.9, preview_lufs_landing
+        // = true) survives.
+        let (seek_reply_tx, _seek_reply_rx) = mpsc::channel();
+        let buffered = vec![
+            AudioCommand::UpdateChain {
+                settings: settings_with_intensity(0.1),
+                preview_lufs_landing: false,
+            },
+            AudioCommand::Pause,
+            AudioCommand::UpdateChain {
+                settings: settings_with_intensity(0.5),
+                preview_lufs_landing: false,
+            },
+            AudioCommand::Seek {
+                position_sec: 42.0,
+                reply: seek_reply_tx,
+            },
+            AudioCommand::UpdateChain {
+                settings: settings_with_intensity(0.9),
+                preview_lufs_landing: true,
+            },
+        ];
+        let (in_order, latest_update) = partition_for_coalescing(buffered);
+
+        // Non-UpdateChain commands kept in submission order.
+        assert_eq!(in_order.len(), 2);
+        assert!(matches!(in_order[0], AudioCommand::Pause));
+        match &in_order[1] {
+            AudioCommand::Seek { position_sec, .. } => {
+                assert!((*position_sec - 42.0).abs() < 1e-9);
+            }
+            _ => panic!("expected Seek at position 1, got a different command variant"),
+        }
+
+        // Latest UpdateChain wins — both settings.intensity AND the
+        // preview_lufs_landing flag are from the FINAL queued payload,
+        // not the first one.
+        let latest = latest_update.expect("latest UpdateChain must survive coalescing");
+        match latest {
+            AudioCommand::UpdateChain { settings, preview_lufs_landing } => {
+                assert!(
+                    (settings.intensity - 0.9).abs() < 1e-6,
+                    "coalescing must keep the LATEST settings; got intensity {}",
+                    settings.intensity
+                );
+                assert!(
+                    preview_lufs_landing,
+                    "coalescing must keep the LATEST preview_lufs_landing flag (should be true)"
+                );
+            }
+            _ => panic!("latest_update should be the LATEST UpdateChain"),
+        }
+    }
+
+    /// Many UpdateChains in a row → only the last survives, regardless of
+    /// queue depth. Bounds the knob-spam case where 10+ UpdateChains
+    /// accumulate between scheduler ticks.
+    #[test]
+    fn partition_collapses_long_run_of_update_chains_to_last() {
+        let buffered: Vec<AudioCommand> = (0..20)
+            .map(|i| AudioCommand::UpdateChain {
+                settings: settings_with_intensity(i as f32 / 20.0),
+                preview_lufs_landing: i % 2 == 0,
+            })
+            .collect();
+        let (in_order, latest_update) = partition_for_coalescing(buffered);
+
+        assert!(in_order.is_empty(), "no non-UpdateChain commands fed in");
+        let latest = latest_update.expect("at least one UpdateChain in the queue");
+        match latest {
+            AudioCommand::UpdateChain { settings, preview_lufs_landing } => {
+                // i=19 → intensity 19/20 = 0.95, preview_lufs_landing = false (odd).
+                assert!((settings.intensity - 0.95).abs() < 1e-6);
+                assert!(!preview_lufs_landing);
+            }
+            _ => panic!("latest_update must be the final UpdateChain"),
+        }
+    }
+
+    /// 8 s preview window still produces accurate landing on sources
+    /// LONGER than the window. The perf optimization measures only the
+    /// middle 8 s of the decoded PCM rather than the full PCM, trusting
+    /// that the BS.1770 gating over multiple 400 ms blocks is
+    /// representative enough for landing-gain computation. This test
+    /// fixes the gate: a 16 s source must still land within target
+    /// tolerance, proving the windowing didn't break landing accuracy
+    /// for longer material.
+    #[test]
+    fn live_preview_landing_accurate_on_source_longer_than_window() {
+        let sample_rate = 48_000;
+        let channels: u16 = 2;
+        // 16 s source: double the 8 s preview window so the windowed
+        // measurement reads only the middle half of the signal. If the
+        // chain produced different LUFS in the first/last 4 s than the
+        // middle 8 s, the landing gain would be off — this test asserts
+        // the gain computed from the window still lands the FULL signal
+        // on target.
+        let samples = sine_signal((sample_rate as usize) * 16, sample_rate, channels);
+        let mut settings = settings_with_intensity(1.0);
+        settings.delivery_profile = DeliveryProfile::BroadcastEu;
+
+        let coeffs = live_preview_coeffs(sample_rate, channels, &samples, &settings, true)
+            .expect("preview coeffs on long source");
+        assert!(
+            coeffs.export_landing_gain_lin < 1.0,
+            "loud 16 s signal targeting BroadcastEU -23 should attenuate; got {}",
+            coeffs.export_landing_gain_lin
+        );
+
+        // Apply preview gain to a fresh FULL-LENGTH chain render and
+        // confirm the resulting integrated LUFS lands on target. This is
+        // the property that gates "is the windowed measurement
+        // representative?" — if the answer is no, the full-signal LUFS
+        // would drift away from -23 by more than the 0.5 dB tolerance.
+        let mut rendered = samples.clone();
+        let mut chain = MasteringChain::new(sample_rate, channels as usize, &settings);
+        chain.coeffs.export_landing_gain_lin = coeffs.export_landing_gain_lin;
+        chain.process_interleaved(&mut rendered, channels as usize);
+        let measured =
+            crate::engine::measure_integrated_lufs(&rendered, sample_rate, channels)
+                .expect("measure long-source preview");
+        assert!(
+            (measured - -23.0).abs() < 0.5,
+            "16 s source with 8 s window measurement should still land at \
+             BroadcastEU target -23 LUFS within ±0.5 dB; got {measured:.2}"
+        );
     }
 
     /// Ceiling-bounded LUFS landing: when the chain leaves headroom below
