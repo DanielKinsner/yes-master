@@ -26,7 +26,7 @@ pub async fn save_user_preset(
         name: trimmed,
         kind,
         settings,
-        created_at_iso: ISO_PLACEHOLDER.to_string(),
+        created_at_iso: now_iso(),
     };
     presets.push(preset.clone());
     write_presets(&path, &presets)?;

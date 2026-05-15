@@ -230,7 +230,7 @@ pub fn analyze_one(track_id: TrackId, path: &Path) -> CommandResult<AnalysisResu
         transient_density,
         stereo_width,
         recommended_universal,
-        measured_at_iso: ISO_PLACEHOLDER.to_string(),
+        measured_at_iso: now_iso(),
         inferred_role: Some(role),
         role_confidence: Some(role_conf),
         inferred_character: Some(character),
@@ -916,6 +916,60 @@ pub fn album_render_with_progress(
             }
         }
 
+        // B5: per-track ceiling-bounded LUFS landing. Pre-B5 this path
+        // skipped LUFS landing entirely — album-simple exports rendered
+        // at whatever the chain happened to produce, ignoring the user's
+        // delivery-profile / advanced.lufs_offset_db target. Mirrors the
+        // block in mastering_render_with_progress; downward gain applies
+        // in full, upward gain is bounded by true-peak headroom below the
+        // user's ceiling (B6 policy).
+        if let Some(target_lufs) = render_settings.effective_target_lufs() {
+            if target_lufs.is_finite() {
+                let channels_u32 = u32::from(pcm.channels.max(1));
+                let mut ebu =
+                    EbuR128::new(channels_u32, pcm.sample_rate, Mode::I | Mode::TRUE_PEAK)
+                        .map_err(|e| CommandError::Render(format!("ebur128 init: {e}")))?;
+                ebu.add_frames_f32(&samples)
+                    .map_err(|e| CommandError::Render(format!("ebur128 feed: {e}")))?;
+                let measured_lufs = sanitize_lufs(
+                    ebu.loudness_global()
+                        .map_err(|e| CommandError::Render(format!("ebur128 global: {e}")))?
+                        as f32,
+                );
+                if measured_lufs.is_finite() && measured_lufs > -70.0 {
+                    let mut peak_lin: f64 = 0.0;
+                    for ch in 0..channels_u32 {
+                        let tp = ebu
+                            .true_peak(ch)
+                            .map_err(|e| CommandError::Render(format!("ebur128 tp: {e}")))?;
+                        if tp > peak_lin {
+                            peak_lin = tp;
+                        }
+                    }
+                    let measured_true_peak_dbtp = if peak_lin > 0.0 {
+                        (20.0 * peak_lin.log10()) as f32
+                    } else {
+                        -60.0
+                    };
+                    let delta_db = target_lufs - measured_lufs;
+                    let ceiling_dbtp = render_settings.effective_ceiling_dbtp();
+                    let headroom_db =
+                        (ceiling_dbtp - measured_true_peak_dbtp).max(0.0);
+                    let applied_delta_db = if delta_db < 0.0 {
+                        delta_db
+                    } else {
+                        delta_db.min(headroom_db)
+                    };
+                    if applied_delta_db.abs() > 1.0e-4 {
+                        let gain_lin = 10.0_f32.powf(applied_delta_db / 20.0);
+                        for s in samples.iter_mut() {
+                            *s *= gain_lin;
+                        }
+                    }
+                }
+            }
+        }
+
         let individual = unique_output_path(out_dir, path, &input.id, RenderKind::Master)?;
         write_wav(&individual, &samples, pcm.sample_rate, pcm.channels, bit_depth)?;
         individual_paths.push(individual.to_string_lossy().to_string());
@@ -944,7 +998,7 @@ pub fn album_render_with_progress(
         target_tracks: track_ids,
         status: JobStatus::Done,
         progress: 1.0,
-        started_at_iso: ISO_PLACEHOLDER.to_string(),
+        started_at_iso: now_iso(),
         output_paths,
         // Album-master measurements are not yet plumbed; the album writer
         // streams per-track segments through the chain and concatenates them,
@@ -1005,7 +1059,7 @@ pub struct AlbumRenderReport {
 #[derive(Debug, Serialize)]
 struct AlbumManifest<'a> {
     plan: &'a AlbumPlan,
-    rendered_at_iso: &'static str,
+    rendered_at_iso: String,
     sample_rate: u32,
     channels: u16,
     bit_depth: u16,
@@ -1186,9 +1240,41 @@ pub fn render_album_plan_impl(
             }
             AlbumArc::Custom { .. } => 0.5,
         };
-        // Energy density for the bias presence_db energy-gate. Default
-        // 0.5 (neutral) when the analysis didn't produce a score.
-        let energy_density = 0.5_f32;
+        // B1: compute per-track energy density from the decoded PCM so the
+        // album-arc character-bias presence-band energy-gate uses the same
+        // signal as the analysis path. Pre-B1 this was hardcoded to 0.5,
+        // dead-coding the gate in the album EXPORT path while
+        // `analyze_tracks` computed real values.
+        //
+        // Four measurements: integrated LUFS, 6-band spectral balance,
+        // dynamic range (p95-p10), transient flux. Falls back to 0.5
+        // (the prior literal, treated as "neutral") if any input is
+        // unavailable — matches `compute_energy_density_score`'s contract.
+        let energy_density_score = {
+            let lufs = measure_integrated_lufs(
+                &pcm.samples,
+                pcm.sample_rate,
+                pcm.channels,
+            )
+            .unwrap_or(-30.0);
+            let spec6 = compute_spectral_balance_6band(
+                &pcm.samples,
+                pcm.sample_rate,
+                pcm.channels as usize,
+            );
+            let dr = compute_dynamic_range_p95_p10(
+                &pcm.samples,
+                pcm.sample_rate,
+                pcm.channels as usize,
+            );
+            let tflux = compute_transient_flux(
+                &pcm.samples,
+                pcm.sample_rate,
+                pcm.channels as usize,
+            );
+            compute_energy_density_score(lufs, spec6.as_ref(), dr, tflux)
+        };
+        let energy_density = energy_density_score.unwrap_or(0.5);
         let shadowed = apply_album_shadow(
             &input.settings,
             entry,
@@ -1297,7 +1383,7 @@ pub fn render_album_plan_impl(
     let manifest_path = out_dir.join("manifest.json");
     let manifest = AlbumManifest {
         plan: &request.plan,
-        rendered_at_iso: ISO_PLACEHOLDER,
+        rendered_at_iso: now_iso(),
         sample_rate: common_sr,
         channels: common_channels,
         bit_depth,
@@ -1704,7 +1790,7 @@ pub fn mastering_render_with_progress(
         target_tracks: vec![track_id],
         status: JobStatus::Done,
         progress: 1.0,
-        started_at_iso: ISO_PLACEHOLDER.to_string(),
+        started_at_iso: now_iso(),
         output_paths: vec![out_path.to_string_lossy().to_string()],
         measurements: Some(measurements),
     })
@@ -2048,6 +2134,30 @@ mod tests {
             max_abs <= 2,
             "dither on silence should never exceed ±2 LSB; saw {}",
             max_abs
+        );
+    }
+
+    /// B4: every production *_iso field now reads from `now_iso()` instead
+    /// of the frozen `ISO_PLACEHOLDER`. Verifies the helper returns a
+    /// real RFC 3339 timestamp near the current time, and explicitly
+    /// confirms it does NOT return the placeholder. Test fixtures still
+    /// use `ISO_PLACEHOLDER` for deterministic AnalysisResult construction.
+    #[test]
+    fn now_iso_returns_current_rfc3339_timestamp_not_placeholder() {
+        let ts = now_iso();
+        let parsed = chrono::DateTime::parse_from_rfc3339(&ts)
+            .expect("now_iso must return a valid RFC 3339 timestamp");
+        let now = chrono::Utc::now();
+        let diff_seconds = (now - parsed.with_timezone(&chrono::Utc))
+            .num_seconds()
+            .abs();
+        assert!(
+            diff_seconds < 5,
+            "now_iso timestamp ({ts}) should be near now (within 5 s), got {diff_seconds}s drift"
+        );
+        assert_ne!(
+            ts, ISO_PLACEHOLDER,
+            "now_iso must return a real current timestamp, not the frozen test placeholder"
         );
     }
 }

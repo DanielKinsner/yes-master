@@ -744,7 +744,23 @@ impl Serialize for CommandError {
 
 pub type CommandResult<T> = Result<T, CommandError>;
 
+/// Deterministic ISO 8601 string used as a frozen timestamp in TEST
+/// fixtures that construct `AnalysisResult` / `RenderJob` / `UserPreset`
+/// by hand. Production code paths use `now_iso()` instead so reports
+/// and manifests record real current timestamps.
 pub const ISO_PLACEHOLDER: &str = "2026-05-11T12:00:00Z";
+
+/// Current UTC timestamp formatted as RFC 3339 / ISO 8601. Used by every
+/// production call site that needs a "when did this happen" string —
+/// analysis `measured_at_iso`, render `started_at_iso` /
+/// `rendered_at_iso`, preset `created_at_iso`, album manifest fields.
+/// Prior to B4 these were all hardcoded to `ISO_PLACEHOLDER` (a frozen
+/// `2026-05-11T12:00:00Z`), so reports couldn't distinguish between
+/// two renders by timestamp. Tests still use `ISO_PLACEHOLDER` for
+/// deterministic fixture construction.
+pub fn now_iso() -> String {
+    chrono::Utc::now().to_rfc3339()
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PlaybackTick {

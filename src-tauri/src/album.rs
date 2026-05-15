@@ -542,7 +542,7 @@ mod tests {
             transient_density: transient_flux.unwrap_or(0.5),
             stereo_width: 0.5,
             recommended_universal: default_master_settings(),
-            measured_at_iso: ISO_PLACEHOLDER.to_string(),
+            measured_at_iso: now_iso(),
             inferred_role,
             role_confidence: Some(InferenceConfidence::Moderate),
             inferred_character: character,

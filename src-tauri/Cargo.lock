@@ -21,6 +21,7 @@ dependencies = [
 name = "album-mastering-studio"
 version = "0.0.0"
 dependencies = [
+ "chrono",
  "ebur128",
  "hound",
  "rodio",

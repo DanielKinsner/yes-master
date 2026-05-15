@@ -40,6 +40,11 @@ ebur128 = "0.1"
 # Phase A5: FFT for the 6-band spectral analysis. rustfft is the
 # standard pure-Rust FFT implementation; no native deps.
 rustfft = "6"
+# B4: real timestamps for analysis / render / preset report fields.
+# Default features (clock + std) cover RFC 3339 formatting; no
+# extra serde/format features needed because every consumer here just
+# wants the string. Locked at 0.4 LTS line.
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }
