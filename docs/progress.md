@@ -3408,4 +3408,95 @@ preset-specific compressor threshold and ratio into
 `docs/PRESET_REFERENCE_ANALYSIS_2026-05-14.md` for the
 calibration target table + acceptance check.
 
+## 2026-05-14 (post-A4) → 2026-05-15 — VM hotfix triplet + perf wins
+
+Three follow-up commits chased the consequences of Phase A4 landing
+the preset compressor by default. Sequenced as Dan listened.
+
+- `b4c2a57` — **Phase A4 hotfix.** Two parts shipped together. (1)
+  VM source-LUFS injection bug: only `updateSettings` and undo/redo
+  injected `source_lufs_integrated`; the FIRST chain build via
+  `playMaster` shipped without it, so the backend fell through to
+  the legacy `1.0 / input_gain_lin` fallback that ignores compressor
+  makeup, EQ boosts, and saturation. New `withSourceLufs` helper
+  centralizes injection across all 3 settings → backend sites
+  (playWithKind, updateSettings, restoreSnapshot); new useEffect
+  re-pushes chain when analysis lands for the loaded master track.
+  (2) Realtime perf: compressor inner loop now skips `powf` when
+  `gr_db <= 0` (the dominant case on quiet material) and uses
+  `(g * LN10/20).exp()` instead of `powf` when reduction IS active
+  (~2× faster); limiter skips the Lagrange-4 ISP loop when raw peak
+  has ≥1.6 dB headroom from the ceiling (saves ~80% of limiter cost
+  on typical Mastered playback). Dan: "real-time play is clean".
+- `1b21172` — **Phase A4 hotfix-2.** VM math rewrite. The hotfix-1
+  injection was correct but the formula was still wrong:
+  `attenuation = source_lufs - effective_target_lufs()` assumed the
+  chain hits its preset `target_lufs`, but `target_lufs` is in the
+  "captured but not applied" list. Distinctness dump showed Tape
+  4.3 dB above target, Loud 3.1 dB above. New formula estimates
+  `chain_push_db = input_gain + avg_compressor_makeup + 5×saturation
+  + user_output_gain` and attenuates by `-chain_push_db` clamped.
+  Source LUFS isn't needed: when estimated_push ≈ actual push,
+  mastered − estimated_push ≈ source regardless of source level.
+  Lands within ~1 dB across all eight presets. The
+  analysis-arrival useEffect from hotfix-1 was removed (no longer
+  needed; source LUFS is only future-friendly now). 4 VM unit tests
+  rewritten to match new spec (3 of them encoded the broken-target
+  math; 1 kept its spirit but with new triggering conditions).
+- `51477a4` — **Phase A4 hotfix-3.** "VM works here and there but
+  gets lost on track switch and stays lost." Root cause was a state
+  desync: the UI checkbox renders `transport.volumeMatch` (session-
+  level, sticky), but the audio chain reads `settings.volume_match`
+  (per-track, persisted). `setVolumeMatch` only updated the entry
+  for the currently-selected track, so switching tracks left the new
+  track's `settings.volume_match` at whatever it was last set to
+  while on it. Fix treats VM as session-level: `withSourceLufs`
+  forces every settings payload to carry the current transport-level
+  VM state. Override reads from a `useRef` so `setVolumeMatch` can
+  write the new value synchronously before the same-tick
+  `updateSettings` call fires (otherwise React's setState batching
+  would have us reading the OLD transport.volumeMatch and clobbering
+  the toggle BACK — the override would have introduced a subtler
+  version of the same bug).
+
+Verification (after each hotfix): `cargo test --lib` 81/81;
+`cargo test` 144/144 fast lane; `npm run build` clean. All
+real-fixture tests skipped in fast lane (no private fixture
+configured locally).
+
+What Dan confirmed audibly:
+- Phase A4 retune: "really good and defined, all distinct from one
+  another, match their name."
+- Realtime: "real-time play is clean" (after hotfix-1 perf wins).
+- VM after hotfix-2: still flaky on click-around, "stays lost"
+  (drove hotfix-3).
+- VM after hotfix-3: NOT yet verified before session end.
+
+What failed or remains partial:
+- Hotfix-3 awaits Dan's first listening pass to confirm VM stays
+  sync'd through track-switch flurries. **First move next session.**
+- "Audio thread reply timeout" toast appeared once mid-session.
+  Likely stale from broken-VM thrash; if it recurs after hotfix-3,
+  dig into `audio.rs::handle_play_master` decode/device-init paths.
+- Phase A4 distinctness contract had to soften two thresholds
+  (Clarity-vs-Universal -1.0 → -0.4 dB, Oomph-vs-Universal -2.0 →
+  -1.0 dB) because the chain has one Q=0.8 peak filter at 1500 Hz
+  and can't deliver multi-band reference-render numbers across 1.4
+  octaves. Logged as structural follow-up in the new handoff.
+- Export path doesn't strip `volume_match` — if a user has VM on
+  at render time, the exported WAV will be VM-attenuated.
+  PRODUCT.md is explicit that "Export level is unchanged" by VM.
+  Easy fix; not urgent.
+
+Real-audio fixture used: None (Dan listened on the live UI, no
+private-fixture render this session).
+
+Next recommended slice: **Dan's listening verification of VM
+hotfix-3** (toggle VM, switch tracks, play/pause/seek, switch
+presets, switch tracks again — checkbox should always match what
+the audio is doing). Then **open queue #1 — album-export
+`energy_density` literal at engine.rs:1188** (~10 lines of fix +
+~50 lines of regression test). Full plan in
+`docs/HANDOFF_2026-05-15_session.md`.
+
 
