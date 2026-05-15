@@ -150,16 +150,18 @@ export const api = {
     trackPath: string,
     settings: MasteringSettings,
     startPositionSec?: number,
+    previewLufsLanding = true,
   ) =>
     invoke<null>("play_master", {
       trackId,
       trackPath,
       settings,
       startPositionSec: startPositionSec ?? null,
+      previewLufsLanding,
     }),
 
-  updateChain: (settings: MasteringSettings) =>
-    invoke<null>("update_chain", { settings }),
+  updateChain: (settings: MasteringSettings, previewLufsLanding = true) =>
+    invoke<null>("update_chain", { settings, previewLufsLanding }),
 
   pausePlayback: () => invoke<null>("pause_playback"),
   resumePlayback: () => invoke<null>("resume_playback"),

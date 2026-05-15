@@ -545,8 +545,10 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           showStoryTags={tm.mode === "album"}
           playbackKind={tm.transport.playbackKind}
           volumeMatch={tm.transport.volumeMatch}
+          exportLufsPreview={tm.transport.exportLufsPreview}
           onPlaybackKindChange={tm.setPlaybackKind}
           onVolumeMatchChange={tm.setVolumeMatch}
+          onExportLufsPreviewChange={tm.setExportLufsPreview}
         />
         <div className="wf-deck">
           <Transport
@@ -665,8 +667,10 @@ function TrackHeader({
   showStoryTags,
   playbackKind,
   volumeMatch,
+  exportLufsPreview,
   onPlaybackKindChange,
   onVolumeMatchChange,
+  onExportLufsPreviewChange,
 }: {
   track: ImportedTrack;
   analysis: AnalysisResult | undefined;
@@ -677,8 +681,10 @@ function TrackHeader({
   // header so the waveform module below can be the workspace anchor.
   playbackKind: PlaybackKindUI;
   volumeMatch: boolean;
+  exportLufsPreview: boolean;
   onPlaybackKindChange: (kind: PlaybackKindUI) => void;
   onVolumeMatchChange: (on: boolean) => void;
+  onExportLufsPreviewChange: (on: boolean) => void;
 }) {
   const chips: { key: string; label: string }[] = [];
   if (track.source_format) {
@@ -739,6 +745,17 @@ function TrackHeader({
             onChange={(e) => onVolumeMatchChange(e.target.checked)}
           />
           <span>Volume Match</span>
+        </label>
+        <label
+          className="vm-toggle"
+          title="Applies the same down-only LUFS target trim used for export during Mastered playback."
+        >
+          <input
+            type="checkbox"
+            checked={exportLufsPreview}
+            onChange={(e) => onExportLufsPreviewChange(e.target.checked)}
+          />
+          <span>Export LUFS</span>
         </label>
         <div
           className={`track-badge status-pill ${isAnalyzing ? "status-warn" : analysis ? "status-ok" : ""}`}

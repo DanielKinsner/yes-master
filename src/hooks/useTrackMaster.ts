@@ -95,6 +95,7 @@ export function useTrackMaster() {
     playbackKind: "source" as PlaybackKindUI,
     loop: false,
     volumeMatch: false,
+    exportLufsPreview: true,
     // Phase 12.2 live clipping meter — post-output-gain peak since the last
     // tick, in dBFS. -120 means "no signal" (silence sentinel from backend).
     // Stored here so the StaleBar's indicator can flash red on clipping
@@ -188,9 +189,13 @@ export function useTrackMaster() {
   // Renaming preserved as `withSourceLufs` to keep diffs small; the
   // comment block above is the source of truth for what it actually does.
   const volumeMatchRef = useRef(false);
+  const exportLufsPreviewRef = useRef(true);
   useEffect(() => {
     volumeMatchRef.current = transport.volumeMatch;
   }, [transport.volumeMatch]);
+  useEffect(() => {
+    exportLufsPreviewRef.current = transport.exportLufsPreview;
+  }, [transport.exportLufsPreview]);
   const withSourceLufs = useCallback(
     (id: TrackId | null, settings: MasteringSettings): MasteringSettings => {
       const result: MasteringSettings = {
@@ -435,7 +440,7 @@ export function useTrackMaster() {
         }));
         const effectiveForChain = withSourceLufs(id as TrackId, effective);
         api
-          .updateChain(effectiveForChain)
+          .updateChain(effectiveForChain, exportLufsPreviewRef.current)
           .then(() => {
             setLiveUpdateStats((s) => ({
               attempts: s.attempts,
@@ -539,7 +544,7 @@ export function useTrackMaster() {
         // `withSourceLufs` helper at the top of this hook.
         const settingsForChain = withSourceLufs(id, nextSettings);
         api
-          .updateChain(settingsForChain)
+          .updateChain(settingsForChain, exportLufsPreviewRef.current)
           .then(() => {
             setLiveUpdateStats((s) => ({
               attempts: s.attempts,
@@ -1009,6 +1014,7 @@ export function useTrackMaster() {
           selectedTrack.path,
           withSourceLufs(selectedTrackId, selectedSettings),
           positionSec,
+          exportLufsPreviewRef.current,
         );
       }
       setLoadedKindByTrack((prev) => ({ ...prev, [selectedTrackId]: kind }));
@@ -1219,6 +1225,34 @@ export function useTrackMaster() {
     [selectedTrackId, updateSettings],
   );
 
+  const setExportLufsPreview = useCallback(
+    (on: boolean) => {
+      exportLufsPreviewRef.current = on;
+      setTransport((t) => ({ ...t, exportLufsPreview: on }));
+      if (selectedTrackId && loadedKindByTrack[selectedTrackId] === "master") {
+        api
+          .updateChain(
+            withSourceLufs(selectedTrackId, selectedSettings),
+            on,
+          )
+          .then(() => {
+            setLiveUpdateStats((s) => ({
+              attempts: s.attempts + 1,
+              applied: s.applied + 1,
+              lastAt: Date.now(),
+            }));
+          })
+          .catch((err) => setError(String(err)));
+      }
+    },
+    [
+      selectedTrackId,
+      loadedKindByTrack,
+      selectedSettings,
+      withSourceLufs,
+    ],
+  );
+
   const toggleAdvanced = useCallback(() => {
     setAdvancedOpen((v) => !v);
   }, []);
@@ -1293,7 +1327,10 @@ export function useTrackMaster() {
           lastAt: Date.now(),
         }));
         api
-          .updateChain(preset.settings)
+          .updateChain(
+            withSourceLufs(selectedTrackId, preset.settings),
+            exportLufsPreviewRef.current,
+          )
           .then(() => {
             setLiveUpdateStats((s) => ({
               attempts: s.attempts,
@@ -1313,6 +1350,7 @@ export function useTrackMaster() {
       loadedTrackId,
       overrideAlbum,
       commitToHistory,
+      withSourceLufs,
     ],
   );
 
@@ -1528,6 +1566,7 @@ export function useTrackMaster() {
     setPlaybackKind,
     toggleLoop,
     setVolumeMatch,
+    setExportLufsPreview,
     toggleAdvanced,
     selectedRegion,
     setRegion,

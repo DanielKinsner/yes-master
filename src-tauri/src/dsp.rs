@@ -576,6 +576,11 @@ pub struct ChainCoeffs {
     /// — doesn't account for EQ/saturation contributions, but close enough
     /// for tone judgment. Tooltip in the UI is honest about this.
     pub volume_match_gain_lin: f32,
+    /// Live-preview export landing gain. Offline export applies a final,
+    /// down-only LUFS trim after rendering; Mastered playback receives the
+    /// same gain from the audio thread so audition level matches export level.
+    /// Defaults to 1.0 in render/export paths.
+    pub export_landing_gain_lin: f32,
     /// Phase 12.2 — stereo width via M/S processing. Scales the side
     /// component between EQ and saturation; 0 = mono (collapse side to zero),
     /// 1 = neutral (no-op), > 1 widens. Only consulted when the chain is
@@ -947,6 +952,7 @@ impl ChainCoeffs {
             ceiling_lin,
             user_output_gain_lin,
             volume_match_gain_lin,
+            export_landing_gain_lin: 1.0,
             width_side_scale,
             compression_active,
             comp_low_lp,
@@ -1722,6 +1728,13 @@ impl MasteringChain {
         if (self.coeffs.user_output_gain_lin - 1.0).abs() > 1.0e-4 {
             for s in frame.iter_mut() {
                 *s *= self.coeffs.user_output_gain_lin;
+            }
+        }
+        // Live export-preview gain: mirrors the offline render's final
+        // down-only LUFS landing trim, which happens after the full chain.
+        if (self.coeffs.export_landing_gain_lin - 1.0).abs() > 1.0e-4 {
+            for s in frame.iter_mut() {
+                *s *= self.coeffs.export_landing_gain_lin;
             }
         }
     }

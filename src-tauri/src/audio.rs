@@ -258,6 +258,7 @@ pub async fn play_master(
     track_path: String,
     settings: MasteringSettings,
     start_position_sec: Option<f64>,
+    preview_lufs_landing: Option<bool>,
     player: tauri::State<'_, Arc<AudioPlayer>>,
 ) -> CommandResult<()> {
     if track_path.is_empty() {
@@ -269,15 +270,22 @@ pub async fn play_master(
             "path traversal not allowed: {track_path}"
         )));
     }
-    player.play_master(track_id, path, settings, start_position_sec.unwrap_or(0.0))
+    player.play_master(
+        track_id,
+        path,
+        settings,
+        start_position_sec.unwrap_or(0.0),
+        preview_lufs_landing.unwrap_or(true),
+    )
 }
 
 #[tauri::command]
 pub async fn update_chain(
     settings: MasteringSettings,
+    preview_lufs_landing: Option<bool>,
     player: tauri::State<'_, Arc<AudioPlayer>>,
 ) -> CommandResult<()> {
-    player.update_chain(settings)
+    player.update_chain(settings, preview_lufs_landing.unwrap_or(true))
 }
 
 #[tauri::command]
@@ -556,10 +564,12 @@ enum AudioCommand {
         path: PathBuf,
         settings: MasteringSettings,
         start_position_sec: f64,
+        preview_lufs_landing: bool,
         reply: Sender<Result<(), String>>,
     },
     UpdateChain {
         settings: MasteringSettings,
+        preview_lufs_landing: bool,
     },
     Pause,
     Resume,
@@ -674,6 +684,7 @@ impl AudioPlayer {
         path: &Path,
         settings: MasteringSettings,
         start_position_sec: f64,
+        preview_lufs_landing: bool,
     ) -> CommandResult<()> {
         let (reply_tx, reply_rx) = mpsc::channel();
         self.send(AudioCommand::PlayMaster {
@@ -681,6 +692,7 @@ impl AudioPlayer {
             path: path.to_path_buf(),
             settings,
             start_position_sec: start_position_sec.max(0.0),
+            preview_lufs_landing,
             reply: reply_tx,
         })
         .map_err(CommandError::Other)?;
@@ -693,9 +705,16 @@ impl AudioPlayer {
         }
     }
 
-    pub fn update_chain(&self, settings: MasteringSettings) -> CommandResult<()> {
-        self.send(AudioCommand::UpdateChain { settings })
-            .map_err(CommandError::Other)
+    pub fn update_chain(
+        &self,
+        settings: MasteringSettings,
+        preview_lufs_landing: bool,
+    ) -> CommandResult<()> {
+        self.send(AudioCommand::UpdateChain {
+            settings,
+            preview_lufs_landing,
+        })
+        .map_err(CommandError::Other)
     }
 
     pub fn pause(&self) {
@@ -828,6 +847,51 @@ fn decode_cache_lookup(
         .map(|entry| entry.pcm.clone())
 }
 
+fn export_landing_gain_lin_for_preview(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+) -> Result<f32, String> {
+    let mut render_settings = settings.clone();
+    render_settings.volume_match = false;
+    let Some(target_lufs) = render_settings.effective_target_lufs() else {
+        return Ok(1.0);
+    };
+    if !target_lufs.is_finite() {
+        return Ok(1.0);
+    }
+
+    let channels_usize = channels.max(1) as usize;
+    let mut rendered = samples.to_vec();
+    let mut chain = crate::dsp::MasteringChain::new(sample_rate, channels_usize, &render_settings);
+    chain.process_interleaved(&mut rendered, channels_usize);
+    let measured = crate::engine::measure_integrated_lufs(&rendered, sample_rate, channels)
+        .map_err(|e| format!("{e}"))?;
+    if measured.is_finite() && measured > -70.0 {
+        let delta_db = target_lufs - measured;
+        if delta_db < 0.0 {
+            return Ok(10.0_f32.powf(delta_db / 20.0));
+        }
+    }
+    Ok(1.0)
+}
+
+fn live_preview_coeffs(
+    sample_rate: u32,
+    channels: u16,
+    samples: &[f32],
+    settings: &MasteringSettings,
+    preview_lufs_landing: bool,
+) -> Result<crate::dsp::ChainCoeffs, String> {
+    let mut coeffs = crate::dsp::ChainCoeffs::from_settings(sample_rate, settings);
+    if preview_lufs_landing {
+        coeffs.export_landing_gain_lin =
+            export_landing_gain_lin_for_preview(samples, sample_rate, channels, settings)?;
+    }
+    Ok(coeffs)
+}
+
 fn audio_thread(rx: mpsc::Receiver<AudioCommand>, snapshot: Arc<RwLock<PlaybackSnapshot>>) {
     let mut state: Option<AudioThreadState> = None;
     loop {
@@ -846,17 +910,42 @@ fn audio_thread(rx: mpsc::Receiver<AudioCommand>, snapshot: Arc<RwLock<PlaybackS
                 path,
                 settings,
                 start_position_sec,
+                preview_lufs_landing,
                 reply,
             }) => {
-                let outcome =
-                    handle_play_master(&mut state, track_id, &path, &settings, start_position_sec);
+                let outcome = handle_play_master(
+                    &mut state,
+                    track_id,
+                    &path,
+                    &settings,
+                    start_position_sec,
+                    preview_lufs_landing,
+                );
                 let _ = reply.send(outcome);
             }
-            Ok(AudioCommand::UpdateChain { settings }) => {
+            Ok(AudioCommand::UpdateChain {
+                settings,
+                preview_lufs_landing,
+            }) => {
                 if let Some(s) = state.as_ref() {
                     if let Some(tx) = s.live_coeffs_tx.as_ref() {
-                        let coeffs =
-                            crate::dsp::ChainCoeffs::from_settings(s.live_sample_rate, &settings);
+                        let coeffs = if let Some(cache) = s.decoded_cache.as_ref() {
+                            live_preview_coeffs(
+                                s.live_sample_rate,
+                                cache.pcm.channels,
+                                &cache.pcm.samples,
+                                &settings,
+                                preview_lufs_landing,
+                            )
+                            .unwrap_or_else(|_| {
+                                crate::dsp::ChainCoeffs::from_settings(
+                                    s.live_sample_rate,
+                                    &settings,
+                                )
+                            })
+                        } else {
+                            crate::dsp::ChainCoeffs::from_settings(s.live_sample_rate, &settings)
+                        };
                         let _ = tx.send(coeffs);
                     }
                 }
@@ -1082,6 +1171,7 @@ fn handle_play_master(
     path: &Path,
     settings: &MasteringSettings,
     start_position_sec: f64,
+    preview_lufs_landing: bool,
 ) -> Result<(), String> {
     // Phase 12.1 perf — decode cache. Resolve the canonical path and
     // mtime to use as the cache key. If the cache holds a matching entry,
@@ -1161,12 +1251,20 @@ fn handle_play_master(
         mid: s.gr_mid.clone(),
         high: s.gr_high.clone(),
     };
-    let chain = crate::dsp::MasteringChain::new_with_gr_snapshots(
+    let mut chain = crate::dsp::MasteringChain::new_with_gr_snapshots(
         pcm.sample_rate,
         pcm.channels as usize,
         settings,
         gr_slots,
     );
+    if preview_lufs_landing {
+        chain.coeffs.export_landing_gain_lin = export_landing_gain_lin_for_preview(
+            &pcm.samples,
+            pcm.sample_rate,
+            pcm.channels,
+            settings,
+        )?;
+    }
     let mastering_source = MasteringSource::new(
         pcm.samples,
         pcm.channels,
@@ -1653,6 +1751,38 @@ mod tests {
         }
         let sum_sq: f32 = samples.iter().map(|s| s * s).sum();
         (sum_sq / samples.len() as f32).sqrt()
+    }
+
+    #[test]
+    fn live_preview_coeffs_apply_export_lufs_landing_gain() {
+        let sample_rate = 48_000;
+        let channels: u16 = 2;
+        let samples = sine_signal(sample_rate as usize * 2, sample_rate, channels);
+        let mut settings = settings_with_intensity(1.0);
+        settings.delivery_profile = DeliveryProfile::BroadcastEu;
+
+        let coeffs = live_preview_coeffs(sample_rate, channels, &samples, &settings, true)
+            .expect("preview coeffs");
+        assert!(
+            coeffs.export_landing_gain_lin < 1.0,
+            "expected live export preview to trim a loud render, got {}",
+            coeffs.export_landing_gain_lin
+        );
+
+        let mut rendered = samples.clone();
+        let mut chain = MasteringChain::new(sample_rate, channels as usize, &settings);
+        chain.coeffs.export_landing_gain_lin = coeffs.export_landing_gain_lin;
+        chain.process_interleaved(&mut rendered, channels as usize);
+        let measured = crate::engine::measure_integrated_lufs(&rendered, sample_rate, channels)
+            .expect("measure preview");
+        assert!(
+            (measured - -23.0).abs() < 0.25,
+            "expected preview near -23 LUFS export target, got {measured}"
+        );
+
+        let raw_coeffs = live_preview_coeffs(sample_rate, channels, &samples, &settings, false)
+            .expect("raw preview coeffs");
+        assert_eq!(raw_coeffs.export_landing_gain_lin, 1.0);
     }
 
     /// Feed a 1 kHz sine through a MasteringSource, send a new ChainCoeffs
