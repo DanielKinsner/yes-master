@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open, save, getCurrentWebview } from "../lib/tauri-runtime";
 import { api, onPlaybackTick, onRenderProgress } from "../lib/api";
-import { applyAdvancedWithProfileFlip } from "../lib/settings-transitions";
+import {
+  applyAdvancedWithProfileFlip,
+  applyChainDispatchOverrides,
+} from "../lib/settings-transitions";
 import type {
   AdvancedSettings,
   AnalysisResult,
@@ -197,20 +200,12 @@ export function useTrackMaster() {
   useEffect(() => {
     exportLufsPreviewRef.current = transport.exportLufsPreview;
   }, [transport.exportLufsPreview]);
+  // React-state glue around `applyChainDispatchOverrides` (Vitest-
+  // tested). Pulls volumeMatchRef + analysisMap from the hook's
+  // closure; the override rules themselves live in the pure helper.
   const withSourceLufs = useCallback(
-    (id: TrackId | null, settings: MasteringSettings): MasteringSettings => {
-      const result: MasteringSettings = {
-        ...settings,
-        volume_match: volumeMatchRef.current,
-      };
-      if (id) {
-        const sourceLufs = analysisMap[id]?.lufs_integrated;
-        if (sourceLufs !== undefined && Number.isFinite(sourceLufs)) {
-          result.source_lufs_integrated = sourceLufs;
-        }
-      }
-      return result;
-    },
+    (id: TrackId | null, settings: MasteringSettings): MasteringSettings =>
+      applyChainDispatchOverrides(settings, id, analysisMap, volumeMatchRef.current),
     [analysisMap],
   );
 

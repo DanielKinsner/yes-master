@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import type {
   AdvancedSettings,
+  AnalysisResult,
   DeliveryProfile,
   MasteringSettings,
+  TrackId,
 } from "../bindings";
 import {
   applyAdvancedWithProfileFlip,
+  applyChainDispatchOverrides,
   shouldFlipToCustomOnLoudnessPick,
   SHADOWED_ADVANCED_KEYS,
 } from "./settings-transitions";
@@ -162,6 +165,111 @@ describe("applyAdvancedWithProfileFlip (B7 — auto-flip-to-Custom)", () => {
     expect(next.eq_mid_db).toBe(3.5);
     expect(next.preset).toEqual({ kind: "tape" });
     expect(next.volume_match).toBe(prev.volume_match);
+  });
+});
+
+describe("applyChainDispatchOverrides (VM session-level + source_lufs injection)", () => {
+  function stubAnalysis(lufs: number): AnalysisResult {
+    return {
+      track_id: "track-a" as TrackId,
+      lufs_integrated: lufs,
+      lufs_short_term_max: lufs,
+      true_peak_dbtp: -1,
+      dynamic_range_lu: 8,
+      spectral_balance: { low: 0.33, mid: 0.34, high: 0.33 },
+      transient_density: 0.5,
+      stereo_width: 0.5,
+      recommended_universal: makeSettings("custom"),
+      measured_at_iso: "2026-05-15T12:00:00Z",
+      inferred_role: "album_track",
+      role_confidence: "moderate",
+      inferred_character: null,
+      character_confidence: null,
+      spectral_balance_6band: null,
+      transient_flux: 0.5,
+      stereo_correlation: 0.0,
+      dynamic_range_p95_p10_db: 8,
+      lufs_short_term_max_3s: lufs,
+      energy_density_score: 0.5,
+    };
+  }
+
+  it("overrides settings.volume_match with the transport value (VM is session-level)", () => {
+    // Pre-Phase-A4-hotfix-3, per-track settings.volume_match would
+    // persist and silently disagree with the transport checkbox after
+    // track switches. The dispatch-time override forces consistency.
+    const base = makeSettings("custom");
+    base.volume_match = false;
+    const onTrue = applyChainDispatchOverrides(base, null, {}, true);
+    const onFalse = applyChainDispatchOverrides(base, null, {}, false);
+    expect(onTrue.volume_match).toBe(true);
+    expect(onFalse.volume_match).toBe(false);
+  });
+
+  it("injects source_lufs_integrated from analysisMap when the trackId resolves", () => {
+    const base = makeSettings("custom");
+    const trackId = "track-a" as TrackId;
+    const analysisMap: Record<TrackId, AnalysisResult> = {
+      [trackId]: stubAnalysis(-13.4),
+    };
+    const result = applyChainDispatchOverrides(base, trackId, analysisMap, false);
+    expect(result.source_lufs_integrated).toBeCloseTo(-13.4, 6);
+  });
+
+  it("does NOT inject source_lufs when trackId is null", () => {
+    const base = makeSettings("custom");
+    const analysisMap: Record<TrackId, AnalysisResult> = {
+      ["track-a" as TrackId]: stubAnalysis(-13.4),
+    };
+    const result = applyChainDispatchOverrides(base, null, analysisMap, false);
+    expect(result.source_lufs_integrated ?? null).toBeNull();
+  });
+
+  it("does NOT inject source_lufs when analysisMap has no entry for the track", () => {
+    const base = makeSettings("custom");
+    const trackId = "untracked-id" as TrackId;
+    const result = applyChainDispatchOverrides(base, trackId, {}, false);
+    expect(result.source_lufs_integrated ?? null).toBeNull();
+  });
+
+  it("does NOT inject non-finite source_lufs (NaN, Infinity)", () => {
+    // Defensive: an analysis that returned non-finite shouldn't
+    // poison the chain's VM cap math downstream.
+    const base = makeSettings("custom");
+    const trackId = "track-a" as TrackId;
+    for (const bogus of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      const analysisMap: Record<TrackId, AnalysisResult> = {
+        [trackId]: stubAnalysis(bogus),
+      };
+      const result = applyChainDispatchOverrides(base, trackId, analysisMap, false);
+      expect(result.source_lufs_integrated ?? null).toBeNull();
+    }
+  });
+
+  it("preserves the rest of the settings — only volume_match + source_lufs are touched", () => {
+    // Discriminator: intensity, EQ, preset, advanced fields should
+    // all pass through unchanged. The override only writes to the
+    // two fields it documents.
+    const base = makeSettings("streaming-universal", {
+      lufs_offset_db: -12,
+      ceiling_dbtp: -1.5,
+    });
+    base.intensity = 0.7;
+    base.eq_low_db = 2.5;
+    base.preset = { kind: "tape" };
+    const trackId = "track-a" as TrackId;
+    const result = applyChainDispatchOverrides(
+      base,
+      trackId,
+      { [trackId]: stubAnalysis(-13) },
+      true,
+    );
+    expect(result.intensity).toBe(0.7);
+    expect(result.eq_low_db).toBe(2.5);
+    expect(result.preset).toEqual({ kind: "tape" });
+    expect(result.delivery_profile).toBe("streaming-universal");
+    expect(result.advanced.lufs_offset_db).toBe(-12);
+    expect(result.advanced.ceiling_dbtp).toBe(-1.5);
   });
 });
 

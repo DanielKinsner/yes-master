@@ -13,8 +13,10 @@
 
 import type {
   AdvancedSettings,
+  AnalysisResult,
   DeliveryProfile,
   MasteringSettings,
+  TrackId,
 } from "../bindings";
 
 /// Keys on `AdvancedSettings` that a non-Custom `DeliveryProfile`
@@ -68,6 +70,48 @@ export function applyAdvancedWithProfileFlip(
     advanced,
     delivery_profile: nextProfile,
   };
+}
+
+/// Wire-time overrides applied to a per-track `MasteringSettings`
+/// before it's sent to the backend audio chain. Two responsibilities:
+///
+///   1. **Volume Match is session-level, not per-track.** The VM
+///      checkbox state lives on the transport, not on individual
+///      track settings — so every chain dispatch overrides
+///      `settings.volume_match` with the current transport value
+///      (passed as `volumeMatchOverride`). Pre-fix, per-track
+///      `settings.volume_match` would persist across track switches
+///      and "lose" the VM toggle (hotfix-3 in the Phase A4 series).
+///
+///   2. **`source_lufs_integrated` injection.** When the user has
+///      analyzed a track, its integrated LUFS is in `analysisMap`.
+///      Injecting it on the dispatched settings lets the chain's
+///      VM cap (B3 fix) bound its attenuation by the limiter
+///      ceiling — see `src-tauri/src/dsp.rs` Volume Match block.
+///      `null` / non-finite values are skipped so the field stays
+///      unset (the chain's fallback path applies).
+///
+/// Pure-data helper extracted from the `withSourceLufs` closure in
+/// `useTrackMaster.ts` so the override behavior is mechanically
+/// gateable. The hook glues `volumeMatchRef.current` and
+/// `analysisMap` from React state; the rules are tested here.
+export function applyChainDispatchOverrides(
+  settings: MasteringSettings,
+  trackId: TrackId | null,
+  analysisMap: Record<TrackId, AnalysisResult>,
+  volumeMatchOverride: boolean,
+): MasteringSettings {
+  const result: MasteringSettings = {
+    ...settings,
+    volume_match: volumeMatchOverride,
+  };
+  if (trackId) {
+    const sourceLufs = analysisMap[trackId]?.lufs_integrated;
+    if (sourceLufs !== undefined && sourceLufs !== null && Number.isFinite(sourceLufs)) {
+      result.source_lufs_integrated = sourceLufs;
+    }
+  }
+  return result;
 }
 
 /// LoudnessTarget quick-select — should the dropdown pick force a
