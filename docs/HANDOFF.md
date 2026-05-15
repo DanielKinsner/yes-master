@@ -140,6 +140,20 @@ agreement going forward:
 This applies in both directions: I don't ask Dan to verify code I
 wrote, and I don't claim "it works" without the test that proves it.
 
+**Test harnesses available:**
+
+- **Rust unit + integration tests** (`cargo test --lib`,
+  `cargo test --target-dir target-tests` for full fast lane). Run
+  every commit that touches `src-tauri/`.
+- **Vitest (frontend, jsdom env)** via `npm test`. Picks up any
+  `src/**/*.test.{ts,tsx}` file. Use for pure-TS helpers, hook
+  reducers, and any logic extractable from React components. The
+  canonical first test is `src/lib/effective-settings.test.ts` —
+  mirrors a Rust test (`effective_settings_tests`) and gates the
+  frontend's shadowing helper.
+- **`npm run build`** (`tsc -b && vite build`) is a TypeScript
+  type-check + production bundle. Run on every frontend change.
+
 ## Autonomy boundaries
 
 **Allowed without asking Dan:**

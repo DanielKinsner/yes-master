@@ -30,6 +30,7 @@ import {
   DELIVERY_PROFILE_TARGET_LUFS,
 } from "./bindings";
 import type { ExportReceipt, PlaybackKindUI } from "./hooks/useTrackMaster";
+import { effectiveLoudnessTarget } from "./lib/effective-settings";
 import "./App.css";
 
 const PRESET_OPTIONS: { value: Preset; label: string; blurb: string }[] = [
@@ -1589,26 +1590,6 @@ const LOUDNESS_PROFILES: { id: string; label: string; lufs: number | null }[] = 
   { id: "cd-master", label: "CD master (-9)", lufs: -9 },
   { id: "off", label: "Off / Natural", lufs: null },
 ];
-
-/// Mirror of `MasteringSettings::effective_target_lufs` in
-/// `src-tauri/src/types.rs`. The Rust accessor is the source of truth
-/// (tested in `types.rs::effective_settings_tests`); this helper exists
-/// so the UI readout doesn't lie about what the chain is targeting when
-/// a non-Custom DeliveryProfile is shadowing `advanced.lufs_offset_db`.
-///
-/// Pre-fix, the readout displayed raw `advanced.lufs_offset_db`, which
-/// is `null` whenever the user is on a non-Custom profile and hasn't
-/// manually entered a target. The chain WAS targeting the profile's
-/// value (-14 LUFS on StreamingUniversal, -10.5 on LoudRock, etc.), but
-/// the LoudnessTarget block showed "—" — same trust failure mode as
-/// VM-in-export (B3) and the auto-flip-to-Custom (B7), read direction.
-function effectiveLoudnessTarget(settings: MasteringSettings): number | null {
-  const profileTarget = DELIVERY_PROFILE_TARGET_LUFS[settings.delivery_profile];
-  if (profileTarget !== null && profileTarget !== undefined) {
-    return profileTarget;
-  }
-  return settings.advanced.lufs_offset_db ?? null;
-}
 
 function profileIdFor(lufs: number | null): string {
   if (lufs === null) return "off";
