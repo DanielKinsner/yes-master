@@ -862,8 +862,31 @@ fn export_landing_gain_lin_for_preview(
         return Ok(1.0);
     }
 
+    // Perf: measure a middle window of the track instead of the full
+    // PCM. Full chain + BS.1770 on a 3 min stereo 48 kHz track is
+    // ~17M samples = ~200-500 ms per call. Every settings change
+    // triggers one of these (when the Export LUFS toggle is on), so
+    // knob spam queues 5-10 expensive measurements behind a seek and
+    // the audio thread hits the "audio seek reply timeout" 15 s window
+    // (Dan, observed on aggressive tweaking). An 8 s window cuts cost
+    // by ~15-20x while staying long enough for BS.1770 integrated
+    // gating to behave (multiple 400 ms blocks needed); the result
+    // sits within ~0.5 dB of full-track for normal music, which is
+    // tighter than the chain push estimate's own error budget.
+    //
+    // Caching by settings hash and async measurement on a worker
+    // thread are bigger wins but deferred — this is the smallest
+    // change that removes the audible cliff.
+    const PREVIEW_WINDOW_SECS: f32 = 8.0;
     let channels_usize = channels.max(1) as usize;
-    let mut rendered = samples.to_vec();
+    let safe_channels = channels_usize.max(1);
+    let total_frames = samples.len() / safe_channels;
+    let window_frames =
+        ((PREVIEW_WINDOW_SECS * sample_rate as f32) as usize).min(total_frames);
+    let start_frame = total_frames.saturating_sub(window_frames) / 2;
+    let start = start_frame * safe_channels;
+    let end = ((start_frame + window_frames) * safe_channels).min(samples.len());
+    let mut rendered = samples[start..end].to_vec();
     let mut chain = crate::dsp::MasteringChain::new(sample_rate, channels_usize, &render_settings);
     chain.process_interleaved(&mut rendered, channels_usize);
 

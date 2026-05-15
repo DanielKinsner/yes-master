@@ -876,28 +876,57 @@ impl ChainCoeffs {
 
         // Volume Match: estimate the chain's loudness push above the
         // source from deterministic gain stages, then attenuate by it.
-        // See the long comment block above the compressor section for the
-        // rationale and accuracy bounds.
         //
-        //   chain_push_db ≈ input_gain
-        //                 + average compressor band makeup
-        //                 + small saturation correction (~5 × drive)
-        //                 + user output trim
+        //   raw_push_db ≈ input_gain
+        //               + average compressor band makeup
+        //               + small saturation correction (~5 × drive)
+        //               + user output trim
         //
         // EQ tilt is signal-dependent (pink-noise-shaped material vs a
         // dense vocal-forward mix lands differently), so it's not in the
-        // estimate. The remaining error sits within ~1 dB of true source
-        // loudness — comfortably under the perceptual threshold for fair
-        // tone comparison.
+        // estimate. For normal settings the remaining error sits within
+        // ~1 dB of true source loudness — comfortably under the
+        // perceptual threshold for fair tone comparison.
+        //
+        // The raw estimate breaks down on extreme settings (e.g. +13 dB
+        // input + +12 dB EQ + Tape Intensity 100%): the chain wants to
+        // push ~20 dB, but the limiter caps actual chain LUFS at
+        // roughly (ceiling - typical_crest), so real push is much less.
+        // Pre-fix, VM would apply the over-estimated 20 dB attenuation
+        // and drop playback 10+ dB below source (Dan: -24.9 LUFS vs
+        // -13.4 source on aggressive Tape settings).
+        //
+        // Fix: cap the effective push at what the limiter could possibly
+        // let through. (ceiling - typical_crest) is the LUFS ceiling of
+        // the chain output; (chain_ceiling - source_lufs) is the maximum
+        // real push. Uses 6 dB as a conservative crest-factor estimate
+        // (real mastered material lands 6-12 dB peak-to-LUFS; 6 picks
+        // the dense-rock end so the cap is wide enough not to fight
+        // legitimate pushes).
         let volume_match_gain_lin = if settings.volume_match {
             let avg_makeup_db =
                 (comp_low_makeup_db + comp_mid_makeup_db + comp_high_makeup_db) / 3.0;
             let saturation_correction_db = 5.0 * saturation_amount.max(0.0);
-            let chain_push_db = input_gain_db
+            let raw_push_db = input_gain_db
                 + avg_makeup_db
                 + saturation_correction_db
                 + user_output_gain_db;
-            let attenuation_db = (-chain_push_db).clamp(-24.0, 0.0);
+            const TYPICAL_CREST_DB: f32 = 6.0;
+            let effective_push_db = if let Some(source_lufs) =
+                settings.source_lufs_integrated
+            {
+                let ceiling_dbtp = settings.effective_ceiling_dbtp();
+                let max_real_push_db =
+                    (ceiling_dbtp - TYPICAL_CREST_DB - source_lufs).max(0.0);
+                raw_push_db.min(max_real_push_db)
+            } else {
+                // No source LUFS available — fall back to raw estimate.
+                // Hits when the playback driver hasn't injected the
+                // current track's analysis yet (rare; the chain rebuilds
+                // a moment later once analysis lands).
+                raw_push_db
+            };
+            let attenuation_db = (-effective_push_db).clamp(-24.0, 0.0);
             10.0_f32.powf(attenuation_db / 20.0)
         } else {
             1.0
@@ -3181,6 +3210,71 @@ mod tests {
         s.source_lufs_integrated = Some(-19.0);
         let c = ChainCoeffs::from_settings(48_000, &s);
         assert!((c.volume_match_gain_lin - 1.0).abs() < 1e-6);
+    }
+
+    /// Regression for the "VM lands 11 dB below source on aggressive
+    /// settings" bug Dan reported on Tape preset at Intensity 100% with
+    /// +13 dB input gain and heavy EQ. The raw chain-push estimate
+    /// (input gain + comp makeup + saturation) would push 18-22 dB, but
+    /// the limiter actually caps post-chain LUFS at roughly
+    /// (ceiling - typical_crest). VM should attenuate by the REAL push
+    /// (~6 dB for source -13 LUFS / ceiling -1 dBTP), not the
+    /// over-estimated raw push.
+    ///
+    /// Asserts the effective attenuation stays bounded by what the
+    /// limiter could plausibly let through, so post-VM playback lands
+    /// near source LUFS rather than 10+ dB below it.
+    #[test]
+    fn volume_match_caps_attenuation_at_limiter_bound() {
+        let mut s = default_master_settings();
+        s.preset = Preset::Tape;
+        s.intensity = 1.0;
+        s.input_gain_db = 13.0;
+        s.volume_match = true;
+        s.source_lufs_integrated = Some(-13.0);
+        // Default ceiling -1.0 dBTP (Custom profile + None advanced).
+        // max_real_push = ceiling - typical_crest - source
+        //               = -1 - 6 - (-13) = 6 dB
+        // So VM should attenuate AT MOST 6 dB, not the raw 18-22 dB
+        // the chain-stage sum would produce.
+        let c = ChainCoeffs::from_settings(48_000, &s);
+        let attenuation_db = 20.0 * c.volume_match_gain_lin.log10();
+        assert!(
+            attenuation_db >= -8.0,
+            "VM cap should prevent over-attenuation on extreme settings — \
+             max real push given (ceiling -1, source -13) is 6 dB, plus a \
+             little numerical slack; got {:.2} dB attenuation (gain = {})",
+            attenuation_db,
+            c.volume_match_gain_lin
+        );
+    }
+
+    /// VM cap requires `source_lufs_integrated` to compute the
+    /// limiter-bound max push. When source LUFS isn't injected (rare:
+    /// the playback driver populates it from the current track's
+    /// analysis), VM falls back to the raw chain-push estimate. Verifies
+    /// the same extreme settings produce the OLD (unsafely-large)
+    /// attenuation when source LUFS is None — proves the cap fires
+    /// only when the data needed to compute it is present.
+    #[test]
+    fn volume_match_falls_back_to_raw_push_when_source_lufs_missing() {
+        let mut s = default_master_settings();
+        s.preset = Preset::Tape;
+        s.intensity = 1.0;
+        s.input_gain_db = 13.0;
+        s.volume_match = true;
+        s.source_lufs_integrated = None; // <- explicit
+        let c = ChainCoeffs::from_settings(48_000, &s);
+        let attenuation_db = 20.0 * c.volume_match_gain_lin.log10();
+        // Raw push at these settings is well over 10 dB — no cap means
+        // VM applies it. Asserts the fallback branch is wired.
+        assert!(
+            attenuation_db <= -10.0,
+            "Without source_lufs_integrated the cap can't fire and VM \
+             should apply the raw chain-push estimate (>= 10 dB on these \
+             aggressive settings); got {:.2} dB",
+            attenuation_db
+        );
     }
 
     // ========================================================================
