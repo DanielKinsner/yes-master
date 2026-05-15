@@ -2,17 +2,18 @@
 
 This document is the entry point for any Claude session — interactive or scheduled — picking up work on this repo. Read this first, then start the loop below.
 
-> **Current snapshot (2026-05-15, end of mechanical-gates session).** 20 commits today after the Phase A4 morning handoff, every one mechanically gated. The entire B1–B7 audit queue resolved: B1 (album energy_density), B2 (INT scale asymmetry), B3 (VM in export), B4 (ISO_PLACEHOLDER timestamps), B5 (album-simple LUFS landing), B6 (refuse-upward → ceiling-bounded LUFS landing across all three render paths), B7 (auto-flip to Custom on shadowed-field edit). Four perf concerns also closed: 8 s preview window (per-call cost), VM cap on aggressive settings (over-attenuation), coalescer + playback barriers (queue depth + stale-UpdateChain-across-track-switch), and shared landing-gain cache (zero cost on repeat settings). Decode-stall fix: three-tier PCM resolution with off-thread prewarm cache eliminates the 1–2 s freeze on first Mastered click. Vitest harness scaffolded with three pure-helper modules in `src/lib/` (effective-settings, settings-transitions) covering both read- and write-direction settings transitions. Last commit before this snapshot: `9b6ab29`. Full snapshot detail at `docs/checkpoints/checkpoint-2026-05-15-end-of-mechanical-gates-session.md`.
+> **Current snapshot (2026-05-15 evening).** 22 commits today after the Phase A4 morning handoff, every one mechanically gated. Full B1–B7 audit queue resolved, four-layer perf defense for live preview (8 s window + VM cap + coalescer with playback barriers + landing-gain cache), three-tier PCM resolution (local cache → off-thread prewarm cache with target guard → fresh decode) eliminates the 1-2 s decode stall, shared ceiling-bounded landing helper replaces three drift-prone copies, Vitest scaffolded with four `src/lib/` pure-helper modules covering effective-settings / settings-transitions / history-stack. Most recent commit (`74d704f`) addresses four Codex review items: auto-prewarm on import/restore/openProject paths, stale-prewarm-evicts-newer target guard, source_lufs_integrated doc/test-name drift, and LoudnessTarget display extracted to a pure helper. Full snapshot detail in `docs/HANDOFF_2026-05-15_evening.md` (read this — it's the entry point for the next session).
 >
-> **Test totals:** `cargo test --lib` **140/140** (was 81 at session start, +59); `cargo test --target-dir target-tests` full fast lane pass; Vitest **21/21** (was 0); `npm run build` clean.
+> **Test totals:** `cargo test --lib` **144/144** (was 81 at session start, +63); `cargo test --target-dir target-tests` full fast lane pass; **Vitest 43/43** across 3 modules (was 0); `npm run build` clean.
 >
 > **What's open / next.** The autonomous queue is effectively empty of items that don't need Dan's input. Three plausible directions: (1) Dan's listening verification batch — five items queued in the checkpoint, would benefit from a focused listening hour; (2) async live-preview measurement on a worker thread — paused this session pending Dan's input because the cost-benefit shifted with the 4-layer perf defense in place; (3) a new product surface (Reference Track UX, Album Master gaps) — needs Dan's nomination.
 >
 > **Codex owns the UI lane** for the moment. Do not edit `src/App.tsx`, `src/App.css`, `src/components/RightRail.tsx`, or `src/components/AlbumPanel.tsx` from the Claude side unless a UI change strictly forces it AND you've pulled latest. App.tsx WAS touched this session for the B7 / LoudnessTarget fixes; coordinate before any further App.tsx work.
 >
-> **New pattern: `src/lib/` pure helpers + co-located Vitest.** Three modules so far:
-> - `src/lib/effective-settings.ts` (+ test) — read-direction shadowing helpers.
+> **New pattern: `src/lib/` pure helpers + co-located Vitest.** Four modules so far:
+> - `src/lib/effective-settings.ts` (+ test) — read-direction shadowing helpers + LoudnessTarget display.
 > - `src/lib/settings-transitions.ts` (+ test) — write-direction transitions: B7 auto-flip, LoudnessTarget force-flip, VM session-level + source_lufs injection.
+> - `src/lib/history-stack.ts` (+ test) — undo/redo stack arithmetic, generic over T.
 >
 > Future frontend slices: extract decision logic into `src/lib/*`, write Vitest cases next to it, glue from the hook.
 >
@@ -22,10 +23,12 @@ This document is the entry point for any Claude session — interactive or sched
 
 1. `CLAUDE.md` — repo rules, non-negotiables, working style, fast/slow test lanes.
 2. `docs/PRODUCT.md` — product canon and source of truth (now titled **YES Master Product Canon**). Do not modify without Dan's explicit ask.
-3. **`docs/HANDOFF_2026-05-15_session.md`** — the latest dated handoff. Carries Phase A4 ship + 3 VM hotfix summary, listening-verification checklist, file-ownership constraints with Codex, and the open queue.
-4. `docs/HANDOFF_2026-05-14_session.md` — yesterday's handoff (Phase A4 plan as written before it was executed; useful for understanding the original design intent vs what shipped).
-5. `docs/PRESET_REFERENCE_ANALYSIS_2026-05-14.md` — the calibration analysis that drove Phase A4. Conservative Target Table (lines 252–259) is what landed.
-6. `docs/checkpoints/checkpoint-2026-05-14-pre-preset-retune.md` — the review checkpoint that anchored Phase A4. The two ordering refinements (P4 first as failing test; ship Punch-vs-Loud crest assertion compressor-only) were both honored.
+3. **`docs/HANDOFF_2026-05-15_evening.md`** — the latest dated handoff. Carries the full 22-commit session inventory, the four-layer perf defense architecture, the decode-stall fix's three-tier cache, the trust-pattern fix consolidation, the `src/lib/` pure-helper pattern, the four Codex review items addressed in `74d704f`, and the deferred follow-up list.
+4. `docs/HANDOFF_2026-05-15_session.md` — the morning handoff (Phase A4 ship + 3 VM hotfixes). Useful for back-context on what was in flight at the start of today.
+5. `docs/checkpoints/checkpoint-2026-05-15-end-of-mechanical-gates-session.md` — session inventory written before the Codex review items landed. Captures architectural state, file-size growth, trust-pattern fix consolidation.
+6. `docs/checkpoints/checkpoint-2026-05-15-post-phase-a4-vm-hotfixes.md` — morning audit checkpoint that opened the B1–B7 queue.
+7. `docs/PRESET_REFERENCE_ANALYSIS_2026-05-14.md` — the calibration analysis that drove Phase A4. Conservative Target Table (lines 252–259) is what landed.
+8. `docs/checkpoints/checkpoint-2026-05-14-pre-preset-retune.md` — the review checkpoint that anchored Phase A4.
 7. `docs/IMPLEMENTATION_PLAN.md` — phase map and gates (back-context; mostly closed).
 8. `docs/progress.md` — append-only slice log; tail entry is "where we are now."
 9. `docs/CLAUDE_WORK_LOOP.md` — work loop format.
