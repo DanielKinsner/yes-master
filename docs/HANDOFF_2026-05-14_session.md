@@ -1,0 +1,235 @@
+# Handoff — YES Master — 2026-05-14 evening session
+
+> **One-paragraph snapshot.** The app was renamed Album Mastering Studio → **YES Master** (HEAD `6a441d9`). All seven UI restyle slices and the post-restyle UX restructure landed earlier in the day; Codex then did a console-layout pass (`a3fcc25`) that locks the Track Master surface to a 5-row CSS grid above `1280×820`, adds a real-PCM Original-playback path with matched metering + FFT spectrum, and removes the Levels + Stereo Width panels from the deck meters column. The **next workstream is preset character retuning** per `docs/PRESET_REFERENCE_ANALYSIS_2026-05-14.md` — the missing piece that makes presets feel like creative directions instead of tonal cousins. Everything else is queued behind it.
+
+## Read first (in order)
+
+1. `CLAUDE.md` — repo non-negotiables + the fast/slow test-lane workflow added in audit slice 6.
+2. `docs/PRODUCT.md` — product canon. Title is now **YES Master** (renamed). Do not modify without explicit ask.
+3. **This file** (`docs/HANDOFF_2026-05-14_session.md`).
+4. `docs/PRESET_REFERENCE_ANALYSIS_2026-05-14.md` — the calibration analysis driving the next workstream. Read top-to-bottom; the Suggested Claude Task List at the bottom is what we're executing.
+5. `docs/UI_LAYOUT_REVISION_1600x940.md` — the closed UI spec. **Layout work is Codex's lane this session**; only read if a preset change forces a layout edit.
+6. Tail entry of `docs/progress.md` for the latest slice-level state.
+
+Do not read by default: `docs/reference/`, `docs/research/`. They're context for the original port, not active work.
+
+## Current branch state
+
+- **HEAD**: `6a441d9 Rename app to YES Master`
+- **Remote**: pushed to `origin/master`
+- **Local tree**: clean at session-end
+- **Tests** (from session memory): `cargo test --lib` 80/80; `cargo test` 138/138 with the real-fixture tests skipping by default (set `AMS_RUN_REAL_FIXTURE=1` for the slow lane). `npm run build` clean. After Codex's `a3fcc25` audio.rs changes (Original-playback `MeteredPcmSource` + decode cache), rerun `cargo test --lib` as a first move next session to confirm nothing regressed — the integration tests for `MasteringSource` paths still apply but a new constructor signature got added.
+
+### What just landed (this session)
+
+| Commit | What |
+|---|---|
+| `e803e83` `fbefe54` `e1e71ad` `7447435` `cf3fcf8` `a368d02` | UI layout revision L1–L5 + L4b (live FFT spectrum). The whole `UI_LAYOUT_REVISION_1600x940.md` spec is shipped. |
+| `47c8bb0` | Codex audit slice 6 — `cargo test` fast/slow lane split via `AMS_RUN_REAL_FIXTURE` env var. |
+| `4f1e53d` | In-app zoom keybindings (`Ctrl+=` / `Ctrl+-` / `Ctrl+0`) so the canvas can render larger physically without changing Windows scaling. |
+| `cc360e4` | `docs/PRESET_REFERENCE_ANALYSIS_2026-05-14.md` tracked. |
+| `a3fcc25` | **Codex** — console-mode layout pass. Adds `@media (min-width: 1280px) and (min-height: 820px)` CSS grid that locks the workspace to the viewport (no main-canvas scroll, rail-only scroll). New `MeteredPcmSource` for Original playback so peak / LUFS / spectrum populate during A/B (not just Mastered). `MasterOutPanel` keeps the deck meters column; `LevelsPanel` + `StereoWidthGauge` are `display: none` in console mode. |
+| `6a441d9` | **Codex** — rename Album Mastering Studio → YES Master in `productName`, window title, brand name, README, PRODUCT.md, etc. Tauri `identifier` stays `com.albummasteringstudio.app` (changing it would break installs); the Cargo package name and repo folder also stay for the same reason. |
+
+### Codex's parallel lane
+
+Codex owns the **UI layout / CSS** files for the foreseeable future. If you need to touch them for a DSP-driven reason, **pull first** and coordinate with Dan to avoid clobbering Codex's in-flight work.
+
+Files Codex is touching:
+
+- `src/App.tsx`
+- `src/App.css`
+- `src/components/RightRail.tsx`
+- `src/components/AlbumPanel.tsx` (likely; Album mode UI polish is still open)
+
+Files **safe to edit** for this preset workstream:
+
+- `src-tauri/src/dsp.rs` — preset calibration table, `ChainCoeffs::from_settings`, MasteringChain compressor wiring
+- `src-tauri/src/types.rs` — only if adding new preset-compressor fields to `MasteringSettings::advanced`
+- `src-tauri/tests/preset_signature.rs` — the existing per-preset character regression test (extend with the new distinctness assertions)
+- `src-tauri/tests/preset_loudness_balance.rs` — already passes; revisit after retune to confirm spread stays <4 LU
+- `src-tauri/tests/contracts.rs` — only if adding a new preset-distinctness contract test
+- `src/bindings.ts` — only if new advanced fields need TS mirroring
+
+## Primary workstream — Preset character retuning
+
+### Why this is next
+
+Per `docs/PRESET_REFERENCE_ANALYSIS_2026-05-14.md` (lines 104–122): the Rust preset table already declares fields like `compressor_threshold_dbfs`, `compressor_ratio`, `transient_punch`, and `target_lufs`, but **most of them are captured and not applied** in the live chain. The user-audible result is that presets feel like minor EQ variations instead of distinct creative directions. The analysis doc compared the app's presets against real online-mastered versions of Dan's track and produced concrete starting values for an 8-preset retune (see lines 252–259) along with a paired dynamics map (lines 265–274).
+
+The product framing (lines 213–215) is the lock:
+
+> Presets are not just safe technical defaults. They are creative direction buttons.
+
+Preset retuning is the slice that delivers on that promise. It is **higher impact than the remaining Codex audit findings** because it changes what every user hears every time they switch presets, not just first-click latency on a long file.
+
+### Required reading inside the analysis doc
+
+- **Lines 104–122** — current implementation gap (which fields are captured but not applied)
+- **Lines 252–259** — Conservative Target Table (8 presets × 8 fields, the starting values to land on)
+- **Lines 265–274** — Dynamics Targets per preset (threshold/ratio/attack/release direction)
+- **Lines 322–349** — Suggested Claude Task List (the six slices)
+- **Lines 365–371** — Good Enough Target (acceptance phrasing)
+- **Lines 277–321** — Inferred Preset Notes for Spatial / Warmth / Punch / Loud (they weren't in the measured set; these are the design intents)
+
+### Implementation plan
+
+The work breaks into six sub-slices (P1–P6) that map 1-to-1 onto the analysis doc's task list. Ship each as its own commit on master (audio-thread changes; the autonomy rules still allow direct-to-master, per the AMS autonomy memory).
+
+#### P1 — Wire preset compressor into the live chain
+
+Files: `src-tauri/src/dsp.rs`, possibly `src-tauri/src/types.rs`.
+
+Inspect the existing `PresetCalibration` table: does it already carry `compressor_threshold_dbfs` and `compressor_ratio` per preset, or are those user-overridable advanced fields only? Decide on the data shape:
+
+- **Option A**: extend `PresetCalibration` with `compressor_threshold_dbfs` / `compressor_ratio` / attack / release.
+- **Option B**: keep one user-side advanced field, drive it from the preset at chain-build time.
+
+Whichever shape lands, `ChainCoeffs::from_settings` must apply the preset's compressor identity by default (so a user who never touches Advanced still hears the preset's dynamics signature). The user's `compression_density` should scale the preset's base, not replace it (per analysis doc line 185: "Treat preset compressor settings as the base. Let user `compression_density` scale the base rather than replace it.").
+
+#### P2 — Define preset/user interaction model
+
+Document and implement: at default `compression_density`, preset behavior is fully applied. At lower densities, scale toward bypass. At higher densities, push slightly past the preset baseline (but bounded by safety). Pure bypass only when the user explicitly disables compression (analysis doc line 187).
+
+Same rule for EQ: user EQ sliders **add to** preset EQ (already the case for `eq_low_db` etc. — preserve this).
+
+Same rule for width: user `width` override replaces preset width when set; otherwise scale.
+
+#### P3 — Retune the calibration table
+
+Use the conservative-target values from `PRESET_REFERENCE_ANALYSIS_2026-05-14.md` lines 252–259 as starting points. The Codex source numbers currently in `dsp.rs::PRESETS` should be replaced with these, NOT the more aggressive measured-reference values (lines 148–153). The conservative set keeps the presets broadly usable while still making each immediately legible.
+
+Specific values to target (table at line 252):
+
+```
+                  low_shelf low_mid presence  air saturation width gain compression
+Universal           +0.2    -0.1    +0.0     +1.1   0.03    1.04  +1.2 light transparent
+Clarity             +0.2    -1.0    -0.8     +1.7   0.025   1.02  +0.8 light, transient
+Tape                -0.2    +0.3    -1.4     +2.0   0.10    0.99  +1.5 glue, crest reduction
+Spatial             +0.1    -0.8    -0.3     +1.3   0.04    1.16  +1.0 light, clean sides
+Oomph               +2.4    -3.0    -2.6     -0.8   0.045   0.95  +1.8 medium, low/mid control
+Warmth              +0.8    +0.7    -1.8     -0.8   0.08    0.98  +1.0 soft glue
+Punch               +0.8    -1.8    +1.6     +0.8   0.035   1.04  +1.6 faster attack/release
+Loud                +0.4    -1.6    +1.8     +1.2   0.055   1.03  +2.5 strongest density/limiting
+```
+
+The dynamics direction per preset is at line 265 — read in tandem with this table.
+
+#### P4 — Preset-distinctness contract test
+
+New file: `src-tauri/tests/preset_distinctness.rs` (or extend `preset_signature.rs`).
+
+Render the same source (synthetic or the existing test fixture) through each preset and assert:
+
+- **Universal vs Clarity**: 1.5–4 kHz band of Clarity is at least 1.0 dB below Universal's; 8–16 kHz band is at least 0.8 dB above.
+- **Universal vs Oomph**: 20–60 Hz band of Oomph is at least +1.8 dB above Universal's; 250 Hz–2 kHz region is at least 2.0 dB below.
+- **Universal vs Tape**: crest factor (true peak − integrated LUFS) of Tape is at least 0.8 dB lower than Universal's.
+- **Punch vs Loud**: Punch's crest factor is at least 0.4 dB higher than Loud's (Punch preserves more transient movement).
+- All 8 presets share their integrated LUFS within 4 LU at default intensity (this is the existing `preset_loudness_balance.rs` assertion — verify it still passes after retune).
+
+If any assertion fails, **adjust the calibration table, do not weaken the assertion** — the test is the spec.
+
+#### P5 — Render the private fixture through the app + rerun the band-delta analysis
+
+Use the private fixtures in `tests for presets/` (gitignored; analysis doc line 5 references this folder). Render `It's a coat-original-test.wav` through each retuned preset via the app's render path, then run the same band-delta analysis the doc used. Compare the resulting deltas against the acceptance check at lines 191–198:
+
+| Preset | Expected App Result |
+|---|---|
+| Universal | mostly neutral, 8–16k about +0.8 to +1.2 dB after match |
+| Clarity | mids clearly reduced, air clearly lifted, not much louder than Universal |
+| Oomph | strongest tonal contrast; sub/low lift and mid scoop obvious within 5 seconds |
+| Tape | crest factor reduced more than Universal/Clarity; quiet sections feel denser |
+
+If the analysis script isn't checked in, ask Dan or work from the band definitions in the analysis doc (line 32) and the Rust `engine::measure_integrated_lufs_at_path` + Goertzel helpers in the existing test files.
+
+#### P6 — Safety checks
+
+New contract test or extension to `preset_distinctness.rs`:
+
+- For each factory preset at default intensity (0.5), render a known-loud source (e.g. the 1 kHz sine fixture or pink noise) through the chain and assert the rendered WAV's measured true peak is ≤ −0.1 dBTP (no clipping).
+- Loud / Punch / Oomph / Tape cannot rely on EQ + input gain alone to pass — the compressor / limiter must engage. Assert the rendered peak is below the user's effective ceiling.
+
+Reference: analysis doc lines 220–231 for the safety principle.
+
+### Acceptance check
+
+After all six slices ship, the workstream is done when **all of these hold simultaneously**:
+
+1. `cargo test --lib`: 80/80 (or N/N — count may grow from P4/P6).
+2. `cargo test`: 138+/138+ (fast lane) with the new preset-distinctness contract test passing.
+3. `AMS_RUN_REAL_FIXTURE=1 cargo test` (slow lane) still passes if a fixture is present.
+4. `npm run build`: clean.
+5. Listening pass on Dan's actual track (`It's a coat`) — Universal, Clarity, Oomph, Tape are immediately distinguishable in a 5-second A/B with Volume Match on. Preset differences survive volume matching. Oomph and Tape feel dynamically different, not just tonally different (analysis doc lines 365–371).
+
+### Constraints
+
+- **Codex owns UI**: do not edit `src/App.tsx`, `src/App.css`, `src/components/RightRail.tsx`, or `src/components/AlbumPanel.tsx` unless a preset change forces a UI surface update AND you've pulled latest first.
+- **Dev binary lock**: if Dan has `npm run tauri dev` running, the standard `cargo test` build can fail with "cannot remove file `target/debug/album-mastering-studio.exe`" (the executable name hasn't been renamed even though the app is now YES Master). Workaround: `cargo test --lib` (no integration tests) or `cargo test --tests --target-dir target-tests` for a scratch build dir. Used twice this session, works reliably.
+- **`MasteringSource::new` signature**: gained a 9th argument (`spectrum_ring: Arc<SpectrumRing>`) in L4b. Codex's `a3fcc25` introduced a sibling `MeteredPcmSource` for Original playback. Any new audio-thread integration test needs both source types.
+- **Preset calibration is the source of truth**: do not retune via the user-facing advanced sliders. Update `PresetCalibration` values directly so the audible identity follows the preset, not the user override.
+
+## Open queue (NOT for this session)
+
+Listed in priority order. Each is a self-contained slice; pick up in this order once preset retuning is closed.
+
+1. **Codex audit slice 7** — first-Mastered-click decode stall (~1–2 s freeze on long WAVs). Last open audit finding. With Codex's `a3fcc25` introducing `MeteredPcmSource` + the decode cache for Original playback, the architecture for this slice is now mostly there — `handle_play_master` already uses the decode cache. The remaining work: kick `decode_full` on the audio thread when a track is selected (not on first play) so the cache is warm before the user clicks Mastered.
+
+2. **Album-master export receipt** — Slice 1 left `RenderJob.measurements = None` for the album path. Album exports still surface source-analysis numbers, not rendered. The fix needs a multi-segment EbuR128 collector that spans the per-track segments the album writer emits, then publishes the aggregate on the returned `RenderJob`.
+
+3. **Album-mode UI polish** — per-transition Gap-seconds spinner, drag-to-reorder inside the album panel, "Album: –1.05 LUFS / ×0.94 intensity" workspace badge per track. Codex's lane (UI).
+
+4. **"New project" menu action** — demoted from Codex audit P1 #2 (was: auto-restore → make clean-boot default). The agreed approach was to leave auto-restore in place and add a Tools-menu "New project (close current)" action. Small slice, ~30 min.
+
+5. **1920×1080 canvas decision** — Dan was contemplating bumping the Tauri window default from `1600×940` to `1920×1080` (`src-tauri/tauri.conf.json` lines 17–18 still say 1600×940 even after the YES Master rename). Codex's console mode already sets a `1700×960` breakpoint for the "wider console" tier; bumping the default to 1920×1080 puts the design canvas firmly inside that tier. Wait for Dan's explicit go-ahead before changing this — it's a product/UX decision, not a routine config bump.
+
+6. **Preset PNG optimization** — each preset PNG is 1.0–1.8 MB. Converting to WebP / AVIF could cut ~70% off the ~13 MB bundle weight. Cosmetic, low priority.
+
+7. **Top-bar version string + user avatar** — mockup at `docs/UI_LAYOUT_REVISION_1600x940.md` shows "YES Master v1.2.0" + an "SM" avatar circle. Cosmetic; skipped in L5. Codex's lane.
+
+8. **Tone-shape per-knob frequency dropdowns** — mockup shows "120 Hz / 2.5 kHz / 10.0 kHz" under each Low/Mid/High knob. DSP frequencies are currently fixed at 200/400/1500/6000 Hz; the UI labels could clarify this without enabling user-adjustable frequencies (the Visual EQ comment already documents why frequency drag is deferred — DSP doesn't support variable band frequency yet).
+
+## Memory carried forward
+
+These are durable preferences from the AMS autonomy memory and the session's accumulated feedback. They apply to all sessions, not just this workstream.
+
+- **High autonomy** on this repo: install deps, run tests, commit + push to master when work is verified. Do NOT merge feature branches to master without explicit ask.
+- **No check-in chatter**: when Dan says "dive in" / "keep going" / "go", chain commits. Don't `AskUserQuestion` between every slice.
+- **Hold evidence under pressure**: if the test or the data backs the call, hold it. Don't capitulate to social pressure.
+- **No under-building**: Dan needs features day-one. Do not v1-then-v2-stage when the spec is clear.
+- **Lock in when shipping**: drop strategy docs, estimates, "this is hard" language when Dan signals shipping pressure.
+- **Listening calls are Dan's**: sound-quality decisions only happen when Dan signals "I listened to it." Don't fake them. This applies hard to preset retuning P5/P6 — the numeric assertions are the gate; the final "does this feel right" call is Dan's listening pass.
+- **`PRODUCT.md` is canon**: read-only without explicit ask. The YES Master rename is already in there; do not modify further without Dan's go-ahead.
+
+## Commit shape
+
+Match the established pattern from this session's commits (see `git log --oneline -20`):
+
+```
+<Slice tag>: <slice name>
+
+<one-paragraph what + why>
+
+- <bullet 1>
+- <bullet 2>
+...
+
+Verification:
+- cargo test --lib: N/N pass
+- cargo test: M/M pass (or skipped — note env var if relevant)
+- npm run build: clean / untouched
+- AMS_RUN_REAL_FIXTURE=1 cargo test: passing (if the slice touches anything safety-critical)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+```
+
+Subject under 70 characters. Push to `origin/master` after every passing slice.
+
+## When to stop and ask
+
+- The slice requires a product decision `docs/PRODUCT.md` doesn't answer (e.g., "should Universal at intensity 0 be true-bypass or still apply +1.2 dB push?").
+- Two consecutive slices fail their own contract tests.
+- The retune's listening verification step (P5) needs Dan's ears.
+- You would need to touch `src/App.tsx` / `src/App.css` / `src/components/RightRail.tsx` for any reason — coordinate with Dan first to avoid clobbering Codex's in-flight work.
+- The preset distinctness contract test (P4) reveals a structural DSP issue rather than a calibration miss (e.g., a band the chain doesn't actually have).
+
+When you stop, append a `progress.md` entry that clearly states the blocker — same convention as every other session-end.

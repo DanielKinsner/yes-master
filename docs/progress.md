@@ -3190,3 +3190,82 @@ click hits a warm entry. Streaming decode is a separate follow-up.
 That closes the Codex audit's "P1 first Mastered playback can still
 block on full decode" finding.
 
+
+
+## 2026-05-14 (evening) — Session handoff: YES Master rename + preset workstream queued
+
+Session end. The day's work landed all of UI restyle slices 1–6,
+4b, the post-restyle UX restructure (`0cdcb6b`), the in-app zoom
+keybindings (`4f1e53d`), Codex audit slice 6 (`47c8bb0`), and the
+six UI layout revision sub-slices L1–L5 + L4b (`e803e83` through
+`a368d02`). Codex then pushed two more commits while a new
+workstream was being scoped:
+
+- `a3fcc25` — Refine console layout and meter Original playback.
+  Adds an `@media (min-width: 1280px) and (min-height: 820px)`
+  CSS-grid block that locks Track Master to a fixed 5-row console
+  (no main-canvas scroll, rail-only scroll), removes `LevelsPanel`
+  and `StereoWidthGauge` from the deck meters column, and
+  introduces a `MeteredPcmSource` so Original playback also
+  populates peak / LUFS / FFT spectrum atomics — A/B switching
+  now meters like-with-like.
+- `6a441d9` — Rename app to **YES Master** across `productName`,
+  window title, brand string in TopHeader, README, and PRODUCT.md.
+  Tauri identifier and Cargo package name stay
+  `com.albummasteringstudio.app` / `album-mastering-studio`
+  (changing those would break installs and target paths).
+
+What changed in this session's docs:
+
+- `docs/HANDOFF_2026-05-14_session.md` — new dated handoff (this
+  session's primary deliverable). Carries the full preset-retuning
+  workstream plan (P1–P6 mapped to
+  `PRESET_REFERENCE_ANALYSIS_2026-05-14.md`'s task list), file-
+  ownership constraints with Codex's UI lane, acceptance criteria,
+  and the open queue (Codex audit slice 7, album-master export
+  receipt, album-mode UI polish, "New project" Tools action,
+  1920×1080 canvas decision, preset PNG optimization, top-bar
+  parity, tone-shape per-knob freq labels).
+- `docs/HANDOFF.md` — rolling pointer updated to YES Master,
+  pointing at the new dated handoff. Verification commands
+  section now includes the fast/slow test-lane env-var workflow
+  + the dev-binary lock workaround (`cargo test --lib` or
+  `--target-dir target-tests`).
+- This entry.
+
+Verification:
+
+- `git log -3 --oneline`: shows `6a441d9` at HEAD with `a3fcc25`
+  and `a368d02` beneath.
+- `git status`: clean before the handoff docs were written.
+- No code touched this session; tests not rerun (last green count
+  carries forward: `cargo test --lib` 80/80, `cargo test` 138/138
+  fast lane).
+
+Real-audio fixture used: None.
+
+What failed or remains partial:
+
+- 1920×1080 canvas decision: Dan flagged he was leaning toward
+  bumping the Tauri window default from 1600×940 → 1920×1080.
+  Not yet in any commit. `src-tauri/tauri.conf.json:17-18` still
+  reads 1600×940. Codex's console-mode CSS has a `1700×960`
+  breakpoint that would pick up the new size if Dan bumps it.
+  Waiting on Dan's explicit go-ahead before the next session
+  changes this.
+- Codex's `a3fcc25` audio.rs changes added a new `MeteredPcmSource`
+  type and updated `MasteringSource::new` signature flows. The
+  per-test integration tests in `src-tauri/tests/contracts.rs`
+  should still pass (Codex would not have pushed otherwise), but
+  the next session should run `cargo test --lib` as a first move
+  to confirm nothing regressed under the locally-unverified
+  Codex push.
+
+Next recommended slice: **Preset character retuning P1** — wire
+preset-specific compressor threshold and ratio into
+`ChainCoeffs::from_settings`. See
+`docs/HANDOFF_2026-05-14_session.md` for the full P1–P6 plan and
+`docs/PRESET_REFERENCE_ANALYSIS_2026-05-14.md` for the
+calibration target table + acceptance check.
+
+

@@ -1,16 +1,24 @@
-# Handoff — Album Mastering Studio (Claude Build)
+# Handoff — YES Master (Claude Build)
 
 This document is the entry point for any Claude session — interactive or scheduled — picking up work on this repo. Read this first, then start the loop below.
 
-> **Current snapshot:** Phase A1–A5 + Phase B Steps 1–7 + Volume Match LUFS fix + Codex audit slices 1–3, 6 + Phase B+ Step 8 validation suite (7 tests) + the full UI restyle (slices 1–6, 4b) + the post-restyle UX restructure + the Ctrl+= / Ctrl+- in-app zoom keybindings are all done and on master. **HEAD is the latest Codex-audit-slice-6 commit** (check `git log -1`). Test workflow now has two lanes: `cargo test` is the daily fast path (~25-50 s, real-fixture tests skip with an advisory); `AMS_RUN_REAL_FIXTURE=1 cargo test` is the slow lane (~5 min, runs the real-audio metering snapshot — required before merging changes that touch the DSP chain or audio-output byte-identity surface). See `CLAUDE.md` "Test workflow — fast / slow lanes" section. Tests green either lane: 138/138 (80 lib + 40 contracts + 2 album_render + 6 step-8 test binaries; +1 ignored debug helper). **Next unfinished workstream is Codex audit slice 7 — background decode for first Mastered click latency**: kick `decode_full` on track-select so the first Mastered click hits a warm cache entry rather than blocking ~1-2 s for the WAV decode. Closes the audit's "P1 first Mastered playback can still block on full decode" finding. Further UX iteration waits on Dan's next listening / usage pass.  Major capabilities now live: live BS.1770-4 momentary + integrated LUFS metering, 4-band EQ chain (200 / 400 / 1500 / 6000 Hz) with full Codex preset calibration, delivery profile shadows (8 profiles), TPDF dither in int outputs, 6-band FFT spectral analysis + transient flux + stereo correlation + dynamic-range P95-P10 + true 3 s short-term LUFS max + energy-density composite, Album Master mode (4 named arcs + Custom, position-aware character inference, per-character LUFS pull + per-character EQ/width/warmth/intensity bias), **proper LUFS-matched Volume Match A/B** (source - target attenuation, not just "undo input gain").  Older snapshots remain authoritative for the pre-A1 back-context: `docs/HANDOFF_2026-05-13_session.md`, `docs/HANDOFF_2026-05-12_night.md`, etc.
+> **Current snapshot (2026-05-14 evening).** App renamed Album Mastering Studio → **YES Master** at HEAD `6a441d9`. All seven UI restyle slices + the post-restyle UX restructure shipped earlier in the day; Codex then did a console-layout pass (`a3fcc25`) that locks Track Master to a 5-row CSS grid above 1280×820, adds a real-PCM `MeteredPcmSource` for Original playback so peak / LUFS / FFT spectrum populate during A/B (not just Mastered), and removes the Levels + Stereo Width panels from the deck meters column. Tests green: `cargo test --lib` 80/80, `cargo test` 138/138 fast lane (`AMS_RUN_REAL_FIXTURE=1` for the slow lane). `npm run build` clean.
+>
+> **Next workstream — preset character retuning.** Driven by `docs/PRESET_REFERENCE_ANALYSIS_2026-05-14.md`, which compared the app's presets against real online-mastered references and found that compressor fields like `compressor_threshold_dbfs` / `compressor_ratio` are captured per preset but **not applied** in the live chain — so presets feel like minor EQ variations instead of distinct creative directions. Six sub-slices (P1–P6) are documented in `docs/HANDOFF_2026-05-14_session.md` — read that doc next.
+>
+> **Codex owns the UI lane** for the moment. Do not edit `src/App.tsx`, `src/App.css`, `src/components/RightRail.tsx`, or `src/components/AlbumPanel.tsx` from the Claude side unless a preset change strictly forces it AND you've pulled latest. Preset retuning lives in `src-tauri/src/dsp.rs` + `src-tauri/tests/preset_*.rs`; safe to ship there.
+>
+> Major capabilities already live: realtime BS.1770-4 momentary + integrated LUFS metering on both Original and Mastered playback, 4-band EQ chain (200 / 400 / 1500 / 6000 Hz) with Codex preset calibration baseline, 8 delivery profile shadows, TPDF dither at integer output, 6-band FFT spectral analysis + transient flux + stereo correlation + dynamic-range P95-P10 + 3 s short-term LUFS max + energy-density composite, Album Master (4 named arcs + Custom, position-aware character inference, per-character bias), proper LUFS-matched Volume Match A/B, **live FFT spectrum** under the EQ panel (audio-thread `rustfft` → atomic ring → snapshot tick → React render). Older session snapshots remain authoritative for back-context: `docs/HANDOFF_2026-05-14_session.md` (newest), `docs/HANDOFF_2026-05-13_session.md`, `docs/HANDOFF_2026-05-12_night.md`, etc.
 
 ## Read first (in order)
 
-1. `CLAUDE.md` — repo rules, non-negotiables, working style.
-2. `docs/PRODUCT.md` — product canon and source of truth. Do not modify without Dan's explicit ask.
-3. `docs/IMPLEMENTATION_PLAN.md` — phase map and gates.
-4. `docs/progress.md` — current state; the last entry's "Next recommended slice" is where you start.
-5. `docs/CLAUDE_WORK_LOOP.md` — work loop format.
+1. `CLAUDE.md` — repo rules, non-negotiables, working style, fast/slow test lanes.
+2. `docs/PRODUCT.md` — product canon and source of truth (now titled **YES Master Product Canon**). Do not modify without Dan's explicit ask.
+3. **`docs/HANDOFF_2026-05-14_session.md`** — the latest dated handoff. Carries the preset-retuning workstream plan (P1–P6), file-ownership constraints with Codex, and the open queue.
+4. `docs/PRESET_REFERENCE_ANALYSIS_2026-05-14.md` — the calibration analysis driving the next workstream. The Conservative Target Table (lines 252–259) is the values to land on.
+5. `docs/IMPLEMENTATION_PLAN.md` — phase map and gates (back-context; mostly closed).
+6. `docs/progress.md` — append-only slice log; tail entry is "where we are now."
+7. `docs/CLAUDE_WORK_LOOP.md` — work loop format.
 
 Do not re-elicit design that already exists in those docs. The spec is settled. Find the next unfinished slice and work it.
 
@@ -42,10 +50,22 @@ npm run build              # tsc -b && vite build
 # Backend (run from src-tauri/)
 cd src-tauri
 cargo check
-cargo test
+cargo test                            # fast lane — real-fixture tests skip with a printed advisory
+$env:AMS_RUN_REAL_FIXTURE = "1"
+cargo test                            # slow lane — ~5 min including the real-fixture metering snapshot
+Remove-Item Env:\AMS_RUN_REAL_FIXTURE  # back to fast lane afterwards
 ```
 
+See `CLAUDE.md` for the full "Test workflow — fast / slow lanes" reasoning. Run the slow lane before any commit that touches the DSP chain, the WAV writer, or LUFS landing math.
+
 `npm run tauri dev` is the interactive smoke check (opens a window). Do not run it in autonomous sessions — it blocks. Dan runs it manually when he wants to eyeball the app.
+
+**Dev-binary lock workaround.** When Dan has `npm run tauri dev` running, the standard `cargo test` build can fail with `cannot remove file 'target/debug/album-mastering-studio.exe'` (the executable name still uses the pre-rename slug). Two paths:
+
+- `cargo test --lib` — lib unit tests only, doesn't link the main bin
+- `cargo test --tests --target-dir target-tests` — integration tests in a scratch target dir; `rm -rf target-tests` after
+
+Both work reliably mid-session without asking Dan to close the dev binary.
 
 If a verification step fails, debug. Do not commit broken state.
 
