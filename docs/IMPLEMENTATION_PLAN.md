@@ -1,6 +1,6 @@
 # Album Mastering Studio Implementation Plan (Claude Build)
 
-Last updated: 2026-05-11
+Last updated: 2026-05-15
 
 This is the execution map for the Claude-build repo of Album Mastering Studio (`album-mastering-studio-claude-build`). `docs/PRODUCT.md` is the product canon; this file is the living implementation plan. If anything below conflicts with `docs/PRODUCT.md`, treat `PRODUCT.md` as authoritative and flag the drift.
 
@@ -52,8 +52,7 @@ Album Master cannot be considered top-tier until it has:
 - Individual masters.
 - Continuous album WAV by default.
 - Preserved source boundaries by default.
-- Gap/crossfade/boundary primitives.
-- Generated transitions off by default.
+- Gap/crossfade/boundary primitives (preserve / direct / timed gap / equal-power crossfade / fade / ring-out). AI-generated transitions are out of scope per PRODUCT.md #42.
 - Cue/split data when appropriate.
 - Album dashboard/report.
 - Album-level quality checks.
@@ -79,6 +78,8 @@ Album Master cannot be considered top-tier until it has:
 These streams can overlap, but every phase must end with a no-victory-lap check against `docs/PRODUCT.md` and an entry in `docs/progress.md`.
 
 ## Phase 0: Workspace Scaffold And Architecture ADR
+
+**Status: DONE (2026-05-11).** ADR 0001 written, workspace scaffolded, baseline commands verified. See `docs/progress.md` Phase 0 entry.
 
 Goal: take this repo from zero-state to a buildable Tauri app shell, with the architecture decision recorded.
 
@@ -109,6 +110,8 @@ No-victory-lap check:
 - The architecture choice is reversible per the ADR; do not act as if Tauri-forever has been decided.
 
 ## Phase 1: Rust/Tauri Typed App Foundation
+
+**Status: DONE (2026-05-11).** 16 typed `#[tauri::command]` handlers in `src-tauri/src/lib.rs`; contract tests in `src-tauri/tests/contracts.rs`; hand-written TS bindings in `src/bindings.ts`. See `docs/progress.md` Phase 1 entry.
 
 Goal: make the backend speak product concepts, not raw shell strings, before any DSP work.
 
@@ -152,6 +155,8 @@ Verification:
 
 ## Phase 2: Track Master Frontend Skeleton
 
+**Status: DONE.** Track Master shell in `src/App.tsx` + `src/components/` (sidebar, waveform, transport, A/B toggle, VM toggle, preset tiles, intensity, 3-band EQ, advanced panel, export). State hook in `src/hooks/useTrackMaster.ts`. See `docs/progress.md` Phase 2 entry.
+
 Goal: build the reference-style Track Master workstation as a UI shell, fed by stub backend data.
 
 Required screen structure:
@@ -185,6 +190,8 @@ No-victory-lap check:
 
 ## Phase 3: Source Playback, Waveform, A/B Foundation
 
+**Status: DONE.** Real playback + waveform + same-playhead A/B in `src-tauri/src/audio.rs`. Three-tier PCM resolution (decoded_cache → SharedDecodedCache prewarm → fresh decode); `prewarm_decode` fired fire-and-forget on selectTrack / loadRecentSession / importTracks / openProjectFromDisk; stale-prewarm-evicts-newer guard via `prewarm_target` check.
+
 Goal: get real source audio playing and rendering as a waveform inside the Tauri app.
 
 Required:
@@ -215,6 +222,8 @@ Verification:
 - `cargo test` covers waveform peak generation and decode-error handling.
 
 ## Phase 4: Offline Universal Mastering Chain + Stale Preview
+
+**Status: DONE.** DSP chain implemented in `src-tauri/src/dsp.rs`; preset coefficients + intensity macro; VM cap math bounds chain-push; stale-preview indicator wired in the Track Master shell.
 
 Goal: produce a first credible mastered preview using an offline-rendered output, with safe-by-default behavior. This is temporary scaffolding for Phase 5's real-time engine; quality has to be honest, not toy-grade.
 
@@ -247,6 +256,8 @@ Verification:
 - LUFS, true-peak, and dynamic range numbers reported after a render match an independent measurement on a known reference tone.
 
 ## Phase 5: Real-Time Audition Engine
+
+**Status: DONE.** Live preview + same-playhead A/B + 4-layer perf defense: (1) 8 s preview window in `export_landing_gain_lin_for_preview`, (2) VM cap in `dsp.rs::from_settings`, (3) coalescer + playback barriers in `audio.rs::coalesced_command_sequence`, (4) `PreviewLandingCache` settings-hash-keyed landing-gain cache. ADR 0001's JUCE/native fallback was not triggered; Rust met the latency targets.
 
 Goal: prove the app can support responsive controls by ear. Mandatory for release-candidate Track Master.
 
@@ -296,6 +307,8 @@ No-victory-lap check:
 
 ## Phase 6: Track Master Export And Quality Checks
 
+**Status: DONE.** WAV export with 16/24-bit symmetric-range integer quantization; ceiling-bounded LUFS landing on track + preview + album paths; post-render quality checks (TP / LUFS / DR / bit-depth / non-finite guards) in `src-tauri/src/exports.rs`.
+
 Goal: make export safe, obvious, and honest.
 
 Required:
@@ -332,6 +345,8 @@ Verification:
 
 ## Phase 7: Presets, Custom Settings, Autosave, Undo
 
+**Status: DONE.** `save_user_preset` / `list_user_presets` commands; project autosave + explicit Save Project; undo/redo with Ctrl+Z / Ctrl+Shift+Z; `src/lib/history-stack.ts` + Vitest coverage (14 cases). B7 auto-flip-to-Custom on advanced edits; LoudnessTarget readout reflects effective target.
+
 Goal: make experimentation safe and reusable.
 
 Required:
@@ -366,6 +381,8 @@ No-victory-lap check:
 
 ## Phase 8: Album Master Mode
 
+**Status: PARTIAL.** `src-tauri/src/album.rs` has album planning + character bias; per-track adaptation logic in place; album-simple + album-plan render paths share the ceiling-bounded landing helper. Album UX (track reordering, the album dashboard, per-track override surface) is still thin in the frontend.
+
 Goal: build the album workflow on the Track Master foundation.
 
 Required:
@@ -390,6 +407,8 @@ No-victory-lap check:
 
 ## Phase 9: Album Story / Roles Step
 
+**Status: NOT STARTED.** Listed in PRODUCT.md "Still Open" as one of the genuinely undecided product questions (album story / roles UX).
+
 Goal: give the user a humble, reviewable view of inferred track roles.
 
 Required:
@@ -408,12 +427,14 @@ No-victory-lap check:
 
 ## Phase 10: Transition Primitives
 
-Goal: provide reliable album boundary tools before any generated musical transitions.
+**Status: NOT STARTED.** Scope is now locked by PRODUCT.md #42 to the primitive set only (preserve / direct / timed gap / equal-power crossfade / fade / ring-out). AI-generated transitions are explicitly out of scope. Any earlier task here that referenced generated interludes is superseded.
+
+Goal: provide reliable album boundary tools. The primitive set below is the full scope of this phase per PRODUCT.md #42; generated interludes are not on the roadmap.
 
 Default:
 
-- Generated transitions off.
 - Preserve source boundaries.
+- No transition applied unless the user opts in.
 
 Primitives to implement, in order of priority:
 
@@ -424,13 +445,9 @@ Primitives to implement, in order of priority:
 - Ring-out.
 - Reverse swell only if it sounds genuinely useful.
 
-Generated interludes:
-
-- Optional later.
-- Must not be default until they sound genuinely good.
-- Not marketed as core quality until listening tests support it.
-
 ## Phase 11: DSP Audit And Modernization
+
+**Status: ONGOING.** Phase A4 mechanical-correctness fixes (B1–B7 audit queue + four perf concerns) ship as part of this stream. PRODUCT.md's 10 DSP Correctness Commitments (BS.1770-5 LUFS, ≥4× oversampled true-peak, ISP awareness, lookahead+oversampled limiter, TPDF dither once at final reduction, polyphase SRC, canonical chain order, mastering-appropriate filters, corpus-grounded preset calibration, spectral-subtraction reference matching) are the audit checklist for this phase.
 
 Goal: improve actual mastering quality, not just UI.
 
@@ -463,6 +480,8 @@ Modernization rule:
 
 ## Phase 12: Private Real-Audio Fixture Loop
 
+**Status: PARTIAL.** Fast/slow test lanes are wired in `CLAUDE.md` (default fast lane skips real-fixture tests; `AMS_RUN_REAL_FIXTURE=1` opts in to the slow lane). `private-audio-fixtures/` is in place locally. Broader fixture coverage and a documented per-fixture acceptance check still TBD.
+
 Goal: test on music that matters.
 
 Use the convention in `docs/PRIVATE_AUDIO_FIXTURES.md`:
@@ -487,6 +506,8 @@ Listening loop per session:
 
 ## Phase 13: Performance Budgets
 
+**Status: PARTIAL.** The 4-layer perf defense (Phase 5 status) closed the audible cliffs (audio-seek reply timeout + VM over-attenuation). Explicit numeric budgets (target ms per chain update, max decode time per minute of audio, etc.) and an automated regression watch are still TBD.
+
 Goal: measure rather than guess.
 
 Initial rough targets (refine with evidence on the dev machine):
@@ -503,6 +524,8 @@ Initial rough targets (refine with evidence on the dev machine):
 Establish baselines, then refine budgets per phase.
 
 ## Phase 14: Release And Installer Hardening
+
+**Status: NOT STARTED.** Listed in PRODUCT.md "Still Open" as installer / distribution polish.
 
 Goal: make the app usable outside the repo.
 
@@ -591,10 +614,8 @@ Use long-running sessions as an execution loop for a clear verified slice, not a
 
 ## Immediate Next Questions For Humans
 
-These are not blockers for executing Phase 0, but they should be answered before or during early phases:
+Genuinely open product questions. The earlier questions on this list (Python offline lane, JUCE/native benchmarking, real audio fixture choice, progress update cadence) have been resolved by ADR 0001, by Phase 5 landing on Rust, by the existence of `private-audio-fixtures/`, and by the mechanical-correctness-first workflow agreement respectively.
 
-1. Are the architecture spike candidates limited to Tauri+Rust audio for now, or should JUCE/native be benchmarked in Phase 5 if real-time targets are missed?
-2. What real audio fixtures will be provided first (Phase 12)?
-3. Should the audio engine commit fully to Rust, or should a Python offline lane be preserved for DSP R&D and offline render parity testing?
-4. How often should long-running sessions update progress: every phase, every day, or every meaningful verified slice?
-5. Does Album Master need to ship before any release-candidate claim, or is "Track Master release-candidate with Album Master near-complete" acceptable?
+1. Does Album Master need to ship before any release-candidate claim, or is "Track Master release-candidate with Album Master near-complete" acceptable?
+
+Additional open product questions live in `docs/PRODUCT.md` under "Still Open" (loudness/TP profile defaults, reference matching algorithm specifics, album story/roles UX, codec QC scope, installer/distribution polish, preset numeric mappings).
