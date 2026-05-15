@@ -866,15 +866,55 @@ fn export_landing_gain_lin_for_preview(
     let mut rendered = samples.to_vec();
     let mut chain = crate::dsp::MasteringChain::new(sample_rate, channels_usize, &render_settings);
     chain.process_interleaved(&mut rendered, channels_usize);
-    let measured = crate::engine::measure_integrated_lufs(&rendered, sample_rate, channels)
-        .map_err(|e| format!("{e}"))?;
-    if measured.is_finite() && measured > -70.0 {
-        let delta_db = target_lufs - measured;
-        if delta_db < 0.0 {
-            return Ok(10.0_f32.powf(delta_db / 20.0));
+
+    // Measure post-chain integrated LUFS and BS.1770 true-peak. Both are
+    // needed for the ceiling-bounded landing math at engine.rs (see the
+    // long comment block there for the rationale). Replicates the same
+    // ebur128 call shape the export path uses at engine.rs:1607-1644.
+    let channels_u32 = u32::from(channels.max(1));
+    let mut ebu = ebur128::EbuR128::new(
+        channels_u32,
+        sample_rate,
+        ebur128::Mode::I | ebur128::Mode::TRUE_PEAK,
+    )
+    .map_err(|e| format!("ebur128 init: {e}"))?;
+    ebu.add_frames_f32(&rendered)
+        .map_err(|e| format!("ebur128 feed: {e}"))?;
+    let measured = ebu
+        .loudness_global()
+        .map_err(|e| format!("ebur128 global: {e}"))? as f32;
+    if !measured.is_finite() || measured <= -70.0 {
+        return Ok(1.0);
+    }
+    let mut peak_lin: f64 = 0.0;
+    for ch in 0..channels_u32 {
+        let tp = ebu
+            .true_peak(ch)
+            .map_err(|e| format!("ebur128 tp: {e}"))?;
+        if tp > peak_lin {
+            peak_lin = tp;
         }
     }
-    Ok(1.0)
+    let measured_true_peak_dbtp = if peak_lin > 0.0 {
+        (20.0 * peak_lin.log10()) as f32
+    } else {
+        -60.0
+    };
+
+    let delta_db = target_lufs - measured;
+    let ceiling_dbtp = render_settings.effective_ceiling_dbtp();
+    let headroom_db = (ceiling_dbtp - measured_true_peak_dbtp).max(0.0);
+    let applied_delta_db = if delta_db < 0.0 {
+        delta_db
+    } else {
+        delta_db.min(headroom_db)
+    };
+
+    if applied_delta_db.abs() > 1.0e-4 {
+        Ok(10.0_f32.powf(applied_delta_db / 20.0))
+    } else {
+        Ok(1.0)
+    }
 }
 
 fn live_preview_coeffs(
@@ -1783,6 +1823,58 @@ mod tests {
         let raw_coeffs = live_preview_coeffs(sample_rate, channels, &samples, &settings, false)
             .expect("raw preview coeffs");
         assert_eq!(raw_coeffs.export_landing_gain_lin, 1.0);
+    }
+
+    /// Ceiling-bounded LUFS landing: when the chain leaves headroom below
+    /// the user's true-peak ceiling and the target is above the chain's
+    /// natural output, the preview should push upward toward target — not
+    /// refuse-upward like the prior policy did.
+    #[test]
+    fn live_preview_coeffs_push_upward_bounded_by_ceiling_headroom() {
+        let sample_rate = 48_000;
+        let channels: u16 = 2;
+        // Quiet sine (~-30 dBFS): chain at intensity 0.5 + Universal won't
+        // drive the limiter, so plenty of headroom below the ceiling for
+        // an upward LUFS push.
+        let mut samples = sine_signal(sample_rate as usize * 2, sample_rate, channels);
+        for s in samples.iter_mut() {
+            *s *= 0.1;
+        }
+        let mut settings = settings_with_intensity(0.5);
+        settings.delivery_profile = DeliveryProfile::LoudRock; // -10.5 LUFS / -1 dBTP
+
+        let coeffs = live_preview_coeffs(sample_rate, channels, &samples, &settings, true)
+            .expect("preview coeffs");
+        assert!(
+            coeffs.export_landing_gain_lin > 1.0,
+            "expected upward LUFS landing when chain leaves headroom below \
+             ceiling, got gain {}",
+            coeffs.export_landing_gain_lin
+        );
+
+        // Apply preview gain to a fresh chain render and confirm the result
+        // lands at or near target without crossing the ceiling.
+        let mut rendered = samples.clone();
+        let mut chain = MasteringChain::new(sample_rate, channels as usize, &settings);
+        chain.coeffs.export_landing_gain_lin = coeffs.export_landing_gain_lin;
+        chain.process_interleaved(&mut rendered, channels as usize);
+        let measured = crate::engine::measure_integrated_lufs(&rendered, sample_rate, channels)
+            .expect("measure preview");
+        assert!(
+            (measured - -10.5).abs() < 0.5,
+            "expected preview near LoudRock target -10.5 LUFS with full headroom, \
+             got {measured:.2}"
+        );
+        let peak = rendered
+            .iter()
+            .map(|s| s.abs())
+            .fold(0.0_f32, f32::max);
+        let peak_dbfs = if peak > 0.0 { 20.0 * peak.log10() } else { -120.0 };
+        assert!(
+            peak_dbfs <= -1.0 + 0.5,
+            "ceiling-bounded preview peak should stay near or below -1 dBTP, \
+             got {peak_dbfs:.2} dBFS"
+        );
     }
 
     /// Feed a 1 kHz sine through a MasteringSource, send a new ChainCoeffs

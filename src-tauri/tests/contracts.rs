@@ -1451,7 +1451,7 @@ fn session_write_is_atomic_against_existing_file() {
 /// Phase 12.2 — LUFS landing: when `lufs_offset_db` is set to a target
 /// QUIETER than the natural chain output, the rendered file's measured
 /// integrated LUFS must land at/below the target (within ±0.5 LU). Verifies
-/// the downward-attenuation path of the refuse-upward policy.
+/// the downward-attenuation path of the ceiling-bounded LUFS landing.
 #[test]
 fn lufs_target_attenuates_loud_render_to_target() {
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -1486,25 +1486,27 @@ fn lufs_target_attenuates_loud_render_to_target() {
     );
 }
 
-/// Phase 12.2 — refuse-upward: when `lufs_offset_db` is set to a target
-/// LOUDER than the natural chain output, the rendered file's measured LUFS
-/// must STAY at the natural chain output (we refuse to amplify past the
-/// limiter ceiling). Confirms the policy by rendering twice — once with
-/// `lufs_offset_db = Some(target)` set very loud, once with `None` — and
-/// asserting the two outputs measure within 0.1 LU of each other.
+/// Ceiling-bounded LUFS landing: when `lufs_offset_db` is set to a target
+/// LOUDER than the natural chain output, the renderer pushes the file
+/// upward — bounded by available true-peak headroom below the user's
+/// ceiling. This test asserts the upward push DOES reach target when the
+/// chain leaves ample headroom (quiet source + neutral preset). Replaces
+/// the prior refuse-upward contract test: PRODUCT.md Locked Decision #19
+/// frames Intensity as a "macro over mastering behavior" and the operator
+/// wants the LUFS Target slider to function as a real target when safe.
 #[test]
-fn lufs_target_refuses_to_amplify_quiet_render() {
+fn lufs_target_pushes_upward_when_headroom_allows() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let src = tmp.path().join("modest.wav");
-    // Very quiet source (0.02 amplitude ≈ -34 dBFS peak). After Custom-preset/
-    // intensity-0 the chain barely lifts it, so the natural rendered LUFS will
-    // be well below the loud LUFS-target slider's maximum (-6 LUFS) — the
-    // refuse-upward branch will fire.
+    // Very quiet source (0.02 amplitude ≈ -34 dBFS peak). With Custom
+    // preset + intensity 0 the chain barely lifts it, so the post-chain
+    // peak sits ~30 dB below the -1 dBTP default ceiling — plenty of
+    // headroom for upward LUFS landing.
     write_sine_wav_at_amplitude(&src, 44_100, 3.0, 1_000.0, 2, 0.02);
 
-    // Baseline: render with NO target so the chain produces its natural LUFS.
-    // Custom preset + intensity 0 gives minimal coloration; lets the source
-    // amplitude dominate the loudness.
+    // Baseline: render with NO target so the chain produces its natural
+    // LUFS. Custom preset + intensity 0 gives minimal coloration; lets
+    // the source amplitude dominate the loudness.
     let mut baseline_settings = default_settings();
     baseline_settings.preset = Preset::Custom {
         id: "neutral".to_string(),
@@ -1522,9 +1524,10 @@ fn lufs_target_refuses_to_amplify_quiet_render() {
         engine::measure_integrated_lufs_at_path(Path::new(&baseline_job.output_paths[0]))
             .expect("baseline measure");
 
-    // With target -6 LUFS (very loud), the chain's natural output should be
-    // QUIETER than the target — triggering the refuse-upward branch. The
-    // rendered LUFS should equal the baseline within measurement tolerance.
+    // With target -6 LUFS (very loud), the chain's natural output is
+    // QUIETER than the target. Ceiling-bounded landing should push the
+    // file upward toward -6 LUFS since plenty of headroom exists below
+    // the -1 dBTP ceiling on this quiet source.
     let mut amplify_settings = baseline_settings.clone();
     amplify_settings.advanced.lufs_offset_db = Some(-6.0);
     let amplify_job = engine::mastering_render(
@@ -1534,22 +1537,48 @@ fn lufs_target_refuses_to_amplify_quiet_render() {
         tmp.path(),
         RenderKind::Master,
     )
-    .expect("refuse-upward render");
-    let refused_lufs =
+    .expect("upward-bounded render");
+    let amplified_lufs =
         engine::measure_integrated_lufs_at_path(Path::new(&amplify_job.output_paths[0]))
-            .expect("refuse measure");
+            .expect("amplified measure");
 
     assert!(
         baseline_lufs < -6.0,
         "baseline {} should be quieter than the loud target -6 LUFS (otherwise the \
-         refuse-upward branch isn't exercised)",
+         upward-push branch isn't exercised)",
         baseline_lufs
     );
     assert!(
-        (refused_lufs - baseline_lufs).abs() < 0.1,
-        "refuse-upward should leave the render unchanged: baseline={}, with target={}",
+        (amplified_lufs - (-6.0)).abs() < 0.5,
+        "ceiling-bounded landing should push the file to target -6 LUFS when \
+         headroom allows; baseline={}, got={}",
         baseline_lufs,
-        refused_lufs
+        amplified_lufs
+    );
+
+    // The push must not exceed the ceiling. Read the rendered WAV samples
+    // and assert sample peak stays at or below -1 dBFS (matches the -1
+    // dBTP default ceiling within sine-wave sample/true-peak parity).
+    let mut wav = hound::WavReader::open(Path::new(&amplify_job.output_paths[0]))
+        .expect("open amplified wav");
+    let spec = wav.spec();
+    let peak_lin = match spec.sample_format {
+        hound::SampleFormat::Float => wav
+            .samples::<f32>()
+            .map(|s| s.expect("read sample").abs())
+            .fold(0.0_f32, f32::max),
+        hound::SampleFormat::Int => {
+            let scale = (1i64 << (spec.bits_per_sample - 1)) as f32;
+            wav.samples::<i32>()
+                .map(|s| (s.expect("read sample") as f32 / scale).abs())
+                .fold(0.0_f32, f32::max)
+        }
+    };
+    let peak_dbfs = if peak_lin > 0.0 { 20.0 * peak_lin.log10() } else { -120.0 };
+    assert!(
+        peak_dbfs <= -1.0 + 0.5,
+        "rendered peak should stay near or below the -1 dBTP ceiling, got \
+         {peak_dbfs:.2} dBFS"
     );
 }
 

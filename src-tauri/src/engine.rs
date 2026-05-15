@@ -1643,31 +1643,44 @@ pub fn mastering_render_with_progress(
         -60.0
     };
 
-    // Phase 12.2 — LUFS landing. When the user has set `lufs_offset_db` as a
-    // target loudness, attenuate the rendered samples to meet the target.
-    // Refuse-upward policy: we only ever scale DOWN. Scaling up post-chain
-    // would push the already-limited peaks past the user's true-peak ceiling,
-    // which no mastering tool the research surveyed (Sonible smart:limit,
-    // Ozone Maximizer, Mastering The Mix LIMITER) is willing to do silently.
-    // When the chain produced quieter audio than the target, we leave the
-    // samples unchanged and let the user re-render with more Intensity /
-    // Input Gain. See `docs/research/most-recent-mastering-app-research.md`
-    // for the industry-survey notes behind this decision.
+    // LUFS landing — ceiling-bounded. Downward gain applies in full (the
+    // limiter already capped peaks at ceiling, so attenuating only moves
+    // them further away). Upward gain is permitted up to the residual
+    // true-peak headroom below the user's ceiling, so the slider feels
+    // alive on quieter material where the limiter wasn't fully engaged
+    // and a real push is safe. Once the chain is already driving the
+    // limiter to the ceiling, residual headroom is ~0 and upward push
+    // clamps to zero — the user needs more Intensity / Input Gain /
+    // denser preset to reach the target.
+    //
+    // The earlier refuse-upward policy (citing Sonible / Ozone / MTM
+    // industry survey) was retired in favor of letting the user push
+    // toward their stated target. The live "Export LUFS" preview shows
+    // the resulting level in real time, so what the user hears is what
+    // export writes — no hidden cap.
     if let Some(target_lufs) = render_settings.effective_target_lufs() {
         if target_lufs.is_finite() && measured_lufs.is_finite() && measured_lufs > -70.0 {
             let delta_db = target_lufs - measured_lufs;
-            if delta_db < 0.0 {
-                let gain_lin = 10.0_f32.powf(delta_db / 20.0);
+            let ceiling_dbtp = render_settings.effective_ceiling_dbtp();
+            let headroom_db = (ceiling_dbtp - measured_true_peak_dbtp).max(0.0);
+            let applied_delta_db = if delta_db < 0.0 {
+                delta_db
+            } else {
+                delta_db.min(headroom_db)
+            };
+            if applied_delta_db.abs() > 1.0e-4 {
+                let gain_lin = 10.0_f32.powf(applied_delta_db / 20.0);
                 for s in samples.iter_mut() {
                     *s *= gain_lin;
                 }
                 // Uniform-gain shift of pre-scale measurements onto the
                 // post-scale samples that are about to be written.
-                measured_lufs += delta_db;
-                measured_true_peak_dbtp += delta_db;
+                measured_lufs += applied_delta_db;
+                measured_true_peak_dbtp += applied_delta_db;
             }
-            // delta_db >= 0 → refuse-upward, samples and measurements
-            // unchanged. The receipt's measured LUFS will surface the gap.
+            // Upward push wanted but ceiling fully consumed → samples and
+            // measurements unchanged. The receipt's measured LUFS will
+            // surface the gap so the user knows to push the chain harder.
         }
     }
 
