@@ -112,7 +112,7 @@ pub fn analyze_one(track_id: TrackId, path: &Path) -> CommandResult<AnalysisResu
         )));
     }
 
-    let pcm = crate::audio::decode_full(path)?;
+    let pcm = crate::decode::decode_full(path)?;
     if pcm.samples.is_empty() {
         return Err(CommandError::Decode("no samples decoded".to_string()));
     }
@@ -471,7 +471,7 @@ pub fn measure_integrated_lufs(
 /// pipeline `analyze_tracks` uses, then measures integrated LUFS. Convenience
 /// for contract tests that want to read back the rendered output's loudness.
 pub fn measure_integrated_lufs_at_path(path: &Path) -> CommandResult<f32> {
-    let pcm = crate::audio::decode_full(path)?;
+    let pcm = crate::decode::decode_full(path)?;
     measure_integrated_lufs(&pcm.samples, pcm.sample_rate, pcm.channels)
 }
 
@@ -1010,7 +1010,7 @@ pub fn album_render_with_progress(
                 input.path
             )));
         }
-        let pcm = crate::audio::decode_full(path)?;
+        let pcm = crate::decode::decode_full(path)?;
         if pcm.samples.is_empty() {
             return Err(CommandError::Decode(format!(
                 "no samples decoded from {}",
@@ -1317,7 +1317,7 @@ pub fn render_album_plan_impl(
                 input.source_path
             )));
         }
-        let pcm = crate::audio::decode_full(path)?;
+        let pcm = crate::decode::decode_full(path)?;
         if pcm.samples.is_empty() {
             return Err(CommandError::Decode(format!(
                 "no samples decoded from {}",
@@ -1779,7 +1779,7 @@ pub fn mastering_render_with_progress(
         )));
     }
 
-    let pcm = crate::audio::decode_full(source_path)?;
+    let pcm = crate::decode::decode_full(source_path)?;
     if pcm.samples.is_empty() {
         return Err(CommandError::Decode(
             "no samples decoded from source".to_string(),

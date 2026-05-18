@@ -1,5 +1,6 @@
 pub mod album;
 pub mod audio;
+pub mod decode;
 pub mod dsp;
 pub mod engine;
 pub mod exports;
