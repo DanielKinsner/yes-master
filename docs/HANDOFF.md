@@ -9,7 +9,7 @@ This document is the entry point for any Claude session — interactive or sched
 - Code signing: macOS is currently ad-hoc signed for local use; wider macOS distribution needs Apple Developer ID + notarization. Windows distribution needs Authenticode signing once YES Master leaves Dan's own machines.
 - Save/export paths: the Tauri dialog plugin returns native paths on each OS (`/` on macOS/Linux, `\` on Windows). Frontend tests now pin both separator styles flowing through to render unchanged.
 
-> **Current snapshot (2026-05-19 Windows pickup).** YES Master is treated as a private cross-platform desktop mastering app — Mac and Windows targeted; Linux deferred. Latest dated handoff is `docs/HANDOFF_2026-05-18_evening.md`; read that first after `CLAUDE.md` and `docs/PRODUCT.md`, then read the 2026-05-19 addenda in this file and `docs/progress.md`. The repo now has static packaging gates for both macOS and Windows, explicit Track/Album export destination pickers, last-export-folder persistence, and the latest shared UI polish: static signal chain, Preset-header `+` save action, no separate save-preset row, and preset/signal-chain grid alignment.
+> **Current snapshot (2026-05-19 Mac pickup).** YES Master is treated as a private cross-platform desktop mastering app - Mac and Windows targeted; Linux deferred. Latest dated handoff is `docs/HANDOFF_2026-05-19_evening.md`; read that first after `CLAUDE.md` and `docs/PRODUCT.md`, then read the tail of `docs/progress.md`. Current pushed `master` tip is `871d3ae` or newer; it contains the full Phase B seven-band EQ slice, the post-merge Album Master/Visual EQ CSS polish (`4aba442`), and the cross-machine handoff corrections. The safety tag `pre-eq-7-band-2026-05-19` is pushed to origin at `450a14f`.
 >
 > **Prior session detail.** The 22-commit Phase A4 session lives in `docs/HANDOFF_2026-05-15_evening.md`; the 2026-05-18 audio split and evening inventory live in `docs/HANDOFF_2026-05-18_evening.md`.
 >
@@ -19,9 +19,11 @@ This document is the entry point for any Claude session — interactive or sched
 >
 > **Addendum (2026-05-19 late UI polish).** The visible preset/signal-chain area was tightened without platform-specific code: the signal chain is a static bar, the old dropdown affordance is gone, preset saving moved into a compact `+` beside the Preset label, and the preset row plus signal-chain row now share an 8-column rhythm. These React/CSS changes apply to macOS and Windows builds.
 >
-> **Test totals:** Rust lib **154/154 on macOS** (plus one Windows-only path test that runs on Windows); Vitest **79/79**; `npm run build` clean. Slow lane last passed with `AMS_RUN_REAL_FIXTURE=1 cargo test -p album-mastering-studio` on the self-review/DSP-comment gate; no slow lane is required for docs/frontend/package-script cleanup.
+> **Addendum (2026-05-19 Phase B).** The seven-band EQ expansion landed on master through `b424b36`; it adds Sub, Low-Mid, High-Mid, and Sparkle Visual EQ nodes around the existing Low/Mid/High Tone Shape knobs while preserving byte-identical chain-output SHA snapshots. Post-merge CSS polish at `4aba442` removed the duplicate Album Master album-order row, prevented desktop vertical scrolling in Album Master at Dan's native Windows resolution, and reduced the primary EQ node/halo thickness.
 >
-> **What's open / next.** Immediate Windows-machine pass: pull latest `master`, run the fast gates, run `npm run build:windows`, confirm the NSIS `.exe` + MSI outputs, and note any Windows-only setup issues in `docs/followups/infrastructure-2026-05-19.md`. After that, three plausible directions remain: (1) Dan's listening verification batch — five items queued in the checkpoint, would benefit from a focused listening hour; (2) async live-preview measurement on a worker thread — paused this session pending Dan's input because the cost-benefit shifted with the 4-layer perf defense in place; (3) a new product surface (Reference Track UX, Album Master gaps) — needs Dan's nomination.
+> **Test totals:** Latest full Phase B final gate on Windows: Rust lib **174/174**, Vitest **81/81**, `npm run build` clean, full `cargo test` green, and `AMS_RUN_REAL_FIXTURE=1 cargo test` green. Latest post-merge CSS/docs fast gate is recorded in `docs/progress.md`; no slow lane is required for handoff-only changes.
+>
+> **What's open / next.** Immediate Mac-laptop pass: pull latest `master`, fetch tags, run `cargo test preset_byte_identity` first from `src-tauri/` to close the Windows-to-Mac SHA portability question, then run the normal fast gates. If the Mac has Tauri packaging prerequisites, `npm run build:mac` is the local package build. Private audio fixtures are intentionally not tracked; only run the real-fixture slow lane on the Mac if Dan intentionally brings those files over.
 >
 > **Codex owns the UI lane** for the moment. Do not edit `src/App.tsx`, `src/App.css`, `src/components/RightRail.tsx`, or `src/components/AlbumPanel.tsx` from the Claude side unless a UI change strictly forces it AND you've pulled latest. App.tsx WAS touched this session for the B7 / LoudnessTarget fixes; coordinate before any further App.tsx work.
 >
@@ -39,33 +41,32 @@ This document is the entry point for any Claude session — interactive or sched
 > - `src/App.preset-save.test.tsx` — preset save lives in the Preset header and the separate save row stays removed.
 > - `src/App.layout-css.test.ts` — preset row and signal chain share the aligned 8-column rhythm.
 >
-> Major capability inventory lives in `docs/HANDOFF_2026-05-18_evening.md` and `docs/PRODUCT.md`; keep this file focused on current state and handoff mechanics.
+> Major capability inventory lives in `docs/HANDOFF_2026-05-19_evening.md`, `docs/HANDOFF_2026-05-18_evening.md`, and `docs/PRODUCT.md`; keep this file focused on current state and handoff mechanics.
 
-## Windows pickup prompt
+## Mac pickup prompt
 
-Use this when starting the Windows-machine Codex session:
+Use this when starting the Mac-laptop Codex session:
 
 ```text
-We are picking up YES Master on the Windows machine.
+We are picking up YES Master on the Mac laptop after the 2026-05-19 Windows seven-band EQ merge.
 
 Please:
-1. Pull latest master.
-2. Read CLAUDE.md, docs/PRODUCT.md, docs/HANDOFF.md, docs/HANDOFF_2026-05-18_evening.md, docs/followups/infrastructure-2026-05-19.md, and the tail of docs/progress.md.
-3. Confirm the current HEAD includes the latest Mac UI polish commits: 7ad9f06, 08c118a, and 6ab4361, plus any newer handoff-doc refresh commit.
-4. From the repo root, run: npm install, npm test, npm run build, and npm run build:windows.
-5. From src-tauri, run: cargo test --lib and cargo test.
-6. Confirm Windows installer outputs are produced (NSIS .exe + MSI), and note their output paths.
-7. Watch for Windows-specific setup issues: WiX/MSI tooling, VBSCRIPT, WebView2 installer mode, locked dev binary, and Authenticode signing not yet configured.
-8. Do not touch DSP/listening-taste items unless Dan explicitly asks. No slow lane is required unless DSP, WAV writer, or LUFS landing math changes.
-9. If anything fails, make the smallest Windows-specific fix, document it in docs/progress.md and docs/followups/infrastructure-2026-05-19.md if needed, then commit and push only after green verification.
-10. Optional visual smoke: launch YES Master and confirm the latest shared UI polish is present: static signal chain, preset save + beside Preset, no separate save row, and preset/signal-chain alignment.
+1. Pull latest master and tags: git pull --ff-only && git fetch --tags.
+2. Read CLAUDE.md, docs/PRODUCT.md, docs/HANDOFF.md, docs/HANDOFF_2026-05-19_evening.md, docs/followups/infrastructure-2026-05-19.md, and the tail of docs/progress.md.
+3. Confirm HEAD is 871d3ae or newer and tag pre-eq-7-band-2026-05-19 points at 450a14f.
+4. From src-tauri, run cargo test preset_byte_identity first. This is the first Mac check for the Windows-pinned Phase B SHA snapshots.
+5. From the repo root, run npm install if needed, npm test, npm run build, and npm run build:mac if local Tauri packaging prerequisites are installed.
+6. From src-tauri, run cargo test --lib and cargo test. Run AMS_RUN_REAL_FIXTURE=1 cargo test only if the private real fixture exists locally on the Mac.
+7. Do not start listening-taste changes, async worker changes, Reference Track UX, Album Master dashboard/report work, dead-code cleanup, or process_sample fixes until Dan nominates the next slice.
+
+If any command fails, stop and report the exact command + failure before changing behavior.
 ```
 
 ## Read first (in order)
 
 1. `CLAUDE.md` — repo rules, non-negotiables, working style, fast/slow test lanes.
 2. `docs/PRODUCT.md` — product canon and source of truth (now titled **YES Master Product Canon**). Do not modify without Dan's explicit ask.
-3. **`docs/HANDOFF_2026-05-18_evening.md`** — latest dated handoff and current entry point.
+3. **`docs/HANDOFF_2026-05-19_evening.md`** — latest dated handoff and current entry point.
 4. `docs/followups/listening-batch-2026-05-19.md` — deferred subjective checks.
 5. `docs/followups/infrastructure-2026-05-19.md` — distribution/cleanup debt.
 6. `docs/HANDOFF_2026-05-15_evening.md` — prior major architecture snapshot.

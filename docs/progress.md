@@ -4897,3 +4897,61 @@ Next recommended slice:
 
 Dan review and merge approval. Do not merge or start follow-up work from this
 branch until Dan greenlights it.
+
+## 2026-05-19 - Mac handoff readiness refresh
+
+Goal:
+
+Make the post-merge master branch self-contained for Dan to pick up on a Mac
+laptop after the Windows seven-band EQ merge and post-merge UI polish.
+
+What changed:
+
+- Updated `docs/HANDOFF.md` so the top-level entry point now routes to
+  `docs/HANDOFF_2026-05-19_evening.md`, not the older 2026-05-18 handoff.
+- Replaced the Windows pickup prompt with a Mac pickup prompt that starts with
+  `git pull --ff-only && git fetch --tags`, then runs
+  `cargo test preset_byte_identity` before the normal fast gates.
+- Updated `docs/HANDOFF_2026-05-19_evening.md` with the real post-merge master
+  state: `b424b36` for the slice merge, `4aba442` for committed CSS/AlbumPanel
+  polish, `871d3ae` as the pre-refresh pushed master tip, and
+  `pre-eq-7-band-2026-05-19` pushed to origin at `450a14f`.
+- Removed stale stash language; the CSS/AlbumPanel work is committed on
+  master, and there is no local stash required for the Mac pickup.
+- Corrected cross-platform SHA follow-up wording: Windows is the established
+  SHA source for this slice; Mac is the pending portability check.
+
+Verification:
+
+- `git status --short --branch`: started clean on `master...origin/master`;
+  after docs edits, only `docs/HANDOFF.md`, `docs/HANDOFF_2026-05-19_evening.md`,
+  and `docs/progress.md` are expected to be dirty before commit.
+- `git log --oneline -5 --decorate`: pre-refresh tip was
+  `871d3ae (HEAD -> master, origin/master, origin/HEAD) Reconcile handoff with safety tag push + CSS commit`.
+- `git ls-remote --tags origin pre-eq-7-band-2026-05-19`: tag is present on
+  origin at `450a14f456c53ca231bd2bc1113f8a25a31ccb66`.
+- `npm test`: 13 files / 81 tests pass.
+- `npm run build`: TypeScript and Vite production build pass.
+- `cargo test --lib`: 174 library tests pass.
+- `cargo test preset_byte_identity`: rerun sequentially after a local Cargo
+  linker race; 10 SHA snapshot tests pass.
+- `git diff --check`: clean.
+
+Real-audio fixture used:
+
+No. This was a documentation/handoff readiness refresh; it did not touch
+`private-audio-fixtures/` and did not need the slow lane.
+
+What failed or remains partial:
+
+- The first `cargo test preset_byte_identity` attempt was launched in parallel
+  with `cargo test --lib` and hit Windows linker contention on the same test
+  executable (`LNK1104`). Rerunning the targeted SHA test sequentially passed.
+- Mac SHA portability is still pending until Dan runs
+  `cargo test preset_byte_identity` on the Mac laptop.
+
+Next recommended slice:
+
+On the Mac laptop, pull master and tags, run `cargo test preset_byte_identity`
+first, then the normal fast gates. Do not start follow-up cleanup or listening
+tuning until Dan nominates the next slice.
