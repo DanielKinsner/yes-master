@@ -41,9 +41,13 @@ describe("console layout CSS", () => {
     expect(block(".workspace-album")).toContain(
       "grid-template-rows: auto minmax(0, 1fr)",
     );
-    expect(block(".track-master-console.is-album")).toContain("42px");
+    expect(block(".track-master-console")).toContain("overflow: hidden");
+    expect(block(".track-master-console.is-album")).toContain("46px");
     expect(block(".track-master-console.is-album")).toContain(
-      "minmax(280px, 1.34fr)",
+      "minmax(288px, 1.3fr)",
+    );
+    expect(block(".track-master-console.is-album")).toContain(
+      "minmax(162px, 0.72fr)",
     );
     expect(block(".album-panel-controls")).toContain("display: grid");
     expect(block(".album-export-btn")).toContain("white-space: nowrap");
@@ -55,6 +59,7 @@ describe("console layout CSS", () => {
     expect(appTsx).not.toContain("StoryTags");
     expect(albumPanelTsx).toContain('className="album-panel-summary"');
     expect(albumPanelTsx).toContain('className="section-label album-panel-mode"');
+    expect(albumPanelTsx).not.toContain("album-track-lane");
     expect(block(".album-panel-head")).toContain("display: grid");
     expect(block(".album-panel-summary")).toContain("align-items: baseline");
   });

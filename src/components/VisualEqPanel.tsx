@@ -364,7 +364,7 @@ export function VisualEqPanel({
           const y = localDbToY(gains[band.id]);
           const isDragging = dragging === band.id;
           const isPrimary = band.tier === "primary";
-          const nodeRadius = isPrimary ? 8 : 5;
+          const nodeRadius = isPrimary ? 7 : 5;
           const renderedRadius = isDragging ? nodeRadius + 1 : nodeRadius;
           const nodeOpacity = isPrimary ? 1 : 0.85;
           const labelOpacity = isPrimary ? 1 : 0.85;
@@ -375,7 +375,7 @@ export function VisualEqPanel({
                   className="eq-node-halo"
                   cx={x}
                   cy={y}
-                  r={12}
+                  r={11}
                   stroke={band.color}
                 />
               )}

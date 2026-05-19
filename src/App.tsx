@@ -77,8 +77,6 @@ function App() {
         {tm.mode === "album" && tm.tracks.length > 0 && (
           <AlbumPanel
             tracks={tm.tracks}
-            selectedTrackId={tm.selectedTrack?.id ?? null}
-            onSelectTrack={tm.selectTrack}
             albumArcKind={tm.albumArcKind}
             albumIntensity={tm.albumIntensity}
             albumTitle={tm.albumTitle}

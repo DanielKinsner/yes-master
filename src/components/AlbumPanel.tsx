@@ -4,7 +4,6 @@
 //   * Arc dropdown (4 named curves)
 //   * Album intensity slider
 //   * Album title input
-//   * Track lane — position number, title, role, arc-offset hint
 //   * Export Album CTA (calls plan_album → render_album_plan via the hook)
 //   * Last export report when present
 //
@@ -12,14 +11,12 @@
 // controls on whichever track the user has selected from the sidebar. The
 // album layer only modulates the per-track LUFS target via arc + character.
 
-import type { AlbumArcKind, ImportedTrack, TrackId, TrackRole } from "../bindings";
+import type { AlbumArcKind, ImportedTrack } from "../bindings";
 import { ALBUM_ARC_DISPLAY } from "../bindings";
 import type { AlbumRenderReport } from "../lib/api";
 
 type AlbumPanelProps = {
   tracks: ImportedTrack[];
-  selectedTrackId: TrackId | null;
-  onSelectTrack: (id: TrackId) => void;
   albumArcKind: AlbumArcKind;
   albumIntensity: number;
   albumTitle: string;
@@ -31,22 +28,6 @@ type AlbumPanelProps = {
   onExportAlbum: () => void;
 };
 
-const ROLE_LABEL: Record<TrackRole, string> = {
-  opener: "Opener",
-  closer: "Closer",
-  single: "Single",
-  ballad: "Ballad",
-  interlude: "Interlude",
-  album_track: "Album",
-};
-
-function inferDisplayRole(index: number, total: number): TrackRole {
-  if (total === 0) return "album_track";
-  if (index === 0) return "opener";
-  if (index === total - 1) return "closer";
-  return "album_track";
-}
-
 function formatAlbumDuration(seconds: number): string {
   const total = Math.max(0, Math.round(seconds));
   const minutes = Math.floor(total / 60);
@@ -56,8 +37,6 @@ function formatAlbumDuration(seconds: number): string {
 
 export function AlbumPanel({
   tracks,
-  selectedTrackId,
-  onSelectTrack,
   albumArcKind,
   albumIntensity,
   albumTitle,
@@ -144,32 +123,6 @@ export function AlbumPanel({
           ×{albumIntensity.toFixed(2)}
         </span>
       </div>
-      <ol className="album-track-lane">
-        {tracks.map((t, i) => {
-          const role = inferDisplayRole(i, tracks.length);
-          const active = t.id === selectedTrackId;
-          return (
-            <li
-              key={t.id}
-              className={"album-track-tile " + (active ? "is-active" : "")}
-            >
-              <button
-                type="button"
-                onClick={() => onSelectTrack(t.id)}
-                className="album-track-tile-btn"
-              >
-                <span className="album-track-position">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span className="album-track-title">{t.display_name}</span>
-                <span className={"album-track-role role-" + role}>
-                  {ROLE_LABEL[role]}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
       {albumExportReport && (
         <div className="album-export-receipt">
           <span className="album-export-receipt-label">Last export:</span>
