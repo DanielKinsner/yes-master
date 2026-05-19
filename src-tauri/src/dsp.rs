@@ -275,7 +275,6 @@ impl BiquadState {
 //     actual LUFS landing through `effective_target_lufs()`, so this
 //     must not grow a second measure-and-target path.
 //   * transient_punch — needs a transient shaper (Phase A5).
-//   * highpass_hz — not in the A2 plan; deferred.
 // ============================================================================
 
 #[derive(Debug, Clone, Copy)]
@@ -302,6 +301,9 @@ pub struct PresetCalibration {
     /// Captured for the future transient shaper (Phase A5). Not applied
     /// in A2 since the shaper doesn't exist.
     pub transient_punch: f32,
+    /// Per-preset subsonic high-pass cutoff in Hz. Applied as an LR4
+    /// cascade before the musical EQ stages; 0.0 means identity.
+    pub highpass_hz: f32,
     /// Captured target integrated LUFS. Preset intent only; actual
     /// render landing is owned by DeliveryProfile/effective_target_lufs().
     pub target_lufs: f32,
@@ -343,6 +345,7 @@ const PRESET_UNIVERSAL: PresetCalibration = PresetCalibration {
     warmth: 0.03,
     stereo_width: 1.04,
     transient_punch: 0.04,
+    highpass_hz: 24.0,
     target_lufs: -14.0,
     ceiling_dbfs: -1.0,
     compressor_threshold_dbfs: -16.0,
@@ -364,6 +367,7 @@ const PRESET_CLARITY: PresetCalibration = PresetCalibration {
     warmth: 0.025,
     stereo_width: 1.02,
     transient_punch: 0.05,
+    highpass_hz: 28.0,
     target_lufs: -13.4,
     ceiling_dbfs: -1.0,
     compressor_threshold_dbfs: -16.0,
@@ -386,6 +390,7 @@ const PRESET_TAPE: PresetCalibration = PresetCalibration {
     warmth: 0.10,
     stereo_width: 0.99,
     transient_punch: -0.03,
+    highpass_hz: 24.0,
     target_lufs: -13.8,
     ceiling_dbfs: -1.1,
     compressor_threshold_dbfs: -22.0,
@@ -407,6 +412,7 @@ const PRESET_SPATIAL: PresetCalibration = PresetCalibration {
     warmth: 0.04,
     stereo_width: 1.16,
     transient_punch: 0.03,
+    highpass_hz: 24.0,
     target_lufs: -13.1,
     ceiling_dbfs: -1.0,
     compressor_threshold_dbfs: -16.0,
@@ -429,6 +435,7 @@ const PRESET_OOMPH: PresetCalibration = PresetCalibration {
     warmth: 0.045,
     stereo_width: 0.95,
     transient_punch: 0.08,
+    highpass_hz: 22.0,
     target_lufs: -12.0,
     ceiling_dbfs: -0.9,
     compressor_threshold_dbfs: -22.0,
@@ -450,6 +457,7 @@ const PRESET_WARMTH: PresetCalibration = PresetCalibration {
     warmth: 0.08,
     stereo_width: 0.98,
     transient_punch: -0.05,
+    highpass_hz: 24.0,
     target_lufs: -14.7,
     ceiling_dbfs: -1.2,
     compressor_threshold_dbfs: -19.0,
@@ -472,6 +480,7 @@ const PRESET_PUNCH: PresetCalibration = PresetCalibration {
     warmth: 0.035,
     stereo_width: 1.04,
     transient_punch: 0.14,
+    highpass_hz: 28.0,
     target_lufs: -10.9,
     ceiling_dbfs: -0.8,
     compressor_threshold_dbfs: -20.0,
@@ -494,6 +503,7 @@ const PRESET_LOUD: PresetCalibration = PresetCalibration {
     warmth: 0.055,
     stereo_width: 1.03,
     transient_punch: 0.12,
+    highpass_hz: 30.0,
     target_lufs: -10.4,
     ceiling_dbfs: -0.8,
     compressor_threshold_dbfs: -23.0,
@@ -519,6 +529,7 @@ const PRESET_CUSTOM_NEUTRAL: PresetCalibration = PresetCalibration {
     warmth: 0.0,
     stereo_width: 1.0,
     transient_punch: 0.0,
+    highpass_hz: 0.0,
     target_lufs: -14.0,
     ceiling_dbfs: -1.0,
     compressor_threshold_dbfs: -16.0,
@@ -545,6 +556,9 @@ pub fn preset_calibration(preset: &Preset) -> PresetCalibration {
 
 #[derive(Debug, Clone, Copy)]
 pub struct ChainCoeffs {
+    /// Per-preset LR4 subsonic high-pass. One Butterworth stage is stored
+    /// here and run through two state stages for a 24 dB/oct slope.
+    pub sub_highpass: BiquadCoeffs,
     pub low: BiquadCoeffs,
     /// Phase A2: low-mid peaking @ 400 Hz, Q=0.9. Heavy presets cut this
     /// band to clean up the mud zone (250–800 Hz). Identity biquad when
@@ -663,6 +677,11 @@ impl ChainCoeffs {
         let effective_mid_db = preset.presence_db * preset_scale + settings.eq_mid_db;
         let effective_high_db = preset.air_db * preset_scale + settings.eq_high_db;
 
+        let sub_highpass = if preset.highpass_hz > 0.0 {
+            BiquadCoeffs::butter_hp(sr, preset.highpass_hz.clamp(20.0, 40.0), BUTTERWORTH_Q)
+        } else {
+            BiquadCoeffs::identity()
+        };
         let low = BiquadCoeffs::low_shelf(sr, 200.0, effective_low_db, 0.7);
         let low_mid = BiquadCoeffs::peaking(sr, 400.0, 0.9, effective_low_mid_db);
         let mid = BiquadCoeffs::peaking(sr, 1500.0, 0.8, effective_mid_db);
@@ -984,6 +1003,7 @@ impl ChainCoeffs {
         let comp_knee_db = 6.0_f32;
 
         Self {
+            sub_highpass,
             low,
             low_mid,
             mid,
@@ -1050,6 +1070,8 @@ pub(crate) fn apply_width_stereo(frame: &mut [f32], side_scale: f32) {
 
 #[derive(Debug, Clone, Default)]
 pub struct ChannelState {
+    sub_hp1: BiquadState,
+    sub_hp2: BiquadState,
     low: BiquadState,
     /// Phase A2: state for the 400 Hz peaking band.
     low_mid: BiquadState,
@@ -1721,6 +1743,8 @@ impl MasteringChain {
         for ch in 0..channels {
             let state = &mut self.states[ch];
             let mut y = frame[ch] * self.coeffs.input_gain_lin;
+            let hp1 = state.sub_hp1.process(&self.coeffs.sub_highpass, y);
+            y = state.sub_hp2.process(&self.coeffs.sub_highpass, hp1);
             y = state.low.process(&self.coeffs.low, y);
             y = state.low_mid.process(&self.coeffs.low_mid, y);
             y = state.mid.process(&self.coeffs.mid, y);
@@ -1937,6 +1961,8 @@ impl MasteringChain {
         };
         let state = &mut self.states[idx];
         let mut y = sample * self.coeffs.input_gain_lin;
+        let hp1 = state.sub_hp1.process(&self.coeffs.sub_highpass, y);
+        y = state.sub_hp2.process(&self.coeffs.sub_highpass, hp1);
         y = state.low.process(&self.coeffs.low, y);
         y = state.mid.process(&self.coeffs.mid, y);
         y = state.high.process(&self.coeffs.high, y);
@@ -2068,6 +2094,66 @@ mod tests {
         let num_mag = (num_re * num_re + num_im * num_im).sqrt();
         let den_mag = (den_re * den_re + den_im * den_im).sqrt();
         20.0 * (num_mag / den_mag).log10()
+    }
+
+    fn cascaded_magnitude_db_at(
+        c: &BiquadCoeffs,
+        stages: usize,
+        freq_hz: f32,
+        sample_rate: f32,
+    ) -> f32 {
+        biquad_magnitude_db_at(c, freq_hz, sample_rate) * stages as f32
+    }
+
+    #[test]
+    fn preset_highpass_cutoffs_are_mastering_subsonic_or_neutral_custom() {
+        let presets = [
+            PRESET_UNIVERSAL,
+            PRESET_CLARITY,
+            PRESET_TAPE,
+            PRESET_SPATIAL,
+            PRESET_OOMPH,
+            PRESET_WARMTH,
+            PRESET_PUNCH,
+            PRESET_LOUD,
+        ];
+        for preset in presets {
+            assert!(
+                (20.0..=40.0).contains(&preset.highpass_hz),
+                "preset HPF must stay in the mastering subsonic range, got {}",
+                preset.highpass_hz
+            );
+        }
+        assert_eq!(PRESET_CUSTOM_NEUTRAL.highpass_hz, 0.0);
+    }
+
+    #[test]
+    fn preset_highpass_is_lr4_subsonic_filter_before_eq() {
+        let mut settings = default_master_settings();
+        settings.preset = Preset::Universal;
+        let coeffs = ChainCoeffs::from_settings(48_000, &settings);
+
+        let sub_10_hz = cascaded_magnitude_db_at(&coeffs.sub_highpass, 2, 10.0, 48_000.0);
+        let audible_100_hz = cascaded_magnitude_db_at(&coeffs.sub_highpass, 2, 100.0, 48_000.0);
+
+        assert!(
+            sub_10_hz < -25.0,
+            "Universal HPF should strongly attenuate 10 Hz rumble, got {sub_10_hz:.2} dB"
+        );
+        assert!(
+            audible_100_hz.abs() < 0.2,
+            "Universal HPF should leave 100 Hz essentially intact, got {audible_100_hz:.2} dB"
+        );
+    }
+
+    #[test]
+    fn custom_highpass_is_identity() {
+        let mut settings = default_master_settings();
+        settings.preset = Preset::Custom { id: "neutral".into() };
+        let coeffs = ChainCoeffs::from_settings(48_000, &settings);
+        assert!(approx_eq(coeffs.sub_highpass.b0, 1.0, 1e-6));
+        assert!(approx_eq(coeffs.sub_highpass.b1, 0.0, 1e-6));
+        assert!(approx_eq(coeffs.sub_highpass.b2, 0.0, 1e-6));
     }
 
     /// Width 0 collapses the stereo image to mono. For an L = sine, R = -sine
