@@ -4403,3 +4403,44 @@ Next recommended slice:
 On Windows: pull latest, run the documented fast gates, run
 `npm run build:windows`, confirm installer outputs, and record any
 Windows-specific setup fixes.
+
+## 2026-05-19 - Album Master layout repair on Windows
+
+Goal:
+
+Fix the Album Master desktop layout regression where the album adaptation
+banner consumed the waveform hero row and crushed the track controls below it.
+
+What changed:
+
+- Added Album Master-specific workspace and console classes.
+- Gave Album Master its own desktop console row contract so the adaptation
+  banner stays compact and the waveform, presets, signal chain, and controls
+  keep their intended rows.
+- Converted the Album Master control row to a grid so the Export Album action
+  stays visible beside Arc and Intensity.
+- Added a layout regression test covering the Album Master row contract.
+
+Verification:
+
+- `npm test -- src/App.layout-css.test.ts`: 3/3 pass.
+- `npm test`: 80/80 pass.
+- `npm run build`: clean production build.
+- `npm run build:windows`: rebuilt NSIS and MSI installers.
+- Static macOS and Windows packaging tests passed as part of `npm test`.
+- Windows release EXE launch-smoked into Album Master after rebuild.
+- `git diff --check`: clean.
+
+Real-audio fixture used:
+
+No. This is a shared frontend layout fix.
+
+What failed or remains partial:
+
+- `npm run build:mac` was not run because this pass was on Windows.
+  The fix is shared React/CSS and the macOS packaging static gate passed.
+
+Next recommended slice:
+
+Install the rebuilt Windows NSIS installer and do a human visual pass on
+Album Master at the target window sizes.

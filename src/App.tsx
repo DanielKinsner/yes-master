@@ -73,7 +73,7 @@ function App() {
         onReorder={tm.reorderTracks}
         overrideAlbum={tm.overrideAlbum}
       />
-      <main className="workspace">
+      <main className={"workspace" + (tm.mode === "album" ? " workspace-album" : "")}>
         {tm.mode === "album" && tm.tracks.length > 0 && (
           <>
             <AlbumHeader
@@ -530,7 +530,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
   const track = tm.selectedTrack;
   if (!track) return null;
   return (
-    <div className="track-master-console">
+    <div className={"track-master-console" + (tm.mode === "album" ? " is-album" : "")}>
       {tm.mode === "album" && (
         <OverrideBanner
           isOverriding={tm.selectedIsOverriding}

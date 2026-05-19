@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const css = readFileSync(resolve(process.cwd(), "src/App.css"), "utf8");
+const appTsx = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
 
 function block(selector: string): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -28,5 +29,19 @@ describe("console layout CSS", () => {
     expect(block(".preset-save-plus")).toContain("width: 18px");
     expect(block(".preset-save-plus")).toContain("height: 18px");
     expect(block(".preset-save-plus")).toContain("font-size: 0.72rem");
+  });
+
+  it("gives Album Master its own workspace and console grid rows", () => {
+    expect(appTsx).toContain('tm.mode === "album" ? " workspace-album" : ""');
+    expect(appTsx).toContain('tm.mode === "album" ? " is-album" : ""');
+    expect(block(".workspace-album")).toContain(
+      "grid-template-rows: auto auto minmax(0, 1fr)",
+    );
+    expect(block(".track-master-console.is-album")).toContain("42px");
+    expect(block(".track-master-console.is-album")).toContain(
+      "minmax(250px, 1.3fr)",
+    );
+    expect(block(".album-panel-controls")).toContain("display: grid");
+    expect(block(".album-export-btn")).toContain("white-space: nowrap");
   });
 });
