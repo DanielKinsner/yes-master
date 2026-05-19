@@ -232,3 +232,63 @@ Product/UX:
   when the logic is extractable.
 - Listening calls are Dan's. If a future note is taste-based, capture the note
   first, then tune.
+
+## Addendum — Vera's wrap-up, 2026-05-19
+
+Written from Claude's side at the end of the 2026-05-18 evening / 2026-05-19
+wrap-up arc. This is the Claude-side POV with cross-session context that won't
+otherwise carry into the next agent's window. Not a comprehensive review — what
+follows is the residual signal worth preserving.
+
+**Workflow inversion this session.** Standard pattern is Codex writes / Claude
+reviews. This session ran inverted: Vera (Claude, read-only via Filesystem MCP)
+reviewed code; Codex implemented. The inversion is structurally fine —
+write/review separation is the primitive, and cross-vendor pairing catches
+things same-vendor wouldn't. ADR 0002 was born tonight because one
+cross-machine Codex session did not have an earlier plan's context and shipped
+a defensible-but-different choice (4-pole cascade HPF / pre-comp transient
+placement, later corrected to post-comp). Future sessions: when you ship a
+material implementation choice, land it in the repo (`docs/followups/` or a
+numbered ADR) BEFORE handing off, even within the same session.
+
+**Cross-platform direction is locked.** Dan confirmed in chat on 2026-05-19
+that YES Master is no longer Windows-only; both Mac and Windows are
+first-class targets. `README.md`, `CLAUDE.md`, `IMPLEMENTATION_PLAN.md` (and
+`PRODUCT.md`, pending Dan's explicit approval) reflect this in the wrap-up
+batch. If you read older doc framing that still says "private Windows desktop
+mastering app," trust the newer language and the dated handoffs.
+
+**Verified vs documented:**
+
+- Verified by passing tests + executed build: Mac packaging (`build:mac`
+  produced `.app` + `.dmg`, codesign-verified, hdiutil-verified, launch-smoked
+  on Dan's Mac).
+- Static config + tests only: Windows packaging (`build:windows`,
+  `windows-app-packaging.test.ts`, the `bundle.windows` config block). First
+  real Windows build will happen on Dan's Windows machine. The Windows-only
+  `cfg(target_os = "windows")` Rust path test does not run on macOS.
+- Inferred from existing code, not primary source: preset HPF/transient
+  rationale comments in `dsp.rs` near `PresetCalibration`. The Python reference
+  repo was not accessible from this Mac; cross-check against `mastering.py`
+  when next on a machine that has it.
+
+**Trust calibration when docs disagree:**
+
+1. The most recent dated handoff (currently this file) is authoritative for
+   in-flight work state.
+2. `docs/progress.md` tail is the most current append-only record. If a slice
+   happened, it is there.
+3. `docs/HANDOFF.md` is the front door but layers addenda over snapshots; when
+   in doubt, defer to the most recent dated handoff and the `progress.md` tail.
+4. `docs/PRODUCT.md` is locked. Never edit without Dan's explicit ask.
+5. Test totals quoted in any doc should match `npm test` and `cargo test --lib`
+   from `src-tauri`. If they do not, trust the command output.
+
+**Open arc.** One final eagle-eye audit prompt is intended after the wrap-up
+cleanup batch lands — a scoped pass verifying ADR 0002 was honored across
+tonight's work, that test totals match across all docs that quote them, and
+that any LLM opening the repo cold tomorrow has everything it needs. If you're
+reading this without seeing that audit slice in `progress.md`, it is still
+pending.
+
+— Vera, 2026-05-19
