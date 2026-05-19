@@ -4232,3 +4232,44 @@ Next recommended slice:
 Run the final eagle-eye audit: verify ADR 0002 was honored, pointer chains are
 current, test totals match everywhere they are quoted, and no chat-only context
 remains.
+
+## 2026-05-19 - static signal chain bar
+
+Goal:
+
+Remove the fake dropdown affordance from the signal-chain strip so it reads as
+one fixed bar.
+
+What changed:
+
+- Removed the SignalChain expand/collapse state and chevron button.
+- Removed the related dropdown/expanded CSS and hover scale treatment so the
+  strip no longer suggests an interactive menu.
+- Added a component regression test that gates the chain rendering without an
+  expand/dropdown affordance.
+- Rebuilt the Mac `.app` and DMG, then updated `/Applications/YES Master.app`
+  from the rebuilt app bundle.
+
+Verification:
+
+- Red test first: `npm test -- src/components/SignalChain.test.tsx` failed
+  because the old expand button was present.
+- `npm test -- src/components/SignalChain.test.tsx`: 1/1 pass.
+- `npm test`: 74/74 pass.
+- `npm run build`: clean production build.
+- `npm run build:mac`: rebuilt `.app` and DMG.
+- `diff -qr /Applications/YES Master.app src-tauri/target/release/bundle/macos/YES Master.app`:
+  no differences after install copy update.
+
+Real-audio fixture used:
+
+No. This is a frontend-only UI affordance fix.
+
+What failed or remains partial:
+
+- The app was already running from `/Applications`; the open window needs a
+  quit/reopen to show the updated installed app.
+
+Next recommended slice:
+
+Continue with the final eagle-eye audit.

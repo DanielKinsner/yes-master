@@ -4,7 +4,7 @@
 // the relevant settings are non-neutral, with a glow proportional to the
 // magnitude of the change.
 
-import type { ReactElement } from "react";
+import { Fragment, type ReactElement } from "react";
 import type { MasteringSettings, Preset } from "../bindings";
 
 type Stage = {
@@ -140,15 +140,9 @@ function signed(v: number, digits: number): string {
 
 export function SignalChain({ settings }: { settings: MasteringSettings }) {
   const stages = buildStages(settings);
-  // UI_LAYOUT_REVISION_1600x940 L5 polish — chevron toggles between
-  // collapsed (just stage discs + labels) and expanded (also shows
-  // the per-stage detail line below each disc). Default: collapsed,
-  // so the chain reads as a slim status strip. Click to expand for
-  // at-a-glance values without opening Advanced.
-  const [expanded, setExpanded] = useState(false);
   return (
     <section
-      className={"signal-chain" + (expanded ? " is-expanded" : "")}
+      className="signal-chain"
       aria-label="Signal chain"
     >
       <div className="signal-chain-track">
@@ -165,22 +159,10 @@ export function SignalChain({ settings }: { settings: MasteringSettings }) {
             <StageNode stage={s} />
           </Fragment>
         ))}
-        <button
-          type="button"
-          className="signal-chain-toggle"
-          onClick={() => setExpanded((prev) => !prev)}
-          aria-expanded={expanded}
-          aria-label={expanded ? "Collapse signal chain detail" : "Expand signal chain detail"}
-          title={expanded ? "Hide stage details" : "Show stage details"}
-        >
-          <span className="signal-chain-toggle-chevron" aria-hidden>⌄</span>
-        </button>
       </div>
     </section>
   );
 }
-
-import { Fragment, useState } from "react";
 
 function StageNode({ stage }: { stage: Stage }) {
   const glowOpacity = stage.active ? Math.max(0.25, stage.intensity) : 0;

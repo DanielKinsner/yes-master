@@ -3594,7 +3594,7 @@ button.primary:disabled {
 
 /* Phase 12.2 P3 — Signal-chain visualization.
    Restructure 2026-05-14 slice C — compressed from full-height panel
-   to a thin breadcrumb. Hidden header (the row reads as a chain
+   to a fixed breadcrumb. Hidden header (the row reads as a chain
    already), smaller discs, shorter labels, per-stage details hidden
    (the same values are in the Macros knobs / right rail). */
 
@@ -3640,7 +3640,7 @@ button.primary:disabled {
      baseline — without this, align-items: center still leaves a few px of
      vertical drift because the flex item's hypothetical line-box has height. */
   line-height: 0;
-  transition: color 120ms ease, background 120ms ease, transform 120ms ease;
+  transition: color 120ms ease, background 120ms ease;
 }
 
 .chain-stage-disc svg {
@@ -3658,10 +3658,6 @@ button.primary:disabled {
 /* (Earlier `.chain-stage-disc svg { display: block }` rule is the
    authoritative one — kept above with the slice-C compressed sizing.) */
 
-.chain-stage:hover .chain-stage-disc {
-  transform: scale(1.06);
-}
-
 .chain-stage-label {
   font-size: 0.58rem;
   letter-spacing: 0.06em;
@@ -3674,11 +3670,9 @@ button.primary:disabled {
   color: var(--text-0);
 }
 
-/* Slice C + L5 polish: per-stage detail hidden by default so the
-   chain reads as a slim status strip. When the chevron at the right
-   end of the chain is clicked, the parent .signal-chain gains
-   .is-expanded and the details surface for an at-a-glance readout
-   without opening Advanced. */
+/* Per-stage detail stays hidden so the chain reads as one static strip.
+   The actual editable values live in the macros, advanced controls, and
+   right rail rather than behind a fake dropdown. */
 .chain-stage-detail {
   display: none;
   font-size: 0.6rem;
@@ -3689,45 +3683,6 @@ button.primary:disabled {
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
-}
-
-.signal-chain.is-expanded .chain-stage-detail {
-  display: block;
-}
-
-.signal-chain.is-expanded .chain-stage.is-active .chain-stage-detail {
-  color: var(--text-1);
-}
-
-.signal-chain-toggle {
-  background: transparent;
-  border: 1px solid rgba(111, 163, 255, 0.12);
-  color: var(--text-2);
-  border-radius: var(--radius-sm);
-  padding: 0.15rem 0.4rem;
-  margin-left: 0.4rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 80ms, color 80ms, border-color 80ms, transform 120ms;
-}
-
-.signal-chain-toggle:hover {
-  color: var(--text-0);
-  border-color: rgba(111, 163, 255, 0.28);
-  background: rgba(13, 16, 24, 0.55);
-}
-
-.signal-chain-toggle-chevron {
-  font-size: 0.85rem;
-  line-height: 1;
-  transition: transform 120ms ease;
-  transform: translateY(-1px);
-}
-
-.signal-chain.is-expanded .signal-chain-toggle-chevron {
-  transform: translateY(-1px) rotate(180deg);
 }
 
 .chain-link {
