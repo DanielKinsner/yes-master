@@ -177,7 +177,7 @@ function StageNode({ stage }: { stage: Stage }) {
           // Live glow intensity follows the stage's setting magnitude so a
           // hot compressor reads as obviously hotter than a gentle Warmth nudge.
           boxShadow: stage.active
-            ? `0 0 14px rgba(77, 139, 255, ${glowOpacity * 0.7}), inset 0 0 0 1px rgba(111, 163, 255, ${glowOpacity * 0.6})`
+            ? `0 0 22px rgba(77, 139, 255, ${glowOpacity * 0.9}), 0 0 8px rgba(195, 215, 255, ${glowOpacity * 0.35}), inset 0 0 0 1px rgba(176, 205, 255, ${glowOpacity * 0.85})`
             : undefined,
         }}
       >

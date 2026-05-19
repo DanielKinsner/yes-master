@@ -4273,3 +4273,48 @@ What failed or remains partial:
 Next recommended slice:
 
 Continue with the final eagle-eye audit.
+
+## 2026-05-19 - inline preset save and brighter chain
+
+Goal:
+
+Move preset saving out of its own row, reclaim the vertical space for larger
+preset tiles and a more legible signal chain, and make active chain stages read
+brighter.
+
+What changed:
+
+- Added a compact `+` save action beside the Preset label.
+- Moved the save-name form into the preset header after clicking `+`.
+- Removed the empty "+ Save current as preset" row below the signal chain.
+- Kept saved user-preset chips available when saved presets exist.
+- Increased preset tile/icon sizing and signal-chain height in the desktop
+  console layouts.
+- Brightened active signal-chain discs, labels, borders, and glow.
+- Rebuilt the Mac `.app` and DMG, then updated `/Applications/YES Master.app`
+  from the rebuilt bundle.
+
+Verification:
+
+- Red test first: `npm test -- src/App.preset-save.test.tsx` failed because
+  the `+` action was missing and the empty save row still rendered.
+- `npm test -- src/App.preset-save.test.tsx`: 3/3 pass.
+- `npm test`: 77/77 pass.
+- `npm run build`: clean production build.
+- `npm run build:mac`: rebuilt `.app` and DMG.
+- `diff -qr /Applications/YES Master.app src-tauri/target/release/bundle/macos/YES Master.app`:
+  no differences after install copy update.
+
+Real-audio fixture used:
+
+No. This is a frontend-only UI layout/affordance change.
+
+What failed or remains partial:
+
+- No functional failure remains from this slice.
+- If YES Master is open while the app bundle is replaced, the visible window
+  still needs a quit/reopen to show the installed update.
+
+Next recommended slice:
+
+Continue with the final eagle-eye audit.

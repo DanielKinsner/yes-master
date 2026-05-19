@@ -589,24 +589,29 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
       <PresetTiles
         selected={tm.selectedSettings.preset}
         onChange={tm.setPreset}
-      />
-      <SignalChain settings={tm.selectedSettings} />
-      <div className="console-controls">
-      <UserPresetSection
-        presets={tm.userPresets}
         savingPreset={tm.savingPreset}
         onSave={tm.saveUserPreset}
-        onDelete={tm.deleteUserPreset}
-        onApply={tm.applyUserPreset}
       />
-      <Macros
-        settings={tm.selectedSettings}
-        onIntensity={tm.setIntensity}
-        onEq={tm.setEqBand}
-        onAdvanced={tm.setAdvanced}
-        onDeliveryProfile={tm.setDeliveryProfile}
-        spectrumDb={tm.transport.spectrumDb}
-      />
+      <SignalChain settings={tm.selectedSettings} />
+      <div
+        className={
+          "console-controls" +
+          (tm.userPresets.length > 0 ? " has-user-presets" : "")
+        }
+      >
+        <UserPresetSection
+          presets={tm.userPresets}
+          onDelete={tm.deleteUserPreset}
+          onApply={tm.applyUserPreset}
+        />
+        <Macros
+          settings={tm.selectedSettings}
+          onIntensity={tm.setIntensity}
+          onEq={tm.setEqBand}
+          onAdvanced={tm.setAdvanced}
+          onDeliveryProfile={tm.setDeliveryProfile}
+          spectrumDb={tm.transport.spectrumDb}
+        />
       </div>
       <div className="console-footer-row">
       <UndoRedoBar
@@ -1327,17 +1332,82 @@ function useWebviewZoomShortcuts() {
   }, []);
 }
 
-function PresetTiles({
+export function PresetTiles({
   selected,
   onChange,
+  savingPreset,
+  onSave,
 }: {
   selected: Preset;
   onChange: (preset: Preset) => void;
+  savingPreset: boolean;
+  onSave: (name: string) => void;
 }) {
+  const [name, setName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    onSave(name);
+    setName("");
+    setIsSaving(false);
+  };
+
   return (
     <section className="presets">
       <div className="section-head">
         <span className="section-label">Preset</span>
+        {!isSaving ? (
+          <button
+            type="button"
+            className="preset-save-plus"
+            onClick={() => setIsSaving(true)}
+            aria-label="Save current settings as preset"
+            title="Save current settings as preset"
+          >
+            +
+          </button>
+        ) : (
+          <form
+            className="preset-save-inline"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSave();
+            }}
+          >
+            <input
+              type="text"
+              className="preset-save-name"
+              placeholder="Preset name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={64}
+              disabled={savingPreset}
+              autoFocus
+            />
+            <button
+              type="submit"
+              className="preset-save-confirm"
+              disabled={savingPreset || !name.trim()}
+              aria-label="Save preset"
+              title="Save preset"
+            >
+              {savingPreset ? "…" : "Save"}
+            </button>
+            <button
+              type="button"
+              className="preset-save-cancel"
+              onClick={() => {
+                setName("");
+                setIsSaving(false);
+              }}
+              aria-label="Cancel preset save"
+              title="Cancel"
+            >
+              ×
+            </button>
+          </form>
+        )}
       </div>
       <div className="tile-row">
         {PRESET_OPTIONS.map((p) => {
@@ -1363,43 +1433,16 @@ function PresetTiles({
   );
 }
 
-function UserPresetSection({
+export function UserPresetSection({
   presets,
-  savingPreset,
-  onSave,
   onDelete,
   onApply,
 }: {
   presets: UserPreset[];
-  savingPreset: boolean;
-  onSave: (name: string) => void;
   onDelete: (id: string) => void;
   onApply: (preset: UserPreset) => void;
 }) {
-  const [name, setName] = useState("");
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const handleSave = () => {
-    if (!name.trim()) return;
-    onSave(name);
-    setName("");
-    setIsExpanded(false);
-  };
-
-  // Empty state collapses to a single inline "+ Save current as preset"
-  // button so we don't burn a full row of vertical space on nothing.
-  if (presets.length === 0 && !isExpanded) {
-    return (
-      <button
-        type="button"
-        className="user-presets-add-inline"
-        onClick={() => setIsExpanded(true)}
-        title="Save the current settings as a named preset"
-      >
-        + Save current as preset
-      </button>
-    );
-  }
+  if (presets.length === 0) return null;
 
   return (
     <section className="user-presets">
@@ -1427,43 +1470,6 @@ function UserPresetSection({
             </button>
           </div>
         ))}
-        <form
-          className="user-preset-save"
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSave();
-          }}
-        >
-          <input
-            type="text"
-            className="user-preset-name"
-            placeholder="Save current as…"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={64}
-            disabled={savingPreset}
-            autoFocus={isExpanded}
-          />
-          <button
-            type="submit"
-            className="ghost-btn"
-            disabled={savingPreset || !name.trim()}
-          >
-            {savingPreset ? "Saving…" : "Save"}
-          </button>
-          {presets.length === 0 && (
-            <button
-              type="button"
-              className="ghost-btn"
-              onClick={() => {
-                setName("");
-                setIsExpanded(false);
-              }}
-            >
-              Cancel
-            </button>
-          )}
-        </form>
       </div>
     </section>
   );

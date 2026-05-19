@@ -1515,8 +1515,8 @@ button.primary:disabled {
 .presets {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.55rem 0.85rem 0.65rem;
+  gap: 0.5rem;
+  padding: 0.65rem 0.9rem 0.75rem;
   background: linear-gradient(180deg, rgba(31, 37, 51, 0.4) 0%, var(--bg-2) 100%);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -1527,6 +1527,81 @@ button.primary:disabled {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.preset-save-plus {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(111, 163, 255, 0.32);
+  background: rgba(77, 139, 255, 0.10);
+  color: var(--accent-bright);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(77, 139, 255, 0.10);
+  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+}
+
+.preset-save-plus:hover {
+  background: rgba(77, 139, 255, 0.18);
+  border-color: rgba(111, 163, 255, 0.62);
+  color: var(--text-0);
+}
+
+.preset-save-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-width: min(280px, 42vw);
+}
+
+.preset-save-name {
+  width: min(180px, 26vw);
+  background: rgba(8, 13, 23, 0.9);
+  border: 1px solid rgba(111, 163, 255, 0.28);
+  color: var(--text-0);
+  padding: 0.26rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  font-family: inherit;
+}
+
+.preset-save-name::placeholder {
+  color: var(--text-2);
+}
+
+.preset-save-name:focus {
+  outline: none;
+  border-color: rgba(111, 163, 255, 0.66);
+}
+
+.preset-save-confirm,
+.preset-save-cancel {
+  border: 1px solid rgba(111, 163, 255, 0.18);
+  background: rgba(13, 16, 24, 0.78);
+  color: var(--text-1);
+  border-radius: var(--radius-sm);
+  padding: 0.24rem 0.48rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.preset-save-confirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.preset-save-confirm:not(:disabled):hover,
+.preset-save-cancel:hover {
+  color: var(--text-0);
+  border-color: rgba(111, 163, 255, 0.48);
+  background: rgba(77, 139, 255, 0.12);
 }
 
 .tile-row {
@@ -1549,7 +1624,7 @@ button.primary:disabled {
      preset keeps its character cue. Per Dan's UX review: presets
      should be accessible but not oversized — primary working area
      is waveform + transport + mastering controls below. */
-  min-height: 72px;
+  min-height: 84px;
   background:
     radial-gradient(
       circle at 50% 30%,
@@ -1594,11 +1669,11 @@ button.primary:disabled {
 
 /* Photoreal preset imagery — screen-blended so the highlights add
    light to the tile rather than reading as a pasted sticker. Compact
-   strip slice B: imagery shrinks from 64-92 → 28-40 so the strip
-   stays a secondary control. */
+   strip slice B: imagery stays compact, but the removed save row gives
+   the presets enough room to read larger without crowding the console. */
 .tile-icon {
-  width: clamp(28px, 2.6vw, 40px);
-  height: clamp(28px, 2.6vw, 40px);
+  width: clamp(34px, 3vw, 52px);
+  height: clamp(34px, 3vw, 52px);
   object-fit: contain;
   margin-bottom: 0.1rem;
   flex-shrink: 0;
@@ -1665,6 +1740,13 @@ button.primary:disabled {
   color: var(--tile-accent, var(--accent));
 }
 
+.console-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-height: 0;
+}
+
 /* User presets */
 .user-presets {
   display: flex;
@@ -1675,29 +1757,6 @@ button.primary:disabled {
   border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-}
-
-/* Inline empty-state CTA — replaces the full card when there are no saved
-   presets, so we don't burn a row of vertical real-estate on a hint. */
-.user-presets-add-inline {
-  align-self: flex-start;
-  background: transparent;
-  border: 1px dashed var(--border-strong);
-  color: var(--text-2);
-  border-radius: 999px;
-  padding: 0.3rem 0.8rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
-}
-
-.user-presets-add-inline:hover {
-  color: var(--text-0);
-  border-color: var(--accent);
-  background: rgba(77, 139, 255, 0.08);
 }
 
 .user-preset-row {
@@ -1761,32 +1820,6 @@ button.primary:disabled {
 .user-preset-delete:hover {
   color: var(--accent-danger);
   background: var(--bg-2);
-}
-
-.user-preset-save {
-  display: flex;
-  gap: 0.4rem;
-  align-items: center;
-}
-
-.user-preset-name {
-  flex: 1;
-  background: var(--bg-2);
-  border: 1px solid var(--border-strong);
-  color: var(--text-0);
-  padding: 0.35rem 0.6rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-family: inherit;
-}
-
-.user-preset-name::placeholder {
-  color: var(--text-2);
-}
-
-.user-preset-name:focus {
-  outline: none;
-  border-color: var(--accent);
 }
 
 /* UI restyle slice 4b — Visual EQ panel.
@@ -3599,13 +3632,15 @@ button.primary:disabled {
    (the same values are in the Macros knobs / right rail). */
 
 .signal-chain {
-  padding: 0.35rem 0.9rem 0.4rem;
+  padding: 0.5rem 1rem 0.55rem;
   background:
-    radial-gradient(circle at 20% 0%, rgba(77, 139, 255, 0.10) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(20, 25, 36, 0.6) 0%, rgba(12, 15, 23, 0.85) 100%);
-  border: 1px solid rgba(111, 163, 255, 0.10);
+    radial-gradient(circle at 20% 0%, rgba(77, 139, 255, 0.16) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(20, 25, 36, 0.7) 0%, rgba(12, 15, 23, 0.88) 100%);
+  border: 1px solid rgba(111, 163, 255, 0.16);
   border-radius: 6px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 12px 28px rgba(0, 0, 0, 0.18);
   position: relative;
 }
 
@@ -3623,12 +3658,12 @@ button.primary:disabled {
   gap: 0.1rem;
   text-align: center;
   flex: 0 0 auto;
-  min-width: 38px;
+  min-width: 42px;
 }
 
 .chain-stage-disc {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
@@ -3645,21 +3680,21 @@ button.primary:disabled {
 
 .chain-stage-disc svg {
   display: block;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 .chain-stage.is-active .chain-stage-disc {
-  color: var(--accent-bright);
-  background: linear-gradient(180deg, rgba(77, 139, 255, 0.18) 0%, rgba(42, 107, 242, 0.08) 100%);
-  border-color: rgba(111, 163, 255, 0.5);
+  color: var(--text-0);
+  background: linear-gradient(180deg, rgba(77, 139, 255, 0.34) 0%, rgba(42, 107, 242, 0.16) 100%);
+  border-color: rgba(133, 178, 255, 0.82);
 }
 
 /* (Earlier `.chain-stage-disc svg { display: block }` rule is the
    authoritative one — kept above with the slice-C compressed sizing.) */
 
 .chain-stage-label {
-  font-size: 0.58rem;
+  font-size: 0.62rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-2);
@@ -3668,6 +3703,7 @@ button.primary:disabled {
 
 .chain-stage.is-active .chain-stage-label {
   color: var(--text-0);
+  text-shadow: 0 0 12px rgba(111, 163, 255, 0.36);
 }
 
 /* Per-stage detail stays hidden so the chain reads as one static strip.
@@ -3966,9 +4002,9 @@ button.primary:disabled {
     display: grid;
     grid-template-rows:
       minmax(330px, 1.55fr)
-      104px
-      50px
-      minmax(170px, 0.75fr)
+      116px
+      58px
+      minmax(154px, 0.75fr)
       38px;
     gap: 0.55rem;
     overflow: hidden;
@@ -4241,11 +4277,11 @@ button.primary:disabled {
   }
 
   .presets .section-head {
-    height: 16px;
+    height: 20px;
   }
 
   .tile-row {
-    height: calc(100% - 18px);
+    height: calc(100% - 22px);
     grid-template-columns: repeat(8, minmax(0, 1fr));
     gap: 0.45rem;
   }
@@ -4258,8 +4294,8 @@ button.primary:disabled {
   }
 
   .tile-icon {
-    width: clamp(28px, 2.2vw, 36px);
-    height: clamp(28px, 2.2vw, 36px);
+    width: clamp(34px, 2.7vw, 46px);
+    height: clamp(34px, 2.7vw, 46px);
   }
 
   .tile-label {
@@ -4268,7 +4304,7 @@ button.primary:disabled {
 
   .signal-chain {
     min-height: 0;
-    padding: 0.28rem 0.8rem 0.32rem;
+    padding: 0.36rem 0.85rem 0.4rem;
     overflow: hidden;
   }
 
@@ -4277,31 +4313,28 @@ button.primary:disabled {
   }
 
   .chain-stage-disc {
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
   }
 
   .chain-stage-label {
-    font-size: 0.58rem;
+    font-size: 0.6rem;
   }
 
   .chain-link {
-    margin-bottom: 24px;
+    margin-bottom: 27px;
   }
 
   .console-controls {
     display: grid;
-    grid-template-rows: 26px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     gap: 0.38rem;
     min-height: 0;
     overflow: hidden;
   }
 
-  .console-controls .user-presets-add-inline {
-    align-self: start;
-    padding: 0.24rem 0.7rem;
-    font-size: 0.66rem;
-    line-height: 1;
+  .console-controls.has-user-presets {
+    grid-template-rows: 26px minmax(0, 1fr);
   }
 
   .console-controls .user-presets {
@@ -4430,9 +4463,9 @@ button.primary:disabled {
   .track-master-console {
     grid-template-rows:
       minmax(410px, 1.56fr)
-      126px
-      58px
-      minmax(228px, 0.84fr)
+      140px
+      66px
+      minmax(206px, 0.84fr)
       42px;
     gap: 0.68rem;
   }
@@ -4471,8 +4504,8 @@ button.primary:disabled {
   }
 
   .tile-icon {
-    width: 44px;
-    height: 44px;
+    width: 54px;
+    height: 54px;
   }
 
   .tile-label {
@@ -4514,9 +4547,9 @@ button.primary:disabled {
   .track-master-console {
     grid-template-rows:
       minmax(300px, 1.45fr)
-      92px
-      44px
-      minmax(154px, 0.68fr)
+      106px
+      52px
+      minmax(134px, 0.68fr)
       36px;
     gap: 0.45rem;
   }
