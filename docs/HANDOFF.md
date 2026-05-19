@@ -2,22 +2,26 @@
 
 This document is the entry point for any Claude session — interactive or scheduled — picking up work on this repo. Read this first, then start the loop below.
 
-> **Current snapshot (2026-05-18 evening).** Latest dated handoff is `docs/HANDOFF_2026-05-18_evening.md`; read that first after `CLAUDE.md` and `docs/PRODUCT.md`. It inventories the audio.rs split, macOS packaging, frontend label/readout work, HPF/transient DSP infrastructure, export destination pickers, ADR 0002, self-review against Vera's flags, Album Export dedupe, and the new listening/infrastructure followup docs.
+> **Current snapshot (2026-05-19 wrap-up).** Latest dated handoff is `docs/HANDOFF_2026-05-18_evening.md`; read that first after `CLAUDE.md` and `docs/PRODUCT.md`, then read the 2026-05-19 addenda in this file and `docs/progress.md`. The repo now has static packaging gates for both macOS and Windows, explicit Track/Album export destination pickers, last-export-folder persistence, and queued follow-ups for distribution work that cannot be completed from this Mac.
 >
 > **Addendum (2026-05-17 + 2026-05-18).** Codex landed `f85482c` (2026-05-17) closing the deferred Codex item 4: mock-API React/Vitest coverage for auto-prewarm dispatches (restore/import/openProject), Export-LUFS toggle dispatch, and LoudnessTarget force-to-Custom DOM (+6 Vitest tests via a one-line `export` on `LoudnessTarget`). Today (2026-05-18) Claude closed the `audio.rs` split candidate in three sequential mechanical-only commits: `fcd5ec3` extracts `SpectrumRing` + `SpectrumAnalyzer` → `src/spectrum.rs` (175 lines); `03d79e3` extracts `decode_full` + `decode_to_peaks` + Symphonia surface → `src/decode.rs` (220 lines, with engine.rs's 5 call sites updated); `abedc64` extracts `MeteredPcmSource` + `MasteringSource` (+ COEFFS constants, bumped to `pub(crate)`) → `src/sources.rs` (423 lines). Net: `audio.rs` 3,655 → 2,883 lines (-21%). Behavior byte-identical; test matrix unchanged. HEAD: `abedc64`. Full session detail in `docs/progress.md` under `2026-05-18 — audio.rs split refactor (3-pass)`.
 >
 > **Addendum (2026-05-18 evening).** Export destination UX now asks for explicit save locations for track and album exports, the duplicate Album Export button was removed, the legacy frontend `exportAlbum` hook was removed, and deferred taste/infrastructure checks live in `docs/followups/listening-batch-2026-05-19.md` plus `docs/followups/infrastructure-2026-05-19.md`.
 >
-> **Test totals:** Rust lib **153/153**; Vitest **62/62**; `npm run build` clean. Slow lane last passed with `AMS_RUN_REAL_FIXTURE=1 cargo test -p album-mastering-studio` on the self-review/DSP-comment gate; no slow lane is required for docs/frontend-hook cleanup.
+> **Addendum (2026-05-19).** Cross-platform packaging parity is now guarded mechanically: `npm run build:mac` builds `app,dmg`; `npm run build:windows` builds `msi,nsis`; `src/lib/mac-app-packaging.test.ts` and `src/lib/windows-app-packaging.test.ts` statically pin Tauri config, icons, scripts, and release binary hygiene. Windows installer execution still must be verified on Windows.
+>
+> **Test totals:** Rust lib **154/154 on macOS** (plus one Windows-only path test that runs on Windows); Vitest **73/73**; `npm run build` clean. Slow lane last passed with `AMS_RUN_REAL_FIXTURE=1 cargo test -p album-mastering-studio` on the self-review/DSP-comment gate; no slow lane is required for docs/frontend/package-script cleanup.
 >
 > **What's open / next.** The autonomous queue is effectively empty of items that don't need Dan's input. Three plausible directions: (1) Dan's listening verification batch — five items queued in the checkpoint, would benefit from a focused listening hour; (2) async live-preview measurement on a worker thread — paused this session pending Dan's input because the cost-benefit shifted with the 4-layer perf defense in place; (3) a new product surface (Reference Track UX, Album Master gaps) — needs Dan's nomination.
 >
 > **Codex owns the UI lane** for the moment. Do not edit `src/App.tsx`, `src/App.css`, `src/components/RightRail.tsx`, or `src/components/AlbumPanel.tsx` from the Claude side unless a UI change strictly forces it AND you've pulled latest. App.tsx WAS touched this session for the B7 / LoudnessTarget fixes; coordinate before any further App.tsx work.
 >
-> **New pattern: `src/lib/` pure helpers + co-located Vitest.** Four modules so far:
+> **New pattern: `src/lib/` pure helpers + co-located Vitest.** Five modules so far:
 > - `src/lib/effective-settings.ts` (+ test) — read-direction shadowing helpers + LoudnessTarget display.
 > - `src/lib/settings-transitions.ts` (+ test) — write-direction transitions: B7 auto-flip, LoudnessTarget force-flip, VM session-level + source_lufs injection.
 > - `src/lib/history-stack.ts` (+ test) — undo/redo stack arithmetic, generic over T.
+> - `src/lib/compressor-auto.ts` (+ test) — read-only Auto compressor values with units for the UI lane.
+> - `src/lib/export-location.ts` (+ test) — last-used export folder persistence and cross-platform path helpers.
 >
 > Future frontend slices: extract decision logic into `src/lib/*`, write Vitest cases next to it, glue from the hook.
 >
@@ -41,6 +45,12 @@ This document is the entry point for any Claude session — interactive or sched
 
 Do not re-elicit design that already exists in those docs. The spec is settled. Find the next unfinished slice and work it.
 
+## Cross-platform considerations
+
+- Build commands: macOS uses `npm run build:mac` (`tauri build --bundles app,dmg`); Windows uses `npm run build:windows` (`tauri build --bundles msi,nsis`). The Windows installer build must be run on Windows for the `.msi` path.
+- Code signing: macOS is currently ad-hoc signed for local use; wider macOS distribution needs Apple Developer ID + notarization. Windows distribution needs Authenticode signing once YES Master leaves Dan's own machines.
+- Save/export paths: the Tauri dialog plugin returns native paths on each OS (`/` on macOS/Linux, `\` on Windows). Frontend tests now pin both separator styles flowing through to render unchanged.
+
 ## What "next slice" means
 
 The current state lives in `docs/progress.md`. The last entry's "Next recommended slice" tells you where to start. If it's stale (e.g. the slice has been worked but progress.md hasn't been updated), inspect the repo and `git log` to confirm before starting.
@@ -62,9 +72,12 @@ Never advance to the next phase without a `PHASE N CONFIRMED — proceed to N+1`
 ## Verification commands
 
 ```powershell
+# PowerShell / Windows
 # Frontend (run from repo root)
 npm install
 npm run build              # tsc -b && vite build
+npm test
+npm run build:windows      # Windows machine only; emits NSIS .exe + MSI
 
 # Backend (run from src-tauri/)
 cd src-tauri
@@ -75,11 +88,27 @@ cargo test                            # slow lane — ~5 min including the real-
 Remove-Item Env:\AMS_RUN_REAL_FIXTURE  # back to fast lane afterwards
 ```
 
+```bash
+# Bash / macOS or Linux
+# Frontend (run from repo root)
+npm install
+npm run build              # tsc -b && vite build
+npm test
+npm run build:mac          # macOS machine only; emits .app + .dmg
+
+# Backend (run from src-tauri/)
+cd src-tauri
+cargo check
+cargo test                            # fast lane — real-fixture tests skip with a printed advisory
+AMS_RUN_REAL_FIXTURE=1 cargo test     # slow lane — ~5 min including the real-fixture metering snapshot
+unset AMS_RUN_REAL_FIXTURE            # back to fast lane afterwards if exported earlier
+```
+
 See `CLAUDE.md` for the full "Test workflow — fast / slow lanes" reasoning. Run the slow lane before any commit that touches the DSP chain, the WAV writer, or LUFS landing math.
 
 `npm run tauri dev` is the interactive smoke check (opens a window). Do not run it in autonomous sessions — it blocks. Dan runs it manually when he wants to eyeball the app.
 
-**Dev-binary lock workaround.** When Dan has `npm run tauri dev` running, the standard `cargo test` build can fail with `cannot remove file 'target/debug/album-mastering-studio.exe'` (the executable name still uses the pre-rename slug). Two paths:
+**Dev-binary lock workaround.** When Dan has `npm run tauri dev` running, the standard `cargo test` build can fail while replacing the running desktop binary: `target/debug/album-mastering-studio.exe` on Windows or `target/debug/album-mastering-studio` on macOS/Linux. Two paths:
 
 - `cargo test --lib` — lib unit tests only, doesn't link the main bin
 - `cargo test --tests --target-dir target-tests` — integration tests in a scratch target dir; `rm -rf target-tests` after

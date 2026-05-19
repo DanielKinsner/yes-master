@@ -14,6 +14,19 @@ distribution items, not monitor-time musical taste checks.
    - Do not block local development on this; pick it up when YES Master needs
      to leave Dan's Mac.
 
+2. Windows installer verification.
+   - `npm run build:windows` is now configured and statically tested, but the
+     actual `.exe` / `.msi` outputs must be built on Dan's Windows machine.
+   - Tauri's `.msi` path depends on WiX and must be verified on Windows; if the
+     first run complains about Windows optional features or installer tooling,
+     capture the exact error here before changing config.
+
+3. Windows Authenticode signing.
+   - Wider Windows distribution will require a code-signing certificate and an
+     Authenticode signing step for the installer/executable.
+   - Do not block local Windows testing on this; treat it like the Apple
+     Developer notarization item and pick it up only when distribution matters.
+
 ## Cleanup
 
 1. Legacy frontend album export hook.

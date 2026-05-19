@@ -4034,3 +4034,59 @@ What failed or remains partial:
 Next recommended slice:
 
 Commit picker UX and DSP-comment rationale as separate concerns, then push.
+
+## 2026-05-19 - cross-platform packaging parity
+
+Goal:
+
+Make YES Master mechanically ready for Dan to pull on Windows tomorrow: static
+Windows packaging checks, Windows build script, cross-platform path regression
+tests, and handoff docs that name the remaining Windows-only verification.
+
+What changed:
+
+- Added `npm run build:windows` using Tauri's Windows installer bundle targets
+  `msi,nsis`.
+- Added `src/lib/windows-app-packaging.test.ts` mirroring the macOS packaging
+  checks for app identifier, bundle activation/targets, `icon.ico`, the Windows
+  build script, and release binary hygiene.
+- Added Vitest coverage that Track Master and Album Master picker outputs flow
+  through unchanged with Windows-style backslash paths.
+- Added Rust output-path parent-creation coverage for native paths plus a
+  Windows-only backslash-path test that will run on Dan's Windows machine.
+- Updated `docs/HANDOFF.md` with PowerShell and bash verification commands,
+  cross-platform build/signing/path notes, and both `.exe` and extensionless
+  dev-binary lock names.
+- Updated `docs/followups/infrastructure-2026-05-19.md` with Windows installer
+  verification and Authenticode signing follow-ups.
+
+Verification:
+
+- `npm test -- src/lib/windows-app-packaging.test.ts src/hooks/useTrackMaster.integration.test.tsx`:
+  first failed while `build:windows` was missing, then passed 17/17.
+- `cargo test --lib explicit_output_path` from `src-tauri`: 1/1 pass on macOS;
+  the Windows-only backslash test is present but not run on macOS.
+- `npm test`: 73/73 pass.
+- `cargo check` from `src-tauri`: pass.
+- `cargo test --lib` from `src-tauri`: 154/154 pass on macOS.
+- `npm run build`: clean production build.
+- `npm run build:mac`: produced `YES Master.app` and
+  `YES Master_0.0.0_aarch64.dmg` with ad-hoc signing; notarization skipped
+  because Apple credentials are not configured.
+- `git diff --check`: clean.
+
+Real-audio fixture used:
+
+No. This batch changes packaging config, tests, and docs only.
+
+What failed or remains partial:
+
+- Actual `npm run build:windows` execution and `.exe` / `.msi` output
+  inspection cannot be completed from this Mac. Captured in infrastructure
+  follow-ups for Dan's Windows pass.
+- Windows code signing remains a distribution setup item, not a local testing
+  blocker.
+
+Next recommended slice:
+
+Run full fast gates, commit as packaging/docs/path-test slices, and push.
