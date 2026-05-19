@@ -343,7 +343,9 @@ const PRESET_UNIVERSAL: PresetCalibration = PresetCalibration {
     air_db: 1.1,
     warmth: 0.03,
     stereo_width: 1.04,
+    // Light lift keeps the safe default slightly alive without making transients a named feature.
     transient_punch: 0.04,
+    // 24 Hz removes transport and room rumble while staying below useful lows on most material.
     highpass_hz: 24.0,
     target_lufs: -14.0,
     ceiling_dbfs: -1.0,
@@ -365,7 +367,9 @@ const PRESET_CLARITY: PresetCalibration = PresetCalibration {
     air_db: 1.7,
     warmth: 0.025,
     stereo_width: 1.02,
+    // Small lift adds articulation to match the air shelf without turning Clarity into Punch.
     transient_punch: 0.05,
+    // 28 Hz gives the vocal/detail preset a cleaner floor where sub weight is not the goal.
     highpass_hz: 28.0,
     target_lufs: -13.4,
     ceiling_dbfs: -1.0,
@@ -388,7 +392,9 @@ const PRESET_TAPE: PresetCalibration = PresetCalibration {
     air_db: 2.0,
     warmth: 0.10,
     stereo_width: 0.99,
+    // Negative punch rounds attacks so the tape-glue character reads softened, not snappy.
     transient_punch: -0.03,
+    // 24 Hz preserves low-body warmth while clearing subsonic headroom waste.
     highpass_hz: 24.0,
     target_lufs: -13.8,
     ceiling_dbfs: -1.1,
@@ -410,7 +416,9 @@ const PRESET_SPATIAL: PresetCalibration = PresetCalibration {
     air_db: 1.3,
     warmth: 0.04,
     stereo_width: 1.16,
+    // Tiny lift keeps widened material from feeling smeared without pushing attacks forward.
     transient_punch: 0.03,
+    // 24 Hz avoids low-image wobble while staying below audible bass weight.
     highpass_hz: 24.0,
     target_lufs: -13.1,
     ceiling_dbfs: -1.0,
@@ -433,7 +441,9 @@ const PRESET_OOMPH: PresetCalibration = PresetCalibration {
     air_db: -0.8,
     warmth: 0.045,
     stereo_width: 0.95,
+    // Moderate lift restores kick and bass impact after the deep low-mid scoop.
     transient_punch: 0.08,
+    // 22 Hz keeps the lowest useful weight because Oomph is the sub-forward preset.
     highpass_hz: 22.0,
     target_lufs: -12.0,
     ceiling_dbfs: -0.9,
@@ -455,7 +465,9 @@ const PRESET_WARMTH: PresetCalibration = PresetCalibration {
     air_db: -0.8,
     warmth: 0.08,
     stereo_width: 0.98,
+    // Negative punch softens edges so the added body reads smooth rather than assertive.
     transient_punch: -0.05,
+    // 24 Hz clears inaudible rumble while preserving the preset's warmth and body.
     highpass_hz: 24.0,
     target_lufs: -14.7,
     ceiling_dbfs: -1.2,
@@ -478,7 +490,9 @@ const PRESET_PUNCH: PresetCalibration = PresetCalibration {
     air_db: 0.8,
     warmth: 0.035,
     stereo_width: 1.04,
+    // Largest lift because Punch's job is impact and forwardness, not density.
     transient_punch: 0.14,
+    // 28 Hz tightens lows above the sub floor so punch reads controlled rather than bloated.
     highpass_hz: 28.0,
     target_lufs: -10.9,
     ceiling_dbfs: -0.8,
@@ -501,7 +515,9 @@ const PRESET_LOUD: PresetCalibration = PresetCalibration {
     air_db: 1.2,
     warmth: 0.055,
     stereo_width: 1.03,
+    // Strong lift preserves attack after dense compression without outrunning Punch.
     transient_punch: 0.12,
+    // 30 Hz buys limiter headroom for the loudest preset where deep subs are least useful.
     highpass_hz: 30.0,
     target_lufs: -10.4,
     ceiling_dbfs: -0.8,
@@ -527,7 +543,9 @@ const PRESET_CUSTOM_NEUTRAL: PresetCalibration = PresetCalibration {
     air_db: 0.0,
     warmth: 0.0,
     stereo_width: 1.0,
+    // Zero keeps transient behavior user-driven for neutral Custom sessions.
     transient_punch: 0.0,
+    // Zero keeps Custom an identity chain until the user chooses subsonic filtering.
     highpass_hz: 0.0,
     target_lufs: -14.0,
     ceiling_dbfs: -1.0,

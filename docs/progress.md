@@ -3986,3 +3986,51 @@ What failed or remains partial:
 Next recommended slice:
 
 Run full frontend/Rust fast gates, then commit and push.
+
+## 2026-05-19 - export picker polish + preset rationale
+
+Goal:
+
+Polish the Track Master and Album Master destination pickers without touching
+DSP behavior, and make the preset HPF/transient values self-documenting.
+
+What changed:
+
+- Added a pure `export-location` helper for last-used export directory tracking.
+- Track Master export now starts in the last successful track export folder.
+- Album Master folder picker now starts in the last successful album export
+  folder.
+- Cancel paths for both pickers are gated as graceful no-ops with no render and
+  no persisted partial location.
+- Existing Track Master WAV paths and existing Album Master folders are gated
+  as accepted when returned by the native picker, leaving overwrite confirmation
+  to the OS dialog.
+- Added one-sentence rationale comments beside every preset `transient_punch`
+  and `highpass_hz` value.
+
+Verification:
+
+- `npm test -- src/lib/export-location.test.ts`: first failed while the helper
+  was missing, then passed after implementation.
+- `npm test -- src/lib/export-location.test.ts src/hooks/useTrackMaster.integration.test.tsx`:
+  15/15 pass.
+- `npm test`: 68/68 pass.
+- `cargo test --lib` from `src-tauri`: 153/153 pass.
+- `npm run build`: clean production build.
+- `git diff --check`: clean.
+
+Real-audio fixture used:
+
+No. This batch only changes frontend picker behavior plus Rust comments.
+
+What failed or remains partial:
+
+- Initial Rust test command from the repo root failed because `Cargo.toml` lives
+  in `src-tauri`; rerun from `src-tauri` passed.
+- The Python reference repo path cited in chat was not present on this Mac, so
+  the comments encode the listening intent from the existing Rust calibration
+  table and the current project context rather than re-reading that old file.
+
+Next recommended slice:
+
+Commit picker UX and DSP-comment rationale as separate concerns, then push.
