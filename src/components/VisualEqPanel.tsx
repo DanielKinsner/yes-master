@@ -1,10 +1,11 @@
 // UI restyle slice 4b — Visual EQ panel v1.
 //
-// Renders a log-frequency / linear-dB grid with four draggable EQ nodes
-// (Low / Low-Mid / Mid / High) pinned to the frequencies the Rust chain
+// Renders a log-frequency / linear-dB grid with seven draggable EQ nodes
+// (Sub / Low / Low-Mid / Mid / High-Mid / High / Sparkle) pinned to the frequencies the Rust chain
 // actually uses (see `ChainCoeffs::from_settings` in src-tauri/src/dsp.rs:
-// 200 Hz low shelf, 400 Hz peak Q=0.9, 1500 Hz peak Q=0.8, 6000 Hz high
-// shelf). Vertical drag changes a band's gain; double-click resets the
+// 80 Hz peak Q=0.8, 200 Hz low shelf, 400 Hz peak Q=0.9, 1500 Hz peak
+// Q=0.8, 3500 Hz peak Q=0.9, 6000 Hz high shelf, 12000 Hz high shelf).
+// Vertical drag changes a band's gain; double-click resets the
 // node to 0 dB. The response curve is an APPROXIMATION of the chain's
 // filter cascade — Gaussian peaks + sigmoid shelves in log-frequency
 // space — chosen to give the user a fast visual feedback loop, not
@@ -25,8 +26,9 @@
 import { useCallback, useRef, useState } from "react";
 import type { MasteringSettings } from "../bindings";
 
-type BandId = "low" | "low-mid" | "mid" | "high";
+type BandId = "sub" | "low" | "low-mid" | "mid" | "high-mid" | "high" | "sparkle";
 type BandKind = "shelf-low" | "peak" | "shelf-high";
+type BandTier = "primary" | "secondary";
 
 interface Band {
   id: BandId;
@@ -34,20 +36,27 @@ interface Band {
   hz: number;
   color: string;
   kind: BandKind;
+  tier: BandTier;
   /// Q-equivalent in octaves; only used for peak bands' Gaussian width.
   qOctaves: number;
 }
 
-// Match the Rust chain's actual filter frequencies — `dsp.rs` line ~620:
+// Match the Rust chain's actual filter frequencies — `dsp.rs` ChainCoeffs:
+//   BiquadCoeffs::peaking(sr, 80.0, 0.8, ...)
 //   BiquadCoeffs::low_shelf(sr, 200.0, ...)
 //   BiquadCoeffs::peaking(sr, 400.0, 0.9, ...)
 //   BiquadCoeffs::peaking(sr, 1500.0, 0.8, ...)
+//   BiquadCoeffs::peaking(sr, 3500.0, 0.9, ...)
 //   BiquadCoeffs::high_shelf(sr, 6000.0, ...)
+//   BiquadCoeffs::high_shelf(sr, 12000.0, ...)
 const BANDS: readonly Band[] = [
-  { id: "low", label: "LOW", hz: 200, color: "#22d3ee", kind: "shelf-low", qOctaves: 0 },
-  { id: "low-mid", label: "LOW-MID", hz: 400, color: "#4ade80", kind: "peak", qOctaves: 1.0 },
-  { id: "mid", label: "MID", hz: 1500, color: "#a78bfa", kind: "peak", qOctaves: 1.2 },
-  { id: "high", label: "HIGH", hz: 6000, color: "#60a5fa", kind: "shelf-high", qOctaves: 0 },
+  { id: "sub", label: "SUB", hz: 80, color: "#38bdf8", kind: "peak", tier: "secondary", qOctaves: 1.2 },
+  { id: "low", label: "LOW", hz: 200, color: "#22d3ee", kind: "shelf-low", tier: "primary", qOctaves: 0 },
+  { id: "low-mid", label: "LOW-MID", hz: 400, color: "#4ade80", kind: "peak", tier: "secondary", qOctaves: 1.0 },
+  { id: "mid", label: "MID", hz: 1500, color: "#a78bfa", kind: "peak", tier: "primary", qOctaves: 1.2 },
+  { id: "high-mid", label: "HIGH-MID", hz: 3500, color: "#f59e0b", kind: "peak", tier: "secondary", qOctaves: 1.0 },
+  { id: "high", label: "HIGH", hz: 6000, color: "#60a5fa", kind: "shelf-high", tier: "primary", qOctaves: 0 },
+  { id: "sparkle", label: "SPARKLE", hz: 12_000, color: "#f9a8d4", kind: "shelf-high", tier: "secondary", qOctaves: 0 },
 ];
 
 const F_MIN = 20;
@@ -142,10 +151,13 @@ export function VisualEqPanel({
   const [dragging, setDragging] = useState<BandId | null>(null);
 
   const gains: Record<BandId, number> = {
+    "sub": settings.eq_sub_db,
     "low": settings.eq_low_db,
     "low-mid": settings.eq_low_mid_db,
     "mid": settings.eq_mid_db,
+    "high-mid": settings.eq_high_mid_db,
     "high": settings.eq_high_db,
+    "sparkle": settings.eq_sparkle_db,
   };
 
   // SVG drawing constants. Viewport is `width × height` (logical units);
@@ -351,14 +363,29 @@ export function VisualEqPanel({
           const x = localFreqToX(band.hz);
           const y = localDbToY(gains[band.id]);
           const isDragging = dragging === band.id;
+          const isPrimary = band.tier === "primary";
+          const nodeRadius = isPrimary ? 8 : 5;
+          const renderedRadius = isDragging ? nodeRadius + 1 : nodeRadius;
+          const nodeOpacity = isPrimary ? 1 : 0.85;
+          const labelOpacity = isPrimary ? 1 : 0.85;
           return (
             <g key={band.id} style={{ "--node-color": band.color } as React.CSSProperties}>
+              {isPrimary && (
+                <circle
+                  className="eq-node-halo"
+                  cx={x}
+                  cy={y}
+                  r={12}
+                  stroke={band.color}
+                />
+              )}
               <circle
-                className={`eq-node ${isDragging ? "is-dragging" : ""}`}
+                className={`eq-node eq-node-${band.tier} ${isDragging ? "is-dragging" : ""}`}
                 cx={x}
                 cy={y}
-                r={7}
+                r={renderedRadius}
                 fill={band.color}
+                fillOpacity={nodeOpacity}
               />
               <circle
                 className="eq-node-hit"
@@ -379,6 +406,7 @@ export function VisualEqPanel({
                   y={PAD_TOP + plotH + BAND_LABEL_Y_OFFSET}
                   textAnchor="middle"
                   fill={band.color}
+                  opacity={labelOpacity}
                 >
                   {band.label}
                 </text>
@@ -390,6 +418,7 @@ export function VisualEqPanel({
                   y={Math.max(PAD_TOP + 12, y - 12)}
                   textAnchor="middle"
                   fill={band.color}
+                  opacity={labelOpacity}
                 >
                   {gains[band.id] > 0 ? `+${gains[band.id].toFixed(1)}` : gains[band.id].toFixed(1)}
                 </text>

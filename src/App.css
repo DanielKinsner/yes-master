@@ -1832,11 +1832,12 @@ button.primary:disabled {
 }
 
 /* UI restyle slice 4b — Visual EQ panel.
-   SVG-rendered log-frequency / linear-dB plot with four draggable EQ
-   nodes (Low / Low-Mid / Mid / High) at the same frequencies the Rust
-   chain uses (200 / 400 / 1500 / 6000 Hz). Sits above the knobs row
-   as the primary "shape the tone" surface; the knobs remain as
-   precision controls underneath. */
+   SVG-rendered log-frequency / linear-dB plot with seven draggable EQ
+   nodes (Sub / Low / Low-Mid / Mid / High-Mid / High / Sparkle) at
+   the same frequencies the Rust chain uses (80 / 200 / 400 / 1500 /
+   3500 / 6000 / 12000 Hz). Sits above the knobs row as the primary
+   "shape the tone" surface; the knobs remain as precision controls
+   underneath. */
 .visual-eq-panel {
   position: relative;
   /* Bumped from 220 to 240 px min after slice 6 split the bottom of the
@@ -1940,7 +1941,16 @@ button.primary:disabled {
 }
 
 .eq-node.is-dragging {
-  r: 9;
+  filter: drop-shadow(0 0 12px var(--node-color, rgba(255, 255, 255, 0.55)));
+}
+
+.eq-node-halo {
+  fill: none;
+  stroke-width: 1.5px;
+  opacity: 0.72;
+  pointer-events: none;
+  filter: drop-shadow(0 0 8px var(--node-color, rgba(255, 255, 255, 0.35)));
+  vector-effect: non-scaling-stroke;
 }
 
 .eq-node-hit {

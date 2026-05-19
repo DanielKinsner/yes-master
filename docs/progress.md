@@ -4607,6 +4607,45 @@ Next recommended slice:
 Commit 4: lift album render plumbing into `src-tauri/src/album_render.rs` as a
 sibling to the pure planner in `album.rs`.
 
+## 2026-05-19 - Phase B.3 seven-band visual EQ
+
+Goal:
+
+Expand the Visual EQ panel from four nodes to the full seven-band Rust/TS EQ
+surface while keeping the compact deck layout readable.
+
+What changed:
+
+- Added Sub, High-Mid, and Sparkle nodes to `VisualEqPanel`, wired to
+  `eq_sub_db`, `eq_high_mid_db`, and `eq_sparkle_db`.
+- Preserved Low, Mid, and High as primary nodes with larger radii and halos.
+- Added secondary-node treatment for Sub, Low-Mid, High-Mid, and Sparkle while
+  keeping the 18 px drag hit targets.
+- Updated the visual EQ CSS comments and drag styling so radius hierarchy is
+  driven by the component, not a fixed CSS drag radius.
+
+Verification:
+
+- `npm test`: 13 files / 81 tests pass.
+- `npm run build`: TypeScript and Vite production build pass.
+- Browser smoke at `1920x1080`, `1600x940`, and `1366x768`: seven EQ nodes,
+  seven hit targets, three primary halos, and four secondary nodes present;
+  node bounds stay inside the SVG at all three sizes.
+
+Real-audio fixture used:
+
+No. This slice is visual/frontend-only.
+
+What failed or remains partial:
+
+- The first browser smoke batch hung before returning output. Re-running the
+  same checks in smaller agent-browser steps passed, and targeted screenshots
+  were captured for the three required viewports.
+
+Next recommended slice:
+
+Review Commit 3, then continue to the next planned seven-band EQ slice.
+
 ## 2026-05-19 - Phase B.1: Rust 7-band EQ chain extension
 
 Goal:
