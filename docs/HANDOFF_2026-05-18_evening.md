@@ -1,9 +1,10 @@
 # Handoff — YES Master — 2026-05-18 Evening
 
 > **Current snapshot (updated 2026-05-19).** YES Master is now a functional
-> private local desktop mastering app with Track Master and Album Master paths
-> both present, explicit export destination pickers, Mac packaging proven on
-> this Mac, and Windows packaging/configuration statically guarded for the next
+> private cross-platform desktop mastering app — Mac and Windows targeted;
+> Linux deferred — with Track Master and Album Master paths both present,
+> explicit export destination pickers, Mac packaging proven on this Mac, and
+> Windows packaging/configuration statically guarded for the next
 > Windows-machine pass. The latest verified state has Rust lib **154/154** on
 > macOS, Vitest **73/73**, and `npm run build` clean. Windows installer
 > execution, Windows signing, and Apple notarization remain distribution
@@ -29,7 +30,12 @@
 
 - Branch: `master`
 - Remote: pushed to `origin/master`
-- Latest completed slice included in this handoff inventory: `9e6b544`
+- Latest completed implementation/config slice included in this handoff
+  inventory: `2368692`
+- The final cross-platform canon documentation commits after `2368692` are
+  summarized at the tail of `docs/progress.md`; inspect `git log` for their
+  exact hashes because the PRODUCT.md canon update is intentionally committed
+  separately.
 - Local convention: verified slices commit and push to `master`.
 - Changelog decision: no separate `CHANGELOG.md`; commit history plus
   `docs/progress.md` are the change record.
@@ -55,8 +61,13 @@
 | `b69090f` | Document preset HPF and transient rationale | Added per-preset rationale comments around `transient_punch` and `highpass_hz`. |
 | `5ea8c9a` | Add Windows packaging checks | Added `build:windows` and static Windows packaging config tests. |
 | `fe0500b` | Gate native export path separators | Added Windows-style picker path tests plus native/Windows Rust output-path tests. |
-| `2f83d59` | Document cross-platform handoff gaps | Added both-shell verification docs and Windows installer/AuthentiCode follow-ups. |
+| `2f83d59` | Document cross-platform handoff gaps | Added both-shell verification docs and Windows installer/Authenticode follow-ups. |
 | `9e6b544` | Polish cross-platform handoff notes | Moved cross-platform notes up, trimmed old snapshot detail, and added confidence disclosures. |
+| `819fc4c` | Refresh latest handoff confidence inventory | Caught up the dated handoff, named the Windows-only Rust path gate, and recorded verified vs inferred areas. |
+| `124916c` | Update project entrypoint wording | Reworked the README/PRODUCT entrypoint language around the active desktop build and no-changelog decision. |
+| `edb422e` | Update verification and release docs | Added bash/PowerShell verification parity and Phase 14 release-build status. |
+| `b53c58b` | Record cold-pickup wrap-up | Logged the wrap-up doc pass and no-changelog decision in `docs/progress.md`. |
+| `2368692` | Harden Windows packaging symmetry | Added explicit `bundle.windows.webviewInstallMode`, cross-shell `rimraf` cleanup, and mirrored Windows packaging assertions. |
 
 ## File-Size Deltas
 
@@ -76,7 +87,9 @@ New frontend helpers:
 
 - `src/lib/compressor-auto.ts` = **78 lines**
 - `src/lib/export-location.ts` = export destination persistence helper
-- `src/lib/windows-app-packaging.test.ts` = static Windows packaging gate
+- `src/lib/windows-app-packaging.test.ts` = static Windows packaging gate,
+  including explicit `bundle.windows.webviewInstallMode`, cross-shell
+  `rimraf`, and helper-binary hygiene
 
 ## Test Status
 
@@ -107,7 +120,10 @@ Slow lane:
 Verified by passing tests:
 
 - Static packaging configuration: `src/lib/mac-app-packaging.test.ts` and
-  `src/lib/windows-app-packaging.test.ts`.
+  `src/lib/windows-app-packaging.test.ts`. The Windows test now gates
+  `bundle.windows.webviewInstallMode`, `build:windows`, `rimraf`, icon
+  presence, binary naming, and the smoke helper staying under
+  `src-tauri/examples/`.
 - Export picker behavior: `src/hooks/useTrackMaster.integration.test.tsx`,
   including cancel, overwrite/native-dialog-returned path, last-used directory,
   and Windows-style separator cases.
@@ -120,6 +136,9 @@ Documented but not yet verified on real target hardware:
 
 - `npm run build:windows` execution, and inspection of the resulting NSIS
   setup EXE plus MSI, must happen on Dan's Windows machine.
+- The explicit Windows WebView2 install mode matches Tauri's documented
+  default (`downloadBootstrapper`, silent), but the actual installer behavior
+  still needs Dan's Windows-machine verification.
 - The Windows-only backslash Rust test is present but has not executed on this
   Mac.
 - Mac `.app`/DMG packaging was built on Dan's Mac, but distribution to another
@@ -136,8 +155,8 @@ Inferred rather than primary-source verified:
 Known uncertainty:
 
 - Whether Dan's Windows machine already has every Tauri/MSI prerequisite
-  enabled, especially WiX/VBSCRIPT-related pieces, is unknown until the first
-  Windows build run.
+  enabled, especially WiX/VBSCRIPT-related pieces and WebView2 installer
+  behavior, is unknown until the first Windows build run.
 - Whether the current ad-hoc signed DMG will behave cleanly on a fresh,
   non-development Mac is unknown until tried or notarized.
 - Per-preset HPF cutoff values and transient strengths still need Dan's monitor
@@ -150,7 +169,9 @@ Known uncertainty:
 - `audio.rs` split candidate is closed at the production-code level.
 - macOS app bundle/DMG builds locally on this Mac.
 - Windows packaging configuration is statically gated: `build:windows`,
-  `src-tauri/icons/icon.ico`, Tauri bundle settings, and release binary hygiene.
+  `src-tauri/icons/icon.ico`, Tauri bundle settings, explicit
+  `bundle.windows.webviewInstallMode`, cross-shell `rimraf` cleanup, and
+  release binary hygiene.
 - LoudnessTarget labels no longer imply generic streaming loudness for Spotify
   Loud mode.
 - Compressor Auto readouts show computed values with units.
@@ -184,8 +205,10 @@ Infrastructure/distribution:
 
 - `docs/followups/infrastructure-2026-05-19.md`
 - Current items: Apple Developer credentials/notarization, Windows installer
-  verification, Windows Authenticode signing, backend simple-album render
-  cleanup, and tests still co-located in `audio.rs`.
+  execution verification, Windows Authenticode signing,
+  `bundle.windows`/WebView2 mode validation after the first Windows build,
+  backend simple-album render cleanup, and tests still co-located in
+  `audio.rs`.
 
 Product/UX:
 

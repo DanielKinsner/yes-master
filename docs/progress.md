@@ -4148,8 +4148,8 @@ What changed:
   a new Confidence and Uncertainty section.
 - Updated README from from-zero framing to current-state/project-entry framing.
 - Updated PRODUCT/CLAUDE/IMPLEMENTATION_PLAN wording from Windows-specific
-  product identity to private local desktop mastering app, while keeping
-  platform-specific build commands as implementation details.
+  product identity to private cross-platform desktop mastering app, while
+  keeping platform-specific build commands as implementation details.
 - Updated `CLAUDE.md` and `docs/IMPLEMENTATION_PLAN.md` with both PowerShell
   and bash verification commands.
 - Marked Phase 14 as PARTIAL with current Mac/Windows packaging status and
@@ -4182,3 +4182,53 @@ What failed or remains partial:
 Next recommended slice:
 
 Run full fast gates, commit/push, then perform the final eagle-eye audit.
+
+## 2026-05-19 - cross-platform canon wrap-up
+
+Goal:
+
+Close the pre-audit documentation pass so a new session can pick up the repo
+cold without relying on chat memory.
+
+What changed:
+
+- Updated README, CLAUDE, IMPLEMENTATION_PLAN, HANDOFF, and PRODUCT language to
+  the approved product-canon direction: private cross-platform desktop
+  mastering app, Mac and Windows targeted, Linux deferred.
+- Kept PRODUCT.md changes narrow and explicit after Dan approved updating the
+  canon file.
+- Caught up `docs/HANDOFF_2026-05-18_evening.md` through `2368692`, including
+  the explicit Windows WebView2 config, cross-shell `rimraf` build cleanup, and
+  Windows packaging test coverage.
+- Added the Windows packaging commands to CLAUDE.md's verification blocks so
+  the repo entry docs now mirror HANDOFF.md's bash/PowerShell layout.
+- Kept the changelog decision explicit without creating a `CHANGELOG.md`:
+  commit history plus `docs/progress.md` remain the change record.
+
+Verification:
+
+- `npm test`: 73/73 pass.
+- `cargo test --lib` from `src-tauri`: 154/154 pass on macOS.
+- `npm run build`: clean production build.
+- `git diff --check`: clean.
+- `git ls-files .DS_Store`: no tracked `.DS_Store` files.
+- `CHANGELOG.md`: not present and not tracked.
+
+Real-audio fixture used:
+
+No. This batch is documentation/configuration only; no DSP or render math
+changed, so the slow lane was not required.
+
+What failed or remains partial:
+
+- Windows installer execution and inspection still wait for Dan's Windows
+  machine.
+- Authenticode signing, Apple Developer notarization, and Mac distribution to
+  non-development machines remain infrastructure follow-ups.
+- The Windows-only Rust path test is present but still not executed on this Mac.
+
+Next recommended slice:
+
+Run the final eagle-eye audit: verify ADR 0002 was honored, pointer chains are
+current, test totals match everywhere they are quoted, and no chat-only context
+remains.
