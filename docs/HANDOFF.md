@@ -2,9 +2,15 @@
 
 This document is the entry point for any Claude session — interactive or scheduled — picking up work on this repo. Read this first, then start the loop below.
 
+## Cross-platform considerations
+
+- Build commands: macOS uses `npm run build:mac` (`tauri build --bundles app,dmg`); Windows uses `npm run build:windows` (`tauri build --bundles msi,nsis`). Tauri's Windows installer docs name MSI and NSIS as the Windows installer outputs; `app` is the macOS app-bundle target, so do not change the Windows script to `app,msi`.
+- Code signing: macOS is currently ad-hoc signed for local use; wider macOS distribution needs Apple Developer ID + notarization. Windows distribution needs Authenticode signing once YES Master leaves Dan's own machines.
+- Save/export paths: the Tauri dialog plugin returns native paths on each OS (`/` on macOS/Linux, `\` on Windows). Frontend tests now pin both separator styles flowing through to render unchanged.
+
 > **Current snapshot (2026-05-19 wrap-up).** Latest dated handoff is `docs/HANDOFF_2026-05-18_evening.md`; read that first after `CLAUDE.md` and `docs/PRODUCT.md`, then read the 2026-05-19 addenda in this file and `docs/progress.md`. The repo now has static packaging gates for both macOS and Windows, explicit Track/Album export destination pickers, last-export-folder persistence, and queued follow-ups for distribution work that cannot be completed from this Mac.
 >
-> **Addendum (2026-05-17 + 2026-05-18).** Codex landed `f85482c` (2026-05-17) closing the deferred Codex item 4: mock-API React/Vitest coverage for auto-prewarm dispatches (restore/import/openProject), Export-LUFS toggle dispatch, and LoudnessTarget force-to-Custom DOM (+6 Vitest tests via a one-line `export` on `LoudnessTarget`). Today (2026-05-18) Claude closed the `audio.rs` split candidate in three sequential mechanical-only commits: `fcd5ec3` extracts `SpectrumRing` + `SpectrumAnalyzer` → `src/spectrum.rs` (175 lines); `03d79e3` extracts `decode_full` + `decode_to_peaks` + Symphonia surface → `src/decode.rs` (220 lines, with engine.rs's 5 call sites updated); `abedc64` extracts `MeteredPcmSource` + `MasteringSource` (+ COEFFS constants, bumped to `pub(crate)`) → `src/sources.rs` (423 lines). Net: `audio.rs` 3,655 → 2,883 lines (-21%). Behavior byte-identical; test matrix unchanged. HEAD: `abedc64`. Full session detail in `docs/progress.md` under `2026-05-18 — audio.rs split refactor (3-pass)`.
+> **Prior session detail.** The 22-commit Phase A4 session lives in `docs/HANDOFF_2026-05-15_evening.md`; the 2026-05-18 audio split and evening inventory live in `docs/HANDOFF_2026-05-18_evening.md`.
 >
 > **Addendum (2026-05-18 evening).** Export destination UX now asks for explicit save locations for track and album exports, the duplicate Album Export button was removed, the legacy frontend `exportAlbum` hook was removed, and deferred taste/infrastructure checks live in `docs/followups/listening-batch-2026-05-19.md` plus `docs/followups/infrastructure-2026-05-19.md`.
 >
@@ -25,7 +31,7 @@ This document is the entry point for any Claude session — interactive or sched
 >
 > Future frontend slices: extract decision logic into `src/lib/*`, write Vitest cases next to it, glue from the hook.
 >
-> Major capabilities already live: realtime BS.1770-4 momentary + integrated LUFS metering on both Original and Mastered playback; 4-band EQ chain (200 / 400 / 1500 / 6000 Hz) with Phase A4 conservative-target preset calibration; per-preset multiband compressor with user `compression_density` macro scaling preset baseline; 8 delivery profile shadows; TPDF dither at integer output (now symmetric-range, post-B2); 6-band FFT spectral analysis + transient flux + stereo correlation + dynamic-range P95-P10 + 3 s short-term LUFS max + energy-density composite; Album Master (4 named arcs + Custom, position-aware character inference, per-character bias); session-level Volume Match A/B with ceiling-bounded chain-push estimate; live FFT spectrum under the EQ panel; ceiling-bounded LUFS landing across all three render paths via shared helper; live-preview-matches-export with a 4-layer perf defense (window + cap + coalescer + cache); decode-stall-eliminating prewarm cache populated off the audio thread; Vitest test harness with mechanical gates for every trust-pattern fix this session. Older session snapshots: `docs/HANDOFF_2026-05-15_session.md` (Phase A4 + VM hotfixes, morning), `docs/HANDOFF_2026-05-14_session.md`, etc.
+> Major capability inventory lives in `docs/HANDOFF_2026-05-18_evening.md` and `docs/PRODUCT.md`; keep this file focused on current state and handoff mechanics.
 
 ## Read first (in order)
 
@@ -44,12 +50,6 @@ This document is the entry point for any Claude session — interactive or sched
 13. `docs/CLAUDE_WORK_LOOP.md` — work loop format.
 
 Do not re-elicit design that already exists in those docs. The spec is settled. Find the next unfinished slice and work it.
-
-## Cross-platform considerations
-
-- Build commands: macOS uses `npm run build:mac` (`tauri build --bundles app,dmg`); Windows uses `npm run build:windows` (`tauri build --bundles msi,nsis`). The Windows installer build must be run on Windows for the `.msi` path.
-- Code signing: macOS is currently ad-hoc signed for local use; wider macOS distribution needs Apple Developer ID + notarization. Windows distribution needs Authenticode signing once YES Master leaves Dan's own machines.
-- Save/export paths: the Tauri dialog plugin returns native paths on each OS (`/` on macOS/Linux, `\` on Windows). Frontend tests now pin both separator styles flowing through to render unchanged.
 
 ## What "next slice" means
 

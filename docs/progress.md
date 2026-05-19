@@ -4090,3 +4090,45 @@ What failed or remains partial:
 Next recommended slice:
 
 Run full fast gates, commit as packaging/docs/path-test slices, and push.
+
+## 2026-05-19 - near-wrap-up documentation polish
+
+Goal:
+
+Fold the latest review polish into the Mac wrap-up state without changing app
+behavior.
+
+What changed:
+
+- Moved the cross-platform considerations section above the current snapshot in
+  `docs/HANDOFF.md`.
+- Kept `build:windows` on `msi,nsis` after checking Tauri's current Windows
+  installer docs; Windows installable outputs are MSI and NSIS setup EXE, while
+  `app` is the macOS app-bundle target.
+- Trimmed layered historical handoff context to one-line back-references.
+- Added an explicit confidence note above the preset HPF/transient rationale
+  comments in `dsp.rs`.
+- Added a one-line note in `export-location.ts` explaining why localStorage was
+  chosen for last export directory persistence.
+- Confirmed the Windows Authenticode signing follow-up already mirrors the Apple
+  Developer/notarization item in `docs/followups/infrastructure-2026-05-19.md`.
+
+Verification:
+
+- `npm test`: 73/73 pass.
+- `cargo test --lib` from `src-tauri`: 154/154 pass.
+- `npm run build`: clean production build.
+- `git diff --check`: clean.
+
+Real-audio fixture used:
+
+No. This batch is documentation and comments only.
+
+What failed or remains partial:
+
+- None expected; Windows installer execution remains a Windows-machine task
+  captured in infrastructure follow-ups.
+
+Next recommended slice:
+
+Run full fast gates, commit, push, then proceed to final eagle-eye audit.

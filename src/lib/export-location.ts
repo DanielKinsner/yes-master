@@ -1,3 +1,5 @@
+// localStorage keeps export-location persistence pure frontend and easy to test;
+// Tauri app data storage would also persist, but would couple picker UX to Rust.
 export type ExportLocationKind = "track" | "album";
 
 export interface ExportLocationStore {

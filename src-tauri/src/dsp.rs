@@ -334,6 +334,9 @@ pub struct PresetCalibration {
     pub baseline_gain_push_db: f32,
 }
 
+// Rationale comments below encode listening intent inferred from the existing
+// calibration table; the original Python reference repo wasn't accessible from
+// this Mac. Cross-check against mastering.py when next on a machine that has it.
 const PRESET_UNIVERSAL: PresetCalibration = PresetCalibration {
     // Conservative target (PRESET_REFERENCE_ANALYSIS_2026-05-14, line 252).
     // Cross-genre safe default. Light transparent compressor.
