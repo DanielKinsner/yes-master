@@ -12,9 +12,8 @@
 //!     for any Gap transitions inserted by the default planner).
 
 use album_mastering_studio_lib::album;
-use album_mastering_studio_lib::engine::{
-    render_album_plan_impl, AlbumPlanRenderRequest, AlbumTrackRenderInput,
-};
+use album_mastering_studio_lib::album_render::render_album_plan_impl;
+use album_mastering_studio_lib::engine::{AlbumPlanRenderRequest, AlbumTrackRenderInput};
 use album_mastering_studio_lib::types::{
     AdvancedSettings, AlbumArc, AlbumArcKind, AnalysisResult, DeliveryProfile,
     InferenceConfidence, MasteringSettings, Preset, SpectralBalance, TrackCharacter,

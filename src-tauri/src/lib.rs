@@ -1,4 +1,5 @@
 pub mod album;
+pub mod album_render;
 pub mod analysis;
 pub mod audio;
 pub mod decode;

@@ -4607,6 +4607,57 @@ Next recommended slice:
 Commit 4: lift album render plumbing into `src-tauri/src/album_render.rs` as a
 sibling to the pure planner in `album.rs`.
 
+## 2026-05-19 - Lift album render module
+
+Goal:
+
+Move album render implementation plumbing out of engine.rs while keeping the
+Tauri command surface and request DTOs with their commands.
+
+What changed:
+
+- Added `src-tauri/src/album_render.rs` as the sibling render module to the
+  pure planner in `album.rs`.
+- Moved `album_render`, `album_render_with_progress`,
+  `render_album_plan_impl`, `sanitize_for_filename`, `apply_album_shadow`,
+  `unique_album_path`, and the private `AlbumManifest` into album_render.rs.
+- Kept `render_album_master`, `plan_album`, and `render_album_plan` in
+  engine.rs as the Tauri command wrappers.
+- Kept `AlbumTrackInput`, `AlbumRenderRequest`, and `PlanAlbumRequest` in
+  engine.rs because they are Tauri command request DTOs.
+- Reclassified `AlbumPlanRenderRequest` as staying in engine.rs because it is
+  the direct `render_album_plan` Tauri command argument. `AlbumTrackRenderInput`
+  stays with it because it is nested in that request.
+- Reclassified `AlbumRenderReport` as staying in engine.rs because it is the
+  `render_album_plan` command return type. `AlbumTrackRenderRecord` stays with
+  it because it is part of that report.
+- Updated integration tests to call the moved implementation helpers through
+  `album_render::*` while continuing to construct the command DTOs from
+  `engine::*`.
+
+Verification:
+
+- `cargo test`: 160 lib tests plus integration suite pass.
+- `AMS_RUN_REAL_FIXTURE=1 cargo test`: 160 lib tests plus integration suite
+  pass, including the real-fixture tests.
+
+Real-audio fixture used:
+
+Yes. The slow lane ran with `AMS_RUN_REAL_FIXTURE=1`.
+
+What failed or remains partial:
+
+- The first slow-lane invocation hit the local 3-minute command timeout before
+  returning a result. Re-running with a longer timeout passed cleanly.
+- No engine unit tests moved; the album-render coverage for these helpers lives
+  in integration tests, which now point at `album_render::*` directly.
+
+Next recommended slice:
+
+Review the final four-slice boundary. Any dead-code cleanup for the legacy
+album-render wrapper should be a separate decision, per the infrastructure
+follow-up note.
+
 ## 2026-05-19 - Remove analysis re-export shim
 
 Goal:

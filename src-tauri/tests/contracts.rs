@@ -255,7 +255,7 @@ fn album_render_writes_continuous_and_individual_masters() {
         per_track_overrides: None,
     };
 
-    let job = engine::album_render(&request, tmp.path()).expect("album render");
+    let job = album_render::album_render(&request, tmp.path()).expect("album render");
     assert!(matches!(job.kind, RenderKind::Album));
     assert!(matches!(job.status, JobStatus::Done));
     assert_eq!(job.output_paths.len(), 3, "album + 2 individual masters");
@@ -302,7 +302,7 @@ fn album_render_rejects_sample_rate_mismatch() {
         per_track_overrides: None,
     };
 
-    let err = engine::album_render(&request, tmp.path()).expect_err("expected mismatch error");
+    let err = album_render::album_render(&request, tmp.path()).expect_err("expected mismatch error");
     let msg = format!("{err}");
     assert!(
         msg.contains("sample-rate mismatch") || msg.contains("sample rate"),
@@ -340,7 +340,7 @@ fn album_render_applies_per_track_override() {
         per_track_overrides: Some(overrides),
     };
 
-    let job = engine::album_render(&request, tmp.path()).expect("album render");
+    let job = album_render::album_render(&request, tmp.path()).expect("album render");
     assert_eq!(job.output_paths.len(), 3);
     // Both individual masters must exist; we don't compare audio numerically here
     // (the override path drives Tape saturation, which is exercised separately
@@ -380,7 +380,7 @@ fn album_render_emits_monotonic_progress_to_completion() {
     };
 
     let fractions = std::cell::RefCell::new(Vec::<f32>::new());
-    let job = engine::album_render_with_progress(
+    let job = album_render::album_render_with_progress(
         &request,
         tmp.path(),
         Some(&|f| fractions.borrow_mut().push(f)),
