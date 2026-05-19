@@ -575,6 +575,13 @@ pub struct ChainCoeffs {
     /// the main High band. High-shelf @ 10 kHz, slope 0.7. Slider 0..1 in
     /// `AdvancedSettings::presence_air` maps to 0..+4 dB; clamped on read.
     pub presence_air: BiquadCoeffs,
+    /// Phase A5 — preset transient shaper amount. Positive values lift
+    /// attacks; negative values soften them. Custom defaults to 0.0.
+    pub transient_amount: f32,
+    pub transient_fast_attack_alpha: f32,
+    pub transient_fast_release_alpha: f32,
+    pub transient_slow_attack_alpha: f32,
+    pub transient_slow_release_alpha: f32,
     pub input_gain_lin: f32,
     pub saturation_amount: f32,
     pub ceiling_lin: f32,
@@ -716,6 +723,11 @@ impl ChainCoeffs {
             .clamp(0.0, 1.0)
             * 4.0;
         let presence_air = BiquadCoeffs::high_shelf(sr, 10_000.0, presence_air_db, 0.7);
+        let transient_amount = (preset.transient_punch * preset_scale).clamp(-0.25, 0.25);
+        let transient_fast_attack_alpha = alpha_from_time_ms(sr, 1.0);
+        let transient_fast_release_alpha = alpha_from_time_ms(sr, 35.0);
+        let transient_slow_attack_alpha = alpha_from_time_ms(sr, 15.0);
+        let transient_slow_release_alpha = alpha_from_time_ms(sr, 140.0);
 
         // Input gain = scaled preset gain push + user input gain. User input
         // gain is the standard mastering "back off the source" knob — useful
@@ -1010,6 +1022,11 @@ impl ChainCoeffs {
             high,
             warmth,
             presence_air,
+            transient_amount,
+            transient_fast_attack_alpha,
+            transient_fast_release_alpha,
+            transient_slow_attack_alpha,
+            transient_slow_release_alpha,
             input_gain_lin,
             saturation_amount,
             ceiling_lin,
@@ -1079,6 +1096,8 @@ pub struct ChannelState {
     high: BiquadState,
     warmth: BiquadState,
     presence_air: BiquadState,
+    transient_fast_env: f32,
+    transient_slow_env: f32,
     // Phase 12.2: multiband compressor — per-channel crossover network state.
     comp_split: LR4State,
     // Per-channel per-band envelope follower. Used directly when
@@ -1365,6 +1384,36 @@ fn alpha_from_time_ms(sample_rate: f32, time_ms: f32) -> f32 {
         return 0.0;
     }
     (-1.0_f32 / (time_ms * 0.001 * sample_rate)).exp()
+}
+
+#[inline]
+fn process_transient_shaper_sample(
+    x: f32,
+    amount: f32,
+    fast_env: &mut f32,
+    slow_env: &mut f32,
+    fast_attack_alpha: f32,
+    fast_release_alpha: f32,
+    slow_attack_alpha: f32,
+    slow_release_alpha: f32,
+) -> f32 {
+    let detector = x.abs();
+    let fast_alpha = if detector > *fast_env {
+        fast_attack_alpha
+    } else {
+        fast_release_alpha
+    };
+    let slow_alpha = if detector > *slow_env {
+        slow_attack_alpha
+    } else {
+        slow_release_alpha
+    };
+    *fast_env = fast_alpha * *fast_env + (1.0 - fast_alpha) * detector;
+    *slow_env = slow_alpha * *slow_env + (1.0 - slow_alpha) * detector;
+
+    let diff = (*fast_env - *slow_env) / ((*slow_env).max(1.0e-4));
+    let gain = (1.0 + amount * diff.clamp(-1.0, 1.0)).clamp(0.75, 1.25);
+    x * gain
 }
 
 // ============================================================================
@@ -1751,6 +1800,18 @@ impl MasteringChain {
             y = state.high.process(&self.coeffs.high, y);
             y = state.warmth.process(&self.coeffs.warmth, y);
             y = state.presence_air.process(&self.coeffs.presence_air, y);
+            if self.coeffs.transient_amount.abs() > 1.0e-5 {
+                y = process_transient_shaper_sample(
+                    y,
+                    self.coeffs.transient_amount,
+                    &mut state.transient_fast_env,
+                    &mut state.transient_slow_env,
+                    self.coeffs.transient_fast_attack_alpha,
+                    self.coeffs.transient_fast_release_alpha,
+                    self.coeffs.transient_slow_attack_alpha,
+                    self.coeffs.transient_slow_release_alpha,
+                );
+            }
             frame[ch] = y;
         }
         // Phase 12.2 — 3-band multiband downward compressor (LR4 split,
@@ -1968,6 +2029,18 @@ impl MasteringChain {
         y = state.high.process(&self.coeffs.high, y);
         y = state.warmth.process(&self.coeffs.warmth, y);
         y = state.presence_air.process(&self.coeffs.presence_air, y);
+        if self.coeffs.transient_amount.abs() > 1.0e-5 {
+            y = process_transient_shaper_sample(
+                y,
+                self.coeffs.transient_amount,
+                &mut state.transient_fast_env,
+                &mut state.transient_slow_env,
+                self.coeffs.transient_fast_attack_alpha,
+                self.coeffs.transient_fast_release_alpha,
+                self.coeffs.transient_slow_attack_alpha,
+                self.coeffs.transient_slow_release_alpha,
+            );
+        }
         if self.coeffs.compression_active {
             let state = &mut self.states[idx];
             let low_a = state.comp_split.low_lp1.process(&self.coeffs.comp_low_lp, y);
@@ -2154,6 +2227,87 @@ mod tests {
         assert!(approx_eq(coeffs.sub_highpass.b0, 1.0, 1e-6));
         assert!(approx_eq(coeffs.sub_highpass.b1, 0.0, 1e-6));
         assert!(approx_eq(coeffs.sub_highpass.b2, 0.0, 1e-6));
+    }
+
+    #[test]
+    fn preset_transient_punch_wires_into_chain_coefficients() {
+        let mut punch = default_master_settings();
+        punch.preset = Preset::Punch;
+        punch.intensity = 0.5;
+        let punch_coeffs = ChainCoeffs::from_settings(48_000, &punch);
+
+        let mut warmth = default_master_settings();
+        warmth.preset = Preset::Warmth;
+        warmth.intensity = 0.5;
+        let warmth_coeffs = ChainCoeffs::from_settings(48_000, &warmth);
+
+        let mut custom = default_master_settings();
+        custom.preset = Preset::Custom { id: "neutral".into() };
+        let custom_coeffs = ChainCoeffs::from_settings(48_000, &custom);
+
+        assert!(
+            punch_coeffs.transient_amount > 0.1,
+            "Punch should carry a positive transient amount, got {}",
+            punch_coeffs.transient_amount
+        );
+        assert!(
+            warmth_coeffs.transient_amount < -0.04,
+            "Warmth should carry a softened transient amount, got {}",
+            warmth_coeffs.transient_amount
+        );
+        assert!(approx_eq(custom_coeffs.transient_amount, 0.0, 1e-6));
+    }
+
+    #[test]
+    fn transient_shaper_positive_amount_boosts_attack() {
+        let mut fast = 0.0;
+        let mut slow = 0.0;
+        let fast_attack = alpha_from_time_ms(48_000.0, 1.0);
+        let fast_release = alpha_from_time_ms(48_000.0, 35.0);
+        let slow_attack = alpha_from_time_ms(48_000.0, 15.0);
+        let slow_release = alpha_from_time_ms(48_000.0, 140.0);
+
+        let out = process_transient_shaper_sample(
+            0.5,
+            0.2,
+            &mut fast,
+            &mut slow,
+            fast_attack,
+            fast_release,
+            slow_attack,
+            slow_release,
+        );
+
+        assert!(
+            out > 0.5,
+            "positive transient amount should boost an attack, got input 0.5 output {out}"
+        );
+    }
+
+    #[test]
+    fn transient_shaper_negative_amount_softens_attack() {
+        let mut fast = 0.0;
+        let mut slow = 0.0;
+        let fast_attack = alpha_from_time_ms(48_000.0, 1.0);
+        let fast_release = alpha_from_time_ms(48_000.0, 35.0);
+        let slow_attack = alpha_from_time_ms(48_000.0, 15.0);
+        let slow_release = alpha_from_time_ms(48_000.0, 140.0);
+
+        let out = process_transient_shaper_sample(
+            0.5,
+            -0.2,
+            &mut fast,
+            &mut slow,
+            fast_attack,
+            fast_release,
+            slow_attack,
+            slow_release,
+        );
+
+        assert!(
+            out < 0.5,
+            "negative transient amount should soften an attack, got input 0.5 output {out}"
+        );
     }
 
     /// Width 0 collapses the stereo image to mono. For an L = sine, R = -sine
