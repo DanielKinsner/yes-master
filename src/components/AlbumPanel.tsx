@@ -47,6 +47,13 @@ function inferDisplayRole(index: number, total: number): TrackRole {
   return "album_track";
 }
 
+function formatAlbumDuration(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(total / 60);
+  const remaining = total % 60;
+  return `${minutes}:${remaining.toString().padStart(2, "0")}`;
+}
+
 export function AlbumPanel({
   tracks,
   selectedTrackId,
@@ -67,10 +74,26 @@ export function AlbumPanel({
     "club-peak",
     "fever-dream",
   ];
+  const totalSeconds = tracks.reduce(
+    (acc, t) => acc + (t.duration_seconds ?? 0),
+    0,
+  );
   return (
     <section className="album-panel">
       <header className="album-panel-head">
-        <span className="section-label">Album Master</span>
+        <div className="album-panel-summary">
+          <span className="section-label">Album</span>
+          <span className="album-panel-stat">
+            <strong>{tracks.length}</strong> tracks
+            {totalSeconds > 0 && (
+              <>
+                <span className="dim"> · </span>
+                <strong>{formatAlbumDuration(totalSeconds)}</strong>
+              </>
+            )}
+          </span>
+        </div>
+        <span className="section-label album-panel-mode">Album Master</span>
         <input
           type="text"
           className="album-title-input"
@@ -79,6 +102,14 @@ export function AlbumPanel({
           onChange={(e) => onAlbumTitle(e.target.value)}
           maxLength={120}
         />
+        <button
+          type="button"
+          className="primary album-export-btn"
+          onClick={onExportAlbum}
+          disabled={albumRendering || tracks.length === 0}
+        >
+          {albumRendering ? "Rendering album…" : "Export Album"}
+        </button>
       </header>
       <div className="album-panel-controls">
         <label className="adv-label" htmlFor="album-arc-select">
@@ -112,14 +143,6 @@ export function AlbumPanel({
         <span className="album-intensity-value">
           ×{albumIntensity.toFixed(2)}
         </span>
-        <button
-          type="button"
-          className="primary album-export-btn"
-          onClick={onExportAlbum}
-          disabled={albumRendering || tracks.length === 0}
-        >
-          {albumRendering ? "Rendering album…" : "Export Album"}
-        </button>
       </div>
       <ol className="album-track-lane">
         {tracks.map((t, i) => {

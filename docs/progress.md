@@ -4444,3 +4444,47 @@ Next recommended slice:
 
 Install the rebuilt Windows NSIS installer and do a human visual pass on
 Album Master at the target window sizes.
+
+## 2026-05-19 - Compact Album Master header
+
+Goal:
+
+Recover more vertical space in Album Master after the Windows visual pass
+showed the album chrome still pushing the mastering controls downward.
+
+What changed:
+
+- Merged the standalone Album summary card into the Album Master title row.
+- Moved Export Album into the compact album/title header.
+- Removed the inferred role/character story chips from the track header so
+  labels like "Appears an interlude" and "Appears dark" no longer spend space
+  in the working surface.
+- Rebalanced the Album Master row contract to return the saved space to the
+  waveform and control areas.
+- Extended the layout regression test to pin the compact album chrome and
+  absence of story chips.
+
+Verification:
+
+- `npm test -- src/App.layout-css.test.ts`: 4/4 pass.
+- `npm run build`: clean production build.
+- `npm test`: 81/81 pass.
+- `npm run build:windows`: rebuilt NSIS and MSI installers.
+- Windows release EXE launch-smoked into Album Master after rebuild.
+
+Real-audio fixture used:
+
+No. This is a shared frontend layout fix.
+
+What failed or remains partial:
+
+- `npm run build:mac` was not run because this pass was on Windows.
+  Static macOS packaging tests passed in `npm test`.
+- The Windows screenshot capture cropped the far right edge of the app, so the
+  final visible confirmation focused on the collapsed album chrome and removed
+  story chips.
+
+Next recommended slice:
+
+Install the rebuilt Windows NSIS installer and do a human visual pass on
+Album Master at the target window sizes.

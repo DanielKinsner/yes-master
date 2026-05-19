@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 
 const css = readFileSync(resolve(process.cwd(), "src/App.css"), "utf8");
 const appTsx = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
+const albumPanelTsx = readFileSync(
+  resolve(process.cwd(), "src/components/AlbumPanel.tsx"),
+  "utf8",
+);
 
 function block(selector: string): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -35,13 +39,23 @@ describe("console layout CSS", () => {
     expect(appTsx).toContain('tm.mode === "album" ? " workspace-album" : ""');
     expect(appTsx).toContain('tm.mode === "album" ? " is-album" : ""');
     expect(block(".workspace-album")).toContain(
-      "grid-template-rows: auto auto minmax(0, 1fr)",
+      "grid-template-rows: auto minmax(0, 1fr)",
     );
     expect(block(".track-master-console.is-album")).toContain("42px");
     expect(block(".track-master-console.is-album")).toContain(
-      "minmax(250px, 1.3fr)",
+      "minmax(280px, 1.34fr)",
     );
     expect(block(".album-panel-controls")).toContain("display: grid");
     expect(block(".album-export-btn")).toContain("white-space: nowrap");
+  });
+
+  it("keeps Album Master chrome compact and avoids inferred story chips", () => {
+    expect(appTsx).not.toContain("<AlbumHeader");
+    expect(appTsx).not.toContain("showStoryTags");
+    expect(appTsx).not.toContain("StoryTags");
+    expect(albumPanelTsx).toContain('className="album-panel-summary"');
+    expect(albumPanelTsx).toContain('className="section-label album-panel-mode"');
+    expect(block(".album-panel-head")).toContain("display: grid");
+    expect(block(".album-panel-summary")).toContain("align-items: baseline");
   });
 });

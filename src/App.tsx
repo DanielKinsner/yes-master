@@ -75,25 +75,20 @@ function App() {
       />
       <main className={"workspace" + (tm.mode === "album" ? " workspace-album" : "")}>
         {tm.mode === "album" && tm.tracks.length > 0 && (
-          <>
-            <AlbumHeader
-              tracks={tm.tracks}
-            />
-            <AlbumPanel
-              tracks={tm.tracks}
-              selectedTrackId={tm.selectedTrack?.id ?? null}
-              onSelectTrack={tm.selectTrack}
-              albumArcKind={tm.albumArcKind}
-              albumIntensity={tm.albumIntensity}
-              albumTitle={tm.albumTitle}
-              albumRendering={tm.albumRendering}
-              albumExportReport={tm.albumExportReport}
-              onAlbumArc={tm.setAlbumArc}
-              onAlbumIntensity={tm.setAlbumIntensity}
-              onAlbumTitle={tm.setAlbumTitle}
-              onExportAlbum={tm.exportAlbumPlan}
-            />
-          </>
+          <AlbumPanel
+            tracks={tm.tracks}
+            selectedTrackId={tm.selectedTrack?.id ?? null}
+            onSelectTrack={tm.selectTrack}
+            albumArcKind={tm.albumArcKind}
+            albumIntensity={tm.albumIntensity}
+            albumTitle={tm.albumTitle}
+            albumRendering={tm.albumRendering}
+            albumExportReport={tm.albumExportReport}
+            onAlbumArc={tm.setAlbumArc}
+            onAlbumIntensity={tm.setAlbumIntensity}
+            onAlbumTitle={tm.setAlbumTitle}
+            onExportAlbum={tm.exportAlbumPlan}
+          />
         )}
         {tm.selectedTrack ? (
           <TrackMaster tm={tm} />
@@ -546,7 +541,6 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           track={track}
           analysis={tm.selectedAnalysis}
           isAnalyzing={tm.isAnalyzing}
-          showStoryTags={tm.mode === "album"}
           playbackKind={tm.transport.playbackKind}
           volumeMatch={tm.transport.volumeMatch}
           exportLufsPreview={tm.transport.exportLufsPreview}
@@ -674,7 +668,6 @@ function TrackHeader({
   track,
   analysis,
   isAnalyzing,
-  showStoryTags,
   playbackKind,
   volumeMatch,
   exportLufsPreview,
@@ -685,7 +678,6 @@ function TrackHeader({
   track: ImportedTrack;
   analysis: AnalysisResult | undefined;
   isAnalyzing: boolean;
-  showStoryTags: boolean;
   // UI_LAYOUT_REVISION_1600x940 L1: A/B comparison toggles and Volume
   // Match moved from the separate Transport section into the track
   // header so the waveform module below can be the workspace anchor.
@@ -724,9 +716,6 @@ function TrackHeader({
           ))}
         </div>
         {analysis && <AnalysisSummary analysis={analysis} />}
-        {showStoryTags && analysis && (
-          <StoryTags analysis={analysis} />
-        )}
       </div>
       <div className="track-header-controls">
         <div className="ab-toggle">
@@ -877,102 +866,6 @@ function AnalysisSummary({ analysis }: { analysis: AnalysisResult }) {
       )}
     </details>
   );
-}
-
-function StoryTags({ analysis }: { analysis: AnalysisResult }) {
-  const role = analysis.inferred_role;
-  const roleConf = analysis.role_confidence;
-  const character = analysis.inferred_character;
-  const charConf = analysis.character_confidence;
-  if (!role && !character) return null;
-  return (
-    <div className="story-tags">
-      {role && (
-        <span
-          className={"tag tag-role conf-" + (roleConf ?? "unsure")}
-          title={`Inferred role · ${confidenceLabel(roleConf)}`}
-        >
-          {humbleVerb(roleConf)} {roleLabel(role)}
-        </span>
-      )}
-      {character && (
-        <span
-          className={"tag tag-character conf-" + (charConf ?? "unsure")}
-          title={`Inferred character · ${confidenceLabel(charConf)}`}
-        >
-          {humbleVerb(charConf)} {characterLabel(character)}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function humbleVerb(conf: AnalysisResult["role_confidence"]): string {
-  switch (conf) {
-    case "strong":
-      return "Likely";
-    case "moderate":
-      return "Appears";
-    case "unsure":
-    case undefined:
-    case null:
-    default:
-      return "Maybe";
-  }
-}
-
-function roleLabel(role: NonNullable<AnalysisResult["inferred_role"]>): string {
-  switch (role) {
-    case "opener":
-      return "opener";
-    case "closer":
-      return "closer";
-    case "single":
-      return "a single";
-    case "ballad":
-      return "a ballad";
-    case "interlude":
-      return "an interlude";
-    case "album_track":
-      return "an album track";
-    default:
-      return "an album track";
-  }
-}
-
-function characterLabel(
-  c: NonNullable<AnalysisResult["inferred_character"]>,
-): string {
-  switch (c) {
-    case "bright":
-      return "bright";
-    case "dark":
-      return "dark";
-    case "dense":
-      return "dense";
-    case "sparse":
-      return "sparse";
-    case "balanced":
-      return "balanced";
-    default:
-      return "balanced";
-  }
-}
-
-function confidenceLabel(
-  conf: AnalysisResult["role_confidence"],
-): string {
-  switch (conf) {
-    case "strong":
-      return "strong";
-    case "moderate":
-      return "moderate";
-    case "unsure":
-    case undefined:
-    case null:
-    default:
-      return "unsure";
-  }
 }
 
 function WaveformView({
@@ -2402,33 +2295,6 @@ function Toast({
         ×
       </button>
     </div>
-  );
-}
-
-function AlbumHeader({
-  tracks,
-}: {
-  tracks: ImportedTrack[];
-}) {
-  const totalSeconds = tracks.reduce(
-    (acc, t) => acc + (t.duration_seconds ?? 0),
-    0,
-  );
-  return (
-    <section className="album-header">
-      <div className="album-summary">
-        <span className="section-label">Album</span>
-        <div className="album-stat">
-          <strong>{tracks.length}</strong> tracks
-          {totalSeconds > 0 && (
-            <>
-              <span className="dim"> · </span>
-              <strong>{formatTime(totalSeconds)}</strong>
-            </>
-          )}
-        </div>
-      </div>
-    </section>
   );
 }
 
