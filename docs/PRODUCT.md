@@ -10,7 +10,7 @@ This file changes only through deliberate grill sessions with the user, not thro
 
 ## Mission
 
-YES Master is a local desktop mastering app for real tracks and real albums. It should be something a musician or producer would be proud to run their audio through.
+YES Master is a private cross-platform desktop mastering app for real tracks and real albums — Mac and Windows targeted; Linux deferred. It should be something a musician or producer would be proud to run their audio through.
 
 The product is not a toy normalizer, not a certified mastering lab, and not a replacement for a skilled mastering engineer. It is a serious, standards-aware, listening-first mastering assistant that helps users improve finished mixes, export credible masters, and understand the result.
 
@@ -57,7 +57,8 @@ The app should not claim certification. Actual certification would require indus
 
 Primary user:
 
-- A capable musician or producer working locally on a desktop machine.
+- A capable musician or producer working locally on a Mac or Windows desktop;
+  Linux is deferred.
 - Comfortable making taste decisions.
 - Not necessarily technical.
 
@@ -405,18 +406,19 @@ The right boundary is: bring ready-made tracks, then master and audition them de
 
 ## Architecture Direction
 
-YES Master is a local desktop application. Whatever stack it runs on must meet these platform requirements:
+YES Master is a private cross-platform desktop application targeting Mac and Windows; Linux is deferred. Whatever stack it runs on must meet these platform requirements:
 
 - Low-latency audition with same-playhead Original/Mastered switching.
 - Native audio I/O (file decode, device output) that does not depend on browser audio APIs.
 - Deterministic export rendering that is byte-stable for identical inputs and settings.
 - Offline-first operation; no required cloud calls for core mastering, audition, or export.
-- Desktop packaging that installs and launches without separate runtimes for the end user.
+- Mac and Windows packaging that installs and launches without separate
+  runtimes for the end user.
 - Project state, autosave, and undo/redo storage that survives crashes and updates.
 - Testable DSP — algorithms must be reachable from automated tests, not only the UI.
 - A typed command surface so the frontend talks to product concepts, not raw CLI arrays.
 
-The actual platform lock and the reasoning behind it live in `docs/adr/0001-tauri-rust-stack.md`. PRODUCT.md is intentionally tech-agnostic about the platform; the ADR is where platform choices get debated and recorded.
+The actual stack lock and the reasoning behind it live in `docs/adr/0001-tauri-rust-stack.md`. PRODUCT.md names the product platform target; the ADR is where implementation stack choices get debated and recorded.
 
 Desired typed command surface includes:
 
