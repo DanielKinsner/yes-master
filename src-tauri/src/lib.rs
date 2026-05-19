@@ -11,6 +11,7 @@ pub mod settings;
 pub mod sources;
 pub mod spectrum;
 pub mod types;
+pub mod wav_writer;
 
 pub use types::*;
 

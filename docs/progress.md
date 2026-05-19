@@ -4445,41 +4445,6 @@ Next recommended slice:
 Install the rebuilt Windows NSIS installer and do a human visual pass on
 Album Master at the target window sizes.
 
-## 2026-05-19 - WAV writer byte guardrails
-
-Goal:
-
-Add deterministic byte-level protection before lifting the WAV writer out of
-engine.rs.
-
-What changed:
-
-- Added spec-plus-SHA snapshots for 16-bit `write_wav`, 24-bit
-  `write_samples_into_writer`, and the existing 32-bit float WAV path.
-- Added a byte parity test for overlapping `write_wav` and
-  `write_samples_into_writer` output.
-- Pinned the intentional per-call dither RNG reset contract for writer helpers.
-- Added `sha2` as a dev dependency for full-file WAV hashing in tests.
-
-Verification:
-
-- `cargo test`: 160 lib tests plus integration suite pass.
-- `AMS_RUN_REAL_FIXTURE=1 cargo test`: 160 lib tests plus integration suite
-  pass, including real-fixture render and metering tests.
-
-Real-audio fixture used:
-
-Yes. The slow lane ran with `AMS_RUN_REAL_FIXTURE=1`.
-
-What failed or remains partial:
-
-- No production code moved yet; this slice only adds the byte guardrails.
-
-Next recommended slice:
-
-Commit 2: move the WAV writer and dither helpers into `src-tauri/src/wav_writer.rs`
-with these byte tests as the gate.
-
 ## 2026-05-19 - Compact Album Master header
 
 Goal:
@@ -4523,3 +4488,76 @@ Next recommended slice:
 
 Install the rebuilt Windows NSIS installer and do a human visual pass on
 Album Master at the target window sizes.
+
+## 2026-05-19 - WAV writer byte guardrails
+
+Goal:
+
+Add deterministic byte-level protection before lifting the WAV writer out of
+engine.rs.
+
+What changed:
+
+- Added spec-plus-SHA snapshots for 16-bit `write_wav`, 24-bit
+  `write_samples_into_writer`, and the existing 32-bit float WAV path.
+- Added a byte parity test for overlapping `write_wav` and
+  `write_samples_into_writer` output.
+- Pinned the intentional per-call dither RNG reset contract for writer helpers.
+- Added `sha2` as a dev dependency for full-file WAV hashing in tests.
+
+Verification:
+
+- `cargo test`: 160 lib tests plus integration suite pass.
+- `AMS_RUN_REAL_FIXTURE=1 cargo test`: 160 lib tests plus integration suite
+  pass, including real-fixture render and metering tests.
+
+Real-audio fixture used:
+
+Yes. The slow lane ran with `AMS_RUN_REAL_FIXTURE=1`.
+
+What failed or remains partial:
+
+- No production code moved yet; this slice only adds the byte guardrails.
+
+Next recommended slice:
+
+Commit 2: move the WAV writer and dither helpers into `src-tauri/src/wav_writer.rs`
+with these byte tests as the gate.
+
+## 2026-05-19 - Lift WAV writer module
+
+Goal:
+
+Move the byte-guarded WAV writer and dither code out of engine.rs without
+changing output bytes.
+
+What changed:
+
+- Added `src-tauri/src/wav_writer.rs` for the WAV spec, writer helpers,
+  deterministic dither RNG, and int quantizers.
+- Moved the commit 1 spec-plus-SHA snapshots into the new module unchanged.
+- Moved the existing dither and quantizer unit tests with the writer internals.
+- Wired engine.rs to use the new `pub(crate)` writer entry points.
+
+Verification:
+
+- `cargo test wav_writer`: 13/13 writer-module tests pass, including the SHA
+  snapshots with unchanged constants.
+- `cargo test`: 160 lib tests plus integration suite pass.
+- `AMS_RUN_REAL_FIXTURE=1 cargo test`: 160 lib tests plus integration suite
+  pass, including real-fixture render and metering tests.
+
+Real-audio fixture used:
+
+Yes. The slow lane ran with `AMS_RUN_REAL_FIXTURE=1`.
+
+What failed or remains partial:
+
+- No behavior changes intended. The writer still duplicates the `write_wav`
+  and `write_samples_into_writer` loops exactly as before; unifying them is
+  intentionally left out of this mechanical lift.
+
+Next recommended slice:
+
+Commit 3: lift the pre-master analysis cluster into `src-tauri/src/analysis.rs`
+while leaving LUFS landing helpers in engine.rs.
