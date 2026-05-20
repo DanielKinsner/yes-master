@@ -280,6 +280,11 @@ enum AudioCommand {
         preview_lufs_landing: bool,
     },
     PreviewLandingReady {
+        /// Captured at worker spawn time. Rejected by the audio thread if
+        /// the current track epoch has moved on — guards the landing-gain
+        /// cache against poisoning from a worker that started against a
+        /// prior track's PCM.
+        track_epoch: u64,
         generation: u64,
         settings: MasteringSettings,
         gain: f32,
@@ -600,6 +605,24 @@ struct AudioThreadState {
     live_coeff_generation: u64,
     live_landing_gain_lin: f32,
     live_sample_rate: u32,
+    /// Bumped on every `play` / `play_master`. Captured by LUFS preview
+    /// workers at spawn time and re-checked on `PreviewLandingReady`. A
+    /// worker that started against a prior track's PCM lands its result
+    /// after the cache is cleared at the track boundary; without the
+    /// epoch check it would re-insert stale-track gain under the
+    /// settings hash and poison the new track's preview.
+    track_epoch: u64,
+    /// True while a `lufs-preview-landing` worker is alive. Caps the
+    /// in-flight measurement count to one and prevents an OS-thread
+    /// spawn flood under fast knob sweeps with Preview LUFS on.
+    lufs_worker_in_flight: bool,
+    /// Most-recent (settings, generation) that wanted a measurement
+    /// while a worker was already in flight. The audio thread drains
+    /// this when the active worker reports back and spawns the
+    /// follow-up measurement — latest-pending semantics, so an
+    /// arbitrary stream of cache-miss updates costs at most one
+    /// active worker plus one queued worker at any time.
+    lufs_worker_pending: Option<(MasteringSettings, u64)>,
     /// Phase 12.1 decode cache — keyed by canonical path + mtime. Speeds up
     /// repeated `play_master` calls on the same file (e.g. Original/Mastered
     /// toggles) from ~1–2 s on a multi-minute WAV down to a sub-100 ms swap.
@@ -859,6 +882,54 @@ fn preview_landing_window(samples: &[f32], sample_rate: u32, channels: u16) -> V
     samples[start..end].to_vec()
 }
 
+/// Spawn a `lufs-preview-landing` worker thread that measures the export
+/// landing gain for `settings` against the cached decoded PCM and sends
+/// the result back through `command_tx` as `PreviewLandingReady`. Returns
+/// `true` if the worker was spawned (caller should then mark its
+/// in-flight gate); `false` if there's no decoded PCM yet or the OS
+/// rejected the thread spawn — in either case no worker is alive.
+///
+/// `track_epoch` is captured here at spawn time and echoed back in the
+/// result so the audio thread can drop results from a worker that
+/// outlived a track change.
+fn try_spawn_lufs_preview_worker(
+    decoded_cache: Option<&DecodedCacheEntry>,
+    sample_rate: u32,
+    settings: MasteringSettings,
+    generation: u64,
+    track_epoch: u64,
+    command_tx: &Sender<AudioCommand>,
+) -> bool {
+    let Some(cache_entry) = decoded_cache else {
+        return false;
+    };
+    let channels = cache_entry.pcm.channels;
+    let samples = preview_landing_window(
+        cache_entry.pcm.samples.as_slice(),
+        sample_rate,
+        channels,
+    );
+    let command_tx = command_tx.clone();
+    std::thread::Builder::new()
+        .name("lufs-preview-landing".to_string())
+        .spawn(move || {
+            let gain = export_landing_gain_lin_for_preview(
+                samples.as_slice(),
+                sample_rate,
+                channels,
+                &settings,
+            )
+            .unwrap_or(1.0);
+            let _ = command_tx.send(AudioCommand::PreviewLandingReady {
+                track_epoch,
+                generation,
+                settings,
+                gain,
+            });
+        })
+        .is_ok()
+}
+
 /// Cache-less variant of the audio thread's UpdateChain coefficient
 /// build. The audio thread itself routes through `PreviewLandingCache`
 /// now (see the `UpdateChain` branch in `process_audio_command`), but
@@ -1077,38 +1148,26 @@ fn process_audio_command(
                             coeffs.export_landing_gain_lin = cached;
                             s.live_landing_gain_lin = cached;
                         } else {
-                            // Do not block the live-control path on LUFS
-                            // measurement. Apply the new tone/compressor/EQ
-                            // coefficients immediately, preserving the
-                            // previous export-landing scalar, then refine the
-                            // scalar from a background latest-generation job.
+                            // Cache miss — apply coefficients now with the
+                            // last-known landing scalar (audio keeps flowing)
+                            // and schedule a background measurement. Single-
+                            // in-flight: if a worker is already running, just
+                            // record the latest (settings, generation) as
+                            // pending; the active worker's completion handler
+                            // drains it. Caps in-flight measurement work at
+                            // one OS thread regardless of UpdateChain rate.
                             coeffs.export_landing_gain_lin = s.live_landing_gain_lin;
-                            if let Some(cache_entry) = s.decoded_cache.as_ref() {
-                                let channels = cache_entry.pcm.channels;
-                                let samples = preview_landing_window(
-                                    cache_entry.pcm.samples.as_slice(),
-                                    sample_rate,
-                                    channels,
-                                );
-                                let settings_for_worker = settings.clone();
-                                let command_tx = command_tx.clone();
-                                let _ = std::thread::Builder::new()
-                                    .name("lufs-preview-landing".to_string())
-                                    .spawn(move || {
-                                        let gain = export_landing_gain_lin_for_preview(
-                                            samples.as_slice(),
-                                            sample_rate,
-                                            channels,
-                                            &settings_for_worker,
-                                        )
-                                        .unwrap_or(1.0);
-                                        let _ =
-                                            command_tx.send(AudioCommand::PreviewLandingReady {
-                                                generation,
-                                                settings: settings_for_worker,
-                                                gain,
-                                            });
-                                    });
+                            if s.lufs_worker_in_flight {
+                                s.lufs_worker_pending = Some((settings.clone(), generation));
+                            } else if try_spawn_lufs_preview_worker(
+                                s.decoded_cache.as_ref(),
+                                sample_rate,
+                                settings.clone(),
+                                generation,
+                                s.track_epoch,
+                                command_tx,
+                            ) {
+                                s.lufs_worker_in_flight = true;
                             }
                         }
                         // No decoded PCM cached yet → leave landing
@@ -1121,19 +1180,61 @@ fn process_audio_command(
             }
         }
         AudioCommand::PreviewLandingReady {
+            track_epoch,
             generation,
             settings,
             gain,
         } => {
             if let Some(s) = state.as_mut() {
-                if generation == s.live_coeff_generation {
+                if track_epoch != s.track_epoch {
+                    // Stale-epoch result — worker started against a prior
+                    // track's PCM. The cache was cleared and the in-flight
+                    // gate was already reset at the track boundary, so
+                    // touching either here would either poison the new
+                    // track's cache or wrongly free the slot the current-
+                    // epoch worker still holds. Drop silently.
+                } else {
+                    // Always cache the completed measurement, even if a
+                    // newer UpdateChain has already moved generation past
+                    // this worker's. A revisit to these settings (the user
+                    // wiggling back to a prior knob position) then hits the
+                    // cache instead of spawning another measurement.
                     s.landing_gain_cache.insert(&settings, gain);
-                    s.live_landing_gain_lin = gain;
-                    if let Some(tx) = s.live_coeffs_tx.as_ref() {
-                        let mut coeffs =
-                            crate::dsp::ChainCoeffs::from_settings(s.live_sample_rate, &settings);
-                        coeffs.export_landing_gain_lin = gain;
-                        let _ = tx.send(LiveCoeffUpdate { generation, coeffs });
+                    if generation == s.live_coeff_generation {
+                        // Still the live setting — promote to the active
+                        // landing scalar and emit a corrective LiveCoeffUpdate
+                        // so the audio output thread crossfades to the
+                        // accurate gain.
+                        s.live_landing_gain_lin = gain;
+                        if let Some(tx) = s.live_coeffs_tx.as_ref() {
+                            let mut coeffs = crate::dsp::ChainCoeffs::from_settings(
+                                s.live_sample_rate,
+                                &settings,
+                            );
+                            coeffs.export_landing_gain_lin = gain;
+                            let _ = tx.send(LiveCoeffUpdate { generation, coeffs });
+                        }
+                    }
+                    // Worker is no longer running. Drain any pending
+                    // measurement and kick off the follow-up if it isn't
+                    // already covered by the cache.
+                    s.lufs_worker_in_flight = false;
+                    if let Some((pending_settings, pending_generation)) =
+                        s.lufs_worker_pending.take()
+                    {
+                        if s.landing_gain_cache.get(&pending_settings).is_some() {
+                            // Already cached (e.g. the user landed back on a
+                            // measured setting). Nothing to do.
+                        } else if try_spawn_lufs_preview_worker(
+                            s.decoded_cache.as_ref(),
+                            s.live_sample_rate,
+                            pending_settings,
+                            pending_generation,
+                            s.track_epoch,
+                            command_tx,
+                        ) {
+                            s.lufs_worker_in_flight = true;
+                        }
                     }
                 }
             }
@@ -1348,6 +1449,9 @@ fn handle_play(
             live_coeff_generation: 0,
             live_landing_gain_lin: 1.0,
             live_sample_rate: pcm.sample_rate,
+            track_epoch: 0,
+            lufs_worker_in_flight: false,
+            lufs_worker_pending: None,
             decoded_cache: None,
             landing_gain_cache: PreviewLandingCache::new(),
             peak_linear: Arc::new(AtomicU32::new(0)),
@@ -1402,6 +1506,15 @@ fn handle_play(
     s.live_coeff_generation = s.live_coeff_generation.wrapping_add(1);
     s.live_landing_gain_lin = 1.0;
     s.live_sample_rate = sample_rate;
+    // Track epoch bump invalidates any in-flight LUFS workers from the
+    // previous track. They'll still complete and send PreviewLandingReady,
+    // but the handler rejects mismatched epochs before touching the
+    // landing-gain cache. Original playback never spawns workers itself,
+    // but the bump matters when the user toggles Master -> Original mid-
+    // measurement.
+    s.track_epoch = s.track_epoch.wrapping_add(1);
+    s.lufs_worker_in_flight = false;
+    s.lufs_worker_pending = None;
     Ok(())
 }
 
@@ -1461,6 +1574,9 @@ fn handle_play_master(
             live_coeff_generation: 0,
             live_landing_gain_lin: 1.0,
             live_sample_rate: pcm.sample_rate,
+            track_epoch: 0,
+            lufs_worker_in_flight: false,
+            lufs_worker_pending: None,
             decoded_cache: None,
             landing_gain_cache: PreviewLandingCache::new(),
             peak_linear: Arc::new(AtomicU32::new(0)),
@@ -1519,6 +1635,16 @@ fn handle_play_master(
     }
     s.live_coeff_generation = s.live_coeff_generation.wrapping_add(1);
     s.live_landing_gain_lin = chain.coeffs.export_landing_gain_lin;
+    // Track epoch bump invalidates any LUFS preview workers spawned
+    // against the prior track. Also wipe the in-flight gate + pending
+    // slot so the next UpdateChain spawns a fresh worker rather than
+    // queueing behind a dead one. Stale workers still in flight will
+    // send PreviewLandingReady against the OLD epoch; the handler
+    // rejects them before they can touch the landing-gain cache or
+    // emit a corrective LiveCoeffUpdate against the new track.
+    s.track_epoch = s.track_epoch.wrapping_add(1);
+    s.lufs_worker_in_flight = false;
+    s.lufs_worker_pending = None;
     let mastering_source = MasteringSource::new(
         pcm.samples,
         pcm.channels,
@@ -2070,6 +2196,79 @@ mod tests {
     fn coalesce_handles_empty_buffer() {
         let result = coalesced_command_sequence(vec![]);
         assert!(result.is_empty());
+    }
+
+    #[test]
+    fn lufs_preview_worker_returns_false_without_decoded_cache() {
+        // No decoded PCM → nothing to measure. Helper must report
+        // false so the caller doesn't mark in_flight.
+        let (tx, rx) = mpsc::channel::<AudioCommand>();
+        let spawned = try_spawn_lufs_preview_worker(
+            None,
+            44_100,
+            settings_with_intensity(0.5),
+            42,
+            7,
+            &tx,
+        );
+        assert!(!spawned, "spawn must report false when no PCM is cached");
+        // No PreviewLandingReady should ever arrive on the channel.
+        assert!(
+            rx.recv_timeout(std::time::Duration::from_millis(50)).is_err(),
+            "no worker started ⇒ no PreviewLandingReady should be sent"
+        );
+    }
+
+    #[test]
+    fn lufs_preview_worker_echoes_epoch_and_generation() {
+        // With a real decoded cache, the worker must spawn, measure,
+        // and report back with the SAME (track_epoch, generation) it
+        // was handed. The handler relies on those round-trip values to
+        // gate cache pollution from prior tracks and to know whether
+        // the live setting has moved on.
+        let sample_rate = 44_100;
+        let channels: u16 = 2;
+        let samples = sine_signal(sample_rate as usize, sample_rate, channels);
+        let entry = DecodedCacheEntry {
+            canonical_path: PathBuf::from("/fake/canonical/a.wav"),
+            mtime: Some(std::time::SystemTime::UNIX_EPOCH),
+            pcm: DecodedPcm {
+                samples,
+                sample_rate,
+                channels,
+            },
+        };
+        let (tx, rx) = mpsc::channel::<AudioCommand>();
+        let spawned_gen: u64 = 9001;
+        let spawned_epoch: u64 = 17;
+        let spawned = try_spawn_lufs_preview_worker(
+            Some(&entry),
+            sample_rate,
+            settings_with_intensity(0.5),
+            spawned_gen,
+            spawned_epoch,
+            &tx,
+        );
+        assert!(spawned, "spawn must report true with decoded PCM available");
+        let msg = rx
+            .recv_timeout(std::time::Duration::from_secs(2))
+            .expect("worker should report PreviewLandingReady within 2s");
+        match msg {
+            AudioCommand::PreviewLandingReady {
+                track_epoch,
+                generation,
+                gain,
+                ..
+            } => {
+                assert_eq!(track_epoch, spawned_epoch, "epoch must round-trip");
+                assert_eq!(generation, spawned_gen, "generation must round-trip");
+                assert!(
+                    gain.is_finite() && gain > 0.0,
+                    "measured gain should be finite and positive, got {gain}"
+                );
+            }
+            _ => panic!("expected PreviewLandingReady, got a different AudioCommand variant"),
+        }
     }
 
     /// A single non-UpdateChain command passes through unmodified.
