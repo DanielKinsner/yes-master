@@ -485,7 +485,7 @@ export function useTrackMaster() {
         }));
         const effectiveForChain = withSourceLufs(id as TrackId, effective);
         api
-          .updateChain(effectiveForChain, false)
+          .updateChain(effectiveForChain, exportLufsPreviewRef.current)
           .then(() => {
             setLiveUpdateStats((s) => ({
               attempts: s.attempts,
@@ -587,10 +587,7 @@ export function useTrackMaster() {
         // `withSourceLufs` helper at the top of this hook.
         const settingsForChain = withSourceLufs(id, nextSettings);
         api
-          // Real-time edits must stay in the fast coefficient-swap lane.
-          // The export-LUFS landing preview is measurement work; running it
-          // on every knob/EQ/profile move makes controls feel non-live.
-          .updateChain(settingsForChain, false)
+          .updateChain(settingsForChain, exportLufsPreviewRef.current)
           .then(() => {
             setLiveUpdateStats((s) => ({
               attempts: s.attempts,
@@ -1422,7 +1419,7 @@ export function useTrackMaster() {
         api
           .updateChain(
             withSourceLufs(selectedTrackId, preset.settings),
-            false,
+            exportLufsPreviewRef.current,
           )
           .then(() => {
             setLiveUpdateStats((s) => ({
