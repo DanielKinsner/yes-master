@@ -23,7 +23,7 @@ fn linear_to_dbfs(linear: f32) -> f32 {
 use std::collections::HashMap;
 
 use crate::decode::{decode_full, decode_to_peaks, DecodedPcm};
-use crate::sources::{MasteringSource, MeteredPcmSource};
+use crate::sources::{LiveCoeffUpdate, MasteringSource, MeteredPcmSource};
 use crate::spectrum::{SpectrumAnalyzer, SpectrumRing};
 
 const DEFAULT_TARGET_PIXELS: u32 = 1000;
@@ -197,25 +197,19 @@ pub async fn prewarm_decode(
 }
 
 #[tauri::command]
-pub async fn pause_playback(
-    player: tauri::State<'_, Arc<AudioPlayer>>,
-) -> CommandResult<()> {
+pub async fn pause_playback(player: tauri::State<'_, Arc<AudioPlayer>>) -> CommandResult<()> {
     player.pause();
     Ok(())
 }
 
 #[tauri::command]
-pub async fn resume_playback(
-    player: tauri::State<'_, Arc<AudioPlayer>>,
-) -> CommandResult<()> {
+pub async fn resume_playback(player: tauri::State<'_, Arc<AudioPlayer>>) -> CommandResult<()> {
     player.resume();
     Ok(())
 }
 
 #[tauri::command]
-pub async fn stop_playback(
-    player: tauri::State<'_, Arc<AudioPlayer>>,
-) -> CommandResult<()> {
+pub async fn stop_playback(player: tauri::State<'_, Arc<AudioPlayer>>) -> CommandResult<()> {
     player.stop();
     Ok(())
 }
@@ -240,7 +234,9 @@ pub async fn set_loop_region(
 ) -> CommandResult<()> {
     if let Some(r) = region {
         if !r.start_sec.is_finite() || !r.end_sec.is_finite() {
-            return Err(CommandError::Other("loop region must be finite".to_string()));
+            return Err(CommandError::Other(
+                "loop region must be finite".to_string(),
+            ));
         }
         if r.start_sec < 0.0 {
             return Err(CommandError::Other(format!(
@@ -282,6 +278,11 @@ enum AudioCommand {
     UpdateChain {
         settings: MasteringSettings,
         preview_lufs_landing: bool,
+    },
+    PreviewLandingReady {
+        generation: u64,
+        settings: MasteringSettings,
+        gain: f32,
     },
     Pause,
     Resume,
@@ -391,9 +392,10 @@ impl AudioPlayer {
         let (tx, rx) = mpsc::channel::<AudioCommand>();
         let snap_for_thread = snapshot.clone();
         let prewarm_for_thread = prewarm_cache.clone();
+        let tx_for_thread = tx.clone();
         std::thread::Builder::new()
             .name("audio-player".to_string())
-            .spawn(move || audio_thread(rx, snap_for_thread, prewarm_for_thread))
+            .spawn(move || audio_thread(rx, tx_for_thread, snap_for_thread, prewarm_for_thread))
             .expect("spawn audio thread");
         Self {
             tx: Mutex::new(Some(tx)),
@@ -546,9 +548,7 @@ impl AudioPlayer {
         match reply_rx.recv_timeout(Duration::from_secs(2)) {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(CommandError::Other(e)),
-            Err(_) => Err(CommandError::Other(
-                "audio seek reply timeout".to_string(),
-            )),
+            Err(_) => Err(CommandError::Other("audio seek reply timeout".to_string())),
         }
     }
 
@@ -562,7 +562,10 @@ impl AudioPlayer {
     }
 
     fn send(&self, cmd: AudioCommand) -> Result<(), String> {
-        let guard = self.tx.lock().map_err(|_| "audio tx mutex poisoned".to_string())?;
+        let guard = self
+            .tx
+            .lock()
+            .map_err(|_| "audio tx mutex poisoned".to_string())?;
         let tx = guard
             .as_ref()
             .ok_or_else(|| "audio thread offline".to_string())?;
@@ -593,7 +596,9 @@ struct AudioThreadState {
     sink: rodio::Sink,
     current_track: Option<TrackId>,
     loop_region: Option<LoopRegion>,
-    live_coeffs_tx: Option<Sender<crate::dsp::ChainCoeffs>>,
+    live_coeffs_tx: Option<Sender<LiveCoeffUpdate>>,
+    live_coeff_generation: u64,
+    live_landing_gain_lin: f32,
     live_sample_rate: u32,
     /// Phase 12.1 decode cache — keyed by canonical path + mtime. Speeds up
     /// repeated `play_master` calls on the same file (e.g. Original/Mastered
@@ -696,6 +701,7 @@ impl PreviewLandingCache {
     /// `compute` with the settings, store its result, and return it.
     /// `compute` is `FnOnce` so callers can borrow other state from
     /// the audio thread inside the closure without lifetime trouble.
+    #[cfg(test)]
     fn get_or_compute<F>(&mut self, settings: &MasteringSettings, compute: F) -> f32
     where
         F: FnOnce(&MasteringSettings) -> f32,
@@ -707,6 +713,16 @@ impl PreviewLandingCache {
         let result = compute(settings);
         self.by_hash.insert(hash, result);
         result
+    }
+
+    fn get(&self, settings: &MasteringSettings) -> Option<f32> {
+        let hash = settings_landing_hash(settings);
+        self.by_hash.get(&hash).copied()
+    }
+
+    fn insert(&mut self, settings: &MasteringSettings, gain: f32) {
+        let hash = settings_landing_hash(settings);
+        self.by_hash.insert(hash, gain);
     }
 }
 
@@ -771,8 +787,7 @@ fn export_landing_gain_lin_for_preview(
     let channels_usize = channels.max(1) as usize;
     let safe_channels = channels_usize.max(1);
     let total_frames = samples.len() / safe_channels;
-    let window_frames =
-        ((PREVIEW_WINDOW_SECS * sample_rate as f32) as usize).min(total_frames);
+    let window_frames = ((PREVIEW_WINDOW_SECS * sample_rate as f32) as usize).min(total_frames);
     let start_frame = total_frames.saturating_sub(window_frames) / 2;
     let start = start_frame * safe_channels;
     let end = ((start_frame + window_frames) * safe_channels).min(samples.len());
@@ -801,9 +816,7 @@ fn export_landing_gain_lin_for_preview(
     }
     let mut peak_lin: f64 = 0.0;
     for ch in 0..channels_u32 {
-        let tp = ebu
-            .true_peak(ch)
-            .map_err(|e| format!("ebur128 tp: {e}"))?;
+        let tp = ebu.true_peak(ch).map_err(|e| format!("ebur128 tp: {e}"))?;
         if tp > peak_lin {
             peak_lin = tp;
         }
@@ -833,6 +846,17 @@ fn export_landing_gain_lin_for_preview(
     } else {
         Ok(1.0)
     }
+}
+
+fn preview_landing_window(samples: &[f32], sample_rate: u32, channels: u16) -> Vec<f32> {
+    const PREVIEW_WINDOW_SECS: f32 = 8.0;
+    let channels_usize = channels.max(1) as usize;
+    let total_frames = samples.len() / channels_usize;
+    let window_frames = ((PREVIEW_WINDOW_SECS * sample_rate as f32) as usize).min(total_frames);
+    let start_frame = total_frames.saturating_sub(window_frames) / 2;
+    let start = start_frame * channels_usize;
+    let end = ((start_frame + window_frames) * channels_usize).min(samples.len());
+    samples[start..end].to_vec()
 }
 
 /// Cache-less variant of the audio thread's UpdateChain coefficient
@@ -1006,6 +1030,7 @@ fn process_audio_command(
     cmd: AudioCommand,
     state: &mut Option<AudioThreadState>,
     prewarm_cache: &SharedDecodedCache,
+    command_tx: &Sender<AudioCommand>,
 ) -> bool {
     match cmd {
         AudioCommand::Play {
@@ -1014,13 +1039,7 @@ fn process_audio_command(
             start_position_sec,
             reply,
         } => {
-            let outcome = handle_play(
-                state,
-                track_id,
-                &path,
-                start_position_sec,
-                prewarm_cache,
-            );
+            let outcome = handle_play(state, track_id, &path, start_position_sec, prewarm_cache);
             let _ = reply.send(outcome);
         }
         AudioCommand::PlayMaster {
@@ -1047,47 +1066,75 @@ fn process_audio_command(
             preview_lufs_landing,
         } => {
             if let Some(s) = state.as_mut() {
-                // Split-borrow the AudioThreadState fields we touch:
-                // `landing_gain_cache` mutably (for cache insert) and
-                // `decoded_cache` / `live_sample_rate` / `live_coeffs_tx`
-                // immutably. Rust permits this when each disjoint field
-                // is named explicitly through `&mut s.x` / `&s.y`.
                 let sample_rate = s.live_sample_rate;
-                let landing_cache = &mut s.landing_gain_cache;
-                let decoded_cache = s.decoded_cache.as_ref();
-                let tx = s.live_coeffs_tx.as_ref();
+                let generation = s.live_coeff_generation.wrapping_add(1);
+                s.live_coeff_generation = generation;
 
-                if let Some(tx) = tx {
-                    let mut coeffs =
-                        crate::dsp::ChainCoeffs::from_settings(sample_rate, &settings);
+                if let Some(tx) = s.live_coeffs_tx.as_ref() {
+                    let mut coeffs = crate::dsp::ChainCoeffs::from_settings(sample_rate, &settings);
                     if preview_lufs_landing {
-                        if let Some(cache_entry) = decoded_cache {
-                            // Cache-aware landing-gain computation.
-                            // Cache miss → run the full measurement
-                            // through `export_landing_gain_lin_for_preview`
-                            // (~20 ms on the 8 s window) and store the
-                            // result. Cache hit → 0 ms; return the prior
-                            // value computed against the same settings
-                            // and PCM.
-                            let samples_ref = cache_entry.pcm.samples.as_slice();
-                            let channels = cache_entry.pcm.channels;
-                            coeffs.export_landing_gain_lin =
-                                landing_cache.get_or_compute(&settings, |s_arg| {
-                                    export_landing_gain_lin_for_preview(
-                                        samples_ref,
-                                        sample_rate,
-                                        channels,
-                                        s_arg,
-                                    )
-                                    .unwrap_or(1.0)
-                                });
+                        if let Some(cached) = s.landing_gain_cache.get(&settings) {
+                            coeffs.export_landing_gain_lin = cached;
+                            s.live_landing_gain_lin = cached;
+                        } else {
+                            // Do not block the live-control path on LUFS
+                            // measurement. Apply the new tone/compressor/EQ
+                            // coefficients immediately, preserving the
+                            // previous export-landing scalar, then refine the
+                            // scalar from a background latest-generation job.
+                            coeffs.export_landing_gain_lin = s.live_landing_gain_lin;
+                            if let Some(cache_entry) = s.decoded_cache.as_ref() {
+                                let channels = cache_entry.pcm.channels;
+                                let samples = preview_landing_window(
+                                    cache_entry.pcm.samples.as_slice(),
+                                    sample_rate,
+                                    channels,
+                                );
+                                let settings_for_worker = settings.clone();
+                                let command_tx = command_tx.clone();
+                                let _ = std::thread::Builder::new()
+                                    .name("lufs-preview-landing".to_string())
+                                    .spawn(move || {
+                                        let gain = export_landing_gain_lin_for_preview(
+                                            samples.as_slice(),
+                                            sample_rate,
+                                            channels,
+                                            &settings_for_worker,
+                                        )
+                                        .unwrap_or(1.0);
+                                        let _ =
+                                            command_tx.send(AudioCommand::PreviewLandingReady {
+                                                generation,
+                                                settings: settings_for_worker,
+                                                gain,
+                                            });
+                                    });
+                            }
                         }
                         // No decoded PCM cached yet → leave landing
                         // gain at 1.0. The next play_master will
                         // populate the decode cache and the next
                         // UpdateChain will compute through the cache.
                     }
-                    let _ = tx.send(coeffs);
+                    let _ = tx.send(LiveCoeffUpdate { generation, coeffs });
+                }
+            }
+        }
+        AudioCommand::PreviewLandingReady {
+            generation,
+            settings,
+            gain,
+        } => {
+            if let Some(s) = state.as_mut() {
+                if generation == s.live_coeff_generation {
+                    s.landing_gain_cache.insert(&settings, gain);
+                    s.live_landing_gain_lin = gain;
+                    if let Some(tx) = s.live_coeffs_tx.as_ref() {
+                        let mut coeffs =
+                            crate::dsp::ChainCoeffs::from_settings(s.live_sample_rate, &settings);
+                        coeffs.export_landing_gain_lin = gain;
+                        let _ = tx.send(LiveCoeffUpdate { generation, coeffs });
+                    }
                 }
             }
         }
@@ -1107,7 +1154,10 @@ fn process_audio_command(
                 s.current_track = None;
             }
         }
-        AudioCommand::Seek { position_sec, reply } => {
+        AudioCommand::Seek {
+            position_sec,
+            reply,
+        } => {
             let outcome = match state.as_ref() {
                 Some(s) => s
                     .sink
@@ -1129,6 +1179,7 @@ fn process_audio_command(
 
 fn audio_thread(
     rx: mpsc::Receiver<AudioCommand>,
+    command_tx: Sender<AudioCommand>,
     snapshot: Arc<RwLock<PlaybackSnapshot>>,
     prewarm_cache: SharedDecodedCache,
 ) {
@@ -1137,12 +1188,11 @@ fn audio_thread(
         // Wait for at least one command (50 ms tick matches the prior
         // poll cadence so loop-region / snapshot housekeeping below
         // still runs every ~50 ms even when no commands arrive).
-        let first_cmd: Option<AudioCommand> =
-            match rx.recv_timeout(Duration::from_millis(50)) {
-                Ok(c) => Some(c),
-                Err(RecvTimeoutError::Timeout) => None,
-                Err(RecvTimeoutError::Disconnected) => break,
-            };
+        let first_cmd: Option<AudioCommand> = match rx.recv_timeout(Duration::from_millis(50)) {
+            Ok(c) => Some(c),
+            Err(RecvTimeoutError::Timeout) => None,
+            Err(RecvTimeoutError::Disconnected) => break,
+        };
 
         let mut shutdown_requested = false;
 
@@ -1177,7 +1227,7 @@ fn audio_thread(
 
             let sequenced = coalesced_command_sequence(buffered);
             for c in sequenced {
-                if process_audio_command(c, &mut state, &prewarm_cache) {
+                if process_audio_command(c, &mut state, &prewarm_cache, &command_tx) {
                     shutdown_requested = true;
                 }
             }
@@ -1236,8 +1286,7 @@ fn audio_thread(
                     }
                 };
                 let lufs_momentary = to_lufs(s.lufs_x100.load(Ordering::Relaxed));
-                let lufs_integrated =
-                    to_lufs(s.integrated_lufs_x100.load(Ordering::Relaxed));
+                let lufs_integrated = to_lufs(s.integrated_lufs_x100.load(Ordering::Relaxed));
                 let is_playing = !s.sink.is_paused() && !s.sink.empty();
                 // L4b — run the FFT analyzer over the ring's current
                 // contents. When idle / paused / playing Original (no
@@ -1279,17 +1328,11 @@ fn handle_play(
     start_position_sec: f64,
     prewarm_cache: &SharedDecodedCache,
 ) -> Result<(), String> {
-    let canonical = path
-        .canonicalize()
-        .unwrap_or_else(|_| path.to_path_buf());
-    let mtime = std::fs::metadata(&canonical).ok().and_then(|m| m.modified().ok());
-    let pcm = resolve_pcm_with_caches(
-        state.as_ref(),
-        prewarm_cache,
-        path,
-        &canonical,
-        mtime,
-    )?;
+    let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let mtime = std::fs::metadata(&canonical)
+        .ok()
+        .and_then(|m| m.modified().ok());
+    let pcm = resolve_pcm_with_caches(state.as_ref(), prewarm_cache, path, &canonical, mtime)?;
 
     if state.is_none() {
         let (stream, handle) = rodio::OutputStream::try_default()
@@ -1302,6 +1345,8 @@ fn handle_play(
             current_track: None,
             loop_region: None,
             live_coeffs_tx: None,
+            live_coeff_generation: 0,
+            live_landing_gain_lin: 1.0,
             live_sample_rate: pcm.sample_rate,
             decoded_cache: None,
             landing_gain_cache: PreviewLandingCache::new(),
@@ -1354,6 +1399,8 @@ fn handle_play(
     s.sink = new_sink;
     s.current_track = Some(track_id);
     s.live_coeffs_tx = None;
+    s.live_coeff_generation = s.live_coeff_generation.wrapping_add(1);
+    s.live_landing_gain_lin = 1.0;
     s.live_sample_rate = sample_rate;
     Ok(())
 }
@@ -1376,17 +1423,11 @@ fn handle_play_master(
     //      what motivates this tier.
     //   3. Fresh `decode_full` — synchronous on the audio thread, the
     //      cold case prewarm exists to avoid.
-    let canonical = path
-        .canonicalize()
-        .unwrap_or_else(|_| path.to_path_buf());
-    let mtime = std::fs::metadata(&canonical).ok().and_then(|m| m.modified().ok());
-    let pcm = resolve_pcm_with_caches(
-        state.as_ref(),
-        prewarm_cache,
-        path,
-        &canonical,
-        mtime,
-    )?;
+    let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    let mtime = std::fs::metadata(&canonical)
+        .ok()
+        .and_then(|m| m.modified().ok());
+    let pcm = resolve_pcm_with_caches(state.as_ref(), prewarm_cache, path, &canonical, mtime)?;
 
     // Cache invalidation: clear the landing-gain cache when canonical
     // path OR mtime differs from the prior decoded cache entry. Same-
@@ -1417,6 +1458,8 @@ fn handle_play_master(
             current_track: None,
             loop_region: None,
             live_coeffs_tx: None,
+            live_coeff_generation: 0,
+            live_landing_gain_lin: 1.0,
             live_sample_rate: pcm.sample_rate,
             decoded_cache: None,
             landing_gain_cache: PreviewLandingCache::new(),
@@ -1452,7 +1495,7 @@ fn handle_play_master(
     s.lufs_x100.store(i32::MIN, Ordering::Relaxed);
     s.integrated_lufs_x100.store(i32::MIN, Ordering::Relaxed);
 
-    let (coeffs_tx, coeffs_rx) = mpsc::channel::<crate::dsp::ChainCoeffs>();
+    let (coeffs_tx, coeffs_rx) = mpsc::channel::<LiveCoeffUpdate>();
     let gr_slots = crate::dsp::GrSnapshotSlots {
         low: s.gr_low.clone(),
         mid: s.gr_mid.clone(),
@@ -1471,7 +1514,11 @@ fn handle_play_master(
             pcm.channels,
             settings,
         )?;
+        s.landing_gain_cache
+            .insert(settings, chain.coeffs.export_landing_gain_lin);
     }
+    s.live_coeff_generation = s.live_coeff_generation.wrapping_add(1);
+    s.live_landing_gain_lin = chain.coeffs.export_landing_gain_lin;
     let mastering_source = MasteringSource::new(
         pcm.samples,
         pcm.channels,
@@ -1544,12 +1591,8 @@ mod tests {
     fn sine_signal(frames: usize, sample_rate: u32, channels: u16) -> Vec<f32> {
         let mut samples = Vec::with_capacity(frames * channels as usize);
         for n in 0..frames {
-            let v = 0.3
-                * (n as f32 / sample_rate as f32
-                    * 2.0
-                    * std::f32::consts::PI
-                    * 1000.0)
-                    .sin();
+            let v =
+                0.3 * (n as f32 / sample_rate as f32 * 2.0 * std::f32::consts::PI * 1000.0).sin();
             for _ in 0..channels {
                 samples.push(v);
             }
@@ -1660,9 +1703,8 @@ mod tests {
         let player = AudioPlayer::new();
         let path = std::path::PathBuf::from("/tmp/a.wav");
         let old_mtime = Some(std::time::SystemTime::UNIX_EPOCH);
-        let new_mtime = Some(
-            std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(60),
-        );
+        let new_mtime =
+            Some(std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(60));
         player.set_prewarm_cache(DecodedCacheEntry {
             canonical_path: path.clone(),
             mtime: old_mtime,
@@ -1968,7 +2010,10 @@ mod tests {
             compute_calls += 1;
             0.5_f32
         });
-        assert_eq!(compute_calls, 1, "clear() must force the next call to re-compute");
+        assert_eq!(
+            compute_calls, 1,
+            "clear() must force the next call to re-compute"
+        );
     }
 
     // ========================================================================
@@ -2072,7 +2117,10 @@ mod tests {
             _ => panic!("expected Seek at position 1"),
         }
         match &result[2] {
-            AudioCommand::UpdateChain { settings, preview_lufs_landing } => {
+            AudioCommand::UpdateChain {
+                settings,
+                preview_lufs_landing,
+            } => {
                 assert!((settings.intensity - 0.9).abs() < 1e-6);
                 assert!(*preview_lufs_landing);
             }
@@ -2261,7 +2309,11 @@ mod tests {
                 channels: 2,
             },
         };
-        assert!(should_invalidate_landing_cache(Some(&prior), &new_path, mtime));
+        assert!(should_invalidate_landing_cache(
+            Some(&prior),
+            &new_path,
+            mtime
+        ));
     }
 
     /// Same path BUT different mtime → invalidate. The file was
@@ -2273,9 +2325,8 @@ mod tests {
     fn invalidate_landing_cache_on_mtime_change_same_path() {
         let path = std::path::PathBuf::from("/tmp/a.wav");
         let old_mtime = Some(std::time::SystemTime::UNIX_EPOCH);
-        let new_mtime = Some(
-            std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(60),
-        );
+        let new_mtime =
+            Some(std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(60));
         let prior = DecodedCacheEntry {
             canonical_path: path.clone(),
             mtime: old_mtime,
@@ -2349,9 +2400,8 @@ mod tests {
         let mut chain = MasteringChain::new(sample_rate, channels as usize, &settings);
         chain.coeffs.export_landing_gain_lin = coeffs.export_landing_gain_lin;
         chain.process_interleaved(&mut rendered, channels as usize);
-        let measured =
-            crate::engine::measure_integrated_lufs(&rendered, sample_rate, channels)
-                .expect("measure long-source preview");
+        let measured = crate::engine::measure_integrated_lufs(&rendered, sample_rate, channels)
+            .expect("measure long-source preview");
         assert!(
             (measured - -23.0).abs() < 0.5,
             "16 s source with 8 s window measurement should still land at \
@@ -2399,11 +2449,12 @@ mod tests {
             "expected preview near LoudRock target -10.5 LUFS with full headroom, \
              got {measured:.2}"
         );
-        let peak = rendered
-            .iter()
-            .map(|s| s.abs())
-            .fold(0.0_f32, f32::max);
-        let peak_dbfs = if peak > 0.0 { 20.0 * peak.log10() } else { -120.0 };
+        let peak = rendered.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
+        let peak_dbfs = if peak > 0.0 {
+            20.0 * peak.log10()
+        } else {
+            -120.0
+        };
         assert!(
             peak_dbfs <= -1.0 + 0.5,
             "ceiling-bounded preview peak should stay near or below -1 dBTP, \
@@ -2426,9 +2477,8 @@ mod tests {
 
         // Initial chain: intensity 0.0 -> Universal gain push ≈ 0.6 dB.
         let initial_settings = settings_with_intensity(0.0);
-        let initial_chain =
-            MasteringChain::new(sample_rate, channels as usize, &initial_settings);
-        let (coeffs_tx, coeffs_rx) = mpsc::channel::<ChainCoeffs>();
+        let initial_chain = MasteringChain::new(sample_rate, channels as usize, &initial_settings);
+        let (coeffs_tx, coeffs_rx) = mpsc::channel::<LiveCoeffUpdate>();
         let peak = Arc::new(AtomicU32::new(0));
         let lufs = Arc::new(AtomicI32::new(i32::MIN));
         let integrated_lufs = Arc::new(AtomicI32::new(i32::MIN));
@@ -2458,7 +2508,12 @@ mod tests {
         // Send updated chain (intensity 1.0 -> Universal gain ≈ 2.4 dB).
         let new_settings = settings_with_intensity(1.0);
         let new_coeffs = ChainCoeffs::from_settings(sample_rate, &new_settings);
-        coeffs_tx.send(new_coeffs).expect("send new coeffs");
+        coeffs_tx
+            .send(LiveCoeffUpdate {
+                generation: 1,
+                coeffs: new_coeffs,
+            })
+            .expect("send new coeffs");
 
         // Drain the second half. The coeff check fires every 128 frames; the
         // crossfade then takes 512 frames. The new chain is fully active by
@@ -2498,6 +2553,98 @@ mod tests {
             "expected live coeff update to raise output RMS by >10% \
              (rms_initial={rms_initial:.4}, rms_updated={rms_updated:.4}, ratio={ratio:.3}). \
              If this fails, the MasteringSource is not picking up new coeffs from the channel."
+        );
+    }
+
+    #[test]
+    fn mastering_source_ignores_stale_live_coeff_generations() {
+        let sample_rate = 44_100;
+        let channels: u16 = 2;
+        let total_frames = 24_576;
+        let samples = sine_signal(total_frames, sample_rate, channels);
+
+        let initial_settings = settings_with_intensity(0.0);
+        let initial_chain = MasteringChain::new(sample_rate, channels as usize, &initial_settings);
+        let (coeffs_tx, coeffs_rx) = mpsc::channel::<LiveCoeffUpdate>();
+        let peak = Arc::new(AtomicU32::new(0));
+        let lufs = Arc::new(AtomicI32::new(i32::MIN));
+        let integrated_lufs = Arc::new(AtomicI32::new(i32::MIN));
+        let mut source = MasteringSource::new(
+            samples,
+            channels,
+            sample_rate,
+            initial_chain,
+            coeffs_rx,
+            peak,
+            lufs,
+            integrated_lufs,
+            Arc::new(SpectrumRing::new()),
+        );
+
+        let third = total_frames * channels as usize / 3;
+        let mut output_initial: Vec<f32> = Vec::with_capacity(third);
+        for _ in 0..third {
+            if let Some(s) = source.next() {
+                output_initial.push(s);
+            }
+        }
+
+        let mut newer_settings = settings_with_intensity(0.0);
+        newer_settings.output_gain_db = 6.0;
+        let newer_coeffs = ChainCoeffs::from_settings(sample_rate, &newer_settings);
+
+        let mut stale_settings = settings_with_intensity(0.0);
+        stale_settings.output_gain_db = -24.0;
+        let stale_coeffs = ChainCoeffs::from_settings(sample_rate, &stale_settings);
+
+        coeffs_tx
+            .send(LiveCoeffUpdate {
+                generation: 2,
+                coeffs: newer_coeffs,
+            })
+            .expect("send newer coeffs");
+        coeffs_tx
+            .send(LiveCoeffUpdate {
+                generation: 1,
+                coeffs: stale_coeffs.clone(),
+            })
+            .expect("send stale coeffs");
+
+        let mut output_newer: Vec<f32> = Vec::with_capacity(third);
+        for _ in 0..third {
+            if let Some(s) = source.next() {
+                output_newer.push(s);
+            }
+        }
+
+        coeffs_tx
+            .send(LiveCoeffUpdate {
+                generation: 1,
+                coeffs: stale_coeffs,
+            })
+            .expect("send late stale coeffs");
+
+        let mut output_after_late_stale: Vec<f32> = Vec::with_capacity(third);
+        for _ in 0..third {
+            if let Some(s) = source.next() {
+                output_after_late_stale.push(s);
+            }
+        }
+
+        let warmup_skip = 4096;
+        let rms_initial = rms(&output_initial[warmup_skip..]);
+        let rms_newer = rms(&output_newer[warmup_skip..]);
+        let rms_after_late_stale = rms(&output_after_late_stale[warmup_skip..]);
+
+        assert!(
+            rms_newer > rms_initial * 1.6,
+            "newest generation should apply the louder coeffs \
+             (initial={rms_initial:.4}, newer={rms_newer:.4})"
+        );
+        assert!(
+            rms_after_late_stale > rms_initial * 1.6,
+            "late stale generation must not overwrite the active newer coeffs \
+             (initial={rms_initial:.4}, after_late_stale={rms_after_late_stale:.4})"
         );
     }
 
@@ -2604,8 +2751,7 @@ mod tests {
             },
         };
         // Same path, different mtime — file was modified, cache must invalidate.
-        let later = std::time::SystemTime::UNIX_EPOCH
-            + std::time::Duration::from_secs(60);
+        let later = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(60);
         let miss = decode_cache_lookup(
             Some(&entry),
             &PathBuf::from("/fake/canonical/a.wav"),
@@ -2639,9 +2785,8 @@ mod tests {
         let initial_settings = settings_with_intensity(0.0);
 
         // Reference run: never send new coeffs.
-        let ref_chain =
-            MasteringChain::new(sample_rate, channels as usize, &initial_settings);
-        let (_ref_tx, ref_rx) = mpsc::channel::<ChainCoeffs>();
+        let ref_chain = MasteringChain::new(sample_rate, channels as usize, &initial_settings);
+        let (_ref_tx, ref_rx) = mpsc::channel::<LiveCoeffUpdate>();
         let ref_peak = Arc::new(AtomicU32::new(0));
         let ref_lufs = Arc::new(AtomicI32::new(i32::MIN));
         let ref_integrated_lufs = Arc::new(AtomicI32::new(i32::MIN));
@@ -2661,9 +2806,8 @@ mod tests {
             .collect();
 
         // Live-update run: send new coeffs halfway.
-        let live_chain =
-            MasteringChain::new(sample_rate, channels as usize, &initial_settings);
-        let (live_tx, live_rx) = mpsc::channel::<ChainCoeffs>();
+        let live_chain = MasteringChain::new(sample_rate, channels as usize, &initial_settings);
+        let (live_tx, live_rx) = mpsc::channel::<LiveCoeffUpdate>();
         let live_peak = Arc::new(AtomicU32::new(0));
         let live_lufs = Arc::new(AtomicI32::new(i32::MIN));
         let live_integrated_lufs = Arc::new(AtomicI32::new(i32::MIN));
@@ -2687,7 +2831,12 @@ mod tests {
         }
         let new_settings = settings_with_intensity(1.0);
         let new_coeffs = ChainCoeffs::from_settings(sample_rate, &new_settings);
-        live_tx.send(new_coeffs).expect("send new coeffs");
+        live_tx
+            .send(LiveCoeffUpdate {
+                generation: 1,
+                coeffs: new_coeffs,
+            })
+            .expect("send new coeffs");
         for _ in half..(total_frames * channels as usize) {
             if let Some(s) = live_source.next() {
                 live_output.push(s);
@@ -2741,7 +2890,7 @@ mod tests {
         settings.output_gain_db = 20.0;
 
         let chain = MasteringChain::new(sample_rate, channels as usize, &settings);
-        let (_tx, rx) = mpsc::channel::<ChainCoeffs>();
+        let (_tx, rx) = mpsc::channel::<LiveCoeffUpdate>();
         let peak = Arc::new(AtomicU32::new(0));
         let lufs = Arc::new(AtomicI32::new(i32::MIN));
         let integrated_lufs = Arc::new(AtomicI32::new(i32::MIN));
@@ -2790,7 +2939,7 @@ mod tests {
 
         let settings = settings_with_intensity(0.0);
         let chain = MasteringChain::new(sample_rate, channels as usize, &settings);
-        let (_tx, rx) = mpsc::channel::<ChainCoeffs>();
+        let (_tx, rx) = mpsc::channel::<LiveCoeffUpdate>();
         let peak = Arc::new(AtomicU32::new(0));
         let lufs = Arc::new(AtomicI32::new(i32::MIN));
         let integrated_lufs = Arc::new(AtomicI32::new(i32::MIN));
@@ -2838,7 +2987,7 @@ mod tests {
 
         let settings = settings_with_intensity(0.0);
         let chain = MasteringChain::new(sample_rate, channels as usize, &settings);
-        let (_tx, rx) = mpsc::channel::<ChainCoeffs>();
+        let (_tx, rx) = mpsc::channel::<LiveCoeffUpdate>();
         let peak = Arc::new(AtomicU32::new(0));
         let lufs = Arc::new(AtomicI32::new(i32::MIN));
         let integrated_lufs = Arc::new(AtomicI32::new(i32::MIN));
@@ -2863,7 +3012,10 @@ mod tests {
         let first = f32::from_bits(peak.swap(0, Ordering::Relaxed));
         let second = f32::from_bits(peak.load(Ordering::Relaxed));
 
-        assert!(first > 0.0, "first window saw signal, expected >0, got {first}");
+        assert!(
+            first > 0.0,
+            "first window saw signal, expected >0, got {first}"
+        );
         assert_eq!(
             second.to_bits(),
             0u32,

@@ -22,6 +22,11 @@ use std::time::Duration;
 
 use crate::spectrum::SpectrumRing;
 
+pub(crate) struct LiveCoeffUpdate {
+    pub(crate) generation: u64,
+    pub(crate) coeffs: crate::dsp::ChainCoeffs,
+}
+
 /// How many frames to process before draining the coefficient channel. At
 /// 44.1 kHz this is ~3 ms — well below the perception threshold for parameter
 /// changes.
@@ -185,7 +190,8 @@ pub(crate) struct MasteringSource {
     pending_chain: Option<crate::dsp::MasteringChain>,
     crossfade_remaining: usize,
     crossfade_total: usize,
-    coeffs_rx: mpsc::Receiver<crate::dsp::ChainCoeffs>,
+    coeffs_rx: mpsc::Receiver<LiveCoeffUpdate>,
+    coeffs_generation: u64,
     frames_since_check: usize,
     // Frame-level scratch buffers; preallocated to avoid heap traffic on the
     // audio thread.
@@ -220,7 +226,7 @@ impl MasteringSource {
         channels: u16,
         sample_rate: u32,
         chain: crate::dsp::MasteringChain,
-        coeffs_rx: mpsc::Receiver<crate::dsp::ChainCoeffs>,
+        coeffs_rx: mpsc::Receiver<LiveCoeffUpdate>,
         peak_linear: Arc<AtomicU32>,
         lufs_x100: Arc<AtomicI32>,
         integrated_lufs_x100: Arc<AtomicI32>,
@@ -237,6 +243,7 @@ impl MasteringSource {
             crossfade_remaining: 0,
             crossfade_total: 0,
             coeffs_rx,
+            coeffs_generation: 0,
             frames_since_check: 0,
             frame_in: vec![0.0; channels_usize],
             frame_main: vec![0.0; channels_usize],
@@ -280,14 +287,20 @@ impl Iterator for MasteringSource {
             self.frames_since_check += 1;
             if self.frames_since_check >= COEFFS_CHECK_INTERVAL_FRAMES {
                 self.frames_since_check = 0;
-                let mut latest: Option<crate::dsp::ChainCoeffs> = None;
-                while let Ok(c) = self.coeffs_rx.try_recv() {
-                    latest = Some(c);
+                let mut latest: Option<LiveCoeffUpdate> = None;
+                while let Ok(update) = self.coeffs_rx.try_recv() {
+                    if update.generation >= self.coeffs_generation {
+                        match latest {
+                            Some(ref current) if current.generation > update.generation => {}
+                            _ => latest = Some(update),
+                        }
+                    }
                 }
-                if let Some(new_coeffs) = latest {
+                if let Some(update) = latest {
+                    self.coeffs_generation = update.generation;
                     self.pending_chain =
                         Some(crate::dsp::MasteringChain::with_coeffs_inheriting_state(
-                            new_coeffs,
+                            update.coeffs,
                             &self.chain,
                         ));
                     self.crossfade_remaining = COEFFS_CROSSFADE_FRAMES;
@@ -299,7 +312,8 @@ impl Iterator for MasteringSource {
             for i in 0..channels {
                 self.frame_main[i] = self.frame_in[i];
             }
-            self.chain.process_frame_inplace(&mut self.frame_main[..channels]);
+            self.chain
+                .process_frame_inplace(&mut self.frame_main[..channels]);
 
             // Process pending chain into frame_pending and mix.
             if self.pending_chain.is_some() && self.crossfade_total > 0 {
@@ -311,12 +325,10 @@ impl Iterator for MasteringSource {
                     .as_mut()
                     .expect("pending_chain just checked");
                 pending.process_frame_inplace(&mut self.frame_pending[..channels]);
-                let t = 1.0
-                    - (self.crossfade_remaining as f32 / self.crossfade_total as f32);
+                let t = 1.0 - (self.crossfade_remaining as f32 / self.crossfade_total as f32);
                 let inv_t = 1.0 - t;
                 for i in 0..channels {
-                    self.frame_main[i] =
-                        self.frame_main[i] * inv_t + self.frame_pending[i] * t;
+                    self.frame_main[i] = self.frame_main[i] * inv_t + self.frame_pending[i] * t;
                 }
                 self.crossfade_remaining = self.crossfade_remaining.saturating_sub(1);
                 if self.crossfade_remaining == 0 {
