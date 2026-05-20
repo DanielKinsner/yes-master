@@ -98,7 +98,7 @@ function baseTrackMasterState(): Record<string, unknown> {
       playbackKind: "source",
       loop: false,
       volumeMatch: false,
-      exportLufsPreview: true,
+      exportLufsPreview: false,
       peakDbfs: -120,
       compressionGr: { low: -120, mid: -120, high: -120 },
       lufsMomentary: -120,

@@ -201,6 +201,7 @@ input,
 select {
   font-family: inherit;
   font-size: inherit;
+  min-width: 0;
 }
 
 .app-root {
@@ -2897,12 +2898,11 @@ button.primary:disabled {
   letter-spacing: 0.06em;
 }
 
-/* Stat tile grid under the meter — matches the reference's bordered
-   "LUFS / dBTP / dB / LU" tiles. 2x2 grid of bordered cells with the
-   value big and the unit subtle. */
+/* Stat tile grid under the live meter. Source/export true peak and dynamic
+   range live in the check panels, so this stays focused on live output. */
 .master-readouts {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.45rem;
   margin: 0.4rem 0 0;
 }
@@ -3251,6 +3251,7 @@ button.primary:disabled {
 
 .rail-card-select {
   width: 100%;
+  max-width: none;
 }
 
 .rail-card-body {
@@ -3940,11 +3941,14 @@ button.primary:disabled {
   color: var(--text-0);
   border: 1px solid var(--border-strong);
   border-radius: 4px;
-  padding: 0.35rem 0.6rem;
+  padding: 0.35rem 1.8rem 0.35rem 0.6rem;
   font-size: 0.78rem;
   width: 100%;
   max-width: 220px;
   cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .loudness-profile-select:focus {
@@ -4346,7 +4350,7 @@ button.primary:disabled {
     grid-row: 2;
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
     gap: 0.14rem;
     margin: 0;
     min-height: 0;
@@ -4547,7 +4551,7 @@ button.primary:disabled {
 
   .loudness-profile-select {
     font-size: 0.72rem;
-    padding: 0.28rem 0.45rem;
+    padding: 0.28rem 1.65rem 0.28rem 0.45rem;
   }
 
   .console-footer-row {
@@ -4849,6 +4853,7 @@ button.primary:disabled {
 
   .loudness-profile-select {
     font-size: 0.66rem;
+    padding-right: 1.55rem;
   }
 }
 

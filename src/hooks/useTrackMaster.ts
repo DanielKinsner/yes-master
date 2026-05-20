@@ -139,7 +139,7 @@ export function useTrackMaster() {
     playbackKind: "source" as PlaybackKindUI,
     loop: false,
     volumeMatch: false,
-    exportLufsPreview: true,
+    exportLufsPreview: false,
     // Phase 12.2 live clipping meter — post-output-gain peak since the last
     // tick, in dBFS. -120 means "no signal" (silence sentinel from backend).
     // Stored here so the StaleBar's indicator can flash red on clipping

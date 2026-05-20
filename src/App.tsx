@@ -142,10 +142,11 @@ function App() {
 function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
   const analysis = tm.selectedAnalysis;
   const peak = tm.transport.peakDbfs;
+  const liveLufs = tm.transport.lufsIntegrated;
   const isPlaying = tm.transport.isPlaying;
 
   const peakDisplay = isPlaying && peak > -80 ? `${peak.toFixed(1)} dBFS` : "—";
-  const lufsDisplay = analysis ? `${analysis.lufs_integrated.toFixed(1)} LUFS` : "—";
+  const lufsDisplay = isPlaying && liveLufs > -80 ? `${liveLufs.toFixed(1)} LUFS` : "—";
 
   let processing: { tone: "idle" | "busy" | "ok"; text: string };
   if (tm.isExporting) {
@@ -200,11 +201,11 @@ function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
       </div>
       <div className="bottom-status-center">
         <span className="status-readout">
-          <span className="status-readout-label">Peak</span>
+          <span className="status-readout-label">Live peak</span>
           <span className="status-readout-value">{peakDisplay}</span>
         </span>
         <span className="status-readout">
-          <span className="status-readout-label">Loudness</span>
+          <span className="status-readout-label">Live LUFS</span>
           <span className="status-readout-value">{lufsDisplay}</span>
         </span>
       </div>
@@ -568,7 +569,6 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           />
           <div className="wf-deck-meters">
             <MasterOutPanel
-              analysis={tm.selectedAnalysis}
               isAnalyzing={tm.isAnalyzing}
               peakDbfs={tm.transport.peakDbfs}
               isPlaying={tm.transport.isPlaying}
@@ -745,14 +745,14 @@ function TrackHeader({
         </label>
         <label
           className="vm-toggle"
-          title="Applies the same down-only LUFS target trim used for export during Mastered playback."
+          title="Previews the export LUFS trim during Mastered playback. Leave off while adjusting if you want the fastest real-time response."
         >
           <input
             type="checkbox"
             checked={exportLufsPreview}
             onChange={(e) => onExportLufsPreviewChange(e.target.checked)}
           />
-          <span>Export LUFS</span>
+          <span>Preview LUFS</span>
         </label>
         <div
           className={`track-badge status-pill ${isAnalyzing ? "status-warn" : analysis ? "status-ok" : ""}`}
@@ -782,14 +782,14 @@ function AnalysisSummary({ analysis }: { analysis: AnalysisResult }) {
   const lufs = analysis.lufs_integrated;
   if (lufs > -8) {
     lines.push(
-      `Very loud at ${lufs.toFixed(1)} LUFS — may sound flat vs streaming references.`,
+      `Source very loud at ${lufs.toFixed(1)} LUFS — may sound flat vs streaming references.`,
     );
   } else if (lufs > -12) {
-    lines.push(`Loud at ${lufs.toFixed(1)} LUFS — streaming-loud territory.`);
+    lines.push(`Source loud at ${lufs.toFixed(1)} LUFS — streaming-loud territory.`);
   } else if (lufs > -16) {
-    lines.push(`${lufs.toFixed(1)} LUFS — close to typical streaming targets.`);
+    lines.push(`Source ${lufs.toFixed(1)} LUFS — close to typical streaming targets.`);
   } else {
-    lines.push(`${lufs.toFixed(1)} LUFS — conservative loudness, room to push.`);
+    lines.push(`Source ${lufs.toFixed(1)} LUFS — conservative loudness, room to push.`);
   }
 
   // Dynamics commentary.

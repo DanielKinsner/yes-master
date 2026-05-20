@@ -63,4 +63,16 @@ describe("console layout CSS", () => {
     expect(block(".album-panel-head")).toContain("display: grid");
     expect(block(".album-panel-summary")).toContain("align-items: baseline");
   });
+
+  it("keeps live meters and delivery selects truthful at rail size", () => {
+    expect(block(".master-readouts")).toContain(
+      "grid-template-columns: repeat(3, minmax(0, 1fr))",
+    );
+    expect(block(".rail-card-select")).toContain("max-width: none");
+    expect(block(".loudness-profile-select")).toContain("padding: 0.35rem 1.8rem");
+    expect(appTsx).toContain("Live peak");
+    expect(appTsx).toContain("Live LUFS");
+    expect(appTsx).toContain("Preview LUFS");
+    expect(appTsx).not.toContain("Export LUFS</span>");
+  });
 });

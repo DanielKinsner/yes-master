@@ -101,48 +101,34 @@ export function RightRail({
 }
 
 export function MasterOutPanel({
-  analysis,
   isAnalyzing,
   peakDbfs,
   isPlaying,
   lufsMomentary,
   lufsIntegrated,
 }: {
-  analysis: AnalysisResult | undefined;
   isAnalyzing: boolean;
   peakDbfs: number;
   isPlaying: boolean;
   lufsMomentary: number;
   lufsIntegrated: number;
 }) {
-  const tp = analysis?.true_peak_dbtp;
-  const dr = analysis?.dynamic_range_lu;
-
-  // Bars drive off the LIVE BS.1770 momentary LUFS during playback.
+  // This panel is a live output meter. Source/export analysis lives in
+  // QualityCheckPanel and export receipts; mixing those fallback values into
+  // this meter made the transport look hot while stopped.
   const liveMomentary = isPlaying && lufsMomentary > -120 ? lufsMomentary : undefined;
-  // Peak-hold line on the bars: during playback we show the LIVE integrated
-  // value so Dan can watch the bar dance around the integrated aggregate as
-  // playback progresses through the track. When paused, it shows the last
-  // analyzed integrated value so the line still says "this is where it
-  // landed last time."
-  const analyzedIntegrated = analysis?.lufs_integrated;
   const liveIntegrated =
     isPlaying && lufsIntegrated > -120 ? lufsIntegrated : undefined;
-  const peakHoldIntegrated = liveIntegrated ?? analyzedIntegrated;
-  // Live TP estimate: use the same live peak (dBFS ≈ dBTP for our chain;
-  // not strictly true-peak in the BS.1770 sense, but in the right ballpark
-  // for a live indicator).
   const liveTp = isPlaying && peakDbfs > -120 ? peakDbfs : undefined;
 
-  // Readouts. Momentary is silent when not playing; integrated falls back
-  // to the analyzed value so the user always sees a meaningful number.
   const momentaryDisplay =
     liveMomentary !== undefined ? liveMomentary.toFixed(1) : "—";
   const integratedDisplay =
-    peakHoldIntegrated !== undefined ? peakHoldIntegrated.toFixed(1) : "—";
+    liveIntegrated !== undefined ? liveIntegrated.toFixed(1) : "—";
+  const peakDisplay = liveTp !== undefined ? liveTp.toFixed(1) : "—";
 
   return (
-    <section className="panel master-out">
+    <section className={`panel master-out ${isPlaying ? "is-live" : "is-idle"}`}>
       <header className="panel-head">
         <span className="panel-title">MASTER OUT</span>
         {isPlaying ? (
@@ -152,16 +138,16 @@ export function MasterOutPanel({
         ) : isAnalyzing ? (
           <span className="panel-hint">analyzing…</span>
         ) : (
-          <span className="panel-hint">hold</span>
+          <span className="panel-hint">idle</span>
         )}
       </header>
       <div className="lufs-meter">
         <div className="lufs-bars">
-          <LufsBar value={liveMomentary} peakHold={peakHoldIntegrated} channel="L" />
-          <LufsBar value={liveMomentary} peakHold={peakHoldIntegrated} channel="R" />
+          <LufsBar value={liveMomentary} peakHold={liveIntegrated} channel="L" />
+          <LufsBar value={liveMomentary} peakHold={liveIntegrated} channel="R" />
         </div>
         <LufsScale />
-        <TruePeakBar value={liveTp ?? tp} />
+        <PeakBar value={liveTp} />
       </div>
       <dl className="master-readouts">
         <Readout
@@ -170,19 +156,14 @@ export function MasterOutPanel({
           unit="LUFS"
         />
         <Readout
-          label={isPlaying ? "Integrated (live)" : "Integrated"}
+          label="Integrated"
           value={integratedDisplay}
           unit="LUFS"
         />
         <Readout
-          label="True Peak"
-          value={tp !== undefined ? tp.toFixed(1) : "—"}
-          unit="dBTP"
-        />
-        <Readout
-          label="Dyn. Range"
-          value={dr !== undefined ? dr.toFixed(1) : "—"}
-          unit="LU"
+          label="Peak"
+          value={peakDisplay}
+          unit="dBFS"
         />
       </dl>
       {/* StereoWidthGauge used to render here as part of MasterOutPanel.
@@ -384,10 +365,10 @@ function LufsBar({
   );
 }
 
-function TruePeakBar({ value }: { value: number | undefined }) {
-  // True peak gets its own narrow bar on a 0..-36 dBTP scale (0 at top means
-  // clipping). The fill itself uses the warm-to-hot gradient because high
-  // true peak is bad; safe headroom reads as quiet/low fill.
+function PeakBar({ value }: { value: number | undefined }) {
+  // Live peak gets its own narrow bar on a 0..-36 dBFS scale (0 at top means
+  // clipping). Export/source true peak is shown in checks, not in this live
+  // meter, because this value comes from the playback tick's sample peak.
   const TP_MIN = -36;
   const TP_MAX = 0;
   let fill = 0;
@@ -402,8 +383,8 @@ function TruePeakBar({ value }: { value: number | undefined }) {
     <div className={`tp-bar tp-${tone}`}>
       <div className="tp-bar-track" />
       <div className="tp-bar-fill" style={{ height: `${fill * 100}%` }} />
-      <div className="tp-clip-line" title="-1 dBTP streaming ceiling" />
-      <span className="tp-bar-label">TP</span>
+      <div className="tp-clip-line" title="-1 dBFS live warning line" />
+      <span className="tp-bar-label">PK</span>
     </div>
   );
 }
@@ -507,6 +488,7 @@ function QualityCheckPanel({
   checks: QualityCheck[] | undefined;
   analysis: AnalysisResult | undefined;
 }) {
+  const hasExportChecks = !!checks && checks.length > 0;
   const rows = checks && checks.length > 0
     ? checks.map((c, i) => ({
         key: `${c.code}-${i}`,
@@ -522,7 +504,7 @@ function QualityCheckPanel({
   return (
     <section className={`panel quality-check ${overallSafe ? "is-safe" : "has-issues"}`}>
       <header className="panel-head">
-        <span className="panel-title">QUALITY CHECK</span>
+        <span className="panel-title">{hasExportChecks ? "EXPORT CHECK" : "SOURCE CHECK"}</span>
         <span className={`quality-badge ${overallSafe ? "badge-safe" : "badge-warn"}`}>
           {overallSafe ? "SAFE" : "REVIEW"}
         </span>
@@ -603,24 +585,24 @@ function derivePreflightChecks(analysis: AnalysisResult | undefined): {
       ok: tp <= -1.0,
       warn: tp > -1.0 && tp <= -0.1,
       crit: tp > -0.1,
-      label: `True peak ${tp.toFixed(1)} dBTP`,
-      detail: `True peak at ${tp.toFixed(2)} dBTP.`,
+      label: `Source true peak ${tp.toFixed(1)} dBTP`,
+      detail: `Analyzed source true peak at ${tp.toFixed(2)} dBTP.`,
     },
     {
       key: "lufs",
       ok: lufs <= -8.0,
       warn: lufs > -8.0 && lufs <= -6.0,
       crit: lufs > -6.0,
-      label: `Loudness ${lufs.toFixed(1)} LUFS`,
-      detail: `Integrated loudness at ${lufs.toFixed(2)} LUFS.`,
+      label: `Source loudness ${lufs.toFixed(1)} LUFS`,
+      detail: `Analyzed source integrated loudness at ${lufs.toFixed(2)} LUFS.`,
     },
     {
       key: "dr",
       ok: dr >= 6.0,
       warn: dr >= 4.0 && dr < 6.0,
       crit: dr < 4.0,
-      label: `Dynamic range ${dr.toFixed(1)} LU`,
-      detail: `Source dynamic range at ${dr.toFixed(2)} LU.`,
+      label: `Source dynamic range ${dr.toFixed(1)} LU`,
+      detail: `Analyzed source dynamic range at ${dr.toFixed(2)} LU.`,
     },
   ];
 }

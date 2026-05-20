@@ -324,6 +324,16 @@ afterEach(() => {
 });
 
 describe("useTrackMaster integration dispatches", () => {
+  it("defaults export LUFS preview off so live settings edits stay responsive", async () => {
+    const harness = await renderHookHarness();
+
+    expect(harness.current().transport.exportLufsPreview).toBe(false);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("prewarms the auto-selected track when restoring the recent session", async () => {
     const track = makeTrack("restored-1", "C:/audio/restored.wav");
     mocks.api.loadRecentSession.mockResolvedValue(makeProjectState(track));
