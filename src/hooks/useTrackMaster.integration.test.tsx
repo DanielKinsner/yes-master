@@ -504,6 +504,55 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("coalesces rapid live-edit updateChain calls into a single latest-wins IPC", async () => {
+    // Fix B: sendUpdateChain is rAF-gated single-in-flight. A burst of
+    // synchronous setIntensity calls within one frame must collapse to
+    // exactly one api.updateChain call carrying the LAST intensity —
+    // not three calls, not the first value.
+    const track = makeTrack("coalesce-1", "C:/audio/coalesce.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      await harness.current().setPlaybackKind("master");
+    });
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+    await waitFor(() => {
+      expect(mocks.api.playMaster).toHaveBeenCalled();
+    });
+
+    mocks.api.updateChain.mockClear();
+    await act(async () => {
+      harness.current().setIntensity(0.11);
+      harness.current().setIntensity(0.55);
+      harness.current().setIntensity(0.93);
+    });
+
+    // Wait for the rAF + microtask flush to actually call updateChain.
+    await waitFor(() => {
+      expect(mocks.api.updateChain).toHaveBeenCalled();
+    });
+    // Exactly one IPC for the burst — latest wins.
+    expect(mocks.api.updateChain).toHaveBeenCalledTimes(1);
+    expect(mocks.api.updateChain).toHaveBeenLastCalledWith(
+      expect.objectContaining({ intensity: 0.93 }),
+      expect.any(Boolean),
+    );
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("asks where to save a track master and passes that path to render", async () => {
     const track = makeTrack("export-1", "C:/audio/export source.wav");
     mocks.api.importTracks.mockResolvedValue([track]);

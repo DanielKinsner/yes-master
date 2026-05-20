@@ -250,6 +250,83 @@ export function useTrackMaster() {
     [analysisMap],
   );
 
+  // Live-edit updateChain dispatcher: rAF-gated, single-in-flight, latest-
+  // wins. Slider drags and EQ tweaks can fire updateSettings dozens of
+  // times per frame; without this gate every one of those mutations
+  // would issue a Tauri IPC call and push another LiveCoeffUpdate at the
+  // audio command thread. The backend handles latest-only correctly
+  // (Fix A on the output thread, Fix C for LUFS workers), but reducing
+  // raw IPC + serialization volume keeps the JS bridge and the React
+  // commit phase responsive under heavy interaction.
+  //
+  // Behavior:
+  //   - Caller passes the LATEST desired (settings, previewLufsLanding)
+  //     for the live chain; we never replay older values.
+  //   - At most one Tauri call is outstanding at a time; subsequent
+  //     calls overwrite the pending slot and wait their turn.
+  //   - The next pending dispatch waits for the next animation frame
+  //     so multiple state mutations within one frame coalesce into a
+  //     single IPC after the frame paints.
+  //   - On Tauri error we clear the in-flight gate AND attempt to
+  //     drain the pending slot, so a transient failure can't strand
+  //     the user's latest setting.
+  //   - `attempts` is incremented at the call-site (counted as
+  //     "user-initiated edits"); `applied` increments here on each
+  //     completed IPC. Gap = edits that were coalesced into a later
+  //     send — a meaningful liveness signal, not a bug.
+  const updateChainInFlight = useRef(false);
+  const updateChainPending = useRef<{
+    settings: MasteringSettings;
+    preview: boolean;
+  } | null>(null);
+  const updateChainRafScheduled = useRef(false);
+
+  const sendUpdateChain = useCallback(
+    (settings: MasteringSettings, preview: boolean) => {
+      updateChainPending.current = { settings, preview };
+      const drain = () => {
+        const next = updateChainPending.current;
+        if (!next) {
+          updateChainInFlight.current = false;
+          return;
+        }
+        updateChainPending.current = null;
+        updateChainInFlight.current = true;
+        api
+          .updateChain(next.settings, next.preview)
+          .then(() => {
+            setLiveUpdateStats((s) => ({
+              attempts: s.attempts,
+              applied: s.applied + 1,
+              lastAt: Date.now(),
+            }));
+            drain();
+          })
+          .catch((err) => {
+            updateChainInFlight.current = false;
+            setError(String(err));
+            // Drain anyway — a fresher setting may have arrived during
+            // the failed call and should still try to land.
+            if (updateChainPending.current) drain();
+          });
+      };
+      if (updateChainInFlight.current || updateChainRafScheduled.current) return;
+      updateChainRafScheduled.current = true;
+      // Use rAF where available (browser/Tauri); fall back to a 16 ms
+      // timer in node-test environments that lack requestAnimationFrame.
+      const scheduleDrain = () => {
+        updateChainRafScheduled.current = false;
+        drain();
+      };
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(scheduleDrain);
+      } else {
+        setTimeout(scheduleDrain, 16);
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     let unlistenTick: (() => void) | undefined;
     let unlistenProgress: (() => void) | undefined;
@@ -484,19 +561,17 @@ export function useTrackMaster() {
           lastAt: Date.now(),
         }));
         const effectiveForChain = withSourceLufs(id as TrackId, effective);
-        api
-          .updateChain(effectiveForChain, exportLufsPreviewRef.current)
-          .then(() => {
-            setLiveUpdateStats((s) => ({
-              attempts: s.attempts,
-              applied: s.applied + 1,
-              lastAt: Date.now(),
-            }));
-          })
-          .catch((err) => setError(String(err)));
+        sendUpdateChain(effectiveForChain, exportLufsPreviewRef.current);
       }
     },
-    [selectedTrackId, loadedKindByTrack, loadedTrackId, mode, withSourceLufs],
+    [
+      selectedTrackId,
+      loadedKindByTrack,
+      loadedTrackId,
+      mode,
+      withSourceLufs,
+      sendUpdateChain,
+    ],
   );
 
   const undo = useCallback(() => {
@@ -586,18 +661,7 @@ export function useTrackMaster() {
         // Volume Match needs the current track's source-LUFS — see the
         // `withSourceLufs` helper at the top of this hook.
         const settingsForChain = withSourceLufs(id, nextSettings);
-        api
-          .updateChain(settingsForChain, exportLufsPreviewRef.current)
-          .then(() => {
-            setLiveUpdateStats((s) => ({
-              attempts: s.attempts,
-              applied: s.applied + 1,
-              lastAt: Date.now(),
-            }));
-          })
-          .catch((err) => {
-            setError(String(err));
-          });
+        sendUpdateChain(settingsForChain, exportLufsPreviewRef.current);
       }
     },
     [
@@ -610,6 +674,7 @@ export function useTrackMaster() {
       settingsMap,
       withSourceLufs,
       commitToHistory,
+      sendUpdateChain,
     ],
   );
 
@@ -1320,19 +1385,15 @@ export function useTrackMaster() {
       exportLufsPreviewRef.current = on;
       setTransport((t) => ({ ...t, exportLufsPreview: on }));
       if (selectedTrackId && loadedKindByTrack[selectedTrackId] === "master") {
-        api
-          .updateChain(
-            withSourceLufs(selectedTrackId, selectedSettings),
-            on,
-          )
-          .then(() => {
-            setLiveUpdateStats((s) => ({
-              attempts: s.attempts + 1,
-              applied: s.applied + 1,
-              lastAt: Date.now(),
-            }));
-          })
-          .catch((err) => setError(String(err)));
+        setLiveUpdateStats((s) => ({
+          attempts: s.attempts + 1,
+          applied: s.applied,
+          lastAt: Date.now(),
+        }));
+        // Route through the same gated dispatcher as live edits — if a
+        // sweep is in flight, this toggle merges into the latest-wins
+        // pending slot instead of slipping in out of order.
+        sendUpdateChain(withSourceLufs(selectedTrackId, selectedSettings), on);
       }
     },
     [
@@ -1340,6 +1401,7 @@ export function useTrackMaster() {
       loadedKindByTrack,
       selectedSettings,
       withSourceLufs,
+      sendUpdateChain,
     ],
   );
 
@@ -1416,19 +1478,10 @@ export function useTrackMaster() {
           applied: s.applied,
           lastAt: Date.now(),
         }));
-        api
-          .updateChain(
-            withSourceLufs(selectedTrackId, preset.settings),
-            exportLufsPreviewRef.current,
-          )
-          .then(() => {
-            setLiveUpdateStats((s) => ({
-              attempts: s.attempts,
-              applied: s.applied + 1,
-              lastAt: Date.now(),
-            }));
-          })
-          .catch((err) => setError(String(err)));
+        sendUpdateChain(
+          withSourceLufs(selectedTrackId, preset.settings),
+          exportLufsPreviewRef.current,
+        );
       }
     },
     [
@@ -1441,6 +1494,7 @@ export function useTrackMaster() {
       overrideAlbum,
       commitToHistory,
       withSourceLufs,
+      sendUpdateChain,
     ],
   );
 
