@@ -5046,3 +5046,134 @@ Next recommended slice:
 
 Continue with subtle utility polish: waveform playhead/A-B transition polish,
 Visual EQ neutral snap affordance, or preset selection lock-in feedback.
+
+## 2026-05-20 - Realtime control recovery (Fix A/B/C + P1/P2 + Tone Shape colors)
+
+Goal:
+
+Dan reported stutter, laggy knob response, and an occasional `audio seek
+reply timeout` while sweeping EQ / Advanced sliders under playback. Codex's
+2026-05-20 LUFS work (`477696d`) had removed one bottleneck but the
+realtime output path remained pinned in 2x DSP and the IPC layer was
+unthrottled. Diagnose with fresh eyes, implement coordinated fixes across
+output thread / audio command thread / TS hook, expose temporary
+counters so the fixes can be verified on live material.
+
+What changed:
+
+Six pushed commits this slice, plus codex's handoff refresh:
+
+- `3b97f5c` Fix A — `MasteringSource::next` (sources.rs) now promotes
+  `pending_chain` into `self.chain` BEFORE installing the next pending
+  chain on mid-fade updates. Pre-fix, sustained UpdateChain traffic
+  re-armed the 512-frame crossfade every 128 frames and `self.chain`
+  stayed frozen at pre-sweep coefficients, leaving the output thread in
+  permanent 2x DSP with the audible mix ~75% on the stale chain. Bounded
+  to one COEFFS_CROSSFADE_FRAMES window per update now. Regression test:
+  `mastering_source_tracks_latest_under_sustained_updates`.
+
+- `457e244` Fix C — Single-in-flight LUFS preview worker on the audio
+  command thread, plus a `track_epoch` captured at worker spawn and
+  re-checked on `PreviewLandingReady`. Caps measurement work at one OS
+  thread regardless of UpdateChain rate; latest pending settings drain
+  on completion; stale-track workers can no longer poison the new
+  track's landing-gain cache. Always-cache on epoch match so a wiggle
+  back to a prior knob position hits cache instead of triggering
+  another measurement. New helper `try_spawn_lufs_preview_worker` with
+  two focused tests.
+
+- `e823f23` Fix B — `sendUpdateChain` in useTrackMaster.ts is now an
+  rAF-gated single-in-flight latest-wins dispatcher. Multiple state
+  mutations within one frame collapse to a single Tauri IPC; on
+  `.catch` the in-flight gate clears AND the pending slot drains so a
+  transient failure can't strand the user's latest setting. Wired
+  through `updateSettings`, `restoreSnapshot`, `applyPreset`, and the
+  Preview LUFS toggle; first `playMaster` stays direct. Regression
+  test: `coalesces_rapid_live_edit_updateChain_calls_into_a_single
+  _latest_wins_IPC`.
+
+- `53d8c74` Diagnostic counters for live-update path verification.
+  Process-wide `AtomicU64`s tracking `update_chain_dispatched`,
+  `lufs_workers_spawned / applied / cached_only / rejected_stale_epoch
+  / queued`, and `mid_fade_promotions`. Exposed via the new
+  `get_diag_counters` Tauri command + matching TS `DiagCountersSnapshot`
+  type and preview-mock shim. Temporary instrumentation - remove once
+  Dan verifies the realtime issues are resolved on live material.
+
+- `cf98360` P1 + P2 — Two correctness gaps codex caught during review
+  of the above batch:
+
+  - P1: `handle_play` rewrites `s.decoded_cache` to the new Original
+    track but did not clear `s.landing_gain_cache`. The next
+    `handle_play_master` then ran `should_invalidate_landing_cache`
+    against the already-updated entry, saw a matching path, and skipped
+    its own clear - so an UpdateChain cache lookup could return a gain
+    measured against the PRIOR track's PCM. Mirror the predicate +
+    `landing_gain_cache.clear()` pattern that already lived in
+    `handle_play_master` so the cache is invalidated at the same moment
+    `decoded_cache` stops being trustworthy.
+
+  - P2: `lufs_worker_pending` was never cleared when a newer
+    UpdateChain landed as a cache hit or with Preview LUFS off. The
+    pending settings were for a generation the user had moved past, but
+    the worker-drain still spawned one obsolete ~20 ms measurement when
+    the active worker completed. Correctness was already protected by
+    the generation check on `PreviewLandingReady` (the wasted
+    measurement could never be applied), but the worker itself still
+    ran. Clear `lufs_worker_pending = None` on cache-hit and on
+    preview-off branches.
+
+- `f516ee4` Align Tone Shape knob tones with the EQ band nodes they
+  control. The MID knob was green but pointed at a purple node; the
+  HIGH knob was purple but pointed at a blue node. Knob.tsx `blue` tone
+  hex retuned from `#4d8bff` to `#60a5fa` so the HIGH knob exactly
+  matches VisualEqPanel's `#60a5fa` HIGH node (blue tone was unused
+  elsewhere, no other knob colors shifted). Now LOW=cyan, MID=purple,
+  HIGH=blue on both surfaces.
+
+- `7462bf6` (codex) — handoff refresh recording the realtime recovery
+  addendum at the top of `docs/HANDOFF.md` and updating
+  `HANDOFF_2026-05-19_evening.md`.
+
+Verification:
+
+- `cargo test --lib`: 178/178 pass.
+- `npm test`: 14 files, 99/99 tests pass.
+- `npm run build`: clean (~286 KB raw / ~89 KB gzipped).
+- `git diff --check`: clean.
+
+Real-audio fixture used:
+
+No. All verification was unit / integration tests + production build.
+Listening verification on live material is the explicit next step (see
+below).
+
+What failed or remains partial:
+
+- Manual listening verification with aggressive knob / EQ / Advanced
+  sweeps under playback has NOT been done in this session. Dan needs
+  studio monitors and a real fixture; see the dated DANDOFF for the
+  specific scenarios to A/B against the symptoms he reported pre-fix.
+- The LUFS landing "catch-up" on a target-only change still runs a
+  full background measurement (~20 ms worker + ~12 ms crossfade =
+  ~30 ms audible level ramp). Codex and Claude both flagged a known
+  optimization: cache the measured post-chain LUFS keyed by
+  chain-hash-without-target, then derive the landing scalar at any
+  target as pure dB math without re-measuring. Deferred until Dan
+  decides whether the current catch-up is tolerable.
+- Diagnostic counters are temporary scaffolding - to be removed after
+  the listening pass confirms the realtime path is healthy. Tracking
+  callout in the commit message of `53d8c74`.
+
+Next recommended slice:
+
+Dan-led listening verification (see `docs/DANDOFF_2026-05-20.md`). After
+that, in priority order:
+
+1. If LUFS-target catch-up is annoying, implement the target-only math
+   shortcut.
+2. Remove `get_diag_counters` + the static AtomicU64s + the TS-side
+   `DiagCountersSnapshot` once the listening pass is clean.
+3. Pick up the green-tone alignment for the secondary LOW-MID node
+   (400 Hz, currently no knob; if the Advanced panel ever surfaces it
+   the tone should match VisualEqPanel's green palette).
