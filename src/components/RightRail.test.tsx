@@ -71,6 +71,13 @@ const HOT_SOURCE_ANALYSIS: AnalysisResult = {
   energy_density_score: null,
 };
 
+const CLEAN_SOURCE_ANALYSIS: AnalysisResult = {
+  ...HOT_SOURCE_ANALYSIS,
+  true_peak_dbtp: -1.2,
+  lufs_integrated: -14.0,
+  dynamic_range_lu: 8.0,
+};
+
 async function renderNode(node: ReactNode): Promise<{
   container: HTMLDivElement;
   root: Root;
@@ -139,6 +146,61 @@ describe("MasterOutPanel", () => {
 });
 
 describe("RightRail source checks", () => {
+  it("keeps the primary action as Export Master when current checks are clean", async () => {
+    const onExport = vi.fn();
+    const { container, root } = await renderNode(
+      <RightRail
+        analysis={CLEAN_SOURCE_ANALYSIS}
+        lastChecks={undefined}
+        canExport
+        isExporting={false}
+        isRendering={false}
+        onExport={onExport}
+        previewStale={false}
+        canRenderPreview
+        onUpdatePreview={vi.fn()}
+      />,
+    );
+
+    const exportButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Export Master",
+    );
+
+    expect(exportButton).toBeTruthy();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("labels the primary action Export With Review when source checks warn", async () => {
+    const onExport = vi.fn();
+    const { container, root } = await renderNode(
+      <RightRail
+        analysis={HOT_SOURCE_ANALYSIS}
+        lastChecks={undefined}
+        canExport
+        isExporting={false}
+        isRendering={false}
+        onExport={onExport}
+        previewStale={false}
+        canRenderPreview
+        onUpdatePreview={vi.fn()}
+      />,
+    );
+
+    const exportButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Export With Review",
+    );
+
+    expect(exportButton).toBeTruthy();
+    expect(onExport).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("labels pre-export analysis as source measurements", async () => {
     const { container, root } = await renderNode(
       <RightRail
