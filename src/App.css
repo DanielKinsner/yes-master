@@ -3313,6 +3313,13 @@ button.primary:disabled {
   color: #fff;
 }
 
+.compressor-mode-note {
+  color: var(--text-2);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  margin: -0.2rem 0 0.45rem;
+}
+
 .per-band-tabs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

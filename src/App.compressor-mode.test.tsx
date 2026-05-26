@@ -100,6 +100,11 @@ describe("AdvancedPanel compressor mode", () => {
     const preset = await renderAdvancedPanel({
       settings: makeSettings({ compression_mode: "preset" }),
     });
+    expect(preset.container.textContent).toContain(
+      "Preset values from Universal.",
+    );
+    expect(preset.container.textContent).toContain("Preset · -16.0 dB");
+    expect(preset.container.textContent).toContain("Preset · 1.8:1");
     expect(compressionInputs(preset.container).every((input) => input.disabled)).toBe(
       true,
     );
@@ -110,6 +115,9 @@ describe("AdvancedPanel compressor mode", () => {
     const manual = await renderAdvancedPanel({
       settings: makeSettings({ compression_mode: "manual" }),
     });
+    expect(manual.container.textContent).toContain(
+      "Manual values replace preset compression.",
+    );
     expect(compressionInputs(manual.container).some((input) => input.disabled)).toBe(
       false,
     );
@@ -120,6 +128,8 @@ describe("AdvancedPanel compressor mode", () => {
     const off = await renderAdvancedPanel({
       settings: makeSettings({ compression_mode: "off" }),
     });
+    expect(off.container.textContent).toContain("Creative compressor bypassed");
+    expect(off.container.textContent).toContain("Off");
     expect(compressionInputs(off.container).every((input) => input.disabled)).toBe(
       true,
     );

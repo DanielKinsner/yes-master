@@ -3416,6 +3416,50 @@ mod tests {
     }
 
     #[test]
+    fn compression_mode_manual_replaces_preset_instead_of_stacking() {
+        let mut preset = default_master_settings();
+        preset.preset = Preset::Universal;
+        preset.advanced.compression_mode = CompressionMode::Preset;
+        let preset_coeffs = ChainCoeffs::from_settings(44_100, &preset);
+
+        let mut manual = default_master_settings();
+        manual.preset = Preset::Universal;
+        manual.advanced.compression_mode = CompressionMode::Manual;
+        manual.advanced.compression_density = Some(1.0);
+        manual.advanced.compression_low_threshold_db =
+            Some(preset_coeffs.comp_low_threshold_db);
+        manual.advanced.compression_mid_threshold_db =
+            Some(preset_coeffs.comp_mid_threshold_db);
+        manual.advanced.compression_high_threshold_db =
+            Some(preset_coeffs.comp_high_threshold_db);
+        manual.advanced.compression_low_ratio = Some(preset_coeffs.comp_low_ratio);
+        manual.advanced.compression_mid_ratio = Some(preset_coeffs.comp_mid_ratio);
+        manual.advanced.compression_high_ratio = Some(preset_coeffs.comp_high_ratio);
+        manual.advanced.compression_low_attack_ms = Some(15.0);
+        manual.advanced.compression_mid_attack_ms = Some(15.0);
+        manual.advanced.compression_high_attack_ms = Some(15.0);
+        manual.advanced.compression_low_release_ms = Some(250.0);
+        manual.advanced.compression_mid_release_ms = Some(250.0);
+        manual.advanced.compression_high_release_ms = Some(250.0);
+
+        let manual_coeffs = ChainCoeffs::from_settings(44_100, &manual);
+        assert!(
+            (manual_coeffs.comp_mid_threshold_db - preset_coeffs.comp_mid_threshold_db).abs()
+                < 1e-4,
+            "Manual should replace the preset with explicit values, not stack density on top"
+        );
+        assert!(
+            (manual_coeffs.comp_mid_ratio - preset_coeffs.comp_mid_ratio).abs() < 1e-4,
+            "Manual ratio should equal the explicit value copied from Preset"
+        );
+        assert!(
+            (manual_coeffs.comp_mid_makeup_db - preset_coeffs.comp_mid_makeup_db).abs()
+                < 1e-4,
+            "Manual makeup should not exceed the preset value when copied from Preset"
+        );
+    }
+
+    #[test]
     fn compression_mode_off_bypasses_compressor_but_preserves_limiter() {
         let mut s = default_master_settings();
         s.preset = Preset::Loud;

@@ -1852,6 +1852,13 @@ function PerBandCompressorCard({
   const autoReadouts = compressorAutoReadouts(settings);
   const compressorMode: CompressionMode = a.compression_mode ?? "preset";
   const manualEnabled = compressorMode === "manual";
+  const fallbackLabel =
+    compressorMode === "off"
+      ? "Off"
+      : compressorMode === "preset"
+        ? "Preset"
+        : "Auto";
+  const showFallbackReadouts = compressorMode !== "off";
   const setCompressorMode = (mode: CompressionMode) => {
     if (mode === "manual") {
       onAdvanced(materializeManualCompressor(settings, a));
@@ -1938,6 +1945,14 @@ function PerBandCompressorCard({
           </button>
         ))}
       </div>
+      <div className="compressor-mode-note">
+        {compressorMode === "preset" &&
+          `Preset values from ${presetDisplayName(settings.preset)}.`}
+        {compressorMode === "manual" &&
+          "Manual values replace preset compression."}
+        {compressorMode === "off" &&
+          "Creative compressor bypassed; limiter and delivery checks remain active."}
+      </div>
       <label className="per-band-link-stereo">
         <input
           type="checkbox"
@@ -1967,11 +1982,36 @@ function PerBandCompressorCard({
         <CompressionBandColumn
           label=""
           disabled={!manualEnabled}
+          fallbackLabel={fallbackLabel}
+          showFallbackReadouts={showFallbackReadouts}
           {...bandFields[active]}
         />
       </div>
     </section>
   );
+}
+
+function presetDisplayName(preset: Preset): string {
+  switch (preset.kind) {
+    case "universal":
+      return "Universal";
+    case "clarity":
+      return "Clarity";
+    case "tape":
+      return "Tape";
+    case "spatial":
+      return "Spatial";
+    case "oomph":
+      return "Oomph";
+    case "warmth":
+      return "Warmth";
+    case "punch":
+      return "Punch";
+    case "loud":
+      return "Loud";
+    case "custom":
+      return "Custom";
+  }
 }
 
 function materializeManualCompressor(
@@ -2060,6 +2100,8 @@ function DeliveryFormatCard({
 function CompressionBandColumn({
   label,
   disabled = false,
+  fallbackLabel = "Auto",
+  showFallbackReadouts = true,
   threshold,
   ratio,
   attack,
@@ -2075,6 +2117,8 @@ function CompressionBandColumn({
 }: {
   label: string;
   disabled?: boolean;
+  fallbackLabel?: string;
+  showFallbackReadouts?: boolean;
   threshold: number | null;
   ratio: number | null;
   attack: number | null;
@@ -2098,7 +2142,8 @@ function CompressionBandColumn({
         min={-60}
         max={0}
         format={(v) => `${v.toFixed(1)} dB`}
-        autoReadout={autoThreshold}
+        autoLabel={fallbackLabel}
+        autoReadout={showFallbackReadouts ? autoThreshold : undefined}
         disabled={disabled}
         onChange={onThreshold}
       />
@@ -2109,7 +2154,8 @@ function CompressionBandColumn({
         min={1}
         max={20}
         format={(v) => `${v.toFixed(1)}:1`}
-        autoReadout={autoRatio}
+        autoLabel={fallbackLabel}
+        autoReadout={showFallbackReadouts ? autoRatio : undefined}
         disabled={disabled}
         onChange={onRatio}
       />
@@ -2120,7 +2166,8 @@ function CompressionBandColumn({
         min={0.5}
         max={200}
         format={(v) => `${v.toFixed(1)} ms`}
-        autoReadout={autoAttack}
+        autoLabel={fallbackLabel}
+        autoReadout={showFallbackReadouts ? autoAttack : undefined}
         disabled={disabled}
         onChange={onAttack}
       />
@@ -2131,7 +2178,8 @@ function CompressionBandColumn({
         min={5}
         max={2000}
         format={(v) => `${v.toFixed(0)} ms`}
-        autoReadout={autoRelease}
+        autoLabel={fallbackLabel}
+        autoReadout={showFallbackReadouts ? autoRelease : undefined}
         disabled={disabled}
         onChange={onRelease}
       />
@@ -2222,6 +2270,7 @@ function NumberField({
   max,
   step,
   format,
+  autoLabel = "Auto",
   autoReadout,
   disabled = false,
   onChange,
@@ -2232,6 +2281,7 @@ function NumberField({
   max: number;
   step: number;
   format: (v: number) => string;
+  autoLabel?: string;
   autoReadout?: string;
   disabled?: boolean;
   onChange: (v: number | null) => void;
@@ -2270,7 +2320,9 @@ function NumberField({
     >
       <span className="adv-label">
         {label}
-        {value === null && <span className="adv-auto-pill">AUTO</span>}
+        {value === null && (
+          <span className="adv-auto-pill">{autoLabel.toUpperCase()}</span>
+        )}
       </span>
       <div className="adv-control">
         <input
@@ -2286,17 +2338,21 @@ function NumberField({
           onDoubleClick={() => onChange(null)}
           title={
             value === null
-              ? "Drag to engage. Double-click to leave it on Auto."
-              : `Drag or type a value. Double-click slider to reset to Auto.`
+              ? `Drag to engage. Double-click to leave it on ${autoLabel}.`
+              : `Drag or type a value. Double-click slider to reset to ${autoLabel}.`
           }
         />
         <span
           className="adv-value"
-          title={value === null && autoReadout ? `Auto: ${autoReadout}` : undefined}
+          title={
+            value === null && autoReadout
+              ? `${autoLabel}: ${autoReadout}`
+              : undefined
+          }
         >
           {value === null ? (
             <>
-              Auto
+              {autoLabel}
               {autoReadout && (
                 <span className="adv-auto-readout"> · {autoReadout}</span>
               )}
@@ -2314,7 +2370,7 @@ function NumberField({
           step={step}
           disabled={disabled}
           value={draft !== null ? draft : value ?? ""}
-          placeholder="auto"
+          placeholder={autoLabel.toLowerCase()}
           onChange={(e) => {
             if (e.target.value === "") {
               onChange(null);
@@ -2335,8 +2391,8 @@ function NumberField({
           }}
           title={
             value === null
-              ? "Type a number to engage, or leave blank for Auto."
-              : `Type a value or clear to reset to Auto.`
+              ? `Type a number to engage, or leave blank for ${autoLabel}.`
+              : `Type a value or clear to reset to ${autoLabel}.`
           }
         />
       </div>
