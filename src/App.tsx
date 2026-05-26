@@ -1923,6 +1923,16 @@ function PerBandCompressorCard({
       onRelease: (v) => onUpdate("compression_high_release_ms", v),
     },
   };
+  const activeBandFields = bandFields[active];
+  const displayedBandFields = manualEnabled
+    ? activeBandFields
+    : {
+        ...activeBandFields,
+        threshold: null,
+        ratio: null,
+        attack: null,
+        release: null,
+      };
   return (
     <section className="panel rail-card rail-card-per-band">
       <header className="panel-head">
@@ -1984,7 +1994,7 @@ function PerBandCompressorCard({
           disabled={!manualEnabled}
           fallbackLabel={fallbackLabel}
           showFallbackReadouts={showFallbackReadouts}
-          {...bandFields[active]}
+          {...displayedBandFields}
         />
       </div>
     </section>

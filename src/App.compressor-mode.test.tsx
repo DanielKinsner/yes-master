@@ -3,7 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AdvancedPanel } from "./App";
-import type { AdvancedSettings, MasteringSettings } from "./bindings";
+import type { AdvancedSettings, MasteringSettings, Preset } from "./bindings";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true;
@@ -35,9 +35,10 @@ const DEFAULT_ADVANCED: AdvancedSettings = {
 
 function makeSettings(
   advanced: Partial<AdvancedSettings> = {},
+  preset: Preset = { kind: "universal" },
 ): MasteringSettings {
   return {
-    preset: { kind: "universal" },
+    preset,
     intensity: 0.5,
     eq_sub_db: 0,
     eq_low_db: 0,
@@ -135,6 +136,40 @@ describe("AdvancedPanel compressor mode", () => {
     );
     await act(async () => {
       off.root.unmount();
+    });
+  });
+
+  it("shows preset compressor readouts instead of stale manual values", async () => {
+    const universal = await renderAdvancedPanel({
+      settings: makeSettings({
+        compression_mode: "preset",
+        compression_low_threshold_db: -22,
+        compression_low_ratio: 2.6,
+        compression_low_attack_ms: 25,
+        compression_low_release_ms: 280,
+      }),
+    });
+    expect(universal.container.textContent).toContain(
+      "Preset values from Universal.",
+    );
+    expect(universal.container.textContent).toContain("Preset · -16.0 dB");
+    expect(universal.container.textContent).toContain("Preset · 1.8:1");
+    expect(universal.container.textContent).not.toContain("-22.0 dB");
+    expect(universal.container.textContent).not.toContain("2.6:1");
+    await act(async () => {
+      universal.root.unmount();
+    });
+
+    const tape = await renderAdvancedPanel({
+      settings: makeSettings({ compression_mode: "preset" }, { kind: "tape" }),
+    });
+    expect(tape.container.textContent).toContain("Preset values from Tape.");
+    expect(tape.container.textContent).toContain("Preset · -22.0 dB");
+    expect(tape.container.textContent).toContain("Preset · 2.4:1");
+    expect(tape.container.textContent).toContain("Preset · 30 ms");
+    expect(tape.container.textContent).toContain("Preset · 400 ms");
+    await act(async () => {
+      tape.root.unmount();
     });
   });
 
