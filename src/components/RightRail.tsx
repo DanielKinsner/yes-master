@@ -1,7 +1,7 @@
 // Right-rail master-out / quality panels. MasterOutPanel is live transport
 // telemetry only; QualityCheckPanel owns source/export analysis.
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { AnalysisResult, QualityCheck } from "../bindings";
 
 type RightRailProps = {
@@ -30,6 +30,15 @@ type RightRailProps = {
   onUpdatePreview: () => void;
 };
 
+type QualityRow = {
+  key: string;
+  ok: boolean;
+  warn: boolean;
+  crit: boolean;
+  label: string;
+  detail: string;
+};
+
 const LUFS_SCALE_MIN = -36;
 const LUFS_SCALE_MAX = -6;
 const CLIP_THRESHOLD_DBFS = -0.1;
@@ -48,6 +57,34 @@ export function RightRail({
   canRenderPreview,
   onUpdatePreview,
 }: RightRailProps) {
+  const qualityRows = qualityRowsFor(lastChecks, analysis);
+  const needsReview = canExport && hasReviewRows(qualityRows);
+  const [reviewOpen, setReviewOpen] = useState(false);
+
+  useEffect(() => {
+    setReviewOpen(false);
+  }, [analysis?.track_id, lastChecks]);
+
+  const exportLabel = isExporting
+    ? "Exporting..."
+    : needsReview
+      ? "Export With Review"
+      : "Export Master";
+
+  const handlePrimaryExport = () => {
+    if (!canExport || isExporting || isRendering) return;
+    if (needsReview) {
+      setReviewOpen(true);
+      return;
+    }
+    onExport();
+  };
+
+  const handleExportAnyway = () => {
+    setReviewOpen(false);
+    onExport();
+  };
+
   return (
     <aside className="right-rail">
       {/* UI_LAYOUT_REVISION_1600x940 L3 — rail order per spec:
@@ -79,7 +116,7 @@ export function RightRail({
         <button
           type="button"
           className="primary right-rail-export"
-          onClick={onExport}
+          onClick={handlePrimaryExport}
           disabled={!canExport || isExporting || isRendering}
           title={
             isRendering && !isExporting
@@ -89,8 +126,50 @@ export function RightRail({
               : undefined
           }
         >
-          {isExporting ? "Exporting…" : "Export Master"}
+          {exportLabel}
         </button>
+        {reviewOpen && needsReview && (
+          <section className="export-review-panel" aria-label="Export review">
+            <header className="export-review-head">
+              <span className="export-review-title">Review before export</span>
+              <span className="quality-badge badge-warn">REVIEW</span>
+            </header>
+            <ul className="export-review-list">
+              {qualityRows
+                .filter((row) => row.warn || row.crit)
+                .map((row) => (
+                  <li
+                    key={row.key}
+                    className={
+                      "export-review-row " + (row.crit ? "is-crit" : "is-warn")
+                    }
+                    title={row.detail}
+                  >
+                    <span className="quality-check-glyph" aria-hidden>
+                      {row.crit ? "✗" : "△"}
+                    </span>
+                    <span>{row.label}</span>
+                  </li>
+                ))}
+            </ul>
+            <div className="export-review-actions">
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => setReviewOpen(false)}
+              >
+                Adjust Settings
+              </button>
+              <button
+                type="button"
+                className="primary"
+                onClick={handleExportAnyway}
+              >
+                Export Anyway
+              </button>
+            </div>
+          </section>
+        )}
       </div>
     </aside>
   );
@@ -405,6 +484,26 @@ function Readout({
   );
 }
 
+function qualityRowsFor(
+  checks: QualityCheck[] | undefined,
+  analysis: AnalysisResult | undefined,
+): QualityRow[] {
+  return checks && checks.length > 0
+    ? checks.map((c, i) => ({
+        key: `${c.code}-${i}`,
+        ok: c.level === "info",
+        warn: c.level === "warning",
+        crit: c.level === "critical",
+        label: friendlyCheckLabel(c),
+        detail: c.message,
+      }))
+    : derivePreflightChecks(analysis);
+}
+
+function hasReviewRows(rows: QualityRow[]): boolean {
+  return rows.some((row) => row.warn || row.crit);
+}
+
 export function LevelsPanel({
   peakDbfs,
   isPlaying,
@@ -485,16 +584,7 @@ function QualityCheckPanel({
   analysis: AnalysisResult | undefined;
 }) {
   const hasExportChecks = !!checks && checks.length > 0;
-  const rows = checks && checks.length > 0
-    ? checks.map((c, i) => ({
-        key: `${c.code}-${i}`,
-        ok: c.level === "info",
-        warn: c.level === "warning",
-        crit: c.level === "critical",
-        label: friendlyCheckLabel(c),
-        detail: c.message,
-      }))
-    : derivePreflightChecks(analysis);
+  const rows = qualityRowsFor(checks, analysis);
 
   const overallSafe = rows.every((r) => r.ok);
   return (
@@ -552,14 +642,7 @@ function friendlyCheckLabel(c: QualityCheck): string {
   }
 }
 
-function derivePreflightChecks(analysis: AnalysisResult | undefined): {
-  key: string;
-  ok: boolean;
-  warn: boolean;
-  crit: boolean;
-  label: string;
-  detail: string;
-}[] {
+function derivePreflightChecks(analysis: AnalysisResult | undefined): QualityRow[] {
   if (!analysis) {
     return [
       {
