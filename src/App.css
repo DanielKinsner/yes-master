@@ -2180,6 +2180,10 @@ button.primary:disabled {
   gap: 0.3rem;
 }
 
+.adv-field.is-disabled {
+  opacity: 0.62;
+}
+
 .adv-label {
   font-size: 0.78rem;
   color: var(--text-2);
@@ -3274,6 +3278,39 @@ button.primary:disabled {
 
 .rail-card-per-band .per-band-link-stereo input[type="checkbox"] {
   accent-color: var(--accent);
+}
+
+.compressor-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  background: rgba(13, 16, 24, 0.55);
+  border: 1px solid rgba(111, 163, 255, 0.10);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin: 0.15rem 0 0.45rem;
+}
+
+.compressor-mode-tab {
+  background: transparent;
+  color: var(--text-2);
+  border: none;
+  border-right: 1px solid rgba(111, 163, 255, 0.08);
+  padding: 0.35rem 0.45rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.compressor-mode-tab:last-child {
+  border-right: none;
+}
+
+.compressor-mode-tab.is-active {
+  background: linear-gradient(180deg, var(--accent-bright) 0%, var(--accent-deep) 100%);
+  color: #fff;
 }
 
 .per-band-tabs {

@@ -76,19 +76,20 @@ pub async fn run_export_checks(
     }
 
     // Phase 12.2 — already-compressed source advisory. Fires when the SOURCE
-    // material is dynamically squashed (DR < 6 LU) AND the user is asking for
-    // moderate-to-heavy compression density (> 0.3) AND they haven't manually
-    // overridden any per-band threshold (per-band overrides imply the user
-    // knows what they're doing and the macro isn't blindly driving). Advisory
-    // only — does not block export.
+    // material is dynamically squashed (DR < 6 LU) AND Preset mode is asking
+    // for moderate-to-heavy compression density (> 0.3). Manual mode is an
+    // explicit user decision; Off mode bypasses the creative compressor.
+    // Advisory only — does not block export.
     if let (Some(analysis), Some(s)) = (source_analysis.as_ref(), settings.as_ref()) {
-        let density = s.advanced.compression_density.unwrap_or(0.0);
-        let no_per_band_threshold_overrides = s.advanced.compression_low_threshold_db.is_none()
-            && s.advanced.compression_mid_threshold_db.is_none()
-            && s.advanced.compression_high_threshold_db.is_none();
+        let default_density = if matches!(s.preset, Preset::Custom { .. }) {
+            0.0
+        } else {
+            0.5
+        };
+        let density = s.advanced.compression_density.unwrap_or(default_density);
         if analysis.dynamic_range_lu < 6.0
             && density > 0.3
-            && no_per_band_threshold_overrides
+            && matches!(s.advanced.compression_mode, CompressionMode::Preset)
         {
             checks.push(QualityCheck {
                 level: QualityLevel::Warning,

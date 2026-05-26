@@ -1715,8 +1715,10 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         checks.iter().map(|c| &c.code).collect::<Vec<_>>()
     );
 
-    // Per-band threshold override should suppress the advisory.
+    // Manual mode is an explicit compressor decision, so the preset-density
+    // advisory should not fire for per-band threshold overrides.
     let mut settings2 = default_settings();
+    settings2.advanced.compression_mode = CompressionMode::Manual;
     settings2.advanced.compression_density = Some(0.5);
     settings2.advanced.compression_mid_threshold_db = Some(-30.0);
     let report2 = ExportReport {
@@ -1764,7 +1766,7 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         !checks2
             .iter()
             .any(|c| c.code == "comp_density_on_compressed_source"),
-        "per-band threshold override should suppress the advisory, got: {:?}",
+        "manual per-band threshold override should suppress the advisory, got: {:?}",
         checks2.iter().map(|c| &c.code).collect::<Vec<_>>()
     );
 }

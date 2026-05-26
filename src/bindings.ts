@@ -30,12 +30,15 @@ export type Preset =
   | { kind: "loud" }
   | { kind: "custom"; id: string };
 
+export type CompressionMode = "preset" | "manual" | "off";
+
 export interface AdvancedSettings {
   lufs_offset_db: number | null;
   ceiling_dbtp: number | null;
   width: number | null;
   warmth: number | null;
   presence_air: number | null;
+  compression_mode?: CompressionMode | null;
   compression_density: number | null;
   // Phase 12.2 per-band compressor overrides. `null` = let the macro
   // (compression_density) drive that band's threshold; per-band ratio/

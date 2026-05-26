@@ -56,6 +56,7 @@ const DEFAULT_SETTINGS: MasteringSettings = {
     width: null,
     warmth: null,
     presence_air: null,
+    compression_mode: "preset",
     compression_density: null,
     compression_low_threshold_db: null,
     compression_low_ratio: null,

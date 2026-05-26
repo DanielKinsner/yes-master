@@ -60,7 +60,21 @@ function buildStages(settings: MasteringSettings): Stage[] {
   const eqIntensity = Math.min(1, eqMax / 6);
   const warmth = settings.advanced.warmth ?? 0;
   const air = settings.advanced.presence_air ?? 0;
-  const comp = settings.advanced.compression_density ?? 0;
+  const compressorMode = settings.advanced.compression_mode ?? "preset";
+  const presetCompDensity =
+    settings.preset.kind === "custom" ? 0 : settings.advanced.compression_density ?? 0.5;
+  const manualCompActive =
+    settings.advanced.compression_low_threshold_db != null ||
+    settings.advanced.compression_mid_threshold_db != null ||
+    settings.advanced.compression_high_threshold_db != null;
+  const comp =
+    compressorMode === "off"
+      ? 0
+      : compressorMode === "manual"
+        ? manualCompActive
+          ? 0.75
+          : 0
+        : presetCompDensity;
   const presetWidth = presetDefaultWidth(settings.preset);
   const effectiveWidth = settings.advanced.width ?? presetWidth;
   const widthDelta = Math.abs(effectiveWidth - 1.0);
@@ -101,7 +115,14 @@ function buildStages(settings: MasteringSettings): Stage[] {
     {
       key: "comp",
       label: "Comp",
-      detail: comp > 0 ? `Density ${(comp * 100).toFixed(0)}% · -${(comp * 24).toFixed(0)} dBFS thr` : "off",
+      detail:
+        compressorMode === "off"
+          ? "off"
+          : compressorMode === "manual"
+            ? comp > 0
+              ? "manual"
+              : "manual idle"
+            : `Preset ${(comp * 100).toFixed(0)}%`,
       active: comp > 0.01,
       intensity: comp,
       icon: CompIcon,

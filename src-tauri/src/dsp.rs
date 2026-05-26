@@ -874,20 +874,28 @@ impl ChainCoeffs {
         // their compressor identity audibly engages without any user
         // fiddling — that's the whole point of P1.
         //
-        // Per-band overrides on `MasteringSettings.advanced.compression_*`
-        // still take precedence and replace the per-preset value for that
-        // band/parameter. The macro engagement only governs the FALLBACK
-        // value used when an override is unset.
+        // In Manual mode, per-band overrides on
+        // `MasteringSettings.advanced.compression_*` take precedence and
+        // replace the per-preset value for that band/parameter. In Preset
+        // mode they are ignored so stale manual values cannot secretly drive
+        // the chain. Off bypasses the creative compressor entirely.
+        let compression_mode = settings.advanced.compression_mode;
+        let compression_off = matches!(compression_mode, CompressionMode::Off);
+        let manual_compression = matches!(compression_mode, CompressionMode::Manual);
         let default_density_for_preset = if matches!(settings.preset, Preset::Custom { .. }) {
             0.0
         } else {
             0.5
         };
-        let density = settings
-            .advanced
-            .compression_density
-            .unwrap_or(default_density_for_preset)
-            .clamp(0.0, 1.0);
+        let density = if compression_off {
+            0.0
+        } else {
+            settings
+                .advanced
+                .compression_density
+                .unwrap_or(default_density_for_preset)
+                .clamp(0.0, 1.0)
+        };
 
         let preset_engagement = (density * 2.0).min(1.0); // 0..1, full at density >= 0.5
         let overdrive = (density * 2.0 - 1.0).max(0.0); // 0 below 0.5, up to 1.0 at density=1
@@ -901,65 +909,104 @@ impl ChainCoeffs {
             + OVERDRIVE_RATIO * overdrive)
             .max(1.0);
 
-        let comp_low_threshold_db = settings
-            .advanced
-            .compression_low_threshold_db
-            .unwrap_or(preset_threshold_db);
-        let comp_mid_threshold_db = settings
-            .advanced
-            .compression_mid_threshold_db
-            .unwrap_or(preset_threshold_db);
-        let comp_high_threshold_db = settings
-            .advanced
-            .compression_high_threshold_db
-            .unwrap_or(preset_threshold_db);
+        let comp_low_threshold_db = if manual_compression {
+            settings
+                .advanced
+                .compression_low_threshold_db
+                .unwrap_or(preset_threshold_db)
+        } else {
+            preset_threshold_db
+        };
+        let comp_mid_threshold_db = if manual_compression {
+            settings
+                .advanced
+                .compression_mid_threshold_db
+                .unwrap_or(preset_threshold_db)
+        } else {
+            preset_threshold_db
+        };
+        let comp_high_threshold_db = if manual_compression {
+            settings
+                .advanced
+                .compression_high_threshold_db
+                .unwrap_or(preset_threshold_db)
+        } else {
+            preset_threshold_db
+        };
 
-        let comp_low_ratio = settings
-            .advanced
-            .compression_low_ratio
-            .unwrap_or(preset_ratio)
-            .max(1.0);
-        let comp_mid_ratio = settings
-            .advanced
-            .compression_mid_ratio
-            .unwrap_or(preset_ratio)
-            .max(1.0);
-        let comp_high_ratio = settings
-            .advanced
-            .compression_high_ratio
-            .unwrap_or(preset_ratio)
-            .max(1.0);
+        let comp_low_ratio = if manual_compression {
+            settings.advanced.compression_low_ratio.unwrap_or(preset_ratio)
+        } else {
+            preset_ratio
+        }
+        .max(1.0);
+        let comp_mid_ratio = if manual_compression {
+            settings.advanced.compression_mid_ratio.unwrap_or(preset_ratio)
+        } else {
+            preset_ratio
+        }
+        .max(1.0);
+        let comp_high_ratio = if manual_compression {
+            settings.advanced.compression_high_ratio.unwrap_or(preset_ratio)
+        } else {
+            preset_ratio
+        }
+        .max(1.0);
 
-        let low_attack_ms = settings
-            .advanced
-            .compression_low_attack_ms
-            .unwrap_or(preset.compressor_attack_ms)
-            .max(0.1);
-        let low_release_ms = settings
-            .advanced
-            .compression_low_release_ms
-            .unwrap_or(preset.compressor_release_ms)
-            .max(0.1);
-        let mid_attack_ms = settings
-            .advanced
-            .compression_mid_attack_ms
-            .unwrap_or(preset.compressor_attack_ms)
-            .max(0.1);
-        let mid_release_ms = settings
-            .advanced
-            .compression_mid_release_ms
-            .unwrap_or(preset.compressor_release_ms)
-            .max(0.1);
-        let high_attack_ms = settings
-            .advanced
-            .compression_high_attack_ms
-            .unwrap_or(preset.compressor_attack_ms)
-            .max(0.1);
-        let high_release_ms = settings
-            .advanced
-            .compression_high_release_ms
-            .unwrap_or(preset.compressor_release_ms)
-            .max(0.1);
+        let low_attack_ms = if manual_compression {
+            settings
+                .advanced
+                .compression_low_attack_ms
+                .unwrap_or(preset.compressor_attack_ms)
+        } else {
+            preset.compressor_attack_ms
+        }
+        .max(0.1);
+        let low_release_ms = if manual_compression {
+            settings
+                .advanced
+                .compression_low_release_ms
+                .unwrap_or(preset.compressor_release_ms)
+        } else {
+            preset.compressor_release_ms
+        }
+        .max(0.1);
+        let mid_attack_ms = if manual_compression {
+            settings
+                .advanced
+                .compression_mid_attack_ms
+                .unwrap_or(preset.compressor_attack_ms)
+        } else {
+            preset.compressor_attack_ms
+        }
+        .max(0.1);
+        let mid_release_ms = if manual_compression {
+            settings
+                .advanced
+                .compression_mid_release_ms
+                .unwrap_or(preset.compressor_release_ms)
+        } else {
+            preset.compressor_release_ms
+        }
+        .max(0.1);
+        let high_attack_ms = if manual_compression {
+            settings
+                .advanced
+                .compression_high_attack_ms
+                .unwrap_or(preset.compressor_attack_ms)
+        } else {
+            preset.compressor_attack_ms
+        }
+        .max(0.1);
+        let high_release_ms = if manual_compression {
+            settings
+                .advanced
+                .compression_high_release_ms
+                .unwrap_or(preset.compressor_release_ms)
+        } else {
+            preset.compressor_release_ms
+        }
+        .max(0.1);
 
         let comp_low_attack_alpha = alpha_from_time_ms(sr, low_attack_ms);
         let comp_low_release_alpha = alpha_from_time_ms(sr, low_release_ms);
@@ -1041,7 +1088,11 @@ impl ChainCoeffs {
         let comp_mid_lp = BiquadCoeffs::butter_lp(sr, LR4_CROSSOVER_HIGH_HZ, BUTTERWORTH_Q);
         let comp_high_hp = BiquadCoeffs::butter_hp(sr, LR4_CROSSOVER_HIGH_HZ, BUTTERWORTH_Q);
 
-        let comp_link_stereo = settings.advanced.compression_link_stereo.unwrap_or(true);
+        let comp_link_stereo = if manual_compression {
+            settings.advanced.compression_link_stereo.unwrap_or(true)
+        } else {
+            true
+        };
 
         // The chain skips the compressor stage entirely when no band is
         // doing anything: effective preset threshold is at the ceiling
@@ -1063,8 +1114,13 @@ impl ChainCoeffs {
             && settings.advanced.compression_high_attack_ms.is_none()
             && settings.advanced.compression_high_release_ms.is_none();
         let comp_link_unset = !matches!(settings.advanced.compression_link_stereo, Some(false));
-        let compression_active =
-            !(preset_compressor_inactive && comp_no_overrides && comp_link_unset);
+        let compression_active = match compression_mode {
+            CompressionMode::Off => false,
+            CompressionMode::Preset => !preset_compressor_inactive,
+            CompressionMode::Manual => {
+                !(preset_compressor_inactive && comp_no_overrides && comp_link_unset)
+            }
+        };
 
         let comp_knee_db = 6.0_f32;
 
@@ -3300,6 +3356,7 @@ mod tests {
     #[test]
     fn compression_per_band_override_replaces_macro() {
         let mut s = default_master_settings();
+        s.advanced.compression_mode = CompressionMode::Manual;
         s.advanced.compression_density = Some(0.0);
         s.advanced.compression_mid_threshold_db = Some(-30.0);
         let c = ChainCoeffs::from_settings(44_100, &s);
@@ -3317,6 +3374,68 @@ mod tests {
             c.comp_high_threshold_db.abs() < 1e-4,
             "high threshold should be macro (0 dBFS at density=0), got {}",
             c.comp_high_threshold_db
+        );
+    }
+
+    #[test]
+    fn compression_mode_preset_ignores_stale_manual_overrides() {
+        let mut s = default_master_settings();
+        s.preset = Preset::Universal;
+        s.advanced.compression_mode = CompressionMode::Preset;
+        s.advanced.compression_density = Some(0.0);
+        s.advanced.compression_mid_threshold_db = Some(-30.0);
+        let c = ChainCoeffs::from_settings(44_100, &s);
+        assert!(
+            c.comp_mid_threshold_db.abs() < 1e-4,
+            "Preset mode should ignore stale manual threshold overrides; got {}",
+            c.comp_mid_threshold_db
+        );
+        assert!(
+            !c.compression_active,
+            "Preset mode at density 0 should be inactive even with stale manual fields"
+        );
+    }
+
+    #[test]
+    fn compression_mode_manual_honors_per_band_overrides() {
+        let mut s = default_master_settings();
+        s.preset = Preset::Universal;
+        s.advanced.compression_mode = CompressionMode::Manual;
+        s.advanced.compression_density = Some(0.0);
+        s.advanced.compression_mid_threshold_db = Some(-30.0);
+        let c = ChainCoeffs::from_settings(44_100, &s);
+        assert!(
+            (c.comp_mid_threshold_db - (-30.0)).abs() < 1e-4,
+            "Manual mode should honor explicit threshold overrides; got {}",
+            c.comp_mid_threshold_db
+        );
+        assert!(
+            c.compression_active,
+            "Manual mode with an explicit threshold override should activate compression"
+        );
+    }
+
+    #[test]
+    fn compression_mode_off_bypasses_compressor_but_preserves_limiter() {
+        let mut s = default_master_settings();
+        s.preset = Preset::Loud;
+        s.advanced.compression_mode = CompressionMode::Off;
+        s.advanced.compression_density = Some(1.0);
+        s.advanced.compression_mid_threshold_db = Some(-30.0);
+        let c = ChainCoeffs::from_settings(44_100, &s);
+        assert!(
+            !c.compression_active,
+            "Off mode should bypass preset and manual compressor settings"
+        );
+        assert!(
+            c.comp_low_makeup_db.abs() < 1e-4
+                && c.comp_mid_makeup_db.abs() < 1e-4
+                && c.comp_high_makeup_db.abs() < 1e-4,
+            "Off mode should not add compressor makeup"
+        );
+        assert!(
+            c.ceiling_lin > 0.0 && c.ceiling_lin < 1.0,
+            "Off mode must preserve limiter ceiling protection"
         );
     }
 
@@ -3359,6 +3478,7 @@ mod tests {
         let sr = 44_100;
         let freq = 1_000.0f32;
         let mut s_linked = default_master_settings();
+        s_linked.advanced.compression_mode = CompressionMode::Manual;
         s_linked.advanced.compression_density = Some(1.0);
         s_linked.advanced.compression_link_stereo = Some(true);
         let mut s_unlinked = s_linked.clone();

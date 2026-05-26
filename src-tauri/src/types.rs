@@ -559,6 +559,15 @@ impl MasteringSettings {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum CompressionMode {
+    #[default]
+    Preset,
+    Manual,
+    Off,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct AdvancedSettings {
     pub lufs_offset_db: Option<f32>,
@@ -566,6 +575,8 @@ pub struct AdvancedSettings {
     pub width: Option<f32>,
     pub warmth: Option<f32>,
     pub presence_air: Option<f32>,
+    #[serde(default)]
+    pub compression_mode: CompressionMode,
     pub compression_density: Option<f32>,
     // Phase 12.2 — per-band compressor overrides. `None` => the macro slider
     // (compression_density) drives that band's threshold; per-band ratio /

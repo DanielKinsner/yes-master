@@ -15,6 +15,7 @@ import { Knob, intensityLabel } from "./components/Knob";
 import { SignalChain } from "./components/SignalChain";
 import type {
   AnalysisResult,
+  CompressionMode,
   DeliveryProfile,
   ImportedTrack,
   LoopRegion,
@@ -1660,7 +1661,7 @@ function StaleBar({
 /// Per-Band Compressor, Bit Depth + Sample Rate) instead of one
 /// monolithic section, so the rail reads as discrete technical
 /// drawers in the order the spec lays out.
-function AdvancedPanel({
+export function AdvancedPanel({
   settings,
   onAdvanced,
   onInputGain,
@@ -1692,7 +1693,12 @@ function AdvancedPanel({
         onInputGain={onInputGain}
         onOutputGain={onOutputGain}
       />
-      <PerBandCompressorCard settings={settings} a={a} onUpdate={update} />
+      <PerBandCompressorCard
+        settings={settings}
+        a={a}
+        onAdvanced={onAdvanced}
+        onUpdate={update}
+      />
       <DeliveryFormatCard settings={settings} update={update} />
     </>
   );
@@ -1747,6 +1753,7 @@ function AdvancedControlsCard({
   onOutputGain: (db: number) => void;
 }) {
   const a = settings.advanced;
+  const compressorMode = a.compression_mode ?? "preset";
   const effectiveLufsTarget = loudnessTargetDisplay(settings).current;
   const effectiveCeiling = effectiveCeilingDbtp(settings);
   return (
@@ -1812,12 +1819,13 @@ function AdvancedControlsCard({
           onChange={(v) => update("presence_air", v)}
         />
         <NumberField
-          label="Compression density"
+          label="Preset density"
           value={a.compression_density}
           step={0.05}
           min={0}
           max={1}
           format={(v) => v.toFixed(2)}
+          disabled={compressorMode !== "preset"}
           onChange={(v) => update("compression_density", v)}
         />
       </div>
@@ -1828,10 +1836,12 @@ function AdvancedControlsCard({
 function PerBandCompressorCard({
   settings,
   a,
+  onAdvanced,
   onUpdate,
 }: {
   settings: MasteringSettings;
   a: MasteringSettings["advanced"];
+  onAdvanced: (adv: MasteringSettings["advanced"]) => void;
   onUpdate: (
     field: keyof MasteringSettings["advanced"],
     value: number | boolean | null,
@@ -1840,6 +1850,15 @@ function PerBandCompressorCard({
   type Band = "low" | "mid" | "high";
   const [active, setActive] = useState<Band>("low");
   const autoReadouts = compressorAutoReadouts(settings);
+  const compressorMode: CompressionMode = a.compression_mode ?? "preset";
+  const manualEnabled = compressorMode === "manual";
+  const setCompressorMode = (mode: CompressionMode) => {
+    if (mode === "manual") {
+      onAdvanced(materializeManualCompressor(settings, a));
+      return;
+    }
+    onAdvanced({ ...a, compression_mode: mode });
+  };
   const bandFields: Record<Band, {
     threshold: number | null;
     ratio: number | null;
@@ -1902,10 +1921,28 @@ function PerBandCompressorCard({
       <header className="panel-head">
         <span className="panel-title">PER-BAND COMPRESSOR</span>
       </header>
+      <div className="compressor-mode-tabs" role="tablist" aria-label="Compressor mode">
+        {(["preset", "manual", "off"] as CompressionMode[]).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            role="tab"
+            aria-selected={compressorMode === mode}
+            className={
+              "compressor-mode-tab" +
+              (compressorMode === mode ? " is-active" : "")
+            }
+            onClick={() => setCompressorMode(mode)}
+          >
+            {mode === "preset" ? "Preset" : mode === "manual" ? "Manual" : "Off"}
+          </button>
+        ))}
+      </div>
       <label className="per-band-link-stereo">
         <input
           type="checkbox"
           checked={a.compression_link_stereo !== false}
+          disabled={!manualEnabled}
           onChange={(e) =>
             onUpdate("compression_link_stereo", e.target.checked ? null : false)
           }
@@ -1927,10 +1964,46 @@ function PerBandCompressorCard({
         ))}
       </div>
       <div className="per-band-active-body">
-        <CompressionBandColumn label="" {...bandFields[active]} />
+        <CompressionBandColumn
+          label=""
+          disabled={!manualEnabled}
+          {...bandFields[active]}
+        />
       </div>
     </section>
   );
+}
+
+function materializeManualCompressor(
+  settings: MasteringSettings,
+  advanced: MasteringSettings["advanced"],
+): MasteringSettings["advanced"] {
+  const readouts = compressorAutoReadouts(settings);
+  return {
+    ...advanced,
+    compression_mode: "manual",
+    compression_low_threshold_db:
+      advanced.compression_low_threshold_db ?? readouts.low.thresholdDb,
+    compression_low_ratio: advanced.compression_low_ratio ?? readouts.low.ratio,
+    compression_low_attack_ms:
+      advanced.compression_low_attack_ms ?? readouts.low.attackMs,
+    compression_low_release_ms:
+      advanced.compression_low_release_ms ?? readouts.low.releaseMs,
+    compression_mid_threshold_db:
+      advanced.compression_mid_threshold_db ?? readouts.mid.thresholdDb,
+    compression_mid_ratio: advanced.compression_mid_ratio ?? readouts.mid.ratio,
+    compression_mid_attack_ms:
+      advanced.compression_mid_attack_ms ?? readouts.mid.attackMs,
+    compression_mid_release_ms:
+      advanced.compression_mid_release_ms ?? readouts.mid.releaseMs,
+    compression_high_threshold_db:
+      advanced.compression_high_threshold_db ?? readouts.high.thresholdDb,
+    compression_high_ratio: advanced.compression_high_ratio ?? readouts.high.ratio,
+    compression_high_attack_ms:
+      advanced.compression_high_attack_ms ?? readouts.high.attackMs,
+    compression_high_release_ms:
+      advanced.compression_high_release_ms ?? readouts.high.releaseMs,
+  };
 }
 
 function DeliveryFormatCard({
@@ -1986,6 +2059,7 @@ function DeliveryFormatCard({
 
 function CompressionBandColumn({
   label,
+  disabled = false,
   threshold,
   ratio,
   attack,
@@ -2000,6 +2074,7 @@ function CompressionBandColumn({
   onRelease,
 }: {
   label: string;
+  disabled?: boolean;
   threshold: number | null;
   ratio: number | null;
   attack: number | null;
@@ -2024,6 +2099,7 @@ function CompressionBandColumn({
         max={0}
         format={(v) => `${v.toFixed(1)} dB`}
         autoReadout={autoThreshold}
+        disabled={disabled}
         onChange={onThreshold}
       />
       <NumberField
@@ -2034,6 +2110,7 @@ function CompressionBandColumn({
         max={20}
         format={(v) => `${v.toFixed(1)}:1`}
         autoReadout={autoRatio}
+        disabled={disabled}
         onChange={onRatio}
       />
       <NumberField
@@ -2044,6 +2121,7 @@ function CompressionBandColumn({
         max={200}
         format={(v) => `${v.toFixed(1)} ms`}
         autoReadout={autoAttack}
+        disabled={disabled}
         onChange={onAttack}
       />
       <NumberField
@@ -2054,6 +2132,7 @@ function CompressionBandColumn({
         max={2000}
         format={(v) => `${v.toFixed(0)} ms`}
         autoReadout={autoRelease}
+        disabled={disabled}
         onChange={onRelease}
       />
     </div>
@@ -2144,6 +2223,7 @@ function NumberField({
   step,
   format,
   autoReadout,
+  disabled = false,
   onChange,
 }: {
   label: string;
@@ -2153,6 +2233,7 @@ function NumberField({
   step: number;
   format: (v: number) => string;
   autoReadout?: string;
+  disabled?: boolean;
   onChange: (v: number | null) => void;
 }) {
   const effective = value ?? min;
@@ -2180,7 +2261,13 @@ function NumberField({
     setDraft(null);
   };
   return (
-    <div className={"adv-field " + (value === null ? "is-auto" : "")}>
+    <div
+      className={
+        "adv-field " +
+        (value === null ? "is-auto " : "") +
+        (disabled ? "is-disabled" : "")
+      }
+    >
       <span className="adv-label">
         {label}
         {value === null && <span className="adv-auto-pill">AUTO</span>}
@@ -2192,6 +2279,7 @@ function NumberField({
           max={max}
           step={step}
           value={effective}
+          disabled={disabled}
           // Always live: dragging an Auto slider engages it at the dragged
           // value instead of staying greyed out. Double-click reverts to Auto.
           onChange={(e) => onChange(parseFloat(e.target.value))}
@@ -2224,6 +2312,7 @@ function NumberField({
           min={min}
           max={max}
           step={step}
+          disabled={disabled}
           value={draft !== null ? draft : value ?? ""}
           placeholder="auto"
           onChange={(e) => {
