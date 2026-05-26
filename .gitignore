@@ -33,6 +33,7 @@ outputs/
 renders/
 test-output/
 test-output/private-fixture-matrix/
+test-output/private-reference-tuning/
 *.wav
 *.aiff
 *.aif
