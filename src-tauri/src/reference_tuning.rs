@@ -80,9 +80,11 @@ pub fn default_reference_presets() -> Vec<Preset> {
 }
 
 pub fn discover_reference_suite(reference_dir: &Path) -> CommandResult<ReferenceSuite> {
+    let reference_dir = fs::canonicalize(reference_dir)
+        .map_err(|e| CommandError::Io(format!("canonicalize reference dir: {e}")))?;
     let mut source: Option<(String, PathBuf)> = None;
     for entry in
-        fs::read_dir(reference_dir).map_err(|e| CommandError::Io(format!("read dir: {e}")))?
+        fs::read_dir(&reference_dir).map_err(|e| CommandError::Io(format!("read dir: {e}")))?
     {
         let entry = entry.map_err(|e| CommandError::Io(format!("read dir entry: {e}")))?;
         let path = entry.path();
@@ -107,7 +109,7 @@ pub fn discover_reference_suite(reference_dir: &Path) -> CommandResult<Reference
     let (track_label, source_path) = source.ok_or_else(|| {
         CommandError::Other(format!(
             "no *-original-test.wav source found in {}",
-            reference_dir.display()
+                reference_dir.display()
         ))
     })?;
     let references = default_reference_presets()
@@ -434,7 +436,12 @@ mod tests {
         let suite = discover_reference_suite(dir.path()).expect("reference suite");
 
         assert_eq!(suite.track_label, "Coat");
-        assert_eq!(suite.source_path, dir.path().join("Coat-original-test.wav"));
+        assert_eq!(
+            suite.source_path.file_name().and_then(|name| name.to_str()),
+            Some("Coat-original-test.wav")
+        );
+        assert!(suite.source_path.is_absolute());
+        assert!(!suite.source_path.to_string_lossy().contains(".."));
         assert_eq!(
             suite
                 .references
@@ -449,9 +456,42 @@ mod tests {
             ]
         );
         assert_eq!(
-            suite.references[2].reference_path,
-            dir.path().join("Coat-oomph-test.wav")
+            suite.references[2]
+                .reference_path
+                .file_name()
+                .and_then(|name| name.to_str()),
+            Some("Coat-oomph-test.wav")
         );
+    }
+
+    #[test]
+    fn discovery_normalizes_relative_parent_components_in_reference_paths() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let refs = dir.path().join("refs");
+        std::fs::create_dir(&refs).expect("refs dir");
+        for name in [
+            "Coat-original-test.wav",
+            "Coat-universal-test.wav",
+            "Coat-clarity-test.wav",
+            "Coat-oomph-test.wav",
+            "Coat-tape-test.wav",
+        ] {
+            std::fs::write(refs.join(name), []).expect("fixture marker");
+        }
+        let traversed_refs = dir.path().join("refs").join("..").join("refs");
+
+        let suite = discover_reference_suite(&traversed_refs).expect("reference suite");
+
+        assert_eq!(
+            suite.source_path.file_name().and_then(|name| name.to_str()),
+            Some("Coat-original-test.wav")
+        );
+        assert!(suite.source_path.is_absolute());
+        assert!(!suite.source_path.to_string_lossy().contains(".."));
+        assert!(!suite.references[0]
+            .reference_path
+            .to_string_lossy()
+            .contains(".."));
     }
 
     fn base_settings() -> MasteringSettings {
