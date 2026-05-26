@@ -3343,6 +3343,66 @@ button.primary:disabled {
   transform: translateY(-1px);
 }
 
+.export-review-panel {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  border-radius: 8px;
+  background: rgba(127, 29, 29, 0.16);
+}
+
+.export-review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.export-review-title {
+  color: var(--text-0);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.export-review-list {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.export-review-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-1);
+  font-size: 0.86rem;
+}
+
+.export-review-row.is-crit {
+  color: #fecaca;
+}
+
+.export-review-row.is-warn {
+  color: #fed7aa;
+}
+
+.export-review-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.export-review-actions .primary,
+.export-review-actions .ghost-btn {
+  width: 100%;
+}
+
 /* Export cluster — Export Master CTA + the small Tools fold-out that
    holds Render audit WAV. Keeps the audit action one click away from
    Export while staying off the playback strip.
