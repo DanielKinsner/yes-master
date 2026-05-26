@@ -8,6 +8,7 @@ use crate::types::{
 use chrono::SecondsFormat;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::path::Component;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -191,6 +192,8 @@ pub fn run_reference_tuning_dir(
     reference_dir: &Path,
     output_dir: &Path,
 ) -> CommandResult<ReferenceTuningRunResult> {
+    let cwd = std::env::current_dir().map_err(|e| CommandError::Io(format!("current dir: {e}")))?;
+    let output_dir = normalized_absolute_path(&cwd, output_dir);
     let suite = discover_reference_suite(reference_dir)?;
     let source_analysis = analyze_one(
         TrackId(format!("{}-source", sanitize_path_part(&suite.track_label))),
@@ -260,7 +263,7 @@ pub fn run_reference_tuning_dir(
         ));
     }
 
-    fs::create_dir_all(output_dir)
+    fs::create_dir_all(&output_dir)
         .map_err(|e| CommandError::Io(format!("create reference tuning output: {e}")))?;
     let report = ReferenceTuningReport {
         generated_at_iso: now_iso(),
@@ -399,6 +402,31 @@ fn now_iso() -> String {
     chrono::Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
 }
 
+fn normalized_absolute_path(cwd: &Path, path: &Path) -> PathBuf {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        cwd.join(path)
+    };
+    lexically_normalize(&absolute)
+}
+
+fn lexically_normalize(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if !normalized.pop() {
+                    normalized.push(component.as_os_str());
+                }
+            }
+            other => normalized.push(other.as_os_str()),
+        }
+    }
+    normalized
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -492,6 +520,19 @@ mod tests {
             .reference_path
             .to_string_lossy()
             .contains(".."));
+    }
+
+    #[test]
+    fn output_dir_normalization_removes_parent_components() {
+        let cwd = PathBuf::from("D:/repo/src-tauri");
+        let output = PathBuf::from("../test-output/private-reference-tuning");
+
+        let normalized = normalized_absolute_path(&cwd, &output);
+
+        assert_eq!(
+            normalized,
+            PathBuf::from("D:/repo/test-output/private-reference-tuning")
+        );
     }
 
     fn base_settings() -> MasteringSettings {
