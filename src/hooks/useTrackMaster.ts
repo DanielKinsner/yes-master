@@ -1365,7 +1365,14 @@ export function useTrackMaster() {
       // the prior transport.volumeMatch (React batches setTransport, so
       // the deferred-effect-driven ref update lands one tick later).
       volumeMatchRef.current = on;
-      setTransport((t) => ({ ...t, volumeMatch: on }));
+      if (on) {
+        exportLufsPreviewRef.current = false;
+      }
+      setTransport((t) => ({
+        ...t,
+        volumeMatch: on,
+        exportLufsPreview: on ? false : t.exportLufsPreview,
+      }));
       // Route through updateSettings so the DSP chain picks up the change
       // (live for Mastered playback via api.updateChain, persisted to
       // settingsMap or albumIntent depending on mode). Source playback is
@@ -1383,7 +1390,14 @@ export function useTrackMaster() {
   const setExportLufsPreview = useCallback(
     (on: boolean) => {
       exportLufsPreviewRef.current = on;
-      setTransport((t) => ({ ...t, exportLufsPreview: on }));
+      if (on) {
+        volumeMatchRef.current = false;
+      }
+      setTransport((t) => ({
+        ...t,
+        volumeMatch: on ? false : t.volumeMatch,
+        exportLufsPreview: on,
+      }));
       if (selectedTrackId && loadedKindByTrack[selectedTrackId] === "master") {
         setLiveUpdateStats((s) => ({
           attempts: s.attempts + 1,

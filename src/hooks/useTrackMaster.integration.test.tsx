@@ -334,6 +334,32 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("keeps Volume Match and Preview LUFS mutually exclusive", async () => {
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      harness.current().setVolumeMatch(true);
+    });
+    expect(harness.current().transport.volumeMatch).toBe(true);
+    expect(harness.current().transport.exportLufsPreview).toBe(false);
+
+    await act(async () => {
+      harness.current().setExportLufsPreview(true);
+    });
+    expect(harness.current().transport.volumeMatch).toBe(false);
+    expect(harness.current().transport.exportLufsPreview).toBe(true);
+
+    await act(async () => {
+      harness.current().setVolumeMatch(true);
+    });
+    expect(harness.current().transport.volumeMatch).toBe(true);
+    expect(harness.current().transport.exportLufsPreview).toBe(false);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("prewarms the auto-selected track when restoring the recent session", async () => {
     const track = makeTrack("restored-1", "C:/audio/restored.wav");
     mocks.api.loadRecentSession.mockResolvedValue(makeProjectState(track));
