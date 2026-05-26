@@ -32,6 +32,7 @@ tests for presets/
 outputs/
 renders/
 test-output/
+test-output/private-fixture-matrix/
 *.wav
 *.aiff
 *.aif
