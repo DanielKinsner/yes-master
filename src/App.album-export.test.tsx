@@ -3,7 +3,13 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
-import type { ImportedTrack, QualityCheck, RenderJob } from "./bindings";
+import type {
+  AnalysisResult,
+  ImportedTrack,
+  MasteringSettings,
+  QualityCheck,
+  RenderJob,
+} from "./bindings";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true;
@@ -27,6 +33,68 @@ const track: ImportedTrack = {
   duration_seconds: 120,
   sample_rate: 44_100,
   channels: 2,
+};
+
+const settings: MasteringSettings = {
+  preset: { kind: "universal" },
+  intensity: 0.5,
+  eq_sub_db: 0,
+  eq_low_db: 0,
+  eq_low_mid_db: 0,
+  eq_mid_db: 0,
+  eq_high_mid_db: 0,
+  eq_high_db: 0,
+  eq_sparkle_db: 0,
+  volume_match: false,
+  input_gain_db: 0,
+  output_gain_db: 0,
+  delivery_profile: "streaming-universal",
+  advanced: {
+    lufs_offset_db: null,
+    ceiling_dbtp: null,
+    width: null,
+    warmth: null,
+    presence_air: null,
+    compression_density: null,
+    compression_low_threshold_db: null,
+    compression_low_ratio: null,
+    compression_low_attack_ms: null,
+    compression_low_release_ms: null,
+    compression_mid_threshold_db: null,
+    compression_mid_ratio: null,
+    compression_mid_attack_ms: null,
+    compression_mid_release_ms: null,
+    compression_high_threshold_db: null,
+    compression_high_ratio: null,
+    compression_high_attack_ms: null,
+    compression_high_release_ms: null,
+    compression_link_stereo: null,
+    bit_depth: null,
+    target_sample_rate: null,
+  },
+};
+
+const hotAnalysis: AnalysisResult = {
+  track_id: track.id,
+  lufs_integrated: -10.5,
+  lufs_short_term_max: -8.8,
+  true_peak_dbtp: 0.2,
+  dynamic_range_lu: 3.3,
+  spectral_balance: { low: 0.3, mid: 0.4, high: 0.3 },
+  transient_density: 0.5,
+  stereo_width: 0.5,
+  recommended_universal: settings,
+  measured_at_iso: "2026-05-26T00:00:00.000Z",
+  inferred_role: null,
+  role_confidence: null,
+  inferred_character: null,
+  character_confidence: null,
+  spectral_balance_6band: null,
+  transient_flux: null,
+  stereo_correlation: null,
+  dynamic_range_p95_p10_db: null,
+  lufs_short_term_max_3s: null,
+  energy_density_score: null,
 };
 
 const cleanCheck: QualityCheck = {
@@ -223,6 +291,29 @@ describe("album export actions", () => {
     expect(container.querySelector(".receipt-summary")?.textContent).toContain(
       "1 item to review",
     );
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("surfaces Export With Review from the app shell when selected source checks warn", async () => {
+    mocks.tm = {
+      ...baseTrackMasterState(),
+      mode: "track",
+      selectedTrackId: track.id,
+      selectedTrack: track,
+      selectedAnalysis: hotAnalysis,
+      selectedSettings: settings,
+    };
+
+    const { container, root } = await renderApp();
+
+    const exportButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Export With Review",
+    );
+
+    expect(exportButton).toBeTruthy();
 
     await act(async () => {
       root.unmount();
