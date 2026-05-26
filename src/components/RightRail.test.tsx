@@ -201,6 +201,124 @@ describe("RightRail source checks", () => {
     });
   });
 
+  it("opens review instead of exporting when warnings are present", async () => {
+    const onExport = vi.fn();
+    const { container, root } = await renderNode(
+      <RightRail
+        analysis={HOT_SOURCE_ANALYSIS}
+        lastChecks={undefined}
+        canExport
+        isExporting={false}
+        isRendering={false}
+        onExport={onExport}
+        previewStale={false}
+        canRenderPreview
+        onUpdatePreview={vi.fn()}
+      />,
+    );
+
+    const exportButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Export With Review",
+    ) as HTMLButtonElement | undefined;
+
+    expect(exportButton).toBeTruthy();
+
+    await act(async () => {
+      exportButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onExport).not.toHaveBeenCalled();
+    expect(container.textContent).toContain("Review before export");
+    expect(container.textContent).toContain("Source true peak 0.2 dBTP");
+    expect(container.textContent).toContain("Source dynamic range 3.3 LU");
+
+    const adjustButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Adjust Settings",
+    ) as HTMLButtonElement | undefined;
+
+    await act(async () => {
+      adjustButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onExport).not.toHaveBeenCalled();
+    expect(container.textContent).not.toContain("Review before export");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("exports from the review panel when the user chooses Export Anyway", async () => {
+    const onExport = vi.fn();
+    const { container, root } = await renderNode(
+      <RightRail
+        analysis={HOT_SOURCE_ANALYSIS}
+        lastChecks={undefined}
+        canExport
+        isExporting={false}
+        isRendering={false}
+        onExport={onExport}
+        previewStale={false}
+        canRenderPreview
+        onUpdatePreview={vi.fn()}
+      />,
+    );
+
+    const exportButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Export With Review",
+    ) as HTMLButtonElement | undefined;
+
+    await act(async () => {
+      exportButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const anywayButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Export Anyway",
+    ) as HTMLButtonElement | undefined;
+
+    await act(async () => {
+      anywayButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onExport).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("exports immediately when current checks are clean", async () => {
+    const onExport = vi.fn();
+    const { container, root } = await renderNode(
+      <RightRail
+        analysis={CLEAN_SOURCE_ANALYSIS}
+        lastChecks={undefined}
+        canExport
+        isExporting={false}
+        isRendering={false}
+        onExport={onExport}
+        previewStale={false}
+        canRenderPreview
+        onUpdatePreview={vi.fn()}
+      />,
+    );
+
+    const exportButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Export Master",
+    ) as HTMLButtonElement | undefined;
+
+    await act(async () => {
+      exportButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onExport).toHaveBeenCalledTimes(1);
+    expect(container.textContent).not.toContain("Review before export");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("labels pre-export analysis as source measurements", async () => {
     const { container, root } = await renderNode(
       <RightRail
