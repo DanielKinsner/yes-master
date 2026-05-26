@@ -38,9 +38,9 @@
 //! mid-band peak around 2.5 kHz) would let us reach the doc's reference
 //! numbers — that's tracked as an open-queue item, not gated here.
 
-use album_mastering_studio_lib::dsp::MasteringChain;
-use album_mastering_studio_lib::engine::measure_integrated_lufs;
-use album_mastering_studio_lib::types::{
+use yes_master_lib::dsp::MasteringChain;
+use yes_master_lib::engine::measure_integrated_lufs;
+use yes_master_lib::types::{
     AdvancedSettings, DeliveryProfile, MasteringSettings, Preset,
 };
 

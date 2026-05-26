@@ -18,9 +18,9 @@
 //! still firing on a single-preset outlier (e.g., a future Tape calibration
 //! tweak that accidentally pushes it past Loud).
 
-use album_mastering_studio_lib::dsp::MasteringChain;
-use album_mastering_studio_lib::engine::measure_integrated_lufs;
-use album_mastering_studio_lib::types::{
+use yes_master_lib::dsp::MasteringChain;
+use yes_master_lib::engine::measure_integrated_lufs;
+use yes_master_lib::types::{
     AdvancedSettings, DeliveryProfile, MasteringSettings, Preset,
 };
 

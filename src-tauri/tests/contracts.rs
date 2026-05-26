@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use album_mastering_studio_lib::*;
+use yes_master_lib::*;
 
 #[test]
 fn position_nudge_promotes_unsure_first_and_last() {
@@ -910,7 +910,7 @@ fn mastering_render_creates_unique_paths_on_collision() {
 /// distinct ChainCoeffs so a future refactor can't silently flatten them.
 #[test]
 fn presets_produce_distinct_chain_coefficients() {
-    use album_mastering_studio_lib::dsp::ChainCoeffs;
+    use yes_master_lib::dsp::ChainCoeffs;
     let sample_rate = 44_100;
 
     let mut universal = default_settings();
@@ -965,10 +965,10 @@ fn presets_produce_distinct_chain_coefficients() {
     // is encoded across b1/b2 too. The honest metric is DC gain for the low
     // shelf and Nyquist gain for the high shelf: those are exactly the
     // frequencies the shelves control.
-    let dc_gain = |c: &album_mastering_studio_lib::dsp::BiquadCoeffs| -> f32 {
+    let dc_gain = |c: &yes_master_lib::dsp::BiquadCoeffs| -> f32 {
         (c.b0 + c.b1 + c.b2) / (1.0 + c.a1 + c.a2)
     };
-    let nyq_gain = |c: &album_mastering_studio_lib::dsp::BiquadCoeffs| -> f32 {
+    let nyq_gain = |c: &yes_master_lib::dsp::BiquadCoeffs| -> f32 {
         // At Nyquist (z = -1): H(-1) = (b0 - b1 + b2) / (1 - a1 + a2).
         (c.b0 - c.b1 + c.b2) / (1.0 - c.a1 + c.a2)
     };
@@ -1042,7 +1042,7 @@ fn presets_produce_distinct_chain_coefficients() {
 /// from the lib's internal helper because tests can't reach into the private
 /// `tests` module.
 fn magnitude_db_at(
-    c: &album_mastering_studio_lib::dsp::BiquadCoeffs,
+    c: &yes_master_lib::dsp::BiquadCoeffs,
     freq_hz: f32,
     sample_rate: f32,
 ) -> f32 {
@@ -1067,7 +1067,7 @@ fn magnitude_db_at(
 /// final output. Both are clamped to ±24 dB.
 #[test]
 fn input_and_output_gain_modify_chain_coefficients() {
-    use album_mastering_studio_lib::dsp::ChainCoeffs;
+    use yes_master_lib::dsp::ChainCoeffs;
     let sample_rate = 44_100;
 
     let mut neutral = default_settings();
@@ -1119,7 +1119,7 @@ fn input_and_output_gain_modify_chain_coefficients() {
 /// Intensity a pure volume knob (which PRODUCT.md explicitly forbids).
 #[test]
 fn intensity_scales_preset_character() {
-    use album_mastering_studio_lib::dsp::ChainCoeffs;
+    use yes_master_lib::dsp::ChainCoeffs;
     let sample_rate = 44_100;
     let mut low_intensity = default_settings();
     low_intensity.preset = Preset::Tape;
@@ -1150,7 +1150,7 @@ fn intensity_scales_preset_character() {
 #[test]
 fn dsp_chain_applies_input_gain_at_default_intensity() {
     let settings = default_settings();
-    let mut chain = album_mastering_studio_lib::dsp::MasteringChain::new(44_100, 1, &settings);
+    let mut chain = yes_master_lib::dsp::MasteringChain::new(44_100, 1, &settings);
     // Generate ~46 ms of audio (2048 samples) so we comfortably clear the
     // limiter's 3 ms lookahead warmup.
     let original: Vec<f32> = (0..2048)
@@ -1194,7 +1194,7 @@ fn limiter_catches_quarter_point_lagrange_intersample_peak() {
     //                    + 0.5625·0.6   - 0.0625·0   ≈ 0.869 <  0.891  ✓ 2× passes
     //   midpoint(0.25) = -0.0547·(-0.85) + 0.8203·0.85
     //                    + 0.2734·0.6   - 0.0391·0   ≈ 0.908 >  0.891  ✗ 4× catches
-    use album_mastering_studio_lib::dsp::Limiter;
+    use yes_master_lib::dsp::Limiter;
 
     let sample_rate = 44_100;
     let channels = 1;
@@ -1273,7 +1273,7 @@ fn limiter_catches_lagrange_intersample_peak() {
     // base (~1.5 dB at intensity 0). The signal already crosses the threshold
     // at the midpoint, so the limiter MUST attenuate.
     settings.intensity = 0.0;
-    let mut chain = album_mastering_studio_lib::dsp::MasteringChain::new(44_100, 1, &settings);
+    let mut chain = yes_master_lib::dsp::MasteringChain::new(44_100, 1, &settings);
 
     let pattern = [0.0_f32, 0.85, 0.85, 0.0];
     let mut samples = Vec::with_capacity(pattern.len() * 1024);
@@ -1302,7 +1302,7 @@ fn limiter_keeps_loud_signal_under_ceiling() {
     let mut settings = default_settings();
     settings.advanced.ceiling_dbtp = Some(-1.0);
     settings.intensity = 1.0; // push the input gain hard
-    let mut chain = album_mastering_studio_lib::dsp::MasteringChain::new(44_100, 1, &settings);
+    let mut chain = yes_master_lib::dsp::MasteringChain::new(44_100, 1, &settings);
 
     // A loud near-full-scale sine. Without the limiter, the input-gain stage
     // would push this far above 0 dBFS; with the limiter it must come out
@@ -1332,12 +1332,12 @@ fn limiter_keeps_loud_signal_under_ceiling() {
 fn dsp_low_shelf_boost_raises_low_frequency_energy() {
     let mut settings = default_settings();
     settings.eq_low_db = 6.0;
-    let mut chain = album_mastering_studio_lib::dsp::MasteringChain::new(44_100, 1, &settings);
+    let mut chain = yes_master_lib::dsp::MasteringChain::new(44_100, 1, &settings);
     let low_freq_signal: Vec<f32> = (0..4_096)
         .map(|i| 0.2 * (i as f32 / 44_100.0 * 2.0 * std::f32::consts::PI * 80.0).sin())
         .collect();
     let baseline_chain_settings = default_settings();
-    let mut baseline_chain = album_mastering_studio_lib::dsp::MasteringChain::new(
+    let mut baseline_chain = yes_master_lib::dsp::MasteringChain::new(
         44_100,
         1,
         &baseline_chain_settings,
@@ -1363,7 +1363,7 @@ fn rms(samples: &[f32]) -> f32 {
 
 #[test]
 fn user_presets_save_list_delete_roundtrip() {
-    use album_mastering_studio_lib::settings;
+    use yes_master_lib::settings;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let path = tmp.path().join("user_presets.json");

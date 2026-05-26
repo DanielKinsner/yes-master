@@ -18,28 +18,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "album-mastering-studio"
-version = "0.0.0"
-dependencies = [
- "chrono",
- "ebur128",
- "hound",
- "rodio",
- "rustfft",
- "serde",
- "serde_json",
- "sha2",
- "symphonia",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "alloc-no-stdlib"
 version = "2.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5291,6 +5269,28 @@ dependencies = [
  "libc",
  "once_cell",
  "pkg-config",
+]
+
+[[package]]
+name = "yes-master"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "ebur128",
+ "hound",
+ "rodio",
+ "rustfft",
+ "serde",
+ "serde_json",
+ "sha2",
+ "symphonia",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

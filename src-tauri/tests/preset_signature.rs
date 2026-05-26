@@ -18,8 +18,8 @@
 //! offset and tests the same property the plan intended: each preset's
 //! EQ calibration is wired through and produces the documented shape.
 
-use album_mastering_studio_lib::dsp::MasteringChain;
-use album_mastering_studio_lib::types::{
+use yes_master_lib::dsp::MasteringChain;
+use yes_master_lib::types::{
     AdvancedSettings, DeliveryProfile, MasteringSettings, Preset,
 };
 

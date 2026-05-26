@@ -14,8 +14,8 @@
 
 use std::path::Path;
 
-use album_mastering_studio_lib::engine;
-use album_mastering_studio_lib::types::{
+use yes_master_lib::engine;
+use yes_master_lib::types::{
     AdvancedSettings, DeliveryProfile, MasteringSettings, Preset, RenderKind, TrackId,
 };
 

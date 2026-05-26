@@ -9,11 +9,11 @@
 //! leave the file untouched; post-fix, the ceiling-bounded landing
 //! pushes it upward to target without exceeding the true-peak ceiling.
 
-use album_mastering_studio_lib::album_render::render_album_plan_impl;
-use album_mastering_studio_lib::engine::{
+use yes_master_lib::album_render::render_album_plan_impl;
+use yes_master_lib::engine::{
     measure_integrated_lufs_at_path, AlbumPlanRenderRequest, AlbumTrackRenderInput,
 };
-use album_mastering_studio_lib::types::{
+use yes_master_lib::types::{
     AdvancedSettings, AlbumArc, AlbumPlan, AlbumTrackEntry, DeliveryProfile,
     MasteringSettings, Preset, TrackId, TrackRole,
 };

@@ -1,21 +1,21 @@
 [package]
-name = "album-mastering-studio"
+name = "yes-master"
 version = "0.0.0"
-description = "YES Master (Claude build)"
+description = "YES Master"
 authors = ["Daniel Kinsner"]
 edition = "2021"
 rust-version = "1.77"
 autobins = false
 # The dialog smoke helper lives under `examples/` so release desktop
 # bundles include only the main app executable.
-default-run = "album-mastering-studio"
+default-run = "yes-master"
 
 [[bin]]
-name = "album-mastering-studio"
+name = "yes-master"
 path = "src/main.rs"
 
 [lib]
-name = "album_mastering_studio_lib"
+name = "yes_master_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

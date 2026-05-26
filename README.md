@@ -1,80 +1,79 @@
 # YES Master
 
-YES Master is a private cross-platform desktop mastering app — Mac and Windows
-targeted; Linux deferred — built with Tauri, React, TypeScript, and a Rust
-audio engine. Track Master and Album Master are both functional, exports are
-explicit and non-destructive, and the product stays local/offline by default;
-no private audio belongs in git.
+YES Master is a local desktop mastering app for finished tracks and album
+drafts. It runs as a Tauri + React + TypeScript frontend with a Rust audio/DSP
+backend.
 
-## Current State
+The product goal is private-solid first: a musician or producer should be able
+to trust it on real material before any public-release discussion.
 
-- Start here for any new contributor or agent session: `docs/HANDOFF.md`.
-- Latest dated handoff: `docs/HANDOFF_2026-05-18_evening.md`.
-- Product canon: `docs/PRODUCT.md`.
-- Append-only implementation log: `docs/progress.md`.
-- Architecture decision: `docs/adr/0001-tauri-rust-stack.md`.
+## Current Product Shape
 
-There is no separate `CHANGELOG.md` by choice. Commit history plus
-`docs/progress.md` are the change record.
+- Track Master is the primary workflow.
+- Album Master exists and should remain intact, but Track Master stabilization
+  is the next release gate.
+- Main UI is for creative shaping: preset, intensity, EQ, tone, saturation,
+  width, compression, and limiter choices.
+- Right rail is for judgment and delivery: quality checks, delivery profile,
+  advanced controls, per-band compressor detail, format, and export review.
+- Export warnings are advisory when technically possible. The user can decide
+  to export a risky master, but the app must make that risk visible.
+- Source files are never destructively edited.
+- Private audio fixtures may be used locally and must never be committed.
 
-## Build
+## Setup
 
-Development:
-
-```bash
-git clone <repo-url>
-cd album-mastering-studio-claude-build
+```powershell
 npm install
-npm run dev
 ```
 
-Installer/package builds:
+## Run
 
-```bash
-# macOS
-npm run build:mac
+```powershell
+npm run tauri dev
+```
 
-# Windows
+## Fast Verification
+
+From the repo root:
+
+```powershell
+npm test
+npm run build
 npm run build:windows
 ```
 
-Use `CLAUDE.md` for the full verification recipe, including frontend tests,
-Rust fast/slow lanes, and shell-specific commands.
+From `src-tauri`:
 
-## Product Shape
-
-The app has two modes:
-
-- Track Master: fast mastering for one or more independent songs.
-- Album Master: album-aware mastering for ordered records, with per-track
-  adaptation and continuous album export.
-
-Track Master is the core vertical slice. Album Master builds on the same
-analysis, rendering, delivery, and export foundation.
-
-## Private Audio
-
-Do not commit private audio, rendered masters from private audio, waveform
-images derived from private audio, or fixture-specific generated artifacts.
-Use the ignored folder:
-
-```text
-private-audio-fixtures/
+```powershell
+cargo test --lib
+cargo test
 ```
 
-Add a local `manifest.json` there to describe fixture purpose, quick/slow test
-suitability, and listening notes.
+## Slow Fixture Lane
 
-## New Session Checklist
+Use this only when local private fixtures exist under
+`private-audio-fixtures/`.
 
-1. Read `docs/HANDOFF.md`.
-2. Read `docs/HANDOFF_2026-05-18_evening.md`.
-3. Read `docs/PRODUCT.md`.
-4. Read `CLAUDE.md`.
-5. Check the tail of `docs/progress.md`.
-6. Read `docs/followups/listening-batch-2026-05-19.md` and
-   `docs/followups/infrastructure-2026-05-19.md` before choosing the next
-   slice.
+```powershell
+cd src-tauri
+$env:AMS_RUN_REAL_FIXTURE = "1"
+cargo test
+Remove-Item Env:\AMS_RUN_REAL_FIXTURE
+```
 
-The architecture is no longer open-ended; ADR 0001 records the Tauri + Rust
-stack decision and the reasons it was chosen.
+The fixture lane is required before merging work that touches DSP, render,
+LUFS landing, WAV writing, export checks, or source/master parity.
+
+## Documentation
+
+Read these first:
+
+- `docs/PRODUCT.md`
+- `docs/APP_BEHAVIOR.md`
+- `docs/ARCHITECTURE.md`
+- `docs/TESTING.md`
+- `docs/RELEASE_STABILIZATION.md`
+
+Historical handoffs, old phase plans, and prior-session notes live in git
+history and in the archived source repo. They are not active product spec.

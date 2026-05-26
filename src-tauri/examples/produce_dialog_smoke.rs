@@ -9,7 +9,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use album_mastering_studio_lib::*;
+use yes_master_lib::*;
 
 fn main() {
     let track_id = TrackId("01-dialog-fixture".to_string());

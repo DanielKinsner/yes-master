@@ -13,11 +13,11 @@
 //! per-track WAV lands within ±0.5 LU of -14 — proving both the
 //! downward attenuation case and the upward-bounded push case run.
 
-use album_mastering_studio_lib::album_render::album_render_with_progress;
-use album_mastering_studio_lib::engine::{
+use yes_master_lib::album_render::album_render_with_progress;
+use yes_master_lib::engine::{
     measure_integrated_lufs_at_path, AlbumRenderRequest, AlbumTrackInput,
 };
-use album_mastering_studio_lib::types::{
+use yes_master_lib::types::{
     AdvancedSettings, DeliveryProfile, MasteringSettings, Preset, TrackId,
 };
 use hound::{SampleFormat, WavSpec, WavWriter};

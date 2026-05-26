@@ -1,131 +1,65 @@
-# Claude Build Instructions
+# YES Master Agent Instructions
 
-This is the working repo for YES Master. Do not import source code from the older Codex/Python reference path unless the user explicitly asks for it.
-
-The app is now a real Tauri + Rust desktop build, not a from-zero scaffold. Use current repo code, `docs/HANDOFF.md`, and `docs/progress.md` as the implementation state.
+This is the active YES Master repo. Do not treat old handoff files or prior
+phase plans as active spec. Use the current code plus the docs listed below.
 
 ## Required Reading
 
-Before planning or coding:
+1. `docs/PRODUCT.md`
+2. `docs/APP_BEHAVIOR.md`
+3. `docs/ARCHITECTURE.md`
+4. `docs/TESTING.md`
+5. `docs/RELEASE_STABILIZATION.md`
 
-1. Read `docs/PRODUCT.md`.
-2. Read `docs/HANDOFF.md`.
-3. Read `docs/HANDOFF_2026-05-18_evening.md`.
-4. Read `docs/CLAUDE_WORK_LOOP.md`.
-5. Read `docs/PRIVATE_AUDIO_FIXTURES.md` before using real audio.
-6. Skim `docs/research/README.md` when DSP, metering, delivery, or codec work is in scope.
+## Non-Negotiables
 
-Do not read `docs/reference/` by default. Those files are optional Codex-path context, not startup reading.
+- Local desktop app for Mac and Windows. Linux remains deferred.
+- Track Master stabilization comes before new feature expansion.
+- Real-time or near-real-time audition must stay responsive.
+- Original/Mastered switching must preserve playhead.
+- Volume Match is optional, off by default, and must not change export level.
+- Exports never overwrite source files or prior renders by default.
+- Export warnings are advisory unless the export is technically invalid.
+- Users may overcook their own track, but the app must show clear metering,
+  warnings, and review states.
+- Private audio and rendered private masters never belong in git.
 
-## Product Non-Negotiables
+## Current Jump-Fix Queue
 
-- Private cross-platform desktop mastering app — Mac and Windows targeted;
-  Linux deferred.
-- Track Master first, Album Master near-term.
-- Universal-first workflow: drop audio, analyze, safe settings, preview, export.
-- Real-time or near-real-time audition is required for final Track Master quality.
-- Native audio should be treated seriously; do not assume browser audio is enough.
-- Original/Mastered toggle must preserve playhead.
-- Volume Match is optional and off by default.
-- Waveform zoom, region selection, and loop are core audition features.
-- Source files are never destructively modified.
-- Exports never overwrite by default.
-- Generated transitions are off by default.
-- Reports are confidence layers, not the main experience.
-- Core processing must work local/offline by default.
+1. Warning-aware export review flow.
+2. Compressor mode: Preset / Manual / Off.
+3. Already-mastered input regression matrix using private fixtures.
+4. Realtime sweep verification, then removal of temporary diagnostic counters.
+5. Release-gate cleanup: Rust formatting decision and Clippy install/gate.
 
-## Architecture Guidance
+## Verification
 
-Start from product/audio requirements, not from framework convenience.
-
-Allowed directions include:
-
-- Tauri plus native Rust audio/DSP.
-- JUCE/native app.
-- Rust-native UI/audio.
-- Hybrid desktop shell plus native audio engine.
-- Python or other high-level DSP only if it can meet product needs or is clearly limited to offline/export work.
-
-Do not choose a framework without documenting why it can meet:
-
-- Low-latency audition.
-- Export parity.
-- Offline rendering quality.
-- Desktop packaging.
-- File/project safety.
-- Testability.
-
-## Working Style
-
-- Build vertical slices, not isolated demos.
-- Keep docs updated after meaningful verified work.
-- Add tests or smoke checks when behavior is testable.
-- Use private fixtures locally, but do not commit audio.
-- Be honest about partial features. Do not call a phase complete because the UI resembles the goal.
-
-## Test workflow — fast / slow lanes
-
-The Rust suite is split so the daily path stays fast and the slow
-real-audio fixture tests only run when explicitly opted in.
-
-**Fast lane (default — under 30 s):**
+Use the fast lane for normal changes:
 
 ```powershell
-# PowerShell / Windows
-# Frontend from repo root
 npm test
 npm run build
-npm run build:windows  # Windows packaging only; emits NSIS .exe + MSI
-
-# Backend from src-tauri/
+npm run build:windows
 cd src-tauri
-cargo test --lib       # lib unit tests only
-cargo test             # full suite with real-fixture tests skipped
+cargo test --lib
+cargo test
 ```
 
-```bash
-# Bash / macOS or Linux
-# Frontend from repo root
-npm test
-npm run build
-npm run build:mac      # macOS packaging only; emits .app + DMG
-
-# Backend from src-tauri/
-cd src-tauri
-cargo test --lib       # lib unit tests only
-cargo test             # full suite with real-fixture tests skipped
-```
-
-The four real-fixture tests in `src-tauri/tests/contracts.rs`
-(`analyze_tracks_runs_against_real_fixture_if_present`,
-`mastering_render_processes_real_fixture_if_present`,
-`decode_real_fixture_if_present`,
-`phase_12_1_real_fixture_metering_snapshot`) print a skip line and
-return early unless the env var below is set.
-
-**Slow lane (migration / pre-merge gating — ~4 minutes):**
+Use the slow fixture lane before DSP/export merges:
 
 ```powershell
-# PowerShell / Windows
+cd src-tauri
 $env:AMS_RUN_REAL_FIXTURE = "1"
 cargo test
 Remove-Item Env:\AMS_RUN_REAL_FIXTURE
 ```
 
-Or one-shot:
+## Working Style
 
-```powershell
-$env:AMS_RUN_REAL_FIXTURE = "1"; cargo test; Remove-Item Env:\AMS_RUN_REAL_FIXTURE
-```
-
-```bash
-# Bash / macOS or Linux
-AMS_RUN_REAL_FIXTURE=1 cargo test
-unset AMS_RUN_REAL_FIXTURE
-```
-
-The slow lane requires `private-audio-fixtures/<some-audio-file>` to
-exist; without a fixture the tests still skip even with the env var
-set. Run the slow lane before merging changes that touch the DSP
-chain, the WAV writer, the LUFS landing math, or anything else where
-audio-output byte-identity matters.
+- Prefer current code reality over historical prose.
+- Keep changes scoped and testable.
+- If a finding is objective, add a mechanical test.
+- If a finding is taste/listening-dependent, capture the listening note before
+  changing preset calibration.
+- Do not call a slice complete because the UI resembles the goal; verify the
+  behavior.

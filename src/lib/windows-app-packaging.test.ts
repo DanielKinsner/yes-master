@@ -13,7 +13,7 @@ describe("Windows app packaging", () => {
     const config = readJson("src-tauri/tauri.conf.json");
     const icons = config.bundle?.icon ?? [];
 
-    expect(config.identifier).toBe("com.albummasteringstudio.yesmaster");
+    expect(config.identifier).toBe("com.yesmaster.desktop");
     expect(config.bundle?.active).toBe(true);
     expect(config.bundle?.targets).toBe("all");
     expect(config.bundle?.windows).toEqual({
@@ -39,7 +39,7 @@ describe("Windows app packaging", () => {
     const cargoToml = readFileSync(resolve(repoRoot, "src-tauri/Cargo.toml"), "utf8");
 
     expect(cargoToml).toContain("autobins = false");
-    expect(cargoToml).toContain('name = "album-mastering-studio"');
+    expect(cargoToml).toContain('name = "yes-master"');
     expect(cargoToml).not.toContain('name = "produce_dialog_smoke"');
     expect(cargoToml).not.toContain('name = "produce_dialog_smoke.exe"');
     expect(existsSync(resolve(repoRoot, "src-tauri/examples/produce_dialog_smoke.rs"))).toBe(true);

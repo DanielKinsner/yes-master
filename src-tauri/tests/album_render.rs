@@ -11,10 +11,10 @@
 //!   * The album.wav is at least the sum of per-track durations (allowing
 //!     for any Gap transitions inserted by the default planner).
 
-use album_mastering_studio_lib::album;
-use album_mastering_studio_lib::album_render::render_album_plan_impl;
-use album_mastering_studio_lib::engine::{AlbumPlanRenderRequest, AlbumTrackRenderInput};
-use album_mastering_studio_lib::types::{
+use yes_master_lib::album;
+use yes_master_lib::album_render::render_album_plan_impl;
+use yes_master_lib::engine::{AlbumPlanRenderRequest, AlbumTrackRenderInput};
+use yes_master_lib::types::{
     AdvancedSettings, AlbumArc, AlbumArcKind, AnalysisResult, DeliveryProfile,
     InferenceConfidence, MasteringSettings, Preset, SpectralBalance, TrackCharacter,
     TrackId, TrackRole, ISO_PLACEHOLDER,
