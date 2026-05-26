@@ -101,3 +101,37 @@ It writes:
 All of those output locations are ignored by git. Commit the harness and
 aggregate interpretation only; do not commit private audio, rendered private
 masters, or fixture-specific output ledgers.
+
+## Private Reference Tuning
+
+Use this local-only runner when comparing YES Master presets against private
+reference masters from an external mastering service:
+
+```powershell
+cd src-tauri
+cargo run --example private_reference_tuning -- --references "..\tests for presets" --output ..\test-output\private-reference-tuning
+```
+
+The reference directory should contain one source file named
+`<track>-original-test.wav` and matching external reference masters named:
+
+- `<track>-universal-test.wav`
+- `<track>-clarity-test.wav`
+- `<track>-oomph-test.wav`
+- `<track>-tape-test.wav`
+
+The runner renders the source through YES Master using the same preset names
+with the preset compressor active, then writes:
+
+- `reference-tuning-report.json`
+- `reference-tuning-report.csv`
+- rendered YES Master WAVs under `renders/`
+
+The CSV reports the source-to-reference move, the source-to-YES move, and the
+remaining YES-minus-reference gap for loudness, dynamic range, spectral balance,
+transient density, stereo width, and optional density/correlation metrics when
+analysis provides them.
+
+All of those output locations are ignored by git. Commit code, docs, and any
+non-private aggregate conclusions only; do not commit private audio, rendered
+private masters, or private ledgers.

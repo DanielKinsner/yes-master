@@ -10,6 +10,7 @@ pub mod files;
 pub mod fixture_matrix;
 pub mod jobs;
 pub mod project;
+pub mod reference_tuning;
 pub mod settings;
 pub mod sources;
 pub mod spectrum;
