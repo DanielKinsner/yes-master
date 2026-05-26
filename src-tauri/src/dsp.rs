@@ -349,10 +349,11 @@ pub struct PresetCalibration {
 // calibration table; the original Python reference repo wasn't accessible from
 // this Mac. Cross-check against mastering.py when next on a machine that has it.
 const PRESET_UNIVERSAL: PresetCalibration = PresetCalibration {
-    // Conservative target (PRESET_REFERENCE_ANALYSIS_2026-05-14, line 252).
-    // Cross-genre safe default. Light transparent compressor.
+    // Cross-genre safe default. Private reference tuning (2026-05-26) kept the
+    // air lift but backed off compression so already-mastered sources keep
+    // closer movement against external Universal references.
     sub_db: 0.0,
-    low_shelf_db: 0.2,
+    low_shelf_db: 0.3,
     low_mid_db: -0.1,
     presence_db: 0.0,
     high_mid_db: 0.0,
@@ -366,8 +367,8 @@ const PRESET_UNIVERSAL: PresetCalibration = PresetCalibration {
     highpass_hz: 24.0,
     target_lufs: -14.0,
     ceiling_dbfs: -1.0,
-    compressor_threshold_dbfs: -16.0,
-    compressor_ratio: 1.8,
+    compressor_threshold_dbfs: -12.5,
+    compressor_ratio: 1.45,
     compressor_attack_ms: 15.0,
     compressor_release_ms: 250.0,
     science_note: "Light transparent program compression, gentle air lift, neutral mids.",
@@ -375,10 +376,11 @@ const PRESET_UNIVERSAL: PresetCalibration = PresetCalibration {
 };
 
 const PRESET_CLARITY: PresetCalibration = PresetCalibration {
-    // Conservative target line 253. Vocal / detail / definition.
-    // Drops the 1.5 kHz region, lifts air, fast release for articulation.
+    // Vocal / detail / definition. Private reference tuning (2026-05-26)
+    // restored a little low support and backed off compression so the preset
+    // reads polished instead of over-flattened on already-mastered material.
     sub_db: 0.0,
-    low_shelf_db: 0.2,
+    low_shelf_db: 0.6,
     low_mid_db: -1.0,
     presence_db: -0.8,
     high_mid_db: 0.0,
@@ -392,8 +394,8 @@ const PRESET_CLARITY: PresetCalibration = PresetCalibration {
     highpass_hz: 28.0,
     target_lufs: -13.4,
     ceiling_dbfs: -1.0,
-    compressor_threshold_dbfs: -16.0,
-    compressor_ratio: 1.8,
+    compressor_threshold_dbfs: -12.5,
+    compressor_ratio: 1.45,
     compressor_attack_ms: 12.0,
     compressor_release_ms: 150.0,
     science_note: "Lower mids tucked, air shelf forward; fast release keeps articulation \
@@ -402,14 +404,15 @@ const PRESET_CLARITY: PresetCalibration = PresetCalibration {
 };
 
 const PRESET_TAPE: PresetCalibration = PresetCalibration {
-    // Conservative target line 254. Glue, softened top, fuller low body.
-    // Heavier saturation + slower compressor for crest reduction.
+    // Glue, softened top, fuller low body. Private reference tuning
+    // (2026-05-26) softened the air push and reduced compression depth so Tape
+    // stays textured without crushing more movement than the reference.
     sub_db: 0.0,
-    low_shelf_db: -0.2,
+    low_shelf_db: 0.0,
     low_mid_db: 0.3,
     presence_db: -1.4,
     high_mid_db: 0.0,
-    air_db: 2.0,
+    air_db: 1.9,
     sparkle_db: 0.0,
     warmth: 0.10,
     stereo_width: 0.99,
@@ -419,8 +422,8 @@ const PRESET_TAPE: PresetCalibration = PresetCalibration {
     highpass_hz: 24.0,
     target_lufs: -13.8,
     ceiling_dbfs: -1.1,
-    compressor_threshold_dbfs: -22.0,
-    compressor_ratio: 2.4,
+    compressor_threshold_dbfs: -16.0,
+    compressor_ratio: 1.65,
     compressor_attack_ms: 30.0,
     compressor_release_ms: 400.0,
     science_note: "Deeper saturation and slow program compression deliver glue and a \
@@ -455,14 +458,15 @@ const PRESET_SPATIAL: PresetCalibration = PresetCalibration {
 };
 
 const PRESET_OOMPH: PresetCalibration = PresetCalibration {
-    // Conservative target line 256. Sub/low lift + low-mid scoop.
-    // Medium compressor controls the lows without flattening.
+    // Sub/low lift + low-mid scoop. Private reference tuning (2026-05-26)
+    // pushed low weight and reduced compression depth after Oomph measured too
+    // mid-forward and too flattened against the external reference.
     sub_db: 0.0,
-    low_shelf_db: 2.4,
+    low_shelf_db: 4.2,
     low_mid_db: -3.0,
     presence_db: -2.6,
     high_mid_db: 0.0,
-    air_db: -0.8,
+    air_db: -1.2,
     sparkle_db: 0.0,
     warmth: 0.045,
     stereo_width: 0.95,
@@ -472,8 +476,8 @@ const PRESET_OOMPH: PresetCalibration = PresetCalibration {
     highpass_hz: 22.0,
     target_lufs: -12.0,
     ceiling_dbfs: -0.9,
-    compressor_threshold_dbfs: -22.0,
-    compressor_ratio: 2.6,
+    compressor_threshold_dbfs: -15.5,
+    compressor_ratio: 1.7,
     compressor_attack_ms: 25.0,
     compressor_release_ms: 280.0,
     science_note: "Strong sub lift with deep low-mid scoop; medium-rate compressor \
@@ -3166,8 +3170,8 @@ mod tests {
                 "Universal",
                 Preset::Universal,
                 expected_platform_sha(
-                    "18f199b5ddb6f17a52d82e62ba18c1e3ee96a04388844c8bb58dd722101da12d",
-                    "904b3908e7f85a11ddfd3e6bdae870b5c8cccbc86ed77027cf03968931040fec",
+                    "51a3d4dbe8138deb376d746d352b57360639adbe727ee307beb7f70179fa34e1",
+                    "51a3d4dbe8138deb376d746d352b57360639adbe727ee307beb7f70179fa34e1",
                 ),
             );
         }
@@ -3178,8 +3182,8 @@ mod tests {
                 "Clarity",
                 Preset::Clarity,
                 expected_platform_sha(
-                    "8abb6c37372da3bd28ecbc75f2c74563655c74b1cb82d4fd14d5ef699fa37ff2",
-                    "abc426309966d6cd602fe50f757b65c8bc92f766d6043b0451c5025e90cfa631",
+                    "add6210476f2c135738d68334b3e23d30c8657a786621b27e94f6debcb93d02b",
+                    "add6210476f2c135738d68334b3e23d30c8657a786621b27e94f6debcb93d02b",
                 ),
             );
         }
@@ -3190,8 +3194,8 @@ mod tests {
                 "Tape",
                 Preset::Tape,
                 expected_platform_sha(
-                    "fb03785bb39648118ee9b9c1727fdda93d86a5d3a2ce81ccfbf57da53c138803",
-                    "7147f0a7fe07d9ddc28a9e76fdff5b2c7bb3fbd5bacb83bfb63812f063045657",
+                    "71d69e666f9838e6199da32645cc17693175a04637d9ec868f52926a026c596c",
+                    "71d69e666f9838e6199da32645cc17693175a04637d9ec868f52926a026c596c",
                 ),
             );
         }
@@ -3214,8 +3218,8 @@ mod tests {
                 "Oomph",
                 Preset::Oomph,
                 expected_platform_sha(
-                    "e3eb1c8d27939206839ee34377a6c670d20c84daf05d6a3049f9c035e06d9df2",
-                    "6d83827ffe7af93d8c515364506b83a59bcbc798f3cfd901de5e13fc2de58bce",
+                    "97f3b17ef7f5679091a383625089e2e6e73c91586ccacb7403ee3367087749a7",
+                    "97f3b17ef7f5679091a383625089e2e6e73c91586ccacb7403ee3367087749a7",
                 ),
             );
         }

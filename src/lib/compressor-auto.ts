@@ -21,11 +21,11 @@ interface PresetCompressorCalibration {
 }
 
 const PRESET_COMPRESSOR: Record<Preset["kind"], PresetCompressorCalibration> = {
-  universal: { thresholdDb: -16, ratio: 1.8, attackMs: 15, releaseMs: 250 },
-  clarity: { thresholdDb: -16, ratio: 1.8, attackMs: 12, releaseMs: 150 },
-  tape: { thresholdDb: -22, ratio: 2.4, attackMs: 30, releaseMs: 400 },
+  universal: { thresholdDb: -12.5, ratio: 1.45, attackMs: 15, releaseMs: 250 },
+  clarity: { thresholdDb: -12.5, ratio: 1.45, attackMs: 12, releaseMs: 150 },
+  tape: { thresholdDb: -16, ratio: 1.65, attackMs: 30, releaseMs: 400 },
   spatial: { thresholdDb: -16, ratio: 1.8, attackMs: 15, releaseMs: 250 },
-  oomph: { thresholdDb: -22, ratio: 2.6, attackMs: 25, releaseMs: 280 },
+  oomph: { thresholdDb: -15.5, ratio: 1.7, attackMs: 25, releaseMs: 280 },
   warmth: { thresholdDb: -19, ratio: 2.0, attackMs: 20, releaseMs: 280 },
   punch: { thresholdDb: -20, ratio: 2.8, attackMs: 10, releaseMs: 100 },
   loud: { thresholdDb: -23, ratio: 3.5, attackMs: 15, releaseMs: 180 },

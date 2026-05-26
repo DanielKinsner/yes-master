@@ -973,15 +973,14 @@ fn presets_produce_distinct_chain_coefficients() {
         (c.b0 - c.b1 + c.b2) / (1.0 - c.a1 + c.a2)
     };
 
-    // High-shelf Nyquist-gain comparison. Phase A4 conservative-target
-    // retune compressed the air-shelf spread vs the prior Codex source
-    // numbers — Universal +1.1 dB, Clarity +1.7 dB, Tape +2.0 dB. The
-    // pairwise gaps are smaller than before but still meaningfully
-    // audible. The thresholds below are sized to catch a wiring bug
-    // (coeffs collapse to identical values) while accepting the new
-    // tighter spread. The full perceptual distinctness contract lives in
-    // `preset_distinctness.rs` — this assertion is the wiring sanity
-    // check, not the audibility gate.
+    // High-shelf Nyquist-gain comparison. Private reference tuning
+    // (2026-05-26) keeps the air-shelf spread tighter than the early Codex
+    // source numbers — Universal +1.1 dB, Clarity +1.7 dB, Tape +1.9 dB.
+    // The thresholds below are sized to catch a wiring bug (coeffs collapse
+    // to identical values) while accepting the intentionally tighter spread.
+    // The full perceptual distinctness contract lives in
+    // `preset_distinctness.rs` — this assertion is the wiring sanity check,
+    // not the audibility gate.
     let cu_high_nyq = nyq_gain(&cu.high);
     let cc_high_nyq = nyq_gain(&cc.high);
     let ct_high_nyq = nyq_gain(&ct.high);
@@ -1005,12 +1004,9 @@ fn presets_produce_distinct_chain_coefficients() {
         ct_high_nyq
     );
 
-    // Low-shelf DC gain. Phase A4 retune: Universal +0.2 dB, Tape -0.2 dB —
-    // 0.4 dB of spread, still measurable as a coefficient difference. The
-    // Codex narrative around Oomph and the +1.2 dB Tape low push no
-    // longer applies; bass weight in the new calibration comes from
-    // Oomph's deep low-mid scoop and explicit low_shelf boost rather
-    // than Tape carrying the bass.
+    // Low-shelf DC gain. Private reference tuning keeps Universal/Tape low
+    // shelves close, but not identical: the check is only meant to catch a
+    // wiring collapse. Oomph remains the explicit bass-weight preset.
     let cu_low_dc = dc_gain(&cu.low);
     let ct_low_dc = dc_gain(&ct.low);
     assert!(

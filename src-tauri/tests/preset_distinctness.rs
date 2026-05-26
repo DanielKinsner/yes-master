@@ -349,9 +349,12 @@ fn tape_compresses_crest_relative_to_universal() {
     let crest_universal = crest_factor_db(&universal);
     let crest_tape = crest_factor_db(&tape);
     let crest_drop = crest_universal - crest_tape;
+    // Private reference tuning (2026-05-26) intentionally backed Tape's
+    // compressor off so it still glues relative to Universal without
+    // flattening more than the external reference masters.
     assert!(
-        crest_drop >= 0.8,
-        "Tape crest must be at least 0.8 dB lower than Universal's; \
+        crest_drop >= 0.5,
+        "Tape crest must be at least 0.5 dB lower than Universal's; \
          got Universal={crest_universal:.2} dB, Tape={crest_tape:.2} dB, drop={crest_drop:+.2} dB",
     );
 }

@@ -104,8 +104,8 @@ describe("AdvancedPanel compressor mode", () => {
     expect(preset.container.textContent).toContain(
       "Preset values from Universal.",
     );
-    expect(preset.container.textContent).toContain("Preset · -16.0 dB");
-    expect(preset.container.textContent).toContain("Preset · 1.8:1");
+    expect(preset.container.textContent).toContain("Preset · -12.5 dB");
+    expect(preset.container.textContent).toContain("Preset · 1.4:1");
     expect(compressionInputs(preset.container).every((input) => input.disabled)).toBe(
       true,
     );
@@ -152,8 +152,8 @@ describe("AdvancedPanel compressor mode", () => {
     expect(universal.container.textContent).toContain(
       "Preset values from Universal.",
     );
-    expect(universal.container.textContent).toContain("Preset · -16.0 dB");
-    expect(universal.container.textContent).toContain("Preset · 1.8:1");
+    expect(universal.container.textContent).toContain("Preset · -12.5 dB");
+    expect(universal.container.textContent).toContain("Preset · 1.4:1");
     expect(universal.container.textContent).not.toContain("-22.0 dB");
     expect(universal.container.textContent).not.toContain("2.6:1");
     await act(async () => {
@@ -164,8 +164,8 @@ describe("AdvancedPanel compressor mode", () => {
       settings: makeSettings({ compression_mode: "preset" }, { kind: "tape" }),
     });
     expect(tape.container.textContent).toContain("Preset values from Tape.");
-    expect(tape.container.textContent).toContain("Preset · -22.0 dB");
-    expect(tape.container.textContent).toContain("Preset · 2.4:1");
+    expect(tape.container.textContent).toContain("Preset · -16.0 dB");
+    expect(tape.container.textContent).toContain("Preset · 1.6:1");
     expect(tape.container.textContent).toContain("Preset · 30 ms");
     expect(tape.container.textContent).toContain("Preset · 400 ms");
     await act(async () => {
@@ -189,16 +189,16 @@ describe("AdvancedPanel compressor mode", () => {
     expect(onAdvanced).toHaveBeenCalledWith(
       expect.objectContaining({
         compression_mode: "manual",
-        compression_low_threshold_db: -16,
-        compression_low_ratio: 1.8,
+        compression_low_threshold_db: -12.5,
+        compression_low_ratio: 1.45,
         compression_low_attack_ms: 15,
         compression_low_release_ms: 250,
-        compression_mid_threshold_db: -16,
-        compression_mid_ratio: 1.8,
+        compression_mid_threshold_db: -12.5,
+        compression_mid_ratio: 1.45,
         compression_mid_attack_ms: 15,
         compression_mid_release_ms: 250,
-        compression_high_threshold_db: -16,
-        compression_high_ratio: 1.8,
+        compression_high_threshold_db: -12.5,
+        compression_high_ratio: 1.45,
         compression_high_attack_ms: 15,
         compression_high_release_ms: 250,
       }),

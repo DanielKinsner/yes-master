@@ -14,9 +14,13 @@
 //!     to threshold-drop × ratio, so Loud (-23/3.5) carries ~2.5 dB more
 //!     makeup than Universal (-16/1.8).
 //!
-//! The bar moved from 4 LU to 7 LU to fit this intentional ramp while
-//! still firing on a single-preset outlier (e.g., a future Tape calibration
-//! tweak that accidentally pushes it past Loud).
+//!
+//! Private reference tuning (2026-05-26) then backed Universal, Clarity,
+//! Tape, and Oomph compression off so already-mastered sources keep more
+//! movement against external references. That widens raw-chain loudness
+//! before export/profile landing; the bar is now 8.5 LU to preserve the
+//! runaway-preset guard without forcing compression back into the safe
+//! presets just to satisfy this raw probe.
 
 use yes_master_lib::dsp::MasteringChain;
 use yes_master_lib::engine::measure_integrated_lufs;
@@ -115,7 +119,7 @@ fn run_through_chain(input: &[f32], preset: Preset) -> Vec<f32> {
 }
 
 #[test]
-fn presets_land_within_4_lu_of_each_other_at_default_intensity() {
+fn presets_keep_raw_chain_loudness_spread_bounded_at_default_intensity() {
     let samples_per_channel = (SR_HZ as f32 * DURATION_SEC) as usize;
     let input = synth_pink_stereo(samples_per_channel);
 
@@ -146,7 +150,7 @@ fn presets_land_within_4_lu_of_each_other_at_default_intensity() {
         .join(", ");
 
     assert!(
-        spread < 7.0,
-        "preset loudness spread = {spread:.2} LU ({loudest_name} {loudest:.2} → {quietest_name} {quietest:.2}); preset calibration appears unbalanced beyond the intentional A4 ramp. Full readings: {detail}",
+        spread < 8.5,
+        "preset loudness spread = {spread:.2} LU ({loudest_name} {loudest:.2} → {quietest_name} {quietest:.2}); preset calibration appears unbalanced beyond the intentional reference-tuning ramp. Full readings: {detail}",
     );
 }

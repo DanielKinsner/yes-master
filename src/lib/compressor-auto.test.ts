@@ -60,8 +60,8 @@ describe("compressorAutoReadouts", () => {
     const auto = compressorAutoReadouts(makeSettings({ kind: "universal" }));
 
     expect(auto.low).toMatchObject({
-      thresholdLabel: "-16.0 dB",
-      ratioLabel: "1.8:1",
+      thresholdLabel: "-12.5 dB",
+      ratioLabel: "1.4:1",
       attackLabel: "15 ms",
       releaseLabel: "250 ms",
     });
