@@ -7,6 +7,7 @@ pub mod dsp;
 pub mod engine;
 pub mod exports;
 pub mod files;
+pub mod fixture_matrix;
 pub mod jobs;
 pub mod project;
 pub mod settings;

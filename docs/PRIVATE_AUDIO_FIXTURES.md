@@ -71,3 +71,33 @@ The filenames above are examples. Use whatever local names are convenient.
 - Do not commit private audio, rendered masters from private audio, waveform images derived from private audio, or fixture-specific generated artifacts.
 - Do not assume fixture files exist. If missing, fall back to synthetic tests and say that real-audio verification is still pending.
 - Prefer short clips for quick loops and full tracks/albums for slow verification.
+
+## Already-Mastered Matrix
+
+Use this local-only runner to measure already-mastered source material across
+the release-stabilization preset/compressor matrix:
+
+```powershell
+cd src-tauri
+cargo run --example private_fixture_matrix -- --manifest ..\private-audio-fixtures\manifest.json --output ..\test-output\private-fixture-matrix
+```
+
+The runner uses only fixtures with a singular `path` field and `track` mode.
+It renders:
+
+- Universal / Preset compressor.
+- Universal / Compressor Off.
+- Loud / Preset compressor.
+- Loud / Compressor Off.
+- Clarity / Preset compressor.
+- Clarity / Compressor Off.
+
+It writes:
+
+- `already-mastered-matrix.json`
+- `already-mastered-matrix.csv`
+- rendered WAVs under `renders/`
+
+All of those output locations are ignored by git. Commit the harness and
+aggregate interpretation only; do not commit private audio, rendered private
+masters, or fixture-specific output ledgers.

@@ -6,6 +6,18 @@ pub async fn run_export_checks(
     source_analysis: Option<AnalysisResult>,
     settings: Option<MasteringSettings>,
 ) -> CommandResult<Vec<QualityCheck>> {
+    Ok(export_checks_for_report(
+        &report,
+        source_analysis.as_ref(),
+        settings.as_ref(),
+    ))
+}
+
+pub fn export_checks_for_report(
+    report: &ExportReport,
+    source_analysis: Option<&AnalysisResult>,
+    settings: Option<&MasteringSettings>,
+) -> Vec<QualityCheck> {
     let mut checks = Vec::new();
 
     if report.measured_true_peak_dbtp > -0.1 {
@@ -63,7 +75,10 @@ pub async fn run_export_checks(
         checks.push(QualityCheck {
             level: QualityLevel::Critical,
             code: "bit_depth_low".to_string(),
-            message: format!("Bit depth {} is below 16. Not suitable for delivery.", report.bit_depth),
+            message: format!(
+                "Bit depth {} is below 16. Not suitable for delivery.",
+                report.bit_depth
+            ),
         });
     }
 
@@ -80,7 +95,7 @@ pub async fn run_export_checks(
     // for moderate-to-heavy compression density (> 0.3). Manual mode is an
     // explicit user decision; Off mode bypasses the creative compressor.
     // Advisory only — does not block export.
-    if let (Some(analysis), Some(s)) = (source_analysis.as_ref(), settings.as_ref()) {
+    if let (Some(analysis), Some(s)) = (source_analysis, settings) {
         let default_density = if matches!(s.preset, Preset::Custom { .. }) {
             0.0
         } else {
@@ -94,7 +109,9 @@ pub async fn run_export_checks(
             checks.push(QualityCheck {
                 level: QualityLevel::Warning,
                 code: "comp_density_on_compressed_source".to_string(),
-                message: "Source appears already compressed (DR < 6 LU). Heavy compression may pump.".to_string(),
+                message:
+                    "Source appears already compressed (DR < 6 LU). Heavy compression may pump."
+                        .to_string(),
             });
         }
     }
@@ -107,7 +124,7 @@ pub async fn run_export_checks(
         });
     }
 
-    Ok(checks)
+    checks
 }
 
 #[tauri::command]
