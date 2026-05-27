@@ -544,8 +544,6 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         <TrackHeader
           track={track}
           analysis={tm.selectedAnalysis}
-          isAnalyzing={tm.isAnalyzing}
-          settings={tm.selectedSettings}
           playbackKind={tm.transport.playbackKind}
           volumeMatch={tm.transport.volumeMatch}
           exportLufsPreview={tm.transport.exportLufsPreview}
@@ -671,8 +669,6 @@ function OverrideBanner({
 function TrackHeader({
   track,
   analysis,
-  isAnalyzing,
-  settings,
   playbackKind,
   volumeMatch,
   exportLufsPreview,
@@ -682,8 +678,6 @@ function TrackHeader({
 }: {
   track: ImportedTrack;
   analysis: AnalysisResult | undefined;
-  isAnalyzing: boolean;
-  settings: MasteringSettings;
   // UI_LAYOUT_REVISION_1600x940 L1: A/B comparison toggles and Volume
   // Match moved from the separate Transport section into the track
   // header so the waveform module below can be the workspace anchor.
@@ -712,7 +706,6 @@ function TrackHeader({
   if (track.duration_seconds) {
     chips.push({ key: "dur", label: formatDuration(track.duration_seconds) });
   }
-  const modifiers = activeModifierChips(settings, volumeMatch, exportLufsPreview);
   return (
     <section className="track-header">
       <div className="track-header-main">
@@ -764,14 +757,6 @@ function TrackHeader({
             <span className="toolbar-toggle-box" aria-hidden />
             <span>Preview LUFS</span>
           </button>
-        </div>
-        <div className="track-toolbar-group track-toolbar-group-status" aria-label="Track status">
-          <div
-            className={`track-badge status-pill ${isAnalyzing ? "status-warn" : analysis ? "status-ok" : ""}`}
-          >
-            {isAnalyzing ? "Analyzing…" : analysis ? "Analyzed" : "Pending"}
-          </div>
-          <ActiveModifierStrip modifiers={modifiers} />
         </div>
       </div>
     </section>
@@ -903,22 +888,6 @@ export function activeModifierChips(
   return chips;
 }
 
-function ActiveModifierStrip({
-  modifiers,
-}: {
-  modifiers: ActiveModifierChip[];
-}) {
-  const summary = activeModifierSummary(modifiers);
-  if (!summary) return null;
-  return (
-    <div className="active-modifier-strip" aria-label="Active processing modifiers">
-      <span className="active-modifier-summary" title={summary.title}>
-        {summary.label}
-      </span>
-    </div>
-  );
-}
-
 export function activeModifierSummary(
   modifiers: ActiveModifierChip[],
 ): { label: string; title: string } | null {
@@ -1018,6 +987,7 @@ function AnalysisSummary({ analysis }: { analysis: AnalysisResult }) {
           <span className="analysis-summary-eyebrow">Insight</span>
           <span className="analysis-summary-headline">{headline}</span>
         </span>
+        <span className="analysis-summary-status status-pill status-ok">Analyzed</span>
         <span className="analysis-summary-chevron" aria-hidden>⌄</span>
       </summary>
       {rest.length > 0 && (
