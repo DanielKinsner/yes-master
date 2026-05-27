@@ -2264,11 +2264,14 @@ button.primary:disabled {
   min-height: 22px;
   padding: 0 0.5rem;
   border-radius: 999px;
-  border: 1px solid rgba(111, 163, 255, 0.22);
-  background: rgba(111, 163, 255, 0.10);
-  color: var(--accent-bright);
+  /* Quiet, neutral count — it's a passive summary of engaged modifiers,
+     not a status or alert. Kept muted so it doesn't compete with the
+     ANALYZED status pill or read like a debug counter. */
+  border: 1px solid var(--border-strong);
+  background: var(--bg-3);
+  color: var(--text-2);
   font-size: 0.62rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
@@ -4362,7 +4365,10 @@ button.primary:disabled {
   .console-hero .track-header-main .analysis-summary {
     grid-column: 2;
     grid-row: 1 / span 2;
-    align-self: center;
+    /* Top-align with the title (and therefore the controls toolbar, which
+       also starts at the header top). Centering used to drop the insight's
+       top edge below the toolbar, so they read as two different rows. */
+    align-self: start;
   }
 
   .console-hero .track-title {
