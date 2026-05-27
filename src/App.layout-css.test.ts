@@ -84,6 +84,16 @@ describe("console layout CSS", () => {
     expect(block(".track-header-controls")).toContain("min-width: max-content");
   });
 
+  it("keeps the console insight card narrow enough for playback controls", () => {
+    expect(css).toContain(
+      "grid-template-columns: minmax(220px, 1fr) minmax(220px, 340px)",
+    );
+    expect(css).toContain(
+      "grid-template-columns: minmax(300px, 1fr) minmax(260px, 360px)",
+    );
+    expect(block(".analysis-summary-headline")).toContain("font-size: 0.78rem");
+  });
+
   it("keeps manual compressor knobs compact inside the right rail", () => {
     expect(block(".compressor-knob-grid")).toContain("gap: 0.35rem");
     expect(block(".compressor-knob-grid")).toContain("padding: 0.32rem");
