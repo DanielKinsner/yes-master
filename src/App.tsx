@@ -34,6 +34,7 @@ import type { ExportReceipt, PlaybackKindUI } from "./hooks/useTrackMaster";
 import {
   effectiveBitDepth,
   effectiveCeilingDbtp,
+  effectiveLoudnessTarget,
   LOUDNESS_PROFILES,
   loudnessTargetDisplay,
 } from "./lib/effective-settings";
@@ -103,6 +104,7 @@ function App() {
         advancedSlot={
           tm.selectedTrack ? (
             <AdvancedPanel
+              analysis={tm.selectedAnalysis}
               settings={tm.selectedSettings}
               onAdvanced={tm.setAdvanced}
               onInputGain={tm.setInputGain}
@@ -543,6 +545,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           track={track}
           analysis={tm.selectedAnalysis}
           isAnalyzing={tm.isAnalyzing}
+          settings={tm.selectedSettings}
           playbackKind={tm.transport.playbackKind}
           volumeMatch={tm.transport.volumeMatch}
           exportLufsPreview={tm.transport.exportLufsPreview}
@@ -669,6 +672,7 @@ function TrackHeader({
   track,
   analysis,
   isAnalyzing,
+  settings,
   playbackKind,
   volumeMatch,
   exportLufsPreview,
@@ -679,6 +683,7 @@ function TrackHeader({
   track: ImportedTrack;
   analysis: AnalysisResult | undefined;
   isAnalyzing: boolean;
+  settings: MasteringSettings;
   // UI_LAYOUT_REVISION_1600x940 L1: A/B comparison toggles and Volume
   // Match moved from the separate Transport section into the track
   // header so the waveform module below can be the workspace anchor.
@@ -707,6 +712,7 @@ function TrackHeader({
   if (track.duration_seconds) {
     chips.push({ key: "dur", label: formatDuration(track.duration_seconds) });
   }
+  const modifiers = activeModifierChips(settings, volumeMatch, exportLufsPreview);
   return (
     <section className="track-header">
       <div className="track-header-main">
@@ -748,7 +754,7 @@ function TrackHeader({
         </label>
         <label
           className="vm-toggle"
-          title="Previews the export LUFS trim during Mastered playback. Leave off while adjusting if you want the fastest real-time response."
+          title="Previews export LUFS landing during Mastered playback. The readout settles over a few seconds on heavier chains."
         >
           <input
             type="checkbox"
@@ -762,8 +768,164 @@ function TrackHeader({
         >
           {isAnalyzing ? "Analyzing…" : analysis ? "Analyzed" : "Pending"}
         </div>
+        <ActiveModifierStrip modifiers={modifiers} />
       </div>
     </section>
+  );
+}
+
+export type ActiveModifierChip = {
+  key: string;
+  label: string;
+  title: string;
+};
+
+export function activeModifierChips(
+  settings: MasteringSettings,
+  volumeMatch: boolean,
+  exportLufsPreview: boolean,
+): ActiveModifierChip[] {
+  const chips: ActiveModifierChip[] = [];
+  const a = settings.advanced;
+  const pushNumber = (
+    key: string,
+    label: string,
+    value: number | null | undefined,
+    unit: string,
+    digits: number,
+    title: string,
+  ) => {
+    if (value === null || value === undefined || Math.abs(value) < 0.0001) return;
+    const prefix = value > 0 && unit === "dB" ? "+" : "";
+    chips.push({
+      key,
+      label: `${label} ${prefix}${value.toFixed(digits)} ${unit}`,
+      title,
+    });
+  };
+
+  pushNumber(
+    "input-gain",
+    "Input",
+    settings.input_gain_db,
+    "dB",
+    1,
+    "Input gain is changing level before the mastering chain.",
+  );
+  pushNumber(
+    "output-gain",
+    "Output",
+    settings.output_gain_db,
+    "dB",
+    1,
+    "Output gain is changing level after the mastering chain.",
+  );
+
+  const target = effectiveLoudnessTarget(settings);
+  if (settings.delivery_profile === "custom" && target !== null) {
+    chips.push({
+      key: "target-lufs",
+      label: `Target ${target.toFixed(target % 1 === 0 ? 0 : 1)} LUFS`,
+      title: "Custom delivery target is active.",
+    });
+  }
+
+  if (a.ceiling_dbtp !== null && a.ceiling_dbtp !== undefined) {
+    chips.push({
+      key: "ceiling",
+      label: `Ceiling ${a.ceiling_dbtp.toFixed(1)} dBTP`,
+      title: "Custom true-peak ceiling is active.",
+    });
+  }
+  if (a.width !== null && a.width !== undefined) {
+    chips.push({
+      key: "width",
+      label: `Width ${a.width.toFixed(2)}`,
+      title: "Manual width override is active.",
+    });
+  }
+  if (a.warmth !== null && a.warmth !== undefined) {
+    chips.push({
+      key: "warmth",
+      label: `Warmth ${a.warmth.toFixed(2)}`,
+      title: "Manual warmth override is active.",
+    });
+  }
+  if (a.presence_air !== null && a.presence_air !== undefined) {
+    chips.push({
+      key: "presence-air",
+      label: `Air ${a.presence_air.toFixed(2)}`,
+      title: "Manual presence/air override is active.",
+    });
+  }
+  const compressorMode = a.compression_mode ?? "preset";
+  if (
+    compressorMode === "preset" &&
+    a.compression_density !== null &&
+    a.compression_density !== undefined
+  ) {
+    chips.push({
+      key: "density",
+      label: `Density ${a.compression_density.toFixed(2)}`,
+      title: "Preset compressor density override is active.",
+    });
+  }
+
+  if (compressorMode !== "preset") {
+    chips.push({
+      key: "compressor-mode",
+      label: `Compressor ${compressorMode === "manual" ? "Manual" : "Off"}`,
+      title:
+        compressorMode === "manual"
+          ? "Manual per-band compressor values are replacing preset compression."
+          : "Creative per-band compression is bypassed.",
+    });
+  }
+  if (volumeMatch) {
+    chips.push({
+      key: "volume-match",
+      label: "Volume Match On",
+      title: "Playback loudness matching is active for comparison only.",
+    });
+  }
+  if (exportLufsPreview) {
+    chips.push({
+      key: "preview-lufs",
+      label: "Preview LUFS On",
+      title: "Export LUFS landing is being previewed during playback.",
+    });
+  }
+
+  return chips;
+}
+
+function ActiveModifierStrip({
+  modifiers,
+}: {
+  modifiers: ActiveModifierChip[];
+}) {
+  if (modifiers.length === 0) return null;
+  return (
+    <div className="active-modifier-strip" aria-label="Active processing modifiers">
+      <span className="active-modifier-label">Active</span>
+      {modifiers.slice(0, 5).map((modifier) => (
+        <span
+          key={modifier.key}
+          className="active-modifier-chip"
+          title={modifier.title}
+        >
+          {modifier.label}
+        </span>
+      ))}
+      {modifiers.length > 5 && (
+        <span
+          className="active-modifier-chip active-modifier-more"
+          title={modifiers.slice(5).map((m) => m.label).join(" · ")}
+        >
+          +{modifiers.length - 5}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -1662,12 +1824,14 @@ function StaleBar({
 /// monolithic section, so the rail reads as discrete technical
 /// drawers in the order the spec lays out.
 export function AdvancedPanel({
+  analysis,
   settings,
   onAdvanced,
   onInputGain,
   onOutputGain,
   onDeliveryProfile,
 }: {
+  analysis?: AnalysisResult;
   settings: MasteringSettings;
   onAdvanced: (adv: MasteringSettings["advanced"]) => void;
   onInputGain: (db: number) => void;
@@ -1690,16 +1854,18 @@ export function AdvancedPanel({
       <AdvancedControlsCard
         settings={settings}
         update={update}
+        onAdvanced={onAdvanced}
         onInputGain={onInputGain}
         onOutputGain={onOutputGain}
       />
       <PerBandCompressorCard
+        analysis={analysis}
         settings={settings}
         a={a}
         onAdvanced={onAdvanced}
         onUpdate={update}
       />
-      <DeliveryFormatCard settings={settings} update={update} />
+      <DeliveryFormatCard settings={settings} update={update} onAdvanced={onAdvanced} />
     </>
   );
 }
@@ -1716,6 +1882,10 @@ function DeliveryProfileCard({
     <section className="panel rail-card rail-card-delivery">
       <header className="panel-head">
         <span className="panel-title">DELIVERY PROFILE</span>
+        <PanelResetButton
+          label="Reset delivery profile"
+          onClick={() => onDeliveryProfile("streaming-universal")}
+        />
       </header>
       <select
         id="delivery-profile-select"
@@ -1741,6 +1911,7 @@ function DeliveryProfileCard({
 function AdvancedControlsCard({
   settings,
   update,
+  onAdvanced,
   onInputGain,
   onOutputGain,
 }: {
@@ -1749,6 +1920,7 @@ function AdvancedControlsCard({
     field: keyof MasteringSettings["advanced"],
     value: number | boolean | null,
   ) => void;
+  onAdvanced: (adv: MasteringSettings["advanced"]) => void;
   onInputGain: (db: number) => void;
   onOutputGain: (db: number) => void;
 }) {
@@ -1756,10 +1928,27 @@ function AdvancedControlsCard({
   const compressorMode = a.compression_mode ?? "preset";
   const effectiveLufsTarget = loudnessTargetDisplay(settings).current;
   const effectiveCeiling = effectiveCeilingDbtp(settings);
+  const resetAdvancedControls = () => {
+    onInputGain(0);
+    onOutputGain(0);
+    onAdvanced({
+      ...a,
+      lufs_offset_db: null,
+      ceiling_dbtp: null,
+      width: null,
+      warmth: null,
+      presence_air: null,
+      compression_density: null,
+    });
+  };
   return (
     <details className="panel rail-card rail-card-advanced">
       <summary className="panel-head panel-head-summary">
         <span className="panel-title">ADVANCED CONTROLS</span>
+        <PanelResetButton
+          label="Reset advanced controls"
+          onClick={resetAdvancedControls}
+        />
         <span className="panel-chevron" aria-hidden>⌄</span>
       </summary>
       <div className="advanced-grid rail-card-body">
@@ -1834,11 +2023,13 @@ function AdvancedControlsCard({
 }
 
 function PerBandCompressorCard({
+  analysis,
   settings,
   a,
   onAdvanced,
   onUpdate,
 }: {
+  analysis?: AnalysisResult;
   settings: MasteringSettings;
   a: MasteringSettings["advanced"];
   onAdvanced: (adv: MasteringSettings["advanced"]) => void;
@@ -1852,19 +2043,36 @@ function PerBandCompressorCard({
   const autoReadouts = compressorAutoReadouts(settings);
   const compressorMode: CompressionMode = a.compression_mode ?? "preset";
   const manualEnabled = compressorMode === "manual";
-  const fallbackLabel =
-    compressorMode === "off"
-      ? "Off"
-      : compressorMode === "preset"
-        ? "Preset"
-        : "Auto";
+  const fallbackLabel = compressorMode === "off" ? "Off" : "Preset";
   const showFallbackReadouts = compressorMode !== "off";
+  const sourceLooksCompressed =
+    (analysis?.dynamic_range_lu ?? Number.POSITIVE_INFINITY) < 6.0;
   const setCompressorMode = (mode: CompressionMode) => {
     if (mode === "manual") {
       onAdvanced(materializeManualCompressor(settings, a));
       return;
     }
     onAdvanced({ ...a, compression_mode: mode });
+  };
+  const resetPerBandCompressor = () => {
+    onAdvanced({
+      ...a,
+      compression_mode: "preset",
+      compression_density: null,
+      compression_link_stereo: null,
+      compression_low_threshold_db: null,
+      compression_low_ratio: null,
+      compression_low_attack_ms: null,
+      compression_low_release_ms: null,
+      compression_mid_threshold_db: null,
+      compression_mid_ratio: null,
+      compression_mid_attack_ms: null,
+      compression_mid_release_ms: null,
+      compression_high_threshold_db: null,
+      compression_high_ratio: null,
+      compression_high_attack_ms: null,
+      compression_high_release_ms: null,
+    });
   };
   const bandFields: Record<Band, {
     threshold: number | null;
@@ -1937,6 +2145,10 @@ function PerBandCompressorCard({
     <section className="panel rail-card rail-card-per-band">
       <header className="panel-head">
         <span className="panel-title">PER-BAND COMPRESSOR</span>
+        <PanelResetButton
+          label="Reset per-band compressor"
+          onClick={resetPerBandCompressor}
+        />
       </header>
       <div className="compressor-mode-tabs" role="tablist" aria-label="Compressor mode">
         {(["preset", "manual", "off"] as CompressionMode[]).map((mode) => (
@@ -1963,6 +2175,11 @@ function PerBandCompressorCard({
         {compressorMode === "off" &&
           "Creative compressor bypassed; limiter and delivery checks remain active."}
       </div>
+      {sourceLooksCompressed && compressorMode === "preset" && (
+        <div className="compressor-source-note" role="note">
+          Source dynamic range is low; lower density or switch Off if preset compression collapses movement.
+        </div>
+      )}
       <label className="per-band-link-stereo">
         <input
           type="checkbox"
@@ -2059,12 +2276,14 @@ function materializeManualCompressor(
 function DeliveryFormatCard({
   settings,
   update,
+  onAdvanced,
 }: {
   settings: MasteringSettings;
   update: (
     field: keyof MasteringSettings["advanced"],
     value: number | boolean | null,
   ) => void;
+  onAdvanced: (adv: MasteringSettings["advanced"]) => void;
 }) {
   const a = settings.advanced;
   const effectiveBitDepthValue = effectiveBitDepth(settings);
@@ -2072,6 +2291,16 @@ function DeliveryFormatCard({
     <section className="panel rail-card rail-card-format">
       <header className="panel-head">
         <span className="panel-title">DELIVERY FORMAT</span>
+        <PanelResetButton
+          label="Reset delivery format"
+          onClick={() =>
+            onAdvanced({
+              ...a,
+              bit_depth: null,
+              target_sample_rate: null,
+            })
+          }
+        />
       </header>
       <div className="rail-card-body">
         <SelectField
@@ -2098,6 +2327,30 @@ function DeliveryFormatCard({
         />
       </div>
     </section>
+  );
+}
+
+function PanelResetButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="panel-reset-button"
+      aria-label={label}
+      title={label}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      }}
+    >
+      ↺
+    </button>
   );
 }
 

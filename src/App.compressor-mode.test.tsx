@@ -2,8 +2,13 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AdvancedPanel } from "./App";
-import type { AdvancedSettings, MasteringSettings, Preset } from "./bindings";
+import { AdvancedPanel, activeModifierChips } from "./App";
+import type {
+  AdvancedSettings,
+  AnalysisResult,
+  MasteringSettings,
+  Preset,
+} from "./bindings";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true;
@@ -56,8 +61,12 @@ function makeSettings(
 }
 
 async function renderAdvancedPanel(props: {
+  analysis?: AnalysisResult;
   settings: MasteringSettings;
   onAdvanced?: (advanced: AdvancedSettings) => void;
+  onInputGain?: (db: number) => void;
+  onOutputGain?: (db: number) => void;
+  onDeliveryProfile?: (profile: MasteringSettings["delivery_profile"]) => void;
 }): Promise<{ container: HTMLDivElement; root: Root }> {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -65,11 +74,12 @@ async function renderAdvancedPanel(props: {
   await act(async () => {
     root.render(
       <AdvancedPanel
+        analysis={props.analysis}
         settings={props.settings}
         onAdvanced={props.onAdvanced ?? vi.fn()}
-        onInputGain={vi.fn()}
-        onOutputGain={vi.fn()}
-        onDeliveryProfile={vi.fn()}
+        onInputGain={props.onInputGain ?? vi.fn()}
+        onOutputGain={props.onOutputGain ?? vi.fn()}
+        onDeliveryProfile={props.onDeliveryProfile ?? vi.fn()}
       />,
     );
   });
@@ -92,11 +102,174 @@ function buttonNamed(container: Element, name: string): HTMLButtonElement {
   return button;
 }
 
+function makeAnalysis(dynamicRangeLu: number): AnalysisResult {
+  const settings = makeSettings();
+  return {
+    track_id: "track-1",
+    lufs_integrated: -14,
+    lufs_short_term_max: -12,
+    true_peak_dbtp: -1.2,
+    dynamic_range_lu: dynamicRangeLu,
+    spectral_balance: { low: 0.33, mid: 0.34, high: 0.33 },
+    transient_density: 0.5,
+    stereo_width: 0.5,
+    recommended_universal: settings,
+    measured_at_iso: "2026-05-26T00:00:00Z",
+    inferred_role: null,
+    role_confidence: null,
+    inferred_character: null,
+    character_confidence: null,
+    spectral_balance_6band: null,
+    transient_flux: null,
+    stereo_correlation: null,
+    dynamic_range_p95_p10_db: null,
+    lufs_short_term_max_3s: null,
+    energy_density_score: null,
+  };
+}
+
 afterEach(() => {
   document.body.innerHTML = "";
 });
 
 describe("AdvancedPanel compressor mode", () => {
+  it("summarizes active modifiers without listing neutral defaults", () => {
+    const chips = activeModifierChips(
+      {
+        ...makeSettings({
+          lufs_offset_db: -20,
+          width: 0.95,
+          compression_density: 0.7,
+          compression_mode: "manual",
+        }),
+        output_gain_db: -6.5,
+        delivery_profile: "custom",
+      },
+      false,
+      true,
+    );
+
+    expect(chips.map((chip) => chip.label)).toEqual([
+      "Output -6.5 dB",
+      "Target -20 LUFS",
+      "Width 0.95",
+      "Compressor Manual",
+      "Preview LUFS On",
+    ]);
+  });
+
+  it("shows no active modifier chips for neutral settings and inactive preview toggles", () => {
+    expect(activeModifierChips(makeSettings(), false, false)).toEqual([]);
+  });
+
+  it("resets the advanced controls section without touching compressor mode", async () => {
+    const onAdvanced = vi.fn();
+    const onInputGain = vi.fn();
+    const onOutputGain = vi.fn();
+    const settings = {
+      ...makeSettings({
+        lufs_offset_db: -20,
+        ceiling_dbtp: -0.5,
+        width: 0.95,
+        warmth: 0.55,
+        presence_air: 0.65,
+        compression_density: 0.7,
+        compression_mode: "manual",
+      }),
+      input_gain_db: 2,
+      output_gain_db: -6.5,
+      delivery_profile: "custom" as const,
+    };
+    const { container, root } = await renderAdvancedPanel({
+      settings,
+      onAdvanced,
+      onInputGain,
+      onOutputGain,
+    });
+
+    await act(async () => {
+      const button = container.querySelector(
+        'button[aria-label="Reset advanced controls"]',
+      );
+      if (!(button instanceof HTMLButtonElement)) {
+        throw new Error("Reset advanced controls button not found");
+      }
+      button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onInputGain).toHaveBeenCalledWith(0);
+    expect(onOutputGain).toHaveBeenCalledWith(0);
+    expect(onAdvanced).toHaveBeenCalledWith({
+      ...settings.advanced,
+      lufs_offset_db: null,
+      ceiling_dbtp: null,
+      width: null,
+      warmth: null,
+      presence_air: null,
+      compression_density: null,
+    });
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("resets the per-band compressor back to preset mode", async () => {
+    const onAdvanced = vi.fn();
+    const settings = makeSettings({
+      compression_mode: "manual",
+      compression_density: 0.8,
+      compression_link_stereo: false,
+      compression_low_threshold_db: -18,
+      compression_low_ratio: 3,
+      compression_low_attack_ms: 15,
+      compression_low_release_ms: 250,
+      compression_mid_threshold_db: -20,
+      compression_mid_ratio: 2,
+      compression_mid_attack_ms: 20,
+      compression_mid_release_ms: 300,
+      compression_high_threshold_db: -22,
+      compression_high_ratio: 1.8,
+      compression_high_attack_ms: 5,
+      compression_high_release_ms: 120,
+    });
+    const { container, root } = await renderAdvancedPanel({
+      settings,
+      onAdvanced,
+    });
+
+    await act(async () => {
+      const button = container.querySelector(
+        'button[aria-label="Reset per-band compressor"]',
+      );
+      if (!(button instanceof HTMLButtonElement)) {
+        throw new Error("Reset per-band compressor button not found");
+      }
+      button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onAdvanced).toHaveBeenCalledWith({
+      ...settings.advanced,
+      compression_mode: "preset",
+      compression_density: null,
+      compression_link_stereo: null,
+      compression_low_threshold_db: null,
+      compression_low_ratio: null,
+      compression_low_attack_ms: null,
+      compression_low_release_ms: null,
+      compression_mid_threshold_db: null,
+      compression_mid_ratio: null,
+      compression_mid_attack_ms: null,
+      compression_mid_release_ms: null,
+      compression_high_threshold_db: null,
+      compression_high_ratio: null,
+      compression_high_attack_ms: null,
+      compression_high_release_ms: null,
+    });
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("keeps per-band compressor controls inactive until Manual is selected", async () => {
     const preset = await renderAdvancedPanel({
       settings: makeSettings({ compression_mode: "preset" }),
@@ -206,6 +379,30 @@ describe("AdvancedPanel compressor mode", () => {
 
     await act(async () => {
       root.unmount();
+    });
+  });
+
+  it("uses preset fallback labels and source guidance instead of Auto copy", async () => {
+    const manual = await renderAdvancedPanel({
+      analysis: makeAnalysis(4.8),
+      settings: makeSettings({ compression_mode: "manual" }),
+    });
+
+    expect(manual.container.textContent).toContain("Preset · -12.5 dB");
+    expect(manual.container.textContent).not.toContain("Auto · -12.5 dB");
+
+    await act(async () => {
+      manual.root.unmount();
+    });
+
+    const preset = await renderAdvancedPanel({
+      analysis: makeAnalysis(4.8),
+      settings: makeSettings({ compression_mode: "preset" }),
+    });
+    expect(preset.container.textContent).toContain("Source dynamic range is low");
+
+    await act(async () => {
+      preset.root.unmount();
     });
   });
 });
