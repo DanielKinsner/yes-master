@@ -75,4 +75,18 @@ describe("console layout CSS", () => {
     expect(appTsx).toContain("Preview LUFS");
     expect(appTsx).not.toContain("Export LUFS</span>");
   });
+
+  it("keeps the header transport controls from overlapping the insight summary", () => {
+    expect(block(".track-header")).toContain("display: grid");
+    expect(block(".track-header")).toContain(
+      "grid-template-columns: minmax(0, 1fr) max-content",
+    );
+    expect(block(".track-header-controls")).toContain("min-width: max-content");
+  });
+
+  it("keeps manual compressor knobs compact inside the right rail", () => {
+    expect(block(".compressor-knob-grid")).toContain("gap: 0.35rem");
+    expect(block(".compressor-knob-grid")).toContain("padding: 0.32rem");
+    expect(block(".compressor-knob-grid .knob-vis")).toContain("transform: scale(0.9)");
+  });
 });

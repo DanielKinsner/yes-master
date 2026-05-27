@@ -1861,7 +1861,7 @@ export function AdvancedPanel({
         onAdvanced={onAdvanced}
         onUpdate={update}
       />
-      <DeliveryFormatCard settings={settings} update={update} onAdvanced={onAdvanced} />
+      <DeliveryFormatCard settings={settings} update={update} />
     </>
   );
 }
@@ -2033,6 +2033,7 @@ function PerBandCompressorCard({
   type Band = "low" | "mid" | "high";
   const [active, setActive] = useState<Band>("low");
   const autoReadouts = compressorAutoReadouts(settings);
+  const presetSummary = presetCompressionSummary(settings, autoReadouts.low);
   const compressorMode: CompressionMode = a.compression_mode ?? "preset";
   const manualEnabled = compressorMode === "manual";
   const sourceLooksCompressed =
@@ -2145,11 +2146,7 @@ function PerBandCompressorCard({
         </div>
       )}
       {!manualEnabled && compressorMode === "preset" && (
-        <div className="compressor-preset-summary">
-          Preset compressor: {autoReadouts.low.thresholdLabel} ·{" "}
-          {autoReadouts.low.ratioLabel} · {autoReadouts.low.attackLabel} ·{" "}
-          {autoReadouts.low.releaseLabel}
-        </div>
+        <div className="compressor-preset-summary">{presetSummary}</div>
       )}
       {!manualEnabled && compressorMode === "off" && (
         <div className="compressor-preset-summary">
@@ -2308,6 +2305,21 @@ function presetDisplayName(preset: Preset): string {
   }
 }
 
+function presetCompressionSummary(
+  settings: MasteringSettings,
+  readout: ReturnType<typeof compressorAutoReadouts>["low"],
+): string {
+  const defaultDensity = settings.preset.kind === "custom" ? 0 : 0.5;
+  const density = Math.max(
+    0,
+    Math.min(1, settings.advanced.compression_density ?? defaultDensity),
+  );
+  if (density <= 0.001) {
+    return `Preset compression inactive · Density ${density.toFixed(2)}`;
+  }
+  return `Effective compression · ${readout.thresholdLabel} · ${readout.ratioLabel} · ${readout.attackLabel} · ${readout.releaseLabel}`;
+}
+
 function materializeManualCompressor(
   settings: MasteringSettings,
   advanced: MasteringSettings["advanced"],
@@ -2392,14 +2404,12 @@ function resetCompressorSettingsToCurrentMode(
 function DeliveryFormatCard({
   settings,
   update,
-  onAdvanced,
 }: {
   settings: MasteringSettings;
   update: (
     field: keyof MasteringSettings["advanced"],
     value: number | boolean | null,
   ) => void;
-  onAdvanced: (adv: MasteringSettings["advanced"]) => void;
 }) {
   const a = settings.advanced;
   const effectiveBitDepthValue = effectiveBitDepth(settings);
@@ -2407,16 +2417,6 @@ function DeliveryFormatCard({
     <section className="panel rail-card rail-card-format">
       <header className="panel-head">
         <span className="panel-title">DELIVERY FORMAT</span>
-        <PanelResetButton
-          label="Reset delivery format"
-          onClick={() =>
-            onAdvanced({
-              ...a,
-              bit_depth: null,
-              target_sample_rate: null,
-            })
-          }
-        />
       </header>
       <div className="rail-card-body">
         <SelectField

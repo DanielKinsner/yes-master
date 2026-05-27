@@ -200,6 +200,20 @@ describe("AdvancedPanel compressor mode", () => {
     });
   });
 
+  it("does not show a reset button on delivery format", async () => {
+    const { container, root } = await renderAdvancedPanel({
+      settings: makeSettings(),
+    });
+
+    expect(
+      container.querySelector('button[aria-label="Reset delivery format"]'),
+    ).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("resets the advanced controls section without touching compressor mode", async () => {
     const onAdvanced = vi.fn();
     const onInputGain = vi.fn();
@@ -316,7 +330,7 @@ describe("AdvancedPanel compressor mode", () => {
       "Preset values from Universal.",
     );
     expect(preset.container.textContent).toContain(
-      "Preset compressor: -12.5 dB · 1.4:1 · 15 ms · 250 ms",
+      "Effective compression · -12.5 dB · 1.4:1 · 15 ms · 250 ms",
     );
     expect(preset.container.textContent).not.toContain("LOWMIDHIGH");
     expect(compressionInputs(preset.container).every((input) => input.disabled)).toBe(
@@ -389,7 +403,7 @@ describe("AdvancedPanel compressor mode", () => {
       "Preset values from Universal.",
     );
     expect(universal.container.textContent).toContain(
-      "Preset compressor: -12.5 dB · 1.4:1 · 15 ms · 250 ms",
+      "Effective compression · -12.5 dB · 1.4:1 · 15 ms · 250 ms",
     );
     expect(universal.container.textContent).not.toContain("-22.0 dB");
     expect(universal.container.textContent).not.toContain("2.6:1");
@@ -402,10 +416,28 @@ describe("AdvancedPanel compressor mode", () => {
     });
     expect(tape.container.textContent).toContain("Preset values from Tape.");
     expect(tape.container.textContent).toContain(
-      "Preset compressor: -16.0 dB · 1.6:1 · 30 ms · 400 ms",
+      "Effective compression · -16.0 dB · 1.6:1 · 30 ms · 400 ms",
     );
     await act(async () => {
       tape.root.unmount();
+    });
+  });
+
+  it("labels density-zero preset compression as inactive instead of showing identity values", async () => {
+    const { container, root } = await renderAdvancedPanel({
+      settings: makeSettings({
+        compression_mode: "preset",
+        compression_density: 0,
+      }),
+    });
+
+    expect(container.textContent).toContain(
+      "Preset compression inactive · Density 0.00",
+    );
+    expect(container.textContent).not.toContain("0.0 dB · 1.0:1");
+
+    await act(async () => {
+      root.unmount();
     });
   });
 
