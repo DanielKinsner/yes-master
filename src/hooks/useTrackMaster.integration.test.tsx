@@ -488,6 +488,75 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("estimates the live playhead when switching original/mastered", async () => {
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const nowSpy = vi.spyOn(Date, "now");
+    const track = makeTrack("switch-1", "C:/audio/switch.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    nowSpy.mockReturnValue(1_000);
+    await act(async () => {
+      playbackHandler?.({
+        track_id: track.id,
+        position_sec: 6,
+        is_playing: true,
+        is_loaded: true,
+        peak_dbfs: -12,
+        gr_low_db: -120,
+        gr_mid_db: -120,
+        gr_high_db: -120,
+        lufs_momentary: -14,
+        lufs_integrated: -14,
+        spectrum_db: [],
+      });
+    });
+    await waitFor(() => {
+      expect(harness.current().transport.currentTimeSec).toBe(6);
+    });
+
+    mocks.api.playMaster.mockClear();
+    nowSpy.mockReturnValue(1_250);
+    await act(async () => {
+      await harness.current().setPlaybackKind("master");
+    });
+
+    await waitFor(() => {
+      expect(mocks.api.playMaster).toHaveBeenCalled();
+    });
+    expect(mocks.api.playMaster.mock.calls.at(-1)?.[3]).toBeCloseTo(6.25, 3);
+
+    nowSpy.mockRestore();
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("honors enabled LUFS preview on subsequent live settings edits", async () => {
     const track = makeTrack("live-preview-1", "C:/audio/live preview.wav");
     mocks.api.importTracks.mockResolvedValue([track]);

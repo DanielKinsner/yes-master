@@ -281,6 +281,17 @@ export function useTrackMaster() {
     preview: boolean;
   } | null>(null);
   const updateChainRafScheduled = useRef(false);
+  const lastPlaybackTickRef = useRef<{
+    trackId: TrackId | null;
+    positionSec: number;
+    isPlaying: boolean;
+    receivedAtMs: number;
+  }>({
+    trackId: null,
+    positionSec: 0,
+    isPlaying: false,
+    receivedAtMs: 0,
+  });
 
   const sendUpdateChain = useCallback(
     (settings: MasteringSettings, preview: boolean) => {
@@ -332,6 +343,12 @@ export function useTrackMaster() {
     let unlistenTick: (() => void) | undefined;
     let unlistenProgress: (() => void) | undefined;
     onPlaybackTick((tick) => {
+      lastPlaybackTickRef.current = {
+        trackId: tick.track_id,
+        positionSec: tick.position_sec,
+        isPlaying: tick.is_playing,
+        receivedAtMs: Date.now(),
+      };
       setLoadedTrackId(tick.is_loaded ? tick.track_id : null);
       setTransport((t) => ({
         ...t,
@@ -490,6 +507,19 @@ export function useTrackMaster() {
   const selectedRegion: LoopRegion | null = selectedTrackId
     ? regionByTrack[selectedTrackId] ?? null
     : null;
+
+  const estimatedPlaybackPositionSec = useCallback(() => {
+    const tick = lastPlaybackTickRef.current;
+    let positionSec = tick.positionSec;
+    if (tick.isPlaying && tick.trackId === selectedTrackId) {
+      positionSec += Math.max(0, Date.now() - tick.receivedAtMs) / 1000;
+    }
+    const duration = selectedTrack?.duration_seconds;
+    if (Number.isFinite(duration)) {
+      positionSec = Math.min(positionSec, duration as number);
+    }
+    return Math.max(0, positionSec);
+  }, [selectedTrack?.duration_seconds, selectedTrackId]);
 
   const markStale = useCallback((id: TrackId) => {
     setStaleSet((prev) => {
@@ -1273,19 +1303,25 @@ export function useTrackMaster() {
       if (loadedTrackId === selectedTrackId) {
         setError(null);
         try {
-          await playWithKind(kind, transport.currentTimeSec);
+          await playWithKind(kind, estimatedPlaybackPositionSec());
         } catch (err) {
           setError(String(err));
         }
       }
     },
-    [selectedTrackId, loadedTrackId, transport.currentTimeSec, playWithKind],
+    [selectedTrackId, loadedTrackId, estimatedPlaybackPositionSec, playWithKind],
   );
 
   const seek = useCallback(
     async (positionSec: number) => {
       if (!selectedTrack) return;
       const clamped = Math.max(0, positionSec);
+      lastPlaybackTickRef.current = {
+        trackId: selectedTrack.id,
+        positionSec: clamped,
+        isPlaying: transport.isPlaying,
+        receivedAtMs: Date.now(),
+      };
       setTransport((t) => ({ ...t, currentTimeSec: clamped }));
       // If the track ran to the end the sink is empty and seekPlayback is a
       // no-op on the backend. Re-prepare the source at the click position
