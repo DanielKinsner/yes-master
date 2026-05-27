@@ -3440,6 +3440,37 @@ button.primary:disabled {
   gap: 0.3rem;
 }
 
+.compressor-knob-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.45rem;
+  padding: 0.45rem 0.35rem 0.35rem;
+  border: 1px solid rgba(111, 163, 255, 0.10);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(180deg, rgba(16, 20, 31, 0.66), rgba(9, 12, 19, 0.48));
+}
+
+.compressor-knob-grid .knob {
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.compressor-knob-grid .knob-label {
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+}
+
+.compressor-knob-grid .knob-value {
+  font-size: 0.72rem;
+  color: var(--text-0);
+}
+
+.compressor-knob-grid .knob-vis {
+  margin: 0 auto;
+}
+
 /* Right-rail Export Master CTA — full-width prominent button at the
    bottom of the right rail. */
 .right-rail-export {

@@ -2035,8 +2035,6 @@ function PerBandCompressorCard({
   const autoReadouts = compressorAutoReadouts(settings);
   const compressorMode: CompressionMode = a.compression_mode ?? "preset";
   const manualEnabled = compressorMode === "manual";
-  const fallbackLabel = compressorMode === "off" ? "Off" : "Preset";
-  const showFallbackReadouts = compressorMode !== "off";
   const sourceLooksCompressed =
     (analysis?.dynamic_range_lu ?? Number.POSITIVE_INFINITY) < 6.0;
   const setCompressorMode = (mode: CompressionMode) => {
@@ -2107,15 +2105,6 @@ function PerBandCompressorCard({
     },
   };
   const activeBandFields = bandFields[active];
-  const displayedBandFields = manualEnabled
-    ? activeBandFields
-    : {
-        ...activeBandFields,
-        threshold: null,
-        ratio: null,
-        attack: null,
-        release: null,
-      };
   return (
     <section className="panel rail-card rail-card-per-band">
       <header className="panel-head">
@@ -2194,16 +2183,105 @@ function PerBandCompressorCard({
             ))}
           </div>
           <div className="per-band-active-body">
-            <CompressionBandColumn
-              label=""
-              fallbackLabel={fallbackLabel}
-              showFallbackReadouts={showFallbackReadouts}
-              {...displayedBandFields}
+            <CompressionKnobGrid
+              threshold={activeBandFields.threshold ?? autoReadouts[active].thresholdDb}
+              ratio={activeBandFields.ratio ?? autoReadouts[active].ratio}
+              attack={activeBandFields.attack ?? autoReadouts[active].attackMs}
+              release={activeBandFields.release ?? autoReadouts[active].releaseMs}
+              defaultThreshold={autoReadouts[active].thresholdDb}
+              defaultRatio={autoReadouts[active].ratio}
+              defaultAttack={autoReadouts[active].attackMs}
+              defaultRelease={autoReadouts[active].releaseMs}
+              onThreshold={activeBandFields.onThreshold}
+              onRatio={activeBandFields.onRatio}
+              onAttack={activeBandFields.onAttack}
+              onRelease={activeBandFields.onRelease}
             />
           </div>
         </>
       )}
     </section>
+  );
+}
+
+function CompressionKnobGrid({
+  threshold,
+  ratio,
+  attack,
+  release,
+  defaultThreshold,
+  defaultRatio,
+  defaultAttack,
+  defaultRelease,
+  onThreshold,
+  onRatio,
+  onAttack,
+  onRelease,
+}: {
+  threshold: number;
+  ratio: number;
+  attack: number;
+  release: number;
+  defaultThreshold: number;
+  defaultRatio: number;
+  defaultAttack: number;
+  defaultRelease: number;
+  onThreshold: (v: number | null) => void;
+  onRatio: (v: number | null) => void;
+  onAttack: (v: number | null) => void;
+  onRelease: (v: number | null) => void;
+}) {
+  return (
+    <div className="compressor-knob-grid">
+      <Knob
+        label="Threshold"
+        value={threshold}
+        min={-60}
+        max={0}
+        step={0.5}
+        defaultValue={defaultThreshold}
+        size="sm"
+        tone="blue"
+        format={(v) => `${v.toFixed(1)} dB`}
+        onChange={onThreshold}
+      />
+      <Knob
+        label="Ratio"
+        value={ratio}
+        min={1}
+        max={20}
+        step={0.1}
+        defaultValue={defaultRatio}
+        size="sm"
+        tone="cyan"
+        format={(v) => `${v.toFixed(1)}:1`}
+        onChange={onRatio}
+      />
+      <Knob
+        label="Attack"
+        value={attack}
+        min={0.5}
+        max={200}
+        step={1}
+        defaultValue={defaultAttack}
+        size="sm"
+        tone="purple"
+        format={(v) => `${v.toFixed(0)} ms`}
+        onChange={onAttack}
+      />
+      <Knob
+        label="Release"
+        value={release}
+        min={5}
+        max={2000}
+        step={5}
+        defaultValue={defaultRelease}
+        size="sm"
+        tone="green"
+        format={(v) => `${v.toFixed(0)} ms`}
+        onChange={onRelease}
+      />
+    </div>
   );
 }
 
@@ -2389,102 +2467,6 @@ function PanelResetButton({
     >
       ↺
     </button>
-  );
-}
-
-// CompressionPerBandSubsection (3-column grid) was replaced by
-// PerBandCompressorCard (Low/Mid/High tabs) per the
-// UI_LAYOUT_REVISION_1600x940 L3 spec. Tabs prevent the right rail
-// from becoming a tall form when all three bands' controls are
-// expanded at once.
-
-function CompressionBandColumn({
-  label,
-  disabled = false,
-  fallbackLabel = "Auto",
-  showFallbackReadouts = true,
-  threshold,
-  ratio,
-  attack,
-  release,
-  autoThreshold,
-  autoRatio,
-  autoAttack,
-  autoRelease,
-  onThreshold,
-  onRatio,
-  onAttack,
-  onRelease,
-}: {
-  label: string;
-  disabled?: boolean;
-  fallbackLabel?: string;
-  showFallbackReadouts?: boolean;
-  threshold: number | null;
-  ratio: number | null;
-  attack: number | null;
-  release: number | null;
-  autoThreshold: string;
-  autoRatio: string;
-  autoAttack: string;
-  autoRelease: string;
-  onThreshold: (v: number | null) => void;
-  onRatio: (v: number | null) => void;
-  onAttack: (v: number | null) => void;
-  onRelease: (v: number | null) => void;
-}) {
-  return (
-    <div className="compression-band-column">
-      <div className="compression-band-label">{label}</div>
-      <NumberField
-        label="Threshold"
-        value={threshold}
-        step={0.5}
-        min={-60}
-        max={0}
-        format={(v) => `${v.toFixed(1)} dB`}
-        autoLabel={fallbackLabel}
-        autoReadout={showFallbackReadouts ? autoThreshold : undefined}
-        disabled={disabled}
-        onChange={onThreshold}
-      />
-      <NumberField
-        label="Ratio"
-        value={ratio}
-        step={0.1}
-        min={1}
-        max={20}
-        format={(v) => `${v.toFixed(1)}:1`}
-        autoLabel={fallbackLabel}
-        autoReadout={showFallbackReadouts ? autoRatio : undefined}
-        disabled={disabled}
-        onChange={onRatio}
-      />
-      <NumberField
-        label="Attack"
-        value={attack}
-        step={1}
-        min={0.5}
-        max={200}
-        format={(v) => `${v.toFixed(1)} ms`}
-        autoLabel={fallbackLabel}
-        autoReadout={showFallbackReadouts ? autoAttack : undefined}
-        disabled={disabled}
-        onChange={onAttack}
-      />
-      <NumberField
-        label="Release"
-        value={release}
-        step={5}
-        min={5}
-        max={2000}
-        format={(v) => `${v.toFixed(0)} ms`}
-        autoLabel={fallbackLabel}
-        autoReadout={showFallbackReadouts ? autoRelease : undefined}
-        disabled={disabled}
-        onChange={onRelease}
-      />
-    </div>
   );
 }
 

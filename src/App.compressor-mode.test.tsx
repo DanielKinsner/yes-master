@@ -352,6 +352,29 @@ describe("AdvancedPanel compressor mode", () => {
     });
   });
 
+  it("uses compact compressor knobs in Manual mode", async () => {
+    const onAdvanced = vi.fn();
+    const { container, root } = await renderAdvancedPanel({
+      settings: makeSettings({ compression_mode: "manual" }),
+      onAdvanced,
+    });
+
+    expect(container.querySelector(".compressor-knob-grid")).not.toBeNull();
+    expect(container.textContent).toContain("Threshold");
+    expect(container.textContent).toContain("Ratio");
+    expect(container.textContent).toContain("Attack");
+    expect(container.textContent).toContain("Release");
+    expect(container.querySelectorAll(".compressor-knob-grid .knob")).toHaveLength(4);
+    expect(container.querySelector(".compression-band-column")).toBeNull();
+
+    const threshold = container.querySelector('input[aria-label="Threshold"]');
+    expect(threshold).toBeInstanceOf(HTMLInputElement);
+    expect((threshold as HTMLInputElement).value).toBe("-12.5");
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("shows preset compressor readouts instead of stale manual values", async () => {
     const universal = await renderAdvancedPanel({
       settings: makeSettings({
@@ -428,7 +451,7 @@ describe("AdvancedPanel compressor mode", () => {
       settings: makeSettings({ compression_mode: "manual" }),
     });
 
-    expect(manual.container.textContent).toContain("Preset · -12.5 dB");
+    expect(manual.container.textContent).toContain("-12.5 dB");
     expect(manual.container.textContent).not.toContain("Auto · -12.5 dB");
 
     await act(async () => {
