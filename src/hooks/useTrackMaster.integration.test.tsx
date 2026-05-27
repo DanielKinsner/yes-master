@@ -557,6 +557,72 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("does not start playback when switching original/mastered while paused", async () => {
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const track = makeTrack("paused-switch-1", "C:/audio/paused switch.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      playbackHandler?.({
+        track_id: track.id,
+        position_sec: 42,
+        is_playing: false,
+        is_loaded: true,
+        peak_dbfs: -120,
+        gr_low_db: -120,
+        gr_mid_db: -120,
+        gr_high_db: -120,
+        lufs_momentary: -120,
+        lufs_integrated: -120,
+        spectrum_db: [],
+      });
+    });
+    await waitFor(() => {
+      expect(harness.current().transport.currentTimeSec).toBe(42);
+    });
+
+    mocks.api.playMaster.mockClear();
+    mocks.api.playTrack.mockClear();
+    await act(async () => {
+      await harness.current().setPlaybackKind("master");
+    });
+
+    expect(harness.current().transport.playbackKind).toBe("master");
+    expect(harness.current().transport.isPlaying).toBe(false);
+    expect(mocks.api.playMaster).not.toHaveBeenCalled();
+    expect(mocks.api.playTrack).not.toHaveBeenCalled();
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("honors enabled LUFS preview on subsequent live settings edits", async () => {
     const track = makeTrack("live-preview-1", "C:/audio/live preview.wav");
     mocks.api.importTracks.mockResolvedValue([track]);

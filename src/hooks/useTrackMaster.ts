@@ -1299,8 +1299,10 @@ export function useTrackMaster() {
     async (kind: PlaybackKindUI) => {
       if (!selectedTrackId) return;
       setTransport((t) => ({ ...t, playbackKind: kind }));
-      // Mid-playback swap: if this track is currently loaded, switch source at the current position.
-      if (loadedTrackId === selectedTrackId) {
+      // Mid-playback swap: only call backend play methods while audio is
+      // actively running. A loaded-but-paused track should let the user choose
+      // Original/Mastered without starting transport.
+      if (loadedTrackId === selectedTrackId && transport.isPlaying) {
         setError(null);
         try {
           await playWithKind(kind, estimatedPlaybackPositionSec());
@@ -1309,7 +1311,13 @@ export function useTrackMaster() {
         }
       }
     },
-    [selectedTrackId, loadedTrackId, estimatedPlaybackPositionSec, playWithKind],
+    [
+      selectedTrackId,
+      loadedTrackId,
+      transport.isPlaying,
+      estimatedPlaybackPositionSec,
+      playWithKind,
+    ],
   );
 
   const seek = useCallback(
