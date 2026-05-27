@@ -63,18 +63,39 @@ Before calling Track Master private-solid, manually verify with audio playing:
 
 ## Already-Mastered Regression Matrix
 
-Add this as a first stabilization fixture protocol:
+Use the local-only runner documented in `docs/PRIVATE_AUDIO_FIXTURES.md`:
+
+```powershell
+cd src-tauri
+cargo run --example private_fixture_matrix -- --manifest ..\private-audio-fixtures\manifest.json --output ..\test-output\private-fixture-matrix
+```
+
+Required coverage:
 
 | Case | Preset | Compressor | Expected Evidence |
 | --- | --- | --- | --- |
 | Already-processed source | Universal | Preset | Source/render LUFS, TP, LRA, warning codes |
 | Already-processed source | Universal | Off | Source/render LUFS, TP, LRA, warning codes |
 | Already-processed source | Loud | Preset | Source/render LUFS, TP, LRA, warning codes |
+| Already-processed source | Loud | Off | Source/render LUFS, TP, LRA, warning codes |
 | Already-processed source | Clarity | Preset | Source/render LUFS, TP, LRA, warning codes |
+| Already-processed source | Clarity | Off | Source/render LUFS, TP, LRA, warning codes |
 
 The goal is not to prevent bold masters. The goal is to catch cases where the
 app makes the output objectively flatter/hotter and then fails to make the user
 review that fact.
+
+## Private Reference Tuning
+
+Use the local-only reference runner after preset/DSP retunes:
+
+```powershell
+cd src-tauri
+cargo run --example private_reference_tuning -- --references "..\tests for presets" --output ..\test-output\private-reference-tuning
+```
+
+Use the ledger as evidence, but do not treat it as a listening substitute. The
+runner output and rendered WAVs are private/ignored and must not be committed.
 
 ## Known Tooling Gaps
 

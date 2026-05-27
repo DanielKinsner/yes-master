@@ -14,8 +14,9 @@ Important frontend helpers:
 
 - `src/lib/settings-transitions.ts` injects source LUFS and handles profile /
   loudness-setting transitions.
-- `src/lib/compressor-auto.ts` currently computes preset/density compressor
-  readouts. This should be renamed conceptually to Preset compressor behavior.
+- `src/lib/compressor-auto.ts` computes preset/density compressor readouts for
+  the `Preset` compressor UI. The filename is historical; the user-facing
+  behavior is not track-aware auto-analysis.
 - `src/lib/export-location.ts` tracks last-used export folders and path helpers.
 
 ## Rust Backend
@@ -49,16 +50,22 @@ Compressor Off should bypass step 4 only.
 
 ## Export Flow Today
 
-1. User chooses an explicit save path.
-2. Frontend calls `renderTrackMaster`.
-3. Backend renders and returns output measurements.
-4. Frontend builds an `ExportReport`.
-5. Frontend calls `runExportChecks`.
-6. Receipt is stored and rendered.
+1. Right rail derives preflight review rows from current source analysis until
+   an export receipt exists.
+2. Clean path shows `Export Master`.
+3. Warning/critical review rows show `Export With Review`.
+4. First review click opens an inline review panel instead of rendering.
+5. `Adjust Settings` closes review; `Export Anyway` calls the normal export
+   path.
+6. User chooses an explicit save path.
+7. Frontend calls `renderTrackMaster`.
+8. Backend renders and returns output measurements.
+9. Frontend builds an `ExportReport`.
+10. Frontend calls `runExportChecks`.
+11. Receipt is stored and rendered.
 
-Missing flow:
-
-- Warning-aware pre-confirm/review state before final user acceptance.
+Quality review rows are advisory. Technical failures still stop export in the
+render/save path.
 
 ## Historical Docs
 

@@ -399,10 +399,8 @@ export function useTrackMaster() {
   }, []);
 
   // (Phase A4 hotfix-2 removed an analysis-arrival re-push effect here.
-  // The VM math no longer needs `source_lufs_integrated` — it estimates
-  // chain loudness push from the deterministic gain stages — so there's
-  // nothing for an analysis result to "unblock" anymore. Centralized in
-  // dsp.rs::ChainCoeffs::from_settings.)
+  // Live chain updates inject source LUFS through `withSourceLufs`; if analysis
+  // arrives later, the normal settings/update path rebuilds the chain.)
 
   // Phase 7.2: load the autosaved session on mount, then enable autosave.
   useEffect(() => {

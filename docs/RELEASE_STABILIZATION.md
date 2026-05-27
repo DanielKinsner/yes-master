@@ -1,77 +1,76 @@
 # Release Stabilization
 
-This is the active jump-fix queue for the new YES Master repo.
+This is the active jump-fix queue for the new YES Master repo. Keep it aligned
+with `docs/PRODUCT.md` and `docs/APP_BEHAVIOR.md`.
 
-## P0 - Export Review
+## Implemented Stabilization Slices
 
-Problem:
+### Export Review
 
-- Export checks warn after render, but the primary action still looks like a
-  normal clean export path.
+Status: implemented.
 
-Required behavior:
+Current behavior:
 
-- No warnings: `Export Master`.
-- Warnings present or expected from current/last checks: `Export With Review`.
+- No review rows: `Export Master`.
+- Warning/critical review rows: `Export With Review`.
 - Review panel lists warning rows plainly.
 - User actions: `Adjust Settings` or `Export Anyway`.
-- Technical failures still block export.
+- Technical failures still stop export through the render/save path.
 
-Verification:
+Verification coverage:
 
-- Frontend tests for button label and review panel.
-- Export receipt tests still pass.
-- Manual UI pass in the desktop app.
+- `src/components/RightRail.test.tsx`
+- `src/App.album-export.test.tsx`
+- Export receipt/backend contract tests.
 
-## P0 - Compressor Mode
+### Compressor Mode
 
-Problem:
+Status: implemented.
 
-- UI says `Auto` for compressor values that are not track-aware. They are
-  preset/density defaults.
+Current behavior:
 
-Required behavior:
-
-- Rename current readout concept to `Preset`.
-- Add mode: `Preset / Manual / Off`.
-- `Manual` engages user overrides.
-- `Off` bypasses creative/preset compressor only.
+- The UI uses `Preset / Manual / Off`.
+- `Preset` displays preset/density fallback values.
+- `Manual` engages user per-band overrides.
+- `Off` bypasses creative/preset compression only.
 - Limiter, ceiling, LUFS landing, metering, and export warnings remain active.
 
-Verification:
+Verification coverage:
 
-- Type/schema migration test.
-- Frontend interaction test.
-- DSP test proving Off removes compressor gain reduction while limiter still
-  catches peaks.
-- Export-check test proving Off still warns on unsafe output.
+- `src/App.compressor-mode.test.tsx`
+- `src/lib/compressor-auto.test.ts`
+- `src-tauri/src/dsp.rs` unit tests.
+- `src-tauri/tests/contracts.rs`
 
-## P0 - Already-Mastered Input Matrix
+### Private Fixture And Reference Harnesses
 
-Problem:
+Status: implemented as local-only slow lanes.
 
-- Current real-fixture recon shows already-processed material can become much
-  louder and flatter after default render.
+Current behavior:
 
-Required behavior:
+- Already-mastered matrix runner writes ignored JSON/CSV/render outputs.
+- Private reference tuning runner writes ignored JSON/CSV/render outputs.
+- Private source audio, rendered private masters, and private ledgers must not
+  be committed.
 
-- Add private-fixture metrics protocol.
+## Active Gates
+
+### Reference Retune Validation
+
+- Re-run the private reference tuning runner after DSP/preset changes.
+- Use listening notes before any further subjective preset tuning.
+- Oomph remains the least-matched preset in the current private reference
+  snapshot and needs careful listening before more changes.
+- Do not change export LUFS landing or compressor mode semantics in this gate.
+
+### Already-Mastered Input Matrix
+
+- Re-run the private fixture matrix for DSP/export changes.
 - Capture source/render LUFS, true peak, dynamic range, and warning codes.
-- Run across at least Universal, Loud, Clarity, and compressor Off.
+- Include Universal, Loud, Clarity, and compressor Off cases.
+- Treat the goal as evidence and review visibility, not banning bold masters.
 
-Verification:
-
-- Slow lane prints a clear ledger.
-- No private audio or rendered private masters are committed.
-
-## P1 - Realtime Sweep Confirmation
-
-Problem:
-
-- Realtime stutter fixes landed, but manual playback verification is still the
-  honest gate.
-
-Required behavior:
+### Realtime Sweep Confirmation
 
 - Aggressively sweep Intensity, EQ, output gain, compressor threshold, and
   density while audio plays.
@@ -83,7 +82,7 @@ After clean verification:
 - Remove `get_diag_counters`.
 - Remove temporary diagnostic atomics/types/API wiring.
 
-## P1 - Tooling Gate Cleanup
+### Tooling Gate Cleanup
 
 - Decide whether to format Rust now or in a dedicated mechanical commit.
 - Install Clippy and make `cargo clippy --all-targets -- -D warnings` runnable.

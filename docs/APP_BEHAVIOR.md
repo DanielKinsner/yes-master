@@ -19,66 +19,115 @@ Track Master supports:
 - Importing local audio.
 - Source analysis.
 - Waveform display.
-- Original/Mastered audition.
+- Original/Mastered audition at the same playhead.
 - Region selection and loop playback.
 - Presets and intensity.
 - Visual EQ/tone shaping.
-- Advanced controls.
+- Volume Match for audition only.
 - Delivery profile selection.
+- Advanced controls.
+- Explicit compressor modes.
+- Per-band compressor detail.
+- Delivery format selection.
 - Explicit save destination for export.
+- Warning-aware export review.
 - Post-render export receipt/checks.
 
-## Export Checks
+## Export Checks And Review
 
-The backend currently checks rendered-output measurements for:
+The backend checks rendered-output measurements for:
 
 - True peak above critical/safe streaming thresholds.
 - Loudness above very-loud territory.
 - Dynamic range below the low-dynamic-range threshold.
 - Bit depth below 16-bit.
 - Non-finite LUFS metering.
-- Already-compressed source combined with moderate/heavy compression density.
+- Already-compressed source combined with moderate/heavy preset compression.
 
-These checks warn; they do not currently create a pre-export review/confirm
-flow in the right rail.
+Before an export receipt exists, the right rail derives preflight review rows
+from current source analysis for true peak, loudness, and dynamic range. These
+rows make already-hot or already-compressed sources visible before the user
+treats export as a clean path.
 
-## Known Current Gaps
+The export button is warning-aware:
 
-1. Export warnings exist, but the primary button still reads `Export Master`.
-   The UX needs a warning-aware review step.
+- No review rows: `Export Master`.
+- Warning or critical review rows: `Export With Review`.
+- First `Export With Review` click opens an inline review panel.
+- `Adjust Settings` closes the panel and does not export.
+- `Export Anyway` calls the existing export path.
 
-2. The per-band compressor UI says `Auto`, but the values are preset/density
-   fallbacks rather than track-aware auto-analysis.
+Quality rows are advisory when the app can write a file. Technical failures
+still stop export through the render/save path: invalid paths, cancelled save
+dialogs, decode/render/write failures, or corrupt/non-finite render state.
 
-3. There is no compressor mode field yet. `Preset / Manual / Off` needs schema,
-   UI, DSP, migration, and tests.
+## Compressor Modes
 
-4. Already-mastered material can be pushed louder and flatter by the default
-   chain. The app can warn afterward, but it needs better pre-export review and
-   fixture-based regression coverage.
+The app has an explicit compressor mode field:
 
-5. Temporary diagnostic counters for the realtime recovery are still wired.
-   Remove them after the aggressive playback sweep is verified clean.
+- `Preset`: current preset/density fallback behavior.
+- `Manual`: user per-band values replace preset compression.
+- `Off`: bypasses creative/preset compression only.
 
-6. `cargo fmt --check` has pre-existing formatting drift.
+`Off` does not bypass the limiter, ceiling protection, LUFS landing, metering,
+or export warnings.
 
-7. Clippy is not currently available in the local Rust toolchain used during
+The per-band compressor card labels preset fallback values as `Preset`, not
+track-aware `Auto`. If a low-dynamic-range source is loaded while `Preset` mode
+is active, the card gives local guidance to lower density or switch Off if
+movement collapses.
+
+## Private Fixture And Reference Lanes
+
+Private audio is local-only and ignored by git.
+
+The already-mastered matrix runner measures preset/compressor cases against
+private fixtures:
+
+```powershell
+cd src-tauri
+cargo run --example private_fixture_matrix -- --manifest ..\private-audio-fixtures\manifest.json --output ..\test-output\private-fixture-matrix
+```
+
+The private reference tuning runner compares YES Master presets against external
+reference masters:
+
+```powershell
+cd src-tauri
+cargo run --example private_reference_tuning -- --references "..\tests for presets" --output ..\test-output\private-reference-tuning
+```
+
+Both lanes write ignored ledgers and rendered WAVs. Do not commit private audio,
+rendered private masters, waveform images from private audio, or fixture-specific
+ledgers.
+
+## Reference Retune Snapshot
+
+The 2026-05-26 reference retune preserved `-14 LUFS` delivery landing and
+compressor-mode semantics. External references were hotter than YES Master
+exports; that is expected for this slice.
+
+Observed aggregate after the retune:
+
+```text
+universal  ref -10.53 LUFS, YES -14.00 LUFS, DR gap -0.31 LU, warnings dynamic_range_low|comp_density_on_compressed_source
+clarity    ref -12.04 LUFS, YES -14.00 LUFS, DR gap -0.50 LU, warnings dynamic_range_low|comp_density_on_compressed_source
+oomph      ref -11.87 LUFS, YES -14.00 LUFS, DR gap -1.10 LU, warnings dynamic_range_low|comp_density_on_compressed_source
+tape       ref  -9.91 LUFS, YES -14.00 LUFS, DR gap -0.82 LU, warnings dynamic_range_low|comp_density_on_compressed_source
+```
+
+Oomph remains the least-matched preset and needs careful listening before any
+further subjective retune.
+
+## Current Gaps
+
+1. Private-fixture and private-reference slow lanes must be rerun for DSP/export
+   changes; automated tests cannot approve taste.
+2. Oomph needs listening notes before another targeted tuning pass.
+3. Temporary realtime diagnostic counters are still wired. Remove them only
+   after the aggressive playback sweep is verified clean.
+4. `cargo fmt --check` has pre-existing formatting drift.
+5. Clippy is not currently available in the local Rust toolchain used during
    the migration recon.
-
-## Real-Fixture Recon Snapshot
-
-A targeted private-fixture snapshot was run before this repo foundation branch.
-It passed mechanically: import, analyze, waveform, render, re-analyze, and export
-checks all completed.
-
-The objective result showed the risk this stabilization pass must address:
-
-- Source: about -14.6 LUFS integrated, -4.0 dBTP true peak, 5.2 LU dynamic
-  range.
-- Rendered Universal output: about -8.4 LUFS integrated, -0.7 dBTP true peak,
-  3.5 LU dynamic range.
-- Checks warned for streaming headroom and low dynamic range.
-
-Interpretation: current measurement/warning infrastructure sees the problem,
-but the export UX needs to surface review before the user treats the render as a
-clean success.
+6. Windows packaging still needs local verification before release-candidate
+   status.

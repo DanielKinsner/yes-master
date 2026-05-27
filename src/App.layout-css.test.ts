@@ -76,22 +76,43 @@ describe("console layout CSS", () => {
     expect(appTsx).not.toContain("Export LUFS</span>");
   });
 
-  it("keeps the header transport controls from overlapping the insight summary", () => {
-    expect(block(".track-header")).toContain("display: grid");
-    expect(block(".track-header")).toContain(
+  it("keeps preview controls in the track header and leaves the waveform deck clean", () => {
+    expect(appTsx).toContain('className="track-header-meta-row"');
+    expect(appTsx).toContain('className="track-header-actions"');
+    expect(appTsx).toContain('className="track-preview-toolbar"');
+    expect(block(".track-header")).toContain("display: block");
+    expect(block(".track-header-primary")).toContain(
       "grid-template-columns: minmax(0, 1fr) max-content",
     );
-    expect(block(".track-header-controls")).toContain("min-width: max-content");
+    expect(block(".track-header-actions")).toContain("justify-items: end");
+    expect(css).toContain("--center-switch-width: 260px");
+    expect(css).toContain("--center-switch-height: 38px");
+    expect(block(".top-header-tabs")).toContain("width: var(--center-switch-width)");
+    expect(block(".track-toolbar-group-compare")).toContain(
+      "width: var(--center-switch-width)",
+    );
+    expect(block(".top-tab")).toContain("min-height: var(--center-switch-height)");
+    expect(block(".ab-toggle button")).toContain(
+      "min-height: var(--center-switch-height)",
+    );
+    expect(block(".track-preview-toolbar")).toContain("display: flex");
+    expect(block(".track-preview-toolbar")).toContain("justify-content: flex-end");
+    expect(block(".wf-deck-transport")).toContain("grid-column: 1");
+    expect(block(".wf-deck-transport")).toContain("grid-row: 1");
+    expect(block(".wf-card")).toContain("grid-column: 2");
+    expect(block(".wf-card")).toContain("grid-row: 1");
+    expect(block(".wf-deck-meters")).toContain("grid-column: 3");
+    expect(block(".wf-deck-meters")).toContain("grid-row: 1");
   });
 
-  it("keeps the console insight card narrow enough for playback controls", () => {
+  it("keeps the console insight compact enough for the metadata rail", () => {
     expect(css).toContain(
-      "grid-template-columns: minmax(220px, 1fr) minmax(220px, 340px)",
+      "flex-wrap: nowrap",
     );
     expect(css).toContain(
-      "grid-template-columns: minmax(300px, 1fr) minmax(260px, 360px)",
+      "grid-template-columns: 86px minmax(0, 1fr) 174px",
     );
-    expect(block(".analysis-summary-headline")).toContain("font-size: 0.78rem");
+    expect(block(".analysis-summary-headline")).toContain("white-space: nowrap");
   });
 
   it("keeps manual compressor knobs compact inside the right rail", () => {

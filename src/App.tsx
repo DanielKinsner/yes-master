@@ -536,10 +536,8 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           onToggle={() => tm.toggleOverrideAlbum(track.id)}
         />
       )}
-      {/* UI_LAYOUT_REVISION_1600x940 L1 + L2 — waveform deck as the
-          workspace anchor. Three columns: transport | waveform |
-          compact master out, keeping primary audio controls in the
-          hero instead of a separate transport strip. */}
+      {/* Header owns comparison/preview controls; the waveform deck stays
+          focused on transport, waveform, and metering. */}
       <section className="console-hero">
         <TrackHeader
           track={track}
@@ -678,9 +676,6 @@ function TrackHeader({
 }: {
   track: ImportedTrack;
   analysis: AnalysisResult | undefined;
-  // UI_LAYOUT_REVISION_1600x940 L1: A/B comparison toggles and Volume
-  // Match moved from the separate Transport section into the track
-  // header so the waveform module below can be the workspace anchor.
   playbackKind: PlaybackKindUI;
   volumeMatch: boolean;
   exportLufsPreview: boolean;
@@ -709,57 +704,98 @@ function TrackHeader({
   return (
     <section className="track-header">
       <div className="track-header-main">
-        <h1 className="track-title">{track.display_name}</h1>
-        <div className="track-meta-chips">
-          {chips.map((c) => (
-            <span key={c.key} className="meta-chip">{c.label}</span>
-          ))}
+        <div className="track-header-primary">
+          <div className="track-header-title-block">
+            <h1 className="track-title">{track.display_name}</h1>
+            <div className="track-header-meta-row">
+              <div className="track-meta-chips">
+                {chips.map((c) => (
+                  <span key={c.key} className="meta-chip">{c.label}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="track-header-actions">
+            {analysis && (
+              <span className="track-header-status">
+                <span className="status-pill status-ok">Analyzed</span>
+                <span className="track-header-status-chevron" aria-hidden>⌄</span>
+              </span>
+            )}
+            <DeckPreviewOptions
+              playbackKind={playbackKind}
+              volumeMatch={volumeMatch}
+              exportLufsPreview={exportLufsPreview}
+              onPlaybackKindChange={onPlaybackKindChange}
+              onVolumeMatchChange={onVolumeMatchChange}
+              onExportLufsPreviewChange={onExportLufsPreviewChange}
+            />
+          </div>
         </div>
         {analysis && <AnalysisSummary analysis={analysis} />}
       </div>
-      <div className="track-header-controls">
-        <div className="track-toolbar-group track-toolbar-group-compare" aria-label="Playback source">
-          <div className="ab-toggle">
-            <button
-              type="button"
-              className={playbackKind === "source" ? "on" : ""}
-              onClick={() => onPlaybackKindChange("source")}
-            >
-              Original
-            </button>
-            <button
-              type="button"
-              className={playbackKind === "master" ? "on" : ""}
-              onClick={() => onPlaybackKindChange("master")}
-            >
-              Mastered
-            </button>
-          </div>
-        </div>
-        <div className="track-toolbar-group track-toolbar-group-options" aria-label="Preview options">
+    </section>
+  );
+}
+
+function DeckPreviewOptions({
+  playbackKind,
+  volumeMatch,
+  exportLufsPreview,
+  onPlaybackKindChange,
+  onVolumeMatchChange,
+  onExportLufsPreviewChange,
+}: {
+  playbackKind: PlaybackKindUI;
+  volumeMatch: boolean;
+  exportLufsPreview: boolean;
+  onPlaybackKindChange: (kind: PlaybackKindUI) => void;
+  onVolumeMatchChange: (on: boolean) => void;
+  onExportLufsPreviewChange: (on: boolean) => void;
+}) {
+  return (
+    <div className="track-preview-toolbar">
+      <div className="track-toolbar-group track-toolbar-group-compare" aria-label="Playback source">
+        <div className="ab-toggle">
           <button
             type="button"
-            className={`toolbar-toggle ${volumeMatch ? "is-on" : ""}`}
-            aria-pressed={volumeMatch}
-            title="Aligns playback loudness for fair tone comparison. Export level is unchanged."
-            onClick={() => onVolumeMatchChange(!volumeMatch)}
+            className={playbackKind === "source" ? "on" : ""}
+            onClick={() => onPlaybackKindChange("source")}
           >
-            <span className="toolbar-toggle-box" aria-hidden />
-            <span>Volume Match</span>
+            Original
           </button>
           <button
             type="button"
-            className={`toolbar-toggle ${exportLufsPreview ? "is-on" : ""}`}
-            aria-pressed={exportLufsPreview}
-            title="Previews export LUFS landing during Mastered playback. The readout settles over a few seconds on heavier chains."
-            onClick={() => onExportLufsPreviewChange(!exportLufsPreview)}
+            className={playbackKind === "master" ? "on" : ""}
+            onClick={() => onPlaybackKindChange("master")}
           >
-            <span className="toolbar-toggle-box" aria-hidden />
-            <span>Preview LUFS</span>
+            Mastered
           </button>
         </div>
       </div>
-    </section>
+      <div className="track-toolbar-group track-toolbar-group-options" aria-label="Preview options">
+        <button
+          type="button"
+          className={`toolbar-toggle ${volumeMatch ? "is-on" : ""}`}
+          aria-pressed={volumeMatch}
+          title="Aligns playback loudness for fair tone comparison. Export level is unchanged."
+          onClick={() => onVolumeMatchChange(!volumeMatch)}
+        >
+          <span className="toolbar-toggle-box" aria-hidden />
+          <span>Volume Match</span>
+        </button>
+        <button
+          type="button"
+          className={`toolbar-toggle ${exportLufsPreview ? "is-on" : ""}`}
+          aria-pressed={exportLufsPreview}
+          title="Previews export LUFS landing during Mastered playback. The readout settles over a few seconds on heavier chains."
+          onClick={() => onExportLufsPreviewChange(!exportLufsPreview)}
+        >
+          <span className="toolbar-toggle-box" aria-hidden />
+          <span>Preview LUFS</span>
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -969,30 +1005,21 @@ function AnalysisSummary({ analysis }: { analysis: AnalysisResult }) {
     lines.push(`True peak ${tp.toFixed(2)} dBTP — comfortable headroom.`);
   }
 
-  // Most actionable headline = first line (loudness commentary). Subsequent
-  // lines stay collapsed by default so the card reads as a one-line "insight"
-  // until the user clicks for the full breakdown.
+  // Most actionable headline = source loudness. Commentary stays collapsed so
+  // the insight can sit on the metadata row without becoming a second header.
   const [headline, ...rest] = lines;
+  const expandedLines = [headline, ...rest];
   return (
     <details className="analysis-summary">
       <summary>
-        <span className="analysis-summary-icon" aria-hidden>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 18h6" />
-            <path d="M10 22h4" />
-            <path d="M12 2a7 7 0 0 0-5 11.9c1 1 1.5 2 1.5 3.1h7c0-1.1.5-2.1 1.5-3.1A7 7 0 0 0 12 2z" />
-          </svg>
-        </span>
         <span className="analysis-summary-text">
           <span className="analysis-summary-eyebrow">Insight</span>
           <span className="analysis-summary-headline">{headline}</span>
         </span>
-        <span className="analysis-summary-status status-pill status-ok">Analyzed</span>
-        <span className="analysis-summary-chevron" aria-hidden>⌄</span>
       </summary>
-      {rest.length > 0 && (
+      {expandedLines.length > 0 && (
         <ul>
-          {rest.map((line, i) => (
+          {expandedLines.map((line, i) => (
             <li key={i}>{line}</li>
           ))}
         </ul>

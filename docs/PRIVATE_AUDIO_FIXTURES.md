@@ -1,6 +1,6 @@
 # Private Audio Fixtures
 
-Use this convention when testing Album Mastering Studio with real user audio.
+Use this convention when testing YES Master with real user audio.
 
 Private audio must never be committed. The repo ignores:
 
@@ -28,7 +28,7 @@ The filenames above are examples. Use whatever local names are convenient.
 ```json
 {
   "version": 1,
-  "notes": "Private local fixtures for Album Mastering Studio. Do not commit audio.",
+  "notes": "Private local fixtures for YES Master. Do not commit audio.",
   "fixtures": [
     {
       "id": "clean-full-mix",
