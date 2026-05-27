@@ -827,6 +827,36 @@ impl PreviewLandingCache {
     }
 }
 
+struct PlayMasterPreviewLandingPlan {
+    initial_gain: f32,
+    needs_measurement: bool,
+}
+
+fn play_master_preview_landing_plan(
+    cache: &PreviewLandingCache,
+    settings: &MasteringSettings,
+    preview_lufs_landing: bool,
+) -> PlayMasterPreviewLandingPlan {
+    if !preview_lufs_landing {
+        return PlayMasterPreviewLandingPlan {
+            initial_gain: 1.0,
+            needs_measurement: false,
+        };
+    }
+
+    if let Some(cached) = cache.get(settings) {
+        return PlayMasterPreviewLandingPlan {
+            initial_gain: cached,
+            needs_measurement: false,
+        };
+    }
+
+    PlayMasterPreviewLandingPlan {
+        initial_gain: 1.0,
+        needs_measurement: true,
+    }
+}
+
 /// Hash of the `MasteringSettings` fields that affect the export
 /// landing gain. Uses serde_json for ergonomic correctness — every
 /// f32 / enum / Option boundary is handled by serde without bespoke
@@ -982,11 +1012,7 @@ fn try_spawn_lufs_preview_worker(
         return false;
     };
     let channels = cache_entry.pcm.channels;
-    let samples = preview_landing_window(
-        cache_entry.pcm.samples.as_slice(),
-        sample_rate,
-        channels,
-    );
+    let samples = preview_landing_window(cache_entry.pcm.samples.as_slice(), sample_rate, channels);
     let command_tx = command_tx.clone();
     let spawn_result = std::thread::Builder::new()
         .name("lufs-preview-landing".to_string())
@@ -1212,6 +1238,7 @@ fn process_audio_command(
                 start_position_sec,
                 preview_lufs_landing,
                 prewarm_cache,
+                command_tx,
             );
             let _ = reply.send(outcome);
         }
@@ -1646,6 +1673,7 @@ fn handle_play_master(
     start_position_sec: f64,
     preview_lufs_landing: bool,
     prewarm_cache: &SharedDecodedCache,
+    command_tx: &Sender<AudioCommand>,
 ) -> Result<(), String> {
     // Three-tier PCM resolution (fastest to slowest):
     //   1. Local "currently-playing" cache on AudioThreadState —
@@ -1743,28 +1771,34 @@ fn handle_play_master(
         settings,
         gr_slots,
     );
-    if preview_lufs_landing {
-        chain.coeffs.export_landing_gain_lin = export_landing_gain_lin_for_preview(
-            &pcm.samples,
-            pcm.sample_rate,
-            pcm.channels,
-            settings,
-        )?;
-        s.landing_gain_cache
-            .insert(settings, chain.coeffs.export_landing_gain_lin);
-    }
     s.live_coeff_generation = s.live_coeff_generation.wrapping_add(1);
-    s.live_landing_gain_lin = chain.coeffs.export_landing_gain_lin;
+    let generation = s.live_coeff_generation;
     // Track epoch bump invalidates any LUFS preview workers spawned
     // against the prior track. Also wipe the in-flight gate + pending
-    // slot so the next UpdateChain spawns a fresh worker rather than
-    // queueing behind a dead one. Stale workers still in flight will
-    // send PreviewLandingReady against the OLD epoch; the handler
-    // rejects them before they can touch the landing-gain cache or
-    // emit a corrective LiveCoeffUpdate against the new track.
+    // slot so the next preview measurement belongs to this newly loaded
+    // source instead of queueing behind a stale worker.
     s.track_epoch = s.track_epoch.wrapping_add(1);
     s.lufs_worker_in_flight = false;
     s.lufs_worker_pending = None;
+    let track_epoch = s.track_epoch;
+
+    let landing_plan =
+        play_master_preview_landing_plan(&s.landing_gain_cache, settings, preview_lufs_landing);
+    chain.coeffs.export_landing_gain_lin = landing_plan.initial_gain;
+    s.live_landing_gain_lin = chain.coeffs.export_landing_gain_lin;
+
+    if landing_plan.needs_measurement
+        && try_spawn_lufs_preview_worker(
+            s.decoded_cache.as_ref(),
+            pcm.sample_rate,
+            settings.clone(),
+            generation,
+            track_epoch,
+            command_tx,
+        )
+    {
+        s.lufs_worker_in_flight = true;
+    }
     let mastering_source = MasteringSource::new(
         pcm.samples,
         pcm.channels,
@@ -2262,6 +2296,32 @@ mod tests {
         );
     }
 
+    #[test]
+    fn play_master_preview_landing_defers_cache_miss() {
+        let cache = PreviewLandingCache::new();
+        let settings = settings_with_intensity(0.5);
+
+        let plan = play_master_preview_landing_plan(&cache, &settings, true);
+
+        assert!((plan.initial_gain - 1.0).abs() < f32::EPSILON);
+        assert!(
+            plan.needs_measurement,
+            "PlayMaster must not synchronously measure a cache miss before audio starts"
+        );
+    }
+
+    #[test]
+    fn play_master_preview_landing_uses_cached_gain_without_measurement() {
+        let mut cache = PreviewLandingCache::new();
+        let settings = settings_with_intensity(0.5);
+        cache.insert(&settings, 0.42);
+
+        let plan = play_master_preview_landing_plan(&cache, &settings, true);
+
+        assert!((plan.initial_gain - 0.42).abs() < f32::EPSILON);
+        assert!(!plan.needs_measurement);
+    }
+
     // ========================================================================
     // Coalescing — mechanical gates for the knob-spam-protection layer.
     // coalesced_command_sequence() is the entire flow. If it stops
@@ -2323,18 +2383,13 @@ mod tests {
         // No decoded PCM → nothing to measure. Helper must report
         // false so the caller doesn't mark in_flight.
         let (tx, rx) = mpsc::channel::<AudioCommand>();
-        let spawned = try_spawn_lufs_preview_worker(
-            None,
-            44_100,
-            settings_with_intensity(0.5),
-            42,
-            7,
-            &tx,
-        );
+        let spawned =
+            try_spawn_lufs_preview_worker(None, 44_100, settings_with_intensity(0.5), 42, 7, &tx);
         assert!(!spawned, "spawn must report false when no PCM is cached");
         // No PreviewLandingReady should ever arrive on the channel.
         assert!(
-            rx.recv_timeout(std::time::Duration::from_millis(50)).is_err(),
+            rx.recv_timeout(std::time::Duration::from_millis(50))
+                .is_err(),
             "no worker started ⇒ no PreviewLandingReady should be sent"
         );
     }
@@ -3032,8 +3087,7 @@ mod tests {
         let samples = sine_signal(total_frames, sample_rate, channels);
 
         let initial_settings = settings_with_intensity(0.0);
-        let initial_chain =
-            MasteringChain::new(sample_rate, channels as usize, &initial_settings);
+        let initial_chain = MasteringChain::new(sample_rate, channels as usize, &initial_settings);
         let (coeffs_tx, coeffs_rx) = mpsc::channel::<LiveCoeffUpdate>();
         let peak = Arc::new(AtomicU32::new(0));
         let lufs = Arc::new(AtomicI32::new(i32::MIN));
