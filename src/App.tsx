@@ -904,29 +904,25 @@ function ActiveModifierStrip({
 }: {
   modifiers: ActiveModifierChip[];
 }) {
-  if (modifiers.length === 0) return null;
+  const summary = activeModifierSummary(modifiers);
+  if (!summary) return null;
   return (
     <div className="active-modifier-strip" aria-label="Active processing modifiers">
-      <span className="active-modifier-label">Active</span>
-      {modifiers.slice(0, 5).map((modifier) => (
-        <span
-          key={modifier.key}
-          className="active-modifier-chip"
-          title={modifier.title}
-        >
-          {modifier.label}
-        </span>
-      ))}
-      {modifiers.length > 5 && (
-        <span
-          className="active-modifier-chip active-modifier-more"
-          title={modifiers.slice(5).map((m) => m.label).join(" · ")}
-        >
-          +{modifiers.length - 5}
-        </span>
-      )}
+      <span className="active-modifier-summary" title={summary.title}>
+        {summary.label}
+      </span>
     </div>
   );
+}
+
+export function activeModifierSummary(
+  modifiers: ActiveModifierChip[],
+): { label: string; title: string } | null {
+  if (modifiers.length === 0) return null;
+  return {
+    label: `Active ${modifiers.length}`,
+    title: modifiers.map((modifier) => modifier.label).join(" · "),
+  };
 }
 
 function formatDuration(seconds: number): string {
@@ -1882,10 +1878,6 @@ function DeliveryProfileCard({
     <section className="panel rail-card rail-card-delivery">
       <header className="panel-head">
         <span className="panel-title">DELIVERY PROFILE</span>
-        <PanelResetButton
-          label="Reset delivery profile"
-          onClick={() => onDeliveryProfile("streaming-universal")}
-        />
       </header>
       <select
         id="delivery-profile-select"
@@ -2055,24 +2047,7 @@ function PerBandCompressorCard({
     onAdvanced({ ...a, compression_mode: mode });
   };
   const resetPerBandCompressor = () => {
-    onAdvanced({
-      ...a,
-      compression_mode: "preset",
-      compression_density: null,
-      compression_link_stereo: null,
-      compression_low_threshold_db: null,
-      compression_low_ratio: null,
-      compression_low_attack_ms: null,
-      compression_low_release_ms: null,
-      compression_mid_threshold_db: null,
-      compression_mid_ratio: null,
-      compression_mid_attack_ms: null,
-      compression_mid_release_ms: null,
-      compression_high_threshold_db: null,
-      compression_high_ratio: null,
-      compression_high_attack_ms: null,
-      compression_high_release_ms: null,
-    });
+    onAdvanced(resetCompressorSettingsToCurrentMode(settings, a));
   };
   const bandFields: Record<Band, {
     threshold: number | null;
@@ -2180,40 +2155,54 @@ function PerBandCompressorCard({
           Source dynamic range is low; lower density or switch Off if preset compression collapses movement.
         </div>
       )}
-      <label className="per-band-link-stereo">
-        <input
-          type="checkbox"
-          checked={a.compression_link_stereo !== false}
-          disabled={!manualEnabled}
-          onChange={(e) =>
-            onUpdate("compression_link_stereo", e.target.checked ? null : false)
-          }
-        />
-        <span>Link stereo</span>
-      </label>
-      <div className="per-band-tabs" role="tablist">
-        {(["low", "mid", "high"] as Band[]).map((band) => (
-          <button
-            key={band}
-            type="button"
-            role="tab"
-            aria-selected={active === band}
-            className={"per-band-tab" + (active === band ? " is-active" : "")}
-            onClick={() => setActive(band)}
-          >
-            {band === "low" ? "Low" : band === "mid" ? "Mid" : "High"}
-          </button>
-        ))}
-      </div>
-      <div className="per-band-active-body">
-        <CompressionBandColumn
-          label=""
-          disabled={!manualEnabled}
-          fallbackLabel={fallbackLabel}
-          showFallbackReadouts={showFallbackReadouts}
-          {...displayedBandFields}
-        />
-      </div>
+      {!manualEnabled && compressorMode === "preset" && (
+        <div className="compressor-preset-summary">
+          Preset compressor: {autoReadouts.low.thresholdLabel} ·{" "}
+          {autoReadouts.low.ratioLabel} · {autoReadouts.low.attackLabel} ·{" "}
+          {autoReadouts.low.releaseLabel}
+        </div>
+      )}
+      {!manualEnabled && compressorMode === "off" && (
+        <div className="compressor-preset-summary">
+          Per-band controls inactive.
+        </div>
+      )}
+      {manualEnabled && (
+        <>
+          <label className="per-band-link-stereo">
+            <input
+              type="checkbox"
+              checked={a.compression_link_stereo !== false}
+              onChange={(e) =>
+                onUpdate("compression_link_stereo", e.target.checked ? null : false)
+              }
+            />
+            <span>Link stereo</span>
+          </label>
+          <div className="per-band-tabs" role="tablist">
+            {(["low", "mid", "high"] as Band[]).map((band) => (
+              <button
+                key={band}
+                type="button"
+                role="tab"
+                aria-selected={active === band}
+                className={"per-band-tab" + (active === band ? " is-active" : "")}
+                onClick={() => setActive(band)}
+              >
+                {band === "low" ? "Low" : band === "mid" ? "Mid" : "High"}
+              </button>
+            ))}
+          </div>
+          <div className="per-band-active-body">
+            <CompressionBandColumn
+              label=""
+              fallbackLabel={fallbackLabel}
+              showFallbackReadouts={showFallbackReadouts}
+              {...displayedBandFields}
+            />
+          </div>
+        </>
+      )}
     </section>
   );
 }
@@ -2270,6 +2259,55 @@ function materializeManualCompressor(
       advanced.compression_high_attack_ms ?? readouts.high.attackMs,
     compression_high_release_ms:
       advanced.compression_high_release_ms ?? readouts.high.releaseMs,
+  };
+}
+
+function resetCompressorSettingsToCurrentMode(
+  settings: MasteringSettings,
+  advanced: MasteringSettings["advanced"],
+): MasteringSettings["advanced"] {
+  const mode = advanced.compression_mode ?? "preset";
+  const base = {
+    ...advanced,
+    compression_mode: mode,
+    compression_density: null,
+    compression_link_stereo: null,
+  };
+  if (mode === "manual") {
+    const resetAdvanced = {
+      ...base,
+      compression_low_threshold_db: null,
+      compression_low_ratio: null,
+      compression_low_attack_ms: null,
+      compression_low_release_ms: null,
+      compression_mid_threshold_db: null,
+      compression_mid_ratio: null,
+      compression_mid_attack_ms: null,
+      compression_mid_release_ms: null,
+      compression_high_threshold_db: null,
+      compression_high_ratio: null,
+      compression_high_attack_ms: null,
+      compression_high_release_ms: null,
+    };
+    return materializeManualCompressor(
+      { ...settings, advanced: resetAdvanced },
+      resetAdvanced,
+    );
+  }
+  return {
+    ...base,
+    compression_low_threshold_db: null,
+    compression_low_ratio: null,
+    compression_low_attack_ms: null,
+    compression_low_release_ms: null,
+    compression_mid_threshold_db: null,
+    compression_mid_ratio: null,
+    compression_mid_attack_ms: null,
+    compression_mid_release_ms: null,
+    compression_high_threshold_db: null,
+    compression_high_ratio: null,
+    compression_high_attack_ms: null,
+    compression_high_release_ms: null,
   };
 }
 

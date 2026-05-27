@@ -700,7 +700,6 @@ button.primary:disabled {
   flex-shrink: 0;
   flex-wrap: wrap;
   justify-content: flex-end;
-  max-width: min(760px, 100%);
 }
 
 .track-title {
@@ -2186,37 +2185,24 @@ button.primary:disabled {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.3rem;
-  flex-wrap: wrap;
-  width: 100%;
-  margin-top: -0.25rem;
+  flex: 0 0 auto;
 }
 
-.active-modifier-label {
-  font-size: 0.62rem;
-  color: var(--text-2);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-weight: 700;
-}
-
-.active-modifier-chip {
+.active-modifier-summary {
   display: inline-flex;
   align-items: center;
   min-height: 20px;
-  padding: 0.12rem 0.4rem;
+  padding: 0.13rem 0.45rem;
   border-radius: 999px;
   border: 1px solid rgba(111, 163, 255, 0.22);
   background: rgba(111, 163, 255, 0.10);
-  color: var(--text-1);
-  font-size: 0.66rem;
+  color: var(--accent-bright);
+  font-size: 0.62rem;
   font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-
-.active-modifier-more {
-  color: var(--accent-bright);
 }
 
 .adv-field.is-disabled {
@@ -3397,6 +3383,17 @@ button.primary:disabled {
   line-height: 1.35;
   padding: 0.42rem 0.5rem;
   margin: -0.1rem 0 0.45rem;
+}
+
+.compressor-preset-summary {
+  color: var(--text-1);
+  background: rgba(13, 16, 24, 0.45);
+  border: 1px solid rgba(111, 163, 255, 0.12);
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  padding: 0.42rem 0.5rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .per-band-tabs {

@@ -2,7 +2,11 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AdvancedPanel, activeModifierChips } from "./App";
+import {
+  AdvancedPanel,
+  activeModifierChips,
+  activeModifierSummary,
+} from "./App";
 import type {
   AdvancedSettings,
   AnalysisResult,
@@ -162,6 +166,40 @@ describe("AdvancedPanel compressor mode", () => {
     expect(activeModifierChips(makeSettings(), false, false)).toEqual([]);
   });
 
+  it("collapses active modifiers to one compact summary for the header", () => {
+    const summary = activeModifierSummary(
+      activeModifierChips(
+        {
+          ...makeSettings({ lufs_offset_db: -20, compression_mode: "manual" }),
+          output_gain_db: -6.5,
+          delivery_profile: "custom",
+        },
+        false,
+        true,
+      ),
+    );
+
+    expect(summary?.label).toBe("Active 4");
+    expect(summary?.title).toContain("Output -6.5 dB");
+    expect(summary?.title).toContain("Target -20 LUFS");
+    expect(summary?.title).toContain("Compressor Manual");
+    expect(summary?.title).toContain("Preview LUFS On");
+  });
+
+  it("does not show a reset button on delivery profile", async () => {
+    const { container, root } = await renderAdvancedPanel({
+      settings: makeSettings(),
+    });
+
+    expect(
+      container.querySelector('button[aria-label="Reset delivery profile"]'),
+    ).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("resets the advanced controls section without touching compressor mode", async () => {
     const onAdvanced = vi.fn();
     const onInputGain = vi.fn();
@@ -213,7 +251,7 @@ describe("AdvancedPanel compressor mode", () => {
     });
   });
 
-  it("resets the per-band compressor back to preset mode", async () => {
+  it("resets the per-band compressor values without changing the selected mode", async () => {
     const onAdvanced = vi.fn();
     const settings = makeSettings({
       compression_mode: "manual",
@@ -249,21 +287,21 @@ describe("AdvancedPanel compressor mode", () => {
 
     expect(onAdvanced).toHaveBeenCalledWith({
       ...settings.advanced,
-      compression_mode: "preset",
+      compression_mode: "manual",
       compression_density: null,
       compression_link_stereo: null,
-      compression_low_threshold_db: null,
-      compression_low_ratio: null,
-      compression_low_attack_ms: null,
-      compression_low_release_ms: null,
-      compression_mid_threshold_db: null,
-      compression_mid_ratio: null,
-      compression_mid_attack_ms: null,
-      compression_mid_release_ms: null,
-      compression_high_threshold_db: null,
-      compression_high_ratio: null,
-      compression_high_attack_ms: null,
-      compression_high_release_ms: null,
+      compression_low_threshold_db: -12.5,
+      compression_low_ratio: 1.45,
+      compression_low_attack_ms: 15,
+      compression_low_release_ms: 250,
+      compression_mid_threshold_db: -12.5,
+      compression_mid_ratio: 1.45,
+      compression_mid_attack_ms: 15,
+      compression_mid_release_ms: 250,
+      compression_high_threshold_db: -12.5,
+      compression_high_ratio: 1.45,
+      compression_high_attack_ms: 15,
+      compression_high_release_ms: 250,
     });
     await act(async () => {
       root.unmount();
@@ -277,8 +315,10 @@ describe("AdvancedPanel compressor mode", () => {
     expect(preset.container.textContent).toContain(
       "Preset values from Universal.",
     );
-    expect(preset.container.textContent).toContain("Preset · -12.5 dB");
-    expect(preset.container.textContent).toContain("Preset · 1.4:1");
+    expect(preset.container.textContent).toContain(
+      "Preset compressor: -12.5 dB · 1.4:1 · 15 ms · 250 ms",
+    );
+    expect(preset.container.textContent).not.toContain("LOWMIDHIGH");
     expect(compressionInputs(preset.container).every((input) => input.disabled)).toBe(
       true,
     );
@@ -325,8 +365,9 @@ describe("AdvancedPanel compressor mode", () => {
     expect(universal.container.textContent).toContain(
       "Preset values from Universal.",
     );
-    expect(universal.container.textContent).toContain("Preset · -12.5 dB");
-    expect(universal.container.textContent).toContain("Preset · 1.4:1");
+    expect(universal.container.textContent).toContain(
+      "Preset compressor: -12.5 dB · 1.4:1 · 15 ms · 250 ms",
+    );
     expect(universal.container.textContent).not.toContain("-22.0 dB");
     expect(universal.container.textContent).not.toContain("2.6:1");
     await act(async () => {
@@ -337,10 +378,9 @@ describe("AdvancedPanel compressor mode", () => {
       settings: makeSettings({ compression_mode: "preset" }, { kind: "tape" }),
     });
     expect(tape.container.textContent).toContain("Preset values from Tape.");
-    expect(tape.container.textContent).toContain("Preset · -16.0 dB");
-    expect(tape.container.textContent).toContain("Preset · 1.6:1");
-    expect(tape.container.textContent).toContain("Preset · 30 ms");
-    expect(tape.container.textContent).toContain("Preset · 400 ms");
+    expect(tape.container.textContent).toContain(
+      "Preset compressor: -16.0 dB · 1.6:1 · 30 ms · 400 ms",
+    );
     await act(async () => {
       tape.root.unmount();
     });
