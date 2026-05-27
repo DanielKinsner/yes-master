@@ -64,7 +64,6 @@ pub fn run() {
             engine::analyze_tracks,
             engine::render_track_preview,
             engine::render_track_master,
-            engine::render_album_master,
             engine::plan_album,
             engine::render_album_plan,
             audio::prepare_waveform,

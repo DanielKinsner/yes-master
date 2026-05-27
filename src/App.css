@@ -1139,10 +1139,9 @@ button.primary:disabled {
     0 24px 60px rgba(0, 0, 0, 0.32);
 }
 
-/* Meters column — hosts MasterOutPanel + StereoWidthGauge inside
-   the deck. Panels lose their own card chrome since the deck owns
-   it; they read as integrated faces of the meter column rather than
-   stacked cards. */
+/* Meters column — hosts MasterOutPanel inside the deck. The panel loses
+   its own card chrome since the deck owns it, reading as an integrated
+   face of the meter column rather than a stacked card. */
 .wf-deck-meters {
   display: flex;
   flex-direction: column;
@@ -3016,53 +3015,6 @@ button.primary:disabled {
   order: 2;
 }
 
-/* STEREO WIDTH gauge — packed tight, value tucked under the arc. */
-.stereo-width-panel {
-  padding-bottom: 0.4rem;
-}
-
-.stereo-gauge-vis {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-  padding: 0;
-  max-width: 200px;
-  margin: 0 auto;
-}
-
-.stereo-gauge-vis svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.stereo-gauge-readout {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-  margin-top: -2.4rem; /* tuck under the arc */
-}
-
-.stereo-gauge-value {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--text-0);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-
-.stereo-gauge-caption {
-  font-size: 0.55rem;
-  color: var(--text-2);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-weight: 600;
-  margin-top: 0.15rem;
-}
-
 /* QUALITY SUMMARY card */
 
 .quality-summary-body {
@@ -3123,50 +3075,6 @@ button.primary:disabled {
   line-height: 1.4;
 }
 
-/* LEVELS — live post-output peak + worst-band GR readout (replaces the
-   reference's QUALITY SUMMARY card with metrics we actually meter). */
-
-.levels-body {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.55rem 0.85rem;
-}
-
-.level-readout {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  min-width: 0;
-}
-
-.level-label {
-  font-size: 0.62rem;
-  color: var(--text-2);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
-.level-value {
-  display: flex;
-  align-items: baseline;
-  gap: 0.2rem;
-}
-
-.level-number {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--text-0);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-
-.level-unit {
-  font-size: 0.7rem;
-  color: var(--text-2);
-}
-
 .status-pill {
   font-size: 0.65rem;
   font-weight: 700;
@@ -3199,30 +3107,6 @@ button.primary:disabled {
   border-color: #e74c3c;
   box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
   animation: clip-pulse 0.7s ease-in-out infinite;
-}
-
-.levels-hint {
-  font-size: 0.68rem;
-  color: var(--text-2);
-  line-height: 1.25;
-  margin: 0;
-}
-
-/* Slice D — only the actionable hints (warn / clip) take a row.
-   Idle/silent/ok states hide the hint so the LEVELS panel doesn't
-   carry a redundant "Press play to start metering." in the rail. */
-.levels-idle .levels-hint,
-.levels-silent .levels-hint,
-.levels-ok .levels-hint {
-  display: none;
-}
-
-/* Steady panel sizing — peak-readout panels shouldn't shift their
-   container as values change. The .levels body grid already keeps
-   the readout cells fixed, but enforce a min height on the body so
-   small empty states don't shrink the card height either. */
-.panel.levels {
-  min-height: 110px;
 }
 
 /* QUALITY CHECK */
@@ -4506,11 +4390,6 @@ button.primary:disabled {
     justify-self: end;
     width: 174px;
     overflow: hidden;
-  }
-
-  .wf-deck-meters .levels,
-  .wf-deck-meters .stereo-width-panel {
-    display: none;
   }
 
   .wf-deck-meters .master-out {

@@ -41,9 +41,6 @@ type QualityRow = {
 
 const LUFS_SCALE_MIN = -36;
 const LUFS_SCALE_MAX = -6;
-const CLIP_THRESHOLD_DBFS = -0.1;
-const HEADROOM_WARN_DBFS = -1.0;
-const SILENCE_FLOOR_DBFS = -80;
 
 export function RightRail({
   analysis,
@@ -91,7 +88,7 @@ export function RightRail({
           Quality Check → advancedSlot (Delivery / Advanced / Per-Band /
           Bit+SR cards, App.tsx composes) → sticky Export Master at
           bottom. Levels moved to the waveform deck's meters column;
-          MasterOutPanel + StereoWidthGauge moved in L2. */}
+          MasterOutPanel moved in L2. */}
       <QualityCheckPanel checks={lastChecks} analysis={analysis} />
       {advancedSlot}
       <div className="right-rail-export-group">
@@ -241,155 +238,6 @@ export function MasterOutPanel({
           unit="dBFS"
         />
       </dl>
-      {/* StereoWidthGauge used to render here as part of MasterOutPanel.
-          UI_LAYOUT_REVISION_1600x940 L2 pulls it out so the caller can
-          position it as its own section beside Master Out in the
-          waveform deck's meters column. */}
-    </section>
-  );
-}
-
-export function StereoWidthGauge({ width }: { width: number }) {
-  // The chain's internal width is 0 (mono) → 1 (neutral) → 2 (max widen).
-  // Display it on a -1..+1 scale where 0 = neutral. Driven by the live
-  // chain setting (user's Width slider or preset default), so dragging
-  // the Width control in Advanced moves the needle in real time.
-  const display = Number.isFinite(width) ? width - 1.0 : 0;
-  const clamped = Math.max(-1, Math.min(1, display));
-
-  // Semi-circular gauge: arc from -135° (left) up through -90° (top) to
-  // -45° (right). t in [0, 1] picks the angle along that arc.
-  const angleAtT = (t: number) => -180 + t * 180;
-  const t = (clamped + 1) / 2;
-  const needleDeg = angleAtT(t);
-
-  // SVG geometry. We render the arc as a half-circle in a 220×130 box.
-  const cx = 110;
-  const cy = 115;
-  const r = 90;
-  const startA = Math.PI; // 180°
-  const endA = 2 * Math.PI; // 360° / 0°
-  const arcPath =
-    `M ${cx + r * Math.cos(startA)} ${cy + r * Math.sin(startA)} ` +
-    `A ${r} ${r} 0 0 1 ${cx + r * Math.cos(endA)} ${cy + r * Math.sin(endA)}`;
-
-  // Tick locations at -1, -0.5, 0, +0.5, +1 (mapped through the same angle).
-  const ticks = [-1, -0.5, 0, 0.5, 1].map((v) => {
-    const tv = (v + 1) / 2;
-    const a = (angleAtT(tv) * Math.PI) / 180;
-    return {
-      v,
-      x1: cx + (r - 6) * Math.cos(a),
-      y1: cy + (r - 6) * Math.sin(a),
-      x2: cx + r * Math.cos(a),
-      y2: cy + r * Math.sin(a),
-      major: v === 0 || v === -1 || v === 1,
-    };
-  });
-
-  const needleA = (needleDeg * Math.PI) / 180;
-  const needleR = r - 4;
-  const nx = cx + needleR * Math.cos(needleA);
-  const ny = cy + needleR * Math.sin(needleA);
-
-  const valueDisplay = display.toFixed(2);
-  const caption =
-    clamped < -0.3
-      ? "Narrow"
-      : clamped > 0.3
-        ? "Wide"
-        : "Balanced";
-
-  return (
-    <section className="panel stereo-width-panel">
-      <header className="panel-head">
-        <span className="panel-title">STEREO WIDTH</span>
-      </header>
-      <div className="stereo-gauge-vis">
-        <svg viewBox="0 0 220 140" width="100%" preserveAspectRatio="xMidYMin meet">
-          {/* Background arc track */}
-          <path
-            d={arcPath}
-            fill="none"
-            stroke="rgba(120,135,165,0.22)"
-            strokeWidth={6}
-            strokeLinecap="round"
-          />
-          {/* Active arc — from center (t=0.5) outward toward the needle, so
-              moving away from neutral fills the arc in whichever direction. */}
-          {(() => {
-            const center = 0.5;
-            const lo = Math.min(center, t);
-            const hi = Math.max(center, t);
-            const aLo = (angleAtT(lo) * Math.PI) / 180;
-            const aHi = (angleAtT(hi) * Math.PI) / 180;
-            const sweep =
-              `M ${cx + r * Math.cos(aLo)} ${cy + r * Math.sin(aLo)} ` +
-              `A ${r} ${r} 0 0 1 ${cx + r * Math.cos(aHi)} ${cy + r * Math.sin(aHi)}`;
-            return (
-              <path
-                d={sweep}
-                fill="none"
-                stroke="var(--accent-bright)"
-                strokeWidth={6}
-                strokeLinecap="round"
-                style={{ filter: "drop-shadow(0 0 6px rgba(111,163,255,0.65))" }}
-              />
-            );
-          })()}
-          {/* Ticks */}
-          {ticks.map((tk) => (
-            <line
-              key={`stw-${tk.v}`}
-              x1={tk.x1}
-              y1={tk.y1}
-              x2={tk.x2}
-              y2={tk.y2}
-              stroke={tk.major ? "rgba(220,230,250,0.7)" : "rgba(150,165,200,0.45)"}
-              strokeWidth={tk.major ? 2 : 1}
-              strokeLinecap="round"
-            />
-          ))}
-          {/* End labels */}
-          <text
-            x={cx + (r + 14) * Math.cos(Math.PI)}
-            y={cy + (r + 14) * Math.sin(Math.PI) + 4}
-            fontSize="10"
-            fill="var(--text-2)"
-            textAnchor="end"
-          >
-            -1
-          </text>
-          <text x={cx} y={cy - r - 6} fontSize="10" fill="var(--text-2)" textAnchor="middle">
-            0
-          </text>
-          <text
-            x={cx + (r + 14) * Math.cos(0)}
-            y={cy + (r + 14) * Math.sin(0) + 4}
-            fontSize="10"
-            fill="var(--text-2)"
-            textAnchor="start"
-          >
-            +1
-          </text>
-          {/* Needle */}
-          <line
-            x1={cx}
-            y1={cy}
-            x2={nx}
-            y2={ny}
-            stroke="var(--text-0)"
-            strokeWidth={2.5}
-            strokeLinecap="round"
-            style={{ filter: "drop-shadow(0 0 4px rgba(255,255,255,0.4))" }}
-          />
-          <circle cx={cx} cy={cy} r={4} fill="var(--text-0)" />
-        </svg>
-        <div className="stereo-gauge-readout">
-          <span className="stereo-gauge-value">{valueDisplay}</span>
-          <span className="stereo-gauge-caption">{caption}</span>
-        </div>
-      </div>
     </section>
   );
 }
@@ -502,78 +350,6 @@ function qualityRowsFor(
 
 function hasReviewRows(rows: QualityRow[]): boolean {
   return rows.some((row) => row.warn || row.crit);
-}
-
-export function LevelsPanel({
-  peakDbfs,
-  isPlaying,
-  compressionGr,
-}: {
-  peakDbfs: number;
-  isPlaying: boolean;
-  compressionGr: { low: number; mid: number; high: number };
-}) {
-  // Status reads off the post-output peak we already meter live (no fake
-  // grading): idle when not playing, silent when peak is at sentinel,
-  // clipping when above -0.1, hot when above -1.0, otherwise safe.
-  let tone: "idle" | "silent" | "ok" | "warn" | "clip";
-  if (!isPlaying) tone = "idle";
-  else if (peakDbfs <= SILENCE_FLOOR_DBFS) tone = "silent";
-  else if (peakDbfs >= CLIP_THRESHOLD_DBFS) tone = "clip";
-  else if (peakDbfs >= HEADROOM_WARN_DBFS) tone = "warn";
-  else tone = "ok";
-
-  const peakDisplay = !isPlaying || peakDbfs <= SILENCE_FLOOR_DBFS
-    ? "—"
-    : peakDbfs.toFixed(1);
-
-  // Worst (most-negative) GR across the three bands while playing.
-  const grValues = [compressionGr.low, compressionGr.mid, compressionGr.high]
-    .filter((v) => Number.isFinite(v) && v > SILENCE_FLOOR_DBFS);
-  const worstGr = grValues.length > 0 ? Math.min(...grValues) : 0;
-  const grDisplay = !isPlaying || grValues.length === 0
-    ? "—"
-    : worstGr.toFixed(1);
-
-  const label = {
-    idle: "Idle",
-    silent: "Silent",
-    ok: "Safe headroom",
-    warn: "Low headroom",
-    clip: "Clipping",
-  }[tone];
-
-  return (
-    <section className={`panel levels levels-${tone}`}>
-      <header className="panel-head">
-        <span className="panel-title">LEVELS</span>
-        <span className={`status-pill status-${tone}`}>{label}</span>
-      </header>
-      <div className="levels-body">
-        <div className="level-readout">
-          <span className="level-label">Output peak</span>
-          <span className="level-value">
-            <span className="level-number">{peakDisplay}</span>
-            <span className="level-unit">dBFS</span>
-          </span>
-        </div>
-        <div className="level-readout">
-          <span className="level-label">Worst GR</span>
-          <span className="level-value">
-            <span className="level-number">{grDisplay}</span>
-            <span className="level-unit">dB</span>
-          </span>
-        </div>
-      </div>
-      <div className="levels-hint">
-        {tone === "idle" && "Press play to start metering."}
-        {tone === "silent" && "Output is below -80 dBFS in the last window."}
-        {tone === "ok" && "Peaks stay safely under streaming ceiling."}
-        {tone === "warn" && "Peaks are pushing the streaming ceiling — back off output."}
-        {tone === "clip" && "Output is clipping. Drop intensity or output gain."}
-      </div>
-    </section>
-  );
 }
 
 function QualityCheckPanel({

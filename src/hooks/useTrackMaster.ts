@@ -162,7 +162,6 @@ export function useTrackMaster() {
     // the response curve.
     spectrumDb: [] as number[],
   });
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [lastExportReceipt, setLastExportReceipt] = useState<ExportReceipt | null>(null);
   const [mode, setMode] = useState<ProjectMode>("track");
   const [albumIntent, setAlbumIntent] = useState<MasteringSettings>(DEFAULT_SETTINGS);
@@ -1464,10 +1463,6 @@ export function useTrackMaster() {
     ],
   );
 
-  const toggleAdvanced = useCallback(() => {
-    setAdvancedOpen((v) => !v);
-  }, []);
-
   const clearError = useCallback(() => setError(null), []);
   const clearExportReceipt = useCallback(() => setLastExportReceipt(null), []);
 
@@ -1679,13 +1674,6 @@ export function useTrackMaster() {
     });
   }, []);
 
-  const updateAlbumIntent = useCallback(
-    (mutate: (prev: MasteringSettings) => MasteringSettings) => {
-      setAlbumIntent((prev) => mutate(prev));
-    },
-    [],
-  );
-
   return {
     tracks,
     selectedTrackId,
@@ -1700,7 +1688,6 @@ export function useTrackMaster() {
     isExporting,
     error,
     transport,
-    advancedOpen,
     lastExportReceipt,
     liveUpdateStats,
     renderProgress,
@@ -1738,7 +1725,6 @@ export function useTrackMaster() {
     toggleLoop,
     setVolumeMatch,
     setExportLufsPreview,
-    toggleAdvanced,
     selectedRegion,
     setRegion,
     clearRegion,
@@ -1748,7 +1734,6 @@ export function useTrackMaster() {
     setMode,
     reorderTracks,
     albumIntent,
-    updateAlbumIntent,
     overrideAlbum,
     selectedIsOverriding,
     followingAlbumIntent,

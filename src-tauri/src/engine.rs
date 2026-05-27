@@ -1,4 +1,4 @@
-use crate::album_render::{album_render_with_progress, render_album_plan_impl};
+use crate::album_render::render_album_plan_impl;
 use crate::analysis::{analyze_one, nudge_role_by_position, sanitize_lufs};
 use crate::types::*;
 use crate::wav_writer::write_wav;
@@ -23,19 +23,6 @@ pub struct RenderProgress {
     pub track_id: TrackId,
     pub kind: RenderKind,
     pub fraction: f32,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct AlbumTrackInput {
-    pub id: TrackId,
-    pub path: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct AlbumRenderRequest {
-    pub tracks: Vec<AlbumTrackInput>,
-    pub album_intent: MasteringSettings,
-    pub per_track_overrides: Option<std::collections::HashMap<String, MasteringSettings>>,
 }
 
 #[tauri::command]
@@ -73,12 +60,11 @@ pub async fn analyze_tracks(tracks: Vec<AnalyzeRequest>) -> CommandResult<Vec<An
 // ============================================================================
 // Ceiling-bounded LUFS landing — shared helpers used by every render path.
 //
-// Pre-extraction, this math was duplicated across three render paths
-// (mastering_render_with_progress, album_render_with_progress,
-// render_album_plan_impl) plus a fourth shape variant in
-// audio.rs::export_landing_gain_lin_for_preview. The B6 ceiling-bounded
-// behavior shipped as three near-identical blocks, and the album-plan
-// copy was missed for almost a full session — exactly the drift the
+// Pre-extraction, this math was duplicated across render paths
+// (mastering_render_with_progress and render_album_plan_impl) plus a shape
+// variant in audio.rs::export_landing_gain_lin_for_preview. The B6
+// ceiling-bounded behavior shipped as near-identical blocks, and the
+// album-plan copy was missed for almost a full session — exactly the drift the
 // extraction is meant to prevent.
 //
 // Two-tier API:
@@ -316,42 +302,6 @@ pub async fn render_track_master(
     )
 }
 
-#[tauri::command]
-pub async fn render_album_master(
-    request: AlbumRenderRequest,
-    output_dir: Option<String>,
-    app: tauri::AppHandle,
-) -> CommandResult<RenderJob> {
-    if request.tracks.is_empty() {
-        return Err(CommandError::Other("album has no tracks".to_string()));
-    }
-    let out_dir = match output_dir {
-        Some(path) => explicit_output_dir(Path::new(&path))?,
-        None => render_output_dir(&app, RenderKind::Album)?,
-    };
-    // The first track's id is the "representative" id on the progress events.
-    // Frontend treats the album bar as one unit, so it just needs to know
-    // "this is the album render" via `kind = Album` — the track_id field is
-    // populated for consistency with the per-track progress payload shape.
-    let representative_id = request
-        .tracks
-        .first()
-        .map(|t| t.id.clone())
-        .unwrap_or_else(|| TrackId("album".to_string()));
-    let app_for_progress = app.clone();
-    let on_progress = move |fraction: f32| {
-        let _ = app_for_progress.emit(
-            "render:progress",
-            RenderProgress {
-                track_id: representative_id.clone(),
-                kind: RenderKind::Album,
-                fraction,
-            },
-        );
-    };
-    album_render_with_progress(&request, &out_dir, Some(&on_progress))
-}
-
 // ============================================================================
 // Phase B Step 3: AlbumPlan-driven render path.
 //
@@ -362,10 +312,9 @@ pub async fn render_album_master(
 //   3. manifest.json documenting the plan + per-track output paths +
 //      post-render measured integrated LUFS for each track
 //
-// The per-track render reuses the existing chunked-chain pipeline from
-// `album_render_with_progress`, but each track's `MasteringSettings` is
-// shadowed by the plan's `arc_lufs_offset_db` (added to the effective
-// LUFS target) and `intensity_scale` (multiplied onto `settings.intensity`).
+// Each track's `MasteringSettings` is shadowed by the plan's
+// `arc_lufs_offset_db` (added to the effective LUFS target) and
+// `intensity_scale` (multiplied onto `settings.intensity`).
 //
 // Sample-rate / channel-count mismatches between tracks fail with a
 // clear error — resampling is deferred to a future phase.
@@ -493,8 +442,8 @@ pub fn mastering_render_to_path(
 
 /// Same as `mastering_render` but accepts an optional progress callback that
 /// fires after each ~4096-frame chunk with the current 0.0–1.0 fraction.
-/// Phase 12.1 perf — `render_track_master` / `render_track_preview` /
-/// `render_album_master` thread an AppHandle-emitting closure through here so
+/// Phase 12.1 perf — `render_track_master` / `render_track_preview` thread an
+/// AppHandle-emitting closure through here so
 /// the frontend can render a real progress bar instead of an indeterminate
 /// "Rendering…" message. Contract tests pass `None` and ignore progress.
 pub fn mastering_render_with_progress(

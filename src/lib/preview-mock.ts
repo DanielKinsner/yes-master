@@ -266,7 +266,6 @@ export async function mockInvoke<T>(
 
     case "render_track_preview":
     case "render_track_master":
-    case "render_album_master":
       return {
         id: `mock-render-${Date.now()}`,
         kind: "preview",
