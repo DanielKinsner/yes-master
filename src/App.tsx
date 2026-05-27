@@ -725,50 +725,54 @@ function TrackHeader({
         {analysis && <AnalysisSummary analysis={analysis} />}
       </div>
       <div className="track-header-controls">
-        <div className="ab-toggle">
+        <div className="track-toolbar-group track-toolbar-group-compare" aria-label="Playback source">
+          <div className="ab-toggle">
+            <button
+              type="button"
+              className={playbackKind === "source" ? "on" : ""}
+              onClick={() => onPlaybackKindChange("source")}
+            >
+              Original
+            </button>
+            <button
+              type="button"
+              className={playbackKind === "master" ? "on" : ""}
+              onClick={() => onPlaybackKindChange("master")}
+            >
+              Mastered
+            </button>
+          </div>
+        </div>
+        <div className="track-toolbar-group track-toolbar-group-options" aria-label="Preview options">
           <button
             type="button"
-            className={playbackKind === "source" ? "on" : ""}
-            onClick={() => onPlaybackKindChange("source")}
+            className={`toolbar-toggle ${volumeMatch ? "is-on" : ""}`}
+            aria-pressed={volumeMatch}
+            title="Aligns playback loudness for fair tone comparison. Export level is unchanged."
+            onClick={() => onVolumeMatchChange(!volumeMatch)}
           >
-            Original
+            <span className="toolbar-toggle-box" aria-hidden />
+            <span>Volume Match</span>
           </button>
           <button
             type="button"
-            className={playbackKind === "master" ? "on" : ""}
-            onClick={() => onPlaybackKindChange("master")}
+            className={`toolbar-toggle ${exportLufsPreview ? "is-on" : ""}`}
+            aria-pressed={exportLufsPreview}
+            title="Previews export LUFS landing during Mastered playback. The readout settles over a few seconds on heavier chains."
+            onClick={() => onExportLufsPreviewChange(!exportLufsPreview)}
           >
-            Mastered
+            <span className="toolbar-toggle-box" aria-hidden />
+            <span>Preview LUFS</span>
           </button>
         </div>
-        <label
-          className="vm-toggle"
-          title="Aligns playback loudness for fair tone comparison. Export level is unchanged."
-        >
-          <input
-            type="checkbox"
-            checked={volumeMatch}
-            onChange={(e) => onVolumeMatchChange(e.target.checked)}
-          />
-          <span>Volume Match</span>
-        </label>
-        <label
-          className="vm-toggle"
-          title="Previews export LUFS landing during Mastered playback. The readout settles over a few seconds on heavier chains."
-        >
-          <input
-            type="checkbox"
-            checked={exportLufsPreview}
-            onChange={(e) => onExportLufsPreviewChange(e.target.checked)}
-          />
-          <span>Preview LUFS</span>
-        </label>
-        <div
-          className={`track-badge status-pill ${isAnalyzing ? "status-warn" : analysis ? "status-ok" : ""}`}
-        >
-          {isAnalyzing ? "Analyzing…" : analysis ? "Analyzed" : "Pending"}
+        <div className="track-toolbar-group track-toolbar-group-status" aria-label="Track status">
+          <div
+            className={`track-badge status-pill ${isAnalyzing ? "status-warn" : analysis ? "status-ok" : ""}`}
+          >
+            {isAnalyzing ? "Analyzing…" : analysis ? "Analyzed" : "Pending"}
+          </div>
+          <ActiveModifierStrip modifiers={modifiers} />
         </div>
-        <ActiveModifierStrip modifiers={modifiers} />
       </div>
     </section>
   );

@@ -681,10 +681,8 @@ button.primary:disabled {
 }
 
 /* Track header.
-   UI_LAYOUT_REVISION_1600x940 L1 — Original/Mastered + Volume Match
-   toggles live here now (used to be in their own Transport row).
-   Right-side cluster `.track-header-controls` packs them together
-   with the analyzed/pending status pill. */
+   The right toolbar is grouped by function so compare, preview options,
+   and status read as one control surface instead of scattered widgets. */
 .track-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content;
@@ -695,13 +693,34 @@ button.primary:disabled {
 .track-header-controls {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.55rem;
   flex-shrink: 0;
   flex-wrap: wrap;
   justify-content: flex-end;
   min-width: max-content;
   position: relative;
   z-index: 6;
+}
+
+.track-toolbar-group {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  border: 1px solid rgba(58, 70, 96, 0.78);
+  background: rgba(13, 16, 24, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.track-toolbar-group-compare,
+.track-toolbar-group-options {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.track-toolbar-group-status {
+  gap: 0.4rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
 }
 
 .track-title {
@@ -1419,9 +1438,9 @@ button.primary:disabled {
 
 .ab-toggle {
   display: flex;
-  background: var(--bg-2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -1429,8 +1448,10 @@ button.primary:disabled {
   background: transparent;
   color: var(--text-1);
   border: none;
-  padding: 0.35rem 0.85rem;
+  min-height: 32px;
+  padding: 0 0.85rem;
   font-size: 0.8rem;
+  line-height: 1;
 }
 
 .ab-toggle button:hover {
@@ -1449,17 +1470,62 @@ button.primary:disabled {
   background: var(--bg-3);
 }
 
-.vm-toggle {
-  display: flex;
+.toolbar-toggle {
+  display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
+  min-height: 32px;
+  padding: 0 0.7rem;
+  border: 0;
+  border-left: 1px solid rgba(58, 70, 96, 0.62);
+  background: transparent;
   color: var(--text-1);
   font-size: 0.8rem;
+  line-height: 1;
   cursor: pointer;
+  white-space: nowrap;
 }
 
-.vm-toggle input[type="checkbox"] {
-  accent-color: var(--accent);
+.toolbar-toggle:first-child {
+  border-left: 0;
+}
+
+.toolbar-toggle:hover {
+  color: var(--text-0);
+  background: rgba(40, 48, 66, 0.72);
+}
+
+.toolbar-toggle.is-on {
+  color: var(--text-0);
+}
+
+.toolbar-toggle-box {
+  position: relative;
+  width: 0.82rem;
+  height: 0.82rem;
+  flex: 0 0 auto;
+  border-radius: 3px;
+  border: 1px solid rgba(139, 156, 190, 0.72);
+  background: rgba(15, 19, 29, 0.78);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+.toolbar-toggle.is-on .toolbar-toggle-box {
+  border-color: rgba(111, 163, 255, 0.95);
+  background: linear-gradient(180deg, var(--accent-bright) 0%, var(--accent-deep) 100%);
+  box-shadow: var(--accent-glow-soft);
+}
+
+.toolbar-toggle.is-on .toolbar-toggle-box::after {
+  content: "";
+  position: absolute;
+  left: 0.24rem;
+  top: 0.1rem;
+  width: 0.22rem;
+  height: 0.42rem;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 /* Presets */
@@ -2192,8 +2258,8 @@ button.primary:disabled {
 .active-modifier-summary {
   display: inline-flex;
   align-items: center;
-  min-height: 20px;
-  padding: 0.13rem 0.45rem;
+  min-height: 22px;
+  padding: 0 0.5rem;
   border-radius: 999px;
   border: 1px solid rgba(111, 163, 255, 0.22);
   background: rgba(111, 163, 255, 0.10);
@@ -3080,7 +3146,10 @@ button.primary:disabled {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 0.14rem 0.5rem;
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.5rem;
   border-radius: 999px;
   border: 1px solid var(--border-strong);
   background: var(--bg-3);
@@ -4328,6 +4397,21 @@ button.primary:disabled {
     gap: 0.55rem;
     flex-wrap: nowrap;
     align-items: center;
+  }
+
+  .track-toolbar-group {
+    min-height: 30px;
+  }
+
+  .ab-toggle button,
+  .toolbar-toggle {
+    min-height: 28px;
+    padding-inline: 0.58rem;
+    font-size: 0.72rem;
+  }
+
+  .track-toolbar-group-status {
+    padding-inline: 0.35rem;
   }
 
   .wf-deck {
