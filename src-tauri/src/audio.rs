@@ -832,6 +832,12 @@ struct PlayMasterPreviewLandingPlan {
     needs_measurement: bool,
 }
 
+struct UpdateChainPreviewLandingPlan {
+    coeff_gain: f32,
+    remembered_gain: f32,
+    needs_measurement: bool,
+}
+
 fn play_master_preview_landing_plan(
     cache: &PreviewLandingCache,
     settings: &MasteringSettings,
@@ -853,6 +859,35 @@ fn play_master_preview_landing_plan(
 
     PlayMasterPreviewLandingPlan {
         initial_gain: 1.0,
+        needs_measurement: true,
+    }
+}
+
+fn update_chain_preview_landing_plan(
+    cache: &PreviewLandingCache,
+    settings: &MasteringSettings,
+    preview_lufs_landing: bool,
+    current_live_gain: f32,
+) -> UpdateChainPreviewLandingPlan {
+    if !preview_lufs_landing {
+        return UpdateChainPreviewLandingPlan {
+            coeff_gain: 1.0,
+            remembered_gain: 1.0,
+            needs_measurement: false,
+        };
+    }
+
+    if let Some(cached) = cache.get(settings) {
+        return UpdateChainPreviewLandingPlan {
+            coeff_gain: cached,
+            remembered_gain: cached,
+            needs_measurement: false,
+        };
+    }
+
+    UpdateChainPreviewLandingPlan {
+        coeff_gain: current_live_gain,
+        remembered_gain: current_live_gain,
         needs_measurement: true,
     }
 }
@@ -1254,10 +1289,16 @@ fn process_audio_command(
 
                 if let Some(tx) = s.live_coeffs_tx.as_ref() {
                     let mut coeffs = crate::dsp::ChainCoeffs::from_settings(sample_rate, &settings);
+                    let landing_plan = update_chain_preview_landing_plan(
+                        &s.landing_gain_cache,
+                        &settings,
+                        preview_lufs_landing,
+                        s.live_landing_gain_lin,
+                    );
+                    coeffs.export_landing_gain_lin = landing_plan.coeff_gain;
+                    s.live_landing_gain_lin = landing_plan.remembered_gain;
                     if preview_lufs_landing {
-                        if let Some(cached) = s.landing_gain_cache.get(&settings) {
-                            coeffs.export_landing_gain_lin = cached;
-                            s.live_landing_gain_lin = cached;
+                        if !landing_plan.needs_measurement {
                             // The current live generation needs no measurement.
                             // Any pending (settings, gen) captured during an
                             // earlier in-flight miss is now for a generation
@@ -1274,7 +1315,6 @@ fn process_audio_command(
                             // pending; the active worker's completion handler
                             // drains it. Caps in-flight measurement work at
                             // one OS thread regardless of UpdateChain rate.
-                            coeffs.export_landing_gain_lin = s.live_landing_gain_lin;
                             if s.lufs_worker_in_flight {
                                 LUFS_WORKERS_QUEUED.fetch_add(1, Ordering::Relaxed);
                                 s.lufs_worker_pending = Some((settings.clone(), generation));
@@ -2319,6 +2359,18 @@ mod tests {
         let plan = play_master_preview_landing_plan(&cache, &settings, true);
 
         assert!((plan.initial_gain - 0.42).abs() < f32::EPSILON);
+        assert!(!plan.needs_measurement);
+    }
+
+    #[test]
+    fn update_chain_preview_off_restores_loud_unity_gain() {
+        let cache = PreviewLandingCache::new();
+        let settings = settings_with_intensity(0.5);
+
+        let plan = update_chain_preview_landing_plan(&cache, &settings, false, 0.42);
+
+        assert!((plan.coeff_gain - 1.0).abs() < f32::EPSILON);
+        assert!((plan.remembered_gain - 1.0).abs() < f32::EPSILON);
         assert!(!plan.needs_measurement);
     }
 
