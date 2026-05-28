@@ -368,7 +368,7 @@ export function VisualEqPanel({
           const y = localDbToY(gains[band.id]);
           const isDragging = dragging === band.id;
           const isPrimary = band.tier === "primary";
-          const nodeRadius = isPrimary ? 6 : 4.5;
+          const nodeRadius = isPrimary ? 5 : 3.8;
           const renderedRadius = isDragging ? nodeRadius + 1 : nodeRadius;
           const nodeOpacity = isPrimary ? 0.52 : 0.4;
           const labelOpacity = isPrimary ? 0.92 : 0.7;
