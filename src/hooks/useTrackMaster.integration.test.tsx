@@ -446,6 +446,108 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("reports project save success and cancellation without using the error channel", async () => {
+    mocks.save.mockResolvedValue("C:/projects/release.ams.json");
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().saveProjectAs();
+    });
+
+    expect(mocks.api.saveProject).toHaveBeenCalledWith(
+      "C:/projects/release.ams.json",
+      expect.objectContaining({ schema_version: 1 }),
+    );
+    expect(harness.current().projectFeedback).toEqual({
+      tone: "ok",
+      message: "Project saved to release.ams.json.",
+    });
+    expect(harness.current().error).toBeNull();
+
+    mocks.save.mockResolvedValue(null);
+    mocks.api.saveProject.mockClear();
+    await act(async () => {
+      await harness.current().saveProjectAs();
+    });
+
+    expect(mocks.api.saveProject).not.toHaveBeenCalled();
+    expect(harness.current().projectFeedback).toEqual({
+      tone: "info",
+      message: "Save project canceled.",
+    });
+    expect(harness.current().error).toBeNull();
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("reports open cancellation without loading or mutating project state", async () => {
+    mocks.open.mockResolvedValue(null);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().openProjectFromDisk();
+    });
+
+    expect(mocks.api.loadProject).not.toHaveBeenCalled();
+    expect(harness.current().projectFeedback).toEqual({
+      tone: "info",
+      message: "Open project canceled.",
+    });
+    expect(harness.current().error).toBeNull();
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("surfaces open-project recovery failures as project feedback", async () => {
+    const track = makeTrack("project-2", "C:/audio/moved.wav");
+    mocks.open.mockResolvedValue("C:/projects/moved.ams.json");
+    mocks.api.loadProject.mockResolvedValue(makeProjectState(track));
+    mocks.api.analyzeTracks.mockRejectedValue(new Error("missing source"));
+    mocks.api.prepareWaveform.mockRejectedValue(new Error("missing source"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const harness = await renderHookHarness();
+
+    try {
+      await act(async () => {
+        await harness.current().openProjectFromDisk();
+      });
+
+      expect(harness.current().projectFeedback).toEqual({
+        tone: "warn",
+        message:
+          "Project opened from moved.ams.json; analysis could not be refreshed; 1 waveform could not be rebuilt.",
+      });
+      expect(harness.current().error).toBeNull();
+    } finally {
+      warn.mockRestore();
+    }
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("uses the error channel for unsupported project schemas", async () => {
+    const track = makeTrack("project-3", "C:/audio/project.wav");
+    mocks.open.mockResolvedValue("C:/projects/old.ams.json");
+    mocks.api.loadProject.mockResolvedValue({
+      ...makeProjectState(track),
+      schema_version: 99,
+    });
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().openProjectFromDisk();
+    });
+
+    expect(harness.current().error).toBe("Unsupported project schema: v99");
+    expect(harness.current().projectFeedback).toBeNull();
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("dispatches updateChain with the current export-LUFS preview flag", async () => {
     const track = makeTrack("mastered-1", "C:/audio/mastered.wav");
     mocks.api.importTracks.mockResolvedValue([track]);

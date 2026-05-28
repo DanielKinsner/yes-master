@@ -4,6 +4,7 @@ import {
   useState,
   type DragEvent as ReactDragEvent,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react";
 import { api } from "./lib/api";
 import { useTrackMaster } from "./hooks/useTrackMaster";
@@ -56,6 +57,7 @@ const PRESET_OPTIONS: { value: Preset; label: string; blurb: string }[] = [
 
 function App() {
   const tm = useTrackMaster();
+  const [chromePanel, setChromePanel] = useState<"settings" | "help" | null>(null);
   useWebviewZoomShortcuts();
 
   return (
@@ -65,6 +67,8 @@ function App() {
         onModeChange={tm.setMode}
         onSaveProject={tm.saveProjectAs}
         onOpenProject={tm.openProjectFromDisk}
+        onOpenSettings={() => setChromePanel("settings")}
+        onOpenHelp={() => setChromePanel("help")}
       />
     <div className="app">
       <Sidebar
@@ -134,12 +138,26 @@ function App() {
           </div>
         </div>
       )}
-      {tm.error && <Toast message={tm.error} onClose={tm.clearError} />}
+      {tm.error ? (
+        <Toast message={tm.error} tone="danger" onClose={tm.clearError} />
+      ) : tm.projectFeedback ? (
+        <Toast
+          message={tm.projectFeedback.message}
+          tone={tm.projectFeedback.tone}
+          onClose={tm.clearProjectFeedback}
+        />
+      ) : null}
       {tm.lastExportReceipt && (
         <ExportReceiptCard
           receipt={tm.lastExportReceipt}
           onClose={tm.clearExportReceipt}
         />
+      )}
+      {chromePanel === "settings" && (
+        <SettingsPanel onClose={() => setChromePanel(null)} />
+      )}
+      {chromePanel === "help" && (
+        <HelpPanel onClose={() => setChromePanel(null)} />
       )}
     </div>
     <BottomStatusBar tm={tm} />
@@ -242,16 +260,20 @@ function StatusDot({
   );
 }
 
-function TopHeader({
+export function TopHeader({
   mode,
   onModeChange,
   onSaveProject,
   onOpenProject,
+  onOpenSettings,
+  onOpenHelp,
 }: {
   mode: "track" | "album";
   onModeChange: (mode: "track" | "album") => void;
   onSaveProject: () => void;
   onOpenProject: () => void;
+  onOpenSettings: () => void;
+  onOpenHelp: () => void;
 }) {
   return (
     <header className="top-header">
@@ -310,8 +332,9 @@ function TopHeader({
         <button
           type="button"
           className="icon-tile"
-          aria-label="Settings (not yet wired)"
-          title="Settings (coming soon)"
+          aria-label="Settings"
+          title="Settings"
+          onClick={onOpenSettings}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
@@ -321,8 +344,9 @@ function TopHeader({
         <button
           type="button"
           className="icon-tile"
-          aria-label="Help (not yet wired)"
-          title="Help (coming soon)"
+          aria-label="Help"
+          title="Help"
+          onClick={onOpenHelp}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
@@ -332,6 +356,153 @@ function TopHeader({
         </button>
       </div>
     </header>
+  );
+}
+
+function ChromeDialog({
+  title,
+  eyebrow,
+  onClose,
+  children,
+}: {
+  title: string;
+  eyebrow: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const titleId = `chrome-dialog-${title.toLowerCase()}`;
+  return (
+    <div className="chrome-dialog-backdrop" role="presentation">
+      <section
+        className="chrome-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <header className="chrome-dialog-head">
+          <div>
+            <div className="chrome-dialog-eyebrow">{eyebrow}</div>
+            <h2 id={titleId}>{title}</h2>
+          </div>
+          <button
+            type="button"
+            className="icon-tile"
+            onClick={onClose}
+            aria-label={`Close ${title}`}
+            title={`Close ${title}`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </header>
+        {children}
+      </section>
+    </div>
+  );
+}
+
+export function SettingsPanel({ onClose }: { onClose: () => void }) {
+  return (
+    <ChromeDialog title="Settings" eyebrow="Current defaults" onClose={onClose}>
+      <div className="settings-grid">
+        <SettingsGroup
+          title="Audio Preview"
+          rows={[
+            ["Preview LUFS", "Off by default"],
+            ["Volume Match", "Session-only audition"],
+            ["Mastered cache", "Prewarm selected tracks when possible"],
+          ]}
+        />
+        <SettingsGroup
+          title="Export Defaults"
+          rows={[
+            ["Delivery profile", "Streaming Universal"],
+            ["Rendered format", "48 kHz, 24-bit WAV"],
+            ["Warnings", "Advisory unless a technical check is critical"],
+          ]}
+        />
+        <SettingsGroup
+          title="Project Session"
+          rows={[
+            ["Recent session", "Autosaved locally"],
+            ["Project files", ".ams.json Save As / Open"],
+            ["Audio files", "Referenced from disk, not embedded"],
+          ]}
+        />
+        <SettingsGroup
+          title="App Info"
+          rows={[
+            ["Build", "Local desktop build"],
+            ["Privacy", "Private audio stays on this machine"],
+          ]}
+        />
+      </div>
+    </ChromeDialog>
+  );
+}
+
+function SettingsGroup({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: Array<[string, string]>;
+}) {
+  return (
+    <section className="settings-group">
+      <h3>{title}</h3>
+      <dl>
+        {rows.map(([label, value]) => (
+          <div className="settings-row" key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+export function HelpPanel({ onClose }: { onClose: () => void }) {
+  const sections = [
+    [
+      "Import / Analyze",
+      "Import audio files, then let analysis populate loudness, true peak, dynamics, waveform, and source checks before export.",
+    ],
+    [
+      "Original vs Mastered",
+      "Switch between Original and Mastered from the track header; playback keeps the same playhead where the backend can seek.",
+    ],
+    [
+      "Volume Match / Preview LUFS",
+      "Volume Match is for auditioning only. Preview LUFS estimates export loudness during Mastered playback and does not change the source file.",
+    ],
+    [
+      "Delivery Profile / Format",
+      "Delivery Profile owns target LUFS, ceiling, bit depth, and sample rate. Custom lets you choose Source, 44.1 kHz, 48 kHz, or 96 kHz for Track Master export.",
+    ],
+    [
+      "Export Review",
+      "Quality notes stay advisory so you can make creative choices, while technical mismatches such as delivery sample-rate disagreement are marked critical.",
+    ],
+    [
+      "Save / Open Project",
+      "Save Project writes a .ams.json snapshot. Open Project restores tracks and settings, then refreshes analysis and waveforms when the source files are still available.",
+    ],
+  ];
+  return (
+    <ChromeDialog title="Help" eyebrow="Track Master guide" onClose={onClose}>
+      <div className="help-sections">
+        {sections.map(([title, body]) => (
+          <section className="help-section" key={title}>
+            <h3>{title}</h3>
+            <p>{body}</p>
+          </section>
+        ))}
+      </div>
+    </ChromeDialog>
   );
 }
 
@@ -2728,13 +2899,15 @@ function SelectField({
 
 function Toast({
   message,
+  tone = "danger",
   onClose,
 }: {
   message: string;
+  tone?: "danger" | "ok" | "info" | "warn";
   onClose: () => void;
 }) {
   return (
-    <div className="toast">
+    <div className={`toast toast-${tone}`}>
       <span>{message}</span>
       <button type="button" className="toast-close" onClick={onClose} aria-label="Dismiss">
         ×

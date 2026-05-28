@@ -88,6 +88,10 @@ function ensureWavExtension(path: string): string {
   return /\.wav$/i.test(path) ? path : `${path}.wav`;
 }
 
+function projectDisplayName(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
+}
+
 async function chooseAlbumExportFolder(): Promise<string | null> {
   const store = browserExportLocationStore();
   const selected = await open({
@@ -109,6 +113,11 @@ export interface ExportReceipt {
   checks: QualityCheck[];
   job: RenderJob;
   kind: "track" | "album";
+}
+
+export interface ProjectFeedback {
+  tone: "ok" | "info" | "warn";
+  message: string;
 }
 
 const AUDIO_EXTENSIONS = [
@@ -135,6 +144,7 @@ export function useTrackMaster() {
   const [isRendering, setIsRendering] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [projectFeedback, setProjectFeedback] = useState<ProjectFeedback | null>(null);
   const [transport, setTransport] = useState({
     isPlaying: false,
     currentTimeSec: 0,
@@ -1486,6 +1496,7 @@ export function useTrackMaster() {
   );
 
   const clearError = useCallback(() => setError(null), []);
+  const clearProjectFeedback = useCallback(() => setProjectFeedback(null), []);
   const clearExportReceipt = useCallback(() => setLastExportReceipt(null), []);
 
   const saveUserPreset = useCallback(
@@ -1593,7 +1604,10 @@ export function useTrackMaster() {
           },
         ],
       });
-      if (!path) return;
+      if (!path) {
+        setProjectFeedback({ tone: "info", message: "Save project canceled." });
+        return;
+      }
       const state: ProjectState = {
         schema_version: 1,
         mode,
@@ -1605,7 +1619,13 @@ export function useTrackMaster() {
         last_saved_iso: new Date().toISOString(),
       };
       await api.saveProject(path, state);
+      setError(null);
+      setProjectFeedback({
+        tone: "ok",
+        message: `Project saved to ${projectDisplayName(path)}.`,
+      });
     } catch (err) {
+      setProjectFeedback(null);
       setError(String(err));
     }
   }, [
@@ -1628,13 +1648,23 @@ export function useTrackMaster() {
           },
         ],
       });
-      if (!selected) return;
+      if (!selected) {
+        setProjectFeedback({ tone: "info", message: "Open project canceled." });
+        return;
+      }
       const path = Array.isArray(selected) ? selected[0] : selected;
+      if (!path) {
+        setProjectFeedback({ tone: "info", message: "Open project canceled." });
+        return;
+      }
       const state = await api.loadProject(path);
       if (state.schema_version !== 1) {
+        setProjectFeedback(null);
         setError(`Unsupported project schema: v${state.schema_version}`);
         return;
       }
+      let analysisRecoveryFailed = false;
+      let waveformRecoveryFailures = 0;
       setTracks(state.tracks ?? []);
       setSettingsMap(state.track_settings ?? {});
       setMode(state.mode);
@@ -1662,6 +1692,7 @@ export function useTrackMaster() {
           for (const r of results) nextAnalysis[r.track_id] = r;
           setAnalysisMap(nextAnalysis);
         } catch (err) {
+          analysisRecoveryFailed = true;
           console.warn("Re-analyze on open failed", err);
         }
         for (const t of state.tracks) {
@@ -1669,11 +1700,34 @@ export function useTrackMaster() {
             const wf = await api.prepareWaveform(t.id, t.path, 1200);
             setWaveformMap((prev) => ({ ...prev, [t.id]: wf }));
           } catch (err) {
+            waveformRecoveryFailures += 1;
             console.warn(`Waveform re-decode failed for ${t.display_name}`, err);
           }
         }
       }
+      const recoveryNotes: string[] = [];
+      if (analysisRecoveryFailed) {
+        recoveryNotes.push("analysis could not be refreshed");
+      }
+      if (waveformRecoveryFailures > 0) {
+        recoveryNotes.push(
+          `${waveformRecoveryFailures} waveform${
+            waveformRecoveryFailures === 1 ? "" : "s"
+          } could not be rebuilt`,
+        );
+      }
+      setError(null);
+      setProjectFeedback({
+        tone: recoveryNotes.length > 0 ? "warn" : "ok",
+        message:
+          recoveryNotes.length > 0
+            ? `Project opened from ${projectDisplayName(path)}; ${recoveryNotes.join(
+                "; ",
+              )}.`
+            : `Project opened from ${projectDisplayName(path)}.`,
+      });
     } catch (err) {
+      setProjectFeedback(null);
       setError(String(err));
     }
   }, []);
@@ -1709,6 +1763,7 @@ export function useTrackMaster() {
     isRendering,
     isExporting,
     error,
+    projectFeedback,
     transport,
     lastExportReceipt,
     liveUpdateStats,
@@ -1753,6 +1808,7 @@ export function useTrackMaster() {
     setRegion,
     clearRegion,
     clearError,
+    clearProjectFeedback,
     clearExportReceipt,
     mode,
     setMode,
