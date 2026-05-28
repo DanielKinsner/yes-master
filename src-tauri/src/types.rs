@@ -163,10 +163,9 @@ pub enum Preset {
 /// means "use the user's explicit `lufs_offset_db` / `ceiling_dbtp` /
 /// `bit_depth` / `target_sample_rate` exactly as set."
 ///
-/// Sample rate is captured per profile but resampling is deferred to a
-/// later phase — A3 honors `bit_depth`, `target_lufs`, and `ceiling_dbtp`
-/// but writes WAVs at the source sample rate regardless. The captured
-/// rate is exposed via `output_sample_rate()` for future use.
+/// Sample rate is captured per profile and Track Master export honors it
+/// through the offline SRC path. Album Master still requires matching source
+/// rates for this release-candidate pass.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum DeliveryProfile {
@@ -556,6 +555,25 @@ impl MasteringSettings {
             .output_bit_depth()
             .or(self.advanced.bit_depth)
             .unwrap_or(24)
+    }
+
+    /// Effective rendered sample rate for Track Master export. Non-Custom
+    /// profiles shadow `advanced.target_sample_rate`; Custom + `None` means
+    /// preserve source rate.
+    pub fn effective_sample_rate(&self, source_sample_rate: u32) -> u32 {
+        self.delivery_profile
+            .output_sample_rate()
+            .or(self.advanced.target_sample_rate)
+            .unwrap_or(source_sample_rate)
+    }
+
+    /// A concrete requested delivery rate when one exists. `None` means
+    /// "Source" in Custom mode, so the expected rendered rate depends on the
+    /// imported file rather than a fixed delivery target.
+    pub fn requested_delivery_sample_rate(&self) -> Option<u32> {
+        self.delivery_profile
+            .output_sample_rate()
+            .or(self.advanced.target_sample_rate)
     }
 }
 
@@ -1042,5 +1060,49 @@ mod effective_settings_tests {
             AdvancedSettings::default(),
         );
         assert_eq!(s.effective_bit_depth(), 24);
+    }
+
+    // ----- effective_sample_rate ---------------------------------------
+
+    #[test]
+    fn effective_sample_rate_profile_overrides_advanced() {
+        let advanced = AdvancedSettings {
+            target_sample_rate: Some(96_000),
+            ..Default::default()
+        };
+        let s = settings_with_profile_and_advanced(DeliveryProfile::Cd, advanced);
+        assert_eq!(
+            s.effective_sample_rate(48_000),
+            44_100,
+            "CD profile must shadow an advanced 96 kHz value"
+        );
+    }
+
+    #[test]
+    fn effective_sample_rate_custom_uses_advanced_value() {
+        let advanced = AdvancedSettings {
+            target_sample_rate: Some(48_000),
+            ..Default::default()
+        };
+        let s = settings_with_profile_and_advanced(DeliveryProfile::Custom, advanced);
+        assert_eq!(s.effective_sample_rate(44_100), 48_000);
+    }
+
+    #[test]
+    fn effective_sample_rate_custom_with_none_advanced_preserves_source() {
+        let s = settings_with_profile_and_advanced(
+            DeliveryProfile::Custom,
+            AdvancedSettings::default(),
+        );
+        assert_eq!(s.effective_sample_rate(96_000), 96_000);
+    }
+
+    #[test]
+    fn requested_delivery_sample_rate_is_none_for_custom_source() {
+        let s = settings_with_profile_and_advanced(
+            DeliveryProfile::Custom,
+            AdvancedSettings::default(),
+        );
+        assert_eq!(s.requested_delivery_sample_rate(), None);
     }
 }

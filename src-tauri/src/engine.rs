@@ -1,5 +1,6 @@
 use crate::album_render::render_album_plan_impl;
 use crate::analysis::{analyze_one, nudge_role_by_position, sanitize_lufs};
+use crate::sample_rate::convert_interleaved;
 use crate::types::*;
 use crate::wav_writer::write_wav;
 use std::path::{Path, PathBuf};
@@ -505,7 +506,17 @@ pub fn mastering_render_with_progress(
         }
     }
 
-    // Single full BS.1770 pass over the post-chain samples — used both to
+    let rendered_sample_rate = render_settings.effective_sample_rate(pcm.sample_rate);
+    if rendered_sample_rate != pcm.sample_rate {
+        samples = convert_interleaved(
+            &samples,
+            pcm.sample_rate,
+            rendered_sample_rate,
+            pcm.channels,
+        )?;
+    }
+
+    // Single full BS.1770 pass over the post-chain, post-SRC samples — used both to
     // decide LUFS landing and to populate the rendered-output measurements
     // for the export receipt (Codex audit 2026-05-13 P0: the receipt must
     // describe the rendered output, not the source analysis).
@@ -518,7 +529,7 @@ pub fn mastering_render_with_progress(
     let channels_u32 = u32::from(pcm.channels.max(1));
     let mut ebu = EbuR128::new(
         channels_u32,
-        pcm.sample_rate,
+        rendered_sample_rate,
         Mode::I | Mode::LRA | Mode::TRUE_PEAK,
     )
     .map_err(|e| CommandError::Render(format!("ebur128 init: {e}")))?;
@@ -573,7 +584,7 @@ pub fn mastering_render_with_progress(
         lufs_integrated: measured_lufs,
         true_peak_dbtp: measured_true_peak_dbtp,
         dynamic_range_lu: if lra.is_finite() { lra } else { 0.0 },
-        sample_rate: pcm.sample_rate,
+        sample_rate: rendered_sample_rate,
         bit_depth,
     };
     let out_path = match output_path {
@@ -583,7 +594,7 @@ pub fn mastering_render_with_progress(
     write_wav(
         &out_path,
         &samples,
-        pcm.sample_rate,
+        rendered_sample_rate,
         pcm.channels,
         bit_depth,
     )?;

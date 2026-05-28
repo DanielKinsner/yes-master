@@ -409,6 +409,8 @@ function friendlyCheckLabel(c: QualityCheck): string {
       return "Heavy compression detected";
     case "bit_depth_low":
       return "Bit depth below 16 bits";
+    case "sample_rate_mismatch":
+      return "Sample rate does not match delivery";
     case "non_finite_metering":
       return "Non-finite loudness measurement";
     case "comp_density_on_compressed_source":

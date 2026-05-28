@@ -517,6 +517,34 @@ async fn run_export_checks_passes_silently_when_clean() {
 }
 
 #[tokio::test]
+async fn run_export_checks_criticals_on_requested_sample_rate_mismatch() {
+    let report = ExportReport {
+        track_id: TrackId("t".to_string()),
+        output_path: "out.wav".to_string(),
+        measured_lufs: -14.0,
+        measured_true_peak_dbtp: -1.2,
+        measured_dynamic_range_lu: 9.0,
+        source_format: "wav".to_string(),
+        destination_format: "wav".to_string(),
+        sample_rate: 44_100,
+        bit_depth: 24,
+        checks: Vec::new(),
+    };
+    let mut settings = default_settings();
+    settings.delivery_profile = DeliveryProfile::StreamingUniversal;
+    let checks = exports::run_export_checks(report, None, Some(settings))
+        .await
+        .expect("checks ok");
+    assert!(
+        checks.iter().any(|c| {
+            matches!(c.level, QualityLevel::Critical) && c.code == "sample_rate_mismatch"
+        }),
+        "expected critical sample_rate_mismatch, got: {:?}",
+        checks.iter().map(|c| &c.code).collect::<Vec<_>>()
+    );
+}
+
+#[tokio::test]
 async fn run_export_checks_warns_on_low_streaming_headroom() {
     // True peak sits in the gray zone between the -0.1 dBTP critical
     // threshold and the typical -1.0 dBTP streaming ceiling. Should fire the
@@ -676,15 +704,14 @@ fn rendered_measurements_reflect_landed_output_not_source() {
         m.lufs_integrated,
         source_lufs_approx,
     );
-    // StreamingUniversal pins -1 dBTP ceiling and 24-bit output; the chain
-    // plus landing should respect both. Sample rate stays at source SR until
-    // SRC ships (see DeliveryProfile::output_sample_rate doc).
+    // StreamingUniversal pins -1 dBTP ceiling, 48 kHz delivery, and 24-bit
+    // output; the chain plus landing should respect all three.
     assert!(
         m.true_peak_dbtp < -1.0,
         "rendered TP {} should be under StreamingUniversal ceiling -1.0 dBTP",
         m.true_peak_dbtp,
     );
-    assert_eq!(m.sample_rate, 44_100, "writer SR matches source until SRC");
+    assert_eq!(m.sample_rate, 48_000, "writer SR matches delivery profile");
     assert_eq!(m.bit_depth, 24, "StreamingUniversal shadows bit_depth=24");
     assert!(
         m.dynamic_range_lu >= 0.0 && m.dynamic_range_lu.is_finite(),

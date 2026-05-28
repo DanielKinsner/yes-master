@@ -11,6 +11,7 @@ pub mod fixture_matrix;
 pub mod jobs;
 pub mod project;
 pub mod reference_tuning;
+pub mod sample_rate;
 pub mod settings;
 pub mod sources;
 pub mod spectrum;

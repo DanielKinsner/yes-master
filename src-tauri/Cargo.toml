@@ -49,6 +49,8 @@ rustfft = "6"
 # extra serde/format features needed because every consumer here just
 # wants the string. Locked at 0.4 LTS line.
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+rubato = "1.0.1"
+audioadapter-buffers = "2.0.0"
 
 [dev-dependencies]
 sha2 = "0.10"

@@ -16,6 +16,7 @@ import type { MasteringSettings } from "../bindings";
 import {
   DELIVERY_PROFILE_BIT_DEPTH,
   DELIVERY_PROFILE_CEILING_DBTP,
+  DELIVERY_PROFILE_SAMPLE_RATE,
   DELIVERY_PROFILE_TARGET_LUFS,
 } from "../bindings";
 
@@ -64,6 +65,14 @@ export function effectiveBitDepth(settings: MasteringSettings): number | null {
     return profileBitDepth;
   }
   return settings.advanced.bit_depth ?? null;
+}
+
+export function effectiveSampleRate(settings: MasteringSettings): number | null {
+  const profileSampleRate = DELIVERY_PROFILE_SAMPLE_RATE[settings.delivery_profile];
+  if (profileSampleRate !== null && profileSampleRate !== undefined) {
+    return profileSampleRate;
+  }
+  return settings.advanced.target_sample_rate ?? null;
 }
 
 /// Match a LUFS value to a quick-select dropdown option id. Returns

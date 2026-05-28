@@ -82,6 +82,21 @@ pub fn export_checks_for_report(
         });
     }
 
+    if let Some(expected_sample_rate) =
+        settings.and_then(MasteringSettings::requested_delivery_sample_rate)
+    {
+        if report.sample_rate != expected_sample_rate {
+            checks.push(QualityCheck {
+                level: QualityLevel::Critical,
+                code: "sample_rate_mismatch".to_string(),
+                message: format!(
+                    "Rendered sample rate {} Hz does not match the requested delivery rate {} Hz.",
+                    report.sample_rate, expected_sample_rate
+                ),
+            });
+        }
+    }
+
     if !report.measured_lufs.is_finite() {
         checks.push(QualityCheck {
             level: QualityLevel::Critical,

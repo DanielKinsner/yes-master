@@ -178,6 +178,7 @@ describe("applyDeliveryProfileSelection", () => {
       lufs_offset_db: -10.5,
       ceiling_dbtp: -1,
       bit_depth: 24,
+      target_sample_rate: 48_000,
     });
 
     const next = applyDeliveryProfileSelection(prev, "cd");
@@ -186,6 +187,7 @@ describe("applyDeliveryProfileSelection", () => {
     expect(next.advanced.lufs_offset_db).toBe(-14);
     expect(next.advanced.ceiling_dbtp).toBe(-1);
     expect(next.advanced.bit_depth).toBe(16);
+    expect(next.advanced.target_sample_rate).toBe(44_100);
   });
 
   it("makes Custom inherit the currently effective profile values", () => {
@@ -193,6 +195,7 @@ describe("applyDeliveryProfileSelection", () => {
       lufs_offset_db: -9,
       ceiling_dbtp: -0.5,
       bit_depth: 16,
+      target_sample_rate: 96_000,
     });
 
     const next = applyDeliveryProfileSelection(prev, "custom");
@@ -201,6 +204,7 @@ describe("applyDeliveryProfileSelection", () => {
     expect(next.advanced.lufs_offset_db).toBe(-18);
     expect(next.advanced.ceiling_dbtp).toBe(-3);
     expect(next.advanced.bit_depth).toBe(24);
+    expect(next.advanced.target_sample_rate).toBe(48_000);
   });
 
   it("preserves non-delivery advanced controls when selecting a profile", () => {

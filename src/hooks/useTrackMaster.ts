@@ -1098,6 +1098,30 @@ export function useTrackMaster() {
     [selectedTrackId, updateSettings],
   );
 
+  const setDeliveryBitDepth = useCallback(
+    (bitDepth: number | null) => {
+      if (!selectedTrackId) return;
+      updateSettings(selectedTrackId, (prev) => ({
+        ...prev,
+        delivery_profile: "custom",
+        advanced: { ...prev.advanced, bit_depth: bitDepth },
+      }));
+    },
+    [selectedTrackId, updateSettings],
+  );
+
+  const setDeliverySampleRate = useCallback(
+    (sampleRate: number | null) => {
+      if (!selectedTrackId) return;
+      updateSettings(selectedTrackId, (prev) => ({
+        ...prev,
+        delivery_profile: "custom",
+        advanced: { ...prev.advanced, target_sample_rate: sampleRate },
+      }));
+    },
+    [selectedTrackId, updateSettings],
+  );
+
   const updatePreview = useCallback(async () => {
     if (!selectedTrackId || !selectedTrack) return;
     setIsRendering(true);
@@ -1705,6 +1729,8 @@ export function useTrackMaster() {
     setInputGain,
     setOutputGain,
     setDeliveryProfile,
+    setDeliveryBitDepth,
+    setDeliverySampleRate,
     // Phase B — Album Master controls.
     albumArcKind,
     albumIntensity,

@@ -71,12 +71,14 @@ fn settings_for(
 fn render_and_assert(
     label: &str,
     settings: MasteringSettings,
+    source_sample_rate: u32,
     expected_lufs: f32,
     expected_bit_depth: u16,
+    expected_sample_rate: u32,
 ) {
     let tmp = tempfile::tempdir().expect("tempdir");
     let src = tmp.path().join("delivery-profile-source.wav");
-    write_sine_source(&src, SR_HZ, DURATION_SEC, 1_000.0);
+    write_sine_source(&src, source_sample_rate, DURATION_SEC, 1_000.0);
 
     let job = engine::mastering_render(
         TrackId(format!("delivery-{label}")),
@@ -110,6 +112,16 @@ fn render_and_assert(
         "{label}: rendered bit-depth {} does not match profile target {expected_bit_depth}",
         spec.bits_per_sample,
     );
+    assert_eq!(
+        spec.sample_rate, expected_sample_rate,
+        "{label}: rendered sample-rate {} does not match delivery target {expected_sample_rate}",
+        spec.sample_rate,
+    );
+    assert_eq!(
+        job.measurements.as_ref().map(|m| m.sample_rate),
+        Some(expected_sample_rate),
+        "{label}: receipt sample-rate must match the WAV header"
+    );
 }
 
 #[test]
@@ -117,8 +129,10 @@ fn delivery_profile_streaming_universal_lands_minus14_24bit() {
     render_and_assert(
         "StreamingUniversal",
         settings_for(DeliveryProfile::StreamingUniversal, None),
+        SR_HZ,
         -14.0,
         24,
+        48_000,
     );
 }
 
@@ -127,14 +141,23 @@ fn delivery_profile_apple_music_lands_minus16_24bit() {
     render_and_assert(
         "AppleMusic",
         settings_for(DeliveryProfile::AppleMusic, None),
+        SR_HZ,
         -16.0,
         24,
+        48_000,
     );
 }
 
 #[test]
 fn delivery_profile_cd_lands_minus14_16bit() {
-    render_and_assert("Cd", settings_for(DeliveryProfile::Cd, None), -14.0, 16);
+    render_and_assert(
+        "Cd",
+        settings_for(DeliveryProfile::Cd, None),
+        48_000,
+        -14.0,
+        16,
+        44_100,
+    );
 }
 
 #[test]
@@ -142,8 +165,10 @@ fn delivery_profile_vinyl_premaster_lands_minus18_24bit() {
     render_and_assert(
         "VinylPremaster",
         settings_for(DeliveryProfile::VinylPremaster, None),
+        SR_HZ,
         -18.0,
         24,
+        48_000,
     );
 }
 
@@ -152,8 +177,10 @@ fn delivery_profile_loud_rock_lands_minus10p5_24bit() {
     render_and_assert(
         "LoudRock",
         settings_for(DeliveryProfile::LoudRock, None),
+        SR_HZ,
         -10.5,
         24,
+        48_000,
     );
 }
 
@@ -162,8 +189,10 @@ fn delivery_profile_broadcast_eu_lands_minus23_24bit() {
     render_and_assert(
         "BroadcastEu",
         settings_for(DeliveryProfile::BroadcastEu, None),
+        SR_HZ,
         -23.0,
         24,
+        48_000,
     );
 }
 
@@ -172,8 +201,10 @@ fn delivery_profile_broadcast_us_lands_minus24_24bit() {
     render_and_assert(
         "BroadcastUs",
         settings_for(DeliveryProfile::BroadcastUs, None),
+        SR_HZ,
         -24.0,
         24,
+        48_000,
     );
 }
 
@@ -189,7 +220,57 @@ fn delivery_profile_custom_honors_explicit_advanced_fields() {
     render_and_assert(
         "Custom",
         settings_for(DeliveryProfile::Custom, Some(advanced)),
+        SR_HZ,
         -12.0,
         16,
+        48_000,
+    );
+}
+
+#[test]
+fn delivery_profile_streaming_converts_44100_source_to_48000() {
+    render_and_assert(
+        "StreamingFrom44100",
+        settings_for(DeliveryProfile::StreamingUniversal, None),
+        44_100,
+        -14.0,
+        24,
+        48_000,
+    );
+}
+
+#[test]
+fn delivery_profile_custom_source_preserves_source_sample_rate() {
+    let advanced = AdvancedSettings {
+        lufs_offset_db: Some(-12.0),
+        bit_depth: Some(24),
+        target_sample_rate: None,
+        ..Default::default()
+    };
+    render_and_assert(
+        "CustomSource44100",
+        settings_for(DeliveryProfile::Custom, Some(advanced)),
+        44_100,
+        -12.0,
+        24,
+        44_100,
+    );
+}
+
+#[test]
+fn delivery_profile_custom_explicit_48000_converts_from_44100() {
+    let advanced = AdvancedSettings {
+        lufs_offset_db: Some(-12.0),
+        bit_depth: Some(24),
+        target_sample_rate: Some(48_000),
+        ..Default::default()
+    };
+    render_and_assert(
+        "Custom48000",
+        settings_for(DeliveryProfile::Custom, Some(advanced)),
+        44_100,
+        -12.0,
+        24,
+        48_000,
     );
 }

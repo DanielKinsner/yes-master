@@ -71,6 +71,8 @@ async function renderAdvancedPanel(props: {
   onInputGain?: (db: number) => void;
   onOutputGain?: (db: number) => void;
   onDeliveryProfile?: (profile: MasteringSettings["delivery_profile"]) => void;
+  onDeliveryBitDepth?: (bitDepth: number | null) => void;
+  onDeliverySampleRate?: (sampleRate: number | null) => void;
 }): Promise<{ container: HTMLDivElement; root: Root }> {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -84,6 +86,8 @@ async function renderAdvancedPanel(props: {
         onInputGain={props.onInputGain ?? vi.fn()}
         onOutputGain={props.onOutputGain ?? vi.fn()}
         onDeliveryProfile={props.onDeliveryProfile ?? vi.fn()}
+        onDeliveryBitDepth={props.onDeliveryBitDepth ?? vi.fn()}
+        onDeliverySampleRate={props.onDeliverySampleRate ?? vi.fn()}
       />,
     );
   });

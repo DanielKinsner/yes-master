@@ -9,6 +9,7 @@ import {
   effectiveBitDepth,
   effectiveCeilingDbtp,
   effectiveLoudnessTarget,
+  effectiveSampleRate,
   LOUDNESS_PROFILES,
   loudnessTargetDisplay,
   profileIdForLufs,
@@ -149,6 +150,23 @@ describe("effectiveBitDepth", () => {
   it("falls through to advanced.bit_depth when delivery_profile is Custom", () => {
     const settings = makeSettings("custom", { bit_depth: 32 });
     expect(effectiveBitDepth(settings)).toBe(32);
+  });
+});
+
+describe("effectiveSampleRate", () => {
+  it("returns the profile sample rate when delivery_profile is non-Custom", () => {
+    const settings = makeSettings("cd", { target_sample_rate: 96_000 });
+    expect(effectiveSampleRate(settings)).toBe(44_100);
+  });
+
+  it("falls through to advanced.target_sample_rate when delivery_profile is Custom", () => {
+    const settings = makeSettings("custom", { target_sample_rate: 48_000 });
+    expect(effectiveSampleRate(settings)).toBe(48_000);
+  });
+
+  it("returns null for Custom Source", () => {
+    const settings = makeSettings("custom", { target_sample_rate: null });
+    expect(effectiveSampleRate(settings)).toBeNull();
   });
 });
 

@@ -123,6 +123,17 @@ export const DELIVERY_PROFILE_BIT_DEPTH: Record<DeliveryProfile, number | null> 
   "custom": null,
 };
 
+export const DELIVERY_PROFILE_SAMPLE_RATE: Record<DeliveryProfile, number | null> = {
+  "streaming-universal": 48_000,
+  "apple-music": 48_000,
+  "cd": 44_100,
+  "vinyl-premaster": 48_000,
+  "loud-rock": 48_000,
+  "broadcast-eu": 48_000,
+  "broadcast-us": 48_000,
+  "custom": null,
+};
+
 /// Phase B — Album Master mode types. Mirror of the Rust types in
 /// types.rs; the four AlbumArcKind values map to the same 6-point
 /// curves the Rust runtime cosine-resamples to actual track count.

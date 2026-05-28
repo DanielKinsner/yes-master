@@ -21,12 +21,14 @@ import type {
 import {
   DELIVERY_PROFILE_BIT_DEPTH,
   DELIVERY_PROFILE_CEILING_DBTP,
+  DELIVERY_PROFILE_SAMPLE_RATE,
   DELIVERY_PROFILE_TARGET_LUFS,
 } from "../bindings";
 import {
   effectiveBitDepth,
   effectiveCeilingDbtp,
   effectiveLoudnessTarget,
+  effectiveSampleRate,
 } from "./effective-settings";
 
 /// Keys on `AdvancedSettings` that a non-Custom `DeliveryProfile`
@@ -100,6 +102,7 @@ export function applyDeliveryProfileSelection(
         lufs_offset_db: effectiveLoudnessTarget(prev),
         ceiling_dbtp: effectiveCeilingDbtp(prev),
         bit_depth: effectiveBitDepth(prev),
+        target_sample_rate: effectiveSampleRate(prev),
       },
     };
   }
@@ -111,6 +114,7 @@ export function applyDeliveryProfileSelection(
       lufs_offset_db: DELIVERY_PROFILE_TARGET_LUFS[profile],
       ceiling_dbtp: DELIVERY_PROFILE_CEILING_DBTP[profile],
       bit_depth: DELIVERY_PROFILE_BIT_DEPTH[profile],
+      target_sample_rate: DELIVERY_PROFILE_SAMPLE_RATE[profile],
     },
   };
 }

@@ -2659,6 +2659,23 @@ button.primary:disabled {
   margin-bottom: 1rem;
 }
 
+.receipt-render-meta {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin: -0.35rem 0 1rem;
+  color: var(--text-2);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.receipt-render-meta span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.45rem;
+}
+
 .receipt-path {
   font-family: ui-monospace, "SF Mono", Consolas, monospace;
   font-size: 0.78rem;

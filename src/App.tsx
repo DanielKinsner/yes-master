@@ -35,6 +35,7 @@ import {
   effectiveBitDepth,
   effectiveCeilingDbtp,
   effectiveLoudnessTarget,
+  effectiveSampleRate,
   LOUDNESS_PROFILES,
   loudnessTargetDisplay,
 } from "./lib/effective-settings";
@@ -110,6 +111,8 @@ function App() {
               onInputGain={tm.setInputGain}
               onOutputGain={tm.setOutputGain}
               onDeliveryProfile={tm.setDeliveryProfile}
+              onDeliveryBitDepth={tm.setDeliveryBitDepth}
+              onDeliverySampleRate={tm.setDeliverySampleRate}
             />
           ) : undefined
         }
@@ -1827,6 +1830,8 @@ export function AdvancedPanel({
   onInputGain,
   onOutputGain,
   onDeliveryProfile,
+  onDeliveryBitDepth,
+  onDeliverySampleRate,
 }: {
   analysis?: AnalysisResult;
   settings: MasteringSettings;
@@ -1834,6 +1839,8 @@ export function AdvancedPanel({
   onInputGain: (db: number) => void;
   onOutputGain: (db: number) => void;
   onDeliveryProfile: (profile: DeliveryProfile) => void;
+  onDeliveryBitDepth: (bitDepth: number | null) => void;
+  onDeliverySampleRate: (sampleRate: number | null) => void;
 }) {
   const a = settings.advanced;
   const update = (
@@ -1862,7 +1869,11 @@ export function AdvancedPanel({
         onAdvanced={onAdvanced}
         onUpdate={update}
       />
-      <DeliveryFormatCard settings={settings} update={update} />
+      <DeliveryFormatCard
+        settings={settings}
+        onBitDepth={onDeliveryBitDepth}
+        onSampleRate={onDeliverySampleRate}
+      />
     </>
   );
 }
@@ -2404,16 +2415,15 @@ function resetCompressorSettingsToCurrentMode(
 
 function DeliveryFormatCard({
   settings,
-  update,
+  onBitDepth,
+  onSampleRate,
 }: {
   settings: MasteringSettings;
-  update: (
-    field: keyof MasteringSettings["advanced"],
-    value: number | boolean | null,
-  ) => void;
+  onBitDepth: (bitDepth: number | null) => void;
+  onSampleRate: (sampleRate: number | null) => void;
 }) {
-  const a = settings.advanced;
   const effectiveBitDepthValue = effectiveBitDepth(settings);
+  const effectiveSampleRateValue = effectiveSampleRate(settings);
   return (
     <section className="panel rail-card rail-card-format">
       <header className="panel-head">
@@ -2429,18 +2439,18 @@ function DeliveryFormatCard({
             { value: 24, label: "24-bit" },
             { value: 32, label: "32-bit float" },
           ]}
-          onChange={(v) => update("bit_depth", v)}
+          onChange={onBitDepth}
         />
-        {/* Codex audit 2026-05-13 P2: the renderer writes `pcm.sample_rate`
-            regardless of this control (see `types.rs` DeliveryProfile doc:
-            "A3 does NOT resample"). Single honest option until SRC ships. */}
         <SelectField
           label="Sample rate"
-          value={a.target_sample_rate}
+          value={effectiveSampleRateValue}
           options={[
-            { value: null, label: "Source (SRC later)" },
+            { value: null, label: "Source" },
+            { value: 44_100, label: "44.1 kHz" },
+            { value: 48_000, label: "48 kHz" },
+            { value: 96_000, label: "96 kHz" },
           ]}
-          onChange={(v) => update("target_sample_rate", v)}
+          onChange={onSampleRate}
         />
       </div>
     </section>
@@ -2750,6 +2760,7 @@ function ExportReceiptCard({
   };
   const isAlbum = receipt.kind === "album";
   const paths = receipt.job.output_paths;
+  const measurements = receipt.job.measurements ?? null;
   const quality = exportQualitySummary(receipt.checks);
   const journeySteps = ["Analyze", "Master", "Quality", "Saved"];
   return (
@@ -2802,6 +2813,12 @@ function ExportReceiptCard({
             </button>
           ))}
         </div>
+        {measurements && (
+          <div className="receipt-render-meta" aria-label="Rendered format">
+            <span>{formatSampleRate(measurements.sample_rate)}</span>
+            <span>{formatBitDepth(measurements.bit_depth)}</span>
+          </div>
+        )}
         {receipt.checks.length > 0 && (
           <div className="receipt-checks">
             <div className="receipt-section-title">Quality notes</div>
@@ -2849,6 +2866,16 @@ function pluralize(count: number, singular: string): string {
 
 function fileNameFromPath(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
+}
+
+function formatSampleRate(sampleRate: number): string {
+  return sampleRate >= 1000
+    ? `${(sampleRate / 1000).toFixed(sampleRate % 1000 === 0 ? 0 : 1)} kHz`
+    : `${sampleRate} Hz`;
+}
+
+function formatBitDepth(bitDepth: number): string {
+  return bitDepth === 32 ? "32-bit float" : `${bitDepth}-bit`;
 }
 
 function CheckRow({ check }: { check: QualityCheck }) {
