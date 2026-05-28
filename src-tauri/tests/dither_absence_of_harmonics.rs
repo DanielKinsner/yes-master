@@ -23,7 +23,7 @@ const SR_HZ: u32 = 48_000;
 const DURATION_SEC: f32 = 1.0;
 const STEREO: u16 = 2;
 /// -90 dBFS *RMS*; for a sine, peak = RMS · √2 → -86.99 dBFS peak.
-const SIGNAL_LUFS_PEAK: f32 = 1.4142_f32 * 3.162_277_7e-5_f32;
+const SIGNAL_LUFS_PEAK: f32 = std::f32::consts::SQRT_2 * 3.162_277_7e-5_f32;
 
 fn neutral_settings_16bit() -> MasteringSettings {
     // Custom preset + zero intensity + zero EQ + zero gain so the chain

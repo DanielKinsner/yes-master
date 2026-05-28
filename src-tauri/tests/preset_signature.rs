@@ -27,6 +27,10 @@ const STEREO: usize = 2;
 const TEST_INTENSITY: f32 = 0.5;
 const NOISE_PEAK: f32 = 0.251; // -12.04 dBFS
 
+type TiltPredicate = fn(f32) -> bool;
+type TiltExpectation<'a> = (&'a str, f32, f32, TiltPredicate, &'a str);
+type PresetExpectation<'a> = (&'a str, Preset, &'a [TiltExpectation<'a>]);
+
 /// Deterministic LCG → uniform white in [-0.5, 0.5); scaled to NOISE_PEAK
 /// so amplitude is reproducible across machines.
 fn synth_noise_stereo(samples_per_channel: usize) -> Vec<f32> {
@@ -104,8 +108,10 @@ fn default_settings_for(preset: Preset) -> MasteringSettings {
     // per-band makeup gain shifts the band-tilt measurements unpredictably.
     // Explicitly bypass compression here so the assertions remain about
     // what the EQ stage shapes (which is what the test name promises).
-    let mut advanced = AdvancedSettings::default();
-    advanced.compression_density = Some(0.0);
+    let advanced = AdvancedSettings {
+        compression_density: Some(0.0),
+        ..Default::default()
+    };
     MasteringSettings {
         preset,
         intensity: TEST_INTENSITY,
@@ -210,7 +216,7 @@ fn preset_signatures_match_calibration_tuples() {
     // direction of each tilt mirrors the preset's calibration tuple
     // (see `compute_band_calibration` in dsp.rs and the Codex source
     // table at `mastering.py:96-357`).
-    let cases: &[(&str, Preset, &[(&str, f32, f32, fn(f32) -> bool, &str)])] = &[
+    let cases: &[PresetExpectation<'_>] = &[
         // Universal: air shelf is the only non-zero EQ; the multiband
         // compressor flattens most of it on broadband noise. Observed
         // 6k - 1.5k tilt is +0.45 dB; require ≥ +0.2 dB.

@@ -121,7 +121,7 @@ pub(crate) fn write_samples_into_writer(
     bit_depth: u16,
 ) -> CommandResult<()> {
     // Phase A4: TPDF dither for int paths. f32 output stays as-is.
-    let mut rng = DitherRng::new(0xA11_CE);
+    let mut rng = DitherRng::new(0x000A_11CE);
     match bit_depth {
         16 => {
             for &s in samples {
@@ -179,7 +179,7 @@ pub(crate) fn write_wav(
     let mut writer =
         hound::WavWriter::create(path, spec).map_err(|e| CommandError::Io(e.to_string()))?;
     // Phase A4: TPDF dither for int paths. f32 output stays as-is.
-    let mut rng = DitherRng::new(0xA11_CE);
+    let mut rng = DitherRng::new(0x000A_11CE);
     match bit_depth {
         16 => {
             for &s in samples {
@@ -312,7 +312,7 @@ mod tests {
         let doubled: Vec<f32> = segment.iter().chain(segment.iter()).copied().collect();
 
         // Intentional writer contract: every public writer helper starts a
-        // fresh deterministic TPDF dither stream with DitherRng::new(0xA11_CE).
+        // fresh deterministic TPDF dither stream with DitherRng::new(0x000A_11CE).
         // Continuous-album segments therefore reset dither at each helper call.
         // Do not "fix" this into one shared RNG stream without changing the
         // byte contract and the album-render expectations together.

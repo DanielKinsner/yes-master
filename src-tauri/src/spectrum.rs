@@ -53,9 +53,9 @@ impl SpectrumRing {
     fn snapshot_into(&self, out: &mut [f32]) {
         debug_assert_eq!(out.len(), SPECTRUM_N_SAMPLES);
         let start = self.cursor.load(Ordering::Relaxed) % SPECTRUM_N_SAMPLES;
-        for i in 0..SPECTRUM_N_SAMPLES {
+        for (i, sample) in out.iter_mut().enumerate().take(SPECTRUM_N_SAMPLES) {
             let src = (start + i) % SPECTRUM_N_SAMPLES;
-            out[i] = f32::from_bits(self.samples[src].load(Ordering::Relaxed));
+            *sample = f32::from_bits(self.samples[src].load(Ordering::Relaxed));
         }
     }
 }
@@ -137,7 +137,7 @@ impl SpectrumAnalyzer {
         // sine of amplitude 1.0 reads near 0 dB at its bin.
         let inv_norm = 2.0 / (SPECTRUM_N_SAMPLES as f32);
         let mut out = vec![SPECTRUM_FLOOR_DB; SPECTRUM_N_BINS];
-        for b in 0..SPECTRUM_N_BINS {
+        for (b, out_bin) in out.iter_mut().enumerate().take(SPECTRUM_N_BINS) {
             let s = self.bin_starts[b];
             let e = self.bin_ends[b];
             let count = (e - s).max(1) as f32;
@@ -158,7 +158,7 @@ impl SpectrumAnalyzer {
             let smoothed = prev * (1.0 - SPECTRUM_SMOOTHING_ALPHA) + db * SPECTRUM_SMOOTHING_ALPHA;
             let clamped = smoothed.clamp(SPECTRUM_FLOOR_DB, SPECTRUM_CEIL_DB);
             self.prev_db[b] = clamped;
-            out[b] = clamped;
+            *out_bin = clamped;
         }
         out
     }

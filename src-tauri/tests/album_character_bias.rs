@@ -95,7 +95,7 @@ fn synth_pink(samples: usize, target_peak: f32) -> Vec<f32> {
         let w = ((state >> 16) & 0x7FFF) as f32 / 32_768.0 - 0.5;
         b0p = 0.99886 * b0p + w * 0.0555179;
         b1p = 0.99332 * b1p + w * 0.0750759;
-        b2p = 0.96900 * b2p + w * 0.1538520;
+        b2p = 0.96900 * b2p + w * 0.153_852;
         b3p = 0.86650 * b3p + w * 0.3104856;
         b4p = 0.55000 * b4p + w * 0.5329522;
         b5p = -0.7616 * b5p - w * 0.0168980;
@@ -230,7 +230,7 @@ fn character_promotion_and_bias_lands_on_rendered_audio() {
 
     // Fake analyses: Track 2 looks heavy (high energy + transient); the
     // other three look acoustic (low energy + low transient).
-    let analyses = vec![
+    let analyses = [
         analysis_for("t1", 0.30, 0.25), // acoustic-leaning
         analysis_for("t2", 0.85, 0.85), // heavy-leaning
         analysis_for("t3", 0.25, 0.20), // acoustic-leaning, will be promoted

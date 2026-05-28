@@ -138,7 +138,7 @@ impl BiquadCoeffs {
     /// epsilon (~1e-7).
     pub fn k_weighting_pre(sample_rate: u32) -> Self {
         let fs = sample_rate as f64;
-        let f0 = 1681.9744509555319_f64;
+        let f0 = 1_681.974_450_955_532_f64;
         let g = 3.999843853973347_f64;
         let q = 0.7071752369554196_f64;
         let k = (std::f64::consts::PI * f0 / fs).tan();
@@ -304,9 +304,10 @@ pub struct PresetCalibration {
     /// Saturation drive amount (Codex `warmth`, 0..1 unitless). Drives
     /// the post-EQ tanh stage.
     pub warmth: f32,
-    /// Baseline M/S widener default (Codex `stereo_width`). 1.0 = neutral,
-    /// > 1 widens, < 1 narrows. The user's `advanced.width` slider takes
-    /// precedence when set; this is what the preset uses out of the box.
+    /// Baseline M/S widener default (Codex `stereo_width`). 1.0 = neutral.
+    /// Values above 1 widen; values below 1 narrow. The user's
+    /// `advanced.width` slider takes precedence when set; this is what the
+    /// preset uses out of the box.
     pub stereo_width: f32,
     /// Preset transient shaper intent. Positive values lift attacks;
     /// negative values soften them.
@@ -1430,7 +1431,8 @@ impl Limiter {
 
 const LR4_CROSSOVER_LOW_HZ: f32 = 120.0;
 const LR4_CROSSOVER_HIGH_HZ: f32 = 4000.0;
-const BUTTERWORTH_Q: f32 = 0.707_106_8; // sqrt(2)/2
+#[allow(clippy::approx_constant)]
+const BUTTERWORTH_Q: f32 = 0.707_106_8; // sqrt(2)/2, pinned by preset byte snapshots
 
 /// Per-channel filter memory for the LR4 split: two LP stages for the low
 /// band, two HP stages and two LP stages for the mid band, two HP stages for
@@ -1515,6 +1517,7 @@ fn alpha_from_time_ms(sample_rate: f32, time_ms: f32) -> f32 {
     (-1.0_f32 / (time_ms * 0.001 * sample_rate)).exp()
 }
 
+#[allow(clippy::too_many_arguments)]
 #[inline]
 fn process_transient_shaper_sample(
     x: f32,
@@ -1916,9 +1919,9 @@ impl MasteringChain {
         // Pass 1: per-channel input gain + 7-band EQ.
         // Phase A2: low-mid peaking band inserted between low and mid so the
         // mud-zone cleanup (250–800 Hz) sits in the natural frequency order.
-        for ch in 0..channels {
+        for (ch, sample) in frame.iter_mut().enumerate().take(channels) {
             let state = &mut self.states[ch];
-            let mut y = frame[ch] * self.coeffs.input_gain_lin;
+            let mut y = *sample * self.coeffs.input_gain_lin;
             let hp1 = state.sub_hp1.process(&self.coeffs.sub_highpass, y);
             y = state.sub_hp2.process(&self.coeffs.sub_highpass, hp1);
             y = state.sub.process(&self.coeffs.sub, y);
@@ -1930,7 +1933,7 @@ impl MasteringChain {
             y = state.sparkle.process(&self.coeffs.sparkle, y);
             y = state.warmth.process(&self.coeffs.warmth, y);
             y = state.presence_air.process(&self.coeffs.presence_air, y);
-            frame[ch] = y;
+            *sample = y;
         }
         // Phase 12.2 — 3-band multiband downward compressor (LR4 split,
         // peak-detector envelope followers, soft 6 dB knee, auto makeup).
@@ -1945,11 +1948,11 @@ impl MasteringChain {
         // can add attack without immediately feeding that lift into compressor
         // gain reduction. Musical tuning is still per-preset, but the topology
         // keeps the shaper's mechanical effect predictable.
-        for ch in 0..channels {
+        for (ch, sample) in frame.iter_mut().enumerate().take(channels) {
             let state = &mut self.states[ch];
             if self.coeffs.transient_amount.abs() > 1.0e-5 {
-                frame[ch] = process_transient_shaper_sample(
-                    frame[ch],
+                *sample = process_transient_shaper_sample(
+                    *sample,
                     self.coeffs.transient_amount,
                     &mut state.transient_fast_env,
                     &mut state.transient_slow_env,
@@ -1972,8 +1975,8 @@ impl MasteringChain {
         if self.coeffs.saturation_amount > 0.0 {
             let drive = 1.0 + self.coeffs.saturation_amount * 2.0;
             let denom = drive.tanh().max(1.0e-3);
-            for ch in 0..channels {
-                frame[ch] = (frame[ch] * drive).tanh() / denom;
+            for sample in frame.iter_mut().take(channels) {
+                *sample = (*sample * drive).tanh() / denom;
             }
         }
         self.limiter.process_frame_inplace(frame);
@@ -2076,15 +2079,15 @@ impl MasteringChain {
             let (thr_db, ratio, alpha_a, alpha_r) = band_params[b];
             let mut linked_x: f32 = 0.0;
             if link {
-                for ch in 0..ch_active {
-                    let a = bands[ch][b].abs();
+                for band in bands.iter().take(ch_active) {
+                    let a = band[b].abs();
                     if a > linked_x {
                         linked_x = a;
                     }
                 }
             }
-            for ch in 0..ch_active {
-                let detector = if link { linked_x } else { bands[ch][b].abs() };
+            for (ch, band) in bands.iter().enumerate().take(ch_active) {
+                let detector = if link { linked_x } else { band[b].abs() };
                 let env_ref = match b {
                     0 => &mut self.states[ch].comp_low_env,
                     1 => &mut self.states[ch].comp_mid_env,
@@ -3081,7 +3084,7 @@ mod tests {
                 let w = ((state >> 16) & 0x7FFF) as f32 / 32_768.0 - 0.5;
                 b0p = 0.99886 * b0p + w * 0.0555179;
                 b1p = 0.99332 * b1p + w * 0.0750759;
-                b2p = 0.96900 * b2p + w * 0.1538520;
+                b2p = 0.96900 * b2p + w * 0.153_852;
                 b3p = 0.86650 * b3p + w * 0.3104856;
                 b4p = 0.55000 * b4p + w * 0.5329522;
                 b5p = -0.7616 * b5p - w * 0.0168980;
@@ -3802,7 +3805,7 @@ mod tests {
     fn k_weighting_pre_matches_bs1770_reference_at_48k() {
         let c = BiquadCoeffs::k_weighting_pre(48_000);
         assert!(
-            (c.b0 - 1.535_124_85_f32).abs() < 1.0e-6,
+            (c.b0 - 1.535_124_9_f32).abs() < 1.0e-6,
             "b0: expected ~1.53512486, got {}",
             c.b0
         );
@@ -3959,7 +3962,7 @@ mod tests {
             let w = ((state >> 16) & 0x7FFF) as f32 / 32768.0 - 0.5; // ~±0.5 uniform
             b0p = 0.99886 * b0p + w * 0.0555179;
             b1p = 0.99332 * b1p + w * 0.0750759;
-            b2p = 0.96900 * b2p + w * 0.1538520;
+            b2p = 0.96900 * b2p + w * 0.153_852;
             b3p = 0.86650 * b3p + w * 0.3104856;
             b4p = 0.55000 * b4p + w * 0.5329522;
             b5p = -0.7616 * b5p - w * 0.0168980;
@@ -4453,7 +4456,7 @@ mod tests {
         assert_eq!(parsed.title, plan.title);
         assert_eq!(parsed.tracks.len(), 4);
         assert_eq!(parsed.tracks[0].role, TrackRole::Opener);
-        assert_eq!(parsed.tracks[1].role_locked, true);
+        assert!(parsed.tracks[1].role_locked);
         assert_eq!(parsed.tracks[2].arc_lufs_offset_db, 1.8);
         assert_eq!(parsed.transitions.len(), 3);
         assert!(matches!(parsed.transitions[1].kind, TransitionKind::Gap));
@@ -4525,6 +4528,7 @@ mod tests {
     /// values directly from the const table so a future numeric tweak
     /// breaks this test and forces a re-think.
     #[test]
+    #[allow(clippy::assertions_on_constants)]
     fn heavy_presets_cut_low_mid_band() {
         assert!(
             PRESET_PUNCH.low_mid_db <= -1.5 && PRESET_PUNCH.low_mid_db >= -2.5,

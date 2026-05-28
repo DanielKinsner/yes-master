@@ -484,7 +484,7 @@ mod tests {
         assert_eq!(settings.preset, Preset::Loud);
         assert_eq!(settings.advanced.compression_mode, CompressionMode::Off);
         assert_eq!(settings.source_lufs_integrated, Some(-12.3));
-        assert_eq!(settings.volume_match, false);
+        assert!(!settings.volume_match);
     }
 
     #[test]

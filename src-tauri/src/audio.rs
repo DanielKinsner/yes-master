@@ -1113,7 +1113,7 @@ fn coalesced_command_sequence(buffered: Vec<AudioCommand>) -> Vec<AudioCommand> 
             // Flush current segment, then the barrier itself. The
             // barrier MUST stay between the segments to preserve
             // submission-time ordering relative to other commands.
-            result.extend(segment_in_order.drain(..));
+            result.append(&mut segment_in_order);
             if let Some(c) = segment_latest_update.take() {
                 result.push(c);
             }
@@ -1616,6 +1616,7 @@ fn handle_play(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_play_master(
     state: &mut Option<AudioThreadState>,
     track_id: TrackId,
@@ -1797,8 +1798,10 @@ mod tests {
         // intensity climbs. The test is grading the live-coeff plumbing,
         // not the compressor, so we explicitly bypass compression here
         // (density 0) to keep the RMS comparison clean.
-        let mut advanced = AdvancedSettings::default();
-        advanced.compression_density = Some(0.0);
+        let advanced = AdvancedSettings {
+            compression_density: Some(0.0),
+            ..Default::default()
+        };
         MasteringSettings {
             preset: Preset::Universal,
             intensity,
@@ -2943,7 +2946,7 @@ mod tests {
         coeffs_tx
             .send(LiveCoeffUpdate {
                 generation: 1,
-                coeffs: stale_coeffs.clone(),
+                coeffs: stale_coeffs,
             })
             .expect("send stale coeffs");
 
@@ -3084,7 +3087,7 @@ mod tests {
                 coeffs_tx
                     .send(LiveCoeffUpdate {
                         generation: gen_counter,
-                        coeffs: loud_coeffs.clone(),
+                        coeffs: loud_coeffs,
                     })
                     .expect("send loud coeffs");
             }

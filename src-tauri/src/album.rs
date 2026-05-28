@@ -51,14 +51,12 @@ pub fn resample_arc_curve(curve: [f32; 6], n: usize) -> Vec<f32> {
 /// label. Direct port of Codex's `arc.py:287-299` offset table:
 ///
 /// * `AcousticFolk`   → -0.72 dB. Extra -0.25 dB at first track.
-/// * `Transition`     → -1.25 dB. Connective tissue sits below the
-///                       surrounding songs so it can redirect the
-///                       album rather than compete.
-/// * `HeavyDjent`     → +0.82 dB. The heavy section is allowed to feel
-///                       bigger than the rest of the record.
-/// * `ReturnAcoustic` → -1.05 dB. Extra -0.20 dB at last track. Pulled
-///                       inward after the heavy center so the record
-///                       lands quietly.
+/// * `Transition`     → -1.25 dB. Connective tissue sits below surrounding
+///   songs so it can redirect the album rather than compete.
+/// * `HeavyDjent`     → +0.82 dB. The heavy section is allowed to feel bigger
+///   than the rest of the record.
+/// * `ReturnAcoustic` → -1.05 dB. Extra -0.20 dB at last track. Pulled inward
+///   after the heavy center so the record lands quietly.
 ///
 /// `None` returns 0 — a track with no inferred album-character gets no
 /// album-position pull, only the arc + source compensation.
@@ -278,8 +276,7 @@ pub fn infer_album_characters(
     }
     let mut labels: Vec<Option<AlbumCharacter>> = Vec::with_capacity(n);
     // Pass 1: per-track inference.
-    for i in 0..n {
-        let a = analyses[i];
+    for (i, a) in analyses.iter().copied().enumerate().take(n) {
         let duration = durations.get(i).copied().unwrap_or(0.0);
         let name = names.get(i).copied().unwrap_or("");
         if let Some(hint) = label_from_name(name) {
@@ -311,12 +308,12 @@ pub fn infer_album_characters(
     // ReturnAcoustic.
     let mut has_seen_heavy = false;
     let half = (n / 2).max(1);
-    for i in 0..n {
-        if labels[i] == Some(AlbumCharacter::HeavyDjent) {
+    for (i, label) in labels.iter_mut().enumerate().take(n) {
+        if *label == Some(AlbumCharacter::HeavyDjent) {
             has_seen_heavy = true;
         }
-        if has_seen_heavy && labels[i] == Some(AlbumCharacter::AcousticFolk) && i >= half {
-            labels[i] = Some(AlbumCharacter::ReturnAcoustic);
+        if has_seen_heavy && *label == Some(AlbumCharacter::AcousticFolk) && i >= half {
+            *label = Some(AlbumCharacter::ReturnAcoustic);
         }
     }
     labels

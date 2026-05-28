@@ -360,7 +360,7 @@ pub(crate) fn compute_spectral_balance_6band(
     let top = (sample_rate as f32 / 2.0).min(16_000.0);
     let edges = [20.0, 80.0, 250.0, 800.0, 2500.0, 6500.0, top];
     let mut bands = [0.0_f64; 6];
-    for bin in 1..bins {
+    for (bin, c) in buf.iter().copied().enumerate().take(bins).skip(1) {
         let freq = bin as f32 * bin_hz;
         let idx = if freq >= edges[0] && freq < edges[1] {
             0
@@ -377,7 +377,6 @@ pub(crate) fn compute_spectral_balance_6band(
         } else {
             continue;
         };
-        let c = buf[bin];
         bands[idx] += (c.re as f64) * (c.re as f64) + (c.im as f64) * (c.im as f64);
     }
     let total: f64 = bands.iter().sum();
@@ -611,7 +610,7 @@ fn compute_transient_density(samples: &[f32], channels: usize) -> f32 {
     }
     // Normalize to a 0..1 range; ~4000 crossings/sec is dense (typical drums).
     let rate = crossings as f32 / frames as f32;
-    (rate * 50.0).min(1.0).max(0.0)
+    (rate * 50.0).clamp(0.0, 1.0)
 }
 
 #[cfg(test)]

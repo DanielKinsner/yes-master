@@ -166,10 +166,11 @@ pub enum Preset {
 /// Sample rate is captured per profile and Track Master export honors it
 /// through the offline SRC path. Album Master still requires matching source
 /// rates for this release-candidate pass.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum DeliveryProfile {
     /// -14 LUFS, -1 dBTP, 48 kHz, 24-bit. Spotify / YouTube / Tidal / Amazon.
+    #[default]
     StreamingUniversal,
     /// -16 LUFS, -1 dBTP, 48 kHz, 24-bit. Apple Music's tighter target.
     AppleMusic,
@@ -189,12 +190,6 @@ pub enum DeliveryProfile {
     /// `ceiling_dbtp`, `bit_depth`, and `target_sample_rate` fields
     /// from `AdvancedSettings` verbatim.
     Custom,
-}
-
-impl Default for DeliveryProfile {
-    fn default() -> Self {
-        Self::StreamingUniversal
-    }
 }
 
 impl DeliveryProfile {
@@ -958,8 +953,7 @@ mod effective_settings_tests {
             (DeliveryProfile::BroadcastUs, -24.0),
         ];
         for (profile, expected) in cases {
-            let s =
-                settings_with_profile_and_advanced(profile.clone(), AdvancedSettings::default());
+            let s = settings_with_profile_and_advanced(*profile, AdvancedSettings::default());
             assert_eq!(
                 s.effective_target_lufs(),
                 Some(*expected),

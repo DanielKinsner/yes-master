@@ -167,7 +167,7 @@ pub async fn open_output(output_path: String) -> CommandResult<()> {
             .arg(&output_path)
             .spawn()
             .map_err(|e| CommandError::Io(format!("failed to open Explorer: {e}")))?;
-        return Ok(());
+        Ok(())
     }
     #[cfg(target_os = "macos")]
     {
@@ -176,7 +176,7 @@ pub async fn open_output(output_path: String) -> CommandResult<()> {
             .arg(&output_path)
             .spawn()
             .map_err(|e| CommandError::Io(format!("failed to open Finder: {e}")))?;
-        return Ok(());
+        Ok(())
     }
     #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
     {

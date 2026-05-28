@@ -221,6 +221,7 @@ pub(crate) struct MasteringSource {
 }
 
 impl MasteringSource {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         samples: Vec<f32>,
         channels: u16,

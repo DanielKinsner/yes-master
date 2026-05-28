@@ -139,6 +139,7 @@ pub fn discover_reference_suite(reference_dir: &Path) -> CommandResult<Reference
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn comparison_row_for(
     track_label: &str,
     preset: Preset,
@@ -685,6 +686,6 @@ mod tests {
             crate::types::CompressionMode::Preset
         );
         assert_eq!(settings.source_lufs_integrated, Some(-12.3));
-        assert_eq!(settings.volume_match, false);
+        assert!(!settings.volume_match);
     }
 }
