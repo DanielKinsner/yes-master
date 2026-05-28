@@ -11,12 +11,13 @@ import {
   applyAdvancedWithProfileFlip,
   applyChainDispatchOverrides,
   applyDeliveryProfileSelection,
-  shouldFlipToCustomOnLoudnessPick,
+  applyExplicitLoudnessTarget,
+  applyLoudnessTargetSelection,
   SHADOWED_ADVANCED_KEYS,
 } from "./settings-transitions";
 
 // Mechanical gates for B7 (auto-flip-to-Custom on shadowed-field
-// edit) and the LoudnessTarget quick-select force-flip. Before this
+// edit), delivery profile writes, and explicit loudness writes. Before this
 // extraction, both decisions lived inside React callbacks and could
 // only be verified by manual click-testing; now they're pure
 // functions with explicit input/output contracts.
@@ -110,9 +111,9 @@ describe("applyAdvancedWithProfileFlip (B7 — auto-flip-to-Custom)", () => {
     // null -> null when the field was already null) is detected as
     // "no diff" by the value-comparison and produces no flip. This
     // is fine because the displayed value didn't change either; the
-    // visual asymmetry can't be observed. The LoudnessTarget quick-
-    // select uses `shouldFlipToCustomOnLoudnessPick` instead, which
-    // captures explicit intent regardless of value diff.
+    // visual asymmetry can't be observed. Explicit LUFS edits use
+    // `applyExplicitLoudnessTarget` instead, which captures intent
+    // regardless of value diff.
     const prev = makeSettings("streaming-universal", { lufs_offset_db: null });
     const next = applyAdvancedWithProfileFlip(prev, {
       ...prev.advanced,
@@ -221,6 +222,42 @@ describe("applyDeliveryProfileSelection", () => {
     expect(next.advanced.compression_density).toBe(0.2);
   });
 });
+describe("loudness target transitions", () => {
+  it("forces Custom and writes a typed right-rail LUFS target atomically", () => {
+    const prev = makeSettings("streaming-universal", { lufs_offset_db: null });
+
+    const next = applyExplicitLoudnessTarget(prev, -12);
+
+    expect(next.delivery_profile).toBe("custom");
+    expect(next.advanced.lufs_offset_db).toBe(-12);
+  });
+
+  it("forces Custom for center Off / Natural even when raw LUFS was already null", () => {
+    const prev = makeSettings("streaming-universal", { lufs_offset_db: null });
+
+    const next = applyLoudnessTargetSelection(prev, "off");
+
+    expect(next.delivery_profile).toBe("custom");
+    expect(next.advanced.lufs_offset_db).toBeNull();
+  });
+
+  it("writes center quick-select targets through the same explicit LUFS path", () => {
+    const prev = makeSettings("apple-music", { lufs_offset_db: null });
+
+    const next = applyLoudnessTargetSelection(prev, "loud-streaming");
+
+    expect(next.delivery_profile).toBe("custom");
+    expect(next.advanced.lufs_offset_db).toBe(-11);
+  });
+
+  it("leaves the Custom dropdown placeholder as a no-op", () => {
+    const prev = makeSettings("custom", { lufs_offset_db: -12 });
+
+    const next = applyLoudnessTargetSelection(prev, "custom");
+
+    expect(next).toEqual(prev);
+  });
+});
 
 describe("applyChainDispatchOverrides (VM session-level + source_lufs injection)", () => {
   function stubAnalysis(lufs: number): AnalysisResult {
@@ -324,34 +361,5 @@ describe("applyChainDispatchOverrides (VM session-level + source_lufs injection)
     expect(result.delivery_profile).toBe("streaming-universal");
     expect(result.advanced.lufs_offset_db).toBe(-12);
     expect(result.advanced.ceiling_dbtp).toBe(-1.5);
-  });
-});
-
-describe("shouldFlipToCustomOnLoudnessPick (quick-select force-flip)", () => {
-  it("returns false when the user picks the 'custom' dropdown entry (no-op)", () => {
-    expect(shouldFlipToCustomOnLoudnessPick("custom", "streaming-universal")).toBe(false);
-    expect(shouldFlipToCustomOnLoudnessPick("custom", "custom")).toBe(false);
-  });
-
-  it("returns true when picking a real loudness option while on a non-Custom profile", () => {
-    expect(shouldFlipToCustomOnLoudnessPick("streaming", "streaming-universal")).toBe(true);
-    expect(shouldFlipToCustomOnLoudnessPick("loud-streaming", "apple-music")).toBe(true);
-    expect(shouldFlipToCustomOnLoudnessPick("cd-master", "vinyl-premaster")).toBe(true);
-  });
-
-  it("returns true on 'off / natural' pick when profile is non-Custom (the null->null no-op gap)", () => {
-    // The bug this fixes: pre-fix, picking "Off / Natural" while on
-    // StreamingUniversal wrote null to advanced.lufs_offset_db. Since
-    // it was already null, the B7 auto-flip's diff check returned false
-    // → no flip → chain kept targeting -14. User's "Off" intent was
-    // silently ignored. The explicit force-flip path closes this gap.
-    expect(shouldFlipToCustomOnLoudnessPick("off", "streaming-universal")).toBe(true);
-    expect(shouldFlipToCustomOnLoudnessPick("off", "broadcast-eu")).toBe(true);
-  });
-
-  it("returns false when the user picks any option while already on Custom", () => {
-    // No flip needed; the value write alone is sufficient.
-    expect(shouldFlipToCustomOnLoudnessPick("streaming", "custom")).toBe(false);
-    expect(shouldFlipToCustomOnLoudnessPick("off", "custom")).toBe(false);
   });
 });

@@ -60,8 +60,7 @@ function makeSettings(
 
 async function renderLoudnessTarget(props: {
   settings: MasteringSettings;
-  onAdvanced: (advanced: AdvancedSettings) => void;
-  onDeliveryProfile: (profile: DeliveryProfile) => void;
+  onProfileSelect: (profileId: string) => void;
 }): Promise<{ container: HTMLDivElement; root: Root }> {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -88,43 +87,31 @@ afterEach(() => {
 });
 
 describe("LoudnessTarget component", () => {
-  it("forces Custom before writing an explicit LUFS pick shadowed by a delivery profile", async () => {
-    const onAdvanced = vi.fn();
-    const onDeliveryProfile = vi.fn();
+  it("delegates explicit LUFS picks to the hook-level loudness transition", async () => {
+    const onProfileSelect = vi.fn();
     const { container, root } = await renderLoudnessTarget({
       settings: makeSettings("streaming-universal"),
-      onAdvanced,
-      onDeliveryProfile,
+      onProfileSelect,
     });
 
     await chooseProfile(container, "cd-master");
 
-    expect(onDeliveryProfile).toHaveBeenCalledWith("custom");
-    expect(onAdvanced).toHaveBeenCalledWith({
-      ...DEFAULT_ADVANCED,
-      lufs_offset_db: -9,
-    });
+    expect(onProfileSelect).toHaveBeenCalledWith("cd-master");
     await act(async () => {
       root.unmount();
     });
   });
 
-  it("also force-flips the Off / Natural pick even when it writes null over null", async () => {
-    const onAdvanced = vi.fn();
-    const onDeliveryProfile = vi.fn();
+  it("delegates Off / Natural even when the raw LUFS value is already null", async () => {
+    const onProfileSelect = vi.fn();
     const { container, root } = await renderLoudnessTarget({
       settings: makeSettings("loud-rock", { lufs_offset_db: null }),
-      onAdvanced,
-      onDeliveryProfile,
+      onProfileSelect,
     });
 
     await chooseProfile(container, "off");
 
-    expect(onDeliveryProfile).toHaveBeenCalledWith("custom");
-    expect(onAdvanced).toHaveBeenCalledWith({
-      ...DEFAULT_ADVANCED,
-      lufs_offset_db: null,
-    });
+    expect(onProfileSelect).toHaveBeenCalledWith("off");
     await act(async () => {
       root.unmount();
     });

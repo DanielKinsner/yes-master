@@ -430,6 +430,42 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("routes center and right-rail loudness target edits through one Custom transition", async () => {
+    const track = makeTrack("loudness-1", "C:/audio/loudness.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      harness.current().setLoudnessTargetProfile("off");
+    });
+    expect(harness.current().selectedSettings.delivery_profile).toBe("custom");
+    expect(harness.current().selectedSettings.advanced.lufs_offset_db).toBeNull();
+
+    await act(async () => {
+      harness.current().setDeliveryProfile("streaming-universal");
+    });
+    expect(harness.current().selectedSettings.delivery_profile).toBe(
+      "streaming-universal",
+    );
+
+    await act(async () => {
+      harness.current().setLoudnessTarget(-12);
+    });
+    expect(harness.current().selectedSettings.delivery_profile).toBe("custom");
+    expect(harness.current().selectedSettings.advanced.lufs_offset_db).toBe(-12);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("prewarms the first track when opening a project from disk", async () => {
     const track = makeTrack("project-1", "C:/audio/project.wav");
     mocks.open.mockResolvedValue("C:/projects/test.ams.json");

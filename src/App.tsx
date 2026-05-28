@@ -41,7 +41,6 @@ import {
   loudnessTargetDisplay,
 } from "./lib/effective-settings";
 import { compressorAutoReadouts } from "./lib/compressor-auto";
-import { shouldFlipToCustomOnLoudnessPick } from "./lib/settings-transitions";
 import "./App.css";
 
 const PRESET_OPTIONS: { value: Preset; label: string; blurb: string }[] = [
@@ -114,6 +113,7 @@ function App() {
               onAdvanced={tm.setAdvanced}
               onInputGain={tm.setInputGain}
               onOutputGain={tm.setOutputGain}
+              onLoudnessTarget={tm.setLoudnessTarget}
               onDeliveryProfile={tm.setDeliveryProfile}
               onDeliveryBitDepth={tm.setDeliveryBitDepth}
               onDeliverySampleRate={tm.setDeliverySampleRate}
@@ -776,8 +776,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           settings={tm.selectedSettings}
           onIntensity={tm.setIntensity}
           onEq={tm.setEqBand}
-          onAdvanced={tm.setAdvanced}
-          onDeliveryProfile={tm.setDeliveryProfile}
+          onLoudnessTargetProfile={tm.setLoudnessTargetProfile}
           spectrumDb={tm.transport.spectrumDb}
         />
       </div>
@@ -1711,8 +1710,7 @@ function Macros({
   settings,
   onIntensity,
   onEq,
-  onAdvanced,
-  onDeliveryProfile,
+  onLoudnessTargetProfile,
   spectrumDb,
 }: {
   settings: MasteringSettings;
@@ -1722,13 +1720,7 @@ function Macros({
     band: "sub" | "low" | "low-mid" | "mid" | "high-mid" | "high" | "sparkle",
     db: number,
   ) => void;
-  onAdvanced: (adv: MasteringSettings["advanced"]) => void;
-  // Used by the LoudnessTarget quick-select so explicit picks atomically
-  // switch the DeliveryProfile alongside the underlying lufs_offset_db
-  // — without this the "Off / Natural" option while on a non-Custom
-  // profile would be a silent no-op (the profile keeps shadowing the
-  // null advanced value).
-  onDeliveryProfile: (profile: MasteringSettings["delivery_profile"]) => void;
+  onLoudnessTargetProfile: (profileId: string) => void;
   // L4b — live FFT spectrum forwarded from PlaybackTick. Empty array
   // means no spectrum yet (idle / Original playback); VisualEqPanel
   // simply omits the spectrum layer in that case.
@@ -1811,8 +1803,7 @@ function Macros({
       </div>
       <LoudnessTarget
         settings={settings}
-        onAdvanced={onAdvanced}
-        onDeliveryProfile={onDeliveryProfile}
+        onProfileSelect={onLoudnessTargetProfile}
       />
     </section>
   );
@@ -1825,12 +1816,10 @@ function Macros({
 
 export function LoudnessTarget({
   settings,
-  onAdvanced,
-  onDeliveryProfile,
+  onProfileSelect,
 }: {
   settings: MasteringSettings;
-  onAdvanced: (adv: MasteringSettings["advanced"]) => void;
-  onDeliveryProfile: (profile: MasteringSettings["delivery_profile"]) => void;
+  onProfileSelect: (profileId: string) => void;
 }) {
   // Display state from the Vitest-tested pure helper — single
   // source of truth for the readout's effective target, dropdown
@@ -1838,17 +1827,7 @@ export function LoudnessTarget({
   const { profileId, displayText } = loudnessTargetDisplay(settings);
 
   const handleProfileChange = (id: string) => {
-    const profile = LOUDNESS_PROFILES.find((p) => p.id === id);
-    if (!profile) return;
-    // `shouldFlipToCustomOnLoudnessPick` (Vitest-tested) captures the
-    // "user picked an explicit option" intent regardless of whether
-    // the underlying value differs — closes the null -> null no-op
-    // gap that the B7 diff-based auto-flip can't see.
-    if (shouldFlipToCustomOnLoudnessPick(id, settings.delivery_profile)) {
-      onDeliveryProfile("custom");
-    }
-    if (id === "custom") return; // Custom dropdown entry is a no-op for the value write.
-    onAdvanced({ ...settings.advanced, lufs_offset_db: profile.lufs });
+    onProfileSelect(id);
   };
 
   return (
@@ -2000,6 +1979,7 @@ export function AdvancedPanel({
   onAdvanced,
   onInputGain,
   onOutputGain,
+  onLoudnessTarget,
   onDeliveryProfile,
   onDeliveryBitDepth,
   onDeliverySampleRate,
@@ -2009,6 +1989,7 @@ export function AdvancedPanel({
   onAdvanced: (adv: MasteringSettings["advanced"]) => void;
   onInputGain: (db: number) => void;
   onOutputGain: (db: number) => void;
+  onLoudnessTarget: (targetLufs: number | null) => void;
   onDeliveryProfile: (profile: DeliveryProfile) => void;
   onDeliveryBitDepth: (bitDepth: number | null) => void;
   onDeliverySampleRate: (sampleRate: number | null) => void;
@@ -2032,6 +2013,7 @@ export function AdvancedPanel({
         onAdvanced={onAdvanced}
         onInputGain={onInputGain}
         onOutputGain={onOutputGain}
+        onLoudnessTarget={onLoudnessTarget}
       />
       <PerBandCompressorCard
         analysis={analysis}
@@ -2089,6 +2071,7 @@ function AdvancedControlsCard({
   onAdvanced,
   onInputGain,
   onOutputGain,
+  onLoudnessTarget,
 }: {
   settings: MasteringSettings;
   update: (
@@ -2098,6 +2081,7 @@ function AdvancedControlsCard({
   onAdvanced: (adv: MasteringSettings["advanced"]) => void;
   onInputGain: (db: number) => void;
   onOutputGain: (db: number) => void;
+  onLoudnessTarget: (targetLufs: number | null) => void;
 }) {
   const a = settings.advanced;
   const compressorMode = a.compression_mode ?? "preset";
@@ -2144,7 +2128,7 @@ function AdvancedControlsCard({
           min={-24}
           max={-6}
           format={(v) => `${v.toFixed(1)} LUFS`}
-          onChange={(v) => update("lufs_offset_db", v)}
+          onChange={onLoudnessTarget}
         />
         <NumberField
           label="Ceiling"

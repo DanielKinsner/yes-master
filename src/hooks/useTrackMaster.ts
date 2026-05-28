@@ -11,6 +11,8 @@ import {
   applyAdvancedWithProfileFlip,
   applyChainDispatchOverrides,
   applyDeliveryProfileSelection,
+  applyExplicitLoudnessTarget,
+  applyLoudnessTargetSelection,
 } from "../lib/settings-transitions";
 import {
   appendToPast,
@@ -1108,6 +1110,26 @@ export function useTrackMaster() {
     [selectedTrackId, updateSettings],
   );
 
+  const setLoudnessTarget = useCallback(
+    (targetLufs: number | null) => {
+      if (!selectedTrackId) return;
+      updateSettings(selectedTrackId, (prev) =>
+        applyExplicitLoudnessTarget(prev, targetLufs),
+      );
+    },
+    [selectedTrackId, updateSettings],
+  );
+
+  const setLoudnessTargetProfile = useCallback(
+    (profileId: string) => {
+      if (!selectedTrackId) return;
+      updateSettings(selectedTrackId, (prev) =>
+        applyLoudnessTargetSelection(prev, profileId),
+      );
+    },
+    [selectedTrackId, updateSettings],
+  );
+
   const setDeliveryBitDepth = useCallback(
     (bitDepth: number | null) => {
       if (!selectedTrackId) return;
@@ -1784,6 +1806,8 @@ export function useTrackMaster() {
     setInputGain,
     setOutputGain,
     setDeliveryProfile,
+    setLoudnessTarget,
+    setLoudnessTargetProfile,
     setDeliveryBitDepth,
     setDeliverySampleRate,
     // Phase B — Album Master controls.

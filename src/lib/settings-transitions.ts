@@ -1,7 +1,7 @@
 // Pure helpers for the "what should the settings change to" decisions
 // that the hook fires in response to user actions. Extracted from
-// `useTrackMaster.ts` (B7 auto-flip-to-Custom on shadowed-field edit)
-// and `App.tsx` (LoudnessTarget quick-select force-flip) so both
+// `useTrackMaster.ts` (B7 auto-flip-to-Custom on shadowed-field edit,
+// delivery profile writes, and explicit loudness-target writes) so the
 // decision rules live alongside their Vitest tests.
 //
 // Write-direction siblings of `effective-settings.ts` (the read-
@@ -29,6 +29,7 @@ import {
   effectiveCeilingDbtp,
   effectiveLoudnessTarget,
   effectiveSampleRate,
+  LOUDNESS_PROFILES,
 } from "./effective-settings";
 
 /// Keys on `AdvancedSettings` that a non-Custom `DeliveryProfile`
@@ -62,10 +63,8 @@ export const SHADOWED_ADVANCED_KEYS = [
 /// flip. Acceptable because the displayed value didn't change
 /// either, so the visual asymmetry can't be observed. (If we ever
 /// need "force flip on every shadowed-field interaction even when
-/// the value didn't differ," the call site can opt in by writing
-/// `setDeliveryProfile("custom")` explicitly — the LoudnessTarget
-/// quick-select does this via `shouldFlipToCustomOnLoudnessPick`
-/// below.)
+/// the value didn't differ," the call site can opt in through
+/// `applyExplicitLoudnessTarget` below.)
 export function applyAdvancedWithProfileFlip(
   prev: MasteringSettings,
   advanced: AdvancedSettings,
@@ -119,6 +118,34 @@ export function applyDeliveryProfileSelection(
   };
 }
 
+/// Shared write rule for explicit loudness target edits. The center
+/// quick-select and the right-rail LUFS number both mean "use this target,"
+/// so both force Custom and write the same advanced field in one state
+/// transition.
+export function applyExplicitLoudnessTarget(
+  prev: MasteringSettings,
+  targetLufs: number | null,
+): MasteringSettings {
+  return {
+    ...prev,
+    delivery_profile: "custom",
+    advanced: {
+      ...prev.advanced,
+      lufs_offset_db: targetLufs,
+    },
+  };
+}
+
+export function applyLoudnessTargetSelection(
+  prev: MasteringSettings,
+  pickedId: string,
+): MasteringSettings {
+  if (pickedId === "custom") return prev;
+  const profile = LOUDNESS_PROFILES.find((p) => p.id === pickedId);
+  if (!profile) return prev;
+  return applyExplicitLoudnessTarget(prev, profile.lufs);
+}
+
 /// Wire-time overrides applied to a per-track `MasteringSettings`
 /// before it's sent to the backend audio chain. Two responsibilities:
 ///
@@ -159,28 +186,4 @@ export function applyChainDispatchOverrides(
     }
   }
   return result;
-}
-
-/// LoudnessTarget quick-select — should the dropdown pick force a
-/// flip to Custom alongside the underlying `lufs_offset_db` write?
-///
-/// Returns true when:
-///   * the user picked a real loudness option (NOT the "custom"
-///     dropdown entry, which is a no-op), and
-///   * the current delivery profile is non-Custom (so the typed
-///     value would otherwise be shadowed by the profile).
-///
-/// The "Off / Natural" entry writes `lufs_offset_db = null`. Pre-fix,
-/// when the user picked it while on a non-Custom profile, the B7
-/// auto-flip (which detects value DIFFS) didn't fire because
-/// `null -> null` doesn't diff — even though the user's intent had
-/// shifted from "use the profile's target" to "no target at all."
-/// This helper captures the explicit-pick intent regardless of
-/// whether the underlying value differs.
-export function shouldFlipToCustomOnLoudnessPick(
-  pickedId: string,
-  currentProfile: DeliveryProfile,
-): boolean {
-  if (pickedId === "custom") return false;
-  return currentProfile !== "custom";
 }

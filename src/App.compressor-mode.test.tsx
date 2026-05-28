@@ -70,6 +70,7 @@ async function renderAdvancedPanel(props: {
   onAdvanced?: (advanced: AdvancedSettings) => void;
   onInputGain?: (db: number) => void;
   onOutputGain?: (db: number) => void;
+  onLoudnessTarget?: (targetLufs: number | null) => void;
   onDeliveryProfile?: (profile: MasteringSettings["delivery_profile"]) => void;
   onDeliveryBitDepth?: (bitDepth: number | null) => void;
   onDeliverySampleRate?: (sampleRate: number | null) => void;
@@ -85,6 +86,7 @@ async function renderAdvancedPanel(props: {
         onAdvanced={props.onAdvanced ?? vi.fn()}
         onInputGain={props.onInputGain ?? vi.fn()}
         onOutputGain={props.onOutputGain ?? vi.fn()}
+        onLoudnessTarget={props.onLoudnessTarget ?? vi.fn()}
         onDeliveryProfile={props.onDeliveryProfile ?? vi.fn()}
         onDeliveryBitDepth={props.onDeliveryBitDepth ?? vi.fn()}
         onDeliverySampleRate={props.onDeliverySampleRate ?? vi.fn()}
