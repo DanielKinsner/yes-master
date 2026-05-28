@@ -79,6 +79,8 @@ describe("console layout CSS", () => {
   it("keeps preview controls in the track header and leaves the waveform deck clean", () => {
     expect(appTsx).toContain('className="track-header-meta-row"');
     expect(appTsx).toContain('className="track-header-actions"');
+    expect(appTsx).toContain("<SessionStatus");
+    expect(appTsx).toContain("<UndoRedoTools");
     expect(appTsx).toContain('className="track-preview-toolbar"');
     expect(block(".track-header")).toContain("display: block");
     expect(block(".track-header-primary")).toContain(
@@ -103,6 +105,20 @@ describe("console layout CSS", () => {
     expect(block(".wf-card")).toContain("grid-row: 1");
     expect(block(".wf-deck-meters")).toContain("grid-column: 3");
     expect(block(".wf-deck-meters")).toContain("grid-row: 1");
+  });
+
+  it("keeps readiness and history tools out of the old footer strip", () => {
+    expect(appTsx).toContain("session-status");
+    expect(appTsx).toContain('className="track-header-tools"');
+    expect(appTsx).not.toContain("StaleBar");
+    expect(appTsx).not.toContain("liveUpdateStats.applied");
+    expect(css).not.toContain(".console-footer-row");
+    expect(css).not.toContain(".undo-redo-bar");
+    expect(css).not.toContain(".stale-bar");
+    expect(css).not.toContain(".live-update-badge");
+    expect(block(".session-status")).toContain("border-radius: 999px");
+    expect(block(".track-header-tools")).toContain("display: inline-flex");
+    expect(block(".track-master-console")).not.toContain("38px");
   });
 
   it("keeps the console insight compact enough for the metadata rail", () => {

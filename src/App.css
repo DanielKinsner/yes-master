@@ -829,21 +829,102 @@ button.primary:disabled {
   grid-template-rows: auto auto;
   justify-items: end;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   min-width: max-content;
 }
 
-.track-header-status {
+.track-header-tools {
   display: inline-flex;
   align-items: center;
-  gap: 0.38rem;
-  min-height: 28px;
+  gap: 0.35rem;
+  min-height: 30px;
 }
 
-.track-header-status-chevron {
+.history-tool {
+  width: 30px;
+  height: 30px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.history-tool:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.session-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-height: 25px;
+  max-width: 240px;
+  padding: 0.18rem 0.55rem 0.18rem 0.48rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(13, 16, 24, 0.55);
+  color: var(--text-1);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.session-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.session-status-live {
+  color: #d0f0d8;
+  border-color: rgba(108, 208, 138, 0.32);
+  background: rgba(28, 50, 36, 0.55);
+}
+
+.session-status-live .session-dot,
+.session-status-idle .session-dot {
+  background: #6cd08a;
+  box-shadow: 0 0 0 3px rgba(108, 208, 138, 0.2), 0 0 6px rgba(108, 208, 138, 0.55);
+}
+
+.session-status-live .session-dot {
+  animation: live-pulse 2s ease-in-out infinite;
+}
+
+.session-status-busy {
+  color: #ffe7bf;
+  border-color: rgba(255, 184, 107, 0.32);
+  background: rgba(56, 42, 22, 0.55);
+}
+
+.session-status-busy .session-dot {
+  background: var(--accent-warm);
+  box-shadow: 0 0 0 3px rgba(255, 184, 107, 0.2);
+}
+
+.session-status-idle {
   color: var(--text-2);
-  font-size: 1rem;
+  background: rgba(13, 16, 24, 0.45);
+}
+
+.session-status-text {
   line-height: 1;
+}
+
+.session-progress {
+  width: 52px;
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(236, 240, 250, 0.1);
+}
+
+.session-progress-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-deep), var(--accent-bright));
 }
 
 .track-toolbar-group {
@@ -913,78 +994,10 @@ button.primary:disabled {
   grid-template-columns: 100px 1fr 80px;
 }
 
-.undo-redo-bar {
-  display: flex;
-  gap: 0.4rem;
-  margin: 0.5rem 0 0.25rem;
-  justify-content: flex-end;
-}
-
-.undo-redo-bar .ghost-btn {
-  padding: 0.3rem 0.7rem;
-  font-size: 0.78rem;
-  background: var(--bg-2);
-  border-radius: 4px;
-  transition: background 80ms, border-color 80ms, color 80ms;
-}
-
-.undo-redo-bar .ghost-btn:not(:disabled):hover {
-  background: var(--bg-3);
-  border-color: var(--accent);
-  color: var(--text-0);
-}
-
-.render-progress {
-  flex: 1 1 100px;
-  min-width: 80px;
-  height: 6px;
-  background:
-    repeating-linear-gradient(
-      90deg,
-      rgba(236, 240, 250, 0.08) 0 1px,
-      transparent 1px 24px
-    ),
-    var(--bg-2);
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  overflow: hidden;
-  box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.4);
-  position: relative;
-}
-
-.render-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent-deep), var(--accent-bright));
-  box-shadow: 0 0 8px rgba(77, 139, 255, 0.45);
-  transition: width 100ms linear;
-  position: relative;
-}
-
-.render-progress-fill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(236, 240, 250, 0.32), transparent);
-  opacity: 0.45;
-}
-
-.live-update-badge {
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-2);
-  color: var(--text-2);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Phase 12.2 — live clipping / peak indicator chip. Sits in the stale-bar
-   alongside the live-update badge. Idle/silent renders muted; ok shows a
-   live dB readout in green; clip flashes red so the eye catches it during
-   slider drags without DevTools or an export round-trip. Tabular-nums keeps
-   the dB readout from shifting horizontally as the value jitters. */
+/* Phase 12.2 — live clipping / peak indicator chip styles. Idle/silent
+   renders muted; ok shows a live dB readout in green; clip flashes red so
+   the eye catches it during slider drags. Tabular-nums keeps the dB readout
+   from shifting horizontally as the value jitters. */
 .clip-indicator {
   font-size: 0.78rem;
   letter-spacing: 0.04em;
@@ -2247,44 +2260,6 @@ button.primary:disabled {
   border-color: var(--accent);
 }
 
-/* Stale bar */
-.stale-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.5rem 0.85rem;
-  background: linear-gradient(180deg, rgba(31, 37, 51, 0.5) 0%, var(--bg-1) 100%);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.8rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  flex-wrap: wrap;
-}
-
-.stale-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.stale-dot.fresh {
-  background: #4dd07a;
-  box-shadow: 0 0 0 3px rgba(77, 208, 122, 0.15);
-}
-
-.stale-dot.stale {
-  background: var(--accent-warm);
-  box-shadow: 0 0 0 3px rgba(255, 184, 107, 0.2);
-  animation: stale-pulse 1.6s ease-in-out infinite;
-}
-
-.stale-dot.live {
-  background: #6cd08a;
-  box-shadow: 0 0 0 3px rgba(108, 208, 138, 0.2), 0 0 6px rgba(108, 208, 138, 0.55);
-  animation: live-pulse 2s ease-in-out infinite;
-}
-
 @keyframes live-pulse {
   0%, 100% {
     box-shadow: 0 0 0 3px rgba(108, 208, 138, 0.2), 0 0 6px rgba(108, 208, 138, 0.55);
@@ -2292,57 +2267,6 @@ button.primary:disabled {
   50% {
     box-shadow: 0 0 0 4px rgba(108, 208, 138, 0.3), 0 0 10px rgba(108, 208, 138, 0.7);
   }
-}
-
-@keyframes stale-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 3px rgba(255, 184, 107, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 0 6px rgba(255, 184, 107, 0.1);
-  }
-}
-
-/* Compact session-status pill — replaces the long "Mastered playback is
-   live ..." sentence with a one-word state token (Realtime / Ready /
-   Rendering N%). The colored dot to its left animates the same way the
-   old stale-bar dot did. */
-.stale-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.15rem 0.6rem 0.15rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: rgba(13, 16, 24, 0.55);
-  color: var(--text-1);
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.stale-status-text {
-  line-height: 1;
-}
-
-.stale-status.stale-status-live {
-  color: #d0f0d8;
-  border-color: rgba(108, 208, 138, 0.32);
-  background: rgba(28, 50, 36, 0.55);
-}
-
-.stale-status.stale-status-busy {
-  color: #ffe7bf;
-  border-color: rgba(255, 184, 107, 0.32);
-  background: rgba(56, 42, 22, 0.55);
-}
-
-.stale-status.stale-status-idle {
-  color: var(--text-2);
-  background: rgba(13, 16, 24, 0.45);
 }
 
 .ghost-btn {
@@ -4470,8 +4394,7 @@ button.primary:disabled {
       minmax(330px, 1.55fr)
       128px
       55px
-      minmax(145px, 0.75fr)
-      38px;
+      minmax(145px, 0.75fr);
     gap: 0.55rem;
     overflow: hidden;
   }
@@ -4482,8 +4405,7 @@ button.primary:disabled {
       minmax(288px, 1.3fr)
       118px
       50px
-      minmax(162px, 0.72fr)
-      34px;
+      minmax(162px, 0.72fr);
   }
 
   .track-master-console.is-album .override-banner {
@@ -4878,31 +4800,6 @@ button.primary:disabled {
     padding: 0.28rem 1.65rem 0.28rem 0.45rem;
   }
 
-  .console-footer-row {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 0.6rem;
-    min-height: 0;
-  }
-
-  .console-footer-row .undo-redo-bar {
-    margin: 0;
-    justify-content: flex-start;
-  }
-
-  .console-footer-row .stale-bar {
-    min-height: 0;
-    height: 100%;
-    padding: 0.35rem 0.7rem;
-    overflow: hidden;
-    flex-wrap: nowrap;
-  }
-
-  .console-footer-row .stale-bar .render-progress {
-    min-width: 140px;
-  }
-
   .right-rail-export-group {
     background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-1) 100%);
     border-top: 1px solid rgba(111, 163, 255, 0.12);
@@ -4936,8 +4833,7 @@ button.primary:disabled {
       minmax(410px, 1.56fr)
       154px
       63px
-      minmax(195px, 0.84fr)
-      42px;
+      minmax(195px, 0.84fr);
     gap: 0.68rem;
   }
 
@@ -4947,8 +4843,7 @@ button.primary:disabled {
       minmax(340px, 1.32fr)
       126px
       56px
-      minmax(190px, 0.74fr)
-      38px;
+      minmax(190px, 0.74fr);
     gap: 0.72rem;
   }
 
@@ -5026,8 +4921,7 @@ button.primary:disabled {
       minmax(300px, 1.45fr)
       117px
       49px
-      minmax(126px, 0.68fr)
-      36px;
+      minmax(126px, 0.68fr);
     gap: 0.45rem;
   }
 
@@ -5037,8 +4931,7 @@ button.primary:disabled {
       minmax(264px, 1.24fr)
       98px
       44px
-      minmax(142px, 0.68fr)
-      32px;
+      minmax(142px, 0.68fr);
   }
 
   .console-hero {

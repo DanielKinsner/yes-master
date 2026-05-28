@@ -719,9 +719,16 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           playbackKind={tm.transport.playbackKind}
           volumeMatch={tm.transport.volumeMatch}
           exportLufsPreview={tm.transport.exportLufsPreview}
+          canUndo={tm.canUndo}
+          canRedo={tm.canRedo}
+          isRendering={tm.isRendering}
+          isPlaying={tm.transport.isPlaying}
+          renderProgress={tm.renderProgress}
           onPlaybackKindChange={tm.setPlaybackKind}
           onVolumeMatchChange={tm.setVolumeMatch}
           onExportLufsPreviewChange={tm.setExportLufsPreview}
+          onUndo={tm.undo}
+          onRedo={tm.redo}
         />
         <div className="wf-deck">
           <Transport
@@ -780,20 +787,6 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           spectrumDb={tm.transport.spectrumDb}
         />
       </div>
-      <div className="console-footer-row">
-      <UndoRedoBar
-        canUndo={tm.canUndo}
-        canRedo={tm.canRedo}
-        onUndo={tm.undo}
-        onRedo={tm.redo}
-      />
-      <StaleBar
-        isRendering={tm.isRendering}
-        liveUpdateStats={tm.liveUpdateStats}
-        renderProgress={tm.renderProgress}
-        isPlaying={tm.transport.isPlaying}
-      />
-      </div>
     </div>
   );
 }
@@ -843,18 +836,32 @@ function TrackHeader({
   playbackKind,
   volumeMatch,
   exportLufsPreview,
+  canUndo,
+  canRedo,
+  isRendering,
+  isPlaying,
+  renderProgress,
   onPlaybackKindChange,
   onVolumeMatchChange,
   onExportLufsPreviewChange,
+  onUndo,
+  onRedo,
 }: {
   track: ImportedTrack;
   analysis: AnalysisResult | undefined;
   playbackKind: PlaybackKindUI;
   volumeMatch: boolean;
   exportLufsPreview: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  isRendering: boolean;
+  isPlaying: boolean;
+  renderProgress: { fraction: number; kind: "preview" | "master" | "album" } | null;
   onPlaybackKindChange: (kind: PlaybackKindUI) => void;
   onVolumeMatchChange: (on: boolean) => void;
   onExportLufsPreviewChange: (on: boolean) => void;
+  onUndo: () => void;
+  onRedo: () => void;
 }) {
   const chips: { key: string; label: string }[] = [];
   if (track.source_format) {
@@ -886,15 +893,21 @@ function TrackHeader({
                   <span key={c.key} className="meta-chip">{c.label}</span>
                 ))}
               </div>
+              {analysis && <span className="status-pill status-ok">Analyzed</span>}
+              <SessionStatus
+                isRendering={isRendering}
+                isPlaying={isPlaying}
+                renderProgress={renderProgress}
+              />
             </div>
           </div>
           <div className="track-header-actions">
-            {analysis && (
-              <span className="track-header-status">
-                <span className="status-pill status-ok">Analyzed</span>
-                <span className="track-header-status-chevron" aria-hidden>⌄</span>
-              </span>
-            )}
+            <UndoRedoTools
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={onUndo}
+              onRedo={onRedo}
+            />
             <DeckPreviewOptions
               playbackKind={playbackKind}
               volumeMatch={volumeMatch}
@@ -908,6 +921,49 @@ function TrackHeader({
         {analysis && <AnalysisSummary analysis={analysis} />}
       </div>
     </section>
+  );
+}
+
+function SessionStatus({
+  isRendering,
+  renderProgress,
+  isPlaying,
+}: {
+  isRendering: boolean;
+  renderProgress: { fraction: number; kind: "preview" | "master" | "album" } | null;
+  isPlaying: boolean;
+}) {
+  const progressPct =
+    renderProgress !== null
+      ? Math.round(Math.max(0, Math.min(1, renderProgress.fraction)) * 100)
+      : null;
+  const statusLabel =
+    progressPct !== null
+      ? `Rendering ${renderProgress!.kind} ${progressPct}%`
+      : isRendering
+      ? "Rendering"
+      : isPlaying
+      ? "Realtime"
+      : "Ready";
+  const statusTone =
+    progressPct !== null || isRendering
+      ? "session-status-busy"
+      : isPlaying
+      ? "session-status-live"
+      : "session-status-idle";
+  return (
+    <span className={`session-status ${statusTone}`}>
+      <span className="session-dot" aria-hidden />
+      <span className="session-status-text">{statusLabel}</span>
+      {progressPct !== null && (
+        <span className="session-progress" aria-hidden>
+          <span
+            className="session-progress-fill"
+            style={{ width: `${progressPct}%` }}
+          />
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -1853,7 +1909,7 @@ export function LoudnessTarget({
   );
 }
 
-function UndoRedoBar({
+function UndoRedoTools({
   canUndo,
   canRedo,
   onUndo,
@@ -1865,108 +1921,30 @@ function UndoRedoBar({
   onRedo: () => void;
 }) {
   return (
-    <section className="undo-redo-bar">
+    <div className="track-header-tools" aria-label="Edit history">
       <button
         type="button"
-        className="ghost-btn"
+        className="icon-tile history-tool"
         onClick={onUndo}
         disabled={!canUndo}
+        aria-label="Undo last edit"
         title="Undo last edit (Ctrl+Z)"
       >
-        ↶ Undo
+        ↶
       </button>
       <button
         type="button"
-        className="ghost-btn"
+        className="icon-tile history-tool"
         onClick={onRedo}
         disabled={!canRedo}
+        aria-label="Redo"
         title="Redo (Ctrl+Shift+Z or Ctrl+Y)"
       >
-        ↷ Redo
+        ↷
       </button>
-    </section>
+    </div>
   );
 }
-
-function StaleBar({
-  isRendering,
-  liveUpdateStats,
-  renderProgress,
-  isPlaying,
-}: {
-  isRendering: boolean;
-  liveUpdateStats: { attempts: number; applied: number; lastAt: number | null };
-  renderProgress: { fraction: number; kind: "preview" | "master" | "album" } | null;
-  isPlaying: boolean;
-}) {
-  const progressPct =
-    renderProgress !== null
-      ? Math.round(Math.max(0, Math.min(1, renderProgress.fraction)) * 100)
-      : null;
-  // Compact session-state pill: one of Rendering / Realtime / Ready.
-  // Restructure 2026-05-14 slice E — the chunky PEAK / L / M / H meter
-  // chips that used to live in this bar are gone; they duplicated the
-  // right-rail LEVELS panel and made the workspace footer read as
-  // debug-flavored. The bar now does one job: surface the session's
-  // playback / render state and any in-progress render bar.
-  const statusLabel =
-    progressPct !== null
-      ? `Rendering ${renderProgress!.kind} ${progressPct}%`
-      : isRendering
-      ? "Rendering preview"
-      : isPlaying
-      ? "Realtime"
-      : "Ready";
-  const statusTone =
-    progressPct !== null || isRendering
-      ? "stale-status-busy"
-      : isPlaying
-      ? "stale-status-live"
-      : "stale-status-idle";
-  return (
-    <section className="stale-bar">
-      <span className={`stale-status ${statusTone}`}>
-        <span className="stale-dot live" aria-hidden />
-        <span className="stale-status-text">{statusLabel}</span>
-      </span>
-      {progressPct !== null && (
-        <div
-          className="render-progress"
-          role="progressbar"
-          aria-valuenow={progressPct}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        >
-          <div
-            className="render-progress-fill"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
-      )}
-      {/* Phase 12.1 live-update counter — verifies that the frontend is
-          actually firing api.updateChain calls when controls move. Useful
-          only when debugging the realtime update plumbing, so it stays
-          dev-only (Vite drops the whole node from production bundles). */}
-      {import.meta.env.DEV && (
-        <span
-          className="live-update-badge"
-          title={`Live coeff updates sent / resolved since session start${
-            liveUpdateStats.lastAt
-              ? `. Last fired ${Math.round((Date.now() - liveUpdateStats.lastAt) / 1000)} s ago.`
-              : ". None fired yet."
-          }`}
-        >
-          live: {liveUpdateStats.applied}/{liveUpdateStats.attempts}
-        </span>
-      )}
-    </section>
-  );
-}
-
-// Restructure 2026-05-14 slice E — the live ClippingIndicator + per-band
-// GrIndicator chips that used to render here in StaleBar were deleted;
-// their readouts already live in the right-rail LEVELS / MASTER OUT
-// panels (which carry their own clip / silence-floor constants).
 
 /// UI_LAYOUT_REVISION_1600x940 L3 — AdvancedPanel renders four
 /// separate rail cards (Delivery Profile, Advanced Controls,
