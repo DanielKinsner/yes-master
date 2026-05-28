@@ -833,25 +833,6 @@ button.primary:disabled {
   min-width: max-content;
 }
 
-.track-header-tools {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-height: 30px;
-}
-
-.history-tool {
-  width: 30px;
-  height: 30px;
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.history-tool:disabled {
-  opacity: 0.38;
-  cursor: not-allowed;
-}
-
 .session-status {
   display: inline-flex;
   align-items: center;
@@ -3062,16 +3043,6 @@ button.primary:disabled {
   box-shadow: 0 0 8px rgba(77, 139, 255, 0.4);
 }
 
-.lufs-peak-hold {
-  position: absolute;
-  left: 1px;
-  right: 1px;
-  height: 2px;
-  background: #ffd866;
-  box-shadow: 0 0 6px rgba(255, 216, 102, 0.65);
-  pointer-events: none;
-}
-
 .lufs-bar-label {
   position: relative;
   z-index: 1;
@@ -3098,69 +3069,6 @@ button.primary:disabled {
 .lufs-bar.is-clipping .lufs-bar-label {
   color: #ff5d5d;
   text-shadow: 0 0 6px rgba(255, 93, 93, 0.75);
-}
-
-/* True peak bar — narrower, separate scale (0 dBTP at top so clipping
-   shows as full fill).  Color zone tinted by current value. */
-.tp-bar {
-  position: relative;
-  width: 14px;
-  border-radius: 3px;
-  overflow: hidden;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  height: 100%;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-
-.tp-bar-track {
-  position: absolute;
-  inset: 0;
-  background: var(--bg-3);
-}
-
-.tp-bar-fill {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  transition: height 90ms linear, background 120ms;
-}
-
-.tp-ok .tp-bar-fill {
-  background: linear-gradient(to top, #4caf78 0%, #b8d651 100%);
-}
-
-.tp-warn .tp-bar-fill {
-  background: linear-gradient(to top, #b8d651 0%, #ffb86b 100%);
-  box-shadow: 0 0 6px rgba(255, 184, 107, 0.4);
-}
-
-.tp-hot .tp-bar-fill {
-  background: linear-gradient(to top, #ffb86b 0%, #ff5d5d 100%);
-  box-shadow: 0 0 10px rgba(255, 93, 93, 0.55);
-}
-
-/* -1 dBTP streaming ceiling line at 97.2% up the bar (=(-1 - -36) / 36). */
-.tp-clip-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 97.2%;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.4);
-  pointer-events: none;
-}
-
-.tp-bar-label {
-  position: relative;
-  z-index: 1;
-  font-size: 0.55rem;
-  font-weight: 700;
-  color: var(--text-1);
-  padding: 1px 0;
-  letter-spacing: 0.06em;
 }
 
 /* Stat tile grid under the live meter. Source/export true peak and dynamic
@@ -4629,10 +4537,6 @@ button.primary:disabled {
     font-size: 0.48rem;
   }
 
-  .wf-deck-meters .master-out .tp-bar {
-    width: 16px;
-  }
-
   .wf-deck-meters .master-out .master-readouts {
     grid-column: 2;
     grid-row: 2;
@@ -4914,10 +4818,6 @@ button.primary:disabled {
     width: 34px;
   }
 
-  .wf-deck-meters .master-out .tp-bar {
-    width: 18px;
-  }
-
   .wf-deck-meters .master-out .readout-number {
     font-size: 0.76rem;
   }
@@ -5026,10 +4926,6 @@ button.primary:disabled {
 
   .wf-deck-meters .master-out .lufs-bar {
     width: 26px;
-  }
-
-  .wf-deck-meters .master-out .tp-bar {
-    width: 14px;
   }
 
   .wf-deck-meters .master-out .readout-number {
