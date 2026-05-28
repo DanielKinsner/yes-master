@@ -49,14 +49,18 @@ interface Band {
 //   BiquadCoeffs::peaking(sr, 3500.0, 0.9, ...)
 //   BiquadCoeffs::high_shelf(sr, 6000.0, ...)
 //   BiquadCoeffs::high_shelf(sr, 12000.0, ...)
+// Muted, cohesive palette — a subtle low→high hue journey (slate → teal →
+// periwinkle → cool blue → ice) at low saturation so the nodes read as a
+// precise instrument rather than candy. Band identity stays legible without
+// the rainbow.
 const BANDS: readonly Band[] = [
-  { id: "sub", label: "SUB", hz: 80, color: "#38bdf8", kind: "peak", tier: "secondary", qOctaves: 1.2 },
-  { id: "low", label: "LOW", hz: 200, color: "#22d3ee", kind: "shelf-low", tier: "primary", qOctaves: 0 },
-  { id: "low-mid", label: "LOW-MID", hz: 400, color: "#4ade80", kind: "peak", tier: "secondary", qOctaves: 1.0 },
-  { id: "mid", label: "MID", hz: 1500, color: "#a78bfa", kind: "peak", tier: "primary", qOctaves: 1.2 },
-  { id: "high-mid", label: "HIGH-MID", hz: 3500, color: "#f59e0b", kind: "peak", tier: "secondary", qOctaves: 1.0 },
-  { id: "high", label: "HIGH", hz: 6000, color: "#60a5fa", kind: "shelf-high", tier: "primary", qOctaves: 0 },
-  { id: "sparkle", label: "SPARKLE", hz: 12_000, color: "#f9a8d4", kind: "shelf-high", tier: "secondary", qOctaves: 0 },
+  { id: "sub", label: "SUB", hz: 80, color: "#6f86ad", kind: "peak", tier: "secondary", qOctaves: 1.2 },
+  { id: "low", label: "LOW", hz: 200, color: "#6d93b3", kind: "shelf-low", tier: "primary", qOctaves: 0 },
+  { id: "low-mid", label: "LOW-MID", hz: 400, color: "#6f9d9c", kind: "peak", tier: "secondary", qOctaves: 1.0 },
+  { id: "mid", label: "MID", hz: 1500, color: "#8f8fb5", kind: "peak", tier: "primary", qOctaves: 1.2 },
+  { id: "high-mid", label: "HIGH-MID", hz: 3500, color: "#a89bb0", kind: "peak", tier: "secondary", qOctaves: 1.0 },
+  { id: "high", label: "HIGH", hz: 6000, color: "#8aa6c6", kind: "shelf-high", tier: "primary", qOctaves: 0 },
+  { id: "sparkle", label: "SPARKLE", hz: 12_000, color: "#a3b6d2", kind: "shelf-high", tier: "secondary", qOctaves: 0 },
 ];
 
 const F_MIN = 20;
@@ -364,18 +368,18 @@ export function VisualEqPanel({
           const y = localDbToY(gains[band.id]);
           const isDragging = dragging === band.id;
           const isPrimary = band.tier === "primary";
-          const nodeRadius = isPrimary ? 7 : 5;
+          const nodeRadius = isPrimary ? 6 : 4.5;
           const renderedRadius = isDragging ? nodeRadius + 1 : nodeRadius;
-          const nodeOpacity = isPrimary ? 1 : 0.85;
-          const labelOpacity = isPrimary ? 1 : 0.85;
+          const nodeOpacity = isPrimary ? 0.52 : 0.4;
+          const labelOpacity = isPrimary ? 0.92 : 0.7;
           return (
             <g key={band.id} style={{ "--node-color": band.color } as React.CSSProperties}>
-              {isPrimary && (
+              {isDragging && (
                 <circle
                   className="eq-node-halo"
                   cx={x}
                   cy={y}
-                  r={11}
+                  r={nodeRadius + 5}
                   stroke={band.color}
                 />
               )}

@@ -2126,29 +2126,35 @@ button.primary:disabled {
 .eq-response-line {
   fill: none;
   stroke: var(--accent-bright, #6fa3ff);
-  stroke-width: 2.4;
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-  filter: drop-shadow(0 0 12px rgba(77, 139, 255, 0.45));
+  filter: drop-shadow(0 0 3px rgba(77, 139, 255, 0.3));
   vector-effect: non-scaling-stroke;
 }
 
+/* Nodes read as precise filled rings, not glowing candy: a translucent
+   fill (set inline) plus a crisp, non-scaling stroke in the band color.
+   No drop-shadow glow. */
 .eq-node {
   cursor: ns-resize;
-  filter: drop-shadow(0 0 8px var(--node-color, rgba(255, 255, 255, 0.4)));
-  transition: r 80ms ease;
+  stroke: var(--node-color, rgba(255, 255, 255, 0.6));
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+  transition: r 80ms ease, fill-opacity 80ms ease;
 }
 
 .eq-node.is-dragging {
-  filter: drop-shadow(0 0 12px var(--node-color, rgba(255, 255, 255, 0.55)));
+  fill-opacity: 0.7;
+  stroke-width: 2px;
 }
 
+/* Selection ring only appears while dragging — a thin, calm outline. */
 .eq-node-halo {
   fill: none;
-  stroke-width: 1.5px;
-  opacity: 0.72;
+  stroke-width: 1px;
+  opacity: 0.5;
   pointer-events: none;
-  filter: drop-shadow(0 0 8px var(--node-color, rgba(255, 255, 255, 0.35)));
   vector-effect: non-scaling-stroke;
 }
 
