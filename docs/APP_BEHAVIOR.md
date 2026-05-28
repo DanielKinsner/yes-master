@@ -32,6 +32,36 @@ Track Master supports:
 - Explicit save destination for export.
 - Warning-aware export review.
 - Post-render export receipt/checks.
+- Baseline Settings and contextual Help dialogs.
+- Visible Save/Open Project feedback.
+
+Track Master Delivery Profile and Delivery Format are authoritative for Track
+Master exports:
+
+- Named profiles set their owned target LUFS, ceiling, bit depth, and sample
+  rate together.
+- Custom Source keeps the source sample rate.
+- Custom format can request 44.1 kHz, 48 kHz, or 96 kHz.
+- The rendered WAV, export receipt, and export checks report the effective
+  rendered sample rate and bit depth.
+- A requested/rendered sample-rate mismatch is treated as a technical integrity
+  issue.
+
+Album Master is intentionally not at full Track Master delivery-format parity in
+this slice; treat it as same-rate unless a later verified change says otherwise.
+
+Mastered preview readiness timeouts surface recoverable user-facing guidance
+instead of silent non-playback.
+
+## Project, Settings, And Help
+
+- Save Project and Open Project use `.ams.json` project files.
+- Save/Open success and cancelled dialogs surface calm visible feedback.
+- Open Project restores state, selects a track when possible, and reports
+  recovery issues that need user action.
+- Settings covers current baseline app defaults and app info.
+- Help explains current Import/Analyze, Original vs Mastered, Volume Match vs
+  Preview LUFS, Delivery Profile/Format, Export Review, and Save/Open behavior.
 
 ## Export Checks And Review
 
@@ -121,11 +151,11 @@ further subjective retune.
 
 ## Current Gaps
 
-1. Private-fixture and private-reference slow lanes must be rerun for DSP/export
-   changes; automated tests cannot approve taste.
-2. Oomph needs listening notes before another targeted tuning pass.
-3. `cargo fmt --check` has pre-existing formatting drift.
-4. Clippy is not currently available in the local Rust toolchain used during
-   the migration recon.
-5. Windows packaging still needs local verification before release-candidate
-   status.
+1. Manual listening signoff is still required; automated tests cannot approve
+   taste.
+2. The full private fixture matrix needs a longer unattended run after the
+   representative subset completed.
+3. Oomph needs listening notes before another targeted tuning pass.
+4. Album Master delivery-format parity remains deferred.
+5. Public signing, notarization, autoupdate, and store-style distribution remain
+   deferred.

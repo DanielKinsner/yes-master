@@ -5,6 +5,99 @@ with `docs/PRODUCT.md` and `docs/APP_BEHAVIOR.md`.
 
 ## Implemented Stabilization Slices
 
+### Track Master Delivery Format
+
+Status: implemented for Track Master.
+
+Current behavior:
+
+- Delivery Profile owns target LUFS, ceiling, bit depth, and sample rate.
+- Custom Source preserves the source sample rate.
+- Custom delivery format can explicitly request 44.1 kHz, 48 kHz, or 96 kHz.
+- Track Master renders the selected effective sample rate and reports it in the
+  receipt.
+- Requested/rendered sample-rate mismatch is a technical export-check issue.
+
+Verification coverage:
+
+- `src/lib/effective-settings.test.ts`
+- `src/lib/settings-transitions.test.ts`
+- `src-tauri/src/types.rs` unit tests
+- `src-tauri/tests/delivery_profile_render.rs`
+- `src-tauri/tests/contracts.rs`
+
+Album Master sample-rate parity remains deferred.
+
+### Project Chrome And Help
+
+Status: implemented.
+
+Current behavior:
+
+- Settings and Help open as real in-app dialogs for current behavior.
+- Save/Open project flows surface success, cancellation, and recovery feedback.
+- Settings/Help do not mutate mastering settings or interrupt selection.
+
+Verification coverage:
+
+- `src/App.chrome.test.tsx`
+- `src/hooks/useTrackMaster.integration.test.tsx`
+
+### Loudness Target Semantics
+
+Status: implemented.
+
+Current behavior:
+
+- Center loudness quick-select and right-rail LUFS edits use one shared settings
+  transition.
+- Explicit target edits switch delivery profile to Custom and keep the effective
+  target truthful.
+- Named delivery profiles restore their owned target, ceiling, bit depth, and
+  sample rate together.
+
+Verification coverage:
+
+- `src/lib/settings-transitions.test.ts`
+- `src/App.loudness-target.test.tsx`
+- `src/hooks/useTrackMaster.integration.test.tsx`
+
+### Long-Track Preview Timeout Feedback
+
+Status: bounded RC hardening implemented.
+
+Current behavior:
+
+- Mastered preview readiness timeouts are surfaced as recoverable user-facing
+  feedback instead of silent transport failure.
+- A full 25-minute manual playback reproduction is still a listening/signoff
+  item, not completed evidence.
+
+Verification coverage:
+
+- `src-tauri/src/audio.rs` timeout path
+- `src/hooks/useTrackMaster.integration.test.tsx`
+
+### Live-Chain And Track Master Chrome
+
+Status: implemented.
+
+Current behavior:
+
+- Settings edits, user presets, undo/redo, and album intent edits share the
+  same "Mastered chain is loaded" predicate.
+- The old mostly empty undo/redo/readiness strip is gone.
+- Undo/redo are compact header tools; analysis/readiness lives with track
+  metadata.
+- The accepted centered Track Master / Album Master header layout remains.
+
+Verification coverage:
+
+- `src/hooks/useTrackMaster.integration.test.tsx`
+- `src/App.layout-css.test.ts`
+- Local ignored screenshots summarized in
+  `docs/RELEASE_EVIDENCE_2026-05-28.md`.
+
 ### Export Review
 
 Status: implemented.
@@ -53,9 +146,14 @@ Current behavior:
 - Private source audio, rendered private masters, and private ledgers must not
   be committed.
 
+Latest aggregate evidence is recorded in
+`docs/RELEASE_EVIDENCE_2026-05-28.md`.
+
 ## Active Gates
 
 ### Reference Retune Validation
+
+Status: aggregate runner completed on 2026-05-28; listening still pending.
 
 - Re-run the private reference tuning runner after DSP/preset changes.
 - Use listening notes before any further subjective preset tuning.
@@ -64,6 +162,9 @@ Current behavior:
 - Do not change export LUFS landing or compressor mode semantics in this gate.
 
 ### Already-Mastered Input Matrix
+
+Status: representative subset completed on 2026-05-28; full local manifest timed
+out and needs a longer unattended run.
 
 - Re-run the private fixture matrix for DSP/export changes.
 - Capture source/render LUFS, true peak, dynamic range, and warning codes.
@@ -84,9 +185,23 @@ Status: responsive sweep accepted, diagnostic counters removed in
 
 ### Tooling Gate Cleanup
 
-- Decide whether to format Rust now or in a dedicated mechanical commit.
-- Install Clippy and make `cargo clippy --all-targets -- -D warnings` runnable.
-- Keep `npm test`, `npm run build`, `cargo test --lib`, and `cargo test` green.
+Status: complete on 2026-05-28.
+
+- Rust formatting was applied in a dedicated mechanical commit.
+- Clippy was installed locally and passes with `-D warnings`.
+- `npm test`, `npm run build`, `cargo test --lib`, `cargo test`, and
+  `npm run build:windows` are green. See
+  `docs/RELEASE_EVIDENCE_2026-05-28.md`.
+
+### Manual Listening Gate
+
+Status: pending.
+
+- Verify normal, already-mastered/compressed, and long edge-case sources by ear.
+- Sweep Intensity, EQ/tone, output gain, compressor controls, Preview LUFS, and
+  Volume Match while audio plays.
+- Seek across a long source in Mastered mode with Preview LUFS enabled.
+- Export a clean case and a warning case, then open and compare output by ear.
 
 ## Deferred
 

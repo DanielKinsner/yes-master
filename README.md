@@ -46,8 +46,10 @@ npm run build:windows
 From `src-tauri`:
 
 ```powershell
-cargo test --lib
-cargo test
+cargo fmt --check
+cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings
+cargo test --lib --target-dir target\codex-rc
+cargo test --target-dir target\codex-rc
 ```
 
 ## Slow Fixture Lane
@@ -74,6 +76,7 @@ Read these first:
 - `docs/ARCHITECTURE.md`
 - `docs/TESTING.md`
 - `docs/RELEASE_STABILIZATION.md`
+- `docs/RELEASE_EVIDENCE_2026-05-28.md`
 
 Historical handoffs, old phase plans, and prior-session notes live in git
 history and in the archived source repo. They are not active product spec.
