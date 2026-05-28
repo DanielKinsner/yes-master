@@ -215,8 +215,17 @@ export function MasterOutPanel({
       </header>
       <div className="lufs-meter">
         <div className="lufs-bars">
-          <LufsBar value={liveMomentary} peakHold={liveIntegrated} channel="L" />
-          <LufsBar value={liveMomentary} peakHold={liveIntegrated} channel="R" />
+          <LufsBar
+            value={liveMomentary}
+            peakHold={liveIntegrated}
+            label="M"
+            title="Momentary loudness (BS.1770). Tick marks the integrated average."
+          />
+          <LufsBar
+            value={liveIntegrated}
+            label="I"
+            title="Integrated loudness since playback started."
+          />
         </div>
         <LufsScale />
         <PeakBar value={liveTp} />
@@ -258,11 +267,13 @@ function LufsScale() {
 function LufsBar({
   value,
   peakHold,
-  channel,
+  label,
+  title,
 }: {
   value: number | undefined;
-  peakHold: number | undefined;
-  channel: "L" | "R";
+  peakHold?: number | undefined;
+  label: string;
+  title?: string;
 }) {
   // Map a dBFS value into 0..1 fill against the -36..-6 scale.
   const ratio = (db: number): number => {
@@ -273,17 +284,17 @@ function LufsBar({
   const fill = value !== undefined ? ratio(value) : 0;
   const peakRatio = peakHold !== undefined ? ratio(peakHold) : null;
   return (
-    <div className="lufs-bar">
+    <div className="lufs-bar" title={title}>
       <div className="lufs-bar-track" />
       <div className="lufs-bar-fill" style={{ height: `${fill * 100}%` }} />
       {peakRatio !== null && peakRatio > 0 && (
         <div
           className="lufs-peak-hold"
           style={{ bottom: `calc(${peakRatio * 100}% - 1px)` }}
-          title="Short-term max"
+          title="Integrated average"
         />
       )}
-      <span className="lufs-bar-label">{channel}</span>
+      <span className="lufs-bar-label">{label}</span>
     </div>
   );
 }

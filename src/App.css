@@ -883,13 +883,14 @@ button.primary:disabled {
   background: rgba(28, 50, 36, 0.55);
 }
 
-.session-status-live .session-dot,
-.session-status-idle .session-dot {
+/* Three visually distinct transport states so peripheral vision can tell
+   them apart without reading the label:
+     idle    — calm, dim dot, no glow, no motion
+     live    — green dot, soft glow, slow breathing pulse (audio flowing)
+     busy    — amber dot, glow, faster working throb (render in progress) */
+.session-status-live .session-dot {
   background: #6cd08a;
   box-shadow: 0 0 0 3px rgba(108, 208, 138, 0.2), 0 0 6px rgba(108, 208, 138, 0.55);
-}
-
-.session-status-live .session-dot {
   animation: live-pulse 2s ease-in-out infinite;
 }
 
@@ -901,12 +902,19 @@ button.primary:disabled {
 
 .session-status-busy .session-dot {
   background: var(--accent-warm);
-  box-shadow: 0 0 0 3px rgba(255, 184, 107, 0.2);
+  box-shadow: 0 0 0 2px rgba(255, 184, 107, 0.18), 0 0 5px rgba(255, 184, 107, 0.45);
+  animation: busy-pulse 1s ease-in-out infinite;
 }
 
 .session-status-idle {
   color: var(--text-2);
   background: rgba(13, 16, 24, 0.45);
+}
+
+.session-status-idle .session-dot {
+  background: var(--text-2);
+  box-shadow: none;
+  animation: none;
 }
 
 .session-status-text {
@@ -2266,6 +2274,17 @@ button.primary:disabled {
   }
   50% {
     box-shadow: 0 0 0 4px rgba(108, 208, 138, 0.3), 0 0 10px rgba(108, 208, 138, 0.7);
+  }
+}
+
+/* Busy throb: larger amplitude and faster than live-pulse so "rendering"
+   reads as active work rather than the calm "playing" breathing. */
+@keyframes busy-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(255, 184, 107, 0.18), 0 0 5px rgba(255, 184, 107, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(255, 184, 107, 0.32), 0 0 11px rgba(255, 184, 107, 0.75);
   }
 }
 
