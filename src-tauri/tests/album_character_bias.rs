@@ -14,9 +14,7 @@ use std::path::Path;
 
 use yes_master_lib::album;
 use yes_master_lib::album_render::render_album_plan_impl;
-use yes_master_lib::engine::{
-    self, AlbumPlanRenderRequest, AlbumTrackRenderInput,
-};
+use yes_master_lib::engine::{self, AlbumPlanRenderRequest, AlbumTrackRenderInput};
 use yes_master_lib::types::{
     AdvancedSettings, AlbumArc, AlbumArcKind, AlbumCharacter, AnalysisResult, DeliveryProfile,
     InferenceConfidence, MasteringSettings, Preset, SpectralBalance, TrackId, TrackRole,
@@ -115,7 +113,12 @@ fn synth_pink(samples: usize, target_peak: f32) -> Vec<f32> {
 /// Square-ish wave at `freq_hz` truncated to 6 odd harmonics, scaled to
 /// `target_peak`. Produces the "saw-like high-pass" signal the plan asks
 /// for in Track 2.
-fn synth_djent(samples: usize, sample_rate: u32, fundamental_hz: f32, target_peak: f32) -> Vec<f32> {
+fn synth_djent(
+    samples: usize,
+    sample_rate: u32,
+    fundamental_hz: f32,
+    target_peak: f32,
+) -> Vec<f32> {
     let mut out = Vec::with_capacity(samples);
     let dt = 1.0 / sample_rate as f32;
     for n in 0..samples {

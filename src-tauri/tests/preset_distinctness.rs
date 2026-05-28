@@ -40,9 +40,7 @@
 
 use yes_master_lib::dsp::MasteringChain;
 use yes_master_lib::engine::measure_integrated_lufs;
-use yes_master_lib::types::{
-    AdvancedSettings, DeliveryProfile, MasteringSettings, Preset,
-};
+use yes_master_lib::types::{AdvancedSettings, DeliveryProfile, MasteringSettings, Preset};
 
 const SR_HZ: u32 = 48_000;
 const DURATION_SEC: f32 = 4.0;

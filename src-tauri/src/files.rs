@@ -64,7 +64,12 @@ fn probe_metadata(path: &Path) -> CommandResult<TrackMetadata> {
         hint.with_extension(ext);
     }
     let probed = symphonia::default::get_probe()
-        .format(&hint, mss, &FormatOptions::default(), &MetadataOptions::default())
+        .format(
+            &hint,
+            mss,
+            &FormatOptions::default(),
+            &MetadataOptions::default(),
+        )
         .map_err(|e| CommandError::Decode(e.to_string()))?;
     let format = probed.format;
     let track = format

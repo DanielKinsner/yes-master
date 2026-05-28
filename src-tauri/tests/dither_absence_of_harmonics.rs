@@ -78,7 +78,10 @@ fn write_float_sine(path: &Path, sample_rate: u32, duration_sec: f32, freq_hz: f
 fn read_left_channel_int16(path: &Path) -> Vec<f32> {
     let mut reader = hound::WavReader::open(path).expect("open rendered wav");
     let spec = reader.spec();
-    assert_eq!(spec.bits_per_sample, 16, "test requires 16-bit rendered WAV");
+    assert_eq!(
+        spec.bits_per_sample, 16,
+        "test requires 16-bit rendered WAV"
+    );
     let channels = spec.channels as usize;
     let scale = 1.0 / i16::MAX as f32;
     let mut left = Vec::with_capacity(reader.duration() as usize);
@@ -141,7 +144,9 @@ fn dithered_16bit_render_of_minus_90_dbfs_sine_shows_no_harmonics() {
     // Noise floor: average of seven well-separated non-harmonic, non-
     // commensurate frequencies. These dodge both the fundamental's
     // harmonics AND its subharmonic intermodulation products.
-    let floor_probes = [1_234.0, 2_345.0, 4_567.0, 6_789.0, 8_901.0, 11_000.0, 14_500.0];
+    let floor_probes = [
+        1_234.0, 2_345.0, 4_567.0, 6_789.0, 8_901.0, 11_000.0, 14_500.0,
+    ];
     let floor: f32 = floor_probes
         .iter()
         .map(|&f| goertzel_mag_db(&samples, sr_f, f))

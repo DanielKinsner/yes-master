@@ -22,8 +22,7 @@ fn position_nudge_promotes_unsure_first_and_last() {
 #[test]
 fn position_nudge_respects_strong_inference() {
     // A clearly-strong Single at track 1 should NOT be rewritten as Opener.
-    let mut strong_single =
-        stub_analysis_with(TrackRole::Single, InferenceConfidence::Strong);
+    let mut strong_single = stub_analysis_with(TrackRole::Single, InferenceConfidence::Strong);
     analysis::nudge_role_by_position(&mut strong_single, 0, 5);
     assert_eq!(strong_single.inferred_role, Some(TrackRole::Single));
 
@@ -88,8 +87,14 @@ async fn analyze_tracks_populates_role_and_character_inference() {
     let r = &results[0];
     assert!(r.inferred_role.is_some(), "expected an inferred role");
     assert!(r.role_confidence.is_some(), "expected a role confidence");
-    assert!(r.inferred_character.is_some(), "expected an inferred character");
-    assert!(r.character_confidence.is_some(), "expected a character confidence");
+    assert!(
+        r.inferred_character.is_some(),
+        "expected an inferred character"
+    );
+    assert!(
+        r.character_confidence.is_some(),
+        "expected a character confidence"
+    );
 }
 
 #[tokio::test]
@@ -130,9 +135,7 @@ async fn analyze_tracks_measures_synthetic_wav() {
 #[tokio::test]
 async fn analyze_tracks_runs_against_real_fixture_if_present() {
     if !real_fixture_enabled() {
-        eprintln!(
-            "Skipping real-fixture test (set AMS_RUN_REAL_FIXTURE=1 to run the slow lane)."
-        );
+        eprintln!("Skipping real-fixture test (set AMS_RUN_REAL_FIXTURE=1 to run the slow lane).");
         return;
     }
     let Some(path) = real_fixture_path() else {
@@ -151,7 +154,10 @@ async fn analyze_tracks_runs_against_real_fixture_if_present() {
     assert!(r.lufs_integrated > -40.0);
     assert!(r.true_peak_dbtp.is_finite());
     assert!(r.dynamic_range_lu.is_finite() && r.dynamic_range_lu >= 0.0);
-    assert!((r.spectral_balance.low + r.spectral_balance.mid + r.spectral_balance.high - 1.0).abs() < 0.05);
+    assert!(
+        (r.spectral_balance.low + r.spectral_balance.mid + r.spectral_balance.high - 1.0).abs()
+            < 0.05
+    );
 }
 
 #[tokio::test]
@@ -235,9 +241,7 @@ async fn prepare_waveform_rejects_empty_path() {
 #[test]
 fn mastering_render_processes_real_fixture_if_present() {
     if !real_fixture_enabled() {
-        eprintln!(
-            "Skipping real-fixture test (set AMS_RUN_REAL_FIXTURE=1 to run the slow lane)."
-        );
+        eprintln!("Skipping real-fixture test (set AMS_RUN_REAL_FIXTURE=1 to run the slow lane).");
         return;
     }
     let Some(path) = real_fixture_path() else {
@@ -274,9 +278,7 @@ fn mastering_render_processes_real_fixture_if_present() {
 #[tokio::test]
 async fn decode_real_fixture_if_present() {
     if !real_fixture_enabled() {
-        eprintln!(
-            "Skipping real-fixture test (set AMS_RUN_REAL_FIXTURE=1 to run the slow lane)."
-        );
+        eprintln!("Skipping real-fixture test (set AMS_RUN_REAL_FIXTURE=1 to run the slow lane).");
         return;
     }
     let Some(path) = real_fixture_path() else {
@@ -291,7 +293,10 @@ async fn decode_real_fixture_if_present() {
         .expect("import ok");
     assert_eq!(tracks.len(), 1);
     let t = &tracks[0];
-    assert!(t.duration_seconds.unwrap_or(0.0) > 10.0, "expected a real song duration");
+    assert!(
+        t.duration_seconds.unwrap_or(0.0) > 10.0,
+        "expected a real song duration"
+    );
     assert!(t.sample_rate.unwrap_or(0) > 0);
     assert!(t.channels.unwrap_or(0) > 0);
 
@@ -306,7 +311,10 @@ async fn decode_real_fixture_if_present() {
     );
     assert!(peaks.sample_rate > 0);
     let max = peaks.channels[0].iter().cloned().fold(0.0_f32, f32::max);
-    assert!(max > 0.1, "expected non-trivial signal energy in the fixture");
+    assert!(
+        max > 0.1,
+        "expected non-trivial signal energy in the fixture"
+    );
 }
 
 /// Phase 12.1 mechanical verification: imports the local fixture, runs analyze,
@@ -424,10 +432,7 @@ async fn phase_12_1_real_fixture_metering_snapshot() {
         master.lufs_integrated,
         master.lufs_integrated - source.lufs_integrated
     );
-    eprintln!(
-        "  True peak:          {:>7.2} dBTP",
-        master.true_peak_dbtp
-    );
+    eprintln!("  True peak:          {:>7.2} dBTP", master.true_peak_dbtp);
     eprintln!(
         "  Dynamic range:      {:>7.2} LU  (delta {:+.2} LU)",
         master.dynamic_range_lu,
@@ -447,7 +452,9 @@ async fn phase_12_1_real_fixture_metering_snapshot() {
         bit_depth: 24,
         checks: Vec::new(),
     };
-    let checks = exports::run_export_checks(report, None, None).await.expect("checks");
+    let checks = exports::run_export_checks(report, None, None)
+        .await
+        .expect("checks");
     eprintln!("Export checks ({} fired):", checks.len());
     for c in &checks {
         eprintln!("  [{:?}] {} -- {}", c.level, c.code, c.message);
@@ -482,7 +489,9 @@ async fn run_export_checks_warns_on_high_true_peak() {
         bit_depth: 24,
         checks: Vec::new(),
     };
-    let checks = exports::run_export_checks(report, None, None).await.expect("checks ok");
+    let checks = exports::run_export_checks(report, None, None)
+        .await
+        .expect("checks ok");
     assert!(checks.iter().any(|c| c.code == "true_peak_high"));
 }
 
@@ -500,7 +509,9 @@ async fn run_export_checks_passes_silently_when_clean() {
         bit_depth: 24,
         checks: Vec::new(),
     };
-    let checks = exports::run_export_checks(report, None, None).await.expect("checks ok");
+    let checks = exports::run_export_checks(report, None, None)
+        .await
+        .expect("checks ok");
     assert_eq!(checks.len(), 1);
     assert_eq!(checks[0].code, "export_ok");
 }
@@ -523,7 +534,9 @@ async fn run_export_checks_warns_on_low_streaming_headroom() {
         bit_depth: 24,
         checks: Vec::new(),
     };
-    let checks = exports::run_export_checks(report, None, None).await.expect("checks ok");
+    let checks = exports::run_export_checks(report, None, None)
+        .await
+        .expect("checks ok");
     assert!(
         checks.iter().any(|c| c.code == "streaming_headroom_low"),
         "expected streaming_headroom_low advisory, got: {:?}",
@@ -552,7 +565,9 @@ async fn run_export_checks_streaming_headroom_quiet_at_streaming_ceiling() {
         bit_depth: 24,
         checks: Vec::new(),
     };
-    let checks = exports::run_export_checks(report, None, None).await.expect("checks ok");
+    let checks = exports::run_export_checks(report, None, None)
+        .await
+        .expect("checks ok");
     assert!(
         !checks.iter().any(|c| c.code == "streaming_headroom_low"),
         "advisory should not fire at exactly the streaming ceiling -1.0 dBTP"
@@ -606,7 +621,10 @@ fn mastering_render_writes_to_explicit_output_path() {
     )
     .expect("render to chosen output path");
 
-    assert_eq!(job.output_paths, vec![chosen_path.to_string_lossy().to_string()]);
+    assert_eq!(
+        job.output_paths,
+        vec![chosen_path.to_string_lossy().to_string()]
+    );
     assert!(chosen_path.exists(), "chosen output file not written");
 }
 
@@ -840,11 +858,7 @@ fn presets_produce_distinct_chain_coefficients() {
 /// Magnitude (dB) of a biquad's frequency response at `freq_hz`. Replicated
 /// from the lib's internal helper because tests can't reach into the private
 /// `tests` module.
-fn magnitude_db_at(
-    c: &yes_master_lib::dsp::BiquadCoeffs,
-    freq_hz: f32,
-    sample_rate: f32,
-) -> f32 {
+fn magnitude_db_at(c: &yes_master_lib::dsp::BiquadCoeffs, freq_hz: f32, sample_rate: f32) -> f32 {
     let omega = 2.0 * std::f32::consts::PI * freq_hz / sample_rate;
     let z1_re = omega.cos();
     let z1_im = -omega.sin();
@@ -1004,13 +1018,9 @@ fn limiter_catches_quarter_point_lagrange_intersample_peak() {
     // Sanity-check that the pattern still exercises the 4× gap. If a future
     // refactor changes the Lagrange coefficients or this pattern, the test
     // must complain loudly rather than silently pass on a degenerate case.
-    let in_mid_05 = -0.0625 * pattern[0]
-        + 0.5625 * pattern[1]
-        + 0.5625 * pattern[2]
-        - 0.0625 * pattern[3];
-    let in_mid_025 = -0.0546875 * pattern[0]
-        + 0.8203125 * pattern[1]
-        + 0.2734375 * pattern[2]
+    let in_mid_05 =
+        -0.0625 * pattern[0] + 0.5625 * pattern[1] + 0.5625 * pattern[2] - 0.0625 * pattern[3];
+    let in_mid_025 = -0.0546875 * pattern[0] + 0.8203125 * pattern[1] + 0.2734375 * pattern[2]
         - 0.0390625 * pattern[3];
     assert!(
         in_mid_05.abs() < ceiling_lin,
@@ -1086,8 +1096,7 @@ fn limiter_catches_lagrange_intersample_peak() {
     let steady = &samples[warmup..];
     let ceiling_lin = 10.0_f32.powf(-1.0 / 20.0);
     for win in steady.windows(4) {
-        let mid =
-            -0.0625 * win[0] + 0.5625 * win[1] + 0.5625 * win[2] - 0.0625 * win[3];
+        let mid = -0.0625 * win[0] + 0.5625 * win[1] + 0.5625 * win[2] - 0.0625 * win[3];
         assert!(
             mid.abs() <= ceiling_lin + 0.005,
             "inter-sample peak {mid} (abs {abs}) exceeded ceiling {ceiling_lin}",
@@ -1136,11 +1145,8 @@ fn dsp_low_shelf_boost_raises_low_frequency_energy() {
         .map(|i| 0.2 * (i as f32 / 44_100.0 * 2.0 * std::f32::consts::PI * 80.0).sin())
         .collect();
     let baseline_chain_settings = default_settings();
-    let mut baseline_chain = yes_master_lib::dsp::MasteringChain::new(
-        44_100,
-        1,
-        &baseline_chain_settings,
-    );
+    let mut baseline_chain =
+        yes_master_lib::dsp::MasteringChain::new(44_100, 1, &baseline_chain_settings);
     let mut boosted = low_freq_signal.clone();
     let mut baseline = low_freq_signal.clone();
     chain.process_interleaved(&mut boosted, 1);
@@ -1195,8 +1201,7 @@ fn user_presets_save_list_delete_roundtrip() {
     assert_eq!(read[1].name, "Acoustic Light");
 
     // Simulate delete: remove preset-1 and write back.
-    let remaining: Vec<UserPreset> =
-        read.into_iter().filter(|p| p.id != "preset-1").collect();
+    let remaining: Vec<UserPreset> = read.into_iter().filter(|p| p.id != "preset-1").collect();
     settings::write_presets(&path, &remaining).expect("write after delete");
     let after = settings::read_presets(&path).expect("read after delete");
     assert_eq!(after.len(), 1);
@@ -1242,7 +1247,10 @@ fn session_write_and_read_roundtrips() {
     assert!(restored.album_intent.is_some());
     assert!(matches!(restored.mode, ProjectMode::Album));
     assert_eq!(restored.track_override_album.len(), 1);
-    assert_eq!(restored.track_override_album[0], TrackId("alpha".to_string()));
+    assert_eq!(
+        restored.track_override_album[0],
+        TrackId("alpha".to_string())
+    );
 }
 
 #[test]
@@ -1394,7 +1402,11 @@ fn lufs_target_pushes_upward_when_headroom_allows() {
                 .fold(0.0_f32, f32::max)
         }
     };
-    let peak_dbfs = if peak_lin > 0.0 { 20.0 * peak_lin.log10() } else { -120.0 };
+    let peak_dbfs = if peak_lin > 0.0 {
+        20.0 * peak_lin.log10()
+    } else {
+        -120.0
+    };
     assert!(
         peak_dbfs <= -1.0 + 0.5,
         "rendered peak should stay near or below the -1 dBTP ceiling, got \
@@ -1642,10 +1654,8 @@ fn real_fixture_path() -> Option<PathBuf> {
     // fixture Dan drops in — original name preserved, no renaming required.
     // Both paths are checked so the harness works from either the workspace
     // root or from `src-tauri/` (cargo runs tests with cwd = src-tauri).
-    const FIXTURE_DIRS: [&str; 2] =
-        ["../private-audio-fixtures", "private-audio-fixtures"];
-    const EXTENSIONS: [&str; 8] =
-        ["wav", "mp3", "flac", "m4a", "aac", "ogg", "opus", "aiff"];
+    const FIXTURE_DIRS: [&str; 2] = ["../private-audio-fixtures", "private-audio-fixtures"];
+    const EXTENSIONS: [&str; 8] = ["wav", "mp3", "flac", "m4a", "aac", "ogg", "opus", "aiff"];
 
     for dir in &FIXTURE_DIRS {
         let dir_path = PathBuf::from(dir);

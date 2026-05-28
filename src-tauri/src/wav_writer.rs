@@ -242,10 +242,7 @@ mod tests {
             .samples::<i16>()
             .collect::<Result<Vec<_>, _>>()
             .expect("decode 16-bit samples");
-        assert_eq!(
-            decoded,
-            vec![-32768, -16383, -4095, -1, 4096, 16385, 32767]
-        );
+        assert_eq!(decoded, vec![-32768, -16383, -4095, -1, 4096, 16385, 32767]);
         assert_eq!(
             sha256_file(&out),
             "49af7efd8ee26001eaabfc0b3a83e09fc09454eeeee6d08678ae6d249f0210d1"
@@ -399,13 +396,13 @@ mod tests {
         let n = (sr as f32 * 0.1) as usize;
         let amp = 10.0_f32.powf(-90.0 / 20.0);
         let omega = 2.0 * std::f32::consts::PI * 1000.0 / sr as f32;
-        let samples: Vec<f32> = (0..n)
-            .map(|i| amp * (omega * i as f32).sin())
-            .collect();
+        let samples: Vec<f32> = (0..n).map(|i| amp * (omega * i as f32).sin()).collect();
 
         let mut undithered = HashSet::new();
         for &s in &samples {
-            let v = (s * INT16_SCALE).round().clamp(-INT16_SCALE, INT16_PEAK_POS) as i16;
+            let v = (s * INT16_SCALE)
+                .round()
+                .clamp(-INT16_SCALE, INT16_PEAK_POS) as i16;
             undithered.insert(v);
         }
 
@@ -440,8 +437,7 @@ mod tests {
     fn tpdf_dither_has_zero_mean() {
         let mut rng = DitherRng::new(0xDEAD_BEEF);
         let n = 100_000;
-        let mean: f32 =
-            (0..n).map(|_| rng.tpdf_lsb()).sum::<f32>() / (n as f32);
+        let mean: f32 = (0..n).map(|_| rng.tpdf_lsb()).sum::<f32>() / (n as f32);
         assert!(
             mean.abs() < 0.01,
             "TPDF mean across {} samples should be ~0; got {}",
@@ -526,8 +522,7 @@ mod tests {
         let mut rng = DitherRng::new(0xDEAD_BEEF);
         let result = quantize_24_tpdf(-1.5, &mut rng);
         assert_eq!(
-            result,
-            -8_388_608,
+            result, -8_388_608,
             "sample <= -1.0 must reach i24-MIN (-8_388_608); pre-B2 \
              the asymmetric scale capped at -8_388_607"
         );

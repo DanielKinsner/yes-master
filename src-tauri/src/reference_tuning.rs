@@ -110,7 +110,7 @@ pub fn discover_reference_suite(reference_dir: &Path) -> CommandResult<Reference
     let (track_label, source_path) = source.ok_or_else(|| {
         CommandError::Other(format!(
             "no *-original-test.wav source found in {}",
-                reference_dir.display()
+            reference_dir.display()
         ))
     })?;
     let references = default_reference_presets()

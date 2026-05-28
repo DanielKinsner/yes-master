@@ -6,11 +6,7 @@ use std::path::Path;
 /// last positions toward Opener/Closer respectively. Strong-confidence roles
 /// (e.g. an obvious Single at track 1) are left alone — the per-track signal
 /// dominates when it's clear.
-pub fn nudge_role_by_position(
-    result: &mut AnalysisResult,
-    index: usize,
-    total: usize,
-) {
+pub fn nudge_role_by_position(result: &mut AnalysisResult, index: usize, total: usize) {
     if total <= 1 {
         return;
     }
@@ -95,8 +91,7 @@ pub(crate) fn analyze_one(track_id: TrackId, path: &Path) -> CommandResult<Analy
         compute_spectral_balance_6band(&pcm.samples, pcm.sample_rate, pcm.channels as usize);
     let transient_flux =
         compute_transient_flux(&pcm.samples, pcm.sample_rate, pcm.channels as usize);
-    let stereo_correlation =
-        compute_stereo_correlation(&pcm.samples, pcm.channels as usize);
+    let stereo_correlation = compute_stereo_correlation(&pcm.samples, pcm.channels as usize);
     let dynamic_range_p95_p10_db =
         compute_dynamic_range_p95_p10(&pcm.samples, pcm.sample_rate, pcm.channels as usize);
     let lufs_short_term_max_3s =
@@ -153,10 +148,8 @@ pub(crate) fn analyze_one(track_id: TrackId, path: &Path) -> CommandResult<Analy
     // (spectral-flux is a stronger Single-track signal than ZCR), and
     // falls back to transient_density for backward compatibility.
     let role_transient_signal = transient_flux.unwrap_or(transient_density);
-    let (role, role_conf) =
-        infer_role(lufs_integrated, role_transient_signal, duration_sec);
-    let (character, character_conf) =
-        infer_character(&spectral_balance, transient_density);
+    let (role, role_conf) = infer_role(lufs_integrated, role_transient_signal, duration_sec);
+    let (character, character_conf) = infer_character(&spectral_balance, transient_density);
 
     Ok(AnalysisResult {
         track_id,
@@ -484,16 +477,11 @@ pub(crate) fn compute_dynamic_range_p95_p10(
 /// Maximum short-term LUFS via ebur128 Mode::S (3 s sliding window).
 /// Feeds the signal in ~100 ms chunks and samples loudness_shortterm()
 /// at each boundary, returning the max.
-fn compute_short_term_max_lufs(
-    samples: &[f32],
-    sample_rate: u32,
-    channels: u16,
-) -> Option<f32> {
+fn compute_short_term_max_lufs(samples: &[f32], sample_rate: u32, channels: u16) -> Option<f32> {
     if samples.is_empty() || channels == 0 {
         return None;
     }
-    let mut ebu =
-        ebur128::EbuR128::new(u32::from(channels), sample_rate, ebur128::Mode::S).ok()?;
+    let mut ebu = ebur128::EbuR128::new(u32::from(channels), sample_rate, ebur128::Mode::S).ok()?;
     let chunk_frames = (sample_rate / 10).max(1) as usize;
     let chunk_samples = chunk_frames * channels as usize;
     let mut max_st = f32::NEG_INFINITY;
@@ -593,10 +581,7 @@ pub(crate) fn compute_energy_density_score(
     // Transient flux already in roughly [0, 1] for typical content.
     let transient_norm = flux.clamp(0.0, 1.0);
     Some(
-        0.44 * loudness_norm
-            + 0.21 * brightness_norm
-            + 0.23 * density_norm
-            + 0.12 * transient_norm,
+        0.44 * loudness_norm + 0.21 * brightness_norm + 0.23 * density_norm + 0.12 * transient_norm,
     )
 }
 
@@ -660,14 +645,10 @@ mod tests {
         // Sustained: continuous 1 kHz sine at lower amplitude so the
         // average level roughly matches the percussive signal. RMS
         // envelope is essentially flat.
-        let sustained: Vec<f32> = (0..n)
-            .map(|i| 0.1 * (omega * i as f32).sin())
-            .collect();
+        let sustained: Vec<f32> = (0..n).map(|i| 0.1 * (omega * i as f32).sin()).collect();
 
-        let flux_p = compute_transient_flux(&percussive, sr, 1)
-            .expect("percussive flux");
-        let flux_s = compute_transient_flux(&sustained, sr, 1)
-            .expect("sustained flux");
+        let flux_p = compute_transient_flux(&percussive, sr, 1).expect("percussive flux");
+        let flux_s = compute_transient_flux(&sustained, sr, 1).expect("sustained flux");
         assert!(
             flux_p > flux_s * 5.0,
             "percussive flux ({:.3}) should be >>5x sustained flux ({:.3})",

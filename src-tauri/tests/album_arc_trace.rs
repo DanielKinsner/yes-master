@@ -10,13 +10,10 @@ use std::path::Path;
 
 use yes_master_lib::album;
 use yes_master_lib::album_render::render_album_plan_impl;
-use yes_master_lib::engine::{
-    self, AlbumPlanRenderRequest, AlbumTrackRenderInput,
-};
+use yes_master_lib::engine::{self, AlbumPlanRenderRequest, AlbumTrackRenderInput};
 use yes_master_lib::types::{
-    AdvancedSettings, AlbumArc, AlbumArcKind, AnalysisResult, DeliveryProfile,
-    InferenceConfidence, MasteringSettings, Preset, SpectralBalance, TrackId, TrackRole,
-    ISO_PLACEHOLDER,
+    AdvancedSettings, AlbumArc, AlbumArcKind, AnalysisResult, DeliveryProfile, InferenceConfidence,
+    MasteringSettings, Preset, SpectralBalance, TrackId, TrackRole, ISO_PLACEHOLDER,
 };
 
 const SR_HZ: u32 = 48_000;

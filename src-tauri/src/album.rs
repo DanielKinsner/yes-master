@@ -77,10 +77,7 @@ pub fn character_loudness_offset(
     if matches!(c, AlbumCharacter::AcousticFolk) && index == 0 {
         offset -= 0.25;
     }
-    if matches!(c, AlbumCharacter::ReturnAcoustic)
-        && count > 1
-        && index == count - 1
-    {
+    if matches!(c, AlbumCharacter::ReturnAcoustic) && count > 1 && index == count - 1 {
         offset -= 0.20;
     }
     offset
@@ -127,8 +124,7 @@ fn transient_signal(a: &AnalysisResult) -> f32 {
 fn heavy_score(a: &AnalysisResult) -> f32 {
     let energy = a.energy_density_score.unwrap_or(0.5);
     let crest = crest_proxy_db(a);
-    let crest_density =
-        1.0 - ((crest - 6.0) / 10.0).clamp(0.0, 1.0);
+    let crest_density = 1.0 - ((crest - 6.0) / 10.0).clamp(0.0, 1.0);
     let low_weight = a
         .spectral_balance_6band
         .as_ref()
@@ -319,10 +315,7 @@ pub fn infer_album_characters(
         if labels[i] == Some(AlbumCharacter::HeavyDjent) {
             has_seen_heavy = true;
         }
-        if has_seen_heavy
-            && labels[i] == Some(AlbumCharacter::AcousticFolk)
-            && i >= half
-        {
+        if has_seen_heavy && labels[i] == Some(AlbumCharacter::AcousticFolk) && i >= half {
             labels[i] = Some(AlbumCharacter::ReturnAcoustic);
         }
     }
@@ -389,15 +382,8 @@ pub fn role_at_position(
 /// Default transition between two adjacent tracks. Simple heuristic for
 /// v1: gap any pair where either side is `Interlude` (the natural place
 /// for an album to "breathe"); everything else butt-splices.
-pub fn default_transition_for(
-    left: &AlbumTrackEntry,
-    right: &AlbumTrackEntry,
-) -> TransitionSpec {
-    if matches!(
-        left.role,
-        TrackRole::Interlude
-    ) || matches!(right.role, TrackRole::Interlude)
-    {
+pub fn default_transition_for(left: &AlbumTrackEntry, right: &AlbumTrackEntry) -> TransitionSpec {
+    if matches!(left.role, TrackRole::Interlude) || matches!(right.role, TrackRole::Interlude) {
         TransitionSpec::gap(0.8)
     } else {
         TransitionSpec::direct()
@@ -637,26 +623,22 @@ mod tests {
     fn character_loudness_offset_table() {
         // AcousticFolk: -0.72 base.
         assert!(
-            (character_loudness_offset(Some(AlbumCharacter::AcousticFolk), 1, 4) - (-0.72))
-                .abs()
+            (character_loudness_offset(Some(AlbumCharacter::AcousticFolk), 1, 4) - (-0.72)).abs()
                 < 1.0e-5
         );
         // AcousticFolk at first track: extra -0.25.
         assert!(
-            (character_loudness_offset(Some(AlbumCharacter::AcousticFolk), 0, 4) - (-0.97))
-                .abs()
+            (character_loudness_offset(Some(AlbumCharacter::AcousticFolk), 0, 4) - (-0.97)).abs()
                 < 1.0e-5
         );
         // AcousticFolk at last track: no extra (that bonus is for ReturnAcoustic).
         assert!(
-            (character_loudness_offset(Some(AlbumCharacter::AcousticFolk), 3, 4) - (-0.72))
-                .abs()
+            (character_loudness_offset(Some(AlbumCharacter::AcousticFolk), 3, 4) - (-0.72)).abs()
                 < 1.0e-5
         );
         // Transition: -1.25.
         assert!(
-            (character_loudness_offset(Some(AlbumCharacter::Transition), 1, 4) - (-1.25))
-                .abs()
+            (character_loudness_offset(Some(AlbumCharacter::Transition), 1, 4) - (-1.25)).abs()
                 < 1.0e-5
         );
         // HeavyDjent: +0.82.
@@ -666,14 +648,12 @@ mod tests {
         );
         // ReturnAcoustic: -1.05 base.
         assert!(
-            (character_loudness_offset(Some(AlbumCharacter::ReturnAcoustic), 1, 4) - (-1.05))
-                .abs()
+            (character_loudness_offset(Some(AlbumCharacter::ReturnAcoustic), 1, 4) - (-1.05)).abs()
                 < 1.0e-5
         );
         // ReturnAcoustic at last track: extra -0.20.
         assert!(
-            (character_loudness_offset(Some(AlbumCharacter::ReturnAcoustic), 3, 4) - (-1.25))
-                .abs()
+            (character_loudness_offset(Some(AlbumCharacter::ReturnAcoustic), 3, 4) - (-1.25)).abs()
                 < 1.0e-5
         );
         // None: 0.
@@ -701,8 +681,7 @@ mod tests {
     fn role_at_position_basic() {
         let opener = fake_analysis("a", Some(TrackRole::Single), None, None, Some(0.5));
         let closer = fake_analysis("b", Some(TrackRole::Single), None, None, Some(0.5));
-        let middle =
-            fake_analysis("m", Some(TrackRole::AlbumTrack), None, None, Some(0.5));
+        let middle = fake_analysis("m", Some(TrackRole::AlbumTrack), None, None, Some(0.5));
         let interlude = fake_analysis("i", None, None, None, Some(0.1));
 
         assert_eq!(role_at_position(&opener, 0, 4, 180.0), TrackRole::Opener);
@@ -802,12 +781,7 @@ mod tests {
         let intensity = 1.0;
 
         // Heavy: low_end +0.35, low_mid -0.55, air +0.35, width +0.035.
-        let heavy = mastering_bias_for(
-            Some(AlbumCharacter::HeavyDjent),
-            energy,
-            curve,
-            intensity,
-        );
+        let heavy = mastering_bias_for(Some(AlbumCharacter::HeavyDjent), energy, curve, intensity);
         assert!((heavy.low_end_db - 0.35).abs() < 1e-5);
         assert!((heavy.low_mid_db - (-0.55)).abs() < 1e-5);
         assert!((heavy.air_db - 0.35).abs() < 1e-5);
@@ -818,12 +792,8 @@ mod tests {
         assert!((heavy.presence_db - 0.15).abs() < 1e-5);
 
         // Heavy at energy > 0.66 → presence_db = -0.20.
-        let heavy_hot = mastering_bias_for(
-            Some(AlbumCharacter::HeavyDjent),
-            0.80,
-            curve,
-            intensity,
-        );
+        let heavy_hot =
+            mastering_bias_for(Some(AlbumCharacter::HeavyDjent), 0.80, curve, intensity);
         assert!((heavy_hot.presence_db - (-0.20)).abs() < 1e-5);
 
         // Return: presence -0.45, warmth +0.055, intensity -0.22.
@@ -838,12 +808,7 @@ mod tests {
         assert!((ret.intensity_offset - (-0.22)).abs() < 1e-5);
 
         // Transition: low_mid -0.25, intensity -0.12.
-        let tx = mastering_bias_for(
-            Some(AlbumCharacter::Transition),
-            energy,
-            curve,
-            intensity,
-        );
+        let tx = mastering_bias_for(Some(AlbumCharacter::Transition), energy, curve, intensity);
         assert!((tx.low_mid_db - (-0.25)).abs() < 1e-5);
         assert!((tx.intensity_offset - (-0.12)).abs() < 1e-5);
 
@@ -882,13 +847,7 @@ mod tests {
     /// Empty plan: 0 tracks, 0 transitions, intensity preserved.
     #[test]
     fn build_album_plan_empty() {
-        let plan = build_album_plan(
-            "Empty".to_string(),
-            &[],
-            &[],
-            AlbumArc::default(),
-            1.0,
-        );
+        let plan = build_album_plan("Empty".to_string(), &[], &[], AlbumArc::default(), 1.0);
         assert_eq!(plan.tracks.len(), 0);
         assert_eq!(plan.transitions.len(), 0);
         assert_eq!(plan.intensity, 1.0);

@@ -148,7 +148,11 @@ impl SpectrumAnalyzer {
             }
             // RMS magnitude of the bin, scaled.
             let rms = ((sum_pow / count).sqrt()) * inv_norm;
-            let db = if rms > 1.0e-12 { 20.0 * rms.log10() } else { SPECTRUM_FLOOR_DB };
+            let db = if rms > 1.0e-12 {
+                20.0 * rms.log10()
+            } else {
+                SPECTRUM_FLOOR_DB
+            };
             // Exponential smoothing in dB so the visual stays calm.
             let prev = self.prev_db[b];
             let smoothed = prev * (1.0 - SPECTRUM_SMOOTHING_ALPHA) + db * SPECTRUM_SMOOTHING_ALPHA;

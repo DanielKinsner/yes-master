@@ -45,7 +45,12 @@ pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
         hint.with_extension(ext);
     }
     let probed = symphonia::default::get_probe()
-        .format(&hint, mss, &FormatOptions::default(), &MetadataOptions::default())
+        .format(
+            &hint,
+            mss,
+            &FormatOptions::default(),
+            &MetadataOptions::default(),
+        )
         .map_err(|e| CommandError::Decode(e.to_string()))?;
     let mut format = probed.format;
 
@@ -78,9 +83,7 @@ pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
     loop {
         let packet = match format.next_packet() {
             Ok(p) => p,
-            Err(SymphoniaError::IoError(e))
-                if e.kind() == std::io::ErrorKind::UnexpectedEof =>
-            {
+            Err(SymphoniaError::IoError(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
                 break;
             }
             Err(SymphoniaError::ResetRequired) => break,
@@ -120,7 +123,12 @@ pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<Decoded
         hint.with_extension(ext);
     }
     let probed = symphonia::default::get_probe()
-        .format(&hint, mss, &FormatOptions::default(), &MetadataOptions::default())
+        .format(
+            &hint,
+            mss,
+            &FormatOptions::default(),
+            &MetadataOptions::default(),
+        )
         .map_err(|e| CommandError::Decode(e.to_string()))?;
     let mut format = probed.format;
 
@@ -159,9 +167,7 @@ pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<Decoded
     loop {
         let packet = match format.next_packet() {
             Ok(p) => p,
-            Err(SymphoniaError::IoError(e))
-                if e.kind() == std::io::ErrorKind::UnexpectedEof =>
-            {
+            Err(SymphoniaError::IoError(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
                 break;
             }
             Err(SymphoniaError::ResetRequired) => break,

@@ -19,9 +19,7 @@
 //! EQ calibration is wired through and produces the documented shape.
 
 use yes_master_lib::dsp::MasteringChain;
-use yes_master_lib::types::{
-    AdvancedSettings, DeliveryProfile, MasteringSettings, Preset,
-};
+use yes_master_lib::types::{AdvancedSettings, DeliveryProfile, MasteringSettings, Preset};
 
 const SR_HZ: u32 = 48_000;
 const DURATION_SEC: f32 = 2.0;
@@ -147,8 +145,7 @@ fn chain_gain_db(input_mono: &[f32], output_mono: &[f32], freq_hz: f32) -> f32 {
 /// the chain's broadband makeup gain so the assertion isolates the
 /// preset's EQ-shape contribution.
 fn tilt_db(input_mono: &[f32], output_mono: &[f32], high_hz: f32, low_hz: f32) -> f32 {
-    chain_gain_db(input_mono, output_mono, high_hz)
-        - chain_gain_db(input_mono, output_mono, low_hz)
+    chain_gain_db(input_mono, output_mono, high_hz) - chain_gain_db(input_mono, output_mono, low_hz)
 }
 
 /// Diagnostic helper — run with `cargo test --test preset_signature
@@ -184,7 +181,10 @@ fn dump_observed_tilts() {
             gains[0], gains[1], gains[2], gains[3], avg,
         );
         for (i, freq) in bands.iter().enumerate() {
-            print!("           tilt vs avg @{freq:>5.0}={:+.2} ", gains[i] - avg);
+            print!(
+                "           tilt vs avg @{freq:>5.0}={:+.2} ",
+                gains[i] - avg
+            );
         }
         println!();
     }
@@ -217,9 +217,13 @@ fn preset_signatures_match_calibration_tuples() {
         (
             "Universal",
             Preset::Universal,
-            &[
-                ("air vs presence", f_air, f_presence, |d| d >= 0.2, ">= +0.2 dB"),
-            ],
+            &[(
+                "air vs presence",
+                f_air,
+                f_presence,
+                |d| d >= 0.2,
+                ">= +0.2 dB",
+            )],
         ),
         // Clarity: post-A4 conservative target = air boost, low-mid AND
         // presence cut. Signature is "air clearly above mids" — no longer
@@ -231,7 +235,13 @@ fn preset_signatures_match_calibration_tuples() {
             Preset::Clarity,
             &[
                 ("air vs mud", f_air, f_low_mid, |d| d >= 0.8, ">= +0.8 dB"),
-                ("air vs presence", f_air, f_presence, |d| d >= 1.0, ">= +1.0 dB"),
+                (
+                    "air vs presence",
+                    f_air,
+                    f_presence,
+                    |d| d >= 1.0,
+                    ">= +1.0 dB",
+                ),
             ],
         ),
         // Tape: low boost, presence cut. Observed 200 - 1.5k = +1.56 dB,
@@ -240,17 +250,33 @@ fn preset_signatures_match_calibration_tuples() {
             "Tape",
             Preset::Tape,
             &[
-                ("low vs presence", f_low, f_presence, |d| d >= 0.8, ">= +0.8 dB"),
-                ("low-mid vs presence", f_low_mid, f_presence, |d| d >= 0.8, ">= +0.8 dB"),
+                (
+                    "low vs presence",
+                    f_low,
+                    f_presence,
+                    |d| d >= 0.8,
+                    ">= +0.8 dB",
+                ),
+                (
+                    "low-mid vs presence",
+                    f_low_mid,
+                    f_presence,
+                    |d| d >= 0.8,
+                    ">= +0.8 dB",
+                ),
             ],
         ),
         // Spatial: air boost, low-mid cut. Observed 6k - 1.5k = +0.80 dB.
         (
             "Spatial",
             Preset::Spatial,
-            &[
-                ("air vs presence", f_air, f_presence, |d| d >= 0.4, ">= +0.4 dB"),
-            ],
+            &[(
+                "air vs presence",
+                f_air,
+                f_presence,
+                |d| d >= 0.4,
+                ">= +0.4 dB",
+            )],
         ),
         // Oomph: post-A4 conservative target = strong sub lift, deep
         // low-mid AND presence scoop. The old "presence boost" assertion
@@ -262,24 +288,38 @@ fn preset_signatures_match_calibration_tuples() {
             Preset::Oomph,
             &[
                 ("low vs mud", f_low, f_low_mid, |d| d >= 1.5, ">= +1.5 dB"),
-                ("low vs presence", f_low, f_presence, |d| d >= 2.0, ">= +2.0 dB"),
+                (
+                    "low vs presence",
+                    f_low,
+                    f_presence,
+                    |d| d >= 2.0,
+                    ">= +2.0 dB",
+                ),
             ],
         ),
         // Warmth: low boost, presence cut. Observed 200 - 1.5k = +1.91 dB.
         (
             "Warmth",
             Preset::Warmth,
-            &[
-                ("low vs presence", f_low, f_presence, |d| d >= 1.0, ">= +1.0 dB"),
-            ],
+            &[(
+                "low vs presence",
+                f_low,
+                f_presence,
+                |d| d >= 1.0,
+                ">= +1.0 dB",
+            )],
         ),
         // Punch: deepest mud cut + presence boost. Observed 1.5k - 400 = +2.59 dB.
         (
             "Punch",
             Preset::Punch,
-            &[
-                ("presence vs mud", f_presence, f_low_mid, |d| d >= 1.5, ">= +1.5 dB"),
-            ],
+            &[(
+                "presence vs mud",
+                f_presence,
+                f_low_mid,
+                |d| d >= 1.5,
+                ">= +1.5 dB",
+            )],
         ),
         // Loud: mud cut + presence + air boosts. Observed 1.5k - 400 = +2.16,
         // 6k - 400 = +1.39.
@@ -287,7 +327,13 @@ fn preset_signatures_match_calibration_tuples() {
             "Loud",
             Preset::Loud,
             &[
-                ("presence vs mud", f_presence, f_low_mid, |d| d >= 1.0, ">= +1.0 dB"),
+                (
+                    "presence vs mud",
+                    f_presence,
+                    f_low_mid,
+                    |d| d >= 1.0,
+                    ">= +1.0 dB",
+                ),
                 ("air vs mud", f_air, f_low_mid, |d| d >= 0.5, ">= +0.5 dB"),
             ],
         ),

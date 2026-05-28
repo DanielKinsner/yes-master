@@ -11,17 +11,17 @@
 //!   * The album.wav is at least the sum of per-track durations (allowing
 //!     for any Gap transitions inserted by the default planner).
 
+use hound::{SampleFormat, WavSpec, WavWriter};
+use std::path::PathBuf;
+use tempfile::TempDir;
 use yes_master_lib::album;
 use yes_master_lib::album_render::render_album_plan_impl;
 use yes_master_lib::engine::{AlbumPlanRenderRequest, AlbumTrackRenderInput};
 use yes_master_lib::types::{
-    AdvancedSettings, AlbumArc, AlbumArcKind, AnalysisResult, DeliveryProfile,
-    InferenceConfidence, MasteringSettings, Preset, SpectralBalance, TrackCharacter,
-    TrackId, TrackRole, ISO_PLACEHOLDER,
+    AdvancedSettings, AlbumArc, AlbumArcKind, AnalysisResult, DeliveryProfile, InferenceConfidence,
+    MasteringSettings, Preset, SpectralBalance, TrackCharacter, TrackId, TrackRole,
+    ISO_PLACEHOLDER,
 };
-use hound::{SampleFormat, WavSpec, WavWriter};
-use std::path::PathBuf;
-use tempfile::TempDir;
 
 fn default_master_settings() -> MasteringSettings {
     MasteringSettings {
@@ -192,9 +192,27 @@ fn album_render_three_tracks_smoke() {
 
     // Build the plan from synthetic analyses.
     let analyses = [
-        fake_analysis("t1", TrackRole::AlbumTrack, Some(TrackCharacter::Bright), 0.55, 0.55),
-        fake_analysis("t2", TrackRole::AlbumTrack, Some(TrackCharacter::Balanced), 0.45, 0.45),
-        fake_analysis("t3", TrackRole::AlbumTrack, Some(TrackCharacter::Sparse), 0.35, 0.35),
+        fake_analysis(
+            "t1",
+            TrackRole::AlbumTrack,
+            Some(TrackCharacter::Bright),
+            0.55,
+            0.55,
+        ),
+        fake_analysis(
+            "t2",
+            TrackRole::AlbumTrack,
+            Some(TrackCharacter::Balanced),
+            0.45,
+            0.45,
+        ),
+        fake_analysis(
+            "t3",
+            TrackRole::AlbumTrack,
+            Some(TrackCharacter::Sparse),
+            0.35,
+            0.35,
+        ),
     ];
     let refs: Vec<&AnalysisResult> = analyses.iter().collect();
     let durations = [2.0, 2.0, 2.0];

@@ -939,19 +939,28 @@ impl ChainCoeffs {
         };
 
         let comp_low_ratio = if manual_compression {
-            settings.advanced.compression_low_ratio.unwrap_or(preset_ratio)
+            settings
+                .advanced
+                .compression_low_ratio
+                .unwrap_or(preset_ratio)
         } else {
             preset_ratio
         }
         .max(1.0);
         let comp_mid_ratio = if manual_compression {
-            settings.advanced.compression_mid_ratio.unwrap_or(preset_ratio)
+            settings
+                .advanced
+                .compression_mid_ratio
+                .unwrap_or(preset_ratio)
         } else {
             preset_ratio
         }
         .max(1.0);
         let comp_high_ratio = if manual_compression {
-            settings.advanced.compression_high_ratio.unwrap_or(preset_ratio)
+            settings
+                .advanced
+                .compression_high_ratio
+                .unwrap_or(preset_ratio)
         } else {
             preset_ratio
         }
@@ -3430,12 +3439,9 @@ mod tests {
         manual.preset = Preset::Universal;
         manual.advanced.compression_mode = CompressionMode::Manual;
         manual.advanced.compression_density = Some(1.0);
-        manual.advanced.compression_low_threshold_db =
-            Some(preset_coeffs.comp_low_threshold_db);
-        manual.advanced.compression_mid_threshold_db =
-            Some(preset_coeffs.comp_mid_threshold_db);
-        manual.advanced.compression_high_threshold_db =
-            Some(preset_coeffs.comp_high_threshold_db);
+        manual.advanced.compression_low_threshold_db = Some(preset_coeffs.comp_low_threshold_db);
+        manual.advanced.compression_mid_threshold_db = Some(preset_coeffs.comp_mid_threshold_db);
+        manual.advanced.compression_high_threshold_db = Some(preset_coeffs.comp_high_threshold_db);
         manual.advanced.compression_low_ratio = Some(preset_coeffs.comp_low_ratio);
         manual.advanced.compression_mid_ratio = Some(preset_coeffs.comp_mid_ratio);
         manual.advanced.compression_high_ratio = Some(preset_coeffs.comp_high_ratio);
@@ -3457,8 +3463,7 @@ mod tests {
             "Manual ratio should equal the explicit value copied from Preset"
         );
         assert!(
-            (manual_coeffs.comp_mid_makeup_db - preset_coeffs.comp_mid_makeup_db).abs()
-                < 1e-4,
+            (manual_coeffs.comp_mid_makeup_db - preset_coeffs.comp_mid_makeup_db).abs() < 1e-4,
             "Manual makeup should not exceed the preset value when copied from Preset"
         );
     }

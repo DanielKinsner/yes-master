@@ -9,24 +9,19 @@
 //! leave the file untouched; post-fix, the ceiling-bounded landing
 //! pushes it upward to target without exceeding the true-peak ceiling.
 
+use hound::{SampleFormat, WavSpec, WavWriter};
+use std::path::{Path, PathBuf};
+use tempfile::TempDir;
 use yes_master_lib::album_render::render_album_plan_impl;
 use yes_master_lib::engine::{
     measure_integrated_lufs_at_path, AlbumPlanRenderRequest, AlbumTrackRenderInput,
 };
 use yes_master_lib::types::{
-    AdvancedSettings, AlbumArc, AlbumPlan, AlbumTrackEntry, DeliveryProfile,
-    MasteringSettings, Preset, TrackId, TrackRole,
+    AdvancedSettings, AlbumArc, AlbumPlan, AlbumTrackEntry, DeliveryProfile, MasteringSettings,
+    Preset, TrackId, TrackRole,
 };
-use hound::{SampleFormat, WavSpec, WavWriter};
-use std::path::{Path, PathBuf};
-use tempfile::TempDir;
 
-fn write_stereo_sine_wav(
-    path: &PathBuf,
-    sample_rate: u32,
-    duration_sec: f32,
-    amplitude: f32,
-) {
+fn write_stereo_sine_wav(path: &PathBuf, sample_rate: u32, duration_sec: f32, amplitude: f32) {
     let spec = WavSpec {
         channels: 2,
         sample_rate,
@@ -137,8 +132,7 @@ fn album_plan_pushes_quiet_track_upward_to_target_bounded_by_ceiling() {
     };
 
     let out_dir = tmp.path().join("out");
-    let report =
-        render_album_plan_impl(&request, &out_dir, None).expect("album plan render");
+    let report = render_album_plan_impl(&request, &out_dir, None).expect("album plan render");
 
     assert_eq!(report.tracks.len(), 1);
     let per_track_path = Path::new(&report.tracks[0].output_path);
@@ -146,8 +140,7 @@ fn album_plan_pushes_quiet_track_upward_to_target_bounded_by_ceiling() {
     // Upward landing case: chain produced ~-22 LUFS, target -14 → +8 dB
     // push. Headroom from -20 dBFS source peak to -1 dBTP ceiling is
     // ~+19 dB, so the full push is allowed. File should land near -14.
-    let measured =
-        measure_integrated_lufs_at_path(per_track_path).expect("measure per-track");
+    let measured = measure_integrated_lufs_at_path(per_track_path).expect("measure per-track");
     assert!(
         (measured - (-14.0)).abs() < 0.5,
         "B6 album-plan: quiet track should be lifted upward to target -14 LUFS \

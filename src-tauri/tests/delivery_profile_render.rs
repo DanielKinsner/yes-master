@@ -44,7 +44,10 @@ fn write_sine_source(path: &Path, sample_rate: u32, duration_sec: f32, freq_hz: 
     writer.finalize().expect("finalize source wav");
 }
 
-fn settings_for(profile: DeliveryProfile, custom_advanced: Option<AdvancedSettings>) -> MasteringSettings {
+fn settings_for(
+    profile: DeliveryProfile,
+    custom_advanced: Option<AdvancedSettings>,
+) -> MasteringSettings {
     MasteringSettings {
         preset: Preset::Universal,
         intensity: 0.5,

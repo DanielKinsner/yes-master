@@ -47,18 +47,13 @@ pub async fn load_project(path: String) -> CommandResult<ProjectState> {
 }
 
 #[tauri::command]
-pub async fn autosave_session(
-    state: ProjectState,
-    app: tauri::AppHandle,
-) -> CommandResult<()> {
+pub async fn autosave_session(state: ProjectState, app: tauri::AppHandle) -> CommandResult<()> {
     let path = autosave_path(&app)?;
     write_session_atomic(&path, &state)
 }
 
 #[tauri::command]
-pub async fn load_recent_session(
-    app: tauri::AppHandle,
-) -> CommandResult<Option<ProjectState>> {
+pub async fn load_recent_session(app: tauri::AppHandle) -> CommandResult<Option<ProjectState>> {
     let path = autosave_path(&app)?;
     if !path.exists() {
         return Ok(None);
@@ -93,6 +88,5 @@ pub fn write_session_atomic(path: &Path, state: &ProjectState) -> CommandResult<
 
 pub fn read_session(path: &Path) -> CommandResult<ProjectState> {
     let json = std::fs::read(path).map_err(|e| CommandError::Io(e.to_string()))?;
-    serde_json::from_slice(&json)
-        .map_err(|e| CommandError::Other(format!("session parse: {e}")))
+    serde_json::from_slice(&json).map_err(|e| CommandError::Other(format!("session parse: {e}")))
 }

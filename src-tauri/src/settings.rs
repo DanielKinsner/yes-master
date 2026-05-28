@@ -69,8 +69,7 @@ pub fn read_presets(path: &Path) -> CommandResult<Vec<UserPreset>> {
         return Ok(Vec::new());
     }
     let json = std::fs::read(path).map_err(|e| CommandError::Io(e.to_string()))?;
-    serde_json::from_slice(&json)
-        .map_err(|e| CommandError::Other(format!("presets parse: {e}")))
+    serde_json::from_slice(&json).map_err(|e| CommandError::Other(format!("presets parse: {e}")))
 }
 
 pub fn write_presets(path: &Path, presets: &[UserPreset]) -> CommandResult<()> {

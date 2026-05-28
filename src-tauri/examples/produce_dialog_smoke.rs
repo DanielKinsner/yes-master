@@ -68,9 +68,8 @@ fn main() {
         last_saved_iso: Some("2026-05-13T00:00:00Z".to_string()),
     };
 
-    let out_path = Path::new(
-        "../test-output/tauri-project-dialogs-smoke/native-dialog-save-as.ams.json",
-    );
+    let out_path =
+        Path::new("../test-output/tauri-project-dialogs-smoke/native-dialog-save-as.ams.json");
     if let Some(parent) = out_path.parent() {
         std::fs::create_dir_all(parent).expect("create output dir");
     }
