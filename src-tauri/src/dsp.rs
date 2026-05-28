@@ -3806,7 +3806,7 @@ mod tests {
         let c = BiquadCoeffs::k_weighting_pre(48_000);
         assert!(
             (c.b0 - 1.535_124_9_f32).abs() < 1.0e-6,
-            "b0: expected ~1.53512486, got {}",
+            "b0: expected ~1.5351249, got {}",
             c.b0
         );
         assert!(

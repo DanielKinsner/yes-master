@@ -469,6 +469,13 @@ impl AudioPlayer {
         *guard = Some(entry);
     }
 
+    /// Shared deadline for an audio-thread play reply. Source (`play_track`)
+    /// and Mastered (`play_master`) preparation can both stall on a slow decode
+    /// of a long file, so they wait the same amount before surfacing a
+    /// recoverable message — Original used to give up 3x sooner with a raw
+    /// error string. The message text derives its seconds from this constant.
+    const PLAYBACK_REPLY_TIMEOUT: Duration = Duration::from_secs(15);
+
     pub fn play_track(
         &self,
         track_id: TrackId,
@@ -483,12 +490,13 @@ impl AudioPlayer {
             reply: reply_tx,
         })
         .map_err(CommandError::Other)?;
-        match reply_rx.recv_timeout(Duration::from_secs(5)) {
+        match reply_rx.recv_timeout(Self::PLAYBACK_REPLY_TIMEOUT) {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(CommandError::Other(e)),
-            Err(_) => Err(CommandError::Other(
-                "audio thread reply timeout".to_string(),
-            )),
+            Err(_) => Err(CommandError::Other(format!(
+                "Original preview did not become ready within {} seconds; the file may still be decoding",
+                Self::PLAYBACK_REPLY_TIMEOUT.as_secs()
+            ))),
         }
     }
 
@@ -510,12 +518,13 @@ impl AudioPlayer {
             reply: reply_tx,
         })
         .map_err(CommandError::Other)?;
-        match reply_rx.recv_timeout(Duration::from_secs(15)) {
+        match reply_rx.recv_timeout(Self::PLAYBACK_REPLY_TIMEOUT) {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(CommandError::Other(e)),
-            Err(_) => Err(CommandError::Other(
-                "Mastered preview did not become ready within 15 seconds; the file may still be decoding".to_string(),
-            )),
+            Err(_) => Err(CommandError::Other(format!(
+                "Mastered preview did not become ready within {} seconds; the file may still be decoding",
+                Self::PLAYBACK_REPLY_TIMEOUT.as_secs()
+            ))),
         }
     }
 

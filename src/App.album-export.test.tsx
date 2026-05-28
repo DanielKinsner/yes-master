@@ -173,7 +173,6 @@ function baseTrackMasterState(): Record<string, unknown> {
       lufsIntegrated: -120,
       spectrumDb: [],
     },
-    liveUpdateStats: { attempts: 0, applied: 0, lastAt: null },
     renderProgress: null,
     undo: vi.fn(),
     redo: vi.fn(),

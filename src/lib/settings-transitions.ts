@@ -126,12 +126,20 @@ export function applyExplicitLoudnessTarget(
   prev: MasteringSettings,
   targetLufs: number | null,
 ): MasteringSettings {
+  // Flipping to Custom must capture the values the user was currently seeing,
+  // not whatever stale raw fields `advanced` happens to hold. This mirrors the
+  // Custom branch of `applyDeliveryProfileSelection` so an explicit loudness
+  // edit and a "switch to Custom" land on identical ceiling/bit-depth/sample
+  // rate, even when arriving from a named profile (e.g. a loaded project).
   return {
     ...prev,
     delivery_profile: "custom",
     advanced: {
       ...prev.advanced,
       lufs_offset_db: targetLufs,
+      ceiling_dbtp: effectiveCeilingDbtp(prev),
+      bit_depth: effectiveBitDepth(prev),
+      target_sample_rate: effectiveSampleRate(prev),
     },
   };
 }

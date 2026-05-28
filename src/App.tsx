@@ -371,13 +371,29 @@ function ChromeDialog({
   children: ReactNode;
 }) {
   const titleId = `chrome-dialog-${title.toLowerCase()}`;
+  const dialogRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    dialogRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
   return (
-    <div className="chrome-dialog-backdrop" role="presentation">
+    <div
+      className="chrome-dialog-backdrop"
+      role="presentation"
+      onClick={onClose}
+    >
       <section
+        ref={dialogRef}
+        tabIndex={-1}
         className="chrome-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        onClick={(e) => e.stopPropagation()}
       >
         <header className="chrome-dialog-head">
           <div>
@@ -939,7 +955,7 @@ function SessionStatus({
       : null;
   const statusLabel =
     progressPct !== null
-      ? `Rendering ${renderProgress!.kind} ${progressPct}%`
+      ? `Rendering ${renderProgress?.kind ?? ""} ${progressPct}%`
       : isRendering
       ? "Rendering"
       : isPlaying

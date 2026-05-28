@@ -29,8 +29,10 @@ Important frontend helpers:
   measurements, and album render entry points.
 - `src-tauri/src/exports.rs` runs export quality checks.
 - `src-tauri/src/types.rs` defines shared command/data contracts.
-- `src-tauri/src/album_render.rs` retains the simple album render path used by
-  backend command/test/back-compat surfaces.
+- `src-tauri/src/album_render.rs` is the active album render path
+  (`render_album_plan_impl`), invoked by the `render_album_plan` command in
+  `engine.rs`. `album.rs` is the separate album *planner*; the two are
+  complementary, not duplicate.
 
 ## Signal-Chain Direction
 

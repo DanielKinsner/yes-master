@@ -147,6 +147,14 @@ export function shouldPushLiveChainForSettingsEdit({
   return loadedTrackId === trackId;
 }
 
+/// Normalize a caught value to its display message. Errors expose `.message`
+/// (no `"Error: "` prefix); anything else stringifies. Used by every catch
+/// that calls `setError`, so thrown `Error`s and raw string rejections render
+/// identically.
+export function messageOf(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 export function playbackErrorMessage(
   err: unknown,
   kind: PlaybackKindUI,
@@ -224,14 +232,6 @@ export function useTrackMaster() {
   const [loadedTrackId, setLoadedTrackId] = useState<TrackId | null>(null);
   const [loadedKindByTrack, setLoadedKindByTrack] = useState<Record<TrackId, PlaybackKindUI>>({});
   const [regionByTrack, setRegionByTrack] = useState<Record<TrackId, LoopRegion | null>>({});
-  // Phase 12.1 live-update visibility: tracks how many api.updateChain calls
-  // have been attempted and applied. Rendered as a small badge in the UI so
-  // Dan can confirm live updates are firing without opening DevTools.
-  const [liveUpdateStats, setLiveUpdateStats] = useState<{
-    attempts: number;
-    applied: number;
-    lastAt: number | null;
-  }>({ attempts: 0, applied: 0, lastAt: null });
   // Phase 12.1 render progress: backend emits "render:progress" with a 0-1
   // fraction during render_track_preview / render_track_master. Used to
   // render a real progress bar instead of an indeterminate "Rendering…".
@@ -357,16 +357,11 @@ export function useTrackMaster() {
         api
           .updateChain(next.settings, next.preview)
           .then(() => {
-            setLiveUpdateStats((s) => ({
-              attempts: s.attempts,
-              applied: s.applied + 1,
-              lastAt: Date.now(),
-            }));
             drain();
           })
           .catch((err) => {
             updateChainInFlight.current = false;
-            setError(String(err));
+            setError(messageOf(err));
             // Drain anyway — a fresher setting may have arrived during
             // the failed call and should still try to land.
             if (updateChainPending.current) drain();
@@ -616,9 +611,10 @@ export function useTrackMaster() {
   // Restore a snapshot. Helper used by both undo and redo.
   const restoreSnapshot = useCallback(
     (snapshot: HistorySnapshot) => {
+      const restoredOverride = new Set(snapshot.overrideAlbum as TrackId[]);
       setSettingsMap(snapshot.settingsMap);
       setAlbumIntent(snapshot.albumIntent);
-      setOverrideAlbum(new Set(snapshot.overrideAlbum as TrackId[]));
+      setOverrideAlbum(restoredOverride);
       // After restoring state, push the restored settings to the live audio
       // chain if the affected track is currently playing as Mastered. Without
       // this, undo would change the UI state but the audible output would lag
@@ -632,17 +628,12 @@ export function useTrackMaster() {
           editingAlbumIntent: followingAlbum,
           loadedTrackId,
           loadedKindByTrack,
-          overrideAlbum: new Set(snapshot.overrideAlbum as TrackId[]),
+          overrideAlbum: restoredOverride,
         })
       ) {
         const effective = followingAlbum
           ? snapshot.albumIntent
           : snapshot.settingsMap[id as string] ?? DEFAULT_SETTINGS;
-        setLiveUpdateStats((s) => ({
-          attempts: s.attempts + 1,
-          applied: s.applied,
-          lastAt: Date.now(),
-        }));
         const effectiveForChain = withSourceLufs(id as TrackId, effective);
         sendUpdateChain(effectiveForChain, exportLufsPreviewRef.current);
       }
@@ -731,11 +722,6 @@ export function useTrackMaster() {
         overrideAlbum,
       });
       if (shouldPush) {
-        setLiveUpdateStats((s) => ({
-          attempts: s.attempts + 1,
-          applied: s.applied,
-          lastAt: Date.now(),
-        }));
         // Volume Match needs the current track's source-LUFS — see the
         // `withSourceLufs` helper at the top of this hook.
         const settingsForChain = withSourceLufs(id, nextSettings);
@@ -841,7 +827,7 @@ export function useTrackMaster() {
           setIsLoadingWaveform(false);
         }
       } catch (err) {
-        setError(String(err));
+        setError(messageOf(err));
       }
     },
     [selectedTrackId, markStale],
@@ -911,7 +897,7 @@ export function useTrackMaster() {
       const paths = Array.isArray(selected) ? selected : [selected];
       await importFiles(paths);
     } catch (err) {
-      setError(String(err));
+      setError(messageOf(err));
     }
   }, [importFiles]);
 
@@ -1121,7 +1107,7 @@ export function useTrackMaster() {
       const report = await api.renderAlbumPlan(plan, renderTracks, outputDir);
       setAlbumExportReport(report);
     } catch (err) {
-      setError(String(err));
+      setError(messageOf(err));
     } finally {
       setAlbumRendering(false);
     }
@@ -1204,7 +1190,7 @@ export function useTrackMaster() {
       await api.renderTrackPreview(selectedTrackId, selectedTrack.path, selectedSettings);
       markFresh(selectedTrackId);
     } catch (err) {
-      setError(String(err));
+      setError(messageOf(err));
     } finally {
       setIsRendering(false);
     }
@@ -1265,7 +1251,7 @@ export function useTrackMaster() {
         kind: "track",
       });
     } catch (err) {
-      setError(String(err));
+      setError(messageOf(err));
     } finally {
       setIsExporting(false);
     }
@@ -1295,7 +1281,7 @@ export function useTrackMaster() {
             exportLufsPreviewRef.current,
           );
         } catch (err) {
-          throw playbackErrorMessage(err, kind);
+          throw new Error(playbackErrorMessage(err, kind));
         }
       }
       setLoadedKindByTrack((prev) => ({ ...prev, [selectedTrackId]: kind }));
@@ -1327,7 +1313,7 @@ export function useTrackMaster() {
         await api.resumePlayback();
       }
     } catch (err) {
-      setError(String(err));
+      setError(messageOf(err));
     }
   }, [
     selectedTrack,
@@ -1402,7 +1388,7 @@ export function useTrackMaster() {
         try {
           await playWithKind(kind, estimatedPlaybackPositionSec());
         } catch (err) {
-          setError(String(err));
+          setError(messageOf(err));
         }
       }
     },
@@ -1444,7 +1430,7 @@ export function useTrackMaster() {
             await api.seekPlayback(clamped);
           }
         } catch (err) {
-          setError(String(err));
+          setError(messageOf(err));
         }
       }
     },
@@ -1461,7 +1447,7 @@ export function useTrackMaster() {
         await api.setLoopRegion(null);
       }
     } catch (err) {
-      setError(String(err));
+      setError(messageOf(err));
     }
   }, [transport.loop, selectedRegion]);
 
@@ -1473,7 +1459,7 @@ export function useTrackMaster() {
         try {
           await api.setLoopRegion(region);
         } catch (err) {
-          setError(String(err));
+          setError(messageOf(err));
         }
       }
     },
@@ -1491,7 +1477,7 @@ export function useTrackMaster() {
       try {
         await api.setLoopRegion(null);
       } catch (err) {
-        setError(String(err));
+        setError(messageOf(err));
       }
     }
   }, [selectedTrackId, transport.loop]);
@@ -1541,17 +1527,12 @@ export function useTrackMaster() {
       if (
         shouldPushLiveChainForSettingsEdit({
           trackId: selectedTrackId,
-          editingAlbumIntent: false,
+          editingAlbumIntent: mode === "album" && !selectedIsOverriding,
           loadedTrackId,
           loadedKindByTrack,
           overrideAlbum,
         })
       ) {
-        setLiveUpdateStats((s) => ({
-          attempts: s.attempts + 1,
-          applied: s.applied,
-          lastAt: Date.now(),
-        }));
         // Route through the same gated dispatcher as live edits — if a
         // sweep is in flight, this toggle merges into the latest-wins
         // pending slot instead of slipping in out of order.
@@ -1559,6 +1540,8 @@ export function useTrackMaster() {
       }
     },
     [
+      mode,
+      selectedIsOverriding,
       selectedTrackId,
       loadedTrackId,
       loadedKindByTrack,
@@ -1588,7 +1571,7 @@ export function useTrackMaster() {
         const created = await api.saveUserPreset(trimmed, kind, snapshot);
         setUserPresets((prev) => [...prev, created]);
       } catch (err) {
-        setError(String(err));
+        setError(messageOf(err));
       } finally {
         setSavingPreset(false);
       }
@@ -1601,7 +1584,7 @@ export function useTrackMaster() {
       await api.deleteUserPreset(id);
       setUserPresets((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
-      setError(String(err));
+      setError(messageOf(err));
     }
   }, []);
 
@@ -1629,11 +1612,6 @@ export function useTrackMaster() {
         overrideAlbum,
       });
       if (shouldPush) {
-        setLiveUpdateStats((s) => ({
-          attempts: s.attempts + 1,
-          applied: s.applied,
-          lastAt: Date.now(),
-        }));
         sendUpdateChain(
           withSourceLufs(selectedTrackId, preset.settings),
           exportLufsPreviewRef.current,
@@ -1695,7 +1673,7 @@ export function useTrackMaster() {
       });
     } catch (err) {
       setProjectFeedback(null);
-      setError(String(err));
+      setError(messageOf(err));
     }
   }, [
     selectedTrack,
@@ -1797,7 +1775,7 @@ export function useTrackMaster() {
       });
     } catch (err) {
       setProjectFeedback(null);
-      setError(String(err));
+      setError(messageOf(err));
     }
   }, []);
 
@@ -1835,7 +1813,6 @@ export function useTrackMaster() {
     projectFeedback,
     transport,
     lastExportReceipt,
-    liveUpdateStats,
     renderProgress,
     undo,
     redo,

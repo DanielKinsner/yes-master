@@ -711,6 +711,95 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("pushes export-LUFS preview to the live album master when a following track is selected", async () => {
+    // Regression for the hardcoded editingAlbumIntent:false in
+    // setExportLufsPreview. In album mode, track A plays as the album master
+    // while a *different* following track (B) is selected. Toggling export-LUFS
+    // preview must still reach the live chain via the album-intent branch —
+    // the per-track branch can't see B (it isn't the loaded track).
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const trackA = makeTrack("album-master-a", "C:/audio/a.wav");
+    const trackB = makeTrack("album-follow-b", "C:/audio/b.wav");
+    mocks.api.importTracks.mockResolvedValue([trackA, trackB]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([trackA.path, trackB.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(trackA.id);
+    });
+
+    await act(async () => {
+      harness.current().setMode("album");
+    });
+
+    await act(async () => {
+      await harness.current().setPlaybackKind("master");
+    });
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+    await waitFor(() => {
+      expect(mocks.api.playMaster).toHaveBeenCalled();
+    });
+
+    // Backend reports track A loaded and playing as the album master.
+    await act(async () => {
+      playbackHandler?.({
+        track_id: trackA.id,
+        position_sec: 3,
+        is_playing: true,
+        is_loaded: true,
+        peak_dbfs: -12,
+        gr_low_db: -120,
+        gr_mid_db: -120,
+        gr_high_db: -120,
+        lufs_momentary: -14,
+        lufs_integrated: -14,
+        spectrum_db: [],
+      });
+    });
+
+    // Select the following track B (not overriding the album intent).
+    await act(async () => {
+      harness.current().selectTrack(trackB.id);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(trackB.id);
+    });
+
+    mocks.api.updateChain.mockClear();
+    await act(async () => {
+      harness.current().setExportLufsPreview(true);
+    });
+
+    await waitFor(() => {
+      expect(mocks.api.updateChain).toHaveBeenCalled();
+    });
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("does not dispatch updateChain for direct edits while Original playback is loaded", async () => {
     const track = makeTrack("source-live-1", "C:/audio/source-live.wav");
     mocks.api.importTracks.mockResolvedValue([track]);

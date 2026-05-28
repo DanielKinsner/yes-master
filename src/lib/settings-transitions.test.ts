@@ -8,6 +8,11 @@ import type {
   TrackId,
 } from "../bindings";
 import {
+  DELIVERY_PROFILE_BIT_DEPTH,
+  DELIVERY_PROFILE_CEILING_DBTP,
+  DELIVERY_PROFILE_SAMPLE_RATE,
+} from "../bindings";
+import {
   applyAdvancedWithProfileFlip,
   applyChainDispatchOverrides,
   applyDeliveryProfileSelection,
@@ -230,6 +235,33 @@ describe("loudness target transitions", () => {
 
     expect(next.delivery_profile).toBe("custom");
     expect(next.advanced.lufs_offset_db).toBe(-12);
+  });
+
+  it("captures effective ceiling/bit-depth/sample-rate when flipping to Custom from a named profile", () => {
+    // A named profile shadows `advanced`, so its raw advanced fields may hold
+    // leftover Custom values. Flipping to Custom via an explicit loudness edit
+    // must capture what the user was seeing (the profile's effective values),
+    // matching the Custom branch of applyDeliveryProfileSelection — otherwise
+    // export lands on stale ceiling/sample-rate.
+    const prev = makeSettings("streaming-universal", {
+      lufs_offset_db: null,
+      ceiling_dbtp: -9,
+      bit_depth: 16,
+      target_sample_rate: 96000,
+    });
+
+    const next = applyExplicitLoudnessTarget(prev, -12);
+
+    expect(next.delivery_profile).toBe("custom");
+    expect(next.advanced.ceiling_dbtp).toBe(
+      DELIVERY_PROFILE_CEILING_DBTP["streaming-universal"],
+    );
+    expect(next.advanced.bit_depth).toBe(
+      DELIVERY_PROFILE_BIT_DEPTH["streaming-universal"],
+    );
+    expect(next.advanced.target_sample_rate).toBe(
+      DELIVERY_PROFILE_SAMPLE_RATE["streaming-universal"],
+    );
   });
 
   it("forces Custom for center Off / Natural even when raw LUFS was already null", () => {
