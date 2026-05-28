@@ -124,10 +124,8 @@ further subjective retune.
 1. Private-fixture and private-reference slow lanes must be rerun for DSP/export
    changes; automated tests cannot approve taste.
 2. Oomph needs listening notes before another targeted tuning pass.
-3. Temporary realtime diagnostic counters are still wired. Remove them only
-   after the aggressive playback sweep is verified clean.
-4. `cargo fmt --check` has pre-existing formatting drift.
-5. Clippy is not currently available in the local Rust toolchain used during
+3. `cargo fmt --check` has pre-existing formatting drift.
+4. Clippy is not currently available in the local Rust toolchain used during
    the migration recon.
-6. Windows packaging still needs local verification before release-candidate
+5. Windows packaging still needs local verification before release-candidate
    status.

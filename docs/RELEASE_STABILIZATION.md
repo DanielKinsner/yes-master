@@ -72,15 +72,15 @@ Current behavior:
 
 ### Realtime Sweep Confirmation
 
+Status: responsive sweep accepted, diagnostic counters removed in
+`58c25d7 chore: remove realtime diagnostic counters`.
+
 - Aggressively sweep Intensity, EQ, output gain, compressor threshold, and
   density while audio plays.
 - Repeat with Preview LUFS off and on.
 - Verify no stutter, stuck 2x DSP, stale LUFS cache, or track-switch poison.
-
-After clean verification:
-
-- Remove `get_diag_counters`.
-- Remove temporary diagnostic atomics/types/API wiring.
+- If future regressions appear, add temporary instrumentation behind a dev-only
+  path instead of restoring production diagnostic API wiring.
 
 ### Tooling Gate Cleanup
 

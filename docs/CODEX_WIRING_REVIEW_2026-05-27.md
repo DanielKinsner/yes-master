@@ -12,6 +12,22 @@
 
 > Re-evaluation note: an earlier draft called the right-rail bottom a large "dead-zone." Screenshots with `ADVANCED CONTROLS` expanded show the rail is mostly full; the remaining gap is just the space above the bottom-sticky export group when rail content is short. Softened accordingly below.
 
+## Post-review status
+
+This review is now historical evidence, not a literal open queue. The safe-delete
+items in section 1 were consumed after review:
+
+- `65381d5 chore: remove unused album and rail wiring` removed the unused rail
+  panels, orphaned advanced state, unused album intent updater, and old simple
+  album render path.
+- `58c25d7 chore: remove realtime diagnostic counters` removed
+  `get_diag_counters` and the temporary diagnostic API/backend wiring after the
+  realtime responsiveness sweep was accepted.
+
+Still treat section 2 and section 3 as live risk areas unless newer code proves
+otherwise: loudness-target control semantics, live-chain update predicates,
+duplicate live-loudness readouts, and A/B/live-chain regression coverage.
+
 ---
 
 ## 1. Dead code — safe to delete
