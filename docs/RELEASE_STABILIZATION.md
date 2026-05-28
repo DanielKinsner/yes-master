@@ -163,8 +163,10 @@ Status: aggregate runner completed on 2026-05-28; listening still pending.
 
 ### Already-Mastered Input Matrix
 
-Status: representative subset completed on 2026-05-28; full local manifest timed
-out and needs a longer unattended run.
+Status: full local manifest completed on 2026-05-28 (18 cases, `--release`
+example build). No silent regression; aggregate in
+`docs/RELEASE_EVIDENCE_2026-05-28.md`. The earlier timeout was a debug-build cost
+only. Listening signoff is still pending.
 
 - Re-run the private fixture matrix for DSP/export changes.
 - Capture source/render LUFS, true peak, dynamic range, and warning codes.

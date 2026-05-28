@@ -89,15 +89,25 @@ names were kept out of git. Only aggregate conclusions are recorded here.
 
 Already-mastered fixture matrix:
 
-- Full private manifest run did not complete within the available window. It was
-  stopped after more than 20 minutes and its partial output is not counted as
-  complete evidence.
-- A representative subset completed in about 523.8 seconds.
-- Rows: 6.
-- Warning-code aggregate: `dynamic_range_low:1`.
-- Rendered LUFS range: `-14.00..-14.00`.
-- Rendered true-peak range: `-7.34..-4.14`.
+- Full private manifest now completes. The earlier timeout was a debug-build
+  cost; a `--release` example build finished all cases in well under two minutes.
+- Rows: 18 (3 already-mastered tracks x {Universal, Loud, Clarity} x
+  {Preset, Off}).
+- Warning-code aggregate: `dynamic_range_low:13, comp_density_on_compressed_source:6`.
+- Rendered LUFS range: `-14.00..-14.00` (every case lands the delivery target).
+- Rendered true-peak range: `-7.92..-3.73` (no case approaches the ceiling; no
+  true-peak warning fired).
 - Dynamic-range delta range: `-2.85..0.07`.
+- Conclusion: no silent regression. Every render whose dynamic range dropped into
+  low territory carried `dynamic_range_low`; the un-warned cases all kept healthy
+  rendered DR (>=5.7 LU). Compressor `Off` measurably preserved more dynamic
+  range than `Preset` on the same source/preset and correctly dropped
+  `comp_density_on_compressed_source` while keeping `dynamic_range_low`, the
+  limiter, ceiling, and the -14.00 LUFS landing. This confirms the canon that
+  `Off` bypasses creative compression only.
+- Listening priority: the `Loud` preset on already-compressed sources crushes
+  hardest (rendered DR down to ~1.7-2.1 LU); both warnings fire, but this is the
+  combination to verify by ear first.
 
 Private reference tuning:
 
@@ -113,16 +123,14 @@ Private reference tuning:
 - U1 used a bounded recoverable-timeout fix rather than a playback pipeline
   rewrite because the repo facts showed the silent failure path could be made
   visible with much lower risk.
-- Full private matrix completion was replaced by a representative subset plus a
-  documented timeout because the full local manifest exceeded the available run
-  window.
+- The full private matrix was later completed with a `--release` example build
+  after the documented debug-build timeout; the subset note is superseded.
 - Album Master SRC parity was deferred to avoid widening Track Master RC scope.
 
 ## Remaining Watch Items
 
 - Manual listening signoff across a normal mix, an already-mastered/compressed
   source, and a long edge-case source.
-- Full private fixture matrix in a longer unattended run.
 - Preview LUFS behavior under heavy load and long-track seeking.
 - Any accepted tiny A/B switching stutter, if it reproduces in manual review.
 - Oomph listening notes before any subjective retune.
