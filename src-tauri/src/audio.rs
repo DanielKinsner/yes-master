@@ -514,7 +514,7 @@ impl AudioPlayer {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(CommandError::Other(e)),
             Err(_) => Err(CommandError::Other(
-                "audio thread reply timeout".to_string(),
+                "Mastered preview did not become ready within 15 seconds; the file may still be decoding".to_string(),
             )),
         }
     }

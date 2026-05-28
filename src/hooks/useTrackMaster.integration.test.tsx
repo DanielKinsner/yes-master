@@ -22,6 +22,7 @@ import type {
 } from "../bindings";
 import { lastExportDirectory } from "../lib/export-location";
 import {
+  playbackErrorMessage,
   shouldPushLiveChainForSettingsEdit,
   useTrackMaster,
 } from "./useTrackMaster";
@@ -385,6 +386,28 @@ describe("live-chain push predicate", () => {
   });
 });
 
+describe("playback error messages", () => {
+  it("turns Mastered preview timeouts into a recoverable user message", () => {
+    expect(playbackErrorMessage("audio thread reply timeout", "master")).toBe(
+      "Mastered preview is still preparing for this file. Wait a moment and try Mastered again, or export the master directly.",
+    );
+    expect(
+      playbackErrorMessage(
+        "Mastered preview did not become ready within 15 seconds; the file may still be decoding",
+        "master",
+      ),
+    ).toBe(
+      "Mastered preview is still preparing for this file. Wait a moment and try Mastered again, or export the master directly.",
+    );
+  });
+
+  it("leaves source playback errors untouched", () => {
+    expect(playbackErrorMessage("audio thread reply timeout", "source")).toBe(
+      "audio thread reply timeout",
+    );
+  });
+});
+
 describe("useTrackMaster integration dispatches", () => {
   it("defaults export LUFS preview off so live settings edits stay responsive", async () => {
     const harness = await renderHookHarness();
@@ -714,6 +737,36 @@ describe("useTrackMaster integration dispatches", () => {
     });
 
     expect(mocks.api.updateChain).not.toHaveBeenCalled();
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("surfaces Mastered preview timeout as recoverable playback guidance", async () => {
+    const track = makeTrack("long-master-1", "C:/audio/long-master.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.playMaster.mockRejectedValue(new Error("audio thread reply timeout"));
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      await harness.current().setPlaybackKind("master");
+    });
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+
+    expect(harness.current().error).toBe(
+      "Mastered preview is still preparing for this file. Wait a moment and try Mastered again, or export the master directly.",
+    );
+    expect(mocks.api.playMaster).toHaveBeenCalled();
+    expect(harness.current().transport.isPlaying).toBe(false);
     await act(async () => {
       harness.root.unmount();
     });

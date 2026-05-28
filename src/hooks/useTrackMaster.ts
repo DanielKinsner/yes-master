@@ -147,6 +147,20 @@ export function shouldPushLiveChainForSettingsEdit({
   return loadedTrackId === trackId;
 }
 
+export function playbackErrorMessage(
+  err: unknown,
+  kind: PlaybackKindUI,
+): string {
+  const raw = String(err);
+  if (
+    kind === "master" &&
+    /audio thread reply timeout|mastered preview did not become ready/i.test(raw)
+  ) {
+    return "Mastered preview is still preparing for this file. Wait a moment and try Mastered again, or export the master directly.";
+  }
+  return raw;
+}
+
 const AUDIO_EXTENSIONS = [
   "wav",
   "aiff",
@@ -1272,13 +1286,17 @@ export function useTrackMaster() {
         // build, not just on subsequent updateSettings calls. The
         // analysis-arrival useEffect below covers the case where Play
         // beat the auto-analyze.
-        await api.playMaster(
-          selectedTrackId,
-          selectedTrack.path,
-          withSourceLufs(selectedTrackId, selectedSettings),
-          positionSec,
-          exportLufsPreviewRef.current,
-        );
+        try {
+          await api.playMaster(
+            selectedTrackId,
+            selectedTrack.path,
+            withSourceLufs(selectedTrackId, selectedSettings),
+            positionSec,
+            exportLufsPreviewRef.current,
+          );
+        } catch (err) {
+          throw playbackErrorMessage(err, kind);
+        }
       }
       setLoadedKindByTrack((prev) => ({ ...prev, [selectedTrackId]: kind }));
     },
