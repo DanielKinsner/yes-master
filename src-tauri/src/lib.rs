@@ -46,6 +46,8 @@ pub fn run() {
                     is_playing: snap.is_playing,
                     is_loaded: snap.is_loaded,
                     peak_dbfs: snap.peak_dbfs,
+                    peak_left_dbfs: snap.peak_left_dbfs,
+                    peak_right_dbfs: snap.peak_right_dbfs,
                     gr_low_db: snap.gr_low_db,
                     gr_mid_db: snap.gr_mid_db,
                     gr_high_db: snap.gr_high_db,

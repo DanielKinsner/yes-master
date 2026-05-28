@@ -288,7 +288,11 @@ export async function mockListen<T>(
       // live signals collapse to the silence sentinel (-120) so the UI
       // renders the same "idle" state the real backend would emit.
       const t = mockPosition;
-      const peakDb = mockPlaying ? -3.5 + 2.5 * Math.sin(t * 7) : -120;
+      // Left/right bounce on slightly different phases so the browser preview
+      // shows a moving stereo image, not two identical bars.
+      const peakLeft = mockPlaying ? -3.5 + 2.5 * Math.sin(t * 7) : -120;
+      const peakRight = mockPlaying ? -3.5 + 2.5 * Math.sin(t * 7 + 0.9) : -120;
+      const peakDb = mockPlaying ? Math.max(peakLeft, peakRight) : -120;
       const lufsMomentary = mockPlaying ? -11 + 3 * Math.sin(t * 4) : -120;
       const lufsIntegrated = mockPlaying ? -14.2 + 0.4 * Math.sin(t * 0.6) : -120;
       const tick: PlaybackTick = {
@@ -297,6 +301,8 @@ export async function mockListen<T>(
         is_playing: mockPlaying,
         is_loaded: true,
         peak_dbfs: peakDb,
+        peak_left_dbfs: peakLeft,
+        peak_right_dbfs: peakRight,
         gr_low_db: mockPlaying ? -1.2 + 0.8 * Math.sin(t * 3) : -120,
         gr_mid_db: mockPlaying ? -2.3 + 1.1 * Math.sin(t * 5 + 1) : -120,
         gr_high_db: mockPlaying ? -0.6 + 0.4 * Math.sin(t * 9 + 2) : -120,

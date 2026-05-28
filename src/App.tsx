@@ -735,16 +735,12 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           playbackKind={tm.transport.playbackKind}
           volumeMatch={tm.transport.volumeMatch}
           exportLufsPreview={tm.transport.exportLufsPreview}
-          canUndo={tm.canUndo}
-          canRedo={tm.canRedo}
           isRendering={tm.isRendering}
           isPlaying={tm.transport.isPlaying}
           renderProgress={tm.renderProgress}
           onPlaybackKindChange={tm.setPlaybackKind}
           onVolumeMatchChange={tm.setVolumeMatch}
           onExportLufsPreviewChange={tm.setExportLufsPreview}
-          onUndo={tm.undo}
-          onRedo={tm.redo}
         />
         <div className="wf-deck">
           <Transport
@@ -770,6 +766,8 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
             <MasterOutPanel
               isAnalyzing={tm.isAnalyzing}
               peakDbfs={tm.transport.peakDbfs}
+              peakLeftDbfs={tm.transport.peakLeftDbfs}
+              peakRightDbfs={tm.transport.peakRightDbfs}
               isPlaying={tm.transport.isPlaying}
               lufsMomentary={tm.transport.lufsMomentary}
               lufsIntegrated={tm.transport.lufsIntegrated}
@@ -852,32 +850,24 @@ function TrackHeader({
   playbackKind,
   volumeMatch,
   exportLufsPreview,
-  canUndo,
-  canRedo,
   isRendering,
   isPlaying,
   renderProgress,
   onPlaybackKindChange,
   onVolumeMatchChange,
   onExportLufsPreviewChange,
-  onUndo,
-  onRedo,
 }: {
   track: ImportedTrack;
   analysis: AnalysisResult | undefined;
   playbackKind: PlaybackKindUI;
   volumeMatch: boolean;
   exportLufsPreview: boolean;
-  canUndo: boolean;
-  canRedo: boolean;
   isRendering: boolean;
   isPlaying: boolean;
   renderProgress: { fraction: number; kind: "preview" | "master" | "album" } | null;
   onPlaybackKindChange: (kind: PlaybackKindUI) => void;
   onVolumeMatchChange: (on: boolean) => void;
   onExportLufsPreviewChange: (on: boolean) => void;
-  onUndo: () => void;
-  onRedo: () => void;
 }) {
   const chips: { key: string; label: string }[] = [];
   if (track.source_format) {
@@ -918,12 +908,6 @@ function TrackHeader({
             </div>
           </div>
           <div className="track-header-actions">
-            <UndoRedoTools
-              canUndo={canUndo}
-              canRedo={canRedo}
-              onUndo={onUndo}
-              onRedo={onRedo}
-            />
             <DeckPreviewOptions
               playbackKind={playbackKind}
               volumeMatch={volumeMatch}
@@ -1921,43 +1905,6 @@ export function LoudnessTarget({
           <option value="custom">Custom ({displayText} LUFS)</option>
         )}
       </select>
-    </div>
-  );
-}
-
-function UndoRedoTools({
-  canUndo,
-  canRedo,
-  onUndo,
-  onRedo,
-}: {
-  canUndo: boolean;
-  canRedo: boolean;
-  onUndo: () => void;
-  onRedo: () => void;
-}) {
-  return (
-    <div className="track-header-tools" aria-label="Edit history">
-      <button
-        type="button"
-        className="icon-tile history-tool"
-        onClick={onUndo}
-        disabled={!canUndo}
-        aria-label="Undo last edit"
-        title="Undo last edit (Ctrl+Z)"
-      >
-        ↶
-      </button>
-      <button
-        type="button"
-        className="icon-tile history-tool"
-        onClick={onRedo}
-        disabled={!canRedo}
-        aria-label="Redo"
-        title="Redo (Ctrl+Shift+Z or Ctrl+Y)"
-      >
-        ↷
-      </button>
     </div>
   );
 }

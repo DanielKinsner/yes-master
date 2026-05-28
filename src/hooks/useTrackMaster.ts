@@ -206,6 +206,10 @@ export function useTrackMaster() {
     // Stored here so the StaleBar's indicator can flash red on clipping
     // without DevTools or an export round-trip.
     peakDbfs: -120,
+    // Per-channel post-output peak (dBFS) for the stereo MASTER OUT meter.
+    // -120 = silence sentinel; mono sources mirror the same value on both.
+    peakLeftDbfs: -120,
+    peakRightDbfs: -120,
     // Phase 12.2 per-band compressor GR readouts. -120 = silence sentinel
     // ("no reduction in the window"). Driven by PlaybackTick → snapshot →
     // atomic-swap on the backend audio thread.
@@ -400,6 +404,8 @@ export function useTrackMaster() {
         currentTimeSec: tick.position_sec,
         isPlaying: tick.is_playing,
         peakDbfs: tick.peak_dbfs,
+        peakLeftDbfs: tick.peak_left_dbfs ?? tick.peak_dbfs,
+        peakRightDbfs: tick.peak_right_dbfs ?? tick.peak_dbfs,
         compressionGr: {
           low: tick.gr_low_db,
           mid: tick.gr_mid_db,

@@ -311,6 +311,11 @@ pub struct PlaybackSnapshot {
     /// playback, idle, or pure silence). Computed inside the audio thread by
     /// swap-and-converting the shared peak atomic.
     pub peak_dbfs: f32,
+    /// Post-output-gain per-channel peak since the last snapshot tick, in
+    /// dBFS. Left/right measured separately for the stereo MASTER OUT meter;
+    /// mono sources report the same value on both. `SILENCE_DBFS` when idle.
+    pub peak_left_dbfs: f32,
+    pub peak_right_dbfs: f32,
     /// Phase 12.2 — per-band compressor gain reduction (in dB, negative)
     /// since the last snapshot tick. `SILENCE_DBFS` when the window had no
     /// reduction or no signal.
@@ -343,6 +348,8 @@ impl Default for PlaybackSnapshot {
             is_playing: false,
             is_loaded: false,
             peak_dbfs: SILENCE_DBFS,
+            peak_left_dbfs: SILENCE_DBFS,
+            peak_right_dbfs: SILENCE_DBFS,
             gr_low_db: SILENCE_DBFS,
             gr_mid_db: SILENCE_DBFS,
             gr_high_db: SILENCE_DBFS,
@@ -648,6 +655,11 @@ struct AudioThreadState {
     /// valid because we only ever store non-negative finite values, where
     /// IEEE 754 bit ordering matches numeric ordering.
     peak_linear: Arc<AtomicU32>,
+    /// Per-channel post-output-gain peak slots, same swap-and-reset pattern as
+    /// `peak_linear`. Written per frame by the active source; the audio thread
+    /// swaps each to 0 per tick. Drives the stereo MASTER OUT meter.
+    peak_left_linear: Arc<AtomicU32>,
+    peak_right_linear: Arc<AtomicU32>,
     /// Phase 12.2 — per-band GR snapshot slots. Mirror of `peak_linear`'s
     /// pattern: `MasteringSource` (via the contained `MasteringChain`)
     /// fetch_max's |reduction_db| * 100 as u32 per frame; the audio thread
@@ -1449,13 +1461,17 @@ fn audio_thread(
                 // reader can't race to drop a sample's peak. NaN-poisoned bits
                 // (which the source-side guard already filters) would only
                 // surface as a one-tick anomaly here, never persistent state.
-                let peak_bits = s.peak_linear.swap(0, Ordering::Relaxed);
-                let peak_linear = f32::from_bits(peak_bits);
-                let peak_dbfs = if peak_linear.is_finite() {
-                    linear_to_dbfs(peak_linear)
-                } else {
-                    SILENCE_DBFS
+                let swap_peak_dbfs = |a: &Arc<AtomicU32>| -> f32 {
+                    let linear = f32::from_bits(a.swap(0, Ordering::Relaxed));
+                    if linear.is_finite() {
+                        linear_to_dbfs(linear)
+                    } else {
+                        SILENCE_DBFS
+                    }
                 };
+                let peak_dbfs = swap_peak_dbfs(&s.peak_linear);
+                let peak_left_dbfs = swap_peak_dbfs(&s.peak_left_linear);
+                let peak_right_dbfs = swap_peak_dbfs(&s.peak_right_linear);
                 // Phase 12.2 — per-band GR snapshot conversion. Atomics hold
                 // |reduction_db| * 100 as u32; 0 = no reduction. Convert to
                 // negative dB (reduction direction); 0 maps to SILENCE_DBFS
@@ -1496,6 +1512,8 @@ fn audio_thread(
                     is_playing,
                     is_loaded: true,
                     peak_dbfs,
+                    peak_left_dbfs,
+                    peak_right_dbfs,
                     gr_low_db: to_gr_db(gr_u(&s.gr_low)),
                     gr_mid_db: to_gr_db(gr_u(&s.gr_mid)),
                     gr_high_db: to_gr_db(gr_u(&s.gr_high)),
@@ -1562,6 +1580,8 @@ fn handle_play(
             decoded_cache: None,
             landing_gain_cache: PreviewLandingCache::new(),
             peak_linear: Arc::new(AtomicU32::new(0)),
+            peak_left_linear: Arc::new(AtomicU32::new(0)),
+            peak_right_linear: Arc::new(AtomicU32::new(0)),
             gr_low: Arc::new(AtomicU32::new(0)),
             gr_mid: Arc::new(AtomicU32::new(0)),
             gr_high: Arc::new(AtomicU32::new(0)),
@@ -1582,6 +1602,8 @@ fn handle_play(
     });
 
     s.peak_linear.store(0, Ordering::Relaxed);
+    s.peak_left_linear.store(0, Ordering::Relaxed);
+    s.peak_right_linear.store(0, Ordering::Relaxed);
     s.gr_low.store(0, Ordering::Relaxed);
     s.gr_mid.store(0, Ordering::Relaxed);
     s.gr_high.store(0, Ordering::Relaxed);
@@ -1595,6 +1617,8 @@ fn handle_play(
         pcm.channels,
         sample_rate,
         s.peak_linear.clone(),
+        s.peak_left_linear.clone(),
+        s.peak_right_linear.clone(),
         s.lufs_x100.clone(),
         s.integrated_lufs_x100.clone(),
         s.spectrum_ring.clone(),
@@ -1689,6 +1713,8 @@ fn handle_play_master(
             decoded_cache: None,
             landing_gain_cache: PreviewLandingCache::new(),
             peak_linear: Arc::new(AtomicU32::new(0)),
+            peak_left_linear: Arc::new(AtomicU32::new(0)),
+            peak_right_linear: Arc::new(AtomicU32::new(0)),
             gr_low: Arc::new(AtomicU32::new(0)),
             gr_mid: Arc::new(AtomicU32::new(0)),
             gr_high: Arc::new(AtomicU32::new(0)),
@@ -1714,6 +1740,8 @@ fn handle_play_master(
     // this, a swap from a prior session would leak its tail peak into the
     // first tick of the new one.
     s.peak_linear.store(0, Ordering::Relaxed);
+    s.peak_left_linear.store(0, Ordering::Relaxed);
+    s.peak_right_linear.store(0, Ordering::Relaxed);
     s.gr_low.store(0, Ordering::Relaxed);
     s.gr_mid.store(0, Ordering::Relaxed);
     s.gr_high.store(0, Ordering::Relaxed);
@@ -1767,6 +1795,8 @@ fn handle_play_master(
         chain,
         coeffs_rx,
         s.peak_linear.clone(),
+        s.peak_left_linear.clone(),
+        s.peak_right_linear.clone(),
         s.lufs_x100.clone(),
         s.integrated_lufs_x100.clone(),
         s.spectrum_ring.clone(),
@@ -2838,6 +2868,8 @@ mod tests {
             initial_chain,
             coeffs_rx,
             peak,
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
             lufs,
             integrated_lufs,
             Arc::new(SpectrumRing::new()),
@@ -2925,6 +2957,8 @@ mod tests {
             initial_chain,
             coeffs_rx,
             peak,
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
             lufs,
             integrated_lufs,
             Arc::new(SpectrumRing::new()),
@@ -3012,6 +3046,8 @@ mod tests {
             channels,
             sample_rate,
             peak.clone(),
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
             lufs.clone(),
             integrated_lufs.clone(),
             spectrum,
@@ -3074,6 +3110,8 @@ mod tests {
             initial_chain,
             coeffs_rx,
             peak,
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
             lufs,
             integrated_lufs,
             Arc::new(SpectrumRing::new()),
@@ -3230,6 +3268,8 @@ mod tests {
             ref_chain,
             ref_rx,
             ref_peak,
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
             ref_lufs,
             ref_integrated_lufs,
             Arc::new(SpectrumRing::new()),
@@ -3251,6 +3291,8 @@ mod tests {
             live_chain,
             live_rx,
             live_peak,
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
             live_lufs,
             live_integrated_lufs,
             Arc::new(SpectrumRing::new()),
@@ -3334,6 +3376,8 @@ mod tests {
             chain,
             rx,
             peak.clone(),
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
             lufs,
             integrated_lufs,
             Arc::new(SpectrumRing::new()),
@@ -3383,6 +3427,8 @@ mod tests {
             chain,
             rx,
             peak.clone(),
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
             lufs,
             integrated_lufs,
             Arc::new(SpectrumRing::new()),
@@ -3431,6 +3477,8 @@ mod tests {
             chain,
             rx,
             peak.clone(),
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
             lufs,
             integrated_lufs,
             Arc::new(SpectrumRing::new()),

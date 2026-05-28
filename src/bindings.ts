@@ -354,6 +354,12 @@ export interface PlaybackTick {
   /// `-120` is the silence sentinel (no signal seen in the window). Values
   /// above `-0.1` indicate clipping risk; values above `0` are clipping.
   peak_dbfs: number;
+  /// Post-output-gain per-channel peak since the last tick, in dBFS. Left and
+  /// right are measured separately so the meter shows a true stereo image;
+  /// mono sources report the same value on both. `-120` is the silence
+  /// sentinel. Optional for back-compat with older backends.
+  peak_left_dbfs?: number;
+  peak_right_dbfs?: number;
   /// Phase 12.2 — per-band compressor gain reduction in dB (negative).
   /// `-120` is the silence sentinel; values like -2.3 mean 2.3 dB of GR.
   gr_low_db: number;

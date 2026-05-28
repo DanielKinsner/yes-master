@@ -39,8 +39,11 @@ type QualityRow = {
   detail: string;
 };
 
-const LUFS_SCALE_MIN = -36;
-const LUFS_SCALE_MAX = -6;
+// MASTER OUT stereo peak meter scale, in dBFS. 0 at top = clipping, -36 floor.
+const PEAK_SCALE_MIN = -36;
+const PEAK_SCALE_MAX = 0;
+// Streaming-safe ceiling line drawn across each bar.
+const PEAK_CEIL_DBFS = -1;
 
 export function RightRail({
   analysis,
@@ -175,12 +178,16 @@ export function RightRail({
 export function MasterOutPanel({
   isAnalyzing,
   peakDbfs,
+  peakLeftDbfs,
+  peakRightDbfs,
   isPlaying,
   lufsMomentary,
   lufsIntegrated,
 }: {
   isAnalyzing: boolean;
   peakDbfs: number;
+  peakLeftDbfs: number;
+  peakRightDbfs: number;
   isPlaying: boolean;
   lufsMomentary: number;
   lufsIntegrated: number;
@@ -188,23 +195,27 @@ export function MasterOutPanel({
   // This panel is a live output meter. Source/export analysis lives in
   // QualityCheckPanel and export receipts; mixing those fallback values into
   // this meter made the transport look hot while stopped.
-  const liveMomentary = isPlaying && lufsMomentary > -120 ? lufsMomentary : undefined;
-  const liveIntegrated =
-    isPlaying && lufsIntegrated > -120 ? lufsIntegrated : undefined;
-  const liveTp = isPlaying && peakDbfs > -120 ? peakDbfs : undefined;
+  const live = (v: number): number | undefined =>
+    isPlaying && v > -120 ? v : undefined;
+  const liveL = live(peakLeftDbfs);
+  const liveR = live(peakRightDbfs);
+  const liveMomentary = live(lufsMomentary);
+  const liveIntegrated = live(lufsIntegrated);
+  // Live Peak readout = the louder of the two channels.
+  const livePeak = live(Math.max(peakLeftDbfs, peakRightDbfs, peakDbfs));
 
   const momentaryDisplay =
     liveMomentary !== undefined ? liveMomentary.toFixed(1) : "—";
   const integratedDisplay =
     liveIntegrated !== undefined ? liveIntegrated.toFixed(1) : "—";
-  const peakDisplay = liveTp !== undefined ? liveTp.toFixed(1) : "—";
+  const peakDisplay = livePeak !== undefined ? livePeak.toFixed(1) : "—";
 
   return (
     <section className={`panel master-out ${isPlaying ? "is-live" : "is-idle"}`}>
       <header className="panel-head">
         <span className="panel-title">MASTER OUT</span>
         {isPlaying ? (
-          <span className="panel-live-pill" title="Momentary bars + live integrated readout are metering the playback in real time.">
+          <span className="panel-live-pill" title="Live stereo peak (L/R) plus loudness readouts, metering playback in real time.">
             <span className="panel-live-dot" aria-hidden /> LIVE
           </span>
         ) : isAnalyzing ? (
@@ -215,46 +226,23 @@ export function MasterOutPanel({
       </header>
       <div className="lufs-meter">
         <div className="lufs-bars">
-          <LufsBar
-            value={liveMomentary}
-            peakHold={liveIntegrated}
-            label="M"
-            title="Momentary loudness (BS.1770). Tick marks the integrated average."
-          />
-          <LufsBar
-            value={liveIntegrated}
-            label="I"
-            title="Integrated loudness since playback started."
-          />
+          <PeakMeterBar value={liveL} label="L" title="Left channel peak (dBFS)" />
+          <PeakMeterBar value={liveR} label="R" title="Right channel peak (dBFS)" />
         </div>
-        <LufsScale />
-        <PeakBar value={liveTp} />
+        <PeakScale />
       </div>
       <dl className="master-readouts">
-        <Readout
-          label="Momentary"
-          value={momentaryDisplay}
-          unit="LUFS"
-        />
-        <Readout
-          label="Since Play"
-          value={integratedDisplay}
-          unit="LUFS"
-        />
-        <Readout
-          label="Live Peak"
-          value={peakDisplay}
-          unit="dBFS"
-        />
+        <Readout label="Momentary" value={momentaryDisplay} unit="LUFS" />
+        <Readout label="Since Play" value={integratedDisplay} unit="LUFS" />
+        <Readout label="Live Peak" value={peakDisplay} unit="dBFS" />
       </dl>
     </section>
   );
 }
 
-function LufsScale() {
-  // Drawing the dB ticks alongside the meter bars. Matches the reference's
-  // descending scale from -6 (top) down to -36 (bottom).
-  const ticks = [-6, -12, -18, -24, -30, -36];
+function PeakScale() {
+  // dBFS ticks for the stereo peak meter: 0 (clipping) at top down to -36.
+  const ticks = [0, -6, -12, -18, -24, -30, -36];
   return (
     <div className="lufs-scale">
       {ticks.map((db) => (
@@ -264,61 +252,34 @@ function LufsScale() {
   );
 }
 
-function LufsBar({
+function PeakMeterBar({
   value,
-  peakHold,
   label,
   title,
 }: {
   value: number | undefined;
-  peakHold?: number | undefined;
   label: string;
   title?: string;
 }) {
-  // Map a dBFS value into 0..1 fill against the -36..-6 scale.
+  // Map a dBFS peak into 0..1 fill against the -36..0 scale (0 = clip).
   const ratio = (db: number): number => {
     if (!Number.isFinite(db)) return 0;
-    const clamped = Math.max(LUFS_SCALE_MIN, Math.min(LUFS_SCALE_MAX, db));
-    return (clamped - LUFS_SCALE_MIN) / (LUFS_SCALE_MAX - LUFS_SCALE_MIN);
+    const clamped = Math.max(PEAK_SCALE_MIN, Math.min(PEAK_SCALE_MAX, db));
+    return (clamped - PEAK_SCALE_MIN) / (PEAK_SCALE_MAX - PEAK_SCALE_MIN);
   };
   const fill = value !== undefined ? ratio(value) : 0;
-  const peakRatio = peakHold !== undefined ? ratio(peakHold) : null;
+  const clipping = value !== undefined && value > -0.1;
+  const ceilRatio = ratio(PEAK_CEIL_DBFS);
   return (
-    <div className="lufs-bar" title={title}>
+    <div className={`lufs-bar${clipping ? " is-clipping" : ""}`} title={title}>
       <div className="lufs-bar-track" />
       <div className="lufs-bar-fill" style={{ height: `${fill * 100}%` }} />
-      {peakRatio !== null && peakRatio > 0 && (
-        <div
-          className="lufs-peak-hold"
-          style={{ bottom: `calc(${peakRatio * 100}% - 1px)` }}
-          title="Integrated average"
-        />
-      )}
+      <div
+        className="peak-ceil-line"
+        style={{ bottom: `${ceilRatio * 100}%` }}
+        title="-1 dBFS ceiling"
+      />
       <span className="lufs-bar-label">{label}</span>
-    </div>
-  );
-}
-
-function PeakBar({ value }: { value: number | undefined }) {
-  // Live peak gets its own narrow bar on a 0..-36 dBFS scale (0 at top means
-  // clipping). Export/source true peak is shown in checks, not in this live
-  // meter, because this value comes from the playback tick's sample peak.
-  const TP_MIN = -36;
-  const TP_MAX = 0;
-  let fill = 0;
-  let tone: "ok" | "warn" | "hot" = "ok";
-  if (value !== undefined && Number.isFinite(value)) {
-    const clamped = Math.max(TP_MIN, Math.min(TP_MAX, value));
-    fill = (clamped - TP_MIN) / (TP_MAX - TP_MIN);
-    if (value > -0.1) tone = "hot";
-    else if (value > -1.0) tone = "warn";
-  }
-  return (
-    <div className={`tp-bar tp-${tone}`}>
-      <div className="tp-bar-track" />
-      <div className="tp-bar-fill" style={{ height: `${fill * 100}%` }} />
-      <div className="tp-clip-line" title="-1 dBFS live warning line" />
-      <span className="tp-bar-label">PK</span>
     </div>
   );
 }

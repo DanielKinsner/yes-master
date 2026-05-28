@@ -101,6 +101,8 @@ describe("MasterOutPanel", () => {
       <MasterOutPanel
         isAnalyzing={false}
         peakDbfs={-120}
+        peakLeftDbfs={-120}
+        peakRightDbfs={-120}
         isPlaying={false}
         lufsMomentary={-120}
         lufsIntegrated={-120}
@@ -110,9 +112,12 @@ describe("MasterOutPanel", () => {
     expect(container.textContent).toContain("idle");
     expect(container.textContent).not.toContain("-10.5");
     expect(container.textContent).not.toContain("0.2");
-    expect(container.querySelector(".tp-bar-label")?.textContent).toBe("PK");
+    const labels = [...container.querySelectorAll(".lufs-bar-label")].map(
+      (e) => e.textContent,
+    );
+    expect(labels).toEqual(["L", "R"]);
     expect(
-      (container.querySelector(".tp-bar-fill") as HTMLElement | null)?.style.height,
+      (container.querySelector(".lufs-bar-fill") as HTMLElement | null)?.style.height,
     ).toBe("0%");
 
     await act(async () => {
@@ -125,6 +130,8 @@ describe("MasterOutPanel", () => {
       <MasterOutPanel
         isAnalyzing={false}
         peakDbfs={-8.5}
+        peakLeftDbfs={-8.5}
+        peakRightDbfs={-8.5}
         isPlaying
         lufsMomentary={-9.7}
         lufsIntegrated={-10.5}

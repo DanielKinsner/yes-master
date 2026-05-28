@@ -36,6 +36,16 @@ const COEFFS_CHECK_INTERVAL_FRAMES: usize = 128;
 /// on preset/intensity changes; short enough to feel instantaneous.
 const COEFFS_CROSSFADE_FRAMES: usize = 512;
 
+/// Fold one channel sample's magnitude into a shared per-channel peak slot,
+/// same bit-encoding/`fetch_max` discipline as the all-channel `peak_linear`.
+/// Non-finite samples are skipped so a stray NaN can't poison the meter.
+fn fold_channel_peak(slot: &Arc<AtomicU32>, sample: f32) {
+    let abs = sample.abs();
+    if abs.is_finite() {
+        slot.fetch_max(abs.to_bits(), Ordering::Relaxed);
+    }
+}
+
 /// Pass-through source for Original playback that still feeds the same peak,
 /// LUFS, and spectrum meter path as Mastered playback. This keeps A/B metering
 /// honest without routing Original through any mastering DSP.
@@ -47,6 +57,8 @@ pub(crate) struct MeteredPcmSource {
     frame: Vec<f32>,
     frame_out_pos: usize,
     peak_linear: Arc<AtomicU32>,
+    peak_left_linear: Arc<AtomicU32>,
+    peak_right_linear: Arc<AtomicU32>,
     lufs_meter: crate::dsp::MomentaryLufs,
     lufs_x100: Arc<AtomicI32>,
     integrated_lufs_meter: crate::dsp::IntegratedLufs,
@@ -55,11 +67,14 @@ pub(crate) struct MeteredPcmSource {
 }
 
 impl MeteredPcmSource {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         samples: Vec<f32>,
         channels: u16,
         sample_rate: u32,
         peak_linear: Arc<AtomicU32>,
+        peak_left_linear: Arc<AtomicU32>,
+        peak_right_linear: Arc<AtomicU32>,
         lufs_x100: Arc<AtomicI32>,
         integrated_lufs_x100: Arc<AtomicI32>,
         spectrum_ring: Arc<SpectrumRing>,
@@ -73,6 +88,8 @@ impl MeteredPcmSource {
             frame: vec![0.0; channels_usize],
             frame_out_pos: channels_usize,
             peak_linear,
+            peak_left_linear,
+            peak_right_linear,
             lufs_meter: crate::dsp::MomentaryLufs::new(sample_rate),
             lufs_x100,
             integrated_lufs_meter: crate::dsp::IntegratedLufs::new(sample_rate),
@@ -113,6 +130,8 @@ impl Iterator for MeteredPcmSource {
 
             let l = self.frame.first().copied().unwrap_or(0.0);
             let r = if channels >= 2 { self.frame[1] } else { l };
+            fold_channel_peak(&self.peak_left_linear, l);
+            fold_channel_peak(&self.peak_right_linear, r);
             let to_x100 = |lufs: f32| -> i32 {
                 if lufs.is_finite() && lufs > -120.0 {
                     (lufs * 100.0) as i32
@@ -202,6 +221,9 @@ pub(crate) struct MasteringSource {
     /// Shared post-output-gain peak slot. Per-frame max of |frame_main[i]| is
     /// atomic-max'd into this slot. The audio thread consumes it via swap.
     peak_linear: Arc<AtomicU32>,
+    /// Per-channel post-output-gain peak slots for the stereo MASTER OUT meter.
+    peak_left_linear: Arc<AtomicU32>,
+    peak_right_linear: Arc<AtomicU32>,
     /// Live BS.1770 momentary LUFS meter (K-weighted, 400 ms window).
     lufs_meter: crate::dsp::MomentaryLufs,
     /// Shared atomic slot for the audio thread to read the latest LUFS value.
@@ -229,6 +251,8 @@ impl MasteringSource {
         chain: crate::dsp::MasteringChain,
         coeffs_rx: mpsc::Receiver<LiveCoeffUpdate>,
         peak_linear: Arc<AtomicU32>,
+        peak_left_linear: Arc<AtomicU32>,
+        peak_right_linear: Arc<AtomicU32>,
         lufs_x100: Arc<AtomicI32>,
         integrated_lufs_x100: Arc<AtomicI32>,
         spectrum_ring: Arc<SpectrumRing>,
@@ -253,6 +277,8 @@ impl MasteringSource {
             // `next()` call rather than requiring a separate "primed" flag.
             frame_out_pos: channels_usize,
             peak_linear,
+            peak_left_linear,
+            peak_right_linear,
             lufs_meter: crate::dsp::MomentaryLufs::new(sample_rate),
             lufs_x100,
             integrated_lufs_meter: crate::dsp::IntegratedLufs::new(sample_rate),
@@ -378,6 +404,8 @@ impl Iterator for MasteringSource {
             // (matches BS.1770's stereo channel summation).
             let l = self.frame_main.first().copied().unwrap_or(0.0);
             let r = if channels >= 2 { self.frame_main[1] } else { l };
+            fold_channel_peak(&self.peak_left_linear, l);
+            fold_channel_peak(&self.peak_right_linear, r);
             let to_x100 = |lufs: f32| -> i32 {
                 if lufs.is_finite() && lufs > -120.0 {
                     (lufs * 100.0) as i32

@@ -810,6 +810,14 @@ pub struct PlaybackTick {
     /// Defaulted so older sessions/frontends parse cleanly as "no info."
     #[serde(default = "default_silence_dbfs")]
     pub peak_dbfs: f32,
+    /// Post-output-gain per-channel peak since the last tick, in dBFS. Left and
+    /// right are measured separately so the MASTER OUT meter can show a true
+    /// stereo image (mono sources report the same value on both). `-120.0` is
+    /// the silence sentinel. Defaulted so older sessions/frontends parse cleanly.
+    #[serde(default = "default_silence_dbfs")]
+    pub peak_left_dbfs: f32,
+    #[serde(default = "default_silence_dbfs")]
+    pub peak_right_dbfs: f32,
     /// Phase 12.2 — gain reduction (in dB, negative) from the low band of the
     /// multiband compressor, captured as the maximum reduction seen in the
     /// last snapshot window. `-120.0` is the silence sentinel (no signal or
