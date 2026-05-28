@@ -19,7 +19,7 @@ function block(selector: string): string {
 describe("console layout CSS", () => {
   it("aligns the preset tiles and signal chain on the same 8-column grid", () => {
     expect(block(".tile-row")).toContain(
-      "grid-template-columns: repeat(auto-fit, minmax(90px, 1fr))",
+      "grid-template-columns: repeat(auto-fit, minmax(104px, 1fr))",
     );
     expect(block(".signal-chain-track")).toContain("display: grid");
     expect(block(".signal-chain-track")).toContain(

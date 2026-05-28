@@ -1820,8 +1820,8 @@ button.primary:disabled {
      drops to ~870 px usable; tile row needs 8×min + 7×gap ≤ ~820 px.
      8×90 + 7×8 = 776 px → comfortable headroom. Wider viewports
      stretch each tile via the 1fr column rule. */
-  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 0.55rem;
 }
 
 .tile {
@@ -1832,7 +1832,7 @@ button.primary:disabled {
      preset keeps its character cue. Per Dan's UX review: presets
      should be accessible but not oversized — primary working area
      is waveform + transport + mastering controls below. */
-  min-height: 92px;
+  min-height: 104px;
   background:
     radial-gradient(
       circle at 50% 30%,
@@ -1858,7 +1858,7 @@ button.primary:disabled {
 
 .tile-label {
   font-weight: 600;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   letter-spacing: 0.02em;
   line-height: 1;
 }
@@ -1880,8 +1880,8 @@ button.primary:disabled {
    strip slice B: imagery stays compact, but the removed save row gives
    the presets enough room to read larger without crowding the console. */
 .tile-icon {
-  width: clamp(37px, 3.3vw, 57px);
-  height: clamp(37px, 3.3vw, 57px);
+  width: clamp(42px, 3.8vw, 64px);
+  height: clamp(42px, 3.8vw, 64px);
   object-fit: contain;
   margin-bottom: 0.1rem;
   flex-shrink: 0;
@@ -4428,7 +4428,7 @@ button.primary:disabled {
     display: grid;
     grid-template-rows:
       minmax(330px, 1.55fr)
-      128px
+      145px
       55px
       minmax(145px, 0.75fr);
     gap: 0.55rem;
@@ -4715,12 +4715,12 @@ button.primary:disabled {
   }
 
   .tile-icon {
-    width: clamp(37px, 2.95vw, 51px);
-    height: clamp(37px, 2.95vw, 51px);
+    width: clamp(42px, 3.3vw, 58px);
+    height: clamp(42px, 3.3vw, 58px);
   }
 
   .tile-label {
-    font-size: 0.68rem;
+    font-size: 0.74rem;
   }
 
   .signal-chain {
@@ -4867,7 +4867,7 @@ button.primary:disabled {
   .track-master-console {
     grid-template-rows:
       minmax(410px, 1.56fr)
-      154px
+      174px
       63px
       minmax(195px, 0.84fr);
     gap: 0.68rem;
@@ -4917,12 +4917,12 @@ button.primary:disabled {
   }
 
   .tile-icon {
-    width: 60px;
-    height: 60px;
+    width: 68px;
+    height: 68px;
   }
 
   .tile-label {
-    font-size: 0.74rem;
+    font-size: 0.82rem;
   }
 
   .knobs-row {
@@ -4955,7 +4955,7 @@ button.primary:disabled {
   .track-master-console {
     grid-template-rows:
       minmax(300px, 1.45fr)
-      117px
+      132px
       49px
       minmax(126px, 0.68fr);
     gap: 0.45rem;
@@ -5036,16 +5036,16 @@ button.primary:disabled {
   }
 
   .tile {
-    padding: 0.2rem 0.18rem;
+    padding: 0.24rem 0.2rem;
   }
 
   .tile-icon {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
   }
 
   .tile-label {
-    font-size: 0.62rem;
+    font-size: 0.7rem;
   }
 
   .signal-chain {
