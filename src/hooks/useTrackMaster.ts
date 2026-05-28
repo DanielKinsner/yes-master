@@ -122,6 +122,31 @@ export interface ProjectFeedback {
   message: string;
 }
 
+export function shouldPushLiveChainForSettingsEdit({
+  trackId,
+  editingAlbumIntent,
+  loadedTrackId,
+  loadedKindByTrack,
+  overrideAlbum,
+}: {
+  trackId: TrackId | null;
+  editingAlbumIntent: boolean;
+  loadedTrackId: TrackId | null;
+  loadedKindByTrack: Record<TrackId, PlaybackKindUI>;
+  overrideAlbum: Set<TrackId>;
+}): boolean {
+  if (editingAlbumIntent) {
+    return Object.entries(loadedKindByTrack).some(
+      ([id, kind]) => kind === "master" && !overrideAlbum.has(id as TrackId),
+    );
+  }
+  if (!trackId) return false;
+  const kindForTrack = loadedKindByTrack[trackId];
+  if (kindForTrack === "source") return false;
+  if (kindForTrack === "master") return true;
+  return loadedTrackId === trackId;
+}
+
 const AUDIO_EXTENSIONS = [
   "wav",
   "aiff",
@@ -585,13 +610,17 @@ export function useTrackMaster() {
       // this, undo would change the UI state but the audible output would lag
       // until the user toggled Original/Master or made another adjustment.
       const id = selectedTrackId;
+      const followingAlbum =
+        !!id && mode === "album" && !snapshot.overrideAlbum.includes(id as string);
       if (
-        id &&
-        (loadedKindByTrack[id] === "master" ||
-          (loadedTrackId === id && loadedKindByTrack[id] !== "source"))
+        shouldPushLiveChainForSettingsEdit({
+          trackId: id,
+          editingAlbumIntent: followingAlbum,
+          loadedTrackId,
+          loadedKindByTrack,
+          overrideAlbum: new Set(snapshot.overrideAlbum as TrackId[]),
+        })
       ) {
-        const followingAlbum =
-          mode === "album" && !snapshot.overrideAlbum.includes(id as string);
         const effective = followingAlbum
           ? snapshot.albumIntent
           : snapshot.settingsMap[id as string] ?? DEFAULT_SETTINGS;
@@ -677,21 +706,16 @@ export function useTrackMaster() {
       }
 
       // Push to live chain when the edit reaches the currently-playing master.
-      // We accept either the synchronous `loadedKindByTrack` map (set in
-      // playWithKind) or the tick-driven `loadedTrackId` as evidence — a track
-      // is "playing as master" if EITHER signal agrees. Belt-and-suspenders
-      // covers the case where one signal is briefly stale.
-      let shouldPush = false;
-      if (editingAlbumIntent) {
-        shouldPush = Object.entries(loadedKindByTrack).some(
-          ([tid, kind]) =>
-            kind === "master" && !overrideAlbum.has(tid as TrackId),
-        );
-      } else {
-        const kindForId = loadedKindByTrack[id];
-        shouldPush =
-          kindForId === "master" || (loadedTrackId === id && kindForId !== "source");
-      }
+      // Source playback is an explicit no-push case; if the frontend kind is
+      // unknown but the backend tick says this track is loaded, keep the
+      // conservative Mastered fallback used by earlier live-chain fixes.
+      const shouldPush = shouldPushLiveChainForSettingsEdit({
+        trackId: id,
+        editingAlbumIntent,
+        loadedTrackId,
+        loadedKindByTrack,
+        overrideAlbum,
+      });
       if (shouldPush) {
         setLiveUpdateStats((s) => ({
           attempts: s.attempts + 1,
@@ -1496,7 +1520,15 @@ export function useTrackMaster() {
         volumeMatch: on ? false : t.volumeMatch,
         exportLufsPreview: on,
       }));
-      if (selectedTrackId && loadedKindByTrack[selectedTrackId] === "master") {
+      if (
+        shouldPushLiveChainForSettingsEdit({
+          trackId: selectedTrackId,
+          editingAlbumIntent: false,
+          loadedTrackId,
+          loadedKindByTrack,
+          overrideAlbum,
+        })
+      ) {
         setLiveUpdateStats((s) => ({
           attempts: s.attempts + 1,
           applied: s.applied,
@@ -1510,7 +1542,9 @@ export function useTrackMaster() {
     },
     [
       selectedTrackId,
+      loadedTrackId,
       loadedKindByTrack,
+      overrideAlbum,
       selectedSettings,
       withSourceLufs,
       sendUpdateChain,
@@ -1567,20 +1601,15 @@ export function useTrackMaster() {
         markStale(selectedTrackId);
       }
       // Push to live chain if currently playing the affected master. Same
-      // belt-and-suspenders signal as updateSettings: accept either the
-      // synchronous loadedKindByTrack map or the tick-driven loadedTrackId.
-      let shouldPush = false;
-      if (mode === "album" && !selectedIsOverriding) {
-        shouldPush = Object.entries(loadedKindByTrack).some(
-          ([tid, kind]) =>
-            kind === "master" && !overrideAlbum.has(tid as TrackId),
-        );
-      } else if (selectedTrackId) {
-        const kindForId = loadedKindByTrack[selectedTrackId];
-        shouldPush =
-          kindForId === "master" ||
-          (loadedTrackId === selectedTrackId && kindForId !== "source");
-      }
+      // shared predicate as settings edits, so Source and unknown loaded-kind
+      // cases stay consistent across presets, undo/redo, and sliders.
+      const shouldPush = shouldPushLiveChainForSettingsEdit({
+        trackId: selectedTrackId,
+        editingAlbumIntent: mode === "album" && !selectedIsOverriding,
+        loadedTrackId,
+        loadedKindByTrack,
+        overrideAlbum,
+      });
       if (shouldPush) {
         setLiveUpdateStats((s) => ({
           attempts: s.attempts + 1,

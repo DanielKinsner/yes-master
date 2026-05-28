@@ -17,10 +17,14 @@ import type {
   MasteringSettings,
   ProjectState,
   RenderJob,
+  TrackId,
   WaveformPeaks,
 } from "../bindings";
 import { lastExportDirectory } from "../lib/export-location";
-import { useTrackMaster } from "./useTrackMaster";
+import {
+  shouldPushLiveChainForSettingsEdit,
+  useTrackMaster,
+} from "./useTrackMaster";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true;
@@ -323,6 +327,64 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+describe("live-chain push predicate", () => {
+  it("pushes direct track edits only when the selected track is loaded as Mastered", () => {
+    const trackId = "track-a" as TrackId;
+
+    expect(
+      shouldPushLiveChainForSettingsEdit({
+        trackId,
+        editingAlbumIntent: false,
+        loadedTrackId: null,
+        loadedKindByTrack: { [trackId]: "master" },
+        overrideAlbum: new Set(),
+      }),
+    ).toBe(true);
+    expect(
+      shouldPushLiveChainForSettingsEdit({
+        trackId,
+        editingAlbumIntent: false,
+        loadedTrackId: trackId,
+        loadedKindByTrack: { [trackId]: "source" },
+        overrideAlbum: new Set(),
+      }),
+    ).toBe(false);
+    expect(
+      shouldPushLiveChainForSettingsEdit({
+        trackId,
+        editingAlbumIntent: false,
+        loadedTrackId: trackId,
+        loadedKindByTrack: {},
+        overrideAlbum: new Set(),
+      }),
+    ).toBe(true);
+  });
+
+  it("pushes album-intent edits for loaded following tracks but skips overrides", () => {
+    const first = "album-a" as TrackId;
+    const second = "album-b" as TrackId;
+
+    expect(
+      shouldPushLiveChainForSettingsEdit({
+        trackId: first,
+        editingAlbumIntent: true,
+        loadedTrackId: first,
+        loadedKindByTrack: { [first]: "master", [second]: "source" },
+        overrideAlbum: new Set([second]),
+      }),
+    ).toBe(true);
+    expect(
+      shouldPushLiveChainForSettingsEdit({
+        trackId: second,
+        editingAlbumIntent: true,
+        loadedTrackId: second,
+        loadedKindByTrack: { [second]: "master" },
+        overrideAlbum: new Set([second]),
+      }),
+    ).toBe(false);
+  });
+});
+
 describe("useTrackMaster integration dispatches", () => {
   it("defaults export LUFS preview off so live settings edits stay responsive", async () => {
     const harness = await renderHookHarness();
@@ -621,6 +683,37 @@ describe("useTrackMaster integration dispatches", () => {
         false,
       );
     });
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("does not dispatch updateChain for direct edits while Original playback is loaded", async () => {
+    const track = makeTrack("source-live-1", "C:/audio/source-live.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+    await waitFor(() => {
+      expect(mocks.api.playTrack).toHaveBeenCalled();
+    });
+
+    mocks.api.updateChain.mockClear();
+    await act(async () => {
+      harness.current().setIntensity(0.62);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+
+    expect(mocks.api.updateChain).not.toHaveBeenCalled();
     await act(async () => {
       harness.root.unmount();
     });
