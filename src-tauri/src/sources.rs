@@ -46,6 +46,21 @@ fn fold_channel_peak(slot: &Arc<AtomicU32>, sample: f32) {
     }
 }
 
+/// Channel pair fed to the live BS.1770 LUFS meters. Stereo passes both
+/// channels; mono passes `(l, 0.0)` so the meter's channel-energy sum
+/// (`l² + r²`) equals true single-channel mono loudness instead of the
+/// `+3.01 LU` (`10·log10(2)`) offset that duplicating mono into both
+/// channels would add. The peak meters still mirror mono onto both channels
+/// for display — only the loudness sum must avoid the double-count.
+fn lufs_meter_input(frame: &[f32], channels: usize) -> (f32, f32) {
+    let l = frame.first().copied().unwrap_or(0.0);
+    if channels >= 2 {
+        (l, frame.get(1).copied().unwrap_or(0.0))
+    } else {
+        (l, 0.0)
+    }
+}
+
 /// Pass-through source for Original playback that still feeds the same peak,
 /// LUFS, and spectrum meter path as Mastered playback. This keeps A/B metering
 /// honest without routing Original through any mastering DSP.
@@ -139,9 +154,12 @@ impl Iterator for MeteredPcmSource {
                     i32::MIN
                 }
             };
-            let momentary = self.lufs_meter.process_frame(l, r);
+            // Mono must feed the BS.1770 meters as a single channel, not a
+            // duplicated pair, or loudness reads +3.01 LU hot (master review §2).
+            let (meter_l, meter_r) = lufs_meter_input(&self.frame, channels);
+            let momentary = self.lufs_meter.process_frame(meter_l, meter_r);
             self.lufs_x100.store(to_x100(momentary), Ordering::Relaxed);
-            let integrated = self.integrated_lufs_meter.process_frame(l, r);
+            let integrated = self.integrated_lufs_meter.process_frame(meter_l, meter_r);
             self.integrated_lufs_x100
                 .store(to_x100(integrated), Ordering::Relaxed);
 
@@ -413,9 +431,12 @@ impl Iterator for MasteringSource {
                     i32::MIN
                 }
             };
-            let momentary = self.lufs_meter.process_frame(l, r);
+            // Mono must feed the BS.1770 meters as a single channel, not a
+            // duplicated pair, or loudness reads +3.01 LU hot (master review §2).
+            let (meter_l, meter_r) = lufs_meter_input(&self.frame_main, channels);
+            let momentary = self.lufs_meter.process_frame(meter_l, meter_r);
             self.lufs_x100.store(to_x100(momentary), Ordering::Relaxed);
-            let integrated = self.integrated_lufs_meter.process_frame(l, r);
+            let integrated = self.integrated_lufs_meter.process_frame(meter_l, meter_r);
             self.integrated_lufs_x100
                 .store(to_x100(integrated), Ordering::Relaxed);
 
@@ -473,5 +494,41 @@ impl rodio::Source for MasteringSource {
         self.crossfade_total = 0;
         self.frame_out_pos = channels;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod meter_input_tests {
+    use super::lufs_meter_input;
+    use crate::dsp::MomentaryLufs;
+
+    #[test]
+    fn mono_feeds_single_channel_not_a_duplicated_pair() {
+        // Regression for master review §2: duplicating mono into both
+        // channels double-counts energy and inflates loudness by +3.01 LU.
+        assert_eq!(lufs_meter_input(&[0.5], 1), (0.5, 0.0));
+        assert_eq!(lufs_meter_input(&[0.5, -0.25], 2), (0.5, -0.25));
+        assert_eq!(lufs_meter_input(&[], 1), (0.0, 0.0));
+    }
+
+    #[test]
+    fn mono_meter_input_reads_about_3lu_below_duplicated_stereo() {
+        let sr = 48_000u32;
+        let measure = |duplicate: bool| {
+            let mut meter = MomentaryLufs::new(sr);
+            let mut last = -120.0f32;
+            // 1 kHz sine, > 400 ms so the momentary window fills.
+            for i in 0..(sr as usize / 2) {
+                let x = 0.5 * (2.0 * std::f32::consts::PI * 1000.0 * i as f32 / sr as f32).sin();
+                let (l, r) = if duplicate { (x, x) } else { (x, 0.0) };
+                last = meter.process_frame(l, r);
+            }
+            last
+        };
+        let delta = measure(true) - measure(false);
+        assert!(
+            (delta - 3.0103).abs() < 0.1,
+            "duplicated-mono should read ~3.01 LU hotter than single-channel; got {delta}"
+        );
     }
 }
