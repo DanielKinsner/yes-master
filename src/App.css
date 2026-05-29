@@ -1809,7 +1809,6 @@ button.primary:disabled {
 }
 
 .preset-save-name:focus {
-  outline: none;
   border-color: rgba(111, 163, 255, 0.66);
 }
 
@@ -2956,7 +2955,6 @@ button.primary:disabled {
   border-color: rgba(111, 163, 255, 0.45);
   background: rgba(111, 163, 255, 0.12);
   color: var(--text-0);
-  outline: none;
 }
 
 .panel-head-summary .panel-reset-button {

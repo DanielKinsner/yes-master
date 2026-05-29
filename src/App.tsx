@@ -2000,6 +2000,7 @@ function DeliveryProfileCard({
       <select
         id="delivery-profile-select"
         className="loudness-profile-select rail-card-select"
+        aria-label="Delivery profile"
         value={profile}
         onChange={(e) => onDeliveryProfile(e.target.value as DeliveryProfile)}
       >
@@ -2634,6 +2635,7 @@ function GainField({
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
           onDoubleClick={() => onChange(0)}
+          aria-label={label}
           title="Double-click to reset to 0 dB"
         />
         <span className="adv-value">
@@ -2658,6 +2660,7 @@ function GainField({
               (e.target as HTMLInputElement).blur();
             }
           }}
+          aria-label={`${label} value`}
           title="Type a value or double-click slider to reset to 0 dB"
         />
       </div>
@@ -2738,6 +2741,7 @@ function NumberField({
           // value instead of staying greyed out. Double-click reverts to Auto.
           onChange={(e) => onChange(parseFloat(e.target.value))}
           onDoubleClick={() => onChange(null)}
+          aria-label={label}
           title={
             value === null
               ? `Drag to engage. Double-click to leave it on ${autoLabel}.`
@@ -2772,6 +2776,7 @@ function NumberField({
           step={step}
           disabled={disabled}
           value={draft !== null ? draft : value ?? ""}
+          aria-label={`${label} value`}
           placeholder={autoLabel.toLowerCase()}
           onChange={(e) => {
             if (e.target.value === "") {
@@ -2818,6 +2823,7 @@ function SelectField({
       <span className="adv-label">{label}</span>
       <select
         className="adv-select"
+        aria-label={label}
         value={value === null ? "" : String(value)}
         onChange={(e) => {
           const v = e.target.value;
