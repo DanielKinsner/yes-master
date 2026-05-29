@@ -3965,9 +3965,10 @@ button.primary:disabled {
 }
 
 .panel-chevron {
-  font-size: 0.9rem;
-  color: var(--text-2);
-  transition: transform 80ms;
+  /* Removed: the whole ADVANCED CONTROLS header is clickable to toggle,
+     so the dropdown caret was redundant chrome. (Only used on that one
+     summary, so hiding it here removes it everywhere it appeared.) */
+  display: none;
 }
 
 .advanced-panel-slot[open] .panel-chevron {
