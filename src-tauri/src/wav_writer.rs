@@ -43,16 +43,19 @@ impl DitherRng {
         ((self.state >> 9) as f32) / 8_388_608.0_f32
     }
 
-    /// Triangular noise in `[-2, 2)` LSB — the sum of two independent
-    /// uniforms in `[-1, 1)`. Per the standard mastering-dither shape
-    /// (Lipshitz / Vanderkooy) at ±2 LSB peak amplitude. Returned in
-    /// LSB units; callers multiply by `1 / scale` to convert to
+    /// Standard TPDF dither: triangular noise in `[-1, 1)` LSB — the sum of
+    /// two independent RPDFs each uniform in `[-0.5, 0.5)` LSB. This is the
+    /// Lipshitz / Vanderkooy optimum (2 LSB peak-to-peak), which fully
+    /// decorrelates the quantization error and eliminates noise modulation.
+    /// (Earlier this summed two `[-1, 1)` uniforms → `[-2, 2)` LSB, twice the
+    /// intended amplitude and ~6 dB hotter noise floor than standard TPDF.)
+    /// Returned in LSB units; callers multiply by `1 / scale` to convert to
     /// amplitude before adding to the sample.
     #[inline]
     fn tpdf_lsb(&mut self) -> f32 {
-        let u1 = 2.0 * self.next_unit() - 1.0; // [-1, 1)
-        let u2 = 2.0 * self.next_unit() - 1.0; // [-1, 1)
-        u1 + u2 // triangle in [-2, 2)
+        let u1 = self.next_unit() - 0.5; // [-0.5, 0.5)
+        let u2 = self.next_unit() - 0.5; // [-0.5, 0.5)
+        u1 + u2 // triangle in [-1, 1)
     }
 }
 
@@ -242,10 +245,10 @@ mod tests {
             .samples::<i16>()
             .collect::<Result<Vec<_>, _>>()
             .expect("decode 16-bit samples");
-        assert_eq!(decoded, vec![-32768, -16383, -4095, -1, 4096, 16385, 32767]);
+        assert_eq!(decoded, vec![-32768, -16384, -4095, -1, 4096, 16384, 32767]);
         assert_eq!(
             sha256_file(&out),
-            "49af7efd8ee26001eaabfc0b3a83e09fc09454eeeee6d08678ae6d249f0210d1"
+            "816224efa3de11b822957fa46fd674100b9ecf5f157e1225761d70b524adfb91"
         );
     }
 
@@ -273,11 +276,11 @@ mod tests {
             .expect("decode 24-bit samples");
         assert_eq!(
             decoded,
-            vec![-8388608, -2097151, 1, 2097151, 6291456, 8388525]
+            vec![-8388608, -2097152, 1, 2097151, 6291456, 8388525]
         );
         assert_eq!(
             sha256_file(&out),
-            "ad59c803dc2d594e5d6915b337c55c3ac64607491a6997153b4dcf9d58f5c369"
+            "2a9d31aa7a50e59816dabdd86bb23a8633c9dd3c732aaa3d6c58e1fd043f2e25"
         );
     }
 
@@ -424,9 +427,9 @@ mod tests {
             dithered.len()
         );
         assert!(
-            dithered.len() >= 5,
-            "dithered -90 dBFS sine should hit at least 5 distinct values \
-             (signal ~±1 LSB peak, TPDF noise ±2 LSB peak); got {}",
+            dithered.len() >= 4,
+            "dithered -90 dBFS sine should hit at least 4 distinct values \
+             (signal ~±1 LSB peak, standard TPDF noise ±1 LSB peak); got {}",
             dithered.len()
         );
     }
@@ -446,10 +449,10 @@ mod tests {
         );
     }
 
-    /// TPDF dither on silence stays within ±2 LSB (the dither's peak
+    /// TPDF dither on silence stays within ±1 LSB (the dither's peak
     /// amplitude). Verifies the dither is applied and bounded.
     #[test]
-    fn tpdf_dither_on_silence_stays_within_two_lsb() {
+    fn tpdf_dither_on_silence_stays_within_one_lsb() {
         let mut rng = DitherRng::new(0x4242_4242);
         let mut max_abs: u16 = 0;
         let n = 10_000;
@@ -461,8 +464,8 @@ mod tests {
             }
         }
         assert!(
-            max_abs <= 2,
-            "dither on silence should never exceed ±2 LSB; saw {}",
+            max_abs <= 1,
+            "dither on silence should never exceed ±1 LSB; saw {}",
             max_abs
         );
     }
@@ -483,8 +486,8 @@ mod tests {
     #[test]
     fn quantize_16_tpdf_reaches_i16_min_on_negative_extreme() {
         // Sample = -1.5 is far enough below -1.0 that no TPDF dither
-        // amplitude (which lives in [-2/INT16_SCALE, +2/INT16_SCALE) ≈
-        // ±6e-5) can pull the dithered value above the clamp floor.
+        // amplitude (which lives in [-1/INT16_SCALE, +1/INT16_SCALE) ≈
+        // ±3e-5) can pull the dithered value above the clamp floor.
         // The scaled value rounds to ~-49152, clamps to -32768, casts
         // to `i16::MIN`.
         let mut rng = DitherRng::new(0xDEAD_BEEF);
@@ -540,8 +543,8 @@ mod tests {
         );
     }
 
-    /// Zero sample with deterministic RNG produces a value within ±2
-    /// LSB of zero (the TPDF dither amplitude bound). Verifies the
+    /// Zero sample with deterministic RNG produces a value within ±1
+    /// LSB of zero (the standard TPDF dither amplitude bound). Verifies the
     /// dither + quantize path doesn't drift away from silence on the
     /// new scale — the prior implementation had the same property and
     /// nothing should have changed for typical-amplitude samples.
@@ -551,9 +554,9 @@ mod tests {
         for _ in 0..100 {
             let result = quantize_16_tpdf(0.0, &mut rng);
             assert!(
-                result.abs() <= 2,
+                result.abs() <= 1,
                 "zero sample with TPDF dither should produce values within \
-                 ±2 LSB; got {result}"
+                 ±1 LSB; got {result}"
             );
         }
     }
