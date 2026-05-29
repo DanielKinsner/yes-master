@@ -22,10 +22,14 @@ type AlbumPanelProps = {
   albumTitle: string;
   albumRendering: boolean;
   albumExportReport: AlbumRenderReport | null;
+  albumSampleRate: number | null;
+  albumBitDepth: number | null;
   onAlbumArc: (kind: AlbumArcKind) => void;
   onAlbumIntensity: (v: number) => void;
   onAlbumTitle: (v: string) => void;
   onExportAlbum: () => void;
+  onAlbumSampleRate: (v: number | null) => void;
+  onAlbumBitDepth: (v: number | null) => void;
 };
 
 function formatAlbumDuration(seconds: number): string {
@@ -42,10 +46,14 @@ export function AlbumPanel({
   albumTitle,
   albumRendering,
   albumExportReport,
+  albumSampleRate,
+  albumBitDepth,
   onAlbumArc,
   onAlbumIntensity,
   onAlbumTitle,
   onExportAlbum,
+  onAlbumSampleRate,
+  onAlbumBitDepth,
 }: AlbumPanelProps) {
   const arcKinds: AlbumArcKind[] = [
     "cinematic",
@@ -122,6 +130,42 @@ export function AlbumPanel({
         <span className="album-intensity-value">
           ×{albumIntensity.toFixed(2)}
         </span>
+        <label className="adv-label" htmlFor="album-rate-select">
+          Sample rate
+        </label>
+        <select
+          id="album-rate-select"
+          className="loudness-profile-select"
+          value={albumSampleRate === null ? "auto" : String(albumSampleRate)}
+          onChange={(e) =>
+            onAlbumSampleRate(
+              e.target.value === "auto" ? null : parseInt(e.target.value, 10),
+            )
+          }
+        >
+          <option value="auto">Auto</option>
+          <option value="44100">44.1 kHz</option>
+          <option value="48000">48 kHz</option>
+          <option value="96000">96 kHz</option>
+        </select>
+        <label className="adv-label" htmlFor="album-depth-select">
+          Bit depth
+        </label>
+        <select
+          id="album-depth-select"
+          className="loudness-profile-select"
+          value={albumBitDepth === null ? "auto" : String(albumBitDepth)}
+          onChange={(e) =>
+            onAlbumBitDepth(
+              e.target.value === "auto" ? null : parseInt(e.target.value, 10),
+            )
+          }
+        >
+          <option value="auto">Auto</option>
+          <option value="16">16-bit</option>
+          <option value="24">24-bit</option>
+          <option value="32">32-bit</option>
+        </select>
       </div>
       {albumExportReport && (
         <div className="album-export-receipt">
