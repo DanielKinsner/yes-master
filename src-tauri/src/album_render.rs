@@ -6,6 +6,7 @@ use crate::engine::{
     measure_and_apply_ceiling_bounded_landing, measure_integrated_lufs, AlbumPlanRenderRequest,
     AlbumRenderReport, AlbumTrackRenderInput, AlbumTrackRenderRecord,
 };
+use crate::sample_rate::convert_interleaved;
 use crate::types::*;
 use crate::wav_writer::{wav_spec, write_samples_into_writer, write_wav};
 use serde::Serialize;
@@ -116,13 +117,28 @@ pub fn render_album_plan_impl(
         .map(|t| (t.track_id.as_str(), t))
         .collect();
 
-    let bit_depth = request
-        .plan
-        .tracks
-        .first()
-        .and_then(|t| settings_by_id.get(t.track_id.as_str()))
-        .map(|input| input.settings.effective_bit_depth())
-        .unwrap_or(24);
+    // Resolve the single album delivery format BEFORE processing any track.
+    // Sample rate: explicit request wins, else Auto = highest source rate
+    // (probed cheaply from headers). Bit depth: explicit request wins, else
+    // the historical first-track effective_bit_depth().
+    let mut source_rates: Vec<u32> = Vec::with_capacity(request.plan.tracks.len());
+    for t in &request.plan.tracks {
+        if let Some(input) = settings_by_id.get(t.track_id.as_str()) {
+            let probed = crate::decode::probe_sample_rate(Path::new(&input.source_path))?;
+            source_rates.push(probed);
+        }
+    }
+    let album_sample_rate =
+        resolve_album_sample_rate(request.plan.delivery_sample_rate, &source_rates);
+    let bit_depth = request.plan.delivery_bit_depth.unwrap_or_else(|| {
+        request
+            .plan
+            .tracks
+            .first()
+            .and_then(|t| settings_by_id.get(t.track_id.as_str()))
+            .map(|input| input.settings.effective_bit_depth())
+            .unwrap_or(24)
+    });
 
     std::fs::create_dir_all(out_dir).map_err(|e| CommandError::Io(e.to_string()))?;
 
@@ -144,7 +160,6 @@ pub fn render_album_plan_impl(
     //   inject Gap silence frames per TransitionSpec, finalize.
     let mut rendered_samples: Vec<Vec<f32>> = Vec::with_capacity(total_tracks);
     let mut track_records: Vec<AlbumTrackRenderRecord> = Vec::with_capacity(total_tracks);
-    let mut common_sr: u32 = 0;
     let mut common_channels: u16 = 0;
 
     for (i, entry) in request.plan.tracks.iter().enumerate() {
@@ -171,14 +186,11 @@ pub fn render_album_plan_impl(
                 input.source_path
             )));
         }
+        // Sample-rate differences are now resolved by resampling each track
+        // to `album_sample_rate` (below). Only a channel-count mismatch is a
+        // hard error — channel parity is a separate, still-deferred concern.
         if i == 0 {
-            common_sr = pcm.sample_rate;
             common_channels = pcm.channels.max(1);
-        } else if pcm.sample_rate != common_sr {
-            return Err(CommandError::Other(format!(
-                "album sample-rate mismatch on {}: {} Hz vs album {} Hz (resampling not yet supported)",
-                input.source_path, pcm.sample_rate, common_sr
-            )));
         } else if pcm.channels != common_channels {
             return Err(CommandError::Other(format!(
                 "album channel mismatch on {}: {} ch vs album {} ch",
@@ -249,6 +261,15 @@ pub fn render_album_plan_impl(
             }
         }
 
+        // Resample this track from its source rate to the album delivery
+        // rate. Ordering mirrors Track Master: chain -> SRC -> measure ->
+        // land. `convert_interleaved` would copy even on a match, so guard
+        // it to avoid a needless full-buffer clone on already-matching tracks.
+        if pcm.sample_rate != album_sample_rate {
+            samples =
+                convert_interleaved(&samples, pcm.sample_rate, album_sample_rate, pcm.channels)?;
+        }
+
         // Per-track ceiling-bounded LUFS landing on the album-plan
         // path. `shadowed.effective_target_lufs()` is the arc-modulated
         // target (per-track LUFS offset baked into the shadow), so each
@@ -258,7 +279,7 @@ pub fn render_album_plan_impl(
         // and album-simple paths via the helper.
         measure_and_apply_ceiling_bounded_landing(
             &mut samples,
-            pcm.sample_rate,
+            album_sample_rate,
             pcm.channels,
             &shadowed,
         )?;
@@ -271,12 +292,12 @@ pub fn render_album_plan_impl(
         write_wav(
             &per_track_path,
             &samples,
-            pcm.sample_rate,
+            album_sample_rate,
             pcm.channels,
             bit_depth,
         )?;
 
-        let measured_lufs = measure_integrated_lufs(&samples, pcm.sample_rate, pcm.channels)?;
+        let measured_lufs = measure_integrated_lufs(&samples, album_sample_rate, pcm.channels)?;
         track_records.push(AlbumTrackRenderRecord {
             track_id: entry.track_id.clone(),
             position: entry.position,
@@ -289,7 +310,7 @@ pub fn render_album_plan_impl(
     // Pass 2 - assemble the continuous album.wav, inserting silence
     // frames per TransitionSpec.
     let album_path = unique_album_path(out_dir)?;
-    let spec = wav_spec(common_channels, common_sr, bit_depth)?;
+    let spec = wav_spec(common_channels, album_sample_rate, bit_depth)?;
     let mut album_writer =
         hound::WavWriter::create(&album_path, spec).map_err(|e| CommandError::Io(e.to_string()))?;
     for (i, samples) in rendered_samples.iter().enumerate() {
@@ -299,7 +320,7 @@ pub fn render_album_plan_impl(
             if let Some(t) = request.plan.transitions.get(i) {
                 if matches!(t.kind, TransitionKind::Gap) {
                     let gap_seconds = t.duration_seconds.clamp(0.0, 5.0);
-                    let gap_frames = (gap_seconds * common_sr as f32) as usize;
+                    let gap_frames = (gap_seconds * album_sample_rate as f32) as usize;
                     let gap_samples = gap_frames * common_channels as usize;
                     let zeros = vec![0.0_f32; gap_samples];
                     write_samples_into_writer(&mut album_writer, &zeros, bit_depth)?;
@@ -316,7 +337,7 @@ pub fn render_album_plan_impl(
     let manifest = AlbumManifest {
         plan: &request.plan,
         rendered_at_iso: now_iso(),
-        sample_rate: common_sr,
+        sample_rate: album_sample_rate,
         channels: common_channels,
         bit_depth,
         album_wav_path: &album_path.to_string_lossy(),
