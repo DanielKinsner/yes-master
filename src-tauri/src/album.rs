@@ -464,6 +464,8 @@ pub fn build_album_plan_with_names(
             tracks: Vec::new(),
             transitions: Vec::new(),
             intensity,
+            delivery_sample_rate: None,
+            delivery_bit_depth: None,
         };
     }
     // Phase B+ — replace the lossy intrinsic-character mapping with the
@@ -497,6 +499,8 @@ pub fn build_album_plan_with_names(
         tracks,
         transitions,
         intensity,
+        delivery_sample_rate: None,
+        delivery_bit_depth: None,
     }
 }
 

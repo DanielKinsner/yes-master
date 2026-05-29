@@ -4450,6 +4450,8 @@ mod tests {
                 TransitionSpec::direct(),
             ],
             intensity: 1.0,
+            delivery_sample_rate: None,
+            delivery_bit_depth: None,
         };
         let json = serde_json::to_string(&plan).expect("serialize");
         let parsed: AlbumPlan = serde_json::from_str(&json).expect("deserialize");

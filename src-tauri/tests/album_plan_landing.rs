@@ -120,6 +120,8 @@ fn album_plan_pushes_quiet_track_upward_to_target_bounded_by_ceiling() {
         }],
         transitions: vec![],
         intensity: 1.0,
+        delivery_sample_rate: None,
+        delivery_bit_depth: None,
     };
 
     let request = AlbumPlanRenderRequest {

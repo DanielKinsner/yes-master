@@ -445,6 +445,16 @@ pub struct AlbumPlan {
     /// Album-level intensity multiplier — feeds into the arc resample
     /// and per-track DSP. Clamped `[0.0, 2.0]`.
     pub intensity: f32,
+    /// Album-wide delivery sample rate in Hz. `None` = Auto (highest
+    /// source rate among the album's tracks). `Some(44100|48000|96000)`
+    /// converts every track to this rate. Added for Album SR parity;
+    /// `serde(default)` keeps pre-parity saved projects deserializing.
+    #[serde(default)]
+    pub delivery_sample_rate: Option<u32>,
+    /// Album-wide delivery bit depth. `None` = Auto (first track's
+    /// `effective_bit_depth()`, the historical behavior).
+    #[serde(default)]
+    pub delivery_bit_depth: Option<u16>,
 }
 
 impl Default for AlbumPlan {
@@ -455,6 +465,8 @@ impl Default for AlbumPlan {
             tracks: Vec::new(),
             transitions: Vec::new(),
             intensity: 1.0,
+            delivery_sample_rate: None,
+            delivery_bit_depth: None,
         }
     }
 }
@@ -856,6 +868,40 @@ fn default_silence_dbfs() -> f32 {
 pub struct LoopRegion {
     pub start_sec: f64,
     pub end_sec: f64,
+}
+
+#[cfg(test)]
+mod album_plan_serde_tests {
+    use super::*;
+
+    #[test]
+    fn album_plan_deserializes_without_delivery_fields_to_none() {
+        // A v1 AlbumPlan JSON (pre-parity) has no delivery_* keys.
+        let json = r#"{
+            "title": "Legacy",
+            "arc": { "kind": "preset", "preset": "cinematic" },
+            "tracks": [],
+            "transitions": [],
+            "intensity": 1.0
+        }"#;
+        let plan: AlbumPlan =
+            serde_json::from_str(json).expect("legacy AlbumPlan must deserialize");
+        assert_eq!(plan.delivery_sample_rate, None);
+        assert_eq!(plan.delivery_bit_depth, None);
+    }
+
+    #[test]
+    fn album_plan_roundtrips_explicit_delivery_fields() {
+        let plan = AlbumPlan {
+            delivery_sample_rate: Some(44_100),
+            delivery_bit_depth: Some(16),
+            ..AlbumPlan::default()
+        };
+        let json = serde_json::to_string(&plan).expect("serialize");
+        let back: AlbumPlan = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.delivery_sample_rate, Some(44_100));
+        assert_eq!(back.delivery_bit_depth, Some(16));
+    }
 }
 
 #[cfg(test)]
