@@ -53,9 +53,9 @@ test-output/private-reference-tuning/
 !test-output/tauri-project-dialogs-smoke/
 !test-output/tauri-project-dialogs-smoke/native-dialog-save-as.ams.json
 test-output/ui-rc/
-test-output/private-fixture-matrix/
-test-output/private-fixture-matrix-subset/
-test-output/private-reference-tuning/
+# Glob covers dated matrix runs too (e.g. private-fixture-matrix-full-2026-05-28).
+test-output/private-fixture-matrix*/
+test-output/private-reference-tuning*/
 
 # Local/editor
 .env
@@ -64,3 +64,5 @@ test-output/private-reference-tuning/
 Thumbs.db
 .idea/
 .vscode/
+# Claude Code local workspace config (e.g. launch.json) — local-only, not shared.
+.claude/
