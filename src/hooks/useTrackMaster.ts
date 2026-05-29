@@ -1352,20 +1352,29 @@ export function useTrackMaster() {
     playWithKind,
   ]);
 
-  // Spacebar = toggle play/pause. Skip when focus is in a form control so
-  // typing in a value-input field still works (Phase 12.1 Dan feedback flagged
-  // this as mandatory). preventDefault stops the page from also scrolling.
+  // Spacebar = toggle play/pause anywhere the app is focused (DAW-style
+  // transport). Only skip when the user is actually typing TEXT — the
+  // preset-name field, a textarea, or a contenteditable — so a literal space
+  // still types (Phase 12.1 Dan feedback flagged that as mandatory). Number/
+  // range inputs (knobs), selects, and buttons don't need space for entry, so
+  // it drives play/stop there too; previously focus parking on a knob or the
+  // Delivery Profile select swallowed it, which made play feel waveform-only.
+  // preventDefault stops page scroll and the focused control's own space action.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.code !== "Space" && e.key !== " ") return;
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
-      const isFormField =
-        tag === "INPUT" ||
+      const inputType = (target as HTMLInputElement | null)?.type;
+      const isTextEntry =
         tag === "TEXTAREA" ||
-        tag === "SELECT" ||
-        (target?.isContentEditable ?? false);
-      if (isFormField) return;
+        (target?.isContentEditable ?? false) ||
+        (tag === "INPUT" &&
+          inputType !== "range" &&
+          inputType !== "number" &&
+          inputType !== "checkbox" &&
+          inputType !== "radio");
+      if (isTextEntry) return;
       e.preventDefault();
       void togglePlay();
     };
