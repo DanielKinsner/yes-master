@@ -892,15 +892,10 @@ fn export_landing_gain_lin_for_preview(
     // Caching by settings hash and async measurement on a worker
     // thread are bigger wins but deferred — this is the smallest
     // change that removes the audible cliff.
-    const PREVIEW_WINDOW_SECS: f32 = 8.0;
     let channels_usize = channels.max(1) as usize;
-    let safe_channels = channels_usize.max(1);
-    let total_frames = samples.len() / safe_channels;
-    let window_frames = ((PREVIEW_WINDOW_SECS * sample_rate as f32) as usize).min(total_frames);
-    let start_frame = total_frames.saturating_sub(window_frames) / 2;
-    let start = start_frame * safe_channels;
-    let end = ((start_frame + window_frames) * safe_channels).min(samples.len());
-    let mut rendered = samples[start..end].to_vec();
+    // Window via the shared helper (identical centering math as the worker
+    // path) so the 8 s preview slice has a single source of truth.
+    let mut rendered = preview_landing_window(samples, sample_rate, channels);
     let mut chain = crate::dsp::MasteringChain::new(sample_rate, channels_usize, &render_settings);
     chain.process_interleaved(&mut rendered, channels_usize);
 
