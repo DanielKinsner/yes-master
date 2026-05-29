@@ -12,6 +12,17 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// Resolve the album-wide delivery sample rate. An explicit request wins;
+/// otherwise Auto = the highest source rate among the tracks (quality-safe:
+/// never forces a needless downsample, deterministic for mixed sources).
+/// Empty source list falls back to 48 kHz.
+fn resolve_album_sample_rate(requested: Option<u32>, source_rates: &[u32]) -> u32 {
+    if let Some(rate) = requested {
+        return rate;
+    }
+    source_rates.iter().copied().max().unwrap_or(48_000)
+}
+
 #[derive(Debug, Serialize)]
 struct AlbumManifest<'a> {
     plan: &'a AlbumPlan,
@@ -344,4 +355,30 @@ fn unique_album_path(out_dir: &Path) -> CommandResult<PathBuf> {
     Err(CommandError::Io(
         "could not generate unique album path".to_string(),
     ))
+}
+
+#[cfg(test)]
+mod resolve_tests {
+    use super::*;
+
+    #[test]
+    fn explicit_request_overrides_sources() {
+        assert_eq!(
+            resolve_album_sample_rate(Some(44_100), &[48_000, 96_000]),
+            44_100
+        );
+    }
+
+    #[test]
+    fn auto_picks_highest_source_rate() {
+        assert_eq!(
+            resolve_album_sample_rate(None, &[44_100, 48_000, 44_100]),
+            48_000
+        );
+    }
+
+    #[test]
+    fn auto_with_no_sources_falls_back_to_48k() {
+        assert_eq!(resolve_album_sample_rate(None, &[]), 48_000);
+    }
 }
