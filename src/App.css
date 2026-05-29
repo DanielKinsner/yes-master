@@ -2393,7 +2393,7 @@ button.primary:disabled {
 
 .adv-label {
   font-size: 0.78rem;
-  color: var(--text-2);
+  color: var(--text-1);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -3393,6 +3393,33 @@ button.primary:disabled {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.3rem 0.7rem;
+}
+
+/* In the narrow 2-col drawer the old [slider | value | 70px box] single row
+   crushed the slider down to its handle. Re-lay each field as a compact
+   value+box top row with the slider on its OWN full-width row beneath, so
+   it's actually grabbable. Number box trimmed so it stops hogging width. */
+.rail-card-advanced .adv-control {
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "value box"
+    "slider slider";
+  gap: 0.15rem 0.4rem;
+}
+
+.rail-card-advanced .adv-control input[type="range"] {
+  grid-area: slider;
+  width: 100%;
+}
+
+.rail-card-advanced .adv-value {
+  grid-area: value;
+  align-self: center;
+}
+
+.rail-card-advanced .adv-number {
+  grid-area: box;
+  width: 52px;
 }
 
 /* Per-band compressor uses Low / Mid / High tabs (only one band's
