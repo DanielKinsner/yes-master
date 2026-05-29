@@ -25,14 +25,14 @@ pub fn export_checks_for_report(
             level: QualityLevel::Warning,
             code: "true_peak_high".to_string(),
             message: format!(
-                "True peak is {:.2} dBTP. Some delivery platforms reject masters above -1.0 dBTP.",
+                "True peak is {:.2} dBTP — near or above full scale, which risks inter-sample clipping. Most delivery platforms want -1.0 dBTP or lower.",
                 report.measured_true_peak_dbtp
             ),
         });
     } else if report.measured_true_peak_dbtp > -1.0 {
         // Streaming-headroom advisory for the narrow gray zone between the
-        // critical -0.1 dBTP threshold above and the typical -1.0 dBTP
-        // streaming ceiling below. Lossy codecs (AAC, MP3, Opus) can boost
+        // high-true-peak -0.1 dBTP threshold above (also advisory) and the
+        // typical -1.0 dBTP streaming ceiling below. Lossy codecs (AAC, MP3, Opus) can boost
         // decoded peaks by up to ~1 dB relative to the source true peak due
         // to quantization noise added inside the codec's spectral bands, so a
         // master at e.g. -0.5 dBTP can clip after AAC encoding on dense

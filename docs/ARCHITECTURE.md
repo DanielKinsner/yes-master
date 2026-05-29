@@ -36,19 +36,23 @@ Important frontend helpers:
 
 ## Signal-Chain Direction
 
-The intended mastering chain is:
+The mastering chain, as implemented in `MasteringChain::process_frame_inplace`
+(`src-tauri/src/dsp.rs`), is:
 
 1. Decode/source PCM.
 2. Input gain.
-3. Preset/tone EQ.
-4. Creative/preset compression.
-5. Saturation/warmth/width.
-6. Limiter/ceiling.
-7. Audition-only Volume Match when enabled.
-8. Export LUFS landing where applicable.
-9. Output measurement/check/report.
+3. Preset/tone EQ (7 bands).
+4. Creative/preset multiband compression.
+5. Transient shaping.
+6. Stereo width (M/S) — applied before saturation so the non-linear stage
+   doesn't smear the chosen image back toward mono.
+7. Saturation/warmth.
+8. Limiter/ceiling (true-peak lookahead).
+9. Audition-only Volume Match when enabled.
+10. User output trim, then export LUFS landing where applicable.
+11. Output measurement/check/report.
 
-Compressor Off should bypass step 4 only.
+Compressor Off bypasses step 4 only.
 
 ## Export Flow Today
 
