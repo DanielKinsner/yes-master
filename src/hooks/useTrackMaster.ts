@@ -1593,7 +1593,11 @@ export function useTrackMaster() {
       setError(null);
       try {
         const kind: PresetKind = mode === "album" ? "album" : "track";
-        const snapshot = followingAlbumIntent ? albumIntent : selectedSettings;
+        const base = followingAlbumIntent ? albumIntent : selectedSettings;
+        // Don't bake a track-specific, frontend-injected source LUFS into a
+        // shared preset — it's meaningless on other tracks and is re-injected
+        // on the next chain update anyway (master review §3).
+        const snapshot = { ...base, source_lufs_integrated: null };
         const created = await api.saveUserPreset(trimmed, kind, snapshot);
         setUserPresets((prev) => [...prev, created]);
       } catch (err) {
