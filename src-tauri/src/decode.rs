@@ -224,3 +224,58 @@ pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<Decoded
         sample_rate,
     })
 }
+
+/// Read just the container/codec header to learn the source sample rate
+/// without decoding any audio. Used by the album render path to resolve
+/// the Auto delivery rate (= highest source rate) cheaply, before any
+/// track is processed.
+pub fn probe_sample_rate(path: &Path) -> CommandResult<u32> {
+    let file = std::fs::File::open(path).map_err(|e| CommandError::Io(e.to_string()))?;
+    let mss = MediaSourceStream::new(Box::new(file), Default::default());
+    let mut hint = Hint::new();
+    if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+        hint.with_extension(ext);
+    }
+    let probed = symphonia::default::get_probe()
+        .format(
+            &hint,
+            mss,
+            &FormatOptions::default(),
+            &MetadataOptions::default(),
+        )
+        .map_err(|e| CommandError::Decode(e.to_string()))?;
+    let track = probed
+        .format
+        .tracks()
+        .iter()
+        .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
+        .ok_or_else(|| CommandError::Decode("no decodable track".to_string()))?;
+    Ok(track.codec_params.sample_rate.unwrap_or(44_100))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn write_silence_wav(path: &Path, sample_rate: u32) {
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut w = hound::WavWriter::create(path, spec).expect("create");
+        for _ in 0..1024 {
+            w.write_sample(0_i16).expect("write");
+        }
+        w.finalize().expect("finalize");
+    }
+
+    #[test]
+    fn probe_sample_rate_reads_header_rate() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let p = tmp.path().join("probe.wav");
+        write_silence_wav(&p, 44_100);
+        assert_eq!(probe_sample_rate(&p).expect("probe"), 44_100);
+    }
+}
