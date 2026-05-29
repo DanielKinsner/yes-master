@@ -121,6 +121,7 @@ function App() {
               onDeliveryProfile={tm.setDeliveryProfile}
               onDeliveryBitDepth={tm.setDeliveryBitDepth}
               onDeliverySampleRate={tm.setDeliverySampleRate}
+              showDeliveryFormat={tm.mode !== "album"}
             />
           ) : undefined
         }
@@ -1928,6 +1929,7 @@ export function AdvancedPanel({
   onDeliveryProfile,
   onDeliveryBitDepth,
   onDeliverySampleRate,
+  showDeliveryFormat = true,
 }: {
   analysis?: AnalysisResult;
   settings: MasteringSettings;
@@ -1938,6 +1940,10 @@ export function AdvancedPanel({
   onDeliveryProfile: (profile: DeliveryProfile) => void;
   onDeliveryBitDepth: (bitDepth: number | null) => void;
   onDeliverySampleRate: (sampleRate: number | null) => void;
+  /// Album Master owns delivery format via its own album-wide control,
+  /// so the per-track Delivery Format card is hidden there to avoid a
+  /// confusing duplicate. Defaults true → Track Master is unchanged.
+  showDeliveryFormat?: boolean;
 }) {
   const a = settings.advanced;
   const update = (
@@ -1967,11 +1973,13 @@ export function AdvancedPanel({
         onAdvanced={onAdvanced}
         onUpdate={update}
       />
-      <DeliveryFormatCard
-        settings={settings}
-        onBitDepth={onDeliveryBitDepth}
-        onSampleRate={onDeliverySampleRate}
-      />
+      {showDeliveryFormat && (
+        <DeliveryFormatCard
+          settings={settings}
+          onBitDepth={onDeliveryBitDepth}
+          onSampleRate={onDeliverySampleRate}
+        />
+      )}
     </>
   );
 }
