@@ -90,10 +90,14 @@ function App() {
             albumTitle={tm.albumTitle}
             albumRendering={tm.albumRendering}
             albumExportReport={tm.albumExportReport}
+            albumSampleRate={tm.albumSampleRate}
+            albumBitDepth={tm.albumBitDepth}
             onAlbumArc={tm.setAlbumArc}
             onAlbumIntensity={tm.setAlbumIntensity}
             onAlbumTitle={tm.setAlbumTitle}
             onExportAlbum={tm.exportAlbumPlan}
+            onAlbumSampleRate={tm.setAlbumSampleRate}
+            onAlbumBitDepth={tm.setAlbumBitDepth}
           />
         )}
         {tm.selectedTrack ? (
