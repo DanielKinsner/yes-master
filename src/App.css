@@ -22,6 +22,23 @@
   --radius-sm: 5px;
   --shadow-1: 0 6px 24px rgba(0, 0, 0, 0.3);
 
+  /* Elevation scale (vera/premium-depth): three deliberate tiers, each a
+     soft ambient shadow + a tight contact shadow + a 1px top sheen, so
+     surfaces read as lit from above instead of carrying ad-hoc shadows.
+     elev-1 = rail cards (barely lifted), elev-2 = workspace cards,
+     elev-3 = floating/overlay. Accent glows + state shadows are untouched. */
+  --elev-1:
+    0 1px 2px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --elev-2:
+    0 2px 6px rgba(0, 0, 0, 0.28),
+    0 8px 20px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --elev-3:
+    0 4px 10px rgba(0, 0, 0, 0.34),
+    0 18px 44px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
   /* Bolder pass: bias toward modern UI families with strong numerics. The
      stack falls through to system fonts on machines without Inter installed,
      but keeps Inter / SF Pro / Segoe UI Variable in front so display-weight
@@ -1731,7 +1748,7 @@ button.primary:disabled {
   background: linear-gradient(180deg, rgba(31, 37, 51, 0.4) 0%, var(--bg-2) 100%);
   border: 1px solid var(--border);
   border-radius: 6px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  box-shadow: var(--elev-2);
 }
 
 .section-head {
@@ -2882,7 +2899,7 @@ button.primary:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  box-shadow: var(--elev-1);
 }
 
 .panel-head {
