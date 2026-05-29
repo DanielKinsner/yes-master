@@ -2885,7 +2885,10 @@ button.primary:disabled {
   background: var(--bg-1);
   border-left: 1px solid var(--border);
   overflow-y: auto;
-  padding: 0.6rem 0.75rem 0.75rem;
+  /* No bottom padding: the sticky export group owns the bottom edge and
+     supplies its own bottom padding, so scrolled content can't peek through
+     a gap beneath the Export button. */
+  padding: 0.6rem 0.75rem 0;
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
@@ -3422,6 +3425,14 @@ button.primary:disabled {
   width: 52px;
 }
 
+/* The auto fields were saying "auto" three times (AUTO pill + "Auto" value
+   readout + the box), and the pill wrapped under the label in the narrow
+   column — funky. Drop the pill in the drawer: the italic "Auto · <value>"
+   readout already says it, and it kills the wrap. */
+.rail-card-advanced .adv-auto-pill {
+  display: none;
+}
+
 /* Per-band compressor uses Low / Mid / High tabs (only one band's
    controls visible at a time). Matches the mockup and prevents the
    rail from becoming a very tall 3-column form. */
@@ -3561,9 +3572,12 @@ button.primary:disabled {
 }
 
 .compressor-knob-grid .knob-label {
-  font-size: 0.64rem;
-  letter-spacing: 0.08em;
-  color: var(--text-2);
+  /* Match the Advanced-drawer subheadings: brighter (--text-1) and a touch
+     larger so the two card families read with one consistent label voice. */
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-1);
 }
 
 .compressor-knob-grid .knob-value {
@@ -3674,8 +3688,11 @@ button.primary:disabled {
   bottom: 0;
   margin-top: auto;
   /* Soft gradient mask above the sticky group so the panels that scroll
-     past behind it don't look abruptly clipped. */
-  padding: 0.6rem 0 0;
+     past behind it don't look abruptly clipped. Bottom padding (moved here
+     from .right-rail) keeps the Export button off the very edge while its
+     solid background covers the strip below it — no scrolled content peeks
+     through anymore. */
+  padding: 0.6rem 0 0.75rem;
   background:
     linear-gradient(180deg, rgba(17, 21, 31, 0) 0%, rgba(17, 21, 31, 0.95) 35%, var(--bg-1) 100%);
   z-index: 2;
