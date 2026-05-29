@@ -175,9 +175,19 @@ export const api = {
     durations: number[],
     arc: AlbumArc,
     intensity: number,
+    deliverySampleRate?: number | null,
+    deliveryBitDepth?: number | null,
   ) =>
     invoke<AlbumPlan>("plan_album", {
-      request: { title, analyses, durations, arc, intensity },
+      request: {
+        title,
+        analyses,
+        durations,
+        arc,
+        intensity,
+        delivery_sample_rate: deliverySampleRate ?? null,
+        delivery_bit_depth: deliveryBitDepth ?? null,
+      },
     }),
 
   renderAlbumPlan: (

@@ -178,6 +178,10 @@ export interface AlbumPlan {
   tracks: AlbumTrackEntry[];
   transitions: TransitionSpec[];
   intensity: number;
+  /// Album-wide delivery sample rate (Hz). null/absent = Auto (highest source rate).
+  delivery_sample_rate?: number | null;
+  /// Album-wide delivery bit depth. null/absent = Auto (first-track effective).
+  delivery_bit_depth?: number | null;
 }
 
 export interface MasteringSettings {
