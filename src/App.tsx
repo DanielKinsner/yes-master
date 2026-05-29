@@ -2097,7 +2097,7 @@ function AdvancedControlsCard({
           value={a.width}
           step={0.05}
           min={0}
-          max={1.5}
+          max={2}
           format={(v) => v.toFixed(2)}
           onChange={(v) => update("width", v)}
         />

@@ -38,7 +38,7 @@ export interface AdvancedSettings {
   width: number | null;
   warmth: number | null;
   presence_air: number | null;
-  compression_mode?: CompressionMode | null;
+  compression_mode?: CompressionMode;
   compression_density: number | null;
   // Phase 12.2 per-band compressor overrides. `null` = let the macro
   // (compression_density) drive that band's threshold; per-band ratio/
@@ -163,6 +163,15 @@ export interface TransitionSpec {
   duration_seconds: number;
 }
 
+/// Mirror of Rust `types::AlbumCharacter` (kebab-case). Per-track album
+/// character used by the render-side mastering bias. Optional — older
+/// serialized plans load without it.
+export type AlbumCharacter =
+  | "acoustic-folk"
+  | "transition"
+  | "heavy-djent"
+  | "return-acoustic";
+
 export interface AlbumTrackEntry {
   track_id: TrackId;
   position: number;
@@ -170,6 +179,7 @@ export interface AlbumTrackEntry {
   role_locked?: boolean;
   arc_lufs_offset_db: number;
   intensity_scale: number;
+  album_character?: AlbumCharacter | null;
 }
 
 export interface AlbumPlan {

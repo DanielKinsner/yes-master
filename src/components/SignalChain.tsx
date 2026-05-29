@@ -42,10 +42,27 @@ function presetSaturation(preset: Preset): number {
   }
 }
 
+// Mirrors the per-preset `stereo_width` baselines in
+// src-tauri/src/dsp.rs (PRESET_* calibration). Display-only; kept in sync
+// by hand until the calibration is sourced from Rust (master review §4).
 function presetDefaultWidth(preset: Preset): number {
   switch (preset.kind) {
+    case "universal":
+      return 1.04;
+    case "clarity":
+      return 1.02;
+    case "tape":
+      return 0.99;
     case "spatial":
-      return 1.3;
+      return 1.16;
+    case "oomph":
+      return 0.95;
+    case "warmth":
+      return 0.98;
+    case "punch":
+      return 1.04;
+    case "loud":
+      return 1.03;
     default:
       return 1.0;
   }
