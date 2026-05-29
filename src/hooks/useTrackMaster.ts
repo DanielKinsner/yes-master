@@ -1064,6 +1064,22 @@ export function useTrackMaster() {
     setAlbumIntensityState(Math.max(0, Math.min(2, v)));
   }, []);
 
+  // Album delivery format. `null` = Auto (backend resolves: rate = highest
+  // source rate, bit depth = first-track effective). Not persisted in track
+  // settings — rebuilt at export like arc/intensity.
+  const [albumSampleRate, setAlbumSampleRateState] = useState<number | null>(
+    null,
+  );
+  const [albumBitDepth, setAlbumBitDepthState] = useState<number | null>(null);
+  const setAlbumSampleRate = useCallback(
+    (v: number | null) => setAlbumSampleRateState(v),
+    [],
+  );
+  const setAlbumBitDepth = useCallback(
+    (v: number | null) => setAlbumBitDepthState(v),
+    [],
+  );
+
   /// Phase B: build + render the album via the new AlbumPlan path. Picks
   /// up the current tracks, per-track analyses, per-track settings,
   /// current arc + intensity, and hands it to the backend. Returns the
@@ -1097,6 +1113,8 @@ export function useTrackMaster() {
         durations,
         arc,
         albumIntensity,
+        albumSampleRate,
+        albumBitDepth,
       );
       const renderTracks: import("../lib/api").AlbumTrackRenderInput[] =
         plan.tracks.map((entry) => {
@@ -1125,6 +1143,8 @@ export function useTrackMaster() {
     albumArcKind,
     albumIntensity,
     albumTitle,
+    albumSampleRate,
+    albumBitDepth,
   ]);
 
   /// Phase A3 — pick a delivery profile. Replaces lufs_offset_db /
@@ -1846,9 +1866,13 @@ export function useTrackMaster() {
     albumTitle,
     albumRendering,
     albumExportReport,
+    albumSampleRate,
+    albumBitDepth,
     setAlbumArc,
     setAlbumIntensity,
     setAlbumTitle,
+    setAlbumSampleRate,
+    setAlbumBitDepth,
     exportAlbumPlan,
     updatePreview,
     exportMaster,
