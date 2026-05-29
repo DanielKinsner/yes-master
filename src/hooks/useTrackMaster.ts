@@ -1594,10 +1594,16 @@ export function useTrackMaster() {
       try {
         const kind: PresetKind = mode === "album" ? "album" : "track";
         const base = followingAlbumIntent ? albumIntent : selectedSettings;
-        // Don't bake a track-specific, frontend-injected source LUFS into a
-        // shared preset — it's meaningless on other tracks and is re-injected
-        // on the next chain update anyway (master review §3).
-        const snapshot = { ...base, source_lufs_integrated: null };
+        // A preset is a tonal recipe — strip transport/session state so it's
+        // portable across tracks: source_lufs_integrated is frontend-injected
+        // per-track (re-injected on the next chain update), and Volume Match is
+        // a transport preference, not a preset value. applyUserPreset likewise
+        // preserves the current VM toggle rather than taking the preset's.
+        const snapshot = {
+          ...base,
+          source_lufs_integrated: null,
+          volume_match: false,
+        };
         const created = await api.saveUserPreset(trimmed, kind, snapshot);
         setUserPresets((prev) => [...prev, created]);
       } catch (err) {
@@ -1621,13 +1627,20 @@ export function useTrackMaster() {
   const applyUserPreset = useCallback(
     (preset: UserPreset) => {
       commitToHistory();
-      if (mode === "album" && !selectedIsOverriding) {
+      const editingAlbumIntent = mode === "album" && !selectedIsOverriding;
+      // Volume Match is a transport preference, not part of a preset — keep
+      // the user's current monitoring toggle instead of the preset's value.
+      const currentVolumeMatch = editingAlbumIntent
+        ? albumIntent?.volume_match ?? false
+        : selectedSettings.volume_match;
+      const applied = { ...preset.settings, volume_match: currentVolumeMatch };
+      if (editingAlbumIntent) {
         // Apply to album intent.
-        setAlbumIntent(preset.settings);
+        setAlbumIntent(applied);
       } else if (selectedTrackId) {
         setSettingsMap((prev) => ({
           ...prev,
-          [selectedTrackId]: preset.settings,
+          [selectedTrackId]: applied,
         }));
         markStale(selectedTrackId);
       }
@@ -1636,14 +1649,14 @@ export function useTrackMaster() {
       // cases stay consistent across presets, undo/redo, and sliders.
       const shouldPush = shouldPushLiveChainForSettingsEdit({
         trackId: selectedTrackId,
-        editingAlbumIntent: mode === "album" && !selectedIsOverriding,
+        editingAlbumIntent,
         loadedTrackId,
         loadedKindByTrack,
         overrideAlbum,
       });
       if (shouldPush) {
         sendUpdateChain(
-          withSourceLufs(selectedTrackId, preset.settings),
+          withSourceLufs(selectedTrackId, applied),
           exportLufsPreviewRef.current,
         );
       }
@@ -1659,6 +1672,8 @@ export function useTrackMaster() {
       commitToHistory,
       withSourceLufs,
       sendUpdateChain,
+      albumIntent,
+      selectedSettings,
     ],
   );
 
