@@ -3366,6 +3366,18 @@ button.primary:disabled {
   gap: 0.45rem;
 }
 
+/* Advanced drawer: its body carries both .advanced-grid and .rail-card-body,
+   and .rail-card-body (later in the sheet) was flattening it to a single
+   column. Re-assert a 2-column grid here (higher specificity wins) so the
+   ~8 fields pair up and the open drawer is roughly half as tall — keeps the
+   rail from overscrolling. Fields are compact (label + small number input),
+   so two columns sit fine at the 300px rail width. */
+.rail-card-advanced .advanced-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem 0.7rem;
+}
+
 /* Per-band compressor uses Low / Mid / High tabs (only one band's
    controls visible at a time). Matches the mockup and prevents the
    rail from becoming a very tall 3-column form. */
