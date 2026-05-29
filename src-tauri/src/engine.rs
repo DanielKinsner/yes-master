@@ -356,6 +356,10 @@ pub struct PlanAlbumRequest {
     pub durations: Vec<f64>,
     pub arc: AlbumArc,
     pub intensity: f32,
+    #[serde(default)]
+    pub delivery_sample_rate: Option<u32>,
+    #[serde(default)]
+    pub delivery_bit_depth: Option<u16>,
 }
 
 /// Phase B Step 4: thin Tauri wrapper around `album::build_album_plan`.
@@ -364,13 +368,16 @@ pub struct PlanAlbumRequest {
 #[tauri::command]
 pub async fn plan_album(request: PlanAlbumRequest) -> CommandResult<AlbumPlan> {
     let refs: Vec<&AnalysisResult> = request.analyses.iter().collect();
-    Ok(crate::album::build_album_plan(
+    let mut plan = crate::album::build_album_plan(
         request.title,
         &refs,
         &request.durations,
         request.arc,
         request.intensity,
-    ))
+    );
+    plan.delivery_sample_rate = request.delivery_sample_rate;
+    plan.delivery_bit_depth = request.delivery_bit_depth;
+    Ok(plan)
 }
 
 #[tauri::command]
