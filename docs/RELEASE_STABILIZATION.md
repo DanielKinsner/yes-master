@@ -26,7 +26,10 @@ Verification coverage:
 - `src-tauri/tests/delivery_profile_render.rs`
 - `src-tauri/tests/contracts.rs`
 
-Album Master sample-rate parity remains deferred.
+Album Master sample-rate + bit-depth delivery parity has landed (album-wide
+Delivery Format, mixed-source resampling; see
+`src-tauri/tests/album_sample_rate.rs`). Channel-count parity (mono vs stereo
+tracks) remains deferred.
 
 ### Project Chrome And Help
 
