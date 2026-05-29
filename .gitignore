@@ -56,6 +56,11 @@ test-output/ui-rc/
 # Glob covers dated matrix runs too (e.g. private-fixture-matrix-full-2026-05-28).
 test-output/private-fixture-matrix*/
 test-output/private-reference-tuning*/
+# Loose generated artifacts at the test-output root (UI screenshots, logs) are
+# never tracked; the dialog-smoke .ams.json fixture above is the only exception.
+# (Needed because `!test-output/` above un-ignores the whole dir for that fixture.)
+test-output/*.png
+test-output/*.log
 
 # Local/editor
 .env

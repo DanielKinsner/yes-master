@@ -1607,9 +1607,10 @@ impl MomentaryLufs {
     }
 
     /// Feed one stereo frame (left, right) and return the current momentary
-    /// LUFS readout. For mono input pass the same sample for both channels;
-    /// the BS.1770 sum-of-channels convention then produces a +3 LU
-    /// stereo-vs-mono offset, which is by design of the standard.
+    /// LUFS readout. For TRUE mono loudness, feed mono as `(l, 0.0)` so the
+    /// channel-energy sum equals a single channel. Feeding the same sample on
+    /// both channels doubles the energy and reads +3.01 LU hot — the live
+    /// meters route mono through `sources.rs::lufs_meter_input` to avoid that.
     #[inline]
     pub fn process_frame(&mut self, left: f32, right: f32) -> f32 {
         let l_hs = self.hs_state[0].process(&self.hs_coeffs, left);
