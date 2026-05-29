@@ -831,6 +831,7 @@ function OverrideBanner({
         <button
           type="button"
           className={!isOverriding ? "on" : ""}
+          aria-pressed={!isOverriding}
           onClick={onToggle}
           disabled={!isOverriding}
         >
@@ -839,6 +840,7 @@ function OverrideBanner({
         <button
           type="button"
           className={isOverriding ? "on" : ""}
+          aria-pressed={isOverriding}
           onClick={onToggle}
           disabled={isOverriding}
         >
@@ -1368,6 +1370,7 @@ function WaveformView({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         role="slider"
+        aria-label="Waveform — click to seek, shift+drag to set a loop region"
         aria-valuemin={0}
         aria-valuemax={durationSec}
         aria-valuenow={currentTimeSec}
