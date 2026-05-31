@@ -14,17 +14,37 @@ interface IphoneTauriConfig {
   };
 }
 
+interface IphoneCapability {
+  permissions?: Array<string | { identifier?: string }>;
+}
+
 type AssetProtocolScope = string[] | { allow?: string[] } | undefined;
 
-function readIphoneTauriConfig(): IphoneTauriConfig {
+function readIphoneJson<T>(relativePath: string): T {
   const currentDir = dirname(fileURLToPath(import.meta.url));
-  const configPath = resolve(currentDir, "../src-tauri/tauri.conf.json");
-  return JSON.parse(readFileSync(configPath, "utf8")) as IphoneTauriConfig;
+  const configPath = resolve(currentDir, relativePath);
+  return JSON.parse(readFileSync(configPath, "utf8")) as T;
+}
+
+function readIphoneTauriConfig(): IphoneTauriConfig {
+  return readIphoneJson("../src-tauri/tauri.conf.json");
+}
+
+function readIphoneDefaultCapability(): IphoneCapability {
+  return readIphoneJson("../src-tauri/capabilities/default.json");
 }
 
 function assetScopeEntries(scope: AssetProtocolScope): string[] {
   if (Array.isArray(scope)) return scope;
   return scope?.allow ?? [];
+}
+
+function permissionIds(permissions: IphoneCapability["permissions"]): string[] {
+  return (
+    permissions?.map((permission) =>
+      typeof permission === "string" ? permission : permission.identifier ?? "",
+    ) ?? []
+  );
 }
 
 describe("iPhone Tauri config", () => {
@@ -34,6 +54,12 @@ describe("iPhone Tauri config", () => {
     expect(assetProtocol?.enable).toBe(true);
     expect(assetScopeEntries(assetProtocol?.scope)).toEqual(
       expect.arrayContaining(["$TEMP/**"]),
+    );
+  });
+
+  it("allows iPhone import and export dialogs", () => {
+    expect(permissionIds(readIphoneDefaultCapability().permissions)).toEqual(
+      expect.arrayContaining(["dialog:allow-open", "dialog:allow-save"]),
     );
   });
 });
