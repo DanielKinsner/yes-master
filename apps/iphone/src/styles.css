@@ -131,6 +131,11 @@ h3 {
   color: #f9fbf7;
 }
 
+.import-button:disabled {
+  background: #4d5b55;
+  cursor: wait;
+}
+
 .wave-panel {
   display: flex;
   flex-direction: column;

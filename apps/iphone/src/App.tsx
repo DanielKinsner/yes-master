@@ -1,4 +1,10 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import {
   attachIphoneTrack,
   initialIphoneAppState,
@@ -35,6 +41,8 @@ import {
 } from "./simple-mode";
 import "./styles.css";
 
+type IphoneOperation = "idle" | "importing" | "exporting";
+
 export default function App({
   backend = iphoneBackend,
   pickAudioPath = pickIphoneAudioPath,
@@ -48,13 +56,18 @@ export default function App({
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [exportChecks, setExportChecks] = useState<QualityCheck[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [operation, setOperation] = useState<IphoneOperation>("idle");
+  const operationRef = useRef<IphoneOperation>("idle");
   const plan = useMemo(() => toIphoneSimplePlan(state), [state]);
   const hasTrack = state.track !== null;
+  const isImporting = operation === "importing";
+  const isExporting = operation === "exporting";
   const sampleRate = plan.exportSettings.advanced.target_sample_rate;
   const bitDepth = plan.exportSettings.advanced.bit_depth;
   const targetLufs = plan.exportSettings.advanced.lufs_offset_db;
 
   async function importTrack() {
+    if (!startOperation("importing")) return;
     setMessage("Importing...");
     try {
       const path = await pickAudioPath();
@@ -71,11 +84,14 @@ export default function App({
       setMessage(null);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      finishOperation();
     }
   }
 
   async function exportMaster() {
     if (!state.track) return;
+    if (!startOperation("exporting")) return;
     setMessage("Exporting...");
     setExportChecks([]);
     try {
@@ -105,7 +121,21 @@ export default function App({
       );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      finishOperation();
     }
+  }
+
+  function startOperation(nextOperation: Exclude<IphoneOperation, "idle">) {
+    if (operationRef.current !== "idle") return false;
+    operationRef.current = nextOperation;
+    setOperation(nextOperation);
+    return true;
+  }
+
+  function finishOperation() {
+    operationRef.current = "idle";
+    setOperation("idle");
   }
 
   return (
@@ -132,9 +162,10 @@ export default function App({
               className="import-button"
               data-testid="iphone-import"
               type="button"
+              disabled={operation !== "idle"}
               onClick={importTrack}
             >
-              Import Track
+              {isImporting ? "Importing..." : "Import Track"}
             </button>
           )}
         </section>
@@ -256,10 +287,10 @@ export default function App({
           className="export-button"
           data-testid="iphone-export"
           type="button"
-          disabled={!hasTrack}
+          disabled={!hasTrack || operation !== "idle"}
           onClick={exportMaster}
         >
-          Export Master
+          {isExporting ? "Exporting..." : "Export Master"}
         </button>
         {message ? <p className="status-message">{message}</p> : null}
         {exportChecks.some((check) => check.level !== "info") ? (

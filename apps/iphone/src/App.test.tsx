@@ -4,6 +4,14 @@ import { describe, expect, it, vi } from "vitest";
 import App from "./App";
 import type { IphoneBackend } from "./iphone-api";
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((innerResolve) => {
+    resolve = innerResolve;
+  });
+  return { promise, resolve };
+}
+
 function makeBackend(): IphoneBackend {
   return {
     importTrack: vi.fn().mockResolvedValue({
@@ -105,6 +113,24 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
+  it("does not start duplicate imports while import is already running", async () => {
+    const selectedPath = deferred<string | null>();
+    const pickAudioPath = vi.fn().mockReturnValue(selectedPath.promise);
+    const { container, root } = renderApp({ pickAudioPath });
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='iphone-import']");
+
+    expect(pickAudioPath).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain("Importing...");
+
+    await act(async () => {
+      selectedPath.resolve(null);
+      await selectedPath.promise;
+    });
+    act(() => root.unmount());
+  });
+
   it("lets the user pick tone, loudness, profile, audition mode, and export", async () => {
     const { container, root } = renderApp();
 
@@ -147,6 +173,27 @@ describe("iPhone app shell", () => {
     expect(backend.runExportChecks).toHaveBeenCalled();
     expect(container.textContent).toContain("Exported");
 
+    act(() => root.unmount());
+  });
+
+  it("does not start duplicate exports while export is already running", async () => {
+    const selectedOutput = deferred<string | null>();
+    const pickOutputPath = vi.fn().mockReturnValue(selectedOutput.promise);
+    const { container, pickOutputPath: pickOutput, root } = renderApp({
+      pickOutputPath,
+    });
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='iphone-export']");
+    await click(container, "[data-testid='iphone-export']");
+
+    expect(pickOutput).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain("Exporting...");
+
+    await act(async () => {
+      selectedOutput.resolve(null);
+      await selectedOutput.promise;
+    });
     act(() => root.unmount());
   });
 
