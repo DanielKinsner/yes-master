@@ -6,6 +6,7 @@ import {
   selectIphoneExportProfile,
   selectIphoneLoudness,
   selectIphoneTone,
+  setIphoneCustomExport,
   setIphonePlayhead,
   switchIphonePlayback,
   toggleIphoneLufsPreview,
@@ -68,5 +69,22 @@ describe("iPhone app state", () => {
     expect(plan.exportSettings.advanced.lufs_offset_db).toBe(-10.5);
     expect(plan.exportSettings.advanced.bit_depth).toBe(16);
     expect(plan.previewLufsLanding).toBe(true);
+  });
+
+  it("feeds Custom export settings into the Simple plan", () => {
+    const custom = setIphoneCustomExport(
+      selectIphoneExportProfile(initialIphoneAppState, "custom"),
+      {
+        ceilingDbtp: -2,
+        bitDepth: 16,
+        sampleRate: 96_000,
+      },
+    );
+
+    const plan = toIphoneSimplePlan(custom);
+
+    expect(plan.exportSettings.advanced.ceiling_dbtp).toBe(-2);
+    expect(plan.exportSettings.advanced.bit_depth).toBe(16);
+    expect(plan.exportSettings.advanced.target_sample_rate).toBe(96_000);
   });
 });
