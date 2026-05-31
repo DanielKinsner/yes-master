@@ -28,6 +28,7 @@ npm run iphone:build
 npm run iphone:test
 npm run iphone:typecheck
 npm run iphone:tauri:check
+npm run iphone:tauri:backend-test
 npm run iphone:ios:init
 npm run iphone:ios:dev
 npm run iphone:ios:build
