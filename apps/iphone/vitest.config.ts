@@ -7,8 +7,9 @@ const root = dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   root,
   test: {
-    environment: "node",
+    environment: "jsdom",
     globals: true,
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}"],
+    setupFiles: ["src/test-setup.ts"],
   },
 });

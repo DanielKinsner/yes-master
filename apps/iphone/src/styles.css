@@ -1,0 +1,279 @@
+:root {
+  color: #17201d;
+  background: #dfe7e2;
+  font-family:
+    ui-rounded,
+    "Avenir Next",
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+}
+
+.iphone-app {
+  align-items: center;
+  background:
+    linear-gradient(140deg, rgba(31, 121, 98, 0.2), transparent 34%),
+    linear-gradient(320deg, rgba(196, 59, 49, 0.18), transparent 42%),
+    #dfe7e2;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 18px;
+}
+
+.phone-frame {
+  background: #f9fbf7;
+  border: 1px solid rgba(23, 32, 29, 0.12);
+  border-radius: 28px;
+  box-shadow: 0 24px 80px rgba(23, 32, 29, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 430px;
+  min-height: min(860px, calc(100vh - 36px));
+  overflow: hidden;
+  padding: 22px;
+  width: min(100%, 430px);
+}
+
+.app-header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.eyebrow,
+.track-label {
+  color: #63716b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  color: #111817;
+  font-size: 2.45rem;
+  line-height: 0.95;
+}
+
+h2 {
+  color: #111817;
+  font-size: 1.2rem;
+}
+
+h3 {
+  color: #2a3632;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.status-chip {
+  background: #dae8df;
+  border: 1px solid rgba(31, 121, 98, 0.18);
+  border-radius: 999px;
+  color: #1f5d4d;
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 8px 11px;
+}
+
+.import-strip,
+.wave-panel,
+.master-card {
+  background: #eef3ee;
+  border: 1px solid rgba(23, 32, 29, 0.1);
+  border-radius: 8px;
+}
+
+.import-strip {
+  min-height: 70px;
+  padding: 16px;
+}
+
+.import-button,
+.export-button {
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 52px;
+  width: 100%;
+}
+
+.import-button {
+  background: #17201d;
+  color: #f9fbf7;
+}
+
+.wave-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+.waveform {
+  align-items: center;
+  display: grid;
+  gap: 3px;
+  grid-template-columns: repeat(36, 1fr);
+  height: 92px;
+}
+
+.waveform span {
+  background: linear-gradient(#c43b31, #1f7962);
+  border-radius: 99px;
+  display: block;
+  height: var(--bar);
+  min-height: 10px;
+}
+
+.transport-row,
+.segmented {
+  background: #dce5df;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 4px;
+}
+
+.transport-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.segmented {
+  grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+}
+
+.segment {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #35413d;
+  cursor: pointer;
+  font-size: 0.83rem;
+  font-weight: 850;
+  min-height: 42px;
+  padding: 0 10px;
+}
+
+.segment.is-active {
+  background: #f9fbf7;
+  box-shadow: 0 8px 22px rgba(23, 32, 29, 0.1);
+  color: #111817;
+}
+
+.control-group {
+  container-type: inline-size;
+}
+
+.toggle-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.toggle-row {
+  align-items: center;
+  background: transparent;
+  border: 1px solid rgba(23, 32, 29, 0.14);
+  border-radius: 8px;
+  color: #17201d;
+  cursor: pointer;
+  display: flex;
+  font-weight: 850;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 0 12px;
+}
+
+.switch {
+  background: #b8c6bf;
+  border-radius: 999px;
+  height: 24px;
+  position: relative;
+  width: 42px;
+}
+
+.switch::after {
+  background: #f9fbf7;
+  border-radius: 50%;
+  content: "";
+  height: 20px;
+  left: 2px;
+  position: absolute;
+  top: 2px;
+  transition: transform 160ms ease;
+  width: 20px;
+}
+
+.switch.is-on {
+  background: #1f7962;
+}
+
+.switch.is-on::after {
+  transform: translateX(18px);
+}
+
+.master-card {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 14px;
+}
+
+.master-card strong {
+  color: #111817;
+  display: block;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.export-button {
+  background: #c43b31;
+  color: #fff8f2;
+  margin-top: auto;
+}
+
+.export-button:disabled {
+  background: #c9d2cd;
+  color: #67756f;
+  cursor: not-allowed;
+}
+
+@media (max-width: 380px) {
+  .phone-frame {
+    border-radius: 0;
+    min-height: 100vh;
+    padding: 18px;
+  }
+
+  .iphone-app {
+    padding: 0;
+  }
+}

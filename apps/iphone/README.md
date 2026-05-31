@@ -19,3 +19,12 @@ The current shared contract lives in `src/simple-mode.ts`. It maps the phone UI
 choices to the existing desktop mastering settings shape so the next slice can
 wire the iPhone shell into the same DSP/render logic without changing the
 desktop app.
+
+## Commands
+
+```sh
+npm run iphone:dev
+npm run iphone:build
+npm run iphone:test
+npm run iphone:typecheck
+```
