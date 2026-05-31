@@ -270,6 +270,39 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
+  it("only applies LUFS landing to mastered preview when LUFS Preview is on", async () => {
+    const { backend, container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='playback-mastered']");
+
+    expect(backend.prepareMasterPreview).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          advanced: expect.objectContaining({
+            lufs_offset_db: null,
+          }),
+        }),
+      }),
+    );
+
+    await click(container, "[data-testid='playback-original']");
+    await click(container, "[data-testid='lufs-preview']");
+    await click(container, "[data-testid='playback-mastered']");
+
+    expect(backend.prepareMasterPreview).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          advanced: expect.objectContaining({
+            lufs_offset_db: -14,
+          }),
+        }),
+      }),
+    );
+
+    act(() => root.unmount());
+  });
+
   it("swaps the audition audio source from Original to Mastered preview", async () => {
     const { container, root } = renderApp();
 

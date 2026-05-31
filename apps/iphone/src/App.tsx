@@ -160,7 +160,7 @@ export default function App({
       const job = await backend.prepareMasterPreview({
         trackId: state.track.id,
         trackPath: state.track.path,
-        settings: plan.auditionSettings,
+        settings: buildAuditionPreviewSettings(plan),
       });
       setMasterPreviewPath(job.output_paths[0] ?? null);
       setState((current) => switchIphonePlayback(current, "mastered"));
@@ -496,6 +496,19 @@ function buildExportReport(track: IphoneTrack, job: RenderJob): ExportReport {
     sample_rate: measurements.sample_rate,
     bit_depth: measurements.bit_depth,
     checks: [],
+  };
+}
+
+function buildAuditionPreviewSettings(
+  plan: ReturnType<typeof toIphoneSimplePlan>,
+) {
+  if (plan.previewLufsLanding) return plan.auditionSettings;
+  return {
+    ...plan.auditionSettings,
+    advanced: {
+      ...plan.auditionSettings.advanced,
+      lufs_offset_db: null,
+    },
   };
 }
 
