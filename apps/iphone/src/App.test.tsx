@@ -400,6 +400,49 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
+  it("ignores a mastered preview that finishes after Simple controls change", async () => {
+    const backend = makeBackend();
+    const delayedPreview = deferred<RenderJob>();
+    vi.mocked(backend.prepareMasterPreview).mockReturnValue(delayedPreview.promise);
+    const { container, root } = renderApp({ backend });
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='playback-mastered']");
+    await click(container, "[data-testid='tone-warm']");
+
+    await act(async () => {
+      delayedPreview.resolve({
+        id: "preview-2",
+        kind: "preview",
+        target_tracks: ["track-1"],
+        status: { status: "done" },
+        progress: 1,
+        started_at_iso: "2026-05-31T00:00:00.000Z",
+        output_paths: ["/private/preview/stale-mastered-preview.wav"],
+        measurements: {
+          lufs_integrated: -14,
+          true_peak_dbtp: -1,
+          dynamic_range_lu: 8,
+          sample_rate: 48_000,
+          bit_depth: 24,
+        },
+      });
+      await delayedPreview.promise;
+    });
+
+    expect(
+      container.querySelector("[data-testid='playback-original']")?.getAttribute(
+        "aria-pressed",
+      ),
+    ).toBe("true");
+    expect(
+      container.querySelector<HTMLAudioElement>("[data-testid='iphone-audio-preview']")
+        ?.src,
+    ).toBe("https://audio.local/private/new-master.wav");
+
+    act(() => root.unmount());
+  });
+
   it("exports with the selected Custom profile settings", async () => {
     const { backend, container, root } = renderApp();
 

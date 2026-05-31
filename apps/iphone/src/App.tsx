@@ -67,6 +67,7 @@ export default function App({
   const [operation, setOperation] = useState<IphoneOperation>("idle");
   const operationRef = useRef<IphoneOperation>("idle");
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const previewRequestVersionRef = useRef(0);
   const plan = useMemo(() => toIphoneSimplePlan(state), [state]);
   const hasTrack = state.track !== null;
   const isImporting = operation === "importing";
@@ -100,7 +101,7 @@ export default function App({
       }
       setAnalysis(null);
       setExportChecks([]);
-      setMasterPreviewPath(null);
+      clearMasterPreview();
       const imported = await backend.importTrack(path);
       setState((current) => attachIphoneTrack(current, toIphoneTrack(imported)));
       setMessage("Analyzing...");
@@ -156,12 +157,18 @@ export default function App({
     if (!state.track) return;
     if (!startOperation("preparing-preview")) return;
     setMessage("Preparing Mastered...");
+    const previewRequestVersion = previewRequestVersionRef.current + 1;
+    previewRequestVersionRef.current = previewRequestVersion;
     try {
       const job = await backend.prepareMasterPreview({
         trackId: state.track.id,
         trackPath: state.track.path,
         settings: withSourceAnalysis(buildAuditionPreviewSettings(plan), analysis),
       });
+      if (previewRequestVersion !== previewRequestVersionRef.current) {
+        setMessage(null);
+        return;
+      }
       const previewPath = job.output_paths[0] ?? null;
       if (!previewPath) {
         throw new Error("Mastered preview did not produce an audio file.");
@@ -202,8 +209,13 @@ export default function App({
   function updateAuditionSettings(
     update: (current: IphoneAppState) => IphoneAppState,
   ) {
-    setMasterPreviewPath(null);
+    clearMasterPreview();
     setState((current) => switchIphonePlayback(update(current), "original"));
+  }
+
+  function clearMasterPreview() {
+    previewRequestVersionRef.current += 1;
+    setMasterPreviewPath(null);
   }
 
   return (
@@ -298,9 +310,10 @@ export default function App({
             <SegmentButton
               active={state.playback === "original"}
               testId="playback-original"
-              onClick={() =>
-                setState((current) => switchIphonePlayback(current, "original"))
-              }
+              onClick={() => {
+                clearMasterPreview();
+                setState((current) => switchIphonePlayback(current, "original"));
+              }}
             >
               Original
             </SegmentButton>
