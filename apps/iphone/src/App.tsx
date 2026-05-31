@@ -75,6 +75,8 @@ export default function App({
         setMessage(null);
         return;
       }
+      setAnalysis(null);
+      setExportChecks([]);
       const imported = await backend.importTrack(path);
       setState((current) => attachIphoneTrack(current, toIphoneTrack(imported)));
       setMessage("Analyzing...");
@@ -153,9 +155,20 @@ export default function App({
 
         <section className="import-strip">
           {hasTrack ? (
-            <div>
-              <p className="track-label">Track</p>
-              <h2>{state.track?.displayName}</h2>
+            <div className="track-strip-row">
+              <div>
+                <p className="track-label">Track</p>
+                <h2>{state.track?.displayName}</h2>
+              </div>
+              <button
+                className="change-track-button"
+                data-testid="iphone-change-track"
+                type="button"
+                disabled={operation !== "idle"}
+                onClick={importTrack}
+              >
+                Change
+              </button>
             </div>
           ) : (
             <button

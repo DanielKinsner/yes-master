@@ -116,6 +116,13 @@ h3 {
   padding: 16px;
 }
 
+.track-strip-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
 .import-button,
 .export-button {
   border: 0;
@@ -133,6 +140,24 @@ h3 {
 
 .import-button:disabled {
   background: #4d5b55;
+  cursor: wait;
+}
+
+.change-track-button {
+  background: transparent;
+  border: 1px solid rgba(23, 32, 29, 0.18);
+  border-radius: 8px;
+  color: #17201d;
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  font-weight: 850;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.change-track-button:disabled {
+  color: #7a8781;
   cursor: wait;
 }
 

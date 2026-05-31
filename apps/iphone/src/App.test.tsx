@@ -14,15 +14,7 @@ function deferred<T>() {
 
 function makeBackend(): IphoneBackend {
   return {
-    importTrack: vi.fn().mockResolvedValue({
-      id: "track-1",
-      path: "/private/new-master.wav",
-      display_name: "new-master",
-      source_format: "wav",
-      duration_seconds: 181,
-      sample_rate: 44_100,
-      channels: 2,
-    }),
+    importTrack: vi.fn().mockResolvedValue(importedTrack()),
     analyzeTrack: vi.fn().mockResolvedValue({
       track_id: "track-1",
       lufs_integrated: -15,
@@ -47,6 +39,29 @@ function makeBackend(): IphoneBackend {
       },
     ]),
   } as unknown as IphoneBackend;
+}
+
+function importedTrack(
+  overrides: Partial<{
+    id: string;
+    path: string;
+    display_name: string;
+    source_format: string;
+    duration_seconds: number;
+    sample_rate: number;
+    channels: number;
+  }> = {},
+) {
+  return {
+    id: "track-1",
+    path: "/private/new-master.wav",
+    display_name: "new-master",
+    source_format: "wav",
+    duration_seconds: 181,
+    sample_rate: 44_100,
+    channels: 2,
+    ...overrides,
+  };
 }
 
 function renderApp({
@@ -128,6 +143,36 @@ describe("iPhone app shell", () => {
       selectedPath.resolve(null);
       await selectedPath.promise;
     });
+    act(() => root.unmount());
+  });
+
+  it("lets the user replace a loaded track", async () => {
+    const backend = makeBackend();
+    vi.mocked(backend.importTrack)
+      .mockResolvedValueOnce(importedTrack())
+      .mockResolvedValueOnce(
+        importedTrack({
+          id: "track-2",
+          path: "/private/second-song.wav",
+          display_name: "second-song",
+        }),
+      );
+    const pickAudioPath = vi
+      .fn()
+      .mockResolvedValueOnce("/private/new-master.wav")
+      .mockResolvedValueOnce("/private/second-song.wav");
+    const { container, root } = renderApp({ backend, pickAudioPath });
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='iphone-change-track']");
+
+    expect(pickAudioPath).toHaveBeenCalledTimes(2);
+    expect(backend.importTrack).toHaveBeenLastCalledWith(
+      "/private/second-song.wav",
+    );
+    expect(container.textContent).toContain("second-song");
+    expect(container.textContent).not.toContain("new-master");
+
     act(() => root.unmount());
   });
 
@@ -213,6 +258,42 @@ describe("iPhone app shell", () => {
 
     expect(container.textContent).toContain("Exported with 1 warning");
     expect(container.textContent).toContain("True peak is high");
+
+    act(() => root.unmount());
+  });
+
+  it("clears export warnings when a different track is imported", async () => {
+    const backend = makeBackend();
+    vi.mocked(backend.importTrack)
+      .mockResolvedValueOnce(importedTrack())
+      .mockResolvedValueOnce(
+        importedTrack({
+          id: "track-2",
+          path: "/private/second-song.wav",
+          display_name: "second-song",
+        }),
+      );
+    vi.mocked(backend.runExportChecks).mockResolvedValue([
+      {
+        level: "warning",
+        code: "true_peak_high",
+        message: "True peak is high. Consider lowering the ceiling.",
+      },
+    ]);
+    const pickAudioPath = vi
+      .fn()
+      .mockResolvedValueOnce("/private/new-master.wav")
+      .mockResolvedValueOnce("/private/second-song.wav");
+    const { container, root } = renderApp({ backend, pickAudioPath });
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='iphone-export']");
+    expect(container.textContent).toContain("True peak is high");
+
+    await click(container, "[data-testid='iphone-change-track']");
+
+    expect(container.textContent).toContain("second-song");
+    expect(container.textContent).not.toContain("True peak is high");
 
     act(() => root.unmount());
   });
