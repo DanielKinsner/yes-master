@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 import App from "./App";
 import type { IphoneBackend } from "./iphone-api";
-import type { RenderJob } from "../../../src/bindings";
+import type { AnalysisResult, RenderJob } from "../../../src/bindings";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -16,12 +16,7 @@ function deferred<T>() {
 function makeBackend(): IphoneBackend {
   return {
     importTrack: vi.fn().mockResolvedValue(importedTrack()),
-    analyzeTrack: vi.fn().mockResolvedValue({
-      track_id: "track-1",
-      lufs_integrated: -15,
-      true_peak_dbtp: -1.4,
-      dynamic_range_lu: 8,
-    }),
+    analyzeTrack: vi.fn().mockResolvedValue(analyzedTrack()),
     renderMaster: vi.fn().mockResolvedValue({
       output_paths: ["/private/new-master__master.wav"],
       measurements: {
@@ -71,6 +66,32 @@ function importedTrack(
     duration_seconds: 181,
     sample_rate: 44_100,
     channels: 2,
+    ...overrides,
+  };
+}
+
+function analyzedTrack(overrides: Partial<AnalysisResult> = {}): AnalysisResult {
+  return {
+    track_id: "track-1",
+    lufs_integrated: -15,
+    lufs_short_term_max: -12,
+    true_peak_dbtp: -1.4,
+    dynamic_range_lu: 8,
+    spectral_balance: { low: 0.33, mid: 0.34, high: 0.33 },
+    transient_density: 0.5,
+    stereo_width: 0.5,
+    recommended_universal: { volume_match: false } as AnalysisResult["recommended_universal"],
+    measured_at_iso: "2026-05-31T00:00:00.000Z",
+    inferred_role: null,
+    role_confidence: null,
+    inferred_character: null,
+    character_confidence: null,
+    spectral_balance_6band: null,
+    transient_flux: null,
+    stereo_correlation: null,
+    dynamic_range_p95_p10_db: null,
+    lufs_short_term_max_3s: null,
+    energy_density_score: null,
     ...overrides,
   };
 }
@@ -162,6 +183,25 @@ describe("iPhone app shell", () => {
     expect(container.textContent).toContain("new-master");
     expect(container.textContent).toContain("Ready");
 
+    act(() => root.unmount());
+  });
+
+  it("shows analysis progress beside the loaded track", async () => {
+    const backend = makeBackend();
+    const analysisResult = deferred<AnalysisResult>();
+    vi.mocked(backend.analyzeTrack).mockReturnValue(analysisResult.promise);
+    const { container, root } = renderApp({ backend });
+
+    await click(container, "[data-testid='iphone-import']");
+
+    expect(container.querySelector(".import-strip")?.textContent).toContain(
+      "Analyzing...",
+    );
+
+    await act(async () => {
+      analysisResult.resolve(analyzedTrack());
+      await analysisResult.promise;
+    });
     act(() => root.unmount());
   });
 

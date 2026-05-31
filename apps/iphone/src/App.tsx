@@ -75,6 +75,14 @@ export default function App({
   const isImporting = operation === "importing";
   const isExporting = operation === "exporting";
   const controlsLocked = isExporting;
+  const trackStripLabel =
+    isImporting && hasTrack
+      ? "Analyzing..."
+      : state.analysisStatus === "ready"
+        ? "Ready"
+        : state.analysisStatus === "needed"
+          ? "Needs analysis"
+          : "Track";
   const trackDuration = state.track?.durationSeconds ?? 0;
   const playheadMax = Math.max(trackDuration, state.playheadSeconds, 0);
   const auditionPath =
@@ -244,7 +252,7 @@ export default function App({
           {hasTrack ? (
             <div className="track-strip-row">
               <div>
-                <p className="track-label">Track</p>
+                <p className="track-label">{trackStripLabel}</p>
                 <h2>{state.track?.displayName}</h2>
               </div>
               <button
