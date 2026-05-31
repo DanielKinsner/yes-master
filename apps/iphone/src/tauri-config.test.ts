@@ -67,12 +67,12 @@ function plistArrayValues(plist: string, key: string): string[] {
 }
 
 describe("iPhone Tauri config", () => {
-  it("allows temp mastered previews through local asset URLs", () => {
+  it("allows original imports and temp mastered previews through local asset URLs", () => {
     const assetProtocol = readIphoneTauriConfig().app?.security?.assetProtocol;
 
     expect(assetProtocol?.enable).toBe(true);
     expect(assetScopeEntries(assetProtocol?.scope)).toEqual(
-      expect.arrayContaining(["$TEMP/**"]),
+      expect.arrayContaining(["$DOCUMENT/**", "$TEMP/**"]),
     );
   });
 

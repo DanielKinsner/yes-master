@@ -24,6 +24,7 @@
       "assetProtocol": {
         "enable": true,
         "scope": [
+          "$DOCUMENT/**",
           "$TEMP/**"
         ]
       }
