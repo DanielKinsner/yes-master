@@ -11,7 +11,13 @@ import {
   toggleIphoneVolumeMatch,
   toIphoneSimplePlan,
   type IphoneAppState,
+  type IphoneTrack,
 } from "./app-state";
+import {
+  iphoneBackend,
+  pickIphoneAudioPath,
+  type IphoneBackend,
+} from "./iphone-api";
 import {
   iphoneSimpleExportProfileOptions,
   iphoneSimpleLoudnessOptions,
@@ -22,24 +28,38 @@ import {
 } from "./simple-mode";
 import "./styles.css";
 
-export default function App() {
+export default function App({
+  backend = iphoneBackend,
+  pickAudioPath = pickIphoneAudioPath,
+}: {
+  backend?: IphoneBackend;
+  pickAudioPath?: () => Promise<string | null>;
+}) {
   const [state, setState] = useState<IphoneAppState>(initialIphoneAppState);
+  const [message, setMessage] = useState<string | null>(null);
   const plan = useMemo(() => toIphoneSimplePlan(state), [state]);
   const hasTrack = state.track !== null;
   const sampleRate = plan.exportSettings.advanced.target_sample_rate;
   const bitDepth = plan.exportSettings.advanced.bit_depth;
   const targetLufs = plan.exportSettings.advanced.lufs_offset_db;
 
-  function importDemoTrack() {
-    setState((current) =>
-      markIphoneAnalysisReady(
-        attachIphoneTrack(current, {
-          id: "iphone-demo-track",
-          displayName: "New master.wav",
-          durationSeconds: 181,
-        }),
-      ),
-    );
+  async function importTrack() {
+    setMessage("Importing...");
+    try {
+      const path = await pickAudioPath();
+      if (!path) {
+        setMessage(null);
+        return;
+      }
+      const imported = await backend.importTrack(path);
+      setState((current) => attachIphoneTrack(current, toIphoneTrack(imported)));
+      setMessage("Analyzing...");
+      await backend.analyzeTrack(imported.id, imported.path);
+      setState((current) => markIphoneAnalysisReady(current));
+      setMessage(null);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    }
   }
 
   return (
@@ -66,7 +86,7 @@ export default function App() {
               className="import-button"
               data-testid="iphone-import"
               type="button"
-              onClick={importDemoTrack}
+              onClick={importTrack}
             >
               Import Track
             </button>
@@ -189,9 +209,22 @@ export default function App() {
         <button className="export-button" type="button" disabled={!hasTrack}>
           Export Master
         </button>
+        {message ? <p className="status-message">{message}</p> : null}
       </section>
     </main>
   );
+}
+
+function toIphoneTrack(track: {
+  id: string;
+  display_name: string;
+  duration_seconds: number | null;
+}): IphoneTrack {
+  return {
+    id: track.id,
+    displayName: track.display_name,
+    durationSeconds: track.duration_seconds,
+  };
 }
 
 function ControlGroup({

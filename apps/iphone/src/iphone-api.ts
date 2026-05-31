@@ -1,4 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import type {
   AnalysisResult,
   ExportReport,
@@ -62,3 +63,18 @@ export function createIphoneBackend(invoke: IphoneInvoke): IphoneBackend {
 }
 
 export const iphoneBackend = createIphoneBackend(tauriInvoke);
+
+export async function pickIphoneAudioPath(): Promise<string | null> {
+  const selected = await open({
+    directory: false,
+    multiple: false,
+    title: "Import audio",
+    filters: [
+      {
+        name: "Audio",
+        extensions: ["wav", "aiff", "aif", "flac", "mp3", "m4a", "aac", "ogg", "opus"],
+      },
+    ],
+  });
+  return Array.isArray(selected) ? selected[0] ?? null : selected;
+}
