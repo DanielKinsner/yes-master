@@ -26,6 +26,11 @@ function readIphoneJson<T>(relativePath: string): T {
   return JSON.parse(readFileSync(configPath, "utf8")) as T;
 }
 
+function readIphoneText(relativePath: string): string {
+  const currentDir = dirname(fileURLToPath(import.meta.url));
+  return readFileSync(resolve(currentDir, relativePath), "utf8");
+}
+
 function readIphoneTauriConfig(): IphoneTauriConfig {
   return readIphoneJson("../src-tauri/tauri.conf.json");
 }
@@ -47,6 +52,20 @@ function permissionIds(permissions: IphoneCapability["permissions"]): string[] {
   );
 }
 
+function plistArrayValues(plist: string, key: string): string[] {
+  const keyStart = plist.indexOf(`<key>${key}</key>`);
+  if (keyStart === -1) return [];
+  const arrayStart = plist.indexOf("<array>", keyStart);
+  const arrayEnd = plist.indexOf("</array>", arrayStart);
+  if (arrayStart === -1 || arrayEnd === -1) return [];
+  return Array.from(
+    plist
+      .slice(arrayStart, arrayEnd)
+      .matchAll(/<string>([^<]+)<\/string>/g),
+    (match) => match[1],
+  );
+}
+
 describe("iPhone Tauri config", () => {
   it("allows temp mastered previews through local asset URLs", () => {
     const assetProtocol = readIphoneTauriConfig().app?.security?.assetProtocol;
@@ -61,5 +80,15 @@ describe("iPhone Tauri config", () => {
     expect(permissionIds(readIphoneDefaultCapability().permissions)).toEqual(
       expect.arrayContaining(["dialog:allow-open", "dialog:allow-save"]),
     );
+  });
+
+  it("locks the iPhone target to portrait orientation", () => {
+    const plist = readIphoneText(
+      "../src-tauri/gen/apple/yes-master-iphone_iOS/Info.plist",
+    );
+
+    expect(plistArrayValues(plist, "UISupportedInterfaceOrientations")).toEqual([
+      "UIInterfaceOrientationPortrait",
+    ]);
   });
 });
