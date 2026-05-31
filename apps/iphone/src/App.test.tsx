@@ -83,7 +83,7 @@ function renderApp({
 }: {
   backend?: IphoneBackend;
   pickAudioPath?: () => Promise<string | null>;
-  pickOutputPath?: () => Promise<string | null>;
+  pickOutputPath?: (defaultPath?: string) => Promise<string | null>;
   toAudioUrl?: (path: string) => string;
 } = {}) {
   const container = document.createElement("div");
@@ -512,6 +512,27 @@ describe("iPhone app shell", () => {
     );
     expect(backend.runExportChecks).toHaveBeenCalled();
     expect(container.textContent).toContain("Exported");
+
+    act(() => root.unmount());
+  });
+
+  it("suggests a track-specific export name", async () => {
+    const backend = makeBackend();
+    vi.mocked(backend.importTrack).mockResolvedValue(
+      importedTrack({
+        display_name: "rough mix.wav",
+        path: "/private/rough mix.wav",
+      }),
+    );
+    const pickOutputPath = vi
+      .fn()
+      .mockResolvedValue("/private/rough mix - YES Master.wav");
+    const { container, root } = renderApp({ backend, pickOutputPath });
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='iphone-export']");
+
+    expect(pickOutputPath).toHaveBeenCalledWith("rough mix - YES Master.wav");
 
     act(() => root.unmount());
   });

@@ -95,10 +95,12 @@ export async function pickIphoneAudioPath(): Promise<string | null> {
   return Array.isArray(selected) ? selected[0] ?? null : selected;
 }
 
-export async function pickIphoneOutputPath(): Promise<string | null> {
+export async function pickIphoneOutputPath(
+  defaultPath = "YES-Master.wav",
+): Promise<string | null> {
   return save({
     title: "Export master",
-    defaultPath: "YES-Master.wav",
+    defaultPath,
     filters: [
       {
         name: "WAV",

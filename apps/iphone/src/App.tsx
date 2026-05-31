@@ -56,7 +56,7 @@ export default function App({
 }: {
   backend?: IphoneBackend;
   pickAudioPath?: () => Promise<string | null>;
-  pickOutputPath?: () => Promise<string | null>;
+  pickOutputPath?: (defaultPath?: string) => Promise<string | null>;
   toAudioUrl?: (path: string) => string;
 }) {
   const [state, setState] = useState<IphoneAppState>(initialIphoneAppState);
@@ -121,7 +121,9 @@ export default function App({
     setMessage("Exporting...");
     setExportChecks([]);
     try {
-      const outputPath = await pickOutputPath();
+      const outputPath = await pickOutputPath(
+        suggestIphoneExportFileName(state.track),
+      );
       if (!outputPath) {
         setMessage(null);
         return;
@@ -546,6 +548,16 @@ function buildExportReport(track: IphoneTrack, job: RenderJob): ExportReport {
     bit_depth: measurements.bit_depth,
     checks: [],
   };
+}
+
+function suggestIphoneExportFileName(track: IphoneTrack) {
+  const baseName = track.displayName
+    .replace(/\.(wav|wave|aiff|aif|flac|mp3|m4a|aac|ogg|opus)$/i, "")
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return baseName ? `${baseName} - YES Master.wav` : "YES-Master.wav";
 }
 
 function buildAuditionPreviewSettings(

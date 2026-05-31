@@ -1,14 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
-import { createIphoneBackend, pickIphoneAudioPath } from "./iphone-api";
+import {
+  createIphoneBackend,
+  pickIphoneAudioPath,
+  pickIphoneOutputPath,
+} from "./iphone-api";
 import type { MasteringSettings } from "../../../src/bindings";
 
 const dialogMocks = vi.hoisted(() => ({
   open: vi.fn(),
+  save: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: dialogMocks.open,
-  save: vi.fn(),
+  save: dialogMocks.save,
 }));
 
 describe("iPhone API facade", () => {
@@ -86,6 +91,18 @@ describe("iPhone API facade", () => {
         multiple: false,
         pickerMode: "document",
         fileAccessMode: "copy",
+      }),
+    );
+  });
+
+  it("uses the suggested iPhone export filename", async () => {
+    dialogMocks.save.mockResolvedValue("/private/rough mix - YES Master.wav");
+
+    await pickIphoneOutputPath("rough mix - YES Master.wav");
+
+    expect(dialogMocks.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultPath: "rough mix - YES Master.wav",
       }),
     );
   });
