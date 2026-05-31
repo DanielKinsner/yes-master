@@ -27,4 +27,22 @@ npm run iphone:dev
 npm run iphone:build
 npm run iphone:test
 npm run iphone:typecheck
+npm run iphone:tauri:check
+npm run iphone:ios:init
+npm run iphone:ios:dev
+npm run iphone:ios:build
 ```
+
+## iOS Container
+
+The iOS/Tauri container lives in `src-tauri/`, with the generated Xcode project
+under `src-tauri/gen/apple/`.
+
+Local iOS runs still need normal Apple setup:
+
+- Full Xcode selected with `xcode-select`.
+- Apple development signing configured.
+- Rust iOS targets installed outside this repo.
+
+The first `tauri ios init` run installed the local helper tools Tauri requested
+through Homebrew, including CocoaPods.

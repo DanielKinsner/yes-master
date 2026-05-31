@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "YES Master iPhone",
+  "version": "0.1.0",
+  "identifier": "com.yesmaster.iphone",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://127.0.0.1:5174",
+    "beforeDevCommand": "cd ../.. && npm run iphone:dev",
+    "beforeBuildCommand": "cd ../.. && npm run iphone:build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "YES Master iPhone",
+        "width": 430,
+        "height": 860,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "android": {
+      "debugApplicationIdSuffix": ".debug"
+    }
+  }
+}
