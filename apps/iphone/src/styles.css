@@ -204,6 +204,11 @@ h3 {
   opacity: 0.45;
 }
 
+.audio-preview {
+  height: 42px;
+  width: 100%;
+}
+
 .transport-row,
 .segmented {
   background: #dce5df;

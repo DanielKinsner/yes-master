@@ -78,10 +78,12 @@ function renderApp({
   backend = makeBackend(),
   pickAudioPath = vi.fn().mockResolvedValue("/private/new-master.wav"),
   pickOutputPath = vi.fn().mockResolvedValue("/private/new-master__master.wav"),
+  toAudioUrl = (path: string) => `https://audio.local${path}`,
 }: {
   backend?: IphoneBackend;
   pickAudioPath?: () => Promise<string | null>;
   pickOutputPath?: () => Promise<string | null>;
+  toAudioUrl?: (path: string) => string;
 } = {}) {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -93,6 +95,7 @@ function renderApp({
         backend={backend}
         pickAudioPath={pickAudioPath}
         pickOutputPath={pickOutputPath}
+        toAudioUrl={toAudioUrl}
       />,
     );
   });
@@ -263,6 +266,24 @@ describe("iPhone app shell", () => {
       }),
     );
     expect(container.textContent).toContain("Mastered");
+
+    act(() => root.unmount());
+  });
+
+  it("swaps the audition audio source from Original to Mastered preview", async () => {
+    const { container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    const audio = container.querySelector<HTMLAudioElement>(
+      "[data-testid='iphone-audio-preview']",
+    );
+    expect(audio?.src).toBe("https://audio.local/private/new-master.wav");
+
+    await click(container, "[data-testid='playback-mastered']");
+
+    expect(audio?.src).toBe(
+      "https://audio.local/private/preview/track-1-mastered-preview.wav",
+    );
 
     act(() => root.unmount());
   });

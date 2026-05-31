@@ -1,10 +1,12 @@
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import {
   attachIphoneTrack,
   initialIphoneAppState,
@@ -50,10 +52,12 @@ export default function App({
   backend = iphoneBackend,
   pickAudioPath = pickIphoneAudioPath,
   pickOutputPath = pickIphoneOutputPath,
+  toAudioUrl = convertFileSrc,
 }: {
   backend?: IphoneBackend;
   pickAudioPath?: () => Promise<string | null>;
   pickOutputPath?: () => Promise<string | null>;
+  toAudioUrl?: (path: string) => string;
 }) {
   const [state, setState] = useState<IphoneAppState>(initialIphoneAppState);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
@@ -62,15 +66,28 @@ export default function App({
   const [masterPreviewPath, setMasterPreviewPath] = useState<string | null>(null);
   const [operation, setOperation] = useState<IphoneOperation>("idle");
   const operationRef = useRef<IphoneOperation>("idle");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const plan = useMemo(() => toIphoneSimplePlan(state), [state]);
   const hasTrack = state.track !== null;
   const isImporting = operation === "importing";
   const isExporting = operation === "exporting";
   const trackDuration = state.track?.durationSeconds ?? 0;
   const playheadMax = Math.max(trackDuration, state.playheadSeconds, 0);
+  const auditionPath =
+    state.playback === "mastered" && masterPreviewPath
+      ? masterPreviewPath
+      : state.track?.path;
+  const auditionUrl = auditionPath ? toAudioUrl(auditionPath) : null;
   const sampleRate = plan.exportSettings.advanced.target_sample_rate;
   const bitDepth = plan.exportSettings.advanced.bit_depth;
   const targetLufs = plan.exportSettings.advanced.lufs_offset_db;
+
+  useEffect(() => {
+    if (!audioRef.current || !auditionUrl) return;
+    if (Math.abs(audioRef.current.currentTime - state.playheadSeconds) > 0.25) {
+      audioRef.current.currentTime = state.playheadSeconds;
+    }
+  }, [auditionUrl, state.playheadSeconds]);
 
   async function importTrack() {
     if (!startOperation("importing")) return;
@@ -252,6 +269,20 @@ export default function App({
             />
             <span>{formatTime(trackDuration)}</span>
           </div>
+          {auditionUrl ? (
+            <audio
+              className="audio-preview"
+              controls
+              data-testid="iphone-audio-preview"
+              ref={audioRef}
+              src={auditionUrl}
+              onTimeUpdate={(event) =>
+                setState((current) =>
+                  setIphonePlayhead(current, event.currentTarget.currentTime),
+                )
+              }
+            />
+          ) : null}
           <div className="transport-row">
             <SegmentButton
               active={state.playback === "original"}
