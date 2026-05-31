@@ -129,14 +129,14 @@ export default function App({
       const job = await backend.renderMaster({
         trackId: state.track.id,
         trackPath: state.track.path,
-        settings: plan.exportSettings,
+        settings: withSourceAnalysis(plan.exportSettings, analysis),
         outputPath,
       });
       const report = buildExportReport(state.track, job);
       const checks = await backend.runExportChecks(
         report,
         analysis,
-        plan.exportSettings,
+        withSourceAnalysis(plan.exportSettings, analysis),
       );
       setExportChecks(checks);
       const warningCount = checks.filter((check) => check.level !== "info").length;
@@ -160,7 +160,7 @@ export default function App({
       const job = await backend.prepareMasterPreview({
         trackId: state.track.id,
         trackPath: state.track.path,
-        settings: buildAuditionPreviewSettings(plan),
+        settings: withSourceAnalysis(buildAuditionPreviewSettings(plan), analysis),
       });
       setMasterPreviewPath(job.output_paths[0] ?? null);
       setState((current) => switchIphonePlayback(current, "mastered"));
@@ -509,6 +509,20 @@ function buildAuditionPreviewSettings(
       ...plan.auditionSettings.advanced,
       lufs_offset_db: null,
     },
+  };
+}
+
+function withSourceAnalysis(
+  settings: ReturnType<typeof toIphoneSimplePlan>["exportSettings"],
+  analysis: AnalysisResult | null,
+) {
+  const sourceLufs = analysis?.lufs_integrated;
+  if (sourceLufs === undefined || sourceLufs === null || !Number.isFinite(sourceLufs)) {
+    return settings;
+  }
+  return {
+    ...settings,
+    source_lufs_integrated: sourceLufs,
   };
 }
 

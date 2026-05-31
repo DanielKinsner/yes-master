@@ -270,6 +270,23 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
+  it("injects analyzed source LUFS into mastered preview settings", async () => {
+    const { backend, container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='playback-mastered']");
+
+    expect(backend.prepareMasterPreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          source_lufs_integrated: -15,
+        }),
+      }),
+    );
+
+    act(() => root.unmount());
+  });
+
   it("only applies LUFS landing to mastered preview when LUFS Preview is on", async () => {
     const { backend, container, root } = renderApp();
 
