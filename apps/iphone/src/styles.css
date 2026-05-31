@@ -273,6 +273,19 @@ h3 {
   text-align: center;
 }
 
+.warning-list {
+  background: #fff1dd;
+  border: 1px solid rgba(196, 59, 49, 0.22);
+  border-radius: 8px;
+  color: #71332d;
+  display: grid;
+  font-size: 0.82rem;
+  font-weight: 750;
+  gap: 6px;
+  line-height: 1.35;
+  padding: 10px 12px;
+}
+
 @media (max-width: 380px) {
   .phone-frame {
     border-radius: 0;

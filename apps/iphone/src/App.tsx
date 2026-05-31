@@ -19,7 +19,12 @@ import {
   pickIphoneOutputPath,
   type IphoneBackend,
 } from "./iphone-api";
-import type { AnalysisResult, ExportReport, RenderJob } from "../../../src/bindings";
+import type {
+  AnalysisResult,
+  ExportReport,
+  QualityCheck,
+  RenderJob,
+} from "../../../src/bindings";
 import {
   iphoneSimpleExportProfileOptions,
   iphoneSimpleLoudnessOptions,
@@ -41,6 +46,7 @@ export default function App({
 }) {
   const [state, setState] = useState<IphoneAppState>(initialIphoneAppState);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [exportChecks, setExportChecks] = useState<QualityCheck[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const plan = useMemo(() => toIphoneSimplePlan(state), [state]);
   const hasTrack = state.track !== null;
@@ -71,6 +77,7 @@ export default function App({
   async function exportMaster() {
     if (!state.track) return;
     setMessage("Exporting...");
+    setExportChecks([]);
     try {
       const outputPath = await pickOutputPath();
       if (!outputPath) {
@@ -89,6 +96,7 @@ export default function App({
         analysis,
         plan.exportSettings,
       );
+      setExportChecks(checks);
       const warningCount = checks.filter((check) => check.level !== "info").length;
       setMessage(
         warningCount > 0
@@ -254,6 +262,15 @@ export default function App({
           Export Master
         </button>
         {message ? <p className="status-message">{message}</p> : null}
+        {exportChecks.some((check) => check.level !== "info") ? (
+          <section className="warning-list" aria-label="Export warnings">
+            {exportChecks
+              .filter((check) => check.level !== "info")
+              .map((check) => (
+                <p key={check.code}>{check.message}</p>
+              ))}
+          </section>
+        ) : null}
       </section>
     </main>
   );
