@@ -72,6 +72,7 @@ export default function App({
   const hasTrack = state.track !== null;
   const isImporting = operation === "importing";
   const isExporting = operation === "exporting";
+  const controlsLocked = isExporting;
   const trackDuration = state.track?.durationSeconds ?? 0;
   const playheadMax = Math.max(trackDuration, state.playheadSeconds, 0);
   const auditionPath =
@@ -316,6 +317,7 @@ export default function App({
           <div className="transport-row">
             <SegmentButton
               active={state.playback === "original"}
+              disabled={controlsLocked}
               testId="playback-original"
               onClick={() => {
                 clearMasterPreview();
@@ -326,6 +328,7 @@ export default function App({
             </SegmentButton>
             <SegmentButton
               active={state.playback === "mastered"}
+              disabled={controlsLocked}
               testId="playback-mastered"
               onClick={switchToMasteredPreview}
             >
@@ -339,6 +342,7 @@ export default function App({
             <SegmentButton
               key={option.id}
               active={state.selectedTone === option.id}
+              disabled={controlsLocked}
               testId={`tone-${option.id}`}
               onClick={() =>
                 updateAuditionSettings((current) =>
@@ -356,6 +360,7 @@ export default function App({
             <SegmentButton
               key={option.id}
               active={state.selectedLoudness === option.id}
+              disabled={controlsLocked}
               testId={`loudness-${option.id}`}
               onClick={() =>
                 updateAuditionSettings((current) =>
@@ -373,6 +378,7 @@ export default function App({
             <SegmentButton
               key={option.id}
               active={state.selectedExportProfile === option.id}
+              disabled={controlsLocked}
               testId={`profile-${option.id}`}
               onClick={() =>
                 updateAuditionSettings((current) =>
@@ -394,6 +400,7 @@ export default function App({
               <span>Rate</span>
               <select
                 data-testid="custom-sample-rate"
+                disabled={controlsLocked}
                 value={state.customExport.sampleRate ?? "source"}
                 onChange={(event) =>
                   updateCustomExport({
@@ -411,6 +418,7 @@ export default function App({
               <span>Depth</span>
               <select
                 data-testid="custom-bit-depth"
+                disabled={controlsLocked}
                 value={state.customExport.bitDepth ?? "source"}
                 onChange={(event) =>
                   updateCustomExport({
@@ -427,6 +435,7 @@ export default function App({
               <span>Ceiling</span>
               <select
                 data-testid="custom-ceiling"
+                disabled={controlsLocked}
                 value={state.customExport.ceilingDbtp}
                 onChange={(event) =>
                   updateCustomExport({
@@ -445,6 +454,7 @@ export default function App({
         <section className="toggle-stack">
           <ToggleRow
             active={state.volumeMatch}
+            disabled={controlsLocked}
             label="Volume Match"
             testId="volume-match"
             onClick={() =>
@@ -453,6 +463,7 @@ export default function App({
           />
           <ToggleRow
             active={state.lufsPreview}
+            disabled={controlsLocked}
             label="LUFS Preview"
             testId="lufs-preview"
             onClick={() =>
@@ -579,11 +590,13 @@ function ControlGroup({
 function SegmentButton({
   active,
   children,
+  disabled = false,
   onClick,
   testId,
 }: {
   active: boolean;
   children: ReactNode;
+  disabled?: boolean;
   onClick: () => void;
   testId: string;
 }) {
@@ -592,6 +605,7 @@ function SegmentButton({
       aria-pressed={active}
       className={active ? "segment is-active" : "segment"}
       data-testid={testId}
+      disabled={disabled}
       type="button"
       onClick={onClick}
     >
@@ -602,11 +616,13 @@ function SegmentButton({
 
 function ToggleRow({
   active,
+  disabled = false,
   label,
   onClick,
   testId,
 }: {
   active: boolean;
+  disabled?: boolean;
   label: string;
   onClick: () => void;
   testId: string;
@@ -616,6 +632,7 @@ function ToggleRow({
       aria-pressed={active}
       className="toggle-row"
       data-testid={testId}
+      disabled={disabled}
       type="button"
       onClick={onClick}
     >

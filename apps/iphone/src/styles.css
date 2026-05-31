@@ -244,6 +244,13 @@ h3 {
   color: #111817;
 }
 
+.segment:disabled,
+.toggle-row:disabled,
+.custom-export-panel select:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
 .control-group {
   container-type: inline-size;
 }

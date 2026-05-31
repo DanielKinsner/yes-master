@@ -537,6 +537,50 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
+  it("locks Simple controls while export is running", async () => {
+    const backend = makeBackend();
+    const renderJob = deferred<RenderJob>();
+    vi.mocked(backend.renderMaster).mockReturnValue(renderJob.promise);
+    const { container, root } = renderApp({ backend });
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='iphone-export']");
+    await click(container, "[data-testid='tone-warm']");
+
+    expect(
+      container.querySelector("[data-testid='tone-balanced']")?.getAttribute(
+        "aria-pressed",
+      ),
+    ).toBe("true");
+    expect(
+      container.querySelector("[data-testid='tone-warm']")?.getAttribute(
+        "aria-pressed",
+      ),
+    ).toBe("false");
+
+    await act(async () => {
+      renderJob.resolve({
+        id: "export-1",
+        kind: "master",
+        target_tracks: ["track-1"],
+        status: { status: "done" },
+        progress: 1,
+        started_at_iso: "2026-05-31T00:00:00.000Z",
+        output_paths: ["/private/new-master__master.wav"],
+        measurements: {
+          lufs_integrated: -14,
+          true_peak_dbtp: -1,
+          dynamic_range_lu: 8,
+          sample_rate: 48_000,
+          bit_depth: 24,
+        },
+      });
+      await renderJob.promise;
+    });
+
+    act(() => root.unmount());
+  });
+
   it("shows advisory export warnings without blocking export", async () => {
     const backend = makeBackend();
     vi.mocked(backend.runExportChecks).mockResolvedValue([
