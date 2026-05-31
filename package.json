@@ -10,6 +10,8 @@
     "build:windows": "rimraf src-tauri/target/release/produce_dialog_smoke.exe && tauri build --bundles msi,nsis",
     "preview": "vite preview",
     "tauri": "tauri",
+    "iphone:typecheck": "tsc -p apps/iphone/tsconfig.json",
+    "iphone:test": "vitest run --config apps/iphone/vitest.config.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
