@@ -162,7 +162,11 @@ export default function App({
         trackPath: state.track.path,
         settings: withSourceAnalysis(buildAuditionPreviewSettings(plan), analysis),
       });
-      setMasterPreviewPath(job.output_paths[0] ?? null);
+      const previewPath = job.output_paths[0] ?? null;
+      if (!previewPath) {
+        throw new Error("Mastered preview did not produce an audio file.");
+      }
+      setMasterPreviewPath(previewPath);
       setState((current) => switchIphonePlayback(current, "mastered"));
       setMessage(null);
     } catch (error) {

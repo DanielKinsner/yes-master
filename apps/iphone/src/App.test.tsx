@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 import App from "./App";
 import type { IphoneBackend } from "./iphone-api";
+import type { RenderJob } from "../../../src/bindings";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -266,6 +267,42 @@ describe("iPhone app shell", () => {
       }),
     );
     expect(container.textContent).toContain("Mastered");
+
+    act(() => root.unmount());
+  });
+
+  it("does not switch to Mastered when the preview render returns no file", async () => {
+    const backend = makeBackend();
+    const emptyPreviewJob: RenderJob = {
+      id: "preview-1",
+      kind: "preview",
+      target_tracks: ["track-1"],
+      status: { status: "done" },
+      progress: 1,
+      started_at_iso: "2026-05-31T00:00:00.000Z",
+      output_paths: [],
+      measurements: {
+        lufs_integrated: -14,
+        true_peak_dbtp: -1,
+        dynamic_range_lu: 8,
+        sample_rate: 48_000,
+        bit_depth: 24,
+      },
+    };
+    vi.mocked(backend.prepareMasterPreview).mockResolvedValue(emptyPreviewJob);
+    const { container, root } = renderApp({ backend });
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='playback-mastered']");
+
+    expect(
+      container.querySelector("[data-testid='playback-original']")?.getAttribute(
+        "aria-pressed",
+      ),
+    ).toBe("true");
+    expect(container.textContent).toContain(
+      "Mastered preview did not produce an audio file.",
+    );
 
     act(() => root.unmount());
   });
