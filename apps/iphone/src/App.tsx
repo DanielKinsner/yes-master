@@ -187,12 +187,19 @@ export default function App({
   function updateCustomExport(
     nextCustomExport: Partial<IphoneCustomExportSettings>,
   ) {
-    setState((current) =>
+    updateAuditionSettings((current) =>
       setIphoneCustomExport(current, {
         ...current.customExport,
         ...nextCustomExport,
       }),
     );
+  }
+
+  function updateAuditionSettings(
+    update: (current: IphoneAppState) => IphoneAppState,
+  ) {
+    setMasterPreviewPath(null);
+    setState((current) => switchIphonePlayback(update(current), "original"));
   }
 
   return (
@@ -310,7 +317,7 @@ export default function App({
               active={state.selectedTone === option.id}
               testId={`tone-${option.id}`}
               onClick={() =>
-                setState((current) =>
+                updateAuditionSettings((current) =>
                   selectIphoneTone(current, option.id as IphoneSimpleTone),
                 )
               }
@@ -327,7 +334,7 @@ export default function App({
               active={state.selectedLoudness === option.id}
               testId={`loudness-${option.id}`}
               onClick={() =>
-                setState((current) =>
+                updateAuditionSettings((current) =>
                   selectIphoneLoudness(current, option.id as IphoneSimpleLoudness),
                 )
               }
@@ -344,7 +351,7 @@ export default function App({
               active={state.selectedExportProfile === option.id}
               testId={`profile-${option.id}`}
               onClick={() =>
-                setState((current) =>
+                updateAuditionSettings((current) =>
                   selectIphoneExportProfile(
                     current,
                     option.id as IphoneSimpleExportProfile,
@@ -416,13 +423,17 @@ export default function App({
             active={state.volumeMatch}
             label="Volume Match"
             testId="volume-match"
-            onClick={() => setState((current) => toggleIphoneVolumeMatch(current))}
+            onClick={() =>
+              updateAuditionSettings((current) => toggleIphoneVolumeMatch(current))
+            }
           />
           <ToggleRow
             active={state.lufsPreview}
             label="LUFS Preview"
             testId="lufs-preview"
-            onClick={() => setState((current) => toggleIphoneLufsPreview(current))}
+            onClick={() =>
+              updateAuditionSettings((current) => toggleIphoneLufsPreview(current))
+            }
           />
         </section>
 

@@ -338,6 +338,31 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
+  it("clears the mastered preview when Simple controls change", async () => {
+    const { container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='playback-mastered']");
+    expect(
+      container.querySelector<HTMLAudioElement>("[data-testid='iphone-audio-preview']")
+        ?.src,
+    ).toBe("https://audio.local/private/preview/track-1-mastered-preview.wav");
+
+    await click(container, "[data-testid='tone-warm']");
+
+    expect(
+      container.querySelector<HTMLAudioElement>("[data-testid='iphone-audio-preview']")
+        ?.src,
+    ).toBe("https://audio.local/private/new-master.wav");
+    expect(
+      container.querySelector("[data-testid='playback-original']")?.getAttribute(
+        "aria-pressed",
+      ),
+    ).toBe("true");
+
+    act(() => root.unmount());
+  });
+
   it("exports with the selected Custom profile settings", async () => {
     const { backend, container, root } = renderApp();
 
