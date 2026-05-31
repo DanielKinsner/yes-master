@@ -43,6 +43,21 @@ async fn iphone_render_master(
   )
 }
 
+#[tauri::command]
+async fn iphone_prepare_master_preview(
+  track_id: String,
+  track_path: String,
+  settings: MasteringSettings,
+) -> CommandResult<RenderJob> {
+  let preview_dir = std::env::temp_dir().join("yes-master-iphone-previews");
+  iphone_prepare_master_preview_in_dir(
+    track_id,
+    Path::new(&track_path),
+    &settings,
+    &preview_dir,
+  )
+}
+
 pub fn iphone_render_master_to_path(
   track_id: String,
   source_path: &Path,
@@ -60,6 +75,36 @@ pub fn iphone_render_master_to_path(
     RenderKind::Master,
     output_path,
   )
+}
+
+pub fn iphone_prepare_master_preview_in_dir(
+  track_id: String,
+  source_path: &Path,
+  settings: &MasteringSettings,
+  preview_dir: &Path,
+) -> CommandResult<RenderJob> {
+  let output_path = preview_dir.join(format!(
+    "{}-mastered-preview.wav",
+    sanitize_preview_name(&track_id)
+  ));
+  iphone_render_master_to_path(track_id, source_path, settings, &output_path)
+}
+
+fn sanitize_preview_name(track_id: &str) -> String {
+  let sanitized = track_id
+    .chars()
+    .map(|character| match character {
+      'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => character,
+      _ => '-',
+    })
+    .collect::<String>()
+    .trim_matches('-')
+    .to_string();
+  if sanitized.is_empty() {
+    "track".to_string()
+  } else {
+    sanitized
+  }
 }
 
 #[tauri::command]
@@ -93,6 +138,7 @@ pub fn run() {
       iphone_import_track,
       iphone_analyze_track,
       iphone_render_master,
+      iphone_prepare_master_preview,
       iphone_run_export_checks,
     ])
     .run(tauri::generate_context!())

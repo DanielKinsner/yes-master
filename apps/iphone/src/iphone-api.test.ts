@@ -45,4 +45,24 @@ describe("iPhone API facade", () => {
       outputPath: "/private/master.wav",
     });
   });
+
+  it("calls the separate iPhone mastered preview command", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      output_paths: ["/private/preview/track-1-mastered.wav"],
+    });
+    const backend = createIphoneBackend(invoke);
+    const settings = { volume_match: true } as MasteringSettings;
+
+    await backend.prepareMasterPreview({
+      trackId: "track-1",
+      trackPath: "/private/song.wav",
+      settings,
+    });
+
+    expect(invoke).toHaveBeenCalledWith("iphone_prepare_master_preview", {
+      trackId: "track-1",
+      trackPath: "/private/song.wav",
+      settings,
+    });
+  });
 });

@@ -2,7 +2,9 @@ use std::f32::consts::TAU;
 
 use hound::{SampleFormat, WavSpec, WavWriter};
 use tempfile::tempdir;
-use yes_master_iphone_lib::iphone_render_master_to_path;
+use yes_master_iphone_lib::{
+    iphone_prepare_master_preview_in_dir, iphone_render_master_to_path,
+};
 use yes_master_lib::{
     AdvancedSettings, CompressionMode, DeliveryProfile, JobStatus, MasteringSettings, Preset,
     RenderKind,
@@ -30,6 +32,38 @@ fn iphone_render_master_to_path_uses_shared_dsp_engine() {
     let measurements = job.measurements.expect("render measurements");
     assert_eq!(measurements.sample_rate, 48_000);
     assert_eq!(measurements.bit_depth, 24);
+    assert!(measurements.lufs_integrated.is_finite());
+}
+
+#[test]
+fn iphone_prepare_master_preview_in_dir_renders_mastered_preview() {
+    let temp = tempdir().expect("tempdir");
+    let source = temp.path().join("source.wav");
+    let preview_dir = temp.path().join("previews");
+    write_test_wav(&source);
+
+    let job = iphone_prepare_master_preview_in_dir(
+        "iphone-track".to_string(),
+        &source,
+        &default_iphone_settings(),
+        &preview_dir,
+    )
+    .expect("preview render should succeed");
+
+    assert!(preview_dir.exists());
+    assert!(matches!(job.kind, RenderKind::Master));
+    assert!(matches!(job.status, JobStatus::Done));
+    assert_eq!(job.output_paths.len(), 1);
+    let output = std::path::PathBuf::from(&job.output_paths[0]);
+    assert!(output.exists());
+    assert_eq!(output.parent(), Some(preview_dir.as_path()));
+    assert!(output
+        .file_name()
+        .and_then(|name| name.to_str())
+        .expect("preview filename")
+        .contains("iphone-track-mastered-preview"));
+    let measurements = job.measurements.expect("render measurements");
+    assert_eq!(measurements.sample_rate, 48_000);
     assert!(measurements.lufs_integrated.is_finite());
 }
 

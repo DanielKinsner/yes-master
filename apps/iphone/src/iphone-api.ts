@@ -21,10 +21,17 @@ export interface IphoneRenderRequest {
   outputPath: string;
 }
 
+export interface IphonePreviewRequest {
+  trackId: string;
+  trackPath: string;
+  settings: MasteringSettings;
+}
+
 export interface IphoneBackend {
   importTrack(path: string): Promise<ImportedTrack>;
   analyzeTrack(trackId: string, path: string): Promise<AnalysisResult>;
   renderMaster(request: IphoneRenderRequest): Promise<RenderJob>;
+  prepareMasterPreview(request: IphonePreviewRequest): Promise<RenderJob>;
   runExportChecks(
     report: ExportReport,
     sourceAnalysis: AnalysisResult | null,
@@ -51,6 +58,13 @@ export function createIphoneBackend(invoke: IphoneInvoke): IphoneBackend {
         trackPath,
         settings,
         outputPath,
+      }),
+
+    prepareMasterPreview: ({ trackId, trackPath, settings }) =>
+      invoke<RenderJob>("iphone_prepare_master_preview", {
+        trackId,
+        trackPath,
+        settings,
       }),
 
     runExportChecks: (report, sourceAnalysis, settings) =>
