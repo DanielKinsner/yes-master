@@ -165,6 +165,26 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
+  it("waits for analysis before enabling mastered preview and export", async () => {
+    const backend = makeBackend();
+    vi.mocked(backend.analyzeTrack).mockRejectedValue(new Error("Analysis failed"));
+    const { container, root } = renderApp({ backend });
+
+    await click(container, "[data-testid='iphone-import']");
+
+    expect(container.textContent).toContain("Analysis failed");
+    expect(
+      container.querySelector<HTMLButtonElement>("[data-testid='playback-mastered']")
+        ?.disabled,
+    ).toBe(true);
+    expect(
+      container.querySelector<HTMLButtonElement>("[data-testid='iphone-export']")
+        ?.disabled,
+    ).toBe(true);
+
+    act(() => root.unmount());
+  });
+
   it("does not start duplicate imports while import is already running", async () => {
     const selectedPath = deferred<string | null>();
     const pickAudioPath = vi.fn().mockReturnValue(selectedPath.promise);

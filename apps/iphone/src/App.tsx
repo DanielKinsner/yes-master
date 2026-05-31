@@ -70,6 +70,8 @@ export default function App({
   const previewRequestVersionRef = useRef(0);
   const plan = useMemo(() => toIphoneSimplePlan(state), [state]);
   const hasTrack = state.track !== null;
+  const analysisReady = state.analysisStatus === "ready";
+  const canRenderMaster = hasTrack && analysisReady;
   const isImporting = operation === "importing";
   const isExporting = operation === "exporting";
   const controlsLocked = isExporting;
@@ -116,7 +118,7 @@ export default function App({
   }
 
   async function exportMaster() {
-    if (!state.track) return;
+    if (!state.track || !analysisReady) return;
     if (!startOperation("exporting")) return;
     setMessage("Exporting...");
     setExportChecks([]);
@@ -155,7 +157,7 @@ export default function App({
   }
 
   async function switchToMasteredPreview() {
-    if (!state.track) return;
+    if (!state.track || !analysisReady) return;
     if (!startOperation("preparing-preview")) return;
     setMessage("Preparing Mastered...");
     const previewRequestVersion = previewRequestVersionRef.current + 1;
@@ -330,7 +332,7 @@ export default function App({
             </SegmentButton>
             <SegmentButton
               active={state.playback === "mastered"}
-              disabled={controlsLocked}
+              disabled={!canRenderMaster || controlsLocked}
               testId="playback-mastered"
               onClick={switchToMasteredPreview}
             >
@@ -491,7 +493,7 @@ export default function App({
           className="export-button"
           data-testid="iphone-export"
           type="button"
-          disabled={!hasTrack || operation !== "idle"}
+          disabled={!canRenderMaster || operation !== "idle"}
           onClick={exportMaster}
         >
           {isExporting ? "Exporting..." : "Export Master"}
