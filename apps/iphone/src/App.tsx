@@ -12,6 +12,7 @@ import {
   selectIphoneExportProfile,
   selectIphoneLoudness,
   selectIphoneTone,
+  setIphonePlayhead,
   switchIphonePlayback,
   toggleIphoneLufsPreview,
   toggleIphoneVolumeMatch,
@@ -62,6 +63,8 @@ export default function App({
   const hasTrack = state.track !== null;
   const isImporting = operation === "importing";
   const isExporting = operation === "exporting";
+  const trackDuration = state.track?.durationSeconds ?? 0;
+  const playheadMax = Math.max(trackDuration, state.playheadSeconds, 0);
   const sampleRate = plan.exportSettings.advanced.target_sample_rate;
   const bitDepth = plan.exportSettings.advanced.bit_depth;
   const targetLufs = plan.exportSettings.advanced.lufs_offset_db;
@@ -191,6 +194,25 @@ export default function App({
                 style={{ "--bar": `${32 + ((index * 19) % 54)}%` } as CSSProperties}
               />
             ))}
+          </div>
+          <div className="playhead-row" aria-label="Playhead">
+            <span>{formatTime(state.playheadSeconds)}</span>
+            <input
+              data-testid="iphone-playhead"
+              type="range"
+              min="0"
+              max={playheadMax}
+              step="0.1"
+              value={state.playheadSeconds}
+              disabled={!hasTrack}
+              onChange={(event) => {
+                const playheadSeconds = Number(event.currentTarget.value);
+                setState((current) =>
+                  setIphonePlayhead(current, playheadSeconds),
+                );
+              }}
+            />
+            <span>{formatTime(trackDuration)}</span>
           </div>
           <div className="transport-row">
             <SegmentButton
@@ -423,4 +445,11 @@ function ToggleRow({
 function formatSampleRate(sampleRate: number | null) {
   if (!sampleRate) return "Source";
   return `${(sampleRate / 1000).toFixed(sampleRate % 1000 === 0 ? 0 : 1)} kHz`;
+}
+
+function formatTime(seconds: number | null | undefined) {
+  const safeSeconds = Math.max(0, Math.floor(seconds ?? 0));
+  const minutes = Math.floor(safeSeconds / 60);
+  const remainingSeconds = safeSeconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }

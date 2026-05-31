@@ -184,6 +184,26 @@ h3 {
   min-height: 10px;
 }
 
+.playhead-row {
+  align-items: center;
+  color: #63716b;
+  display: grid;
+  font-size: 0.76rem;
+  font-weight: 850;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.playhead-row input {
+  accent-color: #1f7962;
+  min-width: 0;
+  width: 100%;
+}
+
+.playhead-row input:disabled {
+  opacity: 0.45;
+}
+
 .transport-row,
 .segmented {
   background: #dce5df;

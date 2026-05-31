@@ -98,6 +98,20 @@ async function click(container: HTMLElement, selector: string) {
   });
 }
 
+async function scrub(container: HTMLElement, selector: string, value: string) {
+  const element = container.querySelector<HTMLInputElement>(selector);
+  if (!element) throw new Error(`Missing element ${selector}`);
+  const setValue = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    "value",
+  )?.set;
+  await act(async () => {
+    setValue?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
 describe("iPhone app shell", () => {
   it("opens as a Simple-only phone app without desktop advanced controls", () => {
     const { container, root } = renderApp();
@@ -193,6 +207,22 @@ describe("iPhone app shell", () => {
     expect(container.textContent).toContain("16-bit");
     expect(container.textContent).toContain("Mastered");
     expect(container.textContent).toContain("Export Master");
+
+    act(() => root.unmount());
+  });
+
+  it("keeps the visible playhead when switching Original and Mastered", async () => {
+    const { container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    await scrub(container, "[data-testid='iphone-playhead']", "42");
+    await click(container, "[data-testid='playback-mastered']");
+
+    const playhead = container.querySelector<HTMLInputElement>(
+      "[data-testid='iphone-playhead']",
+    );
+    expect(playhead?.value).toBe("42");
+    expect(container.textContent).toContain("0:42");
 
     act(() => root.unmount());
   });
