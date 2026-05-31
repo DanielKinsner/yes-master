@@ -1,6 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import { createIphoneBackend } from "./iphone-api";
+import { createIphoneBackend, pickIphoneAudioPath } from "./iphone-api";
 import type { MasteringSettings } from "../../../src/bindings";
+
+const dialogMocks = vi.hoisted(() => ({
+  open: vi.fn(),
+}));
+
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  open: dialogMocks.open,
+  save: vi.fn(),
+}));
 
 describe("iPhone API facade", () => {
   it("calls the separate iPhone import command", async () => {
@@ -64,5 +73,20 @@ describe("iPhone API facade", () => {
       trackPath: "/private/song.wav",
       settings,
     });
+  });
+
+  it("opens iPhone audio as a copied document file", async () => {
+    dialogMocks.open.mockResolvedValue("/private/song.wav");
+
+    await pickIphoneAudioPath();
+
+    expect(dialogMocks.open).toHaveBeenCalledWith(
+      expect.objectContaining({
+        directory: false,
+        multiple: false,
+        pickerMode: "document",
+        fileAccessMode: "copy",
+      }),
+    );
   });
 });

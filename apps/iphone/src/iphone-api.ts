@@ -82,6 +82,8 @@ export async function pickIphoneAudioPath(): Promise<string | null> {
   const selected = await open({
     directory: false,
     multiple: false,
+    pickerMode: "document",
+    fileAccessMode: "copy",
     title: "Import audio",
     filters: [
       {
