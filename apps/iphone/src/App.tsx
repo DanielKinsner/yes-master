@@ -528,6 +528,9 @@ function toIphoneTrack(track: {
 function buildExportReport(track: IphoneTrack, job: RenderJob): ExportReport {
   const outputPath = job.output_paths[0] ?? "";
   const measurements = job.measurements;
+  if (!outputPath) {
+    throw new Error("Export finished without an output file.");
+  }
   if (!measurements) {
     throw new Error("Export finished without rendered measurements.");
   }

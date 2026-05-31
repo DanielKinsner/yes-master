@@ -516,6 +516,38 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
+  it("does not report exported when the render returns no output file", async () => {
+    const backend = makeBackend();
+    vi.mocked(backend.renderMaster).mockResolvedValue({
+      id: "export-1",
+      kind: "master",
+      target_tracks: ["track-1"],
+      status: { status: "done" },
+      progress: 1,
+      started_at_iso: "2026-05-31T00:00:00.000Z",
+      output_paths: [],
+      measurements: {
+        lufs_integrated: -14,
+        true_peak_dbtp: -1,
+        dynamic_range_lu: 8,
+        sample_rate: 48_000,
+        bit_depth: 24,
+      },
+    });
+    const { container, root } = renderApp({ backend });
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='iphone-export']");
+
+    expect(backend.runExportChecks).not.toHaveBeenCalled();
+    expect(container.textContent).toContain(
+      "Export finished without an output file.",
+    );
+    expect(container.textContent).not.toContain("Exported");
+
+    act(() => root.unmount());
+  });
+
   it("does not start duplicate exports while export is already running", async () => {
     const selectedOutput = deferred<string | null>();
     const pickOutputPath = vi.fn().mockReturnValue(selectedOutput.promise);
