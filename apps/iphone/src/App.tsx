@@ -85,9 +85,7 @@ export default function App({
 
   useEffect(() => {
     if (!audioRef.current || !auditionUrl) return;
-    if (Math.abs(audioRef.current.currentTime - state.playheadSeconds) > 0.25) {
-      audioRef.current.currentTime = state.playheadSeconds;
-    }
+    seekAudioToPlayhead(audioRef.current);
   }, [auditionUrl, state.playheadSeconds]);
 
   async function importTrack() {
@@ -218,6 +216,12 @@ export default function App({
     setMasterPreviewPath(null);
   }
 
+  function seekAudioToPlayhead(audio: HTMLAudioElement) {
+    if (Math.abs(audio.currentTime - state.playheadSeconds) > 0.25) {
+      audio.currentTime = state.playheadSeconds;
+    }
+  }
+
   return (
     <main className="iphone-app" aria-label="YES Master iPhone Simple">
       <section className="phone-frame">
@@ -299,6 +303,9 @@ export default function App({
               data-testid="iphone-audio-preview"
               ref={audioRef}
               src={auditionUrl}
+              onLoadedMetadata={(event) =>
+                seekAudioToPlayhead(event.currentTarget)
+              }
               onTimeUpdate={(event) =>
                 setState((current) =>
                   setIphonePlayhead(current, event.currentTarget.currentTime),

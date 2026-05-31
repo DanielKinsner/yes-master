@@ -250,6 +250,28 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
+  it("seeks a newly loaded audition source to the visible playhead", async () => {
+    const { container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    await scrub(container, "[data-testid='iphone-playhead']", "42");
+    await click(container, "[data-testid='playback-mastered']");
+
+    const audio = container.querySelector<HTMLAudioElement>(
+      "[data-testid='iphone-audio-preview']",
+    );
+    if (!audio) throw new Error("Missing audio preview");
+    audio.currentTime = 0;
+
+    await act(async () => {
+      audio.dispatchEvent(new Event("loadedmetadata", { bubbles: true }));
+    });
+
+    expect(audio.currentTime).toBe(42);
+
+    act(() => root.unmount());
+  });
+
   it("prepares a mastered preview before switching to Mastered", async () => {
     const { backend, container, root } = renderApp();
 
