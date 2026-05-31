@@ -69,7 +69,7 @@ button {
     var(--bg-1);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   max-width: 430px;
   min-height: 100vh;
   min-height: 100dvh;
@@ -165,9 +165,11 @@ h3 {
     0 20px 70px rgba(0, 0, 0, 0.36),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   display: grid;
-  gap: 14px;
+  gap: 0;
+  min-height: min(548px, calc(100dvh - 86px));
   overflow: hidden;
   padding: 18px;
+  place-items: center;
   position: relative;
 }
 
@@ -181,20 +183,6 @@ h3 {
   top: -48px;
   transform: rotate(-14deg);
   width: 250px;
-}
-
-.hero-track-row {
-  align-items: flex-start;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-  min-width: 0;
-  position: relative;
-  z-index: 1;
-}
-
-.hero-track-row > div {
-  min-width: 0;
 }
 
 .change-track-button {
@@ -218,19 +206,37 @@ h3 {
 
 .hero-orb {
   display: grid;
-  min-height: 242px;
+  min-height: min(410px, calc(100dvh - 160px));
   place-items: center;
   position: relative;
   z-index: 1;
+  width: 100%;
 }
 
-.hero-orb::before {
-  border: 1px solid color-mix(in srgb, var(--tone-accent, var(--accent)) 28%, rgba(236, 240, 250, 0.2));
+.hero-orb::before,
+.hero-orb::after {
+  animation: hero-ring-spin 18s linear infinite;
+  border: 2px dashed color-mix(in srgb, var(--tone-accent, var(--accent)) 58%, rgba(236, 240, 250, 0.12));
   border-radius: 50%;
   content: "";
-  height: 206px;
+  height: min(78vw, 286px);
+  opacity: 0.76;
   position: absolute;
-  width: 206px;
+  width: min(78vw, 286px);
+}
+
+.hero-orb::after {
+  animation-duration: 26s;
+  animation-direction: reverse;
+  height: min(62vw, 226px);
+  opacity: 0.3;
+  width: min(62vw, 226px);
+}
+
+@keyframes hero-ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .preset-hero-art {
@@ -239,10 +245,10 @@ h3 {
     saturate(1.05)
     drop-shadow(0 24px 44px rgba(0, 0, 0, 0.42))
     drop-shadow(0 0 32px color-mix(in srgb, var(--tone-accent, var(--accent)) 34%, transparent));
-  height: 224px;
+  height: min(58vw, 210px);
   object-fit: contain;
   pointer-events: none;
-  width: 224px;
+  width: min(58vw, 210px);
 }
 
 .hero-action-button {
@@ -257,23 +263,31 @@ h3 {
   cursor: pointer;
   display: grid;
   font-weight: 900;
-  height: 82px;
+  gap: 8px;
+  height: auto;
   justify-items: center;
+  min-height: 58px;
   left: 50%;
+  padding: 0 22px;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 82px;
+  width: auto;
+}
+
+.hero-orb.has-track .hero-action-button {
+  aspect-ratio: 1;
+  height: 86px;
+  min-height: 0;
+  padding: 0;
+  width: 86px;
 }
 
 .hero-action-button span:last-child {
-  color: var(--text-0);
-  font-size: 0.86rem;
-  left: 50%;
-  position: absolute;
+  color: #081115;
+  font-size: 0.96rem;
+  position: static;
   text-align: center;
-  top: calc(100% + 14px);
-  transform: translateX(-50%);
   white-space: nowrap;
 }
 
@@ -284,21 +298,43 @@ h3 {
 }
 
 .hero-play-glyph {
-  border-bottom: 13px solid transparent;
-  border-left: 18px solid #141820;
-  border-top: 13px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 12px solid #141820;
+  border-top: 8px solid transparent;
   height: 0;
-  margin-left: 6px;
+  margin-left: 4px;
   width: 0;
 }
 
-.hero-caption {
-  color: var(--text-1);
-  font-size: 0.86rem;
-  line-height: 1.4;
-  margin-top: -4px;
-  min-height: 2.4em;
-  text-align: center;
+.hero-orb.is-empty .hero-play-glyph {
+  display: none;
+}
+
+.track-meta-row,
+.audition-panel {
+  background: rgba(236, 240, 250, 0.035);
+  border: 1px solid rgba(236, 240, 250, 0.1);
+  border-radius: 14px;
+  display: grid;
+  gap: 11px;
+  padding: 12px;
+}
+
+.track-meta-row {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.track-meta-row > div {
+  min-width: 0;
+}
+
+.track-meta-row h2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .transport-row,
@@ -598,17 +634,22 @@ h3 {
   }
 
   .hero-orb {
-    min-height: 220px;
+    min-height: min(390px, calc(100dvh - 146px));
   }
 
   .hero-orb::before {
-    height: 186px;
-    width: 186px;
+    height: min(78vw, 270px);
+    width: min(78vw, 270px);
+  }
+
+  .hero-orb::after {
+    height: min(62vw, 214px);
+    width: min(62vw, 214px);
   }
 
   .preset-hero-art {
-    height: 202px;
-    width: 202px;
+    height: min(58vw, 196px);
+    width: min(58vw, 196px);
   }
 
   .custom-export-panel,

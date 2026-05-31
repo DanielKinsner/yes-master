@@ -129,22 +129,12 @@ export default function App({
   const bitDepth = plan.exportSettings.advanced.bit_depth;
   const targetLufs = plan.exportSettings.advanced.lufs_offset_db;
   const selectedToneVisual = IPHONE_TONE_VISUALS[state.selectedTone];
-  const heroTitle = hasTrack
-    ? state.track?.displayName
-    : "Create a release-ready master";
-  const heroStatus = hasTrack ? trackStripLabel : "Local mastering";
-  const heroActionLabel = !hasTrack
-    ? isImporting
-      ? "Importing..."
-      : "Import Track"
-    : operation === "preparing-preview"
-      ? "Preparing..."
-      : state.playback === "mastered"
-        ? "Master Ready"
-        : "Preview Master";
+  const heroImportLabel = isImporting ? "Importing..." : "Import Track";
   const heroActionDisabled = hasTrack
-    ? !canRenderMaster || controlsLocked || state.playback === "mastered"
+    ? !canRenderMaster || controlsLocked
     : operation !== "idle";
+  const heroActionAriaLabel =
+    operation === "preparing-preview" ? "Preparing Mastered" : "Preview Master";
   const exportButtonLabel = isExporting ? "Creating..." : "Create Master";
 
   useEffect(() => {
@@ -313,25 +303,7 @@ export default function App({
             alt=""
             aria-hidden="true"
           />
-          <div className="hero-track-row">
-            <div>
-              <p className="track-label">{heroStatus}</p>
-              <h1>{heroTitle}</h1>
-            </div>
-            {hasTrack ? (
-              <button
-                className="change-track-button"
-                data-testid="iphone-change-track"
-                type="button"
-                disabled={operation !== "idle"}
-                onClick={importTrack}
-              >
-                Change
-              </button>
-            ) : null}
-          </div>
-
-          <div className="hero-orb">
+          <div className={hasTrack ? "hero-orb has-track" : "hero-orb is-empty"}>
             <img
               className="preset-hero-art"
               data-testid="iphone-preset-hero"
@@ -340,19 +312,42 @@ export default function App({
             />
             <button
               className="hero-action-button"
+              aria-label={hasTrack ? heroActionAriaLabel : undefined}
               data-testid={hasTrack ? "iphone-preview-master" : "iphone-import"}
               type="button"
               disabled={heroActionDisabled}
               onClick={hasTrack ? switchToMasteredPreview : importTrack}
             >
               <span className="hero-play-glyph" aria-hidden="true" />
-              <span>{heroActionLabel}</span>
+              {!hasTrack ? <span>{heroImportLabel}</span> : null}
             </button>
           </div>
+        </section>
 
-          <p className="hero-caption">{selectedToneVisual.description}</p>
+        {hasTrack ? (
+          <section className="track-meta-row">
+            <div>
+              <p className="track-label">{trackStripLabel}</p>
+              <h2>{state.track?.displayName}</h2>
+            </div>
+            <button
+              className="change-track-button"
+              data-testid="iphone-change-track"
+              type="button"
+              disabled={operation !== "idle"}
+              onClick={importTrack}
+            >
+              Change
+            </button>
+          </section>
+        ) : null}
 
-          <div className="transport-row mode-switch">
+        {hasTrack ? (
+          <section
+            className="audition-panel"
+            aria-label={masterPreviewPath ? "Audition ready" : "Audition"}
+          >
+            <div className="transport-row mode-switch">
             <SegmentButton
               active={state.playback === "original"}
               disabled={controlsLocked}
@@ -372,9 +367,9 @@ export default function App({
             >
               Mastered
             </SegmentButton>
-          </div>
+            </div>
 
-          <div className="playhead-row" aria-label="Playhead">
+            <div className="playhead-row" aria-label="Playhead">
             <span>{formatTime(state.playheadSeconds)}</span>
             <input
               data-testid="iphone-playhead"
@@ -392,25 +387,26 @@ export default function App({
               }}
             />
             <span>{formatTime(trackDuration)}</span>
-          </div>
-          {auditionUrl ? (
-            <audio
-              className="audio-preview"
-              controls
-              data-testid="iphone-audio-preview"
-              ref={audioRef}
-              src={auditionUrl}
-              onLoadedMetadata={(event) =>
-                seekAudioToPlayhead(event.currentTarget)
-              }
-              onTimeUpdate={(event) =>
-                setState((current) =>
-                  setIphonePlayhead(current, event.currentTarget.currentTime),
-                )
-              }
-            />
-          ) : null}
-        </section>
+            </div>
+            {auditionUrl ? (
+              <audio
+                className="audio-preview"
+                controls
+                data-testid="iphone-audio-preview"
+                ref={audioRef}
+                src={auditionUrl}
+                onLoadedMetadata={(event) =>
+                  seekAudioToPlayhead(event.currentTarget)
+                }
+                onTimeUpdate={(event) =>
+                  setState((current) =>
+                    setIphonePlayhead(current, event.currentTarget.currentTime),
+                  )
+                }
+              />
+            ) : null}
+          </section>
+        ) : null}
 
         <section className="settings-sheet" aria-label="Mastering settings">
           <TonePicker

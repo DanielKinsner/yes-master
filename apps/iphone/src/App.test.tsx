@@ -171,6 +171,15 @@ describe("iPhone app shell", () => {
 
   it("uses preset artwork as the mobile hero", async () => {
     const { container, root } = renderApp();
+    const heroPanel = container.querySelector(".hero-panel");
+
+    expect(heroPanel?.textContent).not.toContain("Create a release-ready master");
+    expect(heroPanel?.textContent).not.toContain(
+      "A clean, streaming-ready shape for most mixes.",
+    );
+    expect(container.querySelector(".hero-orb")?.className).toContain(
+      "is-empty",
+    );
 
     const heroArtwork = container.querySelector<HTMLImageElement>(
       "[data-testid='iphone-preset-hero']",
@@ -183,6 +192,25 @@ describe("iPhone app shell", () => {
       container.querySelector<HTMLImageElement>("[data-testid='iphone-preset-hero']")
         ?.alt,
     ).toBe("Warm mastering preset");
+
+    act(() => root.unmount());
+  });
+
+  it("turns the center import control into a play control after import", async () => {
+    const { container, root } = renderApp();
+
+    expect(
+      container.querySelector<HTMLButtonElement>("[data-testid='iphone-import']")
+        ?.textContent,
+    ).toContain("Import Track");
+
+    await click(container, "[data-testid='iphone-import']");
+
+    const previewButton = container.querySelector<HTMLButtonElement>(
+      "[data-testid='iphone-preview-master']",
+    );
+    expect(previewButton?.getAttribute("aria-label")).toBe("Preview Master");
+    expect(previewButton?.textContent?.trim()).toBe("");
 
     act(() => root.unmount());
   });
@@ -212,7 +240,7 @@ describe("iPhone app shell", () => {
 
     await click(container, "[data-testid='iphone-import']");
 
-    expect(container.querySelector(".hero-track-row")?.textContent).toContain(
+    expect(container.querySelector(".track-meta-row")?.textContent).toContain(
       "Analyzing...",
     );
 

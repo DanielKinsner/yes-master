@@ -20,6 +20,16 @@ describe("iPhone styles", () => {
     expect(css).toContain("color-scheme: dark");
   });
 
+  it("animates a dotted hero import ring", () => {
+    const css = readIphoneStyles();
+
+    expect(css).toContain(".hero-orb::before");
+    expect(css).toContain(".hero-orb::after");
+    expect(css).toContain("border: 2px dashed");
+    expect(css).toContain("animation: hero-ring-spin");
+    expect(css).toContain("@keyframes hero-ring-spin");
+  });
+
   it("respects iOS safe areas around the phone shell", () => {
     const css = readIphoneStyles();
 
