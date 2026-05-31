@@ -12,11 +12,13 @@ import {
   selectIphoneExportProfile,
   selectIphoneLoudness,
   selectIphoneTone,
+  setIphoneCustomExport,
   setIphonePlayhead,
   switchIphonePlayback,
   toggleIphoneLufsPreview,
   toggleIphoneVolumeMatch,
   toIphoneSimplePlan,
+  type IphoneCustomExportSettings,
   type IphoneAppState,
   type IphoneTrack,
 } from "./app-state";
@@ -141,6 +143,17 @@ export default function App({
   function finishOperation() {
     operationRef.current = "idle";
     setOperation("idle");
+  }
+
+  function updateCustomExport(
+    nextCustomExport: Partial<IphoneCustomExportSettings>,
+  ) {
+    setState((current) =>
+      setIphoneCustomExport(current, {
+        ...current.customExport,
+        ...nextCustomExport,
+      }),
+    );
   }
 
   return (
@@ -290,6 +303,60 @@ export default function App({
           ))}
         </ControlGroup>
 
+        {state.selectedExportProfile === "custom" ? (
+          <section className="custom-export-panel" aria-label="Custom export">
+            <label>
+              <span>Rate</span>
+              <select
+                data-testid="custom-sample-rate"
+                value={state.customExport.sampleRate ?? "source"}
+                onChange={(event) =>
+                  updateCustomExport({
+                    sampleRate: parseOptionalNumber(event.currentTarget.value),
+                  })
+                }
+              >
+                <option value="source">Source</option>
+                <option value="44100">44.1 kHz</option>
+                <option value="48000">48 kHz</option>
+                <option value="96000">96 kHz</option>
+              </select>
+            </label>
+            <label>
+              <span>Depth</span>
+              <select
+                data-testid="custom-bit-depth"
+                value={state.customExport.bitDepth ?? "source"}
+                onChange={(event) =>
+                  updateCustomExport({
+                    bitDepth: parseOptionalNumber(event.currentTarget.value),
+                  })
+                }
+              >
+                <option value="source">Source</option>
+                <option value="16">16-bit</option>
+                <option value="24">24-bit</option>
+              </select>
+            </label>
+            <label>
+              <span>Ceiling</span>
+              <select
+                data-testid="custom-ceiling"
+                value={state.customExport.ceilingDbtp}
+                onChange={(event) =>
+                  updateCustomExport({
+                    ceilingDbtp: Number(event.currentTarget.value),
+                  })
+                }
+              >
+                <option value="-1">-1 dBTP</option>
+                <option value="-1.5">-1.5 dBTP</option>
+                <option value="-2">-2 dBTP</option>
+              </select>
+            </label>
+          </section>
+        ) : null}
+
         <section className="toggle-stack">
           <ToggleRow
             active={state.volumeMatch}
@@ -313,7 +380,7 @@ export default function App({
           <div>
             <p className="track-label">Format</p>
             <strong>
-              {formatSampleRate(sampleRate)} · {bitDepth ?? 24}-bit
+              {formatSampleRate(sampleRate)} · {formatBitDepth(bitDepth)}
             </strong>
           </div>
         </section>
@@ -447,9 +514,18 @@ function formatSampleRate(sampleRate: number | null) {
   return `${(sampleRate / 1000).toFixed(sampleRate % 1000 === 0 ? 0 : 1)} kHz`;
 }
 
+function formatBitDepth(bitDepth: number | null) {
+  if (!bitDepth) return "Source bit";
+  return `${bitDepth}-bit`;
+}
+
 function formatTime(seconds: number | null | undefined) {
   const safeSeconds = Math.max(0, Math.floor(seconds ?? 0));
   const minutes = Math.floor(safeSeconds / 60);
   const remainingSeconds = safeSeconds % 60;
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+}
+
+function parseOptionalNumber(value: string) {
+  return value === "source" ? null : Number(value);
 }

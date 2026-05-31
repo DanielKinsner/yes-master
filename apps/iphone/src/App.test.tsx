@@ -112,6 +112,15 @@ async function scrub(container: HTMLElement, selector: string, value: string) {
   });
 }
 
+async function choose(container: HTMLElement, selector: string, value: string) {
+  const element = container.querySelector<HTMLSelectElement>(selector);
+  if (!element) throw new Error(`Missing element ${selector}`);
+  await act(async () => {
+    element.value = value;
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+}
+
 describe("iPhone app shell", () => {
   it("opens as a Simple-only phone app without desktop advanced controls", () => {
     const { container, root } = renderApp();
@@ -223,6 +232,33 @@ describe("iPhone app shell", () => {
     );
     expect(playhead?.value).toBe("42");
     expect(container.textContent).toContain("0:42");
+
+    act(() => root.unmount());
+  });
+
+  it("exports with the selected Custom profile settings", async () => {
+    const { backend, container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='profile-custom']");
+    await choose(container, "[data-testid='custom-sample-rate']", "96000");
+    await choose(container, "[data-testid='custom-bit-depth']", "16");
+    await choose(container, "[data-testid='custom-ceiling']", "-2");
+    await click(container, "[data-testid='iphone-export']");
+
+    expect(backend.renderMaster).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          advanced: expect.objectContaining({
+            target_sample_rate: 96_000,
+            bit_depth: 16,
+            ceiling_dbtp: -2,
+          }),
+        }),
+      }),
+    );
+    expect(container.textContent).toContain("96 kHz");
+    expect(container.textContent).toContain("16-bit");
 
     act(() => root.unmount());
   });
