@@ -39,4 +39,15 @@ describe("iPhone styles", () => {
     expect(css).toContain("env(safe-area-inset-bottom)");
     expect(css).toContain("env(safe-area-inset-left)");
   });
+
+  it("keeps the import hero compact enough to reveal presets", () => {
+    const css = readIphoneStyles();
+
+    expect(css).toContain("max(12px, env(safe-area-inset-top))");
+    expect(css).toContain("min-height: 32px");
+    expect(css).toContain("min-height: min(360px, calc(100dvh - 118px))");
+    expect(css).toContain("min-height: min(280px, calc(100dvh - 172px))");
+    expect(css).toContain("height: min(46vw, 168px)");
+    expect(css).toContain("min-height: 70px");
+  });
 });

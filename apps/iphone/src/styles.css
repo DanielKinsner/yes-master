@@ -69,16 +69,16 @@ button {
     var(--bg-1);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   max-width: 430px;
   min-height: 100vh;
   min-height: 100dvh;
   overflow: hidden auto;
   padding:
-    max(18px, env(safe-area-inset-top))
-    max(18px, env(safe-area-inset-right))
-    max(20px, env(safe-area-inset-bottom))
-    max(18px, env(safe-area-inset-left));
+    max(12px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(14px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
   scrollbar-width: none;
   width: min(100%, 430px);
 }
@@ -91,23 +91,23 @@ button {
   align-items: center;
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  min-height: 38px;
+  gap: 12px;
+  min-height: 32px;
 }
 
 .brand-lockup {
   align-items: center;
   color: var(--text-0);
   display: inline-flex;
-  font-size: 0.96rem;
+  font-size: 0.9rem;
   font-weight: 850;
-  gap: 9px;
+  gap: 8px;
   letter-spacing: 0;
 }
 
 .brand-lockup img {
-  height: 26px;
-  width: 26px;
+  height: 24px;
+  width: 24px;
 }
 
 .status-chip {
@@ -115,9 +115,9 @@ button {
   border: 1px solid rgba(84, 208, 208, 0.26);
   border-radius: 999px;
   color: #bffafa;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  padding: 7px 10px;
+  padding: 5px 9px;
 }
 
 h1,
@@ -141,9 +141,9 @@ h2 {
 
 h3 {
   color: var(--text-0);
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   font-weight: 780;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .track-label {
@@ -160,29 +160,29 @@ h3 {
     linear-gradient(180deg, rgba(31, 37, 51, 0.7), rgba(13, 16, 24, 0.96)),
     var(--bg-2);
   border: 1px solid rgba(236, 240, 250, 0.08);
-  border-radius: 20px;
+  border-radius: 18px;
   box-shadow:
     0 20px 70px rgba(0, 0, 0, 0.36),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   display: grid;
   gap: 0;
-  min-height: min(548px, calc(100dvh - 86px));
+  min-height: min(360px, calc(100dvh - 118px));
   overflow: hidden;
-  padding: 18px;
+  padding: 12px;
   place-items: center;
   position: relative;
 }
 
 .hero-watermark {
   filter: saturate(0.85);
-  height: 250px;
+  height: 210px;
   opacity: 0.035;
   pointer-events: none;
   position: absolute;
-  right: -70px;
-  top: -48px;
+  right: -58px;
+  top: -42px;
   transform: rotate(-14deg);
-  width: 250px;
+  width: 210px;
 }
 
 .change-track-button {
@@ -206,7 +206,7 @@ h3 {
 
 .hero-orb {
   display: grid;
-  min-height: min(410px, calc(100dvh - 160px));
+  min-height: min(280px, calc(100dvh - 172px));
   place-items: center;
   position: relative;
   z-index: 1;
@@ -219,18 +219,18 @@ h3 {
   border: 2px dashed color-mix(in srgb, var(--tone-accent, var(--accent)) 58%, rgba(236, 240, 250, 0.12));
   border-radius: 50%;
   content: "";
-  height: min(78vw, 286px);
+  height: min(68vw, 252px);
   opacity: 0.76;
   position: absolute;
-  width: min(78vw, 286px);
+  width: min(68vw, 252px);
 }
 
 .hero-orb::after {
   animation-duration: 26s;
   animation-direction: reverse;
-  height: min(62vw, 226px);
+  height: min(54vw, 200px);
   opacity: 0.3;
-  width: min(62vw, 226px);
+  width: min(54vw, 200px);
 }
 
 @keyframes hero-ring-spin {
@@ -245,10 +245,10 @@ h3 {
     saturate(1.05)
     drop-shadow(0 24px 44px rgba(0, 0, 0, 0.42))
     drop-shadow(0 0 32px color-mix(in srgb, var(--tone-accent, var(--accent)) 34%, transparent));
-  height: min(58vw, 210px);
+  height: min(46vw, 168px);
   object-fit: contain;
   pointer-events: none;
-  width: min(58vw, 210px);
+  width: min(46vw, 168px);
 }
 
 .hero-action-button {
@@ -266,9 +266,9 @@ h3 {
   gap: 8px;
   height: auto;
   justify-items: center;
-  min-height: 58px;
+  min-height: 52px;
   left: 50%;
-  padding: 0 22px;
+  padding: 0 20px;
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -277,10 +277,10 @@ h3 {
 
 .hero-orb.has-track .hero-action-button {
   aspect-ratio: 1;
-  height: 86px;
+  height: 78px;
   min-height: 0;
   padding: 0;
-  width: 86px;
+  width: 78px;
 }
 
 .hero-action-button span:last-child {
@@ -413,7 +413,7 @@ h3 {
 
 .settings-sheet {
   display: grid;
-  gap: 15px;
+  gap: 12px;
 }
 
 .control-group,
@@ -437,34 +437,37 @@ h3 {
   color: var(--text-0);
   cursor: pointer;
   display: grid;
-  gap: 8px;
-  grid-template-columns: 42px minmax(0, 1fr);
-  min-height: 78px;
-  padding: 9px;
+  gap: 7px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  min-height: 70px;
+  padding: 8px;
   text-align: left;
 }
 
 .tone-card img {
   filter: brightness(1.05) saturate(1.04);
-  height: 42px;
+  height: 38px;
   object-fit: contain;
-  width: 42px;
+  width: 38px;
 }
 
 .tone-card span {
   display: block;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 850;
-  line-height: 1.1;
+  line-height: 1.06;
 }
 
 .tone-card small {
   color: var(--text-2);
-  display: block;
-  font-size: 0.68rem;
+  display: -webkit-box;
+  font-size: 0.65rem;
   font-weight: 650;
-  line-height: 1.2;
-  margin-top: 3px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.14;
+  margin-top: 2px;
+  overflow: hidden;
 }
 
 .tone-card.is-active {
@@ -622,34 +625,36 @@ h3 {
 @media (max-width: 380px) {
   .phone-frame {
     padding:
-      env(safe-area-inset-top)
-      env(safe-area-inset-right)
+      max(10px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
       max(16px, env(safe-area-inset-bottom))
-      env(safe-area-inset-left);
+      max(10px, env(safe-area-inset-left));
   }
 
   .hero-panel {
-    border-radius: 0 0 18px 18px;
-    margin: 0 -1px;
+    border-radius: 16px;
+    margin: 0;
+    min-height: min(340px, calc(100dvh - 108px));
+    padding: 10px;
   }
 
   .hero-orb {
-    min-height: min(390px, calc(100dvh - 146px));
+    min-height: min(262px, calc(100dvh - 160px));
   }
 
   .hero-orb::before {
-    height: min(78vw, 270px);
-    width: min(78vw, 270px);
+    height: min(68vw, 238px);
+    width: min(68vw, 238px);
   }
 
   .hero-orb::after {
-    height: min(62vw, 214px);
-    width: min(62vw, 214px);
+    height: min(54vw, 190px);
+    width: min(54vw, 190px);
   }
 
   .preset-hero-art {
-    height: min(58vw, 196px);
-    width: min(58vw, 196px);
+    height: min(46vw, 156px);
+    width: min(46vw, 156px);
   }
 
   .custom-export-panel,
