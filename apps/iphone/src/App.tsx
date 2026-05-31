@@ -44,9 +44,44 @@ import {
   type IphoneSimpleLoudness,
   type IphoneSimpleTone,
 } from "./simple-mode";
+import yesMasterMarkUrl from "../src-tauri/icons/icon.png";
+import clarityPresetUrl from "../../../src/assets/presets/clarity.png";
+import punchPresetUrl from "../../../src/assets/presets/punch.png";
+import universalPresetUrl from "../../../src/assets/presets/universal.png";
+import warmthPresetUrl from "../../../src/assets/presets/warmth.png";
 import "./styles.css";
 
 type IphoneOperation = "idle" | "importing" | "exporting" | "preparing-preview";
+
+const IPHONE_TONE_VISUALS: Record<
+  IphoneSimpleTone,
+  { accent: string; description: string; image: string; title: string }
+> = {
+  balanced: {
+    accent: "#4d8bff",
+    description: "A clean, streaming-ready shape for most mixes.",
+    image: universalPresetUrl,
+    title: "Balanced",
+  },
+  warm: {
+    accent: "#fb923c",
+    description: "Fuller body and smoother top-end finish.",
+    image: warmthPresetUrl,
+    title: "Warm",
+  },
+  open: {
+    accent: "#22d3ee",
+    description: "Air, vocal clarity, and a wider front edge.",
+    image: clarityPresetUrl,
+    title: "Open",
+  },
+  punch: {
+    accent: "#ef4444",
+    description: "Sharper transient impact and forward energy.",
+    image: punchPresetUrl,
+    title: "Punch",
+  },
+};
 
 export default function App({
   backend = iphoneBackend,
@@ -93,6 +128,24 @@ export default function App({
   const sampleRate = plan.exportSettings.advanced.target_sample_rate;
   const bitDepth = plan.exportSettings.advanced.bit_depth;
   const targetLufs = plan.exportSettings.advanced.lufs_offset_db;
+  const selectedToneVisual = IPHONE_TONE_VISUALS[state.selectedTone];
+  const heroTitle = hasTrack
+    ? state.track?.displayName
+    : "Create a release-ready master";
+  const heroStatus = hasTrack ? trackStripLabel : "Local mastering";
+  const heroActionLabel = !hasTrack
+    ? isImporting
+      ? "Importing..."
+      : "Import Track"
+    : operation === "preparing-preview"
+      ? "Preparing..."
+      : state.playback === "mastered"
+        ? "Master Ready"
+        : "Preview Master";
+  const heroActionDisabled = hasTrack
+    ? !canRenderMaster || controlsLocked || state.playback === "mastered"
+    : operation !== "idle";
+  const exportButtonLabel = isExporting ? "Creating..." : "Create Master";
 
   useEffect(() => {
     if (!audioRef.current || !auditionUrl) return;
@@ -238,25 +291,34 @@ export default function App({
   }
 
   return (
-    <main className="iphone-app" aria-label="YES Master iPhone Simple">
+    <main className="iphone-app" aria-label="YES Master iPhone">
       <section className="phone-frame">
         <header className="app-header">
-          <div>
-            <p className="eyebrow">YES Master</p>
-            <h1>Simple</h1>
+          <div className="brand-lockup">
+            <img src={yesMasterMarkUrl} alt="" aria-hidden="true" />
+            <span>YES Master</span>
           </div>
           <span className="status-chip">
             {state.analysisStatus === "ready" ? "Ready" : "Local"}
           </span>
         </header>
 
-        <section className="import-strip">
-          {hasTrack ? (
-            <div className="track-strip-row">
-              <div>
-                <p className="track-label">{trackStripLabel}</p>
-                <h2>{state.track?.displayName}</h2>
-              </div>
+        <section
+          className="hero-panel"
+          style={{ "--tone-accent": selectedToneVisual.accent } as CSSProperties}
+        >
+          <img
+            className="hero-watermark"
+            src={yesMasterMarkUrl}
+            alt=""
+            aria-hidden="true"
+          />
+          <div className="hero-track-row">
+            <div>
+              <p className="track-label">{heroStatus}</p>
+              <h1>{heroTitle}</h1>
+            </div>
+            {hasTrack ? (
               <button
                 className="change-track-button"
                 data-testid="iphone-change-track"
@@ -266,32 +328,52 @@ export default function App({
               >
                 Change
               </button>
-            </div>
-          ) : (
-            <button
-              className="import-button"
-              data-testid="iphone-import"
-              type="button"
-              disabled={operation !== "idle"}
-              onClick={importTrack}
-            >
-              {isImporting ? "Importing..." : "Import Track"}
-            </button>
-          )}
-        </section>
-
-        <section
-          className="wave-panel"
-          aria-label={masterPreviewPath ? "Audition ready" : "Audition"}
-        >
-          <div className="waveform" aria-hidden="true">
-            {Array.from({ length: 36 }, (_, index) => (
-              <span
-                key={index}
-                style={{ "--bar": `${32 + ((index * 19) % 54)}%` } as CSSProperties}
-              />
-            ))}
+            ) : null}
           </div>
+
+          <div className="hero-orb">
+            <img
+              className="preset-hero-art"
+              data-testid="iphone-preset-hero"
+              src={selectedToneVisual.image}
+              alt={`${selectedToneVisual.title} mastering preset`}
+            />
+            <button
+              className="hero-action-button"
+              data-testid={hasTrack ? "iphone-preview-master" : "iphone-import"}
+              type="button"
+              disabled={heroActionDisabled}
+              onClick={hasTrack ? switchToMasteredPreview : importTrack}
+            >
+              <span className="hero-play-glyph" aria-hidden="true" />
+              <span>{heroActionLabel}</span>
+            </button>
+          </div>
+
+          <p className="hero-caption">{selectedToneVisual.description}</p>
+
+          <div className="transport-row mode-switch">
+            <SegmentButton
+              active={state.playback === "original"}
+              disabled={controlsLocked}
+              testId="playback-original"
+              onClick={() => {
+                clearMasterPreview();
+                setState((current) => switchIphonePlayback(current, "original"));
+              }}
+            >
+              Original
+            </SegmentButton>
+            <SegmentButton
+              active={state.playback === "mastered"}
+              disabled={!canRenderMaster || controlsLocked}
+              testId="playback-mastered"
+              onClick={switchToMasteredPreview}
+            >
+              Mastered
+            </SegmentButton>
+          </div>
+
           <div className="playhead-row" aria-label="Playhead">
             <span>{formatTime(state.playheadSeconds)}</span>
             <input
@@ -328,175 +410,148 @@ export default function App({
               }
             />
           ) : null}
-          <div className="transport-row">
-            <SegmentButton
-              active={state.playback === "original"}
-              disabled={controlsLocked}
-              testId="playback-original"
-              onClick={() => {
-                clearMasterPreview();
-                setState((current) => switchIphonePlayback(current, "original"));
-              }}
-            >
-              Original
-            </SegmentButton>
-            <SegmentButton
-              active={state.playback === "mastered"}
-              disabled={!canRenderMaster || controlsLocked}
-              testId="playback-mastered"
-              onClick={switchToMasteredPreview}
-            >
-              Mastered
-            </SegmentButton>
-          </div>
         </section>
 
-        <ControlGroup title="Tone">
-          {iphoneSimpleToneOptions.map((option) => (
-            <SegmentButton
-              key={option.id}
-              active={state.selectedTone === option.id}
-              disabled={controlsLocked}
-              testId={`tone-${option.id}`}
-              onClick={() =>
-                updateAuditionSettings((current) =>
-                  selectIphoneTone(current, option.id as IphoneSimpleTone),
-                )
-              }
-            >
-              {option.label}
-            </SegmentButton>
-          ))}
-        </ControlGroup>
+        <section className="settings-sheet" aria-label="Mastering settings">
+          <TonePicker
+            disabled={controlsLocked}
+            selectedTone={state.selectedTone}
+            onSelect={(tone) =>
+              updateAuditionSettings((current) =>
+                selectIphoneTone(current, tone),
+              )
+            }
+          />
 
-        <ControlGroup title="Loudness">
-          {iphoneSimpleLoudnessOptions.map((option) => (
-            <SegmentButton
-              key={option.id}
-              active={state.selectedLoudness === option.id}
-              disabled={controlsLocked}
-              testId={`loudness-${option.id}`}
-              onClick={() =>
-                updateAuditionSettings((current) =>
-                  selectIphoneLoudness(current, option.id as IphoneSimpleLoudness),
-                )
-              }
-            >
-              {option.label}
-            </SegmentButton>
-          ))}
-        </ControlGroup>
-
-        <ControlGroup title="Profile">
-          {iphoneSimpleExportProfileOptions.map((option) => (
-            <SegmentButton
-              key={option.id}
-              active={state.selectedExportProfile === option.id}
-              disabled={controlsLocked}
-              testId={`profile-${option.id}`}
-              onClick={() =>
-                updateAuditionSettings((current) =>
-                  selectIphoneExportProfile(
-                    current,
-                    option.id as IphoneSimpleExportProfile,
-                  ),
-                )
-              }
-            >
-              {option.label}
-            </SegmentButton>
-          ))}
-        </ControlGroup>
-
-        {state.selectedExportProfile === "custom" ? (
-          <section className="custom-export-panel" aria-label="Custom export">
-            <label>
-              <span>Rate</span>
-              <select
-                data-testid="custom-sample-rate"
+          <ControlGroup title="Loudness">
+            {iphoneSimpleLoudnessOptions.map((option) => (
+              <SegmentButton
+                key={option.id}
+                active={state.selectedLoudness === option.id}
                 disabled={controlsLocked}
-                value={state.customExport.sampleRate ?? "source"}
-                onChange={(event) =>
-                  updateCustomExport({
-                    sampleRate: parseOptionalNumber(event.currentTarget.value),
-                  })
+                testId={`loudness-${option.id}`}
+                onClick={() =>
+                  updateAuditionSettings((current) =>
+                    selectIphoneLoudness(current, option.id as IphoneSimpleLoudness),
+                  )
                 }
               >
-                <option value="source">Source</option>
-                <option value="44100">44.1 kHz</option>
-                <option value="48000">48 kHz</option>
-                <option value="96000">96 kHz</option>
-              </select>
-            </label>
-            <label>
-              <span>Depth</span>
-              <select
-                data-testid="custom-bit-depth"
+                {option.label}
+              </SegmentButton>
+            ))}
+          </ControlGroup>
+
+          <ControlGroup title="Profile">
+            {iphoneSimpleExportProfileOptions.map((option) => (
+              <SegmentButton
+                key={option.id}
+                active={state.selectedExportProfile === option.id}
                 disabled={controlsLocked}
-                value={state.customExport.bitDepth ?? "source"}
-                onChange={(event) =>
-                  updateCustomExport({
-                    bitDepth: parseOptionalNumber(event.currentTarget.value),
-                  })
+                testId={`profile-${option.id}`}
+                onClick={() =>
+                  updateAuditionSettings((current) =>
+                    selectIphoneExportProfile(
+                      current,
+                      option.id as IphoneSimpleExportProfile,
+                    ),
+                  )
                 }
               >
-                <option value="source">Source</option>
-                <option value="16">16-bit</option>
-                <option value="24">24-bit</option>
-              </select>
-            </label>
-            <label>
-              <span>Ceiling</span>
-              <select
-                data-testid="custom-ceiling"
-                disabled={controlsLocked}
-                value={state.customExport.ceilingDbtp}
-                onChange={(event) =>
-                  updateCustomExport({
-                    ceilingDbtp: Number(event.currentTarget.value),
-                  })
-                }
-              >
-                <option value="-1">-1 dBTP</option>
-                <option value="-1.5">-1.5 dBTP</option>
-                <option value="-2">-2 dBTP</option>
-              </select>
-            </label>
+                {option.label}
+              </SegmentButton>
+            ))}
+          </ControlGroup>
+
+          {state.selectedExportProfile === "custom" ? (
+            <section className="custom-export-panel" aria-label="Custom export">
+              <label>
+                <span>Rate</span>
+                <select
+                  data-testid="custom-sample-rate"
+                  disabled={controlsLocked}
+                  value={state.customExport.sampleRate ?? "source"}
+                  onChange={(event) =>
+                    updateCustomExport({
+                      sampleRate: parseOptionalNumber(event.currentTarget.value),
+                    })
+                  }
+                >
+                  <option value="source">Source</option>
+                  <option value="44100">44.1 kHz</option>
+                  <option value="48000">48 kHz</option>
+                  <option value="96000">96 kHz</option>
+                </select>
+              </label>
+              <label>
+                <span>Depth</span>
+                <select
+                  data-testid="custom-bit-depth"
+                  disabled={controlsLocked}
+                  value={state.customExport.bitDepth ?? "source"}
+                  onChange={(event) =>
+                    updateCustomExport({
+                      bitDepth: parseOptionalNumber(event.currentTarget.value),
+                    })
+                  }
+                >
+                  <option value="source">Source</option>
+                  <option value="16">16-bit</option>
+                  <option value="24">24-bit</option>
+                </select>
+              </label>
+              <label>
+                <span>Ceiling</span>
+                <select
+                  data-testid="custom-ceiling"
+                  disabled={controlsLocked}
+                  value={state.customExport.ceilingDbtp}
+                  onChange={(event) =>
+                    updateCustomExport({
+                      ceilingDbtp: Number(event.currentTarget.value),
+                    })
+                  }
+                >
+                  <option value="-1">-1 dBTP</option>
+                  <option value="-1.5">-1.5 dBTP</option>
+                  <option value="-2">-2 dBTP</option>
+                </select>
+              </label>
+            </section>
+          ) : null}
+
+          <section className="toggle-stack">
+            <ToggleRow
+              active={state.volumeMatch}
+              disabled={controlsLocked}
+              label="Volume Match"
+              testId="volume-match"
+              onClick={() =>
+                updateAuditionSettings((current) => toggleIphoneVolumeMatch(current))
+              }
+            />
+            <ToggleRow
+              active={state.lufsPreview}
+              disabled={controlsLocked}
+              label="LUFS Preview"
+              testId="lufs-preview"
+              onClick={() =>
+                updateAuditionSettings((current) => toggleIphoneLufsPreview(current))
+              }
+            />
           </section>
-        ) : null}
 
-        <section className="toggle-stack">
-          <ToggleRow
-            active={state.volumeMatch}
-            disabled={controlsLocked}
-            label="Volume Match"
-            testId="volume-match"
-            onClick={() =>
-              updateAuditionSettings((current) => toggleIphoneVolumeMatch(current))
-            }
-          />
-          <ToggleRow
-            active={state.lufsPreview}
-            disabled={controlsLocked}
-            label="LUFS Preview"
-            testId="lufs-preview"
-            onClick={() =>
-              updateAuditionSettings((current) => toggleIphoneLufsPreview(current))
-            }
-          />
-        </section>
-
-        <section className="master-card" aria-label="Master settings">
-          <div>
-            <p className="track-label">Target</p>
-            <strong>{targetLufs?.toFixed(1) ?? "-14.0"} LUFS</strong>
-          </div>
-          <div>
-            <p className="track-label">Format</p>
-            <strong>
-              {formatSampleRate(sampleRate)} · {formatBitDepth(bitDepth)}
-            </strong>
-          </div>
+          <section className="master-card" aria-label="Master settings">
+            <div>
+              <p className="track-label">Target</p>
+              <strong>{targetLufs?.toFixed(1) ?? "-14.0"} LUFS</strong>
+            </div>
+            <div>
+              <p className="track-label">Format</p>
+              <strong>
+                {formatSampleRate(sampleRate)} · {formatBitDepth(bitDepth)}
+              </strong>
+            </div>
+          </section>
         </section>
 
         <button
@@ -506,7 +561,7 @@ export default function App({
           disabled={!canRenderMaster || operation !== "idle"}
           onClick={exportMaster}
         >
-          {isExporting ? "Exporting..." : "Export Master"}
+          {exportButtonLabel}
         </button>
         {message ? <p className="status-message">{message}</p> : null}
         {exportChecks.some((check) => check.level !== "info") ? (
@@ -520,6 +575,46 @@ export default function App({
         ) : null}
       </section>
     </main>
+  );
+}
+
+function TonePicker({
+  disabled,
+  onSelect,
+  selectedTone,
+}: {
+  disabled: boolean;
+  onSelect: (tone: IphoneSimpleTone) => void;
+  selectedTone: IphoneSimpleTone;
+}) {
+  return (
+    <section className="tone-picker">
+      <h3>Style</h3>
+      <div className="tone-grid">
+        {iphoneSimpleToneOptions.map((option) => {
+          const visual = IPHONE_TONE_VISUALS[option.id];
+          const active = selectedTone === option.id;
+          return (
+            <button
+              key={option.id}
+              aria-pressed={active}
+              className={active ? "tone-card is-active" : "tone-card"}
+              data-testid={`tone-${option.id}`}
+              disabled={disabled}
+              style={{ "--tone-accent": visual.accent } as CSSProperties}
+              type="button"
+              onClick={() => onSelect(option.id)}
+            >
+              <img src={visual.image} alt="" aria-hidden="true" />
+              <div>
+                <span>{option.label}</span>
+                <small>{visual.description}</small>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

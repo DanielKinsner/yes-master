@@ -161,10 +161,28 @@ describe("iPhone app shell", () => {
     const { container, root } = renderApp();
 
     expect(container.textContent).toContain("YES Master");
-    expect(container.textContent).toContain("Simple");
+    expect(container.textContent).not.toContain("Simple");
     expect(container.textContent).toContain("Import Track");
     expect(container.textContent).not.toContain("Advanced");
     expect(container.textContent).not.toContain("Album Master");
+
+    act(() => root.unmount());
+  });
+
+  it("uses preset artwork as the mobile hero", async () => {
+    const { container, root } = renderApp();
+
+    const heroArtwork = container.querySelector<HTMLImageElement>(
+      "[data-testid='iphone-preset-hero']",
+    );
+    expect(heroArtwork?.alt).toBe("Balanced mastering preset");
+
+    await click(container, "[data-testid='tone-warm']");
+
+    expect(
+      container.querySelector<HTMLImageElement>("[data-testid='iphone-preset-hero']")
+        ?.alt,
+    ).toBe("Warm mastering preset");
 
     act(() => root.unmount());
   });
@@ -194,7 +212,7 @@ describe("iPhone app shell", () => {
 
     await click(container, "[data-testid='iphone-import']");
 
-    expect(container.querySelector(".import-strip")?.textContent).toContain(
+    expect(container.querySelector(".hero-track-row")?.textContent).toContain(
       "Analyzing...",
     );
 
@@ -322,7 +340,7 @@ describe("iPhone app shell", () => {
     expect(container.textContent).toContain("44.1 kHz");
     expect(container.textContent).toContain("16-bit");
     expect(container.textContent).toContain("Mastered");
-    expect(container.textContent).toContain("Export Master");
+    expect(container.textContent).toContain("Create Master");
 
     act(() => root.unmount());
   });
