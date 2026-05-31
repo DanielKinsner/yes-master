@@ -9,6 +9,17 @@ function readIphoneStyles() {
 }
 
 describe("iPhone styles", () => {
+  it("uses the desktop brand palette for the phone shell", () => {
+    const css = readIphoneStyles();
+
+    expect(css).toContain("#07080d");
+    expect(css).toContain("#10131a");
+    expect(css).toContain("#4d8bff");
+    expect(css).toContain("#6fa3ff");
+    expect(css).toContain("#ffb86b");
+    expect(css).toContain("color-scheme: dark");
+  });
+
   it("respects iOS safe areas around the phone shell", () => {
     const css = readIphoneStyles();
 

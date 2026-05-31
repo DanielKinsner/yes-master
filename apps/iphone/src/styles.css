@@ -1,14 +1,46 @@
 :root {
-  color: #17201d;
-  background: #dfe7e2;
+  --bg-0: #07080d;
+  --bg-1: #10131a;
+  --bg-2: #161a24;
+  --bg-3: #1f2533;
+  --bg-4: #2a3142;
+  --border: #232a3a;
+  --border-strong: #313a4f;
+  --text-0: #ecf0fa;
+  --text-1: #b0b8d0;
+  --text-2: #6f7795;
+  --accent: #4d8bff;
+  --accent-bright: #6fa3ff;
+  --accent-deep: #2a6bf2;
+  --accent-warm: #ffb86b;
+  --accent-danger: #ff7676;
+  --accent-glow: 0 0 18px rgba(77, 139, 255, 0.45);
+  --accent-glow-soft: 0 0 10px rgba(77, 139, 255, 0.3);
+  --radius: 8px;
+  --radius-sm: 5px;
+  --elev-1:
+    0 1px 2px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --elev-2:
+    0 2px 6px rgba(0, 0, 0, 0.28),
+    0 8px 20px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  color: var(--text-0);
+  background: var(--bg-0);
   font-family:
-    ui-rounded,
-    "Avenir Next",
+    "Inter Variable",
+    "Inter",
+    "Segoe UI Variable Display",
+    "SF Pro Display",
+    -apple-system,
+    BlinkMacSystemFont,
     "Segoe UI",
     system-ui,
     sans-serif;
   font-synthesis: none;
+  font-variant-numeric: tabular-nums;
   text-rendering: optimizeLegibility;
+  color-scheme: dark;
 }
 
 * {
@@ -29,9 +61,9 @@ button {
 .iphone-app {
   align-items: center;
   background:
-    linear-gradient(140deg, rgba(31, 121, 98, 0.2), transparent 34%),
-    linear-gradient(320deg, rgba(196, 59, 49, 0.18), transparent 42%),
-    #dfe7e2;
+    radial-gradient(ellipse 80% 60% at 28% 0%, rgba(77, 139, 255, 0.13), transparent 60%),
+    radial-gradient(ellipse 60% 44% at 94% 100%, rgba(255, 184, 107, 0.08), transparent 60%),
+    var(--bg-0);
   display: flex;
   justify-content: center;
   min-height: 100vh;
@@ -44,10 +76,12 @@ button {
 }
 
 .phone-frame {
-  background: #f9fbf7;
-  border: 1px solid rgba(23, 32, 29, 0.12);
-  border-radius: 28px;
-  box-shadow: 0 24px 80px rgba(23, 32, 29, 0.2);
+  background: linear-gradient(180deg, rgba(22, 26, 36, 0.96), var(--bg-1));
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -74,9 +108,9 @@ button {
 
 .eyebrow,
 .track-label {
-  color: #63716b;
+  color: var(--text-2);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 750;
   letter-spacing: 0;
   margin: 0 0 4px;
   text-transform: uppercase;
@@ -90,27 +124,27 @@ p {
 }
 
 h1 {
-  color: #111817;
+  color: var(--text-0);
   font-size: 2.45rem;
   line-height: 0.95;
 }
 
 h2 {
-  color: #111817;
+  color: var(--text-0);
   font-size: 1.2rem;
 }
 
 h3 {
-  color: #2a3632;
+  color: var(--text-1);
   font-size: 0.85rem;
   margin-bottom: 8px;
 }
 
 .status-chip {
-  background: #dae8df;
-  border: 1px solid rgba(31, 121, 98, 0.18);
-  border-radius: 999px;
-  color: #1f5d4d;
+  background: rgba(77, 139, 255, 0.1);
+  border: 1px solid rgba(111, 163, 255, 0.28);
+  border-radius: var(--radius-sm);
+  color: var(--accent-bright);
   font-size: 0.76rem;
   font-weight: 800;
   padding: 8px 11px;
@@ -119,9 +153,10 @@ h3 {
 .import-strip,
 .wave-panel,
 .master-card {
-  background: #eef3ee;
-  border: 1px solid rgba(23, 32, 29, 0.1);
-  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(31, 37, 51, 0.72) 0%, var(--bg-2) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--elev-1);
 }
 
 .import-strip {
@@ -139,7 +174,7 @@ h3 {
 .import-button,
 .export-button {
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 900;
   min-height: 52px;
@@ -147,20 +182,22 @@ h3 {
 }
 
 .import-button {
-  background: #17201d;
-  color: #f9fbf7;
+  background: linear-gradient(180deg, var(--accent-bright) 0%, var(--accent-deep) 100%);
+  box-shadow: var(--accent-glow-soft);
+  color: #fff;
 }
 
 .import-button:disabled {
-  background: #4d5b55;
+  background: var(--bg-3);
+  box-shadow: none;
   cursor: wait;
 }
 
 .change-track-button {
   background: transparent;
-  border: 1px solid rgba(23, 32, 29, 0.18);
-  border-radius: 8px;
-  color: #17201d;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-1);
   cursor: pointer;
   flex: 0 0 auto;
   font-size: 0.82rem;
@@ -170,7 +207,7 @@ h3 {
 }
 
 .change-track-button:disabled {
-  color: #7a8781;
+  color: var(--text-2);
   cursor: wait;
 }
 
@@ -190,7 +227,8 @@ h3 {
 }
 
 .waveform span {
-  background: linear-gradient(#c43b31, #1f7962);
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent-deep) 56%, var(--accent-warm));
+  box-shadow: 0 0 10px rgba(77, 139, 255, 0.16);
   border-radius: 99px;
   display: block;
   height: var(--bar);
@@ -199,7 +237,7 @@ h3 {
 
 .playhead-row {
   align-items: center;
-  color: #63716b;
+  color: var(--text-2);
   display: grid;
   font-size: 0.76rem;
   font-weight: 850;
@@ -208,7 +246,7 @@ h3 {
 }
 
 .playhead-row input {
-  accent-color: #1f7962;
+  accent-color: var(--accent);
   min-width: 0;
   width: 100%;
 }
@@ -224,8 +262,9 @@ h3 {
 
 .transport-row,
 .segmented {
-  background: #dce5df;
-  border-radius: 8px;
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   display: grid;
   gap: 4px;
   padding: 4px;
@@ -242,8 +281,8 @@ h3 {
 .segment {
   background: transparent;
   border: 0;
-  border-radius: 6px;
-  color: #35413d;
+  border-radius: var(--radius-sm);
+  color: var(--text-1);
   cursor: pointer;
   font-size: 0.83rem;
   font-weight: 850;
@@ -252,9 +291,9 @@ h3 {
 }
 
 .segment.is-active {
-  background: #f9fbf7;
-  box-shadow: 0 8px 22px rgba(23, 32, 29, 0.1);
-  color: #111817;
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
+  box-shadow: var(--accent-glow-soft);
+  color: #fff;
 }
 
 .segment:disabled,
@@ -275,7 +314,7 @@ h3 {
 }
 
 .custom-export-panel label {
-  color: #63716b;
+  color: var(--text-2);
   display: grid;
   font-size: 0.72rem;
   font-weight: 850;
@@ -285,10 +324,10 @@ h3 {
 
 .custom-export-panel select {
   appearance: none;
-  background: #eef3ee;
-  border: 1px solid rgba(23, 32, 29, 0.14);
-  border-radius: 8px;
-  color: #17201d;
+  background: var(--bg-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-0);
   font: inherit;
   font-size: 0.82rem;
   min-height: 42px;
@@ -305,9 +344,9 @@ h3 {
 .toggle-row {
   align-items: center;
   background: transparent;
-  border: 1px solid rgba(23, 32, 29, 0.14);
-  border-radius: 8px;
-  color: #17201d;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-0);
   cursor: pointer;
   display: flex;
   font-weight: 850;
@@ -317,7 +356,7 @@ h3 {
 }
 
 .switch {
-  background: #b8c6bf;
+  background: var(--bg-4);
   border-radius: 999px;
   height: 24px;
   position: relative;
@@ -325,7 +364,7 @@ h3 {
 }
 
 .switch::after {
-  background: #f9fbf7;
+  background: var(--text-1);
   border-radius: 50%;
   content: "";
   height: 20px;
@@ -337,7 +376,8 @@ h3 {
 }
 
 .switch.is-on {
-  background: #1f7962;
+  background: linear-gradient(90deg, var(--accent-deep), var(--accent-bright));
+  box-shadow: var(--accent-glow-soft);
 }
 
 .switch.is-on::after {
@@ -352,36 +392,38 @@ h3 {
 }
 
 .master-card strong {
-  color: #111817;
+  color: var(--text-0);
   display: block;
   font-size: 1rem;
   line-height: 1.2;
 }
 
 .export-button {
-  background: #c43b31;
-  color: #fff8f2;
+  background: linear-gradient(180deg, var(--accent-bright) 0%, var(--accent-deep) 100%);
+  box-shadow: var(--accent-glow-soft);
+  color: #fff;
   margin-top: auto;
 }
 
 .export-button:disabled {
-  background: #c9d2cd;
-  color: #67756f;
+  background: var(--bg-3);
+  box-shadow: none;
+  color: var(--text-2);
   cursor: not-allowed;
 }
 
 .status-message {
-  color: #63716b;
+  color: var(--text-2);
   font-size: 0.82rem;
   font-weight: 800;
   text-align: center;
 }
 
 .warning-list {
-  background: #fff1dd;
-  border: 1px solid rgba(196, 59, 49, 0.22);
-  border-radius: 8px;
-  color: #71332d;
+  background: rgba(255, 184, 107, 0.08);
+  border: 1px solid rgba(255, 184, 107, 0.3);
+  border-radius: var(--radius);
+  color: #ffe7bf;
   display: grid;
   font-size: 0.82rem;
   font-weight: 750;
