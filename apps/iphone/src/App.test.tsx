@@ -747,6 +747,30 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
+  it("clears stale export results when Simple settings change", async () => {
+    const backend = makeBackend();
+    vi.mocked(backend.runExportChecks).mockResolvedValue([
+      {
+        level: "warning",
+        code: "true_peak_high",
+        message: "True peak is high. Consider lowering the ceiling.",
+      },
+    ]);
+    const { container, root } = renderApp({ backend });
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='iphone-export']");
+    expect(container.textContent).toContain("Exported with 1 warning");
+    expect(container.textContent).toContain("True peak is high");
+
+    await click(container, "[data-testid='tone-warm']");
+
+    expect(container.textContent).not.toContain("Exported with 1 warning");
+    expect(container.textContent).not.toContain("True peak is high");
+
+    act(() => root.unmount());
+  });
+
   it("clears export warnings when a different track is imported", async () => {
     const backend = makeBackend();
     vi.mocked(backend.importTrack)

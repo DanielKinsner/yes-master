@@ -221,6 +221,8 @@ export default function App({
     update: (current: IphoneAppState) => IphoneAppState,
   ) {
     clearMasterPreview();
+    setExportChecks([]);
+    setMessage(null);
     setState((current) => switchIphonePlayback(update(current), "original"));
   }
 
