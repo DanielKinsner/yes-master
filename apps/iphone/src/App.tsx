@@ -44,7 +44,7 @@ import {
 } from "./simple-mode";
 import "./styles.css";
 
-type IphoneOperation = "idle" | "importing" | "exporting";
+type IphoneOperation = "idle" | "importing" | "exporting" | "preparing-preview";
 
 export default function App({
   backend = iphoneBackend,
@@ -59,6 +59,7 @@ export default function App({
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [exportChecks, setExportChecks] = useState<QualityCheck[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [masterPreviewPath, setMasterPreviewPath] = useState<string | null>(null);
   const [operation, setOperation] = useState<IphoneOperation>("idle");
   const operationRef = useRef<IphoneOperation>("idle");
   const plan = useMemo(() => toIphoneSimplePlan(state), [state]);
@@ -82,6 +83,7 @@ export default function App({
       }
       setAnalysis(null);
       setExportChecks([]);
+      setMasterPreviewPath(null);
       const imported = await backend.importTrack(path);
       setState((current) => attachIphoneTrack(current, toIphoneTrack(imported)));
       setMessage("Analyzing...");
@@ -126,6 +128,26 @@ export default function App({
           ? `Exported with ${warningCount} warning${warningCount === 1 ? "" : "s"}`
           : "Exported",
       );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      finishOperation();
+    }
+  }
+
+  async function switchToMasteredPreview() {
+    if (!state.track) return;
+    if (!startOperation("preparing-preview")) return;
+    setMessage("Preparing Mastered...");
+    try {
+      const job = await backend.prepareMasterPreview({
+        trackId: state.track.id,
+        trackPath: state.track.path,
+        settings: plan.auditionSettings,
+      });
+      setMasterPreviewPath(job.output_paths[0] ?? null);
+      setState((current) => switchIphonePlayback(current, "mastered"));
+      setMessage(null);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     } finally {
@@ -199,7 +221,10 @@ export default function App({
           )}
         </section>
 
-        <section className="wave-panel" aria-label="Audition">
+        <section
+          className="wave-panel"
+          aria-label={masterPreviewPath ? "Audition ready" : "Audition"}
+        >
           <div className="waveform" aria-hidden="true">
             {Array.from({ length: 36 }, (_, index) => (
               <span
@@ -240,9 +265,7 @@ export default function App({
             <SegmentButton
               active={state.playback === "mastered"}
               testId="playback-mastered"
-              onClick={() =>
-                setState((current) => switchIphonePlayback(current, "mastered"))
-              }
+              onClick={switchToMasteredPreview}
             >
               Mastered
             </SegmentButton>

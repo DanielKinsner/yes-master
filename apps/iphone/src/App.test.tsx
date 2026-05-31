@@ -31,6 +31,16 @@ function makeBackend(): IphoneBackend {
         bit_depth: 24,
       },
     }),
+    prepareMasterPreview: vi.fn().mockResolvedValue({
+      output_paths: ["/private/preview/track-1-mastered-preview.wav"],
+      measurements: {
+        lufs_integrated: -14,
+        true_peak_dbtp: -1,
+        dynamic_range_lu: 8,
+        sample_rate: 48_000,
+        bit_depth: 24,
+      },
+    }),
     runExportChecks: vi.fn().mockResolvedValue([
       {
         level: "info",
@@ -232,6 +242,27 @@ describe("iPhone app shell", () => {
     );
     expect(playhead?.value).toBe("42");
     expect(container.textContent).toContain("0:42");
+
+    act(() => root.unmount());
+  });
+
+  it("prepares a mastered preview before switching to Mastered", async () => {
+    const { backend, container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='volume-match']");
+    await click(container, "[data-testid='playback-mastered']");
+
+    expect(backend.prepareMasterPreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trackId: "track-1",
+        trackPath: "/private/new-master.wav",
+        settings: expect.objectContaining({
+          volume_match: true,
+        }),
+      }),
+    );
+    expect(container.textContent).toContain("Mastered");
 
     act(() => root.unmount());
   });
