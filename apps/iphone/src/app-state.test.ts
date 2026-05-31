@@ -64,11 +64,24 @@ describe("iPhone app state", () => {
     const plan = toIphoneSimplePlan(state);
 
     expect(plan.auditionSettings.preset).toEqual({ kind: "warmth" });
-    expect(plan.auditionSettings.volume_match).toBe(true);
+    expect(plan.auditionSettings.volume_match).toBe(false);
     expect(plan.exportSettings.volume_match).toBe(false);
     expect(plan.exportSettings.advanced.lufs_offset_db).toBe(-10.5);
     expect(plan.exportSettings.advanced.bit_depth).toBe(16);
     expect(plan.previewLufsLanding).toBe(true);
+  });
+
+  it("keeps Volume Match and LUFS Preview mutually exclusive", () => {
+    const volumeMatched = toggleIphoneVolumeMatch(initialIphoneAppState);
+    const lufsPreviewed = toggleIphoneLufsPreview(volumeMatched);
+    const volumeMatchedAgain = toggleIphoneVolumeMatch(lufsPreviewed);
+
+    expect(volumeMatched.volumeMatch).toBe(true);
+    expect(volumeMatched.lufsPreview).toBe(false);
+    expect(lufsPreviewed.volumeMatch).toBe(false);
+    expect(lufsPreviewed.lufsPreview).toBe(true);
+    expect(volumeMatchedAgain.volumeMatch).toBe(true);
+    expect(volumeMatchedAgain.lufsPreview).toBe(false);
   });
 
   it("feeds Custom export settings into the Simple plan", () => {

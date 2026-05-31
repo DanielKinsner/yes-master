@@ -139,16 +139,20 @@ export function setIphonePlayhead(
 }
 
 export function toggleIphoneVolumeMatch(state: IphoneAppState): IphoneAppState {
+  const volumeMatch = !state.volumeMatch;
   return {
     ...state,
-    volumeMatch: !state.volumeMatch,
+    volumeMatch,
+    lufsPreview: volumeMatch ? false : state.lufsPreview,
   };
 }
 
 export function toggleIphoneLufsPreview(state: IphoneAppState): IphoneAppState {
+  const lufsPreview = !state.lufsPreview;
   return {
     ...state,
-    lufsPreview: !state.lufsPreview,
+    volumeMatch: lufsPreview ? false : state.volumeMatch,
+    lufsPreview,
   };
 }
 
