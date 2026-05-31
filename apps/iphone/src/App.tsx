@@ -74,7 +74,7 @@ export default function App({
   const canRenderMaster = hasTrack && analysisReady;
   const isImporting = operation === "importing";
   const isExporting = operation === "exporting";
-  const controlsLocked = isExporting;
+  const controlsLocked = isImporting || isExporting;
   const trackStripLabel =
     isImporting && hasTrack
       ? "Analyzing..."

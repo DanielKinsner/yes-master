@@ -205,6 +205,39 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
+  it("locks Simple controls while analysis is running", async () => {
+    const backend = makeBackend();
+    const analysisResult = deferred<AnalysisResult>();
+    vi.mocked(backend.analyzeTrack).mockReturnValue(analysisResult.promise);
+    const { container, root } = renderApp({ backend });
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='tone-warm']");
+    await click(container, "[data-testid='loudness-high']");
+
+    expect(
+      container.querySelector("[data-testid='tone-balanced']")?.getAttribute(
+        "aria-pressed",
+      ),
+    ).toBe("true");
+    expect(
+      container.querySelector("[data-testid='tone-warm']")?.getAttribute(
+        "aria-pressed",
+      ),
+    ).toBe("false");
+    expect(
+      container.querySelector("[data-testid='loudness-medium']")?.getAttribute(
+        "aria-pressed",
+      ),
+    ).toBe("true");
+
+    await act(async () => {
+      analysisResult.resolve(analyzedTrack());
+      await analysisResult.promise;
+    });
+    act(() => root.unmount());
+  });
+
   it("waits for analysis before enabling mastered preview and export", async () => {
     const backend = makeBackend();
     vi.mocked(backend.analyzeTrack).mockRejectedValue(new Error("Analysis failed"));
