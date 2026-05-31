@@ -1,5 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import type {
   AnalysisResult,
   ExportReport,
@@ -77,4 +77,17 @@ export async function pickIphoneAudioPath(): Promise<string | null> {
     ],
   });
   return Array.isArray(selected) ? selected[0] ?? null : selected;
+}
+
+export async function pickIphoneOutputPath(): Promise<string | null> {
+  return save({
+    title: "Export master",
+    defaultPath: "YES-Master.wav",
+    filters: [
+      {
+        name: "WAV",
+        extensions: ["wav"],
+      },
+    ],
+  });
 }

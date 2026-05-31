@@ -21,27 +21,50 @@ function makeBackend(): IphoneBackend {
       true_peak_dbtp: -1.4,
       dynamic_range_lu: 8,
     }),
-    renderMaster: vi.fn(),
-    runExportChecks: vi.fn(),
+    renderMaster: vi.fn().mockResolvedValue({
+      output_paths: ["/private/new-master__master.wav"],
+      measurements: {
+        lufs_integrated: -14,
+        true_peak_dbtp: -1,
+        dynamic_range_lu: 8,
+        sample_rate: 48_000,
+        bit_depth: 24,
+      },
+    }),
+    runExportChecks: vi.fn().mockResolvedValue([
+      {
+        level: "info",
+        code: "export_ok",
+        message: "No issues detected in measured values.",
+      },
+    ]),
   } as unknown as IphoneBackend;
 }
 
 function renderApp({
   backend = makeBackend(),
   pickAudioPath = vi.fn().mockResolvedValue("/private/new-master.wav"),
+  pickOutputPath = vi.fn().mockResolvedValue("/private/new-master__master.wav"),
 }: {
   backend?: IphoneBackend;
   pickAudioPath?: () => Promise<string | null>;
+  pickOutputPath?: () => Promise<string | null>;
 } = {}) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
 
   act(() => {
-    root.render(<App backend={backend} pickAudioPath={pickAudioPath} />);
+    root.render(
+      <App
+        backend={backend}
+        pickAudioPath={pickAudioPath}
+        pickOutputPath={pickOutputPath}
+      />,
+    );
   });
 
-  return { backend, container, pickAudioPath, root };
+  return { backend, container, pickAudioPath, pickOutputPath, root };
 }
 
 async function click(container: HTMLElement, selector: string) {
@@ -99,6 +122,30 @@ describe("iPhone app shell", () => {
     expect(container.textContent).toContain("16-bit");
     expect(container.textContent).toContain("Mastered");
     expect(container.textContent).toContain("Export Master");
+
+    act(() => root.unmount());
+  });
+
+  it("exports through the iPhone render path with export settings", async () => {
+    const { backend, container, pickOutputPath, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='volume-match']");
+    await click(container, "[data-testid='iphone-export']");
+
+    expect(pickOutputPath).toHaveBeenCalled();
+    expect(backend.renderMaster).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trackId: "track-1",
+        trackPath: "/private/new-master.wav",
+        outputPath: "/private/new-master__master.wav",
+        settings: expect.objectContaining({
+          volume_match: false,
+        }),
+      }),
+    );
+    expect(backend.runExportChecks).toHaveBeenCalled();
+    expect(container.textContent).toContain("Exported");
 
     act(() => root.unmount());
   });

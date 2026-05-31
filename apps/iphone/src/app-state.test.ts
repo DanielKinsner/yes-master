@@ -27,6 +27,8 @@ describe("iPhone app state", () => {
     const imported = attachIphoneTrack(initialIphoneAppState, {
       id: "track-1",
       displayName: "rough mix.wav",
+      path: "/private/rough mix.wav",
+      sourceFormat: "wav",
       durationSeconds: 182.4,
     });
 

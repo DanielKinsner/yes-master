@@ -13,6 +13,8 @@ export type IphoneAnalysisStatus = "idle" | "needed" | "ready";
 export interface IphoneTrack {
   id: string;
   displayName: string;
+  path: string;
+  sourceFormat: string;
   durationSeconds: number | null;
 }
 

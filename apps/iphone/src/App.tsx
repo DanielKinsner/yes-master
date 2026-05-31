@@ -16,8 +16,10 @@ import {
 import {
   iphoneBackend,
   pickIphoneAudioPath,
+  pickIphoneOutputPath,
   type IphoneBackend,
 } from "./iphone-api";
+import type { AnalysisResult, ExportReport, RenderJob } from "../../../src/bindings";
 import {
   iphoneSimpleExportProfileOptions,
   iphoneSimpleLoudnessOptions,
@@ -31,11 +33,14 @@ import "./styles.css";
 export default function App({
   backend = iphoneBackend,
   pickAudioPath = pickIphoneAudioPath,
+  pickOutputPath = pickIphoneOutputPath,
 }: {
   backend?: IphoneBackend;
   pickAudioPath?: () => Promise<string | null>;
+  pickOutputPath?: () => Promise<string | null>;
 }) {
   const [state, setState] = useState<IphoneAppState>(initialIphoneAppState);
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const plan = useMemo(() => toIphoneSimplePlan(state), [state]);
   const hasTrack = state.track !== null;
@@ -54,9 +59,42 @@ export default function App({
       const imported = await backend.importTrack(path);
       setState((current) => attachIphoneTrack(current, toIphoneTrack(imported)));
       setMessage("Analyzing...");
-      await backend.analyzeTrack(imported.id, imported.path);
+      const nextAnalysis = await backend.analyzeTrack(imported.id, imported.path);
+      setAnalysis(nextAnalysis);
       setState((current) => markIphoneAnalysisReady(current));
       setMessage(null);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function exportMaster() {
+    if (!state.track) return;
+    setMessage("Exporting...");
+    try {
+      const outputPath = await pickOutputPath();
+      if (!outputPath) {
+        setMessage(null);
+        return;
+      }
+      const job = await backend.renderMaster({
+        trackId: state.track.id,
+        trackPath: state.track.path,
+        settings: plan.exportSettings,
+        outputPath,
+      });
+      const report = buildExportReport(state.track, job);
+      const checks = await backend.runExportChecks(
+        report,
+        analysis,
+        plan.exportSettings,
+      );
+      const warningCount = checks.filter((check) => check.level !== "info").length;
+      setMessage(
+        warningCount > 0
+          ? `Exported with ${warningCount} warning${warningCount === 1 ? "" : "s"}`
+          : "Exported",
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     }
@@ -206,7 +244,13 @@ export default function App({
           </div>
         </section>
 
-        <button className="export-button" type="button" disabled={!hasTrack}>
+        <button
+          className="export-button"
+          data-testid="iphone-export"
+          type="button"
+          disabled={!hasTrack}
+          onClick={exportMaster}
+        >
           Export Master
         </button>
         {message ? <p className="status-message">{message}</p> : null}
@@ -217,13 +261,37 @@ export default function App({
 
 function toIphoneTrack(track: {
   id: string;
+  path: string;
   display_name: string;
+  source_format: string;
   duration_seconds: number | null;
 }): IphoneTrack {
   return {
     id: track.id,
     displayName: track.display_name,
+    path: track.path,
+    sourceFormat: track.source_format,
     durationSeconds: track.duration_seconds,
+  };
+}
+
+function buildExportReport(track: IphoneTrack, job: RenderJob): ExportReport {
+  const outputPath = job.output_paths[0] ?? "";
+  const measurements = job.measurements;
+  if (!measurements) {
+    throw new Error("Export finished without rendered measurements.");
+  }
+  return {
+    track_id: track.id,
+    output_path: outputPath,
+    measured_lufs: measurements.lufs_integrated,
+    measured_true_peak_dbtp: measurements.true_peak_dbtp,
+    measured_dynamic_range_lu: measurements.dynamic_range_lu,
+    source_format: track.sourceFormat,
+    destination_format: "wav",
+    sample_rate: measurements.sample_rate,
+    bit_depth: measurements.bit_depth,
+    checks: [],
   };
 }
 
