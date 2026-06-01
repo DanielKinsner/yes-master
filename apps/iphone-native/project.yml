@@ -36,8 +36,9 @@ targets:
         HEADER_SEARCH_PATHS:
           - $(PROJECT_DIR)/rust/include
         LIBRARY_SEARCH_PATHS:
-          - $(PROJECT_DIR)/rust/target/aarch64-apple-ios/debug
-          - $(PROJECT_DIR)/rust/target/aarch64-apple-ios/release
+          - $(PROJECT_DIR)/rust/build/$(PLATFORM_NAME)/$(CONFIGURATION)
+        OTHER_LDFLAGS:
+          - -lyes_master_iphone_native_bridge
     dependencies:
       - sdk: AVFoundation.framework
       - sdk: UniformTypeIdentifiers.framework
@@ -45,6 +46,4 @@ targets:
       - name: Build Rust Bridge
         basedOnDependencyAnalysis: false
         script: |
-          export PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH"
-          cd "$PROJECT_DIR/rust"
-          cargo build --target aarch64-apple-ios
+          "$PROJECT_DIR/scripts/build-rust-bridge.sh"
