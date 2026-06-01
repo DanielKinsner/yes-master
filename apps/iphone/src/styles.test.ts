@@ -153,6 +153,14 @@ describe("iPhone styles", () => {
     expect(css).toContain("@keyframes export-ready-enter");
   });
 
+  it("renders a compact waveform preview in the audition panel", () => {
+    const css = readIphoneStyles();
+
+    expect(css).toContain(".mini-waveform");
+    expect(css).toContain("grid-template-columns: repeat(44");
+    expect(css).toContain("@keyframes waveform-loading");
+  });
+
   it("animates the import and analysis processing sheet responsibly", () => {
     const css = readIphoneStyles();
 

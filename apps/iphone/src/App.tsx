@@ -35,6 +35,7 @@ import type {
   ExportReport,
   QualityCheck,
   RenderJob,
+  WaveformPeaks,
 } from "../../../src/bindings";
 import {
   iphoneSimpleExportProfileOptions,
@@ -114,12 +115,15 @@ export default function App({
   const [exportReceipt, setExportReceipt] = useState<IphoneExportReceipt | null>(
     null,
   );
+  const [waveform, setWaveform] = useState<WaveformPeaks | null>(null);
+  const [isLoadingWaveform, setIsLoadingWaveform] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [masterPreviewPath, setMasterPreviewPath] = useState<string | null>(null);
   const [operation, setOperation] = useState<IphoneOperation>("idle");
   const operationRef = useRef<IphoneOperation>("idle");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const previewRequestVersionRef = useRef(0);
+  const waveformRequestVersionRef = useRef(0);
   const plan = useMemo(() => toIphoneSimplePlan(state), [state]);
   const hasTrack = state.track !== null;
   const analysisReady = state.analysisStatus === "ready";
@@ -173,10 +177,12 @@ export default function App({
       setAnalysis(null);
       setExportChecks([]);
       setExportReceipt(null);
+      clearWaveform();
       clearMasterPreview();
       const imported = await backend.importTrack(path);
       const track = toIphoneTrack(imported);
       setState((current) => attachIphoneTrack(current, track));
+      void loadWaveform(track);
       await analyzeTrack(track);
     } catch (error) {
       setMessage(toIphoneErrorMessage(error));
@@ -206,6 +212,30 @@ export default function App({
     setAnalysis(nextAnalysis);
     setState((current) => markIphoneAnalysisReady(current));
     setMessage(null);
+  }
+
+  async function loadWaveform(track: IphoneTrack) {
+    const requestVersion = waveformRequestVersionRef.current + 1;
+    waveformRequestVersionRef.current = requestVersion;
+    setIsLoadingWaveform(true);
+    try {
+      const nextWaveform = await backend.prepareWaveform(track.id, track.path, 140);
+      if (requestVersion !== waveformRequestVersionRef.current) return;
+      setWaveform(nextWaveform);
+    } catch {
+      if (requestVersion !== waveformRequestVersionRef.current) return;
+      setWaveform(null);
+    } finally {
+      if (requestVersion === waveformRequestVersionRef.current) {
+        setIsLoadingWaveform(false);
+      }
+    }
+  }
+
+  function clearWaveform() {
+    waveformRequestVersionRef.current += 1;
+    setWaveform(null);
+    setIsLoadingWaveform(false);
   }
 
   async function exportMaster() {
@@ -465,6 +495,11 @@ export default function App({
               Mastered
             </SegmentButton>
             </div>
+
+            <MiniWaveform
+              isLoading={isLoadingWaveform}
+              peaks={waveform}
+            />
 
             <div className="playhead-row" aria-label="Playhead">
             <span>{formatTime(state.playheadSeconds)}</span>
@@ -925,6 +960,62 @@ function ExportReadySheet({
       </button>
     </section>
   );
+}
+
+function MiniWaveform({
+  isLoading,
+  peaks,
+}: {
+  isLoading: boolean;
+  peaks: WaveformPeaks | null;
+}) {
+  const channel = peaks?.channels[0] ?? [];
+  const bars = channel.length > 0 ? downsampleWaveform(channel, 44) : [];
+
+  return (
+    <div
+      aria-label={isLoading ? "Loading waveform" : "Waveform preview"}
+      className={isLoading ? "mini-waveform is-loading" : "mini-waveform"}
+      data-testid="iphone-mini-waveform"
+    >
+      {bars.length > 0
+        ? bars.map((level, index) => (
+            <span
+              // The waveform is visual only here; the playhead slider remains
+              // the accessible seek control.
+              aria-hidden="true"
+              key={`${index}-${level.toFixed(3)}`}
+              style={{ "--bar-level": level } as CSSProperties}
+            />
+          ))
+        : Array.from({ length: 24 }, (_, index) => (
+            <span
+              aria-hidden="true"
+              key={index}
+              style={{ "--bar-level": 0.22 + (index % 5) * 0.11 } as CSSProperties}
+            />
+          ))}
+    </div>
+  );
+}
+
+function downsampleWaveform(channel: number[], targetBars: number) {
+  if (channel.length <= targetBars) return channel.map(normalizeWaveformLevel);
+  const bucketSize = channel.length / targetBars;
+  return Array.from({ length: targetBars }, (_, bucketIndex) => {
+    const start = Math.floor(bucketIndex * bucketSize);
+    const end = Math.max(start + 1, Math.floor((bucketIndex + 1) * bucketSize));
+    let max = 0;
+    for (let index = start; index < end && index < channel.length; index += 1) {
+      max = Math.max(max, Math.abs(channel[index] ?? 0));
+    }
+    return normalizeWaveformLevel(max);
+  });
+}
+
+function normalizeWaveformLevel(level: number) {
+  if (!Number.isFinite(level)) return 0.08;
+  return Math.max(0.08, Math.min(1, level));
 }
 
 function formatSampleRate(sampleRate: number | null) {

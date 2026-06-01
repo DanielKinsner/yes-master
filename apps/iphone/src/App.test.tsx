@@ -17,6 +17,13 @@ function makeBackend(): IphoneBackend {
   return {
     importTrack: vi.fn().mockResolvedValue(importedTrack()),
     analyzeTrack: vi.fn().mockResolvedValue(analyzedTrack()),
+    prepareWaveform: vi.fn().mockResolvedValue({
+      track_id: "track-1",
+      channels: [[0.1, 0.4, 0.8, 0.5, 0.2]],
+      samples_per_pixel: 512,
+      total_samples: 2560,
+      sample_rate: 44_100,
+    }),
     renderMaster: vi.fn().mockResolvedValue({
       output_paths: ["/private/new-master__master.wav"],
       measurements: {
@@ -245,11 +252,19 @@ describe("iPhone app shell", () => {
       "track-1",
       "/private/new-master.wav",
     );
+    expect(backend.prepareWaveform).toHaveBeenCalledWith(
+      "track-1",
+      "/private/new-master.wav",
+      140,
+    );
     expect(container.textContent).toContain("new-master");
     expect(container.textContent).toContain("WAV");
     expect(container.textContent).toContain("44.1 kHz");
     expect(container.textContent).toContain("Stereo");
     expect(container.textContent).toContain("Ready");
+    expect(
+      container.querySelector("[data-testid='iphone-mini-waveform']"),
+    ).not.toBeNull();
 
     act(() => root.unmount());
   });

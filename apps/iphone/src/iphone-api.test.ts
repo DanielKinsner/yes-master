@@ -72,6 +72,19 @@ describe("iPhone API facade", () => {
     });
   });
 
+  it("calls the separate iPhone waveform command", async () => {
+    const invoke = vi.fn().mockResolvedValue({ track_id: "track-1", channels: [[]] });
+    const backend = createIphoneBackend(invoke);
+
+    await backend.prepareWaveform("track-1", "/private/song.wav", 140);
+
+    expect(invoke).toHaveBeenCalledWith("iphone_prepare_waveform", {
+      trackId: "track-1",
+      trackPath: "/private/song.wav",
+      targetPixels: 140,
+    });
+  });
+
   it("calls the separate iPhone render command with export settings", async () => {
     const invoke = vi.fn().mockResolvedValue({ output_paths: ["/private/master.wav"] });
     const backend = createIphoneBackend(invoke);
@@ -190,6 +203,7 @@ describe("iPhone API facade", () => {
 
     const imported = await backend.importTrack(path);
     const analysis = await backend.analyzeTrack(imported.id, imported.path);
+    const waveform = await backend.prepareWaveform(imported.id, imported.path, 64);
     const preview = await backend.prepareMasterPreview({
       trackId: imported.id,
       trackPath: imported.path,
@@ -199,6 +213,8 @@ describe("iPhone API facade", () => {
     expect(imported.display_name).toBe("rough mix.wav");
     expect(imported.path).toBe("blob:yes-master/rough-mix");
     expect(analysis.track_id).toBe(imported.id);
+    expect(waveform.track_id).toBe(imported.id);
+    expect(waveform.channels[0]?.length).toBeGreaterThan(0);
     expect(preview.output_paths).toEqual(["blob:yes-master/rough-mix"]);
   });
 

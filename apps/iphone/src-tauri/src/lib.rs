@@ -2,7 +2,7 @@ use std::path::Path;
 
 use yes_master_lib::{
   engine, exports, files, AnalysisResult, CommandResult, ExportReport, ImportedTrack,
-  MasteringSettings, QualityCheck, RenderJob, RenderKind, TrackId,
+  MasteringSettings, QualityCheck, RenderJob, RenderKind, TrackId, WaveformPeaks,
 };
 
 #[tauri::command]
@@ -26,6 +26,20 @@ async fn iphone_analyze_track(
   results
     .pop()
     .ok_or_else(|| yes_master_lib::CommandError::Other("no analysis produced".to_string()))
+}
+
+#[tauri::command]
+async fn iphone_prepare_waveform(
+  track_id: String,
+  track_path: String,
+  target_pixels: Option<u32>,
+) -> CommandResult<WaveformPeaks> {
+  yes_master_lib::audio::prepare_waveform(
+    TrackId(track_id),
+    track_path,
+    target_pixels,
+  )
+  .await
 }
 
 #[tauri::command]
@@ -137,6 +151,7 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       iphone_import_track,
       iphone_analyze_track,
+      iphone_prepare_waveform,
       iphone_render_master,
       iphone_prepare_master_preview,
       iphone_run_export_checks,

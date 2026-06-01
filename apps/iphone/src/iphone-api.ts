@@ -11,6 +11,7 @@ import type {
   MasteringSettings,
   QualityCheck,
   RenderJob,
+  WaveformPeaks,
 } from "../../../src/bindings";
 import { buildIphoneSimplePlan } from "./simple-mode";
 
@@ -35,6 +36,11 @@ export interface IphonePreviewRequest {
 export interface IphoneBackend {
   importTrack(path: string): Promise<ImportedTrack>;
   analyzeTrack(trackId: string, path: string): Promise<AnalysisResult>;
+  prepareWaveform(
+    trackId: string,
+    trackPath: string,
+    targetPixels?: number,
+  ): Promise<WaveformPeaks>;
   renderMaster(request: IphoneRenderRequest): Promise<RenderJob>;
   prepareMasterPreview(request: IphonePreviewRequest): Promise<RenderJob>;
   runExportChecks(
@@ -63,6 +69,13 @@ export function createIphoneBackend(invoke: IphoneInvoke): IphoneBackend {
       invoke<AnalysisResult>("iphone_analyze_track", {
         trackId,
         path,
+      }),
+
+    prepareWaveform: (trackId, trackPath, targetPixels) =>
+      invoke<WaveformPeaks>("iphone_prepare_waveform", {
+        trackId,
+        trackPath,
+        targetPixels,
       }),
 
     renderMaster: ({ trackId, trackPath, settings, outputPath }) =>
@@ -128,6 +141,10 @@ export function createBrowserPreviewIphoneBackend(): IphoneBackend {
         lufs_short_term_max_3s: null,
         energy_density_score: null,
       };
+    },
+
+    async prepareWaveform(trackId, _trackPath, targetPixels = 140) {
+      return syntheticIphoneWaveform(trackId, targetPixels);
     },
 
     async renderMaster({ trackId, outputPath, settings }) {
@@ -278,6 +295,28 @@ function browserRenderJob(
       sample_rate: settings.advanced?.target_sample_rate ?? 48_000,
       bit_depth: settings.advanced?.bit_depth ?? 24,
     },
+  };
+}
+
+function syntheticIphoneWaveform(
+  trackId: string,
+  targetPixels: number,
+): WaveformPeaks {
+  const count = Math.max(48, Math.min(180, targetPixels));
+  const channel: number[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const position = index / Math.max(1, count - 1);
+    const phrase = Math.sin(position * Math.PI);
+    const pulse = Math.sin(position * Math.PI * 13) * 0.22;
+    const fine = Math.sin(position * Math.PI * 41) * 0.08;
+    channel.push(Math.max(0.08, Math.min(0.94, phrase * 0.72 + pulse + fine)));
+  }
+  return {
+    track_id: trackId,
+    channels: [channel],
+    samples_per_pixel: 512,
+    total_samples: count * 512,
+    sample_rate: 44_100,
   };
 }
 

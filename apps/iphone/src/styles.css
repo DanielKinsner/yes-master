@@ -503,6 +503,36 @@ h3 {
   margin-top: 2px;
 }
 
+.mini-waveform {
+  align-items: center;
+  background:
+    linear-gradient(180deg, rgba(77, 139, 255, 0.1), rgba(84, 208, 208, 0.04)),
+    rgba(7, 8, 13, 0.34);
+  border: 1px solid rgba(236, 240, 250, 0.08);
+  border-radius: 12px;
+  display: grid;
+  gap: 2px;
+  grid-template-columns: repeat(44, minmax(1px, 1fr));
+  height: 74px;
+  overflow: hidden;
+  padding: 10px;
+}
+
+.mini-waveform span {
+  align-self: center;
+  background: linear-gradient(180deg, #78f1ff, #4d8bff);
+  border-radius: 999px;
+  box-shadow: 0 0 14px rgba(77, 139, 255, 0.2);
+  height: calc(10% + var(--bar-level, 0.2) * 86%);
+  min-height: 5px;
+  opacity: 0.86;
+}
+
+.mini-waveform.is-loading span {
+  animation: waveform-loading 920ms ease-in-out infinite alternate;
+  opacity: 0.38;
+}
+
 .segmented {
   grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
 }
@@ -933,6 +963,13 @@ h3 {
   }
 }
 
+@keyframes waveform-loading {
+  to {
+    opacity: 0.74;
+    transform: scaleY(0.76);
+  }
+}
+
 @keyframes processing-card-enter {
   from {
     opacity: 0;
@@ -960,6 +997,7 @@ h3 {
 @media (prefers-reduced-motion: reduce) {
   .processing-scrim,
   .export-ready-sheet,
+  .mini-waveform.is-loading span,
   .processing-card,
   .processing-mark,
   .processing-bar::after {
