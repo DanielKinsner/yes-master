@@ -23,6 +23,33 @@ The prior device-focused session fixed the three blockers that made it "feel ver
 
 ## Recent changes
 
+### 2026-06-01 premium moodboard branch
+
+Branch: `codex/iphone-premium-moodboard` (not merged to `main` yet).
+
+Purpose: use the provided reference image as a mood board, while keeping the current iPhone workflow intact. This is visual polish only; no DSP, export, import, or playback behavior changed.
+
+Commits on the branch:
+
+1. `ca4e8dc style(iphone): add premium blue moodboard shell`
+2. `9c8d8ba style(iphone): add premium section hierarchy`
+3. `860e3e5 style(iphone): polish premium export surfaces`
+
+What changed:
+
+- Deeper navy/black shell with electric-blue focus lighting.
+- Glowing import orb, subtle waveform/ring treatment, and brighter blue active controls.
+- Numbered `Style / Loudness / Profile` section labels inspired by the reference.
+- More premium tone cards, metering/waveform panels, export button, processing overlay, and Master Ready sheet.
+
+Preview command:
+
+```bash
+npm run iphone:dev -- --host 127.0.0.1
+```
+
+Then open `http://127.0.0.1:5174/`. A preview server was left running during the branch handoff for immediate review.
+
 ### 2026-05-31 works-end-to-end session
 
 1. **scrub race** — playhead no longer yanked back by the 50 ms tick.
