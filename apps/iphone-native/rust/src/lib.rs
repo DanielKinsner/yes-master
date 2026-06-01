@@ -2,7 +2,8 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 
 use yes_master_lib::{
-    AdvancedSettings, CompressionMode, DeliveryProfile, MasteringSettings, Preset,
+    engine::{analyze_tracks, AnalyzeRequest},
+    AdvancedSettings, CompressionMode, DeliveryProfile, MasteringSettings, Preset, TrackId,
 };
 
 const VERSION: &[u8] = b"yes-master-iphone-native-bridge/0.1.0\0";
@@ -29,6 +30,35 @@ pub extern "C" fn yes_master_native_fixed_export_settings_json() -> *mut c_char 
         serde_json::to_string(&fixed_export_settings())
             .unwrap_or_else(|error| format!(r#"{{"error":"{error}"}}"#)),
     )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yes_master_native_analyze_file_json(path: *const c_char) -> *mut c_char {
+    let Some(path) = ffi_string(path) else {
+        return error_to_ffi("missing path");
+    };
+
+    if path.trim().is_empty() {
+        return error_to_ffi("missing path");
+    }
+
+    let request = AnalyzeRequest {
+        id: TrackId::new(),
+        path,
+    };
+
+    match futures_executor::block_on(analyze_tracks(vec![request])) {
+        Ok(mut results) => {
+            if let Some(result) = results.pop() {
+                string_to_ffi(serde_json::to_string(&result).unwrap_or_else(|error| {
+                    format!(r#"{{"error":"analysis serialization failed: {error}"}}"#)
+                }))
+            } else {
+                error_to_ffi("analysis returned no result")
+            }
+        }
+        Err(error) => error_to_ffi(&error.to_string()),
+    }
 }
 
 #[no_mangle]
@@ -83,10 +113,7 @@ fn fixed_export_settings() -> MasteringSettings {
 }
 
 unsafe fn normalize_extension(extension: *const c_char) -> Option<String> {
-    if extension.is_null() {
-        return None;
-    }
-    let raw = CStr::from_ptr(extension).to_str().ok()?;
+    let raw = ffi_string(extension)?;
     let normalized = raw.trim().trim_start_matches('.').to_ascii_lowercase();
     if normalized.is_empty() {
         None
@@ -95,10 +122,21 @@ unsafe fn normalize_extension(extension: *const c_char) -> Option<String> {
     }
 }
 
+unsafe fn ffi_string(value: *const c_char) -> Option<String> {
+    if value.is_null() {
+        return None;
+    }
+    Some(CStr::from_ptr(value).to_str().ok()?.to_owned())
+}
+
 fn string_to_ffi(value: String) -> *mut c_char {
     CString::new(value)
         .unwrap_or_else(|_| CString::new("{}").expect("static JSON has no nul bytes"))
         .into_raw()
+}
+
+fn error_to_ffi(message: &str) -> *mut c_char {
+    string_to_ffi(serde_json::json!({ "error": message }).to_string())
 }
 
 #[cfg(test)]
@@ -136,5 +174,22 @@ mod tests {
         assert!(json.contains(r#""delivery_profile":"custom""#));
         assert!(json.contains(r#""lufs_offset_db":-11.0"#));
         assert!(json.contains(r#""target_sample_rate":44100"#));
+    }
+
+    #[test]
+    fn analyze_file_json_returns_error_for_missing_file() {
+        let missing_path = CString::new("/tmp/yes-master-native-missing.wav").unwrap();
+
+        let pointer = unsafe { yes_master_native_analyze_file_json(missing_path.as_ptr()) };
+        assert!(!pointer.is_null());
+
+        let json = unsafe {
+            let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
+            yes_master_native_free_string(pointer);
+            value
+        };
+
+        assert!(json.contains(r#""error""#), "got {json}");
+        assert!(json.contains("source file not found"), "got {json}");
     }
 }

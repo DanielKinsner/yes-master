@@ -9,5 +9,6 @@ name = "yes_master_iphone_native_bridge"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [dependencies]
+futures-executor = "0.3"
 serde_json = "1.0"
 yes_master_lib = { package = "yes-master", path = "../../../src-tauri", default-features = false }
