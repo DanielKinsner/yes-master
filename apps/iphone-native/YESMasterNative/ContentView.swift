@@ -391,13 +391,7 @@ struct ContentView: View {
         HStack(spacing: 4) {
             ForEach(AuditionSide.allCases) { side in
                 Button {
-                    if side == .original {
-                        selectedAudition = side
-                    } else if renderedMasterURL != nil {
-                        selectedAudition = side
-                    } else {
-                        statusText = "Create a master before auditioning Mastered."
-                    }
+                    selectAudition(side)
                 } label: {
                     Text(side.rawValue)
                         .font(.system(size: 15, weight: .heavy))
@@ -748,6 +742,32 @@ struct ContentView: View {
             statusText = "Playing \(selectedAudition.rawValue.lowercased()) track."
         } catch {
             statusText = "Playback could not start. Try another supported audio file."
+        }
+    }
+
+    private func selectAudition(_ side: AuditionSide) {
+        guard side != selectedAudition else { return }
+        guard side == .original || renderedMasterURL != nil else {
+            statusText = "Create a master before auditioning Mastered."
+            return
+        }
+
+        let shouldResume = playbackController.isPlaying
+        let resumeTime = playbackController.currentTime
+        playbackController.pause()
+        selectedAudition = side
+
+        guard shouldResume else { return }
+        guard let selectedAuditionURL, canPlaySelectedAudition else {
+            statusText = "Selected \(side.rawValue.lowercased())."
+            return
+        }
+
+        do {
+            try playbackController.play(url: selectedAuditionURL, startingAt: resumeTime)
+            statusText = "Switched to \(side.rawValue.lowercased()) at the same spot."
+        } catch {
+            statusText = "Playback could not switch. Try playing again."
         }
     }
 

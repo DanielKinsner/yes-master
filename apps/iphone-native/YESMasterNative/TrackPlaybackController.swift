@@ -3,6 +3,8 @@ import Combine
 import Foundation
 
 protocol TrackAudioPlayer: AnyObject {
+    var currentTime: TimeInterval { get set }
+
     func play() throws
     func pause()
 }
@@ -26,6 +28,10 @@ final class TrackPlaybackController: ObservableObject {
     private var player: (any TrackAudioPlayer)?
     private var loadedURL: URL?
 
+    var currentTime: TimeInterval {
+        player?.currentTime ?? 0
+    }
+
     init(
         activateForPlayback: @escaping () throws -> Void = {
             try AudioSessionController().activateForPlayback()
@@ -38,12 +44,16 @@ final class TrackPlaybackController: ObservableObject {
         self.makePlayer = makePlayer
     }
 
-    func play(url: URL) throws {
+    func play(url: URL, startingAt startTime: TimeInterval? = nil) throws {
         try activateForPlayback()
 
         if loadedURL != url {
             player = try makePlayer(url)
             loadedURL = url
+        }
+
+        if let startTime {
+            player?.currentTime = max(0, startTime)
         }
 
         try player?.play()
@@ -58,6 +68,11 @@ final class TrackPlaybackController: ObservableObject {
 
 private final class AVFoundationTrackAudioPlayer: TrackAudioPlayer {
     private let player: AVAudioPlayer
+
+    var currentTime: TimeInterval {
+        get { player.currentTime }
+        set { player.currentTime = newValue }
+    }
 
     init(url: URL) throws {
         player = try AVAudioPlayer(contentsOf: url)
