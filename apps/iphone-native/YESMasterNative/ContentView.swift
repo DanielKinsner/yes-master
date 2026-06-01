@@ -78,6 +78,9 @@ struct ContentView: View {
     @State private var listeningMode: ListeningMode = .normal
     @State private var importedTrack: ImportedTrack?
     @State private var analysisResult: NativeAnalysisResult?
+    @State private var renderedMasterURL: URL?
+    @State private var renderTask: Task<Void, Never>?
+    @State private var isRendering = false
     @State private var isImportingTrack = false
     @State private var isAnalyzing = false
     @State private var analysisTask: Task<Void, Never>?
@@ -240,7 +243,7 @@ struct ContentView: View {
                 if importedTrack == nil {
                     isImportingTrack = true
                 } else {
-                    toggleOriginalPlayback()
+                    toggleAuditionPlayback()
                 }
             } label: {
                 ZStack {
@@ -271,7 +274,7 @@ struct ContentView: View {
                 .frame(width: 72, height: 72)
             }
             .buttonStyle(.plain)
-            .disabled(importedTrack != nil && !canPlayOriginal)
+            .disabled(importedTrack != nil && !canPlaySelectedAudition)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 156)
@@ -390,8 +393,10 @@ struct ContentView: View {
                 Button {
                     if side == .original {
                         selectedAudition = side
+                    } else if renderedMasterURL != nil {
+                        selectedAudition = side
                     } else {
-                        statusText = "Mastered preview is next after render wiring."
+                        statusText = "Create a master before auditioning Mastered."
                     }
                 } label: {
                     Text(side.rawValue)
@@ -538,13 +543,9 @@ struct ContentView: View {
 
     private var createMasterButton: some View {
         Button {
-            if analysisResult == nil {
-                statusText = "Import and analyze a track before creating a master."
-            } else {
-                statusText = "Render bridge is ready. Button wiring is the next slice."
-            }
+            renderMaster()
         } label: {
-            Text("Create Master")
+            Text(isRendering ? "Creating Master..." : "Create Master")
                 .font(.system(size: 18, weight: .heavy))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
@@ -563,6 +564,7 @@ struct ContentView: View {
                 .shadow(color: Color.blue.opacity(0.34), radius: 26, y: 16)
         }
         .buttonStyle(.plain)
+        .disabled(isRendering)
     }
 
     private var statusAndAnalysis: some View {
@@ -648,6 +650,7 @@ struct ContentView: View {
                     supportedExtensions: bridge.supportedImportExtensions
                 )
                 importedTrack = track
+                renderedMasterURL = nil
                 selectedAudition = .original
                 playbackController.pause()
                 analyzeImportedTrack(track)
@@ -663,6 +666,9 @@ struct ContentView: View {
     }
 
     private var headerStatus: String {
+        if isRendering {
+            return "Rendering"
+        }
         if isAnalyzing {
             return "Analyzing"
         }
@@ -680,8 +686,14 @@ struct ContentView: View {
     }
 
     private var trackCardStatus: String {
+        if isRendering {
+            return "RENDERING"
+        }
         if isAnalyzing {
             return "ANALYZING"
+        }
+        if renderedMasterURL != nil && selectedAudition == .mastered {
+            return "MASTERED"
         }
         if analysisResult != nil {
             return "READY"
@@ -695,13 +707,33 @@ struct ContentView: View {
             : "AUDIO"
     }
 
-    private var canPlayOriginal: Bool {
-        importedTrack != nil && analysisResult != nil && !isAnalyzing && selectedAudition == .original
+    private var selectedAuditionURL: URL? {
+        switch selectedAudition {
+        case .original:
+            importedTrack?.localURL
+        case .mastered:
+            renderedMasterURL
+        }
     }
 
-    private func toggleOriginalPlayback() {
-        guard let track = importedTrack, canPlayOriginal else {
-            statusText = "Import and analyze a track before playback."
+    private var canPlaySelectedAudition: Bool {
+        selectedAuditionURL != nil && analysisResult != nil && !isAnalyzing && !isRendering
+    }
+
+    private var renderedMastersDirectoryURL: URL {
+        FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        )[0].appendingPathComponent("RenderedMasters", isDirectory: true)
+    }
+
+    private func toggleAuditionPlayback() {
+        guard let selectedAuditionURL, canPlaySelectedAudition else {
+            if selectedAudition == .mastered {
+                statusText = "Create a master before auditioning Mastered."
+            } else {
+                statusText = "Import and analyze a track before playback."
+            }
             return
         }
 
@@ -712,8 +744,8 @@ struct ContentView: View {
         }
 
         do {
-            try playbackController.play(url: track.localURL)
-            statusText = "Playing original track."
+            try playbackController.play(url: selectedAuditionURL)
+            statusText = "Playing \(selectedAudition.rawValue.lowercased()) track."
         } catch {
             statusText = "Playback could not start. Try another supported audio file."
         }
@@ -721,7 +753,10 @@ struct ContentView: View {
 
     private func analyzeImportedTrack(_ track: ImportedTrack) {
         analysisTask?.cancel()
+        renderTask?.cancel()
         analysisResult = nil
+        renderedMasterURL = nil
+        isRendering = false
         isAnalyzing = true
         statusText = "Analyzing with the YES Master engine."
 
@@ -743,6 +778,49 @@ struct ContentView: View {
             case .failure(let error):
                 analysisResult = nil
                 statusText = "Analysis failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func renderMaster() {
+        guard let track = importedTrack, analysisResult != nil else {
+            statusText = "Import and analyze a track before creating a master."
+            return
+        }
+
+        renderTask?.cancel()
+        playbackController.pause()
+        renderedMasterURL = nil
+        isRendering = true
+        statusText = "Creating master with the YES Master engine."
+
+        let bridge = bridge
+        let sourceURL = track.localURL
+        let outputDirectoryURL = renderedMastersDirectoryURL
+
+        renderTask = Task {
+            let result = await Task.detached {
+                Result {
+                    try bridge.renderMaster(from: sourceURL, toDirectory: outputDirectoryURL)
+                }
+            }.value
+
+            guard !Task.isCancelled else { return }
+            isRendering = false
+
+            switch result {
+            case .success(let job):
+                guard let outputPath = job.outputPaths.first else {
+                    statusText = "Master render finished but no WAV was returned."
+                    return
+                }
+                renderedMasterURL = URL(fileURLWithPath: outputPath)
+                selectedAudition = .mastered
+                statusText = "Master created. You can audition the mastered version."
+            case .failure(let error):
+                renderedMasterURL = nil
+                selectedAudition = .original
+                statusText = "Master render failed: \(error.localizedDescription)"
             }
         }
     }
