@@ -16,3 +16,9 @@ yes_master_lib = { package = "yes-master", path = "../../../src-tauri", default-
 [dev-dependencies]
 hound = "3"
 tempfile = "3"
+
+# Optimize dependencies (yes_master_lib, symphonia, rustfft, ebur128) even in
+# Debug app builds, so on-device DSP runs at release speed. The bridge crate
+# itself stays unoptimized for fast iteration.
+[profile.dev.package."*"]
+opt-level = 3

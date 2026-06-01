@@ -440,6 +440,46 @@ mod tests {
         std::path::PathBuf::from(payload["output_paths"][0].as_str().expect("render output path"))
     }
 
+    #[test]
+    #[ignore = "timing proxy; run with --release -- --ignored --nocapture"]
+    fn timing_proxy_analyze_and_render() {
+        use std::time::Instant;
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("timing.wav");
+        let output_dir = tmp.path().join("out");
+        write_long_sine_wav(&input, 30); // 30 seconds, 44.1k stereo
+
+        let path = CString::new(input.to_string_lossy().as_bytes()).unwrap();
+        let t0 = Instant::now();
+        let analysis = unsafe { yes_master_native_analyze_file_json(path.as_ptr()) };
+        let analyze_ms = t0.elapsed().as_millis();
+        unsafe { yes_master_native_free_string(analysis) };
+
+        let out = render_master_for_test(&input, &output_dir);
+        let render_ms = t0.elapsed().as_millis() - analyze_ms;
+        assert!(out.exists());
+        eprintln!("TIMING analyze={analyze_ms}ms render={render_ms}ms (30s source)");
+    }
+
+    fn write_long_sine_wav(path: &std::path::Path, seconds: u32) {
+        let spec = hound::WavSpec {
+            channels: 2,
+            sample_rate: 44_100,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut writer = hound::WavWriter::create(path, spec).unwrap();
+        let frames = 44_100 * seconds;
+        for n in 0..frames {
+            let t = n as f32 / 44_100.0;
+            let sample = (t * 220.0 * std::f32::consts::TAU).sin() * 0.2;
+            let value = (sample * i16::MAX as f32) as i16;
+            writer.write_sample(value).unwrap();
+            writer.write_sample(value).unwrap();
+        }
+        writer.finalize().unwrap();
+    }
+
     fn write_sine_wav(path: &std::path::Path) {
         let spec = hound::WavSpec {
             channels: 2,
