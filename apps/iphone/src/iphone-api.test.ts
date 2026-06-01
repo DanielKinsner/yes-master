@@ -135,7 +135,7 @@ describe("iPhone API facade", () => {
 
     expect(invoke).toHaveBeenCalledWith("iphone_update_chain", {
       settings: { volume_match: false },
-      previewLufsLanding: true,
+      previewLufsLanding: false,
     });
     expect(invoke).toHaveBeenCalledWith("iphone_pause_playback");
     expect(invoke).toHaveBeenCalledWith("iphone_resume_playback");

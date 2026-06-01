@@ -230,7 +230,7 @@ async fn iphone_play_master(
         Path::new(&track_path),
         settings,
         start_position_sec.unwrap_or(0.0),
-        preview_lufs_landing.unwrap_or(true),
+        preview_lufs_landing.unwrap_or(false),
     )
 }
 
@@ -240,7 +240,7 @@ async fn iphone_update_chain(
     preview_lufs_landing: Option<bool>,
     player: tauri::State<'_, Arc<AudioPlayer>>,
 ) -> CommandResult<()> {
-    player.update_chain(settings, preview_lufs_landing.unwrap_or(true))
+    player.update_chain(settings, preview_lufs_landing.unwrap_or(false))
 }
 
 #[tauri::command]

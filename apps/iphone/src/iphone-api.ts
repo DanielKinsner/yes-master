@@ -114,7 +114,7 @@ export function createIphoneBackend(invoke: IphoneInvoke): IphoneBackend {
       trackPath,
       settings,
       startPositionSec,
-      previewLufsLanding = true,
+      previewLufsLanding = false,
     ) =>
       invoke<void>("iphone_play_master", {
         trackId,
@@ -124,7 +124,7 @@ export function createIphoneBackend(invoke: IphoneInvoke): IphoneBackend {
         previewLufsLanding,
       }),
 
-    updateMasteringChain: (settings, previewLufsLanding = true) =>
+    updateMasteringChain: (settings, previewLufsLanding = false) =>
       invoke<void>("iphone_update_chain", {
         settings,
         previewLufsLanding,
