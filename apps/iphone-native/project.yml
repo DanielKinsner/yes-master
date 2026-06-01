@@ -1,0 +1,50 @@
+name: YESMasterNative
+options:
+  bundleIdPrefix: com.yesmaster.iphone
+  deploymentTarget:
+    iOS: "16.0"
+configs:
+  Debug: debug
+  Release: release
+settings:
+  base:
+    PRODUCT_NAME: YES Master Native
+    PRODUCT_BUNDLE_IDENTIFIER: com.yesmaster.iphone.native
+    DEVELOPMENT_TEAM: C4ZKT5JJ3K
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+targets:
+  YESMasterNative:
+    type: application
+    platform: iOS
+    sources:
+      - path: YESMasterNative
+    info:
+      path: YESMasterNative/Info.plist
+      properties:
+        CFBundleDisplayName: YES Master
+        LSRequiresIPhoneOS: true
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        NSDocumentsFolderUsageDescription: YES Master imports audio files you choose and exports finished masters.
+    settings:
+      base:
+        HEADER_SEARCH_PATHS:
+          - $(PROJECT_DIR)/rust/include
+        LIBRARY_SEARCH_PATHS:
+          - $(PROJECT_DIR)/rust/target/aarch64-apple-ios/debug
+          - $(PROJECT_DIR)/rust/target/aarch64-apple-ios/release
+    dependencies:
+      - sdk: AVFoundation.framework
+      - sdk: UniformTypeIdentifiers.framework
+    preBuildScripts:
+      - name: Build Rust Bridge
+        basedOnDependencyAnalysis: false
+        script: |
+          export PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH"
+          cd "$PROJECT_DIR/rust"
+          cargo build --target aarch64-apple-ios

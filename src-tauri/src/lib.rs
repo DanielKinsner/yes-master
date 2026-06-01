@@ -19,11 +19,15 @@ pub mod wav_writer;
 
 pub use types::*;
 
+#[cfg(feature = "app-runner")]
 use std::sync::Arc;
+#[cfg(feature = "app-runner")]
 use std::time::Duration;
 
+#[cfg(feature = "app-runner")]
 use tauri::{Emitter, Manager};
 
+#[cfg(feature = "app-runner")]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let player = Arc::new(audio::AudioPlayer::new());
