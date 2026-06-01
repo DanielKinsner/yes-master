@@ -1,12 +1,12 @@
 # YES Master iPhone — Handoff
 
-_Last updated: 2026-05-31, end of the "works-end-to-end" session (Claude). No human was in the loop for the back half, so anything needing an ear/eye on a real device is called out explicitly below._
+_Last updated: 2026-06-01, end of the no-device cleanup session (Codex). No iPhone was connected; anything needing an ear/eye on a real device is called out explicitly below._
 
 ## TL;DR
 
 The iPhone app is a **Tauri 2 iOS port** that reuses the **desktop DSP engine verbatim** (shared `yes_master_lib` crate + shared `src/bindings.ts` types). "Simple mode" is a thin preset-picker (Style → desktop preset, Loudness → target LUFS, Profile → export format) that feeds the same `engine`/`dsp` code the Mac app uses. **DSP parity is not a concern — it's literally the same math** (proven by `iphone_render_master_to_path_uses_shared_dsp_engine` and a repo-wide grep showing zero reimplemented DSP).
 
-This session fixed the three blockers that made it "feel very broken" on device — silent playback, dead-end export, and a fake waveform — plus live audition, audio-session resilience, and the dominant brand gap. All changes are **iPhone-only** (`apps/iphone/**`); the desktop app is untouched.
+The prior device-focused session fixed the three blockers that made it "feel very broken" on device — silent playback, dead-end export, and a fake waveform — plus live audition, audio-session resilience, and the dominant brand gap. The 2026-06-01 no-device pass completed the remaining code-only audit items that were safe without a phone. All changes are **iPhone-only** (`apps/iphone/**`); the desktop app is untouched.
 
 ## State of play
 
@@ -17,13 +17,13 @@ This session fixed the three blockers that made it "feel very broken" on device 
 | Waveform | **Decode path proven sound** (new CI test). On device it had thrown and shown a fake flat placeholder; now the error is surfaced + the import is copied to a durable path. **Read `iphone_prepare_waveform` in the Xcode/Console log on the next device run** to confirm the remaining cause (Io vs Decode vs path). |
 | Export | **Fixed (was a dead end).** Writes a verified non-zero WAV to `Documents/YES Master/`, Files-visible. Needs a device to confirm the file appears under Files › On My iPhone › YES Master. |
 | Live mastering controls | **Fixed.** Changing tone/loudness/etc. now re-applies during Mastered playback. |
-| Interruption/route recovery | **Half done (iPhone-safe half).** Session re-activates on foreground. The stream-recreate half lives in the shared desktop `audio.rs` and was deliberately **not** touched — see Remaining work. |
+| Interruption/route recovery | **Half done (iPhone-safe half).** Session re-activates on foreground, captures `NSError` details, and emits a one-time warning if activation fails. The stream-recreate half lives in shared desktop `audio.rs` and was deliberately **not** touched — see Remaining work. |
 | Untethered (no laptop) | **Proven capable.** Release build bundles a self-contained frontend (no dev-server URL). **Action required:** install a *release* build to replace the dev build currently on the phone. See "Make it untethered". |
-| Brand | Primary CTA re-pointed teal → desktop blue (the big one). 5 smaller items itemized below. |
+| Brand | **No-device brand pass done.** Desktop blue CTA, 5-bar spectrum mark, screen-blended preset art, calmer weights, tracked all-caps labels, and empty hero headline are all in place. |
 
-## What changed this session (all on `main`, pushed)
+## Recent changes
 
-Branches: work landed via `fix/iphone-audio-playback` then `fix/iphone-works-e2e`, both fast-forward merged to `main`. Every commit is small and scoped. In order:
+### 2026-05-31 works-end-to-end session
 
 1. **scrub race** — playhead no longer yanked back by the 50 ms tick.
 2. **AVAudioSession** — `ios_audio` module (objc2 + `dlopen`/`dlsym` AVFoundation, no link-time dep, survives `tauri ios` regen) sets `.playback` + active. This was the silent-playback fix.
@@ -38,11 +38,23 @@ Branches: work landed via `fix/iphone-audio-playback` then `fix/iphone-works-e2e
 11. **lufs default** — `previewLufsLanding` defaults to `false` (Simple contract).
 12. **brand CTA** — teal `--cta` → `var(--accent-bright)` (desktop blue) everywhere.
 
-Tests after the work: **iphone TS 80/80, iphone Rust 6/6, iphone iOS-target check clean, typecheck clean.**
+### 2026-06-01 no-device cleanup session
+
+Commit: `8087c5d fix(iphone): finish no-device cleanup items`.
+
+1. **Review of prior 13 commits:** no blocker found. The AVAudioSession `dlopen`/`objc2` approach is reasonable for surviving `tauri ios` regeneration; write-then-export to `Documents/YES Master/` plus Info.plist sharing keys is the right no-picker path; durable import is the right fix for tmp/InBox lifetime risk. Things I would change were all code-only and are now done: capture NSError details, remove dead asset/preview paths, add a serde shape guard, and make pause→play use native resume when safe.
+2. **FIX-8/9:** same-track pause→play now calls `resumePlayback()` when the loaded source is still valid. If the user changed Mastered settings or scrubbed while paused, it rebuilds playback instead of resuming stale audio. The dead `prepareMasterPreview` command/API/tests were removed.
+3. **FIX-12:** iPhone analyze and waveform commands now offload the blocking decode work through `spawn_blocking`.
+4. **FIX-13:** `ios_audio` now captures `NSError` out-params, logs the localized description when available, and emits one one-time UI warning if activation fails.
+5. **FIX-14:** dead `assetProtocol`, `protocol-asset`, and `toIphoneAudioUrl` were removed.
+6. **FIX-7:** Rust serde guard added for the Simple-mode JSON shape used by shared `bindings.ts` / `types.rs`.
+7. **Brand items 2-6:** desktop SVG spectrum mark, preset-art screen blend, lighter typography, tracked eyebrow labels, and empty hero headline landed.
+
+Latest no-device verification: **iphone TS 84/84, iphone Rust 6/6, iOS-target check clean, typecheck clean.**
 
 ## Verified vs. needs a device (no human was available)
 
-**Verified statically/automatically:** all of the above compile (host + `aarch64-apple-ios`), TS typechecks, 80 TS + 6 Rust tests pass, the built `dist/index.html` has no dev-server URL.
+**Verified statically/automatically:** all code compiles on host and `aarch64-apple-ios`, TS typechecks, 84 TS + 6 Rust tests pass. No device build or on-device run was attempted in the 2026-06-01 session.
 
 **Needs an ear/eye on the real iPhone (cannot be checked without a human):**
 1. **Baseline audibility** — does import → analyze → Play actually make sound at the right level? (Code says yes; `.playback` ignores the silent switch.)
@@ -121,12 +133,8 @@ Anything that fails here is a concrete next task — none of it blocks the other
 From the multi-agent audit (`/tmp/iphone-audit-report.md` — re-generate if gone; it's reproducible). None are end-to-end blockers.
 
 - **FIX-5 stream-recreate (the other half of interruption recovery).** Reactivating the session isn't always enough — the cached `OutputStream` (in shared `audio.rs`) can stay dead. The clean fix recreates it on reactivation/each play, but that's a desktop-crate change and was kept out of this iPhone-only push. Do it as a deliberate, separately-reviewed change (e.g. additive `AudioPlayer::reset_output()` the desktop never calls), or confirm on device whether cpal already resumes after session reactivation.
-- **FIX-8/9** use `resumePlayback` for same-track Play (cheaper than full restart); remove the dead `prepareMasterPreview` command (+ its tests) or adopt it.
-- **FIX-12** `spawn_blocking` the decode in `prepare_waveform`/analyze (currently two concurrent blocking decodes on the runtime).
-- **FIX-13** capture the `NSError` out-params in `ios_audio` and surface a one-time warning if `setActive` returns false.
-- **FIX-14** delete the dead `assetProtocol` config + `protocol-asset` feature + `toIphoneAudioUrl` (audition is native cpal, no `<audio>` element).
-- **FIX-7** add a serde-shape guard test for `bindings.ts` ↔ `types.rs` (hand-maintained, currently in sync, unguarded).
-- **Brand items 2–6** (all pure CSS/markup, no DSP): desktop 5-bar spectrum SVG brand mark vs the raster PNG; preset-art `mix-blend-mode: screen`; type weights 900→700 / 850→600; letter-spacing on all-caps eyebrow labels; empty-hero brand headline (the `h1` CSS is currently dead). Exact line targets are in the audit report §5.
+- **Device validation is now the main next step.** Install a release build and do Part B above. The next concrete code task should come from what the phone proves: audibility, waveform log, export visibility, or interruption recovery.
+- **Optional polish after device signoff:** consider making the export receipt display the backend-resolved Files path rather than the suggested filename; current render/report logic uses the real backend path, but the receipt copy can be more explicit.
 
 ## Orientation for whoever picks this up
 
