@@ -392,8 +392,12 @@ export default function App({
 
   async function switchAuditionMode(nextPlayback: IphoneAppState["playback"]) {
     if (!state.track || !analysisReady) return;
-    setState((current) => switchIphonePlayback(current, nextPlayback));
+    // While stopped, just update the selection; the next Play uses it. While
+    // playing, let startAuditionPlayback flip `playback` only on a successful
+    // (re)start — otherwise a blocked switch leaves the segment showing a mode
+    // the audio isn't actually playing.
     if (!isAuditionPlaying) {
+      setState((current) => switchIphonePlayback(current, nextPlayback));
       setMessage(null);
       return;
     }
