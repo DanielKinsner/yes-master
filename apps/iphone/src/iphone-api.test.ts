@@ -25,6 +25,7 @@ afterEach(() => {
   dialogMocks.open.mockReset();
   dialogMocks.save.mockReset();
   delete (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+  delete (globalThis as typeof globalThis & { isTauri?: boolean }).isTauri;
   if (originalCreateObjectUrl) {
     Object.defineProperty(URL, "createObjectURL", originalCreateObjectUrl);
   } else {
@@ -37,6 +38,13 @@ function setNativeRuntime() {
   Object.defineProperty(window, "__TAURI_INTERNALS__", {
     configurable: true,
     value: {},
+  });
+}
+
+function setTauriRuntimeMarker() {
+  Object.defineProperty(globalThis, "isTauri", {
+    configurable: true,
+    value: true,
   });
 }
 
@@ -118,6 +126,23 @@ describe("iPhone API facade", () => {
         fileAccessMode: "copy",
       }),
     );
+  });
+
+  it("uses the native picker when the Tauri runtime marker is present", async () => {
+    setTauriRuntimeMarker();
+    dialogMocks.open.mockResolvedValue("/private/song.wav");
+
+    const selectedPath = pickIphoneAudioPath();
+    await Promise.resolve();
+
+    expect(dialogMocks.open).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pickerMode: "document",
+        fileAccessMode: "copy",
+      }),
+    );
+
+    await expect(selectedPath).resolves.toBe("/private/song.wav");
   });
 
   it("opens a browser file picker when Chrome previews the dev server", async () => {

@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "iphone:build": "tsc -p apps/iphone/tsconfig.json && vite build --config apps/iphone/vite.config.ts",
-    "iphone:dev": "vite --config apps/iphone/vite.config.ts --host 127.0.0.1 --port 5174",
+    "iphone:dev": "vite --config apps/iphone/vite.config.ts",
     "iphone:ios:build": "cd apps/iphone && ../../node_modules/.bin/tauri ios build",
     "iphone:ios:dev": "cd apps/iphone && ../../node_modules/.bin/tauri ios dev",
     "iphone:ios:init": "cd apps/iphone && ../../node_modules/.bin/tauri ios init --skip-targets-install",

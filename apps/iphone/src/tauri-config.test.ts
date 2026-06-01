@@ -4,6 +4,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 interface IphoneTauriConfig {
+  build?: {
+    devUrl?: string;
+  };
   app?: {
     security?: {
       assetProtocol?: {
@@ -16,6 +19,10 @@ interface IphoneTauriConfig {
 
 interface IphoneCapability {
   permissions?: Array<string | { identifier?: string }>;
+}
+
+interface RootPackageJson {
+  scripts?: Record<string, string>;
 }
 
 type AssetProtocolScope = string[] | { allow?: string[] } | undefined;
@@ -37,6 +44,10 @@ function readIphoneTauriConfig(): IphoneTauriConfig {
 
 function readIphoneDefaultCapability(): IphoneCapability {
   return readIphoneJson("../src-tauri/capabilities/default.json");
+}
+
+function readRootPackageJson(): RootPackageJson {
+  return readIphoneJson("../../../package.json");
 }
 
 function assetScopeEntries(scope: AssetProtocolScope): string[] {
@@ -80,6 +91,16 @@ describe("iPhone Tauri config", () => {
     expect(permissionIds(readIphoneDefaultCapability().permissions)).toEqual(
       expect.arrayContaining(["dialog:allow-open", "dialog:allow-save"]),
     );
+  });
+
+  it("serves the iPhone dev app on the network for physical devices", () => {
+    expect(readRootPackageJson().scripts?.["iphone:dev"]).toBe(
+      "vite --config apps/iphone/vite.config.ts",
+    );
+  });
+
+  it("uses a cache-busted iPhone dev URL while debugging physical devices", () => {
+    expect(readIphoneTauriConfig().build?.devUrl).toContain("ym_dev=B3-static");
   });
 
   it("locks the iPhone target to portrait orientation", () => {

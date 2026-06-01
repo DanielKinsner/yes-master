@@ -1,4 +1,8 @@
-import { convertFileSrc, invoke as tauriInvoke } from "@tauri-apps/api/core";
+import {
+  convertFileSrc,
+  invoke as tauriInvoke,
+  isTauri,
+} from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import type {
   AnalysisResult,
@@ -194,6 +198,8 @@ export function toIphoneAudioUrl(path: string): string {
 }
 
 function hasIphoneNativeRuntime(): boolean {
+  if (isTauri()) return true;
+
   return Boolean(
     typeof window !== "undefined" &&
       (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__,
