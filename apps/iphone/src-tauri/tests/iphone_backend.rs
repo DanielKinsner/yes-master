@@ -1,10 +1,9 @@
 use std::f32::consts::TAU;
 
 use hound::{SampleFormat, WavSpec, WavWriter};
+use serde_json::json;
 use tempfile::tempdir;
-use yes_master_iphone_lib::{
-    iphone_prepare_master_preview_in_dir, iphone_render_master_to_path, normalize_iphone_file_path,
-};
+use yes_master_iphone_lib::{iphone_render_master_to_path, normalize_iphone_file_path};
 use yes_master_lib::{
     AdvancedSettings, CompressionMode, DeliveryProfile, JobStatus, MasteringSettings, Preset,
     RenderKind,
@@ -61,38 +60,6 @@ fn iphone_render_master_to_path_uses_shared_dsp_engine() {
     assert!(measurements.lufs_integrated.is_finite());
 }
 
-#[test]
-fn iphone_prepare_master_preview_in_dir_renders_mastered_preview() {
-    let temp = tempdir().expect("tempdir");
-    let source = temp.path().join("source.wav");
-    let preview_dir = temp.path().join("previews");
-    write_test_wav(&source);
-
-    let job = iphone_prepare_master_preview_in_dir(
-        "iphone-track".to_string(),
-        &source,
-        &default_iphone_settings(),
-        &preview_dir,
-    )
-    .expect("preview render should succeed");
-
-    assert!(preview_dir.exists());
-    assert!(matches!(job.kind, RenderKind::Master));
-    assert!(matches!(job.status, JobStatus::Done));
-    assert_eq!(job.output_paths.len(), 1);
-    let output = std::path::PathBuf::from(&job.output_paths[0]);
-    assert!(output.exists());
-    assert_eq!(output.parent(), Some(preview_dir.as_path()));
-    assert!(output
-        .file_name()
-        .and_then(|name| name.to_str())
-        .expect("preview filename")
-        .contains("iphone-track-mastered-preview"));
-    let measurements = job.measurements.expect("render measurements");
-    assert_eq!(measurements.sample_rate, 48_000);
-    assert!(measurements.lufs_integrated.is_finite());
-}
-
 fn default_iphone_settings() -> MasteringSettings {
     MasteringSettings {
         preset: Preset::Universal,
@@ -135,6 +102,65 @@ fn default_iphone_settings() -> MasteringSettings {
             target_sample_rate: Some(48_000),
         },
     }
+}
+
+#[test]
+fn simple_mode_settings_json_still_deserializes_to_rust_shape() {
+    let value = json!({
+        "preset": { "kind": "warmth" },
+        "intensity": 0.5,
+        "eq_sub_db": 0.0,
+        "eq_low_db": 0.0,
+        "eq_low_mid_db": 0.0,
+        "eq_mid_db": 0.0,
+        "eq_high_mid_db": 0.0,
+        "eq_high_db": 0.0,
+        "eq_sparkle_db": 0.0,
+        "volume_match": true,
+        "source_lufs_integrated": -15.0,
+        "input_gain_db": 0.0,
+        "output_gain_db": 0.0,
+        "delivery_profile": "custom",
+        "album": null,
+        "advanced": {
+            "lufs_offset_db": -14.0,
+            "ceiling_dbtp": -1.0,
+            "width": null,
+            "warmth": null,
+            "presence_air": null,
+            "compression_mode": "preset",
+            "compression_density": null,
+            "compression_low_threshold_db": null,
+            "compression_low_ratio": null,
+            "compression_low_attack_ms": null,
+            "compression_low_release_ms": null,
+            "compression_mid_threshold_db": null,
+            "compression_mid_ratio": null,
+            "compression_mid_attack_ms": null,
+            "compression_mid_release_ms": null,
+            "compression_high_threshold_db": null,
+            "compression_high_ratio": null,
+            "compression_high_attack_ms": null,
+            "compression_high_release_ms": null,
+            "compression_link_stereo": null,
+            "bit_depth": 24,
+            "target_sample_rate": 48000
+        }
+    });
+
+    let settings: MasteringSettings =
+        serde_json::from_value(value).expect("bindings.ts simple-mode shape should parse");
+
+    assert!(matches!(settings.preset, Preset::Warmth));
+    assert!(matches!(settings.delivery_profile, DeliveryProfile::Custom));
+    assert!(matches!(
+        settings.advanced.compression_mode,
+        CompressionMode::Preset
+    ));
+    assert_eq!(settings.advanced.lufs_offset_db, Some(-14.0));
+    assert_eq!(settings.advanced.bit_depth, Some(24));
+    assert_eq!(settings.advanced.target_sample_rate, Some(48_000));
+    assert_eq!(settings.source_lufs_integrated, Some(-15.0));
 }
 
 fn write_test_wav(path: &std::path::Path) {

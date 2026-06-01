@@ -1,8 +1,4 @@
-import {
-  convertFileSrc,
-  invoke as tauriInvoke,
-  isTauri,
-} from "@tauri-apps/api/core";
+import { invoke as tauriInvoke, isTauri } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import type {
@@ -27,12 +23,6 @@ export interface IphoneRenderRequest {
   trackPath: string;
   settings: MasteringSettings;
   outputPath: string;
-}
-
-export interface IphonePreviewRequest {
-  trackId: string;
-  trackPath: string;
-  settings: MasteringSettings;
 }
 
 export interface IphoneBackend {
@@ -63,10 +53,10 @@ export interface IphoneBackend {
   resumePlayback(): Promise<void>;
   stopPlayback(): Promise<void>;
   reactivateAudioSession(): Promise<void>;
+  onAudioSessionWarning(handler: (warning: string) => void): Promise<UnlistenFn>;
   seekPlayback(positionSec: number): Promise<void>;
   onPlaybackTick(handler: (tick: PlaybackTick) => void): Promise<UnlistenFn>;
   renderMaster(request: IphoneRenderRequest): Promise<RenderJob>;
-  prepareMasterPreview(request: IphonePreviewRequest): Promise<RenderJob>;
   runExportChecks(
     report: ExportReport,
     sourceAnalysis: AnalysisResult | null,
@@ -135,6 +125,10 @@ export function createIphoneBackend(invoke: IphoneInvoke): IphoneBackend {
     stopPlayback: () => invoke<void>("iphone_stop_playback"),
     reactivateAudioSession: () =>
       invoke<void>("iphone_reactivate_audio_session"),
+    onAudioSessionWarning: (handler) =>
+      listen<string>("iphone:audio-session-warning", (event) =>
+        handler(event.payload),
+      ),
     seekPlayback: (positionSec) =>
       invoke<void>("iphone_seek_playback", {
         positionSec,
@@ -148,13 +142,6 @@ export function createIphoneBackend(invoke: IphoneInvoke): IphoneBackend {
         trackPath,
         settings,
         outputPath,
-      }),
-
-    prepareMasterPreview: ({ trackId, trackPath, settings }) =>
-      invoke<RenderJob>("iphone_prepare_master_preview", {
-        trackId,
-        trackPath,
-        settings,
       }),
 
     runExportChecks: (report, sourceAnalysis, settings) =>
@@ -218,6 +205,9 @@ export function createBrowserPreviewIphoneBackend(): IphoneBackend {
     async resumePlayback() {},
     async stopPlayback() {},
     async reactivateAudioSession() {},
+    async onAudioSessionWarning() {
+      return () => {};
+    },
     async seekPlayback() {},
     async onPlaybackTick() {
       return () => {};
@@ -225,10 +215,6 @@ export function createBrowserPreviewIphoneBackend(): IphoneBackend {
 
     async renderMaster({ trackId, outputPath, settings }) {
       return browserRenderJob(trackId, "master", outputPath, settings);
-    },
-
-    async prepareMasterPreview({ trackId, trackPath, settings }) {
-      return browserRenderJob(trackId, "preview", trackPath, settings);
     },
 
     async runExportChecks() {
@@ -275,11 +261,6 @@ export async function pickIphoneOutputPath(
   // Files-visible Documents/YES Master folder. (Browser preview also just uses
   // the name.)
   return defaultPath;
-}
-
-export function toIphoneAudioUrl(path: string): string {
-  if (path.startsWith("blob:") || path.startsWith("data:")) return path;
-  return convertFileSrc(path);
 }
 
 function hasIphoneNativeRuntime(): boolean {

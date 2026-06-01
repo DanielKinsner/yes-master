@@ -31,20 +31,11 @@ function makeBackend(): IphoneBackend {
     resumePlayback: vi.fn().mockResolvedValue(undefined),
     stopPlayback: vi.fn().mockResolvedValue(undefined),
     reactivateAudioSession: vi.fn().mockResolvedValue(undefined),
+    onAudioSessionWarning: vi.fn().mockResolvedValue(() => {}),
     seekPlayback: vi.fn().mockResolvedValue(undefined),
     onPlaybackTick: vi.fn().mockResolvedValue(() => {}),
     renderMaster: vi.fn().mockResolvedValue({
       output_paths: ["/private/new-master__master.wav"],
-      measurements: {
-        lufs_integrated: -14,
-        true_peak_dbtp: -1,
-        dynamic_range_lu: 8,
-        sample_rate: 48_000,
-        bit_depth: 24,
-      },
-    }),
-    prepareMasterPreview: vi.fn().mockResolvedValue({
-      output_paths: ["/private/preview/track-1-mastered-preview.wav"],
       measurements: {
         lufs_integrated: -14,
         true_peak_dbtp: -1,
@@ -567,6 +558,37 @@ describe("iPhone app shell", () => {
     await click(container, "[data-testid='volume-match']");
 
     expect(backend.updateMasteringChain).not.toHaveBeenCalled();
+
+    act(() => root.unmount());
+  });
+
+  it("resumes paused same-track playback without rebuilding the native source", async () => {
+    const { backend, container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-native-play']");
+
+    expect(backend.pausePlayback).toHaveBeenCalledTimes(1);
+    expect(backend.resumePlayback).toHaveBeenCalledTimes(1);
+    expect(backend.playOriginal).toHaveBeenCalledTimes(1);
+
+    act(() => root.unmount());
+  });
+
+  it("rebuilds paused Mastered playback after settings change instead of resuming stale audio", async () => {
+    const { backend, container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='playback-mastered']");
+    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='volume-match']");
+    await click(container, "[data-testid='iphone-native-play']");
+
+    expect(backend.resumePlayback).not.toHaveBeenCalled();
+    expect(backend.playMastered).toHaveBeenCalledTimes(2);
 
     act(() => root.unmount());
   });

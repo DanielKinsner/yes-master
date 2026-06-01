@@ -11,6 +11,9 @@ const dialogMocks = vi.hoisted(() => ({
   open: vi.fn(),
   save: vi.fn(),
 }));
+const eventMocks = vi.hoisted(() => ({
+  listen: vi.fn().mockResolvedValue(() => {}),
+}));
 const originalCreateObjectUrl = Object.getOwnPropertyDescriptor(
   URL,
   "createObjectURL",
@@ -21,9 +24,14 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
   save: dialogMocks.save,
 }));
 
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: eventMocks.listen,
+}));
+
 afterEach(() => {
   dialogMocks.open.mockReset();
   dialogMocks.save.mockReset();
+  eventMocks.listen.mockClear();
   delete (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
   delete (globalThis as typeof globalThis & { isTauri?: boolean }).isTauri;
   if (originalCreateObjectUrl) {
@@ -79,6 +87,20 @@ describe("iPhone API facade", () => {
     await backend.reactivateAudioSession();
 
     expect(invoke).toHaveBeenCalledWith("iphone_reactivate_audio_session");
+  });
+
+  it("listens for one-time iPhone audio-session warnings", async () => {
+    const invoke = vi.fn().mockResolvedValue(undefined);
+    const backend = createIphoneBackend(invoke);
+    const handler = vi.fn();
+
+    const unlisten = await backend.onAudioSessionWarning(handler);
+
+    expect(eventMocks.listen).toHaveBeenCalledWith(
+      "iphone:audio-session-warning",
+      expect.any(Function),
+    );
+    expect(unlisten).toEqual(expect.any(Function));
   });
 
   it("calls the separate iPhone waveform command", async () => {
@@ -165,26 +187,6 @@ describe("iPhone API facade", () => {
     });
   });
 
-  it("calls the separate iPhone mastered preview command", async () => {
-    const invoke = vi.fn().mockResolvedValue({
-      output_paths: ["/private/preview/track-1-mastered.wav"],
-    });
-    const backend = createIphoneBackend(invoke);
-    const settings = { volume_match: true } as MasteringSettings;
-
-    await backend.prepareMasterPreview({
-      trackId: "track-1",
-      trackPath: "/private/song.wav",
-      settings,
-    });
-
-    expect(invoke).toHaveBeenCalledWith("iphone_prepare_master_preview", {
-      trackId: "track-1",
-      trackPath: "/private/song.wav",
-      settings,
-    });
-  });
-
   it("opens iPhone audio as a copied document file", async () => {
     setNativeRuntime();
     dialogMocks.open.mockResolvedValue("/private/song.wav");
@@ -264,18 +266,12 @@ describe("iPhone API facade", () => {
     const imported = await backend.importTrack(path);
     const analysis = await backend.analyzeTrack(imported.id, imported.path);
     const waveform = await backend.prepareWaveform(imported.id, imported.path, 64);
-    const preview = await backend.prepareMasterPreview({
-      trackId: imported.id,
-      trackPath: imported.path,
-      settings: { volume_match: true } as MasteringSettings,
-    });
 
     expect(imported.display_name).toBe("rough mix.wav");
     expect(imported.path).toBe("blob:yes-master/rough-mix");
     expect(analysis.track_id).toBe(imported.id);
     expect(waveform.track_id).toBe(imported.id);
     expect(waveform.channels[0]?.length).toBeGreaterThan(0);
-    expect(preview.output_paths).toEqual(["blob:yes-master/rough-mix"]);
   });
 
   it("returns the suggested filename for the iPhone export folder", async () => {

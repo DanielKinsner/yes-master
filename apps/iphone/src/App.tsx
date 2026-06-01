@@ -59,6 +59,13 @@ type IphoneOperation =
   | "preparing-preview";
 type ProcessingStage = "importing" | "analyzing";
 
+interface LoadedAudition {
+  masteredSignature: string | null;
+  playback: IphoneAppState["playback"];
+  resumeDirty: boolean;
+  trackId: string;
+}
+
 interface IphoneExportReceipt {
   bitDepth: number;
   measuredLufs: number;
@@ -120,6 +127,7 @@ export default function App({
   const [operation, setOperation] = useState<IphoneOperation>("idle");
   const operationRef = useRef<IphoneOperation>("idle");
   const waveformRequestVersionRef = useRef(0);
+  const loadedAuditionRef = useRef<LoadedAudition | null>(null);
   // Guards the playhead slider against the 50 ms playback tick: while the user
   // is actively dragging, ticks must not overwrite the thumb. scrubValueRef
   // holds the latest dragged value so endScrub can seek to it on release.
@@ -215,6 +223,29 @@ export default function App({
     };
   }, [backend, state.track?.id]);
 
+  useEffect(() => {
+    let isActive = true;
+    let cleanup: (() => void) | undefined;
+
+    backend
+      .onAudioSessionWarning((warning) => {
+        if (isActive) setMessage(warning);
+      })
+      .then((unlisten) => {
+        if (isActive) {
+          cleanup = unlisten;
+        } else {
+          unlisten();
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isActive = false;
+      cleanup?.();
+    };
+  }, [backend]);
+
   // Live-apply mastering changes while Mastered is auditioning. Without this,
   // changing tone/loudness/profile/volume-match/lufs-preview only updates the
   // UI and export plan, not the audio, until Pause->Play — which breaks the
@@ -270,6 +301,8 @@ export default function App({
       setExportChecks([]);
       setExportReceipt(null);
       clearWaveform();
+      loadedAuditionRef.current = null;
+      setIsAuditionPlaying(false);
       const imported = await backend.importTrack(path);
       const track = toIphoneTrack(imported);
       setState((current) => attachIphoneTrack(current, track));
@@ -387,6 +420,10 @@ export default function App({
       await pauseAuditionPlayback();
       return;
     }
+    if (canResumeAuditionPlayback(state.playback)) {
+      await resumeAuditionPlayback(state.playback);
+      return;
+    }
     await startAuditionPlayback(state.playback);
   }
 
@@ -425,9 +462,48 @@ export default function App({
         );
       }
       setState((current) => switchIphonePlayback(current, playback));
+      loadedAuditionRef.current = {
+        masteredSignature:
+          playback === "mastered" ? masteredControlSignature : null,
+        playback,
+        resumeDirty: false,
+        trackId: state.track.id,
+      };
       setIsAuditionPlaying(true);
       setMessage(null);
     } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+      setIsAuditionPlaying(false);
+    } finally {
+      finishOperation();
+    }
+  }
+
+  function canResumeAuditionPlayback(playback: IphoneAppState["playback"]) {
+    const loaded = loadedAuditionRef.current;
+    if (!loaded || !state.track) return false;
+    if (loaded.trackId !== state.track.id) return false;
+    if (loaded.playback !== playback) return false;
+    if (loaded.resumeDirty) return false;
+    if (
+      playback === "mastered" &&
+      loaded.masteredSignature !== masteredControlSignature
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  async function resumeAuditionPlayback(playback: IphoneAppState["playback"]) {
+    if (!state.track || !startOperation("preparing-preview")) return;
+    setMessage("Resuming...");
+    try {
+      await backend.resumePlayback();
+      setState((current) => switchIphonePlayback(current, playback));
+      setIsAuditionPlaying(true);
+      setMessage(null);
+    } catch (error) {
+      loadedAuditionRef.current = null;
       setMessage(error instanceof Error ? error.message : String(error));
       setIsAuditionPlaying(false);
     } finally {
@@ -491,8 +567,8 @@ export default function App({
       <section className="phone-frame">
         <header className="app-header">
           <div className="brand-lockup">
-            <img src={yesMasterMarkUrl} alt="" aria-hidden="true" />
-            <span>YES Master</span>
+            <BrandMark />
+            <span className="brand-name">YES Master</span>
           </div>
           <span className="status-chip">
             {state.analysisStatus === "ready" ? "Ready" : "Local"}
@@ -509,6 +585,11 @@ export default function App({
             alt=""
             aria-hidden="true"
           />
+          {!hasTrack ? (
+            <div className="hero-copy">
+              <h1>Import, master, export.</h1>
+            </div>
+          ) : null}
           <div className={hasTrack ? "hero-orb has-track" : "hero-orb is-empty"}>
             <button
               className="hero-action-button"
@@ -657,6 +738,11 @@ export default function App({
                 // audio thread isn't flooded with intermediate positions.
                 if (isAuditionPlaying && !isScrubbingRef.current) {
                   void backend.seekPlayback(playheadSeconds);
+                } else if (!isAuditionPlaying && loadedAuditionRef.current) {
+                  loadedAuditionRef.current = {
+                    ...loadedAuditionRef.current,
+                    resumeDirty: true,
+                  };
                 }
               }}
             />
@@ -874,6 +960,19 @@ function TonePicker({
         })}
       </div>
     </section>
+  );
+}
+
+function BrandMark() {
+  return (
+    <span className="brand-mark" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M4 6h2v12H4zM8 10h2v8H8zM12 4h2v16h-2zM16 8h2v10h-2zM20 12h2v6h-2z"
+          fill="currentColor"
+        />
+      </svg>
+    </span>
   );
 }
 

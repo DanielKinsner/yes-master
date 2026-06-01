@@ -25,16 +25,21 @@ use yes_master_lib::{
 mod ios_audio {
     use objc2::runtime::AnyObject;
     use objc2::{class, msg_send};
+    use std::ffi::CStr;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use tauri::Emitter;
 
-    pub fn configure() {
-        activate_playback_session();
+    static AUDIO_SESSION_WARNING_EMITTED: AtomicBool = AtomicBool::new(false);
+
+    pub fn configure(app: &tauri::AppHandle) {
+        activate_playback_session(Some(app));
     }
 
     /// Set the shared AVAudioSession to `.playback` and activate it. Idempotent
     /// — safe to re-call to recover after an interruption, a route change, or
     /// returning from the background, where iOS deactivates the session and the
     /// app would otherwise be silent for the rest of its lifetime.
-    pub fn activate_playback_session() {
+    pub fn activate_playback_session(app: Option<&tauri::AppHandle>) {
         unsafe {
             let handle = libc::dlopen(
                 c"/System/Library/Frameworks/AVFoundation.framework/AVFoundation".as_ptr(),
@@ -60,21 +65,64 @@ mod ios_audio {
                 return;
             }
 
-            let null_err: *mut *mut AnyObject = std::ptr::null_mut();
-            let category_ok: bool = msg_send![session, setCategory: category, error: null_err];
-            let active_ok: bool = msg_send![session, setActive: true, error: null_err];
+            let mut category_error: *mut AnyObject = std::ptr::null_mut();
+            let mut active_error: *mut AnyObject = std::ptr::null_mut();
+            let category_ok: bool =
+                msg_send![session, setCategory: category, error: &mut category_error];
+            let active_ok: bool = msg_send![session, setActive: true, error: &mut active_error];
             log::info!(
                 "AVAudioSession activated (category_ok={category_ok}, active_ok={active_ok})"
             );
+            if !category_ok || !active_ok {
+                let detail = error_description(if !active_ok {
+                    active_error
+                } else {
+                    category_error
+                })
+                .unwrap_or_else(|| "iOS did not return an audio-session error detail".to_string());
+                let warning = format!(
+                    "iPhone audio could not be fully activated. Playback may be silent until the app is restarted. {detail}"
+                );
+                log::warn!("{warning}");
+                emit_warning_once(app, warning);
+            }
+        }
+    }
+
+    unsafe fn error_description(error: *mut AnyObject) -> Option<String> {
+        if error.is_null() {
+            return None;
+        }
+        let description: *mut AnyObject = msg_send![error, localizedDescription];
+        nsstring_to_string(description)
+    }
+
+    unsafe fn nsstring_to_string(value: *mut AnyObject) -> Option<String> {
+        if value.is_null() {
+            return None;
+        }
+        let utf8: *const libc::c_char = msg_send![value, UTF8String];
+        if utf8.is_null() {
+            return None;
+        }
+        Some(CStr::from_ptr(utf8).to_string_lossy().into_owned())
+    }
+
+    fn emit_warning_once(app: Option<&tauri::AppHandle>, warning: String) {
+        let Some(app) = app else {
+            return;
+        };
+        if AUDIO_SESSION_WARNING_EMITTED
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+        {
+            let _ = app.emit("iphone:audio-session-warning", warning);
         }
     }
 }
 
 #[tauri::command]
-async fn iphone_import_track(
-    path: String,
-    app: tauri::AppHandle,
-) -> CommandResult<ImportedTrack> {
+async fn iphone_import_track(path: String, app: tauri::AppHandle) -> CommandResult<ImportedTrack> {
     let normalized = normalize_iphone_file_path(&path);
     log::info!(
         "iphone_import_track: raw={path:?} normalized={normalized:?} exists={}",
@@ -138,11 +186,16 @@ fn copy_into_app_imports(app: &tauri::AppHandle, source: &str) -> String {
 #[tauri::command]
 async fn iphone_analyze_track(track_id: String, path: String) -> CommandResult<AnalysisResult> {
     let path = normalize_iphone_file_path(&path);
-    let mut results = engine::analyze_tracks(vec![engine::AnalyzeRequest {
-        id: TrackId(track_id),
-        path,
-    }])
-    .await?;
+    let mut results = tauri::async_runtime::spawn_blocking(move || {
+        tauri::async_runtime::block_on(engine::analyze_tracks(vec![engine::AnalyzeRequest {
+            id: TrackId(track_id),
+            path,
+        }]))
+    })
+    .await
+    .map_err(|error| {
+        yes_master_lib::CommandError::Other(format!("analyze task failed: {error}"))
+    })??;
     results
         .pop()
         .ok_or_else(|| yes_master_lib::CommandError::Other("no analysis produced".to_string()))
@@ -159,9 +212,19 @@ async fn iphone_prepare_waveform(
         "iphone_prepare_waveform: raw={track_path:?} normalized={normalized:?} exists={} pixels={target_pixels:?}",
         Path::new(&normalized).exists()
     );
-    let result =
-        yes_master_lib::audio::prepare_waveform(TrackId(track_id), normalized.clone(), target_pixels)
-            .await;
+    let decode_track_id = TrackId(track_id);
+    let decode_path = normalized.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        tauri::async_runtime::block_on(yes_master_lib::audio::prepare_waveform(
+            decode_track_id,
+            decode_path,
+            target_pixels,
+        ))
+    })
+    .await
+    .map_err(|error| {
+        yes_master_lib::CommandError::Other(format!("waveform task failed: {error}"))
+    })?;
     match &result {
         Ok(peaks) => log::info!(
             "iphone_prepare_waveform ok: channels={} first_len={}",
@@ -187,17 +250,6 @@ async fn iphone_render_master(
     // scoped URL (which exports a 0-byte placeholder the real bytes never reach).
     let output_path = resolve_export_path(&app, &normalize_iphone_file_path(&output_path))?;
     iphone_render_master_to_path(track_id, Path::new(&track_path), &settings, &output_path)
-}
-
-#[tauri::command]
-async fn iphone_prepare_master_preview(
-    track_id: String,
-    track_path: String,
-    settings: MasteringSettings,
-) -> CommandResult<RenderJob> {
-    let preview_dir = std::env::temp_dir().join("yes-master-iphone-previews");
-    let track_path = normalize_iphone_file_path(&track_path);
-    iphone_prepare_master_preview_in_dir(track_id, Path::new(&track_path), &settings, &preview_dir)
 }
 
 #[tauri::command]
@@ -347,36 +399,6 @@ fn sanitize_export_file_name(file_name: &str) -> String {
     }
 }
 
-pub fn iphone_prepare_master_preview_in_dir(
-    track_id: String,
-    source_path: &Path,
-    settings: &MasteringSettings,
-    preview_dir: &Path,
-) -> CommandResult<RenderJob> {
-    let output_path = preview_dir.join(format!(
-        "{}-mastered-preview.wav",
-        sanitize_preview_name(&track_id)
-    ));
-    iphone_render_master_to_path(track_id, source_path, settings, &output_path)
-}
-
-fn sanitize_preview_name(track_id: &str) -> String {
-    let sanitized = track_id
-        .chars()
-        .map(|character| match character {
-            'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => character,
-            _ => '-',
-        })
-        .collect::<String>()
-        .trim_matches('-')
-        .to_string();
-    if sanitized.is_empty() {
-        "track".to_string()
-    } else {
-        sanitized
-    }
-}
-
 pub fn normalize_iphone_file_path(path: &str) -> String {
     percent_decode_path(&strip_file_url_prefix(path.trim()))
 }
@@ -448,12 +470,14 @@ async fn iphone_run_export_checks(
 }
 
 #[tauri::command]
-async fn iphone_reactivate_audio_session() -> CommandResult<()> {
+async fn iphone_reactivate_audio_session(app: tauri::AppHandle) -> CommandResult<()> {
     // Re-activate the AVAudioSession after the app returns to the foreground —
     // a call / Siri / route change deactivates it, otherwise leaving playback
     // silent for the rest of the app's lifetime. No-op off iOS.
     #[cfg(target_os = "ios")]
-    ios_audio::activate_playback_session();
+    ios_audio::activate_playback_session(Some(&app));
+    #[cfg(not(target_os = "ios"))]
+    let _ = app;
     Ok(())
 }
 
@@ -476,7 +500,7 @@ pub fn run() {
             // visible in the device console, and before the output stream opens
             // on first play.
             #[cfg(target_os = "ios")]
-            ios_audio::configure();
+            ios_audio::configure(app.handle());
             let app_handle = app.handle().clone();
             let player_state = app.state::<Arc<AudioPlayer>>().inner().clone();
             std::thread::spawn(move || loop {
@@ -509,7 +533,6 @@ pub fn run() {
             iphone_analyze_track,
             iphone_prepare_waveform,
             iphone_render_master,
-            iphone_prepare_master_preview,
             iphone_play_track,
             iphone_play_master,
             iphone_update_chain,

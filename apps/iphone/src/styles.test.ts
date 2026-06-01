@@ -9,7 +9,8 @@ function readIphoneStyles() {
 }
 
 function cssBlock(css: string, selector: string) {
-  const start = css.indexOf(selector);
+  let start = css.indexOf(`${selector} {`);
+  if (start < 0) start = css.indexOf(selector);
   if (start < 0) return "";
   const open = css.indexOf("{", start);
   const close = css.indexOf("}", open);
@@ -39,7 +40,7 @@ describe("iPhone styles", () => {
 
   it("keeps decorative hero layers from blocking import taps", () => {
     const css = readIphoneStyles();
-    const heroRingBlock = cssBlock(css, ".hero-orb::before");
+    const heroRingBlock = cssBlock(css, ".hero-orb::before,\n.hero-orb::after");
     const heroButtonBlock = cssBlock(css, ".hero-action-button");
 
     expect(heroRingBlock).toContain("pointer-events: none");
@@ -78,6 +79,17 @@ describe("iPhone styles", () => {
     expect(uploadGlyphBlock).toContain("top: 45%");
     expect(css).toContain(".hero-upload-glyph::before");
     expect(css).toContain(".hero-upload-glyph::after");
+  });
+
+  it("uses the desktop spectrum glyph and an empty-state brand headline", () => {
+    const css = readIphoneStyles();
+    const brandMarkBlock = cssBlock(css, ".brand-mark");
+    const heroHeadlineBlock = cssBlock(css, ".hero-copy h1");
+
+    expect(brandMarkBlock).toContain("color: var(--accent-bright)");
+    expect(brandMarkBlock).toContain("drop-shadow");
+    expect(heroHeadlineBlock).toContain("font-weight: 700");
+    expect(heroHeadlineBlock).not.toContain("clamp(");
   });
 
   it("keeps the mastered preview button as a visible play button", () => {
@@ -159,6 +171,23 @@ describe("iPhone styles", () => {
     expect(css).toContain(".mini-waveform");
     expect(css).toContain("grid-template-columns: repeat(44");
     expect(css).toContain("@keyframes waveform-loading");
+  });
+
+  it("uses desktop-like preset art blending and restrained brand typography", () => {
+    const css = readIphoneStyles();
+    const toneCardBlock = cssBlock(css, ".tone-card");
+    const toneArtBlock = cssBlock(css, ".tone-card img");
+    const trackLabelBlock = cssBlock(css, ".track-label");
+    const customExportLabelBlock = cssBlock(css, ".custom-export-panel label");
+    const processingStepsBlock = cssBlock(css, ".processing-steps");
+
+    expect(toneCardBlock).toContain("grid-template-columns: 48px minmax(0, 1fr)");
+    expect(toneArtBlock).toContain("mix-blend-mode: screen");
+    expect(toneArtBlock).toContain("brightness(0.95)");
+    expect(css).not.toMatch(/font-weight:\s*(850|900)/);
+    expect(trackLabelBlock).toContain("letter-spacing: 0.12em");
+    expect(customExportLabelBlock).toContain("letter-spacing: 0.1em");
+    expect(processingStepsBlock).toContain("letter-spacing: 0.1em");
   });
 
   it("animates the import and analysis processing sheet responsibly", () => {

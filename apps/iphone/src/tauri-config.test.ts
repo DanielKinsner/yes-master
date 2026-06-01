@@ -9,10 +9,7 @@ interface IphoneTauriConfig {
   };
   app?: {
     security?: {
-      assetProtocol?: {
-        enable?: boolean;
-        scope?: AssetProtocolScope;
-      };
+      assetProtocol?: unknown;
     };
   };
 }
@@ -24,8 +21,6 @@ interface IphoneCapability {
 interface RootPackageJson {
   scripts?: Record<string, string>;
 }
-
-type AssetProtocolScope = string[] | { allow?: string[] } | undefined;
 
 function readIphoneJson<T>(relativePath: string): T {
   const currentDir = dirname(fileURLToPath(import.meta.url));
@@ -48,11 +43,6 @@ function readIphoneDefaultCapability(): IphoneCapability {
 
 function readRootPackageJson(): RootPackageJson {
   return readIphoneJson("../../../package.json");
-}
-
-function assetScopeEntries(scope: AssetProtocolScope): string[] {
-  if (Array.isArray(scope)) return scope;
-  return scope?.allow ?? [];
 }
 
 function permissionIds(permissions: IphoneCapability["permissions"]): string[] {
@@ -78,13 +68,10 @@ function plistArrayValues(plist: string, key: string): string[] {
 }
 
 describe("iPhone Tauri config", () => {
-  it("allows original imports and temp mastered previews through local asset URLs", () => {
+  it("does not advertise a dead local asset URL path", () => {
     const assetProtocol = readIphoneTauriConfig().app?.security?.assetProtocol;
 
-    expect(assetProtocol?.enable).toBe(true);
-    expect(assetScopeEntries(assetProtocol?.scope)).toEqual(
-      expect.arrayContaining(["$DOCUMENT/**", "$TEMP/**"]),
-    );
+    expect(assetProtocol).toBeUndefined();
   });
 
   it("allows iPhone import and export dialogs", () => {
