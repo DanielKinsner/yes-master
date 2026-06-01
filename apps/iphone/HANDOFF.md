@@ -1,6 +1,6 @@
 # YES Master iPhone — Handoff
 
-_Last updated: 2026-06-01, end of the no-device cleanup session (Codex). No iPhone was connected; anything needing an ear/eye on a real device is called out explicitly below._
+_Last updated: 2026-06-01, connected-device polish/install session (Codex). Most checks are automated; anything needing a human ear/eye on the real device is called out explicitly below._
 
 ## TL;DR
 
@@ -19,13 +19,13 @@ The prior device-focused session fixed the three blockers that made it "feel ver
 | Live mastering controls | **Fixed.** Changing tone/loudness/etc. now re-applies during Mastered playback. |
 | Interruption/route recovery | **Half done (iPhone-safe half).** Session re-activates on foreground, captures `NSError` details, and emits a one-time warning if activation fails. The stream-recreate half lives in shared desktop `audio.rs` and was deliberately **not** touched — see Remaining work. |
 | Untethered (no laptop) | **Proven capable.** Release build bundles a self-contained frontend (no dev-server URL). **Action required:** install a *release* build to replace the dev build currently on the phone. See "Make it untethered". |
-| Brand | **No-device brand pass done.** Desktop blue CTA, 5-bar spectrum mark, screen-blended preset art, calmer weights, tracked all-caps labels, and empty hero headline are all in place. |
+| Brand | **Premium pass done.** Desktop blue CTA, 5-bar spectrum mark, screen-blended preset art, calmer weights, tracked all-caps labels, empty hero headline, desktop icon watermark, desktop iPhone app icon, and refined play controls are all in place. |
 
 ## Recent changes
 
 ### 2026-06-01 premium moodboard branch
 
-Branch: `codex/iphone-premium-moodboard` (not merged to `main` yet).
+Branch: `codex/iphone-premium-moodboard` (verified and intended to be merged to `main` in this session).
 
 Purpose: use the provided reference image as a mood board, while keeping the current iPhone workflow intact. This is visual polish only; no DSP, export, import, or playback behavior changed.
 
@@ -34,6 +34,9 @@ Commits on the branch:
 1. `ca4e8dc style(iphone): add premium blue moodboard shell`
 2. `9c8d8ba style(iphone): add premium section hierarchy`
 3. `860e3e5 style(iphone): polish premium export surfaces`
+4. `521fdf7 docs(iphone): note premium moodboard branch`
+5. `877beac style(iphone): use desktop icon artwork`
+6. `04a2d89 style(iphone): refine loaded play control`
 
 What changed:
 
@@ -41,6 +44,9 @@ What changed:
 - Glowing import orb, subtle waveform/ring treatment, and brighter blue active controls.
 - Numbered `Style / Loudness / Profile` section labels inspired by the reference.
 - More premium tone cards, metering/waveform panels, export button, processing overlay, and Master Ready sheet.
+- iPhone source icons and generated iOS AppIcon assets now use the desktop YES Master icon artwork.
+- The low-opacity hero watermark now pulls from that desktop icon artwork.
+- The loaded-track hero play button has a more dimensional glow/ring treatment.
 
 Preview command:
 
@@ -49,6 +55,12 @@ npm run iphone:dev -- --host 127.0.0.1
 ```
 
 Then open `http://127.0.0.1:5174/`. A preview server was left running during the branch handoff for immediate review.
+
+Preview evidence from this pass:
+
+- Browser preview is live at `http://127.0.0.1:5174/`.
+- Loaded-track preview was checked with a temporary WAV outside the repo: `/tmp/yes-master-iphone-loaded-styled.png`.
+- Important nuance: the browser preview waveform is synthetic by design (`createBrowserPreviewIphoneBackend().prepareWaveform`). The real iPhone app calls Rust (`iphone_prepare_waveform`) and decodes peaks from the imported audio path, so device waveform behavior must be judged from a real import/log line, not the browser preview art.
 
 ### 2026-05-31 works-end-to-end session
 
@@ -93,6 +105,29 @@ Small, high-confidence follow-ups from the independent review:
 3. **Resume optimization finished:** after a Mastered control change is live-applied while audio is playing, pause→play now keeps using native `resumePlayback()` instead of rebuilding the stream.
 
 Latest no-device verification after these commits: **iphone TS 85/85, iphone Rust 6/6, iOS-target check clean, typecheck clean.**
+
+### 2026-06-01 connected-device polish session
+
+Commits:
+
+- `877beac style(iphone): use desktop icon artwork`
+- `04a2d89 style(iphone): refine loaded play control`
+
+What changed:
+
+1. Replaced all iPhone app icon PNG/ICO/ICNS sources and generated iOS AppIcon sizes with the desktop YES Master icon artwork.
+2. The hero background watermark now visually matches the desktop app icon.
+3. The loaded-track hero play button is still the same control, but now has layered light, glass, and ring styling so it fits the premium blue surface.
+4. The matching style test was updated to guard the richer layered button instead of the old flat blue value.
+
+Verification:
+
+- `npm run iphone:typecheck` ✅
+- `npm run iphone:test` ✅ 85/85
+- `npm run iphone:build` ✅
+- `cd apps/iphone/src-tauri && cargo test` ✅ 6/6
+- `cd apps/iphone/src-tauri && PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" cargo check --target aarch64-apple-ios` ✅
+- Browser preview loaded a temporary WAV and reached the play UI ✅
 
 ## Independent review of the 2026-06-01 cleanup (Claude, 4 adversarial reviewers + re-run verification)
 
