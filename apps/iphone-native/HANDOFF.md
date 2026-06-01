@@ -1,6 +1,6 @@
 # YES Master iPhone Native - Handoff
 
-_Last updated: 2026-06-01, reference-style native UI and Create Master wiring._
+_Last updated: 2026-06-01, native phone-test prep._
 
 ## Current Status
 
@@ -22,6 +22,9 @@ Review and follow-up slices now landed on `main` in small commits:
 12. `77d9890 fix(iphone-native): render masters to unique paths`
 13. `eb302c2 style(iphone-native): match reference iPhone shell`
 14. `1a161f1 feat(iphone-native): wire create master action`
+15. `5ced404 feat(iphone-native): preserve audition switch position`
+16. `eda9d9f feat(iphone-native): add share master action`
+17. `0896f6c fix(iphone-native): require full screen portrait`
 
 The native direction is:
 
@@ -66,14 +69,30 @@ The Rust and Swift bridge can now render a master into an output directory using
 
 The `Create Master` button is now wired to the Swift render bridge. After a render succeeds, the app stores the rendered WAV path, switches to Mastered, and allows Mastered playback.
 
-It is still not a full iPhone mastering app yet: native share/export is not wired, Original/Mastered switching does not preserve playhead yet, and the full import -> analyze -> render -> mastered playback loop still needs hands-on simulator/device testing with a real supported audio file.
+Original/Mastered switching now tries to preserve playback position when switching while audio is playing.
+
+Native share/export has a first pass: after a master render succeeds, a `Share Master` button appears and shares the rendered WAV through the iOS share sheet.
+
+It is still not a full iPhone mastering app yet: the full import -> analyze -> render -> mastered playback -> share loop still needs hands-on testing on the user's real phone with a supported audio file.
+
+## Lunch Test Plan
+
+When the user is home and the phone is connected:
+
+1. Install the native app from `apps/iphone-native`.
+2. Import a supported file: WAV, MP3, M4A, AAC, FLAC, or OGG.
+3. Confirm analysis completes.
+4. Play Original.
+5. Create Master.
+6. Play Mastered and switch Original/Mastered while playing.
+7. Tap `Share Master` and confirm the WAV can be saved or shared.
 
 ## Next Slice
 
-1. Manually test import -> analyze -> Create Master -> Mastered playback in the simulator with a supported local audio file.
-2. Preserve playhead when switching Original/Mastered.
-3. Add native share/export once render output exists.
-4. Consider disabling Create Master with a visible explanation while analysis is pending or failed.
+1. Manually test import -> analyze -> Create Master -> Mastered playback -> Share Master on the real iPhone.
+2. Consider disabling Create Master with a visible explanation while analysis is pending or failed.
+3. Improve loading states if real-phone render time feels long.
+4. Add any install helper script only after confirming the exact connected-device workflow.
 5. Keep the UI spacious; do not add waveform/scrubbing unless the user asks.
 
 ## Verification So Far
@@ -107,7 +126,7 @@ cd apps/iphone-native
 xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO test
 ```
 
-Latest test result after wiring the UI and Create Master action: 6 tests passed, 0 failed.
+Latest test result after audition switching and share action: 7 tests passed, 0 failed.
 
 ```bash
 cd apps/iphone-native
@@ -138,5 +157,28 @@ cargo test
 ```
 
 Rust bridge result: 6 tests passed, 0 failed.
+
+Additional phone-test readiness checks:
+
+```bash
+cd apps/iphone-native/rust
+PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" cargo check --target aarch64-apple-ios
+```
+
+Result: passed.
+
+```bash
+cd apps/iphone-native
+xcodegen generate
+```
+
+Result: project regenerated and remains reproducible once committed files are up to date.
+
+```bash
+cd apps/iphone-native
+xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+```
+
+Result: iPhone target build succeeded and linked the Rust bridge for `iphoneos`.
 
 No remote iPhone install or TestFlight work was attempted.
