@@ -6,6 +6,12 @@ _Last updated: 2026-06-01, native import/export hardening._
 
 `apps/iphone-native` is the SwiftUI-native iPhone app. It is the single active iPhone implementation.
 
+**Current controls (authoritative; supersedes older log entries below):** Style
+(Balanced/Warm/Open/Punch), an intensity slider, Loudness (Low/Med/High =
+-14/-11/-9 LUFS), an Original/Mastered audition toggle, and a playback-only
+Volume Match checkbox. There is no "LUFS Preview" control (it was removed) and no
+export-profile picker; delivery is fixed at 44.1 kHz / 24-bit / -1 dBTP.
+
 Review and follow-up slices now landed on `main` in small commits:
 
 1. `6ac86c7 fix(iphone-native): make xcodegen reproducible`

@@ -150,6 +150,9 @@ fn export_settings_for_options(preset: Option<&str>, intensity: f32, lufs_target
         delivery_profile: DeliveryProfile::Custom,
         album: None,
         advanced: AdvancedSettings {
+            // Under DeliveryProfile::Custom this is read back as the absolute LUFS
+            // target (see MasteringSettings::effective_target_lufs), not a relative
+            // offset despite the field name. We pass the loudness target here.
             lufs_offset_db: Some(lufs_target.clamp(-24.0, -6.0)),
             ceiling_dbtp: Some(-1.0),
             width: None,

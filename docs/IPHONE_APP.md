@@ -13,17 +13,18 @@ settings shape and DSP/render logic where practical.
 
 ## v1 Feature List
 
-Use the Simple Mode list from `docs/SIMPLE_ADVANCED_MODE_NOTE_2026-05-29.md`,
-excluding adaptive analysis and smart analysis:
+The shipped Simple-only flow (no adaptive/smart analysis):
 
 - Import one track.
 - Pick one of four tone presets: Balanced, Warm, Open, Punch.
-- Choose an export profile: Streaming, CD, Custom.
-- Toggle Original / Mastered at the same playhead.
-- Toggle Volume Match for audition only.
-- Toggle LUFS Preview for audition.
+- Set preset intensity with a slider (the manual safety valve against overcooking).
 - Choose loudness: Low, Medium, High.
-- Export the master.
+- Toggle Original / Mastered at the same playhead.
+- Toggle Volume Match for audition only (never changes export level).
+- Create and share the master.
+
+There is no LUFS Preview control and no export-profile picker in v1; the delivery
+format is fixed (see below).
 
 ## Preset Mapping
 
@@ -40,17 +41,19 @@ No Loud tile is needed in v1 because loudness is its own Simple control.
 
 ## Loudness And Export
 
-The iPhone app separates loudness from destination:
+Loudness is a single control mapped to absolute targets:
 
-- Low = -16 LUFS.
-- Medium = -14 LUFS.
-- High = -10.5 LUFS.
-- Streaming = 48 kHz, 24-bit, -1 dBTP ceiling.
-- CD = 44.1 kHz, 16-bit, -1 dBTP ceiling.
-- Custom can set sample rate, bit depth, and ceiling.
+- Low = -14 LUFS.
+- Medium = -11 LUFS.
+- High = -9 LUFS.
+
+The delivery format is fixed at 44.1 kHz, 24-bit, -1 dBTP ceiling. There is no
+Streaming/CD/Custom picker in v1.
 
 To avoid changing desktop delivery-profile behavior, the iPhone contract emits
-`delivery_profile: "custom"` and fills the explicit advanced fields.
+`delivery_profile: "custom"` and fills the explicit advanced fields; the loudness
+target is sent via `lufs_offset_db`, which the Custom profile reads as the
+absolute target.
 
 ## Non-Negotiables
 

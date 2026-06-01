@@ -11,11 +11,10 @@ playback, and export.
 
 - Import one song from the phone.
 - Let the user choose a mastering style: Balanced, Warm, Open, or Punch.
+- Let the user set preset intensity with a slider.
 - Let the user choose loudness: Low, Medium, or High.
-- Let the user choose an output profile: Streaming, CD, or Custom.
 - Audition the original and mastered versions without losing the playhead.
-- Offer Volume Match for fair listening only.
-- Offer LUFS Preview for checking loudness while auditioning.
+- Offer Volume Match for fair listening only (never changes the export).
 - Create a finished master when the user is ready.
 
 ## The Goal
@@ -26,7 +25,7 @@ understand, visually confident, and focused on the core workflow.
 The main flow is:
 
 1. Import a track.
-2. Pick a style and loudness.
+2. Pick a style, intensity, and loudness.
 3. Preview original versus mastered.
 4. Export the master.
 
