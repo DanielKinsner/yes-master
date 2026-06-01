@@ -77,7 +77,9 @@ function importedTrack(
   };
 }
 
-function analyzedTrack(overrides: Partial<AnalysisResult> = {}): AnalysisResult {
+function analyzedTrack(
+  overrides: Partial<AnalysisResult> = {},
+): AnalysisResult {
   return {
     track_id: "track-1",
     lufs_integrated: -15,
@@ -87,7 +89,9 @@ function analyzedTrack(overrides: Partial<AnalysisResult> = {}): AnalysisResult 
     spectral_balance: { low: 0.33, mid: 0.34, high: 0.33 },
     transient_density: 0.5,
     stereo_width: 0.5,
-    recommended_universal: { volume_match: false } as AnalysisResult["recommended_universal"],
+    recommended_universal: {
+      volume_match: false,
+    } as AnalysisResult["recommended_universal"],
     measured_at_iso: "2026-05-31T00:00:00.000Z",
     inferred_role: null,
     role_confidence: null,
@@ -137,20 +141,6 @@ async function click(container: HTMLElement, selector: string) {
   });
 }
 
-async function scrub(container: HTMLElement, selector: string, value: string) {
-  const element = container.querySelector<HTMLInputElement>(selector);
-  if (!element) throw new Error(`Missing element ${selector}`);
-  const setValue = Object.getOwnPropertyDescriptor(
-    window.HTMLInputElement.prototype,
-    "value",
-  )?.set;
-  await act(async () => {
-    setValue?.call(element, value);
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-}
-
 describe("iPhone app shell", () => {
   it("opens as a Simple-only phone app without desktop advanced controls", () => {
     const { container, root } = renderApp();
@@ -168,7 +158,9 @@ describe("iPhone app shell", () => {
     const { container, root } = renderApp();
     const heroPanel = container.querySelector(".hero-panel");
 
-    expect(heroPanel?.textContent).not.toContain("Create a release-ready master");
+    expect(heroPanel?.textContent).not.toContain(
+      "Create a release-ready master",
+    );
     expect(heroPanel?.textContent).not.toContain(
       "A clean, streaming-ready shape for most mixes.",
     );
@@ -214,8 +206,9 @@ describe("iPhone app shell", () => {
     const { container, root } = renderApp();
 
     expect(
-      container.querySelector<HTMLButtonElement>("[data-testid='iphone-import']")
-        ?.textContent,
+      container.querySelector<HTMLButtonElement>(
+        "[data-testid='iphone-import']",
+      )?.textContent,
     ).toContain("Import Track");
 
     await click(container, "[data-testid='iphone-import']");
@@ -240,11 +233,7 @@ describe("iPhone app shell", () => {
       "track-1",
       "/private/new-master.wav",
     );
-    expect(backend.prepareWaveform).toHaveBeenCalledWith(
-      "track-1",
-      "/private/new-master.wav",
-      140,
-    );
+    expect(backend.prepareWaveform).not.toHaveBeenCalled();
     expect(container.textContent).toContain("new-master");
     expect(container.textContent).toContain("WAV");
     expect(container.textContent).toContain("44.1 kHz");
@@ -252,7 +241,10 @@ describe("iPhone app shell", () => {
     expect(container.textContent).toContain("Ready");
     expect(
       container.querySelector("[data-testid='iphone-mini-waveform']"),
-    ).not.toBeNull();
+    ).toBeNull();
+    expect(
+      container.querySelector("[data-testid='iphone-playhead']"),
+    ).toBeNull();
 
     act(() => root.unmount());
   });
@@ -287,19 +279,19 @@ describe("iPhone app shell", () => {
     await click(container, "[data-testid='loudness-high']");
 
     expect(
-      container.querySelector("[data-testid='tone-balanced']")?.getAttribute(
-        "aria-pressed",
-      ),
+      container
+        .querySelector("[data-testid='tone-balanced']")
+        ?.getAttribute("aria-pressed"),
     ).toBe("true");
     expect(
-      container.querySelector("[data-testid='tone-warm']")?.getAttribute(
-        "aria-pressed",
-      ),
+      container
+        .querySelector("[data-testid='tone-warm']")
+        ?.getAttribute("aria-pressed"),
     ).toBe("false");
     expect(
-      container.querySelector("[data-testid='loudness-medium']")?.getAttribute(
-        "aria-pressed",
-      ),
+      container
+        .querySelector("[data-testid='loudness-medium']")
+        ?.getAttribute("aria-pressed"),
     ).toBe("true");
 
     await act(async () => {
@@ -311,7 +303,9 @@ describe("iPhone app shell", () => {
 
   it("waits for analysis before enabling mastered preview and export", async () => {
     const backend = makeBackend();
-    vi.mocked(backend.analyzeTrack).mockRejectedValue(new Error("Analysis failed"));
+    vi.mocked(backend.analyzeTrack).mockRejectedValue(
+      new Error("Analysis failed"),
+    );
     const { container, root } = renderApp({ backend });
 
     await click(container, "[data-testid='iphone-import']");
@@ -324,12 +318,14 @@ describe("iPhone app shell", () => {
       ),
     ).not.toBeNull();
     expect(
-      container.querySelector<HTMLButtonElement>("[data-testid='playback-mastered']")
-        ?.disabled,
+      container.querySelector<HTMLButtonElement>(
+        "[data-testid='playback-mastered']",
+      )?.disabled,
     ).toBe(true);
     expect(
-      container.querySelector<HTMLButtonElement>("[data-testid='iphone-export']")
-        ?.disabled,
+      container.querySelector<HTMLButtonElement>(
+        "[data-testid='iphone-export']",
+      )?.disabled,
     ).toBe(true);
 
     act(() => root.unmount());
@@ -474,7 +470,9 @@ describe("iPhone app shell", () => {
     await click(container, "[data-testid='iphone-import']");
 
     expect(container.querySelector(".master-card")).toBeNull();
-    expect(container.querySelector("[data-testid='profile-streaming']")).toBeNull();
+    expect(
+      container.querySelector("[data-testid='profile-streaming']"),
+    ).toBeNull();
     expect(container.querySelector(".section-meta")?.textContent).toContain(
       "-11.0 LUFS",
     );
@@ -491,35 +489,36 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
-  it("keeps the visible playhead when switching Original and Mastered", async () => {
+  it("keeps Original and Mastered switching simple without scrub controls", async () => {
     const { container, root } = renderApp();
 
     await click(container, "[data-testid='iphone-import']");
-    await scrub(container, "[data-testid='iphone-playhead']", "42");
     await click(container, "[data-testid='playback-mastered']");
 
-    const playhead = container.querySelector<HTMLInputElement>(
-      "[data-testid='iphone-playhead']",
-    );
-    expect(playhead?.value).toBe("42");
-    expect(container.textContent).toContain("0:42");
+    expect(
+      container
+        .querySelector("[data-testid='playback-mastered']")
+        ?.getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      container.querySelector("[data-testid='iphone-playhead']"),
+    ).toBeNull();
 
     act(() => root.unmount());
   });
 
-  it("starts native Mastered playback at the visible playhead", async () => {
+  it("starts native Mastered playback from the hero play button", async () => {
     const { backend, container, root } = renderApp();
 
     await click(container, "[data-testid='iphone-import']");
-    await scrub(container, "[data-testid='iphone-playhead']", "42");
     await click(container, "[data-testid='playback-mastered']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
 
     expect(backend.playMastered).toHaveBeenCalledWith(
       "track-1",
       "/private/new-master.wav",
       expect.any(Object),
-      42,
+      0,
       false,
     );
 
@@ -532,7 +531,7 @@ describe("iPhone app shell", () => {
     await click(container, "[data-testid='iphone-import']");
     await click(container, "[data-testid='volume-match']");
     await click(container, "[data-testid='playback-mastered']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
 
     expect(backend.playMastered).toHaveBeenCalledWith(
       "track-1",
@@ -553,7 +552,7 @@ describe("iPhone app shell", () => {
 
     await click(container, "[data-testid='iphone-import']");
     await click(container, "[data-testid='playback-mastered']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
     await click(container, "[data-testid='volume-match']");
 
     expect(backend.updateMasteringChain).toHaveBeenCalledWith(
@@ -568,7 +567,7 @@ describe("iPhone app shell", () => {
     const { backend, container, root } = renderApp();
 
     await click(container, "[data-testid='iphone-import']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
     await click(container, "[data-testid='volume-match']");
 
     expect(backend.updateMasteringChain).not.toHaveBeenCalled();
@@ -580,9 +579,9 @@ describe("iPhone app shell", () => {
     const { backend, container, root } = renderApp();
 
     await click(container, "[data-testid='iphone-import']");
-    await click(container, "[data-testid='iphone-native-play']");
-    await click(container, "[data-testid='iphone-native-play']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
+    await click(container, "[data-testid='iphone-preview-master']");
+    await click(container, "[data-testid='iphone-preview-master']");
 
     expect(backend.pausePlayback).toHaveBeenCalledTimes(1);
     expect(backend.resumePlayback).toHaveBeenCalledTimes(1);
@@ -596,10 +595,10 @@ describe("iPhone app shell", () => {
 
     await click(container, "[data-testid='iphone-import']");
     await click(container, "[data-testid='playback-mastered']");
-    await click(container, "[data-testid='iphone-native-play']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
+    await click(container, "[data-testid='iphone-preview-master']");
     await click(container, "[data-testid='volume-match']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
 
     expect(backend.resumePlayback).not.toHaveBeenCalled();
     expect(backend.playMastered).toHaveBeenCalledTimes(2);
@@ -612,10 +611,10 @@ describe("iPhone app shell", () => {
 
     await click(container, "[data-testid='iphone-import']");
     await click(container, "[data-testid='playback-mastered']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
     await click(container, "[data-testid='volume-match']");
-    await click(container, "[data-testid='iphone-native-play']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
+    await click(container, "[data-testid='iphone-preview-master']");
 
     expect(backend.updateMasteringChain).toHaveBeenCalledWith(
       expect.objectContaining({ volume_match: true }),
@@ -630,17 +629,22 @@ describe("iPhone app shell", () => {
 
   it("does not mark playback active when native Mastered playback fails", async () => {
     const backend = makeBackend();
-    vi.mocked(backend.playMastered).mockRejectedValue(new Error("audio failed"));
+    vi.mocked(backend.playMastered).mockRejectedValue(
+      new Error("audio failed"),
+    );
     const { container, root } = renderApp({ backend });
 
     await click(container, "[data-testid='iphone-import']");
     await click(container, "[data-testid='playback-mastered']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
 
     expect(
-      container.querySelector<HTMLButtonElement>("[data-testid='iphone-native-play']")
-        ?.textContent,
-    ).toContain("Play");
+      container
+        .querySelector<HTMLButtonElement>(
+          "[data-testid='iphone-preview-master']",
+        )
+        ?.getAttribute("aria-label"),
+    ).toBe("Play");
     expect(container.textContent).toContain("audio failed");
 
     act(() => root.unmount());
@@ -651,7 +655,7 @@ describe("iPhone app shell", () => {
 
     await click(container, "[data-testid='iphone-import']");
     await click(container, "[data-testid='playback-mastered']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
 
     expect(backend.playMastered).toHaveBeenCalledWith(
       "track-1",
@@ -671,7 +675,7 @@ describe("iPhone app shell", () => {
 
     await click(container, "[data-testid='iphone-import']");
     await click(container, "[data-testid='playback-mastered']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
 
     expect(backend.playMastered).toHaveBeenLastCalledWith(
       "track-1",
@@ -688,7 +692,7 @@ describe("iPhone app shell", () => {
     await click(container, "[data-testid='playback-original']");
     await click(container, "[data-testid='lufs-preview']");
     await click(container, "[data-testid='playback-mastered']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
 
     expect(backend.playMastered).toHaveBeenLastCalledWith(
       "track-1",
@@ -709,7 +713,7 @@ describe("iPhone app shell", () => {
     const { backend, container, root } = renderApp();
 
     await click(container, "[data-testid='iphone-import']");
-    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-preview-master']");
     expect(backend.playOriginal).toHaveBeenCalledWith(
       "track-1",
       "/private/new-master.wav",
@@ -731,27 +735,25 @@ describe("iPhone app shell", () => {
     await click(container, "[data-testid='tone-warm']");
 
     expect(
-      container.querySelector("[data-testid='playback-mastered']")?.getAttribute(
-        "aria-pressed",
-      ),
+      container
+        .querySelector("[data-testid='playback-mastered']")
+        ?.getAttribute("aria-pressed"),
     ).toBe("true");
 
     act(() => root.unmount());
   });
 
-  it("seeks native playback when scrubbing while playing", async () => {
+  it("omits native seeking from the simplified phone preview", async () => {
     const backend = makeBackend();
     const { container, root } = renderApp({ backend });
 
     await click(container, "[data-testid='iphone-import']");
-    await click(container, "[data-testid='iphone-native-play']");
-    await scrub(container, "[data-testid='iphone-playhead']", "12");
- 
-    expect(backend.seekPlayback).toHaveBeenCalledWith(12);
+    await click(container, "[data-testid='iphone-preview-master']");
+
     expect(
-      container.querySelector<HTMLInputElement>("[data-testid='iphone-playhead']")
-        ?.value,
-    ).toBe("12");
+      container.querySelector("[data-testid='iphone-playhead']"),
+    ).toBeNull();
+    expect(backend.seekPlayback).not.toHaveBeenCalled();
 
     act(() => root.unmount());
   });
@@ -882,7 +884,11 @@ describe("iPhone app shell", () => {
   it("does not start duplicate exports while export is already running", async () => {
     const selectedOutput = deferred<string | null>();
     const pickOutputPath = vi.fn().mockReturnValue(selectedOutput.promise);
-    const { container, pickOutputPath: pickOutput, root } = renderApp({
+    const {
+      container,
+      pickOutputPath: pickOutput,
+      root,
+    } = renderApp({
       pickOutputPath,
     });
 
@@ -911,14 +917,14 @@ describe("iPhone app shell", () => {
     await click(container, "[data-testid='tone-warm']");
 
     expect(
-      container.querySelector("[data-testid='tone-balanced']")?.getAttribute(
-        "aria-pressed",
-      ),
+      container
+        .querySelector("[data-testid='tone-balanced']")
+        ?.getAttribute("aria-pressed"),
     ).toBe("true");
     expect(
-      container.querySelector("[data-testid='tone-warm']")?.getAttribute(
-        "aria-pressed",
-      ),
+      container
+        .querySelector("[data-testid='tone-warm']")
+        ?.getAttribute("aria-pressed"),
     ).toBe("false");
 
     await act(async () => {

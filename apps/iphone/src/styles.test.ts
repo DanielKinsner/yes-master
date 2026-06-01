@@ -111,7 +111,7 @@ describe("iPhone styles", () => {
     );
 
     expect(loadedHeroButtonBlock).toContain("radial-gradient");
-    expect(loadedHeroButtonBlock).toContain("linear-gradient(160deg");
+    expect(loadedHeroButtonBlock).toMatch(/linear-gradient\(\s*160deg/);
     expect(loadedHeroButtonBlock).toContain("isolation: isolate");
     expect(loadedHeroButtonBlock).toContain("border-radius: 999px");
     expect(css).toContain(".hero-orb.has-track .hero-action-button::before");
@@ -189,13 +189,15 @@ describe("iPhone styles", () => {
     expect(css).toContain("@keyframes export-ready-enter");
   });
 
-  it("renders a compact waveform preview in the audition panel", () => {
+  it("keeps the loaded preview simple without scrub waveform controls", () => {
     const css = readIphoneStyles();
 
-    expect(css).toContain(".waveform-transport-row");
-    expect(css).toContain(".mini-waveform");
-    expect(css).toContain("grid-template-columns: repeat(44");
-    expect(css).toContain("@keyframes waveform-loading");
+    expect(css).toContain(".audition-mode-row");
+    expect(css).toContain("min-height: min(340px, calc(100dvh - 124px))");
+    expect(css).not.toContain(".waveform-transport-row");
+    expect(css).not.toContain(".mini-waveform");
+    expect(css).not.toContain(".playhead-row");
+    expect(css).not.toContain(".native-play-button");
   });
 
   it("uses desktop-like preset art blending and restrained brand typography", () => {
@@ -205,7 +207,9 @@ describe("iPhone styles", () => {
     const trackLabelBlock = cssBlock(css, ".track-label");
     const processingStepsBlock = cssBlock(css, ".processing-steps");
 
-    expect(toneCardBlock).toContain("grid-template-columns: 48px minmax(0, 1fr)");
+    expect(toneCardBlock).toContain(
+      "grid-template-columns: 48px minmax(0, 1fr)",
+    );
     expect(toneArtBlock).toContain("mix-blend-mode: screen");
     expect(toneArtBlock).toContain("brightness(0.95)");
     expect(css).not.toMatch(/font-weight:\s*(850|900)/);

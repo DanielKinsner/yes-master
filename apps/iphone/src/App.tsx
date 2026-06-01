@@ -31,7 +31,6 @@ import type {
   ExportReport,
   QualityCheck,
   RenderJob,
-  WaveformPeaks,
 } from "../../../src/bindings";
 import {
   iphoneSimpleLoudnessOptions,
@@ -111,23 +110,13 @@ export default function App({
   const [state, setState] = useState<IphoneAppState>(initialIphoneAppState);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [exportChecks, setExportChecks] = useState<QualityCheck[]>([]);
-  const [exportReceipt, setExportReceipt] = useState<IphoneExportReceipt | null>(
-    null,
-  );
-  const [waveform, setWaveform] = useState<WaveformPeaks | null>(null);
-  const [isLoadingWaveform, setIsLoadingWaveform] = useState(false);
-  const [waveformError, setWaveformError] = useState<string | null>(null);
+  const [exportReceipt, setExportReceipt] =
+    useState<IphoneExportReceipt | null>(null);
   const [isAuditionPlaying, setIsAuditionPlaying] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [operation, setOperation] = useState<IphoneOperation>("idle");
   const operationRef = useRef<IphoneOperation>("idle");
-  const waveformRequestVersionRef = useRef(0);
   const loadedAuditionRef = useRef<LoadedAudition | null>(null);
-  // Guards the playhead slider against the 50 ms playback tick: while the user
-  // is actively dragging, ticks must not overwrite the thumb. scrubValueRef
-  // holds the latest dragged value so endScrub can seek to it on release.
-  const isScrubbingRef = useRef(false);
-  const scrubValueRef = useRef(0);
   const plan = useMemo(() => toIphoneSimplePlan(state), [state]);
   // Signature of just the controls that change the mastering chain, so the
   // live-apply effect below fires once per real control change — not on every
@@ -154,18 +143,18 @@ export default function App({
   const isAnalyzing = operation === "analyzing" || (isImporting && hasTrack);
   const isExporting = operation === "exporting";
   const isPreparingPlayback = operation === "preparing-preview";
-  const controlsLocked = isImporting || isAnalyzing || isExporting || isPreparingPlayback;
-  const processingStage: ProcessingStage = isAnalyzing ? "analyzing" : "importing";
-  const trackStripLabel =
-    isAnalyzing
-      ? "Analyzing..."
-      : state.analysisStatus === "ready"
-        ? "Ready"
-        : state.analysisStatus === "needed"
-          ? "Needs analysis"
-          : "Track";
-  const trackDuration = state.track?.durationSeconds ?? 0;
-  const playheadMax = Math.max(trackDuration, state.playheadSeconds, 0);
+  const controlsLocked =
+    isImporting || isAnalyzing || isExporting || isPreparingPlayback;
+  const processingStage: ProcessingStage = isAnalyzing
+    ? "analyzing"
+    : "importing";
+  const trackStripLabel = isAnalyzing
+    ? "Analyzing..."
+    : state.analysisStatus === "ready"
+      ? "Ready"
+      : state.analysisStatus === "needed"
+        ? "Needs analysis"
+        : "Track";
   const sampleRate = plan.exportSettings.advanced.target_sample_rate;
   const bitDepth = plan.exportSettings.advanced.bit_depth;
   const targetLufs = plan.exportSettings.advanced.lufs_offset_db;
@@ -191,13 +180,9 @@ export default function App({
       .onPlaybackTick((tick) => {
         if (!isActive || tick.track_id !== state.track?.id) return;
         setIsAuditionPlaying(tick.is_playing);
-        // Don't let the position tick fight an in-progress scrub; the pointer
-        // handlers own the playhead until the drag ends.
-        if (!isScrubbingRef.current) {
-          setState((current) =>
-            setIphonePlayhead(current, Math.max(0, tick.position_sec)),
-          );
-        }
+        setState((current) =>
+          setIphonePlayhead(current, Math.max(0, tick.position_sec)),
+        );
       })
       .then((unlisten) => {
         if (isActive) {
@@ -255,8 +240,8 @@ export default function App({
     }
     void backend
       .updateMasteringChain(
-      withSourceAnalysis(buildAuditionPreviewSettings(plan), analysis),
-      state.lufsPreview,
+        withSourceAnalysis(buildAuditionPreviewSettings(plan), analysis),
+        state.lufsPreview,
       )
       .then(() => {
         const loaded = loadedAuditionRef.current;
@@ -309,13 +294,11 @@ export default function App({
       setAnalysis(null);
       setExportChecks([]);
       setExportReceipt(null);
-      clearWaveform();
       loadedAuditionRef.current = null;
       setIsAuditionPlaying(false);
       const imported = await backend.importTrack(path);
       const track = toIphoneTrack(imported);
       setState((current) => attachIphoneTrack(current, track));
-      void loadWaveform(track);
       await analyzeTrack(track);
     } catch (error) {
       setMessage(toIphoneErrorMessage(error));
@@ -346,36 +329,6 @@ export default function App({
     setMessage(null);
   }
 
-  async function loadWaveform(track: IphoneTrack) {
-    const requestVersion = waveformRequestVersionRef.current + 1;
-    waveformRequestVersionRef.current = requestVersion;
-    setIsLoadingWaveform(true);
-    setWaveformError(null);
-    try {
-      const nextWaveform = await backend.prepareWaveform(track.id, track.path, 140);
-      if (requestVersion !== waveformRequestVersionRef.current) return;
-      setWaveform(nextWaveform);
-    } catch (error) {
-      if (requestVersion !== waveformRequestVersionRef.current) return;
-      setWaveform(null);
-      // Don't swallow it into a fake flat placeholder — record why so the user
-      // sees a distinct "unavailable" state and the device log (lib.rs) is
-      // actionable. Gated by requestVersion so a superseded load can't stomp it.
-      setWaveformError(toIphoneErrorMessage(error));
-    } finally {
-      if (requestVersion === waveformRequestVersionRef.current) {
-        setIsLoadingWaveform(false);
-      }
-    }
-  }
-
-  function clearWaveform() {
-    waveformRequestVersionRef.current += 1;
-    setWaveform(null);
-    setWaveformError(null);
-    setIsLoadingWaveform(false);
-  }
-
   async function exportMaster() {
     if (!state.track || !analysisReady) return;
     if (!startOperation("exporting")) return;
@@ -403,7 +356,9 @@ export default function App({
         withSourceAnalysis(plan.exportSettings, analysis),
       );
       setExportChecks(checks);
-      const warningCount = checks.filter((check) => check.level !== "info").length;
+      const warningCount = checks.filter(
+        (check) => check.level !== "info",
+      ).length;
       setExportReceipt({
         bitDepth: report.bit_depth,
         measuredLufs: report.measured_lufs,
@@ -453,7 +408,9 @@ export default function App({
   async function startAuditionPlayback(playback: IphoneAppState["playback"]) {
     if (!state.track || !analysisReady) return;
     if (!startOperation("preparing-preview")) return;
-    setMessage(playback === "mastered" ? "Starting Mastered..." : "Starting Original...");
+    setMessage(
+      playback === "mastered" ? "Starting Mastered..." : "Starting Original...",
+    );
     try {
       if (playback === "mastered") {
         await backend.playMastered(
@@ -542,15 +499,6 @@ export default function App({
     setOperation("idle");
   }
 
-  function endScrub() {
-    if (!isScrubbingRef.current) return;
-    isScrubbingRef.current = false;
-    // Commit the final dragged position to the audio thread once, on release.
-    if (isAuditionPlaying) {
-      void backend.seekPlayback(scrubValueRef.current);
-    }
-  }
-
   function updateAuditionSettings(
     update: (current: IphoneAppState) => IphoneAppState,
   ) {
@@ -575,7 +523,9 @@ export default function App({
 
         <section
           className={hasTrack ? "hero-panel is-loaded" : "hero-panel"}
-          style={{ "--tone-accent": selectedToneVisual.accent } as CSSProperties}
+          style={
+            { "--tone-accent": selectedToneVisual.accent } as CSSProperties
+          }
         >
           <img
             className="hero-watermark"
@@ -590,7 +540,9 @@ export default function App({
               </h1>
             </div>
           ) : null}
-          <div className={hasTrack ? "hero-orb has-track" : "hero-orb is-empty"}>
+          <div
+            className={hasTrack ? "hero-orb has-track" : "hero-orb is-empty"}
+          >
             <button
               className="hero-action-button"
               aria-label={hasTrack ? heroActionAriaLabel : undefined}
@@ -683,89 +635,24 @@ export default function App({
         ) : null}
 
         {hasTrack ? (
-          <section
-            className="audition-panel"
-            aria-label="Audition"
-          >
+          <section className="audition-mode-row" aria-label="Audition mode">
             <div className="transport-row mode-switch">
-            <SegmentButton
-              active={state.playback === "original"}
-              disabled={controlsLocked}
-              testId="playback-original"
-              onClick={() => void switchAuditionMode("original")}
-            >
-              Original
-            </SegmentButton>
-            <SegmentButton
-              active={state.playback === "mastered"}
-              disabled={!canRenderMaster || controlsLocked}
-              testId="playback-mastered"
-              onClick={() => void switchAuditionMode("mastered")}
-            >
-              Mastered
-            </SegmentButton>
-            </div>
-
-            <div className="waveform-transport-row">
-              <button
-                className="native-play-button"
-                data-testid="iphone-native-play"
-                type="button"
-                disabled={!canRenderMaster || controlsLocked}
-                onClick={toggleAuditionPlayback}
+              <SegmentButton
+                active={state.playback === "original"}
+                disabled={controlsLocked}
+                testId="playback-original"
+                onClick={() => void switchAuditionMode("original")}
               >
-                <span
-                  className={
-                    isAuditionPlaying ? "hero-pause-glyph" : "hero-play-glyph"
-                  }
-                  aria-hidden="true"
-                />
-                <span className="transport-label">
-                  {isAuditionPlaying ? "Pause" : "Play"}
-                </span>
-              </button>
-              <MiniWaveform
-                error={waveformError}
-                isLoading={isLoadingWaveform}
-                peaks={waveform}
-              />
-            </div>
-
-            <div className="playhead-row" aria-label="Playhead">
-            <span>{formatTime(state.playheadSeconds)}</span>
-            <input
-              data-testid="iphone-playhead"
-              type="range"
-              min="0"
-              max={playheadMax}
-              step="0.1"
-              value={state.playheadSeconds}
-              disabled={!hasTrack}
-              onPointerDown={() => {
-                isScrubbingRef.current = true;
-              }}
-              onPointerUp={endScrub}
-              onPointerCancel={endScrub}
-              onChange={(event) => {
-                const playheadSeconds = Number(event.currentTarget.value);
-                scrubValueRef.current = playheadSeconds;
-                setState((current) =>
-                  setIphonePlayhead(current, playheadSeconds),
-                );
-                // Live-seek only for discrete changes (keyboard / a11y steps).
-                // A pointer drag defers its seek to release via endScrub so the
-                // audio thread isn't flooded with intermediate positions.
-                if (isAuditionPlaying && !isScrubbingRef.current) {
-                  void backend.seekPlayback(playheadSeconds);
-                } else if (!isAuditionPlaying && loadedAuditionRef.current) {
-                  loadedAuditionRef.current = {
-                    ...loadedAuditionRef.current,
-                    resumeDirty: true,
-                  };
-                }
-              }}
-            />
-            <span>{formatTime(trackDuration)}</span>
+                Original
+              </SegmentButton>
+              <SegmentButton
+                active={state.playback === "mastered"}
+                disabled={!canRenderMaster || controlsLocked}
+                testId="playback-mastered"
+                onClick={() => void switchAuditionMode("mastered")}
+              >
+                Mastered
+              </SegmentButton>
             </div>
           </section>
         ) : null}
@@ -790,7 +677,10 @@ export default function App({
                 testId={`loudness-${option.id}`}
                 onClick={() =>
                   updateAuditionSettings((current) =>
-                    selectIphoneLoudness(current, option.id as IphoneSimpleLoudness),
+                    selectIphoneLoudness(
+                      current,
+                      option.id as IphoneSimpleLoudness,
+                    ),
                   )
                 }
               >
@@ -816,7 +706,7 @@ export default function App({
               .filter((check) => check.level !== "info")
               .map((check) => (
                 <p key={check.code}>{check.message}</p>
-            ))}
+              ))}
           </section>
         ) : null}
         {exportReceipt ? (
@@ -960,7 +850,11 @@ function withSourceAnalysis(
   analysis: AnalysisResult | null,
 ) {
   const sourceLufs = analysis?.lufs_integrated;
-  if (sourceLufs === undefined || sourceLufs === null || !Number.isFinite(sourceLufs)) {
+  if (
+    sourceLufs === undefined ||
+    sourceLufs === null ||
+    !Number.isFinite(sourceLufs)
+  ) {
     return settings;
   }
   return {
@@ -990,7 +884,9 @@ function ControlGroup({
 }) {
   return (
     <section className="control-group">
-      <SectionTitle meta={meta} step={step}>{title}</SectionTitle>
+      <SectionTitle meta={meta} step={step}>
+        {title}
+      </SectionTitle>
       <div className="segmented">{children}</div>
     </section>
   );
@@ -1132,85 +1028,15 @@ function ExportReadySheet({
       <p className="export-ready-location">
         Saved to Files › On My iPhone › YES Master
       </p>
-      <button data-testid="iphone-export-ready-done" type="button" onClick={onClose}>
+      <button
+        data-testid="iphone-export-ready-done"
+        type="button"
+        onClick={onClose}
+      >
         Done
       </button>
     </section>
   );
-}
-
-function MiniWaveform({
-  error,
-  isLoading,
-  peaks,
-}: {
-  error: string | null;
-  isLoading: boolean;
-  peaks: WaveformPeaks | null;
-}) {
-  const channel = peaks?.channels[0] ?? [];
-  const bars = channel.length > 0 ? downsampleWaveform(channel, 44) : [];
-
-  // A real decode failure must look different from a healthy empty state —
-  // otherwise the flat placeholder reads as "here's your waveform" when it
-  // isn't. The concrete reason is in the Rust log (iphone_prepare_waveform).
-  if (error && bars.length === 0 && !isLoading) {
-    return (
-      <div
-        aria-label="Waveform unavailable"
-        className="mini-waveform is-error"
-        data-testid="iphone-mini-waveform"
-        role="status"
-      >
-        <span className="mini-waveform-note">Waveform unavailable for this file.</span>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      aria-label={isLoading ? "Loading waveform" : "Waveform preview"}
-      className={isLoading ? "mini-waveform is-loading" : "mini-waveform"}
-      data-testid="iphone-mini-waveform"
-    >
-      {bars.length > 0
-        ? bars.map((level, index) => (
-            <span
-              // The waveform is visual only here; the playhead slider remains
-              // the accessible seek control.
-              aria-hidden="true"
-              key={`${index}-${level.toFixed(3)}`}
-              style={{ "--bar-level": level } as CSSProperties}
-            />
-          ))
-        : Array.from({ length: 24 }, (_, index) => (
-            <span
-              aria-hidden="true"
-              key={index}
-              style={{ "--bar-level": 0.22 + (index % 5) * 0.11 } as CSSProperties}
-            />
-          ))}
-    </div>
-  );
-}
-
-function downsampleWaveform(channel: number[], targetBars: number) {
-  if (channel.length <= targetBars) return channel.map(normalizeWaveformLevel);
-  const bucketSize = channel.length / targetBars;
-  return Array.from({ length: targetBars }, (_, bucketIndex) => {
-    const start = Math.floor(bucketIndex * bucketSize);
-    const end = Math.max(start + 1, Math.floor((bucketIndex + 1) * bucketSize));
-    let max = 0;
-    for (let index = start; index < end && index < channel.length; index += 1) {
-      max = Math.max(max, Math.abs(channel[index] ?? 0));
-    }
-    return normalizeWaveformLevel(max);
-  });
-}
-
-function normalizeWaveformLevel(level: number) {
-  if (!Number.isFinite(level)) return 0.08;
-  return Math.max(0.08, Math.min(1, level));
 }
 
 function formatSampleRate(sampleRate: number | null) {
