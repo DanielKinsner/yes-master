@@ -112,21 +112,21 @@ struct ContentView: View {
             appBackground
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 8) {
+                VStack(spacing: 10) {
                     header
                     heroPanel
-                    trackCard
                     auditionSwitch
                     stylePicker
                     intensitySlider
                     loudnessPicker
                     createMasterButton
+                        .padding(.top, 12)
                     shareMasterButton
                     statusAndAnalysis
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
-                .padding(.bottom, 12)
+                .padding(.bottom, 18)
                 .frame(maxWidth: 430)
                 .frame(maxWidth: .infinity)
             }
@@ -217,22 +217,30 @@ struct ContentView: View {
             Image("BrandIcon")
                 .resizable()
                 .scaledToFit()
-                .opacity(0.11)
+                .opacity(0.10)
                 .blendMode(.screen)
-                .frame(width: 236, height: 236)
-                .offset(x: 52, y: -4)
+                .frame(width: 248, height: 248)
+                .offset(x: 58, y: 4)
                 .allowsHitTesting(false)
 
-            playVisual
-                .padding(.horizontal, 14)
-
             VStack {
+                heroTrackRow
+                    .padding(.top, 16)
+                    .padding(.horizontal, 18)
+
                 Spacer()
+
+                playVisual
+                    .padding(.horizontal, 14)
+                    .padding(.top, 12)
+
+                Spacer()
+
                 heroListeningToggles
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 14)
             }
         }
-        .frame(height: 248)
+        .frame(height: 278)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
@@ -302,7 +310,7 @@ struct ContentView: View {
             .disabled(importedTrack != nil && !canPlaySelectedAudition)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 156)
+        .frame(height: 166)
     }
 
     private var heroListeningToggles: some View {
@@ -351,62 +359,70 @@ struct ContentView: View {
         .buttonStyle(.plain)
     }
 
-    private var trackCard: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(importedTrack?.displayName ?? "No track loaded")
-                    .font(.system(size: 17, weight: .heavy))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
+    private var heroTrackRow: some View {
+        HStack(alignment: .top) {
+            Button {
+                isImportingTrack = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: importedTrack == nil ? "tray.and.arrow.down.fill" : "waveform")
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(Color(red: 0.78, green: 0.90, blue: 1.0))
+                        .frame(width: 22, height: 22)
+                        .background(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.41, green: 0.73, blue: 1.0),
+                                    Color(red: 0.12, green: 0.34, blue: 0.78)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
-                Text(importedTrack == nil ? "WAV  MP3  M4A  AAC  FLAC  OGG" : fileTypeLabel)
-                    .font(.system(size: 11, weight: .heavy))
-                    .foregroundStyle(Color(red: 0.76, green: 0.84, blue: 1.0))
-                    .padding(.horizontal, 10)
-                    .frame(height: 20)
-                    .background(Color(red: 0.03, green: 0.06, blue: 0.12).opacity(0.7))
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                    )
+                    Text(trackChipTitle)
+                        .font(.system(size: 13, weight: .heavy))
+                        .foregroundStyle(Color(red: 0.86, green: 0.92, blue: 1.0))
+                        .lineLimit(1)
+
+                    if importedTrack != nil {
+                        Text(fileTypeLabel)
+                            .font(.system(size: 10, weight: .heavy))
+                            .foregroundStyle(Color(red: 0.47, green: 0.62, blue: 0.86))
+                            .lineLimit(1)
+                    }
+                }
+                .padding(.leading, 8)
+                .padding(.trailing, 12)
+                .frame(height: 36)
+                .background(Color(red: 0.02, green: 0.05, blue: 0.12).opacity(0.72))
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(Color(red: 0.35, green: 0.55, blue: 0.95).opacity(0.26), lineWidth: 1)
+                )
             }
+            .buttonStyle(.plain)
 
             Spacer(minLength: 8)
 
             Button {
                 isImportingTrack = true
             } label: {
-                Text(importedTrack == nil ? "Import" : "Change")
-                    .font(.system(size: 14, weight: .heavy))
+                Image(systemName: importedTrack == nil ? "plus" : "pencil")
+                    .font(.system(size: 15, weight: .black))
                     .foregroundStyle(Color(red: 0.86, green: 0.90, blue: 1.0))
-                    .padding(.horizontal, 17)
-                    .frame(height: 36)
-                    .background(.white.opacity(0.06))
-                    .clipShape(Capsule())
+                    .frame(width: 36, height: 36)
+                    .background(Color(red: 0.02, green: 0.05, blue: 0.12).opacity(0.72))
+                    .clipShape(Circle())
                     .overlay(
-                        Capsule()
-                            .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                        Circle()
+                            .stroke(Color(red: 0.35, green: 0.55, blue: 0.95).opacity(0.32), lineWidth: 1)
                     )
             }
             .buttonStyle(.plain)
         }
-        .padding(12)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 0.07, green: 0.12, blue: 0.23).opacity(0.92),
-                    Color(red: 0.025, green: 0.045, blue: 0.09).opacity(0.96)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color(red: 0.38, green: 0.52, blue: 0.84).opacity(0.18), lineWidth: 1)
-        )
     }
 
     private var auditionSwitch: some View {
@@ -543,14 +559,16 @@ struct ContentView: View {
                 .font(.system(size: 10, weight: .heavy))
                 .foregroundStyle(Color(red: 0.56, green: 0.64, blue: 0.80))
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
             .background(Color(red: 0.01, green: 0.02, blue: 0.045).opacity(0.88))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(Color.white.opacity(0.10), lineWidth: 1)
             )
+            .frame(maxWidth: 382)
+            .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 
@@ -658,11 +676,13 @@ struct ContentView: View {
                 analysisSummary(for: analysisResult)
             }
 
-            Text(statusText)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Color(red: 0.50, green: 0.58, blue: 0.74))
-                .multilineTextAlignment(.center)
-                .lineLimit(3)
+            if shouldShowStatusText {
+                Text(statusText)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Color(red: 0.58, green: 0.66, blue: 0.84))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+            }
         }
     }
 
@@ -774,6 +794,22 @@ struct ContentView: View {
         importedTrack?.localURL.pathExtension.uppercased().isEmpty == false
             ? importedTrack?.localURL.pathExtension.uppercased() ?? "AUDIO"
             : "AUDIO"
+    }
+
+    private var trackChipTitle: String {
+        importedTrack?.displayName ?? "Import track"
+    }
+
+    private var shouldShowStatusText: Bool {
+        let lowercasedStatus = statusText.lowercased()
+        return lowercasedStatus.contains("failed")
+            || lowercasedStatus.contains("could not")
+            || lowercasedStatus.contains("not supported")
+            || lowercasedStatus.contains("empty")
+            || lowercasedStatus.contains("not look like")
+            || lowercasedStatus.contains("try ")
+            || lowercasedStatus.contains("no track was selected")
+            || lowercasedStatus.contains("cancelled")
     }
 
     private var selectedAuditionURL: URL? {
