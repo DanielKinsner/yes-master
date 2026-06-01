@@ -1,6 +1,6 @@
 # YES Master iPhone Native - Handoff
 
-_Last updated: 2026-06-01, native phone-test prep._
+_Last updated: 2026-06-01, native import/export hardening._
 
 ## Current Status
 
@@ -30,6 +30,9 @@ Review and follow-up slices now landed on `main` in small commits:
 20. `2c8d3ce style(iphone-native): use YES Master icon artwork`
 21. `98f7214 style(iphone-native): simplify hero controls`
 22. `bfad0fd fix(iphone-native): clarify unreadable wav imports`
+23. `09f0c57 fix(iphone-native): handle unavailable imports`
+24. `f4cb3a5 test(iphone-native): cover render output safety`
+25. `673b93a fix(iphone-native): clean up rejected imports`
 
 The native direction is:
 
@@ -86,6 +89,8 @@ The latest UI cleanup restores the import/play area as the main hero, moves Volu
 
 WAV support was checked after a device screenshot showed `no suitable format reader found`. Normal WAV files analyze successfully, and a new Rust test confirms the native bridge can analyze one of its own rendered 24-bit WAV files. The likely issue is a specific selected file that had a `.wav` name but did not contain readable WAV audio, or was an empty/cloud-placeholder file after import. Native import now catches empty files and `.wav` files that do not look like WAV audio before analysis, and decode failures show a short plain-language message instead of the long Rust decoder text.
 
+Latest no-human hardening adds coverage for missing/deleted source files, rejects unavailable imports with a short message, and removes copied junk from app storage when validation fails. The Rust bridge now also has direct tests proving native renders do not overwrite the source file when rendering beside it and that repeated rendered WAVs stay unique.
+
 Three track-placement mockups were generated outside git because they were based on a user screenshot:
 
 - `/tmp/yes-master-mockups/mockup-a-hero-file-chip.png`
@@ -110,11 +115,11 @@ When the user is home and the phone is connected:
 
 ## Next Slice
 
-1. Manually test import -> analyze -> Create Master -> Mastered playback -> Share Master on the real iPhone.
-2. Pick one subtler track-title placement from the three mockups and implement it.
-3. Consider disabling Create Master with a visible explanation while analysis is pending or failed.
-4. Improve loading states if real-phone render time feels long.
-5. Add any install helper script only after confirming the exact connected-device workflow.
+1. Add automated UI/state coverage for stale share URLs after failed render and settings changes.
+2. Add automated audition-state coverage for Mastered requested before preview is ready.
+3. Manually test import -> analyze -> Create Master -> Mastered playback -> Share Master on the real iPhone when the user has a device connected.
+4. Pick one subtler track-title placement from the three mockups only if the user asks to revisit placement.
+5. Consider disabling Create Master with a visible explanation while analysis is pending or failed.
 6. Keep the UI spacious; do not add waveform/scrubbing unless the user asks.
 
 ## Verification So Far
@@ -386,3 +391,50 @@ Result: signed device build succeeded. The previous app install was removed firs
 Latest screenshot:
 
 - `/tmp/yes-master-screenshots/iphone-native-final-finesse.png`
+
+Latest native hardening pass:
+
+- Landed `09f0c57 fix(iphone-native): handle unavailable imports`.
+- Landed `f4cb3a5 test(iphone-native): cover render output safety`.
+- Landed `673b93a fix(iphone-native): clean up rejected imports`.
+- Missing/deleted import sources now show a short user-facing message instead of a raw file error.
+- Empty or fake WAV imports no longer leave copied junk in app-owned storage.
+- Native Rust render tests now prove source files are not overwritten and repeated rendered masters stay unique.
+- No remote phone install or TestFlight work was attempted.
+
+Latest native hardening checks:
+
+```bash
+cd apps/iphone-native/rust
+cargo test
+```
+
+Result: 11 Rust bridge tests passed, 0 failed.
+
+```bash
+cd apps/iphone-native/rust
+PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" cargo check --target aarch64-apple-ios
+```
+
+Result: passed.
+
+```bash
+cd apps/iphone-native
+xcodegen generate
+```
+
+Result: project regenerated from `project.yml`.
+
+```bash
+cd apps/iphone-native
+xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO test
+```
+
+Result: 12 native Swift tests passed, 0 failed.
+
+```bash
+cd apps/iphone-native
+xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+```
+
+Result: simulator build succeeded and linked the Rust bridge.
