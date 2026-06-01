@@ -192,6 +192,7 @@ describe("iPhone styles", () => {
   it("renders a compact waveform preview in the audition panel", () => {
     const css = readIphoneStyles();
 
+    expect(css).toContain(".waveform-transport-row");
     expect(css).toContain(".mini-waveform");
     expect(css).toContain("grid-template-columns: repeat(44");
     expect(css).toContain("@keyframes waveform-loading");
@@ -202,7 +203,6 @@ describe("iPhone styles", () => {
     const toneCardBlock = cssBlock(css, ".tone-card");
     const toneArtBlock = cssBlock(css, ".tone-card img");
     const trackLabelBlock = cssBlock(css, ".track-label");
-    const customExportLabelBlock = cssBlock(css, ".custom-export-panel label");
     const processingStepsBlock = cssBlock(css, ".processing-steps");
 
     expect(toneCardBlock).toContain("grid-template-columns: 48px minmax(0, 1fr)");
@@ -210,7 +210,6 @@ describe("iPhone styles", () => {
     expect(toneArtBlock).toContain("brightness(0.95)");
     expect(css).not.toMatch(/font-weight:\s*(850|900)/);
     expect(trackLabelBlock).toContain("letter-spacing: 0.12em");
-    expect(customExportLabelBlock).toContain("letter-spacing: 0.1em");
     expect(processingStepsBlock).toContain("letter-spacing: 0.1em");
   });
 

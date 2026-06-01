@@ -7,7 +7,6 @@ import type {
 export type IphoneSimpleFeature =
   | "single-track-import"
   | "tone-presets"
-  | "export-profile"
   | "original-mastered-toggle"
   | "volume-match-toggle"
   | "lufs-preview-toggle"
@@ -17,7 +16,6 @@ export type IphoneSimpleFeature =
 export const IPHONE_SIMPLE_FEATURES: readonly IphoneSimpleFeature[] = [
   "single-track-import",
   "tone-presets",
-  "export-profile",
   "original-mastered-toggle",
   "volume-match-toggle",
   "lufs-preview-toggle",
@@ -27,7 +25,6 @@ export const IPHONE_SIMPLE_FEATURES: readonly IphoneSimpleFeature[] = [
 
 export type IphoneSimpleTone = "balanced" | "warm" | "open" | "punch";
 export type IphoneSimpleLoudness = "low" | "medium" | "high";
-export type IphoneSimpleExportProfile = "streaming" | "cd" | "custom";
 
 export interface IphoneSimpleToneOption {
   id: IphoneSimpleTone;
@@ -41,27 +38,11 @@ export interface IphoneSimpleLoudnessOption {
   targetLufs: number;
 }
 
-export interface IphoneSimpleExportProfileOption {
-  id: IphoneSimpleExportProfile;
-  label: string;
-  ceilingDbtp: number;
-  bitDepth: number | null;
-  sampleRate: number | null;
-}
-
-export interface IphoneSimpleCustomExport {
-  ceilingDbtp?: number;
-  bitDepth?: number;
-  sampleRate?: number;
-}
-
 export interface IphoneSimplePlanInput {
   tone?: IphoneSimpleTone;
   loudness?: IphoneSimpleLoudness;
-  exportProfile?: IphoneSimpleExportProfile;
   volumeMatch?: boolean;
   lufsPreview?: boolean;
-  customExport?: IphoneSimpleCustomExport;
 }
 
 export interface IphoneSimplePlan {
@@ -79,34 +60,14 @@ export const iphoneSimpleToneOptions: readonly IphoneSimpleToneOption[] = [
 ];
 
 export const iphoneSimpleLoudnessOptions: readonly IphoneSimpleLoudnessOption[] = [
-  { id: "low", label: "Low", targetLufs: -16 },
-  { id: "medium", label: "Medium", targetLufs: -14 },
-  { id: "high", label: "High", targetLufs: -10.5 },
+  { id: "low", label: "Low", targetLufs: -14 },
+  { id: "medium", label: "Medium", targetLufs: -11 },
+  { id: "high", label: "High", targetLufs: -9 },
 ];
 
-export const iphoneSimpleExportProfileOptions: readonly IphoneSimpleExportProfileOption[] = [
-  {
-    id: "streaming",
-    label: "Streaming",
-    ceilingDbtp: -1,
-    bitDepth: 24,
-    sampleRate: 48_000,
-  },
-  {
-    id: "cd",
-    label: "CD",
-    ceilingDbtp: -1,
-    bitDepth: 16,
-    sampleRate: 44_100,
-  },
-  {
-    id: "custom",
-    label: "Custom",
-    ceilingDbtp: -1,
-    bitDepth: null,
-    sampleRate: null,
-  },
-];
+const IPHONE_FIXED_CEILING_DBTP = -1;
+const IPHONE_FIXED_BIT_DEPTH = 24;
+const IPHONE_FIXED_SAMPLE_RATE = 44_100;
 
 export function buildIphoneSimplePlan(
   input: IphoneSimplePlanInput = {},
@@ -116,11 +77,7 @@ export function buildIphoneSimplePlan(
     iphoneSimpleLoudnessOptions,
     input.loudness ?? "medium",
   );
-  const exportProfile = findOption(
-    iphoneSimpleExportProfileOptions,
-    input.exportProfile ?? "streaming",
-  );
-  const advanced = buildAdvancedSettings(loudness.targetLufs, exportProfile, input);
+  const advanced = buildAdvancedSettings(loudness.targetLufs);
   const baseSettings = buildBaseSettings(tone.preset, advanced);
   const exportSettings = {
     ...baseSettings,
@@ -163,13 +120,10 @@ function buildBaseSettings(
 
 function buildAdvancedSettings(
   targetLufs: number,
-  exportProfile: IphoneSimpleExportProfileOption,
-  input: IphoneSimplePlanInput,
 ): AdvancedSettings {
-  const custom = input.exportProfile === "custom" ? input.customExport : undefined;
   return {
     lufs_offset_db: targetLufs,
-    ceiling_dbtp: custom?.ceilingDbtp ?? exportProfile.ceilingDbtp,
+    ceiling_dbtp: IPHONE_FIXED_CEILING_DBTP,
     width: null,
     warmth: null,
     presence_air: null,
@@ -188,8 +142,8 @@ function buildAdvancedSettings(
     compression_high_attack_ms: null,
     compression_high_release_ms: null,
     compression_link_stereo: null,
-    bit_depth: custom?.bitDepth ?? exportProfile.bitDepth,
-    target_sample_rate: custom?.sampleRate ?? exportProfile.sampleRate,
+    bit_depth: IPHONE_FIXED_BIT_DEPTH,
+    target_sample_rate: IPHONE_FIXED_SAMPLE_RATE,
   };
 }
 

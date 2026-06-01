@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   IPHONE_SIMPLE_FEATURES,
   buildIphoneSimplePlan,
-  iphoneSimpleExportProfileOptions,
   iphoneSimpleLoudnessOptions,
   iphoneSimpleToneOptions,
 } from "./simple-mode";
@@ -12,7 +11,6 @@ describe("iPhone Simple Mode contract", () => {
     expect(IPHONE_SIMPLE_FEATURES).toEqual([
       "single-track-import",
       "tone-presets",
-      "export-profile",
       "original-mastered-toggle",
       "volume-match-toggle",
       "lufs-preview-toggle",
@@ -46,27 +44,20 @@ describe("iPhone Simple Mode contract", () => {
     });
   });
 
-  it("keeps loudness separate from the export destination profile", () => {
+  it("uses one fixed iPhone WAV destination with a default -11 LUFS medium target", () => {
     expect(iphoneSimpleLoudnessOptions.map((option) => option.targetLufs)).toEqual([
-      -16,
       -14,
-      -10.5,
-    ]);
-    expect(iphoneSimpleExportProfileOptions.map((option) => option.id)).toEqual([
-      "streaming",
-      "cd",
-      "custom",
+      -11,
+      -9,
     ]);
 
     const plan = buildIphoneSimplePlan({
       tone: "open",
-      loudness: "high",
-      exportProfile: "cd",
     });
 
     expect(plan.exportSettings.delivery_profile).toBe("custom");
-    expect(plan.exportSettings.advanced.lufs_offset_db).toBe(-10.5);
-    expect(plan.exportSettings.advanced.bit_depth).toBe(16);
+    expect(plan.exportSettings.advanced.lufs_offset_db).toBe(-11);
+    expect(plan.exportSettings.advanced.bit_depth).toBe(24);
     expect(plan.exportSettings.advanced.target_sample_rate).toBe(44_100);
     expect(plan.exportSettings.advanced.ceiling_dbtp).toBe(-1);
   });
@@ -82,19 +73,13 @@ describe("iPhone Simple Mode contract", () => {
     expect(plan.previewLufsLanding).toBe(true);
   });
 
-  it("supports a custom iPhone export destination without enabling smart analysis", () => {
-    const plan = buildIphoneSimplePlan({
-      exportProfile: "custom",
-      customExport: {
-        bitDepth: 24,
-        ceilingDbtp: -2,
-        sampleRate: 96_000,
-      },
-    });
+  it("keeps the fixed iPhone WAV destination when loudness changes", () => {
+    const plan = buildIphoneSimplePlan({ loudness: "high" });
 
     expect(plan.exportSettings.advanced.bit_depth).toBe(24);
-    expect(plan.exportSettings.advanced.ceiling_dbtp).toBe(-2);
-    expect(plan.exportSettings.advanced.target_sample_rate).toBe(96_000);
+    expect(plan.exportSettings.advanced.ceiling_dbtp).toBe(-1);
+    expect(plan.exportSettings.advanced.target_sample_rate).toBe(44_100);
+    expect(plan.exportSettings.advanced.lufs_offset_db).toBe(-9);
     expect(plan.usesAdaptiveAnalysis).toBe(false);
   });
 });

@@ -3,10 +3,8 @@ import {
   attachIphoneTrack,
   initialIphoneAppState,
   markIphoneAnalysisReady,
-  selectIphoneExportProfile,
   selectIphoneLoudness,
   selectIphoneTone,
-  setIphoneCustomExport,
   setIphonePlayhead,
   switchIphonePlayback,
   toggleIphoneLufsPreview,
@@ -20,7 +18,6 @@ describe("iPhone app state", () => {
     expect(initialIphoneAppState.track).toBeNull();
     expect(initialIphoneAppState.selectedTone).toBe("balanced");
     expect(initialIphoneAppState.selectedLoudness).toBe("medium");
-    expect(initialIphoneAppState.selectedExportProfile).toBe("streaming");
     expect(initialIphoneAppState.playback).toBe("original");
   });
 
@@ -58,10 +55,7 @@ describe("iPhone app state", () => {
   it("feeds the Simple contract from the selected phone controls", () => {
     const state = toggleIphoneLufsPreview(
       toggleIphoneVolumeMatch(
-        selectIphoneExportProfile(
-          selectIphoneLoudness(selectIphoneTone(initialIphoneAppState, "warm"), "high"),
-          "cd",
-        ),
+        selectIphoneLoudness(selectIphoneTone(initialIphoneAppState, "warm"), "high"),
       ),
     );
 
@@ -70,8 +64,9 @@ describe("iPhone app state", () => {
     expect(plan.auditionSettings.preset).toEqual({ kind: "warmth" });
     expect(plan.auditionSettings.volume_match).toBe(false);
     expect(plan.exportSettings.volume_match).toBe(false);
-    expect(plan.exportSettings.advanced.lufs_offset_db).toBe(-10.5);
-    expect(plan.exportSettings.advanced.bit_depth).toBe(16);
+    expect(plan.exportSettings.advanced.lufs_offset_db).toBe(-9);
+    expect(plan.exportSettings.advanced.bit_depth).toBe(24);
+    expect(plan.exportSettings.advanced.target_sample_rate).toBe(44_100);
     expect(plan.previewLufsLanding).toBe(true);
   });
 
@@ -88,20 +83,12 @@ describe("iPhone app state", () => {
     expect(volumeMatchedAgain.lufsPreview).toBe(false);
   });
 
-  it("feeds Custom export settings into the Simple plan", () => {
-    const custom = setIphoneCustomExport(
-      selectIphoneExportProfile(initialIphoneAppState, "custom"),
-      {
-        ceilingDbtp: -2,
-        bitDepth: 16,
-        sampleRate: 96_000,
-      },
-    );
+  it("always feeds the fixed iPhone WAV export format into the Simple plan", () => {
+    const plan = toIphoneSimplePlan(initialIphoneAppState);
 
-    const plan = toIphoneSimplePlan(custom);
-
-    expect(plan.exportSettings.advanced.ceiling_dbtp).toBe(-2);
-    expect(plan.exportSettings.advanced.bit_depth).toBe(16);
-    expect(plan.exportSettings.advanced.target_sample_rate).toBe(96_000);
+    expect(plan.exportSettings.advanced.ceiling_dbtp).toBe(-1);
+    expect(plan.exportSettings.advanced.bit_depth).toBe(24);
+    expect(plan.exportSettings.advanced.target_sample_rate).toBe(44_100);
+    expect(plan.exportSettings.advanced.lufs_offset_db).toBe(-11);
   });
 });

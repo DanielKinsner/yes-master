@@ -151,15 +151,6 @@ async function scrub(container: HTMLElement, selector: string, value: string) {
   });
 }
 
-async function choose(container: HTMLElement, selector: string, value: string) {
-  const element = container.querySelector<HTMLSelectElement>(selector);
-  if (!element) throw new Error(`Missing element ${selector}`);
-  await act(async () => {
-    element.value = value;
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-}
-
 describe("iPhone app shell", () => {
   it("opens as a Simple-only phone app without desktop advanced controls", () => {
     const { container, root } = renderApp();
@@ -456,49 +447,46 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
-  it("lets the user pick tone, loudness, profile, audition mode, and export", async () => {
+  it("lets the user pick tone, loudness, audition mode, and export", async () => {
     const { container, root } = renderApp();
 
     await click(container, "[data-testid='iphone-import']");
     await click(container, "[data-testid='tone-warm']");
     await click(container, "[data-testid='loudness-high']");
-    await click(container, "[data-testid='profile-cd']");
     await click(container, "[data-testid='playback-mastered']");
     await click(container, "[data-testid='volume-match']");
     await click(container, "[data-testid='lufs-preview']");
 
     expect(container.textContent).toContain("Warm");
-    expect(container.textContent).toContain("-10.5 LUFS");
+    expect(container.textContent).toContain("-9.0 LUFS");
     expect(container.textContent).toContain("44.1 kHz");
-    expect(container.textContent).toContain("16-bit");
+    expect(container.textContent).toContain("24-bit");
     expect(container.textContent).toContain("Mastered");
     expect(container.textContent).toContain("Create Master");
+    expect(container.querySelector("[data-testid='profile-cd']")).toBeNull();
 
     act(() => root.unmount());
   });
 
-  it("folds target and format into the compact Profile controls", async () => {
+  it("shows the fixed iPhone WAV export target beside Loudness", async () => {
     const { container, root } = renderApp();
 
     await click(container, "[data-testid='iphone-import']");
 
     expect(container.querySelector(".master-card")).toBeNull();
+    expect(container.querySelector("[data-testid='profile-streaming']")).toBeNull();
     expect(container.querySelector(".section-meta")?.textContent).toContain(
-      "-14.0 LUFS",
+      "-11.0 LUFS",
     );
-    expect(
-      container.querySelector("[data-testid='profile-streaming']")?.textContent,
-    ).toContain("48 kHz / 24-bit");
+    expect(container.querySelector(".section-meta")?.textContent).toContain(
+      "44.1 kHz WAV / 24-bit",
+    );
 
     await click(container, "[data-testid='loudness-high']");
-    await click(container, "[data-testid='profile-cd']");
 
     expect(container.querySelector(".section-meta")?.textContent).toContain(
-      "-10.5 LUFS",
+      "-9.0 LUFS",
     );
-    expect(
-      container.querySelector("[data-testid='profile-cd']")?.textContent,
-    ).toContain("44.1 kHz / 16-bit");
 
     act(() => root.unmount());
   });
@@ -707,7 +695,7 @@ describe("iPhone app shell", () => {
       "/private/new-master.wav",
       expect.objectContaining({
         advanced: expect.objectContaining({
-          lufs_offset_db: -14,
+          lufs_offset_db: -11,
         }),
       }),
       0,
@@ -768,29 +756,26 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
-  it("exports with the selected Custom profile settings", async () => {
+  it("exports with the fixed iPhone WAV settings", async () => {
     const { backend, container, root } = renderApp();
 
     await click(container, "[data-testid='iphone-import']");
-    await click(container, "[data-testid='profile-custom']");
-    await choose(container, "[data-testid='custom-sample-rate']", "96000");
-    await choose(container, "[data-testid='custom-bit-depth']", "16");
-    await choose(container, "[data-testid='custom-ceiling']", "-2");
     await click(container, "[data-testid='iphone-export']");
 
     expect(backend.renderMaster).toHaveBeenCalledWith(
       expect.objectContaining({
         settings: expect.objectContaining({
           advanced: expect.objectContaining({
-            target_sample_rate: 96_000,
-            bit_depth: 16,
-            ceiling_dbtp: -2,
+            lufs_offset_db: -11,
+            target_sample_rate: 44_100,
+            bit_depth: 24,
+            ceiling_dbtp: -1,
           }),
         }),
       }),
     );
-    expect(container.textContent).toContain("96 kHz");
-    expect(container.textContent).toContain("16-bit");
+    expect(container.textContent).toContain("44.1 kHz");
+    expect(container.textContent).toContain("24-bit");
 
     act(() => root.unmount());
   });
@@ -817,7 +802,7 @@ describe("iPhone app shell", () => {
     expect(container.textContent).toContain("Exported");
     expect(container.textContent).toContain("Master ready");
     expect(container.textContent).toContain("new-master__master.wav");
-    expect(container.textContent).toContain("-14.0 LUFS");
+    expect(container.textContent).toContain("-11.0 LUFS");
 
     act(() => root.unmount());
   });

@@ -10,16 +10,13 @@ import {
   attachIphoneTrack,
   initialIphoneAppState,
   markIphoneAnalysisReady,
-  selectIphoneExportProfile,
   selectIphoneLoudness,
   selectIphoneTone,
-  setIphoneCustomExport,
   setIphonePlayhead,
   switchIphonePlayback,
   toggleIphoneLufsPreview,
   toggleIphoneVolumeMatch,
   toIphoneSimplePlan,
-  type IphoneCustomExportSettings,
   type IphoneAppState,
   type IphoneTrack,
 } from "./app-state";
@@ -37,11 +34,8 @@ import type {
   WaveformPeaks,
 } from "../../../src/bindings";
 import {
-  iphoneSimpleExportProfileOptions,
   iphoneSimpleLoudnessOptions,
   iphoneSimpleToneOptions,
-  type IphoneSimpleExportProfile,
-  type IphoneSimpleExportProfileOption,
   type IphoneSimpleLoudness,
   type IphoneSimpleTone,
 } from "./simple-mode";
@@ -143,18 +137,14 @@ export default function App({
       JSON.stringify({
         tone: state.selectedTone,
         loudness: state.selectedLoudness,
-        profile: state.selectedExportProfile,
         volumeMatch: state.volumeMatch,
         lufsPreview: state.lufsPreview,
-        customExport: state.customExport,
       }),
     [
       state.selectedTone,
       state.selectedLoudness,
-      state.selectedExportProfile,
       state.volumeMatch,
       state.lufsPreview,
-      state.customExport,
     ],
   );
   const hasTrack = state.track !== null;
@@ -179,7 +169,7 @@ export default function App({
   const sampleRate = plan.exportSettings.advanced.target_sample_rate;
   const bitDepth = plan.exportSettings.advanced.bit_depth;
   const targetLufs = plan.exportSettings.advanced.lufs_offset_db;
-  const profileSummary = `${targetLufs?.toFixed(1) ?? "-14.0"} LUFS · ${formatSampleRate(sampleRate)} / ${formatBitDepth(bitDepth)}`;
+  const outputSummary = `${targetLufs?.toFixed(1) ?? "-11.0"} LUFS · ${formatSampleRate(sampleRate)} WAV / ${formatBitDepth(bitDepth)}`;
   const selectedToneVisual = IPHONE_TONE_VISUALS[state.selectedTone];
   const heroImportLabel = isImporting ? "Importing..." : "Import Track";
   const heroActionDisabled = hasTrack
@@ -561,17 +551,6 @@ export default function App({
     }
   }
 
-  function updateCustomExport(
-    nextCustomExport: Partial<IphoneCustomExportSettings>,
-  ) {
-    updateAuditionSettings((current) =>
-      setIphoneCustomExport(current, {
-        ...current.customExport,
-        ...nextCustomExport,
-      }),
-    );
-  }
-
   function updateAuditionSettings(
     update: (current: IphoneAppState) => IphoneAppState,
   ) {
@@ -727,11 +706,30 @@ export default function App({
             </SegmentButton>
             </div>
 
-            <MiniWaveform
-              error={waveformError}
-              isLoading={isLoadingWaveform}
-              peaks={waveform}
-            />
+            <div className="waveform-transport-row">
+              <button
+                className="native-play-button"
+                data-testid="iphone-native-play"
+                type="button"
+                disabled={!canRenderMaster || controlsLocked}
+                onClick={toggleAuditionPlayback}
+              >
+                <span
+                  className={
+                    isAuditionPlaying ? "hero-pause-glyph" : "hero-play-glyph"
+                  }
+                  aria-hidden="true"
+                />
+                <span className="transport-label">
+                  {isAuditionPlaying ? "Pause" : "Play"}
+                </span>
+              </button>
+              <MiniWaveform
+                error={waveformError}
+                isLoading={isLoadingWaveform}
+                peaks={waveform}
+              />
+            </div>
 
             <div className="playhead-row" aria-label="Playhead">
             <span>{formatTime(state.playheadSeconds)}</span>
@@ -769,21 +767,6 @@ export default function App({
             />
             <span>{formatTime(trackDuration)}</span>
             </div>
-            <button
-              className="native-play-button"
-              data-testid="iphone-native-play"
-              type="button"
-              disabled={!canRenderMaster || controlsLocked}
-              onClick={toggleAuditionPlayback}
-            >
-              <span
-                className={
-                  isAuditionPlaying ? "hero-pause-glyph" : "hero-play-glyph"
-                }
-                aria-hidden="true"
-              />
-              {isAuditionPlaying ? "Pause" : "Play"}
-            </button>
           </section>
         ) : null}
 
@@ -798,7 +781,7 @@ export default function App({
             }
           />
 
-          <ControlGroup step="2" title="Loudness">
+          <ControlGroup meta={outputSummary} step="2" title="Loudness">
             {iphoneSimpleLoudnessOptions.map((option) => (
               <SegmentButton
                 key={option.id}
@@ -815,87 +798,6 @@ export default function App({
               </SegmentButton>
             ))}
           </ControlGroup>
-
-          <ControlGroup meta={profileSummary} step="3" title="Profile">
-            {iphoneSimpleExportProfileOptions.map((option) => (
-              <SegmentButton
-                key={option.id}
-                active={state.selectedExportProfile === option.id}
-                disabled={controlsLocked}
-                testId={`profile-${option.id}`}
-                onClick={() =>
-                  updateAuditionSettings((current) =>
-                    selectIphoneExportProfile(
-                      current,
-                      option.id as IphoneSimpleExportProfile,
-                    ),
-                  )
-                }
-              >
-                <span>{option.label}</span>
-                <small>
-                  {formatProfileOptionSummary(option, state.customExport)}
-                </small>
-              </SegmentButton>
-            ))}
-          </ControlGroup>
-
-          {state.selectedExportProfile === "custom" ? (
-            <section className="custom-export-panel" aria-label="Custom export">
-              <label>
-                <span>Rate</span>
-                <select
-                  data-testid="custom-sample-rate"
-                  disabled={controlsLocked}
-                  value={state.customExport.sampleRate ?? "source"}
-                  onChange={(event) =>
-                    updateCustomExport({
-                      sampleRate: parseOptionalNumber(event.currentTarget.value),
-                    })
-                  }
-                >
-                  <option value="source">Source</option>
-                  <option value="44100">44.1 kHz</option>
-                  <option value="48000">48 kHz</option>
-                  <option value="96000">96 kHz</option>
-                </select>
-              </label>
-              <label>
-                <span>Depth</span>
-                <select
-                  data-testid="custom-bit-depth"
-                  disabled={controlsLocked}
-                  value={state.customExport.bitDepth ?? "source"}
-                  onChange={(event) =>
-                    updateCustomExport({
-                      bitDepth: parseOptionalNumber(event.currentTarget.value),
-                    })
-                  }
-                >
-                  <option value="source">Source</option>
-                  <option value="16">16-bit</option>
-                  <option value="24">24-bit</option>
-                </select>
-              </label>
-              <label>
-                <span>Ceiling</span>
-                <select
-                  data-testid="custom-ceiling"
-                  disabled={controlsLocked}
-                  value={state.customExport.ceilingDbtp}
-                  onChange={(event) =>
-                    updateCustomExport({
-                      ceilingDbtp: Number(event.currentTarget.value),
-                    })
-                  }
-                >
-                  <option value="-1">-1 dBTP</option>
-                  <option value="-1.5">-1.5 dBTP</option>
-                  <option value="-2">-2 dBTP</option>
-                </select>
-              </label>
-            </section>
-          ) : null}
         </section>
 
         <button
@@ -1321,17 +1223,6 @@ function formatBitDepth(bitDepth: number | null) {
   return `${bitDepth}-bit`;
 }
 
-function formatProfileOptionSummary(
-  option: IphoneSimpleExportProfileOption,
-  customExport: IphoneCustomExportSettings,
-) {
-  const sampleRate =
-    option.id === "custom" ? customExport.sampleRate ?? null : option.sampleRate;
-  const bitDepth =
-    option.id === "custom" ? customExport.bitDepth ?? null : option.bitDepth;
-  return `${formatSampleRate(sampleRate)} / ${formatBitDepth(bitDepth)}`;
-}
-
 function formatSourceFormat(sourceFormat: string) {
   return sourceFormat.trim().toUpperCase() || "AUDIO";
 }
@@ -1351,8 +1242,4 @@ function formatTime(seconds: number | null | undefined) {
   const minutes = Math.floor(safeSeconds / 60);
   const remainingSeconds = safeSeconds % 60;
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-}
-
-function parseOptionalNumber(value: string) {
-  return value === "source" ? null : Number(value);
 }

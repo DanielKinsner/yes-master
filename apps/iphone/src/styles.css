@@ -88,9 +88,9 @@ button {
 }
 
 .phone-frame.has-track {
-  gap: 7px;
+  gap: 9px;
   padding:
-    max(8px, env(safe-area-inset-top))
+    max(10px, env(safe-area-inset-top))
     max(10px, env(safe-area-inset-right))
     max(10px, env(safe-area-inset-bottom))
     max(10px, env(safe-area-inset-left));
@@ -252,8 +252,8 @@ h3 {
 }
 
 .hero-panel.is-loaded {
-  min-height: 160px;
-  padding: 8px;
+  min-height: 190px;
+  padding: 10px;
 }
 
 .hero-panel::before {
@@ -295,9 +295,9 @@ h3 {
 }
 
 .hero-panel.is-loaded::before {
-  height: 44px;
-  left: 38px;
-  right: 38px;
+  height: 56px;
+  left: 28px;
+  right: 28px;
   top: 46%;
 }
 
@@ -319,9 +319,9 @@ h3 {
 }
 
 .hero-panel.is-loaded::after {
-  height: 160px;
+  height: 196px;
   opacity: 0.28;
-  width: 160px;
+  width: 196px;
 }
 
 .hero-copy {
@@ -395,7 +395,7 @@ h3 {
 }
 
 .hero-panel.is-loaded .hero-orb {
-  min-height: 100px;
+  min-height: 130px;
 }
 
 .hero-orb::before,
@@ -415,13 +415,13 @@ h3 {
 }
 
 .hero-panel.is-loaded .hero-orb::before {
-  height: 138px;
-  width: 138px;
+  height: 172px;
+  width: 172px;
 }
 
 .hero-panel.is-loaded .hero-orb::after {
-  height: 94px;
-  width: 94px;
+  height: 118px;
+  width: 118px;
 }
 
 .hero-orb::after {
@@ -484,8 +484,8 @@ h3 {
 }
 
 .hero-panel.is-loaded .hero-orb.has-track .hero-action-button {
-  height: 56px;
-  width: 56px;
+  height: 66px;
+  width: 66px;
 }
 
 .hero-panel.is-loaded .hero-orb.has-track .hero-action-button::before {
@@ -719,8 +719,8 @@ h3 {
 
 .phone-frame.has-track .track-meta-row,
 .phone-frame.has-track .audition-panel {
-  gap: 7px;
-  padding: 8px 10px;
+  gap: 9px;
+  padding: 10px;
 }
 
 .track-meta-row {
@@ -835,7 +835,7 @@ h3 {
 
 .phone-frame.has-track .mini-waveform {
   border-radius: 10px;
-  height: 46px;
+  height: 64px;
   padding: 7px;
 }
 
@@ -915,8 +915,7 @@ h3 {
 }
 
 .segment:disabled,
-.tone-card:disabled,
-.custom-export-panel select:disabled {
+.tone-card:disabled {
   cursor: not-allowed;
   opacity: 0.54;
 }
@@ -966,8 +965,27 @@ h3 {
 
 .phone-frame.has-track .native-play-button {
   font-size: 0.82rem;
-  height: 34px;
-  min-width: 116px;
+  height: 58px;
+  min-width: 0;
+  padding: 0;
+  width: 58px;
+}
+
+.waveform-transport-row .native-play-button {
+  border-radius: 16px;
+  box-shadow:
+    0 12px 28px rgba(20, 87, 232, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.transport-label {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 .native-play-button .hero-play-glyph {
@@ -1035,9 +1053,9 @@ h3 {
 
 .phone-frame.has-track .tone-card {
   gap: 6px;
-  grid-template-columns: 34px minmax(0, 1fr);
-  min-height: 52px;
-  padding: 7px;
+  grid-template-columns: 42px minmax(0, 1fr);
+  min-height: 62px;
+  padding: 8px;
 }
 
 .tone-card img {
@@ -1049,8 +1067,8 @@ h3 {
 }
 
 .phone-frame.has-track .tone-card img {
-  height: 34px;
-  width: 34px;
+  height: 42px;
+  width: 42px;
 }
 
 .tone-card span {
@@ -1077,7 +1095,7 @@ h3 {
 }
 
 .phone-frame.has-track .tone-card small {
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   font-size: 0.6rem;
 }
 
@@ -1093,36 +1111,6 @@ h3 {
   box-shadow:
     0 0 24px color-mix(in srgb, var(--tone-accent, var(--accent)) 22%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.custom-export-panel {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.custom-export-panel label {
-  color: var(--text-2);
-  display: grid;
-  font-size: 0.7rem;
-  font-weight: 600;
-  gap: 5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.custom-export-panel select {
-  appearance: none;
-  background: var(--bg-2);
-  border: 1px solid rgba(236, 240, 250, 0.12);
-  border-radius: var(--radius);
-  color: var(--text-0);
-  font: inherit;
-  font-size: 0.8rem;
-  min-height: 42px;
-  padding: 0 10px;
-  text-transform: none;
-  width: 100%;
 }
 
 .export-button {
@@ -1485,4 +1473,10 @@ h3 {
   .hero-option-row {
     grid-template-columns: 1fr;
   }
+}
+.waveform-transport-row {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 58px minmax(0, 1fr);
 }

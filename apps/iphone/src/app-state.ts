@@ -1,6 +1,4 @@
 import type {
-  IphoneSimpleCustomExport,
-  IphoneSimpleExportProfile,
   IphoneSimpleLoudness,
   IphoneSimplePlan,
   IphoneSimpleTone,
@@ -10,12 +8,6 @@ import { buildIphoneSimplePlan } from "./simple-mode";
 export type IphoneAppMode = "simple";
 export type IphonePlayback = "original" | "mastered";
 export type IphoneAnalysisStatus = "idle" | "needed" | "ready";
-
-export interface IphoneCustomExportSettings {
-  ceilingDbtp: number;
-  bitDepth: number | null;
-  sampleRate: number | null;
-}
 
 export interface IphoneTrack {
   id: string;
@@ -33,8 +25,6 @@ export interface IphoneAppState {
   analysisStatus: IphoneAnalysisStatus;
   selectedTone: IphoneSimpleTone;
   selectedLoudness: IphoneSimpleLoudness;
-  selectedExportProfile: IphoneSimpleExportProfile;
-  customExport: IphoneCustomExportSettings;
   playback: IphonePlayback;
   playheadSeconds: number;
   volumeMatch: boolean;
@@ -47,12 +37,6 @@ export const initialIphoneAppState: IphoneAppState = {
   analysisStatus: "idle",
   selectedTone: "balanced",
   selectedLoudness: "medium",
-  selectedExportProfile: "streaming",
-  customExport: {
-    ceilingDbtp: -1,
-    bitDepth: null,
-    sampleRate: null,
-  },
   playback: "original",
   playheadSeconds: 0,
   volumeMatch: false,
@@ -100,26 +84,6 @@ export function selectIphoneLoudness(
   };
 }
 
-export function selectIphoneExportProfile(
-  state: IphoneAppState,
-  selectedExportProfile: IphoneSimpleExportProfile,
-): IphoneAppState {
-  return {
-    ...state,
-    selectedExportProfile,
-  };
-}
-
-export function setIphoneCustomExport(
-  state: IphoneAppState,
-  customExport: IphoneCustomExportSettings,
-): IphoneAppState {
-  return {
-    ...state,
-    customExport,
-  };
-}
-
 export function switchIphonePlayback(
   state: IphoneAppState,
   playback: IphonePlayback,
@@ -162,19 +126,7 @@ export function toIphoneSimplePlan(state: IphoneAppState): IphoneSimplePlan {
   return buildIphoneSimplePlan({
     tone: state.selectedTone,
     loudness: state.selectedLoudness,
-    exportProfile: state.selectedExportProfile,
     volumeMatch: state.volumeMatch,
     lufsPreview: state.lufsPreview,
-    customExport: toSimpleCustomExport(state.customExport),
   });
-}
-
-function toSimpleCustomExport(
-  customExport: IphoneCustomExportSettings,
-): IphoneSimpleCustomExport {
-  return {
-    ceilingDbtp: customExport.ceilingDbtp,
-    bitDepth: customExport.bitDepth ?? undefined,
-    sampleRate: customExport.sampleRate ?? undefined,
-  };
 }
