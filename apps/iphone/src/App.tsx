@@ -114,6 +114,7 @@ export default function App({
   );
   const [waveform, setWaveform] = useState<WaveformPeaks | null>(null);
   const [isLoadingWaveform, setIsLoadingWaveform] = useState(false);
+  const [waveformError, setWaveformError] = useState<string | null>(null);
   const [isAuditionPlaying, setIsAuditionPlaying] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [operation, setOperation] = useState<IphoneOperation>("idle");
@@ -243,13 +244,18 @@ export default function App({
     const requestVersion = waveformRequestVersionRef.current + 1;
     waveformRequestVersionRef.current = requestVersion;
     setIsLoadingWaveform(true);
+    setWaveformError(null);
     try {
       const nextWaveform = await backend.prepareWaveform(track.id, track.path, 140);
       if (requestVersion !== waveformRequestVersionRef.current) return;
       setWaveform(nextWaveform);
-    } catch {
+    } catch (error) {
       if (requestVersion !== waveformRequestVersionRef.current) return;
       setWaveform(null);
+      // Don't swallow it into a fake flat placeholder — record why so the user
+      // sees a distinct "unavailable" state and the device log (lib.rs) is
+      // actionable. Gated by requestVersion so a superseded load can't stomp it.
+      setWaveformError(toIphoneErrorMessage(error));
     } finally {
       if (requestVersion === waveformRequestVersionRef.current) {
         setIsLoadingWaveform(false);
@@ -260,6 +266,7 @@ export default function App({
   function clearWaveform() {
     waveformRequestVersionRef.current += 1;
     setWaveform(null);
+    setWaveformError(null);
     setIsLoadingWaveform(false);
   }
 
@@ -551,6 +558,7 @@ export default function App({
             </div>
 
             <MiniWaveform
+              error={waveformError}
               isLoading={isLoadingWaveform}
               peaks={waveform}
             />
@@ -1027,14 +1035,32 @@ function ExportReadySheet({
 }
 
 function MiniWaveform({
+  error,
   isLoading,
   peaks,
 }: {
+  error: string | null;
   isLoading: boolean;
   peaks: WaveformPeaks | null;
 }) {
   const channel = peaks?.channels[0] ?? [];
   const bars = channel.length > 0 ? downsampleWaveform(channel, 44) : [];
+
+  // A real decode failure must look different from a healthy empty state —
+  // otherwise the flat placeholder reads as "here's your waveform" when it
+  // isn't. The concrete reason is in the Rust log (iphone_prepare_waveform).
+  if (error && bars.length === 0 && !isLoading) {
+    return (
+      <div
+        aria-label="Waveform unavailable"
+        className="mini-waveform is-error"
+        data-testid="iphone-mini-waveform"
+        role="status"
+      >
+        <span className="mini-waveform-note">Waveform unavailable for this file.</span>
+      </div>
+    );
+  }
 
   return (
     <div
