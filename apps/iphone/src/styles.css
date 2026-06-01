@@ -252,8 +252,8 @@ h3 {
 }
 
 .hero-panel.is-loaded {
-  min-height: 186px;
-  padding: 9px;
+  min-height: 160px;
+  padding: 8px;
 }
 
 .hero-panel::before {
@@ -295,9 +295,9 @@ h3 {
 }
 
 .hero-panel.is-loaded::before {
-  height: 52px;
-  left: 32px;
-  right: 32px;
+  height: 44px;
+  left: 38px;
+  right: 38px;
   top: 46%;
 }
 
@@ -319,9 +319,9 @@ h3 {
 }
 
 .hero-panel.is-loaded::after {
-  height: 190px;
+  height: 160px;
   opacity: 0.28;
-  width: 190px;
+  width: 160px;
 }
 
 .hero-copy {
@@ -395,7 +395,7 @@ h3 {
 }
 
 .hero-panel.is-loaded .hero-orb {
-  min-height: 124px;
+  min-height: 100px;
 }
 
 .hero-orb::before,
@@ -415,13 +415,13 @@ h3 {
 }
 
 .hero-panel.is-loaded .hero-orb::before {
-  height: 168px;
-  width: 168px;
+  height: 138px;
+  width: 138px;
 }
 
 .hero-panel.is-loaded .hero-orb::after {
-  height: 112px;
-  width: 112px;
+  height: 94px;
+  width: 94px;
 }
 
 .hero-orb::after {
@@ -484,8 +484,8 @@ h3 {
 }
 
 .hero-panel.is-loaded .hero-orb.has-track .hero-action-button {
-  height: 64px;
-  width: 64px;
+  height: 56px;
+  width: 56px;
 }
 
 .hero-panel.is-loaded .hero-orb.has-track .hero-action-button::before {
@@ -719,8 +719,8 @@ h3 {
 
 .phone-frame.has-track .track-meta-row,
 .phone-frame.has-track .audition-panel {
-  gap: 8px;
-  padding: 9px 10px;
+  gap: 7px;
+  padding: 8px 10px;
 }
 
 .track-meta-row {
@@ -835,7 +835,7 @@ h3 {
 
 .phone-frame.has-track .mini-waveform {
   border-radius: 10px;
-  height: 52px;
+  height: 46px;
   padding: 7px;
 }
 
@@ -890,6 +890,7 @@ h3 {
   line-height: 1.05;
   min-height: 40px;
   padding: 0 10px;
+  place-content: center;
 }
 
 .segment small {
@@ -965,7 +966,7 @@ h3 {
 
 .phone-frame.has-track .native-play-button {
   font-size: 0.82rem;
-  height: 36px;
+  height: 34px;
   min-width: 116px;
 }
 
@@ -1034,8 +1035,8 @@ h3 {
 
 .phone-frame.has-track .tone-card {
   gap: 6px;
-  grid-template-columns: 38px minmax(0, 1fr);
-  min-height: 56px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  min-height: 52px;
   padding: 7px;
 }
 
@@ -1048,8 +1049,8 @@ h3 {
 }
 
 .phone-frame.has-track .tone-card img {
-  height: 38px;
-  width: 38px;
+  height: 34px;
+  width: 34px;
 }
 
 .tone-card span {
