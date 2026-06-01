@@ -440,6 +440,32 @@ h3 {
   white-space: nowrap;
 }
 
+.track-action-row {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 7px;
+}
+
+.analyze-track-button {
+  background: linear-gradient(180deg, #63dada, var(--cta-strong));
+  border: 0;
+  border-radius: 999px;
+  color: #081115;
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  font-weight: 900;
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.analyze-track-button:disabled {
+  cursor: wait;
+  filter: saturate(0.8);
+  opacity: 0.62;
+}
+
 .transport-row,
 .segmented {
   background: rgba(7, 8, 13, 0.55);

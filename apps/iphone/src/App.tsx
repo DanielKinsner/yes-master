@@ -51,7 +51,12 @@ import universalPresetUrl from "../../../src/assets/presets/universal.png";
 import warmthPresetUrl from "../../../src/assets/presets/warmth.png";
 import "./styles.css";
 
-type IphoneOperation = "idle" | "importing" | "exporting" | "preparing-preview";
+type IphoneOperation =
+  | "idle"
+  | "importing"
+  | "analyzing"
+  | "exporting"
+  | "preparing-preview";
 type ProcessingStage = "importing" | "analyzing";
 
 const IPHONE_TONE_VISUALS: Record<
@@ -109,12 +114,12 @@ export default function App({
   const analysisReady = state.analysisStatus === "ready";
   const canRenderMaster = hasTrack && analysisReady;
   const isImporting = operation === "importing";
+  const isAnalyzing = operation === "analyzing" || (isImporting && hasTrack);
   const isExporting = operation === "exporting";
-  const controlsLocked = isImporting || isExporting;
-  const processingStage: ProcessingStage =
-    isImporting && hasTrack ? "analyzing" : "importing";
+  const controlsLocked = isImporting || isAnalyzing || isExporting;
+  const processingStage: ProcessingStage = isAnalyzing ? "analyzing" : "importing";
   const trackStripLabel =
-    isImporting && hasTrack
+    isAnalyzing
       ? "Analyzing..."
       : state.analysisStatus === "ready"
         ? "Ready"
@@ -158,17 +163,36 @@ export default function App({
       setExportChecks([]);
       clearMasterPreview();
       const imported = await backend.importTrack(path);
-      setState((current) => attachIphoneTrack(current, toIphoneTrack(imported)));
-      setMessage("Analyzing...");
-      const nextAnalysis = await backend.analyzeTrack(imported.id, imported.path);
-      setAnalysis(nextAnalysis);
-      setState((current) => markIphoneAnalysisReady(current));
-      setMessage(null);
+      const track = toIphoneTrack(imported);
+      setState((current) => attachIphoneTrack(current, track));
+      await analyzeTrack(track);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      setMessage(toIphoneErrorMessage(error));
     } finally {
       finishOperation();
     }
+  }
+
+  async function retryAnalysis() {
+    if (!state.track || !startOperation("analyzing")) return;
+    setAnalysis(null);
+    setExportChecks([]);
+    clearMasterPreview();
+    try {
+      await analyzeTrack(state.track);
+    } catch (error) {
+      setMessage(toIphoneErrorMessage(error));
+    } finally {
+      finishOperation();
+    }
+  }
+
+  async function analyzeTrack(track: IphoneTrack) {
+    setMessage("Analyzing...");
+    const nextAnalysis = await backend.analyzeTrack(track.id, track.path);
+    setAnalysis(nextAnalysis);
+    setState((current) => markIphoneAnalysisReady(current));
+    setMessage(null);
   }
 
   async function exportMaster() {
@@ -354,15 +378,28 @@ export default function App({
               <p className="track-label">{trackStripLabel}</p>
               <h2>{state.track?.displayName}</h2>
             </div>
-            <button
-              className="change-track-button"
-              data-testid="iphone-change-track"
-              type="button"
-              disabled={operation !== "idle"}
-              onClick={importTrack}
-            >
-              Change
-            </button>
+            <div className="track-action-row">
+              {state.analysisStatus === "needed" ? (
+                <button
+                  className="analyze-track-button"
+                  data-testid="iphone-retry-analysis"
+                  type="button"
+                  disabled={operation !== "idle"}
+                  onClick={retryAnalysis}
+                >
+                  Analyze
+                </button>
+              ) : null}
+              <button
+                className="change-track-button"
+                data-testid="iphone-change-track"
+                type="button"
+                disabled={operation !== "idle"}
+                onClick={importTrack}
+              >
+                Change
+              </button>
+            </div>
           </section>
         ) : null}
 
@@ -572,7 +609,7 @@ export default function App({
               ))}
           </section>
         ) : null}
-        {isImporting ? (
+        {isImporting || operation === "analyzing" ? (
           <ProcessingOverlay
             stage={processingStage}
             trackName={state.track?.displayName}
@@ -697,6 +734,14 @@ function withSourceAnalysis(
     ...settings,
     source_lufs_integrated: sourceLufs,
   };
+}
+
+function toIphoneErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/analysis|analy[sz]e|decode|source file|no samples/i.test(message)) {
+    return "This track needs analysis before preview or export. Try Analyze again, or choose another audio file.";
+  }
+  return message;
 }
 
 function ControlGroup({

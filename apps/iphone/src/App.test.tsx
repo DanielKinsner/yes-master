@@ -310,7 +310,13 @@ describe("iPhone app shell", () => {
 
     await click(container, "[data-testid='iphone-import']");
 
-    expect(container.textContent).toContain("Analysis failed");
+    expect(container.textContent).toContain("Needs analysis");
+    expect(container.textContent).toContain("Try Analyze again");
+    expect(
+      container.querySelector<HTMLButtonElement>(
+        "[data-testid='iphone-retry-analysis']",
+      ),
+    ).not.toBeNull();
     expect(
       container.querySelector<HTMLButtonElement>("[data-testid='playback-mastered']")
         ?.disabled,
@@ -319,6 +325,28 @@ describe("iPhone app shell", () => {
       container.querySelector<HTMLButtonElement>("[data-testid='iphone-export']")
         ?.disabled,
     ).toBe(true);
+
+    act(() => root.unmount());
+  });
+
+  it("lets a loaded track retry analysis without re-importing", async () => {
+    const backend = makeBackend();
+    vi.mocked(backend.analyzeTrack)
+      .mockRejectedValueOnce(new Error("decode error"))
+      .mockResolvedValueOnce(analyzedTrack());
+    const { container, pickAudioPath, root } = renderApp({ backend });
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='iphone-retry-analysis']");
+
+    expect(pickAudioPath).toHaveBeenCalledTimes(1);
+    expect(backend.analyzeTrack).toHaveBeenCalledTimes(2);
+    expect(container.textContent).toContain("Ready");
+    expect(
+      container.querySelector<HTMLButtonElement>(
+        "[data-testid='iphone-retry-analysis']",
+      ),
+    ).toBeNull();
 
     act(() => root.unmount());
   });
