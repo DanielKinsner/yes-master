@@ -37,9 +37,18 @@ Expect it to mostly work (whole-file `ContentView.swift` was reviewed symbol-by-
 6. **Extension dedup** (`7069806`) — Swift `knownAudioExtensions` trimmed to the Rust-supported set.
 7. **Tauri app removed** (`1abc6aa`) — `apps/iphone` (~13.2k lines, incl. a committed generated Xcode project) and its 9 `iphone:*` root scripts deleted. `apps/iphone-native` is now the only iPhone app.
 
+## Post-review fixes (later 2026-06-01)
+
+Two external reviews of the branch were triaged; the valid findings are fixed in `6f7c575`, `9b251fc`, `6f83b79`:
+- Debounced preview refresh could cancel a just-started Create Master render — now cancelled on render/analysis start, and a no-op while rendering.
+- A just-imported old-dated file could be pruned immediately (`copyItem` keeps the source mtime) — the copy is now stamped with the current time.
+- The duplicated `ImportedTracks` path is consolidated (`ImportedTrackStore` derives it from `RenderStorage`).
+- Product docs (`docs/IPHONE_APP*.md`) synced to the shipped controls.
+
+Declined, with reasons: renaming the shared-desktop `lufs_offset_db` field (out of scope — added a bridge comment instead); re-applying volume mid-playback (not reachable today — `masteredLufs` only changes while playback is paused).
+
 ## Known minor issues (not blockers)
 
-- `ImportedTrackStore` and `RenderStorage.importsDirectory` independently compute the same `ApplicationSupport/ImportedTracks` path. Works today; if one path is ever customized the other won't follow. Small future cleanup.
 - `SupportedExtensionsTests` calls the real bridge FFI, so it needs the linked static lib (fine on device/simulator; would fail on a host that can't load the lib).
 
 ## Next: Stage 2
