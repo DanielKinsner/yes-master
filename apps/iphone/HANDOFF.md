@@ -112,6 +112,7 @@ Commits:
 
 - `877beac style(iphone): use desktop icon artwork`
 - `04a2d89 style(iphone): refine loaded play control`
+- `d79fbba docs(iphone): hand off premium icon polish`
 
 What changed:
 
@@ -128,6 +129,14 @@ Verification:
 - `cd apps/iphone/src-tauri && cargo test` ✅ 6/6
 - `cd apps/iphone/src-tauri && PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" cargo check --target aarch64-apple-ios` ✅
 - Browser preview loaded a temporary WAV and reached the play UI ✅
+
+Device update:
+
+- Merged to `main` and pushed.
+- Built the signed iOS release bundle with the required rustup iOS toolchain path.
+- Installed `/Users/danielkinsner/Projects/yes-master/apps/iphone/src-tauri/gen/apple/build/arm64/YES Master iPhone.ipa` on the connected iPhone (`5D9F3B2F-C68D-50E0-A372-DEE3A7A3B610`).
+- Launched `com.yesmaster.iphone`; `devicectl device info processes` showed `YES Master iPhone` running as PID 2528.
+- Still needs a human tap/listen on device for import → Ready → Play audio audibility and waveform/log verification.
 
 ## Independent review of the 2026-06-01 cleanup (Claude, 4 adversarial reviewers + re-run verification)
 
