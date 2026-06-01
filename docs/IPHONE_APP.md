@@ -1,6 +1,8 @@
 # YES Master iPhone App
 
-This is the active direction for the new iPhone app.
+The iPhone app lives at `apps/iphone-native`. It is a SwiftUI-native app that
+replaces the earlier Tauri iPhone prototype. See `apps/iphone-native/README.md`
+and `apps/iphone-native/HANDOFF.md` for current status and development notes.
 
 ## Boundary
 
@@ -8,12 +10,6 @@ The iPhone app is a new app, not a conversion of the desktop app. The desktop
 Tauri app remains the full Track Master / Album Master workbench. iPhone v1 is a
 separate Simple-only experience that reuses YES Master's existing mastering
 settings shape and DSP/render logic where practical.
-
-The iPhone workspace starts in:
-
-```text
-apps/iphone/
-```
 
 ## v1 Feature List
 
@@ -63,16 +59,3 @@ To avoid changing desktop delivery-profile behavior, the iPhone contract emits
 - Volume Match must stay audition-only and must not change export level.
 - Keep warning checks advisory unless export is technically invalid.
 - Private audio and private renders stay out of git.
-
-## Current Foundation
-
-`apps/iphone/src/simple-mode.ts` defines the tested contract for iPhone v1. It
-returns separate audition and export settings so Volume Match can be on for
-listening while export remains clean.
-
-Run:
-
-```sh
-npm run iphone:test
-npm run iphone:typecheck
-```

@@ -4,7 +4,7 @@ _Last updated: 2026-06-01, native import/export hardening._
 
 ## Current Status
 
-`apps/iphone-native` is a separate SwiftUI-native scaffold. The existing Tauri iPhone app in `apps/iphone` is untouched and remains the reference/prototype.
+`apps/iphone-native` is the SwiftUI-native iPhone app. It is the single active iPhone implementation.
 
 Review and follow-up slices now landed on `main` in small commits:
 
@@ -46,7 +46,6 @@ The native direction is:
 
 - Do not change desktop behavior for this native app.
 - Do not reimplement DSP in Swift.
-- Do not delete `apps/iphone` until the native app proves the full flow on device.
 - Do not advertise AIFF/AIF/Opus in native import until decoder support is deliberately added.
 - Keep private audio and rendered masters out of git.
 
@@ -69,7 +68,7 @@ The native direction is:
 - source track analysis via `yes_master_lib::engine::analyze_tracks`
 - master rendering via `yes_master_lib::engine::mastering_render`
 
-The native app can now import a supported audio file into app-owned storage, ask Rust to analyze it, show LUFS, true peak, and dynamic range, then play or pause the imported original track. Playback activates `AVAudioSession` immediately before starting the player.
+The native app can now import a supported audio file into app-owned storage, ask Rust to analyze it (analysis results are used internally for the loudness landing and Volume Match), then play or pause the imported original track. Playback activates `AVAudioSession` immediately before starting the player.
 
 The main SwiftUI screen has been restyled to match the existing Tauri iPhone reference: dark premium shell, large central import/play panel, Volume Match and LUFS Preview controls, track card, Original/Mastered switch, Style cards, Loudness selector, and Create Master button.
 

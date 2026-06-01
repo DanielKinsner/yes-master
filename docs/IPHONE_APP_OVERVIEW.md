@@ -3,6 +3,10 @@
 YES Master for iPhone is a focused, local mastering app for turning one track
 into a polished master without opening the full desktop workbench.
 
+The iPhone app is at `apps/iphone-native`. It is a SwiftUI-native app using
+Rust (via `yes_master_lib`) for mastering and native iOS APIs for file import,
+playback, and export.
+
 ## What It Can Do
 
 - Import one song from the phone.

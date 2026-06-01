@@ -1,6 +1,6 @@
 # YES Master iPhone Native
 
-This is the new SwiftUI-native iPhone app scaffold. It lives beside the current Tauri iPhone prototype at `apps/iphone`, which remains the working reference until the native app proves itself on device.
+This is the SwiftUI-native iPhone app. It is the single active iPhone implementation, using Rust (via `yes_master_lib`) for mastering and native iOS APIs for file import, playback, and export.
 
 ## Direction
 
