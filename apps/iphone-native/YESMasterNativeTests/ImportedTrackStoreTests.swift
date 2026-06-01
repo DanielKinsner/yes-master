@@ -129,6 +129,28 @@ final class ImportedTrackStoreTests: XCTestCase {
         }
     }
 
+    func testImportStampsCopiedFileWithRecentModificationDate() throws {
+        let sourceURL = temporaryDirectory.appendingPathComponent("old.wav")
+        try writeMinimalWavHeader(to: sourceURL)
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date(timeIntervalSince1970: 1_000)],
+            ofItemAtPath: sourceURL.path
+        )
+
+        let store = ImportedTrackStore(
+            importedTracksDirectory: temporaryDirectory.appendingPathComponent("Imported", isDirectory: true)
+        )
+        let track = try store.importTrack(from: sourceURL, supportedExtensions: ["wav"])
+
+        let attributes = try FileManager.default.attributesOfItem(atPath: track.localURL.path)
+        let modificationDate = try XCTUnwrap(attributes[.modificationDate] as? Date)
+        XCTAssertGreaterThan(
+            modificationDate.timeIntervalSinceNow,
+            -60,
+            "Imported copy should be stamped with a recent mtime, not the source's old date."
+        )
+    }
+
     private func writeMinimalWavHeader(to url: URL) throws {
         var data = Data()
         data.append(contentsOf: [0x52, 0x49, 0x46, 0x46])

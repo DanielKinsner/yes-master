@@ -19,10 +19,7 @@ struct ImportedTrackStore {
     private let fileManager: FileManager
 
     init(
-        importedTracksDirectory: URL = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        )[0].appendingPathComponent("ImportedTracks", isDirectory: true),
+        importedTracksDirectory: URL = RenderStorage().importsDirectory,
         fileManager: FileManager = .default
     ) {
         self.importedTracksDirectory = importedTracksDirectory
@@ -74,6 +71,15 @@ struct ImportedTrackStore {
             try? fileManager.removeItem(at: destinationURL)
             throw error
         }
+
+        // copyItem preserves the source's modification date; stamp "now" so the
+        // most-recently-imported file is the newest for RenderStorage.enforceLimit
+        // pruning. Otherwise importing an old-dated file while the cap is already
+        // full could immediately prune the file we just imported.
+        try? fileManager.setAttributes(
+            [.modificationDate: Date()],
+            ofItemAtPath: destinationURL.path
+        )
 
         return ImportedTrack(
             displayName: fileName,
