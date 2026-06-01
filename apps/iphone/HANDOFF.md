@@ -65,6 +65,51 @@ xcrun devicectl device install app --device <DEVICE_ID> <path-to-built .app>
 
 `xcrun devicectl list devices` shows the connected iPhone (was "iPhone 16 Pro Max"). A signed device build may prompt for keychain/signing in the GUI the first time. Once installed, the release build runs with the laptop disconnected.
 
+## Part B — on-device session (run tomorrow, phone connected + a human present)
+
+Everything else in this doc can be done with nothing plugged in. **This section needs the phone and
+you** — no tool can tap the screen or hear the speaker. The phone is connected **only for the
+install**; then unplug it (running untethered is exactly what you're confirming). Codex can do steps
+1–2 with the phone connected; the tap/listen steps are yours.
+
+Prereqs: iPhone connected (USB simplest), unlocked, "Trust This Computer" accepted.
+
+1. **Build + install the release build** (replaces the dev build on the phone):
+   ```bash
+   export PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH"
+   cd ~/Projects/yes-master/apps/iphone
+   ../../node_modules/.bin/tauri ios build
+   xcrun devicectl list devices                          # note the iPhone's device id
+   xcrun devicectl device install app --device <ID> <built .app path>
+   ```
+   (First signed build may pop a keychain/signing prompt — approve it.)
+
+2. **Untethered check:** unplug the phone, open YES Master from the home screen → it should open to
+   the real UI, not a white screen. ✅ confirms the bundled frontend runs with no laptop.
+
+3. **Audio (the gating unknown):** import a track → wait for "Ready" → Play. You should hear it (the
+   ring/silent switch doesn't matter — `.playback` overrides it). In Xcode/Console confirm the
+   startup line `AVAudioSession activated (category_ok=true, active_ok=true)`.
+
+4. **Waveform root-cause (one line):** right after importing, find `iphone_prepare_waveform` in the
+   console and read which case it is:
+   - `... ok: channels=N first_len=M` → waveform is fine now (the durable-import copy fixed it).
+   - `... FAILED ... Io ...` → missing/unreadable file (should already be fixed; flag it if not).
+   - `... FAILED ... Decode ...` → a codec the shared decoder rejects → hand to Codex for the decoder.
+   Paste that one line and the waveform is settled.
+
+5. **Scrub:** while playing, drag the playhead — it should move freely, not snap back. ✅
+
+6. **Export:** Create Master → Files app → On My iPhone → YES Master → confirm a **non-empty** `.wav`
+   is there and plays. ✅
+
+7. **Interruption recovery (the known gap):** start playback, trigger an interruption (call yourself /
+   Siri / unplug headphones), end it, return to the app, press Play again.
+   - Audio comes back → foreground reactivation is sufficient.
+   - Stays dead → that's the stream-recreate follow-up (see "Remaining work"); hand to Codex.
+
+Anything that fails here is a concrete next task — none of it blocks the others.
+
 ## Desktop safety
 
 **The iPhone work did not touch or break the desktop app** — every change is under `apps/iphone/`, the desktop crate compiles clean, and `git diff` confirms zero desktop-source edits.
