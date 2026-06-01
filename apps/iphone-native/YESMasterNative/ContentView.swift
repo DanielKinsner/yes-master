@@ -75,6 +75,14 @@ enum NativeLoudness: String, CaseIterable, Identifiable {
     case high = "High"
 
     var id: String { rawValue }
+
+    var lufsTarget: Float {
+        switch self {
+        case .low: -14
+        case .medium: -11
+        case .high: -9
+        }
+    }
 }
 
 private enum AuditionSide: String, CaseIterable, Identifiable {
@@ -97,6 +105,7 @@ struct ContentView: View {
     @State private var shareMasterURL: URL?
     @State private var renderTask: Task<Void, Never>?
     @State private var previewTask: Task<Void, Never>?
+    @State private var previewDebounceTask: Task<Void, Never>?
     @State private var isPreparingMasterPreview = false
     @State private var isRendering = false
     @State private var isImportingTrack = false
@@ -510,7 +519,7 @@ struct ContentView: View {
                 ForEach(NativeStylePreset.allCases) { preset in
                     Button {
                         selectedPreset = preset
-                        refreshMasteredPreviewForCurrentSettings()
+                        scheduleMasteredPreviewRefresh()
                     } label: {
                         HStack(spacing: 10) {
                             ZStack {
@@ -578,7 +587,7 @@ struct ContentView: View {
                     in: 0...1,
                     onEditingChanged: { isEditing in
                         if !isEditing {
-                            refreshMasteredPreviewForCurrentSettings()
+                            scheduleMasteredPreviewRefresh()
                         }
                     }
                 )
@@ -616,6 +625,7 @@ struct ContentView: View {
                 ForEach(NativeLoudness.allCases) { loudness in
                     Button {
                         selectedLoudness = loudness
+                        scheduleMasteredPreviewRefresh()
                     } label: {
                         Text(loudness.rawValue)
                             .font(.system(size: 15, weight: .heavy))
@@ -848,7 +858,8 @@ struct ContentView: View {
     private var currentRenderOptions: NativeRenderOptions {
         NativeRenderOptions(
             preset: selectedPreset.bridgeIdentifier,
-            intensity: Float(presetIntensity)
+            intensity: Float(presetIntensity),
+            lufsTarget: selectedLoudness.lufsTarget
         )
     }
 
@@ -952,6 +963,15 @@ struct ContentView: View {
                 analysisResult = nil
                 statusText = friendlyAudioErrorMessage(error)
             }
+        }
+    }
+
+    private func scheduleMasteredPreviewRefresh() {
+        previewDebounceTask?.cancel()
+        previewDebounceTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+            guard !Task.isCancelled else { return }
+            refreshMasteredPreviewForCurrentSettings()
         }
     }
 
