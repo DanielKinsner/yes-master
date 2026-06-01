@@ -7,6 +7,19 @@ struct NativeAnalysisResult: Decodable, Equatable {
     let dynamicRangeLu: Double
 }
 
+struct NativeRenderJob: Decodable, Equatable {
+    let outputPaths: [String]
+    let measurements: NativeRenderedMeasurements?
+}
+
+struct NativeRenderedMeasurements: Decodable, Equatable {
+    let lufsIntegrated: Double
+    let truePeakDbtp: Double
+    let dynamicRangeLu: Double
+    let sampleRate: Int
+    let bitDepth: Int
+}
+
 enum NativeMasteringBridgeError: LocalizedError, Equatable {
     case rust(String)
     case invalidResponse
@@ -80,6 +93,35 @@ struct NativeMasteringBridge {
 
         do {
             return try decoder.decode(NativeAnalysisResult.self, from: data)
+        } catch {
+            throw NativeMasteringBridgeError.invalidResponse
+        }
+    }
+
+    func renderMaster(from sourceURL: URL, to outputURL: URL) throws -> NativeRenderJob {
+        let pointer = sourceURL.path.withCString { sourcePathPointer in
+            outputURL.path.withCString { outputPathPointer in
+                yes_master_native_render_master_json(sourcePathPointer, outputPathPointer)
+            }
+        }
+
+        guard let pointer else {
+            throw NativeMasteringBridgeError.invalidResponse
+        }
+        defer { yes_master_native_free_string(pointer) }
+
+        let json = String(cString: pointer)
+        let data = Data(json.utf8)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+        if let errorPayload = try? decoder.decode(BridgeErrorPayload.self, from: data),
+           !errorPayload.error.isEmpty {
+            throw NativeMasteringBridgeError.rust(errorPayload.error)
+        }
+
+        do {
+            return try decoder.decode(NativeRenderJob.self, from: data)
         } catch {
             throw NativeMasteringBridgeError.invalidResponse
         }
