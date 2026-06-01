@@ -352,3 +352,37 @@ xcodegen generate
 Result: project regenerated; only intended source files were dirty before commit.
 
 No TestFlight work was attempted.
+
+Latest final hero-polish pass:
+
+- Landed `3e2756e style(iphone-native): finesse hero layout`.
+- The selected track now lives as a small chip inside the hero player area.
+- The separate track card was removed to reduce clutter.
+- The hero player is taller with more breathing room around the play button.
+- Volume Match and LUFS Preview remain as small checkboxes in the hero.
+- The intensity slider is visually narrower and lighter.
+- Create Master is lower in the normal page flow and no longer overlaps the loudness control.
+- Normal analysis/status chatter is hidden; failure text still appears when there is an actual failure.
+
+Latest final hero-polish checks:
+
+```bash
+cd apps/iphone-native
+xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO test
+```
+
+Result: 10 native Swift tests passed, 0 failed.
+
+```bash
+cd apps/iphone-native
+xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'id=00008140-001008D621D3001C' -allowProvisioningUpdates build
+xcrun devicectl device uninstall app --device 5D9F3B2F-C68D-50E0-A372-DEE3A7A3B610 com.yesmaster.iphone.native
+xcrun devicectl device install app --device 5D9F3B2F-C68D-50E0-A372-DEE3A7A3B610 "$HOME/Library/Developer/Xcode/DerivedData/YESMasterNative-hkgdvqoawaqkijbqjgjiapwekgrs/Build/Products/Debug-iphoneos/YES Master Native.app"
+xcrun devicectl device process launch --device 5D9F3B2F-C68D-50E0-A372-DEE3A7A3B610 --terminate-existing com.yesmaster.iphone.native
+```
+
+Result: signed device build succeeded. The previous app install was removed first to clear app cache/container, then the current build was installed and launched on the connected iPhone.
+
+Latest screenshot:
+
+- `/tmp/yes-master-screenshots/iphone-native-final-finesse.png`
