@@ -1,4 +1,5 @@
 import Foundation
+import UniformTypeIdentifiers
 
 struct NativeMasteringBridge {
     private let knownAudioExtensions = ["wav", "mp3", "m4a", "aac", "flac", "ogg", "aiff", "aif", "opus"]
@@ -15,6 +16,13 @@ struct NativeMasteringBridge {
             fileExtension.withCString { pointer in
                 yes_master_native_supports_import_extension(pointer)
             }
+        }
+    }
+
+    var supportedImportContentTypes: [UTType] {
+        supportedImportExtensions.map { fileExtension in
+            UTType(filenameExtension: fileExtension)
+                ?? UTType(importedAs: "com.yesmaster.audio.\(fileExtension)", conformingTo: .audio)
         }
     }
 

@@ -29,11 +29,13 @@ struct ContentView: View {
     @State private var selectedPreset: NativeStylePreset = .balanced
     @State private var selectedLoudness: NativeLoudness = .medium
     @State private var listeningMode: ListeningMode = .normal
-    @State private var selectedFileName: String?
+    @State private var importedTrack: ImportedTrack?
+    @State private var isImportingTrack = false
     @State private var statusText = "Import a track to begin."
 
     private let audioSession = AudioSessionController()
     private let bridge = NativeMasteringBridge()
+    private let importStore = ImportedTrackStore()
 
     var body: some View {
         NavigationStack {
@@ -41,14 +43,13 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("YES Master")
                         .font(.largeTitle.bold())
-                    Text(selectedFileName ?? "No track loaded")
+                    Text(importedTrack?.displayName ?? "No track loaded")
                         .font(.headline)
                         .foregroundStyle(.secondary)
                 }
 
                 Button {
-                    selectedFileName = "Native import not wired yet"
-                    statusText = bridge.supportedImportSummary
+                    isImportingTrack = true
                 } label: {
                     Label("Import Track", systemImage: "square.and.arrow.down")
                         .frame(maxWidth: .infinity, minHeight: 48)
@@ -89,6 +90,7 @@ struct ContentView: View {
                             .frame(maxWidth: .infinity, minHeight: 48)
                     }
                     .buttonStyle(.bordered)
+                    .disabled(true)
 
                     Button {
                         statusText = bridge.fixedExportSummary
@@ -97,6 +99,7 @@ struct ContentView: View {
                             .frame(maxWidth: .infinity, minHeight: 48)
                     }
                     .buttonStyle(.borderedProminent)
+                    .disabled(true)
                 }
 
                 Text(statusText)
@@ -108,6 +111,38 @@ struct ContentView: View {
             .padding(20)
             .navigationTitle("Track")
             .navigationBarTitleDisplayMode(.inline)
+            .fileImporter(
+                isPresented: $isImportingTrack,
+                allowedContentTypes: bridge.supportedImportContentTypes,
+                allowsMultipleSelection: false,
+                onCompletion: handleImportResult
+            )
+        }
+    }
+
+    private func handleImportResult(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let sourceURL = urls.first else {
+                statusText = "No track was selected."
+                return
+            }
+
+            do {
+                let track = try importStore.importTrack(
+                    from: sourceURL,
+                    supportedExtensions: bridge.supportedImportExtensions
+                )
+                importedTrack = track
+                statusText = "Track imported. Analysis comes next before preview or export."
+            } catch ImportedTrackStore.ImportError.unsupportedExtension(let fileExtension) {
+                let label = fileExtension.isEmpty ? "that file" : ".\(fileExtension)"
+                statusText = "\(label) is not supported yet. Use \(bridge.supportedImportExtensions.joined(separator: ", "))."
+            } catch {
+                statusText = "Track could not be imported. Try another supported audio file."
+            }
+        case .failure:
+            statusText = "Import was cancelled."
         }
     }
 }
