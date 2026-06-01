@@ -53,6 +53,8 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         CFBundleShortVersionString: 0.1.0
         CFBundleVersion: "0.1.0"
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
     entitlements:
       path: yes-master-iphone_iOS/yes-master-iphone_iOS.entitlements
     scheme:

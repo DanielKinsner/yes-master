@@ -884,6 +884,15 @@ h3 {
   padding: 6px 8px;
 }
 
+.export-ready-location {
+  color: rgba(236, 240, 250, 0.6);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 0;
+  text-align: center;
+}
+
 .export-ready-sheet button {
   background: linear-gradient(180deg, #63dada, var(--cta-strong));
   border: 0;

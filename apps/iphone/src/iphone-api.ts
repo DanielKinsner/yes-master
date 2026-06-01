@@ -4,7 +4,7 @@ import {
   isTauri,
 } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import type {
   AnalysisResult,
   ExportReport,
@@ -265,20 +265,12 @@ export async function pickIphoneAudioPath(): Promise<string | null> {
 export async function pickIphoneOutputPath(
   defaultPath = "YES-Master.wav",
 ): Promise<string | null> {
-  if (!hasIphoneNativeRuntime()) {
-    return defaultPath;
-  }
-
-  return save({
-    title: "Export master",
-    defaultPath,
-    filters: [
-      {
-        name: "WAV",
-        extensions: ["wav"],
-      },
-    ],
-  });
+  // No save() dialog on iOS: the dialog plugin writes a 0-byte placeholder and
+  // exports it BEFORE the render bytes exist, so the user gets an empty file.
+  // Return the suggested filename; iphone_render_master lands it in the app's
+  // Files-visible Documents/YES Master folder. (Browser preview also just uses
+  // the name.)
+  return defaultPath;
 }
 
 export function toIphoneAudioUrl(path: string): string {

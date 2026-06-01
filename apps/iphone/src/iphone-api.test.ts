@@ -269,17 +269,16 @@ describe("iPhone API facade", () => {
     expect(preview.output_paths).toEqual(["blob:yes-master/rough-mix"]);
   });
 
-  it("uses the suggested iPhone export filename", async () => {
+  it("returns the suggested filename for the iPhone export folder", async () => {
     setNativeRuntime();
-    dialogMocks.save.mockResolvedValue("/private/rough mix - YES Master.wav");
 
-    await pickIphoneOutputPath("rough mix - YES Master.wav");
+    await expect(
+      pickIphoneOutputPath("rough mix - YES Master.wav"),
+    ).resolves.toBe("rough mix - YES Master.wav");
 
-    expect(dialogMocks.save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        defaultPath: "rough mix - YES Master.wav",
-      }),
-    );
+    // No save() dialog on iOS — iphone_render_master lands the file in the
+    // app's Documents/YES Master folder, so the dialog must not be invoked.
+    expect(dialogMocks.save).not.toHaveBeenCalled();
   });
 
   it("keeps Chrome preview exports inside the browser flow", async () => {

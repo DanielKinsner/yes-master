@@ -1,4 +1,8 @@
-use std::{path::Path, sync::Arc, time::Duration};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 
 use tauri::{Emitter, Manager};
 use yes_master_lib::{
@@ -167,15 +171,14 @@ async fn iphone_render_master(
     track_path: String,
     settings: MasteringSettings,
     output_path: String,
+    app: tauri::AppHandle,
 ) -> CommandResult<RenderJob> {
     let track_path = normalize_iphone_file_path(&track_path);
-    let output_path = normalize_iphone_file_path(&output_path);
-    iphone_render_master_to_path(
-        track_id,
-        Path::new(&track_path),
-        &settings,
-        Path::new(&output_path),
-    )
+    // On iOS the frontend hands us a bare filename; land the master in the app's
+    // Files-visible Documents/YES Master folder rather than a save()-dialog
+    // scoped URL (which exports a 0-byte placeholder the real bytes never reach).
+    let output_path = resolve_export_path(&app, &normalize_iphone_file_path(&output_path))?;
+    iphone_render_master_to_path(track_id, Path::new(&track_path), &settings, &output_path)
 }
 
 #[tauri::command]
@@ -272,14 +275,68 @@ pub fn iphone_render_master_to_path(
     let output_dir = output_path.parent().unwrap_or_else(|| Path::new("."));
     std::fs::create_dir_all(output_dir)
         .map_err(|e| yes_master_lib::CommandError::Io(e.to_string()))?;
-    engine::mastering_render_to_path(
+    let job = engine::mastering_render_to_path(
         TrackId(track_id),
         source_path,
         settings,
         output_dir,
         RenderKind::Master,
         output_path,
-    )
+    )?;
+    // Don't let the UI claim "Master ready" unless real bytes landed — the iOS
+    // export path historically produced empty/placeholder files.
+    let bytes = std::fs::metadata(output_path)
+        .map(|meta| meta.len())
+        .unwrap_or(0);
+    if bytes == 0 {
+        return Err(yes_master_lib::CommandError::Other(format!(
+            "export produced no audio at {}",
+            output_path.display()
+        )));
+    }
+    Ok(job)
+}
+
+/// Resolve the export destination. An absolute path (desktop / tests) is used
+/// as-is; a bare filename (iOS simple-mode) lands in the app's Files-visible
+/// `Documents/YES Master` folder so the user can actually retrieve the master.
+fn resolve_export_path(app: &tauri::AppHandle, output_path: &str) -> CommandResult<PathBuf> {
+    let candidate = Path::new(output_path);
+    if candidate.is_absolute() {
+        return Ok(candidate.to_path_buf());
+    }
+    let file_name = candidate
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("YES-Master.wav");
+    let dir = app
+        .path()
+        .document_dir()
+        .map_err(|error| {
+            yes_master_lib::CommandError::Other(format!("export document_dir: {error}"))
+        })?
+        .join("YES Master");
+    Ok(dir.join(sanitize_export_file_name(file_name)))
+}
+
+/// Strip path separators and force a `.wav` extension so a user-supplied name
+/// can't escape the export folder or land without a usable extension.
+fn sanitize_export_file_name(file_name: &str) -> String {
+    let base = file_name
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(file_name)
+        .trim();
+    let cleaned = if base.is_empty() {
+        "YES-Master.wav"
+    } else {
+        base
+    };
+    if cleaned.to_ascii_lowercase().ends_with(".wav") {
+        cleaned.to_string()
+    } else {
+        format!("{cleaned}.wav")
+    }
 }
 
 pub fn iphone_prepare_master_preview_in_dir(

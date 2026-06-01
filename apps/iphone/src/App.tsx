@@ -1027,6 +1027,9 @@ function ExportReadySheet({
         <span>{formatSampleRate(receipt.sampleRate)}</span>
         <span>{formatBitDepth(receipt.bitDepth)}</span>
       </div>
+      <p className="export-ready-location">
+        Saved to Files › On My iPhone › YES Master
+      </p>
       <button data-testid="iphone-export-ready-done" type="button" onClick={onClose}>
         Done
       </button>
