@@ -1,6 +1,6 @@
 # YES Master iPhone Native - Handoff
 
-_Last updated: 2026-06-01, native import, Rust analysis, original playback, and render bridge path._
+_Last updated: 2026-06-01, reference-style native UI and Create Master wiring._
 
 ## Current Status
 
@@ -20,6 +20,8 @@ Review and follow-up slices now landed on `main` in small commits:
 10. `61a90cb feat(iphone-native): add Rust render bridge`
 11. `8504032 feat(iphone-native): add Swift render bridge`
 12. `77d9890 fix(iphone-native): render masters to unique paths`
+13. `eb302c2 style(iphone-native): match reference iPhone shell`
+14. `1a161f1 feat(iphone-native): wire create master action`
 
 The native direction is:
 
@@ -58,16 +60,20 @@ The native direction is:
 
 The native app can now import a supported audio file into app-owned storage, ask Rust to analyze it, show LUFS, true peak, and dynamic range, then play or pause the imported original track. Playback activates `AVAudioSession` immediately before starting the player.
 
+The main SwiftUI screen has been restyled to match the existing Tauri iPhone reference: dark premium shell, large central import/play panel, Volume Match and LUFS Preview controls, track card, Original/Mastered switch, Style cards, Loudness selector, and Create Master button.
+
 The Rust and Swift bridge can now render a master into an output directory using the fixed iPhone target (`-11 LUFS`, `44.1 kHz`, `24-bit`, `-1 dBTP`). Rust creates a unique WAV path each time so previous renders are not overwritten.
 
-It is still not a real mastering app yet: the `Create Master` button is not wired to the render bridge, mastered playback is not wired, and native share/export is not wired.
+The `Create Master` button is now wired to the Swift render bridge. After a render succeeds, the app stores the rendered WAV path, switches to Mastered, and allows Mastered playback.
+
+It is still not a full iPhone mastering app yet: native share/export is not wired, Original/Mastered switching does not preserve playhead yet, and the full import -> analyze -> render -> mastered playback loop still needs hands-on simulator/device testing with a real supported audio file.
 
 ## Next Slice
 
-1. Wire `Create Master` to the Swift render bridge on a background task.
-2. Store rendered master paths in app state and enable Mastered playback once render output exists.
-3. Preserve playhead when switching Original/Mastered.
-4. Add native share/export once render output exists.
+1. Manually test import -> analyze -> Create Master -> Mastered playback in the simulator with a supported local audio file.
+2. Preserve playhead when switching Original/Mastered.
+3. Add native share/export once render output exists.
+4. Consider disabling Create Master with a visible explanation while analysis is pending or failed.
 5. Keep the UI spacious; do not add waveform/scrubbing unless the user asks.
 
 ## Verification So Far
@@ -101,7 +107,7 @@ cd apps/iphone-native
 xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO test
 ```
 
-Latest test result after adding the render bridge: 6 tests passed, 0 failed.
+Latest test result after wiring the UI and Create Master action: 6 tests passed, 0 failed.
 
 ```bash
 cd apps/iphone-native
@@ -121,7 +127,16 @@ Device Rust bridge output is arm64.
 Screenshot shared during this pass:
 
 ```text
-/tmp/yes-master-screenshots/iphone-native-current.png
+/tmp/yes-master-screenshots/iphone-native-reference-ui.png
 ```
+
+Additional verification after the latest slices:
+
+```bash
+cd apps/iphone-native/rust
+cargo test
+```
+
+Rust bridge result: 6 tests passed, 0 failed.
 
 No remote iPhone install or TestFlight work was attempted.
