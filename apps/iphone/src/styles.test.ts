@@ -31,10 +31,10 @@ describe("iPhone styles", () => {
   it("uses the desktop brand palette for the phone shell", () => {
     const css = readIphoneStyles();
 
-    expect(css).toContain("#07080d");
-    expect(css).toContain("#10131a");
+    expect(css).toContain("#030712");
+    expect(css).toContain("#060b17");
     expect(css).toContain("#4d8bff");
-    expect(css).toContain("#6fa3ff");
+    expect(css).toContain("#4da2ff");
     expect(css).toContain("#ffb86b");
     expect(css).toContain("color-scheme: dark");
   });
@@ -44,7 +44,8 @@ describe("iPhone styles", () => {
 
     expect(css).toContain(".hero-orb::before");
     expect(css).toContain(".hero-orb::after");
-    expect(css).toContain("border: 2px dashed");
+    expect(css).toContain("box-shadow:");
+    expect(css).toContain("repeating-radial-gradient");
     expect(css).not.toContain("@keyframes hero-ring-spin");
   });
 
@@ -109,7 +110,8 @@ describe("iPhone styles", () => {
       ".hero-orb.has-track .hero-action-button",
     );
 
-    expect(loadedHeroButtonBlock).toContain("background: #f3f6fa");
+    expect(loadedHeroButtonBlock).toContain("radial-gradient");
+    expect(loadedHeroButtonBlock).toContain("rgba(20, 87, 232, 0.96)");
     expect(loadedHeroButtonBlock).toContain("border-radius: 999px");
   });
 
