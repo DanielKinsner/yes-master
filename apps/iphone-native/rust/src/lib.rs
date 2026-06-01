@@ -73,6 +73,7 @@ pub unsafe extern "C" fn yes_master_native_render_master_json(
         output_dir,
         std::ptr::null(),
         0.5,
+        -11.0,
     )
 }
 
@@ -82,6 +83,7 @@ pub unsafe extern "C" fn yes_master_native_render_master_with_options_json(
     output_dir: *const c_char,
     preset: *const c_char,
     intensity: f32,
+    lufs_target: f32,
 ) -> *mut c_char {
     let Some(source_path) = ffi_string(source_path) else {
         return error_to_ffi("missing source path");
@@ -99,7 +101,7 @@ pub unsafe extern "C" fn yes_master_native_render_master_with_options_json(
 
     let source_path = Path::new(&source_path);
     let output_dir = Path::new(&output_dir);
-    let settings = export_settings_for_options(unsafe { ffi_string(preset) }.as_deref(), intensity);
+    let settings = export_settings_for_options(unsafe { ffi_string(preset) }.as_deref(), intensity, lufs_target);
 
     if let Err(error) = std::fs::create_dir_all(output_dir) {
         return error_to_ffi(&error.to_string());
@@ -127,10 +129,10 @@ pub unsafe extern "C" fn yes_master_native_free_string(value: *mut c_char) {
 }
 
 fn fixed_export_settings() -> MasteringSettings {
-    export_settings_for_options(Some("balanced"), 0.5)
+    export_settings_for_options(Some("balanced"), 0.5, -11.0)
 }
 
-fn export_settings_for_options(preset: Option<&str>, intensity: f32) -> MasteringSettings {
+fn export_settings_for_options(preset: Option<&str>, intensity: f32, lufs_target: f32) -> MasteringSettings {
     MasteringSettings {
         preset: native_preset(preset),
         intensity: intensity.clamp(0.0, 1.0),
@@ -148,7 +150,7 @@ fn export_settings_for_options(preset: Option<&str>, intensity: f32) -> Masterin
         delivery_profile: DeliveryProfile::Custom,
         album: None,
         advanced: AdvancedSettings {
-            lufs_offset_db: Some(-11.0),
+            lufs_offset_db: Some(lufs_target.clamp(-24.0, -6.0)),
             ceiling_dbtp: Some(-1.0),
             width: None,
             warmth: None,
@@ -245,16 +247,29 @@ mod tests {
     }
 
     #[test]
+    fn native_options_map_loudness_target() {
+        let low = export_settings_for_options(Some("balanced"), 0.5, -14.0);
+        assert_eq!(low.effective_target_lufs(), Some(-14.0));
+
+        let high = export_settings_for_options(Some("balanced"), 0.5, -9.0);
+        assert_eq!(high.effective_target_lufs(), Some(-9.0));
+
+        // out-of-range is clamped to a safe mastering window
+        let clamped = export_settings_for_options(Some("balanced"), 0.5, 5.0);
+        assert_eq!(clamped.effective_target_lufs(), Some(-6.0));
+    }
+
+    #[test]
     fn native_options_map_to_shared_preset_and_intensity() {
-        let warm = export_settings_for_options(Some("warm"), 0.8);
+        let warm = export_settings_for_options(Some("warm"), 0.8, -11.0);
         assert_eq!(warm.preset, Preset::Warmth);
         assert_eq!(warm.intensity, 0.8);
 
-        let open = export_settings_for_options(Some("open"), 2.0);
+        let open = export_settings_for_options(Some("open"), 2.0, -11.0);
         assert_eq!(open.preset, Preset::Clarity);
         assert_eq!(open.intensity, 1.0);
 
-        let fallback = export_settings_for_options(Some("unknown"), -1.0);
+        let fallback = export_settings_for_options(Some("unknown"), -1.0, -11.0);
         assert_eq!(fallback.preset, Preset::Universal);
         assert_eq!(fallback.intensity, 0.0);
     }
@@ -402,6 +417,7 @@ mod tests {
                 output_dir.as_ptr(),
                 preset.as_ptr(),
                 0.9,
+                -9.0,
             )
         };
         assert!(!pointer.is_null());

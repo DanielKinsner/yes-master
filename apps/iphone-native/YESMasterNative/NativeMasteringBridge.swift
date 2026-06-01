@@ -23,8 +23,9 @@ struct NativeRenderedMeasurements: Decodable, Equatable {
 struct NativeRenderOptions: Equatable {
     let preset: String
     let intensity: Float
+    let lufsTarget: Float
 
-    static let `default` = NativeRenderOptions(preset: "balanced", intensity: 0.5)
+    static let `default` = NativeRenderOptions(preset: "balanced", intensity: 0.5, lufsTarget: -11)
 }
 
 enum NativeMasteringBridgeError: LocalizedError, Equatable {
@@ -117,7 +118,8 @@ struct NativeMasteringBridge {
                         sourcePathPointer,
                         outputDirectoryPointer,
                         presetPointer,
-                        options.intensity
+                        options.intensity,
+                        options.lufsTarget
                     )
                 }
             }

@@ -15,7 +15,8 @@ char *yes_master_native_render_master_with_options_json(
     const char *source_path,
     const char *output_dir,
     const char *preset,
-    float intensity
+    float intensity,
+    float lufs_target
 );
 void yes_master_native_free_string(char *value);
 
