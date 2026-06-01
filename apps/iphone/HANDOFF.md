@@ -1,6 +1,6 @@
 # YES Master iPhone — Handoff
 
-_Last updated: 2026-06-01, connected-device polish/install session (Codex). Most checks are automated; anything needing a human ear/eye on the real device is called out explicitly below._
+_Last updated: 2026-06-01, compact loaded-screen polish session (Codex). Most checks are automated; anything needing a human ear/eye on the real device is called out explicitly below._
 
 ## TL;DR
 
@@ -137,6 +137,30 @@ Device update:
 - Installed `/Users/danielkinsner/Projects/yes-master/apps/iphone/src-tauri/gen/apple/build/arm64/YES Master iPhone.ipa` on the connected iPhone (`5D9F3B2F-C68D-50E0-A372-DEE3A7A3B610`).
 - Launched `com.yesmaster.iphone`; `devicectl device info processes` showed `YES Master iPhone` running as PID 2528.
 - Still needs a human tap/listen on device for import → Ready → Play audio audibility and waveform/log verification.
+
+### 2026-06-01 compact loaded-screen polish session
+
+Commits:
+
+- `2f4a5f7 fix(iphone): compact profile and export layout`
+- `289bd47 style(iphone): fit loaded controls in viewport`
+
+What changed:
+
+1. Removed the separate Target/Format card that sat above Create Master.
+2. Folded selected target and format into the Profile heading, and added format hints inside the Profile buttons.
+3. Made the loaded-track hero, track card, audition card, and tone cards tighter only after a track is loaded.
+4. Changed Create Master from a sticky overlay into a normal bottom button so it does not cover content.
+5. Removed the idle "Local" status chip; "Ready" still appears once analysis is ready.
+
+Verification:
+
+- `npm run iphone:typecheck` ✅
+- `npm run iphone:test` ✅ 87/87
+- `npm run iphone:build` ✅
+- `cd apps/iphone/src-tauri && cargo test` ✅ 6/6
+- `cd apps/iphone/src-tauri && PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" cargo check --target aarch64-apple-ios` ✅
+- Browser preview loaded a temporary WAV at 430×860 with `scrollHeight` equal to viewport height; Create Master was visible and not overlapping. Screenshot: `/tmp/yes-master-iphone-compact-final-viewport.png`.
 
 ## Independent review of the 2026-06-01 cleanup (Claude, 4 adversarial reviewers + re-run verification)
 
