@@ -923,6 +923,7 @@ struct ContentView: View {
         analysisTask?.cancel()
         renderTask?.cancel()
         previewTask?.cancel()
+        previewDebounceTask?.cancel()
         analysisResult = nil
         masteredPreviewURL = nil
         masteredLufs = nil
@@ -965,7 +966,7 @@ struct ContentView: View {
     }
 
     private func refreshMasteredPreviewForCurrentSettings() {
-        guard importedTrack != nil, analysisResult != nil else { return }
+        guard importedTrack != nil, analysisResult != nil, !isRendering else { return }
         previewTask?.cancel()
         renderTask?.cancel()
         playbackController.pause()
@@ -1052,6 +1053,7 @@ struct ContentView: View {
 
         renderTask?.cancel()
         previewTask?.cancel()
+        previewDebounceTask?.cancel()
         playbackController.pause()
         masteredPreviewURL = nil
         masteredLufs = nil
