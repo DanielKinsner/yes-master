@@ -51,6 +51,20 @@ final class ImportedTrackStoreTests: XCTestCase {
         }
     }
 
+    func testImportRejectsMissingSourceFilesWithPlainError() throws {
+        let sourceURL = temporaryDirectory.appendingPathComponent("deleted.wav")
+
+        let store = ImportedTrackStore(
+            importedTracksDirectory: temporaryDirectory.appendingPathComponent("Imported", isDirectory: true)
+        )
+
+        XCTAssertThrowsError(
+            try store.importTrack(from: sourceURL, supportedExtensions: ["wav"])
+        ) { error in
+            XCTAssertEqual(error as? ImportedTrackStore.ImportError, .sourceUnavailable)
+        }
+    }
+
     func testImportCreatesUniqueCopiesInsteadOfOverwriting() throws {
         let sourceURL = temporaryDirectory.appendingPathComponent("mix.wav")
         try writeMinimalWavHeader(to: sourceURL)

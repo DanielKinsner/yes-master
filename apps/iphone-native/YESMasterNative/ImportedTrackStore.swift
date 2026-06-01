@@ -10,6 +10,7 @@ struct ImportedTrackStore {
     enum ImportError: Error, Equatable {
         case unsupportedExtension(String)
         case missingFileName
+        case sourceUnavailable
         case emptyFile
         case unreadableContainer(String)
     }
@@ -53,6 +54,11 @@ struct ImportedTrackStore {
             if didStartSecurityScope {
                 sourceURL.stopAccessingSecurityScopedResource()
             }
+        }
+
+        guard fileManager.fileExists(atPath: sourceURL.path),
+              fileManager.isReadableFile(atPath: sourceURL.path) else {
+            throw ImportError.sourceUnavailable
         }
 
         try fileManager.createDirectory(

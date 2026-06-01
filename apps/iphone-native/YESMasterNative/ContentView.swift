@@ -755,6 +755,8 @@ struct ContentView: View {
             } catch ImportedTrackStore.ImportError.unsupportedExtension(let fileExtension) {
                 let label = fileExtension.isEmpty ? "that file" : ".\(fileExtension)"
                 statusText = "\(label) is not supported yet. Use \(bridge.supportedImportExtensions.joined(separator: ", "))."
+            } catch ImportedTrackStore.ImportError.sourceUnavailable {
+                statusText = "That file is not available. Make sure it finished downloading, then try again."
             } catch ImportedTrackStore.ImportError.emptyFile {
                 statusText = "That file looks empty. Make sure it finished downloading, then try again."
             } catch ImportedTrackStore.ImportError.unreadableContainer(let fileExtension) {
