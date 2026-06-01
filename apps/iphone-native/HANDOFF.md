@@ -26,6 +26,7 @@ Review and follow-up slices now landed on `main` in small commits:
 16. `eda9d9f feat(iphone-native): add share master action`
 17. `0896f6c fix(iphone-native): require full screen portrait`
 18. `5d7dc05 test(iphone-native): verify Swift Rust render path`
+19. `ae6eb3a feat(iphone-native): prepare mastered previews`
 
 The native direction is:
 
@@ -70,9 +71,11 @@ The Rust and Swift bridge can now render a master into an output directory using
 
 The `Create Master` button is now wired to the Swift render bridge. After a render succeeds, the app stores the rendered WAV path, switches to Mastered, and allows Mastered playback.
 
-Original/Mastered switching now tries to preserve playback position when switching while audio is playing.
+Original/Mastered switching now uses a mastered preview render that starts after analysis. This lets the user switch to Mastered before sharing/exporting, and switching while audio is playing tries to preserve playback position.
 
 Native share/export has a first pass: after a master render succeeds, a `Share Master` button appears and shares the rendered WAV through the iOS share sheet.
+
+The iPhone UI has a preset intensity slider. Preset and intensity are passed through the Swift bridge to the shared Rust mastering settings. The center play/import panel is less crowded: Volume Match and LUFS Preview moved into a lower Listening section.
 
 It is still not a full iPhone mastering app yet: the full import -> analyze -> render -> mastered playback -> share loop still needs hands-on testing on the user's real phone with a supported audio file.
 
@@ -85,10 +88,10 @@ When the user is home and the phone is connected:
 1. Install the native app from `apps/iphone-native`.
 2. Import a supported file: WAV, MP3, M4A, AAC, FLAC, or OGG.
 3. Confirm analysis completes.
-4. Play Original.
-5. Create Master.
-6. Play Mastered and switch Original/Mastered while playing.
-7. Tap `Share Master` and confirm the WAV can be saved or shared.
+4. Wait for `Mastered preview ready`.
+5. Play Original, then switch Original/Mastered while playing.
+6. Adjust Style or Intensity, wait for the preview to rebuild, and A/B again.
+7. Tap `Create Master`, then `Share Master`, and confirm the WAV can be saved or shared.
 
 ## Next Slice
 
@@ -197,4 +200,49 @@ xcrun simctl io B3786F0C-1C97-4215-839F-5BC2DC63AAA8 screenshot /tmp/yes-master-
 
 Result: simulator launched and screenshot captured with the polished reference-style UI.
 
-No remote iPhone install or TestFlight work was attempted.
+Latest on-phone feedback follow-up:
+
+```bash
+cd apps/iphone-native/rust
+cargo test
+```
+
+Result: 8 Rust bridge tests passed, 0 failed.
+
+```bash
+cd apps/iphone-native
+xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO test
+```
+
+Result: 8 native Swift tests passed, 0 failed.
+
+```bash
+cd apps/iphone-native/rust
+PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" cargo check --target aarch64-apple-ios
+```
+
+Result: passed.
+
+```bash
+cd apps/iphone-native
+xcodegen generate
+```
+
+Result: project regenerated; only intended source changes were dirty before commit.
+
+```bash
+cd apps/iphone-native
+xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'id=00008140-001008D621D3001C' -allowProvisioningUpdates build
+xcrun devicectl device install app --device 5D9F3B2F-C68D-50E0-A372-DEE3A7A3B610 "$HOME/Library/Developer/Xcode/DerivedData/YESMasterNative-hkgdvqoawaqkijbqjgjiapwekgrs/Build/Products/Debug-iphoneos/YES Master Native.app"
+xcrun devicectl device process launch --device 5D9F3B2F-C68D-50E0-A372-DEE3A7A3B610 --terminate-existing com.yesmaster.iphone.native
+```
+
+Result: signed device build succeeded, installed, and relaunched on the connected iPhone.
+
+Latest simulator screenshot:
+
+```text
+/tmp/yes-master-screenshots/iphone-native-preview-slider-ui.png
+```
+
+No TestFlight work was attempted.
