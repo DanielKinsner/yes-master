@@ -30,7 +30,10 @@ struct ContentView: View {
     @State private var selectedLoudness: NativeLoudness = .medium
     @State private var listeningMode: ListeningMode = .normal
     @State private var importedTrack: ImportedTrack?
+    @State private var analysisResult: NativeAnalysisResult?
     @State private var isImportingTrack = false
+    @State private var isAnalyzing = false
+    @State private var analysisTask: Task<Void, Never>?
     @State private var statusText = "Import a track to begin."
 
     private let audioSession = AudioSessionController()
@@ -106,6 +109,13 @@ struct ContentView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
 
+                if isAnalyzing {
+                    ProgressView("Analyzing track")
+                        .font(.callout)
+                } else if let analysisResult {
+                    analysisSummary(for: analysisResult)
+                }
+
                 Spacer()
             }
             .padding(20)
@@ -134,7 +144,7 @@ struct ContentView: View {
                     supportedExtensions: bridge.supportedImportExtensions
                 )
                 importedTrack = track
-                statusText = "Track imported. Analysis comes next before preview or export."
+                analyzeImportedTrack(track)
             } catch ImportedTrackStore.ImportError.unsupportedExtension(let fileExtension) {
                 let label = fileExtension.isEmpty ? "that file" : ".\(fileExtension)"
                 statusText = "\(label) is not supported yet. Use \(bridge.supportedImportExtensions.joined(separator: ", "))."
@@ -144,6 +154,57 @@ struct ContentView: View {
         case .failure:
             statusText = "Import was cancelled."
         }
+    }
+
+    private func analyzeImportedTrack(_ track: ImportedTrack) {
+        analysisTask?.cancel()
+        analysisResult = nil
+        isAnalyzing = true
+        statusText = "Analyzing with the YES Master engine."
+
+        let bridge = bridge
+        analysisTask = Task {
+            let result = await Task.detached {
+                Result {
+                    try bridge.analyzeTrack(at: track.localURL)
+                }
+            }.value
+
+            guard !Task.isCancelled else { return }
+            isAnalyzing = false
+
+            switch result {
+            case .success(let analysis):
+                analysisResult = analysis
+                statusText = "Analysis complete. Playback and export come next."
+            case .failure(let error):
+                analysisResult = nil
+                statusText = "Analysis failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func analysisSummary(for analysis: NativeAnalysisResult) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Analysis")
+                .font(.headline)
+            HStack(spacing: 14) {
+                analysisMetric(label: "LUFS", value: String(format: "%.1f", analysis.lufsIntegrated))
+                analysisMetric(label: "True Peak", value: String(format: "%.1f dBTP", analysis.truePeakDbtp))
+                analysisMetric(label: "DR", value: String(format: "%.1f LU", analysis.dynamicRangeLu))
+            }
+        }
+    }
+
+    private func analysisMetric(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.headline.monospacedDigit())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
