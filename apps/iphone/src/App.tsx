@@ -119,6 +119,11 @@ export default function App({
   const [operation, setOperation] = useState<IphoneOperation>("idle");
   const operationRef = useRef<IphoneOperation>("idle");
   const waveformRequestVersionRef = useRef(0);
+  // Guards the playhead slider against the 50 ms playback tick: while the user
+  // is actively dragging, ticks must not overwrite the thumb. scrubValueRef
+  // holds the latest dragged value so endScrub can seek to it on release.
+  const isScrubbingRef = useRef(false);
+  const scrubValueRef = useRef(0);
   const plan = useMemo(() => toIphoneSimplePlan(state), [state]);
   const hasTrack = state.track !== null;
   const analysisReady = state.analysisStatus === "ready";
@@ -163,9 +168,13 @@ export default function App({
       .onPlaybackTick((tick) => {
         if (!isActive || tick.track_id !== state.track?.id) return;
         setIsAuditionPlaying(tick.is_playing);
-        setState((current) =>
-          setIphonePlayhead(current, Math.max(0, tick.position_sec)),
-        );
+        // Don't let the position tick fight an in-progress scrub; the pointer
+        // handlers own the playhead until the drag ends.
+        if (!isScrubbingRef.current) {
+          setState((current) =>
+            setIphonePlayhead(current, Math.max(0, tick.position_sec)),
+          );
+        }
       })
       .then((unlisten) => {
         if (isActive) {
@@ -373,6 +382,15 @@ export default function App({
     setOperation("idle");
   }
 
+  function endScrub() {
+    if (!isScrubbingRef.current) return;
+    isScrubbingRef.current = false;
+    // Commit the final dragged position to the audio thread once, on release.
+    if (isAuditionPlaying) {
+      void backend.seekPlayback(scrubValueRef.current);
+    }
+  }
+
   function updateCustomExport(
     nextCustomExport: Partial<IphoneCustomExportSettings>,
   ) {
@@ -547,12 +565,21 @@ export default function App({
               step="0.1"
               value={state.playheadSeconds}
               disabled={!hasTrack}
+              onPointerDown={() => {
+                isScrubbingRef.current = true;
+              }}
+              onPointerUp={endScrub}
+              onPointerCancel={endScrub}
               onChange={(event) => {
                 const playheadSeconds = Number(event.currentTarget.value);
+                scrubValueRef.current = playheadSeconds;
                 setState((current) =>
                   setIphonePlayhead(current, playheadSeconds),
                 );
-                if (isAuditionPlaying) {
+                // Live-seek only for discrete changes (keyboard / a11y steps).
+                // A pointer drag defers its seek to release via endScrub so the
+                // audio thread isn't flooded with intermediate positions.
+                if (isAuditionPlaying && !isScrubbingRef.current) {
                   void backend.seekPlayback(playheadSeconds);
                 }
               }}
