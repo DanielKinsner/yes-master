@@ -1,13 +1,5 @@
 import SwiftUI
 
-enum ListeningMode: String, CaseIterable, Identifiable {
-    case normal = "Normal"
-    case volumeMatch = "Volume Match"
-    case lufsPreview = "LUFS Preview"
-
-    var id: String { rawValue }
-}
-
 enum NativeStylePreset: String, CaseIterable, Identifiable {
     case balanced = "Balanced"
     case warm = "Warm"
@@ -97,10 +89,11 @@ struct ContentView: View {
     @State private var selectedPreset: NativeStylePreset = .balanced
     @State private var selectedLoudness: NativeLoudness = .medium
     @State private var selectedAudition: AuditionSide = .original
-    @State private var listeningMode: ListeningMode = .normal
+    @State private var volumeMatchEnabled = false
     @State private var presetIntensity = 0.5
     @State private var importedTrack: ImportedTrack?
     @State private var analysisResult: NativeAnalysisResult?
+    @State private var masteredLufs: Double?
     @State private var masteredPreviewURL: URL?
     @State private var shareMasterURL: URL?
     @State private var renderTask: Task<Void, Never>?
@@ -361,25 +354,17 @@ struct ContentView: View {
 
     private var heroListeningToggles: some View {
         HStack(spacing: 22) {
-            checkboxButton(
-                title: "Volume Match",
-                active: listeningMode == .volumeMatch,
-                mode: .volumeMatch
-            )
-
-            checkboxButton(
-                title: "LUFS Preview",
-                active: listeningMode == .lufsPreview,
-                mode: .lufsPreview
-            )
+            checkboxButton(title: "Volume Match", active: volumeMatchEnabled) {
+                volumeMatchEnabled.toggle()
+                applyVolumeMatchToActivePlayback()
+            }
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 18)
     }
 
-    private func checkboxButton(title: String, active: Bool, mode: ListeningMode) -> some View {
-        Button {
-            listeningMode = active ? .normal : mode
-        } label: {
+    private func checkboxButton(title: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack(spacing: 8) {
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
                     .fill(active ? Color(red: 0.22, green: 0.55, blue: 1.0) : Color.clear)
@@ -403,6 +388,20 @@ struct ContentView: View {
             .frame(height: 44)
         }
         .buttonStyle(.plain)
+    }
+
+    private func currentSideVolume() -> Float {
+        guard volumeMatchEnabled,
+              let originalLufs = analysisResult?.lufsIntegrated,
+              let masterLufs = masteredLufs else { return 1.0 }
+        switch selectedAudition {
+        case .original: return volumeMatchLinearGain(sideLufs: originalLufs, otherLufs: masterLufs)
+        case .mastered: return volumeMatchLinearGain(sideLufs: masterLufs, otherLufs: originalLufs)
+        }
+    }
+
+    private func applyVolumeMatchToActivePlayback() {
+        playbackController.setVolume(currentSideVolume())
     }
 
     private var heroTrackRow: some View {
@@ -759,6 +758,7 @@ struct ContentView: View {
                 )
                 importedTrack = track
                 masteredPreviewURL = nil
+                masteredLufs = nil
                 shareMasterURL = nil
                 selectedAudition = .original
                 playbackController.pause()
@@ -875,7 +875,7 @@ struct ContentView: View {
         }
 
         do {
-            try playbackController.play(url: selectedAuditionURL)
+            try playbackController.play(url: selectedAuditionURL, volume: currentSideVolume())
             statusText = "Playing \(selectedAudition.rawValue.lowercased()) track."
         } catch {
             statusText = "Playback could not start. Try another supported audio file."
@@ -912,7 +912,7 @@ struct ContentView: View {
         }
 
         do {
-            try playbackController.play(url: selectedAuditionURL, startingAt: resumeTime)
+            try playbackController.play(url: selectedAuditionURL, startingAt: resumeTime, volume: currentSideVolume())
             statusText = "Switched to \(side.rawValue.lowercased()) at the same spot."
         } catch {
             statusText = "Playback could not switch. Try playing again."
@@ -925,6 +925,7 @@ struct ContentView: View {
         previewTask?.cancel()
         analysisResult = nil
         masteredPreviewURL = nil
+        masteredLufs = nil
         shareMasterURL = nil
         isRendering = false
         isPreparingMasterPreview = false
@@ -969,6 +970,7 @@ struct ContentView: View {
         renderTask?.cancel()
         playbackController.pause()
         masteredPreviewURL = nil
+        masteredLufs = nil
         shareMasterURL = nil
         if selectedAudition == .mastered {
             selectedAudition = .original
@@ -987,6 +989,7 @@ struct ContentView: View {
         previewTask?.cancel()
         isPreparingMasterPreview = true
         masteredPreviewURL = nil
+        masteredLufs = nil
         shareMasterURL = nil
 
         let bridge = bridge
@@ -1015,13 +1018,14 @@ struct ContentView: View {
                     return
                 }
                 masteredPreviewURL = URL(fileURLWithPath: outputPath)
+                masteredLufs = job.measurements?.lufsIntegrated
                 renderStorage.pruneObsoletePreviews(keeping: masteredPreviewURL)
                 if selectWhenReady {
                     selectedAudition = .mastered
                 }
                 if resumePlayback, let masteredPreviewURL {
                     do {
-                        try playbackController.play(url: masteredPreviewURL, startingAt: resumeTime)
+                        try playbackController.play(url: masteredPreviewURL, startingAt: resumeTime, volume: currentSideVolume())
                         statusText = "Switched to mastered at the same spot."
                         return
                     } catch {
@@ -1050,6 +1054,7 @@ struct ContentView: View {
         previewTask?.cancel()
         playbackController.pause()
         masteredPreviewURL = nil
+        masteredLufs = nil
         shareMasterURL = nil
         isRendering = true
         isPreparingMasterPreview = false
@@ -1081,6 +1086,7 @@ struct ContentView: View {
                     return
                 }
                 masteredPreviewURL = URL(fileURLWithPath: outputPath)
+                masteredLufs = job.measurements?.lufsIntegrated
                 shareMasterURL = URL(fileURLWithPath: outputPath)
                 renderStorage.enforceLimit(in: renderStorage.mastersDirectory, max: 20)
                 selectedAudition = .mastered

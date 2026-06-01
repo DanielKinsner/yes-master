@@ -4,6 +4,7 @@ import Foundation
 
 protocol TrackAudioPlayer: AnyObject {
     var currentTime: TimeInterval { get set }
+    var volume: Float { get set }
 
     func play() throws
     func pause()
@@ -44,7 +45,7 @@ final class TrackPlaybackController: ObservableObject {
         self.makePlayer = makePlayer
     }
 
-    func play(url: URL, startingAt startTime: TimeInterval? = nil) throws {
+    func play(url: URL, startingAt startTime: TimeInterval? = nil, volume: Float = 1.0) throws {
         try activateForPlayback()
 
         if loadedURL != url {
@@ -56,8 +57,13 @@ final class TrackPlaybackController: ObservableObject {
             player?.currentTime = max(0, startTime)
         }
 
+        player?.volume = volume
         try player?.play()
         isPlaying = true
+    }
+
+    func setVolume(_ volume: Float) {
+        player?.volume = volume
     }
 
     func pause() {
@@ -72,6 +78,11 @@ private final class AVFoundationTrackAudioPlayer: TrackAudioPlayer {
     var currentTime: TimeInterval {
         get { player.currentTime }
         set { player.currentTime = newValue }
+    }
+
+    var volume: Float {
+        get { player.volume }
+        set { player.volume = newValue }
     }
 
     init(url: URL) throws {

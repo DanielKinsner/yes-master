@@ -16,6 +16,17 @@ final class TrackPlaybackControllerTests: XCTestCase {
         XCTAssertTrue(controller.isPlaying)
     }
 
+    func testPlayAppliesRequestedVolume() throws {
+        var events: [String] = []
+        let player = FakeTrackAudioPlayer(events: &events)
+        let controller = TrackPlaybackController(
+            activateForPlayback: { events.append("activate") },
+            makePlayer: { _ in player }
+        )
+        try controller.play(url: URL(fileURLWithPath: "/tmp/x.wav"), volume: 0.5)
+        XCTAssertEqual(player.volume, 0.5)
+    }
+
     func testPlayCanStartReplacementTrackAtExistingTime() throws {
         var events: [String] = []
         let firstPlayer = FakeTrackAudioPlayer(events: &events)
@@ -41,6 +52,7 @@ final class TrackPlaybackControllerTests: XCTestCase {
 private final class FakeTrackAudioPlayer: TrackAudioPlayer {
     private let record: (String) -> Void
     var currentTime: TimeInterval = 0
+    var volume: Float = 1.0
 
     init(events: UnsafeMutablePointer<[String]>) {
         record = { events.pointee.append($0) }
