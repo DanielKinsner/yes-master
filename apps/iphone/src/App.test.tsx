@@ -169,7 +169,7 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
-  it("uses preset artwork as the mobile hero", async () => {
+  it("keeps the import hero clean while preserving preset icons in Style", async () => {
     const { container, root } = renderApp();
     const heroPanel = container.querySelector(".hero-panel");
 
@@ -180,18 +180,37 @@ describe("iPhone app shell", () => {
     expect(container.querySelector(".hero-orb")?.className).toContain(
       "is-empty",
     );
-
-    const heroArtwork = container.querySelector<HTMLImageElement>(
-      "[data-testid='iphone-preset-hero']",
-    );
-    expect(heroArtwork?.alt).toBe("Balanced mastering preset");
+    expect(
+      container.querySelector("[data-testid='iphone-preset-hero']"),
+    ).toBeNull();
+    expect(container.querySelectorAll(".tone-card img")).toHaveLength(4);
 
     await click(container, "[data-testid='tone-warm']");
 
+    expect(container.textContent).toContain("Warm");
     expect(
-      container.querySelector<HTMLImageElement>("[data-testid='iphone-preset-hero']")
-        ?.alt,
-    ).toBe("Warm mastering preset");
+      container.querySelector("[data-testid='iphone-preset-hero']"),
+    ).toBeNull();
+
+    act(() => root.unmount());
+  });
+
+  it("keeps Volume Match and LUFS Preview inside the hero as checkbox options", () => {
+    const { container, root } = renderApp();
+    const heroPanel = container.querySelector(".hero-panel");
+    const heroOptions = container.querySelector(".hero-option-row");
+    const settingsSheet = container.querySelector(".settings-sheet");
+    const volumeMatch = container.querySelector("[data-testid='volume-match']");
+    const lufsPreview = container.querySelector("[data-testid='lufs-preview']");
+
+    expect(heroPanel?.contains(heroOptions)).toBe(true);
+    expect(heroOptions?.contains(volumeMatch)).toBe(true);
+    expect(heroOptions?.contains(lufsPreview)).toBe(true);
+    expect(volumeMatch?.getAttribute("role")).toBe("checkbox");
+    expect(lufsPreview?.getAttribute("role")).toBe("checkbox");
+    expect(
+      heroOptions?.compareDocumentPosition(settingsSheet as Node) ?? 0,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 
     act(() => root.unmount());
   });
@@ -318,6 +337,48 @@ describe("iPhone app shell", () => {
     await act(async () => {
       selectedPath.resolve(null);
       await selectedPath.promise;
+    });
+    act(() => root.unmount());
+  });
+
+  it("shows a processing overlay while the file picker is open", async () => {
+    const selectedPath = deferred<string | null>();
+    const pickAudioPath = vi.fn().mockReturnValue(selectedPath.promise);
+    const { container, root } = renderApp({ pickAudioPath });
+
+    await click(container, "[data-testid='iphone-import']");
+
+    const overlay = container.querySelector(
+      "[data-testid='iphone-processing-overlay']",
+    );
+    expect(overlay?.textContent).toContain("Importing");
+    expect(overlay?.textContent).toContain("Bringing in audio");
+
+    await act(async () => {
+      selectedPath.resolve(null);
+      await selectedPath.promise;
+    });
+    act(() => root.unmount());
+  });
+
+  it("shows an analyzing overlay after the track is imported", async () => {
+    const backend = makeBackend();
+    const analysisResult = deferred<AnalysisResult>();
+    vi.mocked(backend.analyzeTrack).mockReturnValue(analysisResult.promise);
+    const { container, root } = renderApp({ backend });
+
+    await click(container, "[data-testid='iphone-import']");
+
+    const overlay = container.querySelector(
+      "[data-testid='iphone-processing-overlay']",
+    );
+    expect(overlay?.textContent).toContain("Analyzing");
+    expect(overlay?.textContent).toContain("Reading the track");
+    expect(overlay?.textContent).toContain("new-master");
+
+    await act(async () => {
+      analysisResult.resolve(analyzedTrack());
+      await analysisResult.promise;
     });
     act(() => root.unmount());
   });

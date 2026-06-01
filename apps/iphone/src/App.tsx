@@ -52,6 +52,7 @@ import warmthPresetUrl from "../../../src/assets/presets/warmth.png";
 import "./styles.css";
 
 type IphoneOperation = "idle" | "importing" | "exporting" | "preparing-preview";
+type ProcessingStage = "importing" | "analyzing";
 
 const IPHONE_TONE_VISUALS: Record<
   IphoneSimpleTone,
@@ -110,6 +111,8 @@ export default function App({
   const isImporting = operation === "importing";
   const isExporting = operation === "exporting";
   const controlsLocked = isImporting || isExporting;
+  const processingStage: ProcessingStage =
+    isImporting && hasTrack ? "analyzing" : "importing";
   const trackStripLabel =
     isImporting && hasTrack
       ? "Analyzing..."
@@ -304,12 +307,6 @@ export default function App({
             aria-hidden="true"
           />
           <div className={hasTrack ? "hero-orb has-track" : "hero-orb is-empty"}>
-            <img
-              className="preset-hero-art"
-              data-testid="iphone-preset-hero"
-              src={selectedToneVisual.image}
-              alt={`${selectedToneVisual.title} mastering preset`}
-            />
             <button
               className="hero-action-button"
               aria-label={hasTrack ? heroActionAriaLabel : undefined}
@@ -318,10 +315,37 @@ export default function App({
               disabled={heroActionDisabled}
               onClick={hasTrack ? switchToMasteredPreview : importTrack}
             >
+              {!hasTrack ? (
+                <span className="hero-upload-glyph" aria-hidden="true" />
+              ) : null}
               <span className="hero-play-glyph" aria-hidden="true" />
               {!hasTrack ? <span>{heroImportLabel}</span> : null}
             </button>
           </div>
+          <section className="hero-option-row" aria-label="Audition options">
+            <CheckOption
+              active={state.volumeMatch}
+              disabled={controlsLocked}
+              label="Volume Match"
+              testId="volume-match"
+              onClick={() =>
+                updateAuditionSettings((current) =>
+                  toggleIphoneVolumeMatch(current),
+                )
+              }
+            />
+            <CheckOption
+              active={state.lufsPreview}
+              disabled={controlsLocked}
+              label="LUFS Preview"
+              testId="lufs-preview"
+              onClick={() =>
+                updateAuditionSettings((current) =>
+                  toggleIphoneLufsPreview(current),
+                )
+              }
+            />
+          </section>
         </section>
 
         {hasTrack ? (
@@ -515,27 +539,6 @@ export default function App({
             </section>
           ) : null}
 
-          <section className="toggle-stack">
-            <ToggleRow
-              active={state.volumeMatch}
-              disabled={controlsLocked}
-              label="Volume Match"
-              testId="volume-match"
-              onClick={() =>
-                updateAuditionSettings((current) => toggleIphoneVolumeMatch(current))
-              }
-            />
-            <ToggleRow
-              active={state.lufsPreview}
-              disabled={controlsLocked}
-              label="LUFS Preview"
-              testId="lufs-preview"
-              onClick={() =>
-                updateAuditionSettings((current) => toggleIphoneLufsPreview(current))
-              }
-            />
-          </section>
-
           <section className="master-card" aria-label="Master settings">
             <div>
               <p className="track-label">Target</p>
@@ -568,6 +571,12 @@ export default function App({
                 <p key={check.code}>{check.message}</p>
               ))}
           </section>
+        ) : null}
+        {isImporting ? (
+          <ProcessingOverlay
+            stage={processingStage}
+            trackName={state.track?.displayName}
+          />
         ) : null}
       </section>
     </main>
@@ -732,7 +741,7 @@ function SegmentButton({
   );
 }
 
-function ToggleRow({
+function CheckOption({
   active,
   disabled = false,
   label,
@@ -747,16 +756,52 @@ function ToggleRow({
 }) {
   return (
     <button
-      aria-pressed={active}
-      className="toggle-row"
+      aria-checked={active}
+      className={active ? "check-option is-active" : "check-option"}
       data-testid={testId}
       disabled={disabled}
+      role="checkbox"
       type="button"
       onClick={onClick}
     >
+      <span className="check-box" aria-hidden="true" />
       <span>{label}</span>
-      <span className={active ? "switch is-on" : "switch"} aria-hidden="true" />
     </button>
+  );
+}
+
+function ProcessingOverlay({
+  stage,
+  trackName,
+}: {
+  stage: ProcessingStage;
+  trackName?: string;
+}) {
+  const isAnalyzing = stage === "analyzing";
+
+  return (
+    <section
+      aria-label="Track processing"
+      aria-live="polite"
+      className="processing-scrim"
+      data-testid="iphone-processing-overlay"
+    >
+      <div className="processing-card">
+        <div className="processing-mark" aria-hidden="true">
+          <span />
+        </div>
+        <p className="track-label">{isAnalyzing ? "Analyzing" : "Importing"}</p>
+        <h2>{isAnalyzing ? "Reading the track" : "Bringing in audio"}</h2>
+        <p className="processing-copy">
+          {trackName ?? "Preparing your track for YES Master."}
+        </p>
+        <div className="processing-steps" aria-hidden="true">
+          <span className="is-done">Import</span>
+          <span className={isAnalyzing ? "is-active" : ""}>Analyze</span>
+        </div>
+        <div className="processing-bar" aria-hidden="true" />
+      </div>
+    </section>
   );
 }
 

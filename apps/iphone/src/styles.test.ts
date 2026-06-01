@@ -8,6 +8,14 @@ function readIphoneStyles() {
   return readFileSync(resolve(currentDir, "styles.css"), "utf8");
 }
 
+function cssBlock(css: string, selector: string) {
+  const start = css.indexOf(selector);
+  if (start < 0) return "";
+  const open = css.indexOf("{", start);
+  const close = css.indexOf("}", open);
+  return open >= 0 && close >= 0 ? css.slice(open + 1, close) : "";
+}
+
 describe("iPhone styles", () => {
   it("uses the desktop brand palette for the phone shell", () => {
     const css = readIphoneStyles();
@@ -20,14 +28,89 @@ describe("iPhone styles", () => {
     expect(css).toContain("color-scheme: dark");
   });
 
-  it("animates a dotted hero import ring", () => {
+  it("draws a dotted hero import ring", () => {
     const css = readIphoneStyles();
 
     expect(css).toContain(".hero-orb::before");
     expect(css).toContain(".hero-orb::after");
     expect(css).toContain("border: 2px dashed");
-    expect(css).toContain("animation: hero-ring-spin");
     expect(css).toContain("@keyframes hero-ring-spin");
+  });
+
+  it("keeps decorative hero layers from blocking import taps", () => {
+    const css = readIphoneStyles();
+    const heroRingBlock = cssBlock(css, ".hero-orb::before");
+    const heroButtonBlock = cssBlock(css, ".hero-action-button");
+
+    expect(heroRingBlock).toContain("pointer-events: none");
+    expect(heroButtonBlock).toMatch(/z-index: [1-9]/);
+  });
+
+  it("makes the empty hero circle the import hotspot without pill chrome", () => {
+    const css = readIphoneStyles();
+    const heroButtonBlock = cssBlock(css, ".hero-action-button");
+    const emptyHeroButtonBlock = cssBlock(
+      css,
+      ".hero-orb.is-empty .hero-action-button",
+    );
+    const emptyHeroLabelBlock = cssBlock(
+      css,
+      ".hero-orb.is-empty .hero-action-button span:last-child",
+    );
+
+    expect(heroButtonBlock).toContain("background: transparent");
+    expect(heroButtonBlock).toContain("border: 0");
+    expect(heroButtonBlock).toContain("box-shadow: none");
+    expect(emptyHeroButtonBlock).toContain("height: min(68vw, 252px)");
+    expect(emptyHeroButtonBlock).toContain("width: min(68vw, 252px)");
+    expect(emptyHeroLabelBlock).toContain("position: absolute");
+    expect(emptyHeroLabelBlock).toContain("top: 64%");
+    expect(emptyHeroLabelBlock).toContain("transform: translate(-50%, -50%)");
+  });
+
+  it("uses a simple upload mark instead of center preset artwork", () => {
+    const css = readIphoneStyles();
+    const uploadGlyphBlock = cssBlock(css, ".hero-upload-glyph");
+
+    expect(css).not.toContain(".preset-hero-art");
+    expect(uploadGlyphBlock).toContain("color: var(--cta)");
+    expect(uploadGlyphBlock).toContain("pointer-events: none");
+    expect(uploadGlyphBlock).toContain("top: 43%");
+    expect(css).toContain(".hero-upload-glyph::before");
+    expect(css).toContain(".hero-upload-glyph::after");
+  });
+
+  it("keeps the mastered preview button as a visible play button", () => {
+    const css = readIphoneStyles();
+    const loadedHeroButtonBlock = cssBlock(
+      css,
+      ".hero-orb.has-track .hero-action-button",
+    );
+
+    expect(loadedHeroButtonBlock).toContain("background: #f3f6fa");
+    expect(loadedHeroButtonBlock).toContain("border-radius: 999px");
+  });
+
+  it("uses compact checkbox options near the hero instead of lower toggles", () => {
+    const css = readIphoneStyles();
+
+    expect(css).toContain(".hero-option-row");
+    expect(css).toContain(".check-option");
+    expect(css).toContain(".check-box");
+    expect(css).not.toContain(".toggle-stack");
+    expect(css).not.toContain(".toggle-row");
+    expect(css).not.toContain(".switch");
+  });
+
+  it("keeps hero checkbox options unframed inside the import card", () => {
+    const css = readIphoneStyles();
+    const checkOptionBlock = cssBlock(css, ".check-option");
+
+    expect(checkOptionBlock).toContain("background: transparent");
+    expect(checkOptionBlock).toContain("border: 0");
+    expect(checkOptionBlock).not.toContain("linear-gradient");
+    expect(checkOptionBlock).not.toContain("border: 1px");
+    expect(checkOptionBlock).not.toContain("border-radius:");
   });
 
   it("respects iOS safe areas around the phone shell", () => {
@@ -47,7 +130,18 @@ describe("iPhone styles", () => {
     expect(css).toContain("min-height: 32px");
     expect(css).toContain("min-height: min(360px, calc(100dvh - 118px))");
     expect(css).toContain("min-height: min(280px, calc(100dvh - 172px))");
-    expect(css).toContain("height: min(46vw, 168px)");
+    expect(css).toContain("height: min(68vw, 252px)");
     expect(css).toContain("min-height: 70px");
+  });
+
+  it("animates the import and analysis processing sheet responsibly", () => {
+    const css = readIphoneStyles();
+
+    expect(css).toContain(".processing-scrim");
+    expect(css).toContain(".processing-card");
+    expect(css).toContain("@keyframes processing-fade");
+    expect(css).toContain("@keyframes processing-spin");
+    expect(css).toContain("@keyframes processing-slide");
+    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
   });
 });
