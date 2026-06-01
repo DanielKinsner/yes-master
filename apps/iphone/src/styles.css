@@ -311,6 +311,25 @@ h3 {
   width: 0;
 }
 
+.hero-pause-glyph {
+  align-items: center;
+  display: inline-grid;
+  gap: 5px;
+  grid-template-columns: repeat(2, 5px);
+  height: 18px;
+  justify-content: center;
+  width: 18px;
+}
+
+.hero-pause-glyph::before,
+.hero-pause-glyph::after {
+  background: #141820;
+  border-radius: 999px;
+  content: "";
+  height: 18px;
+  width: 5px;
+}
+
 .hero-orb.is-empty .hero-play-glyph {
   display: none;
 }
@@ -582,9 +601,42 @@ h3 {
   opacity: 0.45;
 }
 
+.native-play-button {
+  align-items: center;
+  background: rgba(236, 240, 250, 0.95);
+  border: 0;
+  border-radius: 999px;
+  color: #12151b;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.88rem;
+  font-weight: 900;
+  gap: 10px;
+  height: 42px;
+  justify-content: center;
+  justify-self: center;
+  min-width: 132px;
+  padding: 0 18px;
+}
+
+.native-play-button .hero-play-glyph {
+  border-left-color: #12151b;
+  transform: scale(0.84);
+}
+
+.native-play-button:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.8);
+  opacity: 0.55;
+}
+
+.native-play-button .hero-pause-glyph::before,
+.native-play-button .hero-pause-glyph::after {
+  background: #12151b;
+}
+
 .audio-preview {
-  height: 34px;
-  opacity: 0.86;
+  display: none;
   width: 100%;
 }
 

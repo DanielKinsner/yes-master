@@ -27,7 +27,6 @@ import {
   iphoneBackend,
   pickIphoneAudioPath,
   pickIphoneOutputPath,
-  toIphoneAudioUrl,
   type IphoneBackend,
 } from "./iphone-api";
 import type {
@@ -102,12 +101,10 @@ export default function App({
   backend = iphoneBackend,
   pickAudioPath = pickIphoneAudioPath,
   pickOutputPath = pickIphoneOutputPath,
-  toAudioUrl = toIphoneAudioUrl,
 }: {
   backend?: IphoneBackend;
   pickAudioPath?: () => Promise<string | null>;
   pickOutputPath?: (defaultPath?: string) => Promise<string | null>;
-  toAudioUrl?: (path: string) => string;
 }) {
   const [state, setState] = useState<IphoneAppState>(initialIphoneAppState);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
@@ -117,12 +114,10 @@ export default function App({
   );
   const [waveform, setWaveform] = useState<WaveformPeaks | null>(null);
   const [isLoadingWaveform, setIsLoadingWaveform] = useState(false);
+  const [isAuditionPlaying, setIsAuditionPlaying] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [masterPreviewPath, setMasterPreviewPath] = useState<string | null>(null);
   const [operation, setOperation] = useState<IphoneOperation>("idle");
   const operationRef = useRef<IphoneOperation>("idle");
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const previewRequestVersionRef = useRef(0);
   const waveformRequestVersionRef = useRef(0);
   const plan = useMemo(() => toIphoneSimplePlan(state), [state]);
   const hasTrack = state.track !== null;
@@ -131,7 +126,8 @@ export default function App({
   const isImporting = operation === "importing";
   const isAnalyzing = operation === "analyzing" || (isImporting && hasTrack);
   const isExporting = operation === "exporting";
-  const controlsLocked = isImporting || isAnalyzing || isExporting;
+  const isPreparingPlayback = operation === "preparing-preview";
+  const controlsLocked = isImporting || isAnalyzing || isExporting || isPreparingPlayback;
   const processingStage: ProcessingStage = isAnalyzing ? "analyzing" : "importing";
   const trackStripLabel =
     isAnalyzing
@@ -143,11 +139,6 @@ export default function App({
           : "Track";
   const trackDuration = state.track?.durationSeconds ?? 0;
   const playheadMax = Math.max(trackDuration, state.playheadSeconds, 0);
-  const auditionPath =
-    state.playback === "mastered" && masterPreviewPath
-      ? masterPreviewPath
-      : state.track?.path;
-  const auditionUrl = auditionPath ? toAudioUrl(auditionPath) : null;
   const sampleRate = plan.exportSettings.advanced.target_sample_rate;
   const bitDepth = plan.exportSettings.advanced.bit_depth;
   const targetLufs = plan.exportSettings.advanced.lufs_offset_db;
@@ -157,13 +148,40 @@ export default function App({
     ? !canRenderMaster || controlsLocked
     : operation !== "idle";
   const heroActionAriaLabel =
-    operation === "preparing-preview" ? "Preparing Mastered" : "Preview Master";
+    operation === "preparing-preview"
+      ? "Preparing playback"
+      : isAuditionPlaying
+        ? "Pause"
+        : "Play";
   const exportButtonLabel = isExporting ? "Creating..." : "Create Master";
 
   useEffect(() => {
-    if (!audioRef.current || !auditionUrl) return;
-    seekAudioToPlayhead(audioRef.current);
-  }, [auditionUrl, state.playheadSeconds]);
+    let isActive = true;
+    let cleanup: (() => void) | undefined;
+
+    backend
+      .onPlaybackTick((tick) => {
+        if (!isActive || tick.track_id !== state.track?.id) return;
+        setIsAuditionPlaying(tick.is_playing);
+        setState((current) =>
+          setIphonePlayhead(current, Math.max(0, tick.position_sec)),
+        );
+      })
+      .then((unlisten) => {
+        if (isActive) {
+          cleanup = unlisten;
+        } else {
+          unlisten();
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isActive = false;
+      cleanup?.();
+      void backend.stopPlayback();
+    };
+  }, [backend, state.track?.id]);
 
   async function importTrack() {
     if (!startOperation("importing")) return;
@@ -178,7 +196,6 @@ export default function App({
       setExportChecks([]);
       setExportReceipt(null);
       clearWaveform();
-      clearMasterPreview();
       const imported = await backend.importTrack(path);
       const track = toIphoneTrack(imported);
       setState((current) => attachIphoneTrack(current, track));
@@ -196,7 +213,6 @@ export default function App({
     setAnalysis(null);
     setExportChecks([]);
     setExportReceipt(null);
-    clearMasterPreview();
     try {
       await analyzeTrack(state.track);
     } catch (error) {
@@ -285,33 +301,63 @@ export default function App({
     }
   }
 
-  async function switchToMasteredPreview() {
+  async function toggleAuditionPlayback() {
+    if (!state.track || !analysisReady) return;
+    if (isAuditionPlaying) {
+      await pauseAuditionPlayback();
+      return;
+    }
+    await startAuditionPlayback(state.playback);
+  }
+
+  async function switchAuditionMode(nextPlayback: IphoneAppState["playback"]) {
+    if (!state.track || !analysisReady) return;
+    setState((current) => switchIphonePlayback(current, nextPlayback));
+    if (!isAuditionPlaying) {
+      setMessage(null);
+      return;
+    }
+    await startAuditionPlayback(nextPlayback);
+  }
+
+  async function startAuditionPlayback(playback: IphoneAppState["playback"]) {
     if (!state.track || !analysisReady) return;
     if (!startOperation("preparing-preview")) return;
-    setMessage("Preparing Mastered...");
-    const previewRequestVersion = previewRequestVersionRef.current + 1;
-    previewRequestVersionRef.current = previewRequestVersion;
+    setMessage(playback === "mastered" ? "Starting Mastered..." : "Starting Original...");
     try {
-      const job = await backend.prepareMasterPreview({
-        trackId: state.track.id,
-        trackPath: state.track.path,
-        settings: withSourceAnalysis(buildAuditionPreviewSettings(plan), analysis),
-      });
-      if (previewRequestVersion !== previewRequestVersionRef.current) {
-        setMessage(null);
-        return;
+      if (playback === "mastered") {
+        await backend.playMastered(
+          state.track.id,
+          state.track.path,
+          withSourceAnalysis(buildAuditionPreviewSettings(plan), analysis),
+          state.playheadSeconds,
+          state.lufsPreview,
+        );
+      } else {
+        await backend.playOriginal(
+          state.track.id,
+          state.track.path,
+          state.playheadSeconds,
+        );
       }
-      const previewPath = job.output_paths[0] ?? null;
-      if (!previewPath) {
-        throw new Error("Mastered preview did not produce an audio file.");
-      }
-      setMasterPreviewPath(previewPath);
-      setState((current) => switchIphonePlayback(current, "mastered"));
+      setState((current) => switchIphonePlayback(current, playback));
+      setIsAuditionPlaying(true);
       setMessage(null);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
+      setIsAuditionPlaying(false);
     } finally {
       finishOperation();
+    }
+  }
+
+  async function pauseAuditionPlayback() {
+    try {
+      await backend.pausePlayback();
+      setIsAuditionPlaying(false);
+      setMessage(null);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -341,22 +387,10 @@ export default function App({
   function updateAuditionSettings(
     update: (current: IphoneAppState) => IphoneAppState,
   ) {
-    clearMasterPreview();
     setExportChecks([]);
     setExportReceipt(null);
     setMessage(null);
-    setState((current) => switchIphonePlayback(update(current), "original"));
-  }
-
-  function clearMasterPreview() {
-    previewRequestVersionRef.current += 1;
-    setMasterPreviewPath(null);
-  }
-
-  function seekAudioToPlayhead(audio: HTMLAudioElement) {
-    if (Math.abs(audio.currentTime - state.playheadSeconds) > 0.25) {
-      audio.currentTime = state.playheadSeconds;
-    }
+    setState((current) => update(current));
   }
 
   return (
@@ -389,12 +423,17 @@ export default function App({
               data-testid={hasTrack ? "iphone-preview-master" : "iphone-import"}
               type="button"
               disabled={heroActionDisabled}
-              onClick={hasTrack ? switchToMasteredPreview : importTrack}
+              onClick={hasTrack ? toggleAuditionPlayback : importTrack}
             >
               {!hasTrack ? (
                 <span className="hero-upload-glyph" aria-hidden="true" />
               ) : null}
-              <span className="hero-play-glyph" aria-hidden="true" />
+              <span
+                className={
+                  isAuditionPlaying ? "hero-pause-glyph" : "hero-play-glyph"
+                }
+                aria-hidden="true"
+              />
               {!hasTrack ? <span>{heroImportLabel}</span> : null}
             </button>
           </div>
@@ -472,17 +511,14 @@ export default function App({
         {hasTrack ? (
           <section
             className="audition-panel"
-            aria-label={masterPreviewPath ? "Audition ready" : "Audition"}
+            aria-label="Audition"
           >
             <div className="transport-row mode-switch">
             <SegmentButton
               active={state.playback === "original"}
               disabled={controlsLocked}
               testId="playback-original"
-              onClick={() => {
-                clearMasterPreview();
-                setState((current) => switchIphonePlayback(current, "original"));
-              }}
+              onClick={() => void switchAuditionMode("original")}
             >
               Original
             </SegmentButton>
@@ -490,7 +526,7 @@ export default function App({
               active={state.playback === "mastered"}
               disabled={!canRenderMaster || controlsLocked}
               testId="playback-mastered"
-              onClick={switchToMasteredPreview}
+              onClick={() => void switchAuditionMode("mastered")}
             >
               Mastered
             </SegmentButton>
@@ -516,27 +552,28 @@ export default function App({
                 setState((current) =>
                   setIphonePlayhead(current, playheadSeconds),
                 );
+                if (isAuditionPlaying) {
+                  void backend.seekPlayback(playheadSeconds);
+                }
               }}
             />
             <span>{formatTime(trackDuration)}</span>
             </div>
-            {auditionUrl ? (
-              <audio
-                className="audio-preview"
-                controls
-                data-testid="iphone-audio-preview"
-                ref={audioRef}
-                src={auditionUrl}
-                onLoadedMetadata={(event) =>
-                  seekAudioToPlayhead(event.currentTarget)
+            <button
+              className="native-play-button"
+              data-testid="iphone-native-play"
+              type="button"
+              disabled={!canRenderMaster || controlsLocked}
+              onClick={toggleAuditionPlayback}
+            >
+              <span
+                className={
+                  isAuditionPlaying ? "hero-pause-glyph" : "hero-play-glyph"
                 }
-                onTimeUpdate={(event) =>
-                  setState((current) =>
-                    setIphonePlayhead(current, event.currentTarget.currentTime),
-                  )
-                }
+                aria-hidden="true"
               />
-            ) : null}
+              {isAuditionPlaying ? "Pause" : "Play"}
+            </button>
           </section>
         ) : null}
 

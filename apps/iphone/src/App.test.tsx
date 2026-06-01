@@ -24,6 +24,14 @@ function makeBackend(): IphoneBackend {
       total_samples: 2560,
       sample_rate: 44_100,
     }),
+    playOriginal: vi.fn().mockResolvedValue(undefined),
+    playMastered: vi.fn().mockResolvedValue(undefined),
+    updateMasteringChain: vi.fn().mockResolvedValue(undefined),
+    pausePlayback: vi.fn().mockResolvedValue(undefined),
+    resumePlayback: vi.fn().mockResolvedValue(undefined),
+    stopPlayback: vi.fn().mockResolvedValue(undefined),
+    seekPlayback: vi.fn().mockResolvedValue(undefined),
+    onPlaybackTick: vi.fn().mockResolvedValue(() => {}),
     renderMaster: vi.fn().mockResolvedValue({
       output_paths: ["/private/new-master__master.wav"],
       measurements: {
@@ -107,12 +115,10 @@ function renderApp({
   backend = makeBackend(),
   pickAudioPath = vi.fn().mockResolvedValue("/private/new-master.wav"),
   pickOutputPath = vi.fn().mockResolvedValue("/private/new-master__master.wav"),
-  toAudioUrl = (path: string) => `https://audio.local${path}`,
 }: {
   backend?: IphoneBackend;
   pickAudioPath?: () => Promise<string | null>;
   pickOutputPath?: (defaultPath?: string) => Promise<string | null>;
-  toAudioUrl?: (path: string) => string;
 } = {}) {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -124,7 +130,6 @@ function renderApp({
         backend={backend}
         pickAudioPath={pickAudioPath}
         pickOutputPath={pickOutputPath}
-        toAudioUrl={toAudioUrl}
       />,
     );
   });
@@ -235,7 +240,7 @@ describe("iPhone app shell", () => {
     const previewButton = container.querySelector<HTMLButtonElement>(
       "[data-testid='iphone-preview-master']",
     );
-    expect(previewButton?.getAttribute("aria-label")).toBe("Preview Master");
+    expect(previewButton?.getAttribute("aria-label")).toBe("Play");
     expect(previewButton?.textContent?.trim()).toBe("");
 
     act(() => root.unmount());
@@ -496,171 +501,151 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
-  it("seeks a newly loaded audition source to the visible playhead", async () => {
-    const { container, root } = renderApp();
+  it("starts native Mastered playback at the visible playhead", async () => {
+    const { backend, container, root } = renderApp();
 
     await click(container, "[data-testid='iphone-import']");
     await scrub(container, "[data-testid='iphone-playhead']", "42");
     await click(container, "[data-testid='playback-mastered']");
+    await click(container, "[data-testid='iphone-native-play']");
 
-    const audio = container.querySelector<HTMLAudioElement>(
-      "[data-testid='iphone-audio-preview']",
+    expect(backend.playMastered).toHaveBeenCalledWith(
+      "track-1",
+      "/private/new-master.wav",
+      expect.any(Object),
+      42,
+      false,
     );
-    if (!audio) throw new Error("Missing audio preview");
-    audio.currentTime = 0;
-
-    await act(async () => {
-      audio.dispatchEvent(new Event("loadedmetadata", { bubbles: true }));
-    });
-
-    expect(audio.currentTime).toBe(42);
 
     act(() => root.unmount());
   });
 
-  it("prepares a mastered preview before switching to Mastered", async () => {
+  it("uses native Mastered playback with the selected audition settings", async () => {
     const { backend, container, root } = renderApp();
 
     await click(container, "[data-testid='iphone-import']");
     await click(container, "[data-testid='volume-match']");
     await click(container, "[data-testid='playback-mastered']");
+    await click(container, "[data-testid='iphone-native-play']");
 
-    expect(backend.prepareMasterPreview).toHaveBeenCalledWith(
+    expect(backend.playMastered).toHaveBeenCalledWith(
+      "track-1",
+      "/private/new-master.wav",
       expect.objectContaining({
-        trackId: "track-1",
-        trackPath: "/private/new-master.wav",
-        settings: expect.objectContaining({
-          volume_match: true,
-        }),
+        volume_match: true,
       }),
+      0,
+      false,
     );
     expect(container.textContent).toContain("Mastered");
 
     act(() => root.unmount());
   });
 
-  it("does not switch to Mastered when the preview render returns no file", async () => {
+  it("does not mark playback active when native Mastered playback fails", async () => {
     const backend = makeBackend();
-    const emptyPreviewJob: RenderJob = {
-      id: "preview-1",
-      kind: "preview",
-      target_tracks: ["track-1"],
-      status: { status: "done" },
-      progress: 1,
-      started_at_iso: "2026-05-31T00:00:00.000Z",
-      output_paths: [],
-      measurements: {
-        lufs_integrated: -14,
-        true_peak_dbtp: -1,
-        dynamic_range_lu: 8,
-        sample_rate: 48_000,
-        bit_depth: 24,
-      },
-    };
-    vi.mocked(backend.prepareMasterPreview).mockResolvedValue(emptyPreviewJob);
+    vi.mocked(backend.playMastered).mockRejectedValue(new Error("audio failed"));
     const { container, root } = renderApp({ backend });
 
     await click(container, "[data-testid='iphone-import']");
     await click(container, "[data-testid='playback-mastered']");
+    await click(container, "[data-testid='iphone-native-play']");
 
     expect(
-      container.querySelector("[data-testid='playback-original']")?.getAttribute(
-        "aria-pressed",
-      ),
-    ).toBe("true");
-    expect(container.textContent).toContain(
-      "Mastered preview did not produce an audio file.",
+      container.querySelector<HTMLButtonElement>("[data-testid='iphone-native-play']")
+        ?.textContent,
+    ).toContain("Play");
+    expect(container.textContent).toContain("audio failed");
+
+    act(() => root.unmount());
+  });
+
+  it("injects analyzed source LUFS into native Mastered playback settings", async () => {
+    const { backend, container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='playback-mastered']");
+    await click(container, "[data-testid='iphone-native-play']");
+
+    expect(backend.playMastered).toHaveBeenCalledWith(
+      "track-1",
+      "/private/new-master.wav",
+      expect.objectContaining({
+        source_lufs_integrated: -15,
+      }),
+      0,
+      false,
     );
 
     act(() => root.unmount());
   });
 
-  it("injects analyzed source LUFS into mastered preview settings", async () => {
+  it("only applies LUFS landing to native Mastered playback when LUFS Preview is on", async () => {
     const { backend, container, root } = renderApp();
 
     await click(container, "[data-testid='iphone-import']");
     await click(container, "[data-testid='playback-mastered']");
+    await click(container, "[data-testid='iphone-native-play']");
 
-    expect(backend.prepareMasterPreview).toHaveBeenCalledWith(
+    expect(backend.playMastered).toHaveBeenLastCalledWith(
+      "track-1",
+      "/private/new-master.wav",
       expect.objectContaining({
-        settings: expect.objectContaining({
-          source_lufs_integrated: -15,
+        advanced: expect.objectContaining({
+          lufs_offset_db: null,
         }),
       }),
-    );
-
-    act(() => root.unmount());
-  });
-
-  it("only applies LUFS landing to mastered preview when LUFS Preview is on", async () => {
-    const { backend, container, root } = renderApp();
-
-    await click(container, "[data-testid='iphone-import']");
-    await click(container, "[data-testid='playback-mastered']");
-
-    expect(backend.prepareMasterPreview).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        settings: expect.objectContaining({
-          advanced: expect.objectContaining({
-            lufs_offset_db: null,
-          }),
-        }),
-      }),
+      0,
+      false,
     );
 
     await click(container, "[data-testid='playback-original']");
     await click(container, "[data-testid='lufs-preview']");
     await click(container, "[data-testid='playback-mastered']");
+    await click(container, "[data-testid='iphone-native-play']");
 
-    expect(backend.prepareMasterPreview).toHaveBeenLastCalledWith(
+    expect(backend.playMastered).toHaveBeenLastCalledWith(
+      "track-1",
+      "/private/new-master.wav",
       expect.objectContaining({
-        settings: expect.objectContaining({
-          advanced: expect.objectContaining({
-            lufs_offset_db: -14,
-          }),
+        advanced: expect.objectContaining({
+          lufs_offset_db: -14,
         }),
       }),
+      0,
+      true,
     );
 
     act(() => root.unmount());
   });
 
-  it("swaps the audition audio source from Original to Mastered preview", async () => {
-    const { container, root } = renderApp();
+  it("uses native Original and Mastered commands instead of browser audio", async () => {
+    const { backend, container, root } = renderApp();
 
     await click(container, "[data-testid='iphone-import']");
-    const audio = container.querySelector<HTMLAudioElement>(
-      "[data-testid='iphone-audio-preview']",
+    await click(container, "[data-testid='iphone-native-play']");
+    expect(backend.playOriginal).toHaveBeenCalledWith(
+      "track-1",
+      "/private/new-master.wav",
+      0,
     );
-    expect(audio?.src).toBe("https://audio.local/private/new-master.wav");
 
     await click(container, "[data-testid='playback-mastered']");
-
-    expect(audio?.src).toBe(
-      "https://audio.local/private/preview/track-1-mastered-preview.wav",
-    );
+    expect(backend.playMastered).toHaveBeenCalled();
 
     act(() => root.unmount());
   });
 
-  it("clears the mastered preview when Simple controls change", async () => {
+  it("keeps the Mastered selection when Simple controls change", async () => {
     const { container, root } = renderApp();
 
     await click(container, "[data-testid='iphone-import']");
     await click(container, "[data-testid='playback-mastered']");
-    expect(
-      container.querySelector<HTMLAudioElement>("[data-testid='iphone-audio-preview']")
-        ?.src,
-    ).toBe("https://audio.local/private/preview/track-1-mastered-preview.wav");
 
     await click(container, "[data-testid='tone-warm']");
 
     expect(
-      container.querySelector<HTMLAudioElement>("[data-testid='iphone-audio-preview']")
-        ?.src,
-    ).toBe("https://audio.local/private/new-master.wav");
-    expect(
-      container.querySelector("[data-testid='playback-original']")?.getAttribute(
+      container.querySelector("[data-testid='playback-mastered']")?.getAttribute(
         "aria-pressed",
       ),
     ).toBe("true");
@@ -668,45 +653,19 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
-  it("ignores a mastered preview that finishes after Simple controls change", async () => {
+  it("seeks native playback when scrubbing while playing", async () => {
     const backend = makeBackend();
-    const delayedPreview = deferred<RenderJob>();
-    vi.mocked(backend.prepareMasterPreview).mockReturnValue(delayedPreview.promise);
     const { container, root } = renderApp({ backend });
 
     await click(container, "[data-testid='iphone-import']");
-    await click(container, "[data-testid='playback-mastered']");
-    await click(container, "[data-testid='tone-warm']");
-
-    await act(async () => {
-      delayedPreview.resolve({
-        id: "preview-2",
-        kind: "preview",
-        target_tracks: ["track-1"],
-        status: { status: "done" },
-        progress: 1,
-        started_at_iso: "2026-05-31T00:00:00.000Z",
-        output_paths: ["/private/preview/stale-mastered-preview.wav"],
-        measurements: {
-          lufs_integrated: -14,
-          true_peak_dbtp: -1,
-          dynamic_range_lu: 8,
-          sample_rate: 48_000,
-          bit_depth: 24,
-        },
-      });
-      await delayedPreview.promise;
-    });
-
+    await click(container, "[data-testid='iphone-native-play']");
+    await scrub(container, "[data-testid='iphone-playhead']", "12");
+ 
+    expect(backend.seekPlayback).toHaveBeenCalledWith(12);
     expect(
-      container.querySelector("[data-testid='playback-original']")?.getAttribute(
-        "aria-pressed",
-      ),
-    ).toBe("true");
-    expect(
-      container.querySelector<HTMLAudioElement>("[data-testid='iphone-audio-preview']")
-        ?.src,
-    ).toBe("https://audio.local/private/new-master.wav");
+      container.querySelector<HTMLInputElement>("[data-testid='iphone-playhead']")
+        ?.value,
+    ).toBe("12");
 
     act(() => root.unmount());
   });
