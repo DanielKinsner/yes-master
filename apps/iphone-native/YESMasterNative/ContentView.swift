@@ -19,13 +19,13 @@ enum NativeStylePreset: String, CaseIterable, Identifiable {
     var subtitle: String {
         switch self {
         case .balanced:
-            "A clean, streaming-ready shape for most mixes."
+            "Clean balance"
         case .warm:
-            "Fuller body and smoother top-end finish."
+            "Warm body"
         case .open:
-            "Air, vocal clarity, and a wider front edge."
+            "Open air"
         case .punch:
-            "Sharper transient impact and forward energy."
+            "Punchy impact"
         }
     }
 
@@ -120,20 +120,18 @@ struct ContentView: View {
                     stylePicker
                     intensitySlider
                     loudnessPicker
-                    listeningModeControls
                     createMasterButton
                     shareMasterButton
                     statusAndAnalysis
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 8)
+                .padding(.top, 12)
                 .padding(.bottom, 12)
                 .frame(maxWidth: 430)
                 .frame(maxWidth: .infinity)
             }
         }
         .preferredColorScheme(.dark)
-        .statusBarHidden(true)
         .fileImporter(
             isPresented: $isImportingTrack,
             allowedContentTypes: bridge.supportedImportContentTypes,
@@ -226,9 +224,15 @@ struct ContentView: View {
                 .allowsHitTesting(false)
 
             playVisual
-            .padding(.horizontal, 14)
+                .padding(.horizontal, 14)
+
+            VStack {
+                Spacer()
+                heroListeningToggles
+                    .padding(.bottom, 12)
+            }
         }
-        .frame(height: 205)
+        .frame(height: 248)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
@@ -301,6 +305,23 @@ struct ContentView: View {
         .frame(height: 156)
     }
 
+    private var heroListeningToggles: some View {
+        HStack(spacing: 22) {
+            checkboxButton(
+                title: "Volume Match",
+                active: listeningMode == .volumeMatch,
+                mode: .volumeMatch
+            )
+
+            checkboxButton(
+                title: "LUFS Preview",
+                active: listeningMode == .lufsPreview,
+                mode: .lufsPreview
+            )
+        }
+        .padding(.horizontal, 18)
+    }
+
     private func checkboxButton(title: String, active: Bool, mode: ListeningMode) -> some View {
         Button {
             listeningMode = active ? .normal : mode
@@ -325,7 +346,6 @@ struct ContentView: View {
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(active ? .white : Color(red: 0.74, green: 0.79, blue: 0.88))
             }
-            .frame(maxWidth: .infinity)
             .frame(height: 44)
         }
         .buttonStyle(.plain)
@@ -334,11 +354,6 @@ struct ContentView: View {
     private var trackCard: some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 5) {
-                Text(trackCardStatus)
-                    .font(.system(size: 11, weight: .heavy))
-                    .tracking(2.4)
-                    .foregroundStyle(Color(red: 0.55, green: 0.64, blue: 0.82))
-
                 Text(importedTrack?.displayName ?? "No track loaded")
                     .font(.system(size: 17, weight: .heavy))
                     .foregroundStyle(.white)
@@ -466,7 +481,7 @@ struct ContentView: View {
                                 Text(preset.subtitle)
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundStyle(Color(red: 0.60, green: 0.67, blue: 0.80))
-                                    .lineLimit(2)
+                                    .lineLimit(1)
                                     .multilineTextAlignment(.leading)
                             }
                         }
@@ -541,7 +556,7 @@ struct ContentView: View {
 
     private var loudnessPicker: some View {
         VStack(alignment: .leading, spacing: 7) {
-            sectionTitle(step: "3", title: "Loudness", meta: "-11.0 LUFS · 44.1 KHZ WAV / 24-BIT")
+            sectionTitle(step: "3", title: "Loudness", meta: nil)
 
             HStack(spacing: 4) {
                 ForEach(NativeLoudness.allCases) { loudness in
@@ -575,34 +590,6 @@ struct ContentView: View {
                 }
             }
             .padding(3)
-            .background(Color(red: 0.01, green: 0.02, blue: 0.045).opacity(0.88))
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
-            )
-        }
-    }
-
-    private var listeningModeControls: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            sectionTitle(step: "4", title: "Listening", meta: nil)
-
-            HStack(spacing: 8) {
-                checkboxButton(
-                    title: "Volume Match",
-                    active: listeningMode == .volumeMatch,
-                    mode: .volumeMatch
-                )
-
-                checkboxButton(
-                    title: "LUFS Preview",
-                    active: listeningMode == .lufsPreview,
-                    mode: .lufsPreview
-                )
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
             .background(Color(red: 0.01, green: 0.02, blue: 0.045).opacity(0.88))
             .clipShape(Capsule())
             .overlay(
@@ -777,25 +764,6 @@ struct ContentView: View {
             return "square.and.arrow.down"
         }
         return playbackController.isPlaying ? "pause.fill" : "play.fill"
-    }
-
-    private var trackCardStatus: String {
-        if isRendering {
-            return "RENDERING"
-        }
-        if isPreparingMasterPreview {
-            return "PREVIEW"
-        }
-        if isAnalyzing {
-            return "ANALYZING"
-        }
-        if masteredPreviewURL != nil && selectedAudition == .mastered {
-            return "MASTERED"
-        }
-        if analysisResult != nil {
-            return "READY"
-        }
-        return importedTrack == nil ? "IMPORT" : "LOADED"
     }
 
     private var fileTypeLabel: String {
