@@ -1,6 +1,6 @@
 # YES Master iPhone Native - Handoff
 
-_Last updated: 2026-06-01, native import plus Rust analysis path._
+_Last updated: 2026-06-01, native import, Rust analysis, and original playback path._
 
 ## Current Status
 
@@ -16,6 +16,7 @@ Review and follow-up slices now landed on `main` in small commits:
 6. `d083f72 feat(iphone-native): expose Rust analysis bridge`
 7. `f64c1e5 feat(iphone-native): add Swift analysis bridge`
 8. `889c24c feat(iphone-native): analyze imported tracks`
+9. `93a62d3 feat(iphone-native): add original playback controller`
 
 The native direction is:
 
@@ -36,7 +37,7 @@ The native direction is:
 ## What Exists Now
 
 - `project.yml`: native iOS project shape using bundle id `com.yesmaster.iphone.native`.
-- `YESMasterNative/*.swift`: SwiftUI shell, listening mode model, audio-session controller, and bridge boundary.
+- `YESMasterNative/*.swift`: SwiftUI shell, listening mode model, audio-session controller, original playback controller, and bridge boundary.
 - `YESMasterNative/YESMasterNative-Bridging-Header.h`: imports the Rust C ABI header for Swift.
 - `rust/`: Rust bridge crate depending on `yes_master_lib`.
 - `rust/include/yes_master_native_bridge.h`: C ABI header for Swift integration.
@@ -51,13 +52,15 @@ The native direction is:
 - fixed export settings JSON
 - source track analysis via `yes_master_lib::engine::analyze_tracks`
 
-The native app can now import a supported audio file into app-owned storage, ask Rust to analyze it, and show LUFS, true peak, and dynamic range. It is still not a real mastering app yet: original/mastered playback, render, and share/export are not wired.
+The native app can now import a supported audio file into app-owned storage, ask Rust to analyze it, show LUFS, true peak, and dynamic range, then play or pause the imported original track. Playback activates `AVAudioSession` immediately before starting the player.
+
+It is still not a real mastering app yet: mastered playback, render, and share/export are not wired.
 
 ## Next Slice
 
-1. Add native playback for the imported original file with `AVAudioSession` activation immediately before play.
-2. Preserve playhead when later switching Original/Mastered.
-3. Add render/export bridge call using the shared Rust engine and the fixed `-11 LUFS`, `44.1 kHz`, `24-bit`, `-1 dBTP` export target.
+1. Add the Rust render/export bridge call using the shared Rust engine and the fixed `-11 LUFS`, `44.1 kHz`, `24-bit`, `-1 dBTP` export target.
+2. Add mastered playback once render output exists.
+3. Preserve playhead when switching Original/Mastered.
 4. Add native share/export once render output exists.
 5. Keep the UI spacious; do not add waveform/scrubbing unless the user asks.
 
@@ -92,6 +95,8 @@ cd apps/iphone-native
 xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO test
 ```
 
+Latest test result after adding original playback: 5 tests passed, 0 failed.
+
 ```bash
 cd apps/iphone-native
 xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
@@ -106,5 +111,11 @@ lipo -info rust/build/iphoneos/Debug/libyes_master_iphone_native_bridge.a
 ```
 
 Device Rust bridge output is arm64.
+
+Screenshot shared during this pass:
+
+```text
+/tmp/yes-master-screenshots/iphone-native-current.png
+```
 
 No remote iPhone install or TestFlight work was attempted.
