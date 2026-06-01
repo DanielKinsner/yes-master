@@ -3,12 +3,38 @@ use std::f32::consts::TAU;
 use hound::{SampleFormat, WavSpec, WavWriter};
 use tempfile::tempdir;
 use yes_master_iphone_lib::{
-    iphone_prepare_master_preview_in_dir, iphone_render_master_to_path,
+    iphone_prepare_master_preview_in_dir, iphone_render_master_to_path, normalize_iphone_file_path,
 };
 use yes_master_lib::{
     AdvancedSettings, CompressionMode, DeliveryProfile, JobStatus, MasteringSettings, Preset,
     RenderKind,
 };
+
+#[test]
+fn normalize_iphone_file_path_decodes_copied_document_urls() {
+    let normalized = normalize_iphone_file_path(
+        "file:///private/var/mobile/Containers/Data/It%E2%80%99s%20a%20Coat.mp3",
+    );
+
+    assert_eq!(
+        normalized,
+        "/private/var/mobile/Containers/Data/It’s a Coat.mp3"
+    );
+}
+
+#[test]
+fn normalize_iphone_file_path_decodes_plain_picker_paths() {
+    let normalized = normalize_iphone_file_path("/tmp/YES%20Master/rough%20mix.wav");
+
+    assert_eq!(normalized, "/tmp/YES Master/rough mix.wav");
+}
+
+#[test]
+fn normalize_iphone_file_path_keeps_invalid_percent_text() {
+    let normalized = normalize_iphone_file_path("/tmp/100% legit%ZZ.wav");
+
+    assert_eq!(normalized, "/tmp/100% legit%ZZ.wav");
+}
 
 #[test]
 fn iphone_render_master_to_path_uses_shared_dsp_engine() {
