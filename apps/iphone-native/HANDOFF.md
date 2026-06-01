@@ -25,6 +25,7 @@ Review and follow-up slices now landed on `main` in small commits:
 15. `5ced404 feat(iphone-native): preserve audition switch position`
 16. `eda9d9f feat(iphone-native): add share master action`
 17. `0896f6c fix(iphone-native): require full screen portrait`
+18. `5d7dc05 test(iphone-native): verify Swift Rust render path`
 
 The native direction is:
 
@@ -74,6 +75,8 @@ Original/Mastered switching now tries to preserve playback position when switchi
 Native share/export has a first pass: after a master render succeeds, a `Share Master` button appears and shares the rendered WAV through the iOS share sheet.
 
 It is still not a full iPhone mastering app yet: the full import -> analyze -> render -> mastered playback -> share loop still needs hands-on testing on the user's real phone with a supported audio file.
+
+A simulator test now sends a generated WAV through the Swift bridge into Rust analysis/rendering and confirms Rust creates a 44.1 kHz, 24-bit WAV output. This reduces the risk that the UI is only talking to placeholders.
 
 ## Lunch Test Plan
 
@@ -128,6 +131,8 @@ xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destinati
 
 Latest test result after audition switching and share action: 7 tests passed, 0 failed.
 
+Latest test result after adding the real Swift -> Rust render path check: 8 tests passed, 0 failed.
+
 ```bash
 cd apps/iphone-native
 xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
@@ -147,6 +152,7 @@ Screenshot shared during this pass:
 
 ```text
 /tmp/yes-master-screenshots/iphone-native-reference-ui.png
+/tmp/yes-master-screenshots/iphone-native-pre-phone-test.png
 ```
 
 Additional verification after the latest slices:
@@ -180,5 +186,15 @@ xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destinati
 ```
 
 Result: iPhone target build succeeded and linked the Rust bridge for `iphoneos`.
+
+Latest simulator launch check:
+
+```bash
+xcrun simctl install B3786F0C-1C97-4215-839F-5BC2DC63AAA8 "$HOME/Library/Developer/Xcode/DerivedData/YESMasterNative-hkgdvqoawaqkijbqjgjiapwekgrs/Build/Products/Debug-iphonesimulator/YES Master Native.app"
+xcrun simctl launch B3786F0C-1C97-4215-839F-5BC2DC63AAA8 com.yesmaster.iphone.native
+xcrun simctl io B3786F0C-1C97-4215-839F-5BC2DC63AAA8 screenshot /tmp/yes-master-screenshots/iphone-native-pre-phone-test.png
+```
+
+Result: simulator launched and screenshot captured with the polished reference-style UI.
 
 No remote iPhone install or TestFlight work was attempted.
