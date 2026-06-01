@@ -48,3 +48,27 @@ targets:
         basedOnDependencyAnalysis: false
         script: |
           "$PROJECT_DIR/scripts/build-rust-bridge.sh"
+  YESMasterNativeTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: YESMasterNativeTests
+    dependencies:
+      - target: YESMasterNative
+    settings:
+      base:
+        PRODUCT_NAME: YESMasterNativeTests
+        PRODUCT_MODULE_NAME: YESMasterNativeTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.yesmaster.iphone.native.tests
+        HEADER_SEARCH_PATHS:
+          - $(PROJECT_DIR)/rust/include
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/YES Master Native.app/YES Master Native"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  YESMasterNative:
+    build:
+      targets:
+        YESMasterNative: all
+    test:
+      targets:
+        - YESMasterNativeTests
