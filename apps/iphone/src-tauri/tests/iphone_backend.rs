@@ -153,3 +153,59 @@ fn write_test_wav(path: &std::path::Path) {
     }
     writer.finalize().expect("finalize wav");
 }
+
+/// The exact regression behind the device "flat placeholder" waveform: a
+/// percent-encoded `file://` URL from the iOS document picker must round-trip
+/// through `normalize_iphone_file_path` and decode to non-empty peaks. If this
+/// passes, the decode/normalize path is sound and any device failure is
+/// environmental (missing file / codec), not a logic bug here.
+#[test]
+fn prepare_waveform_decodes_normalized_file_url() {
+    let temp = tempdir().expect("tempdir");
+    // Spaced filename exercises percent-decoding, mirroring the copied
+    // document-picker path (e.g. ".../My Song.wav").
+    let source = temp.path().join("My Song.wav");
+    write_test_wav(&source);
+
+    let url = format!("file://{}", source.to_string_lossy().replace(' ', "%20"));
+    let normalized = normalize_iphone_file_path(&url);
+    assert_eq!(normalized, source.to_string_lossy());
+
+    let peaks = block_on(yes_master_lib::audio::prepare_waveform(
+        yes_master_lib::TrackId("wave-track".to_string()),
+        normalized,
+        Some(140),
+    ))
+    .expect("waveform should decode from a normalized file:// URL");
+
+    assert!(!peaks.channels.is_empty(), "expected at least one channel");
+    let first = &peaks.channels[0];
+    assert!(!first.is_empty(), "expected non-empty peak buckets");
+    assert!(
+        first.iter().any(|&value| value > 0.01),
+        "expected real signal in the decoded waveform peaks"
+    );
+}
+
+/// Minimal single-poll executor. `prepare_waveform`'s async body contains no
+/// `.await` points (it delegates to the synchronous `decode_to_peaks`), so one
+/// poll drives it to completion — no async runtime needed in the test crate.
+fn block_on<F: std::future::Future>(future: F) -> F::Output {
+    use std::pin::pin;
+    use std::ptr;
+    use std::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
+
+    unsafe fn clone(_: *const ()) -> RawWaker {
+        RawWaker::new(ptr::null(), &VTABLE)
+    }
+    unsafe fn noop(_: *const ()) {}
+    static VTABLE: RawWakerVTable = RawWakerVTable::new(clone, noop, noop, noop);
+
+    let waker = unsafe { Waker::from_raw(RawWaker::new(ptr::null(), &VTABLE)) };
+    let mut context = Context::from_waker(&waker);
+    let mut future = pin!(future);
+    match future.as_mut().poll(&mut context) {
+        Poll::Ready(value) => value,
+        Poll::Pending => panic!("prepare_waveform unexpectedly awaited; test needs a real runtime"),
+    }
+}
