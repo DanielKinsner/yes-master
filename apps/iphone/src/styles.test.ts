@@ -111,8 +111,10 @@ describe("iPhone styles", () => {
     );
 
     expect(loadedHeroButtonBlock).toContain("radial-gradient");
-    expect(loadedHeroButtonBlock).toContain("rgba(20, 87, 232, 0.96)");
+    expect(loadedHeroButtonBlock).toContain("linear-gradient(160deg");
+    expect(loadedHeroButtonBlock).toContain("isolation: isolate");
     expect(loadedHeroButtonBlock).toContain("border-radius: 999px");
+    expect(css).toContain(".hero-orb.has-track .hero-action-button::before");
   });
 
   it("uses compact checkbox options near the hero instead of lower toggles", () => {
