@@ -3,12 +3,14 @@ import {
   invoke as tauriInvoke,
   isTauri,
 } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import type {
   AnalysisResult,
   ExportReport,
   ImportedTrack,
   MasteringSettings,
+  PlaybackTick,
   QualityCheck,
   RenderJob,
   WaveformPeaks,
@@ -41,6 +43,27 @@ export interface IphoneBackend {
     trackPath: string,
     targetPixels?: number,
   ): Promise<WaveformPeaks>;
+  playOriginal(
+    trackId: string,
+    trackPath: string,
+    startPositionSec?: number,
+  ): Promise<void>;
+  playMastered(
+    trackId: string,
+    trackPath: string,
+    settings: MasteringSettings,
+    startPositionSec?: number,
+    previewLufsLanding?: boolean,
+  ): Promise<void>;
+  updateMasteringChain(
+    settings: MasteringSettings,
+    previewLufsLanding?: boolean,
+  ): Promise<void>;
+  pausePlayback(): Promise<void>;
+  resumePlayback(): Promise<void>;
+  stopPlayback(): Promise<void>;
+  seekPlayback(positionSec: number): Promise<void>;
+  onPlaybackTick(handler: (tick: PlaybackTick) => void): Promise<UnlistenFn>;
   renderMaster(request: IphoneRenderRequest): Promise<RenderJob>;
   prepareMasterPreview(request: IphonePreviewRequest): Promise<RenderJob>;
   runExportChecks(
@@ -77,6 +100,44 @@ export function createIphoneBackend(invoke: IphoneInvoke): IphoneBackend {
         trackPath,
         targetPixels,
       }),
+
+    playOriginal: (trackId, trackPath, startPositionSec) =>
+      invoke<void>("iphone_play_track", {
+        trackId,
+        trackPath,
+        startPositionSec: startPositionSec ?? null,
+      }),
+
+    playMastered: (
+      trackId,
+      trackPath,
+      settings,
+      startPositionSec,
+      previewLufsLanding = true,
+    ) =>
+      invoke<void>("iphone_play_master", {
+        trackId,
+        trackPath,
+        settings,
+        startPositionSec: startPositionSec ?? null,
+        previewLufsLanding,
+      }),
+
+    updateMasteringChain: (settings, previewLufsLanding = true) =>
+      invoke<void>("iphone_update_chain", {
+        settings,
+        previewLufsLanding,
+      }),
+
+    pausePlayback: () => invoke<void>("iphone_pause_playback"),
+    resumePlayback: () => invoke<void>("iphone_resume_playback"),
+    stopPlayback: () => invoke<void>("iphone_stop_playback"),
+    seekPlayback: (positionSec) =>
+      invoke<void>("iphone_seek_playback", {
+        positionSec,
+      }),
+    onPlaybackTick: (handler) =>
+      listen<PlaybackTick>("playback:tick", (event) => handler(event.payload)),
 
     renderMaster: ({ trackId, trackPath, settings, outputPath }) =>
       invoke<RenderJob>("iphone_render_master", {
@@ -145,6 +206,17 @@ export function createBrowserPreviewIphoneBackend(): IphoneBackend {
 
     async prepareWaveform(trackId, _trackPath, targetPixels = 140) {
       return syntheticIphoneWaveform(trackId, targetPixels);
+    },
+
+    async playOriginal() {},
+    async playMastered() {},
+    async updateMasteringChain() {},
+    async pausePlayback() {},
+    async resumePlayback() {},
+    async stopPlayback() {},
+    async seekPlayback() {},
+    async onPlaybackTick() {
+      return () => {};
     },
 
     async renderMaster({ trackId, outputPath, settings }) {

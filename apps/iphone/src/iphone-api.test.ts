@@ -85,6 +85,57 @@ describe("iPhone API facade", () => {
     });
   });
 
+  it("calls the native iPhone Original playback command", async () => {
+    const invoke = vi.fn().mockResolvedValue(undefined);
+    const backend = createIphoneBackend(invoke);
+
+    await backend.playOriginal("track-1", "/private/song.wav", 12.5);
+
+    expect(invoke).toHaveBeenCalledWith("iphone_play_track", {
+      trackId: "track-1",
+      trackPath: "/private/song.wav",
+      startPositionSec: 12.5,
+    });
+  });
+
+  it("calls the native iPhone Mastered playback command", async () => {
+    const invoke = vi.fn().mockResolvedValue(undefined);
+    const backend = createIphoneBackend(invoke);
+    const settings = { volume_match: true } as MasteringSettings;
+
+    await backend.playMastered("track-1", "/private/song.wav", settings, 7, false);
+
+    expect(invoke).toHaveBeenCalledWith("iphone_play_master", {
+      trackId: "track-1",
+      trackPath: "/private/song.wav",
+      settings,
+      startPositionSec: 7,
+      previewLufsLanding: false,
+    });
+  });
+
+  it("calls the native iPhone transport commands", async () => {
+    const invoke = vi.fn().mockResolvedValue(undefined);
+    const backend = createIphoneBackend(invoke);
+
+    await backend.updateMasteringChain({ volume_match: false } as MasteringSettings);
+    await backend.pausePlayback();
+    await backend.resumePlayback();
+    await backend.seekPlayback(4);
+    await backend.stopPlayback();
+
+    expect(invoke).toHaveBeenCalledWith("iphone_update_chain", {
+      settings: { volume_match: false },
+      previewLufsLanding: true,
+    });
+    expect(invoke).toHaveBeenCalledWith("iphone_pause_playback");
+    expect(invoke).toHaveBeenCalledWith("iphone_resume_playback");
+    expect(invoke).toHaveBeenCalledWith("iphone_seek_playback", {
+      positionSec: 4,
+    });
+    expect(invoke).toHaveBeenCalledWith("iphone_stop_playback");
+  });
+
   it("calls the separate iPhone render command with export settings", async () => {
     const invoke = vi.fn().mockResolvedValue({ output_paths: ["/private/master.wav"] });
     const backend = createIphoneBackend(invoke);

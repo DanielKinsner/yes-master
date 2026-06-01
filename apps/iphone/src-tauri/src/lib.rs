@@ -1,8 +1,10 @@
-use std::path::Path;
+use std::{path::Path, sync::Arc, time::Duration};
 
+use tauri::{Emitter, Manager};
 use yes_master_lib::{
-    engine, exports, files, AnalysisResult, CommandResult, ExportReport, ImportedTrack,
-    MasteringSettings, QualityCheck, RenderJob, RenderKind, TrackId, WaveformPeaks,
+    audio::AudioPlayer, engine, exports, files, AnalysisResult, CommandResult, ExportReport,
+    ImportedTrack, MasteringSettings, PlaybackTick, QualityCheck, RenderJob, RenderKind, TrackId,
+    WaveformPeaks,
 };
 
 #[tauri::command]
@@ -66,6 +68,80 @@ async fn iphone_prepare_master_preview(
     let preview_dir = std::env::temp_dir().join("yes-master-iphone-previews");
     let track_path = normalize_iphone_file_path(&track_path);
     iphone_prepare_master_preview_in_dir(track_id, Path::new(&track_path), &settings, &preview_dir)
+}
+
+#[tauri::command]
+async fn iphone_play_track(
+    track_id: String,
+    track_path: String,
+    start_position_sec: Option<f64>,
+    player: tauri::State<'_, Arc<AudioPlayer>>,
+) -> CommandResult<()> {
+    let track_path = normalize_iphone_file_path(&track_path);
+    player.play_track(
+        TrackId(track_id),
+        Path::new(&track_path),
+        start_position_sec.unwrap_or(0.0),
+    )
+}
+
+#[tauri::command]
+async fn iphone_play_master(
+    track_id: String,
+    track_path: String,
+    settings: MasteringSettings,
+    start_position_sec: Option<f64>,
+    preview_lufs_landing: Option<bool>,
+    player: tauri::State<'_, Arc<AudioPlayer>>,
+) -> CommandResult<()> {
+    let track_path = normalize_iphone_file_path(&track_path);
+    player.play_master(
+        TrackId(track_id),
+        Path::new(&track_path),
+        settings,
+        start_position_sec.unwrap_or(0.0),
+        preview_lufs_landing.unwrap_or(true),
+    )
+}
+
+#[tauri::command]
+async fn iphone_update_chain(
+    settings: MasteringSettings,
+    preview_lufs_landing: Option<bool>,
+    player: tauri::State<'_, Arc<AudioPlayer>>,
+) -> CommandResult<()> {
+    player.update_chain(settings, preview_lufs_landing.unwrap_or(true))
+}
+
+#[tauri::command]
+async fn iphone_pause_playback(player: tauri::State<'_, Arc<AudioPlayer>>) -> CommandResult<()> {
+    player.pause();
+    Ok(())
+}
+
+#[tauri::command]
+async fn iphone_resume_playback(player: tauri::State<'_, Arc<AudioPlayer>>) -> CommandResult<()> {
+    player.resume();
+    Ok(())
+}
+
+#[tauri::command]
+async fn iphone_stop_playback(player: tauri::State<'_, Arc<AudioPlayer>>) -> CommandResult<()> {
+    player.stop();
+    Ok(())
+}
+
+#[tauri::command]
+async fn iphone_seek_playback(
+    position_sec: f64,
+    player: tauri::State<'_, Arc<AudioPlayer>>,
+) -> CommandResult<()> {
+    if !position_sec.is_finite() || position_sec < 0.0 {
+        return Err(yes_master_lib::CommandError::Other(format!(
+            "invalid seek position: {position_sec}"
+        )));
+    }
+    player.seek(position_sec)
 }
 
 pub fn iphone_render_master_to_path(
@@ -189,8 +265,11 @@ async fn iphone_run_export_checks(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let player = Arc::new(AudioPlayer::new());
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .manage(player)
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -199,6 +278,31 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            let app_handle = app.handle().clone();
+            let player_state = app.state::<Arc<AudioPlayer>>().inner().clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(Duration::from_millis(50));
+                let snap = player_state.snapshot();
+                if !snap.is_loaded {
+                    continue;
+                }
+                let tick = PlaybackTick {
+                    track_id: snap.track_id,
+                    position_sec: snap.position_sec,
+                    is_playing: snap.is_playing,
+                    is_loaded: snap.is_loaded,
+                    peak_dbfs: snap.peak_dbfs,
+                    peak_left_dbfs: snap.peak_left_dbfs,
+                    peak_right_dbfs: snap.peak_right_dbfs,
+                    gr_low_db: snap.gr_low_db,
+                    gr_mid_db: snap.gr_mid_db,
+                    gr_high_db: snap.gr_high_db,
+                    lufs_momentary: snap.lufs_momentary,
+                    lufs_integrated: snap.lufs_integrated,
+                    spectrum_db: snap.spectrum_db,
+                };
+                let _ = app_handle.emit("playback:tick", tick);
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -207,6 +311,13 @@ pub fn run() {
             iphone_prepare_waveform,
             iphone_render_master,
             iphone_prepare_master_preview,
+            iphone_play_track,
+            iphone_play_master,
+            iphone_update_chain,
+            iphone_pause_playback,
+            iphone_resume_playback,
+            iphone_stop_playback,
+            iphone_seek_playback,
             iphone_run_export_checks,
         ])
         .run(tauri::generate_context!())
