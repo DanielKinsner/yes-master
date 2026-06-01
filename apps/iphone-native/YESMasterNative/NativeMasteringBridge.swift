@@ -43,7 +43,7 @@ enum NativeMasteringBridgeError: LocalizedError, Equatable {
 }
 
 struct NativeMasteringBridge {
-    private let knownAudioExtensions = ["wav", "mp3", "m4a", "aac", "flac", "ogg", "aiff", "aif", "opus"]
+    private let knownAudioExtensions = ["wav", "mp3", "m4a", "aac", "flac", "ogg"]
 
     var bridgeVersion: String {
         guard let pointer = yes_master_native_bridge_version() else {
