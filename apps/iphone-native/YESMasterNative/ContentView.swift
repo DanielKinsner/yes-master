@@ -735,6 +735,10 @@ struct ContentView: View {
             } catch ImportedTrackStore.ImportError.unsupportedExtension(let fileExtension) {
                 let label = fileExtension.isEmpty ? "that file" : ".\(fileExtension)"
                 statusText = "\(label) is not supported yet. Use \(bridge.supportedImportExtensions.joined(separator: ", "))."
+            } catch ImportedTrackStore.ImportError.emptyFile {
+                statusText = "That file looks empty. Make sure it finished downloading, then try again."
+            } catch ImportedTrackStore.ImportError.unreadableContainer(let fileExtension) {
+                statusText = ".\(fileExtension) was selected, but it does not look like readable audio."
             } catch {
                 statusText = "Track could not be imported. Try another supported audio file."
             }
@@ -908,7 +912,7 @@ struct ContentView: View {
                 prepareMasteredPreview(selectWhenReady: false)
             case .failure(let error):
                 analysisResult = nil
-                statusText = "Analysis failed: \(error.localizedDescription)"
+                statusText = friendlyAudioErrorMessage(error)
             }
         }
     }
@@ -984,7 +988,7 @@ struct ContentView: View {
                 if selectedAudition == .mastered {
                     selectedAudition = .original
                 }
-                statusText = "Mastered preview failed: \(error.localizedDescription)"
+                statusText = friendlyAudioErrorMessage(error)
             }
         }
     }
@@ -1044,9 +1048,18 @@ struct ContentView: View {
                 masteredPreviewURL = nil
                 shareMasterURL = nil
                 selectedAudition = .original
-                statusText = "Master render failed: \(error.localizedDescription)"
+                statusText = friendlyAudioErrorMessage(error)
             }
         }
+    }
+
+    private func friendlyAudioErrorMessage(_ error: Error) -> String {
+        let message = error.localizedDescription
+        if message.localizedCaseInsensitiveContains("no suitable format reader")
+            || message.localizedCaseInsensitiveContains("decode error") {
+            return "The file imported, but the audio could not be read. Try a standard WAV, MP3, or M4A."
+        }
+        return message
     }
 }
 

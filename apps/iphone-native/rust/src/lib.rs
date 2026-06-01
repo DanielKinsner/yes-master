@@ -320,6 +320,28 @@ mod tests {
     }
 
     #[test]
+    fn rendered_wav_can_be_analyzed_again() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        let output_dir = tmp.path().join("rendered");
+        write_sine_wav(&input);
+
+        let rendered = render_master_for_test(&input, &output_dir);
+        let rendered = CString::new(rendered.to_string_lossy().as_bytes()).unwrap();
+        let pointer = unsafe { yes_master_native_analyze_file_json(rendered.as_ptr()) };
+        assert!(!pointer.is_null());
+
+        let json = unsafe {
+            let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
+            yes_master_native_free_string(pointer);
+            value
+        };
+
+        assert!(!json.contains(r#""error""#), "got {json}");
+        assert!(json.contains("lufs_integrated"), "got {json}");
+    }
+
+    #[test]
     fn render_master_json_creates_unique_outputs_in_directory() {
         let tmp = tempfile::tempdir().unwrap();
         let input = tmp.path().join("source.wav");

@@ -19,7 +19,7 @@ final class ImportedTrackStoreTests: XCTestCase {
 
     func testImportCopiesSupportedTrackIntoAppOwnedStorage() throws {
         let sourceURL = temporaryDirectory.appendingPathComponent("Mix Draft.WAV")
-        try Data("fake audio".utf8).write(to: sourceURL)
+        try writeMinimalWavHeader(to: sourceURL)
 
         let store = ImportedTrackStore(
             importedTracksDirectory: temporaryDirectory.appendingPathComponent("Imported", isDirectory: true)
@@ -53,7 +53,7 @@ final class ImportedTrackStoreTests: XCTestCase {
 
     func testImportCreatesUniqueCopiesInsteadOfOverwriting() throws {
         let sourceURL = temporaryDirectory.appendingPathComponent("mix.wav")
-        try Data("first".utf8).write(to: sourceURL)
+        try writeMinimalWavHeader(to: sourceURL)
 
         let store = ImportedTrackStore(
             importedTracksDirectory: temporaryDirectory.appendingPathComponent("Imported", isDirectory: true)
@@ -65,5 +65,43 @@ final class ImportedTrackStoreTests: XCTestCase {
         XCTAssertNotEqual(firstTrack.localURL, secondTrack.localURL)
         XCTAssertTrue(FileManager.default.fileExists(atPath: firstTrack.localURL.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: secondTrack.localURL.path))
+    }
+
+    func testImportRejectsEmptyFiles() throws {
+        let sourceURL = temporaryDirectory.appendingPathComponent("empty.wav")
+        try Data().write(to: sourceURL)
+
+        let store = ImportedTrackStore(
+            importedTracksDirectory: temporaryDirectory.appendingPathComponent("Imported", isDirectory: true)
+        )
+
+        XCTAssertThrowsError(
+            try store.importTrack(from: sourceURL, supportedExtensions: ["wav"])
+        ) { error in
+            XCTAssertEqual(error as? ImportedTrackStore.ImportError, .emptyFile)
+        }
+    }
+
+    func testImportRejectsWavFilesThatDoNotLookLikeWavAudio() throws {
+        let sourceURL = temporaryDirectory.appendingPathComponent("fake.wav")
+        try Data("not really a wave file".utf8).write(to: sourceURL)
+
+        let store = ImportedTrackStore(
+            importedTracksDirectory: temporaryDirectory.appendingPathComponent("Imported", isDirectory: true)
+        )
+
+        XCTAssertThrowsError(
+            try store.importTrack(from: sourceURL, supportedExtensions: ["wav"])
+        ) { error in
+            XCTAssertEqual(error as? ImportedTrackStore.ImportError, .unreadableContainer("wav"))
+        }
+    }
+
+    private func writeMinimalWavHeader(to url: URL) throws {
+        var data = Data()
+        data.append(contentsOf: [0x52, 0x49, 0x46, 0x46])
+        data.append(contentsOf: [0x24, 0x00, 0x00, 0x00])
+        data.append(contentsOf: [0x57, 0x41, 0x56, 0x45])
+        try data.write(to: url)
     }
 }
