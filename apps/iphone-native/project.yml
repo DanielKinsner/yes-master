@@ -34,6 +34,7 @@ targets:
         NSDocumentsFolderUsageDescription: YES Master imports audio files you choose and exports finished masters.
     settings:
       base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         HEADER_SEARCH_PATHS:
           - $(PROJECT_DIR)/rust/include
         LIBRARY_SEARCH_PATHS:
@@ -41,6 +42,7 @@ targets:
         OTHER_LDFLAGS:
           - -lyes_master_iphone_native_bridge
         SWIFT_OBJC_BRIDGING_HEADER: YESMasterNative/YESMasterNative-Bridging-Header.h
+        TARGETED_DEVICE_FAMILY: "1"
     dependencies:
       - sdk: AVFoundation.framework
       - sdk: UniformTypeIdentifiers.framework

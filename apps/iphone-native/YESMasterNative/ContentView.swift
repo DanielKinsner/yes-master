@@ -169,14 +169,17 @@ struct ContentView: View {
     private var header: some View {
         HStack {
             HStack(spacing: 10) {
-                Image(systemName: "waveform")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(Color(red: 0.29, green: 0.65, blue: 1.0))
-                    .shadow(color: .blue.opacity(0.6), radius: 10)
+                Image("BrandIcon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 28, height: 28)
+                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .shadow(color: Color(red: 0.35, green: 0.88, blue: 0.82).opacity(0.38), radius: 10)
 
                 Text("YES MASTER")
                     .font(.system(size: 16, weight: .heavy))
                     .tracking(1.4)
+                    .foregroundStyle(.white)
             }
 
             Spacer()
@@ -213,16 +216,20 @@ struct ContentView: View {
                         .stroke(Color(red: 0.34, green: 0.52, blue: 0.88).opacity(0.28), lineWidth: 1)
                 )
 
-            Image(systemName: "waveform.path.ecg")
-                .font(.system(size: 210, weight: .thin))
-                .foregroundStyle(Color.blue.opacity(0.08))
-                .rotationEffect(.degrees(-12))
-                .offset(x: 114, y: -70)
+            Image("BrandIcon")
+                .resizable()
+                .scaledToFit()
+                .opacity(0.11)
+                .blendMode(.screen)
+                .frame(width: 236, height: 236)
+                .offset(x: 52, y: -4)
+                .allowsHitTesting(false)
 
             playVisual
             .padding(.horizontal, 14)
         }
         .frame(height: 205)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private var playVisual: some View {
