@@ -29,6 +29,7 @@ Review and follow-up slices now landed on `main` in small commits:
 19. `ae6eb3a feat(iphone-native): prepare mastered previews`
 20. `2c8d3ce style(iphone-native): use YES Master icon artwork`
 21. `98f7214 style(iphone-native): simplify hero controls`
+22. `bfad0fd fix(iphone-native): clarify unreadable wav imports`
 
 The native direction is:
 
@@ -77,11 +78,19 @@ Original/Mastered switching now uses a mastered preview render that starts after
 
 Native share/export has a first pass: after a master render succeeds, a `Share Master` button appears and shares the rendered WAV through the iOS share sheet.
 
-The iPhone UI has a preset intensity slider. Preset and intensity are passed through the Swift bridge to the shared Rust mastering settings. The center play/import panel is less crowded: Volume Match and LUFS Preview moved into a lower Listening section.
+The iPhone UI has a preset intensity slider. Preset and intensity are passed through the Swift bridge to the shared Rust mastering settings.
 
 The native app now uses the YES Master desktop icon artwork for the iPhone app icon, the header brand mark, and a very faint play-panel watermark behind the central play/import button.
 
 The latest UI cleanup restores the import/play area as the main hero, moves Volume Match and LUFS Preview back into that hero as small checkboxes, removes the separate Listening/Step 4 section, removes the redundant `IMPORT` label above `No track loaded`, hides the loudness metadata line, and shortens preset copy to one-line labels.
+
+WAV support was checked after a device screenshot showed `no suitable format reader found`. Normal WAV files analyze successfully, and a new Rust test confirms the native bridge can analyze one of its own rendered 24-bit WAV files. The likely issue is a specific selected file that had a `.wav` name but did not contain readable WAV audio, or was an empty/cloud-placeholder file after import. Native import now catches empty files and `.wav` files that do not look like WAV audio before analysis, and decode failures show a short plain-language message instead of the long Rust decoder text.
+
+Three track-placement mockups were generated outside git because they were based on a user screenshot:
+
+- `/tmp/yes-master-mockups/mockup-a-hero-file-chip.png`
+- `/tmp/yes-master-mockups/mockup-b-header-subline.png`
+- `/tmp/yes-master-mockups/mockup-c-bottom-context-line.png`
 
 It is still not a full iPhone mastering app yet: the full import -> analyze -> render -> mastered playback -> share loop still needs hands-on testing on the user's real phone with a supported audio file.
 
@@ -102,10 +111,11 @@ When the user is home and the phone is connected:
 ## Next Slice
 
 1. Manually test import -> analyze -> Create Master -> Mastered playback -> Share Master on the real iPhone.
-2. Consider disabling Create Master with a visible explanation while analysis is pending or failed.
-3. Improve loading states if real-phone render time feels long.
-4. Add any install helper script only after confirming the exact connected-device workflow.
-5. Keep the UI spacious; do not add waveform/scrubbing unless the user asks.
+2. Pick one subtler track-title placement from the three mockups and implement it.
+3. Consider disabling Create Master with a visible explanation while analysis is pending or failed.
+4. Improve loading states if real-phone render time feels long.
+5. Add any install helper script only after confirming the exact connected-device workflow.
+6. Keep the UI spacious; do not add waveform/scrubbing unless the user asks.
 
 ## Verification So Far
 
@@ -310,5 +320,35 @@ xcrun devicectl device process launch --device 5D9F3B2F-C68D-50E0-A372-DEE3A7A3B
 ```
 
 Result: signed device build succeeded. The previous app install was removed first to clear app cache/container, then the current build was installed and launched on the connected iPhone.
+
+Latest WAV/import investigation checks:
+
+```bash
+cd apps/iphone-native/rust
+cargo test
+```
+
+Result: 9 Rust bridge tests passed, 0 failed. New coverage confirms a rendered 24-bit WAV can be analyzed again.
+
+```bash
+cd apps/iphone-native
+xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO test
+```
+
+Result: 10 native Swift tests passed, 0 failed. New coverage catches empty files and `.wav` files that do not look like WAV audio.
+
+```bash
+cd apps/iphone-native/rust
+PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" cargo check --target aarch64-apple-ios
+```
+
+Result: passed.
+
+```bash
+cd apps/iphone-native
+xcodegen generate
+```
+
+Result: project regenerated; only intended source files were dirty before commit.
 
 No TestFlight work was attempted.
