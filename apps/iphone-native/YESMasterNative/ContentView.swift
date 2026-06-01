@@ -103,6 +103,7 @@ struct ContentView: View {
                     stylePicker
                     loudnessPicker
                     createMasterButton
+                    shareMasterButton
                     statusAndAnalysis
                 }
                 .padding(.horizontal, 16)
@@ -559,6 +560,25 @@ struct ContentView: View {
         }
         .buttonStyle(.plain)
         .disabled(isRendering)
+    }
+
+    @ViewBuilder
+    private var shareMasterButton: some View {
+        if let renderedMasterURL {
+            ShareLink(item: renderedMasterURL) {
+                Text("Share Master")
+                    .font(.system(size: 15, weight: .heavy))
+                    .foregroundStyle(Color(red: 0.84, green: 0.90, blue: 1.0))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color.white.opacity(0.055))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    )
+            }
+        }
     }
 
     private var statusAndAnalysis: some View {
