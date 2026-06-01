@@ -1,10 +1,10 @@
 # YES Master iPhone — Handoff
 
-_Last updated: 2026-06-01, fixed iPhone export/remote-distribution planning session (Codex). Most checks are automated; anything needing a human ear/eye on the real device is called out explicitly below._
+_Last updated: 2026-06-01, simplified loaded hierarchy session (Codex). Most checks are automated; anything needing a human ear/eye on the real device is called out explicitly below._
 
 ## TL;DR
 
-The iPhone app is a **Tauri 2 iOS port** that reuses the **desktop DSP engine verbatim** (shared `yes_master_lib` crate + shared `src/bindings.ts` types). "Simple mode" is a thin preset-picker (Style → desktop preset, Loudness → target LUFS, Profile → export format) that feeds the same `engine`/`dsp` code the Mac app uses. **DSP parity is not a concern — it's literally the same math** (proven by `iphone_render_master_to_path_uses_shared_dsp_engine` and a repo-wide grep showing zero reimplemented DSP).
+The iPhone app is a **Tauri 2 iOS port** that reuses the **desktop DSP engine verbatim** (shared `yes_master_lib` crate + shared `src/bindings.ts` types). "Simple mode" is intentionally light now: import a track → pick a Style preset → choose Loudness → Create Master. Export is fixed to `-11 LUFS` by default, `44.1 kHz WAV`, `24-bit`, with no Profile row. **DSP parity is not a concern — it's literally the same math** (proven by `iphone_render_master_to_path_uses_shared_dsp_engine` and a repo-wide grep showing zero reimplemented DSP).
 
 The prior device-focused session fixed the three blockers that made it "feel very broken" on device — silent playback, dead-end export, and a fake waveform — plus live audition, audio-session resilience, and the dominant brand gap. The 2026-06-01 no-device pass completed the remaining code-only audit items that were safe without a phone. All changes are **iPhone-only** (`apps/iphone/**`); the desktop app is untouched.
 
@@ -13,13 +13,13 @@ The prior device-focused session fixed the three blockers that made it "feel ver
 | Area | Status |
 |------|--------|
 | Audio plays on device | **Code-correct, needs an ear.** `AVAudioSession` is configured `.playback` + activated (was the silent-playback cause). cpal `try_default()` succeeds on device; nobody has *listened* yet. |
-| Scrub / playhead | **Fixed.** Tick no longer fights the drag; seek commits on release. |
-| Waveform | **Decode path proven sound** (new CI test). On device it had thrown and shown a fake flat placeholder; now the error is surfaced + the import is copied to a durable path. **Read `iphone_prepare_waveform` in the Xcode/Console log on the next device run** to confirm the remaining cause (Io vs Decode vs path). |
+| Scrub / playhead | **Intentionally removed from the UI.** The iPhone preview is not a scrubber anymore; the hero play button is the only play control. |
+| Waveform | **No separate waveform control in the current UI.** The old fake/flat waveform row is gone. The Rust waveform command and tests remain useful diagnostics if waveform visuals come back later. |
 | Export | **Fixed (was a dead end).** Writes a verified non-zero WAV to `Documents/YES Master/`, Files-visible. Needs a device to confirm the file appears under Files › On My iPhone › YES Master. |
 | Live mastering controls | **Fixed.** Changing tone/loudness/etc. now re-applies during Mastered playback. |
 | Interruption/route recovery | **Half done (iPhone-safe half).** Session re-activates on foreground, captures `NSError` details, and emits a one-time warning if activation fails. The stream-recreate half lives in shared desktop `audio.rs` and was deliberately **not** touched — see Remaining work. |
 | Untethered (no laptop) | **Proven capable.** Release build bundles a self-contained frontend (no dev-server URL). **Action required:** install a *release* build to replace the dev build currently on the phone. See "Make it untethered". |
-| Brand | **Premium pass done.** Desktop blue CTA, 5-bar spectrum mark, screen-blended preset art, calmer weights, tracked all-caps labels, empty hero headline, desktop icon watermark, desktop iPhone app icon, and refined play controls are all in place. |
+| Brand | **Premium pass done, hierarchy simplified.** Desktop blue CTA, 5-bar spectrum mark, screen-blended preset art, calmer weights, tracked all-caps labels, desktop icon watermark, desktop iPhone app icon, and a single refined hero play control are all in place. |
 
 ## Recent changes
 
@@ -188,6 +188,32 @@ Remote install/distribution plan:
 - Upload paths supported by Apple include Xcode, `altool`, Transporter, and the App Store Connect API/Transporter with JWT auth: https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/
 - Next setup task: create/confirm an App Store Connect app record for bundle id `com.yesmaster.iphone`, enable signing for App Store/TestFlight distribution, then archive/upload a build. Once uploaded and processed, invite the user's Apple ID as an internal tester or send a TestFlight invite link. External testers require Apple's first-build TestFlight review.
 
+### 2026-06-01 simplified loaded hierarchy session
+
+Commit:
+
+- `ebdfa1c fix(iphone): simplify loaded audition hierarchy`
+
+What changed:
+
+1. Removed the lower audition waveform row, second play button, playhead slider, and native seek UI.
+2. Kept the only requested controls: hero Play/Pause, Original/Mastered, Volume Match, LUFS Preview, Style, Loudness Low/Medium/High, and Create Master.
+3. Stopped preparing browser/native waveform data for the loaded screen, since no waveform control is displayed.
+4. Restored the more premium visual hierarchy: taller hero, larger center play control, roomier track card, roomier Style cards, and no dense Profile/Target/Format block.
+
+Preview evidence:
+
+- Browser preview loaded `/tmp/yes-master-preview-tone.wav` at 390×844.
+- Confirmed no lower waveform, no playhead, no second play button, and hero play present.
+- Screenshot: `/tmp/yes-master-iphone-simplified-preview.png`.
+
+Verification:
+
+- `npm run iphone:typecheck && npm run iphone:test` ✅ 87/87.
+- `npm run iphone:build` ✅.
+- `cd apps/iphone/src-tauri && cargo test` ✅ 6/6.
+- `cd apps/iphone/src-tauri && PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" cargo check --target aarch64-apple-ios` ✅.
+
 ## Independent review of the 2026-06-01 cleanup (Claude, 4 adversarial reviewers + re-run verification)
 
 **Verdict: solid.** No blocker/high/medium defects in any of the four change areas (Rust/audio, frontend resume logic, config/dead-code removal, brand/CSS). **No regressions** — the prior session's fixes were byte-diffed and confirmed intact (AVAudioSession activate path, `copy_into_app_imports`, `resolve_export_path` + non-zero verify, scrub tick-vs-drag, `switchAuditionMode` guard, foreground `reactivateAudioSession`, CTA blue). Re-verified independently: typecheck clean, TS 84/84, Rust 6/6. Spot-checks that held up under scrutiny: the objc2 `NSError` out-param handling is ABI-correct with no leak/over-release; `spawn_blocking`+`block_on` is sound on the Tauri multi-thread runtime; `protocol-asset`/`convertFileSrc` were genuinely dead (playback is fully native, no `<audio>` element) so removal is safe; the dead `prepareMasterPreview` removal left no dangling references.
@@ -254,28 +280,22 @@ Prereqs: iPhone connected (USB simplest), unlocked, "Trust This Computer" accept
    ring/silent switch doesn't matter — `.playback` overrides it). In Xcode/Console confirm the
    startup line `AVAudioSession activated (category_ok=true, active_ok=true)`.
 
-4. **Waveform root-cause (one line):** right after importing, find `iphone_prepare_waveform` in the
-   console and read which case it is:
-   - `... ok: channels=N first_len=M` → waveform is fine now (the durable-import copy fixed it).
-   - `... FAILED ... Io ...` → missing/unreadable file (should already be fixed; flag it if not).
-   - `... FAILED ... Decode ...` → a codec the shared decoder rejects → hand to Codex for the decoder.
-   Paste that one line and the waveform is settled.
+4. **Audition switching:** while stopped and while playing, switch Original/Mastered. The selected mode
+   should change cleanly and the hero play button should remain the only play button on screen.
 
-5. **Scrub:** while playing, drag the playhead — it should move freely, not snap back. ✅
-
-6. **Export:** Create Master → Files app → On My iPhone → YES Master → confirm a **non-empty** `.wav`
+5. **Export:** Create Master → Files app → On My iPhone → YES Master → confirm a **non-empty** `.wav`
    is there and plays. ✅
 
-7. **Interruption recovery (the known gap):** start playback, trigger an interruption (call yourself /
+6. **Interruption recovery (the known gap):** start playback, trigger an interruption (call yourself /
    Siri / unplug headphones), end it, return to the app, press Play again.
    - Audio comes back → foreground reactivation is sufficient.
    - Stays dead → that's the stream-recreate follow-up (see "Remaining work"); hand to Codex.
 
-8. **Brand visual checks (from the 2026-06-01 review):**
+7. **Brand visual checks (from the 2026-06-01 review):**
    - **Preset thumbnails:** the Style cards now use `mix-blend-mode: screen` at a larger size — confirm
      the four preset images have no bright halo/fringe around the edges (a non-black matte would show).
-   - **Short screens:** on an SE-class iPhone, confirm the new empty-hero headline doesn't crowd or clip
-     the import circle, its label, or the checkbox row.
+   - **Short screens:** on an SE-class iPhone, confirm the taller loaded hero still leaves the track and
+     Style flow feeling intentional rather than cramped.
 
 Anything that fails here is a concrete next task — none of it blocks the others.
 
@@ -290,7 +310,7 @@ Anything that fails here is a concrete next task — none of it blocks the other
 From the multi-agent audit (`/tmp/iphone-audit-report.md` — re-generate if gone; it's reproducible). None are end-to-end blockers.
 
 - **FIX-5 stream-recreate (the other half of interruption recovery).** Reactivating the session isn't always enough — the cached `OutputStream` (in shared `audio.rs`) can stay dead. The clean fix recreates it on reactivation/each play, but that's a desktop-crate change and was kept out of this iPhone-only push. Do it as a deliberate, separately-reviewed change (e.g. additive `AudioPlayer::reset_output()` the desktop never calls), or confirm on device whether cpal already resumes after session reactivation.
-- **Device validation is now the main next step.** Install a release build and do Part B above. The next concrete code task should come from what the phone proves: audibility, waveform log, export visibility, or interruption recovery.
+- **Device validation is now the main next step.** Install a release/TestFlight build and do Part B above. The next concrete code task should come from what the phone proves: audibility, export visibility, or interruption recovery.
 - **Optional polish after device signoff:** consider making the export receipt display the backend-resolved Files path rather than the suggested filename; current render/report logic uses the real backend path, but the receipt copy can be more explicit.
 
 ## Orientation for whoever picks this up
