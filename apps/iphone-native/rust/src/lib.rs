@@ -3,7 +3,7 @@ use std::os::raw::c_char;
 use std::path::Path;
 
 use yes_master_lib::{
-    engine::{analyze_tracks, mastering_render_to_path, AnalyzeRequest},
+    engine::{analyze_tracks, mastering_render, AnalyzeRequest},
     AdvancedSettings, CompressionMode, DeliveryProfile, MasteringSettings, Preset, RenderKind,
     TrackId,
 };
@@ -66,34 +66,36 @@ pub unsafe extern "C" fn yes_master_native_analyze_file_json(path: *const c_char
 #[no_mangle]
 pub unsafe extern "C" fn yes_master_native_render_master_json(
     source_path: *const c_char,
-    output_path: *const c_char,
+    output_dir: *const c_char,
 ) -> *mut c_char {
     let Some(source_path) = ffi_string(source_path) else {
         return error_to_ffi("missing source path");
     };
-    let Some(output_path) = ffi_string(output_path) else {
-        return error_to_ffi("missing output path");
+    let Some(output_dir) = ffi_string(output_dir) else {
+        return error_to_ffi("missing output directory");
     };
 
     if source_path.trim().is_empty() {
         return error_to_ffi("missing source path");
     }
-    if output_path.trim().is_empty() {
-        return error_to_ffi("missing output path");
+    if output_dir.trim().is_empty() {
+        return error_to_ffi("missing output directory");
     }
 
     let source_path = Path::new(&source_path);
-    let output_path = Path::new(&output_path);
-    let out_dir = output_path.parent().unwrap_or_else(|| Path::new("."));
+    let output_dir = Path::new(&output_dir);
     let settings = fixed_export_settings();
 
-    match mastering_render_to_path(
+    if let Err(error) = std::fs::create_dir_all(output_dir) {
+        return error_to_ffi(&error.to_string());
+    }
+
+    match mastering_render(
         TrackId::new(),
         source_path,
         &settings,
-        out_dir,
+        output_dir,
         RenderKind::Master,
-        output_path,
     ) {
         Ok(job) => string_to_ffi(serde_json::to_string(&job).unwrap_or_else(|error| {
             format!(r#"{{"error":"render serialization failed: {error}"}}"#)
@@ -238,13 +240,13 @@ mod tests {
     fn render_master_json_writes_fixed_target_wav() {
         let tmp = tempfile::tempdir().unwrap();
         let input = tmp.path().join("source.wav");
-        let output = tmp.path().join("rendered").join("master.wav");
+        let output_dir = tmp.path().join("rendered");
         write_sine_wav(&input);
 
         let input = CString::new(input.to_string_lossy().as_bytes()).unwrap();
-        let output_c = CString::new(output.to_string_lossy().as_bytes()).unwrap();
+        let output_dir_c = CString::new(output_dir.to_string_lossy().as_bytes()).unwrap();
         let pointer =
-            unsafe { yes_master_native_render_master_json(input.as_ptr(), output_c.as_ptr()) };
+            unsafe { yes_master_native_render_master_json(input.as_ptr(), output_dir_c.as_ptr()) };
         assert!(!pointer.is_null());
 
         let json = unsafe {
@@ -252,6 +254,12 @@ mod tests {
             yes_master_native_free_string(pointer);
             value
         };
+        let payload: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let output = std::path::PathBuf::from(
+            payload["output_paths"][0]
+                .as_str()
+                .expect("render output path"),
+        );
 
         assert!(json.contains(r#""kind":"master""#), "got {json}");
         assert!(output.exists(), "rendered WAV was not written");
@@ -260,6 +268,40 @@ mod tests {
         let spec = reader.spec();
         assert_eq!(spec.sample_rate, 44_100);
         assert_eq!(spec.bits_per_sample, 24);
+    }
+
+    #[test]
+    fn render_master_json_creates_unique_outputs_in_directory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        let output_dir = tmp.path().join("rendered");
+        write_sine_wav(&input);
+
+        let first = render_master_for_test(&input, &output_dir);
+        let second = render_master_for_test(&input, &output_dir);
+
+        assert_ne!(first, second);
+        assert!(first.exists());
+        assert!(second.exists());
+    }
+
+    fn render_master_for_test(
+        input: &std::path::Path,
+        output_dir: &std::path::Path,
+    ) -> std::path::PathBuf {
+        let input = CString::new(input.to_string_lossy().as_bytes()).unwrap();
+        let output_dir = CString::new(output_dir.to_string_lossy().as_bytes()).unwrap();
+        let pointer =
+            unsafe { yes_master_native_render_master_json(input.as_ptr(), output_dir.as_ptr()) };
+        assert!(!pointer.is_null());
+
+        let json = unsafe {
+            let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
+            yes_master_native_free_string(pointer);
+            value
+        };
+        let payload: serde_json::Value = serde_json::from_str(&json).unwrap();
+        std::path::PathBuf::from(payload["output_paths"][0].as_str().expect("render output path"))
     }
 
     fn write_sine_wav(path: &std::path::Path) {

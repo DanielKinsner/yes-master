@@ -17,10 +17,10 @@ final class NativeMasteringBridgeTests: XCTestCase {
     func testRenderMasterSurfacesRustErrors() {
         let bridge = NativeMasteringBridge()
         let missingSourceURL = URL(fileURLWithPath: "/tmp/yes-master-native-missing-render-source.wav")
-        let outputURL = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("yes-master-native-missing-render-output.wav")
+        let outputDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("yes-master-native-missing-render-output", isDirectory: true)
 
-        XCTAssertThrowsError(try bridge.renderMaster(from: missingSourceURL, to: outputURL)) { error in
+        XCTAssertThrowsError(try bridge.renderMaster(from: missingSourceURL, toDirectory: outputDirectoryURL)) { error in
             XCTAssertTrue(
                 error.localizedDescription.contains("source file not found"),
                 "got \(error.localizedDescription)"

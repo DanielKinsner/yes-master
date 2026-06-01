@@ -98,10 +98,10 @@ struct NativeMasteringBridge {
         }
     }
 
-    func renderMaster(from sourceURL: URL, to outputURL: URL) throws -> NativeRenderJob {
+    func renderMaster(from sourceURL: URL, toDirectory outputDirectoryURL: URL) throws -> NativeRenderJob {
         let pointer = sourceURL.path.withCString { sourcePathPointer in
-            outputURL.path.withCString { outputPathPointer in
-                yes_master_native_render_master_json(sourcePathPointer, outputPathPointer)
+            outputDirectoryURL.path.withCString { outputDirectoryPointer in
+                yes_master_native_render_master_json(sourcePathPointer, outputDirectoryPointer)
             }
         }
 
