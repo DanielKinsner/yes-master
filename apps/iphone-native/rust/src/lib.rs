@@ -68,6 +68,21 @@ pub unsafe extern "C" fn yes_master_native_render_master_json(
     source_path: *const c_char,
     output_dir: *const c_char,
 ) -> *mut c_char {
+    yes_master_native_render_master_with_options_json(
+        source_path,
+        output_dir,
+        std::ptr::null(),
+        0.5,
+    )
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yes_master_native_render_master_with_options_json(
+    source_path: *const c_char,
+    output_dir: *const c_char,
+    preset: *const c_char,
+    intensity: f32,
+) -> *mut c_char {
     let Some(source_path) = ffi_string(source_path) else {
         return error_to_ffi("missing source path");
     };
@@ -84,7 +99,7 @@ pub unsafe extern "C" fn yes_master_native_render_master_json(
 
     let source_path = Path::new(&source_path);
     let output_dir = Path::new(&output_dir);
-    let settings = fixed_export_settings();
+    let settings = export_settings_for_options(unsafe { ffi_string(preset) }.as_deref(), intensity);
 
     if let Err(error) = std::fs::create_dir_all(output_dir) {
         return error_to_ffi(&error.to_string());
@@ -112,9 +127,13 @@ pub unsafe extern "C" fn yes_master_native_free_string(value: *mut c_char) {
 }
 
 fn fixed_export_settings() -> MasteringSettings {
+    export_settings_for_options(Some("balanced"), 0.5)
+}
+
+fn export_settings_for_options(preset: Option<&str>, intensity: f32) -> MasteringSettings {
     MasteringSettings {
-        preset: Preset::Universal,
-        intensity: 0.5,
+        preset: native_preset(preset),
+        intensity: intensity.clamp(0.0, 1.0),
         eq_sub_db: 0.0,
         eq_low_db: 0.0,
         eq_low_mid_db: 0.0,
@@ -152,6 +171,21 @@ fn fixed_export_settings() -> MasteringSettings {
             bit_depth: Some(24),
             target_sample_rate: Some(44_100),
         },
+    }
+}
+
+fn native_preset(preset: Option<&str>) -> Preset {
+    match preset
+        .unwrap_or("balanced")
+        .trim()
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "warm" | "warmth" => Preset::Warmth,
+        "open" | "clarity" => Preset::Clarity,
+        "punch" => Preset::Punch,
+        "balanced" | "universal" => Preset::Universal,
+        _ => Preset::Universal,
     }
 }
 
@@ -208,6 +242,21 @@ mod tests {
         assert_eq!(settings.effective_bit_depth(), 24);
         assert_eq!(settings.effective_sample_rate(48_000), 44_100);
         assert!(!settings.volume_match);
+    }
+
+    #[test]
+    fn native_options_map_to_shared_preset_and_intensity() {
+        let warm = export_settings_for_options(Some("warm"), 0.8);
+        assert_eq!(warm.preset, Preset::Warmth);
+        assert_eq!(warm.intensity, 0.8);
+
+        let open = export_settings_for_options(Some("open"), 2.0);
+        assert_eq!(open.preset, Preset::Clarity);
+        assert_eq!(open.intensity, 1.0);
+
+        let fallback = export_settings_for_options(Some("unknown"), -1.0);
+        assert_eq!(fallback.preset, Preset::Universal);
+        assert_eq!(fallback.intensity, 0.0);
     }
 
     #[test]
@@ -283,6 +332,41 @@ mod tests {
         assert_ne!(first, second);
         assert!(first.exists());
         assert!(second.exists());
+    }
+
+    #[test]
+    fn render_master_with_options_writes_wav() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        let output_dir = tmp.path().join("rendered");
+        write_sine_wav(&input);
+
+        let input = CString::new(input.to_string_lossy().as_bytes()).unwrap();
+        let output_dir = CString::new(output_dir.to_string_lossy().as_bytes()).unwrap();
+        let preset = CString::new("punch").unwrap();
+        let pointer = unsafe {
+            yes_master_native_render_master_with_options_json(
+                input.as_ptr(),
+                output_dir.as_ptr(),
+                preset.as_ptr(),
+                0.9,
+            )
+        };
+        assert!(!pointer.is_null());
+
+        let json = unsafe {
+            let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
+            yes_master_native_free_string(pointer);
+            value
+        };
+        let payload: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let output = std::path::PathBuf::from(
+            payload["output_paths"][0]
+                .as_str()
+                .expect("render output path"),
+        );
+
+        assert!(output.exists(), "rendered WAV was not written");
     }
 
     fn render_master_for_test(

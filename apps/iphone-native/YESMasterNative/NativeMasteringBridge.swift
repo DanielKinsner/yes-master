@@ -20,6 +20,13 @@ struct NativeRenderedMeasurements: Decodable, Equatable {
     let bitDepth: Int
 }
 
+struct NativeRenderOptions: Equatable {
+    let preset: String
+    let intensity: Float
+
+    static let `default` = NativeRenderOptions(preset: "balanced", intensity: 0.5)
+}
+
 enum NativeMasteringBridgeError: LocalizedError, Equatable {
     case rust(String)
     case invalidResponse
@@ -98,10 +105,21 @@ struct NativeMasteringBridge {
         }
     }
 
-    func renderMaster(from sourceURL: URL, toDirectory outputDirectoryURL: URL) throws -> NativeRenderJob {
+    func renderMaster(
+        from sourceURL: URL,
+        toDirectory outputDirectoryURL: URL,
+        options: NativeRenderOptions = .default
+    ) throws -> NativeRenderJob {
         let pointer = sourceURL.path.withCString { sourcePathPointer in
             outputDirectoryURL.path.withCString { outputDirectoryPointer in
-                yes_master_native_render_master_json(sourcePathPointer, outputDirectoryPointer)
+                options.preset.withCString { presetPointer in
+                    yes_master_native_render_master_with_options_json(
+                        sourcePathPointer,
+                        outputDirectoryPointer,
+                        presetPointer,
+                        options.intensity
+                    )
+                }
             }
         }
 
