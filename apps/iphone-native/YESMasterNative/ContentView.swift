@@ -117,6 +117,7 @@ struct ContentView: View {
 
     private let bridge = NativeMasteringBridge()
     private let importStore = ImportedTrackStore()
+    private let renderStorage = RenderStorage()
 
     var body: some View {
         ZStack {
@@ -841,20 +842,6 @@ struct ContentView: View {
             && !isPreparingMasterPreview
     }
 
-    private var renderedMastersDirectoryURL: URL {
-        FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        )[0].appendingPathComponent("RenderedMasters", isDirectory: true)
-    }
-
-    private var previewMastersDirectoryURL: URL {
-        FileManager.default.urls(
-            for: .cachesDirectory,
-            in: .userDomainMask
-        )[0].appendingPathComponent("MasteredPreviews", isDirectory: true)
-    }
-
     private var currentRenderOptions: NativeRenderOptions {
         NativeRenderOptions(
             preset: selectedPreset.bridgeIdentifier,
@@ -1003,7 +990,7 @@ struct ContentView: View {
 
         let bridge = bridge
         let sourceURL = track.localURL
-        let outputDirectoryURL = previewMastersDirectoryURL
+        let outputDirectoryURL = renderStorage.previewsDirectory
         let options = currentRenderOptions
 
         previewTask = Task {
@@ -1057,13 +1044,6 @@ struct ContentView: View {
             return
         }
 
-        if let masteredPreviewURL, !isPreparingMasterPreview {
-            shareMasterURL = masteredPreviewURL
-            selectedAudition = .mastered
-            statusText = "Master ready to share."
-            return
-        }
-
         renderTask?.cancel()
         previewTask?.cancel()
         playbackController.pause()
@@ -1075,7 +1055,7 @@ struct ContentView: View {
 
         let bridge = bridge
         let sourceURL = track.localURL
-        let outputDirectoryURL = renderedMastersDirectoryURL
+        let outputDirectoryURL = renderStorage.mastersDirectory
         let options = currentRenderOptions
 
         renderTask = Task {
