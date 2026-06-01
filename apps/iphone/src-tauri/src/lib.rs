@@ -7,6 +7,57 @@ use yes_master_lib::{
     WaveformPeaks,
 };
 
+/// iOS audio-session setup. cpal/rodio open a RemoteIO output unit, but iOS
+/// produces no audible output until the app sets the shared `AVAudioSession`
+/// category to `.playback` and activates it. Without this, playback is silent
+/// (and, on some devices/iOS versions, starting the unit can fail outright).
+///
+/// We avoid a link-time AVFoundation dependency — Xcode links the Rust
+/// staticlib and would otherwise need the framework added to its build
+/// settings, which `tauri ios` regeneration would drop — by `dlopen`-ing
+/// AVFoundation at runtime (registering the `AVAudioSession` class) and
+/// `dlsym`-ing the category constant rather than hard-coding its raw value.
+#[cfg(target_os = "ios")]
+mod ios_audio {
+    use objc2::runtime::AnyObject;
+    use objc2::{class, msg_send};
+
+    pub fn configure() {
+        unsafe {
+            let handle = libc::dlopen(
+                c"/System/Library/Frameworks/AVFoundation.framework/AVFoundation".as_ptr(),
+                libc::RTLD_NOW,
+            );
+            if handle.is_null() {
+                log::warn!("AVFoundation dlopen failed; iPhone playback will be silent");
+                return;
+            }
+
+            // `AVAudioSessionCategoryPlayback` is exported as `NSString * const`,
+            // i.e. dlsym hands back the address of the pointer — deref once.
+            let category_sym = libc::dlsym(handle, c"AVAudioSessionCategoryPlayback".as_ptr());
+            if category_sym.is_null() {
+                log::warn!("AVAudioSessionCategoryPlayback symbol missing; skipping session setup");
+                return;
+            }
+            let category: *const AnyObject = *(category_sym as *const *const AnyObject);
+
+            let session: *mut AnyObject = msg_send![class!(AVAudioSession), sharedInstance];
+            if session.is_null() {
+                log::warn!("AVAudioSession sharedInstance was nil");
+                return;
+            }
+
+            let null_err: *mut *mut AnyObject = std::ptr::null_mut();
+            let category_ok: bool = msg_send![session, setCategory: category, error: null_err];
+            let active_ok: bool = msg_send![session, setActive: true, error: null_err];
+            log::info!(
+                "AVAudioSession configured (category_ok={category_ok}, active_ok={active_ok})"
+            );
+        }
+    }
+}
+
 #[tauri::command]
 async fn iphone_import_track(path: String) -> CommandResult<ImportedTrack> {
     let mut tracks = files::import_tracks(vec![normalize_iphone_file_path(&path)]).await?;
@@ -265,6 +316,10 @@ async fn iphone_run_export_checks(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Make audio audible on iOS before any output stream is opened.
+    #[cfg(target_os = "ios")]
+    ios_audio::configure();
+
     let player = Arc::new(AudioPlayer::new());
 
     tauri::Builder::default()

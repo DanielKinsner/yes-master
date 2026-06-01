@@ -5715,7 +5715,9 @@ name = "yes-master-iphone"
 version = "0.1.0"
 dependencies = [
  "hound",
+ "libc",
  "log",
+ "objc2",
  "serde",
  "serde_json",
  "tauri",

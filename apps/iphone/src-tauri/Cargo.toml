@@ -26,6 +26,12 @@ tauri-plugin-dialog = "2"
 tauri-plugin-log = "2"
 yes_master_lib = { package = "yes-master", path = "../../../src-tauri" }
 
+# iOS-only: configure the AVAudioSession at startup so rodio/cpal output is
+# audible. Pinned to the objc2 major Tauri already resolves (0.6.x).
+[target.'cfg(target_os = "ios")'.dependencies]
+objc2 = "0.6"
+libc = "0.2"
+
 [dev-dependencies]
 hound = "3"
 tempfile = "3"
