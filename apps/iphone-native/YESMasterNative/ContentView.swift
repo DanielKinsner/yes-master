@@ -763,6 +763,7 @@ struct ContentView: View {
                 selectedAudition = .original
                 playbackController.pause()
                 analyzeImportedTrack(track)
+                renderStorage.enforceLimit(in: renderStorage.importsDirectory, max: 20)
             } catch ImportedTrackStore.ImportError.unsupportedExtension(let fileExtension) {
                 let label = fileExtension.isEmpty ? "that file" : ".\(fileExtension)"
                 statusText = "\(label) is not supported yet. Use \(bridge.supportedImportExtensions.joined(separator: ", "))."
@@ -1014,6 +1015,7 @@ struct ContentView: View {
                     return
                 }
                 masteredPreviewURL = URL(fileURLWithPath: outputPath)
+                renderStorage.pruneObsoletePreviews(keeping: masteredPreviewURL)
                 if selectWhenReady {
                     selectedAudition = .mastered
                 }
@@ -1080,6 +1082,7 @@ struct ContentView: View {
                 }
                 masteredPreviewURL = URL(fileURLWithPath: outputPath)
                 shareMasterURL = URL(fileURLWithPath: outputPath)
+                renderStorage.enforceLimit(in: renderStorage.mastersDirectory, max: 20)
                 selectedAudition = .mastered
                 statusText = "Master created. You can audition the mastered version."
             case .failure(let error):

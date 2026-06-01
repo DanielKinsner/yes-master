@@ -16,6 +16,21 @@ final class RenderStorageTests: XCTestCase {
         XCTAssertFalse(storage.mastersDirectory.path.lowercased().contains("caches"))
     }
 
+    func testEnforceLimitKeepsNewest() throws {
+        let storage = RenderStorage(baseDirectory: root)
+        try FileManager.default.createDirectory(at: storage.mastersDirectory, withIntermediateDirectories: true)
+        for i in 0..<5 {
+            let u = storage.mastersDirectory.appendingPathComponent("m\(i).wav")
+            try Data([UInt8(i)]).write(to: u)
+            try FileManager.default.setAttributes(
+                [.modificationDate: Date(timeIntervalSince1970: TimeInterval(1000 + i))], ofItemAtPath: u.path
+            )
+        }
+        storage.enforceLimit(in: storage.mastersDirectory, max: 2)
+        let remaining = try FileManager.default.contentsOfDirectory(atPath: storage.mastersDirectory.path)
+        XCTAssertEqual(Set(remaining), ["m3.wav", "m4.wav"])
+    }
+
     func testPruneObsoletePreviewsKeepsOnlyCurrent() throws {
         let storage = RenderStorage(baseDirectory: root)
         try FileManager.default.createDirectory(at: storage.previewsDirectory, withIntermediateDirectories: true)
