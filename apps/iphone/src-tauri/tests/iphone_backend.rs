@@ -1,7 +1,7 @@
 use std::f32::consts::TAU;
 
 use hound::{SampleFormat, WavSpec, WavWriter};
-use serde_json::json;
+use serde_json::{json, Value};
 use tempfile::tempdir;
 use yes_master_iphone_lib::{iphone_render_master_to_path, normalize_iphone_file_path};
 use yes_master_lib::{
@@ -106,7 +106,62 @@ fn default_iphone_settings() -> MasteringSettings {
 
 #[test]
 fn simple_mode_settings_json_still_deserializes_to_rust_shape() {
-    let value = json!({
+    let value = simple_mode_settings_json();
+
+    let settings: MasteringSettings =
+        serde_json::from_value(value.clone()).expect("bindings.ts simple-mode shape should parse");
+
+    assert!(matches!(settings.preset, Preset::Warmth));
+    assert!(matches!(settings.delivery_profile, DeliveryProfile::Custom));
+    assert!(matches!(
+        settings.advanced.compression_mode,
+        CompressionMode::Preset
+    ));
+    assert_eq!(settings.intensity, 0.5);
+    assert!(settings.volume_match);
+    assert_eq!(settings.eq_sub_db, 0.0);
+    assert_eq!(settings.eq_low_db, 0.0);
+    assert_eq!(settings.eq_low_mid_db, 0.0);
+    assert_eq!(settings.eq_mid_db, 0.0);
+    assert_eq!(settings.eq_high_mid_db, 0.0);
+    assert_eq!(settings.eq_high_db, 0.0);
+    assert_eq!(settings.eq_sparkle_db, 0.0);
+    assert_eq!(settings.input_gain_db, 0.0);
+    assert_eq!(settings.output_gain_db, 0.0);
+    assert_eq!(settings.advanced.lufs_offset_db, Some(-14.0));
+    assert_eq!(settings.advanced.ceiling_dbtp, Some(-1.0));
+    assert_eq!(settings.advanced.width, None);
+    assert_eq!(settings.advanced.warmth, None);
+    assert_eq!(settings.advanced.presence_air, None);
+    assert_eq!(settings.advanced.compression_density, None);
+    assert_eq!(settings.advanced.compression_low_threshold_db, None);
+    assert_eq!(settings.advanced.compression_low_ratio, None);
+    assert_eq!(settings.advanced.compression_low_attack_ms, None);
+    assert_eq!(settings.advanced.compression_low_release_ms, None);
+    assert_eq!(settings.advanced.compression_mid_threshold_db, None);
+    assert_eq!(settings.advanced.compression_mid_ratio, None);
+    assert_eq!(settings.advanced.compression_mid_attack_ms, None);
+    assert_eq!(settings.advanced.compression_mid_release_ms, None);
+    assert_eq!(settings.advanced.compression_high_threshold_db, None);
+    assert_eq!(settings.advanced.compression_high_ratio, None);
+    assert_eq!(settings.advanced.compression_high_attack_ms, None);
+    assert_eq!(settings.advanced.compression_high_release_ms, None);
+    assert_eq!(settings.advanced.compression_link_stereo, None);
+    assert_eq!(settings.advanced.bit_depth, Some(24));
+    assert_eq!(settings.advanced.target_sample_rate, Some(48_000));
+    assert_eq!(settings.source_lufs_integrated, Some(-15.0));
+
+    let round_tripped = serde_json::to_value(&settings).expect("serialize settings");
+    assert_eq!(sorted_json_keys(&round_tripped), sorted_json_keys(&value));
+    assert_eq!(
+        sorted_json_keys(&round_tripped["advanced"]),
+        sorted_json_keys(&value["advanced"])
+    );
+    assert_eq!(round_tripped, value);
+}
+
+fn simple_mode_settings_json() -> Value {
+    json!({
         "preset": { "kind": "warmth" },
         "intensity": 0.5,
         "eq_sub_db": 0.0,
@@ -146,21 +201,18 @@ fn simple_mode_settings_json_still_deserializes_to_rust_shape() {
             "bit_depth": 24,
             "target_sample_rate": 48000
         }
-    });
+    })
+}
 
-    let settings: MasteringSettings =
-        serde_json::from_value(value).expect("bindings.ts simple-mode shape should parse");
-
-    assert!(matches!(settings.preset, Preset::Warmth));
-    assert!(matches!(settings.delivery_profile, DeliveryProfile::Custom));
-    assert!(matches!(
-        settings.advanced.compression_mode,
-        CompressionMode::Preset
-    ));
-    assert_eq!(settings.advanced.lufs_offset_db, Some(-14.0));
-    assert_eq!(settings.advanced.bit_depth, Some(24));
-    assert_eq!(settings.advanced.target_sample_rate, Some(48_000));
-    assert_eq!(settings.source_lufs_integrated, Some(-15.0));
+fn sorted_json_keys(value: &Value) -> Vec<String> {
+    let mut keys = value
+        .as_object()
+        .expect("expected JSON object")
+        .keys()
+        .cloned()
+        .collect::<Vec<_>>();
+    keys.sort();
+    keys
 }
 
 fn write_test_wav(path: &std::path::Path) {

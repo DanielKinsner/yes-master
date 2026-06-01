@@ -13,7 +13,17 @@ function cssBlock(css: string, selector: string) {
   if (start < 0) start = css.indexOf(selector);
   if (start < 0) return "";
   const open = css.indexOf("{", start);
-  const close = css.indexOf("}", open);
+  if (open < 0) return "";
+  let depth = 0;
+  let close = -1;
+  for (let index = open; index < css.length; index += 1) {
+    if (css[index] === "{") depth += 1;
+    if (css[index] === "}") depth -= 1;
+    if (depth === 0) {
+      close = index;
+      break;
+    }
+  }
   return open >= 0 && close >= 0 ? css.slice(open + 1, close) : "";
 }
 
