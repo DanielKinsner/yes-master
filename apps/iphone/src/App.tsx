@@ -604,7 +604,9 @@ export default function App({
           />
           {!hasTrack ? (
             <div className="hero-copy">
-              <h1>Import, master, export.</h1>
+              <h1>
+                Import, master, <span>export.</span>
+              </h1>
             </div>
           ) : null}
           <div className={hasTrack ? "hero-orb has-track" : "hero-orb is-empty"}>
@@ -794,7 +796,7 @@ export default function App({
             }
           />
 
-          <ControlGroup title="Loudness">
+          <ControlGroup step="2" title="Loudness">
             {iphoneSimpleLoudnessOptions.map((option) => (
               <SegmentButton
                 key={option.id}
@@ -812,7 +814,7 @@ export default function App({
             ))}
           </ControlGroup>
 
-          <ControlGroup title="Profile">
+          <ControlGroup step="3" title="Profile">
             {iphoneSimpleExportProfileOptions.map((option) => (
               <SegmentButton
                 key={option.id}
@@ -951,7 +953,7 @@ function TonePicker({
 }) {
   return (
     <section className="tone-picker">
-      <h3>Style</h3>
+      <SectionTitle step="1">Style</SectionTitle>
       <div className="tone-grid">
         {iphoneSimpleToneOptions.map((option) => {
           const visual = IPHONE_TONE_VISUALS[option.id];
@@ -1083,16 +1085,33 @@ function toIphoneErrorMessage(error: unknown) {
 
 function ControlGroup({
   children,
+  step,
   title,
 }: {
   children: ReactNode;
+  step: string;
   title: string;
 }) {
   return (
     <section className="control-group">
-      <h3>{title}</h3>
+      <SectionTitle step={step}>{title}</SectionTitle>
       <div className="segmented">{children}</div>
     </section>
+  );
+}
+
+function SectionTitle({
+  children,
+  step,
+}: {
+  children: ReactNode;
+  step: string;
+}) {
+  return (
+    <h3 className="section-title">
+      <span>{step}</span>
+      {children}
+    </h3>
   );
 }
 
