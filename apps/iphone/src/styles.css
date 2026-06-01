@@ -960,13 +960,15 @@ h3 {
 .export-ready-sheet {
   animation: export-ready-enter 360ms cubic-bezier(0.22, 1, 0.36, 1);
   background:
-    radial-gradient(circle at 50% -10%, rgba(77, 139, 255, 0.26), transparent 42%),
-    linear-gradient(180deg, rgba(236, 240, 250, 0.1), rgba(236, 240, 250, 0.035)),
-    rgba(16, 19, 26, 0.94);
-  border: 1px solid rgba(236, 240, 250, 0.14);
+    radial-gradient(circle at 50% 4%, rgba(77, 162, 255, 0.36), transparent 42%),
+    radial-gradient(circle at 50% 34%, rgba(20, 87, 232, 0.16), transparent 48%),
+    linear-gradient(180deg, rgba(18, 31, 54, 0.9), rgba(5, 9, 19, 0.96)),
+    rgba(6, 11, 23, 0.96);
+  border: 1px solid rgba(77, 162, 255, 0.24);
   border-radius: 18px;
   box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.38),
+    0 26px 76px rgba(0, 0, 0, 0.48),
+    0 0 42px rgba(20, 87, 232, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   display: grid;
   gap: 11px;
@@ -978,10 +980,13 @@ h3 {
 .export-ready-mark {
   background:
     linear-gradient(135deg, transparent 45%, #d9f8ff 45% 56%, transparent 56%),
-    radial-gradient(circle, rgba(84, 208, 208, 0.18), rgba(77, 139, 255, 0.1) 48%, transparent 50%);
-  border: 1px solid rgba(84, 208, 208, 0.48);
+    radial-gradient(circle at 42% 30%, rgba(190, 232, 255, 0.72), rgba(77, 162, 255, 0.24) 44%, rgba(20, 87, 232, 0.1) 58%, transparent 64%);
+  border: 1px solid rgba(77, 162, 255, 0.66);
   border-radius: 999px;
-  box-shadow: 0 0 42px rgba(77, 139, 255, 0.24);
+  box-shadow:
+    0 0 0 8px rgba(77, 162, 255, 0.08),
+    0 0 54px rgba(77, 162, 255, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
   height: 74px;
   position: relative;
   width: 74px;
@@ -1001,6 +1006,8 @@ h3 {
 
 .export-ready-sheet h2 {
   font-size: 1.12rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   line-height: 1.16;
   max-width: 24ch;
   overflow-wrap: anywhere;
@@ -1014,8 +1021,8 @@ h3 {
 }
 
 .export-ready-stats span {
-  background: rgba(236, 240, 250, 0.06);
-  border: 1px solid rgba(236, 240, 250, 0.09);
+  background: rgba(8, 18, 34, 0.66);
+  border: 1px solid rgba(116, 146, 205, 0.14);
   border-radius: 999px;
   color: var(--text-1);
   font-size: 0.72rem;
@@ -1036,7 +1043,10 @@ h3 {
   background: linear-gradient(180deg, var(--accent-bright), var(--cta-strong));
   border: 0;
   border-radius: 999px;
-  color: #081115;
+  box-shadow:
+    0 14px 34px rgba(20, 87, 232, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  color: #f5f9ff;
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 700;
@@ -1050,8 +1060,8 @@ h3 {
   animation: processing-fade 220ms cubic-bezier(0.22, 1, 0.36, 1);
   backdrop-filter: blur(18px);
   background:
-    radial-gradient(circle at 50% 42%, rgba(84, 208, 208, 0.15), transparent 36%),
-    rgba(7, 8, 13, 0.66);
+    radial-gradient(circle at 50% 42%, rgba(77, 162, 255, 0.2), transparent 38%),
+    rgba(3, 7, 16, 0.72);
   display: grid;
   inset: 0;
   justify-items: center;
@@ -1068,9 +1078,10 @@ h3 {
 .processing-card {
   animation: processing-card-enter 360ms cubic-bezier(0.22, 1, 0.36, 1);
   background:
-    linear-gradient(180deg, rgba(236, 240, 250, 0.12), rgba(236, 240, 250, 0.045)),
-    rgba(16, 19, 26, 0.82);
-  border: 1px solid rgba(236, 240, 250, 0.16);
+    radial-gradient(circle at 50% 14%, rgba(77, 162, 255, 0.16), transparent 44%),
+    linear-gradient(180deg, rgba(18, 31, 54, 0.9), rgba(6, 12, 25, 0.84)),
+    rgba(6, 11, 23, 0.9);
+  border: 1px solid rgba(77, 162, 255, 0.22);
   border-radius: 20px;
   box-shadow:
     0 24px 70px rgba(0, 0, 0, 0.52),
@@ -1089,7 +1100,7 @@ h3 {
 .processing-mark {
   align-items: center;
   animation: processing-spin 1.15s linear infinite;
-  border: 2px solid rgba(84, 208, 208, 0.18);
+  border: 2px solid rgba(77, 162, 255, 0.18);
   border-top-color: var(--cta);
   border-radius: 999px;
   display: flex;
@@ -1102,7 +1113,7 @@ h3 {
 .processing-mark span {
   background: color-mix(in srgb, var(--cta) 72%, white 10%);
   border-radius: 999px;
-  box-shadow: 0 0 22px rgba(84, 208, 208, 0.36);
+  box-shadow: 0 0 22px rgba(77, 162, 255, 0.48);
   height: 10px;
   width: 10px;
 }
@@ -1137,7 +1148,7 @@ h3 {
 
 .processing-steps .is-done,
 .processing-steps .is-active {
-  color: #bffafa;
+  color: #cce3ff;
   opacity: 1;
 }
 
