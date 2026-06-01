@@ -35,8 +35,8 @@ struct ContentView: View {
     @State private var isAnalyzing = false
     @State private var analysisTask: Task<Void, Never>?
     @State private var statusText = "Import a track to begin."
+    @StateObject private var playbackController = TrackPlaybackController()
 
-    private let audioSession = AudioSessionController()
     private let bridge = NativeMasteringBridge()
     private let importStore = ImportedTrackStore()
 
@@ -82,18 +82,16 @@ struct ContentView: View {
 
                 HStack(spacing: 12) {
                     Button {
-                        do {
-                            try audioSession.activateForPlayback()
-                            statusText = "Audio session ready."
-                        } catch {
-                            statusText = "Audio session could not start."
-                        }
+                        toggleOriginalPlayback()
                     } label: {
-                        Label("Play", systemImage: "play.fill")
+                        Label(
+                            playbackController.isPlaying ? "Pause" : "Play Original",
+                            systemImage: playbackController.isPlaying ? "pause.fill" : "play.fill"
+                        )
                             .frame(maxWidth: .infinity, minHeight: 48)
                     }
                     .buttonStyle(.bordered)
-                    .disabled(true)
+                    .disabled(!canPlayOriginal)
 
                     Button {
                         statusText = bridge.fixedExportSummary
@@ -144,6 +142,7 @@ struct ContentView: View {
                     supportedExtensions: bridge.supportedImportExtensions
                 )
                 importedTrack = track
+                playbackController.pause()
                 analyzeImportedTrack(track)
             } catch ImportedTrackStore.ImportError.unsupportedExtension(let fileExtension) {
                 let label = fileExtension.isEmpty ? "that file" : ".\(fileExtension)"
@@ -153,6 +152,30 @@ struct ContentView: View {
             }
         case .failure:
             statusText = "Import was cancelled."
+        }
+    }
+
+    private var canPlayOriginal: Bool {
+        importedTrack != nil && analysisResult != nil && !isAnalyzing
+    }
+
+    private func toggleOriginalPlayback() {
+        guard let track = importedTrack, canPlayOriginal else {
+            statusText = "Import and analyze a track before playback."
+            return
+        }
+
+        if playbackController.isPlaying {
+            playbackController.pause()
+            statusText = "Playback paused."
+            return
+        }
+
+        do {
+            try playbackController.play(url: track.localURL)
+            statusText = "Playing original track."
+        } catch {
+            statusText = "Playback could not start. Try another supported audio file."
         }
     }
 
