@@ -24,6 +24,7 @@ targets:
       properties:
         CFBundleDisplayName: YES Master
         LSRequiresIPhoneOS: true
+        UIRequiresFullScreen: true
         UILaunchScreen:
           UIColorName: LaunchBackground
         UISupportedInterfaceOrientations:
