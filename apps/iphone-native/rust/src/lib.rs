@@ -357,6 +357,36 @@ mod tests {
     }
 
     #[test]
+    fn render_master_json_never_overwrites_source_when_rendering_beside_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        write_sine_wav(&input);
+        let source_before = std::fs::read(&input).unwrap();
+
+        let output = render_master_for_test(&input, tmp.path());
+        let source_after = std::fs::read(&input).unwrap();
+
+        assert_ne!(output, input);
+        assert!(output.exists(), "rendered WAV was not written");
+        assert_eq!(source_after, source_before, "source WAV changed during render");
+    }
+
+    #[test]
+    fn render_master_json_keeps_outputs_unique_when_source_name_repeats() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("My Mix 01.wav");
+        let output_dir = tmp.path().join("Masters");
+        write_sine_wav(&input);
+
+        let first = render_master_for_test(&input, &output_dir);
+        let second = render_master_for_test(&input, &output_dir);
+
+        assert_ne!(first.file_name(), second.file_name());
+        assert_eq!(first.extension().and_then(|value| value.to_str()), Some("wav"));
+        assert_eq!(second.extension().and_then(|value| value.to_str()), Some("wav"));
+    }
+
+    #[test]
     fn render_master_with_options_writes_wav() {
         let tmp = tempfile::tempdir().unwrap();
         let input = tmp.path().join("source.wav");
