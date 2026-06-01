@@ -1,9 +1,11 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
+use std::path::Path;
 
 use yes_master_lib::{
-    engine::{analyze_tracks, AnalyzeRequest},
-    AdvancedSettings, CompressionMode, DeliveryProfile, MasteringSettings, Preset, TrackId,
+    engine::{analyze_tracks, mastering_render_to_path, AnalyzeRequest},
+    AdvancedSettings, CompressionMode, DeliveryProfile, MasteringSettings, Preset, RenderKind,
+    TrackId,
 };
 
 const VERSION: &[u8] = b"yes-master-iphone-native-bridge/0.1.0\0";
@@ -57,6 +59,45 @@ pub unsafe extern "C" fn yes_master_native_analyze_file_json(path: *const c_char
                 error_to_ffi("analysis returned no result")
             }
         }
+        Err(error) => error_to_ffi(&error.to_string()),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn yes_master_native_render_master_json(
+    source_path: *const c_char,
+    output_path: *const c_char,
+) -> *mut c_char {
+    let Some(source_path) = ffi_string(source_path) else {
+        return error_to_ffi("missing source path");
+    };
+    let Some(output_path) = ffi_string(output_path) else {
+        return error_to_ffi("missing output path");
+    };
+
+    if source_path.trim().is_empty() {
+        return error_to_ffi("missing source path");
+    }
+    if output_path.trim().is_empty() {
+        return error_to_ffi("missing output path");
+    }
+
+    let source_path = Path::new(&source_path);
+    let output_path = Path::new(&output_path);
+    let out_dir = output_path.parent().unwrap_or_else(|| Path::new("."));
+    let settings = fixed_export_settings();
+
+    match mastering_render_to_path(
+        TrackId::new(),
+        source_path,
+        &settings,
+        out_dir,
+        RenderKind::Master,
+        output_path,
+    ) {
+        Ok(job) => string_to_ffi(serde_json::to_string(&job).unwrap_or_else(|error| {
+            format!(r#"{{"error":"render serialization failed: {error}"}}"#)
+        })),
         Err(error) => error_to_ffi(&error.to_string()),
     }
 }
@@ -191,5 +232,51 @@ mod tests {
 
         assert!(json.contains(r#""error""#), "got {json}");
         assert!(json.contains("source file not found"), "got {json}");
+    }
+
+    #[test]
+    fn render_master_json_writes_fixed_target_wav() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        let output = tmp.path().join("rendered").join("master.wav");
+        write_sine_wav(&input);
+
+        let input = CString::new(input.to_string_lossy().as_bytes()).unwrap();
+        let output_c = CString::new(output.to_string_lossy().as_bytes()).unwrap();
+        let pointer =
+            unsafe { yes_master_native_render_master_json(input.as_ptr(), output_c.as_ptr()) };
+        assert!(!pointer.is_null());
+
+        let json = unsafe {
+            let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
+            yes_master_native_free_string(pointer);
+            value
+        };
+
+        assert!(json.contains(r#""kind":"master""#), "got {json}");
+        assert!(output.exists(), "rendered WAV was not written");
+
+        let reader = hound::WavReader::open(&output).unwrap();
+        let spec = reader.spec();
+        assert_eq!(spec.sample_rate, 44_100);
+        assert_eq!(spec.bits_per_sample, 24);
+    }
+
+    fn write_sine_wav(path: &std::path::Path) {
+        let spec = hound::WavSpec {
+            channels: 2,
+            sample_rate: 44_100,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut writer = hound::WavWriter::create(path, spec).unwrap();
+        for n in 0..22_050 {
+            let t = n as f32 / 44_100.0;
+            let sample = (t * 440.0 * std::f32::consts::TAU).sin() * 0.2;
+            let value = (sample * i16::MAX as f32) as i16;
+            writer.write_sample(value).unwrap();
+            writer.write_sample(value).unwrap();
+        }
+        writer.finalize().unwrap();
     }
 }

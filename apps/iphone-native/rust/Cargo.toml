@@ -12,3 +12,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 futures-executor = "0.3"
 serde_json = "1.0"
 yes_master_lib = { package = "yes-master", path = "../../../src-tauri", default-features = false }
+
+[dev-dependencies]
+hound = "3"
+tempfile = "3"
