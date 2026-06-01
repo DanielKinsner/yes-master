@@ -14,8 +14,8 @@
   --accent-deep: #2a6bf2;
   --accent-warm: #ffb86b;
   --accent-danger: #ff7676;
-  --cta: #54d0d0;
-  --cta-strong: #28bfc8;
+  --cta: var(--accent-bright);
+  --cta-strong: var(--accent-deep);
   --radius: 8px;
   --radius-sm: 5px;
   color: var(--text-0);
@@ -416,7 +416,7 @@ h3 {
 }
 
 .check-option.is-active .check-box {
-  background: linear-gradient(180deg, #63dada, var(--cta-strong));
+  background: linear-gradient(180deg, var(--accent-bright), var(--cta-strong));
   border-color: transparent;
 }
 
@@ -486,7 +486,7 @@ h3 {
 }
 
 .analyze-track-button {
-  background: linear-gradient(180deg, #63dada, var(--cta-strong));
+  background: linear-gradient(180deg, var(--accent-bright), var(--cta-strong));
   border: 0;
   border-radius: 999px;
   color: #081115;
@@ -776,7 +776,7 @@ h3 {
 }
 
 .export-button {
-  background: linear-gradient(180deg, #63dada 0%, var(--cta-strong) 100%);
+  background: linear-gradient(180deg, var(--accent-bright) 0%, var(--cta-strong) 100%);
   border: 0;
   border-radius: 12px;
   box-shadow: 0 14px 34px rgba(40, 191, 200, 0.18);
@@ -894,7 +894,7 @@ h3 {
 }
 
 .export-ready-sheet button {
-  background: linear-gradient(180deg, #63dada, var(--cta-strong));
+  background: linear-gradient(180deg, var(--accent-bright), var(--cta-strong));
   border: 0;
   border-radius: 999px;
   color: #081115;
