@@ -52,18 +52,30 @@ Commit: `8087c5d fix(iphone): finish no-device cleanup items`.
 
 Latest no-device verification: **iphone TS 84/84, iphone Rust 6/6, iOS-target check clean, typecheck clean.**
 
+### 2026-06-01 late-night obvious wins
+
+Commits:
+
+- `aadf06e test(iphone): strengthen no-device guards`
+- `0f70f48 fix(iphone): preserve resume after live control updates`
+
+Small, high-confidence follow-ups from the independent review:
+
+1. **Serde drift guard strengthened:** the Simple-mode JSON test now asserts every sent field and exact serialize/deserialize key round-trip, so typo/rename drift is much harder to miss.
+2. **CSS test helper hardened:** `cssBlock` now reads balanced braces instead of stopping at the first `}`, so nested CSS functions do not trick the test.
+3. **Resume optimization finished:** after a Mastered control change is live-applied while audio is playing, pause→play now keeps using native `resumePlayback()` instead of rebuilding the stream.
+
+Latest no-device verification after these commits: **iphone TS 85/85, iphone Rust 6/6, iOS-target check clean, typecheck clean.**
+
 ## Independent review of the 2026-06-01 cleanup (Claude, 4 adversarial reviewers + re-run verification)
 
 **Verdict: solid.** No blocker/high/medium defects in any of the four change areas (Rust/audio, frontend resume logic, config/dead-code removal, brand/CSS). **No regressions** — the prior session's fixes were byte-diffed and confirmed intact (AVAudioSession activate path, `copy_into_app_imports`, `resolve_export_path` + non-zero verify, scrub tick-vs-drag, `switchAuditionMode` guard, foreground `reactivateAudioSession`, CTA blue). Re-verified independently: typecheck clean, TS 84/84, Rust 6/6. Spot-checks that held up under scrutiny: the objc2 `NSError` out-param handling is ABI-correct with no leak/over-release; `spawn_blocking`+`block_on` is sound on the Tauri multi-thread runtime; `protocol-asset`/`convertFileSrc` were genuinely dead (playback is fully native, no `<audio>` element) so removal is safe; the dead `prepareMasterPreview` removal left no dangling references.
 
 ### Things to look into (none blocking; ordered by value)
 
-1. **[med — false confidence] FIX-7 drift guard tests far less than its name claims.** `tests/iphone_backend.rs` (the serde-shape test): because `MasteringSettings`/`AdvancedSettings` have no `#[serde(deny_unknown_fields)]` and nearly every field is `#[serde(default)]`/`Option`, a reviewer empirically deserialized a JSON with a **typo'd key, an emptied `advanced` object, and half of `MasteringSettings` omitted** — and it **still passed** (`delivery_profile` even silently defaulted to `StreamingUniversal`). So a real binding/field rename would NOT be caught. Fix on the *test side* (assert every field it sends, incl. `intensity`/`volume_match`/the EQ offsets/per-band compression, and assert `delivery_profile == Custom` is honored). ⚠️ Do **not** add `#[serde(deny_unknown_fields)]` to the shared `types.rs` structs to "fix" it — that's a desktop-crate change (out of bounds for iPhone-only work) and could break desktop deserialization.
-2. **[low-med — test quality] `cssBlock` helper is brace-naive.** `styles.test.ts:16` takes the first `}` after the opening brace, so any rule body containing nested braces (`color-mix(...)`/`rgba(...)` inside `box-shadow`/`background`) truncates the extracted block. It passes today by luck and is one CSS edit from a silent false pass/fail. Fix: count `{`/`}` depth instead of `indexOf("}")`.
-3. **[low — missed optimization] Resume signature not synced on live control change.** The live-apply effect updates the chain while Mastered plays but doesn't update `loadedAuditionRef.current.masteredSignature`, so a later pause→play after changing a control takes the full-restart path instead of the cheap native resume. Audio is correct either way — purely a missed resume.
-4. **[low — informational] Redundant `updateMasteringChain` on Mastered resume.** Resume flips `isAuditionPlaying` and re-fires the live-apply effect once with unchanged settings — idempotent, harmless.
-5. **[low — defensive] `analysis` (source LUFS) is absent from `masteredControlSignature`.** Not currently reachable (a ready track's `analysis` doesn't mutate), but worth a code comment if that ever changes, so resume wouldn't miss a source-LUFS update.
-6. **[low — cosmetic] Minor leftovers.** `browserRenderJob` still types `kind` as `"preview" | "master"` though only `"master"` is passed; the stale `apps/iphone/dist/` bundle still contains old teal/`asset:` strings (rebuild artifact — clean `dist/` if it bothers you).
+1. **[low — informational] Redundant `updateMasteringChain` on Mastered resume.** Resume flips `isAuditionPlaying` and re-fires the live-apply effect once with unchanged settings — idempotent, harmless.
+2. **[low — defensive] `analysis` (source LUFS) is absent from `masteredControlSignature`.** Not currently reachable (a ready track's `analysis` doesn't mutate), but worth a code comment if that ever changes, so resume wouldn't miss a source-LUFS update.
+3. **[low — cosmetic] Minor leftovers.** `browserRenderJob` still types `kind` as `"preview" | "master"` though only `"master"` is passed; the stale `apps/iphone/dist/` bundle may contain older strings until the next release build refreshes it.
 
 ### Added to the on-device checklist (Part B) — two brand visual checks
 
@@ -72,7 +84,7 @@ Latest no-device verification: **iphone TS 84/84, iphone Rust 6/6, iOS-target ch
 
 ## Verified vs. needs a device (no human was available)
 
-**Verified statically/automatically:** all code compiles on host and `aarch64-apple-ios`, TS typechecks, 84 TS + 6 Rust tests pass. No device build or on-device run was attempted in the 2026-06-01 session.
+**Verified statically/automatically:** all code compiles on host and `aarch64-apple-ios`, TS typechecks, 85 TS + 6 Rust tests pass. No device build or on-device run was attempted in the 2026-06-01 session.
 
 **Needs an ear/eye on the real iPhone (cannot be checked without a human):**
 1. **Baseline audibility** — does import → analyze → Play actually make sound at the right level? (Code says yes; `.playback` ignores the silent switch.)
