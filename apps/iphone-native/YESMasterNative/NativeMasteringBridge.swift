@@ -1,6 +1,26 @@
 import Foundation
 import UniformTypeIdentifiers
 
+struct NativeAnalysisResult: Decodable, Equatable {
+    let lufsIntegrated: Double
+    let truePeakDbtp: Double
+    let dynamicRangeLu: Double
+}
+
+enum NativeMasteringBridgeError: LocalizedError, Equatable {
+    case rust(String)
+    case invalidResponse
+
+    var errorDescription: String? {
+        switch self {
+        case .rust(let message):
+            message
+        case .invalidResponse:
+            "Rust bridge returned an invalid response."
+        }
+    }
+}
+
 struct NativeMasteringBridge {
     private let knownAudioExtensions = ["wav", "mp3", "m4a", "aac", "flac", "ogg", "aiff", "aif", "opus"]
 
@@ -37,4 +57,35 @@ struct NativeMasteringBridge {
         defer { yes_master_native_free_string(pointer) }
         return String(cString: pointer)
     }
+
+    func analyzeTrack(at url: URL) throws -> NativeAnalysisResult {
+        let pointer = url.path.withCString { pathPointer in
+            yes_master_native_analyze_file_json(pathPointer)
+        }
+
+        guard let pointer else {
+            throw NativeMasteringBridgeError.invalidResponse
+        }
+        defer { yes_master_native_free_string(pointer) }
+
+        let json = String(cString: pointer)
+        let data = Data(json.utf8)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+        if let errorPayload = try? decoder.decode(BridgeErrorPayload.self, from: data),
+           !errorPayload.error.isEmpty {
+            throw NativeMasteringBridgeError.rust(errorPayload.error)
+        }
+
+        do {
+            return try decoder.decode(NativeAnalysisResult.self, from: data)
+        } catch {
+            throw NativeMasteringBridgeError.invalidResponse
+        }
+    }
+}
+
+private struct BridgeErrorPayload: Decodable {
+    let error: String
 }
