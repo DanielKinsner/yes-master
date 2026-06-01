@@ -6,7 +6,6 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import {
   attachIphoneTrack,
   initialIphoneAppState,
@@ -28,6 +27,7 @@ import {
   iphoneBackend,
   pickIphoneAudioPath,
   pickIphoneOutputPath,
+  toIphoneAudioUrl,
   type IphoneBackend,
 } from "./iphone-api";
 import type {
@@ -87,7 +87,7 @@ export default function App({
   backend = iphoneBackend,
   pickAudioPath = pickIphoneAudioPath,
   pickOutputPath = pickIphoneOutputPath,
-  toAudioUrl = convertFileSrc,
+  toAudioUrl = toIphoneAudioUrl,
 }: {
   backend?: IphoneBackend;
   pickAudioPath?: () => Promise<string | null>;
