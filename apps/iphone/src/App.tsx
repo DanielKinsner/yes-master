@@ -126,6 +126,28 @@ export default function App({
   const isScrubbingRef = useRef(false);
   const scrubValueRef = useRef(0);
   const plan = useMemo(() => toIphoneSimplePlan(state), [state]);
+  // Signature of just the controls that change the mastering chain, so the
+  // live-apply effect below fires once per real control change — not on every
+  // playhead tick (which also mutates `state`, and therefore `plan`).
+  const masteredControlSignature = useMemo(
+    () =>
+      JSON.stringify({
+        tone: state.selectedTone,
+        loudness: state.selectedLoudness,
+        profile: state.selectedExportProfile,
+        volumeMatch: state.volumeMatch,
+        lufsPreview: state.lufsPreview,
+        customExport: state.customExport,
+      }),
+    [
+      state.selectedTone,
+      state.selectedLoudness,
+      state.selectedExportProfile,
+      state.volumeMatch,
+      state.lufsPreview,
+      state.customExport,
+    ],
+  );
   const hasTrack = state.track !== null;
   const analysisReady = state.analysisStatus === "ready";
   const canRenderMaster = hasTrack && analysisReady;
@@ -192,6 +214,30 @@ export default function App({
       void backend.stopPlayback();
     };
   }, [backend, state.track?.id]);
+
+  // Live-apply mastering changes while Mastered is auditioning. Without this,
+  // changing tone/loudness/profile/volume-match/lufs-preview only updates the
+  // UI and export plan, not the audio, until Pause->Play — which breaks the
+  // real-time-audition contract. iPhone controls are all discrete (cards,
+  // segments, toggles), so a direct re-apply per change can't flood the bridge
+  // the way desktop's continuous knobs would.
+  useEffect(() => {
+    if (
+      !isAuditionPlaying ||
+      state.playback !== "mastered" ||
+      !state.track ||
+      !analysisReady
+    ) {
+      return;
+    }
+    void backend.updateMasteringChain(
+      withSourceAnalysis(buildAuditionPreviewSettings(plan), analysis),
+      state.lufsPreview,
+    );
+    // Keyed on the control signature so this is one call per actual change;
+    // plan/analysis derive from the same state the signature covers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [masteredControlSignature, isAuditionPlaying, state.playback]);
 
   async function importTrack() {
     if (!startOperation("importing")) return;
