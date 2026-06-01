@@ -39,6 +39,7 @@ targets:
           - $(PROJECT_DIR)/rust/build/$(PLATFORM_NAME)/$(CONFIGURATION)
         OTHER_LDFLAGS:
           - -lyes_master_iphone_native_bridge
+        SWIFT_OBJC_BRIDGING_HEADER: YESMasterNative/YESMasterNative-Bridging-Header.h
     dependencies:
       - sdk: AVFoundation.framework
       - sdk: UniformTypeIdentifiers.framework

@@ -1,13 +1,32 @@
 import Foundation
 
 struct NativeMasteringBridge {
-    let supportedImportExtensions = ["wav", "mp3", "m4a", "aac", "flac", "ogg"]
+    private let knownAudioExtensions = ["wav", "mp3", "m4a", "aac", "flac", "ogg", "aiff", "aif", "opus"]
+
+    var bridgeVersion: String {
+        guard let pointer = yes_master_native_bridge_version() else {
+            return "Rust bridge unavailable"
+        }
+        return String(cString: pointer)
+    }
+
+    var supportedImportExtensions: [String] {
+        knownAudioExtensions.filter { fileExtension in
+            fileExtension.withCString { pointer in
+                yes_master_native_supports_import_extension(pointer)
+            }
+        }
+    }
 
     var supportedImportSummary: String {
-        "Supported now: " + supportedImportExtensions.joined(separator: ", ")
+        "\(bridgeVersion). Supported now: " + supportedImportExtensions.joined(separator: ", ")
     }
 
     var fixedExportSummary: String {
-        "Rust bridge scaffold: Medium maps to -11 LUFS, WAV 44.1 kHz, 24-bit, -1 dBTP."
+        guard let pointer = yes_master_native_fixed_export_settings_json() else {
+            return "Rust bridge could not load export settings."
+        }
+        defer { yes_master_native_free_string(pointer) }
+        return String(cString: pointer)
     }
 }
