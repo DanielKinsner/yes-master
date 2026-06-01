@@ -59,6 +59,14 @@ type IphoneOperation =
   | "preparing-preview";
 type ProcessingStage = "importing" | "analyzing";
 
+interface IphoneExportReceipt {
+  bitDepth: number;
+  measuredLufs: number;
+  outputPath: string;
+  sampleRate: number;
+  warningCount: number;
+}
+
 const IPHONE_TONE_VISUALS: Record<
   IphoneSimpleTone,
   { accent: string; description: string; image: string; title: string }
@@ -103,6 +111,9 @@ export default function App({
   const [state, setState] = useState<IphoneAppState>(initialIphoneAppState);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [exportChecks, setExportChecks] = useState<QualityCheck[]>([]);
+  const [exportReceipt, setExportReceipt] = useState<IphoneExportReceipt | null>(
+    null,
+  );
   const [message, setMessage] = useState<string | null>(null);
   const [masterPreviewPath, setMasterPreviewPath] = useState<string | null>(null);
   const [operation, setOperation] = useState<IphoneOperation>("idle");
@@ -161,6 +172,7 @@ export default function App({
       }
       setAnalysis(null);
       setExportChecks([]);
+      setExportReceipt(null);
       clearMasterPreview();
       const imported = await backend.importTrack(path);
       const track = toIphoneTrack(imported);
@@ -177,6 +189,7 @@ export default function App({
     if (!state.track || !startOperation("analyzing")) return;
     setAnalysis(null);
     setExportChecks([]);
+    setExportReceipt(null);
     clearMasterPreview();
     try {
       await analyzeTrack(state.track);
@@ -200,6 +213,7 @@ export default function App({
     if (!startOperation("exporting")) return;
     setMessage("Exporting...");
     setExportChecks([]);
+    setExportReceipt(null);
     try {
       const outputPath = await pickOutputPath(
         suggestIphoneExportFileName(state.track),
@@ -222,6 +236,13 @@ export default function App({
       );
       setExportChecks(checks);
       const warningCount = checks.filter((check) => check.level !== "info").length;
+      setExportReceipt({
+        bitDepth: report.bit_depth,
+        measuredLufs: report.measured_lufs,
+        outputPath,
+        sampleRate: report.sample_rate,
+        warningCount,
+      });
       setMessage(
         warningCount > 0
           ? `Exported with ${warningCount} warning${warningCount === 1 ? "" : "s"}`
@@ -292,6 +313,7 @@ export default function App({
   ) {
     clearMasterPreview();
     setExportChecks([]);
+    setExportReceipt(null);
     setMessage(null);
     setState((current) => switchIphonePlayback(update(current), "original"));
   }
@@ -620,8 +642,14 @@ export default function App({
               .filter((check) => check.level !== "info")
               .map((check) => (
                 <p key={check.code}>{check.message}</p>
-              ))}
+            ))}
           </section>
+        ) : null}
+        {exportReceipt ? (
+          <ExportReadySheet
+            receipt={exportReceipt}
+            onClose={() => setExportReceipt(null)}
+          />
         ) : null}
         {isImporting || operation === "analyzing" ? (
           <ProcessingOverlay
@@ -868,6 +896,37 @@ function ProcessingOverlay({
   );
 }
 
+function ExportReadySheet({
+  onClose,
+  receipt,
+}: {
+  onClose: () => void;
+  receipt: IphoneExportReceipt;
+}) {
+  return (
+    <section
+      aria-label="Master ready"
+      aria-live="polite"
+      className="export-ready-sheet"
+      data-testid="iphone-export-ready"
+    >
+      <div className="export-ready-mark" aria-hidden="true" />
+      <p className="track-label">
+        {receipt.warningCount > 0 ? "Review warnings" : "Master ready"}
+      </p>
+      <h2>{fileNameFromPath(receipt.outputPath)}</h2>
+      <div className="export-ready-stats" aria-label="Export details">
+        <span>{receipt.measuredLufs.toFixed(1)} LUFS</span>
+        <span>{formatSampleRate(receipt.sampleRate)}</span>
+        <span>{formatBitDepth(receipt.bitDepth)}</span>
+      </div>
+      <button data-testid="iphone-export-ready-done" type="button" onClick={onClose}>
+        Done
+      </button>
+    </section>
+  );
+}
+
 function formatSampleRate(sampleRate: number | null) {
   if (!sampleRate) return "Source";
   return `${(sampleRate / 1000).toFixed(sampleRate % 1000 === 0 ? 0 : 1)} kHz`;
@@ -886,6 +945,10 @@ function formatChannels(channels: number) {
   if (channels === 1) return "Mono";
   if (channels === 2) return "Stereo";
   return `${channels} ch`;
+}
+
+function fileNameFromPath(path: string) {
+  return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 }
 
 function formatTime(seconds: number | null | undefined) {

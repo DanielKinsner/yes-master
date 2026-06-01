@@ -144,6 +144,15 @@ describe("iPhone styles", () => {
     expect(chipBlock).toContain("font-size: 0.65rem");
   });
 
+  it("shows a polished Master Ready sheet after export", () => {
+    const css = readIphoneStyles();
+
+    expect(css).toContain(".export-ready-sheet");
+    expect(css).toContain(".export-ready-mark");
+    expect(css).toContain(".export-ready-stats");
+    expect(css).toContain("@keyframes export-ready-enter");
+  });
+
   it("animates the import and analysis processing sheet responsibly", () => {
     const css = readIphoneStyles();
 

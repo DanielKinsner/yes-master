@@ -743,6 +743,28 @@ describe("iPhone app shell", () => {
     );
     expect(backend.runExportChecks).toHaveBeenCalled();
     expect(container.textContent).toContain("Exported");
+    expect(container.textContent).toContain("Master ready");
+    expect(container.textContent).toContain("new-master__master.wav");
+    expect(container.textContent).toContain("-14.0 LUFS");
+
+    act(() => root.unmount());
+  });
+
+  it("lets the user dismiss the Master Ready sheet", async () => {
+    const { container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='iphone-export']");
+
+    expect(
+      container.querySelector("[data-testid='iphone-export-ready']"),
+    ).not.toBeNull();
+
+    await click(container, "[data-testid='iphone-export-ready-done']");
+
+    expect(
+      container.querySelector("[data-testid='iphone-export-ready']"),
+    ).toBeNull();
 
     act(() => root.unmount());
   });
@@ -900,11 +922,13 @@ describe("iPhone app shell", () => {
     await click(container, "[data-testid='iphone-export']");
     expect(container.textContent).toContain("Exported with 1 warning");
     expect(container.textContent).toContain("True peak is high");
+    expect(container.textContent).toContain("Review warnings");
 
     await click(container, "[data-testid='tone-warm']");
 
     expect(container.textContent).not.toContain("Exported with 1 warning");
     expect(container.textContent).not.toContain("True peak is high");
+    expect(container.textContent).not.toContain("Review warnings");
 
     act(() => root.unmount());
   });
