@@ -41,6 +41,7 @@ import {
   iphoneSimpleLoudnessOptions,
   iphoneSimpleToneOptions,
   type IphoneSimpleExportProfile,
+  type IphoneSimpleExportProfileOption,
   type IphoneSimpleLoudness,
   type IphoneSimpleTone,
 } from "./simple-mode";
@@ -178,6 +179,7 @@ export default function App({
   const sampleRate = plan.exportSettings.advanced.target_sample_rate;
   const bitDepth = plan.exportSettings.advanced.bit_depth;
   const targetLufs = plan.exportSettings.advanced.lufs_offset_db;
+  const profileSummary = `${targetLufs?.toFixed(1) ?? "-14.0"} LUFS · ${formatSampleRate(sampleRate)} / ${formatBitDepth(bitDepth)}`;
   const selectedToneVisual = IPHONE_TONE_VISUALS[state.selectedTone];
   const heroImportLabel = isImporting ? "Importing..." : "Import Track";
   const heroActionDisabled = hasTrack
@@ -581,19 +583,19 @@ export default function App({
 
   return (
     <main className="iphone-app" aria-label="YES Master iPhone">
-      <section className="phone-frame">
+      <section className={hasTrack ? "phone-frame has-track" : "phone-frame"}>
         <header className="app-header">
           <div className="brand-lockup">
             <BrandMark />
             <span className="brand-name">YES Master</span>
           </div>
-          <span className="status-chip">
-            {state.analysisStatus === "ready" ? "Ready" : "Local"}
-          </span>
+          {state.analysisStatus === "ready" ? (
+            <span className="status-chip">Ready</span>
+          ) : null}
         </header>
 
         <section
-          className="hero-panel"
+          className={hasTrack ? "hero-panel is-loaded" : "hero-panel"}
           style={{ "--tone-accent": selectedToneVisual.accent } as CSSProperties}
         >
           <img
@@ -814,7 +816,7 @@ export default function App({
             ))}
           </ControlGroup>
 
-          <ControlGroup step="3" title="Profile">
+          <ControlGroup meta={profileSummary} step="3" title="Profile">
             {iphoneSimpleExportProfileOptions.map((option) => (
               <SegmentButton
                 key={option.id}
@@ -830,7 +832,10 @@ export default function App({
                   )
                 }
               >
-                {option.label}
+                <span>{option.label}</span>
+                <small>
+                  {formatProfileOptionSummary(option, state.customExport)}
+                </small>
               </SegmentButton>
             ))}
           </ControlGroup>
@@ -891,19 +896,6 @@ export default function App({
               </label>
             </section>
           ) : null}
-
-          <section className="master-card" aria-label="Master settings">
-            <div>
-              <p className="track-label">Target</p>
-              <strong>{targetLufs?.toFixed(1) ?? "-14.0"} LUFS</strong>
-            </div>
-            <div>
-              <p className="track-label">Format</p>
-              <strong>
-                {formatSampleRate(sampleRate)} · {formatBitDepth(bitDepth)}
-              </strong>
-            </div>
-          </section>
         </section>
 
         <button
@@ -1085,16 +1077,18 @@ function toIphoneErrorMessage(error: unknown) {
 
 function ControlGroup({
   children,
+  meta,
   step,
   title,
 }: {
   children: ReactNode;
+  meta?: ReactNode;
   step: string;
   title: string;
 }) {
   return (
     <section className="control-group">
-      <SectionTitle step={step}>{title}</SectionTitle>
+      <SectionTitle meta={meta} step={step}>{title}</SectionTitle>
       <div className="segmented">{children}</div>
     </section>
   );
@@ -1102,15 +1096,18 @@ function ControlGroup({
 
 function SectionTitle({
   children,
+  meta,
   step,
 }: {
   children: ReactNode;
+  meta?: ReactNode;
   step: string;
 }) {
   return (
     <h3 className="section-title">
-      <span>{step}</span>
-      {children}
+      <span className="section-step">{step}</span>
+      <span>{children}</span>
+      {meta ? <small className="section-meta">{meta}</small> : null}
     </h3>
   );
 }
@@ -1322,6 +1319,17 @@ function formatSampleRate(sampleRate: number | null) {
 function formatBitDepth(bitDepth: number | null) {
   if (!bitDepth) return "Source bit";
   return `${bitDepth}-bit`;
+}
+
+function formatProfileOptionSummary(
+  option: IphoneSimpleExportProfileOption,
+  customExport: IphoneCustomExportSettings,
+) {
+  const sampleRate =
+    option.id === "custom" ? customExport.sampleRate ?? null : option.sampleRate;
+  const bitDepth =
+    option.id === "custom" ? customExport.bitDepth ?? null : option.bitDepth;
+  return `${formatSampleRate(sampleRate)} / ${formatBitDepth(bitDepth)}`;
 }
 
 function formatSourceFormat(sourceFormat: string) {

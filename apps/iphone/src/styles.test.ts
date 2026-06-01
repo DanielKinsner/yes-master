@@ -128,6 +128,16 @@ describe("iPhone styles", () => {
     expect(css).not.toContain(".switch");
   });
 
+  it("keeps the export button in normal layout flow instead of overlaying settings", () => {
+    const css = readIphoneStyles();
+    const exportButtonBlock = cssBlock(css, ".export-button");
+
+    expect(css).not.toContain(".master-card");
+    expect(exportButtonBlock).toContain("position: relative");
+    expect(exportButtonBlock).not.toContain("position: sticky");
+    expect(exportButtonBlock).not.toContain("bottom:");
+  });
+
   it("keeps hero checkbox options unframed inside the import card", () => {
     const css = readIphoneStyles();
     const checkOptionBlock = cssBlock(css, ".check-option");

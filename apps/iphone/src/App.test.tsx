@@ -477,6 +477,32 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
+  it("folds target and format into the compact Profile controls", async () => {
+    const { container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+
+    expect(container.querySelector(".master-card")).toBeNull();
+    expect(container.querySelector(".section-meta")?.textContent).toContain(
+      "-14.0 LUFS",
+    );
+    expect(
+      container.querySelector("[data-testid='profile-streaming']")?.textContent,
+    ).toContain("48 kHz / 24-bit");
+
+    await click(container, "[data-testid='loudness-high']");
+    await click(container, "[data-testid='profile-cd']");
+
+    expect(container.querySelector(".section-meta")?.textContent).toContain(
+      "-10.5 LUFS",
+    );
+    expect(
+      container.querySelector("[data-testid='profile-cd']")?.textContent,
+    ).toContain("44.1 kHz / 16-bit");
+
+    act(() => root.unmount());
+  });
+
   it("keeps the visible playhead when switching Original and Mastered", async () => {
     const { container, root } = renderApp();
 
