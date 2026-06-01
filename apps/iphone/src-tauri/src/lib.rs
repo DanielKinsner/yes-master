@@ -59,16 +59,68 @@ mod ios_audio {
 }
 
 #[tauri::command]
-async fn iphone_import_track(path: String) -> CommandResult<ImportedTrack> {
+async fn iphone_import_track(
+    path: String,
+    app: tauri::AppHandle,
+) -> CommandResult<ImportedTrack> {
     let normalized = normalize_iphone_file_path(&path);
     log::info!(
         "iphone_import_track: raw={path:?} normalized={normalized:?} exists={}",
         Path::new(&normalized).exists()
     );
-    let mut tracks = files::import_tracks(vec![normalized]).await?;
+    // Copy the picked file into an app-owned dir so analyze/waveform/play/render
+    // all read a path the app controls. The document picker delivers files into
+    // tmp/<bundle>-Inbox/, which iOS can purge under storage pressure or between
+    // launches (every later File::open then fails), and a same-basename
+    // re-import overwrites the prior Inbox copy. A durable copy removes both.
+    let durable = copy_into_app_imports(&app, &normalized);
+    let mut tracks = files::import_tracks(vec![durable]).await?;
     tracks
         .pop()
         .ok_or_else(|| yes_master_lib::CommandError::Other("no track imported".to_string()))
+}
+
+/// Copy `source` into `app_data_dir()/imports/<hash>/<original-name>` and return
+/// that path. The per-source-hash subdir keeps the original filename (so the
+/// display name and extension survive) while avoiding same-basename collisions.
+/// On any failure (including an already-missing source) it returns the original
+/// path unchanged so the real error surfaces downstream rather than being masked
+/// here.
+fn copy_into_app_imports(app: &tauri::AppHandle, source: &str) -> String {
+    use std::hash::{Hash, Hasher};
+
+    let source_path = Path::new(source);
+    if !source_path.exists() {
+        return source.to_string();
+    }
+    let file_name = source_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("import.audio");
+
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    source.hash(&mut hasher);
+    let bucket = format!("{:016x}", hasher.finish());
+
+    let dest_dir = match app.path().app_data_dir() {
+        Ok(dir) => dir.join("imports").join(bucket),
+        Err(error) => {
+            log::warn!("app_data_dir unavailable, using picked path: {error}");
+            return source.to_string();
+        }
+    };
+    if let Err(error) = std::fs::create_dir_all(&dest_dir) {
+        log::warn!("could not create imports dir, using picked path: {error}");
+        return source.to_string();
+    }
+    let dest = dest_dir.join(file_name);
+    match std::fs::copy(source_path, &dest) {
+        Ok(_) => dest.to_string_lossy().to_string(),
+        Err(error) => {
+            log::warn!("could not copy import to app dir, using picked path: {error}");
+            source.to_string()
+        }
+    }
 }
 
 #[tauri::command]
