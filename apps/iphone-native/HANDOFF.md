@@ -1,16 +1,21 @@
 # YES Master iPhone Native - Handoff
 
-_Last updated: 2026-06-01, XcodeGen/linking/Swift-to-Rust review fixes._
+_Last updated: 2026-06-01, native import plus Rust analysis path._
 
 ## Current Status
 
 `apps/iphone-native` is a separate SwiftUI-native scaffold. The existing Tauri iPhone app in `apps/iphone` is untouched and remains the reference/prototype.
 
-Review fixes now landed on `main` in small commits:
+Review and follow-up slices now landed on `main` in small commits:
 
 1. `6ac86c7 fix(iphone-native): make xcodegen reproducible`
 2. `49eaca8 fix(iphone-native): link Rust bridge libraries`
 3. `c7f394a feat(iphone-native): call Rust bridge from Swift`
+4. `8ff9a12 feat(iphone-native): add imported track storage`
+5. `f7694ea feat(iphone-native): wire native file import`
+6. `d083f72 feat(iphone-native): expose Rust analysis bridge`
+7. `f64c1e5 feat(iphone-native): add Swift analysis bridge`
+8. `889c24c feat(iphone-native): analyze imported tracks`
 
 The native direction is:
 
@@ -44,38 +49,48 @@ The native direction is:
 - bridge version
 - supported import extension filtering
 - fixed export settings JSON
+- source track analysis via `yes_master_lib::engine::analyze_tracks`
 
-The native app is still not a real mastering app yet. Import, analyze, original/mastered playback, render, and share/export are not wired.
+The native app can now import a supported audio file into app-owned storage, ask Rust to analyze it, and show LUFS, true peak, and dynamic range. It is still not a real mastering app yet: original/mastered playback, render, and share/export are not wired.
 
 ## Next Slice
 
-1. Add native document import with supported types only: WAV, MP3, M4A/AAC, FLAC, OGG/Vorbis.
-2. Copy imported files into app-owned storage before analysis/render.
-3. Add the Rust analyze bridge call using `yes_master_lib::engine::analyze_tracks`.
-4. Add native playback with `AVAudioSession` activation immediately before play.
-5. Add render/export bridge call using the shared Rust engine and the fixed `-11 LUFS`, `44.1 kHz`, `24-bit`, `-1 dBTP` export target.
+1. Add native playback for the imported original file with `AVAudioSession` activation immediately before play.
+2. Preserve playhead when later switching Original/Mastered.
+3. Add render/export bridge call using the shared Rust engine and the fixed `-11 LUFS`, `44.1 kHz`, `24-bit`, `-1 dBTP` export target.
+4. Add native share/export once render output exists.
+5. Keep the UI spacious; do not add waveform/scrubbing unless the user asks.
 
 ## Verification So Far
 
 Verified in this pass:
 
 ```bash
-cd rust
+cd apps/iphone-native/rust
 cargo test
 ```
 
 ```bash
-cd rust
+cd apps/iphone-native/rust
 PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" cargo check --target aarch64-apple-ios
 ```
 
 ```bash
 cd apps/iphone-native
 xcodegen generate
+```
+
+```bash
+cd apps/iphone-native
 git status --short
 ```
 
 `xcodegen generate` leaves git clean after committed files are up to date. The generated `.xcodeproj` is intentionally ignored and reproducible from `project.yml`.
+
+```bash
+cd apps/iphone-native
+xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO test
+```
 
 ```bash
 cd apps/iphone-native
@@ -91,3 +106,5 @@ lipo -info rust/build/iphoneos/Debug/libyes_master_iphone_native_bridge.a
 ```
 
 Device Rust bridge output is arm64.
+
+No remote iPhone install or TestFlight work was attempted.
