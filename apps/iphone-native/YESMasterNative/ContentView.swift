@@ -85,6 +85,7 @@ private enum AuditionSide: String, CaseIterable, Identifiable {
 }
 
 struct ContentView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedPreset: NativeStylePreset = .balanced
     @State private var selectedLoudness: NativeLoudness = .medium
     @State private var selectedAudition: AuditionSide = .original
@@ -101,6 +102,7 @@ struct ContentView: View {
     @State private var isImportingTrack = false
     @State private var isAnalyzing = false
     @State private var analysisTask: Task<Void, Never>?
+    @State private var heroPulse = false
     @State private var statusText = "Import a track to begin."
     @StateObject private var playbackController = TrackPlaybackController()
 
@@ -115,14 +117,15 @@ struct ContentView: View {
                 VStack(spacing: 10) {
                     header
                     heroPanel
+                    processingBanner
                     auditionSwitch
                     stylePicker
                     intensitySlider
                     loudnessPicker
                     createMasterButton
-                        .padding(.top, 12)
+                        .padding(.top, 22)
                     shareMasterButton
-                    statusAndAnalysis
+                    errorStatus
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
@@ -138,6 +141,12 @@ struct ContentView: View {
             allowsMultipleSelection: false,
             onCompletion: handleImportResult
         )
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 2.8).repeatForever(autoreverses: true)) {
+                heroPulse = true
+            }
+        }
     }
 
     private var appBackground: some View {
@@ -217,10 +226,10 @@ struct ContentView: View {
             Image("BrandIcon")
                 .resizable()
                 .scaledToFit()
-                .opacity(0.10)
+                .opacity(0.13)
                 .blendMode(.screen)
-                .frame(width: 248, height: 248)
-                .offset(x: 58, y: 4)
+                .frame(width: 268, height: 268)
+                .offset(x: 68, y: 8)
                 .allowsHitTesting(false)
 
             VStack {
@@ -240,7 +249,7 @@ struct ContentView: View {
                     .padding(.bottom, 14)
             }
         }
-        .frame(height: 278)
+        .frame(height: 292)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
@@ -253,6 +262,7 @@ struct ContentView: View {
                         lineWidth: index == 0 ? 1.4 : 1
                     )
                     .frame(width: CGFloat(68 + index * 36), height: CGFloat(68 + index * 36))
+                    .scaleEffect(!reduceMotion && heroPulse ? 1.035 : 1.0)
             }
 
             RoundedRectangle(cornerRadius: 0)
@@ -305,12 +315,38 @@ struct ContentView: View {
                         .shadow(color: .white.opacity(0.6), radius: 10)
                 }
                 .frame(width: 72, height: 72)
+                .scaleEffect(playbackController.isPlaying && !reduceMotion ? 1.04 : 1.0)
+                .animation(.easeOut(duration: 0.18), value: playbackController.isPlaying)
             }
             .buttonStyle(.plain)
             .disabled(importedTrack != nil && !canPlaySelectedAudition)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 166)
+    }
+
+    @ViewBuilder
+    private var processingBanner: some View {
+        if isAnalyzing || isPreparingMasterPreview {
+            HStack(spacing: 10) {
+                ProcessingSpinner()
+
+                Text(isAnalyzing ? "Analyzing track" : "Preparing preview")
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundStyle(Color(red: 0.72, green: 0.82, blue: 1.0))
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 38)
+            .background(Color(red: 0.02, green: 0.045, blue: 0.10).opacity(0.76))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Color(red: 0.35, green: 0.62, blue: 1.0).opacity(0.24), lineWidth: 1)
+            )
+            .transition(.opacity.combined(with: .scale(scale: 0.98)))
+        }
     }
 
     private var heroListeningToggles: some View {
@@ -662,27 +698,15 @@ struct ContentView: View {
         }
     }
 
-    private var statusAndAnalysis: some View {
-        VStack(spacing: 10) {
-            if isAnalyzing {
-                HStack(spacing: 10) {
-                    ProgressView()
-                        .tint(Color(red: 0.32, green: 0.65, blue: 1.0))
-                    Text("Analyzing track")
-                }
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(Color(red: 0.68, green: 0.76, blue: 0.92))
-            } else if let analysisResult {
-                analysisSummary(for: analysisResult)
-            }
-
-            if shouldShowStatusText {
-                Text(statusText)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(Color(red: 0.58, green: 0.66, blue: 0.84))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(3)
-            }
+    @ViewBuilder
+    private var errorStatus: some View {
+        if shouldShowStatusText {
+            Text(statusText)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Color(red: 0.72, green: 0.79, blue: 0.92))
+                .multilineTextAlignment(.center)
+                .lineLimit(3)
+                .padding(.top, 2)
         }
     }
 
@@ -707,30 +731,6 @@ struct ContentView: View {
                     .minimumScaleFactor(0.7)
             }
         }
-    }
-
-    private func analysisSummary(for analysis: NativeAnalysisResult) -> some View {
-        HStack(spacing: 8) {
-            analysisMetric(label: "LUFS", value: String(format: "%.1f", analysis.lufsIntegrated))
-            analysisMetric(label: "TP", value: String(format: "%.1f", analysis.truePeakDbtp))
-            analysisMetric(label: "DR", value: String(format: "%.1f", analysis.dynamicRangeLu))
-        }
-    }
-
-    private func analysisMetric(label: String, value: String) -> some View {
-        VStack(spacing: 3) {
-            Text(label)
-                .font(.system(size: 10, weight: .heavy))
-                .foregroundStyle(Color(red: 0.55, green: 0.63, blue: 0.80))
-            Text(value)
-                .font(.system(size: 14, weight: .heavy, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(.white)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 50)
-        .background(Color.white.opacity(0.045))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func handleImportResult(_ result: Result<[URL], Error>) {
@@ -1096,6 +1096,36 @@ struct ContentView: View {
             return "The file imported, but the audio could not be read. Try a standard WAV, MP3, or M4A."
         }
         return message
+    }
+}
+
+private struct ProcessingSpinner: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isRotating = false
+
+    var body: some View {
+        Circle()
+            .trim(from: 0.18, to: 0.86)
+            .stroke(
+                AngularGradient(
+                    colors: [
+                        Color(red: 0.40, green: 0.76, blue: 1.0),
+                        Color(red: 0.93, green: 0.78, blue: 0.35),
+                        Color(red: 0.40, green: 0.76, blue: 1.0)
+                    ],
+                    center: .center
+                ),
+                style: StrokeStyle(lineWidth: 2.4, lineCap: .round)
+            )
+            .frame(width: 18, height: 18)
+            .rotationEffect(.degrees(isRotating ? 360 : 0))
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
+                    isRotating = true
+                }
+            }
+            .accessibilityHidden(true)
     }
 }
 
