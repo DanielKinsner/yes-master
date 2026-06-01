@@ -157,6 +157,7 @@ h3 {
 
 .hero-panel {
   background:
+    radial-gradient(circle at 50% 42%, rgba(77, 139, 255, 0.14), transparent 34%),
     linear-gradient(180deg, rgba(31, 37, 51, 0.7), rgba(13, 16, 24, 0.96)),
     var(--bg-2);
   border: 1px solid rgba(236, 240, 250, 0.08);
@@ -167,7 +168,7 @@ h3 {
   display: grid;
   gap: 0;
   grid-template-rows: minmax(0, 1fr) auto;
-  min-height: min(360px, calc(100dvh - 118px));
+  min-height: min(330px, calc(100dvh - 118px));
   overflow: hidden;
   padding: 12px;
   position: relative;
@@ -206,7 +207,7 @@ h3 {
 
 .hero-orb {
   display: grid;
-  min-height: min(280px, calc(100dvh - 172px));
+  min-height: min(246px, calc(100dvh - 172px));
   place-items: center;
   position: relative;
   z-index: 1;
@@ -215,26 +216,21 @@ h3 {
 
 .hero-orb::before,
 .hero-orb::after {
-  border: 2px dashed color-mix(in srgb, var(--tone-accent, var(--accent)) 58%, rgba(236, 240, 250, 0.12));
+  border: 2px dashed color-mix(in srgb, var(--tone-accent, var(--accent)) 52%, rgba(236, 240, 250, 0.1));
   border-radius: 50%;
   content: "";
-  height: min(68vw, 252px);
-  opacity: 0.76;
+  height: min(64vw, 240px);
+  opacity: 0.66;
   pointer-events: none;
   position: absolute;
-  width: min(68vw, 252px);
+  transform: translateZ(0);
+  width: min(64vw, 240px);
 }
 
 .hero-orb::after {
-  height: min(54vw, 200px);
-  opacity: 0.3;
-  width: min(54vw, 200px);
-}
-
-@keyframes hero-ring-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  height: min(46vw, 174px);
+  opacity: 0.24;
+  width: min(46vw, 174px);
 }
 
 .hero-action-button {
@@ -260,9 +256,9 @@ h3 {
 }
 
 .hero-orb.is-empty .hero-action-button {
-  height: min(68vw, 252px);
+  height: min(64vw, 240px);
   padding: 0;
-  width: min(68vw, 252px);
+  width: min(64vw, 240px);
 }
 
 .hero-orb.has-track .hero-action-button {
@@ -288,10 +284,11 @@ h3 {
 
 .hero-orb.is-empty .hero-action-button span:last-child {
   color: var(--text-0);
+  font-size: 0.92rem;
   left: 50%;
   position: absolute;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.46);
-  top: 64%;
+  top: 67%;
   transform: translate(-50%, -50%);
 }
 
@@ -322,10 +319,10 @@ h3 {
   color: var(--cta);
   height: 54px;
   left: 50%;
-  opacity: 0.9;
+  opacity: 0.92;
   pointer-events: none;
   position: absolute;
-  top: 43%;
+  top: 45%;
   transform: translate(-50%, -50%);
   width: 70px;
 }
@@ -697,6 +694,7 @@ h3 {
 }
 
 .processing-card {
+  animation: processing-card-enter 360ms cubic-bezier(0.22, 1, 0.36, 1);
   background:
     linear-gradient(180deg, rgba(236, 240, 250, 0.12), rgba(236, 240, 250, 0.045)),
     rgba(16, 19, 26, 0.82);
@@ -712,7 +710,7 @@ h3 {
   padding: 22px 20px 18px;
   position: relative;
   text-align: center;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
   width: min(84vw, 320px);
 }
 
@@ -799,6 +797,18 @@ h3 {
   }
 }
 
+@keyframes processing-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes processing-spin {
   to {
     transform: rotate(360deg);
@@ -813,6 +823,7 @@ h3 {
 
 @media (prefers-reduced-motion: reduce) {
   .processing-scrim,
+  .processing-card,
   .processing-mark,
   .processing-bar::after {
     animation: none;
@@ -831,22 +842,22 @@ h3 {
   .hero-panel {
     border-radius: 16px;
     margin: 0;
-    min-height: min(340px, calc(100dvh - 108px));
+    min-height: min(314px, calc(100dvh - 108px));
     padding: 10px;
   }
 
   .hero-orb {
-    min-height: min(262px, calc(100dvh - 160px));
+    min-height: min(230px, calc(100dvh - 160px));
   }
 
   .hero-orb::before {
-    height: min(68vw, 238px);
-    width: min(68vw, 238px);
+    height: min(64vw, 226px);
+    width: min(64vw, 226px);
   }
 
   .hero-orb::after {
-    height: min(54vw, 190px);
-    width: min(54vw, 190px);
+    height: min(46vw, 164px);
+    width: min(46vw, 164px);
   }
 
   .custom-export-panel,

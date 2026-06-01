@@ -351,8 +351,8 @@ describe("iPhone app shell", () => {
     const overlay = container.querySelector(
       "[data-testid='iphone-processing-overlay']",
     );
-    expect(overlay?.textContent).toContain("Importing");
-    expect(overlay?.textContent).toContain("Bringing in audio");
+    expect(overlay?.textContent).toContain("Uploading");
+    expect(overlay?.textContent).toContain("Uploading track");
 
     await act(async () => {
       selectedPath.resolve(null);

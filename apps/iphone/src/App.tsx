@@ -790,10 +790,10 @@ function ProcessingOverlay({
         <div className="processing-mark" aria-hidden="true">
           <span />
         </div>
-        <p className="track-label">{isAnalyzing ? "Analyzing" : "Importing"}</p>
-        <h2>{isAnalyzing ? "Reading the track" : "Bringing in audio"}</h2>
+        <p className="track-label">{isAnalyzing ? "Analyzing" : "Uploading"}</p>
+        <h2>{isAnalyzing ? "Reading the track" : "Uploading track"}</h2>
         <p className="processing-copy">
-          {trackName ?? "Preparing your track for YES Master."}
+          {trackName ?? "Handing audio to YES Master."}
         </p>
         <div className="processing-steps" aria-hidden="true">
           <span className="is-done">Import</span>
