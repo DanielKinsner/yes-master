@@ -60,7 +60,12 @@ mod ios_audio {
 
 #[tauri::command]
 async fn iphone_import_track(path: String) -> CommandResult<ImportedTrack> {
-    let mut tracks = files::import_tracks(vec![normalize_iphone_file_path(&path)]).await?;
+    let normalized = normalize_iphone_file_path(&path);
+    log::info!(
+        "iphone_import_track: raw={path:?} normalized={normalized:?} exists={}",
+        Path::new(&normalized).exists()
+    );
+    let mut tracks = files::import_tracks(vec![normalized]).await?;
     tracks
         .pop()
         .ok_or_else(|| yes_master_lib::CommandError::Other("no track imported".to_string()))
@@ -85,12 +90,23 @@ async fn iphone_prepare_waveform(
     track_path: String,
     target_pixels: Option<u32>,
 ) -> CommandResult<WaveformPeaks> {
-    yes_master_lib::audio::prepare_waveform(
-        TrackId(track_id),
-        normalize_iphone_file_path(&track_path),
-        target_pixels,
-    )
-    .await
+    let normalized = normalize_iphone_file_path(&track_path);
+    log::info!(
+        "iphone_prepare_waveform: raw={track_path:?} normalized={normalized:?} exists={} pixels={target_pixels:?}",
+        Path::new(&normalized).exists()
+    );
+    let result =
+        yes_master_lib::audio::prepare_waveform(TrackId(track_id), normalized.clone(), target_pixels)
+            .await;
+    match &result {
+        Ok(peaks) => log::info!(
+            "iphone_prepare_waveform ok: channels={} first_len={}",
+            peaks.channels.len(),
+            peaks.channels.first().map(Vec::len).unwrap_or(0)
+        ),
+        Err(error) => log::error!("iphone_prepare_waveform FAILED for {normalized:?}: {error:?}"),
+    }
+    result
 }
 
 #[tauri::command]
