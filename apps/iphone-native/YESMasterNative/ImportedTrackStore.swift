@@ -68,7 +68,12 @@ struct ImportedTrackStore {
 
         let destinationURL = uniqueDestinationURL(for: sourceURL)
         try fileManager.copyItem(at: sourceURL, to: destinationURL)
-        try validateCopiedTrack(at: destinationURL, fileExtension: normalizedExtension)
+        do {
+            try validateCopiedTrack(at: destinationURL, fileExtension: normalizedExtension)
+        } catch {
+            try? fileManager.removeItem(at: destinationURL)
+            throw error
+        }
 
         return ImportedTrack(
             displayName: fileName,

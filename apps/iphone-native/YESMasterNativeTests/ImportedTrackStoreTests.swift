@@ -96,6 +96,24 @@ final class ImportedTrackStoreTests: XCTestCase {
         }
     }
 
+    func testImportRemovesCopiedFileWhenValidationFails() throws {
+        let sourceURL = temporaryDirectory.appendingPathComponent("fake.wav")
+        let importedDirectory = temporaryDirectory.appendingPathComponent("Imported", isDirectory: true)
+        try Data("not really a wave file".utf8).write(to: sourceURL)
+
+        let store = ImportedTrackStore(importedTracksDirectory: importedDirectory)
+
+        XCTAssertThrowsError(
+            try store.importTrack(from: sourceURL, supportedExtensions: ["wav"])
+        )
+
+        let copiedFiles = (try? FileManager.default.contentsOfDirectory(
+            at: importedDirectory,
+            includingPropertiesForKeys: nil
+        )) ?? []
+        XCTAssertTrue(copiedFiles.isEmpty, "Rejected imports should not leave copied files behind.")
+    }
+
     func testImportRejectsWavFilesThatDoNotLookLikeWavAudio() throws {
         let sourceURL = temporaryDirectory.appendingPathComponent("fake.wav")
         try Data("not really a wave file".utf8).write(to: sourceURL)
