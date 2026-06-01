@@ -1,6 +1,6 @@
 # YES Master iPhone — Handoff
 
-_Last updated: 2026-06-01, compact loaded-screen polish session (Codex). Most checks are automated; anything needing a human ear/eye on the real device is called out explicitly below._
+_Last updated: 2026-06-01, fixed iPhone export/remote-distribution planning session (Codex). Most checks are automated; anything needing a human ear/eye on the real device is called out explicitly below._
 
 ## TL;DR
 
@@ -161,6 +161,32 @@ Verification:
 - `cd apps/iphone/src-tauri && cargo test` ✅ 6/6
 - `cd apps/iphone/src-tauri && PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" cargo check --target aarch64-apple-ios` ✅
 - Browser preview loaded a temporary WAV at 430×860 with `scrollHeight` equal to viewport height; Create Master was visible and not overlapping. Screenshot: `/tmp/yes-master-iphone-compact-final-viewport.png`.
+
+### 2026-06-01 fixed iPhone export target + hierarchy recovery session
+
+Commit:
+
+- `b587a6a fix(iphone): use fixed wav export target`
+
+What changed:
+
+1. Removed iPhone export Profile/Custom state, controls, and tests. The iPhone app now has one fixed export format instead of Streaming/CD/Custom choices.
+2. Medium loudness now defaults to `-11.0 LUFS`; Low is `-14.0`, High is `-9.0`.
+3. Export format is fixed to WAV settings: `44.1 kHz`, `24-bit`, `-1 dBTP` ceiling.
+4. Moved the lower Play control to the left of the waveform so it no longer needs its own row.
+5. Restored a roomier loaded-track visual hierarchy: larger hero, fuller waveform, and larger Style cards than the previous ultra-compact pass.
+
+Preview evidence:
+
+- Browser preview loaded a temporary WAV at 430×860 with no Profile controls (`hasProfile: false`).
+- Screenshot: `/tmp/yes-master-iphone-fixed-target-preview.png`.
+
+Remote install/distribution plan:
+
+- For an iPhone that is not physically connected, the practical Apple-supported path is **TestFlight** through App Store Connect. Apple says TestFlight testers install through the TestFlight app, and you do not need to track UDIDs for that path: https://developer.apple.com/testflight/
+- The local development-signed `.ipa` from `tauri ios build` is not enough for remote install. App Store Connect/TestFlight uses a distribution provisioning profile, per Xcode's distribution-method docs: https://help.apple.com/xcode/mac/current/en.lproj/dev31de635e5.html
+- Upload paths supported by Apple include Xcode, `altool`, Transporter, and the App Store Connect API/Transporter with JWT auth: https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/
+- Next setup task: create/confirm an App Store Connect app record for bundle id `com.yesmaster.iphone`, enable signing for App Store/TestFlight distribution, then archive/upload a build. Once uploaded and processed, invite the user's Apple ID as an internal tester or send a TestFlight invite link. External testers require Apple's first-build TestFlight review.
 
 ## Independent review of the 2026-06-01 cleanup (Claude, 4 adversarial reviewers + re-run verification)
 
