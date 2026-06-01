@@ -27,6 +27,14 @@ mod ios_audio {
     use objc2::{class, msg_send};
 
     pub fn configure() {
+        activate_playback_session();
+    }
+
+    /// Set the shared AVAudioSession to `.playback` and activate it. Idempotent
+    /// — safe to re-call to recover after an interruption, a route change, or
+    /// returning from the background, where iOS deactivates the session and the
+    /// app would otherwise be silent for the rest of its lifetime.
+    pub fn activate_playback_session() {
         unsafe {
             let handle = libc::dlopen(
                 c"/System/Library/Frameworks/AVFoundation.framework/AVFoundation".as_ptr(),
@@ -56,7 +64,7 @@ mod ios_audio {
             let category_ok: bool = msg_send![session, setCategory: category, error: null_err];
             let active_ok: bool = msg_send![session, setActive: true, error: null_err];
             log::info!(
-                "AVAudioSession configured (category_ok={category_ok}, active_ok={active_ok})"
+                "AVAudioSession activated (category_ok={category_ok}, active_ok={active_ok})"
             );
         }
     }
@@ -439,12 +447,18 @@ async fn iphone_run_export_checks(
     ))
 }
 
+#[tauri::command]
+async fn iphone_reactivate_audio_session() -> CommandResult<()> {
+    // Re-activate the AVAudioSession after the app returns to the foreground —
+    // a call / Siri / route change deactivates it, otherwise leaving playback
+    // silent for the rest of the app's lifetime. No-op off iOS.
+    #[cfg(target_os = "ios")]
+    ios_audio::activate_playback_session();
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Make audio audible on iOS before any output stream is opened.
-    #[cfg(target_os = "ios")]
-    ios_audio::configure();
-
     let player = Arc::new(AudioPlayer::new());
 
     tauri::Builder::default()
@@ -458,6 +472,11 @@ pub fn run() {
                         .build(),
                 )?;
             }
+            // Configure the audio session AFTER the log plugin so its result is
+            // visible in the device console, and before the output stream opens
+            // on first play.
+            #[cfg(target_os = "ios")]
+            ios_audio::configure();
             let app_handle = app.handle().clone();
             let player_state = app.state::<Arc<AudioPlayer>>().inner().clone();
             std::thread::spawn(move || loop {
@@ -499,6 +518,7 @@ pub fn run() {
             iphone_stop_playback,
             iphone_seek_playback,
             iphone_run_export_checks,
+            iphone_reactivate_audio_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -62,6 +62,7 @@ export interface IphoneBackend {
   pausePlayback(): Promise<void>;
   resumePlayback(): Promise<void>;
   stopPlayback(): Promise<void>;
+  reactivateAudioSession(): Promise<void>;
   seekPlayback(positionSec: number): Promise<void>;
   onPlaybackTick(handler: (tick: PlaybackTick) => void): Promise<UnlistenFn>;
   renderMaster(request: IphoneRenderRequest): Promise<RenderJob>;
@@ -132,6 +133,8 @@ export function createIphoneBackend(invoke: IphoneInvoke): IphoneBackend {
     pausePlayback: () => invoke<void>("iphone_pause_playback"),
     resumePlayback: () => invoke<void>("iphone_resume_playback"),
     stopPlayback: () => invoke<void>("iphone_stop_playback"),
+    reactivateAudioSession: () =>
+      invoke<void>("iphone_reactivate_audio_session"),
     seekPlayback: (positionSec) =>
       invoke<void>("iphone_seek_playback", {
         positionSec,
@@ -214,6 +217,7 @@ export function createBrowserPreviewIphoneBackend(): IphoneBackend {
     async pausePlayback() {},
     async resumePlayback() {},
     async stopPlayback() {},
+    async reactivateAudioSession() {},
     async seekPlayback() {},
     async onPlaybackTick() {
       return () => {};

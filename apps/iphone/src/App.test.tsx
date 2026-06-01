@@ -30,6 +30,7 @@ function makeBackend(): IphoneBackend {
     pausePlayback: vi.fn().mockResolvedValue(undefined),
     resumePlayback: vi.fn().mockResolvedValue(undefined),
     stopPlayback: vi.fn().mockResolvedValue(undefined),
+    reactivateAudioSession: vi.fn().mockResolvedValue(undefined),
     seekPlayback: vi.fn().mockResolvedValue(undefined),
     onPlaybackTick: vi.fn().mockResolvedValue(() => {}),
     renderMaster: vi.fn().mockResolvedValue({

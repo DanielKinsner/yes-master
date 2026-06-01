@@ -239,6 +239,24 @@ export default function App({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [masteredControlSignature, isAuditionPlaying, state.playback]);
 
+  // Returning to the foreground after a call / Siri / route change — iOS
+  // deactivates the audio session in those cases, leaving playback silently
+  // dead for the rest of the app's lifetime. Re-activate it on every return so
+  // the next play (or a resume) can be audible again.
+  useEffect(() => {
+    function reactivate() {
+      if (document.visibilityState === "visible") {
+        void backend.reactivateAudioSession();
+      }
+    }
+    document.addEventListener("visibilitychange", reactivate);
+    window.addEventListener("focus", reactivate);
+    return () => {
+      document.removeEventListener("visibilitychange", reactivate);
+      window.removeEventListener("focus", reactivate);
+    };
+  }, [backend]);
+
   async function importTrack() {
     if (!startOperation("importing")) return;
     setMessage("Importing...");

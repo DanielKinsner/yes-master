@@ -72,6 +72,15 @@ describe("iPhone API facade", () => {
     });
   });
 
+  it("reactivates the iPhone audio session", async () => {
+    const invoke = vi.fn().mockResolvedValue(undefined);
+    const backend = createIphoneBackend(invoke);
+
+    await backend.reactivateAudioSession();
+
+    expect(invoke).toHaveBeenCalledWith("iphone_reactivate_audio_session");
+  });
+
   it("calls the separate iPhone waveform command", async () => {
     const invoke = vi.fn().mockResolvedValue({ track_id: "track-1", channels: [[]] });
     const backend = createIphoneBackend(invoke);
