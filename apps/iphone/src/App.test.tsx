@@ -246,6 +246,9 @@ describe("iPhone app shell", () => {
       "/private/new-master.wav",
     );
     expect(container.textContent).toContain("new-master");
+    expect(container.textContent).toContain("WAV");
+    expect(container.textContent).toContain("44.1 kHz");
+    expect(container.textContent).toContain("Stereo");
     expect(container.textContent).toContain("Ready");
 
     act(() => root.unmount());

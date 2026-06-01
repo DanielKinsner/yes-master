@@ -23,6 +23,8 @@ export interface IphoneTrack {
   path: string;
   sourceFormat: string;
   durationSeconds: number | null;
+  sampleRate: number | null;
+  channels: number | null;
 }
 
 export interface IphoneAppState {

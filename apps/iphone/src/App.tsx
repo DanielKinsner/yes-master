@@ -377,6 +377,20 @@ export default function App({
             <div>
               <p className="track-label">{trackStripLabel}</p>
               <h2>{state.track?.displayName}</h2>
+              {state.track ? (
+                <div className="track-chip-row" aria-label="Track details">
+                  <span>{formatSourceFormat(state.track.sourceFormat)}</span>
+                  {state.track.sampleRate ? (
+                    <span>{formatSampleRate(state.track.sampleRate)}</span>
+                  ) : null}
+                  {state.track.channels ? (
+                    <span>{formatChannels(state.track.channels)}</span>
+                  ) : null}
+                  {state.track.durationSeconds ? (
+                    <span>{formatTime(state.track.durationSeconds)}</span>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
             <div className="track-action-row">
               {state.analysisStatus === "needed" ? (
@@ -666,6 +680,8 @@ function toIphoneTrack(track: {
   display_name: string;
   source_format: string;
   duration_seconds: number | null;
+  sample_rate?: number | null;
+  channels?: number | null;
 }): IphoneTrack {
   return {
     id: track.id,
@@ -673,6 +689,8 @@ function toIphoneTrack(track: {
     path: track.path,
     sourceFormat: track.source_format,
     durationSeconds: track.duration_seconds,
+    sampleRate: track.sample_rate ?? null,
+    channels: track.channels ?? null,
   };
 }
 
@@ -858,6 +876,16 @@ function formatSampleRate(sampleRate: number | null) {
 function formatBitDepth(bitDepth: number | null) {
   if (!bitDepth) return "Source bit";
   return `${bitDepth}-bit`;
+}
+
+function formatSourceFormat(sourceFormat: string) {
+  return sourceFormat.trim().toUpperCase() || "AUDIO";
+}
+
+function formatChannels(channels: number) {
+  if (channels === 1) return "Mono";
+  if (channels === 2) return "Stereo";
+  return `${channels} ch`;
 }
 
 function formatTime(seconds: number | null | undefined) {

@@ -134,6 +134,16 @@ describe("iPhone styles", () => {
     expect(css).toContain("min-height: 70px");
   });
 
+  it("styles loaded-track metadata as compact chips", () => {
+    const css = readIphoneStyles();
+    const chipRowBlock = cssBlock(css, ".track-chip-row");
+    const chipBlock = cssBlock(css, ".track-chip-row span");
+
+    expect(chipRowBlock).toContain("flex-wrap: wrap");
+    expect(chipBlock).toContain("border-radius: 999px");
+    expect(chipBlock).toContain("font-size: 0.65rem");
+  });
+
   it("animates the import and analysis processing sheet responsibly", () => {
     const css = readIphoneStyles();
 

@@ -31,9 +31,13 @@ describe("iPhone app state", () => {
       path: "/private/rough mix.wav",
       sourceFormat: "wav",
       durationSeconds: 182.4,
+      sampleRate: 44_100,
+      channels: 2,
     });
 
     expect(imported.track?.displayName).toBe("rough mix.wav");
+    expect(imported.track?.sampleRate).toBe(44_100);
+    expect(imported.track?.channels).toBe(2);
     expect(imported.analysisStatus).toBe("needed");
 
     const ready = markIphoneAnalysisReady(imported);
