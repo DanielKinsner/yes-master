@@ -1,6 +1,6 @@
 # YES Master iPhone Native - Handoff
 
-_Last updated: 2026-06-01, native import, Rust analysis, and original playback path._
+_Last updated: 2026-06-01, native import, Rust analysis, original playback, and render bridge path._
 
 ## Current Status
 
@@ -17,6 +17,9 @@ Review and follow-up slices now landed on `main` in small commits:
 7. `f64c1e5 feat(iphone-native): add Swift analysis bridge`
 8. `889c24c feat(iphone-native): analyze imported tracks`
 9. `93a62d3 feat(iphone-native): add original playback controller`
+10. `61a90cb feat(iphone-native): add Rust render bridge`
+11. `8504032 feat(iphone-native): add Swift render bridge`
+12. `77d9890 fix(iphone-native): render masters to unique paths`
 
 The native direction is:
 
@@ -51,15 +54,18 @@ The native direction is:
 - supported import extension filtering
 - fixed export settings JSON
 - source track analysis via `yes_master_lib::engine::analyze_tracks`
+- master rendering via `yes_master_lib::engine::mastering_render`
 
 The native app can now import a supported audio file into app-owned storage, ask Rust to analyze it, show LUFS, true peak, and dynamic range, then play or pause the imported original track. Playback activates `AVAudioSession` immediately before starting the player.
 
-It is still not a real mastering app yet: mastered playback, render, and share/export are not wired.
+The Rust and Swift bridge can now render a master into an output directory using the fixed iPhone target (`-11 LUFS`, `44.1 kHz`, `24-bit`, `-1 dBTP`). Rust creates a unique WAV path each time so previous renders are not overwritten.
+
+It is still not a real mastering app yet: the `Create Master` button is not wired to the render bridge, mastered playback is not wired, and native share/export is not wired.
 
 ## Next Slice
 
-1. Add the Rust render/export bridge call using the shared Rust engine and the fixed `-11 LUFS`, `44.1 kHz`, `24-bit`, `-1 dBTP` export target.
-2. Add mastered playback once render output exists.
+1. Wire `Create Master` to the Swift render bridge on a background task.
+2. Store rendered master paths in app state and enable Mastered playback once render output exists.
 3. Preserve playhead when switching Original/Mastered.
 4. Add native share/export once render output exists.
 5. Keep the UI spacious; do not add waveform/scrubbing unless the user asks.
@@ -95,7 +101,7 @@ cd apps/iphone-native
 xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO test
 ```
 
-Latest test result after adding original playback: 5 tests passed, 0 failed.
+Latest test result after adding the render bridge: 6 tests passed, 0 failed.
 
 ```bash
 cd apps/iphone-native
