@@ -27,6 +27,8 @@ Review and follow-up slices now landed on `main` in small commits:
 17. `0896f6c fix(iphone-native): require full screen portrait`
 18. `5d7dc05 test(iphone-native): verify Swift Rust render path`
 19. `ae6eb3a feat(iphone-native): prepare mastered previews`
+20. `2c8d3ce style(iphone-native): use YES Master icon artwork`
+21. `98f7214 style(iphone-native): simplify hero controls`
 
 The native direction is:
 
@@ -76,6 +78,10 @@ Original/Mastered switching now uses a mastered preview render that starts after
 Native share/export has a first pass: after a master render succeeds, a `Share Master` button appears and shares the rendered WAV through the iOS share sheet.
 
 The iPhone UI has a preset intensity slider. Preset and intensity are passed through the Swift bridge to the shared Rust mastering settings. The center play/import panel is less crowded: Volume Match and LUFS Preview moved into a lower Listening section.
+
+The native app now uses the YES Master desktop icon artwork for the iPhone app icon, the header brand mark, and a very faint play-panel watermark behind the central play/import button.
+
+The latest UI cleanup restores the import/play area as the main hero, moves Volume Match and LUFS Preview back into that hero as small checkboxes, removes the separate Listening/Step 4 section, removes the redundant `IMPORT` label above `No track loaded`, hides the loudness metadata line, and shortens preset copy to one-line labels.
 
 It is still not a full iPhone mastering app yet: the full import -> analyze -> render -> mastered playback -> share loop still needs hands-on testing on the user's real phone with a supported audio file.
 
@@ -243,6 +249,66 @@ Latest simulator screenshot:
 
 ```text
 /tmp/yes-master-screenshots/iphone-native-preview-slider-ui.png
+/tmp/yes-master-screenshots/iphone-native-brand-icon-final.png
+/tmp/yes-master-screenshots/iphone-native-simplified-hero.png
 ```
+
+Latest final icon-polish checks:
+
+```bash
+cd apps/iphone-native/rust
+cargo test
+```
+
+Result: 8 Rust bridge tests passed, 0 failed.
+
+```bash
+cd apps/iphone-native/rust
+PATH="$HOME/.rustup/toolchains/stable-aarch64-apple-darwin/bin:$PATH" cargo check --target aarch64-apple-ios
+```
+
+Result: passed.
+
+```bash
+cd apps/iphone-native
+xcodegen generate
+```
+
+Result: project regenerated; only the intended icon/UI files were dirty before commit.
+
+```bash
+cd apps/iphone-native
+xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO test
+```
+
+Result: 8 native Swift tests passed, 0 failed.
+
+```bash
+cd apps/iphone-native
+xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'id=00008140-001008D621D3001C' -allowProvisioningUpdates build
+xcrun devicectl device install app --device 5D9F3B2F-C68D-50E0-A372-DEE3A7A3B610 "$HOME/Library/Developer/Xcode/DerivedData/YESMasterNative-hkgdvqoawaqkijbqjgjiapwekgrs/Build/Products/Debug-iphoneos/YES Master Native.app"
+xcrun devicectl device process launch --device 5D9F3B2F-C68D-50E0-A372-DEE3A7A3B610 --terminate-existing com.yesmaster.iphone.native
+```
+
+Result: signed device build succeeded, installed, and relaunched on the connected iPhone.
+
+Latest simplification checks:
+
+```bash
+cd apps/iphone-native
+xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO test
+```
+
+Result: 8 native Swift tests passed, 0 failed.
+
+```bash
+cd apps/iphone-native
+xcodebuild -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'id=00008140-001008D621D3001C' -allowProvisioningUpdates build
+xcrun devicectl device uninstall app --device 5D9F3B2F-C68D-50E0-A372-DEE3A7A3B610 com.yesmaster.iphone.native
+xcrun devicectl device install app --device 5D9F3B2F-C68D-50E0-A372-DEE3A7A3B610 "$HOME/Library/Developer/Xcode/DerivedData/YESMasterNative-hkgdvqoawaqkijbqjgjiapwekgrs/Build/Products/Debug-iphoneos/YES Master Native.app"
+xcrun devicectl device process launch --device 5D9F3B2F-C68D-50E0-A372-DEE3A7A3B610 --terminate-existing com.yesmaster.iphone.native
+```
+
+Result: signed device build succeeded. The previous app install was removed first to clear app cache/container, then the current build was installed and launched on the connected iPhone.
 
 No TestFlight work was attempted.
