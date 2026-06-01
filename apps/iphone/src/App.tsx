@@ -261,10 +261,27 @@ export default function App({
     ) {
       return;
     }
-    void backend.updateMasteringChain(
+    void backend
+      .updateMasteringChain(
       withSourceAnalysis(buildAuditionPreviewSettings(plan), analysis),
       state.lufsPreview,
-    );
+      )
+      .then(() => {
+        const loaded = loadedAuditionRef.current;
+        if (
+          !loaded ||
+          loaded.playback !== "mastered" ||
+          loaded.trackId !== state.track?.id
+        ) {
+          return;
+        }
+        loadedAuditionRef.current = {
+          ...loaded,
+          masteredSignature: masteredControlSignature,
+          resumeDirty: false,
+        };
+      })
+      .catch(() => {});
     // Keyed on the control signature so this is one call per actual change;
     // plan/analysis derive from the same state the signature covers.
     // eslint-disable-next-line react-hooks/exhaustive-deps

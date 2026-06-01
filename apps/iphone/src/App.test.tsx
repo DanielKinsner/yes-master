@@ -593,6 +593,27 @@ describe("iPhone app shell", () => {
     act(() => root.unmount());
   });
 
+  it("resumes Mastered playback after a live-applied control change", async () => {
+    const { backend, container, root } = renderApp();
+
+    await click(container, "[data-testid='iphone-import']");
+    await click(container, "[data-testid='playback-mastered']");
+    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='volume-match']");
+    await click(container, "[data-testid='iphone-native-play']");
+    await click(container, "[data-testid='iphone-native-play']");
+
+    expect(backend.updateMasteringChain).toHaveBeenCalledWith(
+      expect.objectContaining({ volume_match: true }),
+      expect.any(Boolean),
+    );
+    expect(backend.pausePlayback).toHaveBeenCalledTimes(1);
+    expect(backend.resumePlayback).toHaveBeenCalledTimes(1);
+    expect(backend.playMastered).toHaveBeenCalledTimes(1);
+
+    act(() => root.unmount());
+  });
+
   it("does not mark playback active when native Mastered playback fails", async () => {
     const backend = makeBackend();
     vi.mocked(backend.playMastered).mockRejectedValue(new Error("audio failed"));
