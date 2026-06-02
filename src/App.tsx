@@ -2055,6 +2055,7 @@ function AdvancedControlsCard({
       warmth: null,
       presence_air: null,
       compression_density: null,
+      adaptive_strength: null,
     });
   };
   return (
@@ -2132,6 +2133,15 @@ function AdvancedControlsCard({
           format={(v) => v.toFixed(2)}
           disabled={compressorMode !== "preset"}
           onChange={(v) => update("compression_density", v)}
+        />
+        <NumberField
+          label="Adapt strength"
+          value={a.adaptive_strength ?? 0.6}
+          step={0.05}
+          min={0}
+          max={1}
+          format={(v) => (v <= 0.0001 ? "Off" : `${Math.round(v * 100)}%`)}
+          onChange={(v) => update("adaptive_strength", v)}
         />
       </div>
     </details>

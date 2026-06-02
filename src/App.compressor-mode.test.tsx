@@ -265,6 +265,7 @@ describe("AdvancedPanel compressor mode", () => {
       warmth: null,
       presence_air: null,
       compression_density: null,
+      adaptive_strength: null,
     });
     await act(async () => {
       root.unmount();
