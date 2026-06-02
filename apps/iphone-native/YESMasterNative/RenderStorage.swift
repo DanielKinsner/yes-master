@@ -25,11 +25,17 @@ struct RenderStorage {
     }
 
     /// Delete every preview WAV except the one currently in use.
+    ///
+    /// Compares symlink-resolved paths: Apple aliases the same file across
+    /// `/var` and `/private/var`, so raw `URL` equality would treat the
+    /// just-rendered preview as obsolete and delete it out from under playback.
     func pruneObsoletePreviews(keeping current: URL?) {
+        let current = current?.resolvingSymlinksInPath()
         guard let files = try? fileManager.contentsOfDirectory(
             at: previewsDirectory, includingPropertiesForKeys: nil
         ) else { return }
-        for file in files where file != current && file.pathExtension.lowercased() == "wav" {
+        for file in files where file.pathExtension.lowercased() == "wav" {
+            guard file.resolvingSymlinksInPath() != current else { continue }
             try? fileManager.removeItem(at: file)
         }
     }
