@@ -178,15 +178,17 @@ soft-knee linear ramp on the excess past the band:
 |---|---|---|---|---|---|
 | **Already-bright** | `presence + air` share | ≥ 0.20 | +0.12 over edge | 50% | preset `air_db`, `sparkle_db`, `high_mid_db`, `presence_db` (positive lifts only) |
 | **Already-boomy** | `sub + low` share | ≥ 0.42 (wider band — bass variance) | +0.15 over edge | 50% | preset `sub_db`, `low_shelf_db` (positive lifts only) |
-| **Already-dense** | `dynamic_range_p95_p10_db` (primary) + `dynamic_range_lu` (secondary) | DR ≤ 8 dB / LRA ≤ 6 LU starts soft trim | DR 4 dB / LRA 3 LU → hard gate to `Off` | 60% (soft); `Off` (hard) | preset `density` (Preset mode only) |
+| **Already-dense** | `dynamic_range_p95_p10_db` (primary) + `dynamic_range_lu` (secondary) | DR ≤ 8 dB / LRA ≤ 6 LU | DR 3 dB / LRA 3 LU | 60% | preset `density` (Preset mode only) |
 | **Already-wide** | `stereo_correlation` (primary) + `stereo_width` | corr ≤ 0.50 | corr 0.20 | 70% | preset `stereo_width` toward 1.0 (when no explicit user width) |
 
 Notes:
 - All thresholds above are **inference**, flagged as provisional. They are
   conservative (wide deadbands) so a wrong guess under-acts rather than misfires.
-- **Compressor hard gate is a stronger move** than trimming (it changes mode to
-  `Off`). It must be **surfaced** to the user (see transparency), not silent, and
-  remains user-overridable.
+- **v1 softens compression continuously** (caps at 60% reduction, so an already-
+  dense source keeps ≥40% of the preset's compression). The original draft floated
+  an automatic hard-gate to Compressor `Off` at the extreme; that's a stronger,
+  surprising mode change (flagged by the fact-check), so it is **deferred** — the
+  user can still pick `Off` manually. Implemented as built in `guardrails.rs`.
 - Sibilance (5–10 kHz) is a documented adjacent case but we have no exact 5–10 kHz
   band; v1 folds it into already-bright via presence/air. No new notch (that's
   Tier-2).
@@ -243,10 +245,13 @@ tunable defaults so the logic exists for the listening session.
    thing to retune per preset.
 3. **Deadband widths & neutral windows** → proceeding as listed; the calibration
    example will propose measured replacements.
-4. **Compressor hard-gate → `Off`**: surfaced + overridable → proceeding
-   surfaced (not silent).
-5. **Transparency panel** always-visible vs expand-on-click → proceeding
-   **expand-on-click** to protect screen real estate.
+4. **Auto Compressor `Off` at extreme density** → **deferred**; v1 caps density
+   reduction at 60% rather than flipping the mode. Revisit after listening if
+   already-mastered material still feels over-compressed.
+5. **Transparency "what was trimmed" readout** → **deferred to a follow-up**. v1
+   ships the working guardrails + the Adapt Strength control; surfacing the
+   per-axis trim deltas (so the user can see *why* a preset eased off) is the next
+   increment. Needs the computed trims exposed to the UI.
 6. **Multi-axis composition** → proceeding **per-axis independent** (each axis
    trims its own move within its own cap); revisit if it over-acts.
 
