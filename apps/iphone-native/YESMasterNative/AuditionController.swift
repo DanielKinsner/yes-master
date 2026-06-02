@@ -52,6 +52,7 @@ final class AuditionController: ObservableObject {
 
     private(set) var analysisTask: Task<Void, Never>?
     private(set) var renderTask: Task<Void, Never>?
+    private var positionTimer: Timer?
 
     init(
         engine: LiveAudioEngine = LiveAudioEngine(),
@@ -87,8 +88,7 @@ final class AuditionController: ObservableObject {
                 from: sourceURL,
                 supportedExtensions: renderer.supportedImportExtensions
             )
-            engine.pause()
-            isPlaying = false
+            stopPlayback()
             importedTrack = track
             analysisResult = nil
             masteredLufs = nil
@@ -163,18 +163,51 @@ final class AuditionController: ObservableObject {
             return
         }
         if isPlaying {
-            engine.pause()
-            isPlaying = false
+            stopPlayback()
             statusText = "Playback paused."
             return
+        }
+        // Parked at the end? Restart from the top so play always plays.
+        if engine.durationSeconds > 0, engine.positionSeconds >= engine.durationSeconds - 0.05 {
+            engine.seek(toSeconds: 0)
         }
         do {
             try engine.play()
             isPlaying = true
+            startPositionTimer()
             statusText = "Playing \(selectedSide.rawValue.lowercased()) track."
         } catch {
             statusText = "Playback could not start. Try another supported audio file."
         }
+    }
+
+    /// Called ~10x/sec while playing. When the cursor reaches the end, stop so
+    /// the play button returns to "play"; the next play restarts from the top.
+    /// Also halts the silent past-EOF render pull.
+    func handlePlaybackTick() {
+        guard isPlaying, engine.durationSeconds > 0 else { return }
+        if engine.positionSeconds >= engine.durationSeconds - 0.02 {
+            stopPlayback()
+            statusText = "Reached the end. Press play to listen again."
+        }
+    }
+
+    private func stopPlayback() {
+        engine.pause()
+        isPlaying = false
+        stopPositionTimer()
+    }
+
+    private func startPositionTimer() {
+        stopPositionTimer()
+        positionTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.handlePlaybackTick() }
+        }
+    }
+
+    private func stopPositionTimer() {
+        positionTimer?.invalidate()
+        positionTimer = nil
     }
 
     /// Switch Original/Mastered on the single live timeline. The cursor never

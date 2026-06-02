@@ -82,6 +82,31 @@ final class AuditionControllerTests: XCTestCase {
         XCTAssertEqual(ctx.stream.lastVolumeMatch, 1.0)
     }
 
+    func testReachingEndStopsPlaybackSoTheButtonReturns() async throws {
+        let ctx = try makeLoadedController()
+        await ctx.controller.analysisTask?.value
+        ctx.controller.togglePlayback()
+        XCTAssertTrue(ctx.controller.isPlaying)
+
+        // Cursor reaches the end.
+        ctx.stream.positionSeconds = ctx.stream.durationSeconds
+        ctx.controller.handlePlaybackTick()
+
+        XCTAssertFalse(ctx.controller.isPlaying, "playback should stop at EOF so the play button returns")
+    }
+
+    func testPressingPlayAtEndRestartsFromStart() async throws {
+        let ctx = try makeLoadedController()
+        await ctx.controller.analysisTask?.value
+        // Parked at the end, not playing.
+        ctx.stream.positionSeconds = ctx.stream.durationSeconds
+
+        ctx.controller.togglePlayback() // play from the end
+
+        XCTAssertEqual(ctx.stream.lastSeek, 0, "pressing play at the end should seek back to the start")
+        XCTAssertTrue(ctx.controller.isPlaying)
+    }
+
     // MARK: - Fixture
 
     private struct Context {
@@ -142,6 +167,7 @@ private final class RecordingStream: LiveAuditionStreaming {
     var lastOriginal: Bool?
     var lastParams: (preset: String, intensity: Float, loudness: Float)?
     var lastVolumeMatch: Float?
+    var lastSeek: Double?
 
     func render(into buffer: UnsafeMutablePointer<Float>, frames: UInt32) -> UInt32 { frames }
     func setOriginal(_ original: Bool) { lastOriginal = original }
@@ -150,7 +176,10 @@ private final class RecordingStream: LiveAuditionStreaming {
     }
     func setVolumeMatch(linearGain: Float) { lastVolumeMatch = linearGain }
     func setLandingGain(linearGain: Float) {}
-    func seek(toSeconds seconds: Double) {}
+    func seek(toSeconds seconds: Double) {
+        lastSeek = seconds
+        positionSeconds = seconds
+    }
 }
 
 private final class RecordingOutput: LiveAudioOutput {
