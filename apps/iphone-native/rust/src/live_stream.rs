@@ -813,4 +813,130 @@ mod tests {
             yes_master_native_live_destroy(b);
         }
     }
+
+    #[test]
+    fn live_output_matches_desktop_chain_bit_for_bit() {
+        // The whole premise of the feature: the iPhone live path must run the
+        // EXACT desktop MasteringChain. With no param changes and unity audition
+        // gains, the streamed output equals MasteringChain::process_interleaved
+        // over the same decoded PCM + settings.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("src.wav");
+        write_sine_wav(&path, 5_000, 2);
+
+        let pcm = yes_master_lib::decode::decode_full(&path).unwrap();
+        let channels = pcm.channels as usize;
+        let total = pcm.samples.len() / channels;
+        let settings = crate::export_settings_for_options(Some("warm"), 0.7, -11.0);
+
+        // Desktop reference: build the chain and process the whole buffer.
+        let mut reference = pcm.samples.clone();
+        let mut chain = MasteringChain::new(pcm.sample_rate, channels, &settings);
+        chain.process_interleaved(&mut reference, channels);
+
+        // iPhone live path: same file + settings, Mastered, no param changes.
+        let c = CString::new(path.to_string_lossy().as_bytes()).unwrap();
+        let preset = CString::new("warm").unwrap();
+        let handle =
+            unsafe { yes_master_native_live_create(c.as_ptr(), preset.as_ptr(), 0.7, -11.0) };
+        assert!(!handle.is_null());
+        let mut live = vec![0.0f32; total * channels];
+        unsafe {
+            yes_master_native_live_process(handle, live.as_mut_ptr(), total as u32);
+            yes_master_native_live_destroy(handle);
+        }
+
+        let max_diff = reference
+            .iter()
+            .zip(live.iter())
+            .fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
+        assert!(
+            max_diff < 1e-6,
+            "iPhone live output must equal the desktop MasteringChain; max_diff={max_diff}"
+        );
+    }
+
+    #[test]
+    fn intensity_is_wired_and_matches_desktop_curve() {
+        // Intensity must (a) actually change the live output and (b) match the
+        // desktop preset_scale curve at each setting. Intensity 0 is NOT bypass:
+        // desktop maps preset_scale = 0.4 + 1.2*intensity, so 0.0 -> 0.4x preset
+        // (subtle) and 1.0 -> 1.6x (pushed). They differ, but neither is "off".
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("src.wav");
+        write_sine_wav(&path, 6_000, 2);
+        let pcm = yes_master_lib::decode::decode_full(&path).unwrap();
+        let channels = pcm.channels as usize;
+        let total = pcm.samples.len() / channels;
+
+        let render_live = |intensity: f32| -> Vec<f32> {
+            let c = CString::new(path.to_string_lossy().as_bytes()).unwrap();
+            let preset = CString::new("punch").unwrap();
+            let handle = unsafe {
+                yes_master_native_live_create(c.as_ptr(), preset.as_ptr(), intensity, -11.0)
+            };
+            assert!(!handle.is_null());
+            let mut out = vec![0.0f32; total * channels];
+            unsafe {
+                yes_master_native_live_process(handle, out.as_mut_ptr(), total as u32);
+                yes_master_native_live_destroy(handle);
+            }
+            out
+        };
+
+        let low = render_live(0.0);
+        let high = render_live(1.0);
+        let diff: f32 = low.iter().zip(high.iter()).map(|(a, b)| (a - b).abs()).sum();
+        assert!(diff > 1.0, "intensity must change the live output (diff={diff})");
+
+        for intensity in [0.0f32, 1.0] {
+            let settings = crate::export_settings_for_options(Some("punch"), intensity, -11.0);
+            let mut reference = pcm.samples.clone();
+            let mut chain = MasteringChain::new(pcm.sample_rate, channels, &settings);
+            chain.process_interleaved(&mut reference, channels);
+            let live = render_live(intensity);
+            let max_diff = reference
+                .iter()
+                .zip(live.iter())
+                .fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
+            assert!(
+                max_diff < 1e-6,
+                "live must match desktop chain at intensity {intensity}; max_diff={max_diff}"
+            );
+        }
+    }
+
+    #[test]
+    fn set_params_intensity_changes_live_output() {
+        // The slider path: set_params with a new intensity must change the audible
+        // output. Two streams start identical at intensity 0; one is swept to 1.0
+        // via set_params. After the crossfade their outputs must diverge.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("src.wav");
+        write_sine_wav(&path, 8_000, 2);
+        let pcm = yes_master_lib::decode::decode_full(&path).unwrap();
+        let channels = pcm.channels as usize;
+
+        let c = CString::new(path.to_string_lossy().as_bytes()).unwrap();
+        let preset = CString::new("punch").unwrap();
+        let steady = unsafe { yes_master_native_live_create(c.as_ptr(), preset.as_ptr(), 0.0, -11.0) };
+        let swept = unsafe { yes_master_native_live_create(c.as_ptr(), preset.as_ptr(), 0.0, -11.0) };
+        assert!(!steady.is_null() && !swept.is_null());
+
+        unsafe { yes_master_native_live_set_params(swept, preset.as_ptr(), 1.0, -11.0) };
+
+        let frames = 4_000u32;
+        let mut a = vec![0.0f32; frames as usize * channels];
+        let mut b = vec![0.0f32; frames as usize * channels];
+        unsafe {
+            yes_master_native_live_process(steady, a.as_mut_ptr(), frames);
+            yes_master_native_live_process(swept, b.as_mut_ptr(), frames);
+        }
+        let diff: f32 = a.iter().zip(b.iter()).map(|(x, y)| (x - y).abs()).sum();
+        assert!(diff > 1.0, "set_params(intensity) must change the live output (diff={diff})");
+        unsafe {
+            yes_master_native_live_destroy(steady);
+            yes_master_native_live_destroy(swept);
+        }
+    }
 }
