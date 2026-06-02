@@ -1,0 +1,323 @@
+//! Tier-1 adaptive guardrails — defensive, analysis-driven trimming of preset
+//! moves. See `docs/plans/2026-06-02-001-adaptive-dsp-tier1-guardrails.md`.
+//!
+//! Principle: when a source ALREADY has a quality (bright / boomy / dense /
+//! wide), trim the matching preset move toward neutral. Defensive means we only
+//! ever REDUCE a positive preset move — we never add a boost, never flip a
+//! sign, never touch a preset cut, never narrow a source. Per-axis caps plus a
+//! character floor keep presets recognizable at any strength; one `strength`
+//! value scales every trim.
+//!
+//! All triggers read level-invariant shares/ratios from [`SourceProfile`], so no
+//! LUFS normalization is needed before comparison.
+
+use crate::types::SourceProfile;
+
+/// Default Adapt Strength when the user hasn't set one (on by default).
+pub const ADAPTIVE_STRENGTH_DEFAULT: f32 = 0.6;
+
+// ---------------------------------------------------------------------------
+// Neutral references & deadbands — PROVISIONAL, calibrate by ear.
+//
+// Mapped onto YES Master's own 6 analysis bands (sub 20-80, low 80-250,
+// low_mid 250-800, mid 800-2500, presence 2500-6500, air 6500-16k Hz). Per the
+// spec's "false precision" caveat these are interpretive starting points, kept
+// deliberately wide/conservative so an imperfect default UNDER-acts rather than
+// misfires. The single source of truth for tuning lives here.
+// ---------------------------------------------------------------------------
+
+/// Brightness trigger = presence + air share. No trim at/below this share.
+const BRIGHT_DEADBAND: f32 = 0.20;
+/// Brightness share above the deadband that maps to full (pre-cap) trim.
+const BRIGHT_EXCESS_FULL: f32 = 0.12;
+
+/// Boominess trigger = sub + low share. Wider deadband (documented bass variance).
+const LOW_DEADBAND: f32 = 0.42;
+/// Boominess share above the deadband that maps to full (pre-cap) trim.
+const LOW_EXCESS_FULL: f32 = 0.15;
+
+/// Density (P95-P10 dynamic range, dB): trim begins / reaches full.
+const DENSITY_DR_SOFT_DB: f32 = 8.0;
+const DENSITY_DR_FULL_DB: f32 = 3.0;
+/// Density (LRA, LU): trim begins / reaches full (secondary signal).
+const DENSITY_LRA_SOFT_LU: f32 = 6.0;
+const DENSITY_LRA_FULL_LU: f32 = 3.0;
+
+/// Width (L/R correlation): deadband edge / full-trim floor. Lower correlation
+/// = wider, phasier source. Mono (`None`) never trims width.
+const WIDTH_CORR_DEADBAND: f32 = 0.50;
+const WIDTH_CORR_FULL: f32 = 0.20;
+
+// Per-axis maximum trim caps (fraction of the preset move removed), applied
+// AFTER strength scaling and independent of it — this is what guarantees a
+// preset stays recognizable even at full strength on a strongly-matched source.
+const EQ_CAP: f32 = 0.50;
+const DENSITY_CAP: f32 = 0.60;
+const WIDTH_CAP: f32 = 0.70;
+
+/// Positive EQ boosts are never trimmed below this many dB, so a preset's tonal
+/// character survives. (A boost already smaller than the floor is left as-is.)
+const EQ_BOOST_FLOOR_DB: f32 = 0.5;
+
+#[inline]
+fn clamp01(x: f32) -> f32 {
+    x.clamp(0.0, 1.0)
+}
+
+/// Ramp for a "smaller value = more excess" trigger (dynamics, correlation):
+/// 0 at/above `soft`, rising to 1 at/below `full`.
+#[inline]
+fn descending_ramp(value: f32, soft: f32, full: f32) -> f32 {
+    if (soft - full).abs() < f32::EPSILON {
+        return if value <= full { 1.0 } else { 0.0 };
+    }
+    clamp01((soft - value) / (soft - full))
+}
+
+/// Precomputed defensive trim multipliers for one source at one strength. Each
+/// multiplier is in `[1 - cap, 1.0]`; `1.0` means "no trim on this axis".
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SourceGuardrails {
+    bright_mult: f32,
+    low_mult: f32,
+    density_mult: f32,
+    width_mult: f32,
+}
+
+impl SourceGuardrails {
+    /// Compute trims from a source profile at the given `strength` in `[0, 1]`.
+    /// Callers skip this entirely when strength <= 0 (no profile => no trim).
+    pub fn compute(profile: &SourceProfile, strength: f32) -> Self {
+        let strength = clamp01(strength);
+        let s = &profile.spectral_6;
+
+        // already-bright -> trim air/high lift
+        let brightness = s.presence + s.air;
+        let bright_raw = clamp01((brightness - BRIGHT_DEADBAND) / BRIGHT_EXCESS_FULL);
+        let bright_mult = 1.0 - (bright_raw * strength).min(EQ_CAP);
+
+        // already-boomy -> trim low/sub lift
+        let lowness = s.sub + s.low;
+        let low_raw = clamp01((lowness - LOW_DEADBAND) / LOW_EXCESS_FULL);
+        let low_mult = 1.0 - (low_raw * strength).min(EQ_CAP);
+
+        // already-dense -> soften compression (max of DR and LRA triggers)
+        let dr_raw = descending_ramp(
+            profile.dynamic_range_p95_p10_db,
+            DENSITY_DR_SOFT_DB,
+            DENSITY_DR_FULL_DB,
+        );
+        let lra_raw = descending_ramp(profile.dynamic_range_lu, DENSITY_LRA_SOFT_LU, DENSITY_LRA_FULL_LU);
+        let density_raw = dr_raw.max(lra_raw);
+        let density_mult = 1.0 - (density_raw * strength).min(DENSITY_CAP);
+
+        // already-wide -> trim widening (correlation primary; mono never trims)
+        let width_raw = match profile.stereo_correlation {
+            Some(c) => descending_ramp(c, WIDTH_CORR_DEADBAND, WIDTH_CORR_FULL),
+            None => 0.0,
+        };
+        let width_mult = 1.0 - (width_raw * strength).min(WIDTH_CAP);
+
+        Self {
+            bright_mult,
+            low_mult,
+            density_mult,
+            width_mult,
+        }
+    }
+
+    /// An identity (no-op) guardrail — every multiplier `1.0`.
+    pub fn identity() -> Self {
+        Self {
+            bright_mult: 1.0,
+            low_mult: 1.0,
+            density_mult: 1.0,
+            width_mult: 1.0,
+        }
+    }
+
+    /// Trim a preset's high/air-region boost (3.5k / 6k / 12k bands). Reduce-
+    /// only: cuts and zero pass through untouched; a positive boost is scaled by
+    /// the bright multiplier but never pushed below the character floor.
+    pub fn trim_bright_db(&self, preset_db: f32) -> f32 {
+        floor_boost(preset_db, self.bright_mult)
+    }
+
+    /// Trim a preset's sub/low boost (80 Hz / 200 Hz bands). Reduce-only.
+    pub fn trim_low_db(&self, preset_db: f32) -> f32 {
+        floor_boost(preset_db, self.low_mult)
+    }
+
+    /// Scale the compression `density` macro `[0, 1]`. Reduce-only by
+    /// construction (multiplier <= 1.0).
+    pub fn scale_density(&self, density: f32) -> f32 {
+        density * self.density_mult
+    }
+
+    /// Pull a preset stereo-width baseline toward neutral (1.0). Widths at or
+    /// below 1.0 pass through untouched (we never narrow a source — that's
+    /// corrective Tier-2); only the widening *above* 1.0 is trimmed.
+    pub fn trim_width(&self, preset_width: f32) -> f32 {
+        if preset_width <= 1.0 {
+            return preset_width;
+        }
+        1.0 + (preset_width - 1.0) * self.width_mult
+    }
+}
+
+/// Apply a reduce-only multiplier to a boost, honoring the character floor.
+/// Negative or zero `preset_db` (a cut, or no move) passes through unchanged.
+#[inline]
+fn floor_boost(preset_db: f32, mult: f32) -> f32 {
+    if preset_db <= 0.0 {
+        return preset_db;
+    }
+    let trimmed = preset_db * mult;
+    // Never trim below the floor; but if the original boost was already smaller
+    // than the floor, leave it (don't raise it).
+    trimmed.max(EQ_BOOST_FLOOR_DB.min(preset_db))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::{SourceProfile, SpectralBalance6};
+
+    fn profile(
+        presence: f32,
+        air: f32,
+        sub: f32,
+        low: f32,
+        dr: f32,
+        lra: f32,
+        corr: Option<f32>,
+    ) -> SourceProfile {
+        SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub,
+                low,
+                low_mid: 0.2,
+                mid: 0.2,
+                presence,
+                air,
+            },
+            dynamic_range_p95_p10_db: dr,
+            dynamic_range_lu: lra,
+            stereo_correlation: corr,
+            stereo_width: 1.0,
+        }
+    }
+
+    /// Balanced, dynamic, well-correlated source: nothing should trim.
+    fn neutral() -> SourceProfile {
+        profile(0.08, 0.05, 0.08, 0.22, 10.0, 9.0, Some(0.8))
+    }
+
+    #[test]
+    fn neutral_source_is_identity() {
+        let g = SourceGuardrails::compute(&neutral(), 1.0);
+        assert_eq!(g, SourceGuardrails::identity());
+        assert_eq!(g.trim_bright_db(3.0), 3.0);
+        assert_eq!(g.trim_low_db(3.0), 3.0);
+        assert_eq!(g.scale_density(0.5), 0.5);
+        assert_eq!(g.trim_width(1.1), 1.1);
+    }
+
+    #[test]
+    fn deadband_means_no_action_just_inside() {
+        // brightness exactly at the deadband edge -> no trim.
+        let p = profile(0.10, 0.10, 0.08, 0.22, 10.0, 9.0, Some(0.8));
+        let g = SourceGuardrails::compute(&p, 1.0);
+        assert_eq!(g.trim_bright_db(3.0), 3.0);
+    }
+
+    #[test]
+    fn bright_source_trims_only_air() {
+        // presence+air = 0.40, well past the 0.20 deadband.
+        let p = profile(0.20, 0.20, 0.08, 0.22, 10.0, 9.0, Some(0.8));
+        let g = SourceGuardrails::compute(&p, 1.0);
+        let trimmed = g.trim_bright_db(3.0);
+        assert!(trimmed < 3.0, "should trim a positive air boost: {trimmed}");
+        assert!(trimmed >= 1.5 - 1e-6, "EQ cap limits removal to 50%: {trimmed}");
+        // low / density / width untouched.
+        assert_eq!(g.trim_low_db(3.0), 3.0);
+        assert_eq!(g.scale_density(0.5), 0.5);
+        assert_eq!(g.trim_width(1.2), 1.2);
+    }
+
+    #[test]
+    fn bright_trim_respects_floor_and_reduce_only() {
+        let p = profile(0.25, 0.25, 0.08, 0.22, 10.0, 9.0, Some(0.8));
+        let g = SourceGuardrails::compute(&p, 1.0);
+        // a small boost stays at/above the +0.5 dB floor
+        assert!(g.trim_bright_db(0.8) >= 0.5 - 1e-6);
+        // a boost already below the floor is left as-is (never raised)
+        assert_eq!(g.trim_bright_db(0.3), 0.3);
+        // cuts and zero are never touched
+        assert_eq!(g.trim_bright_db(-2.0), -2.0);
+        assert_eq!(g.trim_bright_db(0.0), 0.0);
+    }
+
+    #[test]
+    fn boomy_source_trims_only_low() {
+        // sub+low = 0.55, past the 0.42 deadband.
+        let p = profile(0.08, 0.05, 0.25, 0.30, 10.0, 9.0, Some(0.8));
+        let g = SourceGuardrails::compute(&p, 1.0);
+        assert!(g.trim_low_db(3.0) < 3.0);
+        assert!(g.trim_low_db(3.0) >= 1.5 - 1e-6);
+        assert_eq!(g.trim_bright_db(3.0), 3.0);
+    }
+
+    #[test]
+    fn dense_source_softens_compression_capped() {
+        // very low DR + LRA -> full density ramp, capped at 60%.
+        let p = profile(0.08, 0.05, 0.08, 0.22, 2.0, 2.0, Some(0.8));
+        let g = SourceGuardrails::compute(&p, 1.0);
+        let d = g.scale_density(0.5);
+        assert!(d < 0.5);
+        assert!(d >= 0.5 * 0.4 - 1e-6, "cap keeps >=40% of density: {d}");
+    }
+
+    #[test]
+    fn dense_via_lra_alone_still_trims() {
+        // DR healthy but LRA collapsed -> still soften (max of triggers).
+        let p = profile(0.08, 0.05, 0.08, 0.22, 9.0, 2.0, Some(0.8));
+        let g = SourceGuardrails::compute(&p, 1.0);
+        assert!(g.scale_density(0.5) < 0.5);
+    }
+
+    #[test]
+    fn wide_source_trims_widening_capped_and_reduce_only() {
+        // correlation 0.1 -> strongly wide.
+        let p = profile(0.08, 0.05, 0.08, 0.22, 10.0, 9.0, Some(0.1));
+        let g = SourceGuardrails::compute(&p, 1.0);
+        let w = g.trim_width(1.5); // preset widens to 1.5
+        assert!(w < 1.5 && w > 1.0, "pull toward neutral but not past it: {w}");
+        assert!(w >= 1.0 + 0.5 * 0.30 - 1e-6, "width cap keeps >=30%: {w}");
+        // a narrowing preset (<=1.0) is never touched
+        assert_eq!(g.trim_width(0.9), 0.9);
+    }
+
+    #[test]
+    fn mono_source_never_trims_width() {
+        let p = profile(0.08, 0.05, 0.08, 0.22, 10.0, 9.0, None);
+        let g = SourceGuardrails::compute(&p, 1.0);
+        assert_eq!(g.trim_width(1.5), 1.5);
+    }
+
+    #[test]
+    fn strength_scales_trim_monotonically() {
+        let p = profile(0.20, 0.20, 0.08, 0.22, 10.0, 9.0, Some(0.8));
+        let gentle = SourceGuardrails::compute(&p, 0.3);
+        let strong = SourceGuardrails::compute(&p, 1.0);
+        assert!(strong.trim_bright_db(3.0) < gentle.trim_bright_db(3.0));
+        assert!(gentle.trim_bright_db(3.0) < 3.0, "even gentle trims something");
+    }
+
+    #[test]
+    fn zero_strength_is_identity() {
+        let p = profile(0.30, 0.30, 0.30, 0.30, 1.0, 1.0, Some(0.0));
+        let g = SourceGuardrails::compute(&p, 0.0);
+        assert_eq!(g, SourceGuardrails::identity());
+    }
+}

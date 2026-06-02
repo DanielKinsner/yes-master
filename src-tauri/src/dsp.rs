@@ -741,13 +741,36 @@ impl ChainCoeffs {
         // The user's eq_*_db controls add ON TOP of the scaled preset values.
         let preset = preset_calibration(&settings.preset);
 
-        let effective_sub_db = preset.sub_db * preset_scale + settings.eq_sub_db;
-        let effective_low_db = preset.low_shelf_db * preset_scale + settings.eq_low_db;
+        // ----- Tier-1 adaptive guardrails -----
+        // When the source already has a quality, trim the matching PRESET move
+        // toward neutral (never the user's manual eq_*_db offsets). `None` here
+        // means inert: the closures below are the identity and the chain output
+        // is byte-identical to the non-adaptive path, which is what keeps the
+        // `preset_byte_identity` snapshots stable.
+        // See docs/plans/2026-06-02-001-adaptive-dsp-tier1-guardrails.md.
+        let effective_adaptive_strength = settings
+            .advanced
+            .adaptive_strength
+            .unwrap_or(crate::guardrails::ADAPTIVE_STRENGTH_DEFAULT)
+            .clamp(0.0, 1.0);
+        let guardrails = settings
+            .advanced
+            .source_profile
+            .as_ref()
+            .filter(|_| effective_adaptive_strength > 0.0)
+            .map(|p| crate::guardrails::SourceGuardrails::compute(p, effective_adaptive_strength));
+        let trim_bright = |db: f32| guardrails.as_ref().map_or(db, |g| g.trim_bright_db(db));
+        let trim_low = |db: f32| guardrails.as_ref().map_or(db, |g| g.trim_low_db(db));
+
+        let effective_sub_db = trim_low(preset.sub_db * preset_scale) + settings.eq_sub_db;
+        let effective_low_db = trim_low(preset.low_shelf_db * preset_scale) + settings.eq_low_db;
         let effective_low_mid_db = preset.low_mid_db * preset_scale + settings.eq_low_mid_db;
         let effective_mid_db = preset.presence_db * preset_scale + settings.eq_mid_db;
-        let effective_high_mid_db = preset.high_mid_db * preset_scale + settings.eq_high_mid_db;
-        let effective_high_db = preset.air_db * preset_scale + settings.eq_high_db;
-        let effective_sparkle_db = preset.sparkle_db * preset_scale + settings.eq_sparkle_db;
+        let effective_high_mid_db =
+            trim_bright(preset.high_mid_db * preset_scale) + settings.eq_high_mid_db;
+        let effective_high_db = trim_bright(preset.air_db * preset_scale) + settings.eq_high_db;
+        let effective_sparkle_db =
+            trim_bright(preset.sparkle_db * preset_scale) + settings.eq_sparkle_db;
 
         // Intentionally a cascaded 2-biquad Butterworth (4-pole / 24 dB per
         // octave), even though standalone HPF does not need LR4 sum-flat
@@ -856,10 +879,16 @@ impl ChainCoeffs {
         // Width: None means "neutral" (1.0 = leave the stereo image alone).
         // Clamp to [0, 2] so a stray slider value can't invert phase or push
         // the side past 2× — typical mastering plugins cap M/S widening here.
+        // Tier-1 guardrail pulls the preset's width baseline toward neutral on
+        // already-wide / low-correlation sources. Only the preset fallback is
+        // guarded; an explicit user `advanced.width` is left exactly as set.
+        let guarded_preset_width = guardrails
+            .as_ref()
+            .map_or(preset_width, |g| g.trim_width(preset_width));
         let width_side_scale = settings
             .advanced
             .width
-            .unwrap_or(preset_width)
+            .unwrap_or(guarded_preset_width)
             .clamp(0.0, 2.0);
 
         // ----- Phase A4: preset-driven multiband compressor -----
@@ -895,11 +924,19 @@ impl ChainCoeffs {
         let density = if compression_off {
             0.0
         } else {
-            settings
+            let base = settings
                 .advanced
                 .compression_density
                 .unwrap_or(default_density_for_preset)
-                .clamp(0.0, 1.0)
+                .clamp(0.0, 1.0);
+            // Tier-1 guardrail softens compression on already-dense sources, but
+            // only in Preset mode — Manual per-band values are explicit user
+            // overrides and must not be second-guessed.
+            if manual_compression {
+                base
+            } else {
+                guardrails.as_ref().map_or(base, |g| g.scale_density(base))
+            }
         };
 
         let preset_engagement = (density * 2.0).min(1.0); // 0..1, full at density >= 0.5
@@ -3056,6 +3093,49 @@ mod tests {
             album: None,
             advanced: AdvancedSettings::default(),
         }
+    }
+
+    #[test]
+    fn guardrails_trim_high_shelf_on_bright_source_without_touching_low() {
+        use crate::types::{SourceProfile, SpectralBalance6};
+        // Universal carries a positive air lift (air_db 1.1) plus a small low
+        // lift. At intensity 0.5 the preset is at full character.
+        let mut settings = default_master_settings();
+        settings.preset = Preset::Universal;
+        settings.intensity = 0.5;
+
+        // Baseline: no source profile -> guardrails inert.
+        let base = ChainCoeffs::from_settings(48_000, &settings);
+
+        // Already-bright source: presence+air well past the deadband, while
+        // lows / DR / correlation all sit in the neutral zone, so ONLY the
+        // brightness guardrail fires.
+        settings.advanced.source_profile = Some(SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub: 0.08,
+                low: 0.22,
+                low_mid: 0.20,
+                mid: 0.20,
+                presence: 0.20,
+                air: 0.20,
+            },
+            dynamic_range_p95_p10_db: 10.0,
+            dynamic_range_lu: 9.0,
+            stereo_correlation: Some(0.8),
+            stereo_width: 1.0,
+        });
+        settings.advanced.adaptive_strength = Some(1.0);
+        let adapted = ChainCoeffs::from_settings(48_000, &settings);
+
+        // High shelf changed (air lift trimmed); low band untouched (not bright).
+        assert_ne!(
+            adapted.high.b0, base.high.b0,
+            "bright guardrail should trim the high shelf"
+        );
+        assert_eq!(
+            adapted.low.b0, base.low.b0,
+            "low band must be untouched by the bright guardrail"
+        );
     }
 
     mod preset_byte_identity {
