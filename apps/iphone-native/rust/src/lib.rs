@@ -103,7 +103,11 @@ pub unsafe extern "C" fn yes_master_native_render_master_with_options_json(
 
     let source_path = Path::new(&source_path);
     let output_dir = Path::new(&output_dir);
-    let settings = export_settings_for_options(unsafe { ffi_string(preset) }.as_deref(), intensity, lufs_target);
+    let settings = export_settings_for_options(
+        unsafe { ffi_string(preset) }.as_deref(),
+        intensity,
+        lufs_target,
+    );
 
     if let Err(error) = std::fs::create_dir_all(output_dir) {
         return error_to_ffi(&error.to_string());
@@ -134,7 +138,11 @@ fn fixed_export_settings() -> MasteringSettings {
     export_settings_for_options(Some("balanced"), 0.5, -11.0)
 }
 
-pub(crate) fn export_settings_for_options(preset: Option<&str>, intensity: f32, lufs_target: f32) -> MasteringSettings {
+pub(crate) fn export_settings_for_options(
+    preset: Option<&str>,
+    intensity: f32,
+    lufs_target: f32,
+) -> MasteringSettings {
     MasteringSettings {
         preset: native_preset(preset),
         intensity: intensity.clamp(0.0, 1.0),
@@ -388,7 +396,10 @@ mod tests {
 
         assert_ne!(output, input);
         assert!(output.exists(), "rendered WAV was not written");
-        assert_eq!(source_after, source_before, "source WAV changed during render");
+        assert_eq!(
+            source_after, source_before,
+            "source WAV changed during render"
+        );
     }
 
     #[test]
@@ -402,8 +413,14 @@ mod tests {
         let second = render_master_for_test(&input, &output_dir);
 
         assert_ne!(first.file_name(), second.file_name());
-        assert_eq!(first.extension().and_then(|value| value.to_str()), Some("wav"));
-        assert_eq!(second.extension().and_then(|value| value.to_str()), Some("wav"));
+        assert_eq!(
+            first.extension().and_then(|value| value.to_str()),
+            Some("wav")
+        );
+        assert_eq!(
+            second.extension().and_then(|value| value.to_str()),
+            Some("wav")
+        );
     }
 
     #[test]
@@ -458,7 +475,11 @@ mod tests {
             value
         };
         let payload: serde_json::Value = serde_json::from_str(&json).unwrap();
-        std::path::PathBuf::from(payload["output_paths"][0].as_str().expect("render output path"))
+        std::path::PathBuf::from(
+            payload["output_paths"][0]
+                .as_str()
+                .expect("render output path"),
+        )
     }
 
     #[test]

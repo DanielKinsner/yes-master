@@ -1,6 +1,10 @@
 # YES Master iPhone Native - Handoff
 
-_Last updated: 2026-06-01, native import/export hardening._
+_Last updated: 2026-06-01, historical pointer added._
+
+> This file is historical. For the current native iPhone live-audition handoff,
+> use `docs/HANDOFF_2026-06-01_IPHONE_NATIVE_LIVE_AUDITION.md`. Preview-render
+> language below is stale and should not be treated as active spec.
 
 ## Current Status
 

@@ -70,6 +70,11 @@ struct Shared {
     /// Loudness landing gain (linear), stored as `f32` bits. `1.0` = unity until
     /// the windowed measurement lands a value (Task 7). Mastered path only.
     landing_gain: AtomicU32,
+    /// One-shot request from the UI thread to copy current control targets into
+    /// the audio-thread smoothers before the next block renders. Used when
+    /// playback starts/resumes so paused/pre-play changes do not fade in from an
+    /// old smoother state.
+    snap_controls_to_targets: AtomicBool,
     /// Pending seek target in frames; `NO_SEEK` when none. Applied at the top of
     /// the next `process` block.
     seek_target_frame: AtomicU64,
@@ -86,6 +91,7 @@ impl Shared {
             bypass_original: AtomicBool::new(false),
             volume_match_gain: AtomicU32::new(1.0f32.to_bits()),
             landing_gain: AtomicU32::new(1.0f32.to_bits()),
+            snap_controls_to_targets: AtomicBool::new(false),
             seek_target_frame: AtomicU64::new(NO_SEEK),
             cursor_frame: AtomicU64::new(0),
             generation: AtomicU64::new(0),
@@ -195,9 +201,21 @@ impl AudioCore {
             shared.cursor_frame.store(target as u64, Ordering::Relaxed);
         }
 
-        let target_bypass = if shared.bypass_original.load(Ordering::Relaxed) { 1.0 } else { 0.0 };
+        let should_snap = shared
+            .snap_controls_to_targets
+            .swap(false, Ordering::Acquire);
+        let target_bypass = if shared.bypass_original.load(Ordering::Relaxed) {
+            1.0
+        } else {
+            0.0
+        };
         let target_vol_match = load_gain(&shared.volume_match_gain);
         let target_landing = load_gain(&shared.landing_gain);
+        if should_snap {
+            self.smoothed_bypass = target_bypass;
+            self.smoothed_vol_match = target_vol_match;
+            self.smoothed_landing = target_landing;
+        }
         let smooth = self.gain_smooth_coeff;
 
         let mut cursor = shared.cursor_frame.load(Ordering::Relaxed) as usize;
@@ -237,7 +255,8 @@ impl AudioCore {
             for ch in 0..channels {
                 self.frame_main[ch] = self.frame_in[ch];
             }
-            self.chain.process_frame_inplace(&mut self.frame_main[..channels]);
+            self.chain
+                .process_frame_inplace(&mut self.frame_main[..channels]);
 
             if self.pending_chain.is_some() && self.crossfade_total > 0 {
                 for ch in 0..channels {
@@ -251,8 +270,7 @@ impl AudioCore {
                 let t = 1.0 - (self.crossfade_remaining as f32 / self.crossfade_total as f32);
                 let inv_t = 1.0 - t;
                 for ch in 0..channels {
-                    self.frame_main[ch] =
-                        self.frame_main[ch] * inv_t + self.frame_pending[ch] * t;
+                    self.frame_main[ch] = self.frame_main[ch] * inv_t + self.frame_pending[ch] * t;
                 }
                 self.crossfade_remaining = self.crossfade_remaining.saturating_sub(1);
                 if self.crossfade_remaining == 0 {
@@ -424,7 +442,9 @@ pub unsafe extern "C" fn yes_master_native_live_process(
 
     // A panic must never unwind across the C ABI (UB). On panic, emit silence.
     let core = &mut *stream.core.get();
-    let result = catch_unwind(AssertUnwindSafe(|| core.process(out, frames, &stream.shared)));
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        core.process(out, frames, &stream.shared)
+    }));
     if result.is_err() {
         for s in out.iter_mut() {
             *s = 0.0;
@@ -509,6 +529,23 @@ pub unsafe extern "C" fn yes_master_native_live_set_landing_gain(
         .shared
         .landing_gain
         .store(sanitize_gain(linear_gain).to_bits(), Ordering::Relaxed);
+}
+
+/// Snap the audio-thread smoothers to the current control targets at the next
+/// render block. This is for playback start/resume only; live UI changes still
+/// ramp smoothly through `process`.
+///
+/// # Safety
+/// `handle` must be a live handle from `create` or null.
+#[no_mangle]
+pub unsafe extern "C" fn yes_master_native_live_snap_controls_to_targets(handle: *mut LiveStream) {
+    if handle.is_null() {
+        return;
+    }
+    (*handle)
+        .shared
+        .snap_controls_to_targets
+        .store(true, Ordering::Release);
 }
 
 /// Move the shared cursor to `position_seconds`. Applied at the top of the next
@@ -718,7 +755,10 @@ mod tests {
             // Original passthrough at unity Volume Match == the decoded signal.
             // It is non-silent (a 0.3-amplitude sine).
             let peak = out.iter().fold(0.0f32, |m, v| m.max(v.abs()));
-            assert!(peak > 0.05, "bypassed output should carry the source signal");
+            assert!(
+                peak > 0.05,
+                "bypassed output should carry the source signal"
+            );
             yes_master_native_live_destroy(handle);
         }
     }
@@ -745,7 +785,10 @@ mod tests {
                 .zip(mastered.iter())
                 .map(|(a, b)| (a - b).abs())
                 .sum();
-            assert!(diff > 1.0, "mastered output should differ from original (diff={diff})");
+            assert!(
+                diff > 1.0,
+                "mastered output should differ from original (diff={diff})"
+            );
             yes_master_native_live_destroy(handle);
         }
     }
@@ -884,7 +927,10 @@ mod tests {
                 .zip(balanced.iter())
                 .map(|(x, y)| (x - y).abs())
                 .sum();
-            assert!(diff > 1.0, "preset change at EOF should survive the seek (diff={diff})");
+            assert!(
+                diff > 1.0,
+                "preset change at EOF should survive the seek (diff={diff})"
+            );
 
             yes_master_native_live_destroy(a);
             yes_master_native_live_destroy(b);
@@ -963,8 +1009,15 @@ mod tests {
 
         let low = render_live(0.0);
         let high = render_live(1.0);
-        let diff: f32 = low.iter().zip(high.iter()).map(|(a, b)| (a - b).abs()).sum();
-        assert!(diff > 1.0, "intensity must change the live output (diff={diff})");
+        let diff: f32 = low
+            .iter()
+            .zip(high.iter())
+            .map(|(a, b)| (a - b).abs())
+            .sum();
+        assert!(
+            diff > 1.0,
+            "intensity must change the live output (diff={diff})"
+        );
 
         for intensity in [0.0f32, 1.0] {
             let settings = crate::export_settings_for_options(Some("punch"), intensity, -11.0);
@@ -996,8 +1049,10 @@ mod tests {
 
         let c = CString::new(path.to_string_lossy().as_bytes()).unwrap();
         let preset = CString::new("punch").unwrap();
-        let steady = unsafe { yes_master_native_live_create(c.as_ptr(), preset.as_ptr(), 0.0, -11.0) };
-        let swept = unsafe { yes_master_native_live_create(c.as_ptr(), preset.as_ptr(), 0.0, -11.0) };
+        let steady =
+            unsafe { yes_master_native_live_create(c.as_ptr(), preset.as_ptr(), 0.0, -11.0) };
+        let swept =
+            unsafe { yes_master_native_live_create(c.as_ptr(), preset.as_ptr(), 0.0, -11.0) };
         assert!(!steady.is_null() && !swept.is_null());
 
         unsafe { yes_master_native_live_set_params(swept, preset.as_ptr(), 1.0, -11.0) };
@@ -1010,7 +1065,10 @@ mod tests {
             yes_master_native_live_process(swept, b.as_mut_ptr(), frames);
         }
         let diff: f32 = a.iter().zip(b.iter()).map(|(x, y)| (x - y).abs()).sum();
-        assert!(diff > 1.0, "set_params(intensity) must change the live output (diff={diff})");
+        assert!(
+            diff > 1.0,
+            "set_params(intensity) must change the live output (diff={diff})"
+        );
         unsafe {
             yes_master_native_live_destroy(steady);
             yes_master_native_live_destroy(swept);
@@ -1033,15 +1091,33 @@ mod tests {
 
         let mut lufs_quiet = f32::NEG_INFINITY;
         let gain_quiet = unsafe {
-            yes_master_native_live_measure_landing(handle, preset.as_ptr(), 0.5, -14.0, &mut lufs_quiet)
+            yes_master_native_live_measure_landing(
+                handle,
+                preset.as_ptr(),
+                0.5,
+                -14.0,
+                &mut lufs_quiet,
+            )
         };
         let mut lufs_loud = f32::NEG_INFINITY;
         let gain_loud = unsafe {
-            yes_master_native_live_measure_landing(handle, preset.as_ptr(), 0.5, -9.0, &mut lufs_loud)
+            yes_master_native_live_measure_landing(
+                handle,
+                preset.as_ptr(),
+                0.5,
+                -9.0,
+                &mut lufs_loud,
+            )
         };
 
-        assert!(gain_quiet.is_finite() && gain_quiet > 0.0, "gain must be finite positive");
-        assert!(lufs_quiet.is_finite() && lufs_loud.is_finite(), "mastered LUFS must be finite");
+        assert!(
+            gain_quiet.is_finite() && gain_quiet > 0.0,
+            "gain must be finite positive"
+        );
+        assert!(
+            lufs_quiet.is_finite() && lufs_loud.is_finite(),
+            "mastered LUFS must be finite"
+        );
         assert!(
             gain_loud >= gain_quiet - 1e-6,
             "a louder target must not yield a smaller gain (quiet={gain_quiet}, loud={gain_loud})"
@@ -1072,13 +1148,55 @@ mod tests {
             yes_master_native_live_process(handle, out.as_mut_ptr(), frames as u32);
 
             let head_peak = out[..64 * 2].iter().fold(0.0f32, |m, v| m.max(v.abs()));
-            let tail_peak = out[(frames - 64) * 2..].iter().fold(0.0f32, |m, v| m.max(v.abs()));
-            assert!(head_peak > 0.01, "gain must ramp (head still audible), head={head_peak}");
+            let tail_peak = out[(frames - 64) * 2..]
+                .iter()
+                .fold(0.0f32, |m, v| m.max(v.abs()));
+            assert!(
+                head_peak > 0.01,
+                "gain must ramp (head still audible), head={head_peak}"
+            );
             assert!(
                 tail_peak < head_peak * 0.1,
                 "gain must reach ~0 after the ramp (tail={tail_peak}, head={head_peak})"
             );
             yes_master_native_live_destroy(handle);
+        }
+    }
+
+    #[test]
+    fn snapped_original_starts_dry_from_first_frame() {
+        // The Swift app sets Original before playback starts. The first render
+        // must honor that target immediately, not fade from the default Mastered
+        // smoother state into Original over the first few milliseconds.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("src.wav");
+        write_sine_wav(&path, 2_000, 2);
+        let pcm = yes_master_lib::decode::decode_full(&path).unwrap();
+        let channels = pcm.channels as usize;
+
+        let c = CString::new(path.to_string_lossy().as_bytes()).unwrap();
+        let preset = CString::new("balanced").unwrap();
+        let handle =
+            unsafe { yes_master_native_live_create(c.as_ptr(), preset.as_ptr(), 0.7, -11.0) };
+        assert!(!handle.is_null());
+
+        unsafe {
+            yes_master_native_live_set_bypass(handle, true);
+            yes_master_native_live_snap_controls_to_targets(handle);
+            let frames = 256u32;
+            let mut out = vec![0.0f32; frames as usize * channels];
+            yes_master_native_live_process(handle, out.as_mut_ptr(), frames);
+            yes_master_native_live_destroy(handle);
+
+            let expected = &pcm.samples[..out.len()];
+            let max_diff = expected
+                .iter()
+                .zip(out.iter())
+                .fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
+            assert!(
+                max_diff < 1e-6,
+                "snapped Original should be dry from the first frame; max_diff={max_diff}"
+            );
         }
     }
 }

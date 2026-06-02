@@ -17,6 +17,10 @@ protocol LiveAuditionStreaming: AnyObject {
     /// written (short at end-of-file, remainder zero-filled). Real-time safe.
     func render(into buffer: UnsafeMutablePointer<Float>, frames: UInt32) -> UInt32
 
+    /// Snap smoothed control values to their current targets before the audio
+    /// graph starts, so paused/pre-play changes do not fade in from stale state.
+    func snapControlsToTargets()
+
     /// `true` = play Original (dry); `false` = Mastered. Playhead is preserved.
     func setOriginal(_ original: Bool)
     func setParams(preset: String, intensity: Float, loudnessTarget: Float)
@@ -61,6 +65,10 @@ final class LiveAuditionBridge: LiveAuditionStreaming {
 
     func render(into buffer: UnsafeMutablePointer<Float>, frames: UInt32) -> UInt32 {
         yes_master_native_live_process(handle, buffer, frames)
+    }
+
+    func snapControlsToTargets() {
+        yes_master_native_live_snap_controls_to_targets(handle)
     }
 
     func setOriginal(_ original: Bool) {

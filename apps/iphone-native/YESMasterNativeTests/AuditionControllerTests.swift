@@ -234,6 +234,7 @@ private final class RecordingStream: LiveAuditionStreaming {
     var stubMasteredLufs: Double = -11.0
 
     func render(into buffer: UnsafeMutablePointer<Float>, frames: UInt32) -> UInt32 { frames }
+    func snapControlsToTargets() {}
     func setOriginal(_ original: Bool) { lastOriginal = original }
     func setParams(preset: String, intensity: Float, loudnessTarget: Float) {
         lastParams = (preset, intensity, loudnessTarget)

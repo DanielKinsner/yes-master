@@ -47,6 +47,7 @@ final class LiveAudioEngine: ObservableObject {
 
     func play() throws {
         guard let stream else { return }
+        stream.snapControlsToTargets()
         try output.start(pulling: stream)
         isPlaying = true
     }

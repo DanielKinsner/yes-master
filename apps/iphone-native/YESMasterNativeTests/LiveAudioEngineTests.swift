@@ -45,6 +45,18 @@ final class LiveAudioEngineTests: XCTestCase {
         XCTAssertNotNil(engine.stream, "pause must keep the stream so resume preserves the playhead")
     }
 
+    func testPlaySnapsControlsBeforeStartingOutput() throws {
+        let output = FakeOutput()
+        let stream = FakeStream()
+        let engine = LiveAudioEngine(output: output, makeStream: { _, _, _, _ in stream })
+        engine.load(url: url, preset: "balanced", intensity: 0.5, loudnessTarget: -11)
+
+        try engine.play()
+
+        XCTAssertEqual(stream.snapCount, 1)
+        XCTAssertEqual(output.snapCountAtStart, 1)
+    }
+
     func testPlayWithoutLoadDoesNothing() throws {
         let output = FakeOutput()
         let engine = LiveAudioEngine(output: output, makeStream: { _, _, _, _ in FakeStream() })
@@ -104,8 +116,10 @@ private final class FakeStream: LiveAuditionStreaming {
     var lastVolumeMatch: Float?
     var lastLandingGain: Float?
     var lastSeek: Double?
+    var snapCount = 0
 
     func render(into buffer: UnsafeMutablePointer<Float>, frames: UInt32) -> UInt32 { frames }
+    func snapControlsToTargets() { snapCount += 1 }
     func setOriginal(_ original: Bool) { lastOriginal = original }
     func setParams(preset: String, intensity: Float, loudnessTarget: Float) {
         lastParams = (preset, intensity, loudnessTarget)
@@ -122,11 +136,13 @@ private final class FakeOutput: LiveAudioOutput {
     private(set) var startCount = 0
     private(set) var stopCount = 0
     private(set) var lastStartedStream: LiveAuditionStreaming?
+    private(set) var snapCountAtStart: Int?
     var isRunning = false
 
     func start(pulling stream: LiveAuditionStreaming) throws {
         startCount += 1
         lastStartedStream = stream
+        snapCountAtStart = (stream as? FakeStream)?.snapCount
         isRunning = true
     }
 

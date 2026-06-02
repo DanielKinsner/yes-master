@@ -2,8 +2,17 @@
 
 **Status: shipped to `main`.** The native iPhone app now auditions mastered audio
 live, on-device, through the exact desktop DSP. Built/installed/run on a physical
-iPhone 16 Pro Max; all automated suites green (one pre-existing desktop failure
-noted below, unrelated to this work).
+iPhone 16 Pro Max; iPhone automated suites are green. Desktop still has the
+pre-existing preset snapshot failures noted below, unrelated to this work.
+
+## Latest follow-up
+
+- Fixed a pre-play/resume state mismatch: when the screen is already set to
+  Original, Volume Match, or a loudness landing before Play, the hidden audio
+  smoothers now snap to those targets before the first audio block. Live changes
+  during playback still ramp smoothly.
+- Added Rust + Swift regressions so playback start cannot drift from the visible
+  control state again.
 
 ## What shipped
 
@@ -22,7 +31,8 @@ Live mastered audition on the native iPhone app (`apps/iphone-native/`):
   mastered LUFS vs analyzed original LUFS). Never reaches export.
 - **Create Master** is still the only full-song render/export.
 - Click-free transitions (one-pole smoothing on VM/landing/bypass; chain stays
-  warm). End-of-track replay. AVAudioSession interruption + route-change handling.
+  warm; play/resume snaps to current targets before first audio). End-of-track
+  replay. AVAudioSession interruption + route-change handling.
 
 ### Architecture (the load-bearing decision)
 
@@ -50,7 +60,7 @@ The `.xcodeproj` is gitignored (XcodeGen-managed). After pulling:
 cd apps/iphone-native && xcodegen generate --spec project.yml   # regenerate project
 ```
 
-- **Rust (bridge):** `cd apps/iphone-native/rust && cargo test`  (26 tests)
+- **Rust (bridge):** `cd apps/iphone-native/rust && cargo test`  (27 pass + 1 ignored timing test)
 - **Rust (desktop, shared crate):** `cd src-tauri && cargo test --lib`
 - **Swift (simulator):**
   `xcodebuild -project apps/iphone-native/YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'platform=iOS Simulator,name=iPhone 17' CODE_SIGNING_ALLOWED=NO test`
@@ -62,11 +72,13 @@ cd apps/iphone-native && xcodegen generate --spec project.yml   # regenerate pro
 
 ## Verification status
 
-- ✅ Rust bridge: 26 tests (parity, intensity, landing, smoothing, EOF, bypass).
-- ✅ Swift: full suite (controller/engine/bridge/integration incl. a REAL
+- ✅ Rust bridge: 27 pass + 1 ignored timing test (parity, intensity, landing,
+  smoothing, EOF, bypass, play-start snap).
+- ✅ Swift: 48 tests pass (controller/engine/bridge/integration incl. a REAL
   `AVAudioEngine` start that guards the -10868 interleaved-format crash).
-- ✅ Desktop shared crate: 205 lib tests pass; additive `engine::preview_landing`
-  only.
+- ✅ Generic iOS build passes with `CODE_SIGNING_ALLOWED=NO`.
+- ⚠️ Desktop shared crate: `cargo test --lib` still passes 205 tests and fails
+  only the 4 pre-existing snapshot tests below.
 - ⚠️ **Pre-existing (NOT this work):** 4 `dsp::tests::preset_byte_identity::*`
   SHA-snapshot tests fail identically on a clean tree (verified by stashing).
   They're float byte-identity snapshots, opt-level/CPU-sensitive. Investigate or

@@ -48,6 +48,7 @@ void yes_master_native_live_set_params(
 );
 void yes_master_native_live_set_volume_match(YMLiveHandle *handle, float linear_gain);
 void yes_master_native_live_set_landing_gain(YMLiveHandle *handle, float linear_gain);
+void yes_master_native_live_snap_controls_to_targets(YMLiveHandle *handle);
 float yes_master_native_live_measure_landing(
     const YMLiveHandle *handle,
     const char *preset,
