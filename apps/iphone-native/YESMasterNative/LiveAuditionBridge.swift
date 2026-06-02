@@ -25,6 +25,11 @@ protocol LiveAuditionStreaming: AnyObject {
     /// Loudness landing gain (linear, `1.0` = unity) for the Mastered path.
     func setLandingGain(linearGain: Float)
     func seek(toSeconds seconds: Double)
+
+    /// Measure the loudness landing for the given Simple controls — off the audio
+    /// thread. Returns the linear landing gain and the resulting mastered
+    /// integrated LUFS (for audition Volume Match).
+    func measureLanding(preset: String, intensity: Float, loudnessTarget: Float) -> (gain: Float, masteredLufs: Double)
 }
 
 /// Concrete `LiveAuditionStreaming` backed by the Rust live-stream C ABI. Owns
@@ -78,5 +83,13 @@ final class LiveAuditionBridge: LiveAuditionStreaming {
 
     func seek(toSeconds seconds: Double) {
         yes_master_native_live_seek(handle, seconds)
+    }
+
+    func measureLanding(preset: String, intensity: Float, loudnessTarget: Float) -> (gain: Float, masteredLufs: Double) {
+        var masteredLufs: Float = -.infinity
+        let gain = preset.withCString { pointer in
+            yes_master_native_live_measure_landing(handle, pointer, intensity, loudnessTarget, &masteredLufs)
+        }
+        return (gain, Double(masteredLufs))
     }
 }

@@ -107,6 +107,27 @@ final class AuditionControllerTests: XCTestCase {
         XCTAssertTrue(ctx.controller.isPlaying)
     }
 
+    func testLandingRefreshSetsGainAndMakesVolumeMatchLive() async throws {
+        let ctx = try makeLoadedController()
+        await ctx.controller.analysisTask?.value // FakeRenderer analysis: originalLufs = -12
+        ctx.stream.stubLandingGain = 0.6
+        ctx.stream.stubMasteredLufs = -11.0
+
+        await ctx.controller.refreshLanding()
+
+        // Loudness landing reached the stream (Low/Med/High now audible).
+        XCTAssertEqual(ctx.stream.lastLandingGain, 0.6)
+        XCTAssertEqual(ctx.controller.masteredLufs, -11.0)
+
+        // Volume Match is now live: Mastered (-11) is louder than Original (-12),
+        // so matching attenuates it (~ -1 LU) instead of the previous unity no-op.
+        ctx.controller.selectSide(.mastered)
+        ctx.controller.toggleVolumeMatch()
+        let gain = try XCTUnwrap(ctx.stream.lastVolumeMatch)
+        XCTAssertLessThan(gain, 1.0)
+        XCTAssertGreaterThan(gain, 0.8)
+    }
+
     // MARK: - Fixture
 
     private struct Context {
@@ -168,6 +189,9 @@ private final class RecordingStream: LiveAuditionStreaming {
     var lastParams: (preset: String, intensity: Float, loudness: Float)?
     var lastVolumeMatch: Float?
     var lastSeek: Double?
+    var lastLandingGain: Float?
+    var stubLandingGain: Float = 0.7
+    var stubMasteredLufs: Double = -11.0
 
     func render(into buffer: UnsafeMutablePointer<Float>, frames: UInt32) -> UInt32 { frames }
     func setOriginal(_ original: Bool) { lastOriginal = original }
@@ -175,10 +199,13 @@ private final class RecordingStream: LiveAuditionStreaming {
         lastParams = (preset, intensity, loudnessTarget)
     }
     func setVolumeMatch(linearGain: Float) { lastVolumeMatch = linearGain }
-    func setLandingGain(linearGain: Float) {}
+    func setLandingGain(linearGain: Float) { lastLandingGain = linearGain }
     func seek(toSeconds seconds: Double) {
         lastSeek = seconds
         positionSeconds = seconds
+    }
+    func measureLanding(preset: String, intensity: Float, loudnessTarget: Float) -> (gain: Float, masteredLufs: Double) {
+        (stubLandingGain, stubMasteredLufs)
     }
 }
 

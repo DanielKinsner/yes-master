@@ -52,6 +52,7 @@ final class AuditionController: ObservableObject {
 
     private(set) var analysisTask: Task<Void, Never>?
     private(set) var renderTask: Task<Void, Never>?
+    private var landingTask: Task<Void, Never>?
     private var positionTimer: Timer?
 
     init(
@@ -110,6 +111,7 @@ final class AuditionController: ObservableObject {
                 return
             }
             analyze(track)
+            scheduleLandingRefresh()
         } catch ImportedTrackStore.ImportError.unsupportedExtension(let fileExtension) {
             let label = fileExtension.isEmpty ? "that file" : ".\(fileExtension)"
             statusText = "\(label) is not supported yet. Use \(renderer.supportedImportExtensions.joined(separator: ", "))."
@@ -141,6 +143,7 @@ final class AuditionController: ObservableObject {
             switch result {
             case .success(let analysis):
                 analysisResult = analysis
+                applyVolumeMatch() // original LUFS is now known; landing fills mastered LUFS
                 statusText = "Ready. Press play to audition."
             case .failure(let error):
                 analysisResult = nil
@@ -243,6 +246,38 @@ final class AuditionController: ObservableObject {
             intensity: Float(presetIntensity),
             loudnessTarget: selectedLoudness.lufsTarget
         )
+        // The chain updates live immediately; the loudness landing re-measures
+        // shortly after the change settles (it's heavier — a window through the
+        // chain + LUFS), so Low/Med/High and intensity re-land the level.
+        scheduleLandingRefresh()
+    }
+
+    /// Measure the loudness landing for the current settings and apply it: sets
+    /// the landing gain (so Loudness is audible) and the mastered LUFS that
+    /// Volume Match needs. Routes through the same landing math as Create Master,
+    /// so the live preview lands ≈ where the full render will.
+    func refreshLanding() async {
+        guard let stream = engine.stream else { return }
+        let preset = selectedPreset.bridgeIdentifier
+        let intensity = Float(presetIntensity)
+        let loudness = selectedLoudness.lufsTarget
+        let result = await Task.detached {
+            stream.measureLanding(preset: preset, intensity: intensity, loudnessTarget: loudness)
+        }.value
+        engine.setLandingGain(linearGain: result.gain)
+        if result.masteredLufs.isFinite {
+            masteredLufs = result.masteredLufs
+        }
+        applyVolumeMatch()
+    }
+
+    private func scheduleLandingRefresh() {
+        landingTask?.cancel()
+        landingTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 250_000_000) // settle after the last change
+            if Task.isCancelled { return }
+            await self?.refreshLanding()
+        }
     }
 
     // MARK: - Volume Match (audition only)

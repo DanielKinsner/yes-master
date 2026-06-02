@@ -113,6 +113,9 @@ private final class FakeStream: LiveAuditionStreaming {
     func setVolumeMatch(linearGain: Float) { lastVolumeMatch = linearGain }
     func setLandingGain(linearGain: Float) { lastLandingGain = linearGain }
     func seek(toSeconds seconds: Double) { lastSeek = seconds }
+    func measureLanding(preset: String, intensity: Float, loudnessTarget: Float) -> (gain: Float, masteredLufs: Double) {
+        (1.0, -11.0)
+    }
 }
 
 private final class FakeOutput: LiveAudioOutput {
