@@ -38,6 +38,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::Arc;
 
 use yes_master_lib::dsp::{ChainCoeffs, MasteringChain};
 
@@ -110,7 +111,7 @@ fn sanitize_gain(value: f32) -> f32 {
 /// Audio-thread-only playback state. Reached exclusively from `process` via the
 /// handle's `UnsafeCell`.
 struct AudioCore {
-    samples: Vec<f32>,
+    samples: Arc<[f32]>,
     channels: usize,
     total_frames: usize,
     chain: MasteringChain,
@@ -274,6 +275,11 @@ pub struct LiveStream {
     sample_rate: u32,
     channels: usize,
     total_frames: usize,
+    /// Immutable decoded PCM, shared with `AudioCore`. Read-only after create,
+    /// so the UI thread can measure loudness from it (see
+    /// `yes_master_native_live_measure_landing`) while the audio thread reads its
+    /// own `Arc` clone in `process` — concurrent immutable reads, no race.
+    samples: Arc<[f32]>,
 }
 
 // SAFETY: see the module-level threading contract. `core` (behind the
@@ -289,7 +295,8 @@ impl LiveStream {
         let pcm = yes_master_lib::decode::decode_full(path).ok()?;
         let channels = (pcm.channels.max(1)) as usize;
         let sample_rate = pcm.sample_rate.max(1);
-        let total_frames = pcm.samples.len() / channels;
+        let samples: Arc<[f32]> = Arc::from(pcm.samples);
+        let total_frames = samples.len() / channels;
 
         // Reuse the exact (preset, intensity, lufs) -> MasteringSettings mapping
         // the export path uses, so preview and Create Master share one source of
@@ -300,7 +307,7 @@ impl LiveStream {
 
         let (coeffs_tx, coeffs_rx) = mpsc::channel();
         let core = AudioCore {
-            samples: pcm.samples,
+            samples: samples.clone(),
             channels,
             total_frames,
             chain,
@@ -321,6 +328,7 @@ impl LiveStream {
             sample_rate,
             channels,
             total_frames,
+            samples,
         })
     }
 
@@ -556,6 +564,52 @@ pub unsafe extern "C" fn yes_master_native_live_sample_rate(handle: *const LiveS
         return 0.0;
     }
     (*handle).sample_rate as f64
+}
+
+/// Measure the live loudness landing for the given Simple controls: returns the
+/// linear landing gain and writes the resulting mastered integrated LUFS into
+/// `out_mastered_lufs` (`f32::NEG_INFINITY` when unavailable). Routes through the
+/// shared `engine::preview_landing` so the live preview lands at the same level
+/// the full render will. NOT real-time safe — call off the audio thread (it
+/// processes a representative window through a throwaway chain). Reads only the
+/// immutable shared PCM, so it is safe to call while `process` runs.
+///
+/// # Safety
+/// `handle` must be a live handle from `create` or null; `preset` a C string or
+/// null; `out_mastered_lufs` a writable `f32` or null.
+#[no_mangle]
+pub unsafe extern "C" fn yes_master_native_live_measure_landing(
+    handle: *const LiveStream,
+    preset: *const c_char,
+    intensity: f32,
+    lufs_target: f32,
+    out_mastered_lufs: *mut f32,
+) -> f32 {
+    if handle.is_null() {
+        return 1.0;
+    }
+    let stream = &*handle;
+    let preset = ffi_string(preset);
+    let settings = export_settings_for_options(preset.as_deref(), intensity, lufs_target);
+    match yes_master_lib::engine::preview_landing(
+        &stream.samples,
+        stream.sample_rate,
+        stream.channels as u16,
+        &settings,
+    ) {
+        Ok(landing) => {
+            if !out_mastered_lufs.is_null() {
+                *out_mastered_lufs = landing.mastered_lufs;
+            }
+            landing.gain_lin
+        }
+        Err(_) => {
+            if !out_mastered_lufs.is_null() {
+                *out_mastered_lufs = f32::NEG_INFINITY;
+            }
+            1.0
+        }
+    }
 }
 
 /// Free a handle from [`yes_master_native_live_create`].
@@ -938,5 +992,41 @@ mod tests {
             yes_master_native_live_destroy(steady);
             yes_master_native_live_destroy(swept);
         }
+    }
+
+    #[test]
+    fn measure_landing_is_wired_and_responds_to_target() {
+        // 10 s source so the 8 s landing window is full. Proves the measurement
+        // FFI wires through to engine::preview_landing and responds to the target:
+        // a louder target never yields a smaller gain or a quieter result.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("src.wav");
+        write_sine_wav(&path, 48_000 * 10, 2);
+        let c = CString::new(path.to_string_lossy().as_bytes()).unwrap();
+        let preset = CString::new("balanced").unwrap();
+        let handle =
+            unsafe { yes_master_native_live_create(c.as_ptr(), preset.as_ptr(), 0.5, -14.0) };
+        assert!(!handle.is_null());
+
+        let mut lufs_quiet = f32::NEG_INFINITY;
+        let gain_quiet = unsafe {
+            yes_master_native_live_measure_landing(handle, preset.as_ptr(), 0.5, -14.0, &mut lufs_quiet)
+        };
+        let mut lufs_loud = f32::NEG_INFINITY;
+        let gain_loud = unsafe {
+            yes_master_native_live_measure_landing(handle, preset.as_ptr(), 0.5, -9.0, &mut lufs_loud)
+        };
+
+        assert!(gain_quiet.is_finite() && gain_quiet > 0.0, "gain must be finite positive");
+        assert!(lufs_quiet.is_finite() && lufs_loud.is_finite(), "mastered LUFS must be finite");
+        assert!(
+            gain_loud >= gain_quiet - 1e-6,
+            "a louder target must not yield a smaller gain (quiet={gain_quiet}, loud={gain_loud})"
+        );
+        assert!(
+            lufs_loud >= lufs_quiet - 1e-3,
+            "a louder target must not land quieter (quiet={lufs_quiet}, loud={lufs_loud})"
+        );
+        unsafe { yes_master_native_live_destroy(handle) };
     }
 }

@@ -239,6 +239,98 @@ pub fn measure_integrated_lufs_at_path(path: &Path) -> CommandResult<f32> {
     measure_integrated_lufs(&pcm.samples, pcm.sample_rate, pcm.channels)
 }
 
+/// Result of a live-preview loudness landing measurement.
+pub struct PreviewLanding {
+    /// Linear gain to apply after the chain so the master lands near target.
+    pub gain_lin: f32,
+    /// Resulting integrated LUFS of the mastered window after the landing gain —
+    /// used for audition Volume Match. `f32::NEG_INFINITY` when unavailable
+    /// (no target, or an effectively-silent window).
+    pub mastered_lufs: f32,
+}
+
+/// Compute the live-preview loudness landing for `settings`: process a
+/// representative ~8 s window through the chain, measure integrated LUFS +
+/// BS.1770 true peak, and route through the SAME `ceiling_bounded_landing_delta_db`
+/// the export path uses — so the live preview lands at the same level the full
+/// render will. Mirrors the desktop preview path (`audio.rs`). Returns unity gain
+/// when there's no loudness target or the window is effectively silent. This is
+/// the off-audio-thread measurement the iPhone bridge calls on settings changes.
+pub fn preview_landing(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+) -> CommandResult<PreviewLanding> {
+    let mut render_settings = settings.clone();
+    render_settings.volume_match = false;
+    let unity = PreviewLanding { gain_lin: 1.0, mastered_lufs: f32::NEG_INFINITY };
+    let Some(target_lufs) = render_settings.effective_target_lufs() else {
+        return Ok(unity);
+    };
+    if !target_lufs.is_finite() {
+        return Ok(unity);
+    }
+
+    let channels_usize = channels.max(1) as usize;
+    let mut rendered = preview_landing_window(samples, sample_rate, channels);
+    let mut chain = crate::dsp::MasteringChain::new(sample_rate, channels_usize, &render_settings);
+    chain.process_interleaved(&mut rendered, channels_usize);
+
+    let channels_u32 = u32::from(channels.max(1));
+    let mut ebu = EbuR128::new(channels_u32, sample_rate, Mode::I | Mode::TRUE_PEAK)
+        .map_err(|e| CommandError::Render(format!("ebur128 init: {e}")))?;
+    ebu.add_frames_f32(&rendered)
+        .map_err(|e| CommandError::Render(format!("ebur128 feed: {e}")))?;
+    let measured = sanitize_lufs(
+        ebu.loudness_global()
+            .map_err(|e| CommandError::Render(format!("ebur128 global: {e}")))? as f32,
+    );
+    if !measured.is_finite() || measured <= -70.0 {
+        return Ok(unity);
+    }
+    let mut peak_lin: f64 = 0.0;
+    for ch in 0..channels_u32 {
+        let tp = ebu
+            .true_peak(ch)
+            .map_err(|e| CommandError::Render(format!("ebur128 tp: {e}")))?;
+        if tp > peak_lin {
+            peak_lin = tp;
+        }
+    }
+    let measured_true_peak_dbtp = if peak_lin > 0.0 {
+        (20.0 * peak_lin.log10()) as f32
+    } else {
+        -60.0
+    };
+    let ceiling_dbtp = render_settings.effective_ceiling_dbtp();
+    let applied_delta_db =
+        ceiling_bounded_landing_delta_db(measured, measured_true_peak_dbtp, target_lufs, ceiling_dbtp);
+    let gain_lin = if applied_delta_db != 0.0 {
+        10.0_f32.powf(applied_delta_db / 20.0)
+    } else {
+        1.0
+    };
+    Ok(PreviewLanding {
+        gain_lin,
+        mastered_lufs: measured + applied_delta_db,
+    })
+}
+
+/// The representative ~8 s middle window the preview landing measures, instead
+/// of the full track (≈15-20× cheaper, within ~0.5 dB of full-track for normal
+/// music). Same centering math as the desktop preview path.
+fn preview_landing_window(samples: &[f32], sample_rate: u32, channels: u16) -> Vec<f32> {
+    const PREVIEW_WINDOW_SECS: f32 = 8.0;
+    let channels_usize = channels.max(1) as usize;
+    let total_frames = samples.len() / channels_usize;
+    let window_frames = ((PREVIEW_WINDOW_SECS * sample_rate as f32) as usize).min(total_frames);
+    let start_frame = total_frames.saturating_sub(window_frames) / 2;
+    let start = start_frame * channels_usize;
+    let end = ((start_frame + window_frames) * channels_usize).min(samples.len());
+    samples[start..end].to_vec()
+}
+
 #[tauri::command]
 pub async fn render_track_preview(
     track_id: TrackId,

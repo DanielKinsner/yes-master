@@ -48,6 +48,13 @@ void yes_master_native_live_set_params(
 );
 void yes_master_native_live_set_volume_match(YMLiveHandle *handle, float linear_gain);
 void yes_master_native_live_set_landing_gain(YMLiveHandle *handle, float linear_gain);
+float yes_master_native_live_measure_landing(
+    const YMLiveHandle *handle,
+    const char *preset,
+    float intensity,
+    float lufs_target,
+    float *out_mastered_lufs
+);
 void yes_master_native_live_seek(YMLiveHandle *handle, double position_seconds);
 double yes_master_native_live_position_seconds(const YMLiveHandle *handle);
 double yes_master_native_live_duration_seconds(const YMLiveHandle *handle);
