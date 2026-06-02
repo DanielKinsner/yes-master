@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import UniformTypeIdentifiers
 
@@ -54,6 +55,8 @@ final class AuditionController: ObservableObject {
     private(set) var renderTask: Task<Void, Never>?
     private var landingTask: Task<Void, Never>?
     private var positionTimer: Timer?
+    private var wasPlayingBeforeInterruption = false
+    private var notificationObservers: [NSObjectProtocol] = []
 
     init(
         engine: LiveAudioEngine = LiveAudioEngine(),
@@ -66,6 +69,11 @@ final class AuditionController: ObservableObject {
         self.importStore = importStore
         self.renderStorage = renderStorage
         self.supportedImportContentTypes = renderer.supportedImportContentTypes
+        observeAudioSession()
+    }
+
+    deinit {
+        notificationObservers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
     // MARK: - Import / analyze
@@ -168,9 +176,18 @@ final class AuditionController: ObservableObject {
         if isPlaying {
             stopPlayback()
             statusText = "Playback paused."
-            return
+        } else {
+            startPlayback()
+            if isPlaying {
+                statusText = "Playing \(selectedSide.rawValue.lowercased()) track."
+            }
         }
-        // Parked at the end? Restart from the top so play always plays.
+    }
+
+    /// Begin (or resume) playback from the current playhead, restarting from the
+    /// top if parked at the end.
+    private func startPlayback() {
+        guard canPlay, !isPlaying else { return }
         if engine.durationSeconds > 0, engine.positionSeconds >= engine.durationSeconds - 0.05 {
             engine.seek(toSeconds: 0)
         }
@@ -178,7 +195,6 @@ final class AuditionController: ObservableObject {
             try engine.play()
             isPlaying = true
             startPositionTimer()
-            statusText = "Playing \(selectedSide.rawValue.lowercased()) track."
         } catch {
             statusText = "Playback could not start. Try another supported audio file."
         }
@@ -211,6 +227,77 @@ final class AuditionController: ObservableObject {
     private func stopPositionTimer() {
         positionTimer?.invalidate()
         positionTimer = nil
+    }
+
+    // MARK: - Audio session interruptions / route changes
+
+    /// A phone call (or other interruption) began: pause, remembering whether we
+    /// were playing so we can resume when it ends.
+    func handleInterruptionBegan() {
+        wasPlayingBeforeInterruption = isPlaying
+        if isPlaying {
+            stopPlayback()
+            statusText = "Paused for an interruption."
+        }
+    }
+
+    /// The interruption ended: resume only if we were playing and the system says
+    /// we may (`AVAudioSession.InterruptionOptions.shouldResume`).
+    func handleInterruptionEnded(shouldResume: Bool) {
+        guard wasPlayingBeforeInterruption else { return }
+        wasPlayingBeforeInterruption = false
+        if shouldResume {
+            startPlayback()
+            if isPlaying {
+                statusText = "Playing \(selectedSide.rawValue.lowercased()) track."
+            }
+        }
+    }
+
+    /// The current output route went away (e.g. headphones unplugged). Apple's
+    /// guidance is to pause rather than suddenly play out the speaker.
+    func handleAudioRouteLost() {
+        if isPlaying {
+            stopPlayback()
+            statusText = "Output changed. Press play to continue."
+        }
+    }
+
+    private func observeAudioSession() {
+        let center = NotificationCenter.default
+        let session = AVAudioSession.sharedInstance()
+
+        notificationObservers.append(center.addObserver(
+            forName: AVAudioSession.interruptionNotification, object: session, queue: .main
+        ) { [weak self] note in
+            guard let info = note.userInfo,
+                  let raw = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+            let shouldResume: Bool
+            if type == .ended, let optionRaw = info[AVAudioSessionInterruptionOptionKey] as? UInt {
+                shouldResume = AVAudioSession.InterruptionOptions(rawValue: optionRaw).contains(.shouldResume)
+            } else {
+                shouldResume = false
+            }
+            Task { @MainActor in
+                guard let self else { return }
+                switch type {
+                case .began: self.handleInterruptionBegan()
+                case .ended: self.handleInterruptionEnded(shouldResume: shouldResume)
+                @unknown default: break
+                }
+            }
+        })
+
+        notificationObservers.append(center.addObserver(
+            forName: AVAudioSession.routeChangeNotification, object: session, queue: .main
+        ) { [weak self] note in
+            guard let info = note.userInfo,
+                  let raw = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
+                  let reason = AVAudioSession.RouteChangeReason(rawValue: raw),
+                  reason == .oldDeviceUnavailable else { return }
+            Task { @MainActor in self?.handleAudioRouteLost() }
+        })
     }
 
     /// Switch Original/Mastered on the single live timeline. The cursor never

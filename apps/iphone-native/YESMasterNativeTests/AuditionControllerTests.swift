@@ -128,6 +128,46 @@ final class AuditionControllerTests: XCTestCase {
         XCTAssertGreaterThan(gain, 0.8)
     }
 
+    func testInterruptionPausesThenResumesWhenAllowed() async throws {
+        let ctx = try makeLoadedController()
+        await ctx.controller.analysisTask?.value
+        ctx.controller.togglePlayback()
+        XCTAssertTrue(ctx.controller.isPlaying)
+
+        ctx.controller.handleInterruptionBegan()
+        XCTAssertFalse(ctx.controller.isPlaying, "an interruption should pause")
+
+        ctx.controller.handleInterruptionEnded(shouldResume: true)
+        XCTAssertTrue(ctx.controller.isPlaying, "should resume when the system allows it")
+    }
+
+    func testInterruptionWithoutResumeStaysPaused() async throws {
+        let ctx = try makeLoadedController()
+        await ctx.controller.analysisTask?.value
+        ctx.controller.togglePlayback()
+        ctx.controller.handleInterruptionBegan()
+        ctx.controller.handleInterruptionEnded(shouldResume: false)
+        XCTAssertFalse(ctx.controller.isPlaying)
+    }
+
+    func testInterruptionWhilePausedDoesNotAutoResume() async throws {
+        let ctx = try makeLoadedController()
+        await ctx.controller.analysisTask?.value
+        // Not playing when the interruption begins.
+        ctx.controller.handleInterruptionBegan()
+        ctx.controller.handleInterruptionEnded(shouldResume: true)
+        XCTAssertFalse(ctx.controller.isPlaying, "must not start playing on its own after an interruption")
+    }
+
+    func testRouteLossPausesPlayback() async throws {
+        let ctx = try makeLoadedController()
+        await ctx.controller.analysisTask?.value
+        ctx.controller.togglePlayback()
+        XCTAssertTrue(ctx.controller.isPlaying)
+        ctx.controller.handleAudioRouteLost()
+        XCTAssertFalse(ctx.controller.isPlaying, "losing the output route should pause")
+    }
+
     // MARK: - Fixture
 
     private struct Context {
