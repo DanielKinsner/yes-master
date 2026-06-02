@@ -60,6 +60,14 @@ export interface AdvancedSettings {
   compression_link_stereo: boolean | null;
   bit_depth: number | null;
   target_sample_rate: number | null;
+  /// Tier-1 adaptive guardrail strength in [0,1]. `null`/omitted = backend
+  /// default (on). `0` = guardrails off (presets behave exactly as the
+  /// non-adaptive chain). Scales all defensive trims.
+  adaptive_strength?: number | null;
+  /// Injected level-invariant source snapshot for the adaptive guardrails,
+  /// set on dispatch like `source_lufs_integrated`. `null`/omitted = guardrails
+  /// inert. Not user-facing.
+  source_profile?: SourceProfile | null;
 }
 
 /// Phase A3 — delivery profile presets. Mirrors `types::DeliveryProfile`
@@ -249,6 +257,18 @@ export interface SpectralBalance6 {
   mid: number;
   presence: number;
   air: number;
+}
+
+/// Mirrors `types::SourceProfile`. Compact, level-invariant source snapshot
+/// the Tier-1 adaptive guardrails read to trim preset moves the source already
+/// makes. Injected onto `AdvancedSettings.source_profile` before each chain
+/// build. See docs/plans/2026-06-02-001-adaptive-dsp-tier1-guardrails.md.
+export interface SourceProfile {
+  spectral_6: SpectralBalance6;
+  dynamic_range_p95_p10_db: number;
+  dynamic_range_lu: number;
+  stereo_correlation?: number | null;
+  stereo_width: number;
 }
 
 export interface AnalysisResult {
