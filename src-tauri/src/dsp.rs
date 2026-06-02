@@ -3138,6 +3138,111 @@ mod tests {
         );
     }
 
+    #[test]
+    fn guardrails_soften_compression_and_width_on_dense_wide_source() {
+        use crate::types::{SourceProfile, SpectralBalance6};
+        let mut settings = default_master_settings();
+        settings.preset = Preset::Universal; // compresses by default + widens (1.04)
+        settings.intensity = 0.5;
+        let base = ChainCoeffs::from_settings(48_000, &settings);
+
+        // Dense + wide source, tonally neutral so only those two guardrails fire.
+        settings.advanced.source_profile = Some(SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub: 0.08,
+                low: 0.22,
+                low_mid: 0.20,
+                mid: 0.20,
+                presence: 0.08,
+                air: 0.05,
+            },
+            dynamic_range_p95_p10_db: 2.0, // very dense
+            dynamic_range_lu: 2.0,
+            stereo_correlation: Some(0.1), // very wide / phasey
+            stereo_width: 1.0,
+        });
+        settings.advanced.adaptive_strength = Some(1.0);
+        let adapted = ChainCoeffs::from_settings(48_000, &settings);
+
+        // Softer compression => higher (less negative) threshold.
+        assert!(
+            adapted.comp_low_threshold_db > base.comp_low_threshold_db,
+            "dense guardrail should raise the comp threshold: adapted={} base={}",
+            adapted.comp_low_threshold_db,
+            base.comp_low_threshold_db
+        );
+        // Less widening => side scale pulled toward neutral (1.0).
+        assert!(
+            adapted.width_side_scale < base.width_side_scale,
+            "wide guardrail should pull width toward neutral: adapted={} base={}",
+            adapted.width_side_scale,
+            base.width_side_scale
+        );
+    }
+
+    #[test]
+    fn guardrails_reduce_output_high_share_on_bright_source() {
+        use crate::analysis::compute_spectral_balance_6band;
+        use crate::types::{SourceProfile, SpectralBalance6};
+
+        let sr = 48_000u32;
+        let channels = 2usize;
+        let n = sr as usize; // 1 second
+
+        // Quiet broadband noise: rich high content, low enough to keep the
+        // limiter out of the comparison, so only the air-shelf trim moves the
+        // output's presence+air share.
+        let mut state = 0x1234_5678u32;
+        let mut input = Vec::with_capacity(n * channels);
+        for _ in 0..n {
+            state = state.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+            let s = ((state >> 8) as f32 / 8_388_608.0 - 1.0) * 0.05;
+            input.push(s);
+            input.push(s);
+        }
+
+        let render = |profile: Option<SourceProfile>| -> Vec<f32> {
+            let mut settings = default_master_settings();
+            settings.preset = Preset::Universal;
+            settings.intensity = 1.0; // exaggerate the preset's air lift
+            settings.advanced.adaptive_strength = Some(1.0);
+            settings.advanced.source_profile = profile;
+            let mut chain = MasteringChain::new(sr, channels, &settings);
+            let mut out = input.clone();
+            for frame in out.chunks_mut(channels) {
+                chain.process_frame_inplace(frame);
+            }
+            out
+        };
+
+        let baseline = render(None); // guardrails inert
+        let bright = render(Some(SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub: 0.08,
+                low: 0.22,
+                low_mid: 0.20,
+                mid: 0.20,
+                presence: 0.20,
+                air: 0.10,
+            },
+            dynamic_range_p95_p10_db: 10.0,
+            dynamic_range_lu: 9.0,
+            stereo_correlation: Some(0.8),
+            stereo_width: 1.0,
+        }));
+
+        let base_bal =
+            compute_spectral_balance_6band(&baseline, sr, channels).expect("baseline 6-band");
+        let bright_bal =
+            compute_spectral_balance_6band(&bright, sr, channels).expect("adapted 6-band");
+        let base_high = base_bal.presence + base_bal.air;
+        let bright_high = bright_bal.presence + bright_bal.air;
+        assert!(
+            bright_high < base_high,
+            "adapted bright source should render less presence+air: adapted={bright_high} base={base_high}"
+        );
+    }
+
     mod preset_byte_identity {
         use super::*;
         use sha2::{Digest, Sha256};
