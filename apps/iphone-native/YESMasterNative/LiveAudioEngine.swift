@@ -73,16 +73,34 @@ final class LiveAudioEngine: ObservableObject {
 }
 
 /// Real `LiveAudioOutput`: an `AVAudioEngine` with a single `AVAudioSourceNode`
-/// whose render callback pulls mastered PCM from the Rust stream. The source
-/// node's format is pinned to the decoded source rate/channels (interleaved);
-/// the engine resamples to the hardware rate for monitoring only, so the live
-/// chain runs at the same rate the export path uses.
+/// whose render callback pulls mastered PCM from the Rust stream. AVAudioEngine
+/// accepts a standard non-interleaved Float32 source format on device; Rust still
+/// renders interleaved PCM into a preallocated scratch buffer, and this layer
+/// copies each channel into the node's buffers.
 final class AVAudioEngineOutput: LiveAudioOutput {
+    private static let maxRenderScratchFrames = 16_384
+
     private let engine = AVAudioEngine()
     private var sourceNode: AVAudioSourceNode?
     private var sessionConfigured = false
+    /// Preallocated interleaved scratch. The Rust stream renders interleaved
+    /// here; the render block then deinterleaves into AVAudioEngine's per-channel
+    /// buffers. The engine's buses reject interleaved formats (OSStatus -10868),
+    /// so the node itself runs a standard deinterleaved float format.
+    private var scratch: UnsafeMutableBufferPointer<Float>?
 
     var isRunning: Bool { engine.isRunning }
+
+    deinit { scratch?.deallocate() }
+
+    static func makeSourceFormat(sampleRate: Double, channels: Int) -> AVAudioFormat? {
+        AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: sampleRate > 0 ? sampleRate : 48_000,
+            channels: AVAudioChannelCount(max(1, channels)),
+            interleaved: false
+        )
+    }
 
     func start(pulling stream: LiveAuditionStreaming) throws {
         try configureSessionIfNeeded()
@@ -116,29 +134,77 @@ final class AVAudioEngineOutput: LiveAudioOutput {
             sourceNode = nil
         }
 
-        let channels = AVAudioChannelCount(max(1, stream.channelCount))
+        let channelCount = max(1, stream.channelCount)
         let sampleRate = stream.sampleRate > 0 ? stream.sampleRate : 48_000
-        guard let format = AVAudioFormat(
-            commonFormat: .pcmFormatFloat32,
-            sampleRate: sampleRate,
-            channels: channels,
-            interleaved: true
-        ) else { return }
+        guard let format = Self.makeSourceFormat(sampleRate: sampleRate, channels: channelCount) else { return }
+        prepareScratch(channels: channelCount)
+        guard let scratchBase = scratch?.baseAddress else { return }
+        let scratchCapacityFrames = Self.maxRenderScratchFrames
 
-        // RT render callback. Captures `stream` once (no per-call allocation);
-        // the body is a single forward into the Rust C ABI. NOTE: this is the
-        // hot path to profile in the on-device spike — if existential dispatch
-        // shows ARC traffic, capture the concrete handle instead.
         let node = AVAudioSourceNode(format: format) { _, _, frameCount, audioBufferList in
+            let frames = Int(frameCount)
             let buffers = UnsafeMutableAudioBufferListPointer(audioBufferList)
-            guard let raw = buffers[0].mData else { return noErr }
-            let out = raw.assumingMemoryBound(to: Float.self)
-            _ = stream.render(into: out, frames: frameCount)
+            guard frames <= scratchCapacityFrames, buffers.count >= channelCount else {
+                Self.clear(buffers: buffers, frames: frames)
+                return noErr
+            }
+
+            let written = min(Int(stream.render(into: scratchBase, frames: frameCount)), frames)
+            for channel in 0..<channelCount {
+                guard let raw = buffers[channel].mData else {
+                    Self.clear(buffers: buffers, frames: frames)
+                    return noErr
+                }
+                let availableSamples = Int(buffers[channel].mDataByteSize) / MemoryLayout<Float>.size
+                guard availableSamples >= frames else {
+                    Self.clear(buffers: buffers, frames: frames)
+                    return noErr
+                }
+
+                let destination = raw.assumingMemoryBound(to: Float.self)
+                for frame in 0..<written {
+                    destination[frame] = scratchBase[frame * channelCount + channel]
+                }
+                if written < frames {
+                    for frame in written..<frames {
+                        destination[frame] = 0.0
+                    }
+                }
+            }
+
+            if buffers.count > channelCount {
+                for channel in channelCount..<buffers.count {
+                    guard let raw = buffers[channel].mData else { continue }
+                    let destination = raw.assumingMemoryBound(to: Float.self)
+                    let availableSamples = min(frames, Int(buffers[channel].mDataByteSize) / MemoryLayout<Float>.size)
+                    for frame in 0..<availableSamples {
+                        destination[frame] = 0.0
+                    }
+                }
+            }
             return noErr
         }
 
         engine.attach(node)
         engine.connect(node, to: engine.mainMixerNode, format: format)
         sourceNode = node
+    }
+
+    private func prepareScratch(channels: Int) {
+        scratch?.deallocate()
+        let capacity = Self.maxRenderScratchFrames * max(1, channels)
+        scratch = UnsafeMutableBufferPointer<Float>.allocate(capacity: capacity)
+        scratch?.initialize(repeating: 0.0)
+    }
+
+    private static func clear(buffers: UnsafeMutableAudioBufferListPointer, frames: Int) {
+        for index in 0..<buffers.count {
+            guard let raw = buffers[index].mData else { continue }
+            let destination = raw.assumingMemoryBound(to: Float.self)
+            let availableSamples = min(frames, Int(buffers[index].mDataByteSize) / MemoryLayout<Float>.size)
+            for sample in 0..<availableSamples {
+                destination[sample] = 0.0
+            }
+        }
     }
 }

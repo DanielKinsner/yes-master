@@ -1,3 +1,4 @@
+import AVFoundation
 import XCTest
 @testable import YES_Master_Native
 
@@ -80,6 +81,15 @@ final class LiveAudioEngineTests: XCTestCase {
         engine.load(url: url, preset: "balanced", intensity: 0.5, loudnessTarget: -11)
         XCTAssertEqual(engine.positionSeconds, 3.0)
         XCTAssertEqual(engine.durationSeconds, 60.0)
+    }
+
+    func testSourceNodeFormatUsesNonInterleavedFloat32() throws {
+        let format = try XCTUnwrap(AVAudioEngineOutput.makeSourceFormat(sampleRate: 48_000, channels: 2))
+
+        XCTAssertEqual(format.commonFormat, .pcmFormatFloat32)
+        XCTAssertFalse(format.isInterleaved)
+        XCTAssertEqual(format.channelCount, 2)
+        XCTAssertEqual(format.sampleRate, 48_000)
     }
 }
 
