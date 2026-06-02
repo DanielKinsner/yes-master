@@ -77,40 +77,11 @@ enum NativeLoudness: String, CaseIterable, Identifiable {
     }
 }
 
-private enum AuditionSide: String, CaseIterable, Identifiable {
-    case original = "Original"
-    case mastered = "Mastered"
-
-    var id: String { rawValue }
-}
-
 struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var selectedPreset: NativeStylePreset = .balanced
-    @State private var selectedLoudness: NativeLoudness = .medium
-    @State private var selectedAudition: AuditionSide = .original
-    @State private var volumeMatchEnabled = false
-    @State private var presetIntensity = 0.5
-    @State private var importedTrack: ImportedTrack?
-    @State private var analysisResult: NativeAnalysisResult?
-    @State private var masteredLufs: Double?
-    @State private var masteredPreviewURL: URL?
-    @State private var shareMasterURL: URL?
-    @State private var renderTask: Task<Void, Never>?
-    @State private var previewTask: Task<Void, Never>?
-    @State private var previewDebounceTask: Task<Void, Never>?
-    @State private var isPreparingMasterPreview = false
-    @State private var isRendering = false
+    @StateObject private var controller = AuditionController()
     @State private var isImportingTrack = false
-    @State private var isAnalyzing = false
-    @State private var analysisTask: Task<Void, Never>?
     @State private var heroPulse = false
-    @State private var statusText = "Import a track to begin."
-    @StateObject private var playbackController = TrackPlaybackController()
-
-    private let bridge = NativeMasteringBridge()
-    private let importStore = ImportedTrackStore()
-    private let renderStorage = RenderStorage()
 
     var body: some View {
         ZStack {
@@ -140,9 +111,9 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .fileImporter(
             isPresented: $isImportingTrack,
-            allowedContentTypes: bridge.supportedImportContentTypes,
+            allowedContentTypes: controller.supportedImportContentTypes,
             allowsMultipleSelection: false,
-            onCompletion: handleImportResult
+            onCompletion: controller.handleImportResult
         )
         .onAppear {
             guard !reduceMotion else { return }
@@ -286,10 +257,10 @@ struct ContentView: View {
                 .blur(radius: 0.4)
 
             Button {
-                if importedTrack == nil {
+                if controller.importedTrack == nil {
                     isImportingTrack = true
                 } else {
-                    toggleAuditionPlayback()
+                    controller.togglePlayback()
                 }
             } label: {
                 ZStack {
@@ -318,11 +289,11 @@ struct ContentView: View {
                         .shadow(color: .white.opacity(0.6), radius: 10)
                 }
                 .frame(width: 72, height: 72)
-                .scaleEffect(playbackController.isPlaying && !reduceMotion ? 1.04 : 1.0)
-                .animation(.easeOut(duration: 0.18), value: playbackController.isPlaying)
+                .scaleEffect(controller.isPlaying && !reduceMotion ? 1.04 : 1.0)
+                .animation(.easeOut(duration: 0.18), value: controller.isPlaying)
             }
             .buttonStyle(.plain)
-            .disabled(importedTrack != nil && !canPlaySelectedAudition)
+            .disabled(controller.importedTrack != nil && !controller.canPlay)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 166)
@@ -330,11 +301,11 @@ struct ContentView: View {
 
     @ViewBuilder
     private var processingBanner: some View {
-        if isAnalyzing || isPreparingMasterPreview {
+        if controller.isAnalyzing {
             HStack(spacing: 10) {
                 ProcessingSpinner()
 
-                Text(isAnalyzing ? "Analyzing track" : "Preparing preview")
+                Text("Analyzing track")
                     .font(.system(size: 12, weight: .heavy))
                     .foregroundStyle(Color(red: 0.72, green: 0.82, blue: 1.0))
 
@@ -354,9 +325,8 @@ struct ContentView: View {
 
     private var heroListeningToggles: some View {
         HStack(spacing: 22) {
-            checkboxButton(title: "Volume Match", active: volumeMatchEnabled) {
-                volumeMatchEnabled.toggle()
-                applyVolumeMatchToActivePlayback()
+            checkboxButton(title: "Volume Match", active: controller.volumeMatchEnabled) {
+                controller.toggleVolumeMatch()
             }
             Spacer(minLength: 0)
         }
@@ -390,27 +360,13 @@ struct ContentView: View {
         .buttonStyle(.plain)
     }
 
-    private func currentSideVolume() -> Float {
-        guard volumeMatchEnabled,
-              let originalLufs = analysisResult?.lufsIntegrated,
-              let masterLufs = masteredLufs else { return 1.0 }
-        switch selectedAudition {
-        case .original: return volumeMatchLinearGain(sideLufs: originalLufs, otherLufs: masterLufs)
-        case .mastered: return volumeMatchLinearGain(sideLufs: masterLufs, otherLufs: originalLufs)
-        }
-    }
-
-    private func applyVolumeMatchToActivePlayback() {
-        playbackController.setVolume(currentSideVolume())
-    }
-
     private var heroTrackRow: some View {
         HStack(alignment: .top) {
             Button {
                 isImportingTrack = true
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: importedTrack == nil ? "tray.and.arrow.down.fill" : "waveform")
+                    Image(systemName: controller.importedTrack == nil ? "tray.and.arrow.down.fill" : "waveform")
                         .font(.system(size: 12, weight: .heavy))
                         .foregroundStyle(Color(red: 0.78, green: 0.90, blue: 1.0))
                         .frame(width: 22, height: 22)
@@ -431,7 +387,7 @@ struct ContentView: View {
                         .foregroundStyle(Color(red: 0.86, green: 0.92, blue: 1.0))
                         .lineLimit(1)
 
-                    if importedTrack != nil {
+                    if controller.importedTrack != nil {
                         Text(fileTypeLabel)
                             .font(.system(size: 10, weight: .heavy))
                             .foregroundStyle(Color(red: 0.47, green: 0.62, blue: 0.86))
@@ -455,7 +411,7 @@ struct ContentView: View {
             Button {
                 isImportingTrack = true
             } label: {
-                Image(systemName: importedTrack == nil ? "plus" : "pencil")
+                Image(systemName: controller.importedTrack == nil ? "plus" : "pencil")
                     .font(.system(size: 15, weight: .black))
                     .foregroundStyle(Color(red: 0.86, green: 0.90, blue: 1.0))
                     .frame(width: 36, height: 36)
@@ -472,18 +428,18 @@ struct ContentView: View {
 
     private var auditionSwitch: some View {
         HStack(spacing: 4) {
-            ForEach(AuditionSide.allCases) { side in
+            ForEach(AuditionController.Side.allCases) { side in
                 Button {
-                    selectAudition(side)
+                    controller.selectSide(side)
                 } label: {
                     Text(side.rawValue)
                         .font(.system(size: 15, weight: .heavy))
-                        .foregroundStyle(selectedAudition == side ? .white : Color(red: 0.66, green: 0.70, blue: 0.82))
+                        .foregroundStyle(controller.selectedSide == side ? .white : Color(red: 0.66, green: 0.70, blue: 0.82))
                         .frame(maxWidth: .infinity)
                         .frame(height: 42)
                         .background(
                             Group {
-                                if selectedAudition == side {
+                                if controller.selectedSide == side {
                                     LinearGradient(
                                         colors: [
                                             Color(red: 0.25, green: 0.56, blue: 1.0),
@@ -518,8 +474,7 @@ struct ContentView: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 7) {
                 ForEach(NativeStylePreset.allCases) { preset in
                     Button {
-                        selectedPreset = preset
-                        scheduleMasteredPreviewRefresh()
+                        controller.setStyle(preset)
                     } label: {
                         HStack(spacing: 10) {
                             ZStack {
@@ -552,7 +507,7 @@ struct ContentView: View {
                         .background(
                             LinearGradient(
                                 colors: [
-                                    preset.accent.opacity(selectedPreset == preset ? 0.24 : 0.10),
+                                    preset.accent.opacity(controller.selectedPreset == preset ? 0.24 : 0.10),
                                     Color(red: 0.035, green: 0.065, blue: 0.13).opacity(0.92)
                                 ],
                                 startPoint: .topLeading,
@@ -563,7 +518,7 @@ struct ContentView: View {
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .stroke(
-                                    selectedPreset == preset ? preset.accent.opacity(0.75) : Color.white.opacity(0.09),
+                                    controller.selectedPreset == preset ? preset.accent.opacity(0.75) : Color.white.opacity(0.09),
                                     lineWidth: 1
                                 )
                         )
@@ -581,15 +536,10 @@ struct ContentView: View {
             VStack(spacing: 8) {
                 Slider(
                     value: Binding(
-                        get: { presetIntensity },
-                        set: { presetIntensity = $0 }
+                        get: { controller.presetIntensity },
+                        set: { controller.setIntensity($0) }
                     ),
-                    in: 0...1,
-                    onEditingChanged: { isEditing in
-                        if !isEditing {
-                            scheduleMasteredPreviewRefresh()
-                        }
-                    }
+                    in: 0...1
                 )
                 .tint(Color(red: 0.22, green: 0.56, blue: 1.0))
                 .frame(height: 34)
@@ -624,17 +574,16 @@ struct ContentView: View {
             HStack(spacing: 4) {
                 ForEach(NativeLoudness.allCases) { loudness in
                     Button {
-                        selectedLoudness = loudness
-                        scheduleMasteredPreviewRefresh()
+                        controller.setLoudness(loudness)
                     } label: {
                         Text(loudness.rawValue)
                             .font(.system(size: 15, weight: .heavy))
-                            .foregroundStyle(selectedLoudness == loudness ? .white : Color(red: 0.78, green: 0.82, blue: 0.92))
+                            .foregroundStyle(controller.selectedLoudness == loudness ? .white : Color(red: 0.78, green: 0.82, blue: 0.92))
                             .frame(maxWidth: .infinity)
                             .frame(height: 42)
                             .background(
                                 Group {
-                                    if selectedLoudness == loudness {
+                                    if controller.selectedLoudness == loudness {
                                         LinearGradient(
                                             colors: [
                                                 Color(red: 0.25, green: 0.56, blue: 1.0),
@@ -665,9 +614,9 @@ struct ContentView: View {
 
     private var createMasterButton: some View {
         Button {
-            renderMaster()
+            controller.createMaster()
         } label: {
-            Text(isRendering ? "Creating Master..." : "Create Master")
+            Text(controller.isRendering ? "Creating Master..." : "Create Master")
                 .font(.system(size: 18, weight: .heavy))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
@@ -686,12 +635,12 @@ struct ContentView: View {
                 .shadow(color: Color.blue.opacity(0.34), radius: 26, y: 16)
         }
         .buttonStyle(.plain)
-        .disabled(isRendering)
+        .disabled(controller.isRendering)
     }
 
     @ViewBuilder
     private var shareMasterButton: some View {
-        if let shareMasterURL {
+        if let shareMasterURL = controller.shareMasterURL {
             ShareLink(item: shareMasterURL) {
                 Text("Share Master")
                     .font(.system(size: 15, weight: .heavy))
@@ -711,7 +660,7 @@ struct ContentView: View {
     @ViewBuilder
     private var errorStatus: some View {
         if shouldShowStatusText {
-            Text(statusText)
+            Text(controller.statusText)
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(Color(red: 0.72, green: 0.79, blue: 0.92))
                 .multilineTextAlignment(.center)
@@ -743,79 +692,38 @@ struct ContentView: View {
         }
     }
 
-    private func handleImportResult(_ result: Result<[URL], Error>) {
-        switch result {
-        case .success(let urls):
-            guard let sourceURL = urls.first else {
-                statusText = "No track was selected."
-                return
-            }
-
-            do {
-                let track = try importStore.importTrack(
-                    from: sourceURL,
-                    supportedExtensions: bridge.supportedImportExtensions
-                )
-                importedTrack = track
-                masteredPreviewURL = nil
-                masteredLufs = nil
-                shareMasterURL = nil
-                selectedAudition = .original
-                playbackController.pause()
-                analyzeImportedTrack(track)
-                renderStorage.enforceLimit(in: renderStorage.importsDirectory, max: 20)
-            } catch ImportedTrackStore.ImportError.unsupportedExtension(let fileExtension) {
-                let label = fileExtension.isEmpty ? "that file" : ".\(fileExtension)"
-                statusText = "\(label) is not supported yet. Use \(bridge.supportedImportExtensions.joined(separator: ", "))."
-            } catch ImportedTrackStore.ImportError.sourceUnavailable {
-                statusText = "That file is not available. Make sure it finished downloading, then try again."
-            } catch ImportedTrackStore.ImportError.emptyFile {
-                statusText = "That file looks empty. Make sure it finished downloading, then try again."
-            } catch ImportedTrackStore.ImportError.unreadableContainer(let fileExtension) {
-                statusText = ".\(fileExtension) was selected, but it does not look like readable audio."
-            } catch {
-                statusText = "Track could not be imported. Try another supported audio file."
-            }
-        case .failure:
-            statusText = "Import was cancelled."
-        }
-    }
-
     private var headerStatus: String {
-        if isRendering {
+        if controller.isRendering {
             return "Rendering"
         }
-        if isPreparingMasterPreview {
-            return "Preview"
-        }
-        if isAnalyzing {
+        if controller.isAnalyzing {
             return "Analyzing"
         }
-        if analysisResult != nil {
+        if controller.analysisResult != nil {
             return "Ready"
         }
-        return importedTrack == nil ? "Ready" : "Loaded"
+        return controller.importedTrack == nil ? "Ready" : "Loaded"
     }
 
     private var heroSymbol: String {
-        if importedTrack == nil {
+        if controller.importedTrack == nil {
             return "square.and.arrow.down"
         }
-        return playbackController.isPlaying ? "pause.fill" : "play.fill"
+        return controller.isPlaying ? "pause.fill" : "play.fill"
     }
 
     private var fileTypeLabel: String {
-        importedTrack?.localURL.pathExtension.uppercased().isEmpty == false
-            ? importedTrack?.localURL.pathExtension.uppercased() ?? "AUDIO"
+        controller.importedTrack?.localURL.pathExtension.uppercased().isEmpty == false
+            ? controller.importedTrack?.localURL.pathExtension.uppercased() ?? "AUDIO"
             : "AUDIO"
     }
 
     private var trackChipTitle: String {
-        importedTrack?.displayName ?? "Import track"
+        controller.importedTrack?.displayName ?? "Import track"
     }
 
     private var shouldShowStatusText: Bool {
-        let lowercasedStatus = statusText.lowercased()
+        let lowercasedStatus = controller.statusText.lowercased()
         return lowercasedStatus.contains("failed")
             || lowercasedStatus.contains("could not")
             || lowercasedStatus.contains("not supported")
@@ -826,289 +734,9 @@ struct ContentView: View {
             || lowercasedStatus.contains("cancelled")
     }
 
-    private var selectedAuditionURL: URL? {
-        switch selectedAudition {
-        case .original:
-            importedTrack?.localURL
-        case .mastered:
-            masteredPreviewURL
-        }
-    }
-
-    private var canPlaySelectedAudition: Bool {
-        selectedAuditionURL != nil
-            && analysisResult != nil
-            && !isAnalyzing
-            && !isRendering
-            && !isPreparingMasterPreview
-    }
-
-    private var currentRenderOptions: NativeRenderOptions {
-        NativeRenderOptions(
-            preset: selectedPreset.bridgeIdentifier,
-            intensity: Float(presetIntensity),
-            lufsTarget: selectedLoudness.lufsTarget
-        )
-    }
-
     private var intensityLabel: String {
-        let percent = Int((presetIntensity * 100).rounded())
+        let percent = Int((controller.presetIntensity * 100).rounded())
         return "\(percent)%"
-    }
-
-    private func toggleAuditionPlayback() {
-        guard let selectedAuditionURL, canPlaySelectedAudition else {
-            if selectedAudition == .mastered {
-                statusText = isPreparingMasterPreview
-                    ? "Preparing the mastered preview."
-                    : "Mastered preview is not ready yet."
-            } else {
-                statusText = "Import and analyze a track before playback."
-            }
-            return
-        }
-
-        if playbackController.isPlaying {
-            playbackController.pause()
-            statusText = "Playback paused."
-            return
-        }
-
-        do {
-            try playbackController.play(url: selectedAuditionURL, volume: currentSideVolume())
-            statusText = "Playing \(selectedAudition.rawValue.lowercased()) track."
-        } catch {
-            statusText = "Playback could not start. Try another supported audio file."
-        }
-    }
-
-    private func selectAudition(_ side: AuditionSide) {
-        guard side != selectedAudition else { return }
-        if side == .mastered && masteredPreviewURL == nil {
-            let shouldResume = playbackController.isPlaying
-            let resumeTime = playbackController.currentTime
-            playbackController.pause()
-            selectedAudition = .mastered
-            statusText = isPreparingMasterPreview
-                ? "Preparing the mastered preview."
-                : "Preparing mastered preview."
-            prepareMasteredPreview(
-                selectWhenReady: true,
-                resumePlayback: shouldResume,
-                resumeTime: resumeTime
-            )
-            return
-        }
-
-        let shouldResume = playbackController.isPlaying
-        let resumeTime = playbackController.currentTime
-        playbackController.pause()
-        selectedAudition = side
-
-        guard shouldResume else { return }
-        guard let selectedAuditionURL, canPlaySelectedAudition else {
-            statusText = "Selected \(side.rawValue.lowercased())."
-            return
-        }
-
-        do {
-            try playbackController.play(url: selectedAuditionURL, startingAt: resumeTime, volume: currentSideVolume())
-            statusText = "Switched to \(side.rawValue.lowercased()) at the same spot."
-        } catch {
-            statusText = "Playback could not switch. Try playing again."
-        }
-    }
-
-    private func analyzeImportedTrack(_ track: ImportedTrack) {
-        analysisTask?.cancel()
-        renderTask?.cancel()
-        previewTask?.cancel()
-        previewDebounceTask?.cancel()
-        analysisResult = nil
-        masteredPreviewURL = nil
-        masteredLufs = nil
-        shareMasterURL = nil
-        isRendering = false
-        isPreparingMasterPreview = false
-        isAnalyzing = true
-        statusText = "Analyzing with the YES Master engine."
-
-        let bridge = bridge
-        analysisTask = Task {
-            let result = await Task.detached {
-                Result {
-                    try bridge.analyzeTrack(at: track.localURL)
-                }
-            }.value
-
-            guard !Task.isCancelled else { return }
-            isAnalyzing = false
-
-            switch result {
-            case .success(let analysis):
-                analysisResult = analysis
-                statusText = "Analysis complete. Preparing mastered preview."
-                prepareMasteredPreview(selectWhenReady: false)
-            case .failure(let error):
-                analysisResult = nil
-                statusText = friendlyAudioErrorMessage(error)
-            }
-        }
-    }
-
-    private func scheduleMasteredPreviewRefresh() {
-        previewDebounceTask?.cancel()
-        previewDebounceTask = Task {
-            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
-            guard !Task.isCancelled else { return }
-            refreshMasteredPreviewForCurrentSettings()
-        }
-    }
-
-    private func refreshMasteredPreviewForCurrentSettings() {
-        guard importedTrack != nil, analysisResult != nil, !isRendering else { return }
-        previewTask?.cancel()
-        renderTask?.cancel()
-        playbackController.pause()
-        masteredPreviewURL = nil
-        masteredLufs = nil
-        shareMasterURL = nil
-        if selectedAudition == .mastered {
-            selectedAudition = .original
-        }
-        statusText = "Settings changed. Preparing mastered preview."
-        prepareMasteredPreview(selectWhenReady: false)
-    }
-
-    private func prepareMasteredPreview(
-        selectWhenReady: Bool,
-        resumePlayback: Bool = false,
-        resumeTime: TimeInterval = 0
-    ) {
-        guard let track = importedTrack, analysisResult != nil else { return }
-
-        previewTask?.cancel()
-        isPreparingMasterPreview = true
-        masteredPreviewURL = nil
-        masteredLufs = nil
-        shareMasterURL = nil
-
-        let bridge = bridge
-        let sourceURL = track.localURL
-        let outputDirectoryURL = renderStorage.previewsDirectory
-        let options = currentRenderOptions
-
-        previewTask = Task {
-            let result = await Task.detached {
-                Result {
-                    try bridge.renderMaster(
-                        from: sourceURL,
-                        toDirectory: outputDirectoryURL,
-                        options: options
-                    )
-                }
-            }.value
-
-            guard !Task.isCancelled else { return }
-            isPreparingMasterPreview = false
-
-            switch result {
-            case .success(let job):
-                guard let outputPath = job.outputPaths.first else {
-                    statusText = "Mastered preview finished but no WAV was returned."
-                    return
-                }
-                masteredPreviewURL = URL(fileURLWithPath: outputPath)
-                masteredLufs = job.measurements?.lufsIntegrated
-                renderStorage.pruneObsoletePreviews(keeping: masteredPreviewURL)
-                if selectWhenReady {
-                    selectedAudition = .mastered
-                }
-                if resumePlayback, let masteredPreviewURL {
-                    do {
-                        try playbackController.play(url: masteredPreviewURL, startingAt: resumeTime, volume: currentSideVolume())
-                        statusText = "Switched to mastered at the same spot."
-                        return
-                    } catch {
-                        statusText = "Mastered preview is ready. Tap play to listen."
-                        return
-                    }
-                }
-                statusText = "Mastered preview ready."
-            case .failure(let error):
-                masteredPreviewURL = nil
-                if selectedAudition == .mastered {
-                    selectedAudition = .original
-                }
-                statusText = friendlyAudioErrorMessage(error)
-            }
-        }
-    }
-
-    private func renderMaster() {
-        guard let track = importedTrack, analysisResult != nil else {
-            statusText = "Import and analyze a track before creating a master."
-            return
-        }
-
-        renderTask?.cancel()
-        previewTask?.cancel()
-        previewDebounceTask?.cancel()
-        playbackController.pause()
-        masteredPreviewURL = nil
-        masteredLufs = nil
-        shareMasterURL = nil
-        isRendering = true
-        isPreparingMasterPreview = false
-        statusText = "Creating master with the YES Master engine."
-
-        let bridge = bridge
-        let sourceURL = track.localURL
-        let outputDirectoryURL = renderStorage.mastersDirectory
-        let options = currentRenderOptions
-
-        renderTask = Task {
-            let result = await Task.detached {
-                Result {
-                    try bridge.renderMaster(
-                        from: sourceURL,
-                        toDirectory: outputDirectoryURL,
-                        options: options
-                    )
-                }
-            }.value
-
-            guard !Task.isCancelled else { return }
-            isRendering = false
-
-            switch result {
-            case .success(let job):
-                guard let outputPath = job.outputPaths.first else {
-                    statusText = "Master render finished but no WAV was returned."
-                    return
-                }
-                masteredPreviewURL = URL(fileURLWithPath: outputPath)
-                masteredLufs = job.measurements?.lufsIntegrated
-                shareMasterURL = URL(fileURLWithPath: outputPath)
-                renderStorage.enforceLimit(in: renderStorage.mastersDirectory, max: 20)
-                selectedAudition = .mastered
-                statusText = "Master created. You can audition the mastered version."
-            case .failure(let error):
-                masteredPreviewURL = nil
-                shareMasterURL = nil
-                selectedAudition = .original
-                statusText = friendlyAudioErrorMessage(error)
-            }
-        }
-    }
-
-    private func friendlyAudioErrorMessage(_ error: Error) -> String {
-        let message = error.localizedDescription
-        if message.localizedCaseInsensitiveContains("no suitable format reader")
-            || message.localizedCaseInsensitiveContains("decode error") {
-            return "The file imported, but the audio could not be read. Try a standard WAV, MP3, or M4A."
-        }
-        return message
     }
 }
 
