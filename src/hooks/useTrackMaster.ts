@@ -10,6 +10,7 @@ import {
 import {
   applyAdvancedWithProfileFlip,
   applyChainDispatchOverrides,
+  injectSourceProfile,
   applyDeliveryProfileSelection,
   applyExplicitLoudnessTarget,
   applyLoudnessTargetSelection,
@@ -1243,7 +1244,7 @@ export function useTrackMaster() {
       const job = await api.renderTrackMaster(
         selectedTrackId,
         selectedTrack.path,
-        selectedSettings,
+        injectSourceProfile(selectedSettings, selectedAnalysis),
         chosenOutputPath,
       );
       const outputPath = job.output_paths[0] ?? "";

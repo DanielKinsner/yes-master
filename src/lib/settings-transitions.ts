@@ -16,6 +16,7 @@ import type {
   AnalysisResult,
   DeliveryProfile,
   MasteringSettings,
+  SourceProfile,
   TrackId,
 } from "../bindings";
 import {
@@ -188,10 +189,52 @@ export function applyChainDispatchOverrides(
     volume_match: volumeMatchOverride,
   };
   if (trackId) {
-    const sourceLufs = analysisMap[trackId]?.lufs_integrated;
+    const analysis = analysisMap[trackId];
+    const sourceLufs = analysis?.lufs_integrated;
     if (sourceLufs !== undefined && sourceLufs !== null && Number.isFinite(sourceLufs)) {
       result.source_lufs_integrated = sourceLufs;
     }
+    // Tier-1 adaptive guardrails read this snapshot in the Rust chain.
+    const profile = sourceProfileFromAnalysis(analysis);
+    if (profile) {
+      result.advanced = { ...result.advanced, source_profile: profile };
+    }
   }
   return result;
+}
+
+/// Build the level-invariant `SourceProfile` the Tier-1 adaptive guardrails
+/// read, from a completed analysis. Returns `null` when the 6-band spectral
+/// balance is missing (signal too short/silent) — the EQ guardrails need it to
+/// compare against. Mirrors `SourceProfile::from_analysis` in
+/// `src-tauri/src/types.rs`.
+export function sourceProfileFromAnalysis(
+  analysis: AnalysisResult | null | undefined,
+): SourceProfile | null {
+  const s6 = analysis?.spectral_balance_6band;
+  if (!analysis || !s6) return null;
+  return {
+    spectral_6: s6,
+    dynamic_range_p95_p10_db:
+      analysis.dynamic_range_p95_p10_db ?? analysis.dynamic_range_lu,
+    dynamic_range_lu: analysis.dynamic_range_lu,
+    stereo_correlation: analysis.stereo_correlation ?? null,
+    stereo_width: analysis.stereo_width,
+  };
+}
+
+/// Inject the source profile onto a settings object WITHOUT changing anything
+/// else — notably not `volume_match`, which is audition-only and must never
+/// affect export level. Used by the export path; the live dispatch path folds
+/// the same injection into `applyChainDispatchOverrides`.
+export function injectSourceProfile(
+  settings: MasteringSettings,
+  analysis: AnalysisResult | null | undefined,
+): MasteringSettings {
+  const profile = sourceProfileFromAnalysis(analysis);
+  if (!profile) return settings;
+  return {
+    ...settings,
+    advanced: { ...settings.advanced, source_profile: profile },
+  };
 }
