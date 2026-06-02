@@ -124,6 +124,15 @@ struct AudioCore {
     frame_in: Vec<f32>,
     frame_main: Vec<f32>,
     frame_pending: Vec<f32>,
+    // Per-sample one-pole smoothers toward the lock-free targets, so control
+    // changes ramp (~12 ms) instead of stepping — no clicks on Volume Match,
+    // Loudness, or Original/Mastered. `smoothed_bypass` is the dry/wet mix
+    // (0 = Mastered, 1 = Original); the chain runs every frame so flipping sides
+    // crossfades and the chain stays warm (no cold-start transient).
+    smoothed_bypass: f32,
+    smoothed_vol_match: f32,
+    smoothed_landing: f32,
+    gain_smooth_coeff: f32,
 }
 
 impl AudioCore {
@@ -186,14 +195,22 @@ impl AudioCore {
             shared.cursor_frame.store(target as u64, Ordering::Relaxed);
         }
 
-        let bypass = shared.bypass_original.load(Ordering::Relaxed);
-        let vol_match = load_gain(&shared.volume_match_gain);
-        let landing = load_gain(&shared.landing_gain);
+        let target_bypass = if shared.bypass_original.load(Ordering::Relaxed) { 1.0 } else { 0.0 };
+        let target_vol_match = load_gain(&shared.volume_match_gain);
+        let target_landing = load_gain(&shared.landing_gain);
+        let smooth = self.gain_smooth_coeff;
 
         let mut cursor = shared.cursor_frame.load(Ordering::Relaxed) as usize;
 
         for f in 0..frames {
             let out_base = f * channels;
+
+            // Ramp toward the control targets every frame (one-pole, ~12 ms) so
+            // Volume Match, Loudness, and Original/Mastered fade in instead of
+            // stepping. Advanced even past EOF so the values stay current.
+            self.smoothed_bypass += smooth * (target_bypass - self.smoothed_bypass);
+            self.smoothed_vol_match += smooth * (target_vol_match - self.smoothed_vol_match);
+            self.smoothed_landing += smooth * (target_landing - self.smoothed_landing);
 
             if cursor >= self.total_frames {
                 // Past EOF: emit silence. The cursor intentionally does NOT
@@ -215,48 +232,47 @@ impl AudioCore {
                 self.frame_in[ch] = if s.is_finite() { s } else { 0.0 };
             }
 
-            if bypass {
-                // Original: dry passthrough. Still gets the audition Volume Match
-                // gain so an A/B at matched loudness is fair. No landing gain —
-                // Original is the raw file, not a loudness-landed master.
-                for ch in 0..channels {
-                    out[out_base + ch] = self.frame_in[ch] * vol_match;
-                }
-            } else {
-                for ch in 0..channels {
-                    self.frame_main[ch] = self.frame_in[ch];
-                }
-                self.chain.process_frame_inplace(&mut self.frame_main[..channels]);
+            // Always run the chain so it stays warm even while Original is
+            // selected — switching to Mastered then has no cold-state transient.
+            for ch in 0..channels {
+                self.frame_main[ch] = self.frame_in[ch];
+            }
+            self.chain.process_frame_inplace(&mut self.frame_main[..channels]);
 
-                if self.pending_chain.is_some() && self.crossfade_total > 0 {
-                    for ch in 0..channels {
-                        self.frame_pending[ch] = self.frame_in[ch];
-                    }
-                    let pending = self
+            if self.pending_chain.is_some() && self.crossfade_total > 0 {
+                for ch in 0..channels {
+                    self.frame_pending[ch] = self.frame_in[ch];
+                }
+                let pending = self
+                    .pending_chain
+                    .as_mut()
+                    .expect("pending_chain just checked is_some");
+                pending.process_frame_inplace(&mut self.frame_pending[..channels]);
+                let t = 1.0 - (self.crossfade_remaining as f32 / self.crossfade_total as f32);
+                let inv_t = 1.0 - t;
+                for ch in 0..channels {
+                    self.frame_main[ch] =
+                        self.frame_main[ch] * inv_t + self.frame_pending[ch] * t;
+                }
+                self.crossfade_remaining = self.crossfade_remaining.saturating_sub(1);
+                if self.crossfade_remaining == 0 {
+                    self.chain = self
                         .pending_chain
-                        .as_mut()
+                        .take()
                         .expect("pending_chain just checked is_some");
-                    pending.process_frame_inplace(&mut self.frame_pending[..channels]);
-                    let t = 1.0 - (self.crossfade_remaining as f32 / self.crossfade_total as f32);
-                    let inv_t = 1.0 - t;
-                    for ch in 0..channels {
-                        self.frame_main[ch] =
-                            self.frame_main[ch] * inv_t + self.frame_pending[ch] * t;
-                    }
-                    self.crossfade_remaining = self.crossfade_remaining.saturating_sub(1);
-                    if self.crossfade_remaining == 0 {
-                        self.chain = self
-                            .pending_chain
-                            .take()
-                            .expect("pending_chain just checked is_some");
-                        self.crossfade_total = 0;
-                    }
+                    self.crossfade_total = 0;
                 }
+            }
 
-                let gain = landing * vol_match;
-                for ch in 0..channels {
-                    out[out_base + ch] = self.frame_main[ch] * gain;
-                }
+            // Crossfade dry (Original, no landing) <-> wet (Mastered, landed) by
+            // the smoothed bypass mix, then apply the smoothed Volume Match to the
+            // side being heard. All three transitions are click-free.
+            let bypass_mix = self.smoothed_bypass;
+            for ch in 0..channels {
+                let dry = self.frame_in[ch];
+                let wet = self.frame_main[ch] * self.smoothed_landing;
+                out[out_base + ch] =
+                    (dry * bypass_mix + wet * (1.0 - bypass_mix)) * self.smoothed_vol_match;
             }
 
             cursor += 1;
@@ -319,6 +335,13 @@ impl LiveStream {
             frame_in: vec![0.0; channels],
             frame_main: vec![0.0; channels],
             frame_pending: vec![0.0; channels],
+            // Start at the default targets (Mastered, unity gains) so a stream
+            // with no control changes is bit-identical to the bare chain.
+            smoothed_bypass: 0.0,
+            smoothed_vol_match: 1.0,
+            smoothed_landing: 1.0,
+            // ~12 ms one-pole time constant: a = 1 - exp(-1 / (tau * sr)).
+            gain_smooth_coeff: 1.0 - (-1.0 / (0.012 * sample_rate as f32)).exp(),
         };
 
         Some(Self {
@@ -1028,5 +1051,34 @@ mod tests {
             "a louder target must not land quieter (quiet={lufs_quiet}, loud={lufs_loud})"
         );
         unsafe { yes_master_native_live_destroy(handle) };
+    }
+
+    #[test]
+    fn gain_changes_are_smoothed_not_stepped() {
+        // The fix for click-on-Volume-Match: a gain change must RAMP, not step.
+        // Drop Volume Match to 0 — with smoothing the frames right after the change
+        // are still audible and the tail fades to ~silence; an instantaneous step
+        // would silence everything immediately (head_peak ~ 0), failing this test.
+        let handle = make_stream(48_000, 2); // 1 s @ 48k — well past the ~12 ms ramp
+        assert!(!handle.is_null());
+        unsafe {
+            // Settle the smoother at unity first.
+            let mut warm = vec![0.0f32; 1_024 * 2];
+            yes_master_native_live_process(handle, warm.as_mut_ptr(), 1_024);
+
+            yes_master_native_live_set_volume_match(handle, 0.0);
+            let frames = 4_096usize;
+            let mut out = vec![0.0f32; frames * 2];
+            yes_master_native_live_process(handle, out.as_mut_ptr(), frames as u32);
+
+            let head_peak = out[..64 * 2].iter().fold(0.0f32, |m, v| m.max(v.abs()));
+            let tail_peak = out[(frames - 64) * 2..].iter().fold(0.0f32, |m, v| m.max(v.abs()));
+            assert!(head_peak > 0.01, "gain must ramp (head still audible), head={head_peak}");
+            assert!(
+                tail_peak < head_peak * 0.1,
+                "gain must reach ~0 after the ramp (tail={tail_peak}, head={head_peak})"
+            );
+            yes_master_native_live_destroy(handle);
+        }
     }
 }
