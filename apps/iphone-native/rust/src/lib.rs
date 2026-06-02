@@ -8,6 +8,8 @@ use yes_master_lib::{
     TrackId,
 };
 
+mod live_stream;
+
 const VERSION: &[u8] = b"yes-master-iphone-native-bridge/0.1.0\0";
 const SUPPORTED_IMPORT_EXTENSIONS: &[&str] = &["wav", "mp3", "m4a", "aac", "flac", "ogg"];
 
@@ -132,7 +134,7 @@ fn fixed_export_settings() -> MasteringSettings {
     export_settings_for_options(Some("balanced"), 0.5, -11.0)
 }
 
-fn export_settings_for_options(preset: Option<&str>, intensity: f32, lufs_target: f32) -> MasteringSettings {
+pub(crate) fn export_settings_for_options(preset: Option<&str>, intensity: f32, lufs_target: f32) -> MasteringSettings {
     MasteringSettings {
         preset: native_preset(preset),
         intensity: intensity.clamp(0.0, 1.0),
@@ -204,7 +206,7 @@ unsafe fn normalize_extension(extension: *const c_char) -> Option<String> {
     }
 }
 
-unsafe fn ffi_string(value: *const c_char) -> Option<String> {
+pub(crate) unsafe fn ffi_string(value: *const c_char) -> Option<String> {
     if value.is_null() {
         return None;
     }
