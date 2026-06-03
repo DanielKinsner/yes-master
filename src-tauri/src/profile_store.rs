@@ -18,7 +18,7 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use crate::types::{SourceProfile, TrackId};
+use crate::types::{MasteringSettings, SourceProfile, TrackId};
 
 /// Thread-safe map of `TrackId -> SourceProfile`. Shared (as an `Arc`) between
 /// the analysis command (writer), the render/readout commands (readers), and the
@@ -85,6 +85,20 @@ pub fn resolve_effective_profile(
         return None;
     }
     fe_override.or(cached)
+}
+
+/// Apply the B2-resolved effective profile onto `settings.advanced.source_profile`
+/// in place, treating any value already on `settings` as the frontend override
+/// and `cached` as the backend-derived fallback. The single chokepoint every
+/// chain-building command routes through, so the precedence (and the album
+/// gate) are identical across the live, render, and readout paths.
+pub fn apply_resolved_profile(
+    settings: &mut MasteringSettings,
+    cached: Option<SourceProfile>,
+    album: bool,
+) {
+    settings.advanced.source_profile =
+        resolve_effective_profile(settings.advanced.source_profile, cached, album);
 }
 
 #[cfg(test)]
@@ -161,5 +175,56 @@ mod tests {
     #[test]
     fn resolve_none_when_nothing_available() {
         assert_eq!(resolve_effective_profile(None, None, false), None);
+    }
+
+    fn settings_with(profile: Option<SourceProfile>) -> MasteringSettings {
+        MasteringSettings {
+            preset: crate::types::Preset::Universal,
+            intensity: 0.5,
+            eq_sub_db: 0.0,
+            eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
+            eq_mid_db: 0.0,
+            eq_high_mid_db: 0.0,
+            eq_high_db: 0.0,
+            eq_sparkle_db: 0.0,
+            volume_match: false,
+            source_lufs_integrated: None,
+            input_gain_db: 0.0,
+            output_gain_db: 0.0,
+            delivery_profile: crate::types::DeliveryProfile::Custom,
+            album: None,
+            advanced: crate::types::AdvancedSettings {
+                source_profile: profile,
+                ..Default::default()
+            },
+        }
+    }
+
+    #[test]
+    fn apply_fills_from_cache_when_frontend_omits() {
+        let mut s = settings_with(None);
+        apply_resolved_profile(&mut s, Some(profile(5.0)), false);
+        assert_eq!(
+            s.advanced.source_profile.map(|p| p.dynamic_range_p95_p10_db),
+            Some(5.0)
+        );
+    }
+
+    #[test]
+    fn apply_keeps_frontend_override_over_cache() {
+        let mut s = settings_with(Some(profile(1.0)));
+        apply_resolved_profile(&mut s, Some(profile(2.0)), false);
+        assert_eq!(
+            s.advanced.source_profile.map(|p| p.dynamic_range_p95_p10_db),
+            Some(1.0)
+        );
+    }
+
+    #[test]
+    fn apply_clears_to_none_for_album_even_with_cache() {
+        let mut s = settings_with(Some(profile(1.0)));
+        apply_resolved_profile(&mut s, Some(profile(2.0)), true);
+        assert_eq!(s.advanced.source_profile, None, "album must stay byte-flat");
     }
 }

@@ -1161,7 +1161,12 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
-  it("injects the source profile into BOTH preview and export when analysis has a 6-band (WYSIWYG parity)", async () => {
+  it("sends identical raw settings to preview and export — the backend owns profile injection (B2 WYSIWYG parity)", async () => {
+    // B2: the FE no longer injects source_profile. render_track_preview and
+    // render_track_master each resolve + inject the backend-derived profile
+    // (keyed by track id) via the SAME apply_resolved_profile helper, so WYSIWYG
+    // parity is now guaranteed server-side. At the FE boundary we assert the two
+    // payloads are identical and carry no FE-injected profile.
     const track = makeTrack("export-adaptive", "C:/audio/adaptive.wav");
     const outputPath = "/Users/daniel/Desktop/adaptive-master.wav";
     const analysis: AnalysisResult = {
@@ -1198,16 +1203,14 @@ describe("useTrackMaster integration dispatches", () => {
       await harness.current().exportMaster();
     });
 
-    const previewProfile =
-      mocks.api.renderTrackPreview.mock.calls.at(-1)?.[2]?.advanced
-        ?.source_profile;
-    const exportProfile =
-      mocks.api.renderTrackMaster.mock.calls.at(-1)?.[2]?.advanced
-        ?.source_profile;
-    expect(previewProfile).toBeTruthy();
-    expect(exportProfile).toBeTruthy();
-    expect(previewProfile).toEqual(exportProfile); // WYSIWYG parity
-    expect(previewProfile?.spectral_6.air).toBeCloseTo(0.1, 6);
+    const previewSettings = mocks.api.renderTrackPreview.mock.calls.at(-1)?.[2];
+    const exportSettings = mocks.api.renderTrackMaster.mock.calls.at(-1)?.[2];
+    // FE no longer injects the profile — that is the backend's job now.
+    expect(previewSettings?.advanced?.source_profile ?? null).toBeNull();
+    expect(exportSettings?.advanced?.source_profile ?? null).toBeNull();
+    // Same settings object reaches both render paths → backend derives the same
+    // profile for each (WYSIWYG parity).
+    expect(previewSettings).toEqual(exportSettings);
 
     await act(async () => {
       harness.root.unmount();

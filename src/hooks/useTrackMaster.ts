@@ -1246,13 +1246,14 @@ export function useTrackMaster() {
       // render" no longer needs to swap the audio source. The button still
       // produces an offline WAV (useful when auditing the would-be master in
       // another player) and clears the stale flag for export bookkeeping.
-      // WYSIWYG: the offline preview WAV must run the SAME adapted chain as
-      // export and live audition, so inject the source profile here too (no-op
-      // when the track has no analysis yet). Mirrors exportMaster.
+      // WYSIWYG: the offline preview WAV runs the SAME adapted chain as export
+      // and live audition. B2: the backend derives + injects the source profile
+      // (keyed by track id) inside render_track_preview, so the FE just sends the
+      // raw settings — no FE-side profile injection.
       await api.renderTrackPreview(
         selectedTrackId,
         selectedTrack.path,
-        injectSourceProfile(selectedSettings, selectedAnalysis),
+        selectedSettings,
       );
       markFresh(selectedTrackId);
     } catch (err) {
@@ -1280,10 +1281,12 @@ export function useTrackMaster() {
       const chosenOutputPath = ensureWavExtension(chosenPath);
       rememberExportDirectory(store, "track", chosenOutputPath);
       setIsExporting(true);
+      // B2: the backend derives + injects the source profile inside
+      // render_track_master (keyed by track id); the FE sends raw settings.
       const job = await api.renderTrackMaster(
         selectedTrackId,
         selectedTrack.path,
-        injectSourceProfile(selectedSettings, selectedAnalysis),
+        selectedSettings,
         chosenOutputPath,
       );
       const outputPath = job.output_paths[0] ?? "";

@@ -363,9 +363,14 @@ fn preview_landing_window(samples: &[f32], sample_rate: u32, channels: u16) -> V
 pub async fn render_track_preview(
     track_id: TrackId,
     track_path: String,
-    settings: MasteringSettings,
+    mut settings: MasteringSettings,
     app: tauri::AppHandle,
+    profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
 ) -> CommandResult<RenderJob> {
+    // B2: the backend owns the adaptive profile. Track Master is the adaptive
+    // surface (album renders via render_album_plan), so album = false; any
+    // FE-supplied profile is honored as an override.
+    crate::profile_store::apply_resolved_profile(&mut settings, profile_store.get(&track_id), false);
     let out_dir = render_output_dir(&app, RenderKind::Preview)?;
     let track_id_for_progress = track_id.clone();
     let app_for_progress = app.clone();
@@ -394,10 +399,14 @@ pub async fn render_track_preview(
 pub async fn render_track_master(
     track_id: TrackId,
     track_path: String,
-    settings: MasteringSettings,
+    mut settings: MasteringSettings,
     output_path: Option<String>,
     app: tauri::AppHandle,
+    profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
 ) -> CommandResult<RenderJob> {
+    // B2: backend-owned profile (override > backend-derived cache; album = false
+    // because album exports go through render_album_plan, which strips it).
+    crate::profile_store::apply_resolved_profile(&mut settings, profile_store.get(&track_id), false);
     let out_dir = render_output_dir(&app, RenderKind::Master)?;
     let explicit_output_path = output_path.as_deref().map(Path::new);
     let track_id_for_progress = track_id.clone();
