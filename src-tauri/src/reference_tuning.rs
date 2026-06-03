@@ -300,6 +300,9 @@ pub fn settings_for_reference_preset(
     settings.volume_match = false;
     settings.source_lufs_integrated = Some(source_analysis.lufs_integrated);
     settings.advanced.compression_mode = CompressionMode::Preset;
+    // Calibrate against the SAME adaptive chain the app ships, so reference
+    // tuning measures the adaptive output rather than the old chain.
+    settings.advanced.source_profile = crate::types::SourceProfile::from_analysis(source_analysis);
     settings
 }
 
@@ -687,5 +690,38 @@ mod tests {
         );
         assert_eq!(settings.source_lufs_integrated, Some(-12.3));
         assert!(!settings.volume_match);
+    }
+
+    #[test]
+    fn reference_render_settings_inject_source_profile_for_adaptive_chain() {
+        // Regression: reference tuning must calibrate against the ADAPTIVE chain.
+        let mut source = analysis(
+            "source",
+            -12.3,
+            5.0,
+            SpectralBalance {
+                low: 0.3,
+                mid: 0.4,
+                high: 0.3,
+            },
+            0.5,
+            0.5,
+        );
+        source.spectral_balance_6band = Some(crate::types::SpectralBalance6 {
+            sub: 0.1,
+            low: 0.25,
+            low_mid: 0.2,
+            mid: 0.2,
+            presence: 0.15,
+            air: 0.1,
+        });
+        source.dynamic_range_p95_p10_db = Some(5.0);
+
+        let settings = settings_for_reference_preset(&source, Preset::Tape);
+
+        assert!(
+            settings.advanced.source_profile.is_some(),
+            "reference tuning must inject the source profile (adaptive chain)"
+        );
     }
 }

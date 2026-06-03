@@ -1214,14 +1214,21 @@ export function useTrackMaster() {
       // render" no longer needs to swap the audio source. The button still
       // produces an offline WAV (useful when auditing the would-be master in
       // another player) and clears the stale flag for export bookkeeping.
-      await api.renderTrackPreview(selectedTrackId, selectedTrack.path, selectedSettings);
+      // WYSIWYG: the offline preview WAV must run the SAME adapted chain as
+      // export and live audition, so inject the source profile here too (no-op
+      // when the track has no analysis yet). Mirrors exportMaster.
+      await api.renderTrackPreview(
+        selectedTrackId,
+        selectedTrack.path,
+        injectSourceProfile(selectedSettings, selectedAnalysis),
+      );
       markFresh(selectedTrackId);
     } catch (err) {
       setError(messageOf(err));
     } finally {
       setIsRendering(false);
     }
-  }, [selectedTrackId, selectedTrack, selectedSettings, markFresh]);
+  }, [selectedTrackId, selectedTrack, selectedSettings, selectedAnalysis, markFresh]);
 
   const exportMaster = useCallback(async () => {
     if (!selectedTrackId || !selectedAnalysis) return;
