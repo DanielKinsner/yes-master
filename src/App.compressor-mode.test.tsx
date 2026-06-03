@@ -7,6 +7,7 @@ import {
   activeModifierChips,
   activeModifierSummary,
 } from "./App";
+import { ADAPTIVE_STRENGTH_DEFAULT } from "./bindings";
 import type {
   AdvancedSettings,
   AnalysisResult,
@@ -265,6 +266,8 @@ describe("AdvancedPanel compressor mode", () => {
       warmth: null,
       presence_air: null,
       compression_density: null,
+      // Reset now restores Adapt Strength to its explicit default too.
+      adaptive_strength: ADAPTIVE_STRENGTH_DEFAULT,
     });
     await act(async () => {
       root.unmount();
