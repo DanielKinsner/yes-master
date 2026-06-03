@@ -210,6 +210,18 @@ pub struct GuardrailReadout {
     pub brightness_share: f32,
     pub low_share: f32,
     pub dynamic_range_db: f32,
+    /// Deadband thresholds the source must cross before an axis trims, surfaced so
+    /// the UI can explain a `-0%` as "source in range" instead of looking broken.
+    /// `brightness_share`/`low_share` trim when they exceed `bright_deadband`/
+    /// `low_deadband`; width trims when `stereo_correlation` is BELOW
+    /// `width_corr_deadband` (lower correlation = wider). `#[serde(default)]` for
+    /// back-compat with older serialized readouts.
+    #[serde(default)]
+    pub bright_deadband: f32,
+    #[serde(default)]
+    pub low_deadband: f32,
+    #[serde(default)]
+    pub width_corr_deadband: f32,
     #[serde(default)]
     pub stereo_correlation: Option<f32>,
 }
@@ -269,6 +281,9 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
                 brightness_share: p.spectral_6.presence + p.spectral_6.air,
                 low_share: p.spectral_6.sub + p.spectral_6.low,
                 dynamic_range_db: p.dynamic_range_p95_p10_db,
+                bright_deadband: BRIGHT_DEADBAND,
+                low_deadband: LOW_DEADBAND,
+                width_corr_deadband: WIDTH_CORR_DEADBAND,
                 stereo_correlation: p.stereo_correlation,
             }
         }
@@ -282,6 +297,9 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
             brightness_share: 0.0,
             low_share: 0.0,
             dynamic_range_db: 0.0,
+            bright_deadband: BRIGHT_DEADBAND,
+            low_deadband: LOW_DEADBAND,
+            width_corr_deadband: WIDTH_CORR_DEADBAND,
             stereo_correlation: None,
         },
     }
@@ -522,6 +540,21 @@ mod tests {
         assert_eq!(r.low_trim, 0.0, "sub+low 0.30 < 0.42 deadband -> no low trim");
         assert!((r.brightness_share - 0.45).abs() < 1e-6);
         assert_eq!(r.stereo_correlation, Some(0.1));
+        // Deadband thresholds are surfaced so the UI can explain a -0% axis.
+        assert_eq!(r.bright_deadband, BRIGHT_DEADBAND);
+        assert_eq!(r.low_deadband, LOW_DEADBAND);
+        assert_eq!(r.width_corr_deadband, WIDTH_CORR_DEADBAND);
+    }
+
+    #[test]
+    fn readout_carries_deadbands_even_when_inactive() {
+        // So the UI can always render "share vs threshold", even at strength 0.
+        let p = profile(0.25, 0.20, 0.08, 0.22, 2.0, 2.0, Some(0.1));
+        let r = readout_for(&settings_with(Some(p), Some(0.0)));
+        assert!(!r.active);
+        assert_eq!(r.bright_deadband, BRIGHT_DEADBAND);
+        assert_eq!(r.low_deadband, LOW_DEADBAND);
+        assert_eq!(r.width_corr_deadband, WIDTH_CORR_DEADBAND);
     }
 
     #[test]

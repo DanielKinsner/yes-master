@@ -290,6 +290,12 @@ export interface GuardrailReadout {
   brightness_share: number;
   low_share: number;
   dynamic_range_db: number;
+  // Deadband thresholds the source must cross before an axis trims. Lets the UI
+  // explain a -0% as "source in range" vs broken. brightness/low trim when the
+  // share EXCEEDS the deadband; width trims when correlation is BELOW it.
+  bright_deadband?: number;
+  low_deadband?: number;
+  width_corr_deadband?: number;
   stereo_correlation?: number | null;
 }
 
