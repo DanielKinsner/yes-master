@@ -45,6 +45,16 @@ cargo test --lib
 cargo test
 ```
 
+When you touch shared crate types or `#[tauri::command]` signatures, also
+type-check the iPhone native bridge — it re-uses `yes_master_lib` but none of the
+lanes above build it, so a struct-field or signature change drifts there
+silently (it broke the bridge build once already):
+
+```powershell
+cd apps/iphone-native/rust
+cargo check --all-targets
+```
+
 Use the slow fixture lane before DSP/export merges:
 
 ```powershell
