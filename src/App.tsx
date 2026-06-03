@@ -125,6 +125,7 @@ function App() {
               onDeliverySampleRate={tm.setDeliverySampleRate}
               showDeliveryFormat={tm.mode !== "album"}
               adaptiveReadout={tm.guardrailReadout}
+              albumMode={tm.mode === "album"}
             />
           ) : undefined
         }
@@ -1937,6 +1938,7 @@ export function AdvancedPanel({
   onDeliverySampleRate,
   showDeliveryFormat = true,
   adaptiveReadout,
+  albumMode = false,
 }: {
   analysis?: AnalysisResult;
   settings: MasteringSettings;
@@ -1952,6 +1954,7 @@ export function AdvancedPanel({
   /// confusing duplicate. Defaults true → Track Master is unchanged.
   showDeliveryFormat?: boolean;
   adaptiveReadout?: GuardrailReadout | null;
+  albumMode?: boolean;
 }) {
   const a = settings.advanced;
   const update = (
@@ -1974,6 +1977,7 @@ export function AdvancedPanel({
         onOutputGain={onOutputGain}
         onLoudnessTarget={onLoudnessTarget}
         adaptiveReadout={adaptiveReadout}
+        albumMode={albumMode}
       />
       <PerBandCompressorCard
         analysis={analysis}
@@ -2036,6 +2040,7 @@ function AdvancedControlsCard({
   onOutputGain,
   onLoudnessTarget,
   adaptiveReadout,
+  albumMode = false,
 }: {
   settings: MasteringSettings;
   update: (
@@ -2047,6 +2052,7 @@ function AdvancedControlsCard({
   onOutputGain: (db: number) => void;
   onLoudnessTarget: (targetLufs: number | null) => void;
   adaptiveReadout?: GuardrailReadout | null;
+  albumMode?: boolean;
 }) {
   const a = settings.advanced;
   const compressorMode = a.compression_mode ?? "preset";
@@ -2152,7 +2158,18 @@ function AdvancedControlsCard({
           onChange={(v) => update("adaptive_strength", v)}
         />
       </div>
-      {adaptiveReadout?.active && (
+      {albumMode && (
+        <div
+          style={{
+            fontSize: "0.72rem",
+            opacity: 0.7,
+            padding: "0.3rem 0.6rem",
+          }}
+        >
+          Adaptive applies to Track Master export, not Album renders.
+        </div>
+      )}
+      {adaptiveReadout?.active && !albumMode && (
         <div
           className="adaptive-readout"
           style={{

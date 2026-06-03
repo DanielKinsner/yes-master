@@ -102,6 +102,83 @@ fn apply_album_shadow(
     shadowed
 }
 
+#[cfg(test)]
+mod adaptive_scope_tests {
+    use super::*;
+
+    fn settings_with_profile(
+        profile: Option<crate::types::SourceProfile>,
+    ) -> MasteringSettings {
+        MasteringSettings {
+            preset: crate::types::Preset::Universal,
+            intensity: 0.5,
+            eq_sub_db: 0.0,
+            eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
+            eq_mid_db: 0.0,
+            eq_high_mid_db: 0.0,
+            eq_high_db: 0.0,
+            eq_sparkle_db: 0.0,
+            volume_match: false,
+            source_lufs_integrated: None,
+            input_gain_db: 0.0,
+            output_gain_db: 0.0,
+            delivery_profile: crate::types::DeliveryProfile::Custom,
+            album: None,
+            advanced: crate::types::AdvancedSettings {
+                source_profile: profile,
+                ..Default::default()
+            },
+        }
+    }
+
+    fn album_entry() -> AlbumTrackEntry {
+        AlbumTrackEntry {
+            track_id: crate::types::TrackId("t".to_string()),
+            position: 1,
+            role: crate::types::TrackRole::AlbumTrack,
+            role_locked: false,
+            arc_lufs_offset_db: 0.0,
+            intensity_scale: 1.0,
+            album_character: None,
+        }
+    }
+
+    #[test]
+    fn album_shadow_is_profile_agnostic_so_album_stays_unadapted() {
+        // Owner decision: Album Master is intentionally NOT adaptive (Track Master
+        // is the adaptive surface; see the Tier-1 finish plan + the UI note). Album
+        // track settings carry no source_profile and apply_album_shadow never
+        // injects one — so the Tier-1 guardrails stay inert for album renders.
+        let none = apply_album_shadow(&settings_with_profile(None), &album_entry(), 0.5, 0.0, 0.5);
+        assert!(none.advanced.source_profile.is_none());
+
+        // It is profile-agnostic: neither adds nor strips a profile.
+        let bright = crate::types::SourceProfile {
+            spectral_6: crate::types::SpectralBalance6 {
+                sub: 0.1,
+                low: 0.2,
+                low_mid: 0.2,
+                mid: 0.2,
+                presence: 0.15,
+                air: 0.15,
+            },
+            dynamic_range_p95_p10_db: 8.0,
+            dynamic_range_lu: 8.0,
+            stereo_correlation: Some(0.5),
+            stereo_width: 1.0,
+        };
+        let kept = apply_album_shadow(
+            &settings_with_profile(Some(bright)),
+            &album_entry(),
+            0.5,
+            0.0,
+            0.5,
+        );
+        assert_eq!(kept.advanced.source_profile, Some(bright));
+    }
+}
+
 pub fn render_album_plan_impl(
     request: &AlbumPlanRenderRequest,
     out_dir: &Path,
