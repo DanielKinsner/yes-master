@@ -107,7 +107,17 @@ impl SourceGuardrails {
             DENSITY_DR_SOFT_DB,
             DENSITY_DR_FULL_DB,
         );
-        let lra_raw = descending_ramp(profile.dynamic_range_lu, DENSITY_LRA_SOFT_LU, DENSITY_LRA_FULL_LU);
+        // A non-finite EBU LRA is sanitized to 0.0 upstream (analysis.rs), which
+        // is indistinguishable from a real measurement and would otherwise read
+        // as "maximally dense" and force a full trim. Treat <= 0.5 LU as
+        // "unknown" — no real music master sits that low without the P95-P10 DR
+        // also catching it — so the LRA ramp contributes nothing and density
+        // rests on the P95-P10 measure alone.
+        let lra_raw = if profile.dynamic_range_lu > 0.5 {
+            descending_ramp(profile.dynamic_range_lu, DENSITY_LRA_SOFT_LU, DENSITY_LRA_FULL_LU)
+        } else {
+            0.0
+        };
         let density_raw = dr_raw.max(lra_raw);
         let density_mult = 1.0 - (density_raw * strength).min(DENSITY_CAP);
 
@@ -280,10 +290,23 @@ mod tests {
 
     #[test]
     fn dense_via_lra_alone_still_trims() {
-        // DR healthy but LRA collapsed -> still soften (max of triggers).
+        // DR healthy but a GENUINE low LRA (2.0 LU) -> still soften (max of triggers).
         let p = profile(0.08, 0.05, 0.08, 0.22, 9.0, 2.0, Some(0.8));
         let g = SourceGuardrails::compute(&p, 1.0);
         assert!(g.scale_density(0.5) < 0.5);
+    }
+
+    #[test]
+    fn lra_sentinel_does_not_density_trim_a_dynamic_source() {
+        // A non-finite EBU LRA is sanitized to 0.0 upstream. With a HEALTHY
+        // P95-P10 DR, that sentinel must NOT be read as "maximally dense".
+        let p = profile(0.08, 0.05, 0.08, 0.22, 10.0, 0.0, Some(0.8));
+        let g = SourceGuardrails::compute(&p, 1.0);
+        assert_eq!(
+            g.scale_density(0.5),
+            0.5,
+            "LRA=0.0 sentinel must not density-trim a dynamic source"
+        );
     }
 
     #[test]

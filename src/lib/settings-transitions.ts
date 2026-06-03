@@ -213,10 +213,15 @@ export function sourceProfileFromAnalysis(
 ): SourceProfile | null {
   const s6 = analysis?.spectral_balance_6band;
   if (!analysis || !s6) return null;
+  // When P95-P10 DR is missing, fall back to LRA only if it's a real measurement;
+  // a sanitized 0.0 LRA would masquerade as maximally dense, so treat it as
+  // "unknown / dynamic" instead. Mirrors `SourceProfile::from_analysis` in Rust.
+  const drP95P10 =
+    analysis.dynamic_range_p95_p10_db ??
+    (analysis.dynamic_range_lu > 0.5 ? analysis.dynamic_range_lu : 100);
   return {
     spectral_6: s6,
-    dynamic_range_p95_p10_db:
-      analysis.dynamic_range_p95_p10_db ?? analysis.dynamic_range_lu,
+    dynamic_range_p95_p10_db: drP95P10,
     dynamic_range_lu: analysis.dynamic_range_lu,
     stereo_correlation: analysis.stereo_correlation ?? null,
     stereo_width: analysis.stereo_width,
