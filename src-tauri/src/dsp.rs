@@ -3243,6 +3243,117 @@ mod tests {
         );
     }
 
+    #[test]
+    fn guardrails_strength_zero_is_inert_even_with_a_trigger_profile() {
+        use crate::types::{SourceProfile, SpectralBalance6};
+        let mut base = default_master_settings();
+        base.preset = Preset::Universal;
+        base.intensity = 0.5;
+        let no_profile = ChainCoeffs::from_settings(48_000, &base);
+
+        // A profile that WOULD trim every axis hard...
+        let mut withp = base.clone();
+        withp.advanced.source_profile = Some(SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub: 0.25,
+                low: 0.30,
+                low_mid: 0.10,
+                mid: 0.10,
+                presence: 0.20,
+                air: 0.20,
+            },
+            dynamic_range_p95_p10_db: 2.0,
+            dynamic_range_lu: 2.0,
+            stereo_correlation: Some(0.1),
+            stereo_width: 1.0,
+        });
+        // ...but at strength 0 the chain must be identical to the no-profile chain.
+        withp.advanced.adaptive_strength = Some(0.0);
+        let zero = ChainCoeffs::from_settings(48_000, &withp);
+
+        assert_eq!(zero.high.b0, no_profile.high.b0);
+        assert_eq!(zero.low.b0, no_profile.low.b0);
+        assert_eq!(zero.width_side_scale, no_profile.width_side_scale);
+        assert_eq!(zero.comp_low_threshold_db, no_profile.comp_low_threshold_db);
+    }
+
+    #[test]
+    fn guardrails_compose_across_bright_dense_and_wide_axes() {
+        use crate::types::{SourceProfile, SpectralBalance6};
+        let mut settings = default_master_settings();
+        settings.preset = Preset::Universal;
+        settings.intensity = 0.5;
+        let base = ChainCoeffs::from_settings(48_000, &settings);
+
+        // Bright AND dense AND wide simultaneously — each axis trims independently.
+        settings.advanced.source_profile = Some(SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub: 0.08,
+                low: 0.22,
+                low_mid: 0.15,
+                mid: 0.15,
+                presence: 0.20,
+                air: 0.20,
+            },
+            dynamic_range_p95_p10_db: 2.0,
+            dynamic_range_lu: 2.0,
+            stereo_correlation: Some(0.1),
+            stereo_width: 1.0,
+        });
+        settings.advanced.adaptive_strength = Some(1.0);
+        let adapted = ChainCoeffs::from_settings(48_000, &settings);
+
+        assert_ne!(adapted.high.b0, base.high.b0, "bright axis trims the high shelf");
+        assert!(
+            adapted.comp_low_threshold_db > base.comp_low_threshold_db,
+            "dense axis softens compression"
+        );
+        assert!(
+            adapted.width_side_scale < base.width_side_scale,
+            "wide axis pulls width toward neutral"
+        );
+    }
+
+    #[test]
+    fn guardrails_preserve_explicit_user_overrides() {
+        use crate::types::{CompressionMode, SourceProfile, SpectralBalance6};
+        let mut settings = default_master_settings();
+        settings.preset = Preset::Universal;
+        settings.intensity = 0.5;
+        // A profile that would trigger bright + dense + wide at full strength.
+        settings.advanced.source_profile = Some(SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub: 0.08,
+                low: 0.22,
+                low_mid: 0.15,
+                mid: 0.15,
+                presence: 0.20,
+                air: 0.20,
+            },
+            dynamic_range_p95_p10_db: 2.0,
+            dynamic_range_lu: 2.0,
+            stereo_correlation: Some(0.1),
+            stereo_width: 1.0,
+        });
+        settings.advanced.adaptive_strength = Some(1.0);
+
+        // Explicit user moves the guardrail must NOT touch.
+        settings.advanced.width = Some(1.5);
+        settings.advanced.compression_mode = CompressionMode::Manual;
+        settings.advanced.compression_low_threshold_db = Some(-20.0);
+
+        let coeffs = ChainCoeffs::from_settings(48_000, &settings);
+
+        assert!(
+            (coeffs.width_side_scale - 1.5).abs() < 1e-6,
+            "explicit advanced.width survives the wide guardrail"
+        );
+        assert!(
+            (coeffs.comp_low_threshold_db - (-20.0)).abs() < 1e-6,
+            "Manual compression threshold survives the dense guardrail"
+        );
+    }
+
     mod preset_byte_identity {
         use super::*;
         use sha2::{Digest, Sha256};
