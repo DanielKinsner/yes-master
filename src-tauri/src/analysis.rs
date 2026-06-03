@@ -103,6 +103,24 @@ pub(crate) fn analyze_one(track_id: TrackId, path: &Path) -> CommandResult<Analy
         transient_flux,
     );
 
+    // Tier-2 Phase A: dual-resolution deep analysis (additive; never on the wire).
+    // (Task 9 will gate this off the mobile path; Task 7 always builds it.)
+    let deep_analysis = {
+        let bands31 =
+            compute_spectral_balance_31band(&pcm.samples, pcm.sample_rate, pcm.channels as usize);
+        let windows = crate::deep_analysis::scan_windows(
+            &pcm.samples,
+            pcm.sample_rate,
+            pcm.channels as usize,
+        );
+        match bands31 {
+            Some(bands) if !windows.is_empty() => Some(std::sync::Arc::new(
+                crate::deep_analysis::DeepAnalysis::from_parts(bands, windows),
+            )),
+            _ => None, // too short / silent -> DeepAnalysis absent (SourceProfile still derives)
+        }
+    };
+
     // Prefer the true 3 s short-term max from ebur128 Mode::S when
     // available; fall back to the prior estimate (integrated + LRA / 2)
     // for short signals where Mode::S doesn't have enough material.
@@ -172,6 +190,7 @@ pub(crate) fn analyze_one(track_id: TrackId, path: &Path) -> CommandResult<Analy
         dynamic_range_p95_p10_db,
         lufs_short_term_max_3s,
         energy_density_score,
+        deep_analysis,
     })
 }
 

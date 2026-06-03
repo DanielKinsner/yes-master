@@ -70,6 +70,7 @@ fn neutral_analysis(id: &str) -> AnalysisResult {
         // Neutral energy_density → no curve-gating modulation.
         lufs_short_term_max_3s: None,
         energy_density_score: Some(0.5),
+        deep_analysis: None,
     }
 }
 

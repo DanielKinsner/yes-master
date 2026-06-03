@@ -68,6 +68,7 @@ fn stub_analysis_with(role: TrackRole, confidence: InferenceConfidence) -> Analy
         dynamic_range_p95_p10_db: None,
         lufs_short_term_max_3s: None,
         energy_density_score: None,
+        deep_analysis: None,
     }
 }
 
@@ -130,6 +131,54 @@ async fn analyze_tracks_measures_synthetic_wav() {
     let sb = &r.spectral_balance;
     assert!((sb.low + sb.mid + sb.high - 1.0).abs() < 0.05);
     assert!((0.0..=1.0).contains(&r.stereo_width));
+}
+
+#[tokio::test]
+async fn analyze_tracks_produces_deep_analysis_for_normal_track_but_not_short_clip() {
+    // Tier-2 Phase A regime gate (Task 7). analyze_one builds a DeepAnalysis and
+    // hangs it off AnalysisResult via a serde(skip) field. A normal-length track
+    // (>= SHORT_WINDOW = 16384 frames) yields Some; a clip shorter than one
+    // short window yields None while the rest of the AnalysisResult is still
+    // produced.
+    let tmp = tempfile::tempdir().expect("tempdir");
+
+    // Normal track: 1.5 s @ 48k stereo => 72000 frames >> SHORT_WINDOW.
+    let normal_path = tmp.path().join("normal.wav");
+    write_sine_wav(&normal_path, 48_000, 1.5, 440.0, 2);
+
+    // Short clip: ~0.2 s @ 48k stereo => 9600 frames < SHORT_WINDOW(16384), but
+    // still long enough to decode + run the base measurements.
+    let short_path = tmp.path().join("short.wav");
+    write_sine_wav(&short_path, 48_000, 0.2, 440.0, 2);
+
+    let results = engine::analyze_tracks_core(vec![
+        engine::AnalyzeRequest {
+            id: TrackId("deep-normal".to_string()),
+            path: normal_path.to_string_lossy().to_string(),
+        },
+        engine::AnalyzeRequest {
+            id: TrackId("deep-short".to_string()),
+            path: short_path.to_string_lossy().to_string(),
+        },
+    ])
+    .await
+    .expect("analyze");
+
+    assert_eq!(results.len(), 2);
+    let normal = &results[0];
+    let short = &results[1];
+
+    assert!(
+        normal.deep_analysis.is_some(),
+        "normal-length track should produce a DeepAnalysis"
+    );
+    assert!(
+        short.deep_analysis.is_none(),
+        "short clip (< SHORT_WINDOW frames) should not produce a DeepAnalysis"
+    );
+    // The short clip still yields a complete AnalysisResult (nothing regresses).
+    assert!(short.lufs_integrated.is_finite());
+    assert!(short.true_peak_dbtp.is_finite());
 }
 
 #[tokio::test]
@@ -1622,6 +1671,7 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         dynamic_range_p95_p10_db: None,
         lufs_short_term_max_3s: None,
         energy_density_score: None,
+        deep_analysis: None,
     };
     let mut settings = default_settings();
     settings.advanced.compression_density = Some(0.5);
@@ -1695,6 +1745,7 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         dynamic_range_p95_p10_db: None,
         lufs_short_term_max_3s: None,
         energy_density_score: None,
+        deep_analysis: None,
     };
     let checks2 = exports::run_export_checks(report2, Some(analysis2), Some(settings2))
         .await

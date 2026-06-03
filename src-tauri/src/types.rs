@@ -108,6 +108,11 @@ pub struct AnalysisResult {
     /// Codex's analysis.py formula.
     #[serde(default)]
     pub energy_density_score: Option<f32>,
+    /// Tier-2 Phase A backend-internal deep analysis. NEVER serialized
+    /// (`serde(skip)` -> off the wire; defaults to None on deserialize). Moved
+    /// into the profile store by `populate_profile_store` (Task 8).
+    #[serde(skip)]
+    pub deep_analysis: Option<std::sync::Arc<crate::deep_analysis::DeepAnalysis>>,
 }
 
 /// Compact, level-invariant snapshot of the source used by the Tier-1 adaptive

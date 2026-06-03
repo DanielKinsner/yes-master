@@ -60,6 +60,7 @@ fn fake_analysis(id: &str) -> AnalysisResult {
         dynamic_range_p95_p10_db: None,
         lufs_short_term_max_3s: None,
         energy_density_score: Some(0.5),
+        deep_analysis: None,
     }
 }
 

@@ -591,6 +591,7 @@ mod tests {
             dynamic_range_p95_p10_db: None,
             lufs_short_term_max_3s: None,
             energy_density_score: None,
+            deep_analysis: None,
         }
     }
 
