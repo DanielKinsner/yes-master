@@ -16,7 +16,7 @@
 //! present and `strength > 0`.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use crate::types::{MasteringSettings, SourceProfile, TrackId};
 
@@ -27,6 +27,12 @@ use crate::types::{MasteringSettings, SourceProfile, TrackId};
 #[derive(Default)]
 pub struct SourceProfileStore {
     by_track: Mutex<HashMap<TrackId, SourceProfile>>,
+    /// Backend-internal DeepAnalysis (Tier-2 Phase A), keyed by track. Separate
+    /// map from `by_track` so the two never need a combined lock; methods take
+    /// at most one lock, and the two-map clear in `prune_failed_profiles` calls
+    /// the setters sequentially (never holding both). Arc so readers share
+    /// cheaply without cloning the per-window series.
+    by_track_deep: Mutex<HashMap<TrackId, Arc<crate::deep_analysis::DeepAnalysis>>>,
 }
 
 impl SourceProfileStore {
@@ -61,6 +67,33 @@ impl SourceProfileStore {
             .lock()
             .ok()
             .and_then(|guard| guard.get(track_id).copied())
+    }
+
+    /// Insert when `Some`, otherwise clear any prior entry (mirrors `set` for the
+    /// deep map). Locks only `by_track_deep`.
+    pub fn insert_deep(
+        &self,
+        track_id: TrackId,
+        deep: Option<Arc<crate::deep_analysis::DeepAnalysis>>,
+    ) {
+        if let Ok(mut guard) = self.by_track_deep.lock() {
+            match deep {
+                Some(d) => {
+                    guard.insert(track_id, d);
+                }
+                None => {
+                    guard.remove(&track_id);
+                }
+            }
+        }
+    }
+
+    /// The cached DeepAnalysis for a track, if any (clones the `Arc`, cheap).
+    pub fn get_deep(&self, track_id: &TrackId) -> Option<Arc<crate::deep_analysis::DeepAnalysis>> {
+        self.by_track_deep
+            .lock()
+            .ok()
+            .and_then(|guard| guard.get(track_id).cloned())
     }
 }
 
@@ -119,6 +152,7 @@ pub fn prune_failed_profiles(
     for id in requested {
         if !succeeded.contains(id) {
             store.set(id.clone(), None);
+            store.insert_deep(id.clone(), None);
         }
     }
 }
@@ -301,6 +335,32 @@ mod tests {
         let mut s = settings_with(Some(profile(1.0)));
         apply_resolved_profile(&mut s, Some(profile(2.0)), true);
         assert_eq!(s.advanced.source_profile, None, "album must stay byte-flat");
+    }
+
+    // Concrete helper (no stubs): build a real DeepAnalysis from a synthesized sine.
+    fn make_test_deep() -> crate::deep_analysis::DeepAnalysis {
+        let sr = 48_000_u32;
+        let n = sr as usize * 2;
+        let omega = 2.0 * std::f32::consts::PI * 1000.0 / sr as f32;
+        let samples: Vec<f32> = (0..n).map(|i| 0.3 * (omega * i as f32).sin()).collect();
+        let windows = crate::deep_analysis::scan_windows(&samples, sr, 1);
+        crate::deep_analysis::DeepAnalysis::from_parts([1.0 / 31.0; 31], windows)
+    }
+
+    #[test]
+    fn deep_store_insert_get_and_prune() {
+        let store = SourceProfileStore::default();
+        let id = TrackId("t".into());
+        assert!(store.get_deep(&id).is_none());
+        store.insert_deep(id.clone(), Some(std::sync::Arc::new(make_test_deep())));
+        assert!(store.get_deep(&id).is_some());
+        // soft clear
+        store.insert_deep(id.clone(), None);
+        assert!(store.get_deep(&id).is_none());
+        // prune clears deep too
+        store.insert_deep(id.clone(), Some(std::sync::Arc::new(make_test_deep())));
+        prune_failed_profiles(&store, std::slice::from_ref(&id), &[]);
+        assert!(store.get_deep(&id).is_none());
     }
 
     #[test]

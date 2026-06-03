@@ -104,6 +104,10 @@ pub fn populate_profile_store(
             result.track_id.clone(),
             SourceProfile::from_analysis(result),
         );
+        // Move the (Arc-shared) DeepAnalysis into the store alongside the profile.
+        // `None` (e.g. the soft "too short" path) clears any stale entry, keeping
+        // the two maps in lockstep.
+        profile_store.insert_deep(result.track_id.clone(), result.deep_analysis.clone());
     }
 }
 
