@@ -43,6 +43,10 @@ PSR closed loop — is planned with options + recommendations in
 chose: quick deadband bump (done), build the readout (done), defer the refactor,
 keep album unadapted (done).
 
+**The status-tagged backlog / single entry point for what's left (Tier-1 finish,
+the deferred refactor, Tier-2, and the parallel Simple Mode view) is
+`docs/ADAPTIVE_DSP_NEXT_STEPS.md` — start there.**
+
 ## Default behavior
 
 - **On by default at strength 0.6**, the moment a track is analyzed (the source

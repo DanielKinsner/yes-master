@@ -8,6 +8,11 @@ code by a fan-out workflow. The **mechanical bugs are already fixed** (see
 "Already done"). This plan covers the **taste / new-math / architecture**
 decisions that need Dan's ear or a design call before implementing.
 
+> **The status-tagged backlog / entry point is
+> [`docs/ADAPTIVE_DSP_NEXT_STEPS.md`](../ADAPTIVE_DSP_NEXT_STEPS.md).** This doc
+> holds the detailed options + rationale; that one is the at-a-glance "what's
+> left" (incl. Tier-2 and the parallel Simple Mode view).
+
 ## Already done this session (mechanical, committed)
 
 - **LRA=0.0 sentinel** no longer forces a full density trim (`f6c7cc8`).
