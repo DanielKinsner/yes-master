@@ -274,7 +274,7 @@ export interface SourceProfile {
 /// Default Adapt Strength when unset. Keep in sync with
 /// `ADAPTIVE_STRENGTH_DEFAULT` in `src-tauri/src/guardrails.rs` — the backend is
 /// authoritative (`unwrap_or`); this is only the UI's display fallback.
-export const ADAPTIVE_STRENGTH_DEFAULT = 0.6;
+export const ADAPTIVE_STRENGTH_DEFAULT = 0.5;
 
 /// Mirrors `guardrails::GuardrailReadout`. Read-only per-axis adaptive trim
 /// summary (CHAIN trims, before the post-chain LUFS-landing stage). `*_trim` are

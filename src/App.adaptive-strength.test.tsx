@@ -98,9 +98,9 @@ describe("AdvancedPanel adaptive strength control", () => {
     });
   });
 
-  it("shows the default (on, 60%) when strength is unset", async () => {
+  it("shows the default (on, 50%) when strength is unset", async () => {
     const { container, root } = await renderPanel(settings(null));
-    expect(container.textContent ?? "").toContain("60%");
+    expect(container.textContent ?? "").toContain("50%");
     await act(async () => {
       root.unmount();
     });
@@ -141,7 +141,7 @@ describe("AdvancedPanel adaptive strength control", () => {
     });
   });
 
-  it("resets Adapt strength to the explicit default (0.6) on Reset", async () => {
+  it("resets Adapt strength to the explicit default (0.5) on Reset", async () => {
     // Regression: Reset used to skip adaptive_strength entirely, so a user who
     // dragged it to 0/100% could never get back to default via Reset. Reset now
     // writes the explicit default (not null), like every other Advanced control.

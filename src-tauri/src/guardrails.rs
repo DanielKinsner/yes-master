@@ -14,8 +14,12 @@
 use crate::types::{MasteringSettings, SourceProfile, TrackId};
 use serde::{Deserialize, Serialize};
 
-/// Default Adapt Strength when the user hasn't set one (on by default).
-pub const ADAPTIVE_STRENGTH_DEFAULT: f32 = 0.6;
+/// Default Adapt Strength when the user hasn't set one (on by default). Owner
+/// starting point (2026-06-03 listening): a moderate **0.5** — kept conservative
+/// so adaptation doesn't homogenize presets (a louder default narrows the spread
+/// between presets on a given source) and to under-act rather than over-neuter
+/// while the deeper section-aware analysis / by-ear calibration lands.
+pub const ADAPTIVE_STRENGTH_DEFAULT: f32 = 0.5;
 
 // ---------------------------------------------------------------------------
 // Neutral references & deadbands — PROVISIONAL, calibrate by ear.
@@ -120,7 +124,11 @@ impl SourceGuardrails {
         // also catching it — so the LRA ramp contributes nothing and density
         // rests on the P95-P10 measure alone.
         let lra_raw = if profile.dynamic_range_lu > 0.5 {
-            descending_ramp(profile.dynamic_range_lu, DENSITY_LRA_SOFT_LU, DENSITY_LRA_FULL_LU)
+            descending_ramp(
+                profile.dynamic_range_lu,
+                DENSITY_LRA_SOFT_LU,
+                DENSITY_LRA_FULL_LU,
+            )
         } else {
             0.0
         };
@@ -258,7 +266,12 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
         .adaptive_strength
         .unwrap_or(ADAPTIVE_STRENGTH_DEFAULT)
         .clamp(0.0, 1.0);
-    match settings.advanced.source_profile.as_ref().filter(|_| strength > 0.0) {
+    match settings
+        .advanced
+        .source_profile
+        .as_ref()
+        .filter(|_| strength > 0.0)
+    {
         Some(p) => {
             let g = SourceGuardrails::compute(p, strength);
             let preset = crate::dsp::preset_calibration(&settings.preset);
@@ -386,7 +399,10 @@ mod tests {
         let g = SourceGuardrails::compute(&p, 1.0);
         let trimmed = g.trim_bright_db(3.0);
         assert!(trimmed < 3.0, "should trim a positive air boost: {trimmed}");
-        assert!(trimmed >= 1.5 - 1e-6, "EQ cap limits removal to 50%: {trimmed}");
+        assert!(
+            trimmed >= 1.5 - 1e-6,
+            "EQ cap limits removal to 50%: {trimmed}"
+        );
         // low / density / width untouched.
         assert_eq!(g.trim_low_db(3.0), 3.0);
         assert_eq!(g.scale_density(0.5), 0.5);
@@ -471,7 +487,10 @@ mod tests {
         let p = profile(0.08, 0.05, 0.08, 0.22, 10.0, 9.0, Some(0.1));
         let g = SourceGuardrails::compute(&p, 1.0);
         let w = g.trim_width(1.5); // preset widens to 1.5
-        assert!(w < 1.5 && w > 1.0, "pull toward neutral but not past it: {w}");
+        assert!(
+            w < 1.5 && w > 1.0,
+            "pull toward neutral but not past it: {w}"
+        );
         assert!(w >= 1.0 + 0.5 * 0.30 - 1e-6, "width cap keeps >=30%: {w}");
         // a narrowing preset (<=1.0) is never touched
         assert_eq!(g.trim_width(0.9), 0.9);
@@ -490,7 +509,10 @@ mod tests {
         let gentle = SourceGuardrails::compute(&p, 0.3);
         let strong = SourceGuardrails::compute(&p, 1.0);
         assert!(strong.trim_bright_db(3.0) < gentle.trim_bright_db(3.0));
-        assert!(gentle.trim_bright_db(3.0) < 3.0, "even gentle trims something");
+        assert!(
+            gentle.trim_bright_db(3.0) < 3.0,
+            "even gentle trims something"
+        );
     }
 
     #[test]
@@ -537,7 +559,10 @@ mod tests {
         assert!(r.bright_trim > 0.0); // Universal carries a positive air boost
         assert!(r.density_trim > 0.0);
         assert!(r.width_trim > 0.0);
-        assert_eq!(r.low_trim, 0.0, "sub+low 0.30 < 0.42 deadband -> no low trim");
+        assert_eq!(
+            r.low_trim, 0.0,
+            "sub+low 0.30 < 0.42 deadband -> no low trim"
+        );
         assert!((r.brightness_share - 0.45).abs() < 1e-6);
         assert_eq!(r.stereo_correlation, Some(0.1));
         // Deadband thresholds are surfaced so the UI can explain a -0% axis.
