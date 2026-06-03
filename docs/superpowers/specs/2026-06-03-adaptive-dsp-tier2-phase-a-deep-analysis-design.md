@@ -1,9 +1,10 @@
-# Adaptive DSP Tier-2 — Phase A: Deep Analysis (design) — v2
+# Adaptive DSP Tier-2 — Phase A: Deep Analysis (design) — v2.1
 
 Date: 2026-06-03
-Status: design v2 — revised after a grounded 5-lens adversarial review (38 agents,
-findings re-checked against live code). Pre-implementation.
-Branch context: `fix/adversarial-type-review-2026-06-03`.
+Status: design v2.1 — APPROVED to implement (tests-first). v2 revised after a
+grounded 5-lens adversarial review; v2.1 applies that reviewer's
+implementation-readiness fixes. Branch context:
+`fix/adversarial-type-review-2026-06-03`.
 
 ## Changelog v1 → v2 (what the review changed)
 
@@ -20,7 +21,28 @@ Branch context: `fix/adversarial-type-review-2026-06-03`.
   cuts in one move.
 - **Pinned the fuzzy terms** the v1 §11 banner wrongly called "specified": the
   loudness key, "body," the dispersion estimator, determinism, and the cache rule.
-- **Two genuine owner calls** remain, marked `DECIDE:` (mobile gate, persistence).
+- **Owner calls** remain, marked `DECIDE:` — two material (mobile gate,
+  persistence) plus one minor (loudness-key definition).
+
+## Changelog v2 → v2.1 (implementation-readiness fixes)
+
+- **6-band stays byte-exact, test-enforced.** The 6-band keeps its own direct
+  accumulation; the 31-band is a *parallel* accumulation in the same FFT loop and
+  is never the 6-band's source in Phase A. A byte-exact golden test on the six
+  floats is added *before* the refactor (tests-first).
+- **Data flow pinned:** `DeepAnalysis` rides as `#[serde(skip)]
+  Option<Arc<DeepAnalysis>>` on `AnalysisResult` — chosen over tuple-threading so
+  `analyze_tracks_core`'s signature (called by the iPhone bridge + pinned by
+  `contracts.rs:136`) stays stable and the wire contract stays genuinely unchanged.
+- **Per-window peak = sample peak** (cheap); whole-track true peak kept for the
+  ceiling read; per-window true-peak deferred to B with its 4× cost budgeted.
+- **"momentary-PSR"** qualified (uses the momentary loudness key, not 3 s).
+- **Per-window broad tonal pinned** to the existing 3-band (low/mid/high).
+- Non-finite/silent window exclusion applies to **all** strata (not just the loud
+  cut); two-map clear uses a **fixed lock order, never both locks held**;
+  momentary-key **edge handling** at track start/end defined.
+- §13 reworded: Phase A retains the *ordered series*; the temporal *measure* is
+  Phase B.
 
 ## 1. Context
 
@@ -83,10 +105,13 @@ The decode already happens. Phase A runs two passes over the decoded samples.
 ### 4.1 Long-window tonal pass (frequency resolution)
 
 This is the existing whole-track spectral pass (post-F1: a Welch-averaged window
-up to 2¹⁸ samples, ≈0.18 Hz/bin) — **reused, not duplicated.** Today it buckets
-the averaged spectrum into 6 bands; Phase A *also* buckets the same FFT data into
-**31 one-third-octave bands** (20 Hz–16 kHz) for `DeepAnalysis`. No extra FFT, no
-change to the existing 6-band output.
+up to 2¹⁸ samples, ≈0.18 Hz/bin) — **reused, not duplicated.** The **6-band read
+keeps its own direct accumulation, unchanged.** Phase A adds a **parallel**
+accumulation in the *same* FFT loop that buckets the magnitudes into **31
+one-third-octave bands** (20 Hz–16 kHz) for `DeepAnalysis`. The two accumulations
+are independent: in Phase A the 31-band is **never** the 6-band's source (no
+31→6 rollup — that's deferred to Phase B), so the 6-band output is byte-exact vs.
+today (enforced by a golden test, §12). No extra FFT.
 
 Rationale: low-end ⅓-octave needs fine frequency resolution (the bottom bands are
 only a few Hz wide); the long window already provides it and feeds the future
@@ -98,13 +123,17 @@ A separate sliding short window (**16 384 samples ≈ 0.34 s @ 48 k, 50 % hop,
 Hann**) over the whole track, producing a **per-window series** of the
 *time-varying* axes:
 - **Per-window loudness key** — see §5.2 (used for stratification).
-- **Per-window peak** — true/inter-sample peak (for PSR; see §5.3).
+- **Per-window peak** — **sample peak** (cheap; for momentary-PSR + crest, §5.3).
+  Whole-track *true* peak stays the ceiling read; per-window true peak is deferred
+  to Phase B (and would add a 4× oversampled pass — budgeted in §9, not run here).
 - **Per-window crest** — peak/RMS over the window (transient richness).
 - **Per-window stereo** — width (side/mid energy ratio) + L/R correlation. The
   spectral pass is mono = (L+R)/2; the stereo axis uses L/R (width/correlation are
   degenerate on a collapsed mono signal).
-- **Per-window broad tonal** — a coarse few-band tilt read (cheap, for temporal
-  brightness clumping). The fine ⅓-octave curve comes from the long pass (§4.1).
+- **Per-window broad tonal** — the existing **3-band (low/mid/high)**
+  `compute_spectral_balance` read per window (reused; cheap), for temporal
+  brightness clumping. The fine ⅓-octave curve comes only from the long pass
+  (§4.1) — the short window would be 16× coarser in the low end than what ships.
 
 The short window is deliberately not used for the ⅓-octave curve (it would be 16×
 coarser in the low end than what ships).
@@ -130,6 +159,9 @@ recompute strata/cuts without rescanning, and derive PSR — for ~tens of KB.
 - **Body:** the central **25th–75th percentile** band of windows by loudness key
   (tunable `BODY_PCTL_LO=0.25`, `BODY_PCTL_HI=0.75`). "Median/body" in v1 was
   under-defined; this is the decided meaning.
+- **Exclusion (all strata):** silent / non-finite windows (loudness key → −inf)
+  are dropped **before** computing *any* stratum or percentile — not just the loud
+  cut. Whole-track, loud, and body are all over the finite-window set.
 
 ### 5.2 Loudness key (renamed; v1 "per-window short-term LUFS" was a misnomer)
 A 0.34 s window cannot carry a BS.1770 *short-term* (3 s) measurement. The
@@ -140,11 +172,20 @@ a **400 ms** centered span per window (BS.1770 momentary), in LUFS-like dB.
 - Distinct from `AnalysisResult.lufs_short_term_max_3s`, which remains the true
   3 s Mode::S whole-track measure (`analysis.rs:97-98`). `DECIDE (minor):` use
   momentary-per-window (default) vs sampling the real 3 s short-term per window.
+- **Edge handling:** the 400 ms span is wider than the 341 ms window, so at the
+  track's first/last windows it would run past the buffer. Clamp the integration
+  to the available samples (shrink, don't zero-pad — zero-padding would falsely
+  lower edge loudness); a window with < ~half the span available is treated as
+  non-finite and excluded (§5.1).
 
-### 5.3 PSR (so Phase B's transient defense is reconstructible — v1 stored only crest)
-Store **per-window peak AND per-window loudness key** so PSR = `peak − loudness`
-is derivable per window and per stratum without re-measuring. Per-window crest is
-also kept (different metric: peak/RMS). Drop v1's implicit "crest ≈ PSR."
+### 5.3 momentary-PSR (so Phase B's transient defense is reconstructible — v1 stored only crest)
+Store **per-window sample peak AND per-window loudness key** so
+**momentary-PSR** = `sample_peak − loudness_key` is derivable per window and per
+stratum without re-measuring. It is *momentary*-PSR (keyed on the §5.2 momentary
+loudness, not 3 s short-term) — tied to the §5.2 `DECIDE`; if that flips to true
+3 s short-term, this becomes short-term-PSR. Per-window crest (peak/RMS) is also
+kept (different metric). Whole-track *true*-peak PSR for the ceiling read stays
+on the existing whole-track true peak; per-window true-peak PSR is Phase B (§9).
 
 ### 5.4 Dispersion estimator
 **IQR (inter-quartile range)** of the per-window values, per axis (robust, defined
@@ -161,13 +202,30 @@ estimator per axis, fixed.
 - **`DeepAnalysis`** is a **new backend-internal struct** (Rust only; never
   serialized to TS). It holds the per-window series + strata + dispersion + the
   31-band curve. Because it carries a per-window `Vec`, it is **not `Copy`** →
-  store it behind `Arc<DeepAnalysis>`.
+  store it behind `Arc<DeepAnalysis>`. Derive only `Debug` (Arc needs it); no
+  `Serialize`/`PartialEq` needed.
+- **Data flow (decided):** `analyze_one` attaches the computed `DeepAnalysis` to
+  `AnalysisResult` via a new `#[serde(skip)] pub deep_analysis:
+  Option<Arc<DeepAnalysis>>` field (defaults to `None` on deserialize).
+  `populate_profile_store` moves it into the store. Chosen over threading a
+  `(AnalysisResult, DeepAnalysis)` tuple specifically so `analyze_tracks_core`'s
+  signature stays stable — the iPhone bridge calls it and `contracts.rs:136` pins
+  it. `serde(skip)` means the wire contract is **genuinely unchanged** (no
+  softening of "contract unchanged" needed). Cost: the ~10 `AnalysisResult` test
+  literals gain `deep_analysis: None`; add an `AnalysisResult` test constructor /
+  `..` helper to contain future field-addition churn (the exhaustive-literal
+  lesson from the iPhone-bridge fix).
 - **Store:** add a second map `Mutex<HashMap<TrackId, Arc<DeepAnalysis>>>` beside
   the existing `SourceProfileStore` map. `get()` clones the `Arc` (cheap), not the
   data (`profile_store.rs:59`'s `.copied()` stays valid for `SourceProfile`).
 - **Invalidation must clear both maps in lockstep, on BOTH existing clear paths:**
   (a) `prune_failed_profiles` (hard-fail, F3), and (b) the soft `set(id, None)` in
   `populate_profile_store` (too-short/silent). v1 mentioned only (a).
+- **Lock discipline:** use a **fixed lock order** (SourceProfile map, then
+  DeepAnalysis map) and **never hold both locks at once** — take/drop one, then
+  the other. The audio thread only ever locks the SourceProfile map, so that is
+  the entire cross-thread surface; keeping the DeepAnalysis map off the audio
+  thread avoids any lock-ordering hazard with it.
 - **Contract unchanged.** No 31-band arrays cross the wire. Phase C later adds a
   small curated `AnalysisSummary` — not the raw series.
 - **Lifetime:** in-memory only (`#[derive(Default)] Mutex<HashMap>`), so the cache
@@ -178,9 +236,11 @@ estimator per axis, fixed.
 
 ## 7. Integration with existing analysis (additive — nothing replaced in Phase A)
 
-- The long pass (§4.1) is the existing spectral computation, additionally bucketed
-  into 31 bands. **`compute_spectral_balance_6band` and its 6-band output are
-  unchanged**, so all current consumers are unaffected in Phase A:
+- The long pass (§4.1) is the existing spectral computation. The 6-band keeps its
+  **own direct accumulation**; the 31-band is a **parallel** accumulation in the
+  same loop and is **never the 6-band's source in Phase A**. So
+  **`compute_spectral_balance_6band` and its 6-band output are byte-exact vs.
+  today** (golden test, §12), and all current consumers are unaffected in Phase A:
   - `compute_energy_density_score` (`analysis.rs:99`) — reads the 6-band
     presence+air.
   - album heavy/acoustic/transition classification (`album.rs:127,143`) — threshold
@@ -225,19 +285,29 @@ estimator per axis, fixed.
   (the long pass ≈ today's cost; the short pass adds windowed FFT + per-window
   loudness/crest/stereo — budget **all** of these, not just the FFT). Mobile
   estimated ~1–2.5 s — to be validated (§8). Bounded by `MAX_SCAN_WINDOWS`.
+- **Deferred cost (not in Phase A):** per-window *true* peak would need a 4×
+  oversampled pass per window — explicitly **not** run here (Phase A uses sample
+  peak); if Phase B wants it, add that cost to this budget then.
 
 ## 10. Components / files
 
-- `src-tauri/src/analysis.rs` — add the 31-band bucketing to the long pass; add the
-  short-window time pass; assemble `DeepAnalysis`. `compute_spectral_balance_6band`
-  unchanged.
+- `src-tauri/src/analysis.rs` — add the 31-band **parallel** accumulation to the
+  long pass (the 6-band's own direct accumulation is **untouched**; the 31-band is
+  never its source in Phase A); add the short-window time pass; assemble
+  `DeepAnalysis`. `compute_spectral_balance_6band` byte-exact (golden test, §12).
 - `src-tauri/src/deep_analysis.rs` (new) — the `DeepAnalysis` struct + the
-  per-window series types (backend-internal; not in `bindings.ts`).
+  per-window series types (backend-internal; not in `bindings.ts`). Derives `Debug`.
+- `src-tauri/src/types.rs` — add `#[serde(skip)] pub deep_analysis:
+  Option<Arc<DeepAnalysis>>` to `AnalysisResult` (defaults `None`; off the wire);
+  add a test constructor/helper so the ~10 fixture literals don't each need manual
+  field additions now and on future fields.
 - `src-tauri/src/profile_store.rs` — add the `Arc<DeepAnalysis>` map; extend BOTH
-  clear paths (`prune_failed_profiles` + the soft `set(_, None)`).
-- `src-tauri/src/engine.rs` — `analyze_tracks` / `populate_profile_store` populate
-  `DeepAnalysis` alongside `SourceProfile`.
-- No `src/` / `bindings.ts` changes (contract unchanged).
+  clear paths (`prune_failed_profiles` + the soft `set(_, None)`); fixed lock order,
+  never both locks (§6).
+- `src-tauri/src/engine.rs` — `analyze_tracks` / `populate_profile_store` move the
+  `DeepAnalysis` off the `AnalysisResult` into the store, alongside `SourceProfile`.
+- No `src/` / `bindings.ts` changes (contract unchanged — the new field is
+  `serde(skip)`).
 
 ## 11. Implementation parameters (now actually specified)
 
@@ -259,22 +329,31 @@ estimator per axis, fixed.
 
 ## 12. Testing
 
+- **Golden 6-band test (tests-first, write BEFORE the refactor):** a byte-exact
+  assertion on `compute_spectral_balance_6band`'s six returned floats for a fixed
+  fixture. It must pass on today's code and stay equal after the 31-band parallel
+  accumulation lands — this is what *enforces* the "additive / changes nothing"
+  guarantee (the existing relative tests — `sums_to_unity`, `mid>0.5`,
+  `low>bright` — would not catch a value shift).
 - **Additive invariant:** existing analysis tests, `contracts.rs`, and
-  `preset_byte_identity` snapshots stay green unchanged (Phase A changes no
-  existing value). Add: assert `DeepAnalysis` is produced/cached for a normal
-  track and absent (but `SourceProfile` present) for a 1024–16 384-frame clip.
+  `preset_byte_identity` snapshots stay green unchanged (the latter never read
+  spectral values, so they are the "chain untouched" invariant, not coverage of
+  the 6-band). Add: assert `DeepAnalysis` is produced/cached for a normal track
+  and absent (but `SourceProfile` present) for a 1024–16 384-frame clip.
 - **Short-clip regimes (two, per §7):** (a) ~1024–16 384 frames → `DeepAnalysis`
   absent, `SourceProfile` present, Tier-1 trims still fire; (b) <1024 frames → both
   absent, fully inert.
 - **Stratification / temporal (synthetic fixtures):**
   - *Sustained bright chorus* vs *scattered bright hits* with the **same loudness
-    multiset** → the per-window series / temporal measure distinguishes them
-    (set-based strata alone cannot — this is the §13 gap the retained series fixes).
+    multiset** → assert Phase A's **retained ordered series differs** between the
+    two (set-based strata/dispersion alone are order-invariant and would match).
+    Phase A only proves the series *preserves order*; the temporal *measure/
+    decision* that acts on it is Phase B.
   - *Bright-loud-section + dark-body* → loud-stratum brightness ≫ body; high
     dispersion. *Uniformly bright* → all strata bright, low dispersion.
   - *Localized harsh blip* → harsh present but low coverage in the series.
-- **PSR derivable:** from stored per-window peak + loudness, assert PSR matches a
-  direct computation on a fixture (no re-scan).
+- **momentary-PSR derivable:** from stored per-window sample peak + loudness key,
+  assert momentary-PSR matches a direct computation on a fixture (no re-scan).
 - **Determinism:** same input → identical `DeepAnalysis` **on the same platform**
   (fixed-order f64; not asserted cross-platform).
 - **Mobile cost:** the §8 benchmark records elapsed ms.
@@ -282,8 +361,9 @@ estimator per axis, fixed.
 ## 13. Acceptance criteria
 
 - `DeepAnalysis` produced once per analyze, cached behind `Arc`, holding: the
-  per-window series, 31-band long-pass curve, loud/body/whole strata, IQR
-  dispersion (Fisher-z for correlation), and per-window peak+loudness (PSR-ready).
+  retained **ordered** per-window series, 31-band long-pass curve, loud/body/whole
+  strata, IQR dispersion (Fisher-z for correlation), and per-window sample
+  peak + loudness key (momentary-PSR-ready).
 - "body," dispersion, and the loudness key are defined by constant, not example.
 - Phase A changes **no** existing value/behavior; all current tests green; the two
   store maps invalidate in lockstep on both clear paths.
