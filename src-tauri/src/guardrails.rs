@@ -214,20 +214,56 @@ pub struct GuardrailReadout {
     pub stereo_correlation: Option<f32>,
 }
 
-/// Compute the read-only guardrail summary. Same gating as the chain: a source
-/// profile must be present and `strength > 0`, else `active = false`.
-pub fn readout_for(profile: Option<&SourceProfile>, strength_setting: Option<f32>) -> GuardrailReadout {
-    let strength = strength_setting
+/// Realized trim fraction (AFTER the +0.5 dB character floor) for a set of preset
+/// EQ bands at `preset_scale`: how much of the total POSITIVE boost the guardrail
+/// actually removed. The raw cap fraction (`1 - mult`) overstates near the floor;
+/// this reads true for the by-ear calibration session (B8).
+fn realized_eq_trim(bands: &[f32], preset_scale: f32, trim: impl Fn(f32) -> f32) -> f32 {
+    let mut orig = 0.0_f32;
+    let mut removed = 0.0_f32;
+    for &db in bands {
+        let boost = db * preset_scale;
+        if boost > 0.0 {
+            orig += boost;
+            removed += boost - trim(boost);
+        }
+    }
+    if orig > 1.0e-6 {
+        removed / orig
+    } else {
+        0.0
+    }
+}
+
+/// Compute the read-only guardrail summary for `settings`. Same gating as the
+/// chain: a source profile must be present and `strength > 0`, else
+/// `active = false`. The EQ trims are the REALIZED fractions (after the +0.5 dB
+/// floor, computed against the actual preset bands); density/width are floor-free
+/// and exact.
+pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
+    let strength = settings
+        .advanced
+        .adaptive_strength
         .unwrap_or(ADAPTIVE_STRENGTH_DEFAULT)
         .clamp(0.0, 1.0);
-    match profile.filter(|_| strength > 0.0) {
+    match settings.advanced.source_profile.as_ref().filter(|_| strength > 0.0) {
         Some(p) => {
             let g = SourceGuardrails::compute(p, strength);
+            let preset = crate::dsp::preset_calibration(&settings.preset);
+            let preset_scale = 0.4 + 1.2 * settings.intensity.clamp(0.0, 1.0);
             GuardrailReadout {
                 active: true,
                 strength,
-                bright_trim: 1.0 - g.bright_mult,
-                low_trim: 1.0 - g.low_mult,
+                bright_trim: realized_eq_trim(
+                    &[preset.high_mid_db, preset.air_db, preset.sparkle_db],
+                    preset_scale,
+                    |o| g.trim_bright_db(o),
+                ),
+                low_trim: realized_eq_trim(
+                    &[preset.sub_db, preset.low_shelf_db],
+                    preset_scale,
+                    |o| g.trim_low_db(o),
+                ),
                 density_trim: 1.0 - g.density_mult,
                 width_trim: 1.0 - g.width_mult,
                 brightness_share: p.spectral_6.presence + p.spectral_6.air,
@@ -254,10 +290,7 @@ pub fn readout_for(profile: Option<&SourceProfile>, strength_setting: Option<f32
 /// Tauri command: read-only adaptive-trim summary for the current settings.
 #[tauri::command]
 pub fn guardrail_readout(settings: MasteringSettings) -> GuardrailReadout {
-    readout_for(
-        settings.advanced.source_profile.as_ref(),
-        settings.advanced.adaptive_strength,
-    )
+    readout_for(&settings)
 }
 
 #[cfg(test)]
@@ -438,24 +471,60 @@ mod tests {
         assert_eq!(g, SourceGuardrails::identity());
     }
 
+    fn settings_with(
+        profile: Option<SourceProfile>,
+        strength: Option<f32>,
+    ) -> crate::types::MasteringSettings {
+        crate::types::MasteringSettings {
+            preset: crate::types::Preset::Universal,
+            intensity: 0.5,
+            eq_sub_db: 0.0,
+            eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
+            eq_mid_db: 0.0,
+            eq_high_mid_db: 0.0,
+            eq_high_db: 0.0,
+            eq_sparkle_db: 0.0,
+            volume_match: false,
+            source_lufs_integrated: None,
+            input_gain_db: 0.0,
+            output_gain_db: 0.0,
+            delivery_profile: crate::types::DeliveryProfile::Custom,
+            album: None,
+            advanced: crate::types::AdvancedSettings {
+                adaptive_strength: strength,
+                source_profile: profile,
+                ..Default::default()
+            },
+        }
+    }
+
     #[test]
     fn readout_reports_trims_and_context_when_active() {
         // bright (presence+air 0.45) + dense (DR/LRA 2) + wide (corr 0.1); not boomy.
         let p = profile(0.25, 0.20, 0.08, 0.22, 2.0, 2.0, Some(0.1));
-        let r = readout_for(Some(&p), Some(1.0));
+        let r = readout_for(&settings_with(Some(p), Some(1.0)));
         assert!(r.active);
-        assert!(r.bright_trim > 0.0);
+        assert!(r.bright_trim > 0.0); // Universal carries a positive air boost
         assert!(r.density_trim > 0.0);
         assert!(r.width_trim > 0.0);
-        assert_eq!(r.low_trim, 0.0, "sub+low 0.30 < 0.42 deadband");
+        assert_eq!(r.low_trim, 0.0, "sub+low 0.30 < 0.42 deadband -> no low trim");
         assert!((r.brightness_share - 0.45).abs() < 1e-6);
         assert_eq!(r.stereo_correlation, Some(0.1));
     }
 
     #[test]
     fn readout_inactive_without_profile_or_at_zero_strength() {
-        assert!(!readout_for(None, Some(1.0)).active);
+        assert!(!readout_for(&settings_with(None, Some(1.0))).active);
         let p = profile(0.25, 0.20, 0.08, 0.22, 2.0, 2.0, Some(0.1));
-        assert!(!readout_for(Some(&p), Some(0.0)).active);
+        assert!(!readout_for(&settings_with(Some(p), Some(0.0))).active);
+    }
+
+    #[test]
+    fn realized_eq_trim_respects_the_character_floor() {
+        // A 0.8 dB boost at multiplier 0.5 floors at +0.5 dB -> 0.3 dB removed =
+        // 37.5% realized, NOT the 50% the raw cap fraction would report (B8).
+        let realized = realized_eq_trim(&[0.8], 1.0, |o| floor_boost(o, 0.5));
+        assert!((realized - 0.375).abs() < 1.0e-4, "realized={realized}");
     }
 }
