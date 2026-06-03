@@ -3223,8 +3223,8 @@ mod tests {
                 low: 0.22,
                 low_mid: 0.20,
                 mid: 0.20,
-                presence: 0.20,
-                air: 0.10,
+                presence: 0.25,
+                air: 0.20,
             },
             dynamic_range_p95_p10_db: 10.0,
             dynamic_range_lu: 9.0,
@@ -3241,6 +3241,52 @@ mod tests {
         assert!(
             bright_high < base_high,
             "adapted bright source should render less presence+air: adapted={bright_high} base={base_high}"
+        );
+    }
+
+    #[test]
+    fn pink_neutral_source_gets_no_bright_trim() {
+        use crate::analysis::compute_spectral_balance_6band;
+        use crate::guardrails::SourceGuardrails;
+        use crate::types::SourceProfile;
+
+        let sr = 48_000u32;
+        let channels = 2usize;
+        let n = sr as usize * 4; // 4 s
+        // Paul Kellet pink filter on a deterministic LCG (mono, duplicated L/R).
+        let mut state: u32 = 0x1234_5678;
+        let (mut b0, mut b1, mut b2, mut b3, mut b4, mut b5) =
+            (0f32, 0f32, 0f32, 0f32, 0f32, 0f32);
+        let mut samples = Vec::with_capacity(n * channels);
+        for _ in 0..n {
+            state = state.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+            let w = ((state >> 8) as f32 / 8_388_608.0) - 1.0;
+            b0 = 0.99886 * b0 + w * 0.0555179;
+            b1 = 0.99332 * b1 + w * 0.0750759;
+            b2 = 0.96900 * b2 + w * 0.1538520;
+            b3 = 0.86650 * b3 + w * 0.3104856;
+            b4 = 0.55000 * b4 + w * 0.5329522;
+            b5 = -0.7616 * b5 - w * 0.0168980;
+            let p = (b0 + b1 + b2 + b3 + b4 + b5 + w * 0.5362 + w * 0.115926) * 0.05;
+            samples.push(p);
+            samples.push(p);
+        }
+
+        let bal = compute_spectral_balance_6band(&samples, sr, channels).expect("pink 6-band");
+        let bright_share = bal.presence + bal.air;
+        let profile = SourceProfile {
+            spectral_6: bal,
+            dynamic_range_p95_p10_db: 12.0,
+            dynamic_range_lu: 9.0,
+            stereo_correlation: Some(0.9),
+            stereo_width: 1.0,
+        };
+        let g = SourceGuardrails::compute(&profile, 1.0);
+        // A genuinely neutral (pink) master must NOT lose air at any strength.
+        assert_eq!(
+            g.trim_bright_db(3.0),
+            3.0,
+            "pink neutral (presence+air={bright_share}) must not trim with deadband 0.30"
         );
     }
 

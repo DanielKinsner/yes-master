@@ -27,7 +27,12 @@ pub const ADAPTIVE_STRENGTH_DEFAULT: f32 = 0.6;
 // ---------------------------------------------------------------------------
 
 /// Brightness trigger = presence + air share. No trim at/below this share.
-const BRIGHT_DEADBAND: f32 = 0.20;
+/// Set ABOVE the natural pink-tilt share (presence+air ~= 0.278 for a 1/f
+/// spectrum across our band edges) so a genuinely neutral master reads as zero
+/// excess and keeps its air. Was 0.20, which over-trimmed neutral masters by
+/// ~39% at default strength (reviews 2026-06-02/03). Tilt-vs-reference is the
+/// planned principled replacement; see the finish plan.
+const BRIGHT_DEADBAND: f32 = 0.30;
 /// Brightness share above the deadband that maps to full (pre-cap) trim.
 const BRIGHT_EXCESS_FULL: f32 = 0.12;
 
@@ -218,9 +223,13 @@ mod tests {
         }
     }
 
-    /// Balanced, dynamic, well-correlated source: nothing should trim.
+    /// A realistic pink-tilted neutral master (presence+air ~= 0.278, sub+low
+    /// ~= 0.377 — the shares a true 1/f spectrum yields across our band edges),
+    /// dynamic and well-correlated: nothing should trim. The old fixture
+    /// (presence 0.08, air 0.05) was unrealistically dark and masked the
+    /// neutral-master deadband misfire.
     fn neutral() -> SourceProfile {
-        profile(0.08, 0.05, 0.08, 0.22, 10.0, 9.0, Some(0.8))
+        profile(0.143, 0.135, 0.207, 0.170, 10.0, 9.0, Some(0.8))
     }
 
     #[test]
