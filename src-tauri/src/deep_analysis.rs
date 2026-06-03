@@ -168,6 +168,59 @@ pub struct DeepAnalysis {
     pub stereo_correlation: AxisStrata,
 }
 
+impl DeepAnalysis {
+    /// Assemble from the 31-band whole-track curve + the per-window series.
+    /// Every per-axis aggregate is loudness-stratified over the SAME loudness
+    /// keys (so loud/body refer to the same windows across axes). Correlation
+    /// dispersion uses Fisher-z IQR (variance of a bounded [-1,1] stat is
+    /// meaningless); its whole/loud/body means use raw correlation.
+    pub fn from_parts(bands_31: [f32; 31], windows: Vec<WindowMetrics>) -> Self {
+        let keys: Vec<f32> = windows.iter().map(|w| w.loudness_key).collect();
+        let pick = |f: fn(&WindowMetrics) -> f32| -> AxisStrata {
+            let vals: Vec<f32> = windows.iter().map(f).collect();
+            axis_strata(&vals, &keys)
+        };
+        let loudness = pick(|w| w.loudness_key);
+        let crest = pick(|w| w.crest);
+        let brightness = pick(|w| w.high);
+        let stereo_width = pick(|w| w.stereo_width);
+        // correlation strata: means use raw corr; dispersion uses Fisher-z IQR.
+        let corr_vals: Vec<f32> = windows.iter().map(|w| w.stereo_correlation).collect();
+        let mut stereo_correlation = axis_strata(&corr_vals, &keys);
+        stereo_correlation.dispersion = fisher_z_iqr(&corr_vals);
+        let (harsh_share, sibilant_share) = harsh_sibilant_from_bands(&bands_31);
+        Self {
+            bands_31,
+            harsh_share,
+            sibilant_share,
+            windows,
+            loudness,
+            crest,
+            brightness,
+            stereo_width,
+            stereo_correlation,
+        }
+    }
+}
+
+/// Sum band shares whose center frequency falls in the harsh / sibilant ranges.
+/// `bands_31` are one-third-octave shares; `band_center_hz(i)` gives each band's
+/// nominal center. Ranges are half-open [lo, hi) per the tuning constants.
+fn harsh_sibilant_from_bands(bands: &[f32; 31]) -> (f32, f32) {
+    let mut harsh = 0.0;
+    let mut sib = 0.0;
+    for (i, &share) in bands.iter().enumerate() {
+        let c = band_center_hz(i);
+        if (HARSH_LO_HZ..HARSH_HI_HZ).contains(&c) {
+            harsh += share;
+        }
+        if (SIBILANT_LO_HZ..SIBILANT_HI_HZ).contains(&c) {
+            sib += share;
+        }
+    }
+    (harsh, sib)
+}
+
 /// Short-window time pass. Returns the ordered per-window series. `channels`
 /// interleaved samples. Mono = (L+R)/2 for spectral/loudness; L/R kept for the
 /// stereo axis. Caps at MAX_SCAN_WINDOWS by widening the hop.
@@ -463,6 +516,23 @@ mod tests {
             // mono → correlation is NaN, width 0
             assert!(w.stereo_correlation.is_nan());
         }
+    }
+
+    #[test]
+    fn deep_from_series_builds_strata_and_psr_is_derivable() {
+        let sr = 48_000_u32;
+        let n = sr as usize * 3;
+        let omega = 2.0 * std::f32::consts::PI * 1000.0 / sr as f32;
+        let samples: Vec<f32> = (0..n).map(|i| 0.3 * (omega * i as f32).sin()).collect();
+        let windows = scan_windows(&samples, sr, 1);
+        let bands = [1.0_f32 / 31.0; 31]; // placeholder curve for this unit test
+        let da = DeepAnalysis::from_parts(bands, windows.clone());
+        assert!(da.loudness.whole.is_finite());
+        assert!(da.crest.whole >= 1.0);
+        // momentary-PSR per window = sample_peak(dB) - loudness_key; derivable, finite.
+        let w = windows.iter().find(|w| w.loudness_key.is_finite()).unwrap();
+        let psr = 20.0 * w.sample_peak.max(1e-9).log10() - w.loudness_key;
+        assert!(psr.is_finite());
     }
 
     #[test]
