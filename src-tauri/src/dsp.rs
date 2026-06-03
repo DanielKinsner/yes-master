@@ -26,10 +26,35 @@ impl BiquadCoeffs {
         }
     }
 
-    pub fn low_shelf(sample_rate: f32, freq_hz: f32, gain_db: f32, slope: f32) -> Self {
-        if gain_db.abs() < 1.0e-4 {
-            return Self::identity();
+    /// Sanitize a shelf/peaking gain before it drives `10^(gain_db / 40)`.
+    ///
+    /// Returns `None` (the caller substitutes an identity filter) for a
+    /// non-finite gain or an effective no-op (`|gain_db| < 1e-4`); otherwise the
+    /// gain clamped to ±48 dB. Rationale: the user EQ band dB values come
+    /// straight off `MasteringSettings` with no serde range check (unlike
+    /// input/output gain, which are clamped in `from_settings`), so a hand-built
+    /// / stale / API payload can carry a non-finite or absurd value. Left
+    /// unguarded, `10.0_f32.powf(1e30 / 40.0)` overflows to `+inf` and every
+    /// downstream sample for that band becomes NaN — and a mastering chain must
+    /// never emit NaN. Byte-identical for any in-range gain: the prior `< 1e-4`
+    /// identity short-circuit is preserved and no realistic master pushes a
+    /// single band past ±48 dB.
+    #[inline]
+    fn sanitize_shelf_gain_db(gain_db: f32) -> Option<f32> {
+        if !gain_db.is_finite() {
+            return None;
         }
+        let gain_db = gain_db.clamp(-48.0, 48.0);
+        if gain_db.abs() < 1.0e-4 {
+            return None;
+        }
+        Some(gain_db)
+    }
+
+    pub fn low_shelf(sample_rate: f32, freq_hz: f32, gain_db: f32, slope: f32) -> Self {
+        let Some(gain_db) = Self::sanitize_shelf_gain_db(gain_db) else {
+            return Self::identity();
+        };
         let a = 10.0_f32.powf(gain_db / 40.0);
         let omega = 2.0 * PI * freq_hz / sample_rate;
         let cos_o = omega.cos();
@@ -54,9 +79,9 @@ impl BiquadCoeffs {
     }
 
     pub fn high_shelf(sample_rate: f32, freq_hz: f32, gain_db: f32, slope: f32) -> Self {
-        if gain_db.abs() < 1.0e-4 {
+        let Some(gain_db) = Self::sanitize_shelf_gain_db(gain_db) else {
             return Self::identity();
-        }
+        };
         let a = 10.0_f32.powf(gain_db / 40.0);
         let omega = 2.0 * PI * freq_hz / sample_rate;
         let cos_o = omega.cos();
@@ -192,9 +217,9 @@ impl BiquadCoeffs {
     }
 
     pub fn peaking(sample_rate: f32, freq_hz: f32, q: f32, gain_db: f32) -> Self {
-        if gain_db.abs() < 1.0e-4 {
+        let Some(gain_db) = Self::sanitize_shelf_gain_db(gain_db) else {
             return Self::identity();
-        }
+        };
         let a = 10.0_f32.powf(gain_db / 40.0);
         let omega = 2.0 * PI * freq_hz / sample_rate;
         let cos_o = omega.cos();
@@ -2476,6 +2501,71 @@ mod tests {
         assert!(approx_eq(coeffs.sub_highpass.b0, 1.0, 1e-6));
         assert!(approx_eq(coeffs.sub_highpass.b1, 0.0, 1e-6));
         assert!(approx_eq(coeffs.sub_highpass.b2, 0.0, 1e-6));
+    }
+
+    /// Regression (adversarial type review 2026-06-03): user EQ band dB values
+    /// reach the biquad builders straight off `MasteringSettings` with no serde
+    /// range check, so a hand-built / stale / API payload can carry a non-finite
+    /// or absurd gain. `10.0_f32.powf(1e30 / 40.0)` overflows to `+inf`, which
+    /// poisons the coefficients and turns every downstream sample into NaN. The
+    /// builders must instead collapse a non-finite gain to identity and keep an
+    /// absurd finite gain's coefficients finite.
+    #[test]
+    fn biquad_builders_reject_non_finite_and_absurd_gain() {
+        let sr = 48_000.0;
+        let is_identity = |c: &BiquadCoeffs| {
+            approx_eq(c.b0, 1.0, 1e-6)
+                && approx_eq(c.b1, 0.0, 1e-6)
+                && approx_eq(c.b2, 0.0, 1e-6)
+                && approx_eq(c.a1, 0.0, 1e-6)
+                && approx_eq(c.a2, 0.0, 1e-6)
+        };
+        let all_finite = |c: &BiquadCoeffs| {
+            c.b0.is_finite()
+                && c.b1.is_finite()
+                && c.b2.is_finite()
+                && c.a1.is_finite()
+                && c.a2.is_finite()
+        };
+
+        for &bad in &[f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            assert!(
+                is_identity(&BiquadCoeffs::peaking(sr, 1_000.0, 0.9, bad)),
+                "peaking must collapse a non-finite gain ({bad}) to identity"
+            );
+            assert!(
+                is_identity(&BiquadCoeffs::low_shelf(sr, 120.0, bad, 0.7)),
+                "low_shelf must collapse a non-finite gain ({bad}) to identity"
+            );
+            assert!(
+                is_identity(&BiquadCoeffs::high_shelf(sr, 8_000.0, bad, 0.7)),
+                "high_shelf must collapse a non-finite gain ({bad}) to identity"
+            );
+        }
+
+        // An absurd finite gain (e.g. a malformed 1e30 dB payload) used to
+        // overflow 10^(g/40) to +inf; it must now produce finite coefficients.
+        for &huge in &[1.0e30_f32, -1.0e30_f32] {
+            assert!(
+                all_finite(&BiquadCoeffs::peaking(sr, 1_000.0, 0.9, huge)),
+                "peaking coeffs must stay finite for an absurd gain ({huge})"
+            );
+            assert!(
+                all_finite(&BiquadCoeffs::low_shelf(sr, 120.0, huge, 0.7)),
+                "low_shelf coeffs must stay finite for an absurd gain ({huge})"
+            );
+            assert!(
+                all_finite(&BiquadCoeffs::high_shelf(sr, 8_000.0, huge, 0.7)),
+                "high_shelf coeffs must stay finite for an absurd gain ({huge})"
+            );
+        }
+
+        // A normal in-range gain still builds a real (non-identity) filter.
+        let normal = BiquadCoeffs::peaking(sr, 1_000.0, 0.9, 6.0);
+        assert!(
+            all_finite(&normal) && !is_identity(&normal),
+            "a +6 dB peak must still produce a real filter"
+        );
     }
 
     #[test]
