@@ -786,6 +786,47 @@ mod tests {
         );
     }
 
+    /// Byte-exact lock on the 6-band output (adversarial review must-fix #1). The
+    /// other 6-band tests are relative (sums-to-unity / mid>0.5 / low>bright) and
+    /// would NOT catch a value shift. Phase A adds a PARALLEL 31-band accumulation;
+    /// this asserts the 6 floats are bit-identical before and after that change.
+    /// If a future Phase B intentionally rerolls the 6-band from the 31-band, THIS
+    /// test is the gate that forces an explicit decision.
+    #[test]
+    fn spectral_balance_6band_is_byte_exact_golden() {
+        let sr = 48_000_u32;
+        // Deterministic broadband fixture: summed sines exciting four of the six
+        // bands (sub, low_mid, presence, air); `low`/`mid` stay near-zero so the
+        // lock pins those too.
+        let n = sr as usize * 2; // 2 s, mono
+        let mut samples = Vec::with_capacity(n);
+        for i in 0..n {
+            let t = i as f32 / sr as f32;
+            let s = 0.20 * (2.0 * std::f32::consts::PI * 60.0 * t).sin()
+                + 0.15 * (2.0 * std::f32::consts::PI * 500.0 * t).sin()
+                + 0.12 * (2.0 * std::f32::consts::PI * 3_000.0 * t).sin()
+                + 0.08 * (2.0 * std::f32::consts::PI * 9_000.0 * t).sin();
+            samples.push(s);
+        }
+        let bal = compute_spectral_balance_6band(&samples, sr, 1).expect("balance");
+        // Pinned golden constants captured from today's code (Phase A pre-refactor).
+        // These are the literal f32 Debug values, which round-trip exactly, so the
+        // assertion is truly byte-exact rather than a self-comparison tautology.
+        let golden: [f32; 6] = [
+            // sub, low, low_mid, mid, presence, air
+            0.48019287,
+            3.2878075e-10,
+            0.27010766,
+            8.422937e-9,
+            0.17286925,
+            0.07683022,
+        ];
+        assert_eq!(
+            [bal.sub, bal.low, bal.low_mid, bal.mid, bal.presence, bal.air],
+            golden
+        );
+    }
+
     /// Dynamic-range P95-P10 should be small for a sine at constant amplitude
     /// and large for a square-envelope amplitude-modulated signal.
     #[test]
