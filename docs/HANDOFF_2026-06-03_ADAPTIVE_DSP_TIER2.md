@@ -43,13 +43,21 @@ corrective "smart" tier). Your job starts at the action plan in §7.
 ```
 import → analyze_one (analysis.rs) → AnalysisResult (6-band shares, DR, LRA, corr, width)
   │
-  ├─ TS builds SourceProfile and injects it onto settings.advanced.source_profile:
-  │     live audition + preview + Track Master export  (settings-transitions.ts:
-  │     sourceProfileFromAnalysis / injectSourceProfile / applyChainDispatchOverrides)
-  │     ALBUM: NOT injected (album is non-adaptive); apply_album_shadow also strips it.
+  ├─ BACKEND-OWNED since B2 (2026-06-02): analyze_tracks derives SourceProfile via
+  │     SourceProfile::from_analysis and caches it in SourceProfileStore
+  │     (profile_store.rs), keyed by TrackId. Every Track-Master chain entry resolves
+  │     from it via profile_store::apply_resolved_profile before building the chain:
+  │       • render_track_preview / render_track_master  (engine.rs — have track id)
+  │       • live play_master (has track id) + update_chain (audio thread resolves by
+  │         the loaded track; reads the store fresh so a late analysis is picked up)
+  │       • guardrail_readout (gets track id + album)
+  │     Precedence: album → None; FE-supplied settings.advanced.source_profile =
+  │     override; else the backend-derived cache. ALBUM stays flat (play_master/readout
+  │     `album` arg → None; apply_album_shadow also strips). The FE no longer computes
+  │     the profile (TS mappers deleted) — single Rust derivation, no dual-mapper drift.
   │
-  └─ Rust slow lanes (fixture_matrix / reference_tuning) build it via
-        SourceProfile::from_analysis  (test/tuning only — see B2)
+  └─ Rust slow lanes (fixture_matrix / reference_tuning) still build it directly via
+        SourceProfile::from_analysis (test/tuning — same Rust derivation, no drift)
 
 ChainCoeffs::from_settings (dsp.rs) reads settings.advanced.{source_profile, adaptive_strength}:
   • SourceGuardrails::compute(profile, strength)  (guardrails.rs) → per-axis multipliers
@@ -68,16 +76,23 @@ gate any new behavior on the profile being present.
 
 - `src-tauri/src/guardrails.rs` — **the heart.** Trim math, ALL tuning constants
   (deadbands, caps, floor, `ADAPTIVE_STRENGTH_DEFAULT`), `SourceGuardrails`, the
-  readout (`readout_for`, `realized_eq_trim`, `guardrail_readout` command). **Tune here.**
+  readout (`readout_for`, `realized_eq_trim`, `guardrail_readout` command — now takes
+  `track_id` + `album` and resolves from the store). **Tune here.**
+- `src-tauri/src/profile_store.rs` — **B2.** `SourceProfileStore` (the backend-owned
+  `TrackId → SourceProfile` cache), `resolve_effective_profile` (album/override/cache
+  precedence), `apply_resolved_profile` (the single inject chokepoint). Populated by
+  `engine::analyze_tracks` / `populate_profile_store`.
 - `src-tauri/src/dsp.rs` — `ChainCoeffs::from_settings` applies trims (EQ ≈ L744,
   compression density ≈ L895, width ≈ L860); `preset_calibration` (preset band table).
 - `src-tauri/src/types.rs` — `SourceProfile`, `AdvancedSettings.adaptive_strength`.
 - `src-tauri/src/analysis.rs` — `analyze_one`; `compute_spectral_balance_6band` (the
   ~5.5 s `1<<18` window — see B6).
 - `src-tauri/src/album_render.rs` — `apply_album_shadow` (strips the profile → album flat).
-- `src-tauri/src/audio.rs` — live `update_chain` handler (settings-only, **no track id**
-  — the B2 blocker); `play_master`.
-- `src/lib/settings-transitions.ts` — TS profile builder + injection (the production mapper).
+- `src-tauri/src/audio.rs` — live `update_chain` handler (settings-only, no track id —
+  resolves the profile via the audio thread's `SourceProfileStore` + loaded track,
+  gated by cached `live_album`); `play_master` (now takes `album`, resolves + caches).
+- `src/lib/settings-transitions.ts` — `applyChainDispatchOverrides` (live VM +
+  source_lufs only now; the TS profile mappers were deleted in B2 — backend owns it).
 - `src/hooks/useTrackMaster.ts` — live dispatch (`withSourceLufs`), `exportMaster`,
   `updatePreview`, album export (`exportAlbumPlan` ≈ L1118), the readout fetch.
 - `src/App.tsx` — Adapt Strength control + the readout (in `AdvancedControlsCard`).
@@ -113,19 +128,22 @@ B1/B9); durable on/off default (B4); LU→dB LRA aliasing removed (B11); stale-p
 clear (B10); doc/test hygiene (B12). Gates green (npm 162 / cargo lib 236 / integration /
 clippy / build:windows). Owner decisions are locked in `ADAPTIVE_DSP_NEXT_STEPS.md`.
 
+**P0 / B2 — backend-owned `source_profile` — DONE (2026-06-02).** Derivation moved
+server-side (`profile_store.rs` + `analyze_tracks`); every Track-Master chain entry
+resolves via `apply_resolved_profile`; the live `update_chain` path resolves by the
+loaded track in the audio thread; album stays flat (`album` arg + cached `live_album`);
+`guardrail_readout` re-touched (NF-2); the TS profile mappers were deleted. Gates green
+(cargo lib 246 / contracts 39 / clippy / check --all-features / npm 157 / build).
+
 ## 7. What to do next — action plan (from the TRUE master review)
 
 Owner already decided: album OUT (done), deadband quick-bump (done), readout built,
-backend refactor **deferred to this window**. So:
+backend refactor (done — see §6). So:
 
-**P0 — recommended FIRST (the root cause, B2):**
-- **Make the backend own `source_profile`.** Derive it server-side from the track
-  `AnalysisResult`; treat any FE-supplied profile as an override; **cache it in
-  audio-thread state** so the settings-only `update_chain` live path (`audio.rs`, no
-  track id) gets it too. Dissolves the "FE forgot to inject" bug class (it already
-  happened at 3 sites) and the dual TS/Rust mapper. **Coupling (do in the same change):**
-  re-touch the `guardrail_readout` input contract + the TS readout fetch in
-  `useTrackMaster.ts`. **Keep album flat** (don't inject for album).
+**P0 — DONE (B2, see §6).** ~~Make the backend own `source_profile`.~~ Backend now
+derives server-side, FE profile is an override, the live `update_chain` path resolves
+via the audio thread's store, `guardrail_readout` re-touched, album kept flat, TS
+mappers deleted.
 
 **P1 — calibration-enabling (before the listening session):**
 - **Welch-average the 6-band window + recalibrate brightness (B6).** Today the tonal
@@ -150,10 +168,15 @@ Live backlog: `docs/ADAPTIVE_DSP_NEXT_STEPS.md`.
 - **Don't break `preset_byte_identity`.** Gate any new chain behavior on the profile.
 - **Album is intentionally flat.** Don't add injection for album; the strip + FE skip +
   disabled control are deliberate.
-- **Two profile mappers** (TS `sourceProfileFromAnalysis` + Rust `from_analysis`) must
-  stay in sync until B2 unifies them server-side.
-- **Readout is single-source-of-truth** (reuses `compute()` + the realized-floor math).
-  If you move derivation server-side, update the `guardrail_readout` contract + TS fetch.
+- **One profile mapper now (B2 done).** The TS `sourceProfileFromAnalysis` twin was
+  deleted; the backend `SourceProfile::from_analysis` (via `profile_store.rs`) is the
+  single derivation. The FE may still pass `advanced.source_profile` as an override on
+  the wire, but nothing in the app constructs one — `resolve_effective_profile` decides.
+- **Album flatness is gated in two ways now:** `apply_album_shadow` strips the profile
+  for album renders, AND the live/readout paths pass `album` → `resolve_effective_profile`
+  returns `None`. Don't add injection for album.
+- **Readout is single-source-of-truth** (reuses `compute()` + the realized-floor math)
+  and now resolves the profile from the store via `track_id` + `album` (B2/NF-2 done).
 - **Tuning constants live ONLY in `guardrails.rs`.**
 - **LF→CRLF** warnings on commit are benign. **`Cargo.toml`** showing "modified" after a
   windows build is EOL-only — `git restore` it.

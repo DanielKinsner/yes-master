@@ -16,7 +16,6 @@ import type {
   AnalysisResult,
   DeliveryProfile,
   MasteringSettings,
-  SourceProfile,
   TrackId,
 } from "../bindings";
 import {
@@ -201,42 +200,9 @@ export function applyChainDispatchOverrides(
   return result;
 }
 
-/// Build the level-invariant `SourceProfile` the Tier-1 adaptive guardrails
-/// read, from a completed analysis. Returns `null` when the 6-band spectral
-/// balance is missing (signal too short/silent) — the EQ guardrails need it to
-/// compare against. Mirrors `SourceProfile::from_analysis` in
-/// `src-tauri/src/types.rs`.
-export function sourceProfileFromAnalysis(
-  analysis: AnalysisResult | null | undefined,
-): SourceProfile | null {
-  const s6 = analysis?.spectral_balance_6band;
-  if (!analysis || !s6) return null;
-  // When P95-P10 DR is missing, do NOT fall back to LRA — that aliases an LU
-  // value into the dB DR ramp (B11). Use a "no DR trigger" dB sentinel so density
-  // rests on the LRA ramp (LU thresholds). Mirrors `SourceProfile::from_analysis`.
-  const drP95P10 = analysis.dynamic_range_p95_p10_db ?? 100;
-  return {
-    spectral_6: s6,
-    dynamic_range_p95_p10_db: drP95P10,
-    dynamic_range_lu: analysis.dynamic_range_lu,
-    stereo_correlation: analysis.stereo_correlation ?? null,
-    stereo_width: analysis.stereo_width,
-  };
-}
-
-/// Inject the source profile onto a settings object WITHOUT changing anything
-/// else — notably not `volume_match`, which is audition-only and must never
-/// affect export level. Used by the export path; the live dispatch path folds
-/// the same injection into `applyChainDispatchOverrides`.
-export function injectSourceProfile(
-  settings: MasteringSettings,
-  analysis: AnalysisResult | null | undefined,
-): MasteringSettings {
-  // Always set (undefined when none) so a stale profile is cleared — undefined
-  // serializes to omitted, which the backend reads as None (B10).
-  const profile = sourceProfileFromAnalysis(analysis);
-  return {
-    ...settings,
-    advanced: { ...settings.advanced, source_profile: profile ?? undefined },
-  };
-}
+// B2: the former `sourceProfileFromAnalysis` / `injectSourceProfile` TS twins of
+// the Rust `SourceProfile::from_analysis` mapper were removed. The backend is now
+// the SINGLE derivation point (see src-tauri/src/profile_store.rs +
+// engine::analyze_tracks), which dissolves the dual-mapper drift the reviews
+// flagged. An FE-supplied `advanced.source_profile` is still honored as an
+// override on the wire, but nothing in the app constructs one anymore.

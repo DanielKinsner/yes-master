@@ -20,13 +20,26 @@ rationale for each item live in the finish plan:
   on/off default (B4); readout reads the *realized* EQ trim post-floor (B8); LU→dB
   LRA aliasing removed (B11); stale-profile clear on dispatch (B10); boundary tests
   refreshed (B12). Review trail committed under `docs/reviews/`.
+- **Backend-owned `source_profile` (B2) — DONE (2026-06-02):** the backend is now
+  the SINGLE derivation point. `analyze_tracks` derives + caches the profile in a
+  `SourceProfileStore` (`src-tauri/src/profile_store.rs`); every Track-Master chain
+  entry (live `play_master`/`update_chain`, `render_track_preview`/`master`,
+  `guardrail_readout`) resolves from it via `apply_resolved_profile` (FE-supplied
+  profile = override; album → None). The audio thread holds the store and the live
+  settings-only `update_chain` path resolves by the loaded track (read fresh, so a
+  late analysis is picked up). The TS profile mappers (`sourceProfileFromAnalysis`
+  / `injectSourceProfile`) were removed — dual-mapper drift dissolved. `play_master`
+  + `guardrail_readout` gained an `album` arg; album audition caches `live_album`.
+  Byte-identity untouched (fill is at the command layer). Known minor edge: toggling
+  album↔track mid-Mastered-playback keeps the prior `live_album` until the next
+  play_master (self-heals on the next Mastered click).
 
 ## 🔒 Owner decisions (locked — don't re-ask)
 
 - Neutral-master deadband → **quick bump shipped**; tilt-vs-reference is the
   principled follow-up (below).
 - "What was trimmed" readout → **built**.
-- Backend-owned-profile refactor → **deferred** (below).
+- Backend-owned-profile refactor → **DONE** (B2, see Done section above).
 - Album Master → **unadapted + labeled** (done).
 
 ## 🎚️ Tier-1 finish (remaining — calibrate by ear)
@@ -48,18 +61,14 @@ Tune in one place: `src-tauri/src/guardrails.rs`.
   one-line source-profile digest) to `ExportReport` and the receipt, so a delivered
   master records what adaptation produced it. P1; quick. [review B5]
 
-## 🏛️ Architecture (deferred — owner's call to schedule)
+## 🏛️ Architecture
 
-- **Backend-owned source profile (B2)** — derive `source_profile` server-side from
-  the track `AnalysisResult`; treat any FE-supplied profile as an override; cache
-  it in audio-thread state so the settings-only `update_chain` live path gets it
-  too. Closes the preview / slow-lane / dual-mapper class by construction (NOT
-  album — album is intentionally flat now). **The TRUE master review escalates this
-  to its recommended P0 / root-cause fix** — the FE forgot injection at 3 sites
-  already; one mapper (Rust `from_analysis`) is test/tuning-only while production
-  uses the TS twin. Coupling (NF-2): also re-touch the `guardrail_readout` input
-  contract + the TS readout fetch (`useTrackMaster.ts`) when derivation moves
-  server-side. [002 §5; review B2/NF-2]
+- **Backend-owned source profile (B2) — ✅ DONE (2026-06-02).** See the Done
+  section above. Derivation moved server-side into a `SourceProfileStore`;
+  FE-supplied profile is an override; the audio thread resolves the live
+  settings-only `update_chain` path by the loaded track; album stays flat; the
+  `guardrail_readout` contract + TS fetch were re-touched (NF-2); the TS twin
+  mapper was deleted. [002 §5; review B2/NF-2]
 
 ## 🚀 Tier-2 — the "smart" tier (next milestone, after v1 is locked by ear)
 

@@ -18,9 +18,7 @@ import {
   applyDeliveryProfileSelection,
   applyExplicitLoudnessTarget,
   applyLoudnessTargetSelection,
-  injectSourceProfile,
   SHADOWED_ADVANCED_KEYS,
-  sourceProfileFromAnalysis,
 } from "./settings-transitions";
 
 // Mechanical gates for B7 (auto-flip-to-Custom on shadowed-field
@@ -428,44 +426,9 @@ describe("source profile injection (Tier-1 adaptive guardrails)", () => {
     };
   }
 
-  it("sourceProfileFromAnalysis returns null without a 6-band balance", () => {
-    expect(sourceProfileFromAnalysis(null)).toBeNull();
-    expect(sourceProfileFromAnalysis(undefined)).toBeNull();
-    expect(
-      sourceProfileFromAnalysis(analysisWith6Band({ spectral_balance_6band: null })),
-    ).toBeNull();
-  });
-
-  it("sourceProfileFromAnalysis uses a no-DR-trigger sentinel when P95-P10 is missing (no LU aliasing, B11)", () => {
-    const p = sourceProfileFromAnalysis(
-      analysisWith6Band({ dynamic_range_p95_p10_db: null, dynamic_range_lu: 5 }),
-    );
-    expect(p).not.toBeNull();
-    // NOT 5 (the LRA in LU) — that would alias LU into the dB DR ramp.
-    expect(p!.dynamic_range_p95_p10_db).toBe(100);
-    expect(p!.spectral_6.air).toBeCloseTo(0.1, 6);
-    expect(p!.stereo_correlation).toBe(0.3);
-  });
-
-  it("injectSourceProfile sets the profile but never touches volume_match", () => {
-    const base = makeSettings("custom");
-    base.volume_match = true; // audition-only; export must NOT inherit this
-    base.intensity = 0.7;
-    const result = injectSourceProfile(base, analysisWith6Band());
-    expect(result.advanced.source_profile).not.toBeNull();
-    expect(result.advanced.source_profile?.spectral_6.air).toBeCloseTo(0.1, 6);
-    expect(result.volume_match).toBe(true);
-    expect(result.intensity).toBe(0.7);
-  });
-
-  it("injectSourceProfile clears the profile when the analysis lacks a 6-band balance (B10)", () => {
-    const base = makeSettings("custom");
-    const result = injectSourceProfile(
-      base,
-      analysisWith6Band({ spectral_balance_6band: null }),
-    );
-    expect(result.advanced.source_profile ?? null).toBeNull();
-  });
+  // B2: the TS profile mappers (sourceProfileFromAnalysis / injectSourceProfile)
+  // were removed — derivation is backend-owned now (Rust SourceProfile::from_analysis,
+  // tested in src-tauri). The FE only carries an optional override on the wire.
 
   it("applyChainDispatchOverrides sets VM + source_lufs but no longer injects a profile (B2: backend owns it)", () => {
     const base = makeSettings("custom");
