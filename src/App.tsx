@@ -28,6 +28,7 @@ import type {
   QualityLevel,
 } from "./bindings";
 import {
+  ADAPTIVE_STRENGTH_DEFAULT,
   DELIVERY_PROFILE_DISPLAY,
   DELIVERY_PROFILE_TARGET_LUFS,
 } from "./bindings";
@@ -2136,7 +2137,7 @@ function AdvancedControlsCard({
         />
         <NumberField
           label="Adapt strength"
-          value={a.adaptive_strength ?? 0.6}
+          value={a.adaptive_strength ?? ADAPTIVE_STRENGTH_DEFAULT}
           step={0.05}
           min={0}
           max={1}

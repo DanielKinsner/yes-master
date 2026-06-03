@@ -271,6 +271,11 @@ export interface SourceProfile {
   stereo_width: number;
 }
 
+/// Default Adapt Strength when unset. Keep in sync with
+/// `ADAPTIVE_STRENGTH_DEFAULT` in `src-tauri/src/guardrails.rs` — the backend is
+/// authoritative (`unwrap_or`); this is only the UI's display fallback.
+export const ADAPTIVE_STRENGTH_DEFAULT = 0.6;
+
 export interface AnalysisResult {
   track_id: TrackId;
   lufs_integrated: number;

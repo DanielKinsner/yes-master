@@ -176,10 +176,10 @@ soft-knee linear ramp on the excess past the band:
 
 | Guardrail | Trigger (our fields) | Deadband edge (provisional) | Full-trim at | Axis cap | Touches |
 |---|---|---|---|---|---|
-| **Already-bright** | `presence + air` share | ≥ 0.20 | +0.12 over edge | 50% | preset `air_db`, `sparkle_db`, `high_mid_db`, `presence_db` (positive lifts only) |
+| **Already-bright** | `presence + air` share | ≥ 0.20 | +0.12 over edge | 50% | preset `air_db`, `sparkle_db`, `high_mid_db` (positive lifts only; **not** `presence_db`, which is 1.5 kHz mid) |
 | **Already-boomy** | `sub + low` share | ≥ 0.42 (wider band — bass variance) | +0.15 over edge | 50% | preset `sub_db`, `low_shelf_db` (positive lifts only) |
 | **Already-dense** | `dynamic_range_p95_p10_db` (primary) + `dynamic_range_lu` (secondary) | DR ≤ 8 dB / LRA ≤ 6 LU | DR 3 dB / LRA 3 LU | 60% | preset `density` (Preset mode only) |
-| **Already-wide** | `stereo_correlation` (primary) + `stereo_width` | corr ≤ 0.50 | corr 0.20 | 70% | preset `stereo_width` toward 1.0 (when no explicit user width) |
+| **Already-wide** | `stereo_correlation` (`stereo_width` is carried but **not yet** a trigger — see plan) | corr ≤ 0.50 | corr 0.20 | 70% | preset `stereo_width` toward 1.0 (when no explicit user width) |
 
 Notes:
 - All thresholds above are **inference**, flagged as provisional. They are

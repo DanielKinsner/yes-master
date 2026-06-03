@@ -112,9 +112,10 @@ pub struct AnalysisResult {
 
 /// Compact, level-invariant snapshot of the source used by the Tier-1 adaptive
 /// guardrails (see `docs/plans/2026-06-02-001-adaptive-dsp-tier1-guardrails.md`).
-/// Carried on `AdvancedSettings` and injected before each chain build (live:
-/// `settings-transitions.ts`; export: backend from the track `AnalysisResult`),
-/// the same way `source_lufs_integrated` is injected. Every field is a share or
+/// Carried on `AdvancedSettings` and injected before each chain build: TS
+/// (`settings-transitions.ts`) builds it for live audition, offline preview, and
+/// Track Master export; the Rust slow-lane runners build it via
+/// `SourceProfile::from_analysis`. Every field is a share or
 /// ratio independent of absolute level, so no LUFS normalization is required
 /// before comparison. Not user-facing.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
