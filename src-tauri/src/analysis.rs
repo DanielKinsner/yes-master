@@ -302,9 +302,12 @@ fn compute_spectral_balance(samples: &[f32], channels: usize) -> SpectralBalance
 
 // ============================================================================
 // Phase A5: richer pre-mastering analysis. Implementations ported from
-// Codex's `src/album_mastering_studio/analysis.py`. These do not affect
-// audition or export quality directly — they feed role / character
-// inference and (later) album-arc planning.
+// Codex's `src/album_mastering_studio/analysis.py`. Originally these fed only
+// role / character inference and album-arc planning. As of the Tier-1 adaptive
+// guardrails, `spectral_balance_6band` (plus dynamic_range_p95_p10 / LRA /
+// stereo_correlation) ALSO drives the adaptive EQ / density / width trims on the
+// Track-Master audition and export path via `SourceProfile::from_analysis` — so
+// their accuracy now affects rendered quality, not just metadata.
 // ============================================================================
 
 /// 6-band spectral balance via Hann-windowed FFT. Returns `None` if the
@@ -319,14 +322,17 @@ pub(crate) fn compute_spectral_balance_6band(
         return None;
     }
     let total_frames = samples.len() / channels;
-    // Window: largest power of two <= min(30 s, total), but the `1 << 18` cap in
-    // the loop below hard-limits it to ~5.5 s @48k — so on longer tracks the
-    // tonal read reflects the first ~5.5 s, while DR/LRA/correlation are
-    // whole-track. Whole-track Welch averaging is a planned improvement.
-    let max_frames = (sample_rate as usize).saturating_mul(30);
-    let usable = total_frames.min(max_frames);
+    // Welch-style WHOLE-TRACK average. The largest power-of-two window <= the
+    // track length (hard-capped at `1 << 18` ~= 5.5 s @48k for FFT cost and
+    // low-frequency resolution) is slid across the ENTIRE track at 50% overlap,
+    // and per-band power is accumulated over every window. This keeps the tonal
+    // read representative of the whole track — matching the whole-track DR / LRA /
+    // correlation measures — instead of only the leading ~5.5 s, so a bright (or
+    // dark) intro can no longer bias the adaptive guardrail trims for the whole
+    // song. A track no longer than one window collapses to a single window,
+    // identical to the prior leading-window read (keeps stationary fixtures pinned).
     let mut fft_size = 1_usize;
-    while fft_size * 2 <= usable && fft_size < 1 << 18 {
+    while fft_size * 2 <= total_frames && fft_size < 1 << 18 {
         fft_size *= 2;
     }
     if fft_size < 1024 {
@@ -338,49 +344,54 @@ pub(crate) fn compute_spectral_balance_6band(
     let mut planner = FftPlanner::<f32>::new();
     let fft = planner.plan_fft_forward(fft_size);
 
-    let mut buf: Vec<Complex<f32>> = Vec::with_capacity(fft_size);
-    let two_pi = 2.0 * std::f32::consts::PI;
-    for i in 0..fft_size {
-        let mut mono = 0.0_f32;
-        let frame_start = i * channels;
-        for c in 0..channels {
-            mono += samples[frame_start + c];
-        }
-        mono /= channels as f32;
-        // Hann window — reduces spectral leakage.
-        let w = 0.5 * (1.0 - (two_pi * i as f32 / (fft_size as f32 - 1.0)).cos());
-        buf.push(Complex {
-            re: mono * w,
-            im: 0.0,
-        });
-    }
-    fft.process(&mut buf);
-
     let bins = fft_size / 2;
     let bin_hz = sample_rate as f32 / fft_size as f32;
     // Edge frequencies for the 6 bands (sub / low / low_mid / mid /
     // presence / air). Top edge clamped to min(Nyquist, 16 kHz).
     let top = (sample_rate as f32 / 2.0).min(16_000.0);
     let edges = [20.0, 80.0, 250.0, 800.0, 2500.0, 6500.0, top];
+    let two_pi = 2.0 * std::f32::consts::PI;
+    let hop = (fft_size / 2).max(1);
     let mut bands = [0.0_f64; 6];
-    for (bin, c) in buf.iter().copied().enumerate().take(bins).skip(1) {
-        let freq = bin as f32 * bin_hz;
-        let idx = if freq >= edges[0] && freq < edges[1] {
-            0
-        } else if freq >= edges[1] && freq < edges[2] {
-            1
-        } else if freq >= edges[2] && freq < edges[3] {
-            2
-        } else if freq >= edges[3] && freq < edges[4] {
-            3
-        } else if freq >= edges[4] && freq < edges[5] {
-            4
-        } else if freq >= edges[5] && freq < edges[6] {
-            5
-        } else {
-            continue;
-        };
-        bands[idx] += (c.re as f64) * (c.re as f64) + (c.im as f64) * (c.im as f64);
+    let mut buf: Vec<Complex<f32>> = Vec::with_capacity(fft_size);
+    let mut start = 0_usize;
+    while start + fft_size <= total_frames {
+        buf.clear();
+        for i in 0..fft_size {
+            let mut mono = 0.0_f32;
+            let frame_start = (start + i) * channels;
+            for c in 0..channels {
+                mono += samples[frame_start + c];
+            }
+            mono /= channels as f32;
+            // Hann window — reduces spectral leakage.
+            let w = 0.5 * (1.0 - (two_pi * i as f32 / (fft_size as f32 - 1.0)).cos());
+            buf.push(Complex {
+                re: mono * w,
+                im: 0.0,
+            });
+        }
+        fft.process(&mut buf);
+        for (bin, c) in buf.iter().copied().enumerate().take(bins).skip(1) {
+            let freq = bin as f32 * bin_hz;
+            let idx = if freq >= edges[0] && freq < edges[1] {
+                0
+            } else if freq >= edges[1] && freq < edges[2] {
+                1
+            } else if freq >= edges[2] && freq < edges[3] {
+                2
+            } else if freq >= edges[3] && freq < edges[4] {
+                3
+            } else if freq >= edges[4] && freq < edges[5] {
+                4
+            } else if freq >= edges[5] && freq < edges[6] {
+                5
+            } else {
+                continue;
+            };
+            bands[idx] += (c.re as f64) * (c.re as f64) + (c.im as f64) * (c.im as f64);
+        }
+        start += hop;
     }
     let total: f64 = bands.iter().sum();
     if total <= 1.0e-12 {
@@ -735,6 +746,43 @@ mod tests {
             bal.mid > 0.5,
             "1 kHz sine should put majority of energy in mid band; got mid={}",
             bal.mid
+        );
+    }
+
+    /// Regression (adversarial review F1, 2026-06-03): the 6-band tonal read must
+    /// reflect the WHOLE track, not just the first window. A bright intro
+    /// followed by a longer dark body must read as dark (the body dominates by
+    /// energy), so the adaptive guardrails don't trim the high end based on an
+    /// unrepresentative intro. The pre-fix single-leading-window FFT read only the
+    /// first ~5.5 s and would have reported this track as bright.
+    #[test]
+    fn spectral_balance_6band_reflects_whole_track_not_just_intro() {
+        let sr = 48_000_u32;
+        // 7 s bright intro (10 kHz -> air band), then 17 s dark body (100 Hz ->
+        // low band). The first window (~5.5 s) sees only the bright intro;
+        // whole-track averaging is energy-dominated by the longer dark body.
+        let intro_n = (sr as f32 * 7.0) as usize;
+        let body_n = (sr as f32 * 17.0) as usize;
+        let w_hi = 2.0 * std::f32::consts::PI * 10_000.0 / sr as f32;
+        let w_lo = 2.0 * std::f32::consts::PI * 100.0 / sr as f32;
+        let mut samples: Vec<f32> = Vec::with_capacity(intro_n + body_n);
+        for i in 0..intro_n {
+            samples.push(0.3 * (w_hi * i as f32).sin());
+        }
+        for i in 0..body_n {
+            samples.push(0.3 * (w_lo * i as f32).sin());
+        }
+        let bal = compute_spectral_balance_6band(&samples, sr, 1).expect("balance");
+        let bright = bal.presence + bal.air;
+        let low = bal.sub + bal.low;
+        assert!(
+            low > bright,
+            "whole-track read must be dark-dominated by the body; got low={low} bright={bright} \
+             (a first-window read of the bright intro would report the opposite)"
+        );
+        assert!(
+            low > 0.5,
+            "the 17 s dark body should dominate the 7 s bright intro; got low={low}"
         );
     }
 
