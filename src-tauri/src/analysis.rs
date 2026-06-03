@@ -245,7 +245,7 @@ fn compute_stereo_width(samples: &[f32], channels: usize) -> f32 {
     }
 }
 
-fn compute_spectral_balance(samples: &[f32], channels: usize) -> SpectralBalance {
+pub(crate) fn compute_spectral_balance(samples: &[f32], channels: usize) -> SpectralBalance {
     if samples.is_empty() || channels == 0 {
         return SpectralBalance {
             low: 0.33,

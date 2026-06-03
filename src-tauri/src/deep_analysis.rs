@@ -2,6 +2,8 @@
 //! Additive: produced at analysis time, cached beside SourceProfile, consumed
 //! (later) by Phase B. See docs/superpowers/specs/2026-06-03-adaptive-dsp-tier2-phase-a-deep-analysis-design.md
 
+use crate::dsp::BiquadCoeffs; // existing K-weighting filters (k_weighting_pre/rlb)
+
 // ---- Tuning constants (single source of truth) ----
 /// Short time-pass window (~0.34 s @48k) and 50% hop.
 pub const SHORT_WINDOW: usize = 16_384;
@@ -161,6 +163,200 @@ pub struct DeepAnalysis {
     pub stereo_correlation: AxisStrata,
 }
 
+/// Short-window time pass. Returns the ordered per-window series. `channels`
+/// interleaved samples. Mono = (L+R)/2 for spectral/loudness; L/R kept for the
+/// stereo axis. Caps at MAX_SCAN_WINDOWS by widening the hop.
+pub fn scan_windows(samples: &[f32], sample_rate: u32, channels: usize) -> Vec<WindowMetrics> {
+    if channels == 0 || sample_rate == 0 {
+        return Vec::new();
+    }
+    let total_frames = samples.len() / channels;
+    if total_frames < SHORT_WINDOW {
+        return Vec::new();
+    }
+    // Choose hop so the window count stays <= MAX_SCAN_WINDOWS.
+    let positions = total_frames.saturating_sub(SHORT_WINDOW) / SHORT_HOP + 1;
+    let hop = if positions > MAX_SCAN_WINDOWS {
+        // stride: spread MAX_SCAN_WINDOWS windows across the track.
+        ((total_frames - SHORT_WINDOW) / (MAX_SCAN_WINDOWS - 1)).max(1)
+    } else {
+        SHORT_HOP
+    };
+
+    // K-weighting biquads (reuse the existing BS.1770 pre-filters) for the
+    // momentary loudness key. The 400 ms span is clamped to available samples.
+    let pre = BiquadCoeffs::k_weighting_pre(sample_rate);
+    let rlb = BiquadCoeffs::k_weighting_rlb(sample_rate);
+    let mom_frames = ((MOMENTARY_MS / 1000.0) * sample_rate as f32) as usize;
+
+    let mut out = Vec::new();
+    let mut start = 0usize;
+    while start + SHORT_WINDOW <= total_frames {
+        out.push(measure_window(
+            samples, channels, start, SHORT_WINDOW, sample_rate, mom_frames, &pre, &rlb,
+        ));
+        start += hop;
+    }
+    out
+}
+
+#[allow(clippy::too_many_arguments)]
+fn measure_window(
+    samples: &[f32],
+    channels: usize,
+    start: usize,
+    window: usize,
+    _sample_rate: u32,
+    mom_frames: usize,
+    pre: &BiquadCoeffs,
+    rlb: &BiquadCoeffs,
+) -> WindowMetrics {
+    // mono sum + L/R for this window
+    let mut peak = 0.0_f32;
+    let mut sum_sq = 0.0_f64;
+    let mut sum_l = 0.0_f64;
+    let mut sum_r = 0.0_f64;
+    for f in 0..window {
+        let base = (start + f) * channels;
+        let l = samples[base];
+        let r = if channels > 1 { samples[base + 1] } else { l };
+        let mono = if channels > 1 { 0.5 * (l + r) } else { l };
+        peak = peak.max(mono.abs());
+        sum_sq += (mono as f64) * (mono as f64);
+        sum_l += l as f64;
+        sum_r += r as f64;
+    }
+    let rms = (sum_sq / window as f64).sqrt() as f32;
+    let crest = if rms > 1e-9 { peak / rms } else { 1.0 };
+
+    // momentary K-weighted loudness over min(400ms, available) centered span.
+    let half = mom_frames / 2;
+    let mom_lo = start.saturating_sub(half);
+    let total = samples.len() / channels;
+    let mom_hi = (start + window / 2 + half).min(total);
+    let avail = mom_hi.saturating_sub(mom_lo);
+    // Require >= half the 400 ms span present, else the momentary loudness read
+    // is unreliable -> exclude this window (NEG_INFINITY).
+    let loudness_key = if avail >= mom_frames / 2 {
+        kweighted_lufs(samples, channels, mom_lo, mom_hi, pre, rlb)
+    } else {
+        f32::NEG_INFINITY
+    };
+
+    // 3-band tonal on the window (reuse the crate helper on a mono slice copy).
+    // TODO(phase-b/perf): allocates a mono copy per window just to reuse
+    // compute_spectral_balance; consider a borrowed/iterator view if window
+    // counts grow.
+    let mono_slice: Vec<f32> = (0..window)
+        .map(|f| {
+            let base = (start + f) * channels;
+            if channels > 1 {
+                0.5 * (samples[base] + samples[base + 1])
+            } else {
+                samples[base]
+            }
+        })
+        .collect();
+    // NOTE: compute_spectral_balance is sample-rate-agnostic (bakes in a ~44.1k
+    // band reference), so this 3-band read carries a small SR skew at 48k+.
+    // Consistent/deterministic and matches infer_character's tone read
+    // elsewhere; that inherited assumption is why _sample_rate is currently
+    // unused here. Revisit for Phase B if finer banding is needed.
+    let three = crate::analysis::compute_spectral_balance(&mono_slice, 1);
+
+    // stereo: width = side/(mid+side); correlation via two-pass.
+    let (width, corr) = if channels > 1 {
+        stereo_window(samples, channels, start, window, sum_l, sum_r)
+    } else {
+        (0.0, f32::NAN)
+    };
+
+    WindowMetrics {
+        loudness_key,
+        sample_peak: peak,
+        crest,
+        stereo_width: width,
+        stereo_correlation: corr,
+        low: three.low,
+        mid: three.mid,
+        high: three.high,
+    }
+}
+
+fn kweighted_lufs(
+    samples: &[f32],
+    channels: usize,
+    lo: usize,
+    hi: usize,
+    pre: &BiquadCoeffs,
+    rlb: &BiquadCoeffs,
+) -> f32 {
+    let mut s1 = crate::dsp::BiquadState::default();
+    let mut s2 = crate::dsp::BiquadState::default();
+    let mut sum_sq = 0.0_f64;
+    let mut count = 0usize;
+    for f in lo..hi {
+        let base = f * channels;
+        let mono = if channels > 1 {
+            0.5 * (samples[base] + samples[base + 1])
+        } else {
+            samples[base]
+        };
+        let y = s2.process(rlb, s1.process(pre, mono));
+        sum_sq += (y as f64) * (y as f64);
+        count += 1;
+    }
+    if count == 0 {
+        return f32::NEG_INFINITY;
+    }
+    let ms = sum_sq / count as f64;
+    if ms <= 0.0 {
+        return f32::NEG_INFINITY;
+    }
+    // BS.1770 LUFS calibration offset (see dsp::k_weighting_rlb).
+    (-0.691 + 10.0 * ms.log10()) as f32
+}
+
+fn stereo_window(
+    samples: &[f32],
+    channels: usize,
+    start: usize,
+    window: usize,
+    sum_l: f64,
+    sum_r: f64,
+) -> (f32, f32) {
+    let n = window as f64;
+    let mean_l = sum_l / n;
+    let mean_r = sum_r / n;
+    let (mut cov, mut var_l, mut var_r, mut mid_e, mut side_e) = (0.0, 0.0, 0.0, 0.0_f64, 0.0_f64);
+    for f in 0..window {
+        let base = (start + f) * channels;
+        let l = samples[base] as f64;
+        let r = samples[base + 1] as f64;
+        let dl = l - mean_l;
+        let dr = r - mean_r;
+        cov += dl * dr;
+        var_l += dl * dl;
+        var_r += dr * dr;
+        let mid = 0.5 * (l + r);
+        let side = 0.5 * (l - r);
+        mid_e += mid * mid;
+        side_e += side * side;
+    }
+    let denom = (var_l * var_r).sqrt();
+    let corr = if denom > 1e-12 {
+        (cov / denom).clamp(-1.0, 1.0) as f32
+    } else {
+        1.0
+    };
+    let width = if mid_e + side_e > 1e-12 {
+        (side_e / (mid_e + side_e)) as f32
+    } else {
+        0.0
+    };
+    (width, corr)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,5 +440,34 @@ mod tests {
                 dispersion: 0.0,
             }
         );
+    }
+
+    #[test]
+    fn scan_windows_produces_ordered_series_and_drops_short_tail() {
+        let sr = 48_000_u32;
+        // 1.5 s mono so a couple of 16384 windows (50% hop) fit.
+        let n = (sr as f32 * 1.5) as usize;
+        let omega = 2.0 * std::f32::consts::PI * 1000.0 / sr as f32;
+        let samples: Vec<f32> = (0..n).map(|i| 0.3 * (omega * i as f32).sin()).collect();
+        let windows = scan_windows(&samples, sr, 1);
+        assert!(!windows.is_empty(), "at least one full window fits");
+        for w in &windows {
+            assert!(w.sample_peak > 0.0 && w.sample_peak <= 1.0);
+            assert!(w.crest >= 1.0); // peak >= rms
+            assert!((w.low + w.mid + w.high - 1.0).abs() < 0.05);
+            // mono → correlation is NaN, width 0
+            assert!(w.stereo_correlation.is_nan());
+        }
+    }
+
+    #[test]
+    fn scan_windows_caps_at_max_windows() {
+        // Build a signal long enough to exceed MAX_SCAN_WINDOWS at 50% hop, assert
+        // the cap holds by striding the hop.
+        let sr = 48_000_u32;
+        let needed = (MAX_SCAN_WINDOWS + 100) * SHORT_HOP + SHORT_WINDOW;
+        let samples = vec![0.1_f32; needed];
+        let windows = scan_windows(&samples, sr, 1);
+        assert!(windows.len() <= MAX_SCAN_WINDOWS, "got {}", windows.len());
     }
 }
