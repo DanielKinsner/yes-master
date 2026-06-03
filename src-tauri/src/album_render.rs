@@ -99,6 +99,10 @@ fn apply_album_shadow(
     }
     shadowed.intensity = (shadowed.intensity + bias.intensity_offset).clamp(0.0, 1.5);
 
+    // Album Master is non-adaptive (owner decision): strip any source_profile so a
+    // stale / hand-built / API payload can't make album renders adaptive (B1/B9).
+    shadowed.advanced.source_profile = None;
+
     shadowed
 }
 
@@ -145,15 +149,13 @@ mod adaptive_scope_tests {
     }
 
     #[test]
-    fn album_shadow_is_profile_agnostic_so_album_stays_unadapted() {
-        // Owner decision: Album Master is intentionally NOT adaptive (Track Master
-        // is the adaptive surface; see the Tier-1 finish plan + the UI note). Album
-        // track settings carry no source_profile and apply_album_shadow never
-        // injects one — so the Tier-1 guardrails stay inert for album renders.
+    fn album_shadow_strips_source_profile_so_album_stays_unadapted() {
+        // Owner decision: Album Master is non-adaptive. apply_album_shadow STRIPS
+        // any source_profile, so even a stale / hand-built payload carrying one
+        // renders flat (B1/B9). Track Master is the adaptive surface.
         let none = apply_album_shadow(&settings_with_profile(None), &album_entry(), 0.5, 0.0, 0.5);
         assert!(none.advanced.source_profile.is_none());
 
-        // It is profile-agnostic: neither adds nor strips a profile.
         let bright = crate::types::SourceProfile {
             spectral_6: crate::types::SpectralBalance6 {
                 sub: 0.1,
@@ -168,14 +170,17 @@ mod adaptive_scope_tests {
             stereo_correlation: Some(0.5),
             stereo_width: 1.0,
         };
-        let kept = apply_album_shadow(
+        let stripped = apply_album_shadow(
             &settings_with_profile(Some(bright)),
             &album_entry(),
             0.5,
             0.0,
             0.5,
         );
-        assert_eq!(kept.advanced.source_profile, Some(bright));
+        assert!(
+            stripped.advanced.source_profile.is_none(),
+            "album shadow must strip an incoming profile"
+        );
     }
 }
 
