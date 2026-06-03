@@ -22,6 +22,27 @@ move, flip a sign, touch a preset cut, or narrow a source. Per-axis caps (EQ 50%
 compression 60%, width 70%) and a +0.5 dB character floor keep presets
 recognizable at any strength.
 
+## Post-review update (2026-06-02)
+
+Two independent reviews (`docs/reviews/2026-06-02-adaptive-dsp-tier1-review.md`,
+`docs/reviews/2026-06-03-adaptive-dsp-desktop-review.md`) were verified against
+the code by a fan-out workflow, and their real bugs fixed. Fixed: the `LRA=0.0`
+density misfire (`f6c7cc8`); the preview + slow-lane wiring gaps that made the
+evidence lane render the *old* chain (`dc62dab`, + invariant tests `27f2a4c`);
+the bright deadband over-trimming genuinely-neutral masters (raised 0.20 → 0.30,
+`d6519b7`); doc drift + default-strength dedup (`44a44ef`). Shipped
+(owner-approved before the listening session): the per-axis "what was trimmed"
+readout (`f112f1f`) and an honest "adaptive applies to Track Master" album label
+(`907b1f4`).
+
+Remaining **taste / new-math / architecture** work — the principled deadband
+tilt-metric, density-cap semantics, whole-track Welch window, `stereo_width`
+co-trigger, the backend-owned-profile refactor, and the Tier-2 measured-neutral +
+PSR closed loop — is planned with options + recommendations in
+`docs/plans/2026-06-02-002-adaptive-dsp-tier1-finish-and-tier2.md`. The owner
+chose: quick deadband bump (done), build the readout (done), defer the refactor,
+keep album unadapted (done).
+
 ## Default behavior
 
 - **On by default at strength 0.6**, the moment a track is analyzed (the source
