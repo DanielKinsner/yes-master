@@ -3487,6 +3487,12 @@ button.primary:disabled {
   margin: -0.2rem 0 0.45rem;
 }
 
+/* Preset Density macro now lives in the compressor card (Preset mode), next to
+   the mode tabs that gate it and the "lower density" advisory that references it. */
+.compressor-density-field {
+  margin: 0 0 0.55rem;
+}
+
 .compressor-source-note {
   color: #ffd28a;
   background: rgba(255, 166, 64, 0.08);

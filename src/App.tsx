@@ -2158,7 +2158,6 @@ function AdvancedControlsCard({
   albumMode?: boolean;
 }) {
   const a = settings.advanced;
-  const compressorMode = a.compression_mode ?? "preset";
   const effectiveLufsTarget = loudnessTargetDisplay(settings).current;
   const effectiveCeiling = effectiveCeilingDbtp(settings);
   const resetAdvancedControls = () => {
@@ -2245,16 +2244,6 @@ function AdvancedControlsCard({
           max={1}
           format={(v) => v.toFixed(2)}
           onChange={(v) => update("presence_air", v)}
-        />
-        <NumberField
-          label="Preset density"
-          value={a.compression_density}
-          step={0.05}
-          min={0}
-          max={1}
-          format={(v) => v.toFixed(2)}
-          disabled={compressorMode !== "preset"}
-          onChange={(v) => update("compression_density", v)}
         />
       </div>
       {/* Adapt Strength + its live trim readout, grouped as ONE block so the
@@ -2413,6 +2402,19 @@ function PerBandCompressorCard({
         {compressorMode === "off" &&
           "Creative compressor bypassed; limiter and delivery checks remain active."}
       </div>
+      {compressorMode === "preset" && (
+        <div className="compressor-density-field">
+          <NumberField
+            label="Preset density"
+            value={a.compression_density}
+            step={0.05}
+            min={0}
+            max={1}
+            format={(v) => v.toFixed(2)}
+            onChange={(v) => onUpdate("compression_density", v)}
+          />
+        </div>
+      )}
       {sourceLooksCompressed && compressorMode === "preset" && (
         <div className="compressor-source-note" role="note">
           Source dynamic range is low; lower density or switch Off if preset compression collapses movement.
