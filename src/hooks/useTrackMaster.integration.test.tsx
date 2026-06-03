@@ -1161,6 +1161,59 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("injects the source profile into BOTH preview and export when analysis has a 6-band (WYSIWYG parity)", async () => {
+    const track = makeTrack("export-adaptive", "C:/audio/adaptive.wav");
+    const outputPath = "/Users/daniel/Desktop/adaptive-master.wav";
+    const analysis: AnalysisResult = {
+      ...makeAnalysis(track.id),
+      spectral_balance_6band: {
+        sub: 0.1,
+        low: 0.25,
+        low_mid: 0.2,
+        mid: 0.2,
+        presence: 0.15,
+        air: 0.1,
+      },
+      dynamic_range_p95_p10_db: 6,
+    };
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([analysis]);
+    mocks.save.mockResolvedValue(outputPath);
+    mocks.api.renderTrackPreview.mockResolvedValue(makeRenderJob(outputPath));
+    mocks.api.renderTrackMaster.mockResolvedValue(makeRenderJob(outputPath));
+    mocks.api.runExportChecks.mockResolvedValue([]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      await harness.current().updatePreview();
+    });
+    await act(async () => {
+      await harness.current().exportMaster();
+    });
+
+    const previewProfile =
+      mocks.api.renderTrackPreview.mock.calls.at(-1)?.[2]?.advanced
+        ?.source_profile;
+    const exportProfile =
+      mocks.api.renderTrackMaster.mock.calls.at(-1)?.[2]?.advanced
+        ?.source_profile;
+    expect(previewProfile).toBeTruthy();
+    expect(exportProfile).toBeTruthy();
+    expect(previewProfile).toEqual(exportProfile); // WYSIWYG parity
+    expect(previewProfile?.spectral_6.air).toBeCloseTo(0.1, 6);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("passes Windows-style picker paths through to track rendering unchanged", async () => {
     const track = makeTrack("export-windows", "C:\\audio\\export windows.wav");
     const outputPath = "C:\\Users\\Dan\\Desktop\\existing-master.wav";

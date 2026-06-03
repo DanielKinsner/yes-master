@@ -123,6 +123,10 @@ pub fn settings_for_matrix_case(
     settings.volume_match = false;
     settings.source_lufs_integrated = Some(source_analysis.lufs_integrated);
     settings.advanced.compression_mode = case.compression_mode;
+    // Exercise the SAME adaptive chain the shipping app runs, so the
+    // already-mastered evidence lane validates the adaptive output, not the old
+    // chain. Wires up the (otherwise dead) Rust SourceProfile::from_analysis.
+    settings.advanced.source_profile = crate::types::SourceProfile::from_analysis(source_analysis);
     settings
 }
 
@@ -485,6 +489,35 @@ mod tests {
         assert_eq!(settings.advanced.compression_mode, CompressionMode::Off);
         assert_eq!(settings.source_lufs_integrated, Some(-12.3));
         assert!(!settings.volume_match);
+    }
+
+    #[test]
+    fn matrix_case_settings_inject_source_profile_for_adaptive_chain() {
+        // Regression for the slow-lane gap: the already-mastered evidence lane
+        // must exercise the ADAPTIVE chain, so settings carry a source profile
+        // when the source analysis has a 6-band balance.
+        let mut analysis = source_analysis();
+        analysis.spectral_balance_6band = Some(crate::types::SpectralBalance6 {
+            sub: 0.1,
+            low: 0.25,
+            low_mid: 0.2,
+            mid: 0.2,
+            presence: 0.15,
+            air: 0.1,
+        });
+        analysis.dynamic_range_p95_p10_db = Some(5.0);
+        let case = MatrixCase {
+            name: "universal-preset".to_string(),
+            preset: Preset::Universal,
+            compression_mode: CompressionMode::Preset,
+        };
+
+        let settings = settings_for_matrix_case(&analysis, &case);
+
+        assert!(
+            settings.advanced.source_profile.is_some(),
+            "fixture matrix must inject the source profile (adaptive chain)"
+        );
     }
 
     #[test]

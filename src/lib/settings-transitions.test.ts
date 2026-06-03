@@ -18,7 +18,9 @@ import {
   applyDeliveryProfileSelection,
   applyExplicitLoudnessTarget,
   applyLoudnessTargetSelection,
+  injectSourceProfile,
   SHADOWED_ADVANCED_KEYS,
+  sourceProfileFromAnalysis,
 } from "./settings-transitions";
 
 // Mechanical gates for B7 (auto-flip-to-Custom on shadowed-field
@@ -393,5 +395,104 @@ describe("applyChainDispatchOverrides (VM session-level + source_lufs injection)
     expect(result.delivery_profile).toBe("streaming-universal");
     expect(result.advanced.lufs_offset_db).toBe(-12);
     expect(result.advanced.ceiling_dbtp).toBe(-1.5);
+  });
+});
+
+describe("source profile injection (Tier-1 adaptive guardrails)", () => {
+  function analysisWith6Band(over: Partial<AnalysisResult> = {}): AnalysisResult {
+    return {
+      track_id: "track-a" as TrackId,
+      lufs_integrated: -12,
+      lufs_short_term_max: -10,
+      true_peak_dbtp: -1,
+      dynamic_range_lu: 7,
+      spectral_balance: { low: 0.33, mid: 0.34, high: 0.33 },
+      transient_density: 0.5,
+      stereo_width: 0.6,
+      recommended_universal: makeSettings("custom"),
+      measured_at_iso: "2026-06-02T00:00:00Z",
+      spectral_balance_6band: {
+        sub: 0.1,
+        low: 0.25,
+        low_mid: 0.2,
+        mid: 0.2,
+        presence: 0.15,
+        air: 0.1,
+      },
+      transient_flux: 0.4,
+      stereo_correlation: 0.3,
+      dynamic_range_p95_p10_db: 6,
+      lufs_short_term_max_3s: -10,
+      energy_density_score: 0.5,
+      ...over,
+    };
+  }
+
+  it("sourceProfileFromAnalysis returns null without a 6-band balance", () => {
+    expect(sourceProfileFromAnalysis(null)).toBeNull();
+    expect(sourceProfileFromAnalysis(undefined)).toBeNull();
+    expect(
+      sourceProfileFromAnalysis(analysisWith6Band({ spectral_balance_6band: null })),
+    ).toBeNull();
+  });
+
+  it("sourceProfileFromAnalysis uses a no-DR-trigger sentinel when P95-P10 is missing (no LU aliasing, B11)", () => {
+    const p = sourceProfileFromAnalysis(
+      analysisWith6Band({ dynamic_range_p95_p10_db: null, dynamic_range_lu: 5 }),
+    );
+    expect(p).not.toBeNull();
+    // NOT 5 (the LRA in LU) — that would alias LU into the dB DR ramp.
+    expect(p!.dynamic_range_p95_p10_db).toBe(100);
+    expect(p!.spectral_6.air).toBeCloseTo(0.1, 6);
+    expect(p!.stereo_correlation).toBe(0.3);
+  });
+
+  it("injectSourceProfile sets the profile but never touches volume_match", () => {
+    const base = makeSettings("custom");
+    base.volume_match = true; // audition-only; export must NOT inherit this
+    base.intensity = 0.7;
+    const result = injectSourceProfile(base, analysisWith6Band());
+    expect(result.advanced.source_profile).not.toBeNull();
+    expect(result.advanced.source_profile?.spectral_6.air).toBeCloseTo(0.1, 6);
+    expect(result.volume_match).toBe(true);
+    expect(result.intensity).toBe(0.7);
+  });
+
+  it("injectSourceProfile clears the profile when the analysis lacks a 6-band balance (B10)", () => {
+    const base = makeSettings("custom");
+    const result = injectSourceProfile(
+      base,
+      analysisWith6Band({ spectral_balance_6band: null }),
+    );
+    expect(result.advanced.source_profile ?? null).toBeNull();
+  });
+
+  it("applyChainDispatchOverrides injects the profile alongside VM + source_lufs", () => {
+    const base = makeSettings("custom");
+    const trackId = "track-a" as TrackId;
+    const result = applyChainDispatchOverrides(
+      base,
+      trackId,
+      { [trackId]: analysisWith6Band() },
+      false,
+    );
+    expect(result.advanced.source_profile).not.toBeNull();
+    expect(result.source_lufs_integrated).toBeCloseTo(-12, 6);
+    expect(result.volume_match).toBe(false);
+  });
+
+  it("does NOT inject the profile in album mode (album is non-adaptive, B1)", () => {
+    const base = makeSettings("custom");
+    const trackId = "track-a" as TrackId;
+    const result = applyChainDispatchOverrides(
+      base,
+      trackId,
+      { [trackId]: analysisWith6Band() },
+      false,
+      true, // albumMode
+    );
+    expect(result.advanced.source_profile ?? null).toBeNull();
+    // VM + source_lufs still apply.
+    expect(result.source_lufs_integrated).toBeCloseTo(-12, 6);
   });
 });

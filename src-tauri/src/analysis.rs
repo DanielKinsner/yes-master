@@ -319,7 +319,10 @@ pub(crate) fn compute_spectral_balance_6band(
         return None;
     }
     let total_frames = samples.len() / channels;
-    // Up to 30 seconds — picks the largest power of two ≤ min(30s, total).
+    // Window: largest power of two <= min(30 s, total), but the `1 << 18` cap in
+    // the loop below hard-limits it to ~5.5 s @48k — so on longer tracks the
+    // tonal read reflects the first ~5.5 s, while DR/LRA/correlation are
+    // whole-track. Whole-track Welch averaging is a planned improvement.
     let max_frames = (sample_rate as usize).saturating_mul(30);
     let usable = total_frames.min(max_frames);
     let mut fft_size = 1_usize;

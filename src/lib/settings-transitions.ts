@@ -16,6 +16,7 @@ import type {
   AnalysisResult,
   DeliveryProfile,
   MasteringSettings,
+  SourceProfile,
   TrackId,
 } from "../bindings";
 import {
@@ -182,16 +183,64 @@ export function applyChainDispatchOverrides(
   trackId: TrackId | null,
   analysisMap: Record<TrackId, AnalysisResult>,
   volumeMatchOverride: boolean,
+  albumMode = false,
 ): MasteringSettings {
   const result: MasteringSettings = {
     ...settings,
     volume_match: volumeMatchOverride,
   };
   if (trackId) {
-    const sourceLufs = analysisMap[trackId]?.lufs_integrated;
+    const analysis = analysisMap[trackId];
+    const sourceLufs = analysis?.lufs_integrated;
     if (sourceLufs !== undefined && sourceLufs !== null && Number.isFinite(sourceLufs)) {
       result.source_lufs_integrated = sourceLufs;
     }
+    // Tier-1 adaptive guardrails read this snapshot in the Rust chain — but Album
+    // Master is non-adaptive (B1), so skip injection in album mode so live
+    // audition matches the flat album export. Always SET the field (null when
+    // none) so a stale profile from a prior dispatch is cleared (B10).
+    const profile = albumMode ? null : sourceProfileFromAnalysis(analysis);
+    result.advanced = { ...result.advanced, source_profile: profile ?? undefined };
   }
   return result;
+}
+
+/// Build the level-invariant `SourceProfile` the Tier-1 adaptive guardrails
+/// read, from a completed analysis. Returns `null` when the 6-band spectral
+/// balance is missing (signal too short/silent) — the EQ guardrails need it to
+/// compare against. Mirrors `SourceProfile::from_analysis` in
+/// `src-tauri/src/types.rs`.
+export function sourceProfileFromAnalysis(
+  analysis: AnalysisResult | null | undefined,
+): SourceProfile | null {
+  const s6 = analysis?.spectral_balance_6band;
+  if (!analysis || !s6) return null;
+  // When P95-P10 DR is missing, do NOT fall back to LRA — that aliases an LU
+  // value into the dB DR ramp (B11). Use a "no DR trigger" dB sentinel so density
+  // rests on the LRA ramp (LU thresholds). Mirrors `SourceProfile::from_analysis`.
+  const drP95P10 = analysis.dynamic_range_p95_p10_db ?? 100;
+  return {
+    spectral_6: s6,
+    dynamic_range_p95_p10_db: drP95P10,
+    dynamic_range_lu: analysis.dynamic_range_lu,
+    stereo_correlation: analysis.stereo_correlation ?? null,
+    stereo_width: analysis.stereo_width,
+  };
+}
+
+/// Inject the source profile onto a settings object WITHOUT changing anything
+/// else — notably not `volume_match`, which is audition-only and must never
+/// affect export level. Used by the export path; the live dispatch path folds
+/// the same injection into `applyChainDispatchOverrides`.
+export function injectSourceProfile(
+  settings: MasteringSettings,
+  analysis: AnalysisResult | null | undefined,
+): MasteringSettings {
+  // Always set (undefined when none) so a stale profile is cleared — undefined
+  // serializes to omitted, which the backend reads as None (B10).
+  const profile = sourceProfileFromAnalysis(analysis);
+  return {
+    ...settings,
+    advanced: { ...settings.advanced, source_profile: profile ?? undefined },
+  };
 }

@@ -658,8 +658,9 @@ pub struct ChainCoeffs {
     /// — doesn't account for EQ/saturation contributions, but close enough
     /// for tone judgment. Tooltip in the UI is honest about this.
     pub volume_match_gain_lin: f32,
-    /// Live-preview export landing gain. Offline export applies a final,
-    /// down-only LUFS trim after rendering; Mastered playback receives the
+    /// Live-preview export landing gain. Offline export applies a final LUFS
+    /// landing trim after rendering (downward, or upward when ceiling headroom
+    /// allows — B6 retired refuse-upward); Mastered playback receives the
     /// same gain from the audio thread so audition level matches export level.
     /// Defaults to 1.0 in render/export paths.
     pub export_landing_gain_lin: f32,
@@ -741,13 +742,36 @@ impl ChainCoeffs {
         // The user's eq_*_db controls add ON TOP of the scaled preset values.
         let preset = preset_calibration(&settings.preset);
 
-        let effective_sub_db = preset.sub_db * preset_scale + settings.eq_sub_db;
-        let effective_low_db = preset.low_shelf_db * preset_scale + settings.eq_low_db;
+        // ----- Tier-1 adaptive guardrails -----
+        // When the source already has a quality, trim the matching PRESET move
+        // toward neutral (never the user's manual eq_*_db offsets). `None` here
+        // means inert: the closures below are the identity and the chain output
+        // is byte-identical to the non-adaptive path, which is what keeps the
+        // `preset_byte_identity` snapshots stable.
+        // See docs/plans/2026-06-02-001-adaptive-dsp-tier1-guardrails.md.
+        let effective_adaptive_strength = settings
+            .advanced
+            .adaptive_strength
+            .unwrap_or(crate::guardrails::ADAPTIVE_STRENGTH_DEFAULT)
+            .clamp(0.0, 1.0);
+        let guardrails = settings
+            .advanced
+            .source_profile
+            .as_ref()
+            .filter(|_| effective_adaptive_strength > 0.0)
+            .map(|p| crate::guardrails::SourceGuardrails::compute(p, effective_adaptive_strength));
+        let trim_bright = |db: f32| guardrails.as_ref().map_or(db, |g| g.trim_bright_db(db));
+        let trim_low = |db: f32| guardrails.as_ref().map_or(db, |g| g.trim_low_db(db));
+
+        let effective_sub_db = trim_low(preset.sub_db * preset_scale) + settings.eq_sub_db;
+        let effective_low_db = trim_low(preset.low_shelf_db * preset_scale) + settings.eq_low_db;
         let effective_low_mid_db = preset.low_mid_db * preset_scale + settings.eq_low_mid_db;
         let effective_mid_db = preset.presence_db * preset_scale + settings.eq_mid_db;
-        let effective_high_mid_db = preset.high_mid_db * preset_scale + settings.eq_high_mid_db;
-        let effective_high_db = preset.air_db * preset_scale + settings.eq_high_db;
-        let effective_sparkle_db = preset.sparkle_db * preset_scale + settings.eq_sparkle_db;
+        let effective_high_mid_db =
+            trim_bright(preset.high_mid_db * preset_scale) + settings.eq_high_mid_db;
+        let effective_high_db = trim_bright(preset.air_db * preset_scale) + settings.eq_high_db;
+        let effective_sparkle_db =
+            trim_bright(preset.sparkle_db * preset_scale) + settings.eq_sparkle_db;
 
         // Intentionally a cascaded 2-biquad Butterworth (4-pole / 24 dB per
         // octave), even though standalone HPF does not need LR4 sum-flat
@@ -856,10 +880,16 @@ impl ChainCoeffs {
         // Width: None means "neutral" (1.0 = leave the stereo image alone).
         // Clamp to [0, 2] so a stray slider value can't invert phase or push
         // the side past 2× — typical mastering plugins cap M/S widening here.
+        // Tier-1 guardrail pulls the preset's width baseline toward neutral on
+        // already-wide / low-correlation sources. Only the preset fallback is
+        // guarded; an explicit user `advanced.width` is left exactly as set.
+        let guarded_preset_width = guardrails
+            .as_ref()
+            .map_or(preset_width, |g| g.trim_width(preset_width));
         let width_side_scale = settings
             .advanced
             .width
-            .unwrap_or(preset_width)
+            .unwrap_or(guarded_preset_width)
             .clamp(0.0, 2.0);
 
         // ----- Phase A4: preset-driven multiband compressor -----
@@ -895,11 +925,19 @@ impl ChainCoeffs {
         let density = if compression_off {
             0.0
         } else {
-            settings
+            let base = settings
                 .advanced
                 .compression_density
                 .unwrap_or(default_density_for_preset)
-                .clamp(0.0, 1.0)
+                .clamp(0.0, 1.0);
+            // Tier-1 guardrail softens compression on already-dense sources, but
+            // only in Preset mode — Manual per-band values are explicit user
+            // overrides and must not be second-guessed.
+            if manual_compression {
+                base
+            } else {
+                guardrails.as_ref().map_or(base, |g| g.scale_density(base))
+            }
         };
 
         let preset_engagement = (density * 2.0).min(1.0); // 0..1, full at density >= 0.5
@@ -1999,8 +2037,8 @@ impl MasteringChain {
                 *s *= self.coeffs.user_output_gain_lin;
             }
         }
-        // Live export-preview gain: mirrors the offline render's final
-        // down-only LUFS landing trim, which happens after the full chain.
+        // Live export-preview gain: mirrors the offline render's final LUFS
+        // landing trim (down, or up when ceiling headroom allows), after the chain.
         if (self.coeffs.export_landing_gain_lin - 1.0).abs() > 1.0e-4 {
             for s in frame.iter_mut() {
                 *s *= self.coeffs.export_landing_gain_lin;
@@ -3056,6 +3094,311 @@ mod tests {
             album: None,
             advanced: AdvancedSettings::default(),
         }
+    }
+
+    #[test]
+    fn guardrails_trim_high_shelf_on_bright_source_without_touching_low() {
+        use crate::types::{SourceProfile, SpectralBalance6};
+        // Universal carries a positive air lift (air_db 1.1) plus a small low
+        // lift. At intensity 0.5 the preset is at full character.
+        let mut settings = default_master_settings();
+        settings.preset = Preset::Universal;
+        settings.intensity = 0.5;
+
+        // Baseline: no source profile -> guardrails inert.
+        let base = ChainCoeffs::from_settings(48_000, &settings);
+
+        // Already-bright source: presence+air well past the deadband, while
+        // lows / DR / correlation all sit in the neutral zone, so ONLY the
+        // brightness guardrail fires.
+        settings.advanced.source_profile = Some(SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub: 0.08,
+                low: 0.22,
+                low_mid: 0.20,
+                mid: 0.20,
+                presence: 0.20,
+                air: 0.20,
+            },
+            dynamic_range_p95_p10_db: 10.0,
+            dynamic_range_lu: 9.0,
+            stereo_correlation: Some(0.8),
+            stereo_width: 1.0,
+        });
+        settings.advanced.adaptive_strength = Some(1.0);
+        let adapted = ChainCoeffs::from_settings(48_000, &settings);
+
+        // High shelf changed (air lift trimmed); low band untouched (not bright).
+        assert_ne!(
+            adapted.high.b0, base.high.b0,
+            "bright guardrail should trim the high shelf"
+        );
+        assert_eq!(
+            adapted.low.b0, base.low.b0,
+            "low band must be untouched by the bright guardrail"
+        );
+    }
+
+    #[test]
+    fn guardrails_soften_compression_and_width_on_dense_wide_source() {
+        use crate::types::{SourceProfile, SpectralBalance6};
+        let mut settings = default_master_settings();
+        settings.preset = Preset::Universal; // compresses by default + widens (1.04)
+        settings.intensity = 0.5;
+        let base = ChainCoeffs::from_settings(48_000, &settings);
+
+        // Dense + wide source, tonally neutral so only those two guardrails fire.
+        settings.advanced.source_profile = Some(SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub: 0.08,
+                low: 0.22,
+                low_mid: 0.20,
+                mid: 0.20,
+                presence: 0.08,
+                air: 0.05,
+            },
+            dynamic_range_p95_p10_db: 2.0, // very dense
+            dynamic_range_lu: 2.0,
+            stereo_correlation: Some(0.1), // very wide / phasey
+            stereo_width: 1.0,
+        });
+        settings.advanced.adaptive_strength = Some(1.0);
+        let adapted = ChainCoeffs::from_settings(48_000, &settings);
+
+        // Softer compression => higher (less negative) threshold.
+        assert!(
+            adapted.comp_low_threshold_db > base.comp_low_threshold_db,
+            "dense guardrail should raise the comp threshold: adapted={} base={}",
+            adapted.comp_low_threshold_db,
+            base.comp_low_threshold_db
+        );
+        // Less widening => side scale pulled toward neutral (1.0).
+        assert!(
+            adapted.width_side_scale < base.width_side_scale,
+            "wide guardrail should pull width toward neutral: adapted={} base={}",
+            adapted.width_side_scale,
+            base.width_side_scale
+        );
+    }
+
+    #[test]
+    fn guardrails_reduce_output_high_share_on_bright_source() {
+        use crate::analysis::compute_spectral_balance_6band;
+        use crate::types::{SourceProfile, SpectralBalance6};
+
+        let sr = 48_000u32;
+        let channels = 2usize;
+        let n = sr as usize; // 1 second
+
+        // Quiet broadband noise: rich high content, low enough to keep the
+        // limiter out of the comparison, so only the air-shelf trim moves the
+        // output's presence+air share.
+        let mut state = 0x1234_5678u32;
+        let mut input = Vec::with_capacity(n * channels);
+        for _ in 0..n {
+            state = state.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+            let s = ((state >> 8) as f32 / 8_388_608.0 - 1.0) * 0.05;
+            input.push(s);
+            input.push(s);
+        }
+
+        let render = |profile: Option<SourceProfile>| -> Vec<f32> {
+            let mut settings = default_master_settings();
+            settings.preset = Preset::Universal;
+            settings.intensity = 1.0; // exaggerate the preset's air lift
+            settings.advanced.adaptive_strength = Some(1.0);
+            settings.advanced.source_profile = profile;
+            let mut chain = MasteringChain::new(sr, channels, &settings);
+            let mut out = input.clone();
+            for frame in out.chunks_mut(channels) {
+                chain.process_frame_inplace(frame);
+            }
+            out
+        };
+
+        let baseline = render(None); // guardrails inert
+        let bright = render(Some(SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub: 0.08,
+                low: 0.22,
+                low_mid: 0.20,
+                mid: 0.20,
+                presence: 0.25,
+                air: 0.20,
+            },
+            dynamic_range_p95_p10_db: 10.0,
+            dynamic_range_lu: 9.0,
+            stereo_correlation: Some(0.8),
+            stereo_width: 1.0,
+        }));
+
+        let base_bal =
+            compute_spectral_balance_6band(&baseline, sr, channels).expect("baseline 6-band");
+        let bright_bal =
+            compute_spectral_balance_6band(&bright, sr, channels).expect("adapted 6-band");
+        let base_high = base_bal.presence + base_bal.air;
+        let bright_high = bright_bal.presence + bright_bal.air;
+        assert!(
+            bright_high < base_high,
+            "adapted bright source should render less presence+air: adapted={bright_high} base={base_high}"
+        );
+    }
+
+    #[test]
+    fn pink_neutral_source_gets_no_bright_trim() {
+        use crate::analysis::compute_spectral_balance_6band;
+        use crate::guardrails::SourceGuardrails;
+        use crate::types::SourceProfile;
+
+        let sr = 48_000u32;
+        let channels = 2usize;
+        let n = sr as usize * 4; // 4 s
+        // Paul Kellet pink filter on a deterministic LCG (mono, duplicated L/R).
+        let mut state: u32 = 0x1234_5678;
+        let (mut b0, mut b1, mut b2, mut b3, mut b4, mut b5) =
+            (0f32, 0f32, 0f32, 0f32, 0f32, 0f32);
+        let mut samples = Vec::with_capacity(n * channels);
+        for _ in 0..n {
+            state = state.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+            let w = ((state >> 8) as f32 / 8_388_608.0) - 1.0;
+            b0 = 0.99886 * b0 + w * 0.0555179;
+            b1 = 0.99332 * b1 + w * 0.0750759;
+            b2 = 0.96900 * b2 + w * 0.153_852;
+            b3 = 0.86650 * b3 + w * 0.3104856;
+            b4 = 0.55000 * b4 + w * 0.5329522;
+            b5 = -0.7616 * b5 - w * 0.0168980;
+            let p = (b0 + b1 + b2 + b3 + b4 + b5 + w * 0.5362 + w * 0.115926) * 0.05;
+            samples.push(p);
+            samples.push(p);
+        }
+
+        let bal = compute_spectral_balance_6band(&samples, sr, channels).expect("pink 6-band");
+        let bright_share = bal.presence + bal.air;
+        let profile = SourceProfile {
+            spectral_6: bal,
+            dynamic_range_p95_p10_db: 12.0,
+            dynamic_range_lu: 9.0,
+            stereo_correlation: Some(0.9),
+            stereo_width: 1.0,
+        };
+        let g = SourceGuardrails::compute(&profile, 1.0);
+        // A genuinely neutral (pink) master must NOT lose air at any strength.
+        assert_eq!(
+            g.trim_bright_db(3.0),
+            3.0,
+            "pink neutral (presence+air={bright_share}) must not trim with deadband 0.30"
+        );
+    }
+
+    #[test]
+    fn guardrails_strength_zero_is_inert_even_with_a_trigger_profile() {
+        use crate::types::{SourceProfile, SpectralBalance6};
+        let mut base = default_master_settings();
+        base.preset = Preset::Universal;
+        base.intensity = 0.5;
+        let no_profile = ChainCoeffs::from_settings(48_000, &base);
+
+        // A profile that WOULD trim every axis hard...
+        let mut withp = base.clone();
+        withp.advanced.source_profile = Some(SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub: 0.25,
+                low: 0.30,
+                low_mid: 0.10,
+                mid: 0.10,
+                presence: 0.20,
+                air: 0.20,
+            },
+            dynamic_range_p95_p10_db: 2.0,
+            dynamic_range_lu: 2.0,
+            stereo_correlation: Some(0.1),
+            stereo_width: 1.0,
+        });
+        // ...but at strength 0 the chain must be identical to the no-profile chain.
+        withp.advanced.adaptive_strength = Some(0.0);
+        let zero = ChainCoeffs::from_settings(48_000, &withp);
+
+        assert_eq!(zero.high.b0, no_profile.high.b0);
+        assert_eq!(zero.low.b0, no_profile.low.b0);
+        assert_eq!(zero.width_side_scale, no_profile.width_side_scale);
+        assert_eq!(zero.comp_low_threshold_db, no_profile.comp_low_threshold_db);
+    }
+
+    #[test]
+    fn guardrails_compose_across_bright_dense_and_wide_axes() {
+        use crate::types::{SourceProfile, SpectralBalance6};
+        let mut settings = default_master_settings();
+        settings.preset = Preset::Universal;
+        settings.intensity = 0.5;
+        let base = ChainCoeffs::from_settings(48_000, &settings);
+
+        // Bright AND dense AND wide simultaneously — each axis trims independently.
+        settings.advanced.source_profile = Some(SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub: 0.08,
+                low: 0.22,
+                low_mid: 0.15,
+                mid: 0.15,
+                presence: 0.20,
+                air: 0.20,
+            },
+            dynamic_range_p95_p10_db: 2.0,
+            dynamic_range_lu: 2.0,
+            stereo_correlation: Some(0.1),
+            stereo_width: 1.0,
+        });
+        settings.advanced.adaptive_strength = Some(1.0);
+        let adapted = ChainCoeffs::from_settings(48_000, &settings);
+
+        assert_ne!(adapted.high.b0, base.high.b0, "bright axis trims the high shelf");
+        assert!(
+            adapted.comp_low_threshold_db > base.comp_low_threshold_db,
+            "dense axis softens compression"
+        );
+        assert!(
+            adapted.width_side_scale < base.width_side_scale,
+            "wide axis pulls width toward neutral"
+        );
+    }
+
+    #[test]
+    fn guardrails_preserve_explicit_user_overrides() {
+        use crate::types::{CompressionMode, SourceProfile, SpectralBalance6};
+        let mut settings = default_master_settings();
+        settings.preset = Preset::Universal;
+        settings.intensity = 0.5;
+        // A profile that would trigger bright + dense + wide at full strength.
+        settings.advanced.source_profile = Some(SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub: 0.08,
+                low: 0.22,
+                low_mid: 0.15,
+                mid: 0.15,
+                presence: 0.20,
+                air: 0.20,
+            },
+            dynamic_range_p95_p10_db: 2.0,
+            dynamic_range_lu: 2.0,
+            stereo_correlation: Some(0.1),
+            stereo_width: 1.0,
+        });
+        settings.advanced.adaptive_strength = Some(1.0);
+
+        // Explicit user moves the guardrail must NOT touch.
+        settings.advanced.width = Some(1.5);
+        settings.advanced.compression_mode = CompressionMode::Manual;
+        settings.advanced.compression_low_threshold_db = Some(-20.0);
+
+        let coeffs = ChainCoeffs::from_settings(48_000, &settings);
+
+        assert!(
+            (coeffs.width_side_scale - 1.5).abs() < 1e-6,
+            "explicit advanced.width survives the wide guardrail"
+        );
+        assert!(
+            (coeffs.comp_low_threshold_db - (-20.0)).abs() < 1e-6,
+            "Manual compression threshold survives the dense guardrail"
+        );
     }
 
     mod preset_byte_identity {

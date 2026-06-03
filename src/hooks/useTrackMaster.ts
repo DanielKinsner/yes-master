@@ -10,6 +10,7 @@ import {
 import {
   applyAdvancedWithProfileFlip,
   applyChainDispatchOverrides,
+  injectSourceProfile,
   applyDeliveryProfileSelection,
   applyExplicitLoudnessTarget,
   applyLoudnessTargetSelection,
@@ -24,6 +25,7 @@ import type {
   AdvancedSettings,
   AnalysisResult,
   ExportReport,
+  GuardrailReadout,
   ImportedTrack,
   LoopRegion,
   MasteringSettings,
@@ -75,6 +77,9 @@ const DEFAULT_SETTINGS: MasteringSettings = {
     compression_link_stereo: null,
     bit_depth: null,
     target_sample_rate: null,
+    // Explicit so a fresh track is honestly "on at 0.6" rather than a null that
+    // displays as 60% but reads ambiguously (B4). Durable "off" = 0.0.
+    adaptive_strength: 0.6,
   },
 };
 
@@ -301,8 +306,14 @@ export function useTrackMaster() {
   // closure; the override rules themselves live in the pure helper.
   const withSourceLufs = useCallback(
     (id: TrackId | null, settings: MasteringSettings): MasteringSettings =>
-      applyChainDispatchOverrides(settings, id, analysisMap, volumeMatchRef.current),
-    [analysisMap],
+      applyChainDispatchOverrides(
+        settings,
+        id,
+        analysisMap,
+        volumeMatchRef.current,
+        mode === "album",
+      ),
+    [analysisMap, mode],
   );
 
   // Live-edit updateChain dispatcher: rAF-gated, single-in-flight, latest-
@@ -556,6 +567,28 @@ export function useTrackMaster() {
   const selectedRegion: LoopRegion | null = selectedTrackId
     ? regionByTrack[selectedTrackId] ?? null
     : null;
+
+  // Read-only per-axis adaptive-trim summary for the "what was trimmed" UI.
+  // Computed in Rust (single source of truth) from the profile-injected settings;
+  // recomputes on settings/analysis change with a latest-wins guard. Optional-
+  // chained so it is inert wherever the command isn't available (e.g. tests).
+  const [guardrailReadout, setGuardrailReadout] = useState<GuardrailReadout | null>(
+    null,
+  );
+  const guardrailReadoutReq = useRef(0);
+  useEffect(() => {
+    if (!selectedTrackId) {
+      setGuardrailReadout(null);
+      return;
+    }
+    const reqId = ++guardrailReadoutReq.current;
+    const settings = injectSourceProfile(selectedSettings, selectedAnalysis);
+    Promise.resolve(api.guardrailReadout?.(settings))
+      .then((r) => {
+        if (r && guardrailReadoutReq.current === reqId) setGuardrailReadout(r);
+      })
+      .catch(() => {});
+  }, [selectedTrackId, selectedSettings, selectedAnalysis]);
 
   const estimatedPlaybackPositionSec = useCallback(() => {
     const tick = lastPlaybackTickRef.current;
@@ -1213,14 +1246,21 @@ export function useTrackMaster() {
       // render" no longer needs to swap the audio source. The button still
       // produces an offline WAV (useful when auditing the would-be master in
       // another player) and clears the stale flag for export bookkeeping.
-      await api.renderTrackPreview(selectedTrackId, selectedTrack.path, selectedSettings);
+      // WYSIWYG: the offline preview WAV must run the SAME adapted chain as
+      // export and live audition, so inject the source profile here too (no-op
+      // when the track has no analysis yet). Mirrors exportMaster.
+      await api.renderTrackPreview(
+        selectedTrackId,
+        selectedTrack.path,
+        injectSourceProfile(selectedSettings, selectedAnalysis),
+      );
       markFresh(selectedTrackId);
     } catch (err) {
       setError(messageOf(err));
     } finally {
       setIsRendering(false);
     }
-  }, [selectedTrackId, selectedTrack, selectedSettings, markFresh]);
+  }, [selectedTrackId, selectedTrack, selectedSettings, selectedAnalysis, markFresh]);
 
   const exportMaster = useCallback(async () => {
     if (!selectedTrackId || !selectedAnalysis) return;
@@ -1243,7 +1283,7 @@ export function useTrackMaster() {
       const job = await api.renderTrackMaster(
         selectedTrackId,
         selectedTrack.path,
-        selectedSettings,
+        injectSourceProfile(selectedSettings, selectedAnalysis),
         chosenOutputPath,
       );
       const outputPath = job.output_paths[0] ?? "";
@@ -1903,6 +1943,7 @@ export function useTrackMaster() {
     setAlbumBitDepth,
     exportAlbumPlan,
     updatePreview,
+    guardrailReadout,
     exportMaster,
     togglePlay,
     seek,

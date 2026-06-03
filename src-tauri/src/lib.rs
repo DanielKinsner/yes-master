@@ -8,6 +8,7 @@ pub mod engine;
 pub mod exports;
 pub mod files;
 pub mod fixture_matrix;
+pub mod guardrails;
 pub mod project;
 pub mod reference_tuning;
 pub mod sample_rate;
@@ -81,6 +82,7 @@ pub fn run() {
             audio::seek_playback,
             audio::set_loop_region,
             exports::run_export_checks,
+            guardrails::guardrail_readout,
             exports::open_output,
             project::save_project,
             project::autosave_session,

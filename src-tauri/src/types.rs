@@ -49,7 +49,7 @@ pub struct SpectralBalance {
 ///   air      6500–min(sr/2, 16000) Hz
 /// Fractional values sum to ~1.0. None when the signal is too short or
 /// silent for a meaningful FFT.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub struct SpectralBalance6 {
     pub sub: f32,
     pub low: f32,
@@ -108,6 +108,50 @@ pub struct AnalysisResult {
     /// Codex's analysis.py formula.
     #[serde(default)]
     pub energy_density_score: Option<f32>,
+}
+
+/// Compact, level-invariant snapshot of the source used by the Tier-1 adaptive
+/// guardrails (see `docs/plans/2026-06-02-001-adaptive-dsp-tier1-guardrails.md`).
+/// Carried on `AdvancedSettings` and injected before each chain build: TS
+/// (`settings-transitions.ts`) builds it for live audition, offline preview, and
+/// Track Master export; the Rust slow-lane runners build it via
+/// `SourceProfile::from_analysis`. Every field is a share or
+/// ratio independent of absolute level, so no LUFS normalization is required
+/// before comparison. Not user-facing.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub struct SourceProfile {
+    /// 6-band normalized energy shares (sum ~1.0).
+    pub spectral_6: SpectralBalance6,
+    /// Dynamic range as P95-P10 of 100 ms RMS blocks, in dB.
+    pub dynamic_range_p95_p10_db: f32,
+    /// EBU loudness range (LRA), in LU.
+    pub dynamic_range_lu: f32,
+    /// L/R Pearson correlation in `[-1, 1]`; `None` for mono sources.
+    #[serde(default)]
+    pub stereo_correlation: Option<f32>,
+    /// Side-energy stereo width ratio (`analysis.rs::compute_stereo_width`).
+    pub stereo_width: f32,
+}
+
+impl SourceProfile {
+    /// Build from a completed source analysis. Returns `None` when the 6-band
+    /// spectral balance is unavailable (signal too short/silent) — the EQ
+    /// guardrails would have nothing to compare against in that case. Falls
+    /// back to LRA when the P95-P10 dynamic-range measure is missing.
+    pub fn from_analysis(a: &AnalysisResult) -> Option<Self> {
+        let spectral_6 = a.spectral_balance_6band?;
+        Some(Self {
+            spectral_6,
+            // When P95-P10 DR is missing, do NOT fall back to LRA — that aliases
+            // an LU value into the dB DR ramp (B11). Use a "no DR trigger" dB
+            // sentinel (100.0) so density rests entirely on the LRA ramp, which
+            // has its own LU thresholds.
+            dynamic_range_p95_p10_db: a.dynamic_range_p95_p10_db.unwrap_or(100.0),
+            dynamic_range_lu: a.dynamic_range_lu,
+            stereo_correlation: a.stereo_correlation,
+            stereo_width: a.stereo_width,
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -641,6 +685,19 @@ pub struct AdvancedSettings {
     pub compression_link_stereo: Option<bool>,
     pub bit_depth: Option<u16>,
     pub target_sample_rate: Option<u32>,
+    /// Tier-1 adaptive guardrail strength in `[0, 1]`. `None` => engine default
+    /// (`ADAPTIVE_STRENGTH_DEFAULT`, on). `0.0` => guardrails off (presets behave
+    /// exactly like the non-adaptive chain). Scales all defensive trims; the
+    /// per-axis caps and character floor apply independently of strength. See
+    /// `docs/plans/2026-06-02-001-adaptive-dsp-tier1-guardrails.md`.
+    #[serde(default)]
+    pub adaptive_strength: Option<f32>,
+    /// Tier-1 adaptive guardrails: level-invariant source snapshot, injected
+    /// before each chain build. `None` => guardrails inert (the chain is
+    /// byte-identical to the non-adaptive path, which is what keeps the
+    /// `preset_byte_identity` snapshots stable). Not user-facing.
+    #[serde(default)]
+    pub source_profile: Option<SourceProfile>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

@@ -99,7 +99,89 @@ fn apply_album_shadow(
     }
     shadowed.intensity = (shadowed.intensity + bias.intensity_offset).clamp(0.0, 1.5);
 
+    // Album Master is non-adaptive (owner decision): strip any source_profile so a
+    // stale / hand-built / API payload can't make album renders adaptive (B1/B9).
+    shadowed.advanced.source_profile = None;
+
     shadowed
+}
+
+#[cfg(test)]
+mod adaptive_scope_tests {
+    use super::*;
+
+    fn settings_with_profile(
+        profile: Option<crate::types::SourceProfile>,
+    ) -> MasteringSettings {
+        MasteringSettings {
+            preset: crate::types::Preset::Universal,
+            intensity: 0.5,
+            eq_sub_db: 0.0,
+            eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
+            eq_mid_db: 0.0,
+            eq_high_mid_db: 0.0,
+            eq_high_db: 0.0,
+            eq_sparkle_db: 0.0,
+            volume_match: false,
+            source_lufs_integrated: None,
+            input_gain_db: 0.0,
+            output_gain_db: 0.0,
+            delivery_profile: crate::types::DeliveryProfile::Custom,
+            album: None,
+            advanced: crate::types::AdvancedSettings {
+                source_profile: profile,
+                ..Default::default()
+            },
+        }
+    }
+
+    fn album_entry() -> AlbumTrackEntry {
+        AlbumTrackEntry {
+            track_id: crate::types::TrackId("t".to_string()),
+            position: 1,
+            role: crate::types::TrackRole::AlbumTrack,
+            role_locked: false,
+            arc_lufs_offset_db: 0.0,
+            intensity_scale: 1.0,
+            album_character: None,
+        }
+    }
+
+    #[test]
+    fn album_shadow_strips_source_profile_so_album_stays_unadapted() {
+        // Owner decision: Album Master is non-adaptive. apply_album_shadow STRIPS
+        // any source_profile, so even a stale / hand-built payload carrying one
+        // renders flat (B1/B9). Track Master is the adaptive surface.
+        let none = apply_album_shadow(&settings_with_profile(None), &album_entry(), 0.5, 0.0, 0.5);
+        assert!(none.advanced.source_profile.is_none());
+
+        let bright = crate::types::SourceProfile {
+            spectral_6: crate::types::SpectralBalance6 {
+                sub: 0.1,
+                low: 0.2,
+                low_mid: 0.2,
+                mid: 0.2,
+                presence: 0.15,
+                air: 0.15,
+            },
+            dynamic_range_p95_p10_db: 8.0,
+            dynamic_range_lu: 8.0,
+            stereo_correlation: Some(0.5),
+            stereo_width: 1.0,
+        };
+        let stripped = apply_album_shadow(
+            &settings_with_profile(Some(bright)),
+            &album_entry(),
+            0.5,
+            0.0,
+            0.5,
+        );
+        assert!(
+            stripped.advanced.source_profile.is_none(),
+            "album shadow must strip an incoming profile"
+        );
+    }
 }
 
 pub fn render_album_plan_impl(
