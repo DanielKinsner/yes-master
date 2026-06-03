@@ -3030,6 +3030,15 @@ function ExportReceiptCard({
   const paths = receipt.job.output_paths;
   const measurements = receipt.job.measurements ?? null;
   const quality = exportQualitySummary(receipt.checks);
+  const exportNoun = isAlbum ? "Album export" : "Export";
+  // A Critical quality row means the saved file needs attention — don't present
+  // it as an unqualified "complete". The file IS written and valid (criticals are
+  // advisory format/loudness flags), so "saved" stays accurate while the header
+  // matches the "Needs attention" medallion instead of contradicting it. (F4.)
+  const headerTitle =
+    quality.tone === "attention"
+      ? `${exportNoun} saved — needs attention`
+      : `${exportNoun} complete`;
   const journeySteps = ["Analyze", "Master", "Quality", "Saved"];
   return (
     <div className="receipt-backdrop" onClick={onClose}>
@@ -3039,7 +3048,7 @@ function ExportReceiptCard({
             <span className="receipt-eyebrow">
               {isAlbum ? "Album master" : "Track master"}
             </span>
-            <h2>{isAlbum ? "Album export complete" : "Export complete"}</h2>
+            <h2>{headerTitle}</h2>
           </div>
           <div className={`receipt-medallion receipt-medallion-${quality.tone}`}>
             <span className="receipt-medallion-label">{quality.label}</span>
