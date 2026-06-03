@@ -103,7 +103,11 @@ Tune in one place: `src-tauri/src/guardrails.rs`.
   Mode the natural next product step now that the engine exists.
   Spec: `docs/SIMPLE_ADVANCED_MODE_NOTE_2026-05-29.md`.
 
-## 🎧 Calibration gate (owner, before merge)
+## 🎧 Calibration gate (owner, before release-stable)
+
+> The adaptive guardrails merged to `main` on 2026-06-03; this gate is now the
+> "before treating adaptive DSP as release-stable" listening pass, not a
+> pre-merge blocker. (Merged ≠ ear-validated.)
 
 - Listening A/B: Adapt `0` vs `60%` on already-mastered / bright / dense / wide
   **and** neutral sources; confirm neutral does ~nothing, then lock the constants
