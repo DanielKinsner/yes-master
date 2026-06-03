@@ -13,6 +13,11 @@ finish plan: `docs/plans/2026-06-02-002-adaptive-dsp-tier1-finish-and-tier2.md`.
 - Post-review fixes: `LRA=0.0` density misfire, preview + slow-lane wiring, bright
   deadband `0.20 → 0.30` (neutral-master misfire), doc drift + default dedup.
 - Album labeled Track-Master-only (intentionally unadapted).
+- **Post-TRUE-review (2026-06-03):** album non-adaptive *end-to-end* (audition
+  flat + backend strips any profile + Adapt control disabled, with tests); durable
+  on/off default (B4); readout reads the *realized* EQ trim post-floor (B8); LU→dB
+  LRA aliasing removed (B11); stale-profile clear on dispatch (B10); boundary tests
+  refreshed (B12). Review trail committed under `docs/reviews/`.
 
 ## 🔒 Owner decisions (locked — don't re-ask)
 
@@ -37,13 +42,22 @@ Tune in one place: `src-tauri/src/guardrails.rs`.
 - **`stereo_width` as a width co-trigger** — computed + carried, currently unused. [002 §4]
 - **Per-axis EQ floors / `LOW_DEADBAND` ear-calibration** — bass-forward genres. [002 §6]
 - **`LRA → Option<f32>`** cleanup (optional; the minimal guard already shipped). [002 §9]
+- **Export-receipt traceability (B5)** — add `effective_adaptive_strength` (+ a
+  one-line source-profile digest) to `ExportReport` and the receipt, so a delivered
+  master records what adaptation produced it. P1; quick. [review B5]
 
 ## 🏛️ Architecture (deferred — owner's call to schedule)
 
-- **Backend-owned source profile** — cache the loaded track's profile on the audio
-  thread and attach it on every coeff build; closes preview/album/slow-lane/live
-  by construction and removes the TS↔Rust dual builder. The tactical fixes already
-  closed the known holes, so this is future-proofing, not a current break. [002 §5]
+- **Backend-owned source profile (B2)** — derive `source_profile` server-side from
+  the track `AnalysisResult`; treat any FE-supplied profile as an override; cache
+  it in audio-thread state so the settings-only `update_chain` live path gets it
+  too. Closes the preview / slow-lane / dual-mapper class by construction (NOT
+  album — album is intentionally flat now). **The TRUE master review escalates this
+  to its recommended P0 / root-cause fix** — the FE forgot injection at 3 sites
+  already; one mapper (Rust `from_analysis`) is test/tuning-only while production
+  uses the TS twin. Coupling (NF-2): also re-touch the `guardrail_readout` input
+  contract + the TS readout fetch (`useTrackMaster.ts`) when derivation moves
+  server-side. [002 §5; review B2/NF-2]
 
 ## 🚀 Tier-2 — the "smart" tier (next milestone, after v1 is locked by ear)
 
@@ -56,6 +70,12 @@ Tune in one place: `src-tauri/src/guardrails.rs`.
   + genre/style classification + reference-track upload / matching.
 - **Resonance / sibilance detection** (soothe / Gullfoss style); per-band stereo
   width matching (Ozone Width Match style).
+- **Total-loudness-loss budget (B3)** — when a delivery target is active (incl.
+  Custom + an explicit `lufs_offset_db`), the post-chain LUFS landing recoups
+  loudness the trims removed, so a multi-axis source can exceed a single per-axis
+  cap in final level. Share a loudness-loss budget across axes, or attenuate
+  combined strength when predicted pre-limiter loss is high. Today mitigated only
+  by the readout's honest "pre-landing" label. [review B3]
 - Higher-resolution analysis generally (finer than 6 bands; time-varying) — the
   analysis resolution is the ceiling on how "smart" this can get. [002 §8 + spec
   `2026-06-02-001` "Out of scope"]
