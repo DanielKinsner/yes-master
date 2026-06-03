@@ -276,6 +276,23 @@ export interface SourceProfile {
 /// authoritative (`unwrap_or`); this is only the UI's display fallback.
 export const ADAPTIVE_STRENGTH_DEFAULT = 0.6;
 
+/// Mirrors `guardrails::GuardrailReadout`. Read-only per-axis adaptive trim
+/// summary (CHAIN trims, before the post-chain LUFS-landing stage). `*_trim` are
+/// fractions removed from each preset move; the `*_share`/`dynamic_range_db`/
+/// `stereo_correlation` fields are the source context that drove them.
+export interface GuardrailReadout {
+  active: boolean;
+  strength: number;
+  bright_trim: number;
+  low_trim: number;
+  density_trim: number;
+  width_trim: number;
+  brightness_share: number;
+  low_share: number;
+  dynamic_range_db: number;
+  stereo_correlation?: number | null;
+}
+
 export interface AnalysisResult {
   track_id: TrackId;
   lufs_integrated: number;

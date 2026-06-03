@@ -5,6 +5,7 @@ import type {
   AlbumPlan,
   AnalysisResult,
   ExportReport,
+  GuardrailReadout,
   ImportedTrack,
   LoopRegion,
   MasteringSettings,
@@ -151,6 +152,11 @@ export const api = {
 
   updateChain: (settings: MasteringSettings, previewLufsLanding = true) =>
     invoke<null>("update_chain", { settings, previewLufsLanding }),
+
+  /// Read-only per-axis adaptive-trim summary for the given settings (the
+  /// settings should already carry the injected source_profile).
+  guardrailReadout: (settings: MasteringSettings) =>
+    invoke<GuardrailReadout>("guardrail_readout", { settings }),
 
   /// Prewarm the backend decode cache for a track. Fire-and-forget
   /// from track-select / track-import handlers so the PCM is ready

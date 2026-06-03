@@ -3,7 +3,11 @@ import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AdvancedPanel } from "./App";
-import type { AdvancedSettings, MasteringSettings } from "./bindings";
+import type {
+  AdvancedSettings,
+  GuardrailReadout,
+  MasteringSettings,
+} from "./bindings";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
@@ -52,7 +56,11 @@ function settings(adaptiveStrength: number | null): MasteringSettings {
   };
 }
 
-async function renderPanel(s: MasteringSettings, onAdvanced = vi.fn()) {
+async function renderPanel(
+  s: MasteringSettings,
+  onAdvanced = vi.fn(),
+  readout: GuardrailReadout | null = null,
+) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -67,6 +75,7 @@ async function renderPanel(s: MasteringSettings, onAdvanced = vi.fn()) {
         onDeliveryProfile={vi.fn()}
         onDeliveryBitDepth={vi.fn()}
         onDeliverySampleRate={vi.fn()}
+        adaptiveReadout={readout}
       />,
     );
   });
@@ -126,6 +135,50 @@ describe("AdvancedPanel adaptive strength control", () => {
     expect(onAdvanced).toHaveBeenCalled();
     const arg = onAdvanced.mock.calls.at(-1)?.[0] as AdvancedSettings;
     expect(arg.adaptive_strength).toBe(0);
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("renders the per-axis adaptive trim readout when active", async () => {
+    const readout: GuardrailReadout = {
+      active: true,
+      strength: 0.6,
+      bright_trim: 0.5,
+      low_trim: 0,
+      density_trim: 0.2,
+      width_trim: 0.15,
+      brightness_share: 0.34,
+      low_share: 0.3,
+      dynamic_range_db: 4,
+      stereo_correlation: 0.3,
+    };
+    const { container, root } = await renderPanel(settings(0.6), vi.fn(), readout);
+    const text = container.textContent ?? "";
+    expect(text).toContain("Adaptive trims");
+    expect(text).toContain("Highs -50%");
+    expect(text).toContain("Comp -20%");
+    expect(text).toContain("Width -15%");
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("hides the readout when inactive", async () => {
+    const readout: GuardrailReadout = {
+      active: false,
+      strength: 0,
+      bright_trim: 0,
+      low_trim: 0,
+      density_trim: 0,
+      width_trim: 0,
+      brightness_share: 0,
+      low_share: 0,
+      dynamic_range_db: 0,
+      stereo_correlation: null,
+    };
+    const { container, root } = await renderPanel(settings(0.6), vi.fn(), readout);
+    expect(container.textContent ?? "").not.toContain("Adaptive trims");
     await act(async () => {
       root.unmount();
     });

@@ -82,6 +82,7 @@ pub fn run() {
             audio::seek_playback,
             audio::set_loop_region,
             exports::run_export_checks,
+            guardrails::guardrail_readout,
             exports::open_output,
             project::save_project,
             project::autosave_session,

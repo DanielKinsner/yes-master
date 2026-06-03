@@ -25,6 +25,7 @@ import type {
   AdvancedSettings,
   AnalysisResult,
   ExportReport,
+  GuardrailReadout,
   ImportedTrack,
   LoopRegion,
   MasteringSettings,
@@ -557,6 +558,28 @@ export function useTrackMaster() {
   const selectedRegion: LoopRegion | null = selectedTrackId
     ? regionByTrack[selectedTrackId] ?? null
     : null;
+
+  // Read-only per-axis adaptive-trim summary for the "what was trimmed" UI.
+  // Computed in Rust (single source of truth) from the profile-injected settings;
+  // recomputes on settings/analysis change with a latest-wins guard. Optional-
+  // chained so it is inert wherever the command isn't available (e.g. tests).
+  const [guardrailReadout, setGuardrailReadout] = useState<GuardrailReadout | null>(
+    null,
+  );
+  const guardrailReadoutReq = useRef(0);
+  useEffect(() => {
+    if (!selectedTrackId) {
+      setGuardrailReadout(null);
+      return;
+    }
+    const reqId = ++guardrailReadoutReq.current;
+    const settings = injectSourceProfile(selectedSettings, selectedAnalysis);
+    Promise.resolve(api.guardrailReadout?.(settings))
+      .then((r) => {
+        if (r && guardrailReadoutReq.current === reqId) setGuardrailReadout(r);
+      })
+      .catch(() => {});
+  }, [selectedTrackId, selectedSettings, selectedAnalysis]);
 
   const estimatedPlaybackPositionSec = useCallback(() => {
     const tick = lastPlaybackTickRef.current;
@@ -1911,6 +1934,7 @@ export function useTrackMaster() {
     setAlbumBitDepth,
     exportAlbumPlan,
     updatePreview,
+    guardrailReadout,
     exportMaster,
     togglePlay,
     seek,

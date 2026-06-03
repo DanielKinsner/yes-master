@@ -11,7 +11,8 @@
 //! All triggers read level-invariant shares/ratios from [`SourceProfile`], so no
 //! LUFS normalization is needed before comparison.
 
-use crate::types::SourceProfile;
+use crate::types::{MasteringSettings, SourceProfile};
+use serde::{Deserialize, Serialize};
 
 /// Default Adapt Strength when the user hasn't set one (on by default).
 pub const ADAPTIVE_STRENGTH_DEFAULT: f32 = 0.6;
@@ -193,6 +194,72 @@ fn floor_boost(preset_db: f32, mult: f32) -> f32 {
     trimmed.max(EQ_BOOST_FLOOR_DB.min(preset_db))
 }
 
+/// Read-only per-axis summary of what the guardrails did, for the "what was
+/// trimmed and why" UI. `*_trim` are fractions removed from each preset move
+/// `[0, cap]`; the `*_share` / `dynamic_range_db` / `stereo_correlation` fields
+/// are the source context that drove them. NOTE: these are CHAIN trims, computed
+/// before the post-chain LUFS-landing stage — label any UI accordingly.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub struct GuardrailReadout {
+    pub active: bool,
+    pub strength: f32,
+    pub bright_trim: f32,
+    pub low_trim: f32,
+    pub density_trim: f32,
+    pub width_trim: f32,
+    pub brightness_share: f32,
+    pub low_share: f32,
+    pub dynamic_range_db: f32,
+    #[serde(default)]
+    pub stereo_correlation: Option<f32>,
+}
+
+/// Compute the read-only guardrail summary. Same gating as the chain: a source
+/// profile must be present and `strength > 0`, else `active = false`.
+pub fn readout_for(profile: Option<&SourceProfile>, strength_setting: Option<f32>) -> GuardrailReadout {
+    let strength = strength_setting
+        .unwrap_or(ADAPTIVE_STRENGTH_DEFAULT)
+        .clamp(0.0, 1.0);
+    match profile.filter(|_| strength > 0.0) {
+        Some(p) => {
+            let g = SourceGuardrails::compute(p, strength);
+            GuardrailReadout {
+                active: true,
+                strength,
+                bright_trim: 1.0 - g.bright_mult,
+                low_trim: 1.0 - g.low_mult,
+                density_trim: 1.0 - g.density_mult,
+                width_trim: 1.0 - g.width_mult,
+                brightness_share: p.spectral_6.presence + p.spectral_6.air,
+                low_share: p.spectral_6.sub + p.spectral_6.low,
+                dynamic_range_db: p.dynamic_range_p95_p10_db,
+                stereo_correlation: p.stereo_correlation,
+            }
+        }
+        None => GuardrailReadout {
+            active: false,
+            strength,
+            bright_trim: 0.0,
+            low_trim: 0.0,
+            density_trim: 0.0,
+            width_trim: 0.0,
+            brightness_share: 0.0,
+            low_share: 0.0,
+            dynamic_range_db: 0.0,
+            stereo_correlation: None,
+        },
+    }
+}
+
+/// Tauri command: read-only adaptive-trim summary for the current settings.
+#[tauri::command]
+pub fn guardrail_readout(settings: MasteringSettings) -> GuardrailReadout {
+    readout_for(
+        settings.advanced.source_profile.as_ref(),
+        settings.advanced.adaptive_strength,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -351,5 +418,26 @@ mod tests {
         let p = profile(0.30, 0.30, 0.30, 0.30, 1.0, 1.0, Some(0.0));
         let g = SourceGuardrails::compute(&p, 0.0);
         assert_eq!(g, SourceGuardrails::identity());
+    }
+
+    #[test]
+    fn readout_reports_trims_and_context_when_active() {
+        // bright (presence+air 0.45) + dense (DR/LRA 2) + wide (corr 0.1); not boomy.
+        let p = profile(0.25, 0.20, 0.08, 0.22, 2.0, 2.0, Some(0.1));
+        let r = readout_for(Some(&p), Some(1.0));
+        assert!(r.active);
+        assert!(r.bright_trim > 0.0);
+        assert!(r.density_trim > 0.0);
+        assert!(r.width_trim > 0.0);
+        assert_eq!(r.low_trim, 0.0, "sub+low 0.30 < 0.42 deadband");
+        assert!((r.brightness_share - 0.45).abs() < 1e-6);
+        assert_eq!(r.stereo_correlation, Some(0.1));
+    }
+
+    #[test]
+    fn readout_inactive_without_profile_or_at_zero_strength() {
+        assert!(!readout_for(None, Some(1.0)).active);
+        let p = profile(0.25, 0.20, 0.08, 0.22, 2.0, 2.0, Some(0.1));
+        assert!(!readout_for(Some(&p), Some(0.0)).active);
     }
 }

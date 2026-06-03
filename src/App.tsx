@@ -18,6 +18,7 @@ import type {
   AnalysisResult,
   CompressionMode,
   DeliveryProfile,
+  GuardrailReadout,
   ImportedTrack,
   LoopRegion,
   MasteringSettings,
@@ -123,6 +124,7 @@ function App() {
               onDeliveryBitDepth={tm.setDeliveryBitDepth}
               onDeliverySampleRate={tm.setDeliverySampleRate}
               showDeliveryFormat={tm.mode !== "album"}
+              adaptiveReadout={tm.guardrailReadout}
             />
           ) : undefined
         }
@@ -1934,6 +1936,7 @@ export function AdvancedPanel({
   onDeliveryBitDepth,
   onDeliverySampleRate,
   showDeliveryFormat = true,
+  adaptiveReadout,
 }: {
   analysis?: AnalysisResult;
   settings: MasteringSettings;
@@ -1948,6 +1951,7 @@ export function AdvancedPanel({
   /// so the per-track Delivery Format card is hidden there to avoid a
   /// confusing duplicate. Defaults true → Track Master is unchanged.
   showDeliveryFormat?: boolean;
+  adaptiveReadout?: GuardrailReadout | null;
 }) {
   const a = settings.advanced;
   const update = (
@@ -1969,6 +1973,7 @@ export function AdvancedPanel({
         onInputGain={onInputGain}
         onOutputGain={onOutputGain}
         onLoudnessTarget={onLoudnessTarget}
+        adaptiveReadout={adaptiveReadout}
       />
       <PerBandCompressorCard
         analysis={analysis}
@@ -2030,6 +2035,7 @@ function AdvancedControlsCard({
   onInputGain,
   onOutputGain,
   onLoudnessTarget,
+  adaptiveReadout,
 }: {
   settings: MasteringSettings;
   update: (
@@ -2040,6 +2046,7 @@ function AdvancedControlsCard({
   onInputGain: (db: number) => void;
   onOutputGain: (db: number) => void;
   onLoudnessTarget: (targetLufs: number | null) => void;
+  adaptiveReadout?: GuardrailReadout | null;
 }) {
   const a = settings.advanced;
   const compressorMode = a.compression_mode ?? "preset";
@@ -2145,6 +2152,26 @@ function AdvancedControlsCard({
           onChange={(v) => update("adaptive_strength", v)}
         />
       </div>
+      {adaptiveReadout?.active && (
+        <div
+          className="adaptive-readout"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "0.5rem",
+            fontSize: "0.72rem",
+            opacity: 0.82,
+            padding: "0.3rem 0.6rem 0.5rem",
+          }}
+          title={`Source context — presence+air ${adaptiveReadout.brightness_share.toFixed(2)}, sub+low ${adaptiveReadout.low_share.toFixed(2)}, dynamic range ${adaptiveReadout.dynamic_range_db.toFixed(1)} dB. These are chain trims, before LUFS landing.`}
+        >
+          <span style={{ fontWeight: 600 }}>Adaptive trims (chain):</span>
+          <span>Highs -{Math.round(adaptiveReadout.bright_trim * 100)}%</span>
+          <span>Lows -{Math.round(adaptiveReadout.low_trim * 100)}%</span>
+          <span>Comp -{Math.round(adaptiveReadout.density_trim * 100)}%</span>
+          <span>Width -{Math.round(adaptiveReadout.width_trim * 100)}%</span>
+        </div>
+      )}
     </details>
   );
 }
