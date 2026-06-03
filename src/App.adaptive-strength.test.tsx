@@ -175,6 +175,9 @@ describe("AdvancedPanel adaptive strength control", () => {
       brightness_share: 0.34,
       low_share: 0.3,
       dynamic_range_db: 4,
+      bright_deadband: 0.3,
+      low_deadband: 0.42,
+      width_corr_deadband: 0.5,
       stereo_correlation: 0.3,
     };
     const { container, root } = await renderPanel(settings(0.6), vi.fn(), readout);
@@ -183,6 +186,13 @@ describe("AdvancedPanel adaptive strength control", () => {
     expect(text).toContain("Highs -50%");
     expect(text).toContain("Comp -20%");
     expect(text).toContain("Width -15%");
+    // Source context vs deadband is shown so a -0% axis is legible, not "broken".
+    expect(text).toContain("presence+air 0.34 / 0.30");
+    expect(text).toContain("sub+low 0.30 / 0.42");
+    expect(text).toContain("DR 4.0 dB");
+    expect(text).toContain("corr 0.30 / 0.50");
+    // Lows trimmed 0% AND source below its deadband -> flagged "in range".
+    expect(text).toContain("· in range");
     await act(async () => {
       root.unmount();
     });

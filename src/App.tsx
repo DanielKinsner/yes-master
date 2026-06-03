@@ -2032,6 +2032,109 @@ function DeliveryProfileCard({
   );
 }
 
+/// Per-axis live readout of what the adaptive guardrails are trimming, shown
+/// directly under the Adapt Strength slider. Each row pairs the REALIZED trim
+/// (post character-floor for EQ; raw for comp/width) with the SOURCE context that
+/// drove it — the share/correlation vs that axis's deadband — so a "-0%" is
+/// legibly "source in range," not a dead control. Brightness/low trim when their
+/// share EXCEEDS the deadband; width trims when correlation is BELOW it (lower
+/// correlation = wider). Deadband fields come from the backend (GuardrailReadout)
+/// so the thresholds never drift from the DSP constants. All numbers are chain
+/// trims, BEFORE the post-chain LUFS landing.
+function AdaptiveReadout({ readout }: { readout: GuardrailReadout }) {
+  const pct = (v: number) => Math.round(v * 100);
+  const share = (v: number) => v.toFixed(2);
+  const corr = readout.stereo_correlation;
+  const drLabel =
+    readout.dynamic_range_db >= 100
+      ? "DR n/a"
+      : `DR ${readout.dynamic_range_db.toFixed(1)} dB`;
+  const axes = [
+    {
+      key: "highs",
+      label: "Highs",
+      trim: readout.bright_trim,
+      context:
+        readout.bright_deadband != null
+          ? `presence+air ${share(readout.brightness_share)} / ${share(readout.bright_deadband)}`
+          : null,
+      inRange:
+        readout.bright_deadband != null &&
+        readout.brightness_share <= readout.bright_deadband,
+    },
+    {
+      key: "lows",
+      label: "Lows",
+      trim: readout.low_trim,
+      context:
+        readout.low_deadband != null
+          ? `sub+low ${share(readout.low_share)} / ${share(readout.low_deadband)}`
+          : null,
+      inRange:
+        readout.low_deadband != null && readout.low_share <= readout.low_deadband,
+    },
+    {
+      key: "comp",
+      label: "Comp",
+      trim: readout.density_trim,
+      context: drLabel,
+      inRange: false,
+    },
+    {
+      key: "width",
+      label: "Width",
+      trim: readout.width_trim,
+      context:
+        corr == null
+          ? "mono"
+          : readout.width_corr_deadband != null
+            ? `corr ${share(corr)} / ${share(readout.width_corr_deadband)}`
+            : `corr ${share(corr)}`,
+      inRange:
+        corr == null ||
+        (readout.width_corr_deadband != null &&
+          corr >= readout.width_corr_deadband),
+    },
+  ];
+  return (
+    <div
+      className="adaptive-readout"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.15rem",
+        fontSize: "0.72rem",
+        opacity: 0.85,
+        padding: "0.25rem 0.1rem 0.1rem",
+      }}
+    >
+      <div style={{ fontWeight: 600, opacity: 0.9 }}>
+        Adaptive trims (chain, pre-landing)
+      </div>
+      {axes.map((ax) => (
+        <div
+          key={ax.key}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: "0.5rem",
+          }}
+        >
+          <span>
+            {ax.label} -{pct(ax.trim)}%
+          </span>
+          {ax.context && (
+            <span style={{ opacity: 0.6, textAlign: "right" }}>
+              {ax.context}
+              {ax.trim <= 0.0001 && ax.inRange ? " · in range" : ""}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AdvancedControlsCard({
   settings,
   update,
@@ -2153,6 +2256,13 @@ function AdvancedControlsCard({
           disabled={compressorMode !== "preset"}
           onChange={(v) => update("compression_density", v)}
         />
+      </div>
+      {/* Adapt Strength + its live trim readout, grouped as ONE block so the
+          slider's effect is legible right beside it (the slider used to sit in
+          the grid with the readout floated separately below). Each axis shows
+          its realized trim AND the source share vs that axis's deadband, so a
+          "-0%" reads as "source already in range" rather than looking broken. */}
+      <div className="adaptive-block rail-card-body" style={{ paddingTop: "0.2rem" }}>
         <NumberField
           label="Adapt strength"
           value={a.adaptive_strength ?? ADAPTIVE_STRENGTH_DEFAULT}
@@ -2163,38 +2273,16 @@ function AdvancedControlsCard({
           disabled={albumMode}
           onChange={(v) => update("adaptive_strength", v)}
         />
+        {albumMode ? (
+          <div
+            style={{ fontSize: "0.72rem", opacity: 0.7, padding: "0.3rem 0.1rem" }}
+          >
+            Adaptive applies to Track Master export, not Album renders.
+          </div>
+        ) : adaptiveReadout?.active ? (
+          <AdaptiveReadout readout={adaptiveReadout} />
+        ) : null}
       </div>
-      {albumMode && (
-        <div
-          style={{
-            fontSize: "0.72rem",
-            opacity: 0.7,
-            padding: "0.3rem 0.6rem",
-          }}
-        >
-          Adaptive applies to Track Master export, not Album renders.
-        </div>
-      )}
-      {adaptiveReadout?.active && !albumMode && (
-        <div
-          className="adaptive-readout"
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "0.5rem",
-            fontSize: "0.72rem",
-            opacity: 0.82,
-            padding: "0.3rem 0.6rem 0.5rem",
-          }}
-          title={`Source context — presence+air ${adaptiveReadout.brightness_share.toFixed(2)}, sub+low ${adaptiveReadout.low_share.toFixed(2)}, dynamic range ${adaptiveReadout.dynamic_range_db.toFixed(1)} dB. These are chain trims, before LUFS landing.`}
-        >
-          <span style={{ fontWeight: 600 }}>Adaptive trims (chain):</span>
-          <span>Highs -{Math.round(adaptiveReadout.bright_trim * 100)}%</span>
-          <span>Lows -{Math.round(adaptiveReadout.low_trim * 100)}%</span>
-          <span>Comp -{Math.round(adaptiveReadout.density_trim * 100)}%</span>
-          <span>Width -{Math.round(adaptiveReadout.width_trim * 100)}%</span>
-        </div>
-      )}
     </details>
   );
 }
