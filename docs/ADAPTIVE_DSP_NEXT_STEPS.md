@@ -109,6 +109,15 @@ Tune in one place: `src-tauri/src/guardrails.rs`.
   **and** neutral sources; confirm neutral does ~nothing, then lock the constants
   in `guardrails.rs`.
 - Slow fixture lane (`AMS_RUN_REAL_FIXTURE`) — now exercises the adaptive chain.
+- **2026-06-03 UI session:** Reset now restores Adapt Strength to 0.6; the
+  Adapt Strength block now shows a per-axis readout with source-share-vs-deadband
+  so a `-0%` reads as "source in range." Dan's report that the EQ/Width trims
+  "don't move with the slider" was root-caused to the **deadbands** (the slider
+  wiring is correct; only axes the source crosses move) — a TASTE decision, fully
+  specified (exact constants, The Keeper diagnosis, Loud `low_shelf<floor` quirk,
+  candidate ranges, validation process) in
+  `docs/HANDOFF_2026-06-03_ADAPTIVE_UI_FIXES_AND_DEADBAND_CALIBRATION.md`.
+  **Do not change deadbands without a listening pass.**
 
 ## Pointers
 
