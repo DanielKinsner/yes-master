@@ -101,6 +101,24 @@ pub fn apply_resolved_profile(
         resolve_effective_profile(settings.advanced.source_profile, cached, album);
 }
 
+/// Evict cached profiles for any *requested* track that did NOT produce an
+/// analysis result. A hard analysis failure (missing / unreadable / decode
+/// error) is skipped under `analyze_tracks_core`'s partial-success policy, so
+/// the populate path never sees it — and without this an in-session
+/// re-analysis that now fails (e.g. a moved or replaced source carried under a
+/// persisted project's `TrackId`) would leave the PRIOR profile cached and keep
+/// adapting the audition from stale audio. The soft "too short / silent =>
+/// `None`" case is already cleared by the normal `set(id, None)` populate path;
+/// this closes the hard-failure gap. `succeeded` is the set of `TrackId`s that
+/// produced a result this pass.
+pub fn prune_failed_profiles(store: &SourceProfileStore, requested: &[TrackId], succeeded: &[TrackId]) {
+    for id in requested {
+        if !succeeded.contains(id) {
+            store.set(id.clone(), None);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -149,6 +167,45 @@ mod tests {
         store.insert(id.clone(), profile(3.0));
         store.insert(id.clone(), profile(9.0));
         assert_eq!(store.get(&id).map(|p| p.dynamic_range_p95_p10_db), Some(9.0));
+    }
+
+    #[test]
+    fn prune_failed_profiles_clears_only_the_failed_track() {
+        let store = SourceProfileStore::default();
+        let kept = TrackId("kept".to_string());
+        let failed = TrackId("failed".to_string());
+        // Both carry a profile from an earlier successful analysis.
+        store.insert(kept.clone(), profile(7.0));
+        store.insert(failed.clone(), profile(7.0));
+        // Re-analysis pass: only `kept` produced a result; `failed` hard-errored
+        // (missing / unreadable source) and was skipped from the results.
+        prune_failed_profiles(
+            &store,
+            &[kept.clone(), failed.clone()],
+            std::slice::from_ref(&kept),
+        );
+        assert!(
+            store.get(&kept).is_some(),
+            "a track that still analyzes must keep its profile"
+        );
+        assert_eq!(
+            store.get(&failed),
+            None,
+            "a track that failed re-analysis must have its stale profile evicted"
+        );
+    }
+
+    #[test]
+    fn prune_failed_profiles_clears_all_when_nothing_succeeded() {
+        let store = SourceProfileStore::default();
+        let a = TrackId("a".to_string());
+        let b = TrackId("b".to_string());
+        store.insert(a.clone(), profile(1.0));
+        store.insert(b.clone(), profile(2.0));
+        // Total failure (the analyze_tracks Err path) -> succeeded is empty.
+        prune_failed_profiles(&store, &[a.clone(), b.clone()], &[]);
+        assert_eq!(store.get(&a), None);
+        assert_eq!(store.get(&b), None);
     }
 
     #[test]

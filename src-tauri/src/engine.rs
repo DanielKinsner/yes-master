@@ -31,12 +31,28 @@ pub async fn analyze_tracks(
     tracks: Vec<AnalyzeRequest>,
     profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
 ) -> CommandResult<Vec<AnalysisResult>> {
-    let results = analyze_tracks_core(tracks).await?;
-    // B2: the backend is the SINGLE point that derives the adaptive source
-    // profile (kills the dual TS/Rust mapper). The render / readout commands and
-    // the live chain resolve from this store instead of an FE-injected profile.
-    populate_profile_store(&profile_store, &results);
-    Ok(results)
+    let requested_ids: Vec<TrackId> = tracks.iter().map(|r| r.id.clone()).collect();
+    let result = analyze_tracks_core(tracks).await;
+    match &result {
+        Ok(results) => {
+            // B2: the backend is the SINGLE point that derives the adaptive source
+            // profile (kills the dual TS/Rust mapper). The render / readout commands
+            // and the live chain resolve from this store instead of an FE-injected
+            // profile.
+            populate_profile_store(&profile_store, results);
+            // Evict stale profiles for any requested track that HARD-failed analysis
+            // (skipped under the partial-success policy). Otherwise a re-analysis
+            // whose source moved / was replaced under a persisted TrackId would keep
+            // adapting the audition from old audio.
+            let succeeded: Vec<TrackId> = results.iter().map(|r| r.track_id.clone()).collect();
+            crate::profile_store::prune_failed_profiles(&profile_store, &requested_ids, &succeeded);
+        }
+        Err(_) => {
+            // Every requested track failed — evict any stale profiles outright.
+            crate::profile_store::prune_failed_profiles(&profile_store, &requested_ids, &[]);
+        }
+    }
+    result
 }
 
 /// Analysis core, free of the Tauri `State` so unit / contract tests can call it
