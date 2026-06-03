@@ -310,9 +310,44 @@ pub(crate) fn compute_spectral_balance(samples: &[f32], channels: usize) -> Spec
 // their accuracy now affects rendered quality, not just metadata.
 // ============================================================================
 
+/// IEC 61260 nominal one-third-octave centers, 25 Hz … 20 kHz (30 nominal
+/// centers + 1 padding slot).
+/// Index 29 = 20 kHz, index 30 = 0.0 (padding to keep a fixed [f32; 31]).
+pub(crate) const THIRD_OCTAVE_CENTERS: [f32; 31] = [
+    25.0, 31.5, 40.0, 50.0, 63.0, 80.0, 100.0, 125.0, 160.0, 200.0, 250.0, 315.0,
+    400.0, 500.0, 630.0, 800.0, 1000.0, 1250.0, 1600.0, 2000.0, 2500.0, 3150.0,
+    4000.0, 5000.0, 6300.0, 8000.0, 10000.0, 12500.0, 16000.0, 20000.0, 0.0,
+];
+
+/// Map a bin frequency to its one-third-octave band index (None if outside the
+/// 25 Hz…~22 kHz coverage or in a padding slot). Deterministic.
+/// Note: the nominal (rounded) centers leave small gaps/overlaps at band edges,
+/// so an occasional out-of-band bin is dropped via `continue` — acceptable
+/// because the tonal curve is re-normalized over captured energy (same way the
+/// 6-band pass already drops out-of-range bins).
+fn third_octave_band(freq: f32) -> Option<usize> {
+    // A one-third-octave band spans 2^(1/3), so its edges sit at center ÷/× the
+    // half-bandwidth ratio 2^(1/6) ≈ 1.1225 (= sqrt of the 2^(1/3) span).
+    const HALF_STEP: f32 = 1.122_462_f32; // 2^(1/6)
+    for (i, &c) in THIRD_OCTAVE_CENTERS.iter().enumerate() {
+        if c <= 0.0 {
+            continue; // padding slot
+        }
+        let lo = c / HALF_STEP;
+        let hi = c * HALF_STEP;
+        if freq >= lo && freq < hi {
+            return Some(i);
+        }
+    }
+    None
+}
+
 /// 6-band spectral balance via Hann-windowed FFT. Returns `None` if the
 /// signal is too short for a meaningful FFT (< 1024 frames after
 /// power-of-two truncation) or has no energy.
+// NOTE: byte-exact/golden-pinned (see spectral_balance_6band_is_byte_exact_golden).
+// The 31-band sibling is a deliberate copy, not a shared abstraction — keep them
+// separate.
 pub(crate) fn compute_spectral_balance_6band(
     samples: &[f32],
     sample_rate: u32,
@@ -405,6 +440,80 @@ pub(crate) fn compute_spectral_balance_6band(
         presence: (bands[4] / total) as f32,
         air: (bands[5] / total) as f32,
     })
+}
+
+/// 31-band one-third-octave tonal curve. Mirrors `compute_spectral_balance_6band`'s
+/// Welch sliding-window FFT pass verbatim, but accumulates per-bin power into
+/// one-third-octave bands (via `third_octave_band`) and normalizes to a fixed
+/// `[f32; 31]` summing to ~1. This is the finer-resolution whole-track tonal curve
+/// for `DeepAnalysis` (Phase A long-pass; backend-internal — never serialized).
+// Deliberately a standalone copy of the 6-band Welch loop — do NOT factor the two
+// together: compute_spectral_balance_6band is byte-exact/golden-pinned and shared
+// extraction would risk silent byte-drift.
+pub(crate) fn compute_spectral_balance_31band(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: usize,
+) -> Option<[f32; 31]> {
+    if channels == 0 || samples.is_empty() || sample_rate == 0 {
+        return None;
+    }
+    let total_frames = samples.len() / channels;
+    let mut fft_size = 1_usize;
+    while fft_size * 2 <= total_frames && fft_size < 1 << 18 {
+        fft_size *= 2;
+    }
+    if fft_size < 1024 {
+        return None;
+    }
+
+    use rustfft::num_complex::Complex;
+    use rustfft::FftPlanner;
+    let mut planner = FftPlanner::<f32>::new();
+    let fft = planner.plan_fft_forward(fft_size);
+
+    let bins = fft_size / 2;
+    let bin_hz = sample_rate as f32 / fft_size as f32;
+    let two_pi = 2.0 * std::f32::consts::PI;
+    let hop = (fft_size / 2).max(1);
+    let mut bands = [0.0_f64; 31];
+    let mut buf: Vec<Complex<f32>> = Vec::with_capacity(fft_size);
+    let mut start = 0_usize;
+    while start + fft_size <= total_frames {
+        buf.clear();
+        for i in 0..fft_size {
+            let mut mono = 0.0_f32;
+            let frame_start = (start + i) * channels;
+            for c in 0..channels {
+                mono += samples[frame_start + c];
+            }
+            mono /= channels as f32;
+            // Hann window — reduces spectral leakage.
+            let w = 0.5 * (1.0 - (two_pi * i as f32 / (fft_size as f32 - 1.0)).cos());
+            buf.push(Complex {
+                re: mono * w,
+                im: 0.0,
+            });
+        }
+        fft.process(&mut buf);
+        for (bin, c) in buf.iter().copied().enumerate().take(bins).skip(1) {
+            let freq = bin as f32 * bin_hz;
+            let Some(idx) = third_octave_band(freq) else {
+                continue;
+            };
+            bands[idx] += (c.re as f64) * (c.re as f64) + (c.im as f64) * (c.im as f64);
+        }
+        start += hop;
+    }
+    let total: f64 = bands.iter().sum();
+    if total <= 1.0e-12 {
+        return None;
+    }
+    let mut out = [0.0_f32; 31];
+    for (o, b) in out.iter_mut().zip(bands.iter()) {
+        *o = (*b / total) as f32;
+    }
+    Some(out)
 }
 
 /// Pearson correlation between L and R channels. `None` for mono.
@@ -825,6 +934,23 @@ mod tests {
             [bal.sub, bal.low, bal.low_mid, bal.mid, bal.presence, bal.air],
             golden
         );
+    }
+
+    #[test]
+    fn spectral_balance_31band_sums_to_unity_and_rolls_up_near_6band() {
+        let sr = 48_000_u32;
+        let n = sr as usize * 2;
+        let omega = 2.0 * std::f32::consts::PI * 1000.0 / sr as f32;
+        let samples: Vec<f32> = (0..n).map(|i| 0.3 * (omega * i as f32).sin()).collect();
+        let bands = compute_spectral_balance_31band(&samples, sr, 1).expect("31");
+        let total: f32 = bands.iter().sum();
+        assert!((total - 1.0).abs() < 0.02, "sum={total}");
+        // 1 kHz tone concentrates in the bands around 1 kHz (mid region).
+        let mid_energy: f32 = (0..31)
+            .filter(|&i| (800.0..2500.0).contains(&crate::deep_analysis::band_center_hz(i)))
+            .map(|i| bands[i])
+            .sum();
+        assert!(mid_energy > 0.5, "mid_energy={mid_energy}");
     }
 
     /// Dynamic-range P95-P10 should be small for a sine at constant amplitude

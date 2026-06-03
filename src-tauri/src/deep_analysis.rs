@@ -79,6 +79,11 @@ pub(crate) fn iqr(values: &[f32]) -> f32 {
     percentile_sorted(&v, 0.75) - percentile_sorted(&v, 0.25)
 }
 
+/// Nominal center (Hz) of one-third-octave band `i` (see analysis::THIRD_OCTAVE_CENTERS).
+pub fn band_center_hz(i: usize) -> f32 {
+    *crate::analysis::THIRD_OCTAVE_CENTERS.get(i).unwrap_or(&0.0)
+}
+
 /// Strata for one axis: `vals[i]` paired with loudness `keys[i]`. Windows whose
 /// key is non-finite are excluded from ALL strata (§5.1). Deterministic: tuples
 /// carry the original (finite-filtered) window index and sort on `(key, index)`
