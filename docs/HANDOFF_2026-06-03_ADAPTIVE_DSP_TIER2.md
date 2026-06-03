@@ -149,8 +149,9 @@ mappers deleted.
 - **Welch-average the 6-band window + recalibrate brightness (B6).** Today the tonal
   read is the first ~5.5 s (`1<<18` cap). Average across the track. **Blast radius:**
   `compute_spectral_balance_6band` also feeds role/character/album-bias inference.
-- **Export-receipt traceability (B5).** Add `effective_adaptive_strength` (+ a profile
-  digest) to `ExportReport` and the receipt.
+- **Export-receipt traceability (B5) — ✅ DONE (2026-06-03).** `effective_adaptive_strength`
+  + a one-line `source_profile_digest` on `RenderedMeasurements`/`ExportReport`; receipt
+  shows "Adaptive NN% · digest" (backend-authoritative; recorded only when active).
 
 **P2 / Tier-2 — the "smart" tier (the real next milestone):**
 - **Measured neutral** from the owner's reference masters (`AMS_RUN_REAL_FIXTURE`),

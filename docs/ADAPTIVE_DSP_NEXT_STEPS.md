@@ -57,9 +57,11 @@ Tune in one place: `src-tauri/src/guardrails.rs`.
 - **`stereo_width` as a width co-trigger** — computed + carried, currently unused. [002 §4]
 - **Per-axis EQ floors / `LOW_DEADBAND` ear-calibration** — bass-forward genres. [002 §6]
 - **`LRA → Option<f32>`** cleanup (optional; the minimal guard already shipped). [002 §9]
-- **Export-receipt traceability (B5)** — add `effective_adaptive_strength` (+ a
-  one-line source-profile digest) to `ExportReport` and the receipt, so a delivered
-  master records what adaptation produced it. P1; quick. [review B5]
+- **Export-receipt traceability (B5) — ✅ DONE (2026-06-03).**
+  `RenderedMeasurements` + `ExportReport` now carry `effective_adaptive_strength`
+  + a one-line `source_profile_digest`; the receipt shows "Adaptive NN% · digest"
+  (or "Adaptive: off"). Backend-authoritative (post-B2 the FE no longer holds the
+  profile); recorded only when a profile was present AND strength > 0. [review B5]
 
 ## 🏛️ Architecture
 
