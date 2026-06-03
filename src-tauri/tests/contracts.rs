@@ -475,6 +475,8 @@ async fn phase_12_1_real_fixture_metering_snapshot() {
         destination_format: "wav".to_string(),
         sample_rate: t.sample_rate.unwrap_or(44_100),
         bit_depth: 24,
+        effective_adaptive_strength: 0.0,
+        source_profile_digest: None,
         checks: Vec::new(),
     };
     let checks = exports::run_export_checks(report, None, None)
@@ -512,6 +514,8 @@ async fn run_export_checks_warns_on_high_true_peak() {
         destination_format: "wav".to_string(),
         sample_rate: 44_100,
         bit_depth: 24,
+        effective_adaptive_strength: 0.0,
+        source_profile_digest: None,
         checks: Vec::new(),
     };
     let checks = exports::run_export_checks(report, None, None)
@@ -532,6 +536,8 @@ async fn run_export_checks_passes_silently_when_clean() {
         destination_format: "wav".to_string(),
         sample_rate: 44_100,
         bit_depth: 24,
+        effective_adaptive_strength: 0.0,
+        source_profile_digest: None,
         checks: Vec::new(),
     };
     let checks = exports::run_export_checks(report, None, None)
@@ -553,6 +559,8 @@ async fn run_export_checks_criticals_on_requested_sample_rate_mismatch() {
         destination_format: "wav".to_string(),
         sample_rate: 44_100,
         bit_depth: 24,
+        effective_adaptive_strength: 0.0,
+        source_profile_digest: None,
         checks: Vec::new(),
     };
     let mut settings = default_settings();
@@ -585,6 +593,8 @@ async fn run_export_checks_warns_on_low_streaming_headroom() {
         destination_format: "wav".to_string(),
         sample_rate: 44_100,
         bit_depth: 24,
+        effective_adaptive_strength: 0.0,
+        source_profile_digest: None,
         checks: Vec::new(),
     };
     let checks = exports::run_export_checks(report, None, None)
@@ -616,6 +626,8 @@ async fn run_export_checks_streaming_headroom_quiet_at_streaming_ceiling() {
         destination_format: "wav".to_string(),
         sample_rate: 44_100,
         bit_depth: 24,
+        effective_adaptive_strength: 0.0,
+        source_profile_digest: None,
         checks: Vec::new(),
     };
     let checks = exports::run_export_checks(report, None, None)
@@ -743,6 +755,64 @@ fn rendered_measurements_reflect_landed_output_not_source() {
         "LRA must be finite and non-negative; got {}",
         m.dynamic_range_lu,
     );
+}
+
+#[test]
+fn export_receipt_records_adaptive_traceability_b5() {
+    // B5 — a delivered master must record what adaptation produced it.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let in_path = tmp.path().join("adaptive.wav");
+    write_sine_wav(&in_path, 44_100, 1.0, 440.0, 2);
+
+    let mut settings = default_settings();
+    settings.advanced.adaptive_strength = Some(1.0);
+    settings.advanced.source_profile = Some(SourceProfile {
+        spectral_6: SpectralBalance6 {
+            sub: 0.08,
+            low: 0.22,
+            low_mid: 0.2,
+            mid: 0.2,
+            presence: 0.2,
+            air: 0.2,
+        },
+        dynamic_range_p95_p10_db: 2.0,
+        dynamic_range_lu: 2.0,
+        stereo_correlation: Some(0.1),
+        stereo_width: 1.2,
+    });
+
+    let job = engine::mastering_render(
+        TrackId("adaptive".to_string()),
+        &in_path,
+        &settings,
+        tmp.path(),
+        RenderKind::Master,
+    )
+    .expect("render ok");
+    let m = job.measurements.expect("measurements");
+    assert!((m.effective_adaptive_strength - 1.0).abs() < 1e-6);
+    let digest = m
+        .source_profile_digest
+        .expect("digest present when adaptation is active");
+    assert!(digest.contains("bright"), "digest: {digest}");
+
+    // Strength 0 => guardrails inert => no digest recorded, even with a profile.
+    let mut flat = settings.clone();
+    flat.advanced.adaptive_strength = Some(0.0);
+    let job2 = engine::mastering_render(
+        TrackId("flat".to_string()),
+        &in_path,
+        &flat,
+        tmp.path(),
+        RenderKind::Master,
+    )
+    .expect("render ok");
+    let m2 = job2.measurements.expect("measurements");
+    assert_eq!(
+        m2.source_profile_digest, None,
+        "strength 0 must record no adaptation"
+    );
+    assert_eq!(m2.effective_adaptive_strength, 0.0);
 }
 
 #[test]
@@ -1565,6 +1635,8 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         destination_format: "wav".to_string(),
         sample_rate: 44_100,
         bit_depth: 24,
+        effective_adaptive_strength: 0.0,
+        source_profile_digest: None,
         checks: Vec::new(),
     };
     let checks = exports::run_export_checks(report, Some(analysis), Some(settings))
@@ -1594,6 +1666,8 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         destination_format: "wav".to_string(),
         sample_rate: 44_100,
         bit_depth: 24,
+        effective_adaptive_strength: 0.0,
+        source_profile_digest: None,
         checks: Vec::new(),
     };
     let analysis2 = AnalysisResult {

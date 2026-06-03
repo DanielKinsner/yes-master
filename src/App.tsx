@@ -2995,6 +2995,25 @@ function ExportReceiptCard({
             <span>{formatBitDepth(measurements.bit_depth)}</span>
           </div>
         )}
+        {measurements && (
+          // B5 — adaptive-DSP traceability: a delivered master records what
+          // adaptation produced it (digest present = guardrails were active).
+          <div className="receipt-render-meta" aria-label="Adaptive DSP">
+            {measurements.source_profile_digest ? (
+              <>
+                <span>
+                  Adaptive{" "}
+                  {Math.round((measurements.effective_adaptive_strength ?? 0) * 100)}%
+                </span>
+                <span title="Source profile that drove adaptation">
+                  {measurements.source_profile_digest}
+                </span>
+              </>
+            ) : (
+              <span>Adaptive: off</span>
+            )}
+          </div>
+        )}
         {receipt.checks.length > 0 && (
           <div className="receipt-checks">
             <div className="receipt-section-title">Quality notes</div>

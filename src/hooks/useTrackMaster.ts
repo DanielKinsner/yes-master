@@ -1307,6 +1307,10 @@ export function useTrackMaster() {
         destination_format: "wav",
         sample_rate: m?.sample_rate ?? 44_100,
         bit_depth: m?.bit_depth ?? selectedSettings.advanced.bit_depth ?? 24,
+        // B5 — adaptive traceability, sourced from the backend render (which
+        // resolved the profile; the FE no longer holds it).
+        effective_adaptive_strength: m?.effective_adaptive_strength ?? 0,
+        source_profile_digest: m?.source_profile_digest ?? null,
         checks: [],
       };
       const checks = await api.runExportChecks(report, selectedAnalysis, selectedSettings);

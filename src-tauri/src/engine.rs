@@ -716,12 +716,29 @@ pub fn mastering_render_with_progress(
     }
 
     let bit_depth = render_settings.effective_bit_depth();
+    // B5 — record what adaptation actually produced this master. `render_settings`
+    // already carries the backend-resolved profile (B2), so this mirrors the
+    // chain's own gating: a digest is recorded only when a profile was present AND
+    // the strength was non-zero (otherwise the guardrails were inert).
+    let effective_adaptive_strength = render_settings
+        .advanced
+        .adaptive_strength
+        .unwrap_or(crate::guardrails::ADAPTIVE_STRENGTH_DEFAULT)
+        .clamp(0.0, 1.0);
+    let source_profile_digest = render_settings
+        .advanced
+        .source_profile
+        .as_ref()
+        .filter(|_| effective_adaptive_strength > 0.0)
+        .map(|p| p.digest());
     let measurements = RenderedMeasurements {
         lufs_integrated: measured_lufs,
         true_peak_dbtp: measured_true_peak_dbtp,
         dynamic_range_lu: if lra.is_finite() { lra } else { 0.0 },
         sample_rate: rendered_sample_rate,
         bit_depth,
+        effective_adaptive_strength,
+        source_profile_digest,
     };
     let out_path = match output_path {
         Some(path) => explicit_output_path(path)?,

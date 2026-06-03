@@ -152,6 +152,28 @@ impl SourceProfile {
             stereo_width: a.stereo_width,
         })
     }
+
+    /// One-line human-readable summary of the trigger inputs, for the export
+    /// receipt's "what adaptation produced this master" line (B5). `>= 100 dB`
+    /// P95-P10 is the "no DR trigger" sentinel, shown as `n/a`.
+    pub fn digest(&self) -> String {
+        let s = &self.spectral_6;
+        let dr = if self.dynamic_range_p95_p10_db >= 100.0 {
+            "n/a".to_string()
+        } else {
+            format!("{:.1}dB", self.dynamic_range_p95_p10_db)
+        };
+        let corr = self
+            .stereo_correlation
+            .map(|c| format!("{c:.2}"))
+            .unwrap_or_else(|| "mono".to_string());
+        format!(
+            "bright {:.2} / low {:.2} / DR {dr} / LRA {:.1}LU / corr {corr}",
+            s.presence + s.air,
+            s.sub + s.low,
+            self.dynamic_range_lu,
+        )
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -754,6 +776,15 @@ pub struct RenderedMeasurements {
     pub dynamic_range_lu: f32,
     pub sample_rate: u32,
     pub bit_depth: u16,
+    /// B5 — adaptive-DSP traceability: the Adapt Strength the chain actually used
+    /// (clamped). `#[serde(default)]` keeps older serialized jobs loading.
+    #[serde(default)]
+    pub effective_adaptive_strength: f32,
+    /// B5 — one-line digest of the source profile that drove adaptation, or
+    /// `None` when guardrails were inert (no profile, strength 0, or album). A
+    /// delivered master is then traceable to what adaptation produced it.
+    #[serde(default)]
+    pub source_profile_digest: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -782,6 +813,12 @@ pub struct ExportReport {
     pub destination_format: String,
     pub sample_rate: u32,
     pub bit_depth: u16,
+    /// B5 — adaptive-DSP traceability mirrored onto the receipt (sourced from the
+    /// render's `RenderedMeasurements`). `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub effective_adaptive_strength: f32,
+    #[serde(default)]
+    pub source_profile_digest: Option<String>,
     pub checks: Vec<QualityCheck>,
 }
 

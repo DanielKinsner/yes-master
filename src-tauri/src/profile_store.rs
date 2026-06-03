@@ -227,4 +227,38 @@ mod tests {
         apply_resolved_profile(&mut s, Some(profile(2.0)), true);
         assert_eq!(s.advanced.source_profile, None, "album must stay byte-flat");
     }
+
+    #[test]
+    fn digest_is_compact_and_handles_sentinel_and_mono() {
+        // B5 — receipt digest. presence+air = 0.22, sub+low = 0.38.
+        let p = SourceProfile {
+            spectral_6: SpectralBalance6 {
+                sub: 0.2,
+                low: 0.18,
+                low_mid: 0.2,
+                mid: 0.2,
+                presence: 0.14,
+                air: 0.08,
+            },
+            dynamic_range_p95_p10_db: 9.0,
+            dynamic_range_lu: 7.0,
+            stereo_correlation: Some(0.8),
+            stereo_width: 1.0,
+        };
+        let d = p.digest();
+        assert!(d.contains("bright 0.22"), "{d}");
+        assert!(d.contains("low 0.38"), "{d}");
+        assert!(d.contains("DR 9.0dB"), "{d}");
+        assert!(d.contains("corr 0.80"), "{d}");
+
+        // The 100 dB "no DR trigger" sentinel reads as n/a; mono reads as mono.
+        let sentinel = SourceProfile {
+            dynamic_range_p95_p10_db: 100.0,
+            stereo_correlation: None,
+            ..p
+        };
+        let d2 = sentinel.digest();
+        assert!(d2.contains("DR n/a"), "{d2}");
+        assert!(d2.contains("corr mono"), "{d2}");
+    }
 }

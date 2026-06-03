@@ -336,6 +336,8 @@ fn export_report_for(
         destination_format: "wav".to_string(),
         sample_rate: rendered.sample_rate,
         bit_depth: rendered.bit_depth,
+        effective_adaptive_strength: rendered.effective_adaptive_strength,
+        source_profile_digest: rendered.source_profile_digest.clone(),
         checks: Vec::new(),
     }
 }

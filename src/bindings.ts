@@ -341,6 +341,11 @@ export interface RenderedMeasurements {
   dynamic_range_lu: number;
   sample_rate: number;
   bit_depth: number;
+  // B5 — adaptive-DSP traceability. effective_adaptive_strength is the Adapt
+  // Strength the chain used; source_profile_digest is a one-line summary of the
+  // source profile that drove adaptation, or null when guardrails were inert.
+  effective_adaptive_strength?: number;
+  source_profile_digest?: string | null;
 }
 
 export interface RenderJob {
@@ -372,6 +377,9 @@ export interface ExportReport {
   destination_format: string;
   sample_rate: number;
   bit_depth: number;
+  // B5 — adaptive-DSP traceability mirrored onto the receipt.
+  effective_adaptive_strength?: number;
+  source_profile_digest?: string | null;
   checks: QualityCheck[];
 }
 
