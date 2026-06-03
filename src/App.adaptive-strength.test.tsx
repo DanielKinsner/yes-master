@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AdvancedPanel } from "./App";
+import { ADAPTIVE_STRENGTH_DEFAULT } from "./bindings";
 import type {
   AdvancedSettings,
   GuardrailReadout,
@@ -135,6 +136,29 @@ describe("AdvancedPanel adaptive strength control", () => {
     expect(onAdvanced).toHaveBeenCalled();
     const arg = onAdvanced.mock.calls.at(-1)?.[0] as AdvancedSettings;
     expect(arg.adaptive_strength).toBe(0);
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("resets Adapt strength to the explicit default (0.6) on Reset", async () => {
+    // Regression: Reset used to skip adaptive_strength entirely, so a user who
+    // dragged it to 0/100% could never get back to default via Reset. Reset now
+    // writes the explicit default (not null), like every other Advanced control.
+    const onAdvanced = vi.fn();
+    const { container, root } = await renderPanel(settings(0), onAdvanced);
+    const resetBtn = container.querySelector(
+      'button[aria-label="Reset advanced controls"]',
+    );
+    if (!(resetBtn instanceof HTMLButtonElement)) {
+      throw new Error("Advanced reset button not found");
+    }
+    await act(async () => {
+      resetBtn.click();
+    });
+    expect(onAdvanced).toHaveBeenCalled();
+    const arg = onAdvanced.mock.calls.at(-1)?.[0] as AdvancedSettings;
+    expect(arg.adaptive_strength).toBe(ADAPTIVE_STRENGTH_DEFAULT);
     await act(async () => {
       root.unmount();
     });
