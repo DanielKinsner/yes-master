@@ -58,7 +58,9 @@ pub async fn analyze_tracks(
 /// Analysis core, free of the Tauri `State` so unit / contract tests can call it
 /// directly. The `analyze_tracks` command wraps this and populates the
 /// backend-owned profile store from the results.
-pub async fn analyze_tracks_core(tracks: Vec<AnalyzeRequest>) -> CommandResult<Vec<AnalysisResult>> {
+pub async fn analyze_tracks_core(
+    tracks: Vec<AnalyzeRequest>,
+) -> CommandResult<Vec<AnalysisResult>> {
     let total = tracks.len();
     let mut out = Vec::with_capacity(total);
     let mut failures: Vec<(TrackId, String)> = Vec::new();
@@ -98,7 +100,10 @@ pub fn populate_profile_store(
     results: &[AnalysisResult],
 ) {
     for result in results {
-        profile_store.set(result.track_id.clone(), SourceProfile::from_analysis(result));
+        profile_store.set(
+            result.track_id.clone(),
+            SourceProfile::from_analysis(result),
+        );
     }
 }
 
@@ -308,7 +313,10 @@ pub fn preview_landing(
 ) -> CommandResult<PreviewLanding> {
     let mut render_settings = settings.clone();
     render_settings.volume_match = false;
-    let unity = PreviewLanding { gain_lin: 1.0, mastered_lufs: f32::NEG_INFINITY };
+    let unity = PreviewLanding {
+        gain_lin: 1.0,
+        mastered_lufs: f32::NEG_INFINITY,
+    };
     let Some(target_lufs) = render_settings.effective_target_lufs() else {
         return Ok(unity);
     };
@@ -348,8 +356,12 @@ pub fn preview_landing(
         -60.0
     };
     let ceiling_dbtp = render_settings.effective_ceiling_dbtp();
-    let applied_delta_db =
-        ceiling_bounded_landing_delta_db(measured, measured_true_peak_dbtp, target_lufs, ceiling_dbtp);
+    let applied_delta_db = ceiling_bounded_landing_delta_db(
+        measured,
+        measured_true_peak_dbtp,
+        target_lufs,
+        ceiling_dbtp,
+    );
     let gain_lin = if applied_delta_db != 0.0 {
         10.0_f32.powf(applied_delta_db / 20.0)
     } else {
@@ -386,7 +398,11 @@ pub async fn render_track_preview(
     // B2: the backend owns the adaptive profile. Track Master is the adaptive
     // surface (album renders via render_album_plan), so album = false; any
     // FE-supplied profile is honored as an override.
-    crate::profile_store::apply_resolved_profile(&mut settings, profile_store.get(&track_id), false);
+    crate::profile_store::apply_resolved_profile(
+        &mut settings,
+        profile_store.get(&track_id),
+        false,
+    );
     let out_dir = render_output_dir(&app, RenderKind::Preview)?;
     let track_id_for_progress = track_id.clone();
     let app_for_progress = app.clone();
@@ -422,7 +438,11 @@ pub async fn render_track_master(
 ) -> CommandResult<RenderJob> {
     // B2: backend-owned profile (override > backend-derived cache; album = false
     // because album exports go through render_album_plan, which strips it).
-    crate::profile_store::apply_resolved_profile(&mut settings, profile_store.get(&track_id), false);
+    crate::profile_store::apply_resolved_profile(
+        &mut settings,
+        profile_store.get(&track_id),
+        false,
+    );
     let out_dir = render_output_dir(&app, RenderKind::Master)?;
     let explicit_output_path = output_path.as_deref().map(Path::new);
     let track_id_for_progress = track_id.clone();

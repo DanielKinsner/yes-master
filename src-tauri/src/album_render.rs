@@ -110,9 +110,7 @@ fn apply_album_shadow(
 mod adaptive_scope_tests {
     use super::*;
 
-    fn settings_with_profile(
-        profile: Option<crate::types::SourceProfile>,
-    ) -> MasteringSettings {
+    fn settings_with_profile(profile: Option<crate::types::SourceProfile>) -> MasteringSettings {
         MasteringSettings {
             preset: crate::types::Preset::Universal,
             intensity: 0.5,

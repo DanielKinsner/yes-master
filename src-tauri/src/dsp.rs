@@ -3343,10 +3343,9 @@ mod tests {
         let sr = 48_000u32;
         let channels = 2usize;
         let n = sr as usize * 4; // 4 s
-        // Paul Kellet pink filter on a deterministic LCG (mono, duplicated L/R).
+                                 // Paul Kellet pink filter on a deterministic LCG (mono, duplicated L/R).
         let mut state: u32 = 0x1234_5678;
-        let (mut b0, mut b1, mut b2, mut b3, mut b4, mut b5) =
-            (0f32, 0f32, 0f32, 0f32, 0f32, 0f32);
+        let (mut b0, mut b1, mut b2, mut b3, mut b4, mut b5) = (0f32, 0f32, 0f32, 0f32, 0f32, 0f32);
         let mut samples = Vec::with_capacity(n * channels);
         for _ in 0..n {
             state = state.wrapping_mul(1_103_515_245).wrapping_add(12_345);
@@ -3440,7 +3439,10 @@ mod tests {
         settings.advanced.adaptive_strength = Some(1.0);
         let adapted = ChainCoeffs::from_settings(48_000, &settings);
 
-        assert_ne!(adapted.high.b0, base.high.b0, "bright axis trims the high shelf");
+        assert_ne!(
+            adapted.high.b0, base.high.b0,
+            "bright axis trims the high shelf"
+        );
         assert!(
             adapted.comp_low_threshold_db > base.comp_low_threshold_db,
             "dense axis softens compression"

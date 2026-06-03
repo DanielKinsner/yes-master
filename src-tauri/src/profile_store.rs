@@ -111,7 +111,11 @@ pub fn apply_resolved_profile(
 /// `None`" case is already cleared by the normal `set(id, None)` populate path;
 /// this closes the hard-failure gap. `succeeded` is the set of `TrackId`s that
 /// produced a result this pass.
-pub fn prune_failed_profiles(store: &SourceProfileStore, requested: &[TrackId], succeeded: &[TrackId]) {
+pub fn prune_failed_profiles(
+    store: &SourceProfileStore,
+    requested: &[TrackId],
+    succeeded: &[TrackId],
+) {
     for id in requested {
         if !succeeded.contains(id) {
             store.set(id.clone(), None);
@@ -147,7 +151,10 @@ mod tests {
         let id = TrackId("t1".to_string());
         assert_eq!(store.get(&id), None);
         store.insert(id.clone(), profile(7.0));
-        assert_eq!(store.get(&id).map(|p| p.dynamic_range_p95_p10_db), Some(7.0));
+        assert_eq!(
+            store.get(&id).map(|p| p.dynamic_range_p95_p10_db),
+            Some(7.0)
+        );
     }
 
     #[test]
@@ -157,7 +164,11 @@ mod tests {
         store.set(id.clone(), Some(profile(7.0)));
         assert!(store.get(&id).is_some());
         store.set(id.clone(), None);
-        assert_eq!(store.get(&id), None, "re-analysis losing a profile must clear");
+        assert_eq!(
+            store.get(&id),
+            None,
+            "re-analysis losing a profile must clear"
+        );
     }
 
     #[test]
@@ -166,7 +177,10 @@ mod tests {
         let id = TrackId("t1".to_string());
         store.insert(id.clone(), profile(3.0));
         store.insert(id.clone(), profile(9.0));
-        assert_eq!(store.get(&id).map(|p| p.dynamic_range_p95_p10_db), Some(9.0));
+        assert_eq!(
+            store.get(&id).map(|p| p.dynamic_range_p95_p10_db),
+            Some(9.0)
+        );
     }
 
     #[test]
@@ -263,7 +277,9 @@ mod tests {
         let mut s = settings_with(None);
         apply_resolved_profile(&mut s, Some(profile(5.0)), false);
         assert_eq!(
-            s.advanced.source_profile.map(|p| p.dynamic_range_p95_p10_db),
+            s.advanced
+                .source_profile
+                .map(|p| p.dynamic_range_p95_p10_db),
             Some(5.0)
         );
     }
@@ -273,7 +289,9 @@ mod tests {
         let mut s = settings_with(Some(profile(1.0)));
         apply_resolved_profile(&mut s, Some(profile(2.0)), false);
         assert_eq!(
-            s.advanced.source_profile.map(|p| p.dynamic_range_p95_p10_db),
+            s.advanced
+                .source_profile
+                .map(|p| p.dynamic_range_p95_p10_db),
             Some(1.0)
         );
     }

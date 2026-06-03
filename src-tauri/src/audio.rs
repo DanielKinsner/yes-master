@@ -1733,7 +1733,11 @@ fn handle_play_master(
     // settings drive the chain build AND the preview-landing measurement, so live
     // audition stays WYSIWYG with export.
     let mut settings = settings.clone();
-    crate::profile_store::apply_resolved_profile(&mut settings, profile_store.get(&track_id), album);
+    crate::profile_store::apply_resolved_profile(
+        &mut settings,
+        profile_store.get(&track_id),
+        album,
+    );
     let settings = &settings;
     // Three-tier PCM resolution (fastest to slowest):
     //   1. Local "currently-playing" cache on AudioThreadState —
