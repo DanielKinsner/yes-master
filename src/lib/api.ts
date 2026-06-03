@@ -141,6 +141,9 @@ export const api = {
     settings: MasteringSettings,
     startPositionSec?: number,
     previewLufsLanding = true,
+    // B2: album mode is non-adaptive; the backend derives + injects the profile
+    // and caches album-ness for the subsequent settings-only update_chain calls.
+    album = false,
   ) =>
     invoke<null>("play_master", {
       trackId,
@@ -148,6 +151,7 @@ export const api = {
       settings,
       startPositionSec: startPositionSec ?? null,
       previewLufsLanding,
+      album,
     }),
 
   updateChain: (settings: MasteringSettings, previewLufsLanding = true) =>

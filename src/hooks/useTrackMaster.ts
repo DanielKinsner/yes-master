@@ -306,14 +306,8 @@ export function useTrackMaster() {
   // closure; the override rules themselves live in the pure helper.
   const withSourceLufs = useCallback(
     (id: TrackId | null, settings: MasteringSettings): MasteringSettings =>
-      applyChainDispatchOverrides(
-        settings,
-        id,
-        analysisMap,
-        volumeMatchRef.current,
-        mode === "album",
-      ),
-    [analysisMap, mode],
+      applyChainDispatchOverrides(settings, id, analysisMap, volumeMatchRef.current),
+    [analysisMap],
   );
 
   // Live-edit updateChain dispatcher: rAF-gated, single-in-flight, latest-
@@ -1348,6 +1342,9 @@ export function useTrackMaster() {
             withSourceLufs(selectedTrackId, selectedSettings),
             positionSec,
             exportLufsPreviewRef.current,
+            // B2: album mode is non-adaptive. The backend caches this and reuses
+            // it for the settings-only update_chain dispatches that follow.
+            mode === "album",
           );
         } catch (err) {
           throw new Error(playbackErrorMessage(err, kind));
@@ -1355,7 +1352,7 @@ export function useTrackMaster() {
       }
       setLoadedKindByTrack((prev) => ({ ...prev, [selectedTrackId]: kind }));
     },
-    [selectedTrack, selectedTrackId, selectedSettings, withSourceLufs],
+    [selectedTrack, selectedTrackId, selectedSettings, withSourceLufs, mode],
   );
 
   const togglePlay = useCallback(async () => {

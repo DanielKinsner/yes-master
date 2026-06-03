@@ -467,7 +467,7 @@ describe("source profile injection (Tier-1 adaptive guardrails)", () => {
     expect(result.advanced.source_profile ?? null).toBeNull();
   });
 
-  it("applyChainDispatchOverrides injects the profile alongside VM + source_lufs", () => {
+  it("applyChainDispatchOverrides sets VM + source_lufs but no longer injects a profile (B2: backend owns it)", () => {
     const base = makeSettings("custom");
     const trackId = "track-a" as TrackId;
     const result = applyChainDispatchOverrides(
@@ -476,23 +476,11 @@ describe("source profile injection (Tier-1 adaptive guardrails)", () => {
       { [trackId]: analysisWith6Band() },
       false,
     );
-    expect(result.advanced.source_profile).not.toBeNull();
+    // B2: the backend derives + injects the adaptive profile (keyed by track id,
+    // album-gated via the play_master `album` arg). The live dispatch helper
+    // only carries VM + source_lufs now.
+    expect(result.advanced.source_profile ?? null).toBeNull();
     expect(result.source_lufs_integrated).toBeCloseTo(-12, 6);
     expect(result.volume_match).toBe(false);
-  });
-
-  it("does NOT inject the profile in album mode (album is non-adaptive, B1)", () => {
-    const base = makeSettings("custom");
-    const trackId = "track-a" as TrackId;
-    const result = applyChainDispatchOverrides(
-      base,
-      trackId,
-      { [trackId]: analysisWith6Band() },
-      false,
-      true, // albumMode
-    );
-    expect(result.advanced.source_profile ?? null).toBeNull();
-    // VM + source_lufs still apply.
-    expect(result.source_lufs_integrated).toBeCloseTo(-12, 6);
   });
 });

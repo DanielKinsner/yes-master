@@ -183,7 +183,6 @@ export function applyChainDispatchOverrides(
   trackId: TrackId | null,
   analysisMap: Record<TrackId, AnalysisResult>,
   volumeMatchOverride: boolean,
-  albumMode = false,
 ): MasteringSettings {
   const result: MasteringSettings = {
     ...settings,
@@ -195,13 +194,10 @@ export function applyChainDispatchOverrides(
     if (sourceLufs !== undefined && sourceLufs !== null && Number.isFinite(sourceLufs)) {
       result.source_lufs_integrated = sourceLufs;
     }
-    // Tier-1 adaptive guardrails read this snapshot in the Rust chain — but Album
-    // Master is non-adaptive (B1), so skip injection in album mode so live
-    // audition matches the flat album export. Always SET the field (null when
-    // none) so a stale profile from a prior dispatch is cleared (B10).
-    const profile = albumMode ? null : sourceProfileFromAnalysis(analysis);
-    result.advanced = { ...result.advanced, source_profile: profile ?? undefined };
   }
+  // B2: the adaptive source_profile is now derived + injected by the BACKEND
+  // (keyed by the loaded track; album mode is gated via the play_master `album`
+  // arg). The frontend no longer computes or injects it on the live path.
   return result;
 }
 

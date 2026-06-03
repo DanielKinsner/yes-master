@@ -83,6 +83,7 @@ pub async fn play_master(
     settings: MasteringSettings,
     start_position_sec: Option<f64>,
     preview_lufs_landing: Option<bool>,
+    album: Option<bool>,
     player: tauri::State<'_, Arc<AudioPlayer>>,
 ) -> CommandResult<()> {
     if track_path.is_empty() {
@@ -100,6 +101,8 @@ pub async fn play_master(
         settings,
         start_position_sec.unwrap_or(0.0),
         preview_lufs_landing.unwrap_or(true),
+        // B2: album mode is non-adaptive; default false when the FE omits it.
+        album.unwrap_or(false),
     )
 }
 
@@ -273,6 +276,10 @@ enum AudioCommand {
         settings: MasteringSettings,
         start_position_sec: f64,
         preview_lufs_landing: bool,
+        /// B2: album mode is non-adaptive. Carried so the audio thread skips
+        /// profile resolution and caches `live_album` for the subsequent
+        /// settings-only `update_chain` dispatches.
+        album: bool,
         reply: Sender<Result<(), String>>,
     },
     UpdateChain {
@@ -406,20 +413,33 @@ impl AudioPlayer {
         let snapshot = Arc::new(RwLock::new(PlaybackSnapshot::default()));
         let prewarm_cache: SharedDecodedCache = Arc::new(Mutex::new(None));
         let prewarm_target: Arc<Mutex<Option<PathBuf>>> = Arc::new(Mutex::new(None));
+        let profile_store = Arc::new(crate::profile_store::SourceProfileStore::default());
         let (tx, rx) = mpsc::channel::<AudioCommand>();
         let snap_for_thread = snapshot.clone();
         let prewarm_for_thread = prewarm_cache.clone();
         let tx_for_thread = tx.clone();
+        // B2: the audio thread resolves the adaptive profile from the same store
+        // for the settings-only `update_chain` path (which has no track id and
+        // resolves via the currently-loaded track instead).
+        let store_for_thread = profile_store.clone();
         std::thread::Builder::new()
             .name("audio-player".to_string())
-            .spawn(move || audio_thread(rx, tx_for_thread, snap_for_thread, prewarm_for_thread))
+            .spawn(move || {
+                audio_thread(
+                    rx,
+                    tx_for_thread,
+                    snap_for_thread,
+                    prewarm_for_thread,
+                    store_for_thread,
+                )
+            })
             .expect("spawn audio thread");
         Self {
             tx: Mutex::new(Some(tx)),
             snapshot,
             prewarm_cache,
             prewarm_target,
-            profile_store: Arc::new(crate::profile_store::SourceProfileStore::default()),
+            profile_store,
         }
     }
 
@@ -528,6 +548,7 @@ impl AudioPlayer {
         settings: MasteringSettings,
         start_position_sec: f64,
         preview_lufs_landing: bool,
+        album: bool,
     ) -> CommandResult<()> {
         let (reply_tx, reply_rx) = mpsc::channel();
         self.send(AudioCommand::PlayMaster {
@@ -536,6 +557,7 @@ impl AudioPlayer {
             settings,
             start_position_sec: start_position_sec.max(0.0),
             preview_lufs_landing,
+            album,
             reply: reply_tx,
         })
         .map_err(CommandError::Other)?;
@@ -630,6 +652,11 @@ struct AudioThreadState {
     handle: rodio::OutputStreamHandle,
     sink: rodio::Sink,
     current_track: Option<TrackId>,
+    /// B2: whether the currently-loaded Mastered playback is album mode (which is
+    /// non-adaptive). Set on `play_master`; read by the settings-only
+    /// `update_chain` path to keep album audition byte-flat without re-sending the
+    /// flag on every live edit.
+    live_album: bool,
     loop_region: Option<LoopRegion>,
     live_coeffs_tx: Option<Sender<LiveCoeffUpdate>>,
     live_coeff_generation: u64,
@@ -1193,6 +1220,7 @@ fn process_audio_command(
     state: &mut Option<AudioThreadState>,
     prewarm_cache: &SharedDecodedCache,
     command_tx: &Sender<AudioCommand>,
+    profile_store: &Arc<crate::profile_store::SourceProfileStore>,
 ) -> bool {
     match cmd {
         AudioCommand::Play {
@@ -1210,6 +1238,7 @@ fn process_audio_command(
             settings,
             start_position_sec,
             preview_lufs_landing,
+            album,
             reply,
         } => {
             let outcome = handle_play_master(
@@ -1219,16 +1248,25 @@ fn process_audio_command(
                 &settings,
                 start_position_sec,
                 preview_lufs_landing,
+                album,
                 prewarm_cache,
                 command_tx,
+                profile_store,
             );
             let _ = reply.send(outcome);
         }
         AudioCommand::UpdateChain {
-            settings,
+            mut settings,
             preview_lufs_landing,
         } => {
             if let Some(s) = state.as_mut() {
+                // B2: the settings-only live path carries no track id, so resolve
+                // the backend-owned adaptive profile via the currently-loaded
+                // track. Read fresh from the store so a late-arriving analysis is
+                // picked up by the next live edit. `live_album` (cached at
+                // play_master) keeps album-mode audition byte-flat.
+                let cached = s.current_track.as_ref().and_then(|t| profile_store.get(t));
+                crate::profile_store::apply_resolved_profile(&mut settings, cached, s.live_album);
                 let sample_rate = s.live_sample_rate;
                 let generation = s.live_coeff_generation.wrapping_add(1);
                 s.live_coeff_generation = generation;
@@ -1394,6 +1432,7 @@ fn audio_thread(
     command_tx: Sender<AudioCommand>,
     snapshot: Arc<RwLock<PlaybackSnapshot>>,
     prewarm_cache: SharedDecodedCache,
+    profile_store: Arc<crate::profile_store::SourceProfileStore>,
 ) {
     let mut state: Option<AudioThreadState> = None;
     loop {
@@ -1439,7 +1478,8 @@ fn audio_thread(
 
             let sequenced = coalesced_command_sequence(buffered);
             for c in sequenced {
-                if process_audio_command(c, &mut state, &prewarm_cache, &command_tx) {
+                if process_audio_command(c, &mut state, &prewarm_cache, &command_tx, &profile_store)
+                {
                     shutdown_requested = true;
                 }
             }
@@ -1578,6 +1618,7 @@ fn handle_play(
             handle,
             sink,
             current_track: None,
+            live_album: false,
             loop_region: None,
             live_coeffs_tx: None,
             live_coeff_generation: 0,
@@ -1666,9 +1707,18 @@ fn handle_play_master(
     settings: &MasteringSettings,
     start_position_sec: f64,
     preview_lufs_landing: bool,
+    album: bool,
     prewarm_cache: &SharedDecodedCache,
     command_tx: &Sender<AudioCommand>,
+    profile_store: &Arc<crate::profile_store::SourceProfileStore>,
 ) -> Result<(), String> {
+    // B2: resolve the backend-owned adaptive profile for this track (None in
+    // album mode; an FE-supplied profile is honored as an override). The resolved
+    // settings drive the chain build AND the preview-landing measurement, so live
+    // audition stays WYSIWYG with export.
+    let mut settings = settings.clone();
+    crate::profile_store::apply_resolved_profile(&mut settings, profile_store.get(&track_id), album);
+    let settings = &settings;
     // Three-tier PCM resolution (fastest to slowest):
     //   1. Local "currently-playing" cache on AudioThreadState —
     //      same-track replay (Original/Mastered toggle).
@@ -1711,6 +1761,7 @@ fn handle_play_master(
             handle,
             sink,
             current_track: None,
+            live_album: false,
             loop_region: None,
             live_coeffs_tx: None,
             live_coeff_generation: 0,
@@ -1819,6 +1870,9 @@ fn handle_play_master(
     new_sink.play();
     s.sink = new_sink;
     s.current_track = Some(track_id);
+    // B2: remember album-ness so the settings-only update_chain path stays flat
+    // for album audition without re-sending the flag on every live edit.
+    s.live_album = album;
     s.live_coeffs_tx = Some(coeffs_tx);
     s.live_sample_rate = pcm.sample_rate;
     Ok(())
@@ -2355,6 +2409,7 @@ mod tests {
             settings: settings_with_intensity(0.5),
             start_position_sec: 0.0,
             preview_lufs_landing: true,
+            album: false,
             reply,
         }
     }
