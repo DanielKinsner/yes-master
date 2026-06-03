@@ -394,6 +394,11 @@ pub struct AudioPlayer {
     /// evict the newer entry from the single-slot cache (Codex review).
     /// Stale prewarms drop their result silently.
     prewarm_target: Arc<Mutex<Option<PathBuf>>>,
+    /// B2: backend-owned cache of derived adaptive source profiles, keyed by
+    /// track. Populated by `analyze_tracks`; read by the render / readout
+    /// commands and (cloned into the audio thread) by the live `update_chain`
+    /// path, which has no track id and resolves via the currently-loaded track.
+    profile_store: Arc<crate::profile_store::SourceProfileStore>,
 }
 
 impl AudioPlayer {
@@ -414,7 +419,16 @@ impl AudioPlayer {
             snapshot,
             prewarm_cache,
             prewarm_target,
+            profile_store: Arc::new(crate::profile_store::SourceProfileStore::default()),
         }
+    }
+
+    /// Shared handle to the backend-owned adaptive source-profile store (B2).
+    /// `lib.rs` `.manage`s this clone so the analysis / render / readout commands
+    /// resolve from the same instance the audio thread will use for the live
+    /// `update_chain` path.
+    pub fn profile_store(&self) -> Arc<crate::profile_store::SourceProfileStore> {
+        self.profile_store.clone()
     }
 
     /// Declare the canonical path this player should consider the

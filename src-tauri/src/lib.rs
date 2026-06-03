@@ -9,6 +9,7 @@ pub mod exports;
 pub mod files;
 pub mod fixture_matrix;
 pub mod guardrails;
+pub mod profile_store;
 pub mod project;
 pub mod reference_tuning;
 pub mod sample_rate;
@@ -32,9 +33,14 @@ use tauri::{Emitter, Manager};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let player = Arc::new(audio::AudioPlayer::new());
+    // B2: the backend owns deriving the adaptive source profile. The same store
+    // instance is shared with the audio thread (owned by `player`) and managed
+    // here so the analysis / render / readout commands resolve from it too.
+    let profile_store = player.profile_store();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .manage(profile_store)
         .manage(player)
         .setup(|app| {
             let app_handle = app.handle().clone();

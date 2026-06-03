@@ -27,7 +27,22 @@ pub struct RenderProgress {
 }
 
 #[tauri::command]
-pub async fn analyze_tracks(tracks: Vec<AnalyzeRequest>) -> CommandResult<Vec<AnalysisResult>> {
+pub async fn analyze_tracks(
+    tracks: Vec<AnalyzeRequest>,
+    profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
+) -> CommandResult<Vec<AnalysisResult>> {
+    let results = analyze_tracks_core(tracks).await?;
+    // B2: the backend is the SINGLE point that derives the adaptive source
+    // profile (kills the dual TS/Rust mapper). The render / readout commands and
+    // the live chain resolve from this store instead of an FE-injected profile.
+    populate_profile_store(&profile_store, &results);
+    Ok(results)
+}
+
+/// Analysis core, free of the Tauri `State` so unit / contract tests can call it
+/// directly. The `analyze_tracks` command wraps this and populates the
+/// backend-owned profile store from the results.
+pub async fn analyze_tracks_core(tracks: Vec<AnalyzeRequest>) -> CommandResult<Vec<AnalysisResult>> {
     let total = tracks.len();
     let mut out = Vec::with_capacity(total);
     let mut failures: Vec<(TrackId, String)> = Vec::new();
@@ -56,6 +71,19 @@ pub async fn analyze_tracks(tracks: Vec<AnalyzeRequest>) -> CommandResult<Vec<An
         eprintln!("analyze_tracks: skipping {} — {}", id.as_str(), msg);
     }
     Ok(out)
+}
+
+/// Derive each result's adaptive [`SourceProfile`] and cache it in the
+/// backend-owned store (B2). `set` clears any stale entry when a re-analysis can
+/// no longer derive one (e.g. a source that became too short). Pure over a plain
+/// `&SourceProfileStore` so it's testable without the Tauri runtime.
+pub fn populate_profile_store(
+    profile_store: &crate::profile_store::SourceProfileStore,
+    results: &[AnalysisResult],
+) {
+    for result in results {
+        profile_store.set(result.track_id.clone(), SourceProfile::from_analysis(result));
+    }
 }
 
 // ============================================================================

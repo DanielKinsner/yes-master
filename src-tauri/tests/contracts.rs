@@ -77,7 +77,7 @@ async fn analyze_tracks_populates_role_and_character_inference() {
     let path = tmp.path().join("sine.wav");
     write_sine_wav(&path, 44_100, 3.0, 440.0, 2);
 
-    let results = engine::analyze_tracks(vec![engine::AnalyzeRequest {
+    let results = engine::analyze_tracks_core(vec![engine::AnalyzeRequest {
         id: TrackId("infer-test".to_string()),
         path: path.to_string_lossy().to_string(),
     }])
@@ -104,7 +104,7 @@ async fn analyze_tracks_measures_synthetic_wav() {
     write_sine_wav(&path, 44_100, 3.0, 440.0, 2);
     let path_str = path.to_string_lossy().to_string();
 
-    let results = engine::analyze_tracks(vec![engine::AnalyzeRequest {
+    let results = engine::analyze_tracks_core(vec![engine::AnalyzeRequest {
         id: TrackId("test-analyze".to_string()),
         path: path_str,
     }])
@@ -133,6 +133,31 @@ async fn analyze_tracks_measures_synthetic_wav() {
 }
 
 #[tokio::test]
+async fn populate_profile_store_caches_a_derived_profile_per_track() {
+    // B2: the backend derives + caches the adaptive SourceProfile at analysis
+    // time. A synthetic stereo sine is long enough for the 6-band FFT, so
+    // from_analysis yields Some and the store ends up keyed by the track id.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let path = tmp.path().join("sine.wav");
+    write_sine_wav(&path, 44_100, 3.0, 440.0, 2);
+
+    let results = engine::analyze_tracks_core(vec![engine::AnalyzeRequest {
+        id: TrackId("store-test".to_string()),
+        path: path.to_string_lossy().to_string(),
+    }])
+    .await
+    .expect("analyze");
+
+    let store = profile_store::SourceProfileStore::default();
+    engine::populate_profile_store(&store, &results);
+
+    // The cached profile matches what the single Rust derivation produces — no
+    // second mapper involved.
+    let expected = SourceProfile::from_analysis(&results[0]);
+    assert_eq!(store.get(&TrackId("store-test".to_string())), expected);
+}
+
+#[tokio::test]
 async fn analyze_tracks_runs_against_real_fixture_if_present() {
     if !real_fixture_enabled() {
         eprintln!("Skipping real-fixture test (set AMS_RUN_REAL_FIXTURE=1 to run the slow lane).");
@@ -143,7 +168,7 @@ async fn analyze_tracks_runs_against_real_fixture_if_present() {
         return;
     };
     let abs = path.canonicalize().expect("canonicalize");
-    let results = engine::analyze_tracks(vec![engine::AnalyzeRequest {
+    let results = engine::analyze_tracks_core(vec![engine::AnalyzeRequest {
         id: TrackId("real-analyze".to_string()),
         path: abs.to_string_lossy().to_string(),
     }])
@@ -361,7 +386,7 @@ async fn phase_12_1_real_fixture_metering_snapshot() {
     );
 
     // Analyze — exercises engine::analyze_tracks and the BS.1770 metering path.
-    let source_results = engine::analyze_tracks(vec![engine::AnalyzeRequest {
+    let source_results = engine::analyze_tracks_core(vec![engine::AnalyzeRequest {
         id: t.id.clone(),
         path: path_str.clone(),
     }])
@@ -419,7 +444,7 @@ async fn phase_12_1_real_fixture_metering_snapshot() {
     );
 
     // Re-analyze the rendered master.
-    let master_results = engine::analyze_tracks(vec![engine::AnalyzeRequest {
+    let master_results = engine::analyze_tracks_core(vec![engine::AnalyzeRequest {
         id: TrackId("master".to_string()),
         path: out_path.to_string_lossy().to_string(),
     }])
