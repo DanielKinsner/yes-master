@@ -154,8 +154,15 @@ export const api = {
       album,
     }),
 
-  updateChain: (settings: MasteringSettings, previewLufsLanding = true) =>
-    invoke<null>("update_chain", { settings, previewLufsLanding }),
+  updateChain: (
+    settings: MasteringSettings,
+    previewLufsLanding = true,
+    // B2 / live-mode-sync: album-ness of the CURRENT mode, sent with every live
+    // edit so a Track<->Album switch mid-Mastered-audition resolves correctly
+    // (album mode stays non-adaptive) without waiting for the next playMaster.
+    album = false,
+  ) =>
+    invoke<null>("update_chain", { settings, previewLufsLanding, album }),
 
   /// Read-only per-axis adaptive-trim summary. B2: the backend resolves the
   /// profile from its store (keyed by trackId); album mode is non-adaptive. The

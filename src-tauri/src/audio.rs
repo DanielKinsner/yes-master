@@ -110,9 +110,14 @@ pub async fn play_master(
 pub async fn update_chain(
     settings: MasteringSettings,
     preview_lufs_landing: Option<bool>,
+    album: Option<bool>,
     player: tauri::State<'_, Arc<AudioPlayer>>,
 ) -> CommandResult<()> {
-    player.update_chain(settings, preview_lufs_landing.unwrap_or(true))
+    player.update_chain(
+        settings,
+        preview_lufs_landing.unwrap_or(true),
+        album.unwrap_or(false),
+    )
 }
 
 /// Prewarm the decode cache for `track_path` in the background.
@@ -285,6 +290,11 @@ enum AudioCommand {
     UpdateChain {
         settings: MasteringSettings,
         preview_lufs_landing: bool,
+        /// Album-ness of the CURRENT mode, sent with every live edit so a
+        /// Track<->Album switch mid-Mastered-audition is reflected immediately
+        /// (album stays byte-flat / non-adaptive; track stays adaptive) instead
+        /// of reusing the flag cached at the last `play_master`.
+        album: bool,
     },
     PreviewLandingReady {
         /// Captured at worker spawn time. Rejected by the audio thread if
@@ -575,10 +585,12 @@ impl AudioPlayer {
         &self,
         settings: MasteringSettings,
         preview_lufs_landing: bool,
+        album: bool,
     ) -> CommandResult<()> {
         self.send(AudioCommand::UpdateChain {
             settings,
             preview_lufs_landing,
+            album,
         })
         .map_err(CommandError::Other)
     }
@@ -1258,13 +1270,17 @@ fn process_audio_command(
         AudioCommand::UpdateChain {
             mut settings,
             preview_lufs_landing,
+            album,
         } => {
             if let Some(s) = state.as_mut() {
                 // B2: the settings-only live path carries no track id, so resolve
                 // the backend-owned adaptive profile via the currently-loaded
                 // track. Read fresh from the store so a late-arriving analysis is
-                // picked up by the next live edit. `live_album` (cached at
-                // play_master) keeps album-mode audition byte-flat.
+                // picked up by the next live edit. Refresh `live_album` from THIS
+                // edit's mode so a Track<->Album switch mid-audition resolves
+                // correctly immediately, rather than reusing the flag cached at
+                // the last play_master (album mode stays byte-flat / non-adaptive).
+                s.live_album = album;
                 let cached = s.current_track.as_ref().and_then(|t| profile_store.get(t));
                 crate::profile_store::apply_resolved_profile(&mut settings, cached, s.live_album);
                 let sample_rate = s.live_sample_rate;
@@ -2428,6 +2444,7 @@ mod tests {
         AudioCommand::UpdateChain {
             settings: settings_with_intensity(intensity),
             preview_lufs_landing: preview,
+            album: false,
         }
     }
 
@@ -2563,6 +2580,7 @@ mod tests {
             AudioCommand::UpdateChain {
                 settings,
                 preview_lufs_landing,
+                ..
             } => {
                 assert!((settings.intensity - 0.9).abs() < 1e-6);
                 assert!(*preview_lufs_landing);

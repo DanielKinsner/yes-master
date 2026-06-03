@@ -704,8 +704,74 @@ describe("useTrackMaster integration dispatches", () => {
       expect(mocks.api.updateChain).toHaveBeenCalledWith(
         expect.objectContaining({ volume_match: false }),
         false,
+        false, // album flag — Track mode
       );
     });
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("reflects a Track<->Album mode switch mid-Mastered-audition in the next updateChain (F2)", async () => {
+    // F2 regression: switching mode is a bare state change that does NOT
+    // re-prime playback, and update_chain previously reused the album flag
+    // cached at the last playMaster. A live edit after the switch must carry
+    // the CURRENT mode so the backend resolves album audition as non-adaptive
+    // (album=true) and Track audition as adaptive again on the way back.
+    const track = makeTrack("mode-switch-1", "C:/audio/mode-switch.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    // Load + play Mastered in Track mode (backend caches album=false).
+    await act(async () => {
+      await harness.current().setPlaybackKind("master");
+    });
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+    await waitFor(() => {
+      expect(mocks.api.playMaster).toHaveBeenCalled();
+    });
+
+    // Switch to Album mode WITHOUT re-priming, then make a live edit.
+    await act(async () => {
+      harness.current().setMode("album");
+    });
+    mocks.api.updateChain.mockClear();
+    await act(async () => {
+      harness.current().setIntensity(0.42);
+    });
+    await waitFor(() => {
+      expect(mocks.api.updateChain).toHaveBeenCalledWith(
+        expect.objectContaining({ intensity: 0.42 }),
+        expect.any(Boolean),
+        true, // album flag follows the CURRENT mode, not the stale play cache
+      );
+    });
+
+    // Switch back to Track mode and edit again: adaptive context restored.
+    await act(async () => {
+      harness.current().setMode("track");
+    });
+    mocks.api.updateChain.mockClear();
+    await act(async () => {
+      harness.current().setIntensity(0.43);
+    });
+    await waitFor(() => {
+      expect(mocks.api.updateChain).toHaveBeenCalledWith(
+        expect.objectContaining({ intensity: 0.43 }),
+        expect.any(Boolean),
+        false,
+      );
+    });
+
     await act(async () => {
       harness.root.unmount();
     });
@@ -1030,6 +1096,7 @@ describe("useTrackMaster integration dispatches", () => {
       expect(mocks.api.updateChain).toHaveBeenCalledWith(
         expect.objectContaining({ intensity: 0.72 }),
         true,
+        false, // album flag — Track mode
       );
     });
 
@@ -1080,6 +1147,7 @@ describe("useTrackMaster integration dispatches", () => {
     expect(mocks.api.updateChain).toHaveBeenLastCalledWith(
       expect.objectContaining({ intensity: 0.93 }),
       expect.any(Boolean),
+      expect.any(Boolean), // album flag
     );
 
     await act(async () => {

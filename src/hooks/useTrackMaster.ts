@@ -337,6 +337,7 @@ export function useTrackMaster() {
   const updateChainPending = useRef<{
     settings: MasteringSettings;
     preview: boolean;
+    album: boolean;
   } | null>(null);
   const updateChainRafScheduled = useRef(false);
   const lastPlaybackTickRef = useRef<{
@@ -353,7 +354,15 @@ export function useTrackMaster() {
 
   const sendUpdateChain = useCallback(
     (settings: MasteringSettings, preview: boolean) => {
-      updateChainPending.current = { settings, preview };
+      // Capture album-ness at edit time so a Track<->Album switch mid-audition is
+      // reflected on the very next live edit (the backend otherwise reuses the
+      // flag cached at the last playMaster). Coalescing keeps the latest pending,
+      // so the surviving send carries the most-recent edit's mode.
+      updateChainPending.current = {
+        settings,
+        preview,
+        album: mode === "album",
+      };
       const drain = () => {
         const next = updateChainPending.current;
         if (!next) {
@@ -363,7 +372,7 @@ export function useTrackMaster() {
         updateChainPending.current = null;
         updateChainInFlight.current = true;
         api
-          .updateChain(next.settings, next.preview)
+          .updateChain(next.settings, next.preview, next.album)
           .then(() => {
             drain();
           })
@@ -389,7 +398,7 @@ export function useTrackMaster() {
         setTimeout(scheduleDrain, 16);
       }
     },
-    [],
+    [mode],
   );
 
   useEffect(() => {
