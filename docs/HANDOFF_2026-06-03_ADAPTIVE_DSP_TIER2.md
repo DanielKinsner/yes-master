@@ -1,8 +1,14 @@
 # Handoff — Adaptive DSP: read this, then code (Tier-1 finish + Tier-2)
 
 Audience: a fresh agent in a new window picking up the adaptive/smart DSP. This is
-**self-contained** — review this doc and you can start coding without re-reading the
-history. Branch: `feat/adaptive-dsp-guardrails` (pushed to `origin`, not merged).
+**self-contained** — review this doc and you can start coding without re-reading the history.
+
+> **Merged to `main` on 2026-06-03 (merge commit `2877c6d`).** Work from `main`
+> (or a fresh branch off it); `feat/adaptive-dsp-guardrails` is now historical.
+> **Merged ≠ validated:** the guardrail numbers are still *provisional placeholders*
+> and the owner's by-ear listening signoff has NOT happened. Do not treat the
+> current constants as final, and don't build Tier-2 on the assumption that the
+> Tier-1 numbers are locked.
 
 ---
 
@@ -11,8 +17,11 @@ history. Branch: `feat/adaptive-dsp-guardrails` (pushed to `origin`, not merged)
 YES Master now has an **adaptive/smart DSP**: presets adapt to the source. It is
 **Tier-1 defensive** — when a source already has a quality, the matching preset move
 is *trimmed* toward neutral; it never adds a move, flips a sign, touches a cut, or
-narrows. It is **shipped, green, and pushed**, but **NOT merged** — it waits on the
-owner's by-ear listening signoff (only a human clears taste). Two review rounds were
+narrows. It is **merged to `main`** (`2877c6d`) and green, but **NOT yet
+ear-calibrated** — the guardrail numbers (deadbands, caps, default strength) are
+*provisional placeholders*, and the owner's by-ear listening signoff has not
+happened. **Being on `main` does not mean it's taste-validated.** Only a human
+clears taste; don't lock or hard-code assumptions on the current numbers. Two review rounds were
 verified against the code and their real bugs fixed (see `docs/reviews/`). What's
 left: the Tier-1 *finish* (one root-cause refactor + calibration) and **Tier-2** (the
 corrective "smart" tier). Your job starts at the action plan in §7.

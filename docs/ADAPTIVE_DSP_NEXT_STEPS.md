@@ -1,9 +1,11 @@
 # Adaptive DSP — Next Steps & Backlog
 
-Single entry point for what's left on the adaptive/smart DSP. **Status as of
-2026-06-02** (branch `feat/adaptive-dsp-guardrails`, not merged — awaiting the
-owner's listening signoff). Detailed options + rationale for each item live in the
-finish plan: `docs/plans/2026-06-02-002-adaptive-dsp-tier1-finish-and-tier2.md`.
+Single entry point for what's left on the adaptive/smart DSP. **Status:** merged
+to `main` on 2026-06-03 (merge `2877c6d`), but the owner's by-ear listening signoff
+/ calibration is **still pending** — the guardrail numbers are provisional
+placeholders, not yet ear-validated (merged ≠ validated). Detailed options +
+rationale for each item live in the finish plan:
+`docs/plans/2026-06-02-002-adaptive-dsp-tier1-finish-and-tier2.md`.
 
 ## ✅ Done — do not redo
 
