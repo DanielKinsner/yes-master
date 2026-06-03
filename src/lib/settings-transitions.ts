@@ -183,6 +183,7 @@ export function applyChainDispatchOverrides(
   trackId: TrackId | null,
   analysisMap: Record<TrackId, AnalysisResult>,
   volumeMatchOverride: boolean,
+  albumMode = false,
 ): MasteringSettings {
   const result: MasteringSettings = {
     ...settings,
@@ -194,8 +195,10 @@ export function applyChainDispatchOverrides(
     if (sourceLufs !== undefined && sourceLufs !== null && Number.isFinite(sourceLufs)) {
       result.source_lufs_integrated = sourceLufs;
     }
-    // Tier-1 adaptive guardrails read this snapshot in the Rust chain.
-    const profile = sourceProfileFromAnalysis(analysis);
+    // Tier-1 adaptive guardrails read this snapshot in the Rust chain — but Album
+    // Master is non-adaptive (B1), so skip injection in album mode so live
+    // audition matches the flat album export.
+    const profile = albumMode ? null : sourceProfileFromAnalysis(analysis);
     if (profile) {
       result.advanced = { ...result.advanced, source_profile: profile };
     }

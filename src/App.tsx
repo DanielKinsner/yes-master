@@ -2156,6 +2156,7 @@ function AdvancedControlsCard({
           min={0}
           max={1}
           format={(v) => (v <= 0.0001 ? "Off" : `${Math.round(v * 100)}%`)}
+          disabled={albumMode}
           onChange={(v) => update("adaptive_strength", v)}
         />
       </div>

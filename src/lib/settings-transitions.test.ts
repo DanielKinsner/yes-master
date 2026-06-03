@@ -480,4 +480,19 @@ describe("source profile injection (Tier-1 adaptive guardrails)", () => {
     expect(result.source_lufs_integrated).toBeCloseTo(-12, 6);
     expect(result.volume_match).toBe(false);
   });
+
+  it("does NOT inject the profile in album mode (album is non-adaptive, B1)", () => {
+    const base = makeSettings("custom");
+    const trackId = "track-a" as TrackId;
+    const result = applyChainDispatchOverrides(
+      base,
+      trackId,
+      { [trackId]: analysisWith6Band() },
+      false,
+      true, // albumMode
+    );
+    expect(result.advanced.source_profile ?? null).toBeNull();
+    // VM + source_lufs still apply.
+    expect(result.source_lufs_integrated).toBeCloseTo(-12, 6);
+  });
 });

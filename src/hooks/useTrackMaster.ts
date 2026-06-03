@@ -306,8 +306,14 @@ export function useTrackMaster() {
   // closure; the override rules themselves live in the pure helper.
   const withSourceLufs = useCallback(
     (id: TrackId | null, settings: MasteringSettings): MasteringSettings =>
-      applyChainDispatchOverrides(settings, id, analysisMap, volumeMatchRef.current),
-    [analysisMap],
+      applyChainDispatchOverrides(
+        settings,
+        id,
+        analysisMap,
+        volumeMatchRef.current,
+        mode === "album",
+      ),
+    [analysisMap, mode],
   );
 
   // Live-edit updateChain dispatcher: rAF-gated, single-in-flight, latest-
