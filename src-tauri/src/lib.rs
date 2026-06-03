@@ -3,6 +3,7 @@ pub mod album_render;
 pub mod analysis;
 pub mod audio;
 pub mod decode;
+pub mod deep_analysis;
 pub mod dsp;
 pub mod engine;
 pub mod exports;
