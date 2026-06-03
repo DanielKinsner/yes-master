@@ -373,6 +373,24 @@ mod tests {
     }
 
     #[test]
+    fn missing_p95p10_does_not_alias_lra_into_the_db_ramp() {
+        // When P95-P10 is unmeasured, from_analysis carries the 100.0 "no DR
+        // trigger" sentinel; density then rests on the LRA ramp (LU thresholds),
+        // never on an LU value aliased into the dB DR ramp (B11).
+        let healthy = profile(0.08, 0.05, 0.08, 0.22, 100.0, 8.0, Some(0.8));
+        assert_eq!(
+            SourceGuardrails::compute(&healthy, 1.0).scale_density(0.5),
+            0.5,
+            "healthy LRA + unmeasured DR must not density-trim"
+        );
+        let dense = profile(0.08, 0.05, 0.08, 0.22, 100.0, 2.0, Some(0.8));
+        assert!(
+            SourceGuardrails::compute(&dense, 1.0).scale_density(0.5) < 0.5,
+            "low LRA still softens via the LRA ramp"
+        );
+    }
+
+    #[test]
     fn lra_sentinel_does_not_density_trim_a_dynamic_source() {
         // A non-finite EBU LRA is sanitized to 0.0 upstream. With a HEALTHY
         // P95-P10 DR, that sentinel must NOT be read as "maximally dense".

@@ -77,6 +77,9 @@ const DEFAULT_SETTINGS: MasteringSettings = {
     compression_link_stereo: null,
     bit_depth: null,
     target_sample_rate: null,
+    // Explicit so a fresh track is honestly "on at 0.6" rather than a null that
+    // displays as 60% but reads ambiguously (B4). Durable "off" = 0.0.
+    adaptive_strength: 0.6,
   },
 };
 

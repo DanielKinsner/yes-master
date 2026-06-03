@@ -2069,7 +2069,8 @@ function AdvancedControlsCard({
       warmth: null,
       presence_air: null,
       compression_density: null,
-      adaptive_strength: null,
+      // NOT reset: writing null here would silently re-arm adaptation (B4).
+      // Reset leaves Adapt Strength where the user put it.
     });
   };
   return (

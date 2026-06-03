@@ -142,17 +142,11 @@ impl SourceProfile {
         let spectral_6 = a.spectral_balance_6band?;
         Some(Self {
             spectral_6,
-            // When P95-P10 DR is missing, fall back to LRA only if it's a real
-            // measurement; a sanitized 0.0 LRA would otherwise masquerade as
-            // maximally dense, so treat that as "unknown / dynamic" (a value far
-            // above any density trigger) instead.
-            dynamic_range_p95_p10_db: a.dynamic_range_p95_p10_db.unwrap_or(
-                if a.dynamic_range_lu > 0.5 {
-                    a.dynamic_range_lu
-                } else {
-                    100.0
-                },
-            ),
+            // When P95-P10 DR is missing, do NOT fall back to LRA — that aliases
+            // an LU value into the dB DR ramp (B11). Use a "no DR trigger" dB
+            // sentinel (100.0) so density rests entirely on the LRA ramp, which
+            // has its own LU thresholds.
+            dynamic_range_p95_p10_db: a.dynamic_range_p95_p10_db.unwrap_or(100.0),
             dynamic_range_lu: a.dynamic_range_lu,
             stereo_correlation: a.stereo_correlation,
             stereo_width: a.stereo_width,

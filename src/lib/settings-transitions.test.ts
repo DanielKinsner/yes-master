@@ -436,12 +436,13 @@ describe("source profile injection (Tier-1 adaptive guardrails)", () => {
     ).toBeNull();
   });
 
-  it("sourceProfileFromAnalysis maps fields, with P95-P10 falling back to LRA", () => {
+  it("sourceProfileFromAnalysis uses a no-DR-trigger sentinel when P95-P10 is missing (no LU aliasing, B11)", () => {
     const p = sourceProfileFromAnalysis(
       analysisWith6Band({ dynamic_range_p95_p10_db: null, dynamic_range_lu: 5 }),
     );
     expect(p).not.toBeNull();
-    expect(p!.dynamic_range_p95_p10_db).toBe(5); // fell back to LRA
+    // NOT 5 (the LRA in LU) — that would alias LU into the dB DR ramp.
+    expect(p!.dynamic_range_p95_p10_db).toBe(100);
     expect(p!.spectral_6.air).toBeCloseTo(0.1, 6);
     expect(p!.stereo_correlation).toBe(0.3);
   });
