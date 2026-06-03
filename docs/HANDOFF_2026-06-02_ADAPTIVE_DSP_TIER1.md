@@ -1,5 +1,10 @@
 # Handoff — 2026-06-02 — Adaptive DSP (Tier-1 defensive guardrails)
 
+> **⚠️ Superseded for current state.** The post-review fixes and the self-contained
+> "review-then-code" guide are in **`docs/HANDOFF_2026-06-03_ADAPTIVE_DSP_TIER2.md`** —
+> read that to start coding. This doc is the original build record; some counts/notes
+> below predate the fix stack.
+
 Audience: the owner returning to listen, or the next agent. Pointer doc — the
 full design is in `docs/plans/2026-06-02-001-adaptive-dsp-tier1-guardrails.md`.
 
