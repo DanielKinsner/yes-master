@@ -344,15 +344,15 @@ mod tests {
 
     #[test]
     fn deadband_means_no_action_just_inside() {
-        // brightness exactly at the deadband edge -> no trim.
-        let p = profile(0.10, 0.10, 0.08, 0.22, 10.0, 9.0, Some(0.8));
+        // brightness exactly at the 0.30 deadband edge -> no trim.
+        let p = profile(0.15, 0.15, 0.08, 0.22, 10.0, 9.0, Some(0.8));
         let g = SourceGuardrails::compute(&p, 1.0);
         assert_eq!(g.trim_bright_db(3.0), 3.0);
     }
 
     #[test]
     fn bright_source_trims_only_air() {
-        // presence+air = 0.40, well past the 0.20 deadband.
+        // presence+air = 0.40, well past the 0.30 deadband.
         let p = profile(0.20, 0.20, 0.08, 0.22, 10.0, 9.0, Some(0.8));
         let g = SourceGuardrails::compute(&p, 1.0);
         let trimmed = g.trim_bright_db(3.0);

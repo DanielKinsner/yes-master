@@ -197,11 +197,10 @@ export function applyChainDispatchOverrides(
     }
     // Tier-1 adaptive guardrails read this snapshot in the Rust chain — but Album
     // Master is non-adaptive (B1), so skip injection in album mode so live
-    // audition matches the flat album export.
+    // audition matches the flat album export. Always SET the field (null when
+    // none) so a stale profile from a prior dispatch is cleared (B10).
     const profile = albumMode ? null : sourceProfileFromAnalysis(analysis);
-    if (profile) {
-      result.advanced = { ...result.advanced, source_profile: profile };
-    }
+    result.advanced = { ...result.advanced, source_profile: profile ?? undefined };
   }
   return result;
 }
@@ -237,10 +236,11 @@ export function injectSourceProfile(
   settings: MasteringSettings,
   analysis: AnalysisResult | null | undefined,
 ): MasteringSettings {
+  // Always set (undefined when none) so a stale profile is cleared — undefined
+  // serializes to omitted, which the backend reads as None (B10).
   const profile = sourceProfileFromAnalysis(analysis);
-  if (!profile) return settings;
   return {
     ...settings,
-    advanced: { ...settings.advanced, source_profile: profile },
+    advanced: { ...settings.advanced, source_profile: profile ?? undefined },
   };
 }

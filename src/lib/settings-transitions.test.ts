@@ -458,7 +458,7 @@ describe("source profile injection (Tier-1 adaptive guardrails)", () => {
     expect(result.intensity).toBe(0.7);
   });
 
-  it("injectSourceProfile is a no-op when the analysis lacks a 6-band balance", () => {
+  it("injectSourceProfile clears the profile when the analysis lacks a 6-band balance (B10)", () => {
     const base = makeSettings("custom");
     const result = injectSourceProfile(
       base,
