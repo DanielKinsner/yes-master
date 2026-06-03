@@ -10,7 +10,6 @@ import {
 import {
   applyAdvancedWithProfileFlip,
   applyChainDispatchOverrides,
-  injectSourceProfile,
   applyDeliveryProfileSelection,
   applyExplicitLoudnessTarget,
   applyLoudnessTargetSelection,
@@ -563,9 +562,12 @@ export function useTrackMaster() {
     : null;
 
   // Read-only per-axis adaptive-trim summary for the "what was trimmed" UI.
-  // Computed in Rust (single source of truth) from the profile-injected settings;
-  // recomputes on settings/analysis change with a latest-wins guard. Optional-
-  // chained so it is inert wherever the command isn't available (e.g. tests).
+  // B2: computed in Rust (single source of truth), which resolves the profile
+  // from its store by track id — the SAME profile the chain applies — so the FE
+  // sends raw settings + the track id, not a pre-injected profile. Album mode is
+  // non-adaptive. Recomputes on settings/analysis/mode change with a latest-wins
+  // guard; depends on selectedAnalysis so a late-arriving analysis refetches.
+  // Optional-chained so it is inert wherever the command isn't available (tests).
   const [guardrailReadout, setGuardrailReadout] = useState<GuardrailReadout | null>(
     null,
   );
@@ -576,13 +578,15 @@ export function useTrackMaster() {
       return;
     }
     const reqId = ++guardrailReadoutReq.current;
-    const settings = injectSourceProfile(selectedSettings, selectedAnalysis);
-    Promise.resolve(api.guardrailReadout?.(settings))
+    void selectedAnalysis; // dep: refetch when analysis lands so the store is ready
+    Promise.resolve(
+      api.guardrailReadout?.(selectedSettings, selectedTrackId, mode === "album"),
+    )
       .then((r) => {
         if (r && guardrailReadoutReq.current === reqId) setGuardrailReadout(r);
       })
       .catch(() => {});
-  }, [selectedTrackId, selectedSettings, selectedAnalysis]);
+  }, [selectedTrackId, selectedSettings, selectedAnalysis, mode]);
 
   const estimatedPlaybackPositionSec = useCallback(() => {
     const tick = lastPlaybackTickRef.current;

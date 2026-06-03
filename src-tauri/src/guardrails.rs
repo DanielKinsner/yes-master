@@ -11,7 +11,7 @@
 //! All triggers read level-invariant shares/ratios from [`SourceProfile`], so no
 //! LUFS normalization is needed before comparison.
 
-use crate::types::{MasteringSettings, SourceProfile};
+use crate::types::{MasteringSettings, SourceProfile, TrackId};
 use serde::{Deserialize, Serialize};
 
 /// Default Adapt Strength when the user hasn't set one (on by default).
@@ -288,8 +288,19 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
 }
 
 /// Tauri command: read-only adaptive-trim summary for the current settings.
+/// B2: the backend resolves the effective profile from its store (keyed by
+/// `track_id`) so the readout reflects the SAME profile the chain will apply;
+/// album mode is non-adaptive. An FE-supplied profile on `settings` is honored as
+/// an override, matching every other chain entry point.
 #[tauri::command]
-pub fn guardrail_readout(settings: MasteringSettings) -> GuardrailReadout {
+pub fn guardrail_readout(
+    mut settings: MasteringSettings,
+    track_id: Option<TrackId>,
+    album: Option<bool>,
+    profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
+) -> GuardrailReadout {
+    let cached = track_id.as_ref().and_then(|t| profile_store.get(t));
+    crate::profile_store::apply_resolved_profile(&mut settings, cached, album.unwrap_or(false));
     readout_for(&settings)
 }
 

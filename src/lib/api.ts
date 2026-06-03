@@ -157,10 +157,19 @@ export const api = {
   updateChain: (settings: MasteringSettings, previewLufsLanding = true) =>
     invoke<null>("update_chain", { settings, previewLufsLanding }),
 
-  /// Read-only per-axis adaptive-trim summary for the given settings (the
-  /// settings should already carry the injected source_profile).
-  guardrailReadout: (settings: MasteringSettings) =>
-    invoke<GuardrailReadout>("guardrail_readout", { settings }),
+  /// Read-only per-axis adaptive-trim summary. B2: the backend resolves the
+  /// profile from its store (keyed by trackId); album mode is non-adaptive. The
+  /// FE sends raw settings + the track id, not a pre-injected profile.
+  guardrailReadout: (
+    settings: MasteringSettings,
+    trackId?: TrackId | null,
+    album = false,
+  ) =>
+    invoke<GuardrailReadout>("guardrail_readout", {
+      settings,
+      trackId: trackId ?? null,
+      album,
+    }),
 
   /// Prewarm the backend decode cache for a track. Fire-and-forget
   /// from track-select / track-import handlers so the PCM is ready
