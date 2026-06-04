@@ -129,8 +129,8 @@ pub(crate) fn axis_strata(vals: &[f32], keys: &[f32]) -> AxisStrata {
     // body = central [p25,p75] index band; guard a degenerate empty span.
     let body_end = hi_idx.max(lo_idx + 1).min(finite.len());
     let body_slice = &finite[lo_idx..body_end];
-    let body =
-        body_slice.iter().map(|(_, v, _)| *v as f64).sum::<f64>() as f32 / body_slice.len().max(1) as f32;
+    let body = body_slice.iter().map(|(_, v, _)| *v as f64).sum::<f64>() as f32
+        / body_slice.len().max(1) as f32;
     AxisStrata {
         whole,
         loud,
@@ -258,7 +258,14 @@ pub fn scan_windows(samples: &[f32], sample_rate: u32, channels: usize) -> Vec<W
     let mut start = 0usize;
     while start + SHORT_WINDOW <= total_frames {
         out.push(measure_window(
-            samples, channels, start, SHORT_WINDOW, sample_rate, mom_frames, &pre, &rlb,
+            samples,
+            channels,
+            start,
+            SHORT_WINDOW,
+            sample_rate,
+            mom_frames,
+            &pre,
+            &rlb,
         ));
         start += hop;
     }
@@ -579,8 +586,16 @@ mod tests {
         let total = 100_000_000; // far from both edges -> no clamping
         let (lo, hi) = momentary_span(start, SHORT_WINDOW, mom_frames, total);
         let center = start + SHORT_WINDOW / 2;
-        assert_eq!(hi - lo, mom_frames, "span must be exactly mom_frames (400 ms) wide");
-        assert_eq!((lo + hi) / 2, center, "span must be centered on the window center");
+        assert_eq!(
+            hi - lo,
+            mom_frames,
+            "span must be exactly mom_frames (400 ms) wide"
+        );
+        assert_eq!(
+            (lo + hi) / 2,
+            center,
+            "span must be centered on the window center"
+        );
         assert_eq!(lo, center - mom_frames / 2);
         assert_eq!(hi, center + mom_frames / 2);
     }
@@ -610,7 +625,11 @@ mod tests {
         let s = axis_strata(&vals, &keys);
         // NaN value dropped -> whole = mean over [10, 30, 40].
         assert!(s.whole.is_finite(), "whole was {}", s.whole);
-        assert!((s.whole - (10.0 + 30.0 + 40.0) / 3.0).abs() < 1e-4, "whole was {}", s.whole);
+        assert!(
+            (s.whole - (10.0 + 30.0 + 40.0) / 3.0).abs() < 1e-4,
+            "whole was {}",
+            s.whole
+        );
         assert!(s.loud.is_finite() && s.body.is_finite() && s.dispersion.is_finite());
     }
 

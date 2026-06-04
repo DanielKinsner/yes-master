@@ -246,7 +246,11 @@ mod tests {
         // A sustained LF tone: windows are boomy, not bright.
         let c = Confidence::from_deep(&deep_from_tone(80.0, 1));
         assert!(c.bright.coverage < 0.1, "bright coverage {:?}", c.bright);
-        assert!(c.bright.confidence < 0.2, "bright confidence {:?}", c.bright);
+        assert!(
+            c.bright.confidence < 0.2,
+            "bright confidence {:?}",
+            c.bright
+        );
         assert!(c.low.coverage > 0.9, "boom coverage {:?}", c.low);
         assert!(c.low.confidence > 0.7, "boom confidence {:?}", c.low);
     }
@@ -313,7 +317,11 @@ mod tests {
             .iter()
             .any(|w| w.stereo_correlation.is_finite() && w.stereo_correlation < 0.0));
         let c = Confidence::from_deep(&DeepAnalysis::from_parts([1.0 / 31.0; 31], windows));
-        assert!(c.width.coverage > 0.5, "width coverage collapsed: {:?}", c.width);
+        assert!(
+            c.width.coverage > 0.5,
+            "width coverage collapsed: {:?}",
+            c.width
+        );
         assert!(
             c.width.confidence > 0.5,
             "width confidence collapsed: {:?}",

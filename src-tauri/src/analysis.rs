@@ -341,9 +341,9 @@ pub(crate) fn compute_spectral_balance(samples: &[f32], channels: usize) -> Spec
 /// centers + 1 padding slot).
 /// Index 29 = 20 kHz, index 30 = 0.0 (padding to keep a fixed [f32; 31]).
 pub(crate) const THIRD_OCTAVE_CENTERS: [f32; 31] = [
-    25.0, 31.5, 40.0, 50.0, 63.0, 80.0, 100.0, 125.0, 160.0, 200.0, 250.0, 315.0,
-    400.0, 500.0, 630.0, 800.0, 1000.0, 1250.0, 1600.0, 2000.0, 2500.0, 3150.0,
-    4000.0, 5000.0, 6300.0, 8000.0, 10000.0, 12500.0, 16000.0, 20000.0, 0.0,
+    25.0, 31.5, 40.0, 50.0, 63.0, 80.0, 100.0, 125.0, 160.0, 200.0, 250.0, 315.0, 400.0, 500.0,
+    630.0, 800.0, 1000.0, 1250.0, 1600.0, 2000.0, 2500.0, 3150.0, 4000.0, 5000.0, 6300.0, 8000.0,
+    10000.0, 12500.0, 16000.0, 20000.0, 0.0,
 ];
 
 /// Map a bin frequency to its one-third-octave band index (None if outside the
@@ -958,7 +958,14 @@ mod tests {
             0.07683022,
         ];
         assert_eq!(
-            [bal.sub, bal.low, bal.low_mid, bal.mid, bal.presence, bal.air],
+            [
+                bal.sub,
+                bal.low,
+                bal.low_mid,
+                bal.mid,
+                bal.presence,
+                bal.air
+            ],
             golden
         );
     }
