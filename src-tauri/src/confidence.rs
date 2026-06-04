@@ -25,6 +25,13 @@
 
 use crate::deep_analysis::{iqr, DeepAnalysis};
 
+/// **Owner-calibration gate (master switch for Phase B §7.2).** While `false`, the
+/// chain resolves confidence to `None` (→ `full()` → byte-identical Tier-1), so the
+/// provisional gating below has **no audible effect**. Flip to `true` only after a
+/// by-ear A/B has locked the constants in this file (handoff §7.6 / §10). Kept off
+/// by default so an unvalidated voicing can never reach a render.
+pub const CONFIDENCE_GATING_ENABLED: bool = false;
+
 // --- Provisional coverage thresholds (per-window "is the trait present?") ---
 /// A window counts as **bright** when its 3-band `high` share exceeds this
 /// (a flat/neutral window sits near 0.33). Provisional.

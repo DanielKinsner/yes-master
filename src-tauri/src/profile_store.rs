@@ -136,15 +136,19 @@ pub fn apply_resolved_profile(
 
 /// Tier-2 Phase B companion to [`apply_resolved_profile`]: inject the per-axis
 /// confidence derived from the cached `DeepAnalysis` onto
-/// `settings.advanced.source_confidence`. Album is non-adaptive, so `album = true`
-/// clears it; a missing deep read leaves it `None` (=> full confidence => the chain
-/// stays byte-identical to Tier-1). Confidence is backend-internal — no FE override.
+/// `settings.advanced.source_confidence`. Resolves to `None` (=> full confidence =>
+/// the chain stays byte-identical to Tier-1) when any of: the owner-calibration gate
+/// [`crate::confidence::CONFIDENCE_GATING_ENABLED`] is off (the default — the
+/// provisional voicing must not reach a render until A/B-validated), the surface is
+/// album (non-adaptive), or there is no cached deep read. Confidence is
+/// backend-internal — no FE override.
 pub fn apply_resolved_confidence(
     settings: &mut MasteringSettings,
     deep: Option<std::sync::Arc<crate::deep_analysis::DeepAnalysis>>,
     album: bool,
 ) {
-    settings.advanced.source_confidence = if album {
+    settings.advanced.source_confidence = if album || !crate::confidence::CONFIDENCE_GATING_ENABLED
+    {
         None
     } else {
         deep.map(|d| crate::confidence::Confidence::from_deep(&d))
@@ -378,6 +382,21 @@ mod tests {
         store.insert_deep(id.clone(), Some(std::sync::Arc::new(make_test_deep())));
         prune_failed_profiles(&store, std::slice::from_ref(&id), &[]);
         assert!(store.get_deep(&id).is_none());
+    }
+
+    #[test]
+    fn confidence_gating_off_by_default_resolves_to_none() {
+        // Owner-calibration gate: while CONFIDENCE_GATING_ENABLED is false, even a
+        // present deep read resolves to None, so the chain stays byte-identical Tier-1.
+        if crate::confidence::CONFIDENCE_GATING_ENABLED {
+            return; // gate is on (post-calibration); this default no longer applies.
+        }
+        let mut s = settings_with(None);
+        apply_resolved_confidence(&mut s, Some(std::sync::Arc::new(make_test_deep())), false);
+        assert!(
+            s.advanced.source_confidence.is_none(),
+            "confidence gating must be inert by default"
+        );
     }
 
     #[test]
