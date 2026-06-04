@@ -810,6 +810,7 @@ pub fn mastering_render_with_progress(
         .advanced
         .source_confidence
         .as_ref()
+        .filter(|_| render_settings.advanced.source_profile.is_some())
         .filter(|_| effective_adaptive_strength > 0.0)
         .map(|c| c.digest());
     let measurements = RenderedMeasurements {

@@ -910,6 +910,7 @@ fn export_receipt_records_adaptive_traceability_b5() {
         stereo_correlation: Some(0.1),
         stereo_width: 1.2,
     });
+    settings.advanced.source_confidence = Some(confidence::Confidence::full());
 
     let job = engine::mastering_render(
         TrackId("adaptive".to_string()),
@@ -925,6 +926,11 @@ fn export_receipt_records_adaptive_traceability_b5() {
         .source_profile_digest
         .expect("digest present when adaptation is active");
     assert!(digest.contains("bright"), "digest: {digest}");
+    assert_eq!(
+        m.confidence_digest.as_deref(),
+        Some("bright 1.00 / low 1.00 / density 1.00 / width 1.00"),
+        "confidence digest should persist when confidence shaped active adaptation"
+    );
 
     // Strength 0 => guardrails inert => no digest recorded, even with a profile.
     let mut flat = settings.clone();
@@ -942,7 +948,27 @@ fn export_receipt_records_adaptive_traceability_b5() {
         m2.source_profile_digest, None,
         "strength 0 must record no adaptation"
     );
+    assert_eq!(
+        m2.confidence_digest, None,
+        "strength 0 must record no confidence shaping"
+    );
     assert_eq!(m2.effective_adaptive_strength, 0.0);
+
+    // Confidence without a source profile cannot shape guardrails; do not record a
+    // misleading confidence digest for an inactive adaptive path.
+    let mut no_profile = settings;
+    no_profile.advanced.source_profile = None;
+    let job3 = engine::mastering_render(
+        TrackId("confidence-no-profile".to_string()),
+        &in_path,
+        &no_profile,
+        tmp.path(),
+        RenderKind::Master,
+    )
+    .expect("render ok");
+    let m3 = job3.measurements.expect("measurements");
+    assert_eq!(m3.source_profile_digest, None);
+    assert_eq!(m3.confidence_digest, None);
 }
 
 #[test]
