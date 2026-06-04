@@ -23,7 +23,7 @@
 //! (handoff §7.6 / §10, slow-fixture lane). The single source of truth for Phase B
 //! tuning lives here.
 
-use crate::deep_analysis::{iqr, DeepAnalysis};
+use crate::deep_analysis::{fisher_z_iqr, iqr, DeepAnalysis};
 
 /// **Owner-calibration gate (master switch for Phase B §7.2).** While `false`, the
 /// chain resolves confidence to `None` (→ `full()` → byte-identical Tier-1), so the
@@ -137,11 +137,16 @@ impl Confidence {
                 d.crest.dispersion,
                 CREST_DISP_FULL,
             ),
+            // Width gates on STEREO CONTENT (finite correlation), not the mono
+            // loudness key: a side-heavy / anti-phase window can be ~silent in the
+            // mono downmix yet maximally wide, and must still count toward width
+            // coverage (else Phase B under-trims widening on the phasiest material).
+            // Dispersion = Fisher-z IQR over the same correlation-finite population.
             width: axis_confidence(
                 &corrs,
-                &keys,
+                &corrs,
                 |v| v.is_finite() && v < WIDTH_CORR_WIDE,
-                d.stereo_correlation.dispersion, // Fisher-z IQR (set in from_parts)
+                fisher_z_iqr(&corrs),
                 WIDTH_DISP_FULL,
             ),
         }
@@ -243,6 +248,37 @@ mod tests {
         let c = Confidence::from_deep(&deep_from_tone(1_000.0, 1));
         assert_eq!(c.width.coverage, 0.0, "{:?}", c.width);
         assert_eq!(c.width.confidence, 0.0, "{:?}", c.width);
+    }
+
+    #[test]
+    fn anti_phase_stereo_keeps_width_confidence_nonzero() {
+        // L = -R: the mono downmix is ~silent (loudness_key NEG_INF) but the stereo
+        // field is maximally wide (correlation ~ -1). Width coverage must gate on
+        // stereo content (finite correlation), NOT the mono loudness key — otherwise
+        // Phase B under-trims widening on exactly the phasiest material (Codex review).
+        let sr = 48_000_u32;
+        let n = sr as usize * 3;
+        let omega = 2.0 * std::f32::consts::PI * 1000.0 / sr as f32;
+        let samples: Vec<f32> = (0..n)
+            .flat_map(|i| {
+                let s = 0.3 * (omega * i as f32).sin();
+                [s, -s] // anti-phase L/R
+            })
+            .collect();
+        let windows = scan_windows(&samples, sr, 2);
+        assert!(!windows.is_empty());
+        // sanity: mono is silent (loudness keys non-finite) but correlation is wide.
+        assert!(windows.iter().all(|w| !w.loudness_key.is_finite()));
+        assert!(windows
+            .iter()
+            .any(|w| w.stereo_correlation.is_finite() && w.stereo_correlation < 0.0));
+        let c = Confidence::from_deep(&DeepAnalysis::from_parts([1.0 / 31.0; 31], windows));
+        assert!(c.width.coverage > 0.5, "width coverage collapsed: {:?}", c.width);
+        assert!(
+            c.width.confidence > 0.5,
+            "width confidence collapsed: {:?}",
+            c.width
+        );
     }
 
     #[test]
