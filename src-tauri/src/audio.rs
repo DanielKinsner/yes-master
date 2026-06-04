@@ -1282,7 +1282,13 @@ fn process_audio_command(
                 // the last play_master (album mode stays byte-flat / non-adaptive).
                 s.live_album = album;
                 let cached = s.current_track.as_ref().and_then(|t| profile_store.get(t));
+                let cached_deep = s.current_track.as_ref().and_then(|t| profile_store.get_deep(t));
                 crate::profile_store::apply_resolved_profile(&mut settings, cached, s.live_album);
+                crate::profile_store::apply_resolved_confidence(
+                    &mut settings,
+                    cached_deep,
+                    s.live_album,
+                );
                 let sample_rate = s.live_sample_rate;
                 let generation = s.live_coeff_generation.wrapping_add(1);
                 s.live_coeff_generation = generation;
@@ -1736,6 +1742,11 @@ fn handle_play_master(
     crate::profile_store::apply_resolved_profile(
         &mut settings,
         profile_store.get(&track_id),
+        album,
+    );
+    crate::profile_store::apply_resolved_confidence(
+        &mut settings,
+        profile_store.get_deep(&track_id),
         album,
     );
     let settings = &settings;

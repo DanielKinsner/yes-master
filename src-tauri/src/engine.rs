@@ -427,6 +427,11 @@ pub async fn render_track_preview(
         profile_store.get(&track_id),
         false,
     );
+    crate::profile_store::apply_resolved_confidence(
+        &mut settings,
+        profile_store.get_deep(&track_id),
+        false,
+    );
     let out_dir = render_output_dir(&app, RenderKind::Preview)?;
     let track_id_for_progress = track_id.clone();
     let app_for_progress = app.clone();
@@ -465,6 +470,11 @@ pub async fn render_track_master(
     crate::profile_store::apply_resolved_profile(
         &mut settings,
         profile_store.get(&track_id),
+        false,
+    );
+    crate::profile_store::apply_resolved_confidence(
+        &mut settings,
+        profile_store.get_deep(&track_id),
         false,
     );
     let out_dir = render_output_dir(&app, RenderKind::Master)?;

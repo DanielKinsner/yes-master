@@ -134,6 +134,23 @@ pub fn apply_resolved_profile(
         resolve_effective_profile(settings.advanced.source_profile, cached, album);
 }
 
+/// Tier-2 Phase B companion to [`apply_resolved_profile`]: inject the per-axis
+/// confidence derived from the cached `DeepAnalysis` onto
+/// `settings.advanced.source_confidence`. Album is non-adaptive, so `album = true`
+/// clears it; a missing deep read leaves it `None` (=> full confidence => the chain
+/// stays byte-identical to Tier-1). Confidence is backend-internal — no FE override.
+pub fn apply_resolved_confidence(
+    settings: &mut MasteringSettings,
+    deep: Option<std::sync::Arc<crate::deep_analysis::DeepAnalysis>>,
+    album: bool,
+) {
+    settings.advanced.source_confidence = if album {
+        None
+    } else {
+        deep.map(|d| crate::confidence::Confidence::from_deep(&d))
+    };
+}
+
 /// Evict cached profiles for any *requested* track that did NOT produce an
 /// analysis result. A hard analysis failure (missing / unreadable / decode
 /// error) is skipped under `analyze_tracks_core`'s partial-success policy, so

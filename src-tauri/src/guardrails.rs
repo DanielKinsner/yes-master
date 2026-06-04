@@ -292,7 +292,11 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
         .filter(|_| strength > 0.0)
     {
         Some(p) => {
-            let g = SourceGuardrails::compute(p, strength);
+            let g = SourceGuardrails::compute_with_confidence(
+                p,
+                strength,
+                &settings.advanced.source_confidence.unwrap_or_default(),
+            );
             let preset = crate::dsp::preset_calibration(&settings.preset);
             let preset_scale = 0.4 + 1.2 * settings.intensity.clamp(0.0, 1.0);
             GuardrailReadout {
@@ -349,8 +353,11 @@ pub fn guardrail_readout(
     album: Option<bool>,
     profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
 ) -> GuardrailReadout {
+    let album = album.unwrap_or(false);
     let cached = track_id.as_ref().and_then(|t| profile_store.get(t));
-    crate::profile_store::apply_resolved_profile(&mut settings, cached, album.unwrap_or(false));
+    let cached_deep = track_id.as_ref().and_then(|t| profile_store.get_deep(t));
+    crate::profile_store::apply_resolved_profile(&mut settings, cached, album);
+    crate::profile_store::apply_resolved_confidence(&mut settings, cached_deep, album);
     readout_for(&settings)
 }
 
@@ -654,5 +661,35 @@ mod tests {
         // 37.5% realized, NOT the 50% the raw cap fraction would report (B8).
         let realized = realized_eq_trim(&[0.8], 1.0, |o| floor_boost(o, 0.5));
         assert!((realized - 0.375).abs() < 1.0e-4, "realized={realized}");
+    }
+
+    #[test]
+    fn readout_honors_source_confidence_reduce_only() {
+        use crate::confidence::{AxisConfidence, Confidence};
+        // brightness 0.35 sits above the 0.30 deadband but below the EQ cap, so the
+        // confidence scaling is observable in the realized trim.
+        let p = profile(0.18, 0.17, 0.08, 0.22, 10.0, 9.0, Some(0.8));
+        let mut s = settings_with(Some(p), Some(1.0)); // source_confidence None => full
+        let full = readout_for(&s);
+        assert!(
+            full.bright_trim > 0.0,
+            "Universal air boost should trim at full confidence"
+        );
+        // Inject a low-confidence brightness axis (scattered/ambiguous trait).
+        let mut conf = Confidence::full();
+        conf.bright = AxisConfidence {
+            coverage: 0.3,
+            consistency: 0.5,
+            confidence: 0.15,
+        };
+        s.advanced.source_confidence = Some(conf);
+        let gated = readout_for(&s);
+        assert!(
+            gated.bright_trim < full.bright_trim,
+            "confidence gating must REDUCE the realized bright trim (gated {} vs full {})",
+            gated.bright_trim,
+            full.bright_trim,
+        );
+        assert!(gated.bright_trim >= 0.0);
     }
 }

@@ -779,12 +779,21 @@ impl ChainCoeffs {
             .adaptive_strength
             .unwrap_or(crate::guardrails::ADAPTIVE_STRENGTH_DEFAULT)
             .clamp(0.0, 1.0);
+        // Tier-2 Phase B: per-axis confidence gates each trim (reduce-only). `None`
+        // (no DeepAnalysis: short clip / mobile / FE settings) => full => byte-identical.
+        let source_confidence = settings.advanced.source_confidence.unwrap_or_default();
         let guardrails = settings
             .advanced
             .source_profile
             .as_ref()
             .filter(|_| effective_adaptive_strength > 0.0)
-            .map(|p| crate::guardrails::SourceGuardrails::compute(p, effective_adaptive_strength));
+            .map(|p| {
+                crate::guardrails::SourceGuardrails::compute_with_confidence(
+                    p,
+                    effective_adaptive_strength,
+                    &source_confidence,
+                )
+            });
         let trim_bright = |db: f32| guardrails.as_ref().map_or(db, |g| g.trim_bright_db(db));
         let trim_low = |db: f32| guardrails.as_ref().map_or(db, |g| g.trim_low_db(db));
 

@@ -729,6 +729,13 @@ pub struct AdvancedSettings {
     /// `preset_byte_identity` snapshots stable). Not user-facing.
     #[serde(default)]
     pub source_profile: Option<SourceProfile>,
+    /// Tier-2 Phase B: per-axis confidence derived from the cached `DeepAnalysis`,
+    /// injected alongside `source_profile` before each chain build to scale the
+    /// guardrail trims (reduce-only, anti-homogenization). `#[serde(skip)]` =>
+    /// backend-internal, never on the wire; `None` => full confidence (the chain
+    /// stays byte-identical to Tier-1). Resolved by `apply_resolved_confidence`.
+    #[serde(skip)]
+    pub source_confidence: Option<crate::confidence::Confidence>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
