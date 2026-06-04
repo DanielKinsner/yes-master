@@ -5,10 +5,11 @@ new window. This is **self‑contained** — read this and you can continue with
 session history. It covers what shipped, the **current state**, the **one gate that's left**
 (by‑ear calibration), and the concrete next steps.
 
-> **On `main` and pushed (2026‑06‑04), HEAD = `4210f48`.** The Phase B confidence‑gating machinery
-> is fully built and wired — but **gated OFF by default**, so `main` behaves exactly like the
-> validated Tier‑1 voicing. **Nothing audible has changed.** Enabling it is a one‑flag, owner‑by‑ear
-> decision (see §3).
+> **On `main` and pushed (2026-06-04).** The Phase B confidence-gating machinery is built and wired,
+> then Codex follow-up fixed the remaining traceability plumbing (`24a51c3`, `09979ad`). The gate is
+> still **OFF by default**, so `main` behaves like the validated Tier-1 voicing unless the owner
+> explicitly enables `YES_MASTER_CONFIDENCE_GATING` / `set_confidence_gating`. Enabling it remains a
+> one-flag, owner-by-ear decision (see §3).
 
 ---
 
@@ -47,9 +48,9 @@ by‑ear calibration. "A measures, B decides" — and B is now built, just not y
   command (`api.setConfidenceGating(true)`) or the `YES_MASTER_CONFIDENCE_GATING=1` env seed.
 - **All confidence constants are PROVISIONAL.** They have **no audible effect** until the gate is on
   AND Adapt Strength > 0. The owner locks them by ear (§3).
-- **Gates green at HEAD:** desktop `cargo test` 287 pass / 0 fail (incl. the byte‑exact 6‑band golden
-  and all 9 `preset_byte_identity` SHAs); `cargo clippy --all-targets` 0 warnings; `npx tsc -b` clean;
-  `npm test` 160 pass; iPhone bridge `cargo check --all-targets` clean + `cargo test` 30 pass.
+- **Verification:** re-run the §8 lanes on the current HEAD. The original Claude handoff was green at
+  `4210f48`; Codex follow-up added targeted green checks for export-report confidence plumbing and
+  active-adaptation-only digest recording before updating this doc.
 
 ---
 
@@ -83,8 +84,9 @@ Everything downstream waits on this. The confidence machinery is provisional unt
 4. **Traceability for the calibration session (already built, Codex P3 #6):**
    - `GuardrailReadout.confidence` carries the live per‑axis `{coverage, consistency, confidence}`
      (validate *why* an axis acted, by eye).
-   - `RenderedMeasurements.confidence_digest` records a one‑line `"bright 0.85 / low 0.20 / …"` on the
-     render receipt (persistent provenance).
+   - `RenderedMeasurements.confidence_digest` records a one-line `"bright 0.85 / low 0.20 / ..."` and
+     `ExportReport.confidence_digest` preserves it through export-check/report plumbing. It is
+     recorded only when a source profile exists, confidence resolved, and Adapt Strength is > 0.
    - ⚠️ **These are exposed on the wire but NOT yet rendered in any UI element** — owner decision
      (2026‑06‑04): keep confidence backend‑only for now; revisit a UI surface only if a real need
      shows up during calibration. Inspect via the readout response / devtools meanwhile.
@@ -101,12 +103,27 @@ Until the gate flips on, **`main` is the Tier‑1 voicing the owner already trus
 | P2 — width false‑negative on side‑heavy/anti‑phase stereo | ✅ `80a53d7` (width coverage gates on stereo content, not mono loudness) |
 | P2 — low/boom coverage vs consistency window mismatch | ✅ `a671049` (low dispersion uses the loudness‑finite set) |
 | P2 #1 — evidence lanes validate the wrong chain once gated on | ✅ `33d1133` (fixture/reference lanes analyze `deep=true` + resolve confidence like the app) |
-| P3 #6 — confidence traceability | ✅ `49d78f6` + `4210f48` (readout + receipt digest) |
+| P3 #6 — confidence traceability | ✅ `49d78f6` + `4210f48` + `24a51c3` + `09979ad` (readout, receipt digest, ExportReport propagation, active-adaptation-only digest) |
 | P3 #7 — backend cache not evicted on track removal | ✅ `fcfa1d5` (`evict_source_profile`, FE‑wired) |
 | (iPhone parity) | ✅ `a5bbc0f` — iPhone now runs the deep‑capable path + resolves adaptive context like desktop (⚠️ reverses the old "mobile = deep OFF" default; confidence still gate‑respecting there) |
 | P3 — stale wiring comments + whitespace | ✅ `25f2957` (whitespace item was a **false positive** — autocrlf/CRLF, committed blob is clean LF) |
 | **P2 #3** — does the **31‑band** curve feed adaptation, or stay Phase‑C readout? | ❌ **open design decision** (owner's call) |
 | **P2 #6** — bright/low per‑window tonal uses the coarse 3‑band `compute_spectral_balance` (44.1k‑referenced SR skew), not the precise 31‑band | ❌ open (tied to P2 #3) |
+
+### Still Open After Codex Follow-up
+
+These are the threads I did **not** fix in the follow-up commits:
+
+1. Owner by-ear calibration of the Phase B gate and constants. Do not call Phase B tuned until this
+   happens against private audio.
+2. P2 #3 / P2 #6: decide whether 31-band analysis becomes an adaptation input, then either wire it
+   with harsh/sibilant/tilt fixtures or explicitly defer it to Phase C readout.
+3. PSR/crest closed-loop transient protection (§7.3): still planned, not built.
+4. Holistic already-mastered stand-down (§7.4): still planned, not built.
+5. 31-band rollup swap (§7.5): risky future change; needs tolerance tests plus album label-stability
+   coverage before touching the current 6-band golden path.
+6. Confidence UI surface: intentionally **not** built. Confidence remains backend/wire-only unless the
+   owner asks for a visible calibration or summary surface.
 
 ---
 
@@ -132,16 +149,20 @@ Until the gate flips on, **`main` is the Tier‑1 voicing the owner already trus
 - **`src-tauri/src/dsp.rs`** — the chain seam: `ChainCoeffs::from_settings` reads
   `settings.advanced.source_confidence` (`unwrap_or_default()` → `full()` when `None` → byte‑identical).
 - **`src-tauri/src/engine.rs` / `audio.rs`** — every chain entry resolves confidence:
-  `render_track_preview`/`render_track_master`, both live‑audition paths, and the
-  `RenderedMeasurements.confidence_digest` record (`engine.rs`).
+  `render_track_preview`/`render_track_master`, both live-audition paths, and the
+  `RenderedMeasurements.confidence_digest` record (`engine.rs`). The digest records only when the
+  adaptive path is active (source profile present + confidence present + strength > 0).
 - **`src-tauri/src/lib.rs`** — `run()` seeds the gate from env at startup; the two new commands are in
   the invoke handler.
 - **`apps/iphone-native/rust/src/lib.rs`** — bridge resolves adaptive profile + confidence via a
   `NativeAdaptiveContext` (gate‑respecting); seeds env in `export_settings_for_options_with_context`.
 - **`src-tauri/src/fixture_matrix.rs` / `reference_tuning.rs`** — the private evidence lanes now
   analyze the source `deep=true` + resolve confidence like the app, and seed the env gate.
-- **`src/bindings.ts` / `src/lib/api.ts`** — `AxisConfidence`/`Confidence`/`GuardrailReadout.confidence`/
-  `RenderedMeasurements.confidence_digest` types; `api.setConfidenceGating` / `api.confidenceGatingEnabled`.
+- **`src/bindings.ts` / `src/lib/api.ts` / `src/hooks/useTrackMaster.ts`** —
+  `AxisConfidence`/`Confidence`/`GuardrailReadout.confidence`,
+  `RenderedMeasurements.confidence_digest`, and `ExportReport.confidence_digest`; the hook preserves
+  the digest through `runExportChecks`. `api.setConfidenceGating` / `api.confidenceGatingEnabled`
+  toggle/query the runtime gate.
 
 ---
 
@@ -192,7 +213,7 @@ The audible feature steps are all **calibration‑gated** (provisional until the
 
 ---
 
-## 8. Verification (exact lanes — all green at HEAD `4210f48`)
+## 8. Verification (exact lanes to run on current HEAD)
 
 ```powershell
 # Desktop (lib + integration; golden + 9 preset_byte_identity SHAs included)
@@ -210,7 +231,33 @@ cargo test
 # Slow fixture lane (before any DSP/calibration merge; needs private audio)
 cd ../../../src-tauri
 $env:AMS_RUN_REAL_FIXTURE = "1"; cargo test --target-dir target/codex-rc; Remove-Item Env:\AMS_RUN_REAL_FIXTURE
-# To exercise the gate-ON path in any lane: prefix with YES_MASTER_CONFIDENCE_GATING=1
+# To exercise the gate-ON path in any lane: set YES_MASTER_CONFIDENCE_GATING=1 first
+```
+
+Codex follow-up verification before this doc refresh:
+
+```powershell
+npx vitest run src/hooks/useTrackMaster.integration.test.tsx
+cd src-tauri
+cargo test --test contracts --target-dir target\codex-rc
+cargo test --test contracts export_receipt_records_adaptive_traceability_b5 --target-dir target\codex-rc
+cargo fmt --check
+```
+
+Final Codex verification after the follow-up commits:
+
+```powershell
+npm test                         # 161 passed
+npm run build
+npm run build:windows             # MSI + NSIS produced under ignored target/
+cd src-tauri
+cargo fmt --check
+cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings
+cargo test --lib --target-dir target\codex-rc   # 287 passed
+cargo test --target-dir target\codex-rc
+cd ..\apps\iphone-native\rust
+cargo check --all-targets
+cargo test                        # 30 passed, 1 ignored
 ```
 
 ---
@@ -223,15 +270,16 @@ $env:AMS_RUN_REAL_FIXTURE = "1"; cargo test --target-dir target/codex-rc; Remove
 - **Codex Phase B review:** `docs/reviews/2026-06-04-adaptive-deep-analysis-adversarial-review.md`.
 - **Spec / plan:** `docs/superpowers/specs/2026-06-03-adaptive-dsp-tier2-phase-a-deep-analysis-design.md`,
   `docs/superpowers/plans/2026-06-03-adaptive-dsp-tier2-phase-a-deep-analysis.md`.
-- **This session's commits:** `git log --oneline 366235c..4210f48` (Phase A review → F1/F2 → Phase B
-  §7.1/§7.2 → runtime gate → Codex review cleared → traceability).
+- **This session's commits:** `git log --oneline 366235c..HEAD` (Phase A review -> F1/F2 -> Phase B
+  §7.1/§7.2 -> runtime gate -> Codex review fixes -> traceability follow-up).
 
 ---
 
 ## 10. Quick‑start for the next agent
 
 ```
-1. Read this doc. Confirm you're on `main` @ 4210f48 (or later).
+1. Read this doc. Confirm you're on `main` and check `git log --oneline -8` for the latest follow-up
+   commits.
 2. Run the §8 lanes — confirm all green (golden + preset_byte_identity included).
 3. Phase B is BUILT but OFF. The next real step is OWNER calibration (§3) — not yours to clear by
    ear. If asked to PREP for it, you can build P2 #3/§7.5 fixtures (ears-free). Do NOT enable the
