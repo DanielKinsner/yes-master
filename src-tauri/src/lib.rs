@@ -2,6 +2,7 @@ pub mod album;
 pub mod album_render;
 pub mod analysis;
 pub mod audio;
+pub mod confidence;
 pub mod decode;
 pub mod deep_analysis;
 pub mod dsp;

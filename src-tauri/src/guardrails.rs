@@ -55,7 +55,7 @@ const DENSITY_LRA_FULL_LU: f32 = 3.0;
 
 /// Width (L/R correlation): deadband edge / full-trim floor. Lower correlation
 /// = wider, phasier source. Mono (`None`) never trims width.
-const WIDTH_CORR_DEADBAND: f32 = 0.50;
+pub(crate) const WIDTH_CORR_DEADBAND: f32 = 0.50;
 const WIDTH_CORR_FULL: f32 = 0.20;
 
 // Per-axis maximum trim caps (fraction of the preset move removed), applied
