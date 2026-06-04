@@ -802,6 +802,11 @@ pub struct RenderedMeasurements {
     /// delivered master is then traceable to what adaptation produced it.
     #[serde(default)]
     pub source_profile_digest: Option<String>,
+    /// Tier-2 Phase B traceability: one-line per-axis confidence digest that gated
+    /// adaptation, or `None` when confidence gating was inert (off, no deep read, or
+    /// strength 0). `#[serde(default)]` for back-compat with older receipts.
+    #[serde(default)]
+    pub confidence_digest: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

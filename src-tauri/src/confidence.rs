@@ -160,6 +160,19 @@ impl Confidence {
         }
     }
 
+    /// One-line per-axis confidence summary for the export receipt's "what Phase B
+    /// confidence shaped this master" line. Each value is the reduce-only trim
+    /// multiplier in `[0, 1]` (1.00 = full Tier-1 trim, lower = held back).
+    pub fn digest(&self) -> String {
+        format!(
+            "bright {:.2} / low {:.2} / density {:.2} / width {:.2}",
+            self.bright.confidence,
+            self.low.confidence,
+            self.density.confidence,
+            self.width.confidence,
+        )
+    }
+
     /// Derive per-axis confidence from the Phase A deep analysis. Coverage is the
     /// fraction of loudness-finite windows exhibiting each trait; consistency comes
     /// from the per-axis dispersion (the stored strata IQR where Phase A retained
@@ -303,6 +316,14 @@ mod tests {
         assert!(resolve_source_confidence(None, false, true).is_none());
         // The runtime gate defaults to off (no test mutates it, so this is stable).
         assert!(!is_confidence_gating_enabled());
+    }
+
+    #[test]
+    fn confidence_digest_is_compact_per_axis() {
+        assert_eq!(
+            Confidence::full().digest(),
+            "bright 1.00 / low 1.00 / density 1.00 / width 1.00"
+        );
     }
 
     #[test]

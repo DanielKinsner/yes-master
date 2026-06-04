@@ -596,6 +596,7 @@ mod tests {
             bit_depth: 24,
             effective_adaptive_strength: 0.0,
             source_profile_digest: None,
+            confidence_digest: None,
         };
         let checks = vec![
             QualityCheck {

@@ -373,6 +373,9 @@ export interface RenderedMeasurements {
   // source profile that drove adaptation, or null when guardrails were inert.
   effective_adaptive_strength?: number;
   source_profile_digest?: string | null;
+  // Tier-2 Phase B traceability: per-axis confidence digest that gated adaptation,
+  // or null when confidence gating was inert.
+  confidence_digest?: string | null;
 }
 
 export interface RenderJob {

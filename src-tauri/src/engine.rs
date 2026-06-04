@@ -804,6 +804,14 @@ pub fn mastering_render_with_progress(
         .as_ref()
         .filter(|_| effective_adaptive_strength > 0.0)
         .map(|p| p.digest());
+    // Tier-2 Phase B traceability: record the per-axis confidence that gated the
+    // trims (present only when confidence resolved — gate on + deep + strength > 0).
+    let confidence_digest = render_settings
+        .advanced
+        .source_confidence
+        .as_ref()
+        .filter(|_| effective_adaptive_strength > 0.0)
+        .map(|c| c.digest());
     let measurements = RenderedMeasurements {
         lufs_integrated: measured_lufs,
         true_peak_dbtp: measured_true_peak_dbtp,
@@ -812,6 +820,7 @@ pub fn mastering_render_with_progress(
         bit_depth,
         effective_adaptive_strength,
         source_profile_digest,
+        confidence_digest,
     };
     let out_path = match output_path {
         Some(path) => explicit_output_path(path)?,
