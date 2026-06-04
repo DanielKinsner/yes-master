@@ -359,7 +359,7 @@ mod tests {
             settings.source_lufs_integrated,
             Some(context.source_lufs_integrated)
         );
-        if yes_master_lib::confidence::CONFIDENCE_GATING_ENABLED {
+        if yes_master_lib::confidence::is_confidence_gating_enabled() {
             assert!(
                 settings.advanced.source_confidence.is_some(),
                 "when Phase B is enabled, native settings must carry resolved confidence"

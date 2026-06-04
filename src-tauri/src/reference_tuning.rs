@@ -311,8 +311,8 @@ pub fn settings_for_reference_preset(
     // Resolve the adaptive context the SAME way the app's chain entry does (backend
     // SourceProfile + gate-aware confidence), so reference tuning measures the app's
     // chain at any gate state, not full-confidence Tier-1. The source is analyzed with
-    // deep = true (above); while `CONFIDENCE_GATING_ENABLED` is off confidence resolves
-    // to None (byte-identical Tier-1) and tracks the app automatically once enabled.
+    // deep = true (above); while confidence gating is off confidence resolves to None
+    // (byte-identical Tier-1) and tracks the app automatically once enabled.
     settings.advanced.source_profile = crate::types::SourceProfile::from_analysis(source_analysis);
     crate::profile_store::apply_resolved_confidence(
         &mut settings,
@@ -785,7 +785,7 @@ mod tests {
             "reference tuning must resolve confidence identically to the app's chain entry"
         );
         // Gate-aware: documents the current default; tracks the app once enabled.
-        if crate::confidence::CONFIDENCE_GATING_ENABLED {
+        if crate::confidence::is_confidence_gating_enabled() {
             assert!(settings.advanced.source_confidence.is_some());
         } else {
             assert!(settings.advanced.source_confidence.is_none());

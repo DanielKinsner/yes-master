@@ -23,14 +23,57 @@
 //! (handoff §7.6 / §10, slow-fixture lane). The single source of truth for Phase B
 //! tuning lives here.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use crate::deep_analysis::{fisher_z_iqr, iqr, DeepAnalysis};
 
-/// **Owner-calibration gate (master switch for Phase B §7.2).** While `false`, the
-/// chain resolves confidence to `None` (→ `full()` → byte-identical Tier-1), so the
-/// provisional gating below has **no audible effect**. Flip to `true` only after a
-/// by-ear A/B has locked the constants in this file (handoff §7.6 / §10). Kept off
-/// by default so an unvalidated voicing can never reach a render.
-pub const CONFIDENCE_GATING_ENABLED: bool = false;
+/// **Owner-calibration gate (master switch for Phase B §7.2), runtime-toggleable.**
+/// Off by default: while disabled the chain resolves confidence to `None`
+/// (→ `full()` → byte-identical Tier-1), so the provisional gating below has **no
+/// audible effect**. Enable it at runtime — without a rebuild — via
+/// [`set_confidence_gating_enabled`] (the `set_confidence_gating` Tauri command) or
+/// the `YES_MASTER_CONFIDENCE_GATING` env seed ([`init_confidence_gating_from_env`]),
+/// so the owner can A/B-calibrate and the gate-ON path stays testable. Enable it only
+/// after a by-ear A/B has locked the constants in this file (handoff §7.6 / §10).
+static CONFIDENCE_GATING: AtomicBool = AtomicBool::new(false);
+
+/// Whether Phase B confidence gating is currently enabled (default `false`).
+pub fn is_confidence_gating_enabled() -> bool {
+    CONFIDENCE_GATING.load(Ordering::Relaxed)
+}
+
+/// Enable/disable Phase B confidence gating at runtime; returns the previous value.
+pub fn set_confidence_gating_enabled(enabled: bool) -> bool {
+    CONFIDENCE_GATING.swap(enabled, Ordering::Relaxed)
+}
+
+/// Seed the gate from the `YES_MASTER_CONFIDENCE_GATING` env var (`1`/`true`/`on`/
+/// `yes` => enabled). Call once at startup so headless / fixture / dev runs can
+/// enable Phase B without a UI; an unset var leaves the default (off).
+pub fn init_confidence_gating_from_env() {
+    if let Ok(v) = std::env::var("YES_MASTER_CONFIDENCE_GATING") {
+        let on = matches!(
+            v.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "on" | "yes"
+        );
+        set_confidence_gating_enabled(on);
+    }
+}
+
+/// Resolve the per-axis confidence for one chain build, honoring the album gate and
+/// an explicit `gating_enabled` flag. `None` => `full()` => byte-identical Tier-1.
+/// Pure (the flag is a parameter) so both gate states are deterministically testable;
+/// the app passes [`is_confidence_gating_enabled`].
+pub fn resolve_source_confidence(
+    deep: Option<&DeepAnalysis>,
+    album: bool,
+    gating_enabled: bool,
+) -> Option<Confidence> {
+    if album || !gating_enabled {
+        return None;
+    }
+    deep.map(Confidence::from_deep)
+}
 
 // --- Provisional coverage thresholds (per-window "is the trait present?") ---
 /// A window counts as **bright** when its 3-band `high` share exceeds this
@@ -229,6 +272,22 @@ mod tests {
             assert_eq!(a.consistency, 1.0);
         }
         assert_eq!(Confidence::default(), Confidence::full());
+    }
+
+    #[test]
+    fn resolve_source_confidence_respects_gate_and_album() {
+        let deep = deep_from_tone(1_000.0, 2);
+        // Gate OFF -> None even with a deep read present (byte-identical Tier-1).
+        assert!(resolve_source_confidence(Some(&deep), false, false).is_none());
+        // Gate ON + deep present -> Some. This is the gate-ON path made testable by
+        // the runtime flag (the flag is an explicit parameter, no global mutation).
+        assert!(resolve_source_confidence(Some(&deep), false, true).is_some());
+        // Album is never adaptive -> None even with the gate on.
+        assert!(resolve_source_confidence(Some(&deep), true, true).is_none());
+        // Gate on but no deep read -> None.
+        assert!(resolve_source_confidence(None, false, true).is_none());
+        // The runtime gate defaults to off (no test mutates it, so this is stable).
+        assert!(!is_confidence_gating_enabled());
     }
 
     #[test]

@@ -127,8 +127,8 @@ pub fn settings_for_matrix_case(
     // evidence lane validates the app's chain at any gate state (not full-confidence
     // Tier-1): the backend SourceProfile plus the gate-aware confidence. The source
     // is analyzed with deep = true (above), so DeepAnalysis is present; while
-    // `CONFIDENCE_GATING_ENABLED` is off, confidence resolves to None (byte-identical
-    // Tier-1) and once it flips on this lane tracks the app automatically.
+    // confidence gating is off, confidence resolves to None (byte-identical Tier-1)
+    // and once it flips on this lane tracks the app automatically.
     settings.advanced.source_profile = crate::types::SourceProfile::from_analysis(source_analysis);
     crate::profile_store::apply_resolved_confidence(
         &mut settings,
@@ -570,7 +570,7 @@ mod tests {
             "fixture matrix must resolve confidence identically to the app's chain entry"
         );
         // Gate-aware: documents the current default; tracks the app once enabled.
-        if crate::confidence::CONFIDENCE_GATING_ENABLED {
+        if crate::confidence::is_confidence_gating_enabled() {
             assert!(settings.advanced.source_confidence.is_some());
         } else {
             assert!(settings.advanced.source_confidence.is_none());

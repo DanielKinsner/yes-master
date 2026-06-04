@@ -152,23 +152,23 @@ pub fn apply_resolved_profile(
 
 /// Tier-2 Phase B companion to [`apply_resolved_profile`]: inject the per-axis
 /// confidence derived from the cached `DeepAnalysis` onto
-/// `settings.advanced.source_confidence`. Resolves to `None` (=> full confidence =>
-/// the chain stays byte-identical to Tier-1) when any of: the owner-calibration gate
-/// [`crate::confidence::CONFIDENCE_GATING_ENABLED`] is off (the default — the
-/// provisional voicing must not reach a render until A/B-validated), the surface is
-/// album (non-adaptive), or there is no cached deep read. Confidence is
-/// backend-internal — no FE override.
+/// `settings.advanced.source_confidence`. Delegates to
+/// [`crate::confidence::resolve_source_confidence`], which resolves to `None`
+/// (=> full confidence => the chain stays byte-identical to Tier-1) when any of: the
+/// owner-calibration gate ([`crate::confidence::is_confidence_gating_enabled`]) is
+/// off (the default — the provisional voicing must not reach a render until
+/// A/B-validated), the surface is album (non-adaptive), or there is no cached deep
+/// read. Confidence is backend-internal — no FE override.
 pub fn apply_resolved_confidence(
     settings: &mut MasteringSettings,
     deep: Option<std::sync::Arc<crate::deep_analysis::DeepAnalysis>>,
     album: bool,
 ) {
-    settings.advanced.source_confidence = if album || !crate::confidence::CONFIDENCE_GATING_ENABLED
-    {
-        None
-    } else {
-        deep.map(|d| crate::confidence::Confidence::from_deep(&d))
-    };
+    settings.advanced.source_confidence = crate::confidence::resolve_source_confidence(
+        deep.as_deref(),
+        album,
+        crate::confidence::is_confidence_gating_enabled(),
+    );
 }
 
 /// Evict cached profiles for any *requested* track that did NOT produce an
@@ -415,9 +415,9 @@ mod tests {
 
     #[test]
     fn confidence_gating_off_by_default_resolves_to_none() {
-        // Owner-calibration gate: while CONFIDENCE_GATING_ENABLED is false, even a
+        // Owner-calibration gate: while confidence gating is off (the default), even a
         // present deep read resolves to None, so the chain stays byte-identical Tier-1.
-        if crate::confidence::CONFIDENCE_GATING_ENABLED {
+        if crate::confidence::is_confidence_gating_enabled() {
             return; // gate is on (post-calibration); this default no longer applies.
         }
         let mut s = settings_with(None);
