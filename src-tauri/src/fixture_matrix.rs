@@ -123,13 +123,18 @@ pub fn settings_for_matrix_case(
     settings.volume_match = false;
     settings.source_lufs_integrated = Some(source_analysis.lufs_integrated);
     settings.advanced.compression_mode = case.compression_mode;
-    // Exercise the Tier-1 adaptive chain by injecting the same SourceProfile the
-    // app resolves. NOTE: this lane does NOT compute DeepAnalysis, so it does not
-    // exercise the Phase B confidence gating (§7.2). Equivalent only while
-    // `confidence::CONFIDENCE_GATING_ENABLED` is off; once it flips on, resolve
-    // `source_confidence` here too (analyze with deep = true) or this lane will
-    // validate a different chain than the app runs.
+    // Resolve the adaptive context the SAME way the app's chain entry does, so this
+    // evidence lane validates the app's chain at any gate state (not full-confidence
+    // Tier-1): the backend SourceProfile plus the gate-aware confidence. The source
+    // is analyzed with deep = true (above), so DeepAnalysis is present; while
+    // `CONFIDENCE_GATING_ENABLED` is off, confidence resolves to None (byte-identical
+    // Tier-1) and once it flips on this lane tracks the app automatically.
     settings.advanced.source_profile = crate::types::SourceProfile::from_analysis(source_analysis);
+    crate::profile_store::apply_resolved_confidence(
+        &mut settings,
+        source_analysis.deep_analysis.clone(),
+        false,
+    );
     settings
 }
 
@@ -203,9 +208,10 @@ pub fn run_fixture_matrix(
         .filter(|fixture| fixture.is_track_fixture())
     {
         let source_path = fixture.resolved_path(manifest_dir);
-        // deep analysis not consumed here — this fixture-matrix tool only reads the
-        // base measurements, so pass `false` to skip the Tier-2 deep scan (Task 9).
-        let source_analysis = analyze_one(TrackId(fixture.id.clone()), &source_path, false)?;
+        // Analyze with deep = true so the rendered settings can resolve Phase B
+        // confidence the SAME way the app does — this evidence lane must validate the
+        // app's chain, not full-confidence Tier-1. DeepAnalysis stays Rust-internal.
+        let source_analysis = analyze_one(TrackId(fixture.id.clone()), &source_path, true)?;
         let fixture_dir = render_dir.join(sanitize_path_part(&fixture.id));
         fs::create_dir_all(&fixture_dir)
             .map_err(|e| CommandError::Io(format!("create fixture render dir: {e}")))?;
@@ -526,6 +532,49 @@ mod tests {
             settings.advanced.source_profile.is_some(),
             "fixture matrix must inject the source profile (adaptive chain)"
         );
+    }
+
+    fn make_deep_for_test() -> crate::deep_analysis::DeepAnalysis {
+        let sr = 48_000_u32;
+        let n = sr as usize * 2;
+        let omega = 2.0 * std::f32::consts::PI * 1000.0 / sr as f32;
+        let samples: Vec<f32> = (0..n).map(|i| 0.3 * (omega * i as f32).sin()).collect();
+        let windows = crate::deep_analysis::scan_windows(&samples, sr, 1);
+        crate::deep_analysis::DeepAnalysis::from_parts([1.0 / 31.0; 31], windows)
+    }
+
+    #[test]
+    fn matrix_case_resolves_confidence_like_the_app() {
+        // Codex review #1: the evidence lane must resolve source_confidence the SAME
+        // way the app's chain entry does (apply_resolved_confidence), so it validates
+        // the app's chain at ANY gate state -- not full-confidence Tier-1.
+        let mut analysis = source_analysis();
+        analysis.deep_analysis = Some(std::sync::Arc::new(make_deep_for_test()));
+        let case = MatrixCase {
+            name: "universal-preset".to_string(),
+            preset: Preset::Universal,
+            compression_mode: CompressionMode::Preset,
+        };
+
+        let settings = settings_for_matrix_case(&analysis, &case);
+
+        // The lane must resolve confidence identically to the app resolver.
+        let mut expected = analysis.recommended_universal.clone();
+        crate::profile_store::apply_resolved_confidence(
+            &mut expected,
+            analysis.deep_analysis.clone(),
+            false,
+        );
+        assert_eq!(
+            settings.advanced.source_confidence, expected.advanced.source_confidence,
+            "fixture matrix must resolve confidence identically to the app's chain entry"
+        );
+        // Gate-aware: documents the current default; tracks the app once enabled.
+        if crate::confidence::CONFIDENCE_GATING_ENABLED {
+            assert!(settings.advanced.source_confidence.is_some());
+        } else {
+            assert!(settings.advanced.source_confidence.is_none());
+        }
     }
 
     #[test]

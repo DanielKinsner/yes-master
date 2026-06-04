@@ -196,12 +196,15 @@ pub fn run_reference_tuning_dir(
     let cwd = std::env::current_dir().map_err(|e| CommandError::Io(format!("current dir: {e}")))?;
     let output_dir = normalized_absolute_path(&cwd, output_dir);
     let suite = discover_reference_suite(reference_dir)?;
-    // deep analysis not consumed here — reference tuning only reads the base
-    // measurements, so pass `false` to skip the Tier-2 deep scan (Task 9).
+    // Analyze the SOURCE with deep = true so the rendered settings can resolve Phase B
+    // confidence the SAME way the app does — reference tuning must measure the app's
+    // chain, not full-confidence Tier-1. DeepAnalysis stays Rust-internal. (The
+    // reference / yes comparison analyses below stay deep = false; they only read base
+    // measurements and never build chain settings.)
     let source_analysis = analyze_one(
         TrackId(format!("{}-source", sanitize_path_part(&suite.track_label))),
         &suite.source_path,
-        false,
+        true,
     )?;
     let render_dir = output_dir.join("renders");
     fs::create_dir_all(&render_dir)
@@ -305,12 +308,17 @@ pub fn settings_for_reference_preset(
     settings.volume_match = false;
     settings.source_lufs_integrated = Some(source_analysis.lufs_integrated);
     settings.advanced.compression_mode = CompressionMode::Preset;
-    // Calibrate against the Tier-1 adaptive chain (injects the app's SourceProfile).
-    // NOTE: no DeepAnalysis is computed here, so Phase B confidence gating (§7.2) is
-    // NOT exercised — equivalent only while `confidence::CONFIDENCE_GATING_ENABLED`
-    // is off; resolve `source_confidence` here before enabling Phase B, or reference
-    // tuning measures a different chain than the app (see the deep-analysis review).
+    // Resolve the adaptive context the SAME way the app's chain entry does (backend
+    // SourceProfile + gate-aware confidence), so reference tuning measures the app's
+    // chain at any gate state, not full-confidence Tier-1. The source is analyzed with
+    // deep = true (above); while `CONFIDENCE_GATING_ENABLED` is off confidence resolves
+    // to None (byte-identical Tier-1) and tracks the app automatically once enabled.
     settings.advanced.source_profile = crate::types::SourceProfile::from_analysis(source_analysis);
+    crate::profile_store::apply_resolved_confidence(
+        &mut settings,
+        source_analysis.deep_analysis.clone(),
+        false,
+    );
     settings
 }
 
@@ -734,5 +742,53 @@ mod tests {
             settings.advanced.source_profile.is_some(),
             "reference tuning must inject the source profile (adaptive chain)"
         );
+    }
+
+    fn make_deep_for_test() -> crate::deep_analysis::DeepAnalysis {
+        let sr = 48_000_u32;
+        let n = sr as usize * 2;
+        let omega = 2.0 * std::f32::consts::PI * 1000.0 / sr as f32;
+        let samples: Vec<f32> = (0..n).map(|i| 0.3 * (omega * i as f32).sin()).collect();
+        let windows = crate::deep_analysis::scan_windows(&samples, sr, 1);
+        crate::deep_analysis::DeepAnalysis::from_parts([1.0 / 31.0; 31], windows)
+    }
+
+    #[test]
+    fn reference_settings_resolve_confidence_like_the_app() {
+        // Codex review #1: reference tuning must resolve source_confidence the SAME
+        // way the app's chain entry does, so it measures the app's chain at ANY gate
+        // state -- not full-confidence Tier-1.
+        let mut source = analysis(
+            "source",
+            -12.3,
+            5.0,
+            SpectralBalance {
+                low: 0.3,
+                mid: 0.4,
+                high: 0.3,
+            },
+            0.5,
+            0.5,
+        );
+        source.deep_analysis = Some(std::sync::Arc::new(make_deep_for_test()));
+
+        let settings = settings_for_reference_preset(&source, Preset::Tape);
+
+        let mut expected = source.recommended_universal.clone();
+        crate::profile_store::apply_resolved_confidence(
+            &mut expected,
+            source.deep_analysis.clone(),
+            false,
+        );
+        assert_eq!(
+            settings.advanced.source_confidence, expected.advanced.source_confidence,
+            "reference tuning must resolve confidence identically to the app's chain entry"
+        );
+        // Gate-aware: documents the current default; tracks the app once enabled.
+        if crate::confidence::CONFIDENCE_GATING_ENABLED {
+            assert!(settings.advanced.source_confidence.is_some());
+        } else {
+            assert!(settings.advanced.source_confidence.is_none());
+        }
     }
 }
