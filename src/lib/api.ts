@@ -127,6 +127,14 @@ export const api = {
   evictSourceProfile: (trackId: TrackId) =>
     invoke<null>("evict_source_profile", { trackId }),
 
+  // Phase B owner-calibration gate (runtime, no rebuild). Off by default; flip on
+  // to A/B the confidence-gated adaptive voicing, then lock the constants by ear.
+  setConfidenceGating: (enabled: boolean) =>
+    invoke<boolean>("set_confidence_gating", { enabled }),
+
+  confidenceGatingEnabled: () =>
+    invoke<boolean>("confidence_gating_enabled"),
+
   playTrack: (
     trackId: TrackId,
     trackPath: string,

@@ -34,6 +34,9 @@ use tauri::{Emitter, Manager};
 #[cfg(feature = "app-runner")]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Seed the Phase B confidence gate from the environment (stays off unless
+    // YES_MASTER_CONFIDENCE_GATING is set) before any chain resolves confidence.
+    crate::confidence::init_confidence_gating_from_env();
     let player = Arc::new(audio::AudioPlayer::new());
     // B2: the backend owns deriving the adaptive source profile. The same store
     // instance is shared with the audio thread (owned by `player`) and managed
@@ -93,6 +96,8 @@ pub fn run() {
             guardrails::guardrail_readout,
             exports::open_output,
             profile_store::evict_source_profile,
+            confidence::set_confidence_gating,
+            confidence::confidence_gating_enabled,
             project::save_project,
             project::autosave_session,
             project::load_recent_session,

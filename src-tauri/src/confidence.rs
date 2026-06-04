@@ -60,6 +60,19 @@ pub fn init_confidence_gating_from_env() {
     }
 }
 
+/// Tauri command: enable/disable Phase B confidence gating at runtime (owner A/B
+/// calibration — no rebuild). Returns the previous value.
+#[tauri::command]
+pub fn set_confidence_gating(enabled: bool) -> bool {
+    set_confidence_gating_enabled(enabled)
+}
+
+/// Tauri command: read whether Phase B confidence gating is currently enabled.
+#[tauri::command]
+pub fn confidence_gating_enabled() -> bool {
+    is_confidence_gating_enabled()
+}
+
 /// Resolve the per-axis confidence for one chain build, honoring the album gate and
 /// an explicit `gating_enabled` flag. `None` => `full()` => byte-identical Tier-1.
 /// Pure (the flag is a parameter) so both gate states are deterministically testable;
