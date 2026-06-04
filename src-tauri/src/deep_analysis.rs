@@ -85,7 +85,10 @@ pub fn band_center_hz(i: usize) -> f32 {
 }
 
 /// Strata for one axis: `vals[i]` paired with loudness `keys[i]`. Windows whose
-/// key is non-finite are excluded from ALL strata (§5.1). Deterministic: tuples
+/// key OR value is non-finite are excluded from ALL strata (§5.1) — dropping the
+/// value too keeps a NaN (e.g. mono `stereo_correlation`) from poisoning the f64
+/// means; an axis with no finite values (mono correlation) yields an all-zero
+/// `AxisStrata`. Deterministic: tuples
 /// carry the original (finite-filtered) window index and sort on `(key, index)`
 /// via `total_cmp` then `cmp`, so the tiebreak is explicit and robust even under
 /// an unstable sort.
@@ -93,7 +96,7 @@ pub(crate) fn axis_strata(vals: &[f32], keys: &[f32]) -> AxisStrata {
     let mut finite: Vec<(f32, f32, usize)> = vals
         .iter()
         .zip(keys.iter())
-        .filter(|(_, k)| k.is_finite())
+        .filter(|(v, k)| k.is_finite() && v.is_finite())
         .enumerate()
         .map(|(i, (v, k))| (*k, *v, i))
         .collect();
@@ -184,7 +187,8 @@ impl DeepAnalysis {
         let crest = pick(|w| w.crest);
         let brightness = pick(|w| w.high);
         let stereo_width = pick(|w| w.stereo_width);
-        // correlation strata: means use raw corr; dispersion uses Fisher-z IQR.
+        // correlation strata: means use raw corr (NaN values dropped by axis_strata,
+        // so a mono track -> all-NaN -> all-zero strata); dispersion uses Fisher-z IQR.
         let corr_vals: Vec<f32> = windows.iter().map(|w| w.stereo_correlation).collect();
         let mut stereo_correlation = axis_strata(&corr_vals, &keys);
         stereo_correlation.dispersion = fisher_z_iqr(&corr_vals);
@@ -591,5 +595,53 @@ mod tests {
         let (lo2, hi2) = momentary_span(start, SHORT_WINDOW, mom_frames, total);
         assert_eq!(hi2, total);
         assert!(lo2 < hi2);
+    }
+
+    #[test]
+    fn axis_strata_drops_non_finite_values_not_just_keys() {
+        // A window with a finite loudness KEY but a non-finite VALUE must be
+        // excluded so it can't poison the f64 means (previously only the key was
+        // checked, so a NaN value propagated to whole/loud/body).
+        let vals = [10.0_f32, f32::NAN, 30.0, 40.0];
+        let keys = [-10.0_f32, -8.0, -6.0, -4.0];
+        let s = axis_strata(&vals, &keys);
+        // NaN value dropped -> whole = mean over [10, 30, 40].
+        assert!(s.whole.is_finite(), "whole was {}", s.whole);
+        assert!((s.whole - (10.0 + 30.0 + 40.0) / 3.0).abs() < 1e-4, "whole was {}", s.whole);
+        assert!(s.loud.is_finite() && s.body.is_finite() && s.dispersion.is_finite());
+    }
+
+    #[test]
+    fn mono_track_correlation_strata_are_finite() {
+        // A mono source sets every window's stereo_correlation to NaN (degenerate).
+        // The correlation strata means must NOT inherit that NaN — it would poison
+        // every Phase B comparison (all IEEE compares against NaN are false).
+        let sr = 48_000_u32;
+        let n = sr as usize * 3;
+        let omega = 2.0 * std::f32::consts::PI * 1000.0 / sr as f32;
+        let samples: Vec<f32> = (0..n).map(|i| 0.3 * (omega * i as f32).sin()).collect();
+        let windows = scan_windows(&samples, sr, 1);
+        assert!(!windows.is_empty());
+        assert!(
+            windows.iter().all(|w| w.stereo_correlation.is_nan()),
+            "mono windows should carry NaN correlation"
+        );
+        let da = DeepAnalysis::from_parts([1.0 / 31.0; 31], windows);
+        assert!(
+            da.stereo_correlation.whole.is_finite(),
+            "whole was {}",
+            da.stereo_correlation.whole
+        );
+        assert!(
+            da.stereo_correlation.loud.is_finite(),
+            "loud was {}",
+            da.stereo_correlation.loud
+        );
+        assert!(
+            da.stereo_correlation.body.is_finite(),
+            "body was {}",
+            da.stereo_correlation.body
+        );
+        assert!(da.stereo_correlation.dispersion.is_finite());
     }
 }
