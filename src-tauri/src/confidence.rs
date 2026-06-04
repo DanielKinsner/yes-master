@@ -25,6 +25,8 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use serde::{Deserialize, Serialize};
+
 use crate::deep_analysis::{fisher_z_iqr, iqr, DeepAnalysis};
 
 /// **Owner-calibration gate (master switch for Phase B §7.2), runtime-toggleable.**
@@ -111,7 +113,7 @@ const WIDTH_DISP_FULL: f32 = 0.6;
 /// Coverage + consistency + their product for one adaptive axis. `confidence` is
 /// what the guardrails consume; `coverage`/`consistency` are retained for the
 /// future "what we found" readout (Phase C).
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct AxisConfidence {
     /// Fraction of loudness-finite windows exhibiting the trait, `[0, 1]`.
     pub coverage: f32,
@@ -133,7 +135,7 @@ impl AxisConfidence {
 
 /// Per-axis confidence for the four Tier-1 guardrail axes, derived from a
 /// `DeepAnalysis`. `full()` is the byte-identity default (no deep read).
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Confidence {
     pub bright: AxisConfidence,
     pub low: AxisConfidence,

@@ -251,6 +251,13 @@ pub struct GuardrailReadout {
     pub width_corr_deadband: f32,
     #[serde(default)]
     pub stereo_correlation: Option<f32>,
+    /// Tier-2 Phase B: the per-axis confidence (coverage × consistency) that gated
+    /// the trims, present only when confidence gating resolved a value (gate on +
+    /// deep present). `None` => Tier-1 full confidence. Lets a calibration session
+    /// SEE why each axis acted (or held back) by eye. `#[serde(default)]` for
+    /// back-compat with older readouts.
+    #[serde(default)]
+    pub confidence: Option<crate::confidence::Confidence>,
 }
 
 /// Realized trim fraction (AFTER the +0.5 dB character floor) for a set of preset
@@ -321,6 +328,7 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
                 low_deadband: LOW_DEADBAND,
                 width_corr_deadband: WIDTH_CORR_DEADBAND,
                 stereo_correlation: p.stereo_correlation,
+                confidence: settings.advanced.source_confidence,
             }
         }
         None => GuardrailReadout {
@@ -337,6 +345,7 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
             low_deadband: LOW_DEADBAND,
             width_corr_deadband: WIDTH_CORR_DEADBAND,
             stereo_correlation: None,
+            confidence: None,
         },
     }
 }
@@ -691,5 +700,24 @@ mod tests {
             full.bright_trim,
         );
         assert!(gated.bright_trim >= 0.0);
+    }
+
+    #[test]
+    fn readout_surfaces_source_confidence_for_eye_validation() {
+        use crate::confidence::Confidence;
+        let p = profile(0.18, 0.17, 0.08, 0.22, 10.0, 9.0, Some(0.8));
+        let mut s = settings_with(Some(p), Some(1.0));
+        // No confidence resolved (gate off / Tier-1) -> readout carries None.
+        assert_eq!(readout_for(&s).confidence, None);
+        // A resolved confidence is surfaced verbatim, so a calibration session can
+        // read coverage/consistency/confidence per axis by eye.
+        let conf = Confidence::full();
+        s.advanced.source_confidence = Some(conf);
+        assert_eq!(readout_for(&s).confidence, Some(conf));
+        // An inactive readout (no profile) carries None too.
+        assert_eq!(
+            readout_for(&settings_with(None, Some(1.0))).confidence,
+            None
+        );
     }
 }

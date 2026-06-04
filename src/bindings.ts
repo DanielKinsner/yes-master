@@ -276,6 +276,24 @@ export interface SourceProfile {
 /// authoritative (`unwrap_or`); this is only the UI's display fallback.
 export const ADAPTIVE_STRENGTH_DEFAULT = 0.5;
 
+/// Mirrors `confidence::AxisConfidence`. Per-axis coverage (fraction of windows
+/// exhibiting the trait) × consistency (1 - dispersion/scale) = confidence, the
+/// reduce-only trim multiplier in [0, 1].
+export interface AxisConfidence {
+  coverage: number;
+  consistency: number;
+  confidence: number;
+}
+
+/// Mirrors `confidence::Confidence`. Per-axis Phase B confidence that gated the
+/// adaptive trims (backend-internal; surfaced on the readout for eye-validation).
+export interface Confidence {
+  bright: AxisConfidence;
+  low: AxisConfidence;
+  density: AxisConfidence;
+  width: AxisConfidence;
+}
+
 /// Mirrors `guardrails::GuardrailReadout`. Read-only per-axis adaptive trim
 /// summary (CHAIN trims, before the post-chain LUFS-landing stage). `*_trim` are
 /// fractions removed from each preset move; the `*_share`/`dynamic_range_db`/
@@ -297,6 +315,9 @@ export interface GuardrailReadout {
   low_deadband?: number;
   width_corr_deadband?: number;
   stereo_correlation?: number | null;
+  /// Per-axis Phase B confidence that gated the trims; null/absent => Tier-1 full
+  /// confidence. Surfaced so a calibration session can read the numbers by eye.
+  confidence?: Confidence | null;
 }
 
 export interface AnalysisResult {
