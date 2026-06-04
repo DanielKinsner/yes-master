@@ -124,7 +124,9 @@ A separate sliding short window (**16 384 samples ≈ 0.34 s @ 48 k, 50 % hop,
 Hann**) over the whole track, producing a **per-window series** of the
 *time-varying* axes:
 - **Per-window loudness key** — see §5.2 (used for stratification).
-- **Per-window peak** — **sample peak** (cheap; for momentary-PSR + crest, §5.3).
+- **Per-window peak** — **sample peak** of the mono downmix `0.5·(L+R)` (cheap; for
+  momentary-PSR + crest, §5.3; same downmix as the loudness key, so PSR is self-consistent
+  — understates hard-panned material vs a per-channel max).
   Whole-track *true* peak stays the ceiling read; per-window true peak is deferred
   to Phase B (and would add a 4× oversampled pass — budgeted in §9, not run here).
 - **Per-window crest** — peak/RMS over the window (transient richness).

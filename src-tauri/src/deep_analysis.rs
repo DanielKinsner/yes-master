@@ -28,7 +28,10 @@ pub struct WindowMetrics {
     /// Momentary-style K-weighted loudness key (LUFS-like dB). `NEG_INFINITY`
     /// for a silent/non-finite window (excluded from every stratum, §5.1).
     pub loudness_key: f32,
-    /// Linear sample peak over the window (for momentary-PSR + crest, §5.3).
+    /// Linear peak of the mono downmix `0.5*(L+R)` over the window (same downmix
+    /// as `loudness_key`/`crest`, so momentary-PSR is self-consistent; understates
+    /// hard-panned/decorrelated material vs a per-channel `max(|L|,|R|)`). For
+    /// momentary-PSR + crest (§5.3).
     pub sample_peak: f32,
     /// Crest = peak / RMS (linear) over the window.
     pub crest: f32,

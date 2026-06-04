@@ -63,6 +63,10 @@ pub struct SpectralBalance6 {
 pub struct AnalysisResult {
     pub track_id: TrackId,
     pub lufs_integrated: f32,
+    /// Whole-track short-term loudness max: the true 3 s BS.1770 Mode::S value
+    /// when the signal is long enough, else an `integrated + LRA/2` fallback for
+    /// sub-3 s / silent clips. Use `lufs_short_term_max_3s` (below) for the
+    /// guaranteed-pure Mode::S value.
     pub lufs_short_term_max: f32,
     pub true_peak_dbtp: f32,
     pub dynamic_range_lu: f32,

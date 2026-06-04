@@ -121,11 +121,16 @@ the whole track. Each window → a `WindowMetrics`:
   handling:** the 400 ms span is clamped to available samples at track start/end (shrink,
   never zero‑pad — zero‑padding would falsely lower edge loudness); a window with < ~half
   the span available is `NEG_INFINITY` (treated as non‑finite, excluded from all strata).
-  Distinct from `AnalysisResult.lufs_short_term_max` (the true 3 s Mode::S whole‑track
-  measure).
-- **`sample_peak`** — linear sample peak over the window (cheap; for momentary‑PSR +
-  crest). *True* peak is NOT done per window (would need a 4× oversampled pass — deferred
-  to Phase B); whole‑track true peak stays the ceiling read.
+  Distinct from `AnalysisResult.lufs_short_term_max` — the whole‑track short‑term max,
+  which is the true 3 s Mode::S value when there's enough material, else an
+  `integrated + LRA/2` estimate for sub‑3 s/silent clips. For the guaranteed‑pure
+  Mode::S value use the `lufs_short_term_max_3s` `Option`.
+- **`sample_peak`** — linear peak of the **mono downmix** `0.5·(L+R)` over the window
+  (same downmix as `loudness_key`/`crest`, so momentary‑PSR stays self‑consistent; it
+  understates hard‑panned/decorrelated material by up to ~6 dB vs a per‑channel
+  `max(|L|,|R|)` — matters for §7.4). Cheap; for momentary‑PSR + crest. *True* peak is NOT
+  done per window (would need a 4× oversampled pass — deferred to Phase B); whole‑track
+  true peak stays the ceiling read.
 - **`crest`** — `peak / RMS` (linear), RMS via f64 sum‑of‑squares; `1.0` if RMS≈0.
 - **`stereo_width`** — `side_e / (mid_e + side_e)` where mid=(L+R)/2, side=(L−R)/2; `0.0`
   for mono.
@@ -313,7 +318,10 @@ thresholds/confidence live in Phase B. Suggested order:
    peak), integrated LUFS, and crest into an "already mastered" interpretation → **stand
    down** (minimal/zero trims). It's an *interpretation of retained inputs*, not a new
    measurement. (Owner asked: yes, treat this as part of the overall detection, not a
-   separate feature.)
+   separate feature.) ⚠️ Per‑stratum `sample_peak` is the **mono‑downmix** peak (§3.2),
+   conservative‑low for hard‑panned material — for an absolute "is this slammed to full
+   scale" read prefer the whole‑track true peak (or add a per‑channel pass), don't trust
+   the mono peak alone.
 
 5. **6‑band → 31‑band rollup unification (the one risky change).** When the chain moves
    from the 6‑band to a 31‑band‑derived tonal read, the 6‑band values **will shift
