@@ -113,6 +113,16 @@ impl Confidence {
         let lows: Vec<f32> = d.windows.iter().map(|w| w.low).collect();
         let crests: Vec<f32> = d.windows.iter().map(|w| w.crest).collect();
         let corrs: Vec<f32> = d.windows.iter().map(|w| w.stereo_correlation).collect();
+        // The boom axis has no stored stratum; compute its dispersion over the SAME
+        // loudness-finite windows coverage uses (matching the other axes' stored
+        // strata) so silent/tail windows don't dilute consistency differently than
+        // coverage.
+        let lows_keyed: Vec<f32> = d
+            .windows
+            .iter()
+            .filter(|w| w.loudness_key.is_finite())
+            .map(|w| w.low)
+            .collect();
         Self {
             // brightness/density/width reuse the Phase A strata dispersion (IQR);
             // the boom axis has no stored stratum, so its IQR is computed here.
@@ -127,7 +137,7 @@ impl Confidence {
                 &lows,
                 &keys,
                 |v| v > LOW_WINDOW_SHARE,
-                iqr(&lows),
+                iqr(&lows_keyed),
                 LOW_DISP_FULL,
             ),
             density: axis_confidence(
@@ -239,6 +249,36 @@ mod tests {
         assert!(c.bright.confidence < 0.2, "bright confidence {:?}", c.bright);
         assert!(c.low.coverage > 0.9, "boom coverage {:?}", c.low);
         assert!(c.low.confidence > 0.7, "boom confidence {:?}", c.low);
+    }
+
+    #[test]
+    fn low_confidence_consistency_ignores_silent_tail() {
+        // A boomy track with a silent tail must not have its low CONSISTENCY diluted
+        // by the silent windows (which are already excluded from coverage). Low
+        // dispersion must use the same loudness-finite window population as coverage
+        // (Codex review: coverage and consistency were calibrated off different sets).
+        let sr = 48_000_u32;
+        let omega = 2.0 * std::f32::consts::PI * 80.0 / sr as f32;
+        let boomy: Vec<f32> = (0..(sr as usize * 2))
+            .map(|i| 0.3 * (omega * i as f32).sin())
+            .collect();
+        let mut with_tail = boomy.clone();
+        with_tail.extend(std::iter::repeat(0.0).take(sr as usize * 2)); // + 2 s silence
+
+        let c_boomy = Confidence::from_deep(&DeepAnalysis::from_parts(
+            [1.0 / 31.0; 31],
+            scan_windows(&boomy, sr, 1),
+        ));
+        let c_tail = Confidence::from_deep(&DeepAnalysis::from_parts(
+            [1.0 / 31.0; 31],
+            scan_windows(&with_tail, sr, 1),
+        ));
+        assert!(
+            (c_tail.low.consistency - c_boomy.low.consistency).abs() < 0.1,
+            "silent tail diluted low consistency: boomy {} vs tail {}",
+            c_boomy.low.consistency,
+            c_tail.low.consistency,
+        );
     }
 
     #[test]
