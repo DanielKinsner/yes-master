@@ -42,7 +42,10 @@ use std::sync::Arc;
 
 use yes_master_lib::dsp::{ChainCoeffs, MasteringChain};
 
-use crate::{export_settings_for_options, ffi_string};
+use crate::{
+    export_settings_for_options_with_context, ffi_string, native_adaptive_context_for_path,
+    NativeAdaptiveContext,
+};
 
 /// Crossfade length between the old and new chain when coefficients change.
 /// 512 frames ≈ 10.7 ms at 48 kHz — long enough to mask filter-state
@@ -314,6 +317,9 @@ pub struct LiveStream {
     /// `yes_master_native_live_measure_landing`) while the audio thread reads its
     /// own `Arc` clone in `process` — concurrent immutable reads, no race.
     samples: Arc<[f32]>,
+    /// Desktop-equivalent adaptive source context derived once at stream create
+    /// time. Immutable and reused for live coefficient updates / landing probes.
+    adaptive_context: Option<NativeAdaptiveContext>,
 }
 
 // SAFETY: see the module-level threading contract. `core` (behind the
@@ -336,7 +342,13 @@ impl LiveStream {
         // the export path uses, so preview and Create Master share one source of
         // truth. The chain runs at the decoded source rate; its coefficients are
         // computed for that rate inside `MasteringChain::new`.
-        let settings = export_settings_for_options(preset, intensity, lufs_target);
+        let adaptive_context = native_adaptive_context_for_path(path);
+        let settings = export_settings_for_options_with_context(
+            preset,
+            intensity,
+            lufs_target,
+            adaptive_context.as_ref(),
+        );
         let chain = MasteringChain::new(sample_rate, channels, &settings);
 
         let (coeffs_tx, coeffs_rx) = mpsc::channel();
@@ -370,6 +382,7 @@ impl LiveStream {
             channels,
             total_frames,
             samples,
+            adaptive_context,
         })
     }
 
@@ -378,7 +391,12 @@ impl LiveStream {
     /// the whole struct, so passing only the three Simple-mode controls would be
     /// lossy if the chain ever grew to read more fields.
     fn set_params(&self, preset: Option<&str>, intensity: f32, lufs_target: f32) {
-        let settings = export_settings_for_options(preset, intensity, lufs_target);
+        let settings = export_settings_for_options_with_context(
+            preset,
+            intensity,
+            lufs_target,
+            self.adaptive_context.as_ref(),
+        );
         let coeffs = ChainCoeffs::from_settings(self.sample_rate, &settings);
         let generation = self.shared.generation.fetch_add(1, Ordering::Relaxed) + 1;
         // Best-effort: a closed channel only happens if the handle is being torn
@@ -650,7 +668,12 @@ pub unsafe extern "C" fn yes_master_native_live_measure_landing(
     }
     let stream = &*handle;
     let preset = ffi_string(preset);
-    let settings = export_settings_for_options(preset.as_deref(), intensity, lufs_target);
+    let settings = export_settings_for_options_with_context(
+        preset.as_deref(),
+        intensity,
+        lufs_target,
+        stream.adaptive_context.as_ref(),
+    );
     match yes_master_lib::engine::preview_landing(
         &stream.samples,
         stream.sample_rate,
@@ -740,6 +763,24 @@ mod tests {
         let empty_handle =
             unsafe { yes_master_native_live_create(empty.as_ptr(), preset.as_ptr(), 0.5, -11.0) };
         assert!(empty_handle.is_null());
+    }
+
+    #[test]
+    fn create_derives_adaptive_context_for_live_chain_updates() {
+        let handle = make_stream(48_000, 2);
+        assert!(!handle.is_null());
+        unsafe {
+            let stream = &*handle;
+            let context = stream
+                .adaptive_context
+                .as_ref()
+                .expect("live stream adaptive context");
+            assert!(
+                context.source_profile.is_some(),
+                "live audition should use the same backend-derived source profile as export"
+            );
+            yes_master_native_live_destroy(handle);
+        }
     }
 
     #[test]

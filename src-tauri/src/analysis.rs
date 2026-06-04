@@ -108,9 +108,9 @@ pub(crate) fn analyze_one(
     );
 
     // Tier-2 Phase A: dual-resolution deep analysis (additive; never on the wire).
-    // Task 9: gated off the mobile/FFI path (`deep == false`) to save battery/CPU —
-    // the iPhone path is intentionally non-adaptive and never consumes DeepAnalysis.
-    // The desktop path passes `deep == true`.
+    // Task 9: callers can still pass `deep == false` for low-cost/mobile-lite
+    // analysis, but desktop and the current iPhone native bridge both use the
+    // deep-capable path when they need adaptive render/live parity.
     let deep_analysis = if deep {
         let bands31 =
             compute_spectral_balance_31band(&pcm.samples, pcm.sample_rate, pcm.channels as usize);

@@ -65,9 +65,11 @@ pub async fn analyze_tracks_core(
     analyze_tracks_core_impl(tracks, true).await
 }
 
-/// Mobile/FFI analysis entry: same as `analyze_tracks_core` but with the Tier-2
-/// deep scan gated OFF (DECIDE default — the iPhone path is non-adaptive and
-/// skips the cost). Returns AnalysisResult with `deep_analysis = None`.
+/// Low-cost/mobile-lite analysis entry: same as `analyze_tracks_core` but with
+/// the Tier-2 deep scan gated OFF. The current iPhone bridge uses
+/// `analyze_tracks_core` for desktop-equivalent adaptive render/live wiring;
+/// keep this helper for callers that explicitly need analysis-only battery/CPU
+/// savings and do not consume `DeepAnalysis`.
 pub async fn analyze_tracks_core_lite(
     tracks: Vec<AnalyzeRequest>,
 ) -> CommandResult<Vec<AnalysisResult>> {
@@ -75,8 +77,9 @@ pub async fn analyze_tracks_core_lite(
 }
 
 /// Shared body for the two public entry points. `deep` is threaded straight
-/// through to `analyze_one`: `true` for the desktop path (`analyze_tracks_core`),
-/// `false` for the mobile/FFI path (`analyze_tracks_core_lite`).
+/// through to `analyze_one`: `true` for the adaptive-capable path
+/// (`analyze_tracks_core`), `false` for the low-cost analysis-only path
+/// (`analyze_tracks_core_lite`).
 async fn analyze_tracks_core_impl(
     tracks: Vec<AnalyzeRequest>,
     deep: bool,

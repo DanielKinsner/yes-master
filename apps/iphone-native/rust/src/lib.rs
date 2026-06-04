@@ -1,11 +1,13 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::path::Path;
+use std::sync::Arc;
 
 use yes_master_lib::{
-    engine::{analyze_tracks_core_lite, mastering_render, AnalyzeRequest},
-    AdvancedSettings, CompressionMode, DeliveryProfile, MasteringSettings, Preset, RenderKind,
-    TrackId,
+    engine::{analyze_tracks_core, mastering_render, AnalyzeRequest},
+    profile_store::{apply_resolved_confidence, apply_resolved_profile},
+    AdvancedSettings, AnalysisResult, CompressionMode, DeliveryProfile, MasteringSettings, Preset,
+    RenderKind, SourceProfile, TrackId,
 };
 
 mod live_stream;
@@ -53,10 +55,10 @@ pub unsafe extern "C" fn yes_master_native_analyze_file_json(path: *const c_char
 
     // The native bridge has no Tauri runtime, so it calls the State-free core
     // (the `analyze_tracks` command takes a `tauri::State<SourceProfileStore>`
-    // that can't exist here). The iPhone path is intentionally non-adaptive, so
-    // it needs no profile-store population and uses the `_lite` entry, which
-    // gates the Tier-2 deep scan OFF to save battery/CPU (Task 9).
-    match futures_executor::block_on(analyze_tracks_core_lite(vec![request])) {
+    // that can't exist here). Use the same deep-capable analysis entry as
+    // desktop; `DeepAnalysis` stays Rust-internal via serde(skip), but render/live
+    // settings can resolve adaptive profile + confidence from it below.
+    match futures_executor::block_on(analyze_tracks_core(vec![request])) {
         Ok(mut results) => {
             if let Some(result) = results.pop() {
                 string_to_ffi(serde_json::to_string(&result).unwrap_or_else(|error| {
@@ -108,10 +110,12 @@ pub unsafe extern "C" fn yes_master_native_render_master_with_options_json(
 
     let source_path = Path::new(&source_path);
     let output_dir = Path::new(&output_dir);
-    let settings = export_settings_for_options(
+    let adaptive_context = native_adaptive_context_for_path(source_path);
+    let settings = export_settings_for_options_with_context(
         unsafe { ffi_string(preset) }.as_deref(),
         intensity,
         lufs_target,
+        adaptive_context.as_ref(),
     );
 
     if let Err(error) = std::fs::create_dir_all(output_dir) {
@@ -143,12 +147,47 @@ fn fixed_export_settings() -> MasteringSettings {
     export_settings_for_options(Some("balanced"), 0.5, -11.0)
 }
 
+#[derive(Clone)]
+pub(crate) struct NativeAdaptiveContext {
+    source_lufs_integrated: f32,
+    source_profile: Option<SourceProfile>,
+    deep_analysis: Option<Arc<yes_master_lib::deep_analysis::DeepAnalysis>>,
+}
+
+fn native_adaptive_context_from_analysis(analysis: &AnalysisResult) -> NativeAdaptiveContext {
+    NativeAdaptiveContext {
+        source_lufs_integrated: analysis.lufs_integrated,
+        source_profile: SourceProfile::from_analysis(analysis),
+        deep_analysis: analysis.deep_analysis.clone(),
+    }
+}
+
+pub(crate) fn native_adaptive_context_for_path(path: &Path) -> Option<NativeAdaptiveContext> {
+    let request = AnalyzeRequest {
+        id: TrackId::new(),
+        path: path.to_string_lossy().into_owned(),
+    };
+    futures_executor::block_on(analyze_tracks_core(vec![request]))
+        .ok()
+        .and_then(|mut results| results.pop())
+        .map(|analysis| native_adaptive_context_from_analysis(&analysis))
+}
+
 pub(crate) fn export_settings_for_options(
     preset: Option<&str>,
     intensity: f32,
     lufs_target: f32,
 ) -> MasteringSettings {
-    MasteringSettings {
+    export_settings_for_options_with_context(preset, intensity, lufs_target, None)
+}
+
+pub(crate) fn export_settings_for_options_with_context(
+    preset: Option<&str>,
+    intensity: f32,
+    lufs_target: f32,
+    adaptive_context: Option<&NativeAdaptiveContext>,
+) -> MasteringSettings {
+    let mut settings = MasteringSettings {
         preset: native_preset(preset),
         intensity: intensity.clamp(0.0, 1.0),
         eq_sub_db: 0.0,
@@ -190,14 +229,18 @@ pub(crate) fn export_settings_for_options(
             compression_link_stereo: None,
             bit_depth: Some(24),
             target_sample_rate: Some(44_100),
-            // The native iPhone export path is intentionally non-adaptive, so the
-            // Tier-1 guardrail fields (adaptive_strength / source_profile) stay at
-            // their `None` defaults. Spreading Default here also future-proofs the
-            // bridge: a new AdvancedSettings field added on the desktop side used
-            // to break this exhaustive literal at compile time (E0063).
+            // Keep future desktop fields compiling through the bridge. Adaptive
+            // profile/confidence are resolved from `adaptive_context` immediately
+            // below, matching desktop's backend-owned command-layer injection.
             ..Default::default()
         },
+    };
+    if let Some(context) = adaptive_context {
+        settings.source_lufs_integrated = Some(context.source_lufs_integrated);
+        apply_resolved_profile(&mut settings, context.source_profile, false);
+        apply_resolved_confidence(&mut settings, context.deep_analysis.clone(), false);
     }
+    settings
 }
 
 fn native_preset(preset: Option<&str>) -> Preset {
@@ -299,6 +342,37 @@ mod tests {
     }
 
     #[test]
+    fn native_adaptive_context_injects_desktop_profile_fields() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        write_sine_wav(&input);
+
+        let context = native_adaptive_context_for_path(&input).expect("adaptive context");
+        let settings =
+            export_settings_for_options_with_context(Some("balanced"), 0.5, -11.0, Some(&context));
+
+        assert!(
+            settings.advanced.source_profile.is_some(),
+            "native bridge must inject the same backend-derived profile desktop uses"
+        );
+        assert_eq!(
+            settings.source_lufs_integrated,
+            Some(context.source_lufs_integrated)
+        );
+        if yes_master_lib::confidence::CONFIDENCE_GATING_ENABLED {
+            assert!(
+                settings.advanced.source_confidence.is_some(),
+                "when Phase B is enabled, native settings must carry resolved confidence"
+            );
+        } else {
+            assert!(
+                settings.advanced.source_confidence.is_none(),
+                "owner gate off keeps confidence inert, matching desktop"
+            );
+        }
+    }
+
+    #[test]
     fn fixed_export_settings_json_uses_shared_contract_shape() {
         let json = serde_json::to_string(&fixed_export_settings()).unwrap();
 
@@ -356,6 +430,32 @@ mod tests {
         let spec = reader.spec();
         assert_eq!(spec.sample_rate, 44_100);
         assert_eq!(spec.bits_per_sample, 24);
+    }
+
+    #[test]
+    fn render_master_json_records_adaptive_source_digest() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        let output_dir = tmp.path().join("rendered");
+        write_sine_wav(&input);
+
+        let input = CString::new(input.to_string_lossy().as_bytes()).unwrap();
+        let output_dir_c = CString::new(output_dir.to_string_lossy().as_bytes()).unwrap();
+        let pointer =
+            unsafe { yes_master_native_render_master_json(input.as_ptr(), output_dir_c.as_ptr()) };
+        assert!(!pointer.is_null());
+
+        let json = unsafe {
+            let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
+            yes_master_native_free_string(pointer);
+            value
+        };
+        let payload: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(payload["measurements"]["effective_adaptive_strength"], 0.5);
+        assert!(
+            payload["measurements"]["source_profile_digest"].is_string(),
+            "native render should be traceable to its source profile: {json}"
+        );
     }
 
     #[test]
