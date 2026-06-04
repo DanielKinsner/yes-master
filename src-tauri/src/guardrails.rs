@@ -11,6 +11,7 @@
 //! All triggers read level-invariant shares/ratios from [`SourceProfile`], so no
 //! LUFS normalization is needed before comparison.
 
+use crate::confidence::Confidence;
 use crate::types::{MasteringSettings, SourceProfile, TrackId};
 use serde::{Deserialize, Serialize};
 
@@ -98,17 +99,34 @@ impl SourceGuardrails {
     /// Compute trims from a source profile at the given `strength` in `[0, 1]`.
     /// Callers skip this entirely when strength <= 0 (no profile => no trim).
     pub fn compute(profile: &SourceProfile, strength: f32) -> Self {
+        // Tier-1 path: full confidence on every axis (no DeepAnalysis consulted).
+        Self::compute_with_confidence(profile, strength, &Confidence::full())
+    }
+
+    /// Tier-2 Phase B: like [`compute`](Self::compute) but scales each axis's
+    /// defensive excess by its per-axis `confidence` in `[0, 1]` (reduce-only —
+    /// confidence never increases a trim beyond Tier-1). Full confidence reproduces
+    /// `compute` byte-for-byte (`raw * 1.0 == raw`), so a source with no
+    /// DeepAnalysis is unaffected. The anti-homogenization core: act strongly only
+    /// where a quality is broad AND consistent (see [`crate::confidence`]).
+    pub fn compute_with_confidence(
+        profile: &SourceProfile,
+        strength: f32,
+        confidence: &Confidence,
+    ) -> Self {
         let strength = clamp01(strength);
         let s = &profile.spectral_6;
 
         // already-bright -> trim air/high lift
         let brightness = s.presence + s.air;
-        let bright_raw = clamp01((brightness - BRIGHT_DEADBAND) / BRIGHT_EXCESS_FULL);
+        let bright_raw = clamp01((brightness - BRIGHT_DEADBAND) / BRIGHT_EXCESS_FULL)
+            * confidence.bright.confidence;
         let bright_mult = 1.0 - (bright_raw * strength).min(EQ_CAP);
 
         // already-boomy -> trim low/sub lift
         let lowness = s.sub + s.low;
-        let low_raw = clamp01((lowness - LOW_DEADBAND) / LOW_EXCESS_FULL);
+        let low_raw =
+            clamp01((lowness - LOW_DEADBAND) / LOW_EXCESS_FULL) * confidence.low.confidence;
         let low_mult = 1.0 - (low_raw * strength).min(EQ_CAP);
 
         // already-dense -> soften compression (max of DR and LRA triggers)
@@ -132,14 +150,15 @@ impl SourceGuardrails {
         } else {
             0.0
         };
-        let density_raw = dr_raw.max(lra_raw);
+        let density_raw = dr_raw.max(lra_raw) * confidence.density.confidence;
         let density_mult = 1.0 - (density_raw * strength).min(DENSITY_CAP);
 
         // already-wide -> trim widening (correlation primary; mono never trims)
-        let width_raw = match profile.stereo_correlation {
+        let width_excess = match profile.stereo_correlation {
             Some(c) => descending_ramp(c, WIDTH_CORR_DEADBAND, WIDTH_CORR_FULL),
             None => 0.0,
         };
+        let width_raw = width_excess * confidence.width.confidence;
         let width_mult = 1.0 - (width_raw * strength).min(WIDTH_CAP);
 
         Self {
@@ -520,6 +539,46 @@ mod tests {
         let p = profile(0.30, 0.30, 0.30, 0.30, 1.0, 1.0, Some(0.0));
         let g = SourceGuardrails::compute(&p, 0.0);
         assert_eq!(g, SourceGuardrails::identity());
+    }
+
+    #[test]
+    fn full_confidence_is_byte_identical_to_tier1() {
+        use crate::confidence::Confidence;
+        // triggers every axis (bright + boomy + dense + wide).
+        let p = profile(0.25, 0.25, 0.30, 0.30, 2.0, 2.0, Some(0.1));
+        assert_eq!(
+            SourceGuardrails::compute(&p, 1.0),
+            SourceGuardrails::compute_with_confidence(&p, 1.0, &Confidence::full()),
+        );
+    }
+
+    #[test]
+    fn lower_confidence_reduces_trim_reduce_only() {
+        use crate::confidence::Confidence;
+        // brightness 0.35 sits just above the 0.30 deadband and BELOW the EQ cap,
+        // so confidence scaling is observable (a capped trim would saturate).
+        let p = profile(0.18, 0.17, 0.08, 0.22, 10.0, 9.0, Some(0.8));
+        let full = SourceGuardrails::compute_with_confidence(&p, 1.0, &Confidence::full());
+        let mut conf = Confidence::full();
+        conf.bright.confidence = 0.5;
+        let gated = SourceGuardrails::compute_with_confidence(&p, 1.0, &conf);
+        // half confidence -> the air boost is trimmed LESS (kept closer to original).
+        assert!(
+            gated.trim_bright_db(3.0) > full.trim_bright_db(3.0),
+            "confidence gating must REDUCE the trim (gated {} vs full {})",
+            gated.trim_bright_db(3.0),
+            full.trim_bright_db(3.0),
+        );
+        // never trims MORE than Tier-1 (reduce-only).
+        assert!(gated.trim_bright_db(3.0) <= 3.0);
+        // zero confidence on an axis -> that axis does not trim at all.
+        conf.bright.confidence = 0.0;
+        let off = SourceGuardrails::compute_with_confidence(&p, 1.0, &conf);
+        assert_eq!(
+            off.trim_bright_db(3.0),
+            3.0,
+            "zero confidence = no brightness trim"
+        );
     }
 
     fn settings_with(
