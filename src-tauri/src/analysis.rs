@@ -29,7 +29,11 @@ pub fn nudge_role_by_position(result: &mut AnalysisResult, index: usize, total: 
     }
 }
 
-pub(crate) fn analyze_one(track_id: TrackId, path: &Path) -> CommandResult<AnalysisResult> {
+pub(crate) fn analyze_one(
+    track_id: TrackId,
+    path: &Path,
+    deep: bool,
+) -> CommandResult<AnalysisResult> {
     if crate::files::has_parent_dir_component(path) {
         return Err(CommandError::InvalidPath(format!(
             "path traversal not allowed: {}",
@@ -104,8 +108,10 @@ pub(crate) fn analyze_one(track_id: TrackId, path: &Path) -> CommandResult<Analy
     );
 
     // Tier-2 Phase A: dual-resolution deep analysis (additive; never on the wire).
-    // (Task 9 will gate this off the mobile path; Task 7 always builds it.)
-    let deep_analysis = {
+    // Task 9: gated off the mobile/FFI path (`deep == false`) to save battery/CPU —
+    // the iPhone path is intentionally non-adaptive and never consumes DeepAnalysis.
+    // The desktop path passes `deep == true`.
+    let deep_analysis = if deep {
         let bands31 =
             compute_spectral_balance_31band(&pcm.samples, pcm.sample_rate, pcm.channels as usize);
         let windows = crate::deep_analysis::scan_windows(
@@ -119,6 +125,8 @@ pub(crate) fn analyze_one(track_id: TrackId, path: &Path) -> CommandResult<Analy
             )),
             _ => None, // too short / silent -> DeepAnalysis absent (SourceProfile still derives)
         }
+    } else {
+        None
     };
 
     // Prefer the true 3 s short-term max from ebur128 Mode::S when

@@ -10,7 +10,7 @@ use ebur128::{EbuR128, Mode};
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct AnalyzeRequest {
     pub id: TrackId,
     pub path: String,
@@ -57,15 +57,35 @@ pub async fn analyze_tracks(
 
 /// Analysis core, free of the Tauri `State` so unit / contract tests can call it
 /// directly. The `analyze_tracks` command wraps this and populates the
-/// backend-owned profile store from the results.
+/// backend-owned profile store from the results. Desktop path: the Tier-2 deep
+/// scan is ON.
 pub async fn analyze_tracks_core(
     tracks: Vec<AnalyzeRequest>,
+) -> CommandResult<Vec<AnalysisResult>> {
+    analyze_tracks_core_impl(tracks, true).await
+}
+
+/// Mobile/FFI analysis entry: same as `analyze_tracks_core` but with the Tier-2
+/// deep scan gated OFF (DECIDE default — the iPhone path is non-adaptive and
+/// skips the cost). Returns AnalysisResult with `deep_analysis = None`.
+pub async fn analyze_tracks_core_lite(
+    tracks: Vec<AnalyzeRequest>,
+) -> CommandResult<Vec<AnalysisResult>> {
+    analyze_tracks_core_impl(tracks, false).await
+}
+
+/// Shared body for the two public entry points. `deep` is threaded straight
+/// through to `analyze_one`: `true` for the desktop path (`analyze_tracks_core`),
+/// `false` for the mobile/FFI path (`analyze_tracks_core_lite`).
+async fn analyze_tracks_core_impl(
+    tracks: Vec<AnalyzeRequest>,
+    deep: bool,
 ) -> CommandResult<Vec<AnalysisResult>> {
     let total = tracks.len();
     let mut out = Vec::with_capacity(total);
     let mut failures: Vec<(TrackId, String)> = Vec::new();
     for (index, req) in tracks.into_iter().enumerate() {
-        match analyze_one(req.id.clone(), Path::new(&req.path)) {
+        match analyze_one(req.id.clone(), Path::new(&req.path), deep) {
             Ok(mut result) => {
                 nudge_role_by_position(&mut result, index, total);
                 out.push(result);

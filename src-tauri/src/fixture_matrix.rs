@@ -200,7 +200,9 @@ pub fn run_fixture_matrix(
         .filter(|fixture| fixture.is_track_fixture())
     {
         let source_path = fixture.resolved_path(manifest_dir);
-        let source_analysis = analyze_one(TrackId(fixture.id.clone()), &source_path)?;
+        // deep analysis not consumed here — this fixture-matrix tool only reads the
+        // base measurements, so pass `false` to skip the Tier-2 deep scan (Task 9).
+        let source_analysis = analyze_one(TrackId(fixture.id.clone()), &source_path, false)?;
         let fixture_dir = render_dir.join(sanitize_path_part(&fixture.id));
         fs::create_dir_all(&fixture_dir)
             .map_err(|e| CommandError::Io(format!("create fixture render dir: {e}")))?;

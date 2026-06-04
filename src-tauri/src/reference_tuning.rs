@@ -196,9 +196,12 @@ pub fn run_reference_tuning_dir(
     let cwd = std::env::current_dir().map_err(|e| CommandError::Io(format!("current dir: {e}")))?;
     let output_dir = normalized_absolute_path(&cwd, output_dir);
     let suite = discover_reference_suite(reference_dir)?;
+    // deep analysis not consumed here — reference tuning only reads the base
+    // measurements, so pass `false` to skip the Tier-2 deep scan (Task 9).
     let source_analysis = analyze_one(
         TrackId(format!("{}-source", sanitize_path_part(&suite.track_label))),
         &suite.source_path,
+        false,
     )?;
     let render_dir = output_dir.join("renders");
     fs::create_dir_all(&render_dir)
@@ -214,6 +217,7 @@ pub fn run_reference_tuning_dir(
                 slug
             )),
             &target.reference_path,
+            false,
         )?;
         let settings = settings_for_reference_preset(&source_analysis, target.preset.clone());
         let yes_output_path = render_dir.join(format!(
@@ -239,6 +243,7 @@ pub fn run_reference_tuning_dir(
                 slug
             )),
             &yes_output_path,
+            false,
         )?;
         let export_report = export_report_for(
             &source_analysis.track_id,

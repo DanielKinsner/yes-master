@@ -3,7 +3,7 @@ use std::os::raw::c_char;
 use std::path::Path;
 
 use yes_master_lib::{
-    engine::{analyze_tracks_core, mastering_render, AnalyzeRequest},
+    engine::{analyze_tracks_core_lite, mastering_render, AnalyzeRequest},
     AdvancedSettings, CompressionMode, DeliveryProfile, MasteringSettings, Preset, RenderKind,
     TrackId,
 };
@@ -54,8 +54,9 @@ pub unsafe extern "C" fn yes_master_native_analyze_file_json(path: *const c_char
     // The native bridge has no Tauri runtime, so it calls the State-free core
     // (the `analyze_tracks` command takes a `tauri::State<SourceProfileStore>`
     // that can't exist here). The iPhone path is intentionally non-adaptive, so
-    // it needs no profile-store population.
-    match futures_executor::block_on(analyze_tracks_core(vec![request])) {
+    // it needs no profile-store population and uses the `_lite` entry, which
+    // gates the Tier-2 deep scan OFF to save battery/CPU (Task 9).
+    match futures_executor::block_on(analyze_tracks_core_lite(vec![request])) {
         Ok(mut results) => {
             if let Some(result) = results.pop() {
                 string_to_ffi(serde_json::to_string(&result).unwrap_or_else(|error| {
