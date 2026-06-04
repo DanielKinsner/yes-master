@@ -13,7 +13,8 @@ settings shape and DSP/render logic where practical.
 
 ## v1 Feature List
 
-The shipped Simple-only flow (no adaptive/smart analysis):
+The shipped Simple-only flow keeps adaptive analysis hidden behind the Rust
+bridge:
 
 - Import one track.
 - Pick one of four tone presets: Balanced, Warm, Open, Punch.
@@ -25,6 +26,11 @@ The shipped Simple-only flow (no adaptive/smart analysis):
 
 There is no LUFS Preview control and no export-profile picker in v1; the delivery
 format is fixed (see below).
+
+The user-facing contract stays simple: no adaptive readout, no expert-band UI,
+and no confidence-gate control. The native Rust bridge resolves the same
+source-profile context used by desktop Track Master so preview and export hear
+the current shared engine.
 
 ## Preset Mapping
 
@@ -58,7 +64,7 @@ absolute target.
 ## Non-Negotiables
 
 - Do not reshape the desktop app to make the phone app.
-- Do not add adaptive/smart analysis to iPhone v1.
+- Do not expose desktop adaptive/smart-analysis controls in iPhone v1.
 - Volume Match must stay audition-only and must not change export level.
 - Keep warning checks advisory unless export is technically invalid.
 - Private audio and private renders stay out of git.

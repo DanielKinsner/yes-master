@@ -33,13 +33,15 @@ The main flow is:
 
 - It is not the desktop app converted to a phone layout.
 - It is not trying to expose every advanced desktop control.
-- It is not using adaptive or smart analysis in v1.
+- It is not exposing adaptive or smart-analysis controls in v1.
 
 ## Experience Rules
 
 - Keep the phone app simple.
 - Keep audio private and local.
 - Reuse the mastering sound and DSP logic that make the desktop app valuable.
+- Keep adaptive/source analysis hidden in the Rust bridge unless a later product
+  decision deliberately adds an expert phone surface.
 - Make the interface feel like a product, not a settings panel.
 - Keep the Mac and Windows desktop apps untouched.
 

@@ -187,6 +187,9 @@ pub(crate) fn export_settings_for_options_with_context(
     lufs_target: f32,
     adaptive_context: Option<&NativeAdaptiveContext>,
 ) -> MasteringSettings {
+    // The native bridge has no Tauri `run()` startup hook. Mirror desktop/headless
+    // startup here so YES_MASTER_CONFIDENCE_GATING=1 can exercise Phase B.
+    yes_master_lib::confidence::init_confidence_gating_from_env();
     let mut settings = MasteringSettings {
         preset: native_preset(preset),
         intensity: intensity.clamp(0.0, 1.0),

@@ -195,6 +195,9 @@ pub fn run_fixture_matrix(
     manifest_path: &Path,
     output_dir: &Path,
 ) -> CommandResult<MatrixRunResult> {
+    // Headless evidence runner: mirror desktop startup so
+    // YES_MASTER_CONFIDENCE_GATING=1 can validate the Phase B gate without a UI.
+    crate::confidence::init_confidence_gating_from_env();
     let manifest_dir = manifest_path.parent().unwrap_or_else(|| Path::new("."));
     let cases = default_already_mastered_matrix();
     let render_dir = output_dir.join("renders");

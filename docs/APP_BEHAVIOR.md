@@ -134,6 +134,10 @@ Both lanes write ignored ledgers and rendered WAVs. Do not commit private audio,
 rendered private masters, waveform images from private audio, or fixture-specific
 ledgers.
 
+Both lanes honor `YES_MASTER_CONFIDENCE_GATING`. Leave it unset for the default
+release path; set it to `1` only when collecting Phase B confidence-gate evidence
+against the same private fixtures/references.
+
 ## Reference Retune Snapshot
 
 The 2026-05-26 reference retune preserved `-14 LUFS` delivery landing and

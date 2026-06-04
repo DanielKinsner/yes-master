@@ -7,6 +7,8 @@ This is the SwiftUI-native iPhone app. It is the single active iPhone implementa
 - SwiftUI owns the iPhone UI.
 - Native iOS owns file import, playback, audio-session handling, and share/export surfaces.
 - Rust remains the mastering core through the shared `yes_master_lib` engine.
+- The Rust bridge derives the same adaptive source context as desktop Track
+  Master, while SwiftUI keeps the phone controls Simple-only.
 - Do not reimplement mastering, loudness, limiting, export checks, or DSP in Swift.
 
 ## First Slice
@@ -24,6 +26,7 @@ Run the native bridge checks:
 
 ```bash
 cd apps/iphone-native/rust
+cargo check --all-targets
 cargo test
 ```
 
