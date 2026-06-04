@@ -305,8 +305,11 @@ pub fn settings_for_reference_preset(
     settings.volume_match = false;
     settings.source_lufs_integrated = Some(source_analysis.lufs_integrated);
     settings.advanced.compression_mode = CompressionMode::Preset;
-    // Calibrate against the SAME adaptive chain the app ships, so reference
-    // tuning measures the adaptive output rather than the old chain.
+    // Calibrate against the Tier-1 adaptive chain (injects the app's SourceProfile).
+    // NOTE: no DeepAnalysis is computed here, so Phase B confidence gating (§7.2) is
+    // NOT exercised — equivalent only while `confidence::CONFIDENCE_GATING_ENABLED`
+    // is off; resolve `source_confidence` here before enabling Phase B, or reference
+    // tuning measures a different chain than the app (see the deep-analysis review).
     settings.advanced.source_profile = crate::types::SourceProfile::from_analysis(source_analysis);
     settings
 }

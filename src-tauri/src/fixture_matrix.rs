@@ -123,9 +123,12 @@ pub fn settings_for_matrix_case(
     settings.volume_match = false;
     settings.source_lufs_integrated = Some(source_analysis.lufs_integrated);
     settings.advanced.compression_mode = case.compression_mode;
-    // Exercise the SAME adaptive chain the shipping app runs, so the
-    // already-mastered evidence lane validates the adaptive output, not the old
-    // chain. Wires up the (otherwise dead) Rust SourceProfile::from_analysis.
+    // Exercise the Tier-1 adaptive chain by injecting the same SourceProfile the
+    // app resolves. NOTE: this lane does NOT compute DeepAnalysis, so it does not
+    // exercise the Phase B confidence gating (§7.2). Equivalent only while
+    // `confidence::CONFIDENCE_GATING_ENABLED` is off; once it flips on, resolve
+    // `source_confidence` here too (analyze with deep = true) or this lane will
+    // validate a different chain than the app runs.
     settings.advanced.source_profile = crate::types::SourceProfile::from_analysis(source_analysis);
     settings
 }

@@ -64,9 +64,9 @@ export interface AdvancedSettings {
   /// default (on). `0` = guardrails off (presets behave exactly as the
   /// non-adaptive chain). Scales all defensive trims.
   adaptive_strength?: number | null;
-  /// Injected level-invariant source snapshot for the adaptive guardrails,
-  /// set on dispatch like `source_lufs_integrated`. `null`/omitted = guardrails
-  /// inert. Not user-facing.
+  /// Level-invariant source snapshot for the adaptive guardrails. Backend-owned
+  /// (B2): the backend resolves it from its SourceProfileStore before each chain
+  /// build; a value set here is honored as an FE override. Not user-facing.
   source_profile?: SourceProfile | null;
 }
 

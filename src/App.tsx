@@ -2171,7 +2171,7 @@ function AdvancedControlsCard({
       warmth: null,
       presence_air: null,
       compression_density: null,
-      // Reset Adapt Strength to its explicit default (0.6), like every other
+      // Reset Adapt Strength to its explicit default (0.5), like every other
       // Advanced control. We write the EXPLICIT default rather than null: null
       // also resolves to the default downstream, but it displays ambiguously and
       // the durable "off" is 0.0 — so an explicit value keeps the readout honest
