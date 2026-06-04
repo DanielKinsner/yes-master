@@ -258,6 +258,22 @@ pub fn scan_windows(samples: &[f32], sample_rate: u32, channels: usize) -> Vec<W
     out
 }
 
+/// Frame interval `[lo, hi)` for the per-window momentary loudness key: a span of
+/// `mom_frames` (~400 ms) centered on the window CENTER (`start + window/2`),
+/// clamped to `[0, total)` at the track edges (shrinks, never zero-pads — spec §5.2).
+pub(crate) fn momentary_span(
+    start: usize,
+    window: usize,
+    mom_frames: usize,
+    total: usize,
+) -> (usize, usize) {
+    let half = mom_frames / 2;
+    let center = start + window / 2;
+    let lo = center.saturating_sub(half);
+    let hi = (center + half).min(total);
+    (lo, hi)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn measure_window(
     samples: &[f32],
@@ -287,11 +303,10 @@ fn measure_window(
     let rms = (sum_sq / window as f64).sqrt() as f32;
     let crest = if rms > 1e-9 { peak / rms } else { 1.0 };
 
-    // momentary K-weighted loudness over min(400ms, available) centered span.
-    let half = mom_frames / 2;
-    let mom_lo = start.saturating_sub(half);
+    // momentary K-weighted loudness over a ~400 ms span centered on the window
+    // (clamped at the track edges; see `momentary_span`).
     let total = samples.len() / channels;
-    let mom_hi = (start + window / 2 + half).min(total);
+    let (mom_lo, mom_hi) = momentary_span(start, window, mom_frames, total);
     let avail = mom_hi.saturating_sub(mom_lo);
     // Require >= half the 400 ms span present, else the momentary loudness read
     // is unreliable -> exclude this window (NEG_INFINITY).
@@ -544,5 +559,37 @@ mod tests {
         let samples = vec![0.1_f32; needed];
         let windows = scan_windows(&samples, sr, 1);
         assert!(windows.len() <= MAX_SCAN_WINDOWS, "got {}", windows.len());
+    }
+
+    #[test]
+    fn momentary_span_is_window_centered_and_400ms() {
+        // The per-window loudness key must integrate a span of mom_frames (~400 ms)
+        // CENTERED on the window center (start + window/2), per spec §5.2 / handoff §3.2
+        // ("a single transient can't crown a window 'loudest'"). Pins both the width
+        // and the centering so the span geometry cannot silently drift again.
+        let mom_frames = 19_200; // 400 ms @ 48k
+        let start = 1_000_000;
+        let total = 100_000_000; // far from both edges -> no clamping
+        let (lo, hi) = momentary_span(start, SHORT_WINDOW, mom_frames, total);
+        let center = start + SHORT_WINDOW / 2;
+        assert_eq!(hi - lo, mom_frames, "span must be exactly mom_frames (400 ms) wide");
+        assert_eq!((lo + hi) / 2, center, "span must be centered on the window center");
+        assert_eq!(lo, center - mom_frames / 2);
+        assert_eq!(hi, center + mom_frames / 2);
+    }
+
+    #[test]
+    fn momentary_span_clamps_at_track_edges_without_zero_padding() {
+        let mom_frames = 19_200;
+        // Window at the very start: low bound clamps to 0 (shrink, not zero-pad).
+        let (lo, hi) = momentary_span(0, SHORT_WINDOW, mom_frames, 100_000);
+        assert_eq!(lo, 0);
+        assert_eq!(hi, SHORT_WINDOW / 2 + mom_frames / 2);
+        // Window near the end: high bound clamps to total.
+        let total = SHORT_WINDOW + 1_000;
+        let start = total - SHORT_WINDOW;
+        let (lo2, hi2) = momentary_span(start, SHORT_WINDOW, mom_frames, total);
+        assert_eq!(hi2, total);
+        assert!(lo2 < hi2);
     }
 }
