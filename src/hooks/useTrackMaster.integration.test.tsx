@@ -182,7 +182,10 @@ function makeAnalysis(trackId: string): AnalysisResult {
   };
 }
 
-function makeRenderJob(path: string): RenderJob {
+function makeRenderJob(
+  path: string,
+  measurementOverrides: Partial<NonNullable<RenderJob["measurements"]>> = {},
+): RenderJob {
   return {
     id: "render-1",
     kind: "master",
@@ -197,6 +200,7 @@ function makeRenderJob(path: string): RenderJob {
       dynamic_range_lu: 8,
       sample_rate: 44_100,
       bit_depth: 24,
+      ...measurementOverrides,
     },
   };
 }
@@ -1302,6 +1306,48 @@ describe("useTrackMaster integration dispatches", () => {
     // Same settings object reaches both render paths → backend derives the same
     // profile for each (WYSIWYG parity).
     expect(previewSettings).toEqual(exportSettings);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("passes backend adaptive traceability through the export report contract", async () => {
+    const track = makeTrack("export-confidence", "C:/audio/confidence.wav");
+    const outputPath = "/Users/daniel/Desktop/confidence-master.wav";
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.save.mockResolvedValue(outputPath);
+    mocks.api.renderTrackMaster.mockResolvedValue(
+      makeRenderJob(outputPath, {
+        effective_adaptive_strength: 0.5,
+        source_profile_digest: "bright 0.50 / low 0.20 / density 0.10 / width 0.00",
+        confidence_digest: "bright 0.80 / low 0.10 / density 0.40 / width 0.90",
+      }),
+    );
+    mocks.api.runExportChecks.mockResolvedValue([]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      await harness.current().exportMaster();
+    });
+
+    expect(mocks.api.runExportChecks).toHaveBeenCalledWith(
+      expect.objectContaining({
+        effective_adaptive_strength: 0.5,
+        source_profile_digest: "bright 0.50 / low 0.20 / density 0.10 / width 0.00",
+        confidence_digest: "bright 0.80 / low 0.10 / density 0.40 / width 0.90",
+      }),
+      expect.any(Object),
+      expect.any(Object),
+    );
 
     await act(async () => {
       harness.root.unmount();

@@ -841,6 +841,8 @@ pub struct ExportReport {
     pub effective_adaptive_strength: f32,
     #[serde(default)]
     pub source_profile_digest: Option<String>,
+    #[serde(default)]
+    pub confidence_digest: Option<String>,
     pub checks: Vec<QualityCheck>,
 }
 

@@ -1323,6 +1323,7 @@ export function useTrackMaster() {
         // resolved the profile; the FE no longer holds it).
         effective_adaptive_strength: m?.effective_adaptive_strength ?? 0,
         source_profile_digest: m?.source_profile_digest ?? null,
+        confidence_digest: m?.confidence_digest ?? null,
         checks: [],
       };
       const checks = await api.runExportChecks(report, selectedAnalysis, selectedSettings);

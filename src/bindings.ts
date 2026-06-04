@@ -410,6 +410,7 @@ export interface ExportReport {
   // B5 — adaptive-DSP traceability mirrored onto the receipt.
   effective_adaptive_strength?: number;
   source_profile_digest?: string | null;
+  confidence_digest?: string | null;
   checks: QualityCheck[];
 }
 
