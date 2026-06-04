@@ -713,10 +713,10 @@ Expected: FAIL (`compute_spectral_balance_31band` not found).
 
 - [ ] **Step 3: Implement the 31-band sibling + `band_center_hz`**
 
-Add `compute_spectral_balance_31band` to `analysis.rs` — same Welch windowing as `compute_spectral_balance_6band` (copy its window-sizing + FFT loop), but bucket into 31 one-third-octave bands using IEC nominal centers 25 Hz … 16 kHz. It is a SEPARATE function; **do not touch `compute_spectral_balance_6band`** (the golden test from Task 1 must stay green).
+Add `compute_spectral_balance_31band` to `analysis.rs` — same Welch windowing as `compute_spectral_balance_6band` (copy its window-sizing + FFT loop), but bucket into one-third-octave bands using IEC nominal centers 25 Hz … 20 kHz (30 nominal centers + a `0.0` padding slot at index 30 to fill a fixed `[f32; 31]`). It is a SEPARATE function; **do not touch `compute_spectral_balance_6band`** (the golden test from Task 1 must stay green).
 
 ```rust
-/// IEC 61260 nominal one-third-octave centers, 25 Hz … 16 kHz (31 bands).
+/// IEC 61260 nominal one-third-octave centers, 25 Hz … 20 kHz (30 nominal centers + 1 padding slot at index 30).
 pub(crate) const THIRD_OCTAVE_CENTERS: [f32; 31] = [
     25.0, 31.5, 40.0, 50.0, 63.0, 80.0, 100.0, 125.0, 160.0, 200.0, 250.0, 315.0,
     400.0, 500.0, 630.0, 800.0, 1000.0, 1250.0, 1600.0, 2000.0, 2500.0, 3150.0,

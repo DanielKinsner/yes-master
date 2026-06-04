@@ -107,8 +107,9 @@ The decode already happens. Phase A runs two passes over the decoded samples.
 This is the existing whole-track spectral pass (post-F1: a Welch-averaged window
 up to 2¹⁸ samples, ≈0.18 Hz/bin) — **reused, not duplicated.** The **6-band read
 keeps its own direct accumulation, unchanged.** Phase A adds a **parallel**
-accumulation in the *same* FFT loop that buckets the magnitudes into **31
-one-third-octave bands** (20 Hz–16 kHz) for `DeepAnalysis`. The two accumulations
+accumulation in the *same* FFT loop that buckets the magnitudes into **30 nominal
+one-third-octave bands** (25 Hz–20 kHz, IEC 61260) for `DeepAnalysis`, held in a
+fixed `[f32; 31]` whose index 30 is a `0.0` padding slot. The two accumulations
 are independent: in Phase A the 31-band is **never** the 6-band's source (no
 31→6 rollup — that's deferred to Phase B), so the 6-band output is byte-exact vs.
 today (enforced by a golden test, §12). No extra FFT.
