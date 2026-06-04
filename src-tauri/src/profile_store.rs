@@ -95,6 +95,22 @@ impl SourceProfileStore {
             .ok()
             .and_then(|guard| guard.get(track_id).cloned())
     }
+
+    /// Remove both adaptive cache entries for a track. Used when the frontend
+    /// removes a track from the session so backend-only DeepAnalysis data does
+    /// not linger for the life of the app process.
+    pub fn evict(&self, track_id: &TrackId) {
+        self.set(track_id.clone(), None);
+        self.insert_deep(track_id.clone(), None);
+    }
+}
+
+#[tauri::command]
+pub fn evict_source_profile(
+    track_id: TrackId,
+    profile_store: tauri::State<'_, Arc<SourceProfileStore>>,
+) {
+    profile_store.evict(&track_id);
 }
 
 /// Resolve the effective adaptive source profile for one chain build (B2
@@ -224,6 +240,19 @@ mod tests {
             None,
             "re-analysis losing a profile must clear"
         );
+    }
+
+    #[test]
+    fn evict_clears_profile_and_deep_analysis() {
+        let store = SourceProfileStore::default();
+        let id = TrackId("t1".to_string());
+        store.set(id.clone(), Some(profile(7.0)));
+        store.insert_deep(id.clone(), Some(std::sync::Arc::new(make_test_deep())));
+
+        store.evict(&id);
+
+        assert_eq!(store.get(&id), None);
+        assert!(store.get_deep(&id).is_none());
     }
 
     #[test]

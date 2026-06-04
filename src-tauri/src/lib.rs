@@ -92,6 +92,7 @@ pub fn run() {
             exports::run_export_checks,
             guardrails::guardrail_readout,
             exports::open_output,
+            profile_store::evict_source_profile,
             project::save_project,
             project::autosave_session,
             project::load_recent_session,

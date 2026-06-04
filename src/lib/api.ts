@@ -124,6 +124,9 @@ export const api = {
   deleteUserPreset: (id: string) =>
     invoke<null>("delete_user_preset", { id }),
 
+  evictSourceProfile: (trackId: TrackId) =>
+    invoke<null>("evict_source_profile", { trackId }),
+
   playTrack: (
     trackId: TrackId,
     trackPath: string,

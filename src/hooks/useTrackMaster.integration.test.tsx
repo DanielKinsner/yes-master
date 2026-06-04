@@ -46,6 +46,7 @@ const mocks = vi.hoisted(() => {
     saveUserPreset: vi.fn(),
     listUserPresets: vi.fn(),
     deleteUserPreset: vi.fn(),
+    evictSourceProfile: vi.fn(),
     playTrack: vi.fn(),
     playMaster: vi.fn(),
     updateChain: vi.fn(),
@@ -469,6 +470,28 @@ describe("useTrackMaster integration dispatches", () => {
     });
 
     expect(mocks.api.prewarmDecode).toHaveBeenCalledWith(track.path);
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("evicts backend adaptive profile state when removing a track", async () => {
+    const track = makeTrack("remove-1", "C:/audio/remove.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      harness.current().removeTrack(track.id);
+    });
+
+    expect(mocks.api.evictSourceProfile).toHaveBeenCalledWith(track.id);
     await act(async () => {
       harness.root.unmount();
     });

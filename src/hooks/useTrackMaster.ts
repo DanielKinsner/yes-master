@@ -1003,6 +1003,9 @@ export function useTrackMaster() {
         delete next[id];
         return next;
       });
+      api.evictSourceProfile(id).catch(() => {
+        /* best-effort backend cache cleanup */
+      });
       if (loadedTrackId === id) {
         api.stopPlayback().catch(() => {
           /* swallow — best-effort */
