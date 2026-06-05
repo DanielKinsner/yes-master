@@ -185,6 +185,15 @@ const AUDIO_EXTENSIONS = [
   "opus",
 ];
 
+const ANALYSIS_PROGRESS_STAGES = [
+  { label: "Analyzing audio", progress: 0.14 },
+  { label: "Reading tonal balance", progress: 0.32 },
+  { label: "Checking dynamics", progress: 0.5 },
+  { label: "Evaluating stereo field", progress: 0.66 },
+  { label: "Building mastering context", progress: 0.82 },
+  { label: "Preparing preview", progress: 0.94 },
+] as const;
+
 export function useTrackMaster() {
   const [tracks, setTracks] = useState<ImportedTrack[]>([]);
   const [selectedTrackId, setSelectedTrackId] = useState<TrackId | null>(null);
@@ -193,6 +202,7 @@ export function useTrackMaster() {
   const [settingsMap, setSettingsMap] = useState<Record<TrackId, MasteringSettings>>({});
   const [staleSet, setStaleSet] = useState<Set<TrackId>>(new Set());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStageIndex, setAnalysisStageIndex] = useState(0);
   const [isLoadingWaveform, setIsLoadingWaveform] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -247,6 +257,9 @@ export function useTrackMaster() {
     fraction: number;
     kind: "preview" | "master" | "album";
   } | null>(null);
+  const analysisProgress = isAnalyzing
+    ? ANALYSIS_PROGRESS_STAGES[analysisStageIndex]
+    : null;
   // Phase 7.4 undo/redo: snapshot-based history of the undoable state pieces.
   // Refs (not state) so commitToHistory mutations don't trigger re-renders by
   // themselves; we bump `historyVersion` separately when undo/redo state
@@ -445,6 +458,20 @@ export function useTrackMaster() {
       unlistenProgress?.();
     };
   }, []);
+
+  useEffect(() => {
+    if (!isAnalyzing) {
+      setAnalysisStageIndex(0);
+      return;
+    }
+    setAnalysisStageIndex(0);
+    const timer = window.setInterval(() => {
+      setAnalysisStageIndex((current) =>
+        Math.min(current + 1, ANALYSIS_PROGRESS_STAGES.length - 1),
+      );
+    }, 1400);
+    return () => window.clearInterval(timer);
+  }, [isAnalyzing]);
 
   // Phase 7.3: load user presets on mount; subsequent saves/deletes refresh
   // the list directly so we don't need to re-fetch.
@@ -1921,6 +1948,7 @@ export function useTrackMaster() {
     selectedSettings,
     previewStale,
     isAnalyzing,
+    analysisProgress,
     isLoadingWaveform,
     isRendering,
     isExporting,

@@ -79,6 +79,7 @@ function App() {
         onRemove={tm.removeTrack}
         onAdd={tm.openImportDialog}
         isAnalyzing={tm.isAnalyzing}
+        analysisProgress={tm.analysisProgress}
         mode={tm.mode}
         onReorder={tm.reorderTracks}
         overrideAlbum={tm.overrideAlbum}
@@ -189,7 +190,7 @@ function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
   } else if (tm.isRendering) {
     processing = { tone: "busy", text: "Rendering audit…" };
   } else if (tm.isAnalyzing) {
-    processing = { tone: "busy", text: "Analyzing…" };
+    processing = { tone: "busy", text: tm.analysisProgress?.label ?? "Analyzing…" };
   } else if (tm.isLoadingWaveform) {
     processing = { tone: "busy", text: "Decoding…" };
   } else if (tm.selectedTrack) {
@@ -538,6 +539,7 @@ function Sidebar({
   onRemove,
   onAdd,
   isAnalyzing,
+  analysisProgress,
   mode,
   onReorder,
   overrideAlbum,
@@ -548,6 +550,7 @@ function Sidebar({
   onRemove: (id: string) => void;
   onAdd: () => void;
   isAnalyzing: boolean;
+  analysisProgress: { label: string; progress: number } | null;
   mode: "track" | "album";
   onReorder: (fromIndex: number, toIndex: number) => void;
   overrideAlbum: Set<string>;
@@ -669,7 +672,11 @@ function Sidebar({
       </ul>
 
       <div className="sidebar-footer">
-        {isAnalyzing && <div className="sidebar-status">Analyzing…</div>}
+        {isAnalyzing && (
+          <div className="sidebar-status">
+            {analysisProgress?.label ?? "Analyzing…"}
+          </div>
+        )}
         <button
           type="button"
           className="primary sidebar-import-btn"
@@ -744,6 +751,8 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           playbackKind={tm.transport.playbackKind}
           volumeMatch={tm.transport.volumeMatch}
           exportLufsPreview={tm.transport.exportLufsPreview}
+          isAnalyzing={tm.isAnalyzing}
+          analysisProgress={tm.analysisProgress}
           isRendering={tm.isRendering}
           isPlaying={tm.transport.isPlaying}
           renderProgress={tm.renderProgress}
@@ -861,6 +870,8 @@ function TrackHeader({
   playbackKind,
   volumeMatch,
   exportLufsPreview,
+  isAnalyzing,
+  analysisProgress,
   isRendering,
   isPlaying,
   renderProgress,
@@ -873,6 +884,8 @@ function TrackHeader({
   playbackKind: PlaybackKindUI;
   volumeMatch: boolean;
   exportLufsPreview: boolean;
+  isAnalyzing: boolean;
+  analysisProgress: { label: string; progress: number } | null;
   isRendering: boolean;
   isPlaying: boolean;
   renderProgress: { fraction: number; kind: "preview" | "master" | "album" } | null;
@@ -913,8 +926,10 @@ function TrackHeader({
               {analysis && <span className="status-pill status-ok">Analyzed</span>}
               <SessionStatus
                 isRendering={isRendering}
+                isAnalyzing={isAnalyzing}
                 isPlaying={isPlaying}
                 renderProgress={renderProgress}
+                analysisProgress={analysisProgress}
               />
             </div>
           </div>
@@ -937,27 +952,37 @@ function TrackHeader({
 
 function SessionStatus({
   isRendering,
+  isAnalyzing,
   renderProgress,
+  analysisProgress,
   isPlaying,
 }: {
   isRendering: boolean;
+  isAnalyzing: boolean;
   renderProgress: { fraction: number; kind: "preview" | "master" | "album" } | null;
+  analysisProgress: { label: string; progress: number } | null;
   isPlaying: boolean;
 }) {
-  const progressPct =
+  const progressFraction =
     renderProgress !== null
-      ? Math.round(Math.max(0, Math.min(1, renderProgress.fraction)) * 100)
-      : null;
+      ? Math.max(0, Math.min(1, renderProgress.fraction))
+      : analysisProgress
+        ? Math.max(0, Math.min(1, analysisProgress.progress))
+        : null;
+  const progressPct =
+    progressFraction !== null ? Math.round(progressFraction * 100) : null;
   const statusLabel =
-    progressPct !== null
+    renderProgress !== null && progressPct !== null
       ? `Rendering ${renderProgress?.kind ?? ""} ${progressPct}%`
+      : isAnalyzing && analysisProgress
+      ? analysisProgress.label
       : isRendering
       ? "Rendering"
       : isPlaying
       ? "Realtime"
       : "Ready";
   const statusTone =
-    progressPct !== null || isRendering
+    progressPct !== null || isRendering || isAnalyzing
       ? "session-status-busy"
       : isPlaying
       ? "session-status-live"
