@@ -1,15 +1,17 @@
-# Handoff — Adaptive DSP Tier‑2 **Phase B (Confidence Gating) IN PROGRESS**
+# Handoff — Adaptive DSP Tier‑2 **Phase B (Confidence Gating + 31-Band Input)**
 
 Audience: a fresh Claude/agent (or Dan) picking up the adaptive/"smart" DSP for YES Master in a
 new window. This is **self‑contained** — read this and you can continue without re‑reading the
 session history. It covers what shipped, the **current state**, the **one gate that's left**
 (by‑ear calibration), and the concrete next steps.
 
-> **On `main` and pushed (2026-06-04).** The Phase B confidence-gating machinery is built and wired,
-> then Codex follow-up fixed the remaining traceability plumbing (`24a51c3`, `09979ad`). The gate is
-> still **OFF by default**, so `main` behaves like the validated Tier-1 voicing unless the owner
-> explicitly enables `YES_MASTER_CONFIDENCE_GATING` / `set_confidence_gating`. Enabling it remains a
-> one-flag, owner-by-ear decision (see §3).
+> **On `main` and pushed (2026-06-05).** The Phase B confidence-gating machinery is built and wired,
+> Codex follow-up fixed the remaining traceability plumbing (`24a51c3`, `09979ad`), and the owner-
+> approved 31-band adaptation input is now implemented (`aeefee6`). Desktop + iPhone also have
+> truthful staged processing copy (`2683f42`, `611f5ff`). The gate is still **OFF by default**, so
+> `main` behaves like the validated Tier-1 voicing unless the owner explicitly enables
+> `YES_MASTER_CONFIDENCE_GATING` / `set_confidence_gating`. Enabling it remains a one-flag,
+> owner-by-ear decision (see §3).
 
 ---
 
@@ -19,9 +21,10 @@ YES Master has a three‑phase adaptive program. **Tier‑1** (shipped earlier):
 trim* toward neutral when the source already has a quality (bright/boomy/dense/wide); one **Adapt
 Strength** dial (`0..1`, default **0.5**). **Tier‑2 Phase A** (shipped 2026‑06‑03): a backend‑internal
 `DeepAnalysis` — a 31‑band tonal curve + an ordered per‑window time series + loudness‑stratified
-aggregates — computed per track, *measure‑only*. **Tier‑2 Phase B** (this work): *consume* that
-DeepAnalysis to make the Tier‑1 trims **confident, surgical, and non‑homogenizing**. The Phase B
-"anti‑homogenization core" is now implemented end‑to‑end but **off by default** pending owner
+aggregates — computed per track. **Tier‑2 Phase B** (this work): *consume* that DeepAnalysis to make
+the Tier‑1 trims **confident, surgical, and non‑homogenizing**. The Phase B "anti‑homogenization core"
+is implemented end‑to‑end and now uses per-window 31-band harsh/sibilant/air/tilt detail where the
+old confidence prototype used a coarse tonal proxy, but it remains **off by default** pending owner
 by‑ear calibration. "A measures, B decides" — and B is now built, just not yet *tuned*.
 
 ---
@@ -36,6 +39,9 @@ by‑ear calibration. "A measures, B decides" — and B is now built, just not y
   - `confidence.rs` derives, per Tier‑1 guardrail axis (brightness, low/boom, density, width), a
     **coverage** (fraction of loudness‑finite windows exhibiting the trait) × **consistency**
     (`1 − dispersion/scale`) = **confidence** in `[0, 1]`.
+  - Bright/low confidence now consumes per-window 31-band detail from `deep_analysis.rs`: harsh
+    (~2-5 kHz), sibilant (~5-9 kHz), air (~10-16 kHz), low, and tilt. Airy sources can back off
+    brightness confidence instead of being treated as harsh by a broad high-band bucket.
   - `SourceGuardrails::compute_with_confidence` scales each defensive trim by its axis confidence,
     **reduce‑only** (confidence can only *shrink* a trim, never add one). Low confidence ⇒ smaller
     trim ⇒ presets stay distinct (the anti‑homogenization fix). Full confidence reproduces Tier‑1
@@ -107,8 +113,9 @@ Until the gate flips on, **`main` is the Tier‑1 voicing the owner already trus
 | P3 #7 — backend cache not evicted on track removal | ✅ `fcfa1d5` (`evict_source_profile`, FE‑wired) |
 | (iPhone parity) | ✅ `a5bbc0f` — iPhone now runs the deep‑capable path + resolves adaptive context like desktop (⚠️ reverses the old "mobile = deep OFF" default; confidence still gate‑respecting there) |
 | P3 — stale wiring comments + whitespace | ✅ `25f2957` (whitespace item was a **false positive** — autocrlf/CRLF, committed blob is clean LF) |
-| **P2 #3** — does the **31‑band** curve feed adaptation, or stay Phase‑C readout? | ✅ owner decision 2026‑06‑05: **feed adaptation now** |
-| **P2 #6** — bright/low per‑window tonal uses the coarse 3‑band `compute_spectral_balance` (44.1k‑referenced SR skew), not the precise 31‑band | 🔄 implement now with P2 #3: wire 31‑band harsh/sibilant/tilt fixtures |
+| **P2 #3** — does the **31‑band** curve feed adaptation, or stay Phase‑C readout? | ✅ `aeefee6` — 31-band per-window detail feeds Phase-B confidence now |
+| **P2 #6** — bright/low per‑window tonal uses the coarse 3‑band `compute_spectral_balance` (44.1k‑referenced SR skew), not the precise 31‑band | ✅ `aeefee6` — bright/low confidence uses 31-band low/harsh/sibilant/air/tilt metrics with focused tests |
+| Premium progress UI | ✅ `2683f42` desktop + `611f5ff` iPhone. Truthful timed stage copy, not backend telemetry. |
 
 ### Still Open After Codex Follow-up
 
@@ -116,12 +123,13 @@ These are the threads I did **not** fix in the follow-up commits:
 
 1. Owner by-ear calibration of the Phase B gate and constants. Do not call Phase B tuned until this
    happens against private audio.
-2. P2 #3 / P2 #6: 31-band analysis is now owner-approved as adaptation input. Wire it with
-   harsh/sibilant/tilt fixtures; do not expose confidence in the everyday UI.
-3. PSR/crest closed-loop transient protection (§7.3): still planned, not built.
-4. Holistic already-mastered stand-down (§7.4): still planned, not built.
-5. 31-band rollup swap (§7.5): risky future change; needs tolerance tests plus album label-stability
+2. PSR/crest closed-loop transient protection (§7.3): still planned, not built.
+3. Holistic already-mastered stand-down (§7.4): still planned, not built.
+4. 31-band rollup swap (§7.5): risky future change; needs tolerance tests plus album label-stability
    coverage before touching the current 6-band golden path.
+5. Backend event telemetry for processing progress: not built. The shipped desktop/iPhone staged UI is
+   timed against the active analysis/render task and uses truthful labels, but it is not per-stage
+   backend progress.
 6. Confidence UI surface: intentionally **not** built. Confidence remains backend/wire-only unless the
    owner asks for a visible calibration or summary surface.
 
@@ -140,6 +148,9 @@ These are the threads I did **not** fix in the follow-up commits:
     consistency, confidence }`, `Confidence::{full, from_deep, digest}`. **All provisional constants
     live here.** (`Confidence`/`AxisConfidence` derive `Serialize` for the readout; the
     `AdvancedSettings.source_confidence` field is `#[serde(skip)]` so they stay off the wire there.)
+- **`src-tauri/src/deep_analysis.rs`** — per-window 31-band detail input:
+  `WindowMetrics` carries `low_31`, `harsh_31`, `sibilant_31`, `air_31`, and `tilt_31`, measured via
+  a lightweight per-window FFT and one-third-octave buckets.
 - **`src-tauri/src/guardrails.rs`** — `SourceGuardrails::compute_with_confidence` (the reduce‑only
   seam; `compute` delegates with `Confidence::full()`); `GuardrailReadout.confidence` (the readout
   surface); `WIDTH_CORR_DEADBAND` is `pub(crate)` (reused by confidence's per‑window "wide" test).
@@ -162,7 +173,11 @@ These are the threads I did **not** fix in the follow-up commits:
   `AxisConfidence`/`Confidence`/`GuardrailReadout.confidence`,
   `RenderedMeasurements.confidence_digest`, and `ExportReport.confidence_digest`; the hook preserves
   the digest through `runExportChecks`. `api.setConfidenceGating` / `api.confidenceGatingEnabled`
-  toggle/query the runtime gate.
+  toggle/query the runtime gate. `useTrackMaster` also owns the desktop staged analysis progress
+  labels returned to the UI.
+- **`apps/iphone-native/YESMasterNative/AuditionController.swift` / `ContentView.swift`** — iPhone
+  staged analysis/render labels and progress bar state. This mirrors the desktop product choice
+  without exposing confidence.
 
 ---
 
@@ -171,22 +186,19 @@ These are the threads I did **not** fix in the follow-up commits:
 The audible feature steps are all **calibration‑gated** (provisional until the owner locks numbers):
 
 1. **Calibrate §7.2** (owner, §3) — the prerequisite for everything below.
-2. **Implement P2 #3 / P2 #6** — the 31‑band curve is now a Phase B adaptation input. Wire harsh/
-   sibilant/tilt into `Confidence::from_deep` or a new guardrail input, with tests proving harsh‑only
-   vs sibilant‑only vs airy sources adapt differently. Replace the coarse per‑window 3‑band tonal
-   trigger where it drives confidence.
-3. **§7.3 PSR/crest closed loop** — honest transient protection from the retained per‑window
+2. **§7.3 PSR/crest closed loop** — honest transient protection from the retained per‑window
    `sample_peak` + `loudness_key` (now correct after F1). If transients are healthy, don't compress.
-4. **§7.4 holistic already‑mastered stand‑down** — combine per‑stratum peak + integrated LUFS + crest
+3. **§7.4 holistic already‑mastered stand‑down** — combine per‑stratum peak + integrated LUFS + crest
    into an "already mastered" interpretation → minimal/zero trims. (Mind F3: `sample_peak` is the
    **mono‑downmix** peak, conservative‑low for hard‑panned material — see the Phase A review.)
-5. **§7.5 6‑band → 31‑band rollup (the one risky change)** — when the chain moves to a 31‑band‑derived
+4. **§7.5 6‑band → 31‑band rollup (the one risky change)** — when the chain moves to a 31‑band‑derived
    tonal read the 6‑band values shift slightly. You MUST: swap the byte‑exact 6‑band golden for a
    per‑band tolerance test, **and add an album label‑stability fixture** — `album.rs` arc‑role
    classification thresholds read `spectral_balance_6band` + `energy_density_score`, and per‑character
    LUFS offsets span ~2 dB, so a borderline track's label can flip (byte‑identity does NOT cover this).
-6. **Phase C** — premium staged‑loading UI + a curated `AnalysisSummary` on the wire (a few flags +
-   a plain "what we found" summary). The `GuardrailReadout.confidence` surface is a starting point.
+5. **Phase C** — backend-driven progress telemetry + a curated `AnalysisSummary` on the wire (a few
+   flags + a plain "what we found" summary). The desktop/iPhone staged UI copy is already in place,
+   but it is not backend event telemetry. The `GuardrailReadout.confidence` surface is a starting point.
 
 ---
 
@@ -279,9 +291,9 @@ cargo test                        # 30 passed, 1 ignored
 ```
 1. Read this doc. Confirm you're on `main` and check `git log --oneline -8` for the latest follow-up
    commits.
-2. Run the §8 lanes — confirm all green (golden + preset_byte_identity included).
-3. Phase B is BUILT but OFF. The owner has now approved 31-band as adaptation input, so wire P2 #3/P2
-   #6 with tests. Do NOT enable the gate by default or tune constants without owner listening.
+2. Run `npm run verify:fast` or the explicit §8 lanes — confirm all green (golden + preset_byte_identity included).
+3. Phase B is BUILT but OFF. 31-band confidence input is implemented. Do NOT enable the gate by default
+   or tune constants without owner listening.
 4. Keep changes byte-identity-safe (gate off => Tier-1). Tests-first. Small commits. ALWAYS run the
    iPhone `cargo check --all-targets` AND `cargo test` lanes after touching shared `yes_master_lib`.
 5. Do not add a FE surface for confidence unless the owner asks (backend-only for now).

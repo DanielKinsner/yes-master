@@ -20,6 +20,13 @@ rationale for each item live in the finish plan:
   on/off default (B4); readout reads the *realized* EQ trim post-floor (B8); LU→dB
   LRA aliasing removed (B11); stale-profile clear on dispatch (B10); boundary tests
   refreshed (B12). Review trail committed under `docs/reviews/`.
+- **Owner follow-up (2026-06-05):** confidence remains backend/devtools-only;
+  31-band per-window harsh/sibilant/air/tilt detail now feeds Phase-B confidence
+  instead of relying on the coarse 3-band tonal proxy (`aeefee6`). Desktop and
+  iPhone now show truthful staged analysis/render progress copy without claiming
+  unbuilt genre/style detection (`2683f42`, `611f5ff`). `npm run verify:fast`
+  is available for the documented frontend + desktop Rust + iPhone Rust bridge
+  lane (`a386d81`).
 - **Backend-owned `source_profile` (B2) — DONE (2026-06-02):** the backend is now
   the SINGLE derivation point. `analyze_tracks` derives + caches the profile in a
   `SourceProfileStore` (`src-tauri/src/profile_store.rs`); every Track-Master chain
@@ -43,12 +50,12 @@ rationale for each item live in the finish plan:
 - Album Master → **unadapted + labeled** (done).
 - Confidence detail → **backend/devtools only**. Do not add an everyday-user
   confidence UI surface unless the owner explicitly reopens it.
-- 31-band detail → **adaptation input now**, not Phase-C readout-only. Wire
-  harsh/sibilant/tilt detail into the Phase-B backend path with mechanical
-  tests, while keeping confidence-gated behavior provisional until listening.
-- Premium progress language → **approved** when it reflects real stages. LANDR-
-  style staged copy is fine for analysis/rendering as long as the app does not
-  claim unbuilt steps such as genre detection.
+- 31-band detail → **adaptation input now — implemented 2026-06-05.** The
+  current feed is per-window harsh/sibilant/air/tilt into Phase-B confidence.
+  Confidence-gated behavior remains provisional until listening.
+- Premium progress language → **approved and implemented as truthful staged UI**
+  for desktop + iPhone analysis/rendering. It is timed UI state, not backend
+  stage telemetry yet; do not claim unbuilt steps such as genre detection.
 
 ## 🎚️ Tier-1 finish (remaining — calibrate by ear)
 
@@ -91,10 +98,11 @@ Tune in one place: `src-tauri/src/guardrails.rs`.
   + genre/style classification + reference-track upload / matching.
 - **Resonance / sibilance detection** (soothe / Gullfoss style); per-band stereo
   width matching (Ozone Width Match style).
-- **31-band adaptive input (owner decision 2026-06-05)** — use the existing
-  31-band curve to refine Phase-B adaptation now. Confidence remains backend-
-  only and gate-controlled; the work is not a preset retune or a release-stable
-  listening signoff.
+- **31-band rollup / target-curve future work** — the 31-band confidence feed is
+  done, but the core 6-band UI rollup, measured-neutral target work, and any
+  corrective target-curve behavior remain future milestones. Confidence remains
+  backend-only and gate-controlled; this is not a preset retune or a release-
+  stable listening signoff.
 - **Total-loudness-loss budget (B3)** — when a delivery target is active (incl.
   Custom + an explicit `lufs_offset_db`), the post-chain LUFS landing recoups
   loudness the trims removed, so a multi-axis source can exceed a single per-axis
