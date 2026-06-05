@@ -653,4 +653,146 @@ mod tests {
         }
         writer.finalize().unwrap();
     }
+
+    fn read_wav_samples(path: &std::path::Path) -> (hound::WavSpec, Vec<i32>) {
+        let mut reader = hound::WavReader::open(path).expect("open rendered wav");
+        let spec = reader.spec();
+        let samples = reader
+            .samples::<i32>()
+            .map(|s| s.expect("read sample"))
+            .collect::<Vec<_>>();
+        (spec, samples)
+    }
+
+    fn max_normalized_diff(a: &(hound::WavSpec, Vec<i32>), b: &(hound::WavSpec, Vec<i32>)) -> f64 {
+        assert_eq!(a.0.sample_rate, b.0.sample_rate, "sample-rate mismatch");
+        assert_eq!(a.0.channels, b.0.channels, "channel-count mismatch");
+        assert_eq!(
+            a.0.bits_per_sample, b.0.bits_per_sample,
+            "bit-depth mismatch"
+        );
+        assert_eq!(a.1.len(), b.1.len(), "sample-count mismatch");
+        let scale = (1i64 << (a.0.bits_per_sample - 1)) as f64;
+        a.1.iter()
+            .zip(&b.1)
+            .map(|(x, y)| (*x as f64 - *y as f64).abs() / scale)
+            .fold(0.0, f64::max)
+    }
+
+    // Task #3: the bridge's offline render (FFI -> mastering_render) must match
+    // the shared render path sample-for-sample for an identical WAV + settings,
+    // with a source-present adaptive context and the confidence gate off. Guards
+    // against drift in the FFI parameter mapping or adaptive-context resolution
+    // that the existing structural render tests would not catch.
+    #[test]
+    fn bridge_render_matches_shared_render_path() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        write_sine_wav(&input);
+
+        // Source-profile-present adaptive context (the interesting case).
+        let context = native_adaptive_context_for_path(&input);
+        assert!(context.is_some(), "expected a resolved adaptive context");
+        let settings =
+            export_settings_for_options_with_context(Some("warm"), 0.5, -11.0, context.as_ref());
+        assert!(
+            settings.advanced.source_profile.is_some(),
+            "render-path parity should exercise an injected source profile"
+        );
+        if !yes_master_lib::confidence::is_confidence_gating_enabled() {
+            assert!(
+                settings.advanced.source_confidence.is_none(),
+                "gate off must keep confidence inert at the render boundary"
+            );
+        }
+
+        // Reference: render directly through the shared lib with those settings.
+        let ref_dir = tmp.path().join("reference");
+        std::fs::create_dir_all(&ref_dir).unwrap();
+        let reference = mastering_render(
+            TrackId::new(),
+            &input,
+            &settings,
+            &ref_dir,
+            RenderKind::Master,
+        )
+        .expect("reference render");
+        let reference = read_wav_samples(&std::path::PathBuf::from(&reference.output_paths[0]));
+
+        // Bridge: render the same input + matching args through the FFI.
+        let bridge_dir = tmp.path().join("bridge");
+        let input_c = CString::new(input.to_string_lossy().as_bytes()).unwrap();
+        let bridge_dir_c = CString::new(bridge_dir.to_string_lossy().as_bytes()).unwrap();
+        let preset_c = CString::new("warm").unwrap();
+        let pointer = unsafe {
+            yes_master_native_render_master_with_options_json(
+                input_c.as_ptr(),
+                bridge_dir_c.as_ptr(),
+                preset_c.as_ptr(),
+                0.5,
+                -11.0,
+            )
+        };
+        assert!(!pointer.is_null());
+        let json = unsafe {
+            let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
+            yes_master_native_free_string(pointer);
+            value
+        };
+        let payload: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let bridge_out = std::path::PathBuf::from(
+            payload["output_paths"][0]
+                .as_str()
+                .expect("bridge render output path"),
+        );
+        let bridge = read_wav_samples(&bridge_out);
+
+        let diff = max_normalized_diff(&reference, &bridge);
+        assert!(
+            diff < 1e-6,
+            "bridge render diverged from the shared render path by {diff} (normalized)"
+        );
+    }
+
+    // Export forces Volume Match off (engine-side), so a VM-like option present
+    // on the settings must not change the rendered output.
+    #[test]
+    fn export_render_is_invariant_to_volume_match() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        write_sine_wav(&input);
+        let context = native_adaptive_context_for_path(&input);
+
+        let off = export_settings_for_options_with_context(
+            Some("balanced"),
+            0.5,
+            -11.0,
+            context.as_ref(),
+        );
+        let mut on = export_settings_for_options_with_context(
+            Some("balanced"),
+            0.5,
+            -11.0,
+            context.as_ref(),
+        );
+        on.volume_match = true;
+        on.source_lufs_integrated = Some(-20.0);
+
+        let off_dir = tmp.path().join("off");
+        let on_dir = tmp.path().join("on");
+        std::fs::create_dir_all(&off_dir).unwrap();
+        std::fs::create_dir_all(&on_dir).unwrap();
+        let off_job =
+            mastering_render(TrackId::new(), &input, &off, &off_dir, RenderKind::Master).unwrap();
+        let on_job =
+            mastering_render(TrackId::new(), &input, &on, &on_dir, RenderKind::Master).unwrap();
+
+        let off_wav = read_wav_samples(&std::path::PathBuf::from(&off_job.output_paths[0]));
+        let on_wav = read_wav_samples(&std::path::PathBuf::from(&on_job.output_paths[0]));
+        let diff = max_normalized_diff(&off_wav, &on_wav);
+        assert!(
+            diff < 1e-6,
+            "render changed when a Volume Match-like option was present: {diff}"
+        );
+    }
 }
