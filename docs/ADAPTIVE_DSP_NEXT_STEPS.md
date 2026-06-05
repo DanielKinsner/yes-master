@@ -148,4 +148,4 @@ Tune in one place: `src-tauri/src/guardrails.rs`.
 - Finish plan (detail + options): `docs/plans/2026-06-02-002-adaptive-dsp-tier1-finish-and-tier2.md`
 - Spec: `docs/plans/2026-06-02-001-adaptive-dsp-tier1-guardrails.md`
 - Handoff (start here to code): `docs/HANDOFF_2026-06-03_ADAPTIVE_DSP_TIER2.md`
-- Reviews: `docs/reviews/2026-06-02-adaptive-dsp-tier1-review.md`, `docs/reviews/2026-06-03-adaptive-dsp-desktop-review.md` (+ an untracked `…-GLOBAL-review.md`, unread)
+- Reviews: `docs/reviews/2026-06-02-adaptive-dsp-tier1-review.md`, `docs/reviews/2026-06-03-adaptive-dsp-desktop-review.md`, `docs/reviews/2026-06-03-adaptive-dsp-GLOBAL-review.md` (all tracked)
