@@ -1722,3 +1722,101 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 });
+
+describe("staged analysis progress", () => {
+  it("advances stages while analyzing, clamps at the last, then clears on completion", async () => {
+    const track = makeTrack("track-a", "/in/a.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    // Hold analysis pending so isAnalyzing stays true while we drive the
+    // staged-progress interval by hand.
+    let resolveAnalyze!: (value: AnalysisResult[]) => void;
+    mocks.api.analyzeTracks.mockReturnValue(
+      new Promise<AnalysisResult[]>((resolve) => {
+        resolveAnalyze = resolve;
+      }),
+    );
+
+    const harness = await renderHookHarness();
+    // Fake only the interval the staged progress uses; setTimeout, Date,
+    // microtasks, and act's own scheduling stay real so mount/import settle.
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      let importDone!: Promise<void>;
+      await act(async () => {
+        importDone = harness.current().importFiles([track.path]);
+      });
+
+      // Analysis is active: the first stage shows immediately, and the
+      // render channel is independent (still empty).
+      expect(harness.current().isAnalyzing).toBe(true);
+      expect(harness.current().analysisProgress?.label).toBe("Analyzing audio");
+      expect(harness.current().renderProgress).toBeNull();
+
+      // Each 1400ms tick advances to the next stage, in order.
+      const laterStages = [
+        "Reading tonal balance",
+        "Checking dynamics",
+        "Evaluating stereo field",
+        "Building mastering context",
+        "Preparing preview",
+      ];
+      for (const label of laterStages) {
+        await act(async () => {
+          vi.advanceTimersByTime(1400);
+        });
+        expect(harness.current().analysisProgress?.label).toBe(label);
+      }
+
+      // Clamp: extra ticks do not advance past the final stage.
+      await act(async () => {
+        vi.advanceTimersByTime(1400 * 3);
+      });
+      expect(harness.current().analysisProgress?.label).toBe("Preparing preview");
+
+      // Completing analysis clears the staged progress.
+      await act(async () => {
+        resolveAnalyze([makeAnalysis(track.id)]);
+        await importDone;
+      });
+      expect(harness.current().isAnalyzing).toBe(false);
+      expect(harness.current().analysisProgress).toBeNull();
+    } finally {
+      vi.useRealTimers();
+      await act(async () => {
+        harness.root.unmount();
+      });
+    }
+  });
+
+  it("clears staged progress when analysis fails", async () => {
+    const track = makeTrack("track-a", "/in/a.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    let rejectAnalyze!: (reason?: unknown) => void;
+    mocks.api.analyzeTracks.mockReturnValue(
+      new Promise<AnalysisResult[]>((_, reject) => {
+        rejectAnalyze = reject;
+      }),
+    );
+
+    const harness = await renderHookHarness();
+    try {
+      let importDone!: Promise<void>;
+      await act(async () => {
+        importDone = harness.current().importFiles([track.path]);
+      });
+      expect(harness.current().isAnalyzing).toBe(true);
+      expect(harness.current().analysisProgress?.label).toBe("Analyzing audio");
+
+      await act(async () => {
+        rejectAnalyze(new Error("analyze boom"));
+        await importDone;
+      });
+      expect(harness.current().isAnalyzing).toBe(false);
+      expect(harness.current().analysisProgress).toBeNull();
+    } finally {
+      await act(async () => {
+        harness.root.unmount();
+      });
+    }
+  });
+});
