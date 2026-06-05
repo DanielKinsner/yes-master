@@ -681,9 +681,10 @@ mod tests {
 
     // Task #3: the bridge's offline render (FFI -> mastering_render) must match
     // the shared render path sample-for-sample for an identical WAV + settings,
-    // with a source-present adaptive context and the confidence gate off. Guards
-    // against drift in the FFI parameter mapping or adaptive-context resolution
-    // that the existing structural render tests would not catch.
+    // with a source-present adaptive context. Guards against drift in the FFI
+    // parameter mapping or adaptive-context resolution that the existing
+    // structural render tests would not catch. (Gate-off confidence inertness is
+    // pinned deterministically in `confidence_resolver_is_inert_when_gate_off`.)
     #[test]
     fn bridge_render_matches_shared_render_path() {
         let tmp = tempfile::tempdir().unwrap();
@@ -699,12 +700,6 @@ mod tests {
             settings.advanced.source_profile.is_some(),
             "render-path parity should exercise an injected source profile"
         );
-        if !yes_master_lib::confidence::is_confidence_gating_enabled() {
-            assert!(
-                settings.advanced.source_confidence.is_none(),
-                "gate off must keep confidence inert at the render boundary"
-            );
-        }
 
         // Reference: render directly through the shared lib with those settings.
         let ref_dir = tmp.path().join("reference");
@@ -793,6 +788,30 @@ mod tests {
         assert!(
             diff < 1e-6,
             "render changed when a Volume Match-like option was present: {diff}"
+        );
+    }
+
+    // Deterministic gate-off contract for the resolver the bridge depends on.
+    // The pure resolver takes the gate (and album) as explicit params, so this
+    // pins inertness without racing the process-wide CONFIDENCE_GATING atomic or
+    // depending on the ambient YES_MASTER_CONFIDENCE_GATING env.
+    #[test]
+    fn confidence_resolver_is_inert_when_gate_off() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        write_sine_wav(&input);
+        let context = native_adaptive_context_for_path(&input).expect("adaptive context");
+        let deep = context.deep_analysis.as_deref();
+
+        // Gate off => no confidence, even with a real source DeepAnalysis present.
+        assert!(
+            yes_master_lib::confidence::resolve_source_confidence(deep, false, false).is_none(),
+            "gate off must resolve no confidence"
+        );
+        // Album is non-adaptive even with the gate on.
+        assert!(
+            yes_master_lib::confidence::resolve_source_confidence(deep, true, true).is_none(),
+            "album must resolve no confidence"
         );
     }
 }
