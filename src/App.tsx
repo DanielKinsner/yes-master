@@ -17,6 +17,7 @@ import { EmptyState } from "./components/EmptyState";
 import { StatusDot } from "./components/StatusDot";
 import { Toast } from "./components/Toast";
 import { ChromeDialog } from "./components/ChromeDialog";
+import { SettingsGroup } from "./components/SettingsGroup";
 import type {
   AnalysisResult,
   CompressionMode,
@@ -394,28 +395,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         />
       </div>
     </ChromeDialog>
-  );
-}
-
-function SettingsGroup({
-  title,
-  rows,
-}: {
-  title: string;
-  rows: Array<[string, string]>;
-}) {
-  return (
-    <section className="settings-group">
-      <h3>{title}</h3>
-      <dl>
-        {rows.map(([label, value]) => (
-          <div className="settings-row" key={label}>
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
   );
 }
 
