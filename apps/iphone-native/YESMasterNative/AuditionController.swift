@@ -41,6 +41,8 @@ final class AuditionController: ObservableObject {
     @Published private(set) var shareMasterURL: URL?
     @Published private(set) var isAnalyzing = false
     @Published private(set) var isRendering = false
+    @Published private(set) var analysisProgress: Double?
+    @Published private(set) var renderProgress: Double?
     @Published private(set) var isPlaying = false
     @Published var statusText = "Import a track to begin."
 
@@ -54,6 +56,8 @@ final class AuditionController: ObservableObject {
     private(set) var analysisTask: Task<Void, Never>?
     private(set) var renderTask: Task<Void, Never>?
     private var landingTask: Task<Void, Never>?
+    private var analysisStageTask: Task<Void, Never>?
+    private var renderStageTask: Task<Void, Never>?
     private var positionTimer: Timer?
     private var wasPlayingBeforeInterruption = false
     private var notificationObservers: [NSObjectProtocol] = []
@@ -73,6 +77,8 @@ final class AuditionController: ObservableObject {
     }
 
     deinit {
+        analysisStageTask?.cancel()
+        renderStageTask?.cancel()
         notificationObservers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
@@ -93,6 +99,12 @@ final class AuditionController: ObservableObject {
 
     func importTrack(from sourceURL: URL) {
         do {
+            cancelAnalysisProgress()
+            cancelRenderProgress()
+            analysisTask?.cancel()
+            renderTask?.cancel()
+            isAnalyzing = false
+            isRendering = false
             let track = try importStore.importTrack(
                 from: sourceURL,
                 supportedExtensions: renderer.supportedImportExtensions
@@ -138,7 +150,7 @@ final class AuditionController: ObservableObject {
         analysisTask?.cancel()
         analysisResult = nil
         isAnalyzing = true
-        statusText = "Analyzing with the YES Master engine."
+        startAnalysisProgress()
 
         let renderer = renderer
         analysisTask = Task {
@@ -148,6 +160,7 @@ final class AuditionController: ObservableObject {
 
             guard !Task.isCancelled else { return }
             isAnalyzing = false
+            cancelAnalysisProgress()
             switch result {
             case .success(let analysis):
                 analysisResult = analysis
@@ -406,7 +419,7 @@ final class AuditionController: ObservableObject {
         renderTask?.cancel()
         isRendering = true
         shareMasterURL = nil
-        statusText = "Creating master with the YES Master engine."
+        startRenderProgress()
 
         let renderer = renderer
         let sourceURL = track.localURL
@@ -422,6 +435,7 @@ final class AuditionController: ObservableObject {
 
             guard !Task.isCancelled else { return }
             isRendering = false
+            cancelRenderProgress()
             switch result {
             case .success(let job):
                 guard let outputPath = job.outputPaths.first else {
@@ -447,5 +461,79 @@ final class AuditionController: ObservableObject {
             return "The file imported, but the audio could not be read. Try a standard WAV, MP3, or M4A."
         }
         return message
+    }
+
+    // MARK: - Processing progress copy
+
+    private struct ProcessingStage: Sendable {
+        let label: String
+        let progress: Double
+    }
+
+    private static let analysisStages: [ProcessingStage] = [
+        ProcessingStage(label: "Analyzing audio", progress: 0.14),
+        ProcessingStage(label: "Reading tonal balance", progress: 0.32),
+        ProcessingStage(label: "Checking dynamics", progress: 0.50),
+        ProcessingStage(label: "Evaluating stereo field", progress: 0.66),
+        ProcessingStage(label: "Building mastering context", progress: 0.82),
+        ProcessingStage(label: "Preparing preview", progress: 0.94)
+    ]
+
+    private static let renderStages: [ProcessingStage] = [
+        ProcessingStage(label: "Building mastering chain", progress: 0.18),
+        ProcessingStage(label: "Balancing dynamics", progress: 0.42),
+        ProcessingStage(label: "Optimizing frequency balance", progress: 0.62),
+        ProcessingStage(label: "Optimizing loudness", progress: 0.78),
+        ProcessingStage(label: "Preparing master", progress: 0.94)
+    ]
+
+    private func startAnalysisProgress() {
+        analysisStageTask?.cancel()
+        guard let first = Self.analysisStages.first else { return }
+        statusText = first.label
+        analysisProgress = first.progress
+
+        analysisStageTask = Task { [weak self] in
+            for stage in Self.analysisStages.dropFirst() {
+                try? await Task.sleep(nanoseconds: 1_400_000_000)
+                if Task.isCancelled { return }
+                await MainActor.run {
+                    guard let self, self.isAnalyzing else { return }
+                    self.statusText = stage.label
+                    self.analysisProgress = stage.progress
+                }
+            }
+        }
+    }
+
+    private func cancelAnalysisProgress() {
+        analysisStageTask?.cancel()
+        analysisStageTask = nil
+        analysisProgress = nil
+    }
+
+    private func startRenderProgress() {
+        renderStageTask?.cancel()
+        guard let first = Self.renderStages.first else { return }
+        statusText = first.label
+        renderProgress = first.progress
+
+        renderStageTask = Task { [weak self] in
+            for stage in Self.renderStages.dropFirst() {
+                try? await Task.sleep(nanoseconds: 1_400_000_000)
+                if Task.isCancelled { return }
+                await MainActor.run {
+                    guard let self, self.isRendering else { return }
+                    self.statusText = stage.label
+                    self.renderProgress = stage.progress
+                }
+            }
+        }
+    }
+
+    private func cancelRenderProgress() {
+        renderStageTask?.cancel()
+        renderStageTask = nil
+        renderProgress = nil
     }
 }

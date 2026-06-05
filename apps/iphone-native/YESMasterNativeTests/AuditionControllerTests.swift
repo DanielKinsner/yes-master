@@ -1,3 +1,4 @@
+import Foundation
 import UniformTypeIdentifiers
 import XCTest
 @testable import YES_Master_Native
@@ -15,6 +16,20 @@ final class AuditionControllerTests: XCTestCase {
         XCTAssertNotNil(ctx.controller.analysisResult)
         XCTAssertEqual(ctx.renderer.analyzeCount, 1, "import analyzes exactly once")
         XCTAssertEqual(ctx.renderer.renderCount, 0, "analysis must not render")
+    }
+
+    func testAnalysisProgressUsesStagedStatusUntilAnalysisFinishes() async throws {
+        let renderer = FakeRenderer()
+        renderer.analysisDelay = 0.10
+        let ctx = try makeLoadedController(renderer: renderer)
+
+        XCTAssertTrue(ctx.controller.isAnalyzing)
+        XCTAssertEqual(ctx.controller.statusText, "Analyzing audio")
+        XCTAssertEqual(ctx.controller.analysisProgress ?? 0, 0.14, accuracy: 0.001)
+
+        await ctx.controller.analysisTask?.value
+        XCTAssertNil(ctx.controller.analysisProgress)
+        XCTAssertEqual(ctx.controller.statusText, "Ready. Press play to audition.")
     }
 
     func testLiveSettingsForwardToEngineAndNeverRender() throws {
@@ -70,6 +85,22 @@ final class AuditionControllerTests: XCTestCase {
         // Export options carry only preset/intensity/loudness — never a Volume
         // Match flag (the Rust export force-disables it).
         XCTAssertEqual(ctx.renderer.lastRenderOptions?.preset, "balanced")
+    }
+
+    func testRenderProgressUsesStagedStatusUntilMasterFinishes() async throws {
+        let renderer = FakeRenderer()
+        renderer.renderDelay = 0.10
+        let ctx = try makeLoadedController(renderer: renderer)
+        await ctx.controller.analysisTask?.value
+
+        ctx.controller.createMaster()
+        XCTAssertTrue(ctx.controller.isRendering)
+        XCTAssertEqual(ctx.controller.statusText, "Building mastering chain")
+        XCTAssertEqual(ctx.controller.renderProgress ?? 0, 0.18, accuracy: 0.001)
+
+        await ctx.controller.renderTask?.value
+        XCTAssertNil(ctx.controller.renderProgress)
+        XCTAssertEqual(ctx.controller.statusText, "Master created. Share it anytime.")
     }
 
     func testVolumeMatchToggleForwardsAuditionGain() throws {
@@ -178,14 +209,13 @@ final class AuditionControllerTests: XCTestCase {
         let tempBase: URL
     }
 
-    private func makeLoadedController() throws -> Context {
+    private func makeLoadedController(renderer: FakeRenderer = FakeRenderer()) throws -> Context {
         let tempBase = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempBase, withIntermediateDirectories: true)
         let storage = RenderStorage(baseDirectory: tempBase)
         let importStore = ImportedTrackStore(importedTracksDirectory: storage.importsDirectory)
         let stream = RecordingStream()
         let output = RecordingOutput()
-        let renderer = FakeRenderer()
         let engine = LiveAudioEngine(output: output, makeStream: { _, _, _, _ in stream })
         let controller = AuditionController(
             engine: engine, renderer: renderer, importStore: importStore, renderStorage: storage
@@ -262,16 +292,24 @@ private final class FakeRenderer: MasteringRenderer {
     private(set) var analyzeCount = 0
     private(set) var renderCount = 0
     private(set) var lastRenderOptions: NativeRenderOptions?
+    var analysisDelay: TimeInterval = 0
+    var renderDelay: TimeInterval = 0
 
     let supportedImportExtensions = ["wav", "mp3"]
     let supportedImportContentTypes: [UTType] = [.wav]
 
     func analyzeTrack(at url: URL) throws -> NativeAnalysisResult {
+        if analysisDelay > 0 {
+            Thread.sleep(forTimeInterval: analysisDelay)
+        }
         analyzeCount += 1
         return NativeAnalysisResult(lufsIntegrated: -12, truePeakDbtp: -1, dynamicRangeLu: 8)
     }
 
     func renderMaster(from sourceURL: URL, toDirectory: URL, options: NativeRenderOptions) throws -> NativeRenderJob {
+        if renderDelay > 0 {
+            Thread.sleep(forTimeInterval: renderDelay)
+        }
         renderCount += 1
         lastRenderOptions = options
         return NativeRenderJob(

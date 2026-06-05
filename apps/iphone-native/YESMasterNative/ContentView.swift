@@ -301,18 +301,27 @@ struct ContentView: View {
 
     @ViewBuilder
     private var processingBanner: some View {
-        if controller.isAnalyzing {
-            HStack(spacing: 10) {
-                ProcessingSpinner()
+        if controller.isAnalyzing || controller.isRendering {
+            VStack(spacing: 8) {
+                HStack(spacing: 10) {
+                    ProcessingSpinner()
 
-                Text("Analyzing track")
-                    .font(.system(size: 12, weight: .heavy))
-                    .foregroundStyle(Color(red: 0.72, green: 0.82, blue: 1.0))
+                    Text(controller.statusText)
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(Color(red: 0.72, green: 0.82, blue: 1.0))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
 
-                Spacer(minLength: 0)
+                    Spacer(minLength: 0)
+                }
+
+                ProgressView(value: processingProgressValue)
+                    .tint(Color(red: 0.43, green: 0.86, blue: 0.94))
+                    .frame(height: 3)
+                    .scaleEffect(x: 1, y: 0.72, anchor: .center)
             }
             .padding(.horizontal, 14)
-            .frame(height: 38)
+            .padding(.vertical, 9)
             .background(Color(red: 0.02, green: 0.045, blue: 0.10).opacity(0.76))
             .clipShape(Capsule())
             .overlay(
@@ -703,6 +712,10 @@ struct ContentView: View {
             return "Ready"
         }
         return controller.importedTrack == nil ? "Ready" : "Loaded"
+    }
+
+    private var processingProgressValue: Double {
+        controller.analysisProgress ?? controller.renderProgress ?? 0.12
     }
 
     private var heroSymbol: String {
