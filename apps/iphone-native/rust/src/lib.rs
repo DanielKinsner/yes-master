@@ -814,4 +814,37 @@ mod tests {
             "album must resolve no confidence"
         );
     }
+
+    // Documents the desktop-equivalent settings contract the native render builds
+    // for a non-default preset/intensity with a source-present context, asserted
+    // before render so a helper drift is caught directly (not only via the
+    // render-output parity test).
+    #[test]
+    fn native_render_settings_match_desktop_contract() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        write_sine_wav(&input);
+        let context = native_adaptive_context_for_path(&input).expect("adaptive context");
+
+        let settings =
+            export_settings_for_options_with_context(Some("warm"), 0.8, -9.0, Some(&context));
+
+        // Preset / intensity / loudness mapping.
+        assert_eq!(settings.preset, Preset::Warmth);
+        assert_eq!(settings.intensity, 0.8);
+        assert_eq!(settings.effective_target_lufs(), Some(-9.0));
+        // Fixed delivery contract for the phone target.
+        assert_eq!(settings.delivery_profile, DeliveryProfile::Custom);
+        assert_eq!(settings.effective_ceiling_dbtp(), -1.0);
+        assert_eq!(settings.effective_bit_depth(), 24);
+        assert_eq!(settings.effective_sample_rate(48_000), 44_100);
+        // Export forces Volume Match off.
+        assert!(!settings.volume_match);
+        // Source-present adaptive context is injected like desktop's command layer.
+        assert!(settings.advanced.source_profile.is_some());
+        assert_eq!(
+            settings.source_lufs_integrated,
+            Some(context.source_lufs_integrated)
+        );
+    }
 }
