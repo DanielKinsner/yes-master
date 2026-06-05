@@ -278,4 +278,33 @@ mod tests {
         write_silence_wav(&p, 44_100);
         assert_eq!(probe_sample_rate(&p).expect("probe"), 44_100);
     }
+
+    // Unsupported / garbage input must surface as a Decode error, never a
+    // panic, on every entry point.
+    #[test]
+    fn garbage_input_is_a_decode_error_not_a_panic() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let p = tmp.path().join("garbage.wav");
+        std::fs::write(&p, b"this is definitely not an audio container").expect("write garbage");
+        assert!(matches!(decode_full(&p), Err(CommandError::Decode(_))));
+        assert!(matches!(
+            decode_to_peaks(&p, 100),
+            Err(CommandError::Decode(_))
+        ));
+        assert!(matches!(
+            probe_sample_rate(&p),
+            Err(CommandError::Decode(_))
+        ));
+    }
+
+    #[test]
+    fn decode_full_round_trips_a_known_wav() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let p = tmp.path().join("silence.wav");
+        write_silence_wav(&p, 44_100);
+        let pcm = decode_full(&p).expect("decode");
+        assert_eq!(pcm.channels, 1);
+        assert_eq!(pcm.sample_rate, 44_100);
+        assert_eq!(pcm.samples.len(), 1024);
+    }
 }
