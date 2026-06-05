@@ -1,3 +1,8 @@
+param(
+    [ValidateSet("all", "frontend", "rust", "iphone")]
+    [string]$Lane = "all"
+)
+
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
@@ -17,21 +22,24 @@ function Invoke-Step {
     & $Command
 }
 
-try {
-    Set-Location $repoRoot
-
+function Invoke-FrontendLane {
     Invoke-Step "frontend tests" {
+        Set-Location $repoRoot
         npm test
     }
 
     Invoke-Step "frontend build" {
+        Set-Location $repoRoot
         npm run build
     }
 
     Invoke-Step "windows package build" {
+        Set-Location $repoRoot
         npm run build:windows
     }
+}
 
+function Invoke-RustLane {
     Invoke-Step "rust format check" {
         Set-Location (Join-Path $repoRoot "src-tauri")
         cargo fmt --check
@@ -51,7 +59,9 @@ try {
         Set-Location (Join-Path $repoRoot "src-tauri")
         cargo test --target-dir target\codex-rc
     }
+}
 
+function Invoke-IphoneLane {
     Invoke-Step "iphone rust bridge check" {
         Set-Location (Join-Path $repoRoot "apps\iphone-native\rust")
         cargo check --all-targets
@@ -61,9 +71,25 @@ try {
         Set-Location (Join-Path $repoRoot "apps\iphone-native\rust")
         cargo test
     }
+}
+
+try {
+    Set-Location $repoRoot
+
+    switch ($Lane) {
+        "frontend" { Invoke-FrontendLane }
+        "rust" { Invoke-RustLane }
+        "iphone" { Invoke-IphoneLane }
+        default {
+            Invoke-FrontendLane
+            Invoke-RustLane
+            Invoke-IphoneLane
+        }
+    }
 
     Write-Host ""
-    Write-Host "Fast verification lane passed." -ForegroundColor Green
+    $laneLabel = if ($Lane -eq "all") { "Fast verification lane" } else { "$Lane lane" }
+    Write-Host "$laneLabel passed." -ForegroundColor Green
 } finally {
     Set-Location $originalLocation
 }

@@ -12,7 +12,10 @@
     "tauri": "tauri",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify:fast": "powershell -ExecutionPolicy Bypass -File scripts/verify-fast.ps1"
+    "verify:fast": "powershell -ExecutionPolicy Bypass -File scripts/verify-fast.ps1",
+    "verify:frontend": "powershell -ExecutionPolicy Bypass -File scripts/verify-fast.ps1 -Lane frontend",
+    "verify:rust": "powershell -ExecutionPolicy Bypass -File scripts/verify-fast.ps1 -Lane rust",
+    "verify:iphone": "powershell -ExecutionPolicy Bypass -File scripts/verify-fast.ps1 -Lane iphone"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.1.1",
