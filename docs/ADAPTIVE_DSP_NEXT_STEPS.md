@@ -41,6 +41,14 @@ rationale for each item live in the finish plan:
 - "What was trimmed" readout → **built**.
 - Backend-owned-profile refactor → **DONE** (B2, see Done section above).
 - Album Master → **unadapted + labeled** (done).
+- Confidence detail → **backend/devtools only**. Do not add an everyday-user
+  confidence UI surface unless the owner explicitly reopens it.
+- 31-band detail → **adaptation input now**, not Phase-C readout-only. Wire
+  harsh/sibilant/tilt detail into the Phase-B backend path with mechanical
+  tests, while keeping confidence-gated behavior provisional until listening.
+- Premium progress language → **approved** when it reflects real stages. LANDR-
+  style staged copy is fine for analysis/rendering as long as the app does not
+  claim unbuilt steps such as genre detection.
 
 ## 🎚️ Tier-1 finish (remaining — calibrate by ear)
 
@@ -83,6 +91,10 @@ Tune in one place: `src-tauri/src/guardrails.rs`.
   + genre/style classification + reference-track upload / matching.
 - **Resonance / sibilance detection** (soothe / Gullfoss style); per-band stereo
   width matching (Ozone Width Match style).
+- **31-band adaptive input (owner decision 2026-06-05)** — use the existing
+  31-band curve to refine Phase-B adaptation now. Confidence remains backend-
+  only and gate-controlled; the work is not a preset retune or a release-stable
+  listening signoff.
 - **Total-loudness-loss budget (B3)** — when a delivery target is active (incl.
   Custom + an explicit `lufs_offset_db`), the post-chain LUFS landing recoups
   loudness the trims removed, so a multi-axis source can exceed a single per-axis

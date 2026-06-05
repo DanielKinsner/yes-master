@@ -87,9 +87,9 @@ Everything downstream waits on this. The confidence machinery is provisional unt
    - `RenderedMeasurements.confidence_digest` records a one-line `"bright 0.85 / low 0.20 / ..."` and
      `ExportReport.confidence_digest` preserves it through export-check/report plumbing. It is
      recorded only when a source profile exists, confidence resolved, and Adapt Strength is > 0.
-   - ⚠️ **These are exposed on the wire but NOT yet rendered in any UI element** — owner decision
-     (2026‑06‑04): keep confidence backend‑only for now; revisit a UI surface only if a real need
-     shows up during calibration. Inspect via the readout response / devtools meanwhile.
+   - ⚠️ **These are exposed on the wire but NOT rendered in any everyday-user UI element** — owner
+     decision (2026‑06‑04, reaffirmed 2026‑06‑05): keep confidence backend/devtools-only. Inspect via
+     the readout response / devtools during calibration.
 
 Until the gate flips on, **`main` is the Tier‑1 voicing the owner already trusts.**
 
@@ -107,8 +107,8 @@ Until the gate flips on, **`main` is the Tier‑1 voicing the owner already trus
 | P3 #7 — backend cache not evicted on track removal | ✅ `fcfa1d5` (`evict_source_profile`, FE‑wired) |
 | (iPhone parity) | ✅ `a5bbc0f` — iPhone now runs the deep‑capable path + resolves adaptive context like desktop (⚠️ reverses the old "mobile = deep OFF" default; confidence still gate‑respecting there) |
 | P3 — stale wiring comments + whitespace | ✅ `25f2957` (whitespace item was a **false positive** — autocrlf/CRLF, committed blob is clean LF) |
-| **P2 #3** — does the **31‑band** curve feed adaptation, or stay Phase‑C readout? | ❌ **open design decision** (owner's call) |
-| **P2 #6** — bright/low per‑window tonal uses the coarse 3‑band `compute_spectral_balance` (44.1k‑referenced SR skew), not the precise 31‑band | ❌ open (tied to P2 #3) |
+| **P2 #3** — does the **31‑band** curve feed adaptation, or stay Phase‑C readout? | ✅ owner decision 2026‑06‑05: **feed adaptation now** |
+| **P2 #6** — bright/low per‑window tonal uses the coarse 3‑band `compute_spectral_balance` (44.1k‑referenced SR skew), not the precise 31‑band | 🔄 implement now with P2 #3: wire 31‑band harsh/sibilant/tilt fixtures |
 
 ### Still Open After Codex Follow-up
 
@@ -116,8 +116,8 @@ These are the threads I did **not** fix in the follow-up commits:
 
 1. Owner by-ear calibration of the Phase B gate and constants. Do not call Phase B tuned until this
    happens against private audio.
-2. P2 #3 / P2 #6: decide whether 31-band analysis becomes an adaptation input, then either wire it
-   with harsh/sibilant/tilt fixtures or explicitly defer it to Phase C readout.
+2. P2 #3 / P2 #6: 31-band analysis is now owner-approved as adaptation input. Wire it with
+   harsh/sibilant/tilt fixtures; do not expose confidence in the everyday UI.
 3. PSR/crest closed-loop transient protection (§7.3): still planned, not built.
 4. Holistic already-mastered stand-down (§7.4): still planned, not built.
 5. 31-band rollup swap (§7.5): risky future change; needs tolerance tests plus album label-stability
@@ -171,11 +171,10 @@ These are the threads I did **not** fix in the follow-up commits:
 The audible feature steps are all **calibration‑gated** (provisional until the owner locks numbers):
 
 1. **Calibrate §7.2** (owner, §3) — the prerequisite for everything below.
-2. **Decide P2 #3 / P2 #6** — is the 31‑band curve a Phase B adaptation input (wire harsh/sibilant/
-   tilt into `Confidence::from_deep` or a new guardrail input, with tests proving harsh‑only vs
-   sibilant‑only vs airy sources adapt differently) or Phase‑C readout‑only? Currently the per‑window
-   bright/low triggers use the coarse 3‑band `compute_spectral_balance` (SR‑skewed) — fix or defer
-   with this decision.
+2. **Implement P2 #3 / P2 #6** — the 31‑band curve is now a Phase B adaptation input. Wire harsh/
+   sibilant/tilt into `Confidence::from_deep` or a new guardrail input, with tests proving harsh‑only
+   vs sibilant‑only vs airy sources adapt differently. Replace the coarse per‑window 3‑band tonal
+   trigger where it drives confidence.
 3. **§7.3 PSR/crest closed loop** — honest transient protection from the retained per‑window
    `sample_peak` + `loudness_key` (now correct after F1). If transients are healthy, don't compress.
 4. **§7.4 holistic already‑mastered stand‑down** — combine per‑stratum peak + integrated LUFS + crest
@@ -281,9 +280,8 @@ cargo test                        # 30 passed, 1 ignored
 1. Read this doc. Confirm you're on `main` and check `git log --oneline -8` for the latest follow-up
    commits.
 2. Run the §8 lanes — confirm all green (golden + preset_byte_identity included).
-3. Phase B is BUILT but OFF. The next real step is OWNER calibration (§3) — not yours to clear by
-   ear. If asked to PREP for it, you can build P2 #3/§7.5 fixtures (ears-free). Do NOT enable the
-   gate or tune constants without the owner.
+3. Phase B is BUILT but OFF. The owner has now approved 31-band as adaptation input, so wire P2 #3/P2
+   #6 with tests. Do NOT enable the gate by default or tune constants without owner listening.
 4. Keep changes byte-identity-safe (gate off => Tier-1). Tests-first. Small commits. ALWAYS run the
    iPhone `cargo check --all-targets` AND `cargo test` lanes after touching shared `yes_master_lib`.
 5. Do not add a FE surface for confidence unless the owner asks (backend-only for now).
