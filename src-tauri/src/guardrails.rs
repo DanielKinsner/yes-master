@@ -625,6 +625,16 @@ mod tests {
         }
     }
 
+    fn confidence_for_tone(freq: f32) -> crate::confidence::Confidence {
+        let sr = 48_000_u32;
+        let n = sr as usize * 3;
+        let omega = 2.0 * std::f32::consts::PI * freq / sr as f32;
+        let samples: Vec<f32> = (0..n).map(|i| 0.3 * (omega * i as f32).sin()).collect();
+        let windows = crate::deep_analysis::scan_windows(&samples, sr, 1);
+        let deep = crate::deep_analysis::DeepAnalysis::from_parts([1.0 / 31.0; 31], windows);
+        crate::confidence::Confidence::from_deep(&deep)
+    }
+
     #[test]
     fn readout_reports_trims_and_context_when_active() {
         // bright (presence+air 0.45) + dense (DR/LRA 2) + wide (corr 0.1); not boomy.
@@ -700,6 +710,32 @@ mod tests {
             full.bright_trim,
         );
         assert!(gated.bright_trim >= 0.0);
+    }
+
+    #[test]
+    fn readout_uses_31band_confidence_to_distinguish_harsh_from_air() {
+        let p = profile(0.20, 0.20, 0.08, 0.22, 10.0, 9.0, Some(0.8));
+        let mut s = settings_with(Some(p), Some(1.0));
+        let full = readout_for(&s);
+        assert!(full.bright_trim > 0.0);
+
+        s.advanced.source_confidence = Some(confidence_for_tone(12_000.0));
+        let airy = readout_for(&s);
+        assert!(
+            airy.bright_trim < full.bright_trim * 0.25,
+            "air-only 31-band read should back off bright trim: airy {} full {}",
+            airy.bright_trim,
+            full.bright_trim
+        );
+
+        s.advanced.source_confidence = Some(confidence_for_tone(3_000.0));
+        let harsh = readout_for(&s);
+        assert!(
+            harsh.bright_trim > full.bright_trim * 0.70,
+            "harsh 31-band read should preserve most bright trim: harsh {} full {}",
+            harsh.bright_trim,
+            full.bright_trim
+        );
     }
 
     #[test]

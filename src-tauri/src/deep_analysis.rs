@@ -2,7 +2,10 @@
 //! Additive: produced at analysis time, cached beside SourceProfile, consumed
 //! (later) by Phase B. See docs/superpowers/specs/2026-06-03-adaptive-dsp-tier2-phase-a-deep-analysis-design.md
 
+use std::sync::Arc;
+
 use crate::dsp::BiquadCoeffs; // existing K-weighting filters (k_weighting_pre/rlb)
+use rustfft::{num_complex::Complex, Fft, FftPlanner};
 
 // ---- Tuning constants (single source of truth) ----
 /// Short time-pass window (~0.34 s @48k) and 50% hop.
@@ -21,6 +24,12 @@ pub const HARSH_LO_HZ: f32 = 2_000.0;
 pub const HARSH_HI_HZ: f32 = 5_000.0;
 pub const SIBILANT_LO_HZ: f32 = 5_000.0;
 pub const SIBILANT_HI_HZ: f32 = 9_000.0;
+pub const AIR_LO_HZ: f32 = 9_000.0;
+pub const AIR_HI_HZ: f32 = 16_000.0;
+/// Short-window 31-band proxy FFT. Smaller than `SHORT_WINDOW` for cost, centered
+/// inside each retained window so the Phase-B temporal trigger is sample-rate-aware
+/// without turning deep analysis into a full mastering render.
+const WINDOW_DETAIL_FFT: usize = 4_096;
 
 /// One short-window's time-varying measurements (ordered series, §4.2).
 #[derive(Debug, Clone, Copy)]
@@ -43,6 +52,15 @@ pub struct WindowMetrics {
     pub low: f32,
     pub mid: f32,
     pub high: f32,
+    /// Sample-rate-aware one-third-octave detail derived from the same short
+    /// window. These feed Phase-B confidence so harsh/sibilant/air/bass behavior
+    /// no longer depends on the old approximate 3-band helper.
+    pub low_31: f32,
+    pub harsh_31: f32,
+    pub sibilant_31: f32,
+    pub air_31: f32,
+    /// High-detail minus low-detail balance, roughly [-1, 1].
+    pub tilt_31: f32,
 }
 
 /// Loudness-stratified aggregate of one axis over the finite-window set (§4.3).
@@ -253,6 +271,9 @@ pub fn scan_windows(samples: &[f32], sample_rate: u32, channels: usize) -> Vec<W
     let pre = BiquadCoeffs::k_weighting_pre(sample_rate);
     let rlb = BiquadCoeffs::k_weighting_rlb(sample_rate);
     let mom_frames = ((MOMENTARY_MS / 1000.0) * sample_rate as f32) as usize;
+    let detail_fft_size = WINDOW_DETAIL_FFT.min(SHORT_WINDOW);
+    let mut planner = FftPlanner::<f32>::new();
+    let detail_fft = planner.plan_fft_forward(detail_fft_size);
 
     let mut out = Vec::new();
     let mut start = 0usize;
@@ -266,6 +287,7 @@ pub fn scan_windows(samples: &[f32], sample_rate: u32, channels: usize) -> Vec<W
             mom_frames,
             &pre,
             &rlb,
+            &detail_fft,
         ));
         start += hop;
     }
@@ -294,10 +316,11 @@ fn measure_window(
     channels: usize,
     start: usize,
     window: usize,
-    _sample_rate: u32,
+    sample_rate: u32,
     mom_frames: usize,
     pre: &BiquadCoeffs,
     rlb: &BiquadCoeffs,
+    detail_fft: &Arc<dyn Fft<f32>>,
 ) -> WindowMetrics {
     // mono sum + L/R for this window
     let mut peak = 0.0_f32;
@@ -344,12 +367,10 @@ fn measure_window(
             }
         })
         .collect();
-    // NOTE: compute_spectral_balance is sample-rate-agnostic (bakes in a ~44.1k
-    // band reference), so this 3-band read carries a small SR skew at 48k+.
-    // Consistent/deterministic and matches infer_character's tone read
-    // elsewhere; that inherited assumption is why _sample_rate is currently
-    // unused here. Revisit for Phase B if finer banding is needed.
+    // The 3-band read is retained for Phase-A diagnostics and historical tests.
+    // Phase-B confidence consumes the sample-rate-aware 31-band detail below.
     let three = crate::analysis::compute_spectral_balance(&mono_slice, 1);
+    let detail = window_detail_features(&mono_slice, sample_rate, detail_fft);
 
     // stereo: width = side/(mid+side); correlation via two-pass.
     let (width, corr) = if channels > 1 {
@@ -367,6 +388,103 @@ fn measure_window(
         low: three.low,
         mid: three.mid,
         high: three.high,
+        low_31: detail.low,
+        harsh_31: detail.harsh,
+        sibilant_31: detail.sibilant,
+        air_31: detail.air,
+        tilt_31: detail.tilt,
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct WindowDetail {
+    low: f32,
+    harsh: f32,
+    sibilant: f32,
+    air: f32,
+    tilt: f32,
+}
+
+fn window_detail_features(
+    mono_slice: &[f32],
+    sample_rate: u32,
+    fft: &Arc<dyn Fft<f32>>,
+) -> WindowDetail {
+    let fft_size = fft.len();
+    if sample_rate == 0 || mono_slice.len() < fft_size || fft_size < 1024 {
+        return WindowDetail {
+            low: 0.0,
+            harsh: 0.0,
+            sibilant: 0.0,
+            air: 0.0,
+            tilt: 0.0,
+        };
+    }
+
+    let start = (mono_slice.len() - fft_size) / 2;
+    let two_pi = 2.0 * std::f32::consts::PI;
+    let mut buf: Vec<Complex<f32>> = Vec::with_capacity(fft_size);
+    for i in 0..fft_size {
+        let w = 0.5 * (1.0 - (two_pi * i as f32 / (fft_size as f32 - 1.0)).cos());
+        buf.push(Complex {
+            re: mono_slice[start + i] * w,
+            im: 0.0,
+        });
+    }
+    fft.process(&mut buf);
+
+    let bins = fft_size / 2;
+    let bin_hz = sample_rate as f32 / fft_size as f32;
+    let mut low = 0.0_f64;
+    let mut harsh = 0.0_f64;
+    let mut sibilant = 0.0_f64;
+    let mut air = 0.0_f64;
+    let mut upper = 0.0_f64;
+    let mut total = 0.0_f64;
+    for (bin, c) in buf.iter().copied().enumerate().take(bins).skip(1) {
+        let freq = bin as f32 * bin_hz;
+        let Some(idx) = crate::analysis::third_octave_band(freq) else {
+            continue;
+        };
+        let center = band_center_hz(idx);
+        let power = (c.re as f64) * (c.re as f64) + (c.im as f64) * (c.im as f64);
+        total += power;
+        if (20.0..250.0).contains(&center) {
+            low += power;
+        }
+        if (HARSH_LO_HZ..HARSH_HI_HZ).contains(&center) {
+            harsh += power;
+        }
+        if (SIBILANT_LO_HZ..SIBILANT_HI_HZ).contains(&center) {
+            sibilant += power;
+        }
+        if (AIR_LO_HZ..AIR_HI_HZ).contains(&center) {
+            air += power;
+        }
+        if (2_500.0..AIR_HI_HZ).contains(&center) {
+            upper += power;
+        }
+    }
+    if total <= 1.0e-12 {
+        return WindowDetail {
+            low: 0.0,
+            harsh: 0.0,
+            sibilant: 0.0,
+            air: 0.0,
+            tilt: 0.0,
+        };
+    }
+    let low = (low / total) as f32;
+    let harsh = (harsh / total) as f32;
+    let sibilant = (sibilant / total) as f32;
+    let air = (air / total) as f32;
+    let upper = (upper / total) as f32;
+    WindowDetail {
+        low,
+        harsh,
+        sibilant,
+        air,
+        tilt: (upper - low).clamp(-1.0, 1.0),
     }
 }
 
@@ -545,6 +663,28 @@ mod tests {
             // mono → correlation is NaN, width 0
             assert!(w.stereo_correlation.is_nan());
         }
+    }
+
+    #[test]
+    fn scan_windows_carries_31band_harsh_sibilant_and_air_detail() {
+        let sr = 48_000_u32;
+        let make = |freq: f32| {
+            let n = sr as usize * 2;
+            let omega = 2.0 * std::f32::consts::PI * freq / sr as f32;
+            let samples: Vec<f32> = (0..n).map(|i| 0.3 * (omega * i as f32).sin()).collect();
+            scan_windows(&samples, sr, 1)
+        };
+
+        let harsh = make(3_000.0);
+        let sibilant = make(7_000.0);
+        let air = make(12_000.0);
+        assert!(harsh.iter().all(|w| w.harsh_31 > 0.5), "{harsh:?}");
+        assert!(sibilant.iter().all(|w| w.sibilant_31 > 0.5), "{sibilant:?}");
+        assert!(air.iter().all(|w| w.air_31 > 0.5), "{air:?}");
+        assert!(
+            air.iter().all(|w| w.harsh_31 + w.sibilant_31 < 0.2),
+            "air-only windows should not look harsh/sibilant: {air:?}"
+        );
     }
 
     #[test]

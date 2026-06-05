@@ -352,7 +352,7 @@ pub(crate) const THIRD_OCTAVE_CENTERS: [f32; 31] = [
 /// so an occasional out-of-band bin is dropped via `continue` — acceptable
 /// because the tonal curve is re-normalized over captured energy (same way the
 /// 6-band pass already drops out-of-range bins).
-fn third_octave_band(freq: f32) -> Option<usize> {
+pub(crate) fn third_octave_band(freq: f32) -> Option<usize> {
     // A one-third-octave band spans 2^(1/3), so its edges sit at center ÷/× the
     // half-bandwidth ratio 2^(1/6) ≈ 1.1225 (= sqrt of the 2^(1/3) span).
     const HALF_STEP: f32 = 1.122_462_f32; // 2^(1/6)

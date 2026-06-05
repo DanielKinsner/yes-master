@@ -91,11 +91,13 @@ pub fn resolve_source_confidence(
 }
 
 // --- Provisional coverage thresholds (per-window "is the trait present?") ---
-/// A window counts as **bright** when its 3-band `high` share exceeds this
-/// (a flat/neutral window sits near 0.33). Provisional.
-const BRIGHT_WINDOW_SHARE: f32 = 0.40;
-/// A window counts as **boomy** when its 3-band `low` share exceeds this. Provisional.
-const LOW_WINDOW_SHARE: f32 = 0.40;
+/// A window counts as **bright/problematic** when its 31-band harsh+sibilant
+/// share exceeds this. Air-only sheen is deliberately not the same as harshness.
+/// Provisional.
+const BRIGHT_PROBLEM_WINDOW_SHARE: f32 = 0.35;
+/// A window counts as **boomy** when its sample-rate-aware 31-band low share
+/// exceeds this. Provisional.
+const LOW_31_WINDOW_SHARE: f32 = 0.35;
 /// A window counts as **dense** when its crest (peak/RMS, linear) is BELOW this
 /// (a sine sits ~1.41; limited masters trend lower). Provisional.
 const CREST_DENSE: f32 = 2.2;
@@ -173,41 +175,33 @@ impl Confidence {
         )
     }
 
-    /// Derive per-axis confidence from the Phase A deep analysis. Coverage is the
-    /// fraction of loudness-finite windows exhibiting each trait; consistency comes
-    /// from the per-axis dispersion (the stored strata IQR where Phase A retained
-    /// it; a fresh IQR over the per-window `low` share for the boom axis, which has
-    /// no stored stratum). Width uses the Fisher-z dispersion (bounded stat).
+    /// Derive per-axis confidence from the Phase A deep analysis. Bright and low
+    /// now consume the per-window 31-band detail (harsh/sibilant/tilt/low) instead
+    /// of the old approximate 3-band helper, so Phase B can back off airy-but-not-
+    /// harsh material while still acting on broad harshness or sibilance. Width
+    /// uses the Fisher-z dispersion (bounded stat).
     pub fn from_deep(d: &DeepAnalysis) -> Self {
         let keys: Vec<f32> = d.windows.iter().map(|w| w.loudness_key).collect();
-        let highs: Vec<f32> = d.windows.iter().map(|w| w.high).collect();
-        let lows: Vec<f32> = d.windows.iter().map(|w| w.low).collect();
+        let bright_problem: Vec<f32> = d.windows.iter().map(bright_problem_share).collect();
+        let lows_31: Vec<f32> = d.windows.iter().map(|w| w.low_31).collect();
         let crests: Vec<f32> = d.windows.iter().map(|w| w.crest).collect();
         let corrs: Vec<f32> = d.windows.iter().map(|w| w.stereo_correlation).collect();
-        // The boom axis has no stored stratum; compute its dispersion over the SAME
-        // loudness-finite windows coverage uses (matching the other axes' stored
-        // strata) so silent/tail windows don't dilute consistency differently than
-        // coverage.
-        let lows_keyed: Vec<f32> = d
-            .windows
-            .iter()
-            .filter(|w| w.loudness_key.is_finite())
-            .map(|w| w.low)
-            .collect();
+        let bright_problem_keyed = keyed_finite_values(&d.windows, bright_problem_share);
+        let lows_keyed = keyed_finite_values(&d.windows, |w| w.low_31);
         Self {
-            // brightness/density/width reuse the Phase A strata dispersion (IQR);
-            // the boom axis has no stored stratum, so its IQR is computed here.
+            // Brightness/low now use 31-band per-window detail. Density/width
+            // reuse the Phase A strata or Fisher-z dispersion.
             bright: axis_confidence(
-                &highs,
+                &bright_problem,
                 &keys,
-                |v| v > BRIGHT_WINDOW_SHARE,
-                d.brightness.dispersion,
+                |v| v > BRIGHT_PROBLEM_WINDOW_SHARE,
+                iqr(&bright_problem_keyed),
                 BRIGHT_DISP_FULL,
             ),
             low: axis_confidence(
-                &lows,
+                &lows_31,
                 &keys,
-                |v| v > LOW_WINDOW_SHARE,
+                |v| v > LOW_31_WINDOW_SHARE,
                 iqr(&lows_keyed),
                 LOW_DISP_FULL,
             ),
@@ -232,6 +226,26 @@ impl Confidence {
             ),
         }
     }
+}
+
+fn bright_problem_share(w: &crate::deep_analysis::WindowMetrics) -> f32 {
+    // 31-band harsh/sibilant detail is the primary trigger; spectral tilt is a
+    // gentle sanity check so a low-heavy window with a little upper energy is not
+    // treated the same as a genuinely upper-tilted harsh/sibilant window.
+    let tilt_weight = ((w.tilt_31 + 1.0) * 0.5).clamp(0.25, 1.0);
+    (w.harsh_31 + w.sibilant_31).clamp(0.0, 1.0) * tilt_weight
+}
+
+fn keyed_finite_values(
+    windows: &[crate::deep_analysis::WindowMetrics],
+    value: impl Fn(&crate::deep_analysis::WindowMetrics) -> f32,
+) -> Vec<f32> {
+    windows
+        .iter()
+        .filter(|w| w.loudness_key.is_finite())
+        .map(value)
+        .filter(|v| v.is_finite())
+        .collect()
 }
 
 /// Coverage (fraction of loudness-finite windows passing `trait_present`) and
@@ -327,13 +341,40 @@ mod tests {
     }
 
     #[test]
-    fn broad_consistent_bright_source_has_high_brightness_confidence() {
-        // A sustained HF-dominant tone reads "bright" in every window with near-zero
-        // dispersion -> high coverage AND high consistency.
-        let c = Confidence::from_deep(&deep_from_tone(12_000.0, 1));
+    fn broad_consistent_harsh_source_has_high_brightness_confidence() {
+        // A sustained 3 kHz tone lives in the 31-band harsh range in every
+        // window, so Phase B should let the brightness trim act.
+        let c = Confidence::from_deep(&deep_from_tone(3_000.0, 1));
         assert!(c.bright.coverage > 0.9, "coverage {:?}", c.bright);
         assert!(c.bright.consistency > 0.8, "consistency {:?}", c.bright);
         assert!(c.bright.confidence > 0.7, "confidence {:?}", c.bright);
+    }
+
+    #[test]
+    fn broad_consistent_sibilant_source_has_high_brightness_confidence() {
+        // Sibilance is distinct from harshness internally, but both are concrete
+        // 31-band reasons to allow the Tier-1 brightness trim.
+        let c = Confidence::from_deep(&deep_from_tone(7_000.0, 1));
+        assert!(c.bright.coverage > 0.9, "coverage {:?}", c.bright);
+        assert!(c.bright.confidence > 0.7, "confidence {:?}", c.bright);
+    }
+
+    #[test]
+    fn airy_not_harsh_source_backs_off_brightness_confidence() {
+        // The old coarse high-band trigger could treat a shiny 12 kHz air tone as
+        // "bright" and trim preset air globally. The 31-band Phase-B input keeps
+        // air-only material from looking like harshness or sibilance.
+        let c = Confidence::from_deep(&deep_from_tone(12_000.0, 1));
+        assert!(
+            c.bright.coverage < 0.2,
+            "air-only source should not look harsh/sibilant: {:?}",
+            c.bright
+        );
+        assert!(
+            c.bright.confidence < 0.2,
+            "air-only source should back off brightness trim: {:?}",
+            c.bright
+        );
     }
 
     #[test]
