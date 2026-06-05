@@ -52,6 +52,21 @@ cargo test --lib --target-dir target\codex-rc
 cargo test --target-dir target\codex-rc
 ```
 
+## iPhone Native Bridge Lane
+
+When changing shared Rust types, `yes_master_lib` behavior, adaptive/profile
+resolution, or `#[tauri::command]` signatures that the phone bridge may depend
+on, also run:
+
+```powershell
+cd apps/iphone-native/rust
+cargo check --all-targets
+cargo test
+```
+
+The desktop lanes do not compile this bridge. A shared struct or signature can
+drift here while all desktop checks stay green.
+
 ## Slow Fixture Lane
 
 Use this only when local private fixtures exist under
