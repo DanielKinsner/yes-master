@@ -16,6 +16,7 @@ import { Knob, intensityLabel } from "./components/Knob";
 import { SignalChain } from "./components/SignalChain";
 import { EmptyState } from "./components/EmptyState";
 import { StatusDot } from "./components/StatusDot";
+import { Toast } from "./components/Toast";
 import type {
   AnalysisResult,
   CompressionMode,
@@ -2965,25 +2966,6 @@ function SelectField({
           </option>
         ))}
       </select>
-    </div>
-  );
-}
-
-function Toast({
-  message,
-  tone = "danger",
-  onClose,
-}: {
-  message: string;
-  tone?: "danger" | "ok" | "info" | "warn";
-  onClose: () => void;
-}) {
-  return (
-    <div className={`toast toast-${tone}`}>
-      <span>{message}</span>
-      <button type="button" className="toast-close" onClick={onClose} aria-label="Dismiss">
-        ×
-      </button>
     </div>
   );
 }
