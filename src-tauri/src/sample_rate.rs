@@ -95,4 +95,50 @@ mod tests {
             "converted sine should retain audible signal energy"
         );
     }
+
+    // A zero rate is only reached when source != target, because the
+    // same-rate fast path returns first (0 == 0 would copy, not error).
+    #[test]
+    fn convert_interleaved_rejects_zero_source_rate() {
+        let input = sine(44_100, 0.01, 2);
+        let result = convert_interleaved(&input, 0, 48_000, 2);
+        assert!(matches!(result, Err(CommandError::Render(_))));
+    }
+
+    #[test]
+    fn convert_interleaved_rejects_zero_target_rate() {
+        let input = sine(44_100, 0.01, 2);
+        let result = convert_interleaved(&input, 44_100, 0, 2);
+        assert!(matches!(result, Err(CommandError::Render(_))));
+    }
+
+    #[test]
+    fn convert_interleaved_rejects_non_divisible_length() {
+        // 3 samples cannot split evenly across 2 channels.
+        let result = convert_interleaved(&[0.0, 0.0, 0.0], 44_100, 48_000, 2);
+        assert!(matches!(result, Err(CommandError::Render(_))));
+    }
+
+    #[test]
+    fn convert_interleaved_empty_input_is_empty_ok() {
+        let converted = convert_interleaved(&[], 44_100, 48_000, 2).expect("empty SRC");
+        assert!(converted.is_empty());
+    }
+
+    #[test]
+    fn convert_interleaved_mono_stays_finite_and_lands_near_target_length() {
+        let input = sine(44_100, 0.1, 1);
+        let converted = convert_interleaved(&input, 44_100, 48_000, 1).expect("mono SRC");
+        assert!(
+            converted.iter().all(|s| s.is_finite()),
+            "conversion must not introduce NaN/Inf"
+        );
+        // mono: one sample per frame. Length tracks the rate ratio.
+        let output_frames = converted.len() as i64;
+        let expected = (input.len() as f64 * 48_000.0 / 44_100.0) as i64;
+        assert!(
+            (output_frames - expected).abs() <= 2,
+            "expected ~{expected} frames, got {output_frames}"
+        );
+    }
 }
