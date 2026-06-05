@@ -446,13 +446,18 @@ export function useTrackMaster() {
       unlistenTick = fn;
     });
     onRenderProgress((evt) => {
+      // Any fresh progress supersedes a still-pending "clear the bar" timer
+      // from a prior completion. Without cancelling on EVERY event, render A
+      // reaching 1.0 schedules a 600ms clear that can fire mid render B (which
+      // started <600ms later) and wipe B's bar. The effect cleanup cancels a
+      // still-pending clear on unmount.
+      if (renderProgressClearTimer) {
+        clearTimeout(renderProgressClearTimer);
+        renderProgressClearTimer = undefined;
+      }
       setRenderProgress({ fraction: evt.fraction, kind: evt.kind });
       // Clear the bar shortly after reaching 1.0 so it doesn't linger.
-      // Capture the handle so the effect cleanup can cancel a pending
-      // clear (and replace any prior pending one), matching the autosave
-      // effect's capture-and-clear pattern below.
       if (evt.fraction >= 1.0) {
-        if (renderProgressClearTimer) clearTimeout(renderProgressClearTimer);
         renderProgressClearTimer = setTimeout(() => setRenderProgress(null), 600);
       }
     }).then((fn) => {

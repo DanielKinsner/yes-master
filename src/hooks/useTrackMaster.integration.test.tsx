@@ -1820,3 +1820,43 @@ describe("staged analysis progress", () => {
     }
   });
 });
+
+describe("render progress timer", () => {
+  it("a previous render's completion clear does not wipe a newly-started render", async () => {
+    let emitRenderProgress!: (evt: {
+      fraction: number;
+      kind: "preview" | "master" | "album";
+    }) => void;
+    mocks.onRenderProgress.mockImplementation((cb) => {
+      emitRenderProgress = cb;
+      return Promise.resolve(() => {});
+    });
+
+    const harness = await renderHookHarness();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      // Render A completes -> schedules the 600ms "clear the bar" timer.
+      await act(async () => {
+        emitRenderProgress({ fraction: 1.0, kind: "master" });
+      });
+      // Render B starts <600ms later (a fresh, non-completion event).
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+        emitRenderProgress({ fraction: 0.1, kind: "master" });
+      });
+      // Past A's 600ms window: its stale clear must NOT have fired.
+      await act(async () => {
+        vi.advanceTimersByTime(600);
+      });
+      expect(harness.current().renderProgress).toEqual({
+        fraction: 0.1,
+        kind: "master",
+      });
+    } finally {
+      vi.useRealTimers();
+      await act(async () => {
+        harness.root.unmount();
+      });
+    }
+  });
+});
