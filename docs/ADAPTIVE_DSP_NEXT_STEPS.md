@@ -27,6 +27,10 @@ rationale for each item live in the finish plan:
   unbuilt genre/style detection (`2683f42`, `611f5ff`). `npm run verify:fast`
   is available for the documented frontend + desktop Rust + iPhone Rust bridge
   lane (`a386d81`).
+- **Whole-track Welch spectral window — DONE (2026-06-05):** the 6-band tonal
+  read is no longer just the first ~5.5 s; `compute_spectral_balance_6band`
+  now Welch-averages across the track and is covered by
+  `spectral_balance_6band_reflects_whole_track_not_just_intro`.
 - **Backend-owned `source_profile` (B2) — DONE (2026-06-02):** the backend is now
   the SINGLE derivation point. `analyze_tracks` derives + caches the profile in a
   `SourceProfileStore` (`src-tauri/src/profile_store.rs`); every Track-Master chain
@@ -66,9 +70,8 @@ Tune in one place: `src-tauri/src/guardrails.rs`.
   zero excess by construction. The principled fix behind the deadband bump. [002 §1]
 - **Density cap semantics** — reshape the density trim against the engagement
   curve so "keep ≥40%" is honest in dB gain-reduction; revisit the default-vs-cap
-  interaction (at 0.6 the dial is a no-op above default on dense material). [002 §2]
-- **Whole-track Welch spectral window** — the 6-band tonal read is the first
-  ~5.5 s; average across the track. Note: shifts role/character/album inference too. [002 §3]
+  interaction (current default is 0.5; fully dense sources saturate once strength
+  reaches the `DENSITY_CAP` of 0.60). [002 §2]
 - **`stereo_width` as a width co-trigger** — computed + carried, currently unused. [002 §4]
 - **Per-axis EQ floors / `LOW_DEADBAND` ear-calibration** — bass-forward genres. [002 §6]
 - **`LRA → Option<f32>`** cleanup (optional; the minimal guard already shipped). [002 §9]
@@ -129,11 +132,12 @@ Tune in one place: `src-tauri/src/guardrails.rs`.
 > "before treating adaptive DSP as release-stable" listening pass, not a
 > pre-merge blocker. (Merged ≠ ear-validated.)
 
-- Listening A/B: Adapt `0` vs `60%` on already-mastered / bright / dense / wide
+- Listening A/B: Adapt `0` vs `50%` on already-mastered / bright / dense / wide
   **and** neutral sources; confirm neutral does ~nothing, then lock the constants
   in `guardrails.rs`.
 - Slow fixture lane (`AMS_RUN_REAL_FIXTURE`) — now exercises the adaptive chain.
-- **2026-06-03 UI session:** Reset now restores Adapt Strength to 0.6; the
+- **2026-06-03 UI session:** Reset now restores Adapt Strength to the explicit
+  default, currently 0.5; the
   Adapt Strength block now shows a per-axis readout with source-share-vs-deadband
   so a `-0%` reads as "source in range." Dan's report that the EQ/Width trims
   "don't move with the slider" was root-caused to the **deadbands** (the slider
