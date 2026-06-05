@@ -7,9 +7,11 @@ procedure, not a backlog — the backlog lives in `docs/ADAPTIVE_DSP_NEXT_STEPS.
 
 ## 0. Orientation (read once, 2 min)
 
-- **Nothing is broken or waiting in a degraded state.** `main` is the validated **Tier-1** voicing, green,
-  byte-identical-safe, shippable today. Phase B (confidence gating) is **OFF by default** and reduce-only,
-  so it cannot overcook a master.
+- **Nothing is broken or waiting in a degraded state — but this is NOT release-cleared.** `main` is green
+  and not degraded: the validated **Tier-1** voicing, byte-identical-safe, with Phase B (confidence gating)
+  **OFF by default** and reduce-only (it cannot overcook a master). The manual listening signoff and the
+  release-stabilization gates are still pending (`docs/RELEASE_STABILIZATION.md`,
+  `docs/ADAPTIVE_DSP_NEXT_STEPS.md`), so do not treat the human listening gate as already cleared.
 - This session is about **advancing** — deciding whether to turn the next tier *on* and locking its
   provisional numbers by ear. It is a taste/identity gate, not a correctness one.
 - The whole 2026-06-03 GLOBAL review is triaged and **closed on code**: 15 already-fixed, 3 stale, 0 open
