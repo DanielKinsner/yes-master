@@ -65,7 +65,7 @@ Use the slow fixture lane before DSP/export merges:
 ```powershell
 cd src-tauri
 $env:AMS_RUN_REAL_FIXTURE = "1"
-cargo test
+cargo test --target-dir target\codex-rc
 Remove-Item Env:\AMS_RUN_REAL_FIXTURE
 ```
 

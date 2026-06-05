@@ -50,7 +50,7 @@ Run from `src-tauri`:
 
 ```powershell
 $env:AMS_RUN_REAL_FIXTURE = "1"
-cargo test
+cargo test --target-dir target\codex-rc
 Remove-Item Env:\AMS_RUN_REAL_FIXTURE
 ```
 
