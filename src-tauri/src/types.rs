@@ -87,7 +87,7 @@ pub struct AnalysisResult {
     pub character_confidence: Option<InferenceConfidence>,
     // Phase A5: richer analysis measurements ported from Codex's
     // analysis.py. All optional so older serialized analyses still load.
-    /// 6-band spectral balance via FFT (Hann-windowed, up to 30 s of mono).
+    /// 6-band spectral balance via FFT (Hann-windowed, whole-track Welch-averaged mono).
     #[serde(default)]
     pub spectral_balance_6band: Option<SpectralBalance6>,
     /// Spectral-flux-based transient density. Higher = more percussive.
