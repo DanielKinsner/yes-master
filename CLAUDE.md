@@ -41,8 +41,10 @@ npm test
 npm run build
 npm run build:windows
 cd src-tauri
-cargo test --lib
-cargo test
+cargo fmt --check
+cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings
+cargo test --lib --target-dir target\codex-rc
+cargo test --target-dir target\codex-rc
 ```
 
 When you touch shared crate types or `#[tauri::command]` signatures, also build
