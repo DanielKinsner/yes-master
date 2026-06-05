@@ -483,3 +483,41 @@ mod resolve_tests {
         assert_eq!(resolve_album_sample_rate(None, &[]), 48_000);
     }
 }
+
+#[cfg(test)]
+mod unique_path_tests {
+    use super::*;
+    use std::fs;
+
+    // AGENTS.md non-negotiable: exports never overwrite a prior render. The
+    // continuous-album writer has its own uniqueness helper, so pin that a
+    // second allocation in the same directory dodges an existing file and
+    // both renders survive on disk.
+    #[test]
+    fn unique_album_path_never_overwrites_a_prior_render() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let out = dir.path();
+
+        let first = unique_album_path(out).expect("first path");
+        fs::write(&first, b"first").expect("write first");
+
+        let second = unique_album_path(out).expect("second path");
+        assert_ne!(first, second, "second render must not reuse the first path");
+        fs::write(&second, b"second").expect("write second");
+
+        // Nothing was overwritten: both files exist and keep their contents.
+        assert!(first.exists());
+        assert!(second.exists());
+        assert_eq!(fs::read(&first).expect("read first"), b"first");
+
+        // Naming contract (timestamp value intentionally not asserted).
+        for path in [&first, &second] {
+            let name = path.file_name().unwrap().to_string_lossy();
+            assert!(
+                name.starts_with("album_continuous_"),
+                "unexpected prefix: {name}"
+            );
+            assert!(name.ends_with(".wav"), "unexpected suffix: {name}");
+        }
+    }
+}
