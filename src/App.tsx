@@ -15,6 +15,7 @@ import { AlbumPanel } from "./components/AlbumPanel";
 import { Knob, intensityLabel } from "./components/Knob";
 import { SignalChain } from "./components/SignalChain";
 import { EmptyState } from "./components/EmptyState";
+import { StatusDot } from "./components/StatusDot";
 import type {
   AnalysisResult,
   CompressionMode,
@@ -253,21 +254,6 @@ function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         </span>
       </div>
     </footer>
-  );
-}
-
-function StatusDot({
-  tone,
-  label,
-}: {
-  tone: "idle" | "ok" | "warn" | "bad";
-  label: string;
-}) {
-  return (
-    <span className={`status-dot-row status-dot-${tone}`} title={label}>
-      <span className="status-dot-glyph" aria-hidden />
-      <span className="status-dot-label">{label}</span>
-    </span>
   );
 }
 
