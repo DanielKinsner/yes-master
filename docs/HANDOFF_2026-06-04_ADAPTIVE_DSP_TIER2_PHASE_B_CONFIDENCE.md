@@ -85,8 +85,8 @@ Everything downstream waits on this. The confidence machinery is provisional unt
    presets distinct — the homogenization fix). Use the slow fixture lane with private audio:
    `cd src-tauri; $env:AMS_RUN_REAL_FIXTURE = "1"; cargo test --target-dir target/codex-rc`.
 3. Tune the **provisional constants** — all in `src-tauri/src/confidence.rs` (single source of truth):
-   coverage thresholds (`BRIGHT_WINDOW_SHARE`, `LOW_WINDOW_SHARE`, `CREST_DENSE`, the reused
-   `WIDTH_CORR_WIDE`) and dispersion scales (`*_DISP_FULL`). Lock them by ear.
+   coverage thresholds (`BRIGHT_PROBLEM_WINDOW_SHARE`, `LOW_31_WINDOW_SHARE`, `CREST_DENSE`, the
+   reused `WIDTH_CORR_WIDE`) and dispersion scales (`*_DISP_FULL`). Lock them by ear.
 4. **Traceability for the calibration session (already built, Codex P3 #6):**
    - `GuardrailReadout.confidence` carries the live per‑axis `{coverage, consistency, confidence}`
      (validate *why* an axis acted, by eye).
