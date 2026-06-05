@@ -417,6 +417,7 @@ export function useTrackMaster() {
   useEffect(() => {
     let unlistenTick: (() => void) | undefined;
     let unlistenProgress: (() => void) | undefined;
+    let renderProgressClearTimer: ReturnType<typeof setTimeout> | undefined;
     onPlaybackTick((tick) => {
       lastPlaybackTickRef.current = {
         trackId: tick.track_id,
@@ -447,8 +448,12 @@ export function useTrackMaster() {
     onRenderProgress((evt) => {
       setRenderProgress({ fraction: evt.fraction, kind: evt.kind });
       // Clear the bar shortly after reaching 1.0 so it doesn't linger.
+      // Capture the handle so the effect cleanup can cancel a pending
+      // clear (and replace any prior pending one), matching the autosave
+      // effect's capture-and-clear pattern below.
       if (evt.fraction >= 1.0) {
-        setTimeout(() => setRenderProgress(null), 600);
+        if (renderProgressClearTimer) clearTimeout(renderProgressClearTimer);
+        renderProgressClearTimer = setTimeout(() => setRenderProgress(null), 600);
       }
     }).then((fn) => {
       unlistenProgress = fn;
@@ -456,6 +461,7 @@ export function useTrackMaster() {
     return () => {
       unlistenTick?.();
       unlistenProgress?.();
+      if (renderProgressClearTimer) clearTimeout(renderProgressClearTimer);
     };
   }, []);
 
