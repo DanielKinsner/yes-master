@@ -1,10 +1,8 @@
 import {
   useEffect,
-  useId,
   useRef,
   useState,
   type DragEvent as ReactDragEvent,
-  type PointerEvent as ReactPointerEvent,
 } from "react";
 import { api } from "./lib/api";
 import { useTrackMaster } from "./hooks/useTrackMaster";
@@ -19,18 +17,16 @@ import { StatusDot } from "./components/StatusDot";
 import { Toast } from "./components/Toast";
 import { ChromeDialog } from "./components/ChromeDialog";
 import { SettingsGroup } from "./components/SettingsGroup";
-import { WaveformDbScale } from "./components/WaveformDbScale";
+import { WaveformView } from "./components/Waveform";
 import type {
   AnalysisResult,
   CompressionMode,
   DeliveryProfile,
   GuardrailReadout,
   ImportedTrack,
-  LoopRegion,
   MasteringSettings,
   Preset,
   UserPreset,
-  WaveformPeaks,
   QualityCheck,
   QualityLevel,
 } from "./bindings";
@@ -50,7 +46,6 @@ import {
 } from "./lib/effective-settings";
 import { compressorAutoReadouts } from "./lib/compressor-auto";
 import { isToneFlat } from "./lib/tone-reset";
-import { waveformLoadingView } from "./lib/waveform-progress";
 import "./App.css";
 
 const PRESET_OPTIONS: { value: Preset; label: string; blurb: string }[] = [
@@ -1175,318 +1170,7 @@ function AnalysisSummary({ analysis }: { analysis: AnalysisResult }) {
 // (with the current stage label + percent); `loading` shows an indeterminate
 // sweeping bar for the waveform decode (no real fraction available); `idle`
 // is the plain empty state.
-export function WaveformLoading({
-  isAnalyzing,
-  isLoadingWaveform,
-  analysisProgress,
-}: {
-  isAnalyzing: boolean;
-  isLoadingWaveform: boolean;
-  analysisProgress: { label: string; progress: number } | null;
-}) {
-  const view = waveformLoadingView({
-    isAnalyzing,
-    analysisProgress,
-    isLoadingWaveform,
-  });
-  const labelId = useId();
-  const showBar = view.mode !== "idle";
-  const determinate = view.mode === "analyzing" && view.percent !== null;
-  return (
-    <div className={`wf-loading wf-loading-${view.mode}`}>
-      <div className="wf-loading-row">
-        {/* Only the stage LABEL is a polite live region, so a screen reader
-            announces each stage once ("Reading tonal balance") rather than
-            re-reading the percent + the bar's value on every ~1.4 s tick. The
-            progressbar below (outside any live region) carries the numeric
-            value for AT to poll; the visible percent is decorative. */}
-        <span
-          id={labelId}
-          className="wf-loading-text"
-          role="status"
-          aria-live="polite"
-        >
-          {view.label}
-        </span>
-        {view.percent !== null && (
-          <span className="wf-loading-pct" aria-hidden="true">
-            {view.percent}%
-          </span>
-        )}
-      </div>
-      {showBar && (
-        <div
-          className={`wf-loading-bar${determinate ? "" : " is-indeterminate"}`}
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={determinate ? (view.percent ?? undefined) : undefined}
-          aria-labelledby={labelId}
-        >
-          {determinate ? (
-            <span
-              className="wf-loading-bar-fill"
-              style={{ width: `${view.percent}%` }}
-            />
-          ) : (
-            <span className="wf-loading-bar-sweep" />
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function WaveformView({
-  peaks,
-  isLoading,
-  isAnalyzing,
-  analysisProgress,
-  currentTimeSec,
-  durationSec,
-  region,
-  onSeek,
-  onSetRegion,
-  onClearRegion,
-}: {
-  peaks: WaveformPeaks | undefined;
-  isLoading: boolean;
-  isAnalyzing: boolean;
-  analysisProgress: { label: string; progress: number } | null;
-  currentTimeSec: number;
-  durationSec: number;
-  region: LoopRegion | null;
-  onSeek: (positionSec: number) => void;
-  onSetRegion: (region: LoopRegion) => void;
-  onClearRegion: () => void;
-}) {
-  const [dragRegion, setDragRegion] = useState<LoopRegion | null>(null);
-
-  // Show the waveform whenever the SELECTED track has peaks; otherwise show the
-  // prepare-progress surface (staged analysis bar → indeterminate decode bar →
-  // idle "no waveform yet"). Gating on `!peaks` alone — not the GLOBAL
-  // isAnalyzing/isLoading flags — keeps an already-decoded track's waveform,
-  // transport, playhead, and loop region on screen while a DIFFERENT imported
-  // track analyzes or decodes in the background. isAnalyzing/isLoading still
-  // flow into WaveformLoading to pick the right progress mode for the genuine
-  // first-load case (when this track has no peaks yet).
-  if (!peaks) {
-    return (
-      <section className="wf-card">
-        <WaveformLoading
-          isAnalyzing={isAnalyzing}
-          isLoadingWaveform={isLoading}
-          analysisProgress={analysisProgress}
-        />
-      </section>
-    );
-  }
-  const channel = peaks.channels[0] ?? [];
-  const W = 1000;
-  const H = 240;
-  const playheadX =
-    durationSec > 0
-      ? Math.max(0, Math.min(W, (currentTimeSec / durationSec) * W))
-      : 0;
-
-  const timeAtPointer = (e: ReactPointerEvent<SVGSVGElement>): number => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    if (rect.width <= 0 || durationSec <= 0) return 0;
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    return ratio * durationSec;
-  };
-
-  const handlePointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
-    if (durationSec <= 0) return;
-    const t = timeAtPointer(e);
-    if (e.shiftKey) {
-      e.preventDefault();
-      try {
-        e.currentTarget.setPointerCapture(e.pointerId);
-      } catch {
-        /* setPointerCapture can throw on some platforms; we still track via state */
-      }
-      setDragRegion({ start_sec: t, end_sec: t });
-    } else {
-      onSeek(t);
-    }
-  };
-
-  const handlePointerMove = (e: ReactPointerEvent<SVGSVGElement>) => {
-    if (!dragRegion) return;
-    const t = timeAtPointer(e);
-    setDragRegion({ start_sec: dragRegion.start_sec, end_sec: t });
-  };
-
-  const handlePointerUp = (_e: ReactPointerEvent<SVGSVGElement>) => {
-    if (!dragRegion) return;
-    const start = Math.min(dragRegion.start_sec, dragRegion.end_sec);
-    const end = Math.max(dragRegion.start_sec, dragRegion.end_sec);
-    const meaningfulDrag =
-      durationSec > 0 && end - start > Math.max(0.1, durationSec * 0.005);
-    if (meaningfulDrag) {
-      onSetRegion({ start_sec: start, end_sec: end });
-    } else if (region) {
-      onClearRegion();
-    }
-    setDragRegion(null);
-  };
-
-  const displayRegion: LoopRegion | null = dragRegion ?? region;
-  const regionRect = displayRegion && durationSec > 0
-    ? (() => {
-        const startX = Math.max(
-          0,
-          Math.min(W, (Math.min(displayRegion.start_sec, displayRegion.end_sec) / durationSec) * W),
-        );
-        const endX = Math.max(
-          0,
-          Math.min(W, (Math.max(displayRegion.start_sec, displayRegion.end_sec) / durationSec) * W),
-        );
-        return { startX, endX };
-      })()
-    : null;
-
-  return (
-    <section className="wf-card">
-      <div className="wf-main">
-      <svg
-        className="wf"
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        role="slider"
-        aria-label="Waveform — click to seek, shift+drag to set a loop region"
-        aria-valuemin={0}
-        aria-valuemax={durationSec}
-        aria-valuenow={currentTimeSec}
-      >
-        {channel.map((v, i) => {
-          const x = (i / channel.length) * W;
-          const barW = (W / channel.length) * 0.85;
-          const barH = v * (H * 0.88);
-          const y = (H - barH) / 2;
-          return <rect key={i} x={x} y={y} width={barW} height={barH} rx={0.5} />;
-        })}
-        {regionRect && (
-          <rect
-            className="wf-region"
-            x={regionRect.startX}
-            y={0}
-            width={Math.max(1, regionRect.endX - regionRect.startX)}
-            height={H}
-          />
-        )}
-        <line
-          className="wf-playhead"
-          x1={playheadX}
-          y1={0}
-          x2={playheadX}
-          y2={H}
-        />
-      </svg>
-      <WaveformDbScale />
-      </div>
-      <WaveformOverview
-        channel={channel}
-        currentTimeSec={currentTimeSec}
-        durationSec={durationSec}
-        region={displayRegion}
-        onSeek={onSeek}
-      />
-      <p className="wf-hint">
-        Click to seek. Shift+drag to define a loop region. Shift+click clears it.
-      </p>
-    </section>
-  );
-}
-
-function WaveformOverview({
-  channel,
-  currentTimeSec,
-  durationSec,
-  region,
-  onSeek,
-}: {
-  channel: number[];
-  currentTimeSec: number;
-  durationSec: number;
-  region: LoopRegion | null;
-  onSeek: (positionSec: number) => void;
-}) {
-  // Compact 48 px-high overview rendered below the main waveform. Click-to-
-  // seek only — no shift-drag region edit here, the main waveform handles
-  // that. Adds a "viewport" rectangle showing what's currently in the
-  // main waveform's visible window; for v1 the main waveform shows the
-  // whole track, so the viewport equals the visible region (or the loop
-  // region if set).
-  const W = 1000;
-  const H = 48;
-  const playheadX =
-    durationSec > 0
-      ? Math.max(0, Math.min(W, (currentTimeSec / durationSec) * W))
-      : 0;
-  const regionRect = region && durationSec > 0
-    ? (() => {
-        const startX = Math.max(
-          0,
-          Math.min(W, (Math.min(region.start_sec, region.end_sec) / durationSec) * W),
-        );
-        const endX = Math.max(
-          0,
-          Math.min(W, (Math.max(region.start_sec, region.end_sec) / durationSec) * W),
-        );
-        return { startX, endX };
-      })()
-    : null;
-  const handlePointer = (e: ReactPointerEvent<SVGSVGElement>) => {
-    if (durationSec <= 0) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    if (rect.width <= 0) return;
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    onSeek(ratio * durationSec);
-  };
-  return (
-    <svg
-      className="wf-overview"
-      viewBox={`0 0 ${W} ${H}`}
-      preserveAspectRatio="none"
-      onPointerDown={handlePointer}
-      role="slider"
-      aria-label="Waveform overview — click to seek"
-      aria-valuemin={0}
-      aria-valuemax={durationSec}
-      aria-valuenow={currentTimeSec}
-    >
-      {channel.map((v, i) => {
-        const x = (i / channel.length) * W;
-        const barW = (W / channel.length) * 0.85;
-        const barH = v * (H * 0.92);
-        const y = (H - barH) / 2;
-        return <rect key={i} x={x} y={y} width={barW} height={barH} rx={0.5} />;
-      })}
-      {regionRect && (
-        <rect
-          className="wf-overview-region"
-          x={regionRect.startX}
-          y={0}
-          width={Math.max(1, regionRect.endX - regionRect.startX)}
-          height={H}
-        />
-      )}
-      <line
-        className="wf-overview-playhead"
-        x1={playheadX}
-        y1={0}
-        x2={playheadX}
-        y2={H}
-      />
-    </svg>
-  );
-}
+export { WaveformView, WaveformLoading } from "./components/Waveform";
 
 /// UI_LAYOUT_REVISION_1600x940 L1 — slim Transport.
 /// Original/Mastered + Volume Match moved to TrackHeader (their natural
