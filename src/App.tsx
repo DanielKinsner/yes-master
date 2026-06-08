@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useRef,
   useState,
   type DragEvent as ReactDragEvent,
@@ -1173,8 +1174,7 @@ function AnalysisSummary({ analysis }: { analysis: AnalysisResult }) {
 // `analyzing` drives a determinate bar from the staged analysis progress
 // (with the current stage label + percent); `loading` shows an indeterminate
 // sweeping bar for the waveform decode (no real fraction available); `idle`
-// is the plain empty state. role=status + aria-live announces the stage
-// changes to assistive tech without stealing focus.
+// is the plain empty state.
 export function WaveformLoading({
   isAnalyzing,
   isLoadingWaveform,
@@ -1189,14 +1189,29 @@ export function WaveformLoading({
     analysisProgress,
     isLoadingWaveform,
   });
+  const labelId = useId();
   const showBar = view.mode !== "idle";
   const determinate = view.mode === "analyzing" && view.percent !== null;
   return (
-    <div className={`wf-loading wf-loading-${view.mode}`} role="status" aria-live="polite">
+    <div className={`wf-loading wf-loading-${view.mode}`}>
       <div className="wf-loading-row">
-        <span className="wf-loading-text">{view.label}</span>
+        {/* Only the stage LABEL is a polite live region, so a screen reader
+            announces each stage once ("Reading tonal balance") rather than
+            re-reading the percent + the bar's value on every ~1.4 s tick. The
+            progressbar below (outside any live region) carries the numeric
+            value for AT to poll; the visible percent is decorative. */}
+        <span
+          id={labelId}
+          className="wf-loading-text"
+          role="status"
+          aria-live="polite"
+        >
+          {view.label}
+        </span>
         {view.percent !== null && (
-          <span className="wf-loading-pct">{view.percent}%</span>
+          <span className="wf-loading-pct" aria-hidden="true">
+            {view.percent}%
+          </span>
         )}
       </div>
       {showBar && (
@@ -1206,7 +1221,7 @@ export function WaveformLoading({
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={determinate ? (view.percent ?? undefined) : undefined}
-          aria-label={view.label}
+          aria-labelledby={labelId}
         >
           {determinate ? (
             <span
@@ -1222,7 +1237,7 @@ export function WaveformLoading({
   );
 }
 
-function WaveformView({
+export function WaveformView({
   peaks,
   isLoading,
   isAnalyzing,
@@ -1247,11 +1262,15 @@ function WaveformView({
 }) {
   const [dragRegion, setDragRegion] = useState<LoopRegion | null>(null);
 
-  // While the track is being prepared the deck shows progress instead of the
-  // waveform: the staged analysis bar (the slow part the user waits on), then
-  // an indeterminate decode bar. `!peaks` also covers the brief gap before
-  // either flag flips, and the idle "no waveform yet" edge.
-  if (isAnalyzing || isLoading || !peaks) {
+  // Show the waveform whenever the SELECTED track has peaks; otherwise show the
+  // prepare-progress surface (staged analysis bar → indeterminate decode bar →
+  // idle "no waveform yet"). Gating on `!peaks` alone — not the GLOBAL
+  // isAnalyzing/isLoading flags — keeps an already-decoded track's waveform,
+  // transport, playhead, and loop region on screen while a DIFFERENT imported
+  // track analyzes or decodes in the background. isAnalyzing/isLoading still
+  // flow into WaveformLoading to pick the right progress mode for the genuine
+  // first-load case (when this track has no peaks yet).
+  if (!peaks) {
     return (
       <section className="wf-card">
         <WaveformLoading

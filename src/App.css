@@ -1550,18 +1550,10 @@ button.primary:disabled {
   letter-spacing: 0.02em;
 }
 
-.wf-empty {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-2);
-  font-size: 0.85rem;
-}
-
 /* Analysis / waveform-decode progress shown in the waveform deck before
-   the waveform exists. Replaces the old static "Loading…" text so the long
-   analyze pass reads as active work, not an idle blank. */
+   the waveform exists. Replaces the old static "Loading…" text (and the
+   former .wf-empty rule) so the long analyze pass reads as active work,
+   not an idle blank. */
 .wf-loading {
   height: 100%;
   display: flex;

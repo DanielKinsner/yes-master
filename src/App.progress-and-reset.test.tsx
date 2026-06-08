@@ -2,8 +2,8 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Macros, WaveformLoading } from "./App";
-import type { MasteringSettings } from "./bindings";
+import { Macros, WaveformLoading, WaveformView } from "./App";
+import type { MasteringSettings, WaveformPeaks } from "./bindings";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
   true;
@@ -111,6 +111,65 @@ describe("WaveformLoading", () => {
     );
     expect(container.textContent ?? "").toContain("No waveform yet.");
     expect(container.querySelector('[role="progressbar"]')).toBeNull();
+    await act(async () => root.unmount());
+  });
+});
+
+describe("WaveformView busy gating", () => {
+  const peaks: WaveformPeaks = {
+    track_id: "wf-1",
+    channels: [[0.1, 0.3, 0.2, 0.4, 0.25]],
+    samples_per_pixel: 512,
+    total_samples: 2560,
+    sample_rate: 44_100,
+  };
+
+  function renderView(
+    p: WaveformPeaks | undefined,
+    flags: { isAnalyzing: boolean; isLoading: boolean },
+  ) {
+    return render(
+      <WaveformView
+        peaks={p}
+        isLoading={flags.isLoading}
+        isAnalyzing={flags.isAnalyzing}
+        analysisProgress={{ label: "Analyzing audio", progress: 0.14 }}
+        currentTimeSec={0}
+        durationSec={180}
+        region={null}
+        onSeek={vi.fn()}
+        onSetRegion={vi.fn()}
+        onClearRegion={vi.fn()}
+      />,
+    );
+  }
+
+  it("keeps the waveform on screen when peaks exist even while a different track analyzes", async () => {
+    // Regression: importing a 2nd file flips the GLOBAL isAnalyzing flag; the
+    // currently-selected, already-decoded track must NOT blank to the
+    // progress surface.
+    const { container, root } = await renderView(peaks, {
+      isAnalyzing: true,
+      isLoading: true,
+    });
+    expect(
+      container.querySelector('[role="slider"][aria-label^="Waveform"]'),
+    ).not.toBeNull();
+    expect(container.querySelector('[role="progressbar"]')).toBeNull();
+    expect(container.textContent ?? "").not.toContain("Analyzing audio");
+    await act(async () => root.unmount());
+  });
+
+  it("shows the analysis progress surface when the selected track has no peaks yet", async () => {
+    const { container, root } = await renderView(undefined, {
+      isAnalyzing: true,
+      isLoading: false,
+    });
+    expect(
+      container.querySelector('[role="slider"][aria-label^="Waveform"]'),
+    ).toBeNull();
+    expect(container.querySelector('[role="progressbar"]')).not.toBeNull();
+    expect(container.textContent ?? "").toContain("Analyzing audio");
     await act(async () => root.unmount());
   });
 });
