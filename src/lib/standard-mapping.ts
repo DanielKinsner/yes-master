@@ -10,6 +10,8 @@ import type { Preset } from "../bindings";
 export type StandardStyleId = "balanced" | "bright" | "warm" | "heavy";
 export type StandardLoudnessId = "low" | "medium" | "high";
 
+export type StandardTone = "blue" | "cyan" | "gold" | "purple";
+
 /// The four tiles, in display order, with the metadata the UI renders.
 /// `tone` reuses the Knob/accent tone vocabulary already in the app.
 export const STANDARD_STYLES: ReadonlyArray<{
@@ -17,7 +19,7 @@ export const STANDARD_STYLES: ReadonlyArray<{
   label: string;
   subtitle: string;
   preset: Preset;
-  tone: string; // accent tone, drives the tile's accent color
+  tone: StandardTone; // accent tone, drives the tile's accent color
 }> = [
   { id: "balanced", label: "Balanced", subtitle: "Clean balance", preset: { kind: "universal" }, tone: "blue" },
   { id: "bright", label: "Bright", subtitle: "Air & detail", preset: { kind: "clarity" }, tone: "cyan" },
@@ -39,9 +41,8 @@ export const STANDARD_LOUDNESS: ReadonlyArray<{
 
 export function styleToPreset(style: StandardStyleId): Preset {
   const found = STANDARD_STYLES.find((s) => s.id === style);
-  // The union is exhaustive over StandardStyleId, so this never throws in
-  // practice; the fallback keeps the function total for defensive callers.
-  return found ? found.preset : { kind: "universal" };
+  if (!found) throw new Error(`unknown standard style: ${style}`);
+  return found.preset;
 }
 
 /// Reverse: the engine preset -> the Standard tile that owns it, or null
@@ -49,13 +50,17 @@ export function styleToPreset(style: StandardStyleId): Preset {
 /// returning from Advanced still carrying `spatial`). UI shows no active
 /// tile in that case until the user picks one.
 export function presetToStyle(preset: Preset): StandardStyleId | null {
+  // Custom presets have unique ids — a future custom tile must not be matched
+  // by kind alone, so bail out before the kind-based lookup below.
+  if (preset.kind === "custom") return null;
   const found = STANDARD_STYLES.find((s) => s.preset.kind === preset.kind);
   return found ? found.id : null;
 }
 
 export function loudnessToTarget(loudness: StandardLoudnessId): number {
   const found = STANDARD_LOUDNESS.find((l) => l.id === loudness);
-  return found ? found.lufs : -14;
+  if (!found) throw new Error(`unknown standard loudness: ${loudness}`);
+  return found.lufs;
 }
 
 /// Reverse: an effective LUFS target -> the matching step, or null when

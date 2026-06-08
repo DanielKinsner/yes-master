@@ -39,11 +39,10 @@ describe("standard style mapping (the reference-4)", () => {
       "warm",
       "heavy",
     ]);
-    for (const s of STANDARD_STYLES) {
-      expect(s.label.length).toBeGreaterThan(0);
-      expect(s.subtitle.length).toBeGreaterThan(0);
-      expect(s.tone.length).toBeGreaterThan(0);
-    }
+    expect(STANDARD_STYLES[0]).toMatchObject({ label: "Balanced", subtitle: "Clean balance", tone: "blue" });
+    expect(STANDARD_STYLES[1]).toMatchObject({ label: "Bright",   subtitle: "Air & detail",  tone: "cyan" });
+    expect(STANDARD_STYLES[2]).toMatchObject({ label: "Warm",     subtitle: "Glue & body",   tone: "gold" });
+    expect(STANDARD_STYLES[3]).toMatchObject({ label: "Heavy",    subtitle: "Sub & weight",  tone: "purple" });
   });
 });
 
