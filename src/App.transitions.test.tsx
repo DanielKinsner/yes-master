@@ -1,0 +1,489 @@
+// src/App.transitions.test.tsx
+//
+// End-to-end integration tests that mount the REAL <App/> and exercise the
+// Standard<->Advanced view-mode wiring landed in Task 10. These tests drive the
+// view entirely through the two deterministic inputs the wiring reads:
+//
+//   * localStorage key `yes-master:view-mode` -> seeds useViewMode's initial
+//     resolution (a `{migrated:true, lastView:…}` value resolves synchronously
+//     on first render; its absence makes useViewMode wait for the session
+//     signal before resolving).
+//   * the `api.loadRecentSession` mock -> drives `hadPriorSession` (returning
+//     vs new user) and, when it returns a track whose settings carry a
+//     non-default field (`eq_low_db: 3`), makes `hasNonManagedEdits` true so
+//     the always-clean entry guard forces Advanced.
+//
+// No DOM-driving of knobs is needed to set up the initial view. The only DOM
+// interactions are the affordance buttons ("Advanced" / "‹ Back to Standard")
+// and the confirm-modal action ("Reset & continue") — which is the actual
+// surface a user touches. We assert on rendered DOM (affordance button text,
+// presence/absence of the desk Sidebar, the confirm dialog) rather than on
+// mock internals.
+//
+// Mounting harness + api-mock shape are copied from
+// useTrackMaster.integration.test.tsx so <App/> mounts without throwing.
+
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+
+import App from "./App";
+import type {
+  ImportedTrack,
+  MasteringSettings,
+  ProjectMode,
+  ProjectState,
+  WaveformPeaks,
+} from "./bindings";
+
+(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean })
+  .IS_REACT_ACT_ENVIRONMENT = true;
+
+const mocks = vi.hoisted(() => {
+  const api = {
+    importTracks: vi.fn(),
+    analyzeTracks: vi.fn(),
+    renderTrackPreview: vi.fn(),
+    renderTrackMaster: vi.fn(),
+    prepareWaveform: vi.fn(),
+    runExportChecks: vi.fn(),
+    openOutput: vi.fn(),
+    saveProject: vi.fn(),
+    autosaveSession: vi.fn(),
+    loadRecentSession: vi.fn(),
+    loadProject: vi.fn(),
+    saveUserPreset: vi.fn(),
+    listUserPresets: vi.fn(),
+    deleteUserPreset: vi.fn(),
+    evictSourceProfile: vi.fn(),
+    playTrack: vi.fn(),
+    playMaster: vi.fn(),
+    updateChain: vi.fn(),
+    prewarmDecode: vi.fn(),
+    pausePlayback: vi.fn(),
+    resumePlayback: vi.fn(),
+    stopPlayback: vi.fn(),
+    seekPlayback: vi.fn(),
+    setLoopRegion: vi.fn(),
+    planAlbum: vi.fn(),
+    renderAlbumPlan: vi.fn(),
+  };
+  return {
+    api,
+    onPlaybackTick: vi.fn(),
+    onRenderProgress: vi.fn(),
+    open: vi.fn(),
+    save: vi.fn(),
+    onDragDropEvent: vi.fn(),
+  };
+});
+
+vi.mock("./lib/api", () => ({
+  api: mocks.api,
+  onPlaybackTick: mocks.onPlaybackTick,
+  onRenderProgress: mocks.onRenderProgress,
+}));
+
+vi.mock("./lib/tauri-runtime", () => ({
+  open: mocks.open,
+  save: mocks.save,
+  getCurrentWebview: () => ({
+    onDragDropEvent: mocks.onDragDropEvent,
+  }),
+}));
+
+const DEFAULT_SETTINGS: MasteringSettings = {
+  preset: { kind: "universal" },
+  intensity: 0.5,
+  eq_sub_db: 0,
+  eq_low_db: 0,
+  eq_low_mid_db: 0,
+  eq_mid_db: 0,
+  eq_high_mid_db: 0,
+  eq_high_db: 0,
+  eq_sparkle_db: 0,
+  volume_match: false,
+  input_gain_db: 0,
+  output_gain_db: 0,
+  delivery_profile: "streaming-universal",
+  advanced: {
+    lufs_offset_db: null,
+    ceiling_dbtp: null,
+    width: null,
+    warmth: null,
+    presence_air: null,
+    compression_density: null,
+    compression_low_threshold_db: null,
+    compression_low_ratio: null,
+    compression_low_attack_ms: null,
+    compression_low_release_ms: null,
+    compression_mid_threshold_db: null,
+    compression_mid_ratio: null,
+    compression_mid_attack_ms: null,
+    compression_mid_release_ms: null,
+    compression_high_threshold_db: null,
+    compression_high_ratio: null,
+    compression_high_attack_ms: null,
+    compression_high_release_ms: null,
+    compression_link_stereo: null,
+    bit_depth: null,
+    target_sample_rate: null,
+  },
+};
+
+function makeTrack(id: string, path: string): ImportedTrack {
+  return {
+    id,
+    path,
+    display_name: `${id}.wav`,
+    source_format: "wav",
+    duration_seconds: 10,
+    sample_rate: 44_100,
+    channels: 2,
+  };
+}
+
+function makeWaveform(trackId: string): WaveformPeaks {
+  return {
+    track_id: trackId,
+    channels: [[], []],
+    samples_per_pixel: 512,
+    total_samples: 0,
+    sample_rate: 44_100,
+  };
+}
+
+/// A restorable session whose single track carries `settings`. `mode` defaults
+/// to "track"; pass "album" to seed Album mode (which forces Advanced).
+function makeSession(
+  settings: MasteringSettings,
+  mode: ProjectMode = "track",
+): ProjectState {
+  const track = makeTrack("restored-1", "C:/audio/restored.wav");
+  return {
+    schema_version: 1,
+    mode,
+    tracks: [track],
+    track_order: [track.id],
+    track_settings: { [track.id]: settings },
+    album_intent: null,
+    track_override_album: [],
+    last_saved_iso: null,
+  };
+}
+
+const CLEAN_SETTINGS: MasteringSettings = DEFAULT_SETTINGS;
+const DIRTY_SETTINGS: MasteringSettings = {
+  ...DEFAULT_SETTINGS,
+  // A non-default Tone Shape band -> hasNonManagedEdits() === true, so the
+  // entry guard forces Advanced and the return door routes through confirm.
+  eq_low_db: 3,
+};
+
+function seedViewMode(lastView: "standard" | "advanced") {
+  localStorage.setItem(
+    "yes-master:view-mode",
+    JSON.stringify({ migrated: true, lastView }),
+  );
+}
+
+async function waitFor(assertion: () => void, timeoutMs = 2000): Promise<void> {
+  const startedAt = Date.now();
+  let lastError: unknown;
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      });
+    }
+  }
+  throw lastError;
+}
+
+function resetApiMocks() {
+  for (const fn of Object.values(mocks.api)) {
+    (fn as Mock).mockReset();
+    (fn as Mock).mockResolvedValue(null);
+  }
+  mocks.open.mockReset();
+  mocks.save.mockReset();
+  mocks.onDragDropEvent.mockReset();
+  mocks.onPlaybackTick.mockReset();
+  mocks.onRenderProgress.mockReset();
+
+  mocks.api.listUserPresets.mockResolvedValue([]);
+  mocks.api.loadRecentSession.mockResolvedValue(null);
+  mocks.api.importTracks.mockResolvedValue([]);
+  mocks.api.analyzeTracks.mockResolvedValue([]);
+  mocks.api.prepareWaveform.mockImplementation((trackId: string) =>
+    Promise.resolve(makeWaveform(trackId)),
+  );
+  mocks.api.prewarmDecode.mockResolvedValue(null);
+  mocks.api.autosaveSession.mockResolvedValue(null);
+  mocks.api.stopPlayback.mockResolvedValue(null);
+  mocks.onPlaybackTick.mockResolvedValue(() => {});
+  mocks.onRenderProgress.mockResolvedValue(() => {});
+  mocks.onDragDropEvent.mockResolvedValue(() => {});
+}
+
+function installTestLocalStorage() {
+  const values = new Map<string, string>();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, String(value));
+      },
+      removeItem: (key: string) => {
+        values.delete(key);
+      },
+      clear: () => {
+        values.clear();
+      },
+    },
+  });
+}
+
+async function mountApp(): Promise<{ root: Root; container: HTMLDivElement }> {
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  await act(async () => {
+    root.render(<App />);
+  });
+  return { root, container };
+}
+
+// ---- DOM queries (stable selectors only) -----------------------------------
+
+/// The header affordance button. Its text discriminates the view:
+/// "Advanced" in Standard, "‹ Back to Standard" in Advanced.
+function affordance(container: HTMLElement): HTMLButtonElement | null {
+  const buttons = Array.from(
+    container.querySelectorAll<HTMLButtonElement>("button.top-advanced"),
+  );
+  return buttons[0] ?? null;
+}
+
+function affordanceText(container: HTMLElement): string {
+  return (affordance(container)?.textContent ?? "").trim();
+}
+
+/// The desk Sidebar (<aside class="sidebar">) renders only in Advanced.
+function hasSidebar(container: HTMLElement): boolean {
+  return container.querySelector("aside.sidebar") !== null;
+}
+
+/// The Back-to-Standard confirm modal: role="dialog" aria-label="Back to Standard".
+function confirmDialog(container: HTMLElement): HTMLElement | null {
+  return container.querySelector<HTMLElement>(
+    '[role="dialog"][aria-label="Back to Standard"]',
+  );
+}
+
+function findButtonByText(
+  container: HTMLElement,
+  text: string,
+): HTMLButtonElement {
+  const button = Array.from(
+    container.querySelectorAll<HTMLButtonElement>("button"),
+  ).find((b) => (b.textContent ?? "").trim() === text);
+  if (!button) throw new Error(`button with text "${text}" not found`);
+  return button;
+}
+
+async function click(el: HTMLElement): Promise<void> {
+  await act(async () => {
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+}
+
+beforeEach(() => {
+  installTestLocalStorage();
+  localStorage.clear();
+  resetApiMocks();
+});
+
+afterEach(() => {
+  document.body.innerHTML = "";
+});
+
+describe("App Standard<->Advanced view transitions", () => {
+  it("1) new user with no prior session lands in Standard (no Sidebar, Advanced affordance)", async () => {
+    // No view-mode key, no restorable session -> resolveInitialViewMode picks
+    // Standard for a brand-new user.
+    mocks.api.loadRecentSession.mockResolvedValue(null);
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(affordanceText(container)).toBe("Advanced");
+    });
+    expect(hasSidebar(container)).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("2) returning user with a clean prior session lands in Advanced (Sidebar + Back affordance)", async () => {
+    // No view-mode key but a restorable session with >=1 track ->
+    // hadPriorSession=true -> Advanced.
+    mocks.api.loadRecentSession.mockResolvedValue(makeSession(CLEAN_SETTINGS));
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(hasSidebar(container)).toBe(true);
+    });
+    expect(affordanceText(container)).toBe("‹ Back to Standard");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("3) migrated-last-Standard with a clean track stays Standard (no bounce)", async () => {
+    seedViewMode("standard");
+    mocks.api.loadRecentSession.mockResolvedValue(makeSession(CLEAN_SETTINGS));
+    const { root, container } = await mountApp();
+
+    // Let the session restore settle so the entry guard has the real track +
+    // (clean) settings to evaluate; a clean track must NOT bounce to Advanced.
+    await waitFor(() => {
+      expect(container.querySelector(".std-tiles")).not.toBeNull();
+    });
+    expect(affordanceText(container)).toBe("Advanced");
+    expect(hasSidebar(container)).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("4) take control: clicking Advanced from Standard reveals the desk", async () => {
+    seedViewMode("standard");
+    mocks.api.loadRecentSession.mockResolvedValue(makeSession(CLEAN_SETTINGS));
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(container.querySelector(".std-tiles")).not.toBeNull();
+    });
+    expect(hasSidebar(container)).toBe(false);
+
+    await click(affordance(container)!);
+
+    await waitFor(() => {
+      expect(hasSidebar(container)).toBe(true);
+    });
+    expect(affordanceText(container)).toBe("‹ Back to Standard");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("5) back to Standard with a clean track returns silently (no confirm modal)", async () => {
+    // Reach Advanced via take-control on a clean track (scenario 4 state), then
+    // return: with no non-managed edits the door switches straight to Standard.
+    seedViewMode("standard");
+    mocks.api.loadRecentSession.mockResolvedValue(makeSession(CLEAN_SETTINGS));
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(container.querySelector(".std-tiles")).not.toBeNull();
+    });
+    await click(affordance(container)!);
+    await waitFor(() => {
+      expect(hasSidebar(container)).toBe(true);
+    });
+
+    // Return door — clean settings => no confirm.
+    await click(affordance(container)!);
+
+    await waitFor(() => {
+      expect(container.querySelector(".std-tiles")).not.toBeNull();
+    });
+    expect(confirmDialog(container)).toBeNull();
+    expect(affordanceText(container)).toBe("Advanced");
+    expect(hasSidebar(container)).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("6) dirty entry bounce: last-Standard but a dirty track forces Advanced", async () => {
+    // localStorage seeds Standard, so useViewMode resolves "standard"
+    // synchronously — but the entry guard sees the restored track's dirty
+    // settings (eq_low_db !== 0) and forces Advanced.
+    seedViewMode("standard");
+    mocks.api.loadRecentSession.mockResolvedValue(makeSession(DIRTY_SETTINGS));
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(hasSidebar(container)).toBe(true);
+    });
+    expect(affordanceText(container)).toBe("‹ Back to Standard");
+    // Standard surface must NOT be on screen.
+    expect(container.querySelector(".std-tiles")).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("7) back to Standard with dirty edits opens the confirm modal; Reset & continue returns to Standard", async () => {
+    seedViewMode("standard");
+    mocks.api.loadRecentSession.mockResolvedValue(makeSession(DIRTY_SETTINGS));
+    const { root, container } = await mountApp();
+
+    // Forced into Advanced by the dirty entry guard.
+    await waitFor(() => {
+      expect(hasSidebar(container)).toBe(true);
+    });
+    expect(affordanceText(container)).toBe("‹ Back to Standard");
+
+    // Return door with dirty edits -> confirm modal appears.
+    await click(affordance(container)!);
+    await waitFor(() => {
+      expect(confirmDialog(container)).not.toBeNull();
+    });
+
+    // Reset & continue -> modal closes, view returns to Standard.
+    await click(findButtonByText(container, "Reset & continue"));
+
+    await waitFor(() => {
+      expect(confirmDialog(container)).toBeNull();
+      expect(affordanceText(container)).toBe("Advanced");
+    });
+    expect(hasSidebar(container)).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("8) album-mode session forces Advanced even when last-Standard", async () => {
+    // Album Master is Advanced-only in v1: even with last-Standard seeded and a
+    // clean track, an album-mode session must force Advanced.
+    seedViewMode("standard");
+    mocks.api.loadRecentSession.mockResolvedValue(
+      makeSession(CLEAN_SETTINGS, "album"),
+    );
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(hasSidebar(container)).toBe(true);
+    });
+    expect(affordanceText(container)).toBe("‹ Back to Standard");
+    expect(container.querySelector(".std-tiles")).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+});
