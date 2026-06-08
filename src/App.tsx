@@ -6,6 +6,9 @@ import {
 } from "react";
 import { api } from "./lib/api";
 import { useTrackMaster } from "./hooks/useTrackMaster";
+import { useViewMode } from "./hooks/useViewMode";
+import { StandardView } from "./components/StandardView";
+import { hasNonManagedEdits, shouldForceAdvancedOnStandardEntry } from "./lib/standard-managed";
 import { PresetIcon } from "./components/PresetIcon";
 import { RightRail, MasterOutPanel } from "./components/RightRail";
 import { VisualEqPanel } from "./components/VisualEqPanel";
@@ -64,6 +67,44 @@ function App() {
   const [chromePanel, setChromePanel] = useState<"settings" | "help" | null>(null);
   useWebviewZoomShortcuts();
 
+  const { view, setView } = useViewMode(tm.hadPriorSession);
+  const [returnConfirm, setReturnConfirm] = useState(false);
+
+  // WYSIWYG: the live Mastered audition equals the export only when the
+  // loudness landing + limiter are applied in real time. Standard forces
+  // that via the INTERNAL flag — it never touches the user-facing Advanced
+  // `Preview LUFS` toggle (see Task 5 step 3g).
+  useEffect(() => {
+    if (view === null) return;
+    tm.setForceWysiwyg(view === "standard");
+  }, [view, tm.setForceWysiwyg]);
+
+  // The always-clean invariant + Album-only-in-Advanced, enforced at EVERY
+  // entry to Standard — not just the return door. If the selected track
+  // carries hidden Advanced edits (opened project, restored session, or a
+  // track switch), or we're in Album mode, show it in Advanced instead.
+  // Pure decision lives in `shouldForceAdvancedOnStandardEntry` (Task 2, tested).
+  useEffect(() => {
+    if (view !== "standard") return;
+    if (
+      shouldForceAdvancedOnStandardEntry({
+        isAlbum: tm.mode === "album",
+        hasTrack: !!tm.selectedTrack,
+        settings: tm.selectedSettings,
+      })
+    ) {
+      setView("advanced");
+    }
+  }, [view, tm.mode, tm.selectedTrack, tm.selectedSettings, setView]);
+
+  const requestBackToStandard = () => {
+    if (hasNonManagedEdits(tm.selectedSettings)) {
+      setReturnConfirm(true);
+    } else {
+      setView("standard");
+    }
+  };
+
   return (
     <div className="app-root">
       <TopHeader
@@ -73,8 +114,13 @@ function App() {
         onOpenProject={tm.openProjectFromDisk}
         onOpenSettings={() => setChromePanel("settings")}
         onOpenHelp={() => setChromePanel("help")}
+        viewMode={view === "advanced" ? "advanced" : "standard"}
+        onEnterAdvanced={() => setView("advanced")}
+        onBackToStandard={requestBackToStandard}
       />
     <div className="app">
+      {view !== "standard" && (
+        <>
       <Sidebar
         tracks={tm.tracks}
         selectedId={tm.selectedTrackId}
@@ -141,6 +187,10 @@ function App() {
         onUpdatePreview={tm.updatePreview}
         onExport={tm.exportMaster}
       />
+        </>
+      )}
+      {view === "standard" && tm.selectedTrack && <StandardView tm={tm} />}
+      {view === "standard" && !tm.selectedTrack && <EmptyState onAdd={tm.openImportDialog} />}
       {tm.isDragOver && (
         <div className="drop-overlay" aria-hidden>
           <div className="drop-overlay-card">
@@ -160,7 +210,7 @@ function App() {
           onClose={tm.clearProjectFeedback}
         />
       ) : null}
-      {tm.lastExportReceipt && (
+      {tm.lastExportReceipt && view !== "standard" && (
         <ExportReceiptCard
           receipt={tm.lastExportReceipt}
           onClose={tm.clearExportReceipt}
@@ -171,6 +221,24 @@ function App() {
       )}
       {chromePanel === "help" && (
         <HelpPanel onClose={() => setChromePanel(null)} />
+      )}
+      {returnConfirm && (
+        <BackToStandardConfirm
+          saving={tm.savingPreset}
+          onCancel={() => setReturnConfirm(false)}
+          onReset={() => { tm.resetToStandardManaged(); setReturnConfirm(false); setView("standard"); }}
+          onSaveAsPreset={async (name) => {
+            // Only reset + switch if the save actually succeeded — the save
+            // is async; never discard the user's edits when the write failed.
+            const ok = await tm.saveUserPreset(name);
+            if (ok) {
+              tm.resetToStandardManaged();
+              setReturnConfirm(false);
+              setView("standard");
+            }
+            return ok;
+          }}
+        />
       )}
     </div>
     <BottomStatusBar tm={tm} />
@@ -265,6 +333,9 @@ export function TopHeader({
   onOpenProject,
   onOpenSettings,
   onOpenHelp,
+  viewMode,
+  onEnterAdvanced,
+  onBackToStandard,
 }: {
   mode: "track" | "album";
   onModeChange: (mode: "track" | "album") => void;
@@ -272,6 +343,9 @@ export function TopHeader({
   onOpenProject: () => void;
   onOpenSettings: () => void;
   onOpenHelp: () => void;
+  viewMode: "standard" | "advanced";
+  onEnterAdvanced: () => void;
+  onBackToStandard: () => void;
 }) {
   return (
     <header className="top-header">
@@ -303,6 +377,15 @@ export function TopHeader({
         </button>
       </nav>
       <div className="top-header-right">
+        {viewMode === "standard" ? (
+          <button type="button" className="ghost-btn top-advanced" onClick={onEnterAdvanced}>
+            Advanced
+          </button>
+        ) : (
+          <button type="button" className="ghost-btn top-advanced" onClick={onBackToStandard}>
+            ‹ Back to Standard
+          </button>
+        )}
         <button
           type="button"
           className="icon-tile"
@@ -435,6 +518,66 @@ export function HelpPanel({ onClose }: { onClose: () => void }) {
         ))}
       </div>
     </ChromeDialog>
+  );
+}
+
+function BackToStandardConfirm({
+  saving,
+  onCancel,
+  onReset,
+  onSaveAsPreset,
+}: {
+  saving: boolean;
+  onCancel: () => void;
+  onReset: () => void;
+  onSaveAsPreset: (name: string) => Promise<boolean>;
+}) {
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const disabled = saving || busy;
+  const handleSave = async () => {
+    const trimmed = name.trim();
+    if (!trimmed || disabled) return;
+    setBusy(true);
+    try {
+      // On success the parent unmounts this modal; on failure it stays open
+      // with the edits intact so the user can retry.
+      await onSaveAsPreset(trimmed);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="modal-scrim" role="dialog" aria-modal="true" aria-label="Back to Standard">
+      <div className="modal-card">
+        <h2 className="modal-title">Back to Standard</h2>
+        <p className="modal-body">
+          Back to Standard resets your manual edits to the preset's clean sound.
+          Save them as a preset first?
+        </p>
+        <div className="modal-save-row">
+          <input
+            className="modal-input"
+            placeholder="Preset name"
+            value={name}
+            disabled={disabled}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <button
+            type="button"
+            className="primary"
+            disabled={disabled || name.trim().length === 0}
+            onClick={handleSave}
+          >
+            {busy ? "Saving…" : "Save as preset"}
+          </button>
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="ghost-btn" disabled={disabled} onClick={onCancel}>Cancel</button>
+          <button type="button" className="danger-btn" disabled={disabled} onClick={onReset}>Reset & continue</button>
+        </div>
+      </div>
+    </div>
   );
 }
 

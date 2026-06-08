@@ -201,6 +201,14 @@ function baseTrackMasterState(): Record<string, unknown> {
     savingPreset: false,
     saveCurrentPreset: vi.fn(),
     deleteUserPresetById: vi.fn(),
+    // Standard-view wiring (Task 10): App reads/calls these on the hook.
+    // `hadPriorSession: true` resolves useViewMode to Advanced so the desk
+    // (the surface these tests assert on) renders as before.
+    hadPriorSession: true,
+    setForceWysiwyg: vi.fn(),
+    resetToStandardManaged: vi.fn(),
+    exportStandardMaster: vi.fn(),
+    saveUserPreset: vi.fn(),
   };
 }
 
