@@ -1732,8 +1732,13 @@ export function useTrackMaster() {
       ) {
         // Route through the same gated dispatcher as live edits — if a
         // sweep is in flight, this toggle merges into the latest-wins
-        // pending slot instead of slipping in out of order.
-        sendUpdateChain(withSourceLufs(selectedTrackId, selectedSettings), on);
+        // pending slot instead of slipping in out of order. Push the
+        // EFFECTIVE landing (not the raw `on`): exportLufsPreviewRef was
+        // already set to `on` above, so effectivePreviewLanding() reflects
+        // this toggle while still ORing in the forced-WYSIWYG (Standard)
+        // flag. Pushing raw `on` would drop Standard's landing when the
+        // user toggle goes off.
+        sendUpdateChain(withSourceLufs(selectedTrackId, selectedSettings), effectivePreviewLanding());
       }
     },
     [
@@ -1746,6 +1751,7 @@ export function useTrackMaster() {
       selectedSettings,
       withSourceLufs,
       sendUpdateChain,
+      effectivePreviewLanding,
     ],
   );
 

@@ -739,6 +739,70 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("routes the export-LUFS preview live push through the EFFECTIVE landing (Standard WYSIWYG survives toggling the user flag off)", async () => {
+    // Guard: in Standard (forceWysiwyg on, Volume Match off), toggling the
+    // user-facing Preview LUFS flag OFF must NOT drop the live landing — the
+    // forced-WYSIWYG flag still demands landing=true. setExportLufsPreview
+    // must push effectivePreviewLanding() (= true here), not the raw `on`
+    // (= false). Pushing raw `on` would silently un-land Standard playback.
+    const track = makeTrack("eff-landing-1", "C:/audio/eff-landing.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      await harness.current().setPlaybackKind("master");
+    });
+    await waitFor(() => {
+      expect(harness.current().transport.playbackKind).toBe("master");
+    });
+
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+    await waitFor(() => {
+      expect(mocks.api.playMaster).toHaveBeenCalled();
+    });
+
+    // Enter Standard: forceWysiwyg on (Volume Match stays off). This itself
+    // fires a re-land push; let it fully drain before clearing so the only
+    // push we assert on below is the one from setExportLufsPreview (both
+    // sites carry identical settings, so we discriminate by timing, not args).
+    await act(async () => {
+      harness.current().setForceWysiwyg(true);
+    });
+    await waitFor(() => {
+      expect(mocks.api.updateChain).toHaveBeenCalled();
+    });
+
+    mocks.api.updateChain.mockClear();
+    // Drive the USER toggle OFF. Effective landing is still true (forced).
+    await act(async () => {
+      harness.current().setExportLufsPreview(false);
+    });
+
+    await waitFor(() => {
+      expect(mocks.api.updateChain).toHaveBeenCalled();
+    });
+    // The push from setExportLufsPreview must carry the EFFECTIVE landing
+    // (true — forced WYSIWYG), NOT the raw `on` (false). Assert on the most
+    // recent call so a stray coalesced earlier push can't mask a regression.
+    expect(mocks.api.updateChain).toHaveBeenLastCalledWith(
+      expect.objectContaining({ volume_match: false }),
+      true, // EFFECTIVE landing — forced WYSIWYG, not the raw `on` (false)
+      false, // album flag — Track mode
+    );
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("reflects a Track<->Album mode switch mid-Mastered-audition in the next updateChain (F2)", async () => {
     // F2 regression: switching mode is a bare state change that does NOT
     // re-prime playback, and update_chain previously reused the album flag
