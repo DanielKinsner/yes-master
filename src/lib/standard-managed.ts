@@ -7,8 +7,7 @@
 // these functions detect and enforce (see design spec §2b).
 
 import type { MasteringSettings } from "../bindings";
-
-const STANDARD_ADAPTIVE_STRENGTH = 0.5;
+import { ADAPTIVE_STRENGTH_DEFAULT } from "../bindings";
 
 export function hasNonManagedEdits(s: MasteringSettings): boolean {
   if (
@@ -47,7 +46,7 @@ export function hasNonManagedEdits(s: MasteringSettings): boolean {
   if (a.compression_link_stereo !== null) return true;
   // Deliberate superset of the spec table — keep Standard's adaptive
   // behavior at the validated default. See plan Task 2 scope note.
-  if ((a.adaptive_strength ?? STANDARD_ADAPTIVE_STRENGTH) !== STANDARD_ADAPTIVE_STRENGTH) {
+  if ((a.adaptive_strength ?? ADAPTIVE_STRENGTH_DEFAULT) !== ADAPTIVE_STRENGTH_DEFAULT) {
     return true;
   }
   return false;
@@ -89,7 +88,7 @@ export function resetToStandardManaged(s: MasteringSettings): MasteringSettings 
       compression_high_attack_ms: null,
       compression_high_release_ms: null,
       compression_link_stereo: null,
-      adaptive_strength: STANDARD_ADAPTIVE_STRENGTH,
+      adaptive_strength: ADAPTIVE_STRENGTH_DEFAULT,
     },
   };
 }
