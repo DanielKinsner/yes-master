@@ -105,9 +105,9 @@ function fakeSettings() {
 function fakeTm(overrides: Partial<TM> = {}): TM {
   const noop = () => {};
   return {
-    tracks: [{ id: "t1", path: "C:/a.wav", display_name: "Song.wav", source_format: "wav", duration_sec: 100 }],
+    tracks: [{ id: "t1", path: "C:/a.wav", display_name: "Song.wav", source_format: "wav", duration_seconds: 100 }],
     selectedTrackId: "t1",
-    selectedTrack: { id: "t1", path: "C:/a.wav", display_name: "Song.wav", source_format: "wav", duration_sec: 100 },
+    selectedTrack: { id: "t1", path: "C:/a.wav", display_name: "Song.wav", source_format: "wav", duration_seconds: 100 },
     selectedAnalysis: { track_id: "t1", lufs_integrated: -16, true_peak_dbtp: -1.2, dynamic_range_lu: 9 },
     selectedWaveform: undefined,
     selectedSettings: fakeSettings(),

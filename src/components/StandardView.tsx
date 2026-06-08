@@ -151,9 +151,9 @@ export function StandardView({ tm }: { tm: TM }) {
         </div>
 
         <div className="std-ab">
-          <div className="ab-toggle">
-            <button className={tm.transport.playbackKind === "source" ? "on" : ""} onClick={() => tm.setPlaybackKind("source")}>Original</button>
-            <button className={tm.transport.playbackKind === "master" ? "on" : ""} onClick={() => tm.setPlaybackKind("master")}>Mastered</button>
+          <div className="ab-toggle" role="group" aria-label="Playback source">
+            <button type="button" aria-pressed={tm.transport.playbackKind === "source"} className={tm.transport.playbackKind === "source" ? "on" : ""} onClick={() => tm.setPlaybackKind("source")}>Original</button>
+            <button type="button" aria-pressed={tm.transport.playbackKind === "master"} className={tm.transport.playbackKind === "master" ? "on" : ""} onClick={() => tm.setPlaybackKind("master")}>Mastered</button>
           </div>
           <button
             type="button"
