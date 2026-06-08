@@ -119,7 +119,7 @@ function App() {
         onBackToStandard={requestBackToStandard}
       />
     <div className="app">
-      {view !== "standard" && (
+      {view === "advanced" && (
         <>
       <Sidebar
         tracks={tm.tracks}
@@ -210,7 +210,7 @@ function App() {
           onClose={tm.clearProjectFeedback}
         />
       ) : null}
-      {tm.lastExportReceipt && view !== "standard" && (
+      {tm.lastExportReceipt && view === "advanced" && (
         <ExportReceiptCard
           receipt={tm.lastExportReceipt}
           onClose={tm.clearExportReceipt}

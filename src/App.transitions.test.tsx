@@ -330,6 +330,39 @@ describe("App Standard<->Advanced view transitions", () => {
     });
   });
 
+  it("1a) new user's FIRST committed frame does not flash the Advanced desk", async () => {
+    // Regression guard for the unresolved-view flash (adversarial review): for a
+    // brand-new user, `view` is null until the async loadRecentSession probe
+    // settles AFTER first paint. The desk gate must NOT paint during that null
+    // frame (null === "advanced" is false), so the first committed frame shows
+    // chrome only — no Sidebar — then resolves to Standard.
+    mocks.api.loadRecentSession.mockResolvedValue(null);
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    // Synchronous render: flushes the synchronous render + initial effects but
+    // NOT the async session probe (which resolves a microtask/tick later).
+    // Deliberately NOT awaited and NOT followed by waitFor here.
+    act(() => {
+      root.render(<App />);
+    });
+
+    // First frame: view is still null, so the desk must be absent.
+    expect(container.querySelector("aside.sidebar")).toBeNull();
+
+    // Now let the probe settle and confirm we resolve to Standard.
+    await waitFor(() => {
+      expect(affordanceText(container)).toBe("Advanced");
+    });
+    expect(hasSidebar(container)).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("2) returning user with a clean prior session lands in Advanced (Sidebar + Back affordance)", async () => {
     // No view-mode key but a restorable session with >=1 track ->
     // hadPriorSession=true -> Advanced.
