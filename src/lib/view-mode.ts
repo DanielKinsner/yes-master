@@ -21,8 +21,9 @@ const KEY = "yes-master:view-mode";
 
 export function browserViewModeStore(): ViewModeStore | null {
   try {
-    if (typeof window !== "undefined" && window.localStorage) {
-      return window.localStorage;
+    const storage = globalThis.localStorage;
+    if (storage && typeof storage.getItem === "function" && typeof storage.setItem === "function") {
+      return storage;
     }
   } catch {
     /* localStorage can throw in locked-down webviews; treat as absent */
