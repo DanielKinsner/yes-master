@@ -2,61 +2,45 @@ import SwiftUI
 
 enum NativeStylePreset: String, CaseIterable, Identifiable {
     case balanced = "Balanced"
+    case bright = "Bright"
     case warm = "Warm"
-    case open = "Open"
-    case punch = "Punch"
+    case heavy = "Heavy"
 
     var id: String { rawValue }
 
     var subtitle: String {
         switch self {
-        case .balanced:
-            "Clean balance"
-        case .warm:
-            "Warm body"
-        case .open:
-            "Open air"
-        case .punch:
-            "Punchy impact"
+        case .balanced: "Clean balance"
+        case .bright: "Air & detail"
+        case .warm: "Glue & body"
+        case .heavy: "Sub & weight"
         }
     }
 
     var symbol: String {
         switch self {
-        case .balanced:
-            "circle.hexagongrid.fill"
-        case .warm:
-            "flame.fill"
-        case .open:
-            "snowflake"
-        case .punch:
-            "bolt.fill"
+        case .balanced: "circle.hexagongrid.fill"
+        case .bright: "snowflake"
+        case .warm: "flame.fill"
+        case .heavy: "bolt.fill"
         }
     }
 
     var accent: Color {
         switch self {
-        case .balanced:
-            Color(red: 0.25, green: 0.57, blue: 1.0)
-        case .warm:
-            Color(red: 1.0, green: 0.49, blue: 0.22)
-        case .open:
-            Color(red: 0.27, green: 0.88, blue: 0.96)
-        case .punch:
-            Color(red: 1.0, green: 0.24, blue: 0.24)
+        case .balanced: Color(red: 0.25, green: 0.57, blue: 1.0)   // blue
+        case .bright: Color(red: 0.27, green: 0.88, blue: 0.96)    // cyan
+        case .warm: Color(red: 1.0, green: 0.72, blue: 0.30)       // amber
+        case .heavy: Color(red: 0.66, green: 0.45, blue: 0.96)     // violet
         }
     }
 
     var bridgeIdentifier: String {
         switch self {
-        case .balanced:
-            "balanced"
-        case .warm:
-            "warm"
-        case .open:
-            "open"
-        case .punch:
-            "punch"
+        case .balanced: "balanced"
+        case .bright: "bright"
+        case .warm: "warm"
+        case .heavy: "heavy"
         }
     }
 }

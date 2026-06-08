@@ -739,6 +739,70 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("routes the export-LUFS preview live push through the EFFECTIVE landing (Standard WYSIWYG survives toggling the user flag off)", async () => {
+    // Guard: in Standard (forceWysiwyg on, Volume Match off), toggling the
+    // user-facing Preview LUFS flag OFF must NOT drop the live landing — the
+    // forced-WYSIWYG flag still demands landing=true. setExportLufsPreview
+    // must push effectivePreviewLanding() (= true here), not the raw `on`
+    // (= false). Pushing raw `on` would silently un-land Standard playback.
+    const track = makeTrack("eff-landing-1", "C:/audio/eff-landing.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      await harness.current().setPlaybackKind("master");
+    });
+    await waitFor(() => {
+      expect(harness.current().transport.playbackKind).toBe("master");
+    });
+
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+    await waitFor(() => {
+      expect(mocks.api.playMaster).toHaveBeenCalled();
+    });
+
+    // Enter Standard: forceWysiwyg on (Volume Match stays off). This itself
+    // fires a re-land push; let it fully drain before clearing so the only
+    // push we assert on below is the one from setExportLufsPreview (both
+    // sites carry identical settings, so we discriminate by timing, not args).
+    await act(async () => {
+      harness.current().setForceWysiwyg(true);
+    });
+    await waitFor(() => {
+      expect(mocks.api.updateChain).toHaveBeenCalled();
+    });
+
+    mocks.api.updateChain.mockClear();
+    // Drive the USER toggle OFF. Effective landing is still true (forced).
+    await act(async () => {
+      harness.current().setExportLufsPreview(false);
+    });
+
+    await waitFor(() => {
+      expect(mocks.api.updateChain).toHaveBeenCalled();
+    });
+    // The push from setExportLufsPreview must carry the EFFECTIVE landing
+    // (true — forced WYSIWYG), NOT the raw `on` (false). Assert on the most
+    // recent call so a stray coalesced earlier push can't mask a regression.
+    expect(mocks.api.updateChain).toHaveBeenLastCalledWith(
+      expect.objectContaining({ volume_match: false }),
+      true, // EFFECTIVE landing — forced WYSIWYG, not the raw `on` (false)
+      false, // album flag — Track mode
+    );
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("reflects a Track<->Album mode switch mid-Mastered-audition in the next updateChain (F2)", async () => {
     // F2 regression: switching mode is a bare state change that does NOT
     // re-prime playback, and update_chain previously reused the album flag
@@ -1720,6 +1784,97 @@ describe("useTrackMaster integration dispatches", () => {
     await act(async () => {
       harness.root.unmount();
     });
+  });
+
+  it("exposes hadPriorSession=false when there is no restorable session", async () => {
+    mocks.api.loadRecentSession.mockResolvedValue(null);
+    const harness = await renderHookHarness();
+    await waitFor(() => {
+      expect(harness.current().hadPriorSession).toBe(false);
+    });
+    await act(async () => harness.root.unmount());
+  });
+
+  it("resetToStandardManaged clears manual EQ but keeps preset/intensity", async () => {
+    const track = makeTrack("reset-managed-1", "C:/audio/r.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles([track.path]); });
+    await waitFor(() => { expect(harness.current().selectedTrackId).toBe(track.id); });
+
+    // Separate act blocks: updateSettings reads settingsMap from the
+    // current-render closure (by design — see the hook), so batching these
+    // into one act would have all three compute from the same stale base and
+    // clobber each other. The established suite style (see resetToneControls)
+    // is one edit per act.
+    await act(async () => { harness.current().setPreset({ kind: "oomph" }); });
+    await act(async () => { harness.current().setIntensity(0.8); });
+    await act(async () => { harness.current().setEqBand("low", 4); });
+    await waitFor(() => { expect(harness.current().selectedSettings.eq_low_db).toBe(4); });
+
+    await act(async () => { harness.current().resetToStandardManaged(); });
+    await waitFor(() => {
+      const s = harness.current().selectedSettings;
+      expect(s.eq_low_db).toBe(0);
+      expect(s.preset).toEqual({ kind: "oomph" });
+      expect(s.intensity).toBe(0.8);
+    });
+    await act(async () => harness.root.unmount());
+  });
+
+  it("exportStandardMaster renders with the fixed 44.1k/24-bit/-1 dBTP wrap", async () => {
+    const track = makeTrack("std-export-1", "C:/audio/e.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.save.mockResolvedValue("C:/out/e.wav");
+    mocks.api.renderTrackMaster.mockResolvedValue({
+      output_paths: ["C:/out/e.wav"],
+      measurements: null,
+    });
+    mocks.api.runExportChecks.mockResolvedValue([]);
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles([track.path]); });
+    await waitFor(() => { expect(harness.current().selectedTrackId).toBe(track.id); });
+
+    await act(async () => { await harness.current().exportStandardMaster(); });
+    await waitFor(() => { expect(mocks.api.renderTrackMaster).toHaveBeenCalled(); });
+
+    const sent = mocks.api.renderTrackMaster.mock.calls[0][2] as { delivery_profile: string; advanced: { target_sample_rate: number; bit_depth: number; ceiling_dbtp: number } };
+    expect(sent.delivery_profile).toBe("custom");
+    expect(sent.advanced.target_sample_rate).toBe(44_100);
+    expect(sent.advanced.bit_depth).toBe(24);
+    expect(sent.advanced.ceiling_dbtp).toBe(-1);
+    await act(async () => harness.root.unmount());
+  });
+
+  it("setForceWysiwyg never mutates the user-facing Preview LUFS toggle", async () => {
+    const harness = await renderHookHarness();
+    expect(harness.current().transport.exportLufsPreview).toBe(false);
+    await act(async () => { harness.current().setForceWysiwyg(true); });
+    // The internal flag drives landing; the visible Advanced toggle is untouched.
+    expect(harness.current().transport.exportLufsPreview).toBe(false);
+    await act(async () => { harness.current().setForceWysiwyg(false); });
+    expect(harness.current().transport.exportLufsPreview).toBe(false);
+    await act(async () => harness.root.unmount());
+  });
+
+  it("saveUserPreset resolves true on success and false on failure", async () => {
+    const track = makeTrack("save-preset-1", "C:/audio/p.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles([track.path]); });
+    await waitFor(() => { expect(harness.current().selectedTrackId).toBe(track.id); });
+
+    mocks.api.saveUserPreset.mockResolvedValueOnce({ id: "p1", name: "Mine", kind: "track", settings: {} });
+    let ok: boolean | undefined;
+    await act(async () => { ok = await harness.current().saveUserPreset("Mine"); });
+    expect(ok).toBe(true);
+
+    mocks.api.saveUserPreset.mockRejectedValueOnce(new Error("disk full"));
+    let ok2: boolean | undefined;
+    await act(async () => { ok2 = await harness.current().saveUserPreset("Other"); });
+    expect(ok2).toBe(false);
+    await act(async () => harness.root.unmount());
   });
 });
 

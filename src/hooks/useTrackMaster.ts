@@ -21,6 +21,8 @@ import {
   shouldCoalesceCommit,
 } from "../lib/history-stack";
 import { resetToneSettings } from "../lib/tone-reset";
+import { resetToStandardManaged as resetToStandardManagedSettings } from "../lib/standard-managed";
+import { standardExportSettings } from "../lib/standard-export";
 import type {
   AdvancedSettings,
   AnalysisResult,
@@ -244,6 +246,7 @@ export function useTrackMaster() {
   const [mode, setMode] = useState<ProjectMode>("track");
   const [albumIntent, setAlbumIntent] = useState<MasteringSettings>(DEFAULT_SETTINGS);
   const [sessionLoaded, setSessionLoaded] = useState(false);
+  const [hadPriorSession, setHadPriorSession] = useState<boolean | null>(null);
   const [overrideAlbum, setOverrideAlbum] = useState<Set<TrackId>>(new Set());
   const [userPresets, setUserPresets] = useState<UserPreset[]>([]);
   const [savingPreset, setSavingPreset] = useState(false);
@@ -308,12 +311,25 @@ export function useTrackMaster() {
   // comment block above is the source of truth for what it actually does.
   const volumeMatchRef = useRef(false);
   const exportLufsPreviewRef = useRef(false);
+  // Internal "force WYSIWYG" flag, distinct from the user-facing Advanced
+  // `Preview LUFS` toggle (`transport.exportLufsPreview`). Standard auditions
+  // with the loudness landing + limiter applied without ever mutating that
+  // visible toggle; `effectivePreviewLanding()` ORs the two for the live chain.
+  const forceWysiwygRef = useRef(false);
   useEffect(() => {
     volumeMatchRef.current = transport.volumeMatch;
   }, [transport.volumeMatch]);
   useEffect(() => {
     exportLufsPreviewRef.current = transport.exportLufsPreview;
   }, [transport.exportLufsPreview]);
+  // Single source of truth for "should live playback apply the export landing?".
+  // ORs the user toggle with the forced flag, but yields to Volume Match (an
+  // input-referenced A/B aid that is mutually exclusive with the landing — the
+  // surrounding setters already keep one off when the other is on).
+  const effectivePreviewLanding = useCallback(
+    () => exportLufsPreviewRef.current || (forceWysiwygRef.current && !volumeMatchRef.current),
+    [],
+  );
   // React-state glue around `applyChainDispatchOverrides` (Vitest-
   // tested). Pulls volumeMatchRef + analysisMap from the hook's
   // closure; the override rules themselves live in the pure helper.
@@ -513,10 +529,12 @@ export function useTrackMaster() {
       .loadRecentSession()
       .then(async (session) => {
         if (cancelled || !session || session.schema_version !== 1) {
+          setHadPriorSession(false);
           setSessionLoaded(true);
           return;
         }
         const restoredTracks = session.tracks ?? [];
+        setHadPriorSession(restoredTracks.length > 0);
         if (restoredTracks.length > 0) {
           setTracks(restoredTracks);
           setSelectedTrackId(restoredTracks[0].id);
@@ -563,6 +581,7 @@ export function useTrackMaster() {
       })
       .catch((err) => {
         console.warn("Session load failed", err);
+        setHadPriorSession(false);
         setSessionLoaded(true);
       });
     return () => {
@@ -720,7 +739,7 @@ export function useTrackMaster() {
           ? snapshot.albumIntent
           : snapshot.settingsMap[id as string] ?? DEFAULT_SETTINGS;
         const effectiveForChain = withSourceLufs(id as TrackId, effective);
-        sendUpdateChain(effectiveForChain, exportLufsPreviewRef.current);
+        sendUpdateChain(effectiveForChain, effectivePreviewLanding());
       }
     },
     [
@@ -730,6 +749,7 @@ export function useTrackMaster() {
       mode,
       withSourceLufs,
       sendUpdateChain,
+      effectivePreviewLanding,
     ],
   );
 
@@ -810,7 +830,7 @@ export function useTrackMaster() {
         // Volume Match needs the current track's source-LUFS — see the
         // `withSourceLufs` helper at the top of this hook.
         const settingsForChain = withSourceLufs(id, nextSettings);
-        sendUpdateChain(settingsForChain, exportLufsPreviewRef.current);
+        sendUpdateChain(settingsForChain, effectivePreviewLanding());
       }
     },
     [
@@ -824,6 +844,7 @@ export function useTrackMaster() {
       withSourceLufs,
       commitToHistory,
       sendUpdateChain,
+      effectivePreviewLanding,
     ],
   );
 
@@ -1106,6 +1127,16 @@ export function useTrackMaster() {
     updateSettings(selectedTrackId, (prev) => resetToneSettings(prev));
   }, [selectedTrackId, updateSettings]);
 
+  // Advanced -> Standard return: reset every non-managed field to its default
+  // (broader than `resetToneSettings`), preserving the Standard-managed
+  // {preset, intensity, loudness target, delivery format}. Routes through
+  // updateSettings so the live-chain / album-intent bookkeeping is identical
+  // to every other edit.
+  const resetToStandardManaged = useCallback(() => {
+    if (!selectedTrackId) return;
+    updateSettings(selectedTrackId, (prev) => resetToStandardManagedSettings(prev));
+  }, [selectedTrackId, updateSettings]);
+
   // UI-truthfulness contract (B7): when the user edits a field that a
   // non-Custom DeliveryProfile would shadow at render time, the
   // displayed value MUST become the value export uses. The pure logic
@@ -1323,73 +1354,86 @@ export function useTrackMaster() {
     }
   }, [selectedTrackId, selectedTrack, selectedSettings, selectedAnalysis, markFresh]);
 
-  const exportMaster = useCallback(async () => {
-    if (!selectedTrackId || !selectedAnalysis) return;
-    setError(null);
-    try {
-      if (!selectedTrack) return;
-      const store = browserExportLocationStore();
-      const chosenPath = await save({
-        defaultPath: defaultExportPath(
-          store,
-          "track",
-          suggestedMasterFilename(selectedTrack),
-        ),
-        filters: [{ name: "WAV audio", extensions: ["wav"] }],
-      });
-      if (!chosenPath) return;
-      const chosenOutputPath = ensureWavExtension(chosenPath);
-      rememberExportDirectory(store, "track", chosenOutputPath);
-      setIsExporting(true);
-      // B2: the backend derives + injects the source profile inside
-      // render_track_master (keyed by track id); the FE sends raw settings.
-      const job = await api.renderTrackMaster(
-        selectedTrackId,
-        selectedTrack.path,
-        selectedSettings,
-        chosenOutputPath,
-      );
-      const outputPath = job.output_paths[0] ?? "";
-      // Codex audit 2026-05-13 P0 fix: the receipt must describe the
-      // rendered output, not the source analysis. The Rust renderer now
-      // measures the post-chain samples and returns them on job.measurements;
-      // we only fall back to the source analysis when a render path didn't
-      // supply measurements (e.g. album masters, which haven't been wired
-      // through this slice yet).
-      const m = job.measurements ?? null;
-      const report: ExportReport = {
-        track_id: selectedTrackId,
-        output_path: outputPath,
-        measured_lufs: m?.lufs_integrated ?? selectedAnalysis.lufs_integrated,
-        measured_true_peak_dbtp:
-          m?.true_peak_dbtp ?? selectedAnalysis.true_peak_dbtp,
-        measured_dynamic_range_lu:
-          m?.dynamic_range_lu ?? selectedAnalysis.dynamic_range_lu,
-        source_format: selectedTrack?.source_format ?? "unknown",
-        destination_format: "wav",
-        sample_rate: m?.sample_rate ?? 44_100,
-        bit_depth: m?.bit_depth ?? selectedSettings.advanced.bit_depth ?? 24,
-        // B5 — adaptive traceability, sourced from the backend render (which
-        // resolved the profile; the FE no longer holds it).
-        effective_adaptive_strength: m?.effective_adaptive_strength ?? 0,
-        source_profile_digest: m?.source_profile_digest ?? null,
-        confidence_digest: m?.confidence_digest ?? null,
-        checks: [],
-      };
-      const checks = await api.runExportChecks(report, selectedAnalysis, selectedSettings);
-      setLastExportReceipt({
-        trackId: selectedTrackId,
-        outputPath,
-        checks,
-        job,
-        kind: "track",
-      });
-    } catch (err) {
-      setError(messageOf(err));
-    } finally {
-      setIsExporting(false);
-    }
-  }, [selectedTrackId, selectedAnalysis, selectedSettings, selectedTrack]);
+  const runExport = useCallback(
+    async (exportSettings: MasteringSettings) => {
+      if (!selectedTrackId || !selectedAnalysis) return;
+      setError(null);
+      try {
+        if (!selectedTrack) return;
+        const store = browserExportLocationStore();
+        const chosenPath = await save({
+          defaultPath: defaultExportPath(
+            store,
+            "track",
+            suggestedMasterFilename(selectedTrack),
+          ),
+          filters: [{ name: "WAV audio", extensions: ["wav"] }],
+        });
+        if (!chosenPath) return;
+        const chosenOutputPath = ensureWavExtension(chosenPath);
+        rememberExportDirectory(store, "track", chosenOutputPath);
+        setIsExporting(true);
+        // B2: the backend derives + injects the source profile inside
+        // render_track_master (keyed by track id); the FE sends raw settings.
+        const job = await api.renderTrackMaster(
+          selectedTrackId,
+          selectedTrack.path,
+          exportSettings,
+          chosenOutputPath,
+        );
+        const outputPath = job.output_paths[0] ?? "";
+        // Codex audit 2026-05-13 P0 fix: the receipt must describe the
+        // rendered output, not the source analysis. The Rust renderer now
+        // measures the post-chain samples and returns them on job.measurements;
+        // we only fall back to the source analysis when a render path didn't
+        // supply measurements (e.g. album masters, which haven't been wired
+        // through this slice yet).
+        const m = job.measurements ?? null;
+        const report: ExportReport = {
+          track_id: selectedTrackId,
+          output_path: outputPath,
+          measured_lufs: m?.lufs_integrated ?? selectedAnalysis.lufs_integrated,
+          measured_true_peak_dbtp:
+            m?.true_peak_dbtp ?? selectedAnalysis.true_peak_dbtp,
+          measured_dynamic_range_lu:
+            m?.dynamic_range_lu ?? selectedAnalysis.dynamic_range_lu,
+          source_format: selectedTrack?.source_format ?? "unknown",
+          destination_format: "wav",
+          sample_rate: m?.sample_rate ?? 44_100,
+          bit_depth: m?.bit_depth ?? exportSettings.advanced.bit_depth ?? 24,
+          // B5 — adaptive traceability, sourced from the backend render (which
+          // resolved the profile; the FE no longer holds it).
+          effective_adaptive_strength: m?.effective_adaptive_strength ?? 0,
+          source_profile_digest: m?.source_profile_digest ?? null,
+          confidence_digest: m?.confidence_digest ?? null,
+          checks: [],
+        };
+        const checks = await api.runExportChecks(report, selectedAnalysis, exportSettings);
+        setLastExportReceipt({
+          trackId: selectedTrackId,
+          outputPath,
+          checks,
+          job,
+          kind: "track",
+        });
+      } catch (err) {
+        setError(messageOf(err));
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    [selectedTrackId, selectedAnalysis, selectedTrack],
+  );
+
+  const exportMaster = useCallback(
+    () => runExport(selectedSettings),
+    [runExport, selectedSettings],
+  );
+
+  const exportStandardMaster = useCallback(
+    () => runExport(standardExportSettings(selectedSettings)),
+    [runExport, selectedSettings],
+  );
 
   const playWithKind = useCallback(
     async (kind: PlaybackKindUI, positionSec: number) => {
@@ -1412,7 +1456,7 @@ export function useTrackMaster() {
             selectedTrack.path,
             withSourceLufs(selectedTrackId, selectedSettings),
             positionSec,
-            exportLufsPreviewRef.current,
+            effectivePreviewLanding(),
             // B2: album mode is non-adaptive. The backend caches this and reuses
             // it for the settings-only update_chain dispatches that follow.
             mode === "album",
@@ -1423,7 +1467,14 @@ export function useTrackMaster() {
       }
       setLoadedKindByTrack((prev) => ({ ...prev, [selectedTrackId]: kind }));
     },
-    [selectedTrack, selectedTrackId, selectedSettings, withSourceLufs, mode],
+    [
+      selectedTrack,
+      selectedTrackId,
+      selectedSettings,
+      withSourceLufs,
+      mode,
+      effectivePreviewLanding,
+    ],
   );
 
   const togglePlay = useCallback(async () => {
@@ -1681,8 +1732,13 @@ export function useTrackMaster() {
       ) {
         // Route through the same gated dispatcher as live edits — if a
         // sweep is in flight, this toggle merges into the latest-wins
-        // pending slot instead of slipping in out of order.
-        sendUpdateChain(withSourceLufs(selectedTrackId, selectedSettings), on);
+        // pending slot instead of slipping in out of order. Push the
+        // EFFECTIVE landing (not the raw `on`): exportLufsPreviewRef was
+        // already set to `on` above, so effectivePreviewLanding() reflects
+        // this toggle while still ORing in the forced-WYSIWYG (Standard)
+        // flag. Pushing raw `on` would drop Standard's landing when the
+        // user toggle goes off.
+        sendUpdateChain(withSourceLufs(selectedTrackId, selectedSettings), effectivePreviewLanding());
       }
     },
     [
@@ -1695,6 +1751,38 @@ export function useTrackMaster() {
       selectedSettings,
       withSourceLufs,
       sendUpdateChain,
+      effectivePreviewLanding,
+    ],
+  );
+
+  const setForceWysiwyg = useCallback(
+    (on: boolean) => {
+      forceWysiwygRef.current = on;
+      // Re-land the live chain if a master is currently auditioning, so
+      // entering/leaving Standard mid-playback recomputes the landing.
+      if (
+        shouldPushLiveChainForSettingsEdit({
+          trackId: selectedTrackId,
+          editingAlbumIntent: mode === "album" && !selectedIsOverriding,
+          loadedTrackId,
+          loadedKindByTrack,
+          overrideAlbum,
+        })
+      ) {
+        sendUpdateChain(withSourceLufs(selectedTrackId, selectedSettings), effectivePreviewLanding());
+      }
+    },
+    [
+      mode,
+      selectedIsOverriding,
+      selectedTrackId,
+      loadedTrackId,
+      loadedKindByTrack,
+      overrideAlbum,
+      selectedSettings,
+      withSourceLufs,
+      sendUpdateChain,
+      effectivePreviewLanding,
     ],
   );
 
@@ -1703,11 +1791,11 @@ export function useTrackMaster() {
   const clearExportReceipt = useCallback(() => setLastExportReceipt(null), []);
 
   const saveUserPreset = useCallback(
-    async (name: string) => {
+    async (name: string): Promise<boolean> => {
       const trimmed = name.trim();
       if (!trimmed) {
         setError("Preset name cannot be empty");
-        return;
+        return false;
       }
       setSavingPreset(true);
       setError(null);
@@ -1726,8 +1814,10 @@ export function useTrackMaster() {
         };
         const created = await api.saveUserPreset(trimmed, kind, snapshot);
         setUserPresets((prev) => [...prev, created]);
+        return true;
       } catch (err) {
         setError(messageOf(err));
+        return false;
       } finally {
         setSavingPreset(false);
       }
@@ -1777,7 +1867,7 @@ export function useTrackMaster() {
       if (shouldPush) {
         sendUpdateChain(
           withSourceLufs(selectedTrackId, applied),
-          exportLufsPreviewRef.current,
+          effectivePreviewLanding(),
         );
       }
     },
@@ -1794,6 +1884,7 @@ export function useTrackMaster() {
       sendUpdateChain,
       albumIntent,
       selectedSettings,
+      effectivePreviewLanding,
     ],
   );
 
@@ -1980,6 +2071,7 @@ export function useTrackMaster() {
     transport,
     lastExportReceipt,
     renderProgress,
+    hadPriorSession,
     undo,
     redo,
     canUndo,
@@ -1993,6 +2085,7 @@ export function useTrackMaster() {
     setIntensity,
     setEqBand,
     resetToneControls,
+    resetToStandardManaged,
     setAdvanced,
     setInputGain,
     setOutputGain,
@@ -2018,12 +2111,14 @@ export function useTrackMaster() {
     updatePreview,
     guardrailReadout,
     exportMaster,
+    exportStandardMaster,
     togglePlay,
     seek,
     setPlaybackKind,
     toggleLoop,
     setVolumeMatch,
     setExportLufsPreview,
+    setForceWysiwyg,
     selectedRegion,
     setRegion,
     clearRegion,

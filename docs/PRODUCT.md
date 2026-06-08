@@ -84,6 +84,36 @@ No-warning path:
 
 - Primary button: `Export Master`.
 
+### Standard view — export ceremony
+
+The review ceremony above describes **Advanced**. In **Standard** (the default
+view), the deliberate behavior is:
+
+- **No blocking review gate.** `Create Master` renders directly. Standard
+  trusts the validated engine + the user's ears.
+- **Cosmetic / advisory warnings are suppressed** (e.g. loudness-vs-reference,
+  low dynamic range, codec headroom, already-compressed source). A
+  non-technical user shouldn't have to weigh them.
+- **One tiny, non-blocking integrity note** is kept for a genuine integrity
+  issue (true-peak slipping over) — inline text, never a modal. The
+  fixed-ceiling limiter makes this rare by construction.
+- **Technical hard-stops are always surfaced, never hidden** — but be precise
+  about *when*. Pre-render failures (invalid path, cancelled save dialog,
+  decode failure) abort before any file is written: these genuinely block.
+  Post-render criticals (non-finite / corrupt render, requested-vs-rendered
+  sample-rate mismatch, sub-16-bit) are detected *after* the WAV is written,
+  so the honest framing is "saved, but this master is invalid — re-render",
+  shown prominently instead of celebrating success (not a pre-render block).
+  Under Standard's pinned 44.1 kHz / 24-bit format the only post-render
+  critical that can realistically fire is a corrupt/non-finite render, which
+  is unknowable before rendering. This matches Advanced, which has always
+  rendered-then-checked; Standard differs only in suppressing the cosmetic
+  warnings.
+- **Standard exports a fixed, known-safe default: 44.1 kHz / 24-bit WAV at a
+  −1 dBTP ceiling**, with the Standard-chosen loudness (−14 / −11 / −9 LUFS).
+  Sample rate / bit depth / ceiling are configurable only in Advanced. This
+  mirrors the iPhone app's fixed export.
+
 ## Compressor Canon
 
 The current automatic compressor behavior is preset/density fallback. It is not

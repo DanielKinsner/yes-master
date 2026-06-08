@@ -44,6 +44,9 @@ describe("top chrome", () => {
         onOpenProject={vi.fn()}
         onOpenSettings={onOpenSettings}
         onOpenHelp={onOpenHelp}
+        viewMode="advanced"
+        onEnterAdvanced={vi.fn()}
+        onBackToStandard={vi.fn()}
       />,
     );
 
