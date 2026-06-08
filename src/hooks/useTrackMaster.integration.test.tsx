@@ -1723,6 +1723,101 @@ describe("useTrackMaster integration dispatches", () => {
   });
 });
 
+describe("tone reset", () => {
+  it("flattens intensity and every EQ band via resetToneControls", async () => {
+    const track = makeTrack("reset-1", "C:/audio/reset.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    // Dirty the tone area: a couple of EQ bands + a non-default intensity.
+    await act(async () => {
+      harness.current().setEqBand("mid", 4);
+    });
+    await act(async () => {
+      harness.current().setEqBand("sparkle", -2.5);
+    });
+    await act(async () => {
+      harness.current().setIntensity(0.82);
+    });
+    await waitFor(() => {
+      const s = harness.current().selectedSettings;
+      expect(s.eq_mid_db).toBe(4);
+      expect(s.eq_sparkle_db).toBe(-2.5);
+      expect(s.intensity).toBe(0.82);
+    });
+
+    await act(async () => {
+      harness.current().resetToneControls();
+    });
+
+    await waitFor(() => {
+      const s = harness.current().selectedSettings;
+      expect(s.intensity).toBe(0.5);
+      expect(s.eq_sub_db).toBe(0);
+      expect(s.eq_low_db).toBe(0);
+      expect(s.eq_low_mid_db).toBe(0);
+      expect(s.eq_mid_db).toBe(0);
+      expect(s.eq_high_mid_db).toBe(0);
+      expect(s.eq_high_db).toBe(0);
+      expect(s.eq_sparkle_db).toBe(0);
+    });
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("pushes the flattened tone to the live chain while a master is playing", async () => {
+    const track = makeTrack("reset-live-1", "C:/audio/reset-live.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      await harness.current().setPlaybackKind("master");
+    });
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+    await waitFor(() => {
+      expect(mocks.api.playMaster).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      harness.current().setEqBand("mid", 6);
+    });
+
+    mocks.api.updateChain.mockClear();
+    await act(async () => {
+      harness.current().resetToneControls();
+    });
+    await waitFor(() => {
+      expect(mocks.api.updateChain).toHaveBeenCalledWith(
+        expect.objectContaining({ intensity: 0.5, eq_mid_db: 0 }),
+        expect.any(Boolean),
+        false, // Track mode → album flag false
+      );
+    });
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+});
+
 describe("staged analysis progress", () => {
   it("advances stages while analyzing, clamps at the last, then clears on completion", async () => {
     const track = makeTrack("track-a", "/in/a.wav");
