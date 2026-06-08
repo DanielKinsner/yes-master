@@ -2003,7 +2003,14 @@ function DeliveryProfileCard({
 }
 
 /// Per-axis live readout of what the adaptive guardrails are trimming, shown
-/// directly under the Adapt Strength slider. Each row pairs the REALIZED trim
+/// directly under the Adapt Strength slider.
+///
+/// TODO(owner 2026-06-08): this readout is an ITERATION aid — keep it upfront
+/// while calibrating the guardrails by ear, then HIDE it before release-stable
+/// (gate behind a debug/advanced flag rather than delete, so we can re-surface
+/// it during future tuning). Tracked in docs/ADAPTIVE_DSP_NEXT_STEPS.md.
+///
+/// Each row pairs the REALIZED trim
 /// (post character-floor for EQ; raw for comp/width) with the SOURCE context that
 /// drove it — the share/correlation vs that axis's deadband — so a "-0%" is
 /// legibly "source in range," not a dead control. Brightness/low trim when their
