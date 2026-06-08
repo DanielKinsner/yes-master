@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { StyleTiles } from "./StandardView";
+import { LoudnessSegmented, StyleTiles } from "./StandardView";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -47,6 +47,31 @@ describe("StyleTiles", () => {
     const heavy = tiles.find((t) => t.textContent?.includes("Heavy"))!;
     await act(async () => { heavy.click(); });
     expect(onSelect).toHaveBeenCalledWith({ kind: "oomph" });
+    await act(async () => root.unmount());
+  });
+});
+
+describe("LoudnessSegmented", () => {
+  it("renders Low/Medium/High and marks the active step from the LUFS target", async () => {
+    const { container, root } = await render(
+      <LoudnessSegmented targetLufs={-11} onSelect={() => {}} />,
+    );
+    const text = container.textContent ?? "";
+    for (const label of ["Low", "Medium", "High"]) expect(text).toContain(label);
+    const active = container.querySelector(".std-seg-option.is-active");
+    expect(active?.textContent).toContain("Medium");
+    await act(async () => root.unmount());
+  });
+
+  it("calls onSelect with the mapped LUFS target", async () => {
+    const onSelect = vi.fn();
+    const { container, root } = await render(
+      <LoudnessSegmented targetLufs={-14} onSelect={onSelect} />,
+    );
+    const opts = Array.from(container.querySelectorAll<HTMLButtonElement>(".std-seg-option"));
+    const high = opts.find((o) => o.textContent?.includes("High"))!;
+    await act(async () => { high.click(); });
+    expect(onSelect).toHaveBeenCalledWith(-9);
     await act(async () => root.unmount());
   });
 });
