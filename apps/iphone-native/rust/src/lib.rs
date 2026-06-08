@@ -253,10 +253,13 @@ fn native_preset(preset: Option<&str>) -> Preset {
         .to_ascii_lowercase()
         .as_str()
     {
-        "warm" | "warmth" => Preset::Warmth,
-        "open" | "clarity" => Preset::Clarity,
-        "punch" => Preset::Punch,
         "balanced" | "universal" => Preset::Universal,
+        "bright" | "clarity" | "open" => Preset::Clarity,
+        "warm" | "tape" => Preset::Tape,
+        "heavy" | "oomph" => Preset::Oomph,
+        // Back-compat aliases for older builds / saved payloads.
+        "warmth" => Preset::Warmth,
+        "punch" => Preset::Punch,
         _ => Preset::Universal,
     }
 }
@@ -331,13 +334,23 @@ mod tests {
 
     #[test]
     fn native_options_map_to_shared_preset_and_intensity() {
+        let balanced = export_settings_for_options(Some("balanced"), 0.5, -11.0);
+        assert_eq!(balanced.preset, Preset::Universal);
+
+        let bright = export_settings_for_options(Some("bright"), 0.5, -11.0);
+        assert_eq!(bright.preset, Preset::Clarity);
+
         let warm = export_settings_for_options(Some("warm"), 0.8, -11.0);
-        assert_eq!(warm.preset, Preset::Warmth);
+        assert_eq!(warm.preset, Preset::Tape);
         assert_eq!(warm.intensity, 0.8);
 
-        let open = export_settings_for_options(Some("open"), 2.0, -11.0);
-        assert_eq!(open.preset, Preset::Clarity);
-        assert_eq!(open.intensity, 1.0);
+        let heavy = export_settings_for_options(Some("heavy"), 1.0, -11.0);
+        assert_eq!(heavy.preset, Preset::Oomph);
+
+        // Back-compat aliases still resolve.
+        assert_eq!(export_settings_for_options(Some("open"), 0.5, -11.0).preset, Preset::Clarity);
+        assert_eq!(export_settings_for_options(Some("warmth"), 0.5, -11.0).preset, Preset::Warmth);
+        assert_eq!(export_settings_for_options(Some("punch"), 0.5, -11.0).preset, Preset::Punch);
 
         let fallback = export_settings_for_options(Some("unknown"), -1.0, -11.0);
         assert_eq!(fallback.preset, Preset::Universal);
@@ -830,7 +843,7 @@ mod tests {
             export_settings_for_options_with_context(Some("warm"), 0.8, -9.0, Some(&context));
 
         // Preset / intensity / loudness mapping.
-        assert_eq!(settings.preset, Preset::Warmth);
+        assert_eq!(settings.preset, Preset::Tape);
         assert_eq!(settings.intensity, 0.8);
         assert_eq!(settings.effective_target_lufs(), Some(-9.0));
         // Fixed delivery contract for the phone target.
