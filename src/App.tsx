@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useRef,
   useState,
   type DragEvent as ReactDragEvent,
@@ -48,6 +49,8 @@ import {
   loudnessTargetDisplay,
 } from "./lib/effective-settings";
 import { compressorAutoReadouts } from "./lib/compressor-auto";
+import { isToneFlat } from "./lib/tone-reset";
+import { waveformLoadingView } from "./lib/waveform-progress";
 import "./App.css";
 
 const PRESET_OPTIONS: { value: Preset; label: string; blurb: string }[] = [
@@ -644,6 +647,8 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           <WaveformView
             peaks={tm.selectedWaveform}
             isLoading={tm.isLoadingWaveform}
+            isAnalyzing={tm.isAnalyzing}
+            analysisProgress={tm.analysisProgress}
             currentTimeSec={tm.transport.currentTimeSec}
             durationSec={track.duration_seconds ?? 180}
             region={tm.selectedRegion}
@@ -686,6 +691,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           settings={tm.selectedSettings}
           onIntensity={tm.setIntensity}
           onEq={tm.setEqBand}
+          onResetTone={tm.resetToneControls}
           onLoudnessTargetProfile={tm.setLoudnessTargetProfile}
           spectrumDb={tm.transport.spectrumDb}
         />
@@ -1164,9 +1170,78 @@ function AnalysisSummary({ analysis }: { analysis: AnalysisResult }) {
   );
 }
 
-function WaveformView({
+// Progress surface shown in the waveform deck while a track is prepared.
+// `analyzing` drives a determinate bar from the staged analysis progress
+// (with the current stage label + percent); `loading` shows an indeterminate
+// sweeping bar for the waveform decode (no real fraction available); `idle`
+// is the plain empty state.
+export function WaveformLoading({
+  isAnalyzing,
+  isLoadingWaveform,
+  analysisProgress,
+}: {
+  isAnalyzing: boolean;
+  isLoadingWaveform: boolean;
+  analysisProgress: { label: string; progress: number } | null;
+}) {
+  const view = waveformLoadingView({
+    isAnalyzing,
+    analysisProgress,
+    isLoadingWaveform,
+  });
+  const labelId = useId();
+  const showBar = view.mode !== "idle";
+  const determinate = view.mode === "analyzing" && view.percent !== null;
+  return (
+    <div className={`wf-loading wf-loading-${view.mode}`}>
+      <div className="wf-loading-row">
+        {/* Only the stage LABEL is a polite live region, so a screen reader
+            announces each stage once ("Reading tonal balance") rather than
+            re-reading the percent + the bar's value on every ~1.4 s tick. The
+            progressbar below (outside any live region) carries the numeric
+            value for AT to poll; the visible percent is decorative. */}
+        <span
+          id={labelId}
+          className="wf-loading-text"
+          role="status"
+          aria-live="polite"
+        >
+          {view.label}
+        </span>
+        {view.percent !== null && (
+          <span className="wf-loading-pct" aria-hidden="true">
+            {view.percent}%
+          </span>
+        )}
+      </div>
+      {showBar && (
+        <div
+          className={`wf-loading-bar${determinate ? "" : " is-indeterminate"}`}
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={determinate ? (view.percent ?? undefined) : undefined}
+          aria-labelledby={labelId}
+        >
+          {determinate ? (
+            <span
+              className="wf-loading-bar-fill"
+              style={{ width: `${view.percent}%` }}
+            />
+          ) : (
+            <span className="wf-loading-bar-sweep" />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function WaveformView({
   peaks,
   isLoading,
+  isAnalyzing,
+  analysisProgress,
   currentTimeSec,
   durationSec,
   region,
@@ -1176,6 +1251,8 @@ function WaveformView({
 }: {
   peaks: WaveformPeaks | undefined;
   isLoading: boolean;
+  isAnalyzing: boolean;
+  analysisProgress: { label: string; progress: number } | null;
   currentTimeSec: number;
   durationSec: number;
   region: LoopRegion | null;
@@ -1185,10 +1262,22 @@ function WaveformView({
 }) {
   const [dragRegion, setDragRegion] = useState<LoopRegion | null>(null);
 
-  if (isLoading || !peaks) {
+  // Show the waveform whenever the SELECTED track has peaks; otherwise show the
+  // prepare-progress surface (staged analysis bar → indeterminate decode bar →
+  // idle "no waveform yet"). Gating on `!peaks` alone — not the GLOBAL
+  // isAnalyzing/isLoading flags — keeps an already-decoded track's waveform,
+  // transport, playhead, and loop region on screen while a DIFFERENT imported
+  // track analyzes or decodes in the background. isAnalyzing/isLoading still
+  // flow into WaveformLoading to pick the right progress mode for the genuine
+  // first-load case (when this track has no peaks yet).
+  if (!peaks) {
     return (
       <section className="wf-card">
-        <div className="wf-empty">{isLoading ? "Loading waveform…" : "No waveform yet."}</div>
+        <WaveformLoading
+          isAnalyzing={isAnalyzing}
+          isLoadingWaveform={isLoading}
+          analysisProgress={analysisProgress}
+        />
       </section>
     );
   }
@@ -1645,10 +1734,11 @@ function isPresetActive(a: Preset, b: Preset): boolean {
   return a.kind === b.kind;
 }
 
-function Macros({
+export function Macros({
   settings,
   onIntensity,
   onEq,
+  onResetTone,
   onLoudnessTargetProfile,
   spectrumDb,
 }: {
@@ -1659,6 +1749,8 @@ function Macros({
     band: "sub" | "low" | "low-mid" | "mid" | "high-mid" | "high" | "sparkle",
     db: number,
   ) => void;
+  // Fast reset for this whole area — flatten intensity + every EQ band.
+  onResetTone: () => void;
   onLoudnessTargetProfile: (profileId: string) => void;
   // L4b — live FFT spectrum forwarded from PlaybackTick. Empty array
   // means no spectrum yet (idle / Original playback); VisualEqPanel
@@ -1732,7 +1824,14 @@ function Macros({
           but the panel itself now has the horizontal real estate to
           show the curve, nodes, and grid cleanly. */}
       <div className="equalizer-block">
-        <span className="section-label">EQUALIZER (Dynamic)</span>
+        <div className="equalizer-block-head">
+          <span className="section-label">EQUALIZER (Dynamic)</span>
+          <PanelResetButton
+            label="Reset intensity & EQ to flat"
+            onClick={onResetTone}
+            disabled={isToneFlat(settings)}
+          />
+        </div>
         <VisualEqPanel
           settings={settings}
           onEq={onEq}
@@ -1904,7 +2003,14 @@ function DeliveryProfileCard({
 }
 
 /// Per-axis live readout of what the adaptive guardrails are trimming, shown
-/// directly under the Adapt Strength slider. Each row pairs the REALIZED trim
+/// directly under the Adapt Strength slider.
+///
+/// TODO(owner 2026-06-08): this readout is an ITERATION aid — keep it upfront
+/// while calibrating the guardrails by ear, then HIDE it before release-stable
+/// (gate behind a debug/advanced flag rather than delete, so we can re-surface
+/// it during future tuning). Tracked in docs/ADAPTIVE_DSP_NEXT_STEPS.md.
+///
+/// Each row pairs the REALIZED trim
 /// (post character-floor for EQ; raw for comp/width) with the SOURCE context that
 /// drove it — the share/correlation vs that axis's deadband — so a "-0%" is
 /// legibly "source in range," not a dead control. Brightness/low trim when their
@@ -2594,9 +2700,11 @@ function DeliveryFormatCard({
 function PanelResetButton({
   label,
   onClick,
+  disabled = false,
 }: {
   label: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
@@ -2604,9 +2712,11 @@ function PanelResetButton({
       className="panel-reset-button"
       aria-label={label}
       title={label}
+      disabled={disabled}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (disabled) return;
         onClick();
       }}
     >

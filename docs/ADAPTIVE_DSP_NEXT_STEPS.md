@@ -60,6 +60,13 @@ rationale for each item live in the finish plan:
 - Premium progress language → **approved and implemented as truthful staged UI**
   for desktop + iPhone analysis/rendering. It is timed UI state, not backend
   stage telemetry yet; do not claim unbuilt steps such as genre detection.
+- **"Adaptive trims (chain, pre-landing)" readout → keep upfront for iteration,
+  hide before release (owner, 2026-06-08).** The per-axis readout (`AdaptiveReadout`
+  in `src/App.tsx`) stays front-and-center while the guardrails are being
+  calibrated by ear; before treating adaptive DSP as release-stable, **gate it
+  behind a debug/advanced flag** (hide, don't delete — we'll want it back for
+  future tuning). Marked with a `TODO(owner 2026-06-08)` at the component.
+  Ties into the Calibration gate below.
 
 ## 🎚️ Tier-1 finish (remaining — calibrate by ear)
 

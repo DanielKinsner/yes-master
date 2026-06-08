@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>YES Master — Preset Calibration Reference</title>
+<style>
+  :root {
+    --bg-0:#070b12; --bg-1:#0c111c; --bg-2:#121a28; --line:#1f2a3d;
+    --text-0:#eef3fb; --text-1:#c3cfe2; --text-2:#7e8da6;
+    --boost:#5fa8ff; --boost-deep:#2a6bf2;
+    --cut:#ff9a5c; --cut-deep:#e8662a;
+    --accent:#6fa3ff; --warm:#ffb86b; --good:#6cd08a;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:radial-gradient(1200px 600px at 50% -10%, #0e1626 0%, var(--bg-0) 60%);
+    color:var(--text-1); font:14px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    padding:32px 28px 64px; -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1180px; margin:0 auto; }
+  h1 { color:var(--text-0); font-size:24px; letter-spacing:-.01em; margin:0 0 4px; }
+  h1 .accent { color:var(--accent); }
+  .sub { color:var(--text-2); margin:0 0 4px; font-size:13px; }
+  .src { color:var(--text-2); font-size:12px; font-family:ui-monospace,Menlo,Consolas,monospace; margin:0 0 24px; }
+  h2 { color:var(--text-0); font-size:15px; letter-spacing:.04em; text-transform:uppercase;
+       margin:34px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line);
+       display:flex; align-items:baseline; gap:10px; }
+  h2 small { color:var(--text-2); font-size:11px; letter-spacing:.02em; text-transform:none; font-weight:400; }
+  .legend { display:flex; flex-wrap:wrap; gap:18px; align-items:center; font-size:12px; color:var(--text-2); margin:8px 0 4px; }
+  .legend .chip { display:inline-flex; align-items:center; gap:6px; }
+  .swatch { width:22px; height:8px; border-radius:2px; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { padding:7px 8px; text-align:center; border-bottom:1px solid #16202f; }
+  th { color:var(--text-2); font-weight:600; font-size:11px; letter-spacing:.03em; text-transform:uppercase; }
+  th.freq small { display:block; color:#52607a; font-weight:400; font-size:10px; letter-spacing:0; }
+  td.name, th.name { text-align:left; }
+  td.name { color:var(--text-0); font-weight:600; white-space:nowrap; }
+  td.name .blurb { display:block; color:var(--text-2); font-weight:400; font-size:11px; max-width:320px; }
+  tbody tr:hover { background:rgba(111,163,255,.04); }
+  .num { font-family:ui-monospace,Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; }
+  /* diverging EQ bar */
+  .bar { position:relative; height:26px; min-width:78px; }
+  .bar .mid { position:absolute; left:50%; top:3px; bottom:3px; width:1px; background:#2a3650; }
+  .bar .fill { position:absolute; top:6px; bottom:6px; border-radius:2px; }
+  .bar .val { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+              font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; color:var(--text-0);
+              text-shadow:0 1px 2px rgba(0,0,0,.7); }
+  .bar.zero .val { color:#475068; }
+  /* tinted scalar cells */
+  .cell { border-radius:4px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12.5px; color:var(--text-0);
+          padding:5px 4px; }
+  .cell .u { color:var(--text-2); font-size:10px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(255px,1fr)); gap:12px; margin-top:14px; }
+  .card { background:linear-gradient(180deg,var(--bg-2),var(--bg-1)); border:1px solid var(--line);
+          border-radius:10px; padding:13px 15px; }
+  .card h3 { margin:0 0 6px; font-size:14px; color:var(--text-0); display:flex; align-items:center; gap:8px; }
+  .card h3 .dot { width:9px; height:9px; border-radius:50%; }
+  .card p { margin:0; color:var(--text-1); font-size:12.5px; }
+  .note { color:var(--text-2); font-size:12px; margin:18px 0 0; padding:12px 14px; background:var(--bg-1);
+          border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:6px; }
+  .note b { color:var(--text-1); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>YES <span class="accent">Master</span> — Preset Calibration Reference</h1>
+  <p class="sub">Every preset's baseline DSP move, before your Intensity / manual EQ / adaptive guardrails. This is the "starting shape" each preset stamps on the source.</p>
+  <p class="src">source of truth: src-tauri/src/dsp.rs · PresetCalibration · generated 2026-06-08</p>
+
+  <div class="legend">
+    <span class="chip"><span class="swatch" style="background:linear-gradient(90deg,var(--boost-deep),var(--boost))"></span> boost (dB)</span>
+    <span class="chip"><span class="swatch" style="background:linear-gradient(90deg,var(--cut),var(--cut-deep))"></span> cut (dB)</span>
+    <span class="chip" style="color:#475068">0.0 = untouched (left to you)</span>
+  </div>
+
+  <h2>Tonal shape <small>7-band EQ baseline · the visual-EQ frequencies · scaled by Intensity, then your manual EQ adds on top</small></h2>
+  <table id="eq">
+    <thead><tr>
+      <th class="name">Preset</th>
+      <th class="freq">Sub<small>80 Hz</small></th>
+      <th class="freq">Low<small>200 Hz</small></th>
+      <th class="freq">Low-Mid<small>400 Hz</small></th>
+      <th class="freq">Mid<small>1.5 kHz</small></th>
+      <th class="freq">High-Mid<small>3.5 kHz</small></th>
+      <th class="freq">Air<small>6 kHz</small></th>
+      <th class="freq">Sparkle<small>12 kHz</small></th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>Character &amp; space</h2>
+  <table id="space">
+    <thead><tr>
+      <th class="name">Preset</th>
+      <th>Saturation<br><small style="color:#52607a">drive 0–1</small></th>
+      <th>Stereo width<br><small style="color:#52607a">1.0 = neutral</small></th>
+      <th>Transient<br><small style="color:#52607a">+punch / −soften</small></th>
+      <th>Sub HPF<br><small style="color:#52607a">Hz</small></th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>Dynamics &amp; loudness</h2>
+  <table id="dyn">
+    <thead><tr>
+      <th class="name">Preset</th>
+      <th>Comp threshold<br><small style="color:#52607a">dBFS · lower = more</small></th>
+      <th>Ratio</th>
+      <th>Attack<br><small style="color:#52607a">ms</small></th>
+      <th>Release<br><small style="color:#52607a">ms</small></th>
+      <th>Target<br><small style="color:#52607a">LUFS</small></th>
+      <th>Gain push<br><small style="color:#52607a">dB</small></th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>What each is for</h2>
+  <div class="cards" id="cards"></div>
+
+  <p class="note"><b>How to read this with the adaptive guardrails:</b> the numbers above are what the preset <i>wants</i> to do. On an already-bright / boomy / dense / wide source, the guardrails <b>reduce</b> the matching moves here (and only these — never your manual EQ), down to a <b>+0.5 dB character floor</b> that keeps the preset recognizable. So a preset like <b>Oomph</b> (+4.2 dB low) has lots for the low guardrail to rein in; <b>Universal</b> (+0.3 dB low, below the floor) has almost nothing — which is why it reads −0% on most sources.</p>
+</div>
+
+<script>
+const PRESETS = [
+  { n:"Universal", c:"#6fa3ff", eq:[0,0.3,-0.1,0,0,1.1,0],  sat:0.03, w:1.04, t:0.04, hpf:24, thr:-12.5, r:1.45, atk:15, rel:250, lufs:-14.0, gain:1.2,
+    note:"Cross-genre safe default. Light air lift, neutral mids, gentle program glue." },
+  { n:"Clarity",   c:"#7fd6e6", eq:[0,0.6,-1.0,-0.8,0,1.7,0], sat:0.025,w:1.02, t:0.05, hpf:28, thr:-12.5, r:1.45, atk:12, rel:150, lufs:-13.4, gain:0.8,
+    note:"Vocal / detail. Lower mids tucked, air shelf forward; fast release keeps articulation open." },
+  { n:"Tape",      c:"#d6b98a", eq:[0,0.0,0.3,-1.4,0,1.9,0],  sat:0.10, w:0.99, t:-0.03,hpf:24, thr:-16.0, r:1.65, atk:30, rel:400, lufs:-13.8, gain:1.5,
+    note:"Glue + softened top + fuller body. Deeper saturation and slow comp visibly drop crest factor." },
+  { n:"Spatial",   c:"#a98fe0", eq:[0,0.1,-0.8,-0.3,0,1.3,0], sat:0.04, w:1.16, t:0.03, hpf:24, thr:-16.0, r:1.8,  atk:15, rel:250, lufs:-13.1, gain:1.0,
+    note:"Widest side image with a clean low-mid floor and transparent comp — width without pumping." },
+  { n:"Oomph",     c:"#e0707a", eq:[0,4.2,-3.0,-2.6,0,-1.2,0],sat:0.045,w:0.95, t:0.08, hpf:22, thr:-15.5, r:1.7,  atk:25, rel:280, lufs:-12.0, gain:1.8,
+    note:"Strong sub lift with a deep low-mid scoop; medium-rate comp keeps the weight controlled, not muddy." },
+  { n:"Warmth",    c:"#e8a06b", eq:[0,0.8,0.7,-1.8,0,-0.8,0], sat:0.08, w:0.98, t:-0.05,hpf:24, thr:-19.0, r:2.0,  atk:20, rel:280, lufs:-14.7, gain:1.0,
+    note:"Fuller body, softer top, soft glue — smooth body, no edge." },
+  { n:"Punch",     c:"#ff8f6b", eq:[0,0.8,-1.8,1.6,0,0.8,0],  sat:0.035,w:1.04, t:0.14, hpf:28, thr:-20.0, r:2.8,  atk:10, rel:100, lufs:-10.9, gain:1.6,
+    note:"Tight lows, presence bite, fast attack/release — impact and forwardness without going Loud." },
+  { n:"Loud",      c:"#7fb3ff", eq:[0,0.4,-1.6,1.8,0,1.2,0],  sat:0.055,w:1.03, t:0.12, hpf:30, thr:-23.0, r:3.5,  atk:15, rel:180, lufs:-10.4, gain:2.5,
+    note:"Strongest density and limiting — assertive but not smashed; enough movement to read as a master." },
+  { n:"Custom",    c:"#8895ad", eq:[0,0,0,0,0,0,0],           sat:0.0,  w:1.00, t:0.0,  hpf:0,  thr:-16.0, r:1.8,  atk:15, rel:200, lufs:-14.0, gain:1.5,
+    note:"Neutral slate — identity chain until you dial it. Comp is present but density defaults to 0 (off)." },
+];
+
+const EQ_MAX = 4.2; // largest abs move (Oomph low) for bar scaling
+const fmtDb = v => (v>0?"+":"") + v.toFixed(1);
+
+function eqCell(v){
+  const td = document.createElement("td");
+  const z = Math.abs(v) < 0.05;
+  const w = Math.min(50, Math.abs(v)/EQ_MAX*50);
+  const pos = v >= 0;
+  const grad = pos ? "linear-gradient(90deg,var(--boost-deep),var(--boost))"
+                   : "linear-gradient(90deg,var(--cut-deep),var(--cut))";
+  td.innerHTML = `<div class="bar${z?" zero":""}">
+    <div class="mid"></div>
+    ${z?"":`<div class="fill" style="${pos?`left:50%`:`right:50%`};width:${w}%;background:${grad};opacity:${0.35+Math.min(0.55,Math.abs(v)/EQ_MAX*0.65)}"></div>`}
+    <div class="val">${z?"0.0":fmtDb(v)}</div>
+  </div>`;
+  return td;
+}
+
+// generic tinted scalar: t in [0,1] -> color toward `hue` accent
+function tintCell(text, t, hue){
+  const td = document.createElement("td");
+  const a = 0.06 + 0.30*Math.max(0,Math.min(1,t));
+  td.innerHTML = `<div class="cell" style="background:rgba(${hue},${a})">${text}</div>`;
+  return td;
+}
+
+const rowName = p => {
+  const td = document.createElement("td");
+  td.className = "name";
+  td.innerHTML = `<span style="border-left:3px solid ${p.c};padding-left:8px">${p.n}</span>`;
+  return td;
+};
+
+// ---- EQ table
+const eqBody = document.querySelector("#eq tbody");
+PRESETS.forEach(p => {
+  const tr = document.createElement("tr");
+  tr.appendChild(rowName(p));
+  p.eq.forEach(v => tr.appendChild(eqCell(v)));
+  eqBody.appendChild(tr);
+});
+
+// ---- Character & space
+const spaceBody = document.querySelector("#space tbody");
+PRESETS.forEach(p => {
+  const tr = document.createElement("tr");
+  tr.appendChild(rowName(p));
+  tr.appendChild(tintCell(p.sat.toFixed(3), p.sat/0.10, "255,184,107"));           // saturation (warm)
+  // width: diverging around 1.0
+  const wDelta = p.w - 1.0, wt = Math.abs(wDelta)/0.16;
+  const wHue = wDelta>=0 ? "111,163,255" : "232,160,107";
+  tr.appendChild(tintCell(`${p.w.toFixed(2)} <span class="u">${wDelta>0?"wider":wDelta<0?"narrower":"neutral"}</span>`, wt, wHue));
+  const tHue = p.t>=0 ? "108,208,138" : "232,160,107";
+  tr.appendChild(tintCell(`${p.t>0?"+":""}${p.t.toFixed(2)}`, Math.abs(p.t)/0.14, tHue));
+  tr.appendChild(tintCell(p.hpf===0?"—":`${p.hpf} Hz`, p.hpf? (p.hpf-22)/8 : 0, "111,163,255"));
+  spaceBody.appendChild(tr);
+});
+
+// ---- Dynamics & loudness
+const dynBody = document.querySelector("#dyn tbody");
+PRESETS.forEach(p => {
+  const tr = document.createElement("tr");
+  tr.appendChild(rowName(p));
+  tr.appendChild(tintCell(`${p.thr.toFixed(1)}`, (-p.thr-12.5)/10.5, "255,154,92"));   // lower threshold = hotter
+  tr.appendChild(tintCell(`${p.r.toFixed(2)}:1`, (p.r-1.45)/2.05, "255,154,92"));
+  tr.appendChild(tintCell(`${p.atk}`, (30-p.atk)/20, "111,163,255"));                  // faster attack = brighter
+  tr.appendChild(tintCell(`${p.rel}`, (p.rel-100)/300, "111,163,255"));
+  tr.appendChild(tintCell(`${p.lufs.toFixed(1)}`, (p.lufs+14.7)/4.3, "255,184,107"));  // louder = warmer
+  tr.appendChild(tintCell(`+${p.gain.toFixed(1)}`, (p.gain-0.8)/1.7, "108,208,138"));
+  dynBody.appendChild(tr);
+});
+
+// ---- Cards
+const cards = document.querySelector("#cards");
+PRESETS.forEach(p => {
+  const d = document.createElement("div");
+  d.className = "card";
+  d.innerHTML = `<h3><span class="dot" style="background:${p.c}"></span>${p.n}</h3><p>${p.note}</p>`;
+  cards.appendChild(d);
+});
+</script>
+</body>
+</html>
