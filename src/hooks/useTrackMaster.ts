@@ -20,6 +20,7 @@ import {
   applyUndo,
   shouldCoalesceCommit,
 } from "../lib/history-stack";
+import { resetToneSettings } from "../lib/tone-reset";
 import type {
   AdvancedSettings,
   AnalysisResult,
@@ -1094,6 +1095,17 @@ export function useTrackMaster() {
     [selectedTrackId, updateSettings],
   );
 
+  // Fast reset for the Visual EQ + Intensity area: flatten intensity and all
+  // seven EQ bands in a SINGLE updateSettings mutation so it lands as one
+  // undo step (vs. eight coalesced setEqBand/setIntensity calls) and pushes
+  // the live chain once. Routes through updateSettings, so album-intent vs.
+  // per-track and the stale/live-push bookkeeping are handled identically to
+  // every other tone edit.
+  const resetToneControls = useCallback(() => {
+    if (!selectedTrackId) return;
+    updateSettings(selectedTrackId, (prev) => resetToneSettings(prev));
+  }, [selectedTrackId, updateSettings]);
+
   // UI-truthfulness contract (B7): when the user edits a field that a
   // non-Custom DeliveryProfile would shadow at render time, the
   // displayed value MUST become the value export uses. The pure logic
@@ -1980,6 +1992,7 @@ export function useTrackMaster() {
     setPreset,
     setIntensity,
     setEqBand,
+    resetToneControls,
     setAdvanced,
     setInputGain,
     setOutputGain,

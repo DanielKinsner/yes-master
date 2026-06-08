@@ -48,6 +48,8 @@ import {
   loudnessTargetDisplay,
 } from "./lib/effective-settings";
 import { compressorAutoReadouts } from "./lib/compressor-auto";
+import { isToneFlat } from "./lib/tone-reset";
+import { waveformLoadingView } from "./lib/waveform-progress";
 import "./App.css";
 
 const PRESET_OPTIONS: { value: Preset; label: string; blurb: string }[] = [
@@ -644,6 +646,8 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           <WaveformView
             peaks={tm.selectedWaveform}
             isLoading={tm.isLoadingWaveform}
+            isAnalyzing={tm.isAnalyzing}
+            analysisProgress={tm.analysisProgress}
             currentTimeSec={tm.transport.currentTimeSec}
             durationSec={track.duration_seconds ?? 180}
             region={tm.selectedRegion}
@@ -686,6 +690,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           settings={tm.selectedSettings}
           onIntensity={tm.setIntensity}
           onEq={tm.setEqBand}
+          onResetTone={tm.resetToneControls}
           onLoudnessTargetProfile={tm.setLoudnessTargetProfile}
           spectrumDb={tm.transport.spectrumDb}
         />
@@ -1164,9 +1169,64 @@ function AnalysisSummary({ analysis }: { analysis: AnalysisResult }) {
   );
 }
 
+// Progress surface shown in the waveform deck while a track is prepared.
+// `analyzing` drives a determinate bar from the staged analysis progress
+// (with the current stage label + percent); `loading` shows an indeterminate
+// sweeping bar for the waveform decode (no real fraction available); `idle`
+// is the plain empty state. role=status + aria-live announces the stage
+// changes to assistive tech without stealing focus.
+export function WaveformLoading({
+  isAnalyzing,
+  isLoadingWaveform,
+  analysisProgress,
+}: {
+  isAnalyzing: boolean;
+  isLoadingWaveform: boolean;
+  analysisProgress: { label: string; progress: number } | null;
+}) {
+  const view = waveformLoadingView({
+    isAnalyzing,
+    analysisProgress,
+    isLoadingWaveform,
+  });
+  const showBar = view.mode !== "idle";
+  const determinate = view.mode === "analyzing" && view.percent !== null;
+  return (
+    <div className={`wf-loading wf-loading-${view.mode}`} role="status" aria-live="polite">
+      <div className="wf-loading-row">
+        <span className="wf-loading-text">{view.label}</span>
+        {view.percent !== null && (
+          <span className="wf-loading-pct">{view.percent}%</span>
+        )}
+      </div>
+      {showBar && (
+        <div
+          className={`wf-loading-bar${determinate ? "" : " is-indeterminate"}`}
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={determinate ? (view.percent ?? undefined) : undefined}
+          aria-label={view.label}
+        >
+          {determinate ? (
+            <span
+              className="wf-loading-bar-fill"
+              style={{ width: `${view.percent}%` }}
+            />
+          ) : (
+            <span className="wf-loading-bar-sweep" />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function WaveformView({
   peaks,
   isLoading,
+  isAnalyzing,
+  analysisProgress,
   currentTimeSec,
   durationSec,
   region,
@@ -1176,6 +1236,8 @@ function WaveformView({
 }: {
   peaks: WaveformPeaks | undefined;
   isLoading: boolean;
+  isAnalyzing: boolean;
+  analysisProgress: { label: string; progress: number } | null;
   currentTimeSec: number;
   durationSec: number;
   region: LoopRegion | null;
@@ -1185,10 +1247,18 @@ function WaveformView({
 }) {
   const [dragRegion, setDragRegion] = useState<LoopRegion | null>(null);
 
-  if (isLoading || !peaks) {
+  // While the track is being prepared the deck shows progress instead of the
+  // waveform: the staged analysis bar (the slow part the user waits on), then
+  // an indeterminate decode bar. `!peaks` also covers the brief gap before
+  // either flag flips, and the idle "no waveform yet" edge.
+  if (isAnalyzing || isLoading || !peaks) {
     return (
       <section className="wf-card">
-        <div className="wf-empty">{isLoading ? "Loading waveform…" : "No waveform yet."}</div>
+        <WaveformLoading
+          isAnalyzing={isAnalyzing}
+          isLoadingWaveform={isLoading}
+          analysisProgress={analysisProgress}
+        />
       </section>
     );
   }
@@ -1645,10 +1715,11 @@ function isPresetActive(a: Preset, b: Preset): boolean {
   return a.kind === b.kind;
 }
 
-function Macros({
+export function Macros({
   settings,
   onIntensity,
   onEq,
+  onResetTone,
   onLoudnessTargetProfile,
   spectrumDb,
 }: {
@@ -1659,6 +1730,8 @@ function Macros({
     band: "sub" | "low" | "low-mid" | "mid" | "high-mid" | "high" | "sparkle",
     db: number,
   ) => void;
+  // Fast reset for this whole area — flatten intensity + every EQ band.
+  onResetTone: () => void;
   onLoudnessTargetProfile: (profileId: string) => void;
   // L4b — live FFT spectrum forwarded from PlaybackTick. Empty array
   // means no spectrum yet (idle / Original playback); VisualEqPanel
@@ -1732,7 +1805,14 @@ function Macros({
           but the panel itself now has the horizontal real estate to
           show the curve, nodes, and grid cleanly. */}
       <div className="equalizer-block">
-        <span className="section-label">EQUALIZER (Dynamic)</span>
+        <div className="equalizer-block-head">
+          <span className="section-label">EQUALIZER (Dynamic)</span>
+          <PanelResetButton
+            label="Reset intensity & EQ to flat"
+            onClick={onResetTone}
+            disabled={isToneFlat(settings)}
+          />
+        </div>
         <VisualEqPanel
           settings={settings}
           onEq={onEq}
@@ -2594,9 +2674,11 @@ function DeliveryFormatCard({
 function PanelResetButton({
   label,
   onClick,
+  disabled = false,
 }: {
   label: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
@@ -2604,9 +2686,11 @@ function PanelResetButton({
       className="panel-reset-button"
       aria-label={label}
       title={label}
+      disabled={disabled}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (disabled) return;
         onClick();
       }}
     >

@@ -9,7 +9,7 @@ import { isToneFlat, resetToneSettings, TONE_DEFAULT_INTENSITY } from "./tone-re
 
 function settings(overrides: Partial<MasteringSettings> = {}): MasteringSettings {
   return {
-    preset: { kind: "warm" },
+    preset: { kind: "warmth" },
     intensity: 0.82,
     eq_sub_db: -3,
     eq_low_db: 2.5,
@@ -21,7 +21,7 @@ function settings(overrides: Partial<MasteringSettings> = {}): MasteringSettings
     volume_match: true,
     input_gain_db: -1.5,
     output_gain_db: 0.5,
-    delivery_profile: "club",
+    delivery_profile: "vinyl-premaster",
     advanced: {
       lufs_offset_db: -1,
       ceiling_dbtp: -0.8,

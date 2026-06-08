@@ -1559,6 +1559,95 @@ button.primary:disabled {
   font-size: 0.85rem;
 }
 
+/* Analysis / waveform-decode progress shown in the waveform deck before
+   the waveform exists. Replaces the old static "Loading…" text so the long
+   analyze pass reads as active work, not an idle blank. */
+.wf-loading {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  padding: 1rem;
+}
+
+.wf-loading-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+}
+
+.wf-loading-text {
+  color: var(--text-1);
+  font-size: 0.86rem;
+  letter-spacing: 0.02em;
+}
+
+.wf-loading-pct {
+  color: var(--text-2);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.wf-loading-idle .wf-loading-text {
+  color: var(--text-2);
+}
+
+.wf-loading-bar {
+  position: relative;
+  width: clamp(180px, 42%, 360px);
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(236, 240, 250, 0.1);
+}
+
+.wf-loading-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent-deep), var(--accent-bright));
+  /* Stages step every ~1.4 s — glide between them so the bar reads as
+     continuous motion rather than discrete jumps. */
+  transition: width 380ms ease;
+}
+
+/* Indeterminate decode pass: no real fraction, so sweep a short segment
+   across the track to signal "still working". */
+.wf-loading-bar-sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--accent-bright), transparent);
+  animation: wf-loading-sweep 1.15s ease-in-out infinite;
+}
+
+@keyframes wf-loading-sweep {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(310%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf-loading-bar-sweep {
+    /* Park a static partial fill instead of sweeping. */
+    animation: none;
+    transform: none;
+    width: 100%;
+    background: rgba(111, 163, 255, 0.35);
+  }
+  .wf-loading-bar-fill {
+    transition: none;
+  }
+}
+
 /* Transport — sits directly under the waveform deck. Matching dark
    surface + soft top border so the pair reads as one mastering deck
    even before a JSX wrapper joins them. UI restyle 2026-05-14 slice 2. */
@@ -2962,6 +3051,12 @@ button.primary:disabled {
   margin-right: 0.35rem;
 }
 
+.panel-reset-button:disabled {
+  opacity: 0.32;
+  cursor: default;
+  pointer-events: none;
+}
+
 .panel-hint {
   font-size: 0.7rem;
   color: var(--accent);
@@ -4226,6 +4321,21 @@ button.primary:disabled {
   gap: 0.45rem;
   min-width: 0;
   align-self: stretch;
+}
+
+/* Header row for the EQ cell: section label on the left, the fast-reset
+   ↺ (flatten intensity + every EQ band) pinned to the right. */
+.equalizer-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.equalizer-block-head .panel-reset-button {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 /* EQ in the deck takes the full vertical room of the macros row and
