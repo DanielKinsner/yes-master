@@ -4,7 +4,7 @@
 
 **Goal:** Ship "Standard" — the default desktop view: a stripped, opinionated UI (4 reference-tuned style tiles + Intensity + Loudness) riding the validated adaptive engine, with an asymmetric door into Advanced, plus iPhone parity.
 
-**Architecture:** One settings truth — Standard binds to the same per-track `selectedSettings` and setters that Advanced uses (no new global). A `useViewMode` hook owns `standard | advanced` with a versioned, migration-aware default persisted in `localStorage`. Standard reuses the engine, transport, waveform, and export plumbing wholesale; it adds only friendly mappings, a managed-reset, a fixed-format export wrap, and the Option-B layout. The live "Mastered" audition is made WYSIWYG by forcing the existing `exportLufsPreview` flag on while Standard is active (the DSP audit confirmed the live and export chains are identical when that flag is true).
+**Architecture:** One settings truth — Standard binds to the same per-track `selectedSettings` and setters that Advanced uses (no new global). A `useViewMode` hook owns `standard | advanced` with a versioned, migration-aware default persisted in `localStorage`. Standard reuses the engine, transport, waveform, and export plumbing wholesale; it adds only friendly mappings, a managed-reset, a fixed-format export wrap, and the Option-B layout. Standard holds an **always-clean invariant** enforced at every entry (open project, track switch, return from Advanced), not just the return door: a track carrying hidden Advanced edits is shown in Advanced, never silently in Standard. The live "Mastered" audition is made WYSIWYG via an **internal effective-landing flag** that Standard turns on without ever touching the user-facing Advanced `Preview LUFS` toggle (the DSP audit confirmed the live and export chains are identical when landing is applied).
 
 **Tech Stack:** React 18 + TypeScript (Vite), Vitest (`createRoot` + `act` component tests, pure-helper unit tests), Tauri + Rust (`yes_master_lib`), SwiftUI iPhone app + a Rust FFI bridge crate.
 
@@ -248,7 +248,7 @@ Background (verified shapes): `MasteringSettings` (`src/bindings.ts:205-234`) ha
 import { describe, expect, it } from "vitest";
 
 import type { MasteringSettings } from "../bindings";
-import { hasNonManagedEdits, resetToStandardManaged } from "./standard-managed";
+import { hasNonManagedEdits, resetToStandardManaged, shouldForceAdvancedOnStandardEntry } from "./standard-managed";
 
 function base(overrides: Partial<MasteringSettings> = {}): MasteringSettings {
   return {
@@ -398,6 +398,24 @@ describe("resetToStandardManaged", () => {
     expect(input.eq_low_db).toBe(5);
   });
 });
+
+describe("shouldForceAdvancedOnStandardEntry (always-clean invariant guard)", () => {
+  it("is false for a clean track", () => {
+    expect(shouldForceAdvancedOnStandardEntry({ isAlbum: false, hasTrack: true, settings: base() })).toBe(false);
+  });
+
+  it("is true when the selected track carries hidden non-managed edits", () => {
+    expect(shouldForceAdvancedOnStandardEntry({ isAlbum: false, hasTrack: true, settings: base({ eq_low_db: 2 }) })).toBe(true);
+  });
+
+  it("is true in album mode (Album Master is Advanced-only in v1)", () => {
+    expect(shouldForceAdvancedOnStandardEntry({ isAlbum: true, hasTrack: true, settings: base() })).toBe(true);
+  });
+
+  it("is false when there is no selected track (nothing to leak)", () => {
+    expect(shouldForceAdvancedOnStandardEntry({ isAlbum: false, hasTrack: false, settings: base({ eq_low_db: 9 }) })).toBe(false);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -414,7 +432,7 @@ Expected: FAIL — module not found.
 // Everything else that affects the sound is a "non-managed edit": it can
 // only exist because the user went into Advanced. Standard holds a hard
 // invariant — its non-managed fields are always at their defaults — which
-// these two pure functions detect and enforce (see design spec §2b).
+// these functions detect and enforce (see design spec §2b).
 
 import type { MasteringSettings } from "../bindings";
 
@@ -503,6 +521,20 @@ export function resetToStandardManaged(s: MasteringSettings): MasteringSettings 
     },
   };
 }
+
+/// The always-clean-invariant guard (design spec §2a/§2b). Standard must
+/// never silently render a track that carries hidden Advanced edits — when
+/// it would, the caller shows that track in Advanced instead. Also forces
+/// Advanced in Album mode (Album Master is Advanced-only in v1).
+export function shouldForceAdvancedOnStandardEntry(args: {
+  isAlbum: boolean;
+  hasTrack: boolean;
+  settings: MasteringSettings;
+}): boolean {
+  if (args.isAlbum) return true;
+  if (args.hasTrack && hasNonManagedEdits(args.settings)) return true;
+  return false;
+}
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -514,7 +546,7 @@ Expected: PASS.
 
 ```bash
 git add src/lib/standard-managed.ts src/lib/standard-managed.test.ts
-git commit -m "feat(standard): managed/non-managed edit model + resetToStandardManaged"
+git commit -m "feat(standard): managed/non-managed edit model + reset + entry guard"
 ```
 
 ---
@@ -600,21 +632,21 @@ describe("standardExportNotes", () => {
 
   it("is clean when only cosmetic warnings + info are present", () => {
     const notes = standardExportNotes([info("export_ok"), warn("lufs_very_loud"), warn("dynamic_range_low")]);
-    expect(notes.blocked).toBe(false);
-    expect(notes.blockMessage).toBeUndefined();
+    expect(notes.invalid).toBe(false);
+    expect(notes.invalidMessage).toBeUndefined();
     expect(notes.integrityNote).toBeUndefined();
   });
 
-  it("surfaces a tiny integrity note for true-peak, without blocking", () => {
+  it("surfaces a tiny integrity note for true-peak, without flagging invalid", () => {
     const notes = standardExportNotes([warn("true_peak_high")]);
-    expect(notes.blocked).toBe(false);
+    expect(notes.invalid).toBe(false);
     expect(notes.integrityNote).toContain("true_peak_high msg");
   });
 
-  it("blocks on any critical hard-stop", () => {
+  it("flags the saved master invalid on any critical hard-stop", () => {
     const notes = standardExportNotes([warn("lufs_very_loud"), crit("non_finite_metering")]);
-    expect(notes.blocked).toBe(true);
-    expect(notes.blockMessage).toContain("non_finite_metering msg");
+    expect(notes.invalid).toBe(true);
+    expect(notes.invalidMessage).toContain("non_finite_metering msg");
   });
 });
 ```
@@ -656,10 +688,15 @@ export function standardExportSettings(s: MasteringSettings): MasteringSettings 
 }
 
 export interface StandardExportNotes {
-  /// A technical hard-stop was found — present this prominently and do not
-  /// celebrate the export.
-  blocked: boolean;
-  blockMessage?: string;
+  /// A technical hard-stop was found in the rendered output. Standard
+  /// renders first, then checks — so the file exists but must not be
+  /// treated as a usable master. Present prominently as "saved, but this
+  /// master has a problem — re-render", never celebrate it. This is NOT a
+  /// pre-render block: under Standard's pinned 44.1k/24-bit format the only
+  /// critical that can fire is a corrupt/non-finite render, which is
+  /// unknowable before rendering (see plan Task 13 canon wording).
+  invalid: boolean;
+  invalidMessage?: string;
   /// A genuine integrity issue (true-peak slipped over) — a tiny inline
   /// note alongside success, never a modal.
   integrityNote?: string;
@@ -670,14 +707,14 @@ const INTEGRITY_CODES = new Set(["true_peak_high"]);
 export function standardExportNotes(checks: QualityCheck[]): StandardExportNotes {
   const critical = checks.find((c) => c.level === "critical");
   if (critical) {
-    return { blocked: true, blockMessage: critical.message };
+    return { invalid: true, invalidMessage: critical.message };
   }
   const integrity = checks.find((c) => INTEGRITY_CODES.has(c.code));
   if (integrity) {
-    return { blocked: false, integrityNote: integrity.message };
+    return { invalid: false, integrityNote: integrity.message };
   }
   // Everything else (cosmetic warnings + info) is suppressed in Standard.
-  return { blocked: false };
+  return { invalid: false };
 }
 ```
 
@@ -856,10 +893,10 @@ git commit -m "feat(standard): view-mode resolution + versioned migration persis
 
 ---
 
-## Task 5: `useTrackMaster` — expose `hadPriorSession`, `resetToStandardManaged`, `exportStandardMaster`
+## Task 5: `useTrackMaster` — `hadPriorSession`, `resetToStandardManaged`, `exportStandardMaster`, internal WYSIWYG flag, async-safe save
 
 **Files:**
-- Modify: `src/hooks/useTrackMaster.ts` (session-load effect ~509-571; refs ~309-316; `exportMaster` 1326-1392; return object 1965-2049)
+- Modify: `src/hooks/useTrackMaster.ts` (session-load effect ~509-571; refs ~309-316; live-landing read sites ~723/813/1415/1780; `setExportLufsPreview` 1662-1699 (mirror for `setForceWysiwyg`); `saveUserPreset` 1705-1736; `exportMaster` 1326-1392; return object 1965-2049)
 - Test: `src/hooks/useTrackMaster.integration.test.tsx` (append)
 
 - [ ] **Step 1: Write the failing tests (append to the integration suite)**
@@ -921,6 +958,36 @@ Add inside the existing `describe("useTrackMaster integration dispatches", ...)`
     expect(sent.advanced.target_sample_rate).toBe(44_100);
     expect(sent.advanced.bit_depth).toBe(24);
     expect(sent.advanced.ceiling_dbtp).toBe(-1);
+    await act(async () => harness.root.unmount());
+  });
+
+  it("setForceWysiwyg never mutates the user-facing Preview LUFS toggle", async () => {
+    const harness = await renderHookHarness();
+    expect(harness.current().transport.exportLufsPreview).toBe(false);
+    await act(async () => { harness.current().setForceWysiwyg(true); });
+    // The internal flag drives landing; the visible Advanced toggle is untouched.
+    expect(harness.current().transport.exportLufsPreview).toBe(false);
+    await act(async () => { harness.current().setForceWysiwyg(false); });
+    expect(harness.current().transport.exportLufsPreview).toBe(false);
+    await act(async () => harness.root.unmount());
+  });
+
+  it("saveUserPreset resolves true on success and false on failure", async () => {
+    const track = makeTrack("save-preset-1", "C:/audio/p.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles([track.path]); });
+    await waitFor(() => { expect(harness.current().selectedTrackId).toBe(track.id); });
+
+    mocks.api.saveUserPreset.mockResolvedValueOnce({ id: "p1", name: "Mine", kind: "track", settings: {} });
+    let ok: boolean | undefined;
+    await act(async () => { ok = await harness.current().saveUserPreset("Mine"); });
+    expect(ok).toBe(true);
+
+    mocks.api.saveUserPreset.mockRejectedValueOnce(new Error("disk full"));
+    let ok2: boolean | undefined;
+    await act(async () => { ok2 = await harness.current().saveUserPreset("Other"); });
+    expect(ok2).toBe(false);
     await act(async () => harness.root.unmount());
   });
 ```
@@ -1066,21 +1133,78 @@ Refactor `exportMaster` (`src/hooks/useTrackMaster.ts:1326-1392`) so the body be
 
 (The render/checks logic is byte-for-byte the prior `exportMaster`, with `selectedSettings` parameterized as `exportSettings`.)
 
-- [ ] **Step 3f: Export the three new members**
+- [ ] **Step 3g: Internal effective WYSIWYG flag (do NOT mutate the user toggle)**
 
-In the return object (`src/hooks/useTrackMaster.ts:1965-2049`), add `hadPriorSession,` near the other status fields, `resetToStandardManaged,` next to `resetToneControls,`, and `exportStandardMaster,` next to `exportMaster,`.
+Standard must audition with the loudness landing + limiter applied (WYSIWYG) **without** changing the Advanced `Preview LUFS` toggle (`transport.exportLufsPreview`). Add a separate internal flag and OR it into every live-landing decision.
+
+Add a ref next to `exportLufsPreviewRef` (`src/hooks/useTrackMaster.ts:310`):
+```typescript
+  const forceWysiwygRef = useRef(false);
+```
+
+Immediately after the refs/sync effects (after line ~316), add one accessor — the single source of truth for "should live playback apply the export landing?". It ORs the user toggle with the forced flag, but yields to Volume Match (VM is an input-referenced A/B aid, mutually exclusive with landing — the existing code already turns one off when the other is on, so this keeps that contract):
+```typescript
+  const effectivePreviewLanding = useCallback(
+    () => exportLufsPreviewRef.current || (forceWysiwygRef.current && !volumeMatchRef.current),
+    [],
+  );
+```
+
+Replace the reads of `exportLufsPreviewRef.current` that feed the **live chain** with `effectivePreviewLanding()`. Grep `exportLufsPreviewRef.current` — change the call sites at lines ~723 and ~813 (the two `sendUpdateChain(..., exportLufsPreviewRef.current)` in `updateSettings`), ~1415 (the `playMaster(..., exportLufsPreviewRef.current, ...)` in `playWithKind`), and ~1780 (the `applyUserPreset` dispatch). **Do NOT** change the ref *assignments* inside `setVolumeMatch` (line ~1641) or `setExportLufsPreview` (line ~1664), nor the `sendUpdateChain(..., on)` at ~1685 (that path just set the ref to `on`).
+
+Add the `setForceWysiwyg` setter, mirroring how `setExportLufsPreview` re-pushes the live chain (`src/hooks/useTrackMaster.ts:1662-1699`) — place it right after `setExportLufsPreview`:
+```typescript
+  const setForceWysiwyg = useCallback(
+    (on: boolean) => {
+      forceWysiwygRef.current = on;
+      // Re-land the live chain if a master is currently auditioning, so
+      // entering/leaving Standard mid-playback recomputes the landing.
+      if (
+        shouldPushLiveChainForSettingsEdit({
+          trackId: selectedTrackId,
+          editingAlbumIntent: mode === "album" && !selectedIsOverriding,
+          loadedTrackId,
+          loadedKindByTrack,
+          overrideAlbum,
+        })
+      ) {
+        sendUpdateChain(withSourceLufs(selectedTrackId, selectedSettings), effectivePreviewLanding());
+      }
+    },
+    [
+      mode,
+      selectedIsOverriding,
+      selectedTrackId,
+      loadedTrackId,
+      loadedKindByTrack,
+      overrideAlbum,
+      selectedSettings,
+      withSourceLufs,
+      sendUpdateChain,
+      effectivePreviewLanding,
+    ],
+  );
+```
+
+- [ ] **Step 3h: Make `saveUserPreset` async-safe (return success)**
+
+The Back-to-Standard modal must only reset + switch *after* a successful save. Today `saveUserPreset` (`src/hooks/useTrackMaster.ts:1705-1736`) returns `void` and swallows errors. Change it to report success: return `Promise<boolean>`. In the empty-name guard `return false;`; after `setUserPresets((prev) => [...prev, created]);` add `return true;`; in the `catch` block (after `setError(messageOf(err))`) `return false;`. Update the signature to `async (name: string): Promise<boolean>`. Callers that ignore the return value (e.g. `PresetTiles`'s `onSave`) keep working.
+
+- [ ] **Step 3f: Export the new members**
+
+In the return object (`src/hooks/useTrackMaster.ts:1965-2049`), add `hadPriorSession,` near the other status fields, `resetToStandardManaged,` next to `resetToneControls,`, `exportStandardMaster,` next to `exportMaster,`, and `setForceWysiwyg,` next to `setExportLufsPreview,`.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `npm test -- useTrackMaster.integration`
 Expected: PASS. Then run the full suite to catch regressions: `npm test`.
-Expected: all green (the existing `exportMaster` tests still pass — behavior is unchanged).
+Expected: all green (the existing `exportMaster` tests still pass — `runExport(selectedSettings)` is behavior-identical; the live-landing read sites now go through `effectivePreviewLanding()`, which equals `exportLufsPreviewRef.current` whenever `forceWysiwygRef` is false — i.e. everywhere except Standard).
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/hooks/useTrackMaster.ts src/hooks/useTrackMaster.integration.test.tsx
-git commit -m "feat(standard): hook exposes hadPriorSession, resetToStandardManaged, exportStandardMaster"
+git commit -m "feat(standard): hook adds hadPriorSession, resetToStandardManaged, exportStandardMaster, internal WYSIWYG flag, async-safe save"
 ```
 
 ---
@@ -1470,9 +1594,35 @@ git commit -m "feat(standard): LoudnessSegmented component"
 - Modify: `src/components/StandardView.tsx` (add `StandardView` + `StandardExportButton`)
 - Test: `src/components/StandardView.test.tsx` (add a `StandardView` describe block)
 
-`StandardView` takes the whole `tm` (the `useTrackMaster` return) — the same pattern as `TrackMaster` (`<TrackMaster tm={tm} />`, `App.tsx:115`). It composes the Option-B layout: a left hero (track chip + import, Play, the existing `WaveformView`/`WaveformLoading` surface, Original/Mastered + Volume Match) and a right control column (`StyleTiles`, the Intensity `Knob`, `LoudnessSegmented`, and the `StandardExportButton`). Reused exports from `App.tsx`: `WaveformView` (`App.tsx:1240`), `WaveformLoading` (`App.tsx:1178`). Reused: `Knob` (`src/components/Knob.tsx:80`), `intensityLabel` (`src/components/Knob.tsx:367`).
+`StandardView` takes the whole `tm` (the `useTrackMaster` return) — the same pattern as `TrackMaster` (`<TrackMaster tm={tm} />`, `App.tsx:115`). It composes the Option-B layout: a left hero (track chip + import, Play, the `WaveformView`/`WaveformLoading` surface, Original/Mastered + Volume Match) and a right control column (`StyleTiles`, the Intensity `Knob`, `LoudnessSegmented`, and the `StandardExportButton`). Reused from the extracted `src/components/Waveform.tsx` (Step 1): `WaveformView`, `WaveformLoading`. Reused: `Knob` (`src/components/Knob.tsx:80`), `intensityLabel` (`src/components/Knob.tsx:367`).
 
-- [ ] **Step 1: Write the failing test (append)**
+- [ ] **Step 1: Extract the waveform components (removes the App ↔ StandardView cycle)**
+
+`StandardView` needs `WaveformView`/`WaveformLoading`, which currently live in `App.tsx`. To avoid a circular import (`App` → `StandardView` → `App`), move them into their own module first — this is a planned step, not a contingency.
+
+Create `src/components/Waveform.tsx` and move the `WaveformLoading` (`App.tsx:1178-1238`) and `WaveformView` (`App.tsx:1240-~1405`) function definitions there **verbatim**. Add the imports they use:
+```typescript
+// src/components/Waveform.tsx
+import { useId, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { waveformLoadingView } from "../lib/waveform-progress";
+import { WaveformDbScale } from "./WaveformDbScale";
+import type { LoopRegion, WaveformPeaks } from "../bindings";
+```
+(Let `tsc` flag any further symbol the moved bodies reference — e.g. a local formatting helper — and move or import it too.)
+
+In `src/App.tsx`, delete the two moved definitions and re-export them so existing imports keep working (`App.progress-and-reset.test.tsx` imports them from `./App`, and the Advanced desk renders `<WaveformView />` internally):
+```typescript
+export { WaveformView, WaveformLoading } from "./components/Waveform";
+```
+Drop the now-unused `useId` from the `App.tsx` React import if nothing else uses it (let `tsc`/lint guide).
+
+Run: `npm test` — `App.progress-and-reset.test.tsx` must stay green (it still imports the components from `./App` via the re-export). Then commit:
+```bash
+git add src/components/Waveform.tsx src/App.tsx
+git commit -m "refactor(standard): extract WaveformView/WaveformLoading to break the App<->StandardView import cycle"
+```
+
+- [ ] **Step 2: Write the failing test (append)**
 
 ```typescript
 import { StandardView } from "./StandardView";
@@ -1555,24 +1705,24 @@ describe("StandardView", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 3: Run test to verify it fails**
 
 Run: `npm test -- StandardView`
 Expected: FAIL — `StandardView` not exported.
 
-- [ ] **Step 3: Add `StandardView` + `StandardExportButton`**
+- [ ] **Step 4: Add `StandardView` + `StandardExportButton`**
 
 Add imports at the top of `src/components/StandardView.tsx`:
 
 ```typescript
 import type { useTrackMaster } from "../hooks/useTrackMaster";
 import { Knob, intensityLabel } from "./Knob";
-import { WaveformLoading, WaveformView } from "../App";
+import { WaveformLoading, WaveformView } from "./Waveform";
 import { effectiveLoudnessTarget } from "../lib/effective-settings";
 import { standardExportNotes } from "../lib/standard-export";
 ```
 
-> Note on imports: `StandardView` imports `WaveformView`/`WaveformLoading` from `../App`, while `App.tsx` will import `StandardView` from `./components/StandardView`. This is a benign one-way usage at runtime (App renders StandardView; StandardView only references App's already-defined function components), but to avoid a static circular-import smell, if the bundler warns, hoist `WaveformView`/`WaveformLoading` into a small `src/components/Waveform.tsx` and re-export from `App.tsx`. Prefer the direct import first; only split if a warning appears.
+> Note: the waveform widgets come from `./Waveform` (extracted in Step 1), so there is no `App` ↔ `StandardView` import cycle.
 
 Then add the components:
 
@@ -1593,8 +1743,10 @@ function StandardExportButton({ tm }: { tm: TM }) {
       >
         {tm.isExporting ? "Creating Master…" : "Create Master"}
       </button>
-      {notes?.blocked && (
-        <p className="std-export-block" role="alert">{notes.blockMessage}</p>
+      {notes?.invalid && (
+        <p className="std-export-block" role="alert">
+          Saved, but this master has a problem — re-render: {notes.invalidMessage}
+        </p>
       )}
       {notes?.integrityNote && (
         <p className="std-export-note">{notes.integrityNote}</p>
@@ -1710,12 +1862,12 @@ export function StandardView({ tm }: { tm: TM }) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 5: Run test to verify it passes**
 
 Run: `npm test -- StandardView`
-Expected: PASS. If a circular-import warning appears, apply the `Waveform.tsx` hoist noted above and re-run.
+Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/components/StandardView.tsx src/components/StandardView.test.tsx
@@ -1841,17 +1993,31 @@ In `App` (`src/App.tsx:67`), after `const tm = useTrackMaster();` add:
   const [returnConfirm, setReturnConfirm] = useState(false);
 
   // WYSIWYG: the live Mastered audition equals the export only when the
-  // loudness landing + limiter are applied in real time. Force that on in
-  // Standard (and back to Advanced's responsive default otherwise).
+  // loudness landing + limiter are applied in real time. Standard forces
+  // that via the INTERNAL flag — it never touches the user-facing Advanced
+  // `Preview LUFS` toggle (see Task 5 step 3g).
   useEffect(() => {
     if (view === null) return;
-    tm.setExportLufsPreview(view === "standard");
-  }, [view, tm.setExportLufsPreview]);
+    tm.setForceWysiwyg(view === "standard");
+  }, [view, tm.setForceWysiwyg]);
 
-  // Album Master is Advanced-only in v1.
+  // The always-clean invariant + Album-only-in-Advanced, enforced at EVERY
+  // entry to Standard — not just the return door. If the selected track
+  // carries hidden Advanced edits (opened project, restored session, or a
+  // track switch), or we're in Album mode, show it in Advanced instead.
+  // Pure decision lives in `shouldForceAdvancedOnStandardEntry` (Task 2, tested).
   useEffect(() => {
-    if (view === "standard" && tm.mode === "album") setView("advanced");
-  }, [view, tm.mode, setView]);
+    if (view !== "standard") return;
+    if (
+      shouldForceAdvancedOnStandardEntry({
+        isAlbum: tm.mode === "album",
+        hasTrack: !!tm.selectedTrack,
+        settings: tm.selectedSettings,
+      })
+    ) {
+      setView("advanced");
+    }
+  }, [view, tm.mode, tm.selectedTrack, tm.selectedSettings, setView]);
 
   const requestBackToStandard = () => {
     if (hasNonManagedEdits(tm.selectedSettings)) {
@@ -1868,7 +2034,7 @@ Add the imports at the top of `src/App.tsx`:
 import { useEffect, useState } from "react"; // extend the existing react import
 import { useViewMode } from "./hooks/useViewMode";
 import { StandardView } from "./components/StandardView";
-import { hasNonManagedEdits } from "./lib/standard-managed";
+import { hasNonManagedEdits, shouldForceAdvancedOnStandardEntry } from "./lib/standard-managed";
 ```
 
 (Merge `useEffect`/`useState` into whatever React import already exists — do not duplicate the import.)
@@ -1907,9 +2073,20 @@ Before the closing `</div>` of `.app`, add:
 ```typescript
       {returnConfirm && (
         <BackToStandardConfirm
+          saving={tm.savingPreset}
           onCancel={() => setReturnConfirm(false)}
           onReset={() => { tm.resetToStandardManaged(); setReturnConfirm(false); setView("standard"); }}
-          onSaveAsPreset={(name) => { tm.saveUserPreset(name); tm.resetToStandardManaged(); setReturnConfirm(false); setView("standard"); }}
+          onSaveAsPreset={async (name) => {
+            // Only reset + switch if the save actually succeeded — the save
+            // is async; never discard the user's edits when the write failed.
+            const ok = await tm.saveUserPreset(name);
+            if (ok) {
+              tm.resetToStandardManaged();
+              setReturnConfirm(false);
+              setView("standard");
+            }
+            return ok;
+          }}
         />
       )}
 ```
@@ -1918,15 +2095,31 @@ And add the small component near the other panels in `src/App.tsx`:
 
 ```typescript
 function BackToStandardConfirm({
+  saving,
   onCancel,
   onReset,
   onSaveAsPreset,
 }: {
+  saving: boolean;
   onCancel: () => void;
   onReset: () => void;
-  onSaveAsPreset: (name: string) => void;
+  onSaveAsPreset: (name: string) => Promise<boolean>;
 }) {
   const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const disabled = saving || busy;
+  const handleSave = async () => {
+    const trimmed = name.trim();
+    if (!trimmed || disabled) return;
+    setBusy(true);
+    try {
+      // On success the parent unmounts this modal; on failure it stays open
+      // with the edits intact so the user can retry.
+      await onSaveAsPreset(trimmed);
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <div className="modal-scrim" role="dialog" aria-modal="true" aria-label="Back to Standard">
       <div className="modal-card">
@@ -1940,20 +2133,21 @@ function BackToStandardConfirm({
             className="modal-input"
             placeholder="Preset name"
             value={name}
+            disabled={disabled}
             onChange={(e) => setName(e.target.value)}
           />
           <button
             type="button"
             className="primary"
-            disabled={name.trim().length === 0}
-            onClick={() => onSaveAsPreset(name.trim())}
+            disabled={disabled || name.trim().length === 0}
+            onClick={handleSave}
           >
-            Save as preset
+            {busy ? "Saving…" : "Save as preset"}
           </button>
         </div>
         <div className="modal-actions">
-          <button type="button" className="ghost-btn" onClick={onCancel}>Cancel</button>
-          <button type="button" className="danger-btn" onClick={onReset}>Reset & continue</button>
+          <button type="button" className="ghost-btn" disabled={disabled} onClick={onCancel}>Cancel</button>
+          <button type="button" className="danger-btn" disabled={disabled} onClick={onReset}>Reset & continue</button>
         </div>
       </div>
     </div>
@@ -1964,13 +2158,13 @@ function BackToStandardConfirm({
 - [ ] **Step 4: Run the test + full suite**
 
 Run: `npm test -- App.standard-view` then `npm test`.
-Expected: PASS. Watch for: the existing `App.progress-and-reset.test.tsx` still passes (it imports `Macros`/`WaveformView`/`WaveformLoading` from `./App`, which are unchanged).
+Expected: PASS. Watch for: the existing `App.progress-and-reset.test.tsx` still passes (it imports `Macros` from `./App` unchanged, and `WaveformView`/`WaveformLoading` via the Task 9 re-export). The dirty-entry bounce decision is the pure `shouldForceAdvancedOnStandardEntry` (Task 2 covers the open-project / track-switch / album cases); the effect here is just the one-line wiring around it.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/App.tsx src/App.standard-view.test.tsx
-git commit -m "feat(standard): wire Standard view, asymmetric transition, WYSIWYG + Album guard into App"
+git commit -m "feat(standard): wire Standard view — transition, internal WYSIWYG, clean-invariant entry guard, async-safe return"
 ```
 
 ---
@@ -2238,10 +2432,18 @@ view), the deliberate behavior is:
 - **One tiny, non-blocking integrity note** is kept for a genuine integrity
   issue (true-peak slipping over) — inline text, never a modal. The
   fixed-ceiling limiter makes this rare by construction.
-- **Technical hard-stops still block in both modes** (invalid path,
-  non-finite / corrupt render state, requested-vs-rendered sample-rate
-  mismatch, sub-16-bit). Standard surfaces these prominently instead of
-  celebrating the export.
+- **Technical hard-stops are always surfaced, never hidden** — but be precise
+  about *when*. Pre-render failures (invalid path, cancelled save dialog,
+  decode failure) abort before any file is written: these genuinely block.
+  Post-render criticals (non-finite / corrupt render, requested-vs-rendered
+  sample-rate mismatch, sub-16-bit) are detected *after* the WAV is written,
+  so the honest framing is "saved, but this master is invalid — re-render",
+  shown prominently instead of celebrating success (not a pre-render block).
+  Under Standard's pinned 44.1 kHz / 24-bit format the only post-render
+  critical that can realistically fire is a corrupt/non-finite render, which
+  is unknowable before rendering. This matches Advanced, which has always
+  rendered-then-checked; Standard differs only in suppressing the cosmetic
+  warnings.
 - **Standard exports a fixed, known-safe default: 44.1 kHz / 24-bit WAV at a
   −1 dBTP ceiling**, with the Standard-chosen loudness (−14 / −11 / −9 LUFS).
   Sample rate / bit depth / ceiling are configurable only in Advanced. This
@@ -2298,21 +2500,29 @@ git push -u origin feat/standard-view
 - §2 one settings truth / per-track binding → StandardView binds `tm.selectedSettings` + setters (Task 9); no new global. ✓
 - §2a asymmetric transition (seed-forward / warn-reset-on-return + save-as-preset) → Task 10 (`requestBackToStandard`, `BackToStandardConfirm`). ✓
 - §2b managed/non-managed model + `resetToStandardManaged` → Task 2 + Task 5. ✓
+- §2 always-clean invariant **at every entry** (not just the return door) → Task 2 `shouldForceAdvancedOnStandardEntry` + Task 10 entry-guard effect (open-project / restore / track-switch / album → Advanced). ✓
 - §3 reference-4 (Oomph 1:1) → Task 1. ✓
-- §4 Style/Intensity/Loudness mapping + WYSIWYG → Tasks 1, 8, 9, 10 (force `exportLufsPreview`). ✓
+- §4 Style/Intensity/Loudness mapping + WYSIWYG → Tasks 1, 8, 9, 10. WYSIWYG via the **internal** effective-landing flag (`setForceWysiwyg` / `effectivePreviewLanding`, Task 5 step 3g), never the user toggle. ✓
 - §5 Option-B layout + chrome → Tasks 9, 10, 11. ✓
 - §6 export fixed format + ceremony + canon → Tasks 3, 9, 13. ✓
 - §7 versioned migration default + persistence → Tasks 4, 6, and `hadPriorSession` (Task 5). ✓
 - §8 desktop↔mobile parity (mapping + iPhone rename/remap) → Tasks 1, 12. ✓
-- §9 component breakdown → Tasks 1-9 map 1:1 to the listed units. ✓
+- §9 component breakdown → Tasks 1-9 map 1:1 to the listed units; waveform extraction (Task 9 step 1) removes the App↔StandardView import cycle. ✓
 - §10 testing → every task is TDD; render-parity is exercised by the fixed-format wrap test (Task 5) + bridge parity tests (existing). ✓
 - §11 out of scope (Tier-2 corrective, all-8 renaming, Album-in-Standard) → not built; Album→Advanced guard added (Task 10). ✓
 
+**Codex review fixes folded in (v2):**
+1. **Always-clean invariant has no back doors** — enforced at every Standard entry via `shouldForceAdvancedOnStandardEntry` (Task 2) + the entry-guard effect (Task 10), covering project-open / session-restore / track-switch, not just Back-to-Standard.
+2. **"Block" wording matches the mechanism** — Standard renders then checks, so post-render criticals are framed "saved but invalid — re-render", not a false pre-render block (Task 3 `standardExportNotes.invalid`, Task 13 canon).
+3. **WYSIWYG never clobbers the Advanced toggle** — an internal `forceWysiwygRef` + `effectivePreviewLanding()` OR-in the landing for Standard without touching `transport.exportLufsPreview` (Task 5 step 3g; Task 10 drives `setForceWysiwyg`).
+4. **Save-as-preset return is async-safe** — `saveUserPreset` returns `Promise<boolean>`; the modal awaits it, only resets/switches on success, and disables its buttons while saving (Task 5 step 3h, Task 10 modal).
+5. **Circular import removed up front** — `WaveformView`/`WaveformLoading` extracted into `src/components/Waveform.tsx` as Task 9's first step (a planned step, with `App.tsx` re-exporting for back-compat), not a contingency.
+
 **Known scoping decisions (flag to owner):**
 1. `adaptive_strength` is treated as a non-managed edit (reset to 0.5) — a deliberate superset of the §2b table, to keep Standard's adaptive at the validated default (Task 2 note).
-2. A preset outside the reference-4 (e.g. `spatial` carried back from Advanced) shows **no** active Standard tile until the user picks one (Task 1 `presetToStyle` → null). Acceptable v1 behavior.
+2. A preset outside the reference-4 (e.g. `spatial` carried back from Advanced) shows **no** active Standard tile until the user picks one (Task 1 `presetToStyle` → null). With the entry guard, a `spatial`-carrying track also has no non-managed edits *only if* its other fields are clean — if it does, it's shown in Advanced anyway. Acceptable v1 behavior.
 3. Standard's hero includes a minimal track switcher (`<select>` when >1 track) — pragmatic, not in the mockup; revisit during the polish pass.
 
-**Type consistency:** `ViewMode`, `StandardStyleId`, `StandardLoudnessId`, `PersistedViewState`, `StandardExportNotes`, the `tm` member names (`hadPriorSession`, `resetToStandardManaged`, `exportStandardMaster`, `setExportLufsPreview`, `setLoudnessTarget`, `setPreset`, `setIntensity`), and the `Preset` `kind` literals are used identically across tasks. ✓
+**Type consistency:** `ViewMode`, `StandardStyleId`, `StandardLoudnessId`, `PersistedViewState`, `StandardExportNotes` (`invalid` / `invalidMessage` / `integrityNote`), `shouldForceAdvancedOnStandardEntry`, the `tm` member names (`hadPriorSession`, `resetToStandardManaged`, `exportStandardMaster`, `setForceWysiwyg`, `setLoudnessTarget`, `setPreset`, `setIntensity`, `savingPreset`, `saveUserPreset`), and the `Preset` `kind` literals are used identically across tasks. ✓
 
 **Design-polish follow-up (deferred, not dropped):** §1 demands flagship motion/hero/micro-interaction polish. Tasks 7-11 ship a correct, accessible, functional Option-B layout; the visual polish pass should run *after* this plan lands, using the design skills against `docs/simple-mode-mockup.html`. Surfaced here so it isn't mistaken for complete.
