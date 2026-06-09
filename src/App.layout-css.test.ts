@@ -134,4 +134,23 @@ describe("console layout CSS", () => {
     expect(block(".compressor-knob-grid")).toContain("padding: 0.32rem");
     expect(block(".compressor-knob-grid .knob-vis")).toContain("transform: scale(0.9)");
   });
+
+  it("keeps Standard's center and rail on one shared column gap (seam alignment)", () => {
+    // lib/rail-alignment.ts derives Delivery's top from Preview bottom + the
+    // rail gap while Loudness's top is Intensity bottom + the steps gap. The
+    // two gaps must be the SAME variable or the second seam silently drifts.
+    expect(block(".standard-view")).toContain("--std-col-gap");
+    expect(block(".std-steps")).toContain("gap: var(--std-col-gap)");
+    expect(block(".std-rail")).toContain("gap: var(--std-col-gap)");
+    expect(block(".std-center")).toContain("gap: var(--std-col-gap)");
+  });
+
+  it("lets Standard's center column compress instead of scrolling on short viewports", () => {
+    // Center scroll disables seam alignment, and the owner wants no center
+    // scroll in any mode — the tall fixed minimums must stay height-fluid.
+    expect(block(".std-wave-deck")).toContain("min-height: clamp(");
+    expect(block(".std-tile")).toContain("min-height: clamp(");
+    expect(block(".std-steps .std-step-intensity")).toContain("min-height: clamp(");
+    expect(block(".std-tile-icon")).toContain("10.5vh");
+  });
 });

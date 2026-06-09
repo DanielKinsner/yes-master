@@ -5262,6 +5262,13 @@ button.primary:disabled {
 .standard-view {
   /* In Standard the parent .app switches to display: block (.app-standard),
      so this view owns the full width and lays out its own 3 columns. */
+  /* One shared column gap for the center steps AND the rail cards. The seam
+     alignment (lib/rail-alignment.ts) relies on Delivery's top being Preview
+     bottom + gap while Loudness's top is Intensity bottom + gap — the two
+     gaps must be THE SAME value or the second seam drifts. Height-fluid so
+     the column compresses on short/scaled viewports instead of scrolling
+     (scrolling disables seam alignment entirely). */
+  --std-col-gap: clamp(0.6rem, 1.3vh, 1rem);
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 300px;
   /* Constrain the implicit row to the shell height so the rails can shrink
@@ -5342,8 +5349,13 @@ button.primary:disabled {
    default 15px scrollbar was shoving the cards left and breaking the
    equality exactly on windows short enough to scroll. */
 .std-center {
-  display: flex; flex-direction: column; gap: 1rem; min-width: 0;
-  padding: 1.6rem 0.5rem 1.5rem 1.55rem; overflow-y: auto; scrollbar-gutter: stable;
+  display: flex; flex-direction: column; gap: var(--std-col-gap); min-width: 0;
+  /* Vertical padding compresses with the viewport (1080-class windows with
+     OS display scaling have far fewer CSS px than the 940 design height) so
+     the column fits without scrolling — center scroll kills seam alignment
+     and the owner wants no center scroll in any mode. */
+  padding: clamp(0.9rem, 1.7vh, 1.6rem) 0.5rem clamp(0.9rem, 1.6vh, 1.5rem) 1.55rem;
+  overflow-y: auto; scrollbar-gutter: stable;
 }
 .std-center::-webkit-scrollbar,
 .std-rail::-webkit-scrollbar,
@@ -5368,8 +5380,10 @@ button.primary:disabled {
   grid-template-columns: 92px minmax(0, 1fr);
   align-items: center;
   gap: 1rem;
-  min-height: 178px;
-  padding: 1rem 1rem 1rem 1.25rem;
+  /* Height-fluid: tall windows get the full 178px deck, short/scaled
+     viewports compress to 128px before the column would have to scroll. */
+  min-height: clamp(128px, 17vh, 178px);
+  padding: clamp(0.65rem, 1.4vh, 1rem) 1rem clamp(0.65rem, 1.4vh, 1rem) 1.25rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background:
@@ -5435,10 +5449,10 @@ button.primary:disabled {
   display: none;
 }
 
-.std-steps { display: flex; flex-direction: column; gap: 1rem; }
+.std-steps { display: flex; flex-direction: column; gap: var(--std-col-gap); }
 .std-step {
-  display: flex; flex-direction: column; gap: 0.6rem;
-  padding: 1rem 1.25rem;
+  display: flex; flex-direction: column; gap: clamp(0.4rem, 0.9vh, 0.6rem);
+  padding: clamp(0.7rem, 1.5vh, 1rem) 1.25rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background:
@@ -5473,8 +5487,8 @@ button.primary:disabled {
      accent-mixed border, screen-blended imagery, and the active
      ring + floor + halo shadow stack — one preset, one look, both views. */
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; text-align: center;
-  min-height: 184px;
-  padding: 1.1rem 0.7rem 0.95rem; border-radius: var(--radius-card); cursor: pointer;
+  min-height: clamp(140px, 19vh, 184px);
+  padding: clamp(0.7rem, 1.5vh, 1.1rem) 0.7rem clamp(0.6rem, 1.3vh, 0.95rem); border-radius: var(--radius-card); cursor: pointer;
   overflow: hidden;
   background:
     radial-gradient(
@@ -5490,8 +5504,11 @@ button.primary:disabled {
   transition: transform 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease, box-shadow 180ms ease;
 }
 .std-tile-icon {
-  width: clamp(76px, 7.4vw, 108px);
-  height: clamp(76px, 7.4vw, 108px);
+  /* Fluid on BOTH axes: 7.4vw keys to window width (the original behavior),
+     10.5vh keeps the icon from holding the tile tall on short/scaled
+     viewports — the smaller of the two wins. */
+  width: clamp(56px, min(7.4vw, 10.5vh), 108px);
+  height: clamp(56px, min(7.4vw, 10.5vh), 108px);
   display: grid;
   place-items: center;
   margin-bottom: 0.12rem;
@@ -5564,7 +5581,7 @@ button.primary:disabled {
     "hint knob"
     "zones knob";
   align-items: center;
-  min-height: 168px;
+  min-height: clamp(148px, 17vh, 168px);
 }
 .std-steps .std-step-intensity .std-step-label { grid-area: label; align-self: end; }
 .std-steps .std-step-intensity .std-step-hint { grid-area: hint; align-self: start; }
@@ -5606,7 +5623,7 @@ button.primary:disabled {
 .std-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.55rem; }
 .std-seg-option {
   display: flex; flex-direction: column; gap: 0.2rem; align-items: center;
-  padding: 0.8rem 0.4rem; border-radius: var(--radius-card); cursor: pointer;
+  padding: clamp(0.55rem, 1.2vh, 0.8rem) 0.4rem; border-radius: var(--radius-card); cursor: pointer;
   background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
   border: 1px solid var(--border); color: var(--text-1);
   transition: transform 160ms cubic-bezier(.2,.8,.2,1), border-color 160ms ease, box-shadow 160ms ease;
@@ -5623,8 +5640,11 @@ button.primary:disabled {
 
 /* ---- right rail (preview / delivery / export) ---- */
 .std-rail {
-  display: flex; flex-direction: column; gap: 1rem;
-  padding: 0.85rem 0.5rem 1rem 1rem; min-width: 0; min-height: 0; scrollbar-gutter: stable;
+  /* gap MUST be the shared --std-col-gap: seam alignment derives Delivery's
+     top from Preview bottom + this gap, mirroring Loudness's top = Intensity
+     bottom + the center's identical gap. See .standard-view. */
+  display: flex; flex-direction: column; gap: var(--std-col-gap);
+  padding: 0.85rem 0.5rem clamp(0.65rem, 1.4vh, 1rem) 1rem; min-width: 0; min-height: 0; scrollbar-gutter: stable;
   overflow-y: auto;
   border-left: 1px solid var(--border);
   background:
