@@ -230,7 +230,11 @@ function StandardRightRail({
             void tm.exportStandardMaster();
           }}
         >
-          {tm.isExporting ? "Creating…" : "Create Master"}
+          {tm.isExporting
+            ? "Creating…"
+            : tm.isRendering
+              ? "Preparing…"
+              : "Create Master"}
         </button>
         {notes?.invalid && (
           <p className="std-export-block" role="alert">
@@ -250,7 +254,8 @@ export function StandardView({
   onEnterAdvanced,
 }: {
   tm: TM;
-  onEnterAdvanced?: () => void;
+  // Required: a missed wiring must fail tsc, not ship a dead 'Change' button.
+  onEnterAdvanced: () => void;
 }) {
   const s = tm.selectedSettings;
   const sourceLufs = tm.selectedAnalysis?.lufs_integrated ?? null;
@@ -346,7 +351,7 @@ export function StandardView({
         </div>
       </section>
 
-      <StandardRightRail tm={tm} onEnterAdvanced={onEnterAdvanced ?? (() => {})} />
+      <StandardRightRail tm={tm} onEnterAdvanced={onEnterAdvanced} />
     </div>
   );
 }

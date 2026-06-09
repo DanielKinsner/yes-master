@@ -130,7 +130,7 @@ function fakeTm(overrides: Partial<TM> = {}): TM {
 
 describe("StandardView", () => {
   it("renders style tiles, an intensity control, loudness steps, and the Create Master CTA", async () => {
-    const { container, root } = await render(<StandardView tm={fakeTm()} />);
+    const { container, root } = await render(<StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />);
     const text = container.textContent ?? "";
     expect(text).toContain("Balanced");
     expect(text).toContain("Low");
@@ -140,7 +140,7 @@ describe("StandardView", () => {
 
   it("routes a style click to setPreset", async () => {
     const setPreset = vi.fn();
-    const { container, root } = await render(<StandardView tm={fakeTm({ setPreset })} />);
+    const { container, root } = await render(<StandardView tm={fakeTm({ setPreset })} onEnterAdvanced={() => {}} />);
     const tiles = Array.from(container.querySelectorAll<HTMLButtonElement>(".std-tile"));
     tiles.find((t) => t.textContent?.includes("Bright"))!;
     await act(async () => { tiles.find((t) => t.textContent?.includes("Bright"))!.click(); });
@@ -150,7 +150,7 @@ describe("StandardView", () => {
 
   it("Create Master triggers exportStandardMaster", async () => {
     const exportStandardMaster = vi.fn();
-    const { container, root } = await render(<StandardView tm={fakeTm({ exportStandardMaster })} />);
+    const { container, root } = await render(<StandardView tm={fakeTm({ exportStandardMaster })} onEnterAdvanced={() => {}} />);
     const cta = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((b) => b.textContent?.includes("Create Master"))!;
     await act(async () => { cta.click(); });
     expect(exportStandardMaster).toHaveBeenCalled();
@@ -189,7 +189,7 @@ function twoTrackTm(overrides: Partial<TM> = {}): TM {
 
 describe("TracksRail", () => {
   it("lists every track with index and m:ss duration, marking the selected row", async () => {
-    const { container, root } = await render(<StandardView tm={twoTrackTm()} />);
+    const { container, root } = await render(<StandardView tm={twoTrackTm()} onEnterAdvanced={() => {}} />);
     const rows = Array.from(container.querySelectorAll<HTMLButtonElement>(".std-track-row"));
     expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toContain("01");
@@ -205,7 +205,7 @@ describe("TracksRail", () => {
 
   it("routes a row click to selectTrack with that track's id", async () => {
     const selectTrack = vi.fn();
-    const { container, root } = await render(<StandardView tm={twoTrackTm({ selectTrack })} />);
+    const { container, root } = await render(<StandardView tm={twoTrackTm({ selectTrack })} onEnterAdvanced={() => {}} />);
     const rows = Array.from(container.querySelectorAll<HTMLButtonElement>(".std-track-row"));
     await act(async () => { rows[1].click(); });
     expect(selectTrack).toHaveBeenCalledWith("t2");
@@ -214,7 +214,7 @@ describe("TracksRail", () => {
 
   it("'+ Add Tracks' opens the import dialog", async () => {
     const openImportDialog = vi.fn();
-    const { container, root } = await render(<StandardView tm={fakeTm({ openImportDialog })} />);
+    const { container, root } = await render(<StandardView tm={fakeTm({ openImportDialog })} onEnterAdvanced={() => {}} />);
     const add = container.querySelector<HTMLButtonElement>(".std-add-track")!;
     await act(async () => { add.click(); });
     expect(openImportDialog).toHaveBeenCalled();
@@ -222,17 +222,17 @@ describe("TracksRail", () => {
   });
 
   it("status chip is truthful: Analyzing… / Analyzed / Not analyzed (idle dot)", async () => {
-    const analyzing = await render(<StandardView tm={fakeTm({ isAnalyzing: true })} />);
+    const analyzing = await render(<StandardView tm={fakeTm({ isAnalyzing: true })} onEnterAdvanced={() => {}} />);
     expect(analyzing.container.querySelector(".std-tracks-status")?.textContent).toContain("Analyzing…");
     await act(async () => analyzing.root.unmount());
 
-    const analyzed = await render(<StandardView tm={fakeTm()} />);
+    const analyzed = await render(<StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />);
     const okChip = analyzed.container.querySelector(".std-tracks-status")!;
     expect(okChip.textContent).toContain("Analyzed");
     expect(okChip.classList.contains("is-idle")).toBe(false);
     await act(async () => analyzed.root.unmount());
 
-    const idle = await render(<StandardView tm={fakeTm({ selectedAnalysis: null })} />);
+    const idle = await render(<StandardView tm={fakeTm({ selectedAnalysis: undefined })} onEnterAdvanced={() => {}} />);
     const idleChip = idle.container.querySelector(".std-tracks-status")!;
     expect(idleChip.textContent).toContain("Not analyzed");
     expect(idleChip.classList.contains("is-idle")).toBe(true);
@@ -243,7 +243,7 @@ describe("TracksRail", () => {
 describe("StandardRightRail", () => {
   it("A/B reflects playbackKind via aria-pressed and routes clicks to setPlaybackKind", async () => {
     const setPlaybackKind = vi.fn();
-    const { container, root } = await render(<StandardView tm={fakeTm({ setPlaybackKind })} />);
+    const { container, root } = await render(<StandardView tm={fakeTm({ setPlaybackKind })} onEnterAdvanced={() => {}} />);
     const group = container.querySelector(".std-rail-ab")!;
     const buttons = Array.from(group.querySelectorAll<HTMLButtonElement>("button"));
     const original = buttons.find((b) => b.textContent === "Original")!;
@@ -257,7 +257,7 @@ describe("StandardRightRail", () => {
 
   it("Volume Match toggle routes to setVolumeMatch with the flipped value", async () => {
     const setVolumeMatch = vi.fn();
-    const { container, root } = await render(<StandardView tm={fakeTm({ setVolumeMatch })} />);
+    const { container, root } = await render(<StandardView tm={fakeTm({ setVolumeMatch })} onEnterAdvanced={() => {}} />);
     const toggle = container.querySelector<HTMLButtonElement>(".std-volume-match")!;
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
     await act(async () => { toggle.click(); });
@@ -278,7 +278,7 @@ describe("StandardRightRail", () => {
 
   it("hero subtitle derives the LUFS qualifier from measurement vs target", async () => {
     // fakeTm: source -16 LUFS, delivery_profile "custom" -> target -11 => quieter.
-    const { container, root } = await render(<StandardView tm={fakeTm()} />);
+    const { container, root } = await render(<StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />);
     expect(container.querySelector(".std-source")?.textContent).toBe(
       "Source -16.0 LUFS · quieter than your -11 LUFS target",
     );
@@ -287,7 +287,7 @@ describe("StandardRightRail", () => {
 
   it("hero subtitle says 'not analyzed yet' instead of claiming analysis is running", async () => {
     const { container, root } = await render(
-      <StandardView tm={fakeTm({ selectedAnalysis: null })} />,
+      <StandardView tm={fakeTm({ selectedAnalysis: undefined })} onEnterAdvanced={() => {}} />,
     );
     expect(container.querySelector(".std-source")?.textContent).toBe(
       "Source not analyzed yet",
