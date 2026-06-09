@@ -5652,6 +5652,7 @@ button.primary:disabled {
 }
 .std-rail-card {
   display: flex; flex-direction: column; gap: 0.7rem;
+  width: 100%;
   padding: 1rem 1rem; border-radius: var(--radius-card);
   background:
     linear-gradient(180deg, rgba(18, 23, 34, 0.76), rgba(8, 11, 18, 0.9));
@@ -5769,12 +5770,13 @@ button.primary:disabled {
   padding-inline: 0.85rem;
   margin-top: 0.35rem;
 }
-.std-rail-export { margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; }
+.std-rail-export { width: 100%; margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; }
 /* The TSX renders className="primary std-create-master"; these selectors must
    carry button.primary's specificity (0,2,1) or every overlapping declaration
    silently loses to the generic primary style (App.css ~766). */
 button.primary.std-create-master {
   position: relative; overflow: hidden;
+  width: 100%;
   padding: 0.85rem 1rem; font-size: 0.95rem; font-weight: 650; letter-spacing: 0.01em;
   border: none; border-radius: var(--radius-card); cursor: pointer; color: #fff;
   background: linear-gradient(135deg, var(--accent-deep) 0%, var(--accent) 55%, var(--accent-bright) 100%);

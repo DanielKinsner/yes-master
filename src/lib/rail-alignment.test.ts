@@ -16,7 +16,6 @@ function baseInput(): RailAlignmentInput {
     deliveryHeight: 120,
     exportHeight: 56,
     railGap: 16,
-    centerScrolls: false,
   };
 }
 
@@ -29,12 +28,6 @@ describe("computeRailAlignment", () => {
       // Export group lifted flush with loudness bottom: 900 - 840.
       exportMarginBottomPx: 60,
     });
-  });
-
-  it("falls back when the center column scrolls", () => {
-    expect(
-      computeRailAlignment({ ...baseInput(), centerScrolls: true }),
-    ).toBeNull();
   });
 
   it("falls back when the preview would collapse below the meter minimum", () => {

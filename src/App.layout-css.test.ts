@@ -145,9 +145,16 @@ describe("console layout CSS", () => {
     expect(block(".std-center")).toContain("gap: var(--std-col-gap)");
   });
 
+  it("keeps Standard rail cards and CTA on one shared left/right edge", () => {
+    expect(block(".std-rail-card")).toContain("width: 100%");
+    expect(css).toContain(".std-rail-export { width: 100%");
+    expect(block("button.primary.std-create-master")).toContain("width: 100%");
+  });
+
   it("lets Standard's center column compress instead of scrolling on short viewports", () => {
-    // Center scroll disables seam alignment, and the owner wants no center
-    // scroll in any mode — the tall fixed minimums must stay height-fluid.
+    // The owner wants no center scroll in any mode — the tall fixed minimums
+    // must stay height-fluid even though seam alignment can now remeasure
+    // against the current scroll position.
     expect(block(".std-wave-deck")).toContain("min-height: clamp(");
     expect(block(".std-tile")).toContain("min-height: clamp(");
     expect(block(".std-steps .std-step-intensity")).toContain("min-height: clamp(");

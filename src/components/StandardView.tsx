@@ -192,7 +192,9 @@ type RailSeamRefs = {
 /// vars consumed by `.std-rail.is-aligned` in App.css. The decision logic
 /// lives in lib/rail-alignment.ts (pure, unit-tested); this hook is only
 /// the measurement glue. No ResizeObserver (node/jsdom) → no-op, which
-/// leaves the flex-absorb fallback layout.
+/// leaves the flex-absorb fallback layout. If the center column is
+/// technically scrollable, scroll events remeasure the current card seams
+/// instead of dropping back to the unaligned rail.
 function useRailSeamAlignment(refs: RailSeamRefs) {
   useLayoutEffect(() => {
     if (typeof ResizeObserver === "undefined") return;
@@ -229,7 +231,6 @@ function useRailSeamAlignment(refs: RailSeamRefs) {
         deliveryHeight: delivery.getBoundingClientRect().height,
         exportHeight: exportGroup.getBoundingClientRect().height,
         railGap: parseFloat(railStyle.rowGap || railStyle.gap) || 16,
-        centerScrolls: center.scrollHeight > center.clientHeight + 1,
       });
       if (result) {
         rail.style.setProperty("--std-preview-h", `${result.previewHeightPx}px`);
@@ -262,10 +263,12 @@ function useRailSeamAlignment(refs: RailSeamRefs) {
     ]) {
       if (ref.current) observer.observe(ref.current);
     }
+    refs.center.current?.addEventListener("scroll", schedule, { passive: true });
     schedule();
 
     return () => {
       observer.disconnect();
+      refs.center.current?.removeEventListener("scroll", schedule);
       if (frame) cancelAnimationFrame(frame);
       const rail = refs.rail.current;
       if (rail) {

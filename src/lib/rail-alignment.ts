@@ -9,11 +9,11 @@
 //
 // The two columns are independent scroll containers, so CSS alone cannot
 // pin their seams: card heights are content-driven. StandardView measures
-// the geometry (ResizeObserver) and this module decides — pure function,
-// unit-testable with plain numbers — whether alignment is possible and
-// what the two pixel values are. Returning null means "fall back to the
-// flex-absorb layout" (Preview soaks up free rail height), which is the
-// pre-alignment behavior and always safe.
+// the current geometry (ResizeObserver + center scroll) and this module
+// decides — pure function, unit-testable with plain numbers — whether
+// alignment is possible and what the two pixel values are. Returning null
+// means "fall back to the flex-absorb layout" (Preview soaks up free rail
+// height), which is the pre-alignment behavior and always safe.
 
 export type RailAlignmentInput = {
   /** Top edge of the Preview card (viewport px). */
@@ -30,11 +30,6 @@ export type RailAlignmentInput = {
   exportHeight: number;
   /** The rail's flex gap between cards (px). */
   railGap: number;
-  /**
-   * True when the center column overflows and scrolls. Seams cannot align
-   * against a column whose cards move with the scroll position.
-   */
-  centerScrolls: boolean;
 };
 
 export type RailAlignment = {
@@ -62,10 +57,7 @@ export function computeRailAlignment(
     deliveryHeight,
     exportHeight,
     railGap,
-    centerScrolls,
   } = input;
-
-  if (centerScrolls) return null;
 
   const values = [
     previewTop,
