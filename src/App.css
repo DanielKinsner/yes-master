@@ -5695,6 +5695,16 @@ button.primary:disabled {
    height above the export block) all goes to metering. */
 .std-rail-preview { flex: 1 1 auto; min-height: 0; }
 .std-rail-preview .master-out { flex: 1 1 auto; min-height: 0; }
+/* Seam alignment (2026-06-09): when the center column fits without
+   scrolling, useRailSeamAlignment (StandardView.tsx) measures its card
+   seams and the rail mirrors them — the Preview card's bottom lands on the
+   Intensity card's bottom (so DELIVERY FORMAT tops align with 3 · Loudness
+   across the divider, both columns sharing the 1rem gap) and the export
+   group lifts flush with Loudness's bottom edge. Geometry + fallback
+   guards live in lib/rail-alignment.ts; without .is-aligned the
+   flex-absorb layout above still applies. */
+.std-rail.is-aligned .std-rail-preview { flex: 0 0 auto; height: var(--std-preview-h); }
+.std-rail.is-aligned .std-rail-export { margin-bottom: var(--std-export-mb); }
 .std-rail .master-out .lufs-meter {
   height: auto;
   flex: 1 1 auto;
