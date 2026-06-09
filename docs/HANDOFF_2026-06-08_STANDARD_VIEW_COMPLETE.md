@@ -105,3 +105,39 @@ The preset+adaptive **engine is validated and treated as locked** (preset_signat
 - Engine reference: `docs/ENGINE_REFERENCE.md` (+ `docs/preset-reference.html`)
 - Adaptive Phase B handoff: `docs/HANDOFF_2026-06-04_ADAPTIVE_DSP_TIER2_PHASE_B_CONFIDENCE.md`
 - Phase A handoff: `docs/HANDOFF_2026-06-03_ADAPTIVE_DSP_TIER2_PHASE_A_COMPLETE.md`
+
+---
+
+## Addendum (2026-06-09): post-handoff polish commits, review, and fix series
+
+Two **unreviewed** polish commits landed the same evening this handoff was
+written, so several claims above describe a state that briefly stopped being
+true; an adversarially-verified review (2026-06-09) then drove a fix series.
+Read this section as the corrections layer:
+
+- `a7d407d` ("polish standard mode shell", +645/−193) restructured the
+  Standard shell: the hero `<select>` track switcher (line ~85 above) was
+  **replaced by the clickable TracksRail row list**, the transport/waveform
+  moved into the center column, and a StandardRightRail (A/B, Volume Match,
+  delivery card, Create Master) was added. `ee65e44` added CSS accents.
+  The "polish wholly deferred" framing above predates these commits.
+- The review found `a7d407d` had also **flipped the return door to
+  always-confirm and dropped the Track/Album tabs and single-Advanced
+  chrome**, contradicting the spec; branch
+  `fix/standard-review-2026-06-09` **restored spec behavior** (silent
+  when clean — line 27 above is true again), restored the chrome, gave the
+  tracks list/rail a scroll path, made the Standard copy truthful (derived
+  LUFS qualifier, real Analyzed gating, "Standard WAV" delivery name),
+  fixed the dead Create Master restyle (specificity), added TracksRail/
+  StandardRightRail test coverage (259 vitest total), and cleared the CSS
+  hygiene tail. See the `(review)` commits on that branch for the
+  itemized evidence.
+- **Graphify note (owner decision, clean later):** `graphify-out/` is
+  deliberately tracked for cross-machine agent reuse. The shareable
+  artifacts (`graph.json`, `GRAPH_REPORT.md`, labels) are path-clean and
+  portable; `manifest.json`, `cache/stat-index.json`, and 63 `cache/ast/`
+  files embed this machine's absolute paths + mtimes (they will miss and
+  rebuild on any other machine, and they churn on each run), and
+  `cost.json` rides along untracked-by-intent. Deferred cleanup: either
+  gitignore the path-keyed files or have graphify store repo-relative
+  paths before the next regeneration.
