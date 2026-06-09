@@ -1,4 +1,12 @@
 // src/components/StandardView.tsx
+//
+// Standard view — the default desktop face. Phase 2 layout: the 3-column
+// Advanced shell (Tracks rail · center controls · Preview/Delivery/Export
+// rail) so the flip to Advanced is seamless. Style tiles reuse the Advanced
+// preset artwork (PresetIcon) so Balanced/Bright/Warm/Heavy read as the same
+// Universal/Clarity/Tape/Oomph presets in Advanced. Intensity is the shared
+// Knob. One transport (no duplicates). Binds to per-track selectedSettings.
+
 import type { Preset } from "../bindings";
 import {
   STANDARD_LOUDNESS,
@@ -11,8 +19,19 @@ import {
 import type { useTrackMaster } from "../hooks/useTrackMaster";
 import { Knob, intensityLabel } from "./Knob";
 import { WaveformLoading, WaveformView } from "./Waveform";
+import { PresetIcon } from "./PresetIcon";
 import { effectiveLoudnessTarget } from "../lib/effective-settings";
 import { standardExportNotes } from "../lib/standard-export";
+import { MasterOutPanel } from "./RightRail";
+
+type TM = ReturnType<typeof useTrackMaster>;
+
+function fmtDuration(sec: number | null | undefined): string {
+  if (sec == null || !Number.isFinite(sec)) return "";
+  const m = Math.floor(sec / 60);
+  const r = Math.floor(sec % 60);
+  return `${m}:${r.toString().padStart(2, "0")}`;
+}
 
 export function StyleTiles({
   preset,
@@ -24,19 +43,25 @@ export function StyleTiles({
   const activeStyle = presetToStyle(preset);
   return (
     <div className="std-tiles" role="group" aria-label="Style">
-      {STANDARD_STYLES.map((s) => (
-        <button
-          key={s.id}
-          type="button"
-          className={"std-tile" + (s.id === activeStyle ? " is-active" : "")}
-          data-tone={s.tone}
-          aria-pressed={s.id === activeStyle}
-          onClick={() => onSelect(styleToPreset(s.id))}
-        >
-          <span className="std-tile-label">{s.label}</span>
-          <span className="std-tile-subtitle">{s.subtitle}</span>
-        </button>
-      ))}
+      {STANDARD_STYLES.map((s) => {
+        const tilePreset = styleToPreset(s.id);
+        return (
+          <button
+            key={s.id}
+            type="button"
+            className={"std-tile" + (s.id === activeStyle ? " is-active" : "")}
+            data-tone={s.tone}
+            aria-pressed={s.id === activeStyle}
+            onClick={() => onSelect(tilePreset)}
+          >
+            <span className="std-tile-icon">
+              <PresetIcon kind={tilePreset.kind} />
+            </span>
+            <span className="std-tile-label">{s.label}</span>
+            <span className="std-tile-subtitle">{s.subtitle}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -67,136 +92,231 @@ export function LoudnessSegmented({
   );
 }
 
-type TM = ReturnType<typeof useTrackMaster>;
+function TracksRail({ tm }: { tm: TM }) {
+  return (
+    <aside className="std-tracks">
+      <div className="std-tracks-head">TRACKS</div>
+      <div className="std-tracks-list">
+        {tm.tracks.map((t, index) => (
+          <button
+            key={t.id}
+            type="button"
+            className={
+              "std-track-row" + (t.id === tm.selectedTrackId ? " is-active" : "")
+            }
+            onClick={() => tm.selectTrack(t.id)}
+          >
+            <span className="std-track-index" aria-hidden>
+              {(index + 1).toString().padStart(2, "0")}
+            </span>
+            <span className="std-track-copy">
+              <span className="std-track-name">{t.display_name}</span>
+              <span className="std-track-dur">{fmtDuration(t.duration_seconds)}</span>
+            </span>
+            <span className="std-track-meter" aria-hidden />
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="ghost-btn std-add-track"
+        onClick={tm.openImportDialog}
+      >
+        + Add Tracks
+      </button>
+      <div className="std-tracks-status">
+        <span className="std-status-dot" aria-hidden />
+        {tm.isAnalyzing ? "Analyzing…" : "Analyzed"}
+      </div>
+    </aside>
+  );
+}
 
-function StandardExportButton({ tm }: { tm: TM }) {
+function StandardRightRail({
+  tm,
+  onEnterAdvanced,
+}: {
+  tm: TM;
+  onEnterAdvanced: () => void;
+}) {
   const notes = tm.lastExportReceipt
     ? standardExportNotes(tm.lastExportReceipt.checks)
     : null;
   return (
-    <div className="std-export">
-      <button
-        type="button"
-        className="primary std-create-master"
-        disabled={!tm.selectedAnalysis || tm.isExporting || tm.isRendering}
-        onClick={() => { void tm.exportStandardMaster(); }}
-      >
-        {tm.isExporting ? "Creating Master…" : "Create Master"}
-      </button>
-      {notes?.invalid && (
-        <p className="std-export-block" role="alert">
-          Saved, but this master has a problem — re-render: {notes.invalidMessage}
-        </p>
-      )}
-      {notes?.integrityNote && (
-        <p className="std-export-note">{notes.integrityNote}</p>
-      )}
-    </div>
+    <aside className="std-rail">
+      <section className="std-rail-card">
+        <div className="std-rail-title">PREVIEW</div>
+        <div className="std-rail-ab" role="group" aria-label="Playback source">
+          <button
+            type="button"
+            aria-pressed={tm.transport.playbackKind === "source"}
+            className={tm.transport.playbackKind === "source" ? "on" : ""}
+            onClick={() => tm.setPlaybackKind("source")}
+          >
+            Original
+          </button>
+          <button
+            type="button"
+            aria-pressed={tm.transport.playbackKind === "master"}
+            className={tm.transport.playbackKind === "master" ? "on" : ""}
+            onClick={() => tm.setPlaybackKind("master")}
+          >
+            Mastered
+          </button>
+        </div>
+        <MasterOutPanel
+          isAnalyzing={tm.isAnalyzing}
+          peakDbfs={tm.transport.peakDbfs}
+          peakLeftDbfs={tm.transport.peakLeftDbfs}
+          peakRightDbfs={tm.transport.peakRightDbfs}
+          isPlaying={tm.transport.isPlaying}
+          lufsMomentary={tm.transport.lufsMomentary}
+          lufsIntegrated={tm.transport.lufsIntegrated}
+        />
+        <button
+          type="button"
+          className={`toolbar-toggle std-volume-match ${tm.transport.volumeMatch ? "is-on" : ""}`}
+          aria-pressed={tm.transport.volumeMatch}
+          onClick={() => tm.setVolumeMatch(!tm.transport.volumeMatch)}
+        >
+          <span className="toolbar-toggle-box" aria-hidden />
+          <span>Volume Match</span>
+        </button>
+      </section>
+
+      <section className="std-rail-card">
+        <div className="std-rail-title">DELIVERY FORMAT</div>
+        <div className="std-delivery-name">Streaming</div>
+        <div className="std-delivery-spec">44.1 kHz · 24-bit · −1 dBTP</div>
+        <button type="button" className="ghost-btn std-delivery-change" onClick={onEnterAdvanced}>
+          Change
+        </button>
+      </section>
+
+      <div className="std-rail-export">
+        <button
+          type="button"
+          className="primary std-create-master"
+          disabled={!tm.selectedAnalysis || tm.isExporting || tm.isRendering}
+          onClick={() => {
+            void tm.exportStandardMaster();
+          }}
+        >
+          {tm.isExporting ? "Creating…" : "Create Master"}
+        </button>
+        {notes?.invalid && (
+          <p className="std-export-block" role="alert">
+            Saved, but this master has a problem — re-render: {notes.invalidMessage}
+          </p>
+        )}
+        {notes?.integrityNote && (
+          <p className="std-export-note">{notes.integrityNote}</p>
+        )}
+      </div>
+    </aside>
   );
 }
 
-export function StandardView({ tm }: { tm: TM }) {
+export function StandardView({
+  tm,
+  onEnterAdvanced,
+}: {
+  tm: TM;
+  onEnterAdvanced?: () => void;
+}) {
   const s = tm.selectedSettings;
+  const sourceLufs = tm.selectedAnalysis?.lufs_integrated ?? null;
   return (
     <div className="standard-view">
-      <section className="std-hero">
+      <TracksRail tm={tm} />
+
+      <section className="std-center">
         <div className="std-hero-head">
-          {tm.tracks.length > 1 ? (
-            <select
-              className="std-track-select"
-              aria-label="Track"
-              value={tm.selectedTrackId ?? ""}
-              onChange={(e) => tm.selectTrack(e.target.value)}
-            >
-              {tm.tracks.map((t) => (
-                <option key={t.id} value={t.id}>{t.display_name}</option>
-              ))}
-            </select>
-          ) : (
-            <span className="std-track-chip">{tm.selectedTrack?.display_name ?? "No track"}</span>
-          )}
-          <button type="button" className="ghost-btn" onClick={tm.openImportDialog}>Import</button>
-        </div>
-
-        <button
-          type="button"
-          className="std-play"
-          aria-label={tm.transport.isPlaying ? "Pause" : "Play"}
-          onClick={tm.togglePlay}
-        >
-          {tm.transport.isPlaying ? "❚❚" : "►"}
-        </button>
-
-        <div className="std-wave">
-          {tm.selectedWaveform ? (
-            <WaveformView
-              peaks={tm.selectedWaveform}
-              isLoading={tm.isLoadingWaveform}
-              isAnalyzing={tm.isAnalyzing}
-              analysisProgress={tm.analysisProgress}
-              currentTimeSec={tm.transport.currentTimeSec}
-              durationSec={tm.selectedTrack?.duration_seconds ?? 0}
-              region={tm.selectedRegion}
-              onSeek={tm.seek}
-              onSetRegion={tm.setRegion}
-              onClearRegion={tm.clearRegion}
-            />
-          ) : (
-            <WaveformLoading
-              isAnalyzing={tm.isAnalyzing}
-              isLoadingWaveform={tm.isLoadingWaveform}
-              analysisProgress={tm.analysisProgress}
-            />
-          )}
-        </div>
-
-        <div className="std-ab">
-          <div className="ab-toggle" role="group" aria-label="Playback source">
-            <button type="button" aria-pressed={tm.transport.playbackKind === "source"} className={tm.transport.playbackKind === "source" ? "on" : ""} onClick={() => tm.setPlaybackKind("source")}>Original</button>
-            <button type="button" aria-pressed={tm.transport.playbackKind === "master"} className={tm.transport.playbackKind === "master" ? "on" : ""} onClick={() => tm.setPlaybackKind("master")}>Mastered</button>
+          <div className="std-title-wrap">
+            <h1 className="std-title">{tm.selectedTrack?.display_name ?? "No track"}</h1>
+            <p className="std-source">
+              {sourceLufs != null
+                ? `Source ${sourceLufs.toFixed(1)} LUFS · close to typical streaming targets`
+              : "Analyzing source…"}
+            </p>
           </div>
-          <button
-            type="button"
-            className={`toolbar-toggle ${tm.transport.volumeMatch ? "is-on" : ""}`}
-            aria-pressed={tm.transport.volumeMatch}
-            onClick={() => tm.setVolumeMatch(!tm.transport.volumeMatch)}
-          >
-            <span className="toolbar-toggle-box" aria-hidden />
-            <span>Volume Match</span>
-          </button>
+        </div>
+
+        <div className="std-wave-deck">
+          <div className="std-play-stack">
+            <button
+              type="button"
+              className="std-play"
+              aria-label={tm.transport.isPlaying ? "Pause" : "Play"}
+              onClick={tm.togglePlay}
+            >
+              {tm.transport.isPlaying ? "❚❚" : "►"}
+            </button>
+            <span className="std-time">
+              {fmtDuration(tm.transport.currentTimeSec)} / {fmtDuration(tm.selectedTrack?.duration_seconds)}
+            </span>
+          </div>
+          <div className="std-wave">
+            {tm.selectedWaveform ? (
+              <WaveformView
+                peaks={tm.selectedWaveform}
+                isLoading={tm.isLoadingWaveform}
+                isAnalyzing={tm.isAnalyzing}
+                analysisProgress={tm.analysisProgress}
+                currentTimeSec={tm.transport.currentTimeSec}
+                durationSec={tm.selectedTrack?.duration_seconds ?? 0}
+                region={tm.selectedRegion}
+                onSeek={tm.seek}
+                onSetRegion={tm.setRegion}
+                onClearRegion={tm.clearRegion}
+              />
+            ) : (
+              <WaveformLoading
+                isAnalyzing={tm.isAnalyzing}
+                isLoadingWaveform={tm.isLoadingWaveform}
+                analysisProgress={tm.analysisProgress}
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="std-steps">
+          <div className="std-step">
+            <span className="std-step-label">1 · Style</span>
+            <span className="std-step-hint">Choose the character you want.</span>
+            <StyleTiles preset={s.preset} onSelect={tm.setPreset} />
+          </div>
+
+          <div className="std-step">
+            <span className="std-step-label">2 · Intensity</span>
+            <span className="std-step-hint">Set how strong the effect is.</span>
+            <Knob
+              label=""
+              size="lg"
+              value={s.intensity}
+              min={0}
+              max={1}
+              step={0.01}
+              defaultValue={0.5}
+              format={(v) => `${Math.round(v * 100)}%`}
+              caption={intensityLabel(s.intensity)}
+              onChange={tm.setIntensity}
+              centerValue
+            />
+          </div>
+
+          <div className="std-step">
+            <span className="std-step-label">3 · Loudness</span>
+            <span className="std-step-hint">Choose your target loudness.</span>
+            <LoudnessSegmented
+              targetLufs={effectiveLoudnessTarget(s)}
+              onSelect={tm.setLoudnessTarget}
+            />
+          </div>
         </div>
       </section>
 
-      <section className="std-controls">
-        <div className="std-step">
-          <span className="std-step-label">1 · Style</span>
-          <StyleTiles preset={s.preset} onSelect={tm.setPreset} />
-        </div>
-
-        <div className="std-step">
-          <span className="std-step-label">2 · Intensity</span>
-          <Knob
-            label=""
-            size="lg"
-            value={s.intensity}
-            min={0}
-            max={1}
-            step={0.01}
-            defaultValue={0.5}
-            format={(v) => `${Math.round(v * 100)}%`}
-            caption={intensityLabel(s.intensity)}
-            onChange={tm.setIntensity}
-            centerValue
-          />
-        </div>
-
-        <div className="std-step">
-          <span className="std-step-label">3 · Loudness</span>
-          <LoudnessSegmented targetLufs={effectiveLoudnessTarget(s)} onSelect={tm.setLoudnessTarget} />
-        </div>
-
-        <StandardExportButton tm={tm} />
-      </section>
+      <StandardRightRail tm={tm} onEnterAdvanced={onEnterAdvanced ?? (() => {})} />
     </div>
   );
 }

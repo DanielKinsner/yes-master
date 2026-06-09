@@ -419,9 +419,11 @@ describe("App Standard<->Advanced view transitions", () => {
     });
   });
 
-  it("5) back to Standard with a clean track returns silently (no confirm modal)", async () => {
+  it("5) back to Standard with a clean track still opens the reset confirm", async () => {
     // Reach Advanced via take-control on a clean track (scenario 4 state), then
-    // return: with no non-managed edits the door switches straight to Standard.
+    // return: the spec's asymmetric transition is warn-reset-on-return. For a
+    // clean track the reset is a no-op, but the user still sees the same
+    // confirmation boundary before leaving Advanced.
     seedViewMode("standard");
     mocks.api.loadRecentSession.mockResolvedValue(makeSession(CLEAN_SETTINGS));
     const { root, container } = await mountApp();
@@ -434,13 +436,19 @@ describe("App Standard<->Advanced view transitions", () => {
       expect(hasSidebar(container)).toBe(true);
     });
 
-    // Return door — clean settings => no confirm.
+    // Return door — even clean settings must confirm before leaving Advanced.
     await click(affordance(container)!);
 
     await waitFor(() => {
-      expect(container.querySelector(".std-tiles")).not.toBeNull();
+      expect(confirmDialog(container)).not.toBeNull();
     });
-    expect(confirmDialog(container)).toBeNull();
+
+    await click(findButtonByText(container, "Reset & continue"));
+
+    await waitFor(() => {
+      expect(container.querySelector(".std-tiles")).not.toBeNull();
+      expect(confirmDialog(container)).toBeNull();
+    });
     expect(affordanceText(container)).toBe("Advanced");
     expect(hasSidebar(container)).toBe(false);
 

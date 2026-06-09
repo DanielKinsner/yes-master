@@ -8,7 +8,7 @@ import { api } from "./lib/api";
 import { useTrackMaster } from "./hooks/useTrackMaster";
 import { useViewMode } from "./hooks/useViewMode";
 import { StandardView } from "./components/StandardView";
-import { hasNonManagedEdits, shouldForceAdvancedOnStandardEntry } from "./lib/standard-managed";
+import { shouldForceAdvancedOnStandardEntry } from "./lib/standard-managed";
 import { PresetIcon } from "./components/PresetIcon";
 import { RightRail, MasterOutPanel } from "./components/RightRail";
 import { VisualEqPanel } from "./components/VisualEqPanel";
@@ -98,11 +98,11 @@ function App() {
   }, [view, tm.mode, tm.selectedTrack, tm.selectedSettings, setView]);
 
   const requestBackToStandard = () => {
-    if (hasNonManagedEdits(tm.selectedSettings)) {
-      setReturnConfirm(true);
-    } else {
+    if (!tm.selectedTrack) {
       setView("standard");
+      return;
     }
+    setReturnConfirm(true);
   };
 
   return (
@@ -118,7 +118,7 @@ function App() {
         onEnterAdvanced={() => setView("advanced")}
         onBackToStandard={requestBackToStandard}
       />
-    <div className="app">
+    <div className={"app" + (view === "standard" ? " app-standard" : "")}>
       {view === "advanced" && (
         <>
       <Sidebar
@@ -189,7 +189,9 @@ function App() {
       />
         </>
       )}
-      {view === "standard" && tm.selectedTrack && <StandardView tm={tm} />}
+      {view === "standard" && tm.selectedTrack && (
+        <StandardView tm={tm} onEnterAdvanced={() => setView("advanced")} />
+      )}
       {view === "standard" && !tm.selectedTrack && <EmptyState onAdd={tm.openImportDialog} />}
       {tm.isDragOver && (
         <div className="drop-overlay" aria-hidden>
@@ -241,7 +243,7 @@ function App() {
         />
       )}
     </div>
-    <BottomStatusBar tm={tm} />
+    {view === "advanced" && <BottomStatusBar tm={tm} />}
     </div>
   );
 }
@@ -360,28 +362,35 @@ export function TopHeader({
         </span>
         <span className="brand-name">YES Master</span>
       </div>
-      <nav className="top-header-tabs" aria-label="Mode">
-        <button
-          type="button"
-          className={"top-tab " + (mode === "track" ? "is-active" : "")}
-          onClick={() => onModeChange("track")}
-        >
-          Track Master
-        </button>
-        <button
-          type="button"
-          className={"top-tab " + (mode === "album" ? "is-active" : "")}
-          onClick={() => onModeChange("album")}
-        >
-          Album Master
-        </button>
-      </nav>
-      <div className="top-header-right">
-        {viewMode === "standard" ? (
-          <button type="button" className="ghost-btn top-advanced" onClick={onEnterAdvanced}>
+      {viewMode === "standard" ? (
+        <nav className="top-header-tabs top-header-tabs-view" aria-label="View">
+          <button type="button" className="top-tab is-active">
+            Standard
+          </button>
+          <button type="button" className="top-tab top-advanced" onClick={onEnterAdvanced}>
             Advanced
           </button>
-        ) : (
+        </nav>
+      ) : (
+        <nav className="top-header-tabs" aria-label="Mode">
+          <button
+            type="button"
+            className={"top-tab " + (mode === "track" ? "is-active" : "")}
+            onClick={() => onModeChange("track")}
+          >
+            Track Master
+          </button>
+          <button
+            type="button"
+            className={"top-tab " + (mode === "album" ? "is-active" : "")}
+            onClick={() => onModeChange("album")}
+          >
+            Album Master
+          </button>
+        </nav>
+      )}
+      <div className="top-header-right">
+        {viewMode === "advanced" && (
           <button type="button" className="ghost-btn top-advanced" onClick={onBackToStandard}>
             ‹ Back to Standard
           </button>
@@ -552,8 +561,8 @@ function BackToStandardConfirm({
       <div className="modal-card">
         <h2 className="modal-title">Back to Standard</h2>
         <p className="modal-body">
-          Back to Standard resets your manual edits to the preset's clean sound.
-          Save them as a preset first?
+          Back to Standard resets Advanced-only controls to their Standard
+          defaults. Save the current settings as a preset first?
         </p>
         <div className="modal-save-row">
           <input
