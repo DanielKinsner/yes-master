@@ -5334,9 +5334,12 @@ button.primary:disabled {
 .std-tracks-status.is-idle .std-status-dot { background: var(--text-2); box-shadow: none; }
 
 /* ---- center ---- */
+/* One spacing rhythm at the center/rail junction: card gaps are 1rem on
+   BOTH sides of the divider, and the divider sits centered in its gutter
+   (1.25rem clearance each side). */
 .std-center {
-  display: flex; flex-direction: column; gap: 1.05rem; min-width: 0;
-  padding: 1.6rem 1.55rem 1.5rem; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 1rem; min-width: 0;
+  padding: 1.6rem 1.25rem 1.5rem 1.55rem; overflow-y: auto;
 }
 /* Plain block (the old flex wrapper was a single-child leftover): long track
    titles wrap at the column width instead of overflowing the flex item. */
@@ -5416,7 +5419,7 @@ button.primary:disabled {
   display: none;
 }
 
-.std-steps { display: flex; flex-direction: column; gap: 0.75rem; }
+.std-steps { display: flex; flex-direction: column; gap: 1rem; }
 .std-step {
   display: flex; flex-direction: column; gap: 0.6rem;
   padding: 1rem 1.25rem;
@@ -5605,7 +5608,7 @@ button.primary:disabled {
 /* ---- right rail (preview / delivery / export) ---- */
 .std-rail {
   display: flex; flex-direction: column; gap: 1rem;
-  padding: 0.85rem 0.95rem 1rem; min-width: 0; min-height: 0;
+  padding: 0.85rem 0.95rem 1rem 1.25rem; min-width: 0; min-height: 0;
   overflow-y: auto;
   border-left: 1px solid var(--border);
   background:
