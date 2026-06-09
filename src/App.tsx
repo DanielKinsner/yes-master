@@ -367,35 +367,32 @@ export function TopHeader({
         </span>
         <span className="brand-name">YES Master</span>
       </div>
-      {viewMode === "standard" ? (
-        <nav className="top-header-tabs top-header-tabs-view" aria-label="View">
-          <button type="button" className="top-tab is-active">
-            Standard
-          </button>
-          <button type="button" className="top-tab top-advanced" onClick={onEnterAdvanced}>
+      {/* Spec §chrome: Track/Album tabs render in BOTH views (clicking Album
+          from Standard triggers the entry guard's bounce into Advanced);
+          Standard gets a single 'Advanced' affordance, never a
+          Standard|Advanced segmented control. */}
+      <nav className="top-header-tabs" aria-label="Mode">
+        <button
+          type="button"
+          className={"top-tab " + (mode === "track" ? "is-active" : "")}
+          onClick={() => onModeChange("track")}
+        >
+          Track Master
+        </button>
+        <button
+          type="button"
+          className={"top-tab " + (mode === "album" ? "is-active" : "")}
+          onClick={() => onModeChange("album")}
+        >
+          Album Master
+        </button>
+      </nav>
+      <div className="top-header-right">
+        {viewMode === "standard" ? (
+          <button type="button" className="ghost-btn top-advanced" onClick={onEnterAdvanced}>
             Advanced
           </button>
-        </nav>
-      ) : (
-        <nav className="top-header-tabs" aria-label="Mode">
-          <button
-            type="button"
-            className={"top-tab " + (mode === "track" ? "is-active" : "")}
-            onClick={() => onModeChange("track")}
-          >
-            Track Master
-          </button>
-          <button
-            type="button"
-            className={"top-tab " + (mode === "album" ? "is-active" : "")}
-            onClick={() => onModeChange("album")}
-          >
-            Album Master
-          </button>
-        </nav>
-      )}
-      <div className="top-header-right">
-        {viewMode === "advanced" && (
+        ) : (
           <button type="button" className="ghost-btn top-advanced" onClick={onBackToStandard}>
             ‹ Back to Standard
           </button>
