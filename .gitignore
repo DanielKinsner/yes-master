@@ -67,6 +67,17 @@ test-output/preset-verify/
 test-output/*.png
 test-output/*.log
 
+# graphify knowledge graph (graphify-out/). The graph data (graph.json), the
+# semantic-extraction cache (one-time LLM token spend, keyed by file hash),
+# manifest.json (file hashes for incremental --update), community labels, and
+# GRAPH_REPORT.md are shared infrastructure for agents on every machine, so
+# they ARE tracked. Only machine-local pointers and the regenerable HTML view
+# are ignored.
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+# Regenerate anytime with `graphify export html` (reads graph.json).
+graphify-out/graph.html
+
 # Local/editor
 .env
 .env.*
