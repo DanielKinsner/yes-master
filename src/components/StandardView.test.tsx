@@ -3,7 +3,12 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { LoudnessSegmented, StandardView, StyleTiles } from "./StandardView";
+import {
+  LoudnessSegmented,
+  StandardView,
+  StyleTiles,
+  sourceLufsCopy,
+} from "./StandardView";
 import type { useTrackMaster } from "../hooks/useTrackMaster";
 
 type TM = ReturnType<typeof useTrackMaster>;
@@ -125,7 +130,7 @@ function fakeTm(overrides: Partial<TM> = {}): TM {
 
 describe("StandardView", () => {
   it("renders style tiles, an intensity control, loudness steps, and the Create Master CTA", async () => {
-    const { container, root } = await render(<StandardView tm={fakeTm()} />);
+    const { container, root } = await render(<StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />);
     const text = container.textContent ?? "";
     expect(text).toContain("Balanced");
     expect(text).toContain("Low");
@@ -135,7 +140,7 @@ describe("StandardView", () => {
 
   it("routes a style click to setPreset", async () => {
     const setPreset = vi.fn();
-    const { container, root } = await render(<StandardView tm={fakeTm({ setPreset })} />);
+    const { container, root } = await render(<StandardView tm={fakeTm({ setPreset })} onEnterAdvanced={() => {}} />);
     const tiles = Array.from(container.querySelectorAll<HTMLButtonElement>(".std-tile"));
     tiles.find((t) => t.textContent?.includes("Bright"))!;
     await act(async () => { tiles.find((t) => t.textContent?.includes("Bright"))!.click(); });
@@ -145,10 +150,148 @@ describe("StandardView", () => {
 
   it("Create Master triggers exportStandardMaster", async () => {
     const exportStandardMaster = vi.fn();
-    const { container, root } = await render(<StandardView tm={fakeTm({ exportStandardMaster })} />);
+    const { container, root } = await render(<StandardView tm={fakeTm({ exportStandardMaster })} onEnterAdvanced={() => {}} />);
     const cta = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((b) => b.textContent?.includes("Create Master"))!;
     await act(async () => { cta.click(); });
     expect(exportStandardMaster).toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+});
+
+describe("sourceLufsCopy", () => {
+  it("reads 'close to' within ±1.5 LU of the target (band edges inclusive)", () => {
+    expect(sourceLufsCopy(-12.5, -14)).toBe("Source -12.5 LUFS · close to your -14 LUFS target");
+    expect(sourceLufsCopy(-14, -14)).toBe("Source -14.0 LUFS · close to your -14 LUFS target");
+  });
+
+  it("reads 'quieter than' below the band and 'louder than' above it", () => {
+    expect(sourceLufsCopy(-22, -14)).toBe("Source -22.0 LUFS · quieter than your -14 LUFS target");
+    expect(sourceLufsCopy(-8, -11)).toBe("Source -8.0 LUFS · louder than your -11 LUFS target");
+  });
+
+  it("shows the bare measurement when there is no target", () => {
+    expect(sourceLufsCopy(-16.3, null)).toBe("Source -16.3 LUFS");
+  });
+});
+
+const SECOND_TRACK = {
+  id: "t2",
+  path: "C:/b.wav",
+  display_name: "B-side.wav",
+  source_format: "wav",
+  duration_seconds: 61,
+};
+
+function twoTrackTm(overrides: Partial<TM> = {}): TM {
+  const base = fakeTm(overrides);
+  return { ...base, tracks: [...base.tracks, SECOND_TRACK] } as TM;
+}
+
+describe("TracksRail", () => {
+  it("lists every track with index and m:ss duration, marking the selected row", async () => {
+    const { container, root } = await render(<StandardView tm={twoTrackTm()} onEnterAdvanced={() => {}} />);
+    const rows = Array.from(container.querySelectorAll<HTMLButtonElement>(".std-track-row"));
+    expect(rows).toHaveLength(2);
+    expect(rows[0].textContent).toContain("01");
+    expect(rows[0].textContent).toContain("Song.wav");
+    expect(rows[0].textContent).toContain("1:40");
+    expect(rows[1].textContent).toContain("02");
+    expect(rows[1].textContent).toContain("B-side.wav");
+    expect(rows[1].textContent).toContain("1:01");
+    expect(rows[0].classList.contains("is-active")).toBe(true);
+    expect(rows[1].classList.contains("is-active")).toBe(false);
+    await act(async () => root.unmount());
+  });
+
+  it("routes a row click to selectTrack with that track's id", async () => {
+    const selectTrack = vi.fn();
+    const { container, root } = await render(<StandardView tm={twoTrackTm({ selectTrack })} onEnterAdvanced={() => {}} />);
+    const rows = Array.from(container.querySelectorAll<HTMLButtonElement>(".std-track-row"));
+    await act(async () => { rows[1].click(); });
+    expect(selectTrack).toHaveBeenCalledWith("t2");
+    await act(async () => root.unmount());
+  });
+
+  it("'+ Add Tracks' opens the import dialog", async () => {
+    const openImportDialog = vi.fn();
+    const { container, root } = await render(<StandardView tm={fakeTm({ openImportDialog })} onEnterAdvanced={() => {}} />);
+    const add = container.querySelector<HTMLButtonElement>(".std-add-track")!;
+    await act(async () => { add.click(); });
+    expect(openImportDialog).toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("status chip is truthful: Analyzing… / Analyzed / Not analyzed (idle dot)", async () => {
+    const analyzing = await render(<StandardView tm={fakeTm({ isAnalyzing: true })} onEnterAdvanced={() => {}} />);
+    expect(analyzing.container.querySelector(".std-tracks-status")?.textContent).toContain("Analyzing…");
+    await act(async () => analyzing.root.unmount());
+
+    const analyzed = await render(<StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />);
+    const okChip = analyzed.container.querySelector(".std-tracks-status")!;
+    expect(okChip.textContent).toContain("Analyzed");
+    expect(okChip.classList.contains("is-idle")).toBe(false);
+    await act(async () => analyzed.root.unmount());
+
+    const idle = await render(<StandardView tm={fakeTm({ selectedAnalysis: undefined })} onEnterAdvanced={() => {}} />);
+    const idleChip = idle.container.querySelector(".std-tracks-status")!;
+    expect(idleChip.textContent).toContain("Not analyzed");
+    expect(idleChip.classList.contains("is-idle")).toBe(true);
+    await act(async () => idle.root.unmount());
+  });
+});
+
+describe("StandardRightRail", () => {
+  it("A/B reflects playbackKind via aria-pressed and routes clicks to setPlaybackKind", async () => {
+    const setPlaybackKind = vi.fn();
+    const { container, root } = await render(<StandardView tm={fakeTm({ setPlaybackKind })} onEnterAdvanced={() => {}} />);
+    const group = container.querySelector(".std-rail-ab")!;
+    const buttons = Array.from(group.querySelectorAll<HTMLButtonElement>("button"));
+    const original = buttons.find((b) => b.textContent === "Original")!;
+    const mastered = buttons.find((b) => b.textContent === "Mastered")!;
+    expect(mastered.getAttribute("aria-pressed")).toBe("true");
+    expect(original.getAttribute("aria-pressed")).toBe("false");
+    await act(async () => { original.click(); });
+    expect(setPlaybackKind).toHaveBeenCalledWith("source");
+    await act(async () => root.unmount());
+  });
+
+  it("Volume Match toggle routes to setVolumeMatch with the flipped value", async () => {
+    const setVolumeMatch = vi.fn();
+    const { container, root } = await render(<StandardView tm={fakeTm({ setVolumeMatch })} onEnterAdvanced={() => {}} />);
+    const toggle = container.querySelector<HTMLButtonElement>(".std-volume-match")!;
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    await act(async () => { toggle.click(); });
+    expect(setVolumeMatch).toHaveBeenCalledWith(true);
+    await act(async () => root.unmount());
+  });
+
+  it("Delivery 'Change' routes to onEnterAdvanced", async () => {
+    const onEnterAdvanced = vi.fn();
+    const { container, root } = await render(
+      <StandardView tm={fakeTm()} onEnterAdvanced={onEnterAdvanced} />,
+    );
+    const change = container.querySelector<HTMLButtonElement>(".std-delivery-change")!;
+    await act(async () => { change.click(); });
+    expect(onEnterAdvanced).toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("hero subtitle derives the LUFS qualifier from measurement vs target", async () => {
+    // fakeTm: source -16 LUFS, delivery_profile "custom" -> target -11 => quieter.
+    const { container, root } = await render(<StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />);
+    expect(container.querySelector(".std-source")?.textContent).toBe(
+      "Source -16.0 LUFS · quieter than your -11 LUFS target",
+    );
+    await act(async () => root.unmount());
+  });
+
+  it("hero subtitle says 'not analyzed yet' instead of claiming analysis is running", async () => {
+    const { container, root } = await render(
+      <StandardView tm={fakeTm({ selectedAnalysis: undefined })} onEnterAdvanced={() => {}} />,
+    );
+    expect(container.querySelector(".std-source")?.textContent).toBe(
+      "Source not analyzed yet",
+    );
     await act(async () => root.unmount());
   });
 });

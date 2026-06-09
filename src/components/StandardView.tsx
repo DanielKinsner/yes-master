@@ -33,6 +33,23 @@ function fmtDuration(sec: number | null | undefined): string {
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 
+/// Truthful hero subtitle: the qualifier is derived from the measurement
+/// against the user's selected loudness target (±1.5 LU reads as "close"
+/// at mastering tolerances) — never asserted unconditionally.
+export function sourceLufsCopy(
+  sourceLufs: number,
+  targetLufs: number | null,
+): string {
+  const measured = `Source ${sourceLufs.toFixed(1)} LUFS`;
+  if (targetLufs == null || !Number.isFinite(targetLufs)) return measured;
+  const delta = sourceLufs - targetLufs;
+  const target = `your ${targetLufs.toFixed(0)} LUFS target`;
+  if (Math.abs(delta) <= 1.5) return `${measured} · close to ${target}`;
+  return delta < 0
+    ? `${measured} · quieter than ${target}`
+    : `${measured} · louder than ${target}`;
+}
+
 export function StyleTiles({
   preset,
   onSelect,
@@ -124,9 +141,18 @@ function TracksRail({ tm }: { tm: TM }) {
       >
         + Add Tracks
       </button>
-      <div className="std-tracks-status">
+      <div
+        className={
+          "std-tracks-status" +
+          (!tm.isAnalyzing && !tm.selectedAnalysis ? " is-idle" : "")
+        }
+      >
         <span className="std-status-dot" aria-hidden />
-        {tm.isAnalyzing ? "Analyzing…" : "Analyzed"}
+        {tm.isAnalyzing
+          ? "Analyzing…"
+          : tm.selectedAnalysis
+            ? "Analyzed"
+            : "Not analyzed"}
       </div>
     </aside>
   );
@@ -186,7 +212,9 @@ function StandardRightRail({
 
       <section className="std-rail-card">
         <div className="std-rail-title">DELIVERY FORMAT</div>
-        <div className="std-delivery-name">Streaming</div>
+        {/* State-free name: the recipe is fixed (standardExportSettings), and
+            "Streaming" would read as a live profile next to a −9 LUFS target. */}
+        <div className="std-delivery-name">Standard WAV</div>
         <div className="std-delivery-spec">44.1 kHz · 24-bit · −1 dBTP</div>
         <button type="button" className="ghost-btn std-delivery-change" onClick={onEnterAdvanced}>
           Change
@@ -202,7 +230,11 @@ function StandardRightRail({
             void tm.exportStandardMaster();
           }}
         >
-          {tm.isExporting ? "Creating…" : "Create Master"}
+          {tm.isExporting
+            ? "Creating…"
+            : tm.isRendering
+              ? "Preparing…"
+              : "Create Master"}
         </button>
         {notes?.invalid && (
           <p className="std-export-block" role="alert">
@@ -222,7 +254,8 @@ export function StandardView({
   onEnterAdvanced,
 }: {
   tm: TM;
-  onEnterAdvanced?: () => void;
+  // Required: a missed wiring must fail tsc, not ship a dead 'Change' button.
+  onEnterAdvanced: () => void;
 }) {
   const s = tm.selectedSettings;
   const sourceLufs = tm.selectedAnalysis?.lufs_integrated ?? null;
@@ -232,14 +265,14 @@ export function StandardView({
 
       <section className="std-center">
         <div className="std-hero-head">
-          <div className="std-title-wrap">
-            <h1 className="std-title">{tm.selectedTrack?.display_name ?? "No track"}</h1>
-            <p className="std-source">
-              {sourceLufs != null
-                ? `Source ${sourceLufs.toFixed(1)} LUFS · close to typical streaming targets`
-              : "Analyzing source…"}
-            </p>
-          </div>
+          <h1 className="std-title">{tm.selectedTrack?.display_name ?? "No track"}</h1>
+          <p className="std-source">
+            {sourceLufs != null
+              ? sourceLufsCopy(sourceLufs, effectiveLoudnessTarget(s))
+              : tm.isAnalyzing
+                ? "Analyzing source…"
+                : "Source not analyzed yet"}
+          </p>
         </div>
 
         <div className="std-wave-deck">
@@ -250,7 +283,14 @@ export function StandardView({
               aria-label={tm.transport.isPlaying ? "Pause" : "Play"}
               onClick={tm.togglePlay}
             >
-              {tm.transport.isPlaying ? "❚❚" : "►"}
+              <span
+                className={
+                  "std-play-glyph" + (tm.transport.isPlaying ? " is-pause" : "")
+                }
+                aria-hidden
+              >
+                {tm.transport.isPlaying ? "❚❚" : "►"}
+              </span>
             </button>
             <span className="std-time">
               {fmtDuration(tm.transport.currentTimeSec)} / {fmtDuration(tm.selectedTrack?.duration_seconds)}
@@ -287,7 +327,7 @@ export function StandardView({
             <StyleTiles preset={s.preset} onSelect={tm.setPreset} />
           </div>
 
-          <div className="std-step">
+          <div className="std-step std-step-intensity">
             <span className="std-step-label">2 · Intensity</span>
             <span className="std-step-hint">Set how strong the effect is.</span>
             <Knob
@@ -316,7 +356,7 @@ export function StandardView({
         </div>
       </section>
 
-      <StandardRightRail tm={tm} onEnterAdvanced={onEnterAdvanced ?? (() => {})} />
+      <StandardRightRail tm={tm} onEnterAdvanced={onEnterAdvanced} />
     </div>
   );
 }

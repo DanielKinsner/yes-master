@@ -8,7 +8,10 @@ import { api } from "./lib/api";
 import { useTrackMaster } from "./hooks/useTrackMaster";
 import { useViewMode } from "./hooks/useViewMode";
 import { StandardView } from "./components/StandardView";
-import { shouldForceAdvancedOnStandardEntry } from "./lib/standard-managed";
+import {
+  hasNonManagedEdits,
+  shouldForceAdvancedOnStandardEntry,
+} from "./lib/standard-managed";
 import { PresetIcon } from "./components/PresetIcon";
 import { RightRail, MasterOutPanel } from "./components/RightRail";
 import { VisualEqPanel } from "./components/VisualEqPanel";
@@ -97,8 +100,10 @@ function App() {
     }
   }, [view, tm.mode, tm.selectedTrack, tm.selectedSettings, setView]);
 
+  // Spec §2a: the return door is asymmetric — silent when the track is clean,
+  // confirm (with Save-as-preset) only when non-managed edits would be reset.
   const requestBackToStandard = () => {
-    if (!tm.selectedTrack) {
+    if (!tm.selectedTrack || !hasNonManagedEdits(tm.selectedSettings)) {
       setView("standard");
       return;
     }
@@ -362,35 +367,32 @@ export function TopHeader({
         </span>
         <span className="brand-name">YES Master</span>
       </div>
-      {viewMode === "standard" ? (
-        <nav className="top-header-tabs top-header-tabs-view" aria-label="View">
-          <button type="button" className="top-tab is-active">
-            Standard
-          </button>
-          <button type="button" className="top-tab top-advanced" onClick={onEnterAdvanced}>
+      {/* Spec §chrome: Track/Album tabs render in BOTH views (clicking Album
+          from Standard triggers the entry guard's bounce into Advanced);
+          Standard gets a single 'Advanced' affordance, never a
+          Standard|Advanced segmented control. */}
+      <nav className="top-header-tabs" aria-label="Mode">
+        <button
+          type="button"
+          className={"top-tab " + (mode === "track" ? "is-active" : "")}
+          onClick={() => onModeChange("track")}
+        >
+          Track Master
+        </button>
+        <button
+          type="button"
+          className={"top-tab " + (mode === "album" ? "is-active" : "")}
+          onClick={() => onModeChange("album")}
+        >
+          Album Master
+        </button>
+      </nav>
+      <div className="top-header-right">
+        {viewMode === "standard" ? (
+          <button type="button" className="ghost-btn top-advanced" onClick={onEnterAdvanced}>
             Advanced
           </button>
-        </nav>
-      ) : (
-        <nav className="top-header-tabs" aria-label="Mode">
-          <button
-            type="button"
-            className={"top-tab " + (mode === "track" ? "is-active" : "")}
-            onClick={() => onModeChange("track")}
-          >
-            Track Master
-          </button>
-          <button
-            type="button"
-            className={"top-tab " + (mode === "album" ? "is-active" : "")}
-            onClick={() => onModeChange("album")}
-          >
-            Album Master
-          </button>
-        </nav>
-      )}
-      <div className="top-header-right">
-        {viewMode === "advanced" && (
+        ) : (
           <button type="button" className="ghost-btn top-advanced" onClick={onBackToStandard}>
             ‹ Back to Standard
           </button>
@@ -561,8 +563,8 @@ function BackToStandardConfirm({
       <div className="modal-card">
         <h2 className="modal-title">Back to Standard</h2>
         <p className="modal-body">
-          Back to Standard resets Advanced-only controls to their Standard
-          defaults. Save the current settings as a preset first?
+          Back to Standard resets your manual edits to the preset&apos;s clean
+          sound. Save them as a preset first?
         </p>
         <div className="modal-save-row">
           <input
