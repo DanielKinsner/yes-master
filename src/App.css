@@ -5338,7 +5338,9 @@ button.primary:disabled {
   display: flex; flex-direction: column; gap: 1.05rem; min-width: 0;
   padding: 1.6rem 1.55rem 1.5rem; overflow-y: auto;
 }
-.std-hero-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+/* Plain block (the old flex wrapper was a single-child leftover): long track
+   titles wrap at the column width instead of overflowing the flex item. */
+.std-hero-head { min-width: 0; }
 .std-title { font-size: 1.55rem; font-weight: 700; color: var(--text-0); margin: 0; letter-spacing: 0; }
 .std-source { margin: 0.36rem 0 0; font-size: 0.8rem; color: var(--text-1); }
 
@@ -5365,7 +5367,7 @@ button.primary:disabled {
 .std-play {
   position: relative; flex-shrink: 0; width: 64px; height: 64px; border-radius: 50%;
   border: none; cursor: pointer; font-size: 1.15rem; color: #fff;
-  display: grid; place-items: center; padding-left: 3px;
+  display: grid; place-items: center;
   background:
     radial-gradient(120% 120% at 30% 25%, rgba(154, 191, 255, 0.95), rgba(30, 62, 133, 0.9) 68%, rgba(13, 19, 34, 1));
   border: 1px solid rgba(111,163,255,0.55);
@@ -5374,6 +5376,10 @@ button.primary:disabled {
 }
 .std-play:hover { transform: scale(1.06); box-shadow: 0 8px 30px rgba(42,107,242,0.6); }
 .std-play:active { transform: scale(0.98); }
+/* Optical centering for the ► triangle only (equivalent to the old
+   padding-left: 3px content shift); the ❚❚ pause glyph stays true-center. */
+.std-play-glyph { transform: translateX(1.5px); }
+.std-play-glyph.is-pause { transform: none; }
 .std-play::after {
   content: ""; position: absolute; inset: -5px; border-radius: 50%; pointer-events: none;
   border: 1px solid rgba(111, 163, 255, 0.4); opacity: 0; transition: opacity 160ms ease;
@@ -5472,7 +5478,9 @@ button.primary:disabled {
 .std-tile-subtitle { font-size: 0.76rem; color: var(--text-2); }
 .std-tile.is-active .std-tile-subtitle { color: var(--text-1); }
 
-.std-step:nth-child(2) {
+/* Class-targeted (not :nth-child) so inserting/reordering steps can't
+   silently move the knob grid to the wrong card. */
+.std-steps .std-step-intensity {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
@@ -5481,14 +5489,14 @@ button.primary:disabled {
   align-items: center;
   min-height: 168px;
 }
-.std-step:nth-child(2) .std-step-label { grid-area: label; align-self: end; }
-.std-step:nth-child(2) .std-step-hint { grid-area: hint; align-self: start; }
-.std-step:nth-child(2) .knob {
+.std-steps .std-step-intensity .std-step-label { grid-area: label; align-self: end; }
+.std-steps .std-step-intensity .std-step-hint { grid-area: hint; align-self: start; }
+.std-steps .std-step-intensity .knob {
   grid-area: knob;
   justify-self: center;
   min-width: 150px;
 }
-.std-step:nth-child(2) .knob-caption {
+.std-steps .std-step-intensity .knob-caption {
   margin-top: 0.1rem;
   color: var(--text-1);
 }

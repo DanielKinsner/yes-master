@@ -265,16 +265,14 @@ export function StandardView({
 
       <section className="std-center">
         <div className="std-hero-head">
-          <div className="std-title-wrap">
-            <h1 className="std-title">{tm.selectedTrack?.display_name ?? "No track"}</h1>
-            <p className="std-source">
-              {sourceLufs != null
-                ? sourceLufsCopy(sourceLufs, effectiveLoudnessTarget(s))
-                : tm.isAnalyzing
-                  ? "Analyzing source…"
-                  : "Source not analyzed yet"}
-            </p>
-          </div>
+          <h1 className="std-title">{tm.selectedTrack?.display_name ?? "No track"}</h1>
+          <p className="std-source">
+            {sourceLufs != null
+              ? sourceLufsCopy(sourceLufs, effectiveLoudnessTarget(s))
+              : tm.isAnalyzing
+                ? "Analyzing source…"
+                : "Source not analyzed yet"}
+          </p>
         </div>
 
         <div className="std-wave-deck">
@@ -285,7 +283,14 @@ export function StandardView({
               aria-label={tm.transport.isPlaying ? "Pause" : "Play"}
               onClick={tm.togglePlay}
             >
-              {tm.transport.isPlaying ? "❚❚" : "►"}
+              <span
+                className={
+                  "std-play-glyph" + (tm.transport.isPlaying ? " is-pause" : "")
+                }
+                aria-hidden
+              >
+                {tm.transport.isPlaying ? "❚❚" : "►"}
+              </span>
             </button>
             <span className="std-time">
               {fmtDuration(tm.transport.currentTimeSec)} / {fmtDuration(tm.selectedTrack?.duration_seconds)}
@@ -322,7 +327,7 @@ export function StandardView({
             <StyleTiles preset={s.preset} onSelect={tm.setPreset} />
           </div>
 
-          <div className="std-step">
+          <div className="std-step std-step-intensity">
             <span className="std-step-label">2 · Intensity</span>
             <span className="std-step-hint">Set how strong the effect is.</span>
             <Knob
