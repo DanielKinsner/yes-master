@@ -843,6 +843,12 @@ pub struct ExportReport {
     pub source_profile_digest: Option<String>,
     #[serde(default)]
     pub confidence_digest: Option<String>,
+    /// 2026-06-09 export-metrics inquiry — true when the measured_* fields
+    /// describe the rendered output (`RenderedMeasurements`) rather than the
+    /// legacy source-analysis fallback. Gates checks that compare delivered
+    /// loudness against the target. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub measurements_are_rendered: bool,
     pub checks: Vec<QualityCheck>,
 }
 

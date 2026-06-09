@@ -307,6 +307,8 @@ fn export_report_for(
         effective_adaptive_strength: rendered.effective_adaptive_strength,
         source_profile_digest: rendered.source_profile_digest.clone(),
         confidence_digest: rendered.confidence_digest.clone(),
+        // Built directly from RenderedMeasurements — always rendered output.
+        measurements_are_rendered: true,
         checks: Vec::new(),
     }
 }

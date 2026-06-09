@@ -411,6 +411,9 @@ export interface ExportReport {
   effective_adaptive_strength?: number;
   source_profile_digest?: string | null;
   confidence_digest?: string | null;
+  // True when the measured_* fields describe the rendered output rather than
+  // the legacy source-analysis fallback; gates target-comparison checks.
+  measurements_are_rendered?: boolean;
   checks: QualityCheck[];
 }
 
