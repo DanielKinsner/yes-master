@@ -5264,6 +5264,10 @@ button.primary:disabled {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 300px;
+  /* Constrain the implicit row to the shell height so the rails can shrink
+     and scroll internally instead of growing past #root's overflow: hidden
+     (album-sized track lists would otherwise clip with no scrollbar). */
+  grid-template-rows: minmax(0, 1fr);
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -5276,13 +5280,14 @@ button.primary:disabled {
 /* ---- tracks rail (left) ---- */
 .std-tracks {
   display: flex; flex-direction: column; gap: 0.65rem;
-  padding: 1.65rem 0.65rem 1rem; min-width: 0;
+  padding: 1.65rem 0.65rem 1rem; min-width: 0; min-height: 0;
   border-right: 1px solid var(--border);
   background:
     linear-gradient(180deg, rgba(10, 14, 23, 0.72), rgba(7, 9, 15, 0.86));
 }
 .std-tracks-head { font-size: 0.72rem; letter-spacing: 0.18em; color: var(--text-1); font-weight: 700; padding: 0 0.9rem 0.75rem; }
-.std-tracks-list { display: flex; flex-direction: column; gap: 0.55rem; min-width: 0; }
+/* The list, not the rail, scrolls — Add Tracks and the status row stay pinned. */
+.std-tracks-list { display: flex; flex-direction: column; gap: 0.55rem; min-width: 0; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .std-track-row {
   display: grid;
   grid-template-columns: 1.45rem minmax(0, 1fr) 1.15rem;
@@ -5508,7 +5513,8 @@ button.primary:disabled {
 /* ---- right rail (preview / delivery / export) ---- */
 .std-rail {
   display: flex; flex-direction: column; gap: 1rem;
-  padding: 0.85rem 0.95rem 1rem; min-width: 0;
+  padding: 0.85rem 0.95rem 1rem; min-width: 0; min-height: 0;
+  overflow-y: auto;
   border-left: 1px solid var(--border);
   background:
     linear-gradient(180deg, rgba(10, 14, 23, 0.72), rgba(7, 9, 15, 0.86));
