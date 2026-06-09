@@ -520,4 +520,36 @@ describe("App Standard<->Advanced view transitions", () => {
       root.unmount();
     });
   });
+
+  it("9) back to Standard from Album mode leaves Album and lands in Standard", async () => {
+    // Regression: the return door used to only setView("standard") — the
+    // Album-only-in-Advanced entry guard re-bounced to Advanced in the same
+    // commit and the button visibly did nothing. Returning to Standard must
+    // also return the project mode to Track.
+    seedViewMode("standard");
+    mocks.api.loadRecentSession.mockResolvedValue(
+      makeSession(CLEAN_SETTINGS, "album"),
+    );
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(hasSidebar(container)).toBe(true);
+    });
+    expect(affordanceText(container)).toBe("‹ Back to Standard");
+
+    await click(affordance(container)!);
+
+    await waitFor(() => {
+      expect(container.querySelector(".std-tiles")).not.toBeNull();
+    });
+    expect(hasSidebar(container)).toBe(false);
+    expect(affordanceText(container)).toBe("Advanced");
+    // The mode tabs must reflect the implied Album -> Track switch.
+    const activeTab = container.querySelector("button.top-tab.is-active");
+    expect(activeTab?.textContent).toBe("Track Master");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
 });

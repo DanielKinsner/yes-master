@@ -100,11 +100,21 @@ function App() {
     }
   }, [view, tm.mode, tm.selectedTrack, tm.selectedSettings, setView]);
 
+  // Standard is track-only, so the return door must also leave Album mode —
+  // otherwise the Album-only-in-Advanced entry guard above re-bounces the
+  // view to Advanced in the same commit and the button visibly does nothing.
+  // setMode is plain state (albumIntent/overrides live separately), so
+  // leaving and re-entering Album loses no album configuration.
+  const returnToStandard = () => {
+    if (tm.mode === "album") tm.setMode("track");
+    setView("standard");
+  };
+
   // Spec §2a: the return door is asymmetric — silent when the track is clean,
   // confirm (with Save-as-preset) only when non-managed edits would be reset.
   const requestBackToStandard = () => {
     if (!tm.selectedTrack || !hasNonManagedEdits(tm.selectedSettings)) {
-      setView("standard");
+      returnToStandard();
       return;
     }
     setReturnConfirm(true);
@@ -233,7 +243,7 @@ function App() {
         <BackToStandardConfirm
           saving={tm.savingPreset}
           onCancel={() => setReturnConfirm(false)}
-          onReset={() => { tm.resetToStandardManaged(); setReturnConfirm(false); setView("standard"); }}
+          onReset={() => { tm.resetToStandardManaged(); setReturnConfirm(false); returnToStandard(); }}
           onSaveAsPreset={async (name) => {
             // Only reset + switch if the save actually succeeded — the save
             // is async; never discard the user's edits when the write failed.
@@ -241,7 +251,7 @@ function App() {
             if (ok) {
               tm.resetToStandardManaged();
               setReturnConfirm(false);
-              setView("standard");
+              returnToStandard();
             }
             return ok;
           }}
