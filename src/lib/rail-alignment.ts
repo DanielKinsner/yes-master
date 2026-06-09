@@ -44,7 +44,8 @@ export type RailAlignment = {
  * review stack, so the live meter is allowed to compress below the Advanced
  * rail's hero-meter size when that is what keeps the card corners aligned.
  */
-export const MIN_PREVIEW_HEIGHT_PX = 248;
+// 248 + ~16px returned to the readout pills (App.css .std-rail .readout).
+export const MIN_PREVIEW_HEIGHT_PX = 264;
 
 export function computeRailAlignment(
   input: RailAlignmentInput,
