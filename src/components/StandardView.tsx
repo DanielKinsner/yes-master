@@ -183,7 +183,7 @@ function StandardRightRail({
     : null;
   return (
     <aside className="std-rail">
-      <section className="std-rail-card">
+      <section className="std-rail-card std-rail-preview">
         <div className="std-rail-head">
           <div className="std-rail-title">PREVIEW</div>
           <button

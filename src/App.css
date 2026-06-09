@@ -5670,10 +5670,16 @@ button.primary:disabled {
   letter-spacing: 0.14em;
   color: var(--text-2);
 }
+/* The PREVIEW card absorbs the rail's free height: the meter stretches to
+   fill it and the LUFS readouts ride at the bottom of the card — instead of
+   a fixed taller meter, the space Volume Match vacated (and any spare rail
+   height above the export block) all goes to metering. */
+.std-rail-preview { flex: 1 1 auto; min-height: 0; }
+.std-rail-preview .master-out { flex: 1 1 auto; min-height: 0; }
 .std-rail .master-out .lufs-meter {
-  /* Lengthened (172px -> 240px): Volume Match moved into the PREVIEW
-     header row, so the freed body height goes to the meters. */
-  height: 240px;
+  height: auto;
+  flex: 1 1 auto;
+  min-height: 172px;
   justify-content: center;
 }
 .std-rail .master-out .lufs-bars {
