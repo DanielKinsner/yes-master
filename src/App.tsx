@@ -2918,8 +2918,11 @@ function ExportReceiptCard({
                   Adaptive{" "}
                   {Math.round((measurements.effective_adaptive_strength ?? 0) * 100)}%
                 </span>
-                <span title="Source profile that drove adaptation">
-                  {measurements.source_profile_digest}
+                <span title="Source profile that drove adaptation — these describe the SOURCE, not the delivered master">
+                  {/* Visible "Source" prefix (export-metrics inquiry 2026-06-09):
+                      a hover-only tooltip let these source stats read as master
+                      measurements right under the output chips. */}
+                  Source · {measurements.source_profile_digest}
                 </span>
               </>
             ) : (

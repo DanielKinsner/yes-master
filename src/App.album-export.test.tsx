@@ -290,6 +290,9 @@ describe("album export actions", () => {
             dynamic_range_lu: 10.9,
             sample_rate: 96_000,
             bit_depth: 32,
+            effective_adaptive_strength: 0.5,
+            source_profile_digest:
+              "bright 0.02 / low 0.37 / DR 22.2dB / LRA 13.6LU / corr 0.74",
           },
         },
         kind: "track",
@@ -304,6 +307,14 @@ describe("album export actions", () => {
     expect(delivered?.textContent).toContain("Master -10.3 LUFS");
     expect(delivered?.textContent).toContain("TP -0.97 dBTP");
     expect(delivered?.textContent).toContain("LRA 10.9 LU");
+
+    // The adaptive digest is SOURCE data — it must carry a visible label so
+    // it can't read as master measurements next to the delivered chips.
+    const adaptive = container.querySelector('[aria-label="Adaptive DSP"]');
+    expect(adaptive?.textContent).toContain("Adaptive 50%");
+    expect(adaptive?.textContent).toContain(
+      "Source · bright 0.02 / low 0.37 / DR 22.2dB / LRA 13.6LU / corr 0.74",
+    );
 
     await act(async () => {
       root.unmount();
