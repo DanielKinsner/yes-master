@@ -5330,6 +5330,8 @@ button.primary:disabled {
 }
 .std-tracks-status { display: flex; align-items: center; gap: 0.45rem; font-size: 0.72rem; color: var(--text-1); padding: 0.5rem 0.25rem 0; }
 .std-status-dot { width: 9px; height: 9px; border-radius: 50%; background: #6cd08a; box-shadow: 0 0 8px rgba(108,208,138,0.8); }
+/* "Not analyzed": the dot must not glow green when there is no analysis. */
+.std-tracks-status.is-idle .std-status-dot { background: var(--text-2); box-shadow: none; }
 
 /* ---- center ---- */
 .std-center {
