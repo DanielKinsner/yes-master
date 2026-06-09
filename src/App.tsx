@@ -12,7 +12,7 @@ import {
   hasNonManagedEdits,
   shouldForceAdvancedOnStandardEntry,
 } from "./lib/standard-managed";
-import { PresetIcon } from "./components/PresetIcon";
+import { PresetIcon, PRESET_ACCENT } from "./components/PresetIcon";
 import { RightRail, MasterOutPanel } from "./components/RightRail";
 import { VisualEqPanel } from "./components/VisualEqPanel";
 import { AlbumPanel } from "./components/AlbumPanel";
@@ -1381,18 +1381,8 @@ function Transport({
 
 // Per-preset accent color. Drives the tile's character glow so the imagery
 // feels integrated with the tile rather than pasted on. Matches the color
-// language of the generated 3D imagery.
-const PRESET_ACCENT: Record<Preset["kind"], string> = {
-  universal: "#4d8bff",
-  clarity: "#22d3ee",
-  tape: "#fbbf24",
-  spatial: "#a78bfa",
-  oomph: "#f87171",
-  warmth: "#fb923c",
-  punch: "#ef4444",
-  loud: "#60a5fa",
-  custom: "#9ca3af",
-};
+// language of the generated 3D imagery. Lives in PresetIcon.tsx so the
+// Standard style tiles share the exact same hues (visual-parity pass).
 
 /// Keep the WebView at a deterministic 100% app zoom on every fresh launch.
 /// The app is now composed for a native 1920x1080 window, so carrying an

@@ -10,7 +10,7 @@ import type { Preset } from "../bindings";
 export type StandardStyleId = "balanced" | "bright" | "warm" | "heavy";
 export type StandardLoudnessId = "low" | "medium" | "high";
 
-export type StandardTone = "blue" | "cyan" | "gold" | "purple";
+export type StandardTone = "blue" | "cyan" | "gold" | "red";
 
 /// The four tiles, in display order, with the metadata the UI renders.
 /// `tone` reuses the Knob/accent tone vocabulary already in the app.
@@ -24,7 +24,10 @@ export const STANDARD_STYLES: ReadonlyArray<{
   { id: "balanced", label: "Balanced", subtitle: "Clean balance", preset: { kind: "universal" }, tone: "blue" },
   { id: "bright", label: "Bright", subtitle: "Air & detail", preset: { kind: "clarity" }, tone: "cyan" },
   { id: "warm", label: "Warm", subtitle: "Glue & body", preset: { kind: "tape" }, tone: "gold" },
-  { id: "heavy", label: "Heavy", subtitle: "Sub & weight", preset: { kind: "oomph" }, tone: "purple" },
+  // Heavy is "red", not purple: Oomph's accent everywhere else (PRESET_ACCENT,
+  // the red speaker artwork) is #f87171, and Knob's "red" is the same hex —
+  // one hue per preset across both views (visual-parity pass).
+  { id: "heavy", label: "Heavy", subtitle: "Sub & weight", preset: { kind: "oomph" }, tone: "red" },
 ];
 
 /// The three loudness steps, in display order (matches the iPhone's

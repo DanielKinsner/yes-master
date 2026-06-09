@@ -19,7 +19,7 @@ import {
 import type { useTrackMaster } from "../hooks/useTrackMaster";
 import { Knob, intensityLabel } from "./Knob";
 import { WaveformLoading, WaveformView } from "./Waveform";
-import { PresetIcon } from "./PresetIcon";
+import { PresetIcon, PRESET_ACCENT } from "./PresetIcon";
 import { effectiveLoudnessTarget } from "../lib/effective-settings";
 import { standardExportNotes } from "../lib/standard-export";
 import { MasterOutPanel } from "./RightRail";
@@ -67,7 +67,9 @@ export function StyleTiles({
             key={s.id}
             type="button"
             className={"std-tile" + (s.id === activeStyle ? " is-active" : "")}
-            data-tone={s.tone}
+            // Same accent variable + hue as Advanced's preset strip, so one
+            // preset glows one color across both views.
+            style={{ ["--tile-accent" as never]: PRESET_ACCENT[tilePreset.kind] }}
             aria-pressed={s.id === activeStyle}
             onClick={() => onSelect(tilePreset)}
           >

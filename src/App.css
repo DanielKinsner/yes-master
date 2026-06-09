@@ -5443,19 +5443,27 @@ button.primary:disabled {
 /* ---- style tiles (reuse Advanced preset artwork) ---- */
 .std-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
 .std-tile {
-  --tone: var(--accent-bright);
+  /* Advanced's .tile material system (App.css ~1937) scaled to the Standard
+     hero card: --tile-accent radial wash over the deep deck gradient,
+     accent-mixed border, screen-blended imagery, and the active
+     ring + floor + halo shadow stack — one preset, one look, both views. */
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; text-align: center;
   min-height: 184px;
   padding: 1.1rem 0.7rem 0.95rem; border-radius: var(--radius-card); cursor: pointer;
-  background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
-  border: 1px solid var(--border); color: var(--text-1);
-  /* No `background` here: both endpoints are gradients, which don't
-     interpolate — the selection change snaps by design. */
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 50% 30%,
+      color-mix(in srgb, var(--tile-accent, var(--accent)) 24%, transparent),
+      transparent 58%
+    ),
+    linear-gradient(180deg, rgba(31, 37, 51, 0.84) 0%, rgba(13, 16, 24, 0.96) 100%);
+  border: 1px solid color-mix(in srgb, var(--tile-accent, var(--accent)) 18%, var(--border));
+  color: var(--text-1);
+  /* No `background` in the list: gradient endpoints don't interpolate —
+     wash-depth changes snap by design, exactly as in Advanced. */
   transition: transform 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease, box-shadow 180ms ease;
 }
-.std-tile[data-tone="cyan"] { --tone: #45e0f5; }
-.std-tile[data-tone="gold"] { --tone: var(--accent-warm); }
-.std-tile[data-tone="purple"] { --tone: #a875f5; }
 .std-tile-icon {
   width: clamp(76px, 7.4vw, 108px);
   height: clamp(76px, 7.4vw, 108px);
@@ -5463,19 +5471,61 @@ button.primary:disabled {
   place-items: center;
   margin-bottom: 0.12rem;
 }
-.std-tile-icon img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 18px rgba(0,0,0,0.5)); }
-.std-tile:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--tone) 55%, var(--border)); box-shadow: 0 10px 26px rgba(0,0,0,0.35); }
+/* Screen-blended like Advanced's .tile-icon: highlights add light to the
+   tile instead of reading as a pasted sticker. */
+.std-tile-icon img {
+  width: 100%; height: 100%; object-fit: contain;
+  mix-blend-mode: screen;
+  filter: brightness(0.95) saturate(1.05) contrast(1.04);
+  transition: filter 150ms ease, transform 150ms ease;
+}
+.std-tile:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-strong);
+  background:
+    radial-gradient(
+      ellipse 80% 70% at 50% 32%,
+      color-mix(in srgb, var(--tile-accent, var(--accent)) 32%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(180deg, rgba(31, 37, 51, 0.9) 0%, rgba(13, 16, 24, 0.96) 100%);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+}
+.std-tile:hover .std-tile-icon img {
+  filter: brightness(1.05) saturate(1.05);
+  transform: translateY(-1px) scale(1.03);
+}
 .std-tile.is-active {
-  border-color: var(--tone); color: var(--text-0);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 16%, var(--bg-2)), var(--bg-1));
-  box-shadow: 0 0 0 1px var(--tone), 0 8px 26px color-mix(in srgb, var(--tone) 28%, transparent);
+  color: var(--text-0);
+  background:
+    radial-gradient(
+      ellipse 90% 80% at 50% 38%,
+      color-mix(in srgb, var(--tile-accent, var(--accent)) 38%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(180deg, rgba(31, 37, 51, 0.95) 0%, rgba(13, 16, 24, 0.98) 100%);
+  border-color: color-mix(in srgb, var(--tile-accent, var(--accent)) 72%, white 8%);
+  /* Advanced's chosen-direction stack: inner sheen, 1px accent ring,
+     floor shadow, colored halo. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px color-mix(in srgb, var(--tile-accent, var(--accent)) 28%, transparent),
+    0 18px 38px rgba(0, 0, 0, 0.34),
+    0 0 32px color-mix(in srgb, var(--tile-accent, var(--accent)) 24%, transparent);
+}
+.std-tile.is-active .std-tile-icon img {
+  filter: brightness(1.18) saturate(1.15)
+    drop-shadow(0 0 18px color-mix(in srgb, var(--tile-accent, var(--accent)) 60%, transparent));
+  transform: scale(1.05);
 }
 .std-tile.is-active::after {
   content: "✓"; position: absolute; top: 0.7rem; right: 0.75rem;
   width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
-  font-size: 0.7rem; color: #fff; background: var(--tone);
+  font-size: 0.7rem; color: #fff;
+  background: color-mix(in srgb, var(--tile-accent, var(--accent)) 85%, black 15%);
 }
-.std-tile-label { font-size: 0.98rem; font-weight: 600; }
+.std-tile-label { font-size: 0.98rem; font-weight: 600; letter-spacing: 0.02em; }
+.std-tile.is-active .std-tile-label { color: var(--tile-accent, var(--accent)); }
 .std-tile-subtitle { font-size: 0.76rem; color: var(--text-2); }
 .std-tile.is-active .std-tile-subtitle { color: var(--text-1); }
 
