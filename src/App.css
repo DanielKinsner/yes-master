@@ -5285,7 +5285,8 @@ button.primary:disabled {
   background:
     linear-gradient(180deg, rgba(10, 14, 23, 0.72), rgba(7, 9, 15, 0.86));
 }
-.std-tracks-head { font-size: 0.72rem; letter-spacing: 0.18em; color: var(--text-1); font-weight: 700; padding: 0 0.9rem 0.75rem; }
+/* Panel-header type matches Advanced's .panel-title exactly (0.72/0.16em/700/text-0). */
+.std-tracks-head { font-size: 0.72rem; letter-spacing: 0.16em; color: var(--text-0); font-weight: 700; padding: 0 0.9rem 0.75rem; display: inline-flex; align-items: center; gap: 0.55rem; }
 /* The list, not the rail, scrolls — Add Tracks and the status row stay pinned. */
 .std-tracks-list { display: flex; flex-direction: column; gap: 0.55rem; min-width: 0; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .std-track-row {
@@ -5333,10 +5334,29 @@ button.primary:disabled {
 .std-tracks-status.is-idle .std-status-dot { background: var(--text-2); box-shadow: none; }
 
 /* ---- center ---- */
+/* One 1rem rhythm at the center/rail junction: every card corner sits
+   exactly 1rem from its vertical neighbor AND 1rem from the divider — an
+   equal-armed cross. The scrollable columns reserve a slim 8px scrollbar
+   gutter at ALL times (scrollbar-gutter: stable) and pad the remaining 8px,
+   so the 1rem clearance holds whether or not the column scrolls — the
+   default 15px scrollbar was shoving the cards left and breaking the
+   equality exactly on windows short enough to scroll. */
 .std-center {
-  display: flex; flex-direction: column; gap: 1.05rem; min-width: 0;
-  padding: 1.6rem 1.55rem 1.5rem; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 1rem; min-width: 0;
+  padding: 1.6rem 0.5rem 1.5rem 1.55rem; overflow-y: auto; scrollbar-gutter: stable;
 }
+.std-center::-webkit-scrollbar,
+.std-rail::-webkit-scrollbar,
+.std-tracks-list::-webkit-scrollbar { width: 8px; }
+.std-center::-webkit-scrollbar-track,
+.std-rail::-webkit-scrollbar-track,
+.std-tracks-list::-webkit-scrollbar-track { background: transparent; }
+.std-center::-webkit-scrollbar-thumb,
+.std-rail::-webkit-scrollbar-thumb,
+.std-tracks-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+.std-center::-webkit-scrollbar-thumb:hover,
+.std-rail::-webkit-scrollbar-thumb:hover,
+.std-tracks-list::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--accent) 35%, var(--border-strong)); }
 /* Plain block (the old flex wrapper was a single-child leftover): long track
    titles wrap at the column width instead of overflowing the flex item. */
 .std-hero-head { min-width: 0; }
@@ -5415,7 +5435,7 @@ button.primary:disabled {
   display: none;
 }
 
-.std-steps { display: flex; flex-direction: column; gap: 0.75rem; }
+.std-steps { display: flex; flex-direction: column; gap: 1rem; }
 .std-step {
   display: flex; flex-direction: column; gap: 0.6rem;
   padding: 1rem 1.25rem;
@@ -5423,16 +5443,21 @@ button.primary:disabled {
   border-radius: var(--radius-card);
   background:
     linear-gradient(180deg, rgba(18, 23, 34, 0.78), rgba(8, 11, 18, 0.9));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+  /* Workspace-card tier of the shared elevation scale (same as Advanced's
+     workspace cards) — ambient + contact shadow + 1px top sheen. */
+  box-shadow: var(--elev-2);
   animation: std-rise 520ms cubic-bezier(.2,.8,.2,1) both;
 }
 .std-steps .std-step:nth-of-type(1) { animation-delay: 60ms; }
 .std-steps .std-step:nth-of-type(2) { animation-delay: 120ms; }
 .std-steps .std-step:nth-of-type(3) { animation-delay: 180ms; }
+/* Center-column section type matches Advanced's .section-label exactly
+   (0.78/0.12em/600/text-1) — same hierarchy language as PRESET/INTENSITY
+   labels on the desk. */
 .std-step-label {
   display: inline-flex; align-items: center; gap: 0.55rem;
-  font-size: 0.78rem; letter-spacing: 0.16em; text-transform: uppercase;
-  font-weight: 700; color: var(--text-1);
+  font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase;
+  font-weight: 600; color: var(--text-1);
 }
 .std-step-label::before {
   content: ""; flex-shrink: 0; width: 3px; height: 13px; border-radius: 2px;
@@ -5443,19 +5468,27 @@ button.primary:disabled {
 /* ---- style tiles (reuse Advanced preset artwork) ---- */
 .std-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
 .std-tile {
-  --tone: var(--accent-bright);
+  /* Advanced's .tile material system (App.css ~1937) scaled to the Standard
+     hero card: --tile-accent radial wash over the deep deck gradient,
+     accent-mixed border, screen-blended imagery, and the active
+     ring + floor + halo shadow stack — one preset, one look, both views. */
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; text-align: center;
   min-height: 184px;
   padding: 1.1rem 0.7rem 0.95rem; border-radius: var(--radius-card); cursor: pointer;
-  background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
-  border: 1px solid var(--border); color: var(--text-1);
-  /* No `background` here: both endpoints are gradients, which don't
-     interpolate — the selection change snaps by design. */
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 50% 30%,
+      color-mix(in srgb, var(--tile-accent, var(--accent)) 24%, transparent),
+      transparent 58%
+    ),
+    linear-gradient(180deg, rgba(31, 37, 51, 0.84) 0%, rgba(13, 16, 24, 0.96) 100%);
+  border: 1px solid color-mix(in srgb, var(--tile-accent, var(--accent)) 18%, var(--border));
+  color: var(--text-1);
+  /* No `background` in the list: gradient endpoints don't interpolate —
+     wash-depth changes snap by design, exactly as in Advanced. */
   transition: transform 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease, box-shadow 180ms ease;
 }
-.std-tile[data-tone="cyan"] { --tone: #45e0f5; }
-.std-tile[data-tone="gold"] { --tone: var(--accent-warm); }
-.std-tile[data-tone="purple"] { --tone: #a875f5; }
 .std-tile-icon {
   width: clamp(76px, 7.4vw, 108px);
   height: clamp(76px, 7.4vw, 108px);
@@ -5463,19 +5496,61 @@ button.primary:disabled {
   place-items: center;
   margin-bottom: 0.12rem;
 }
-.std-tile-icon img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 18px rgba(0,0,0,0.5)); }
-.std-tile:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--tone) 55%, var(--border)); box-shadow: 0 10px 26px rgba(0,0,0,0.35); }
+/* Screen-blended like Advanced's .tile-icon: highlights add light to the
+   tile instead of reading as a pasted sticker. */
+.std-tile-icon img {
+  width: 100%; height: 100%; object-fit: contain;
+  mix-blend-mode: screen;
+  filter: brightness(0.95) saturate(1.05) contrast(1.04);
+  transition: filter 150ms ease, transform 150ms ease;
+}
+.std-tile:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-strong);
+  background:
+    radial-gradient(
+      ellipse 80% 70% at 50% 32%,
+      color-mix(in srgb, var(--tile-accent, var(--accent)) 32%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(180deg, rgba(31, 37, 51, 0.9) 0%, rgba(13, 16, 24, 0.96) 100%);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+}
+.std-tile:hover .std-tile-icon img {
+  filter: brightness(1.05) saturate(1.05);
+  transform: translateY(-1px) scale(1.03);
+}
 .std-tile.is-active {
-  border-color: var(--tone); color: var(--text-0);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 16%, var(--bg-2)), var(--bg-1));
-  box-shadow: 0 0 0 1px var(--tone), 0 8px 26px color-mix(in srgb, var(--tone) 28%, transparent);
+  color: var(--text-0);
+  background:
+    radial-gradient(
+      ellipse 90% 80% at 50% 38%,
+      color-mix(in srgb, var(--tile-accent, var(--accent)) 38%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(180deg, rgba(31, 37, 51, 0.95) 0%, rgba(13, 16, 24, 0.98) 100%);
+  border-color: color-mix(in srgb, var(--tile-accent, var(--accent)) 72%, white 8%);
+  /* Advanced's chosen-direction stack: inner sheen, 1px accent ring,
+     floor shadow, colored halo. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px color-mix(in srgb, var(--tile-accent, var(--accent)) 28%, transparent),
+    0 18px 38px rgba(0, 0, 0, 0.34),
+    0 0 32px color-mix(in srgb, var(--tile-accent, var(--accent)) 24%, transparent);
+}
+.std-tile.is-active .std-tile-icon img {
+  filter: brightness(1.18) saturate(1.15)
+    drop-shadow(0 0 18px color-mix(in srgb, var(--tile-accent, var(--accent)) 60%, transparent));
+  transform: scale(1.05);
 }
 .std-tile.is-active::after {
   content: "✓"; position: absolute; top: 0.7rem; right: 0.75rem;
   width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
-  font-size: 0.7rem; color: #fff; background: var(--tone);
+  font-size: 0.7rem; color: #fff;
+  background: color-mix(in srgb, var(--tile-accent, var(--accent)) 85%, black 15%);
 }
-.std-tile-label { font-size: 0.98rem; font-weight: 600; }
+.std-tile-label { font-size: 0.98rem; font-weight: 600; letter-spacing: 0.02em; }
+.std-tile.is-active .std-tile-label { color: var(--tile-accent, var(--accent)); }
 .std-tile-subtitle { font-size: 0.76rem; color: var(--text-2); }
 .std-tile.is-active .std-tile-subtitle { color: var(--text-1); }
 
@@ -5486,12 +5561,37 @@ button.primary:disabled {
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
     "label knob"
-    "hint knob";
+    "hint knob"
+    "zones knob";
   align-items: center;
   min-height: 168px;
 }
 .std-steps .std-step-intensity .std-step-label { grid-area: label; align-self: end; }
 .std-steps .std-step-intensity .std-step-hint { grid-area: hint; align-self: start; }
+/* Zone quick-sets fill the formerly bare left half of the intensity card.
+   The active chip tracks intensityLabel() for ANY knob position, tinted by
+   the selected style's accent (--tile-accent set on the step in TSX). */
+.std-zone-chips {
+  grid-area: zones;
+  align-self: end;
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.std-zone-chip {
+  padding: 0.34rem 0.7rem; border-radius: 999px; cursor: pointer;
+  font-size: 0.72rem; letter-spacing: 0.04em; color: var(--text-2);
+  background: linear-gradient(180deg, rgba(24, 29, 41, 0.7), rgba(12, 15, 23, 0.85));
+  border: 1px solid var(--border);
+  transition: border-color 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+.std-zone-chip:hover { color: var(--text-1); border-color: var(--border-strong); transform: translateY(-1px); }
+.std-zone-chip.is-active {
+  color: var(--text-0);
+  border-color: color-mix(in srgb, var(--tile-accent, var(--accent)) 65%, var(--border));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 12px color-mix(in srgb, var(--tile-accent, var(--accent)) 22%, transparent);
+}
 .std-steps .std-step-intensity .knob {
   grid-area: knob;
   justify-self: center;
@@ -5524,7 +5624,7 @@ button.primary:disabled {
 /* ---- right rail (preview / delivery / export) ---- */
 .std-rail {
   display: flex; flex-direction: column; gap: 1rem;
-  padding: 0.85rem 0.95rem 1rem; min-width: 0; min-height: 0;
+  padding: 0.85rem 0.5rem 1rem 1rem; min-width: 0; min-height: 0; scrollbar-gutter: stable;
   overflow-y: auto;
   border-left: 1px solid var(--border);
   background:
@@ -5536,9 +5636,18 @@ button.primary:disabled {
   background:
     linear-gradient(180deg, rgba(18, 23, 34, 0.76), rgba(8, 11, 18, 0.9));
   border: 1px solid var(--border);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+  /* Rail-card tier of the shared elevation scale, same as Advanced's rail. */
+  box-shadow: var(--elev-1);
 }
-.std-rail-title { font-size: 0.72rem; letter-spacing: 0.18em; color: var(--text-1); font-weight: 700; }
+/* Panel-header type matches Advanced's .panel-title exactly. */
+.std-rail-title { font-size: 0.72rem; letter-spacing: 0.16em; color: var(--text-0); font-weight: 700; display: inline-flex; align-items: center; gap: 0.55rem; }
+/* Same accent tick as the step labels — one hierarchy language across
+   TRACKS / PREVIEW / DELIVERY FORMAT and the numbered steps. */
+.std-rail-title::before,
+.std-tracks-head::before {
+  content: ""; flex-shrink: 0; width: 3px; height: 12px; border-radius: 2px;
+  background: var(--accent); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 65%, transparent);
+}
 .std-rail-ab {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -5580,8 +5689,16 @@ button.primary:disabled {
   letter-spacing: 0.14em;
   color: var(--text-2);
 }
+/* The PREVIEW card absorbs the rail's free height: the meter stretches to
+   fill it and the LUFS readouts ride at the bottom of the card — instead of
+   a fixed taller meter, the space Volume Match vacated (and any spare rail
+   height above the export block) all goes to metering. */
+.std-rail-preview { flex: 1 1 auto; min-height: 0; }
+.std-rail-preview .master-out { flex: 1 1 auto; min-height: 0; }
 .std-rail .master-out .lufs-meter {
-  height: 172px;
+  height: auto;
+  flex: 1 1 auto;
+  min-height: 172px;
   justify-content: center;
 }
 .std-rail .master-out .lufs-bars {
@@ -5605,10 +5722,14 @@ button.primary:disabled {
 .std-rail .master-out .readout-value {
   justify-content: flex-end;
 }
+/* Compact pill beside the PREVIEW title (was a full-width row under the meters). */
+.std-rail-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+}
 .std-volume-match {
   justify-content: center;
-  width: 100%;
-  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  padding: 0.22rem 0.55rem;
 }
 .std-delivery-name { font-size: 0.92rem; font-weight: 600; color: var(--text-0); }
 .std-delivery-spec { font-size: 0.76rem; color: var(--text-2); font-variant-numeric: tabular-nums; }

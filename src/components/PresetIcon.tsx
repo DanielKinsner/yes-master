@@ -19,6 +19,22 @@ import loudSrc from "../assets/presets/loud.png";
 
 type IconKind = Preset["kind"];
 
+/// Accent color per preset — matches the language of the generated 3D
+/// imagery. The ONE shared source for preset accent hues: Advanced's
+/// preset strip and Standard's style tiles both tint from this map, so the
+/// same preset glows the same color in both views (visual-parity pass).
+export const PRESET_ACCENT: Record<IconKind, string> = {
+  universal: "#4d8bff",
+  clarity: "#22d3ee",
+  tape: "#fbbf24",
+  spatial: "#a78bfa",
+  oomph: "#f87171",
+  warmth: "#fb923c",
+  punch: "#ef4444",
+  loud: "#60a5fa",
+  custom: "#9ca3af",
+};
+
 type IconProps = {
   kind: IconKind;
   className?: string;

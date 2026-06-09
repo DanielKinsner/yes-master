@@ -19,7 +19,7 @@ import {
 import type { useTrackMaster } from "../hooks/useTrackMaster";
 import { Knob, intensityLabel } from "./Knob";
 import { WaveformLoading, WaveformView } from "./Waveform";
-import { PresetIcon } from "./PresetIcon";
+import { PresetIcon, PRESET_ACCENT } from "./PresetIcon";
 import { effectiveLoudnessTarget } from "../lib/effective-settings";
 import { standardExportNotes } from "../lib/standard-export";
 import { MasterOutPanel } from "./RightRail";
@@ -50,6 +50,17 @@ export function sourceLufsCopy(
     : `${measured} · louder than ${target}`;
 }
 
+/// Quick-set intensity zones. Labels are exactly Knob's `intensityLabel`
+/// vocabulary, and each value lands inside its own zone band, so the active
+/// chip doubles as a zone indicator for any knob position.
+export const INTENSITY_ZONES: ReadonlyArray<{ label: string; value: number }> = [
+  { label: "Subtle", value: 0.1 },
+  { label: "Restrained", value: 0.3 },
+  { label: "Moderate", value: 0.5 },
+  { label: "Driving", value: 0.8 },
+  { label: "Aggressive", value: 0.95 },
+];
+
 export function StyleTiles({
   preset,
   onSelect,
@@ -67,7 +78,9 @@ export function StyleTiles({
             key={s.id}
             type="button"
             className={"std-tile" + (s.id === activeStyle ? " is-active" : "")}
-            data-tone={s.tone}
+            // Same accent variable + hue as Advanced's preset strip, so one
+            // preset glows one color across both views.
+            style={{ ["--tile-accent" as never]: PRESET_ACCENT[tilePreset.kind] }}
             aria-pressed={s.id === activeStyle}
             onClick={() => onSelect(tilePreset)}
           >
@@ -170,8 +183,19 @@ function StandardRightRail({
     : null;
   return (
     <aside className="std-rail">
-      <section className="std-rail-card">
-        <div className="std-rail-title">PREVIEW</div>
+      <section className="std-rail-card std-rail-preview">
+        <div className="std-rail-head">
+          <div className="std-rail-title">PREVIEW</div>
+          <button
+            type="button"
+            className={`toolbar-toggle std-volume-match ${tm.transport.volumeMatch ? "is-on" : ""}`}
+            aria-pressed={tm.transport.volumeMatch}
+            onClick={() => tm.setVolumeMatch(!tm.transport.volumeMatch)}
+          >
+            <span className="toolbar-toggle-box" aria-hidden />
+            <span>Volume Match</span>
+          </button>
+        </div>
         <div className="std-rail-ab" role="group" aria-label="Playback source">
           <button
             type="button"
@@ -199,15 +223,6 @@ function StandardRightRail({
           lufsMomentary={tm.transport.lufsMomentary}
           lufsIntegrated={tm.transport.lufsIntegrated}
         />
-        <button
-          type="button"
-          className={`toolbar-toggle std-volume-match ${tm.transport.volumeMatch ? "is-on" : ""}`}
-          aria-pressed={tm.transport.volumeMatch}
-          onClick={() => tm.setVolumeMatch(!tm.transport.volumeMatch)}
-        >
-          <span className="toolbar-toggle-box" aria-hidden />
-          <span>Volume Match</span>
-        </button>
       </section>
 
       <section className="std-rail-card">
@@ -259,6 +274,12 @@ export function StandardView({
 }) {
   const s = tm.selectedSettings;
   const sourceLufs = tm.selectedAnalysis?.lufs_integrated ?? null;
+  // Knob arc follows the active style's tone (Knob's red/gold/cyan are the
+  // same hexes as PRESET_ACCENT's oomph/tape/clarity); "blue" when the
+  // current preset isn't one of the reference-4.
+  const activeTone =
+    STANDARD_STYLES.find((st) => st.id === presetToStyle(s.preset))?.tone ??
+    "blue";
   return (
     <div className="standard-view">
       <TracksRail tm={tm} />
@@ -327,12 +348,34 @@ export function StandardView({
             <StyleTiles preset={s.preset} onSelect={tm.setPreset} />
           </div>
 
-          <div className="std-step std-step-intensity">
+          <div
+            className="std-step std-step-intensity"
+            // The active style's accent tints the zone chips and matches the
+            // knob arc tone — intensity visibly belongs to the chosen style.
+            style={{ ["--tile-accent" as never]: PRESET_ACCENT[s.preset.kind] }}
+          >
             <span className="std-step-label">2 · Intensity</span>
             <span className="std-step-hint">Set how strong the effect is.</span>
+            <div className="std-zone-chips" role="group" aria-label="Intensity presets">
+              {INTENSITY_ZONES.map((z) => (
+                <button
+                  key={z.label}
+                  type="button"
+                  className={
+                    "std-zone-chip" +
+                    (intensityLabel(s.intensity) === z.label ? " is-active" : "")
+                  }
+                  aria-pressed={intensityLabel(s.intensity) === z.label}
+                  onClick={() => tm.setIntensity(z.value)}
+                >
+                  {z.label}
+                </button>
+              ))}
+            </div>
             <Knob
               label=""
               size="lg"
+              tone={activeTone}
               value={s.intensity}
               min={0}
               max={1}
