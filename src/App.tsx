@@ -8,7 +8,10 @@ import { api } from "./lib/api";
 import { useTrackMaster } from "./hooks/useTrackMaster";
 import { useViewMode } from "./hooks/useViewMode";
 import { StandardView } from "./components/StandardView";
-import { shouldForceAdvancedOnStandardEntry } from "./lib/standard-managed";
+import {
+  hasNonManagedEdits,
+  shouldForceAdvancedOnStandardEntry,
+} from "./lib/standard-managed";
 import { PresetIcon } from "./components/PresetIcon";
 import { RightRail, MasterOutPanel } from "./components/RightRail";
 import { VisualEqPanel } from "./components/VisualEqPanel";
@@ -97,8 +100,10 @@ function App() {
     }
   }, [view, tm.mode, tm.selectedTrack, tm.selectedSettings, setView]);
 
+  // Spec §2a: the return door is asymmetric — silent when the track is clean,
+  // confirm (with Save-as-preset) only when non-managed edits would be reset.
   const requestBackToStandard = () => {
-    if (!tm.selectedTrack) {
+    if (!tm.selectedTrack || !hasNonManagedEdits(tm.selectedSettings)) {
       setView("standard");
       return;
     }
@@ -561,8 +566,8 @@ function BackToStandardConfirm({
       <div className="modal-card">
         <h2 className="modal-title">Back to Standard</h2>
         <p className="modal-body">
-          Back to Standard resets Advanced-only controls to their Standard
-          defaults. Save the current settings as a preset first?
+          Back to Standard resets your manual edits to the preset&apos;s clean
+          sound. Save them as a preset first?
         </p>
         <div className="modal-save-row">
           <input
