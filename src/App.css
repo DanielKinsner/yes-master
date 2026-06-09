@@ -5610,7 +5610,10 @@ button.primary:disabled {
   margin-top: 0.35rem;
 }
 .std-rail-export { margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; }
-.std-create-master {
+/* The TSX renders className="primary std-create-master"; these selectors must
+   carry button.primary's specificity (0,2,1) or every overlapping declaration
+   silently loses to the generic primary style (App.css ~766). */
+button.primary.std-create-master {
   position: relative; overflow: hidden;
   padding: 0.85rem 1rem; font-size: 0.95rem; font-weight: 650; letter-spacing: 0.01em;
   border: none; border-radius: 7px; cursor: pointer; color: #fff;
@@ -5618,9 +5621,11 @@ button.primary:disabled {
   box-shadow: 0 8px 26px rgba(42,107,242,0.4), inset 0 1px 0 rgba(255,255,255,0.25);
   transition: transform 160ms cubic-bezier(.2,.8,.2,1), box-shadow 160ms ease, filter 160ms ease;
 }
-.std-create-master:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 34px rgba(42,107,242,0.55); filter: brightness(1.05); }
-.std-create-master:active:not(:disabled) { transform: translateY(0); }
-.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; }
+button.primary.std-create-master:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 34px rgba(42,107,242,0.55); filter: brightness(1.05); }
+button.primary.std-create-master:active:not(:disabled) { transform: translateY(0); }
+/* Single dim: faded hero gradient, glow off — not opacity stacked on
+   button.primary:disabled's muted palette. */
+button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 .std-export-block { color: var(--accent-danger); font-size: 0.82rem; margin: 0; }
 .std-export-note { color: var(--text-2); font-size: 0.78rem; margin: 0; }
 
