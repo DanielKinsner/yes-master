@@ -40,11 +40,11 @@ export type RailAlignment = {
 };
 
 /**
- * Floor for the Preview card: header + A/B toggle + the meter's own
- * 172px minimum (`.std-rail .master-out .lufs-meter`) + three readout rows.
- * Below this the meter would collapse; alignment is not worth a broken meter.
+ * Floor for the Preview card in Standard. The Standard rail is a compact
+ * review stack, so the live meter is allowed to compress below the Advanced
+ * rail's hero-meter size when that is what keeps the card corners aligned.
  */
-export const MIN_PREVIEW_HEIGHT_PX = 320;
+export const MIN_PREVIEW_HEIGHT_PX = 248;
 
 export function computeRailAlignment(
   input: RailAlignmentInput,

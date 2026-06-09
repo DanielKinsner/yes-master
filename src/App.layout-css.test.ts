@@ -145,6 +145,11 @@ describe("console layout CSS", () => {
     expect(block(".std-center")).toContain("gap: var(--std-col-gap)");
   });
 
+  it("keeps Standard center from becoming its own scroll region", () => {
+    expect(block(".std-center")).toContain("overflow: hidden");
+    expect(block(".std-center")).not.toContain("scrollbar-gutter");
+  });
+
   it("keeps Standard rail cards and CTA on one shared left/right edge", () => {
     expect(block(".std-rail-card")).toContain("width: 100%");
     expect(css).toContain(".std-rail-export { width: 100%");
@@ -158,6 +163,7 @@ describe("console layout CSS", () => {
     expect(block(".std-wave-deck")).toContain("min-height: clamp(");
     expect(block(".std-tile")).toContain("min-height: clamp(");
     expect(block(".std-steps .std-step-intensity")).toContain("min-height: clamp(");
-    expect(block(".std-tile-icon")).toContain("10.5vh");
+    expect(block(".std-tile-icon")).toContain("9vh");
+    expect(block(".std-rail .master-out .lufs-meter")).toContain("min-height: 112px");
   });
 });

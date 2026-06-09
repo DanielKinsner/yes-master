@@ -465,7 +465,7 @@ export function StandardView({
         </div>
 
         <div className="std-steps">
-          <div className="std-step">
+          <div className="std-step std-step-style">
             <span className="std-step-label">1 · Style</span>
             <span className="std-step-hint">Choose the character you want.</span>
             <StyleTiles preset={s.preset} onSelect={tm.setPreset} />
@@ -512,7 +512,7 @@ export function StandardView({
             />
           </div>
 
-          <div className="std-step" ref={seamRefs.loudness}>
+          <div className="std-step std-step-loudness" ref={seamRefs.loudness}>
             <span className="std-step-label">3 · Loudness</span>
             <span className="std-step-hint">Choose your target loudness.</span>
             <LoudnessSegmented
