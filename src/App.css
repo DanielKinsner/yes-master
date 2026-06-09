@@ -20,6 +20,7 @@
   --center-switch-height: 38px;
   --radius: 8px;
   --radius-sm: 5px;
+  --radius-card: 7px;
   --shadow-1: 0 6px 24px rgba(0, 0, 0, 0.3);
 
   /* Elevation scale (vera/premium-depth): three deliberate tiers, each a
@@ -5259,9 +5260,8 @@ button.primary:disabled {
 /* ---- Standard view (Option B: desktop reflow) ---- */
 /* ---------------- Standard view — 3-column Advanced shell ---------------- */
 .standard-view {
-  /* Standard is the lone child of the .app grid (260px · 1fr · 300px); span
-     all columns so the view owns the full width and lays out its own 3 cols. */
-  grid-column: 1 / -1;
+  /* In Standard the parent .app switches to display: block (.app-standard),
+     so this view owns the full width and lays out its own 3 columns. */
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 300px;
   /* Constrain the implicit row to the shell height so the rails can shrink
@@ -5295,7 +5295,7 @@ button.primary:disabled {
   gap: 0.65rem;
   min-height: 62px;
   padding: 0.72rem 0.7rem;
-  border-radius: 7px;
+  border-radius: var(--radius-card);
   cursor: pointer;
   text-align: left;
   background: transparent; border: 1px solid transparent; color: var(--text-1);
@@ -5323,10 +5323,9 @@ button.primary:disabled {
 .std-track-row.is-active .std-track-meter { color: var(--accent-bright); }
 .std-add-track {
   margin-top: auto;
-  justify-content: center;
   font-size: 0.82rem;
   min-height: 44px;
-  border-radius: 7px;
+  border-radius: var(--radius-card);
 }
 .std-tracks-status { display: flex; align-items: center; gap: 0.45rem; font-size: 0.72rem; color: var(--text-1); padding: 0.5rem 0.25rem 0; }
 .std-status-dot { width: 9px; height: 9px; border-radius: 50%; background: #6cd08a; box-shadow: 0 0 8px rgba(108,208,138,0.8); }
@@ -5352,7 +5351,7 @@ button.primary:disabled {
   min-height: 178px;
   padding: 1rem 1rem 1rem 1.25rem;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-card);
   background:
     linear-gradient(180deg, rgba(18, 23, 34, 0.76), rgba(8, 11, 18, 0.88));
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
@@ -5366,7 +5365,7 @@ button.primary:disabled {
 }
 .std-play {
   position: relative; flex-shrink: 0; width: 64px; height: 64px; border-radius: 50%;
-  border: none; cursor: pointer; font-size: 1.15rem; color: #fff;
+  cursor: pointer; font-size: 1.15rem; color: #fff;
   display: grid; place-items: center;
   background:
     radial-gradient(120% 120% at 30% 25%, rgba(154, 191, 255, 0.95), rgba(30, 62, 133, 0.9) 68%, rgba(13, 19, 34, 1));
@@ -5382,7 +5381,7 @@ button.primary:disabled {
 .std-play-glyph.is-pause { transform: none; }
 .std-play::after {
   content: ""; position: absolute; inset: -5px; border-radius: 50%; pointer-events: none;
-  border: 1px solid rgba(111, 163, 255, 0.4); opacity: 0; transition: opacity 160ms ease;
+  border: 1px solid color-mix(in srgb, var(--accent-bright) 40%, transparent); opacity: 0; transition: opacity 160ms ease;
 }
 .std-play:hover::after { opacity: 1; }
 .std-time {
@@ -5421,7 +5420,7 @@ button.primary:disabled {
   display: flex; flex-direction: column; gap: 0.6rem;
   padding: 1rem 1.25rem;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-card);
   background:
     linear-gradient(180deg, rgba(18, 23, 34, 0.78), rgba(8, 11, 18, 0.9));
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
@@ -5437,7 +5436,7 @@ button.primary:disabled {
 }
 .std-step-label::before {
   content: ""; flex-shrink: 0; width: 3px; height: 13px; border-radius: 2px;
-  background: var(--accent); box-shadow: 0 0 8px rgba(77, 139, 255, 0.65);
+  background: var(--accent); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 65%, transparent);
 }
 .std-step-hint { font-size: 0.78rem; color: var(--text-2); margin: -0.2rem 0 0.1rem; }
 
@@ -5447,10 +5446,12 @@ button.primary:disabled {
   --tone: var(--accent-bright);
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; text-align: center;
   min-height: 184px;
-  padding: 1.1rem 0.7rem 0.95rem; border-radius: 7px; cursor: pointer;
+  padding: 1.1rem 0.7rem 0.95rem; border-radius: var(--radius-card); cursor: pointer;
   background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
   border: 1px solid var(--border); color: var(--text-1);
-  transition: transform 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  /* No `background` here: both endpoints are gradients, which don't
+     interpolate — the selection change snaps by design. */
+  transition: transform 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease, box-shadow 180ms ease;
 }
 .std-tile[data-tone="cyan"] { --tone: #45e0f5; }
 .std-tile[data-tone="gold"] { --tone: var(--accent-warm); }
@@ -5505,10 +5506,10 @@ button.primary:disabled {
 .std-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.55rem; }
 .std-seg-option {
   display: flex; flex-direction: column; gap: 0.2rem; align-items: center;
-  padding: 0.8rem 0.4rem; border-radius: 7px; cursor: pointer;
+  padding: 0.8rem 0.4rem; border-radius: var(--radius-card); cursor: pointer;
   background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
   border: 1px solid var(--border); color: var(--text-1);
-  transition: transform 160ms cubic-bezier(.2,.8,.2,1), border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  transition: transform 160ms cubic-bezier(.2,.8,.2,1), border-color 160ms ease, box-shadow 160ms ease;
 }
 .std-seg-option:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
 .std-seg-option.is-active {
@@ -5531,7 +5532,7 @@ button.primary:disabled {
 }
 .std-rail-card {
   display: flex; flex-direction: column; gap: 0.7rem;
-  padding: 1rem 1rem; border-radius: 7px;
+  padding: 1rem 1rem; border-radius: var(--radius-card);
   background:
     linear-gradient(180deg, rgba(18, 23, 34, 0.76), rgba(8, 11, 18, 0.9));
   border: 1px solid var(--border);
@@ -5624,7 +5625,7 @@ button.primary:disabled {
 button.primary.std-create-master {
   position: relative; overflow: hidden;
   padding: 0.85rem 1rem; font-size: 0.95rem; font-weight: 650; letter-spacing: 0.01em;
-  border: none; border-radius: 7px; cursor: pointer; color: #fff;
+  border: none; border-radius: var(--radius-card); cursor: pointer; color: #fff;
   background: linear-gradient(135deg, var(--accent-deep) 0%, var(--accent) 55%, var(--accent-bright) 100%);
   box-shadow: 0 8px 26px rgba(42,107,242,0.4), inset 0 1px 0 rgba(255,255,255,0.25);
   transition: transform 160ms cubic-bezier(.2,.8,.2,1), box-shadow 160ms ease, filter 160ms ease;
@@ -5639,11 +5640,6 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
 
 @keyframes std-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
-@media (prefers-reduced-motion: reduce) {
-  .standard-view, .std-step { animation: none !important; }
-  .std-tile, .std-seg-option, .std-play, .std-create-master, .std-track-row { transition: none !important; }
-}
-
 /* Back-to-Standard confirm modal */
 .modal-scrim { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(4,6,12,0.6); z-index: 50; }
 .modal-card { width: min(420px, 92vw); background: var(--bg-1); border: 1px solid var(--border-strong); border-radius: 14px; padding: 1.3rem; display: flex; flex-direction: column; gap: 0.9rem; }
@@ -5653,7 +5649,3 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
 .modal-input { flex: 1; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.7rem; color: var(--text-0); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; }
 .danger-btn { background: rgba(255,118,118,0.14); border: 1px solid var(--accent-danger); color: var(--accent-danger); border-radius: 8px; padding: 0.5rem 0.8rem; cursor: pointer; }
-
-@media (max-width: 980px) {
-  .standard-view { grid-template-columns: 1fr; }
-}
