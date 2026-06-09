@@ -1406,6 +1406,9 @@ export function useTrackMaster() {
           effective_adaptive_strength: m?.effective_adaptive_strength ?? 0,
           source_profile_digest: m?.source_profile_digest ?? null,
           confidence_digest: m?.confidence_digest ?? null,
+          // Gates the target_not_reached check: only a rendered-output
+          // measurement may be compared against the delivery target.
+          measurements_are_rendered: m != null,
           checks: [],
         };
         const checks = await api.runExportChecks(report, selectedAnalysis, exportSettings);

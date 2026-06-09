@@ -2899,6 +2899,18 @@ function ExportReceiptCard({
           </div>
         )}
         {measurements && (
+          // 2026-06-09 export-metrics inquiry: these delivered-master numbers
+          // were measured and carried on the payload all along but never
+          // rendered — the only loudness on the receipt was the
+          // source-describing adaptive digest below. Values describe the
+          // written file (post-landing).
+          <div className="receipt-render-meta" aria-label="Delivered master measurements">
+            <span>Master {measurements.lufs_integrated.toFixed(1)} LUFS</span>
+            <span>TP {measurements.true_peak_dbtp.toFixed(2)} dBTP</span>
+            <span>LRA {measurements.dynamic_range_lu.toFixed(1)} LU</span>
+          </div>
+        )}
+        {measurements && (
           // B5 — adaptive-DSP traceability: a delivered master records what
           // adaptation produced it (digest present = guardrails were active).
           <div className="receipt-render-meta" aria-label="Adaptive DSP">
@@ -2908,8 +2920,11 @@ function ExportReceiptCard({
                   Adaptive{" "}
                   {Math.round((measurements.effective_adaptive_strength ?? 0) * 100)}%
                 </span>
-                <span title="Source profile that drove adaptation">
-                  {measurements.source_profile_digest}
+                <span title="Source profile that drove adaptation — these describe the SOURCE, not the delivered master">
+                  {/* Visible "Source" prefix (export-metrics inquiry 2026-06-09):
+                      a hover-only tooltip let these source stats read as master
+                      measurements right under the output chips. */}
+                  Source · {measurements.source_profile_digest}
                 </span>
               </>
             ) : (

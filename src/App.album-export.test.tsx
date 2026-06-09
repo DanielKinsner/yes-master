@@ -275,6 +275,75 @@ describe("album export actions", () => {
     });
   });
 
+  it("renders the delivered master's LUFS/TP/LRA from job.measurements", async () => {
+    mocks.tm = {
+      ...baseTrackMasterState(),
+      lastExportReceipt: {
+        trackId: track.id,
+        outputPath: "/Users/daniel/Masters/album-track-1__master.wav",
+        checks: [cleanCheck],
+        job: {
+          ...renderJob(["/Users/daniel/Masters/album-track-1__master.wav"]),
+          measurements: {
+            lufs_integrated: -10.26,
+            true_peak_dbtp: -0.97,
+            dynamic_range_lu: 10.9,
+            sample_rate: 96_000,
+            bit_depth: 32,
+            effective_adaptive_strength: 0.5,
+            source_profile_digest:
+              "bright 0.02 / low 0.37 / DR 22.2dB / LRA 13.6LU / corr 0.74",
+          },
+        },
+        kind: "track",
+      },
+    };
+
+    const { container, root } = await renderApp();
+
+    const delivered = container.querySelector(
+      '[aria-label="Delivered master measurements"]',
+    );
+    expect(delivered?.textContent).toContain("Master -10.3 LUFS");
+    expect(delivered?.textContent).toContain("TP -0.97 dBTP");
+    expect(delivered?.textContent).toContain("LRA 10.9 LU");
+
+    // The adaptive digest is SOURCE data — it must carry a visible label so
+    // it can't read as master measurements next to the delivered chips.
+    const adaptive = container.querySelector('[aria-label="Adaptive DSP"]');
+    expect(adaptive?.textContent).toContain("Adaptive 50%");
+    expect(adaptive?.textContent).toContain(
+      "Source · bright 0.02 / low 0.37 / DR 22.2dB / LRA 13.6LU / corr 0.74",
+    );
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("omits the delivered-measurements row when a render path supplies none", async () => {
+    mocks.tm = {
+      ...baseTrackMasterState(),
+      lastExportReceipt: {
+        trackId: track.id,
+        outputPath: "/Users/daniel/Masters/album-track-1__master.wav",
+        checks: [cleanCheck],
+        job: renderJob(["/Users/daniel/Masters/album-track-1__master.wav"]),
+        kind: "track",
+      },
+    };
+
+    const { container, root } = await renderApp();
+
+    expect(
+      container.querySelector('[aria-label="Delivered master measurements"]'),
+    ).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("marks completed exports for review when quality checks warn", async () => {
     mocks.tm = {
       ...baseTrackMasterState(),

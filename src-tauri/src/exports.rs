@@ -60,6 +60,41 @@ pub fn export_checks_for_report(
         });
     }
 
+    // 2026-06-09 export-metrics inquiry — landed-short-of-target advisory.
+    // The LUFS landing is ceiling-bounded (engine.rs::ceiling_bounded_landing_delta_db):
+    // upward gain stops when true peak reaches the delivery ceiling, so
+    // high-crest material can deliver below the requested target. Surface the
+    // shortfall at export time instead of leaving it discoverable only by
+    // external measurement. Info-level: the ceiling protecting the master is
+    // the design, not a defect. Gated on measurements_are_rendered so the
+    // legacy source-analysis fallback (album path) can never compare a SOURCE
+    // loudness against the delivery target.
+    if report.measurements_are_rendered && report.measured_lufs.is_finite() {
+        if let Some(s) = settings {
+            if let Some(target) = s.effective_target_lufs() {
+                let shortfall = target - report.measured_lufs;
+                if shortfall > 0.25 {
+                    let ceiling = s.effective_ceiling_dbtp();
+                    let reason = if report.measured_true_peak_dbtp >= ceiling - 0.1 {
+                        format!(
+                            "the {ceiling:.1} dBTP ceiling capped the loudness push (true peak is at the ceiling)"
+                        )
+                    } else {
+                        "the loudness landing could not push further".to_string()
+                    };
+                    checks.push(QualityCheck {
+                        level: QualityLevel::Info,
+                        code: "target_not_reached".to_string(),
+                        message: format!(
+                            "Delivered {:.1} LUFS — {shortfall:.1} LU below the {target:.1} LUFS target; {reason}. Use a lower target or a higher ceiling if this master should be louder.",
+                            report.measured_lufs
+                        ),
+                    });
+                }
+            }
+        }
+    }
+
     if report.measured_dynamic_range_lu < 5.0 {
         checks.push(QualityCheck {
             level: QualityLevel::Warning,
@@ -186,5 +221,126 @@ pub async fn open_output(output_path: String) -> CommandResult<()> {
             .spawn()
             .map_err(|e| CommandError::Io(format!("failed to open file manager: {e}")))?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn settings(target_lufs: Option<f32>, ceiling_dbtp: Option<f32>) -> MasteringSettings {
+        MasteringSettings {
+            preset: Preset::Universal,
+            intensity: 0.5,
+            eq_sub_db: 0.0,
+            eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
+            eq_mid_db: 0.0,
+            eq_high_mid_db: 0.0,
+            eq_high_db: 0.0,
+            eq_sparkle_db: 0.0,
+            volume_match: false,
+            source_lufs_integrated: None,
+            input_gain_db: 0.0,
+            output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
+            album: None,
+            advanced: AdvancedSettings {
+                lufs_offset_db: target_lufs,
+                ceiling_dbtp,
+                ..Default::default()
+            },
+        }
+    }
+
+    fn report(measured_lufs: f32, measured_tp: f32, rendered: bool) -> ExportReport {
+        ExportReport {
+            track_id: TrackId("t1".to_string()),
+            output_path: "C:/out/master.wav".to_string(),
+            measured_lufs,
+            measured_true_peak_dbtp: measured_tp,
+            measured_dynamic_range_lu: 10.9,
+            source_format: "wav".to_string(),
+            destination_format: "wav".to_string(),
+            sample_rate: 96_000,
+            bit_depth: 32,
+            effective_adaptive_strength: 0.5,
+            source_profile_digest: None,
+            confidence_digest: None,
+            measurements_are_rendered: rendered,
+            checks: Vec::new(),
+        }
+    }
+
+    fn codes(checks: &[QualityCheck]) -> Vec<&str> {
+        checks.iter().map(|c| c.code.as_str()).collect()
+    }
+
+    /// The inquiry scenario: -9 target, -1 ceiling, delivered -10.26 LUFS with
+    /// TP parked at the ceiling -> Info note naming the shortfall and reason.
+    #[test]
+    fn landed_short_at_ceiling_fires_info_note() {
+        let s = settings(Some(-9.0), Some(-1.0));
+        let checks = export_checks_for_report(&report(-10.26, -0.97, true), None, Some(&s));
+        let note = checks
+            .iter()
+            .find(|c| c.code == "target_not_reached")
+            .expect("shortfall note must fire");
+        assert!(matches!(note.level, QualityLevel::Info), "{:?}", note.level);
+        assert!(note.message.contains("-10.3 LUFS"), "{}", note.message);
+        assert!(note.message.contains("1.3 LU below"), "{}", note.message);
+        assert!(
+            note.message.contains("-9.0 LUFS target"),
+            "{}",
+            note.message
+        );
+        assert!(note.message.contains("ceiling capped"), "{}", note.message);
+    }
+
+    /// Landing on target (within the 0.25 LU band) stays quiet.
+    #[test]
+    fn on_target_no_note() {
+        let s = settings(Some(-9.0), Some(-1.0));
+        let checks = export_checks_for_report(&report(-9.05, -1.2, true), None, Some(&s));
+        assert!(
+            !codes(&checks).contains(&"target_not_reached"),
+            "{checks:?}"
+        );
+    }
+
+    /// Delivering louder than target (downward landing applied in full) never
+    /// reads as a shortfall.
+    #[test]
+    fn louder_than_target_no_note() {
+        let s = settings(Some(-9.0), Some(-1.0));
+        let checks = export_checks_for_report(&report(-8.0, -1.4, true), None, Some(&s));
+        assert!(
+            !codes(&checks).contains(&"target_not_reached"),
+            "{checks:?}"
+        );
+    }
+
+    /// The legacy source-analysis fallback (album path) must never compare a
+    /// SOURCE loudness against the delivery target.
+    #[test]
+    fn source_fallback_never_fires() {
+        let s = settings(Some(-9.0), Some(-1.0));
+        let checks = export_checks_for_report(&report(-16.3, -3.9, false), None, Some(&s));
+        assert!(
+            !codes(&checks).contains(&"target_not_reached"),
+            "{checks:?}"
+        );
+    }
+
+    /// No effective target (Custom profile, no advanced offset) -> the landing
+    /// never ran, so there is no target to miss.
+    #[test]
+    fn no_target_no_note() {
+        let s = settings(None, Some(-1.0));
+        let checks = export_checks_for_report(&report(-16.3, -3.9, true), None, Some(&s));
+        assert!(
+            !codes(&checks).contains(&"target_not_reached"),
+            "{checks:?}"
+        );
     }
 }
