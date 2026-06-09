@@ -5536,12 +5536,37 @@ button.primary:disabled {
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
     "label knob"
-    "hint knob";
+    "hint knob"
+    "zones knob";
   align-items: center;
   min-height: 168px;
 }
 .std-steps .std-step-intensity .std-step-label { grid-area: label; align-self: end; }
 .std-steps .std-step-intensity .std-step-hint { grid-area: hint; align-self: start; }
+/* Zone quick-sets fill the formerly bare left half of the intensity card.
+   The active chip tracks intensityLabel() for ANY knob position, tinted by
+   the selected style's accent (--tile-accent set on the step in TSX). */
+.std-zone-chips {
+  grid-area: zones;
+  align-self: end;
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.std-zone-chip {
+  padding: 0.34rem 0.7rem; border-radius: 999px; cursor: pointer;
+  font-size: 0.72rem; letter-spacing: 0.04em; color: var(--text-2);
+  background: linear-gradient(180deg, rgba(24, 29, 41, 0.7), rgba(12, 15, 23, 0.85));
+  border: 1px solid var(--border);
+  transition: border-color 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+.std-zone-chip:hover { color: var(--text-1); border-color: var(--border-strong); transform: translateY(-1px); }
+.std-zone-chip.is-active {
+  color: var(--text-0);
+  border-color: color-mix(in srgb, var(--tile-accent, var(--accent)) 65%, var(--border));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 12px color-mix(in srgb, var(--tile-accent, var(--accent)) 22%, transparent);
+}
 .std-steps .std-step-intensity .knob {
   grid-area: knob;
   justify-self: center;

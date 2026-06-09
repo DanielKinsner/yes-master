@@ -158,6 +158,38 @@ describe("StandardView", () => {
   });
 });
 
+describe("intensity zone chips", () => {
+  it("renders the five intensityLabel zones with the current zone active", async () => {
+    // fakeTm intensity 0.5 -> intensityLabel "Moderate"
+    const { container, root } = await render(
+      <StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />,
+    );
+    const chips = Array.from(container.querySelectorAll<HTMLButtonElement>(".std-zone-chip"));
+    expect(chips.map((c) => c.textContent)).toEqual([
+      "Subtle",
+      "Restrained",
+      "Moderate",
+      "Driving",
+      "Aggressive",
+    ]);
+    const active = chips.filter((c) => c.classList.contains("is-active"));
+    expect(active).toHaveLength(1);
+    expect(active[0].textContent).toBe("Moderate");
+    await act(async () => root.unmount());
+  });
+
+  it("routes a zone click to setIntensity with a value inside that zone", async () => {
+    const setIntensity = vi.fn();
+    const { container, root } = await render(
+      <StandardView tm={fakeTm({ setIntensity })} onEnterAdvanced={() => {}} />,
+    );
+    const chips = Array.from(container.querySelectorAll<HTMLButtonElement>(".std-zone-chip"));
+    await act(async () => { chips.find((c) => c.textContent === "Driving")!.click(); });
+    expect(setIntensity).toHaveBeenCalledWith(0.8);
+    await act(async () => root.unmount());
+  });
+});
+
 describe("sourceLufsCopy", () => {
   it("reads 'close to' within ±1.5 LU of the target (band edges inclusive)", () => {
     expect(sourceLufsCopy(-12.5, -14)).toBe("Source -12.5 LUFS · close to your -14 LUFS target");
