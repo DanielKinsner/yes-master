@@ -134,4 +134,36 @@ describe("console layout CSS", () => {
     expect(block(".compressor-knob-grid")).toContain("padding: 0.32rem");
     expect(block(".compressor-knob-grid .knob-vis")).toContain("transform: scale(0.9)");
   });
+
+  it("keeps Standard's center and rail on one shared column gap (seam alignment)", () => {
+    // lib/rail-alignment.ts derives Delivery's top from Preview bottom + the
+    // rail gap while Loudness's top is Intensity bottom + the steps gap. The
+    // two gaps must be the SAME variable or the second seam silently drifts.
+    expect(block(".standard-view")).toContain("--std-col-gap");
+    expect(block(".std-steps")).toContain("gap: var(--std-col-gap)");
+    expect(block(".std-rail")).toContain("gap: var(--std-col-gap)");
+    expect(block(".std-center")).toContain("gap: var(--std-col-gap)");
+  });
+
+  it("keeps Standard center from becoming its own scroll region", () => {
+    expect(block(".std-center")).toContain("overflow: hidden");
+    expect(block(".std-center")).not.toContain("scrollbar-gutter");
+  });
+
+  it("keeps Standard rail cards and CTA on one shared left/right edge", () => {
+    expect(block(".std-rail-card")).toContain("width: 100%");
+    expect(css).toContain(".std-rail-export { width: 100%");
+    expect(block("button.primary.std-create-master")).toContain("width: 100%");
+  });
+
+  it("lets Standard's center column compress instead of scrolling on short viewports", () => {
+    // The owner wants no center scroll in any mode — the tall fixed minimums
+    // must stay height-fluid even though seam alignment can now remeasure
+    // against the current scroll position.
+    expect(block(".std-wave-deck")).toContain("min-height: clamp(");
+    expect(block(".std-tile")).toContain("min-height: clamp(");
+    expect(block(".std-steps .std-step-intensity")).toContain("min-height: clamp(");
+    expect(block(".std-tile-icon")).toContain("9vh");
+    expect(block(".std-rail .master-out .lufs-meter")).toContain("min-height: 112px");
+  });
 });

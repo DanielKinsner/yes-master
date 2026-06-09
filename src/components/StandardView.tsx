@@ -7,6 +7,7 @@
 // Universal/Clarity/Tape/Oomph presets in Advanced. Intensity is the shared
 // Knob. One transport (no duplicates). Binds to per-track selectedSettings.
 
+import { useLayoutEffect, useRef, type RefObject } from "react";
 import type { Preset } from "../bindings";
 import {
   STANDARD_LOUDNESS,
@@ -16,6 +17,7 @@ import {
   styleToPreset,
   targetToLoudness,
 } from "../lib/standard-mapping";
+import { computeRailAlignment } from "../lib/rail-alignment";
 import type { useTrackMaster } from "../hooks/useTrackMaster";
 import { Knob, intensityLabel } from "./Knob";
 import { WaveformLoading, WaveformView } from "./Waveform";
@@ -171,19 +173,130 @@ function TracksRail({ tm }: { tm: TM }) {
   );
 }
 
+/// Refs the seam-alignment hook needs from both columns. The rail and
+/// center are separate components, so StandardView owns the refs and
+/// threads the rail's subset down as a prop.
+type RailSeamRefs = {
+  center: RefObject<HTMLElement | null>;
+  intensity: RefObject<HTMLDivElement | null>;
+  loudness: RefObject<HTMLDivElement | null>;
+  rail: RefObject<HTMLElement | null>;
+  preview: RefObject<HTMLElement | null>;
+  delivery: RefObject<HTMLElement | null>;
+  exportGroup: RefObject<HTMLDivElement | null>;
+};
+
+/// Seam alignment (2026-06-09): mirror the center column's card seams in
+/// the rail — Preview bottom flush with the Intensity card, export group
+/// flush with Loudness — by measuring both columns and setting two pixel
+/// vars consumed by `.std-rail.is-aligned` in App.css. The decision logic
+/// lives in lib/rail-alignment.ts (pure, unit-tested); this hook is only
+/// the measurement glue. No ResizeObserver (node/jsdom) → no-op, which
+/// leaves the flex-absorb fallback layout. If the center column is
+/// technically scrollable, scroll events remeasure the current card seams
+/// instead of dropping back to the unaligned rail.
+function useRailSeamAlignment(refs: RailSeamRefs) {
+  useLayoutEffect(() => {
+    if (typeof ResizeObserver === "undefined") return;
+    let frame = 0;
+
+    const apply = () => {
+      frame = 0;
+      const rail = refs.rail.current;
+      const center = refs.center.current;
+      const intensity = refs.intensity.current;
+      const loudness = refs.loudness.current;
+      const preview = refs.preview.current;
+      const delivery = refs.delivery.current;
+      const exportGroup = refs.exportGroup.current;
+      if (
+        !rail ||
+        !center ||
+        !intensity ||
+        !loudness ||
+        !preview ||
+        !delivery ||
+        !exportGroup
+      ) {
+        return;
+      }
+      const railRect = rail.getBoundingClientRect();
+      const railStyle = getComputedStyle(rail);
+      const result = computeRailAlignment({
+        previewTop: preview.getBoundingClientRect().top,
+        intensityBottom: intensity.getBoundingClientRect().bottom,
+        loudnessBottom: loudness.getBoundingClientRect().bottom,
+        railContentBottom:
+          railRect.bottom - (parseFloat(railStyle.paddingBottom) || 0),
+        deliveryHeight: delivery.getBoundingClientRect().height,
+        exportHeight: exportGroup.getBoundingClientRect().height,
+        railGap: parseFloat(railStyle.rowGap || railStyle.gap) || 16,
+      });
+      if (result) {
+        rail.style.setProperty("--std-preview-h", `${result.previewHeightPx}px`);
+        rail.style.setProperty(
+          "--std-export-mb",
+          `${result.exportMarginBottomPx}px`,
+        );
+        rail.classList.add("is-aligned");
+      } else {
+        rail.classList.remove("is-aligned");
+        rail.style.removeProperty("--std-preview-h");
+        rail.style.removeProperty("--std-export-mb");
+      }
+    };
+
+    // Coalesce observer bursts into one measurement per frame. The Preview
+    // card is deliberately NOT observed — apply() sets its height, so
+    // observing it would loop the observer.
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(apply);
+    };
+    const observer = new ResizeObserver(schedule);
+    for (const ref of [
+      refs.rail,
+      refs.center,
+      refs.intensity,
+      refs.loudness,
+      refs.delivery,
+      refs.exportGroup,
+    ]) {
+      if (ref.current) observer.observe(ref.current);
+    }
+    refs.center.current?.addEventListener("scroll", schedule, { passive: true });
+    schedule();
+
+    return () => {
+      observer.disconnect();
+      refs.center.current?.removeEventListener("scroll", schedule);
+      if (frame) cancelAnimationFrame(frame);
+      const rail = refs.rail.current;
+      if (rail) {
+        rail.classList.remove("is-aligned");
+        rail.style.removeProperty("--std-preview-h");
+        rail.style.removeProperty("--std-export-mb");
+      }
+    };
+    // Refs are stable for the lifetime of the view; mount-only is intended.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
+
 function StandardRightRail({
   tm,
   onEnterAdvanced,
+  seamRefs,
 }: {
   tm: TM;
   onEnterAdvanced: () => void;
+  seamRefs: RailSeamRefs;
 }) {
   const notes = tm.lastExportReceipt
     ? standardExportNotes(tm.lastExportReceipt.checks)
     : null;
   return (
-    <aside className="std-rail">
-      <section className="std-rail-card std-rail-preview">
+    <aside className="std-rail" ref={seamRefs.rail}>
+      <section className="std-rail-card std-rail-preview" ref={seamRefs.preview}>
         <div className="std-rail-head">
           <div className="std-rail-title">PREVIEW</div>
           <button
@@ -225,7 +338,7 @@ function StandardRightRail({
         />
       </section>
 
-      <section className="std-rail-card">
+      <section className="std-rail-card" ref={seamRefs.delivery}>
         <div className="std-rail-title">DELIVERY FORMAT</div>
         {/* State-free name: the recipe is fixed (standardExportSettings), and
             "Streaming" would read as a live profile next to a −9 LUFS target. */}
@@ -236,7 +349,7 @@ function StandardRightRail({
         </button>
       </section>
 
-      <div className="std-rail-export">
+      <div className="std-rail-export" ref={seamRefs.exportGroup}>
         <button
           type="button"
           className="primary std-create-master"
@@ -280,11 +393,21 @@ export function StandardView({
   const activeTone =
     STANDARD_STYLES.find((st) => st.id === presetToStyle(s.preset))?.tone ??
     "blue";
+  const seamRefs: RailSeamRefs = {
+    center: useRef<HTMLElement | null>(null),
+    intensity: useRef<HTMLDivElement | null>(null),
+    loudness: useRef<HTMLDivElement | null>(null),
+    rail: useRef<HTMLElement | null>(null),
+    preview: useRef<HTMLElement | null>(null),
+    delivery: useRef<HTMLElement | null>(null),
+    exportGroup: useRef<HTMLDivElement | null>(null),
+  };
+  useRailSeamAlignment(seamRefs);
   return (
     <div className="standard-view">
       <TracksRail tm={tm} />
 
-      <section className="std-center">
+      <section className="std-center" ref={seamRefs.center}>
         <div className="std-hero-head">
           <h1 className="std-title">{tm.selectedTrack?.display_name ?? "No track"}</h1>
           <p className="std-source">
@@ -342,7 +465,7 @@ export function StandardView({
         </div>
 
         <div className="std-steps">
-          <div className="std-step">
+          <div className="std-step std-step-style">
             <span className="std-step-label">1 · Style</span>
             <span className="std-step-hint">Choose the character you want.</span>
             <StyleTiles preset={s.preset} onSelect={tm.setPreset} />
@@ -350,6 +473,7 @@ export function StandardView({
 
           <div
             className="std-step std-step-intensity"
+            ref={seamRefs.intensity}
             // The active style's accent tints the zone chips and matches the
             // knob arc tone — intensity visibly belongs to the chosen style.
             style={{ ["--tile-accent" as never]: PRESET_ACCENT[s.preset.kind] }}
@@ -388,7 +512,7 @@ export function StandardView({
             />
           </div>
 
-          <div className="std-step">
+          <div className="std-step std-step-loudness" ref={seamRefs.loudness}>
             <span className="std-step-label">3 · Loudness</span>
             <span className="std-step-hint">Choose your target loudness.</span>
             <LoudnessSegmented
@@ -399,7 +523,11 @@ export function StandardView({
         </div>
       </section>
 
-      <StandardRightRail tm={tm} onEnterAdvanced={onEnterAdvanced} />
+      <StandardRightRail
+        tm={tm}
+        onEnterAdvanced={onEnterAdvanced}
+        seamRefs={seamRefs}
+      />
     </div>
   );
 }

@@ -5262,6 +5262,11 @@ button.primary:disabled {
 .standard-view {
   /* In Standard the parent .app switches to display: block (.app-standard),
      so this view owns the full width and lays out its own 3 columns. */
+  /* One shared column gap for the center steps AND the rail cards. The seam
+     alignment (lib/rail-alignment.ts) relies on Delivery's top being Preview
+     bottom + gap while Loudness's top is Intensity bottom + gap — the two
+     gaps must be THE SAME value or the second seam drifts. */
+  --std-col-gap: clamp(0.45rem, 1vh, 0.8rem);
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 300px;
   /* Constrain the implicit row to the shell height so the rails can shrink
@@ -5334,16 +5339,13 @@ button.primary:disabled {
 .std-tracks-status.is-idle .std-status-dot { background: var(--text-2); box-shadow: none; }
 
 /* ---- center ---- */
-/* One 1rem rhythm at the center/rail junction: every card corner sits
-   exactly 1rem from its vertical neighbor AND 1rem from the divider — an
-   equal-armed cross. The scrollable columns reserve a slim 8px scrollbar
-   gutter at ALL times (scrollbar-gutter: stable) and pad the remaining 8px,
-   so the 1rem clearance holds whether or not the column scrolls — the
-   default 15px scrollbar was shoving the cards left and breaking the
-   equality exactly on windows short enough to scroll. */
+/* Standard center is intentionally not its own scroll region. The controls
+   compress to the available shell height so the center/rail seam stays legible
+   without a permanent scrollbar gutter beside the cards. */
 .std-center {
-  display: flex; flex-direction: column; gap: 1rem; min-width: 0;
-  padding: 1.6rem 0.5rem 1.5rem 1.55rem; overflow-y: auto; scrollbar-gutter: stable;
+  display: flex; flex-direction: column; gap: var(--std-col-gap); min-width: 0;
+  padding: clamp(0.55rem, 1.2vh, 1rem) 0.5rem clamp(0.55rem, 1.1vh, 0.95rem) 1.55rem;
+  overflow: hidden;
 }
 .std-center::-webkit-scrollbar,
 .std-rail::-webkit-scrollbar,
@@ -5360,16 +5362,18 @@ button.primary:disabled {
 /* Plain block (the old flex wrapper was a single-child leftover): long track
    titles wrap at the column width instead of overflowing the flex item. */
 .std-hero-head { min-width: 0; }
-.std-title { font-size: 1.55rem; font-weight: 700; color: var(--text-0); margin: 0; letter-spacing: 0; }
-.std-source { margin: 0.36rem 0 0; font-size: 0.8rem; color: var(--text-1); }
+.std-title { font-size: clamp(1.2rem, 2.2vh, 1.55rem); font-weight: 700; color: var(--text-0); margin: 0; letter-spacing: 0; }
+.std-source { margin: 0.24rem 0 0; font-size: 0.78rem; color: var(--text-1); }
 
 .std-wave-deck {
   display: grid;
   grid-template-columns: 92px minmax(0, 1fr);
   align-items: center;
   gap: 1rem;
-  min-height: 178px;
-  padding: 1rem 1rem 1rem 1.25rem;
+  /* Height-fluid: tall windows get the full 178px deck, short/scaled
+     viewports compress to 128px before the column would have to scroll. */
+  min-height: clamp(102px, 14vh, 162px);
+  padding: clamp(0.48rem, 1vh, 0.85rem) 1rem clamp(0.48rem, 1vh, 0.85rem) 1.25rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background:
@@ -5384,7 +5388,7 @@ button.primary:disabled {
   min-width: 0;
 }
 .std-play {
-  position: relative; flex-shrink: 0; width: 64px; height: 64px; border-radius: 50%;
+  position: relative; flex-shrink: 0; width: clamp(52px, 7vh, 64px); height: clamp(52px, 7vh, 64px); border-radius: 50%;
   cursor: pointer; font-size: 1.15rem; color: #fff;
   display: grid; place-items: center;
   background:
@@ -5412,7 +5416,7 @@ button.primary:disabled {
 }
 .std-wave {
   min-width: 0;
-  height: 144px;
+  height: clamp(88px, 12vh, 132px);
   overflow: hidden;
   background: transparent;
   border-left: 1px solid var(--border-strong);
@@ -5435,10 +5439,10 @@ button.primary:disabled {
   display: none;
 }
 
-.std-steps { display: flex; flex-direction: column; gap: 1rem; }
+.std-steps { display: flex; flex-direction: column; gap: var(--std-col-gap); }
 .std-step {
-  display: flex; flex-direction: column; gap: 0.6rem;
-  padding: 1rem 1.25rem;
+  display: flex; flex-direction: column; gap: clamp(0.28rem, 0.7vh, 0.5rem);
+  padding: clamp(0.5rem, 1.05vh, 0.82rem) 1.25rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background:
@@ -5463,7 +5467,7 @@ button.primary:disabled {
   content: ""; flex-shrink: 0; width: 3px; height: 13px; border-radius: 2px;
   background: var(--accent); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 65%, transparent);
 }
-.std-step-hint { font-size: 0.78rem; color: var(--text-2); margin: -0.2rem 0 0.1rem; }
+.std-step-hint { font-size: 0.76rem; color: var(--text-2); margin: -0.16rem 0 0.04rem; }
 
 /* ---- style tiles (reuse Advanced preset artwork) ---- */
 .std-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
@@ -5473,8 +5477,8 @@ button.primary:disabled {
      accent-mixed border, screen-blended imagery, and the active
      ring + floor + halo shadow stack — one preset, one look, both views. */
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; text-align: center;
-  min-height: 184px;
-  padding: 1.1rem 0.7rem 0.95rem; border-radius: var(--radius-card); cursor: pointer;
+  min-height: clamp(104px, 15vh, 170px);
+  padding: clamp(0.48rem, 1vh, 0.9rem) 0.7rem clamp(0.45rem, 0.9vh, 0.78rem); border-radius: var(--radius-card); cursor: pointer;
   overflow: hidden;
   background:
     radial-gradient(
@@ -5490,8 +5494,11 @@ button.primary:disabled {
   transition: transform 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease, box-shadow 180ms ease;
 }
 .std-tile-icon {
-  width: clamp(76px, 7.4vw, 108px);
-  height: clamp(76px, 7.4vw, 108px);
+  /* Fluid on BOTH axes: 7.4vw keys to window width (the original behavior),
+     10.5vh keeps the icon from holding the tile tall on short/scaled
+     viewports — the smaller of the two wins. */
+  width: clamp(48px, min(6.9vw, 9vh), 98px);
+  height: clamp(48px, min(6.9vw, 9vh), 98px);
   display: grid;
   place-items: center;
   margin-bottom: 0.12rem;
@@ -5564,7 +5571,7 @@ button.primary:disabled {
     "hint knob"
     "zones knob";
   align-items: center;
-  min-height: 168px;
+  min-height: clamp(126px, 14.5vh, 160px);
 }
 .std-steps .std-step-intensity .std-step-label { grid-area: label; align-self: end; }
 .std-steps .std-step-intensity .std-step-hint { grid-area: hint; align-self: start; }
@@ -5575,10 +5582,10 @@ button.primary:disabled {
   grid-area: zones;
   align-self: end;
   display: flex; flex-wrap: wrap; gap: 0.4rem;
-  margin-top: 0.4rem;
+  margin-top: 0.22rem;
 }
 .std-zone-chip {
-  padding: 0.34rem 0.7rem; border-radius: 999px; cursor: pointer;
+  padding: 0.28rem 0.58rem; border-radius: 999px; cursor: pointer;
   font-size: 0.72rem; letter-spacing: 0.04em; color: var(--text-2);
   background: linear-gradient(180deg, rgba(24, 29, 41, 0.7), rgba(12, 15, 23, 0.85));
   border: 1px solid var(--border);
@@ -5595,7 +5602,7 @@ button.primary:disabled {
 .std-steps .std-step-intensity .knob {
   grid-area: knob;
   justify-self: center;
-  min-width: 150px;
+  min-width: clamp(126px, 14vh, 150px);
 }
 .std-steps .std-step-intensity .knob-caption {
   margin-top: 0.1rem;
@@ -5603,10 +5610,10 @@ button.primary:disabled {
 }
 
 /* ---- loudness segmented ---- */
-.std-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.55rem; }
+.std-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem; }
 .std-seg-option {
   display: flex; flex-direction: column; gap: 0.2rem; align-items: center;
-  padding: 0.8rem 0.4rem; border-radius: var(--radius-card); cursor: pointer;
+  padding: clamp(0.42rem, 0.9vh, 0.7rem) 0.4rem; border-radius: var(--radius-card); cursor: pointer;
   background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
   border: 1px solid var(--border); color: var(--text-1);
   transition: transform 160ms cubic-bezier(.2,.8,.2,1), border-color 160ms ease, box-shadow 160ms ease;
@@ -5623,8 +5630,11 @@ button.primary:disabled {
 
 /* ---- right rail (preview / delivery / export) ---- */
 .std-rail {
-  display: flex; flex-direction: column; gap: 1rem;
-  padding: 0.85rem 0.5rem 1rem 1rem; min-width: 0; min-height: 0; scrollbar-gutter: stable;
+  /* gap MUST be the shared --std-col-gap: seam alignment derives Delivery's
+     top from Preview bottom + this gap, mirroring Loudness's top = Intensity
+     bottom + the center's identical gap. See .standard-view. */
+  display: flex; flex-direction: column; gap: var(--std-col-gap);
+  padding: 0.85rem 0.5rem clamp(0.65rem, 1.4vh, 1rem) 1rem; min-width: 0; min-height: 0; scrollbar-gutter: stable;
   overflow-y: auto;
   border-left: 1px solid var(--border);
   background:
@@ -5632,6 +5642,7 @@ button.primary:disabled {
 }
 .std-rail-card {
   display: flex; flex-direction: column; gap: 0.7rem;
+  width: 100%;
   padding: 1rem 1rem; border-radius: var(--radius-card);
   background:
     linear-gradient(180deg, rgba(18, 23, 34, 0.76), rgba(8, 11, 18, 0.9));
@@ -5695,26 +5706,42 @@ button.primary:disabled {
    height above the export block) all goes to metering. */
 .std-rail-preview { flex: 1 1 auto; min-height: 0; }
 .std-rail-preview .master-out { flex: 1 1 auto; min-height: 0; }
+/* Seam alignment (2026-06-09): when the center column fits without
+   scrolling, useRailSeamAlignment (StandardView.tsx) measures its card
+   seams and the rail mirrors them — the Preview card's bottom lands on the
+   Intensity card's bottom (so DELIVERY FORMAT tops align with 3 · Loudness
+   across the divider, both columns sharing the 1rem gap) and the export
+   group lifts flush with Loudness's bottom edge. Geometry + fallback
+   guards live in lib/rail-alignment.ts; without .is-aligned the
+   flex-absorb layout above still applies. */
+.std-rail.is-aligned .std-rail-preview { flex: 0 0 auto; height: var(--std-preview-h); }
+.std-rail.is-aligned .std-rail-export { margin-bottom: var(--std-export-mb); }
 .std-rail .master-out .lufs-meter {
   height: auto;
   flex: 1 1 auto;
-  min-height: 172px;
+  min-height: 112px;
   justify-content: center;
 }
 .std-rail .master-out .lufs-bars {
-  flex: 0 0 74px;
+  flex: 0 0 62px;
 }
 .std-rail .master-out .lufs-bar {
   max-width: 32px;
 }
 .std-rail .master-out .master-readouts {
   grid-template-columns: 1fr;
-  gap: 0.35rem;
+  gap: 0.38rem;
 }
+/* The readout pills keep their breathing room: the meter above is the flex
+   element, so on real window heights it has pixels to spare — compressing
+   the pills (compaction pass) bought nothing visually and read as cramped.
+   The meter's 112px floor still carries the short-window case. */
 .std-rail .master-out .readout {
   flex-direction: row;
   justify-content: space-between;
-  padding: 0.42rem 0.5rem;
+  align-items: center;
+  min-height: 34px;
+  padding: 0.48rem 0.6rem;
 }
 .std-rail .master-out .readout-label {
   text-align: left;
@@ -5739,12 +5766,13 @@ button.primary:disabled {
   padding-inline: 0.85rem;
   margin-top: 0.35rem;
 }
-.std-rail-export { margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; }
+.std-rail-export { width: 100%; margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; }
 /* The TSX renders className="primary std-create-master"; these selectors must
    carry button.primary's specificity (0,2,1) or every overlapping declaration
    silently loses to the generic primary style (App.css ~766). */
 button.primary.std-create-master {
   position: relative; overflow: hidden;
+  width: 100%;
   padding: 0.85rem 1rem; font-size: 0.95rem; font-weight: 650; letter-spacing: 0.01em;
   border: none; border-radius: var(--radius-card); cursor: pointer; color: #fff;
   background: linear-gradient(135deg, var(--accent-deep) 0%, var(--accent) 55%, var(--accent-bright) 100%);
