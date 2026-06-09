@@ -1438,7 +1438,7 @@ export function PresetTiles({
   return (
     <section className="presets">
       <div className="section-head">
-        <span className="section-label">Preset</span>
+        <span className="section-label">Styles</span>
         {!isSaving ? (
           <button
             type="button"

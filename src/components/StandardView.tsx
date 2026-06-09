@@ -184,7 +184,18 @@ function StandardRightRail({
   return (
     <aside className="std-rail">
       <section className="std-rail-card">
-        <div className="std-rail-title">PREVIEW</div>
+        <div className="std-rail-head">
+          <div className="std-rail-title">PREVIEW</div>
+          <button
+            type="button"
+            className={`toolbar-toggle std-volume-match ${tm.transport.volumeMatch ? "is-on" : ""}`}
+            aria-pressed={tm.transport.volumeMatch}
+            onClick={() => tm.setVolumeMatch(!tm.transport.volumeMatch)}
+          >
+            <span className="toolbar-toggle-box" aria-hidden />
+            <span>Volume Match</span>
+          </button>
+        </div>
         <div className="std-rail-ab" role="group" aria-label="Playback source">
           <button
             type="button"
@@ -212,15 +223,6 @@ function StandardRightRail({
           lufsMomentary={tm.transport.lufsMomentary}
           lufsIntegrated={tm.transport.lufsIntegrated}
         />
-        <button
-          type="button"
-          className={`toolbar-toggle std-volume-match ${tm.transport.volumeMatch ? "is-on" : ""}`}
-          aria-pressed={tm.transport.volumeMatch}
-          onClick={() => tm.setVolumeMatch(!tm.transport.volumeMatch)}
-        >
-          <span className="toolbar-toggle-box" aria-hidden />
-          <span>Volume Match</span>
-        </button>
       </section>
 
       <section className="std-rail-card">

@@ -5286,7 +5286,7 @@ button.primary:disabled {
     linear-gradient(180deg, rgba(10, 14, 23, 0.72), rgba(7, 9, 15, 0.86));
 }
 /* Panel-header type matches Advanced's .panel-title exactly (0.72/0.16em/700/text-0). */
-.std-tracks-head { font-size: 0.72rem; letter-spacing: 0.16em; color: var(--text-0); font-weight: 700; padding: 0 0.9rem 0.75rem; }
+.std-tracks-head { font-size: 0.72rem; letter-spacing: 0.16em; color: var(--text-0); font-weight: 700; padding: 0 0.9rem 0.75rem; display: inline-flex; align-items: center; gap: 0.55rem; }
 /* The list, not the rail, scrolls — Add Tracks and the status row stay pinned. */
 .std-tracks-list { display: flex; flex-direction: column; gap: 0.55rem; min-width: 0; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .std-track-row {
@@ -5621,7 +5621,14 @@ button.primary:disabled {
   box-shadow: var(--elev-1);
 }
 /* Panel-header type matches Advanced's .panel-title exactly. */
-.std-rail-title { font-size: 0.72rem; letter-spacing: 0.16em; color: var(--text-0); font-weight: 700; }
+.std-rail-title { font-size: 0.72rem; letter-spacing: 0.16em; color: var(--text-0); font-weight: 700; display: inline-flex; align-items: center; gap: 0.55rem; }
+/* Same accent tick as the step labels — one hierarchy language across
+   TRACKS / PREVIEW / DELIVERY FORMAT and the numbered steps. */
+.std-rail-title::before,
+.std-tracks-head::before {
+  content: ""; flex-shrink: 0; width: 3px; height: 12px; border-radius: 2px;
+  background: var(--accent); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 65%, transparent);
+}
 .std-rail-ab {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -5664,7 +5671,9 @@ button.primary:disabled {
   color: var(--text-2);
 }
 .std-rail .master-out .lufs-meter {
-  height: 172px;
+  /* Lengthened (172px -> 240px): Volume Match moved into the PREVIEW
+     header row, so the freed body height goes to the meters. */
+  height: 240px;
   justify-content: center;
 }
 .std-rail .master-out .lufs-bars {
@@ -5688,10 +5697,14 @@ button.primary:disabled {
 .std-rail .master-out .readout-value {
   justify-content: flex-end;
 }
+/* Compact pill beside the PREVIEW title (was a full-width row under the meters). */
+.std-rail-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+}
 .std-volume-match {
   justify-content: center;
-  width: 100%;
-  margin-top: 0.2rem;
+  font-size: 0.68rem;
+  padding: 0.22rem 0.55rem;
 }
 .std-delivery-name { font-size: 0.92rem; font-weight: 600; color: var(--text-0); }
 .std-delivery-spec { font-size: 0.76rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
