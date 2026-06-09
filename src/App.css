@@ -5334,13 +5334,29 @@ button.primary:disabled {
 .std-tracks-status.is-idle .std-status-dot { background: var(--text-2); box-shadow: none; }
 
 /* ---- center ---- */
-/* One spacing rhythm at the center/rail junction: card gaps are 1rem on
-   BOTH sides of the divider, and the divider sits centered in its gutter
-   (1.25rem clearance each side). */
+/* One 1rem rhythm at the center/rail junction: every card corner sits
+   exactly 1rem from its vertical neighbor AND 1rem from the divider — an
+   equal-armed cross. The scrollable columns reserve a slim 8px scrollbar
+   gutter at ALL times (scrollbar-gutter: stable) and pad the remaining 8px,
+   so the 1rem clearance holds whether or not the column scrolls — the
+   default 15px scrollbar was shoving the cards left and breaking the
+   equality exactly on windows short enough to scroll. */
 .std-center {
   display: flex; flex-direction: column; gap: 1rem; min-width: 0;
-  padding: 1.6rem 1rem 1.5rem 1.55rem; overflow-y: auto;
+  padding: 1.6rem 0.5rem 1.5rem 1.55rem; overflow-y: auto; scrollbar-gutter: stable;
 }
+.std-center::-webkit-scrollbar,
+.std-rail::-webkit-scrollbar,
+.std-tracks-list::-webkit-scrollbar { width: 8px; }
+.std-center::-webkit-scrollbar-track,
+.std-rail::-webkit-scrollbar-track,
+.std-tracks-list::-webkit-scrollbar-track { background: transparent; }
+.std-center::-webkit-scrollbar-thumb,
+.std-rail::-webkit-scrollbar-thumb,
+.std-tracks-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+.std-center::-webkit-scrollbar-thumb:hover,
+.std-rail::-webkit-scrollbar-thumb:hover,
+.std-tracks-list::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--accent) 35%, var(--border-strong)); }
 /* Plain block (the old flex wrapper was a single-child leftover): long track
    titles wrap at the column width instead of overflowing the flex item. */
 .std-hero-head { min-width: 0; }
@@ -5608,7 +5624,7 @@ button.primary:disabled {
 /* ---- right rail (preview / delivery / export) ---- */
 .std-rail {
   display: flex; flex-direction: column; gap: 1rem;
-  padding: 0.85rem 1rem 1rem 1rem; min-width: 0; min-height: 0;
+  padding: 0.85rem 0.5rem 1rem 1rem; min-width: 0; min-height: 0; scrollbar-gutter: stable;
   overflow-y: auto;
   border-left: 1px solid var(--border);
   background:
