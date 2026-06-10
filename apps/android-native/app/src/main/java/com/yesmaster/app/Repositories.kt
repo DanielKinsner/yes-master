@@ -55,9 +55,17 @@ class ExportRepository(private val context: Context) {
         val resolver = context.contentResolver
         val collection = MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         val uri = resolver.insert(collection, values) ?: error("MediaStore insert failed")
-        resolver.openOutputStream(uri)?.use { output ->
-            rendered.inputStream().use { input -> input.copyTo(output) }
-        } ?: error("Could not write to the music library")
+        try {
+            resolver.openOutputStream(uri)?.use { output ->
+                rendered.inputStream().use { input -> input.copyTo(output) }
+            } ?: error("Could not write to the music library")
+        } catch (e: Exception) {
+            // A failed copy (disk full, source gone) must not leave an
+            // invisible IS_PENDING row orphaned until the OS reaps it —
+            // delete the row, then surface the original failure.
+            runCatching { resolver.delete(uri, null, null) }
+            throw e
+        }
         values.clear()
         values.put(MediaStore.Audio.Media.IS_PENDING, 0)
         resolver.update(uri, values, null, null)

@@ -96,9 +96,21 @@ mod jni_shims {
     use jni::JNIEnv;
 
     fn to_jstring(env: &mut JNIEnv, value: String) -> jstring {
-        env.new_string(value)
-            .map(|s| s.into_raw())
-            .unwrap_or(std::ptr::null_mut())
+        match env.new_string(&value) {
+            Ok(s) => s.into_raw(),
+            Err(_) => {
+                // Result-string allocation failed (realistically: JVM OOM).
+                // Clear the pending Java exception so it cannot propagate
+                // across the boundary — the contract is JSON-or-null, never
+                // a throw — then try the small static error payload. If even
+                // that fails we return null, which the Kotlin wrapper maps
+                // back into the error-JSON contract.
+                env.exception_clear().ok();
+                env.new_string(r#"{"error":"jni string allocation failed"}"#)
+                    .map(|s| s.into_raw())
+                    .unwrap_or(std::ptr::null_mut())
+            }
+        }
     }
 
     fn from_jstring(env: &mut JNIEnv, value: &JString) -> Option<String> {
@@ -106,7 +118,7 @@ mod jni_shims {
     }
 
     #[no_mangle]
-    pub extern "system" fn Java_com_yesmaster_app_NativeBridge_bridgeVersion(
+    pub extern "system" fn Java_com_yesmaster_app_NativeBridge_bridgeVersionNative(
         mut env: JNIEnv,
         _class: JClass,
     ) -> jstring {
@@ -126,7 +138,7 @@ mod jni_shims {
     }
 
     #[no_mangle]
-    pub extern "system" fn Java_com_yesmaster_app_NativeBridge_analyzeFileJson(
+    pub extern "system" fn Java_com_yesmaster_app_NativeBridge_analyzeFileJsonNative(
         mut env: JNIEnv,
         _class: JClass,
         path: JString,
@@ -139,7 +151,7 @@ mod jni_shims {
     }
 
     #[no_mangle]
-    pub extern "system" fn Java_com_yesmaster_app_NativeBridge_renderMasterWithOptionsJson(
+    pub extern "system" fn Java_com_yesmaster_app_NativeBridge_renderMasterWithOptionsJsonNative(
         mut env: JNIEnv,
         _class: JClass,
         source_path: JString,

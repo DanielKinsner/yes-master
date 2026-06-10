@@ -154,9 +154,34 @@ already has.
 
 ## Owner decisions
 
-| # | Decision | Default unless told otherwise |
+| # | Decision | Outcome |
 | --- | --- | --- |
-| D1 | Google SDK/NDK license acceptance (blocks A0) | **needs your explicit OK** |
-| D2 | minSdk | 29 (Android 10) |
-| D3 | MVP cut | A2 ships without live audition; A3 follows immediately |
-| D4 | Test hardware | whatever Android device(s) you own — list them when A3 nears |
+| D1 | Google SDK/NDK license acceptance | **approved 2026-06-10**; toolchain installed |
+| D2 | minSdk | 29 (Android 10) — default taken |
+| D3 | MVP cut | A2 shipped without live audition; A3 is the next phase |
+| D4 | Test hardware | owner can't device-test for a while; APK is sideload-ready when they can |
+
+## Execution record
+
+A0–A2 completed 2026-06-10 on `feat/android-native` (A0 `96ebcef`, A1
+`64baf0b`, A2 `7631962`):
+
+- Toolchain: JDK 17, SDK platform 35 + build-tools 35/34, NDK r27.2,
+  rust android targets, cargo-ndk, Gradle 8.11.1 (wrapper committed).
+- **The feared dep gating proved unnecessary** — rodio/tauri-utils
+  cross-compile for android as-is; the desktop crate has ZERO changes.
+- iPhone facade touch: one visibility-only change
+  (`export_settings_for_options` `pub(crate)` → `pub`) so the android crate
+  can assert the parity fixture; iPhone lane re-verified green.
+- Deliverable: `gradlew assembleDebug` → 31.5 MB arm64 debug APK
+  (engine statically linked, 4.3 MB `.so`, zero Android permissions).
+- Pins landed: analyze/render wire-key tests (Kotlin-decoded keys),
+  parity-fixture third (Rust) and fourth (Kotlin JVM) assert-sides,
+  wire-samples drift gate consumed by the Gson models.
+- Cross-platform matrix at A2 head: desktop FE 336/336 + Windows bundle,
+  desktop Rust full lane exit 0, iPhone 37/37, android 5/5 + arm64 check,
+  JVM 3/3.
+
+Sideload: `apps/android-native/gradlew assembleDebug` →
+`app/build/outputs/apk/debug/app-debug.apk` → enable "install unknown
+apps" on the phone, copy, tap. Next phase: A3 live audition (oboe).

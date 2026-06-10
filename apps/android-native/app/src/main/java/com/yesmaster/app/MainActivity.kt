@@ -75,7 +75,11 @@ private fun AppRoot(vm: MasteringViewModel = viewModel()) {
         is UiState.Working -> WorkingScreen(s.label)
         is UiState.Ready -> ReadyScreen(s, onMaster = vm::master, onImportOther = pick)
         is UiState.Done -> DoneScreen(s, onAgain = vm::backToReady, onNew = vm::reset)
-        is UiState.Error -> ErrorScreen(s, onBack = vm::backToReady)
+        is UiState.Error -> ErrorScreen(
+            s,
+            onBack = vm::backToReady,
+            onRetry = if (s.retrySourcePath != null) vm::retryAnalysis else null,
+        )
     }
 }
 
@@ -130,9 +134,13 @@ private fun ReadyScreen(
     onMaster: (StandardStyle, StandardLoudness, Float) -> Unit,
     onImportOther: () -> Unit,
 ) {
-    var style by remember { mutableStateOf(StandardStyle.BALANCED) }
-    var loudness by remember { mutableStateOf(StandardLoudness.MEDIUM) }
-    var intensity by remember { mutableFloatStateOf(0.5f) }
+    // Seeded from the state (keyed on it) so "Master again" reopens on the
+    // choices that produced the last master, not on defaults — the Ready
+    // screen leaves the composition during Working/Done, so plain remember
+    // would reset (adversarial-review finding).
+    var style by remember(ready) { mutableStateOf(ready.style) }
+    var loudness by remember(ready) { mutableStateOf(ready.loudness) }
+    var intensity by remember(ready) { mutableFloatStateOf(ready.intensity) }
 
     ScreenColumn {
         Text(ready.displayName, style = MaterialTheme.typography.titleLarge)
@@ -233,11 +241,18 @@ private fun DoneScreen(done: UiState.Done, onAgain: () -> Unit, onNew: () -> Uni
 }
 
 @Composable
-private fun ErrorScreen(error: UiState.Error, onBack: () -> Unit) {
+private fun ErrorScreen(error: UiState.Error, onBack: () -> Unit, onRetry: (() -> Unit)?) {
     ScreenColumn {
         Text("Something went wrong", style = MaterialTheme.typography.headlineSmall)
         Text(error.message, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.weight(1f))
-        Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Back") }
+        if (onRetry != null) {
+            // Analysis failed after the import already cached the file —
+            // retry without making the user re-pick through SAF.
+            Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
+                Text("Retry analysis")
+            }
+        }
+        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Back") }
     }
 }

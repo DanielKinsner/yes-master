@@ -19,6 +19,13 @@ sealed interface UiState {
         val displayName: String,
         val sourcePath: String,
         val analysis: WireAnalysis,
+        // The last choices made on this track, so "Master again" reopens the
+        // screen on what the user actually rendered with — these live in the
+        // state (not in composable `remember`) because the Ready screen
+        // leaves the composition during Working/Done.
+        val style: StandardStyle = StandardStyle.BALANCED,
+        val loudness: StandardLoudness = StandardLoudness.MEDIUM,
+        val intensity: Float = 0.5f,
     ) : UiState
     data class Done(
         val displayName: String,
@@ -27,7 +34,14 @@ sealed interface UiState {
         /** Kept so "Master again" can return to Ready without re-analyzing. */
         val previous: Ready,
     ) : UiState
-    data class Error(val message: String, val previous: Ready? = null) : UiState
+    data class Error(
+        val message: String,
+        val previous: Ready? = null,
+        /** Set when analysis failed AFTER the import already cached the
+         *  file — lets the user retry without re-picking through SAF. */
+        val retrySourcePath: String? = null,
+        val retryDisplayName: String? = null,
+    ) : UiState
 }
 
 class MasteringViewModel(application: Application) : AndroidViewModel(application) {
@@ -41,26 +55,48 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
     fun importTrack(uri: Uri) {
         _state.value = UiState.Working("Importing…")
         viewModelScope.launch {
-            try {
-                val imported = withContext(Dispatchers.IO) { imports.copyToCache(uri) }
-                _state.value = UiState.Working("Analyzing…")
-                val analysis = withContext(Dispatchers.IO) {
-                    Wire.analysis(NativeBridge.analyzeFileJson(imported.file.absolutePath))
-                }
-                analysis.error?.let { error(it) }
-                _state.value = UiState.Ready(
-                    displayName = imported.displayName,
-                    sourcePath = imported.file.absolutePath,
-                    analysis = analysis,
-                )
+            val imported = try {
+                withContext(Dispatchers.IO) { imports.copyToCache(uri) }
             } catch (e: Exception) {
                 _state.value = UiState.Error(e.message ?: "Import failed")
+                return@launch
             }
+            analyze(imported.file.absolutePath, imported.displayName)
+        }
+    }
+
+    fun retryAnalysis() {
+        val error = _state.value as? UiState.Error ?: return
+        val path = error.retrySourcePath ?: return
+        val name = error.retryDisplayName ?: "imported-audio"
+        viewModelScope.launch { analyze(path, name) }
+    }
+
+    private suspend fun analyze(sourcePath: String, displayName: String) {
+        _state.value = UiState.Working("Analyzing…")
+        try {
+            val analysis = withContext(Dispatchers.IO) {
+                Wire.analysis(NativeBridge.analyzeFileJson(sourcePath))
+            }
+            analysis.error?.let { error(it) }
+            _state.value = UiState.Ready(
+                displayName = displayName,
+                sourcePath = sourcePath,
+                analysis = analysis,
+            )
+        } catch (e: Exception) {
+            _state.value = UiState.Error(
+                message = e.message ?: "Analysis failed",
+                retrySourcePath = sourcePath,
+                retryDisplayName = displayName,
+            )
         }
     }
 
     fun master(style: StandardStyle, loudness: StandardLoudness, intensity: Float) {
-        val ready = _state.value as? UiState.Ready ?: return
+        val ready = (_state.value as? UiState.Ready)
+            ?.copy(style = style, loudness = loudness, intensity = intensity)
+            ?: return
         _state.value = UiState.Working("Mastering…")
         viewModelScope.launch {
             try {

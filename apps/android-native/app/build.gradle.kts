@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -49,20 +51,66 @@ android {
     }
 }
 
-// Build the Rust bridge (.so) with cargo-ndk before every Android build so
-// jniLibs is always current with the engine. Release profile: the debug .so
-// is ~165 MB; release is what ships in the APK.
+// Build the Rust bridge (.so) with cargo-ndk before jniLibs are merged into
+// the APK. Release profile: the debug .so is ~165 MB; release is what ships.
+//
+// Portability (adversarial-review findings): cargo/cargo-ndk are resolved
+// via ~/.cargo/bin without relying on the Gradle daemon's inherited PATH
+// (IDE launches on macOS don't source shell profiles), and the NDK is
+// resolved from ANDROID_NDK_HOME or local.properties' sdk.dir (newest
+// ndk/<version>). Inputs/outputs are declared so a no-change build is
+// UP-TO-DATE instead of respawning cargo every invocation.
 val cargoNdk = tasks.register<Exec>("cargoNdk") {
     workingDir = file("../rust")
+    inputs.dir(file("../rust/src"))
+    inputs.files(file("../rust/Cargo.toml"), file("../rust/Cargo.lock"))
+    // The .so statically links the facade + engine — their sources are
+    // inputs too, so touching shared Rust re-triggers this task.
+    inputs.dir(file("../../iphone-native/rust/src"))
+    inputs.dir(file("../../../src-tauri/src"))
+    outputs.dir(file("src/main/jniLibs"))
+
+    val pathSeparator = File.pathSeparator
+    val cargoBinDir = File(System.getProperty("user.home"), ".cargo/bin")
+    if (cargoBinDir.isDirectory) {
+        environment("PATH", cargoBinDir.absolutePath + pathSeparator + System.getenv("PATH"))
+    }
+    val cargoExe = sequenceOf("cargo.exe", "cargo")
+        .map { File(cargoBinDir, it) }
+        .firstOrNull { it.isFile }
+        ?.absolutePath
+        ?: "cargo"
+
+    val ndkDir = System.getenv("ANDROID_NDK_HOME")
+        ?: run {
+            val properties = Properties()
+            val localProperties = rootProject.file("local.properties")
+            if (localProperties.isFile) {
+                localProperties.inputStream().use { properties.load(it) }
+            }
+            val sdkDir = properties.getProperty("sdk.dir") ?: System.getenv("ANDROID_HOME")
+            sdkDir
+                ?.let { File(it, "ndk").listFiles() }
+                ?.filter { it.isDirectory }
+                ?.maxByOrNull { it.name }
+                ?.absolutePath
+        }
+    if (ndkDir != null) {
+        environment("ANDROID_NDK_HOME", ndkDir)
+    }
+
     commandLine(
-        "cargo", "ndk",
+        cargoExe, "ndk",
         "-t", "arm64-v8a",
         "-o", file("src/main/jniLibs").absolutePath,
         "build", "--release",
     )
 }
 
-tasks.named("preBuild") {
+// Hook into jniLib merging only — APK packaging needs the .so, but the JVM
+// unit-test lane (the wire drift gate's fourth consumer) must stay runnable
+// on a machine with no Rust or NDK installed.
+tasks.matching { it.name.matches(Regex("merge.*JniLibFolders")) }.configureEach {
     dependsOn(cargoNdk)
 }
 
