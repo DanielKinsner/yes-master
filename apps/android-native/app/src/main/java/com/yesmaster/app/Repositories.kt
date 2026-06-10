@@ -59,16 +59,30 @@ class ExportRepository(private val context: Context) {
             resolver.openOutputStream(uri)?.use { output ->
                 rendered.inputStream().use { input -> input.copyTo(output) }
             } ?: error("Could not write to the music library")
+            values.clear()
+            values.put(MediaStore.Audio.Media.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
         } catch (e: Exception) {
-            // A failed copy (disk full, source gone) must not leave an
-            // invisible IS_PENDING row orphaned until the OS reaps it —
-            // delete the row, then surface the original failure.
+            // A failed copy or finalize (disk full, source gone, provider
+            // error) must not leave an invisible IS_PENDING row orphaned
+            // until the OS reaps it — delete the row, then surface the
+            // original failure.
             runCatching { resolver.delete(uri, null, null) }
             throw e
         }
-        values.clear()
-        values.put(MediaStore.Audio.Media.IS_PENDING, 0)
-        resolver.update(uri, values, null, null)
-        return Published(uri, "Music/YES Master/$displayName")
+        // MediaStore uniquifies on collision ("song (YES Master) (1).wav" on
+        // a re-master), so the receipt must name the row that was actually
+        // created, not the requested name. A failed read-back must not nuke
+        // the published master — fall back to the requested name instead.
+        val actualName = runCatching {
+            resolver.query(
+                uri,
+                arrayOf(MediaStore.Audio.Media.DISPLAY_NAME),
+                null,
+                null,
+                null,
+            )?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+        }.getOrNull() ?: displayName
+        return Published(uri, "Music/YES Master/$actualName")
     }
 }

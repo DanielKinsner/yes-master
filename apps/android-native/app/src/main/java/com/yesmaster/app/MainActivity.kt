@@ -32,10 +32,9 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -137,10 +136,12 @@ private fun ReadyScreen(
     // Seeded from the state (keyed on it) so "Master again" reopens on the
     // choices that produced the last master, not on defaults — the Ready
     // screen leaves the composition during Working/Done, so plain remember
-    // would reset (adversarial-review finding).
-    var style by remember(ready) { mutableStateOf(ready.style) }
-    var loudness by remember(ready) { mutableStateOf(ready.loudness) }
-    var intensity by remember(ready) { mutableFloatStateOf(ready.intensity) }
+    // would reset (adversarial-review finding). Saveable so uncommitted
+    // tweaks also survive Activity recreation (dark-mode toggle, font-scale
+    // change — anything outside the manifest's configChanges opt-outs).
+    var style by rememberSaveable(ready) { mutableStateOf(ready.style) }
+    var loudness by rememberSaveable(ready) { mutableStateOf(ready.loudness) }
+    var intensity by rememberSaveable(ready) { mutableStateOf(ready.intensity) }
 
     ScreenColumn {
         Text(ready.displayName, style = MaterialTheme.typography.titleLarge)

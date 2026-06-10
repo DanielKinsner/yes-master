@@ -100,9 +100,9 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
         _state.value = UiState.Working("Mastering…")
         viewModelScope.launch {
             try {
-                val outDir = File(getApplication<Application>().cacheDir, "renders")
-                    .apply { mkdirs() }
                 val job = withContext(Dispatchers.IO) {
+                    val outDir = File(getApplication<Application>().cacheDir, "renders")
+                        .apply { mkdirs() }
                     Wire.renderJob(
                         NativeBridge.renderMasterWithOptionsJson(
                             sourcePath = ready.sourcePath,
@@ -116,9 +116,19 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
                 job.error?.let { error(it) }
                 val rendered = job.outputPaths.firstOrNull()?.let(::File)
                     ?: error("Render produced no output file")
+                // SAF display names arrive raw from the provider; strip path
+                // separators so MediaStore can't reject the export name
+                // (the import side already sanitizes its cache copy).
                 val baseName = ready.displayName.substringBeforeLast('.')
+                    .replace(Regex("[/\\\\]"), "-")
                 val published = withContext(Dispatchers.IO) {
-                    exports.publishToMusic(rendered, "$baseName (YES Master).wav")
+                    try {
+                        exports.publishToMusic(rendered, "$baseName (YES Master).wav")
+                    } finally {
+                        // The cache copy has no further consumer once
+                        // MediaStore owns (or rejected) the master.
+                        rendered.delete()
+                    }
                 }
                 _state.value = UiState.Done(
                     displayName = ready.displayName,
