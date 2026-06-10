@@ -68,6 +68,17 @@ cargo check --all-targets
 cargo test
 ```
 
+The Android bridge (`apps/android-native/rust`) re-uses the same shared crate
+AND the iPhone facade crate as an rlib. When you touch shared crate types,
+the facade, or the android crate, run its lane too (host tests + arm64
+cross-check; needs the Android NDK from docs/ANDROID_NATIVE_SPEC.md A0):
+
+```powershell
+cd apps/android-native/rust
+cargo test
+cargo ndk -t arm64-v8a check
+```
+
 Use the slow fixture lane before DSP/export merges:
 
 ```powershell
