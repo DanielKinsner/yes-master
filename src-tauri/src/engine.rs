@@ -57,38 +57,19 @@ pub async fn analyze_tracks(
 
 /// Analysis core, free of the Tauri `State` so unit / contract tests can call it
 /// directly. The `analyze_tracks` command wraps this and populates the
-/// backend-owned profile store from the results. Desktop path: the Tier-2 deep
-/// scan is ON.
+/// backend-owned profile store from the results. The Tier-2 deep scan is
+/// always ON: desktop and the iPhone bridge both go through here, and the
+/// bridge resolves the adaptive profile + confidence from `DeepAnalysis`.
+/// (A `_lite` deep-scan-off variant existed for a never-shipped mobile
+/// battery path; deleted 2026-06-09, owner-approved.)
 pub async fn analyze_tracks_core(
     tracks: Vec<AnalyzeRequest>,
-) -> CommandResult<Vec<AnalysisResult>> {
-    analyze_tracks_core_impl(tracks, true).await
-}
-
-/// Low-cost/mobile-lite analysis entry: same as `analyze_tracks_core` but with
-/// the Tier-2 deep scan gated OFF. The current iPhone bridge uses
-/// `analyze_tracks_core` for desktop-equivalent adaptive render/live wiring;
-/// keep this helper for callers that explicitly need analysis-only battery/CPU
-/// savings and do not consume `DeepAnalysis`.
-pub async fn analyze_tracks_core_lite(
-    tracks: Vec<AnalyzeRequest>,
-) -> CommandResult<Vec<AnalysisResult>> {
-    analyze_tracks_core_impl(tracks, false).await
-}
-
-/// Shared body for the two public entry points. `deep` is threaded straight
-/// through to `analyze_one`: `true` for the adaptive-capable path
-/// (`analyze_tracks_core`), `false` for the low-cost analysis-only path
-/// (`analyze_tracks_core_lite`).
-async fn analyze_tracks_core_impl(
-    tracks: Vec<AnalyzeRequest>,
-    deep: bool,
 ) -> CommandResult<Vec<AnalysisResult>> {
     let total = tracks.len();
     let mut out = Vec::with_capacity(total);
     let mut failures: Vec<(TrackId, String)> = Vec::new();
     for (index, req) in tracks.into_iter().enumerate() {
-        match analyze_one(req.id.clone(), Path::new(&req.path), deep) {
+        match analyze_one(req.id.clone(), Path::new(&req.path), true) {
             Ok(mut result) => {
                 nudge_role_by_position(&mut result, index, total);
                 out.push(result);
