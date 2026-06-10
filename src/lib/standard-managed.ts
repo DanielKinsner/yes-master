@@ -93,16 +93,29 @@ export function resetToStandardManaged(s: MasteringSettings): MasteringSettings 
   };
 }
 
-/// The always-clean-invariant guard (design spec §2a/§2b). Standard must
-/// never silently render a track that carries hidden Advanced edits — when
-/// it would, the caller shows that track in Advanced instead. Also forces
-/// Advanced in Album mode (Album Master is Advanced-only in v1).
+/// The always-clean-invariant guard (design spec §2a/§2b) over plain
+/// booleans — the form the navigation machine's context carries. Standard
+/// must never silently render a track that carries hidden Advanced edits,
+/// and Album Master is Advanced-only in v1.
+export function forceAdvancedOnStandardEntry(args: {
+  isAlbum: boolean;
+  hasTrack: boolean;
+  hasNonManagedEdits: boolean;
+}): boolean {
+  return args.isAlbum || (args.hasTrack && args.hasNonManagedEdits);
+}
+
+/// Settings-typed convenience over `forceAdvancedOnStandardEntry` — the
+/// original public form, kept so existing callers/tests stay pinned to one
+/// predicate.
 export function shouldForceAdvancedOnStandardEntry(args: {
   isAlbum: boolean;
   hasTrack: boolean;
   settings: MasteringSettings;
 }): boolean {
-  if (args.isAlbum) return true;
-  if (args.hasTrack && hasNonManagedEdits(args.settings)) return true;
-  return false;
+  return forceAdvancedOnStandardEntry({
+    isAlbum: args.isAlbum,
+    hasTrack: args.hasTrack,
+    hasNonManagedEdits: hasNonManagedEdits(args.settings),
+  });
 }

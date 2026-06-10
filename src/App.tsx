@@ -4,12 +4,9 @@ import {
   type DragEvent as ReactDragEvent,
 } from "react";
 import { useTrackMaster } from "./hooks/useTrackMaster";
-import { useViewMode } from "./hooks/useViewMode";
+import { useNavigationMachine } from "./hooks/useNavigationMachine";
 import { StandardView } from "./components/StandardView";
-import {
-  hasNonManagedEdits,
-  shouldForceAdvancedOnStandardEntry,
-} from "./lib/standard-managed";
+import { hasNonManagedEdits } from "./lib/standard-managed";
 import { PresetIcon, PRESET_ACCENT } from "./components/PresetIcon";
 import { RightRail, MasterOutPanel } from "./components/RightRail";
 import { VisualEqPanel } from "./components/VisualEqPanel";
@@ -54,8 +51,25 @@ function App() {
   const [chromePanel, setChromePanel] = useState<"settings" | "help" | null>(null);
   useWebviewZoomShortcuts();
 
-  const { view, setView } = useViewMode(tm.hadPriorSession);
-  const [returnConfirm, setReturnConfirm] = useState(false);
+  // B5.1: Standard/Advanced/Album navigation is ONE legal-state machine
+  // (lib/navigation-machine.ts). The old split-brain shape — view in
+  // useViewMode, returnConfirm here, legality patched by two reactive
+  // effects after render — produced the 2a78f4a silent-trap class; now
+  // every transition is a reducer table row, the always-clean /
+  // Album-only-in-Advanced invariants are entry conditions instead of
+  // corrections, and leaving Album on a return to Standard happens at the
+  // dispatch site so nothing can re-bounce it.
+  const nav = useNavigationMachine({
+    hadPriorSession: tm.hadPriorSession,
+    isAlbum: tm.mode === "album",
+    hasTrack: !!tm.selectedTrack,
+    hasNonManagedEdits:
+      !!tm.selectedTrack && hasNonManagedEdits(tm.selectedSettings),
+    // setMode is plain state (albumIntent/overrides live separately), so
+    // leaving and re-entering Album loses no album configuration.
+    leaveAlbumMode: () => tm.setMode("track"),
+  });
+  const { view, setView } = nav;
 
   // WYSIWYG: the live Mastered audition equals the export only when the
   // loudness landing + limiter are applied in real time. Standard forces
@@ -65,44 +79,6 @@ function App() {
     if (view === null) return;
     tm.setForceWysiwyg(view === "standard");
   }, [view, tm.setForceWysiwyg]);
-
-  // The always-clean invariant + Album-only-in-Advanced, enforced at EVERY
-  // entry to Standard — not just the return door. If the selected track
-  // carries hidden Advanced edits (opened project, restored session, or a
-  // track switch), or we're in Album mode, show it in Advanced instead.
-  // Pure decision lives in `shouldForceAdvancedOnStandardEntry` (Task 2, tested).
-  useEffect(() => {
-    if (view !== "standard") return;
-    if (
-      shouldForceAdvancedOnStandardEntry({
-        isAlbum: tm.mode === "album",
-        hasTrack: !!tm.selectedTrack,
-        settings: tm.selectedSettings,
-      })
-    ) {
-      setView("advanced");
-    }
-  }, [view, tm.mode, tm.selectedTrack, tm.selectedSettings, setView]);
-
-  // Standard is track-only, so the return door must also leave Album mode —
-  // otherwise the Album-only-in-Advanced entry guard above re-bounces the
-  // view to Advanced in the same commit and the button visibly does nothing.
-  // setMode is plain state (albumIntent/overrides live separately), so
-  // leaving and re-entering Album loses no album configuration.
-  const returnToStandard = () => {
-    if (tm.mode === "album") tm.setMode("track");
-    setView("standard");
-  };
-
-  // Spec §2a: the return door is asymmetric — silent when the track is clean,
-  // confirm (with Save-as-preset) only when non-managed edits would be reset.
-  const requestBackToStandard = () => {
-    if (!tm.selectedTrack || !hasNonManagedEdits(tm.selectedSettings)) {
-      returnToStandard();
-      return;
-    }
-    setReturnConfirm(true);
-  };
 
   return (
     <div className="app-root">
@@ -115,7 +91,7 @@ function App() {
         onOpenHelp={() => setChromePanel("help")}
         viewMode={view === "advanced" ? "advanced" : "standard"}
         onEnterAdvanced={() => setView("advanced")}
-        onBackToStandard={requestBackToStandard}
+        onBackToStandard={nav.requestBackToStandard}
       />
     <div className={"app" + (view === "standard" ? " app-standard" : "")}>
       {view === "advanced" && (
@@ -223,19 +199,21 @@ function App() {
       {chromePanel === "help" && (
         <HelpPanel onClose={() => setChromePanel(null)} />
       )}
-      {returnConfirm && (
+      {nav.returnConfirmOpen && (
         <BackToStandardConfirm
           saving={tm.savingPreset}
-          onCancel={() => setReturnConfirm(false)}
-          onReset={() => { tm.resetToStandardManaged(); setReturnConfirm(false); returnToStandard(); }}
+          onCancel={nav.cancelReturn}
+          onReset={() => {
+            tm.resetToStandardManaged();
+            nav.completeReturn();
+          }}
           onSaveAsPreset={async (name) => {
             // Only reset + switch if the save actually succeeded — the save
             // is async; never discard the user's edits when the write failed.
             const ok = await tm.saveUserPreset(name);
             if (ok) {
               tm.resetToStandardManaged();
-              setReturnConfirm(false);
-              returnToStandard();
+              nav.completeReturn();
             }
             return ok;
           }}
