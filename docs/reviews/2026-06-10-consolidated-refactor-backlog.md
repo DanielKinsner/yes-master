@@ -223,14 +223,14 @@ table-driven reducer tests covering every (state × action) cell including the
 
 ---
 
-## Parking lot — owner decisions (one line each unlocks)
+## Parking lot — owner decisions (decided 2026-06-09)
 
-| # | Decision | Options |
+| # | Decision | Owner verdict |
 | --- | --- | --- |
-| P1 | Graphify cache portability: tracked path-keyed cache (234 abs-path hits in manifest.json) cannot warm caches on other machines; tracking it was a deliberate 2026-06-09 choice (`c22d71a`) | **(a)** untrack `manifest.json` + `cache/` (~155 files, S) and accept cold rebuilds; **(b)** patch graphify to write repo-relative paths (M/L) |
-| P2 | Engine-adjacent cleanup slice — plans fully written in the Claude survey (F12/F13/F14), byte-identity verification specified; deletes only dead code + its self-tests, but touches engine files and test expectations, so it runs only on explicit approval | **approve** (one line) / **defer** — if approved: F12 `process_sample` delete → F13 `analyze_tracks_core_lite` delete → F14 one-pole/soft-knee hoist (after F12 halves the knee sites) |
-| P3 | AdaptiveReadout debug gate (owner's own TODO, App.tsx:1846-1849; "hide, don't delete" per ADAPTIVE_DSP_NEXT_STEPS.md:63-67) — changes visible UI, so it rides outside refactor batches | pick the flag home: **localStorage UI pref** (suggested) vs UI-state hook; schedule before release gate |
-| P4 | tauri-specta adoption — the long-term bindings answer; a dependency change | **adopt later** / **stay with B2.1 gate** (the dependency-free 90%) |
+| P1 | Graphify cache portability: tracked path-keyed cache (234 abs-path hits in manifest.json) cannot warm caches on other machines; tracking it was a deliberate 2026-06-09 choice (`c22d71a`) | **(a) approved** — untrack `manifest.json` + `cache/` (~155 files), keep graph.json / GRAPH_REPORT.md / labels; accept cold rebuilds |
+| P2 | Engine-adjacent cleanup slice — plans fully written in the Claude survey (F12/F13/F14), byte-identity verification specified | **Deletions only approved** — F12 `process_sample` delete + F13 `analyze_tracks_core_lite` delete; **F14 one-pole/soft-knee hoist deferred** (stays flagged) |
+| P3 | AdaptiveReadout debug gate (owner's own TODO, App.tsx:1846-1849; "hide, don't delete" per ADAPTIVE_DSP_NEXT_STEPS.md:63-67) — changes visible UI, so it rides outside refactor batches | **localStorage UI pref approved** — lands with the Session 4 App.tsx work; readout hidden by default, flag re-enables |
+| P4 | tauri-specta adoption — the long-term bindings answer; a dependency change | **Stays parked** — B2.1 gate is the dependency-free answer for now |
 
 ## Declined (consensus across all docs — do not re-derive)
 
@@ -259,7 +259,8 @@ convention. Engine lock applies throughout.
 | 3 | B3.1 (1–2 commits) | slow fixture lane byte-identical before merge |
 | 4 | B4.1 → B4.2 → B4.3 (3 commits) | npm suites unchanged; visual smoke |
 | 5 | B5.1 (own branch, several commits) | scenarios 1–9 + reducer table green; manual pass of all nav flows |
-| owner-timed | P1–P4 as decided | per-item plans already written |
+| 1 (tail) | P1 cache untrack + P2 approved deletions (F12, F13) | byte-identity SHAs unchanged; clippy clean; bridge lane green |
+| 4 (rider) | P3 AdaptiveReadout localStorage gate | updated positive + new negative test |
 
 Sequencing rationale: pins before movement (B2 guards B3–B5 for free), small
 moves before the big one (B4 shrinks the B5 diff), engine-adjacent only
