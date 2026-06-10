@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -30,9 +32,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -72,7 +76,13 @@ private fun AppRoot(vm: MasteringViewModel = viewModel()) {
     when (val s = state) {
         is UiState.Idle -> ImportHero(onImport = pick)
         is UiState.Working -> WorkingScreen(s.label)
-        is UiState.Ready -> ReadyScreen(s, onMaster = vm::master, onImportOther = pick)
+        is UiState.Ready -> ReadyScreen(
+            s,
+            audition = vm.audition,
+            onChoices = vm::auditionParams,
+            onMaster = vm::master,
+            onImportOther = pick,
+        )
         is UiState.Done -> DoneScreen(s, onAgain = vm::backToReady, onNew = vm::reset)
         is UiState.Error -> ErrorScreen(
             s,
@@ -130,6 +140,8 @@ private fun WorkingScreen(label: String) {
 @Composable
 private fun ReadyScreen(
     ready: UiState.Ready,
+    audition: AuditionController,
+    onChoices: (StandardStyle, StandardLoudness, Float) -> Unit,
     onMaster: (StandardStyle, StandardLoudness, Float) -> Unit,
     onImportOther: () -> Unit,
 ) {
@@ -142,8 +154,17 @@ private fun ReadyScreen(
     var style by rememberSaveable(ready) { mutableStateOf(ready.style) }
     var loudness by rememberSaveable(ready) { mutableStateOf(ready.loudness) }
     var intensity by rememberSaveable(ready) { mutableStateOf(ready.intensity) }
+    val retune = { onChoices(style, loudness, intensity) }
 
-    ScreenColumn {
+    // Scrollable (unlike the other screens): transport + style grid +
+    // loudness + intensity exceed small displays.
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
         Text(ready.displayName, style = MaterialTheme.typography.titleLarge)
         Text(
             "Source  %.1f LUFS · TP %.2f dBTP · LRA %.1f LU".format(
@@ -155,6 +176,8 @@ private fun ReadyScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
+        AuditionCard(audition)
+
         Text("Style", style = MaterialTheme.typography.titleMedium)
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -165,7 +188,7 @@ private fun ReadyScreen(
             items(StandardStyle.entries) { candidate ->
                 val selected = candidate == style
                 Card(
-                    onClick = { style = candidate },
+                    onClick = { style = candidate; retune() },
                     colors = CardDefaults.cardColors(
                         containerColor = if (selected) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.surfaceVariant,
@@ -189,7 +212,7 @@ private fun ReadyScreen(
             StandardLoudness.entries.forEachIndexed { index, candidate ->
                 SegmentedButton(
                     selected = loudness == candidate,
-                    onClick = { loudness = candidate },
+                    onClick = { loudness = candidate; retune() },
                     shape = SegmentedButtonDefaults.itemShape(
                         index = index,
                         count = StandardLoudness.entries.size,
@@ -202,15 +225,109 @@ private fun ReadyScreen(
             "Intensity  ${"%.0f".format(intensity * 100)}%",
             style = MaterialTheme.typography.titleMedium,
         )
-        Slider(value = intensity, onValueChange = { intensity = it })
+        Slider(value = intensity, onValueChange = { intensity = it; retune() })
 
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(8.dp))
         Button(
             onClick = { onMaster(style, loudness, intensity) },
             modifier = Modifier.fillMaxWidth(),
         ) { Text("Create Master") }
         OutlinedButton(onClick = onImportOther, modifier = Modifier.fillMaxWidth()) {
             Text("Import a different track")
+        }
+    }
+}
+
+private fun formatClock(seconds: Double): String {
+    val total = seconds.toInt().coerceAtLeast(0)
+    return "%d:%02d".format(total / 60, total % 60)
+}
+
+/**
+ * Live audition transport: hear Original vs Mastered on one timeline (the
+ * playhead never moves on a switch), with the loudness landing always
+ * applied — what plays here is what Create Master renders.
+ */
+@Composable
+private fun AuditionCard(audition: AuditionController) {
+    val ui by audition.state.collectAsState()
+
+    Card {
+        Column(
+            Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Button(
+                    onClick = audition::togglePlay,
+                    enabled = ui.status == AuditionUi.Status.Ready,
+                ) { Text(if (ui.playing) "Pause" else "Play") }
+                Text(
+                    "${formatClock(ui.positionSeconds)} / ${formatClock(ui.durationSeconds)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (ui.status == AuditionUi.Status.Preparing) {
+                    CircularProgressIndicator(Modifier.height(20.dp))
+                    Text("Preparing…", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            // Local drag state so the thumb tracks the finger; the engine
+            // seeks once on release (applied at the next processed block).
+            var dragValue by remember { mutableStateOf<Float?>(null) }
+            val duration = ui.durationSeconds
+            Slider(
+                value = dragValue
+                    ?: if (duration > 0) (ui.positionSeconds / duration).toFloat() else 0f,
+                onValueChange = { dragValue = it },
+                onValueChangeFinished = {
+                    dragValue?.let { audition.seek(it.toDouble() * duration) }
+                    dragValue = null
+                },
+                enabled = ui.status == AuditionUi.Status.Ready && duration > 0,
+            )
+
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                listOf(false to "Mastered", true to "Original").forEachIndexed { index, (original, label) ->
+                    SegmentedButton(
+                        selected = ui.listeningOriginal == original,
+                        onClick = { audition.setListeningOriginal(original) },
+                        enabled = ui.status == AuditionUi.Status.Ready,
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                    ) { Text(label) }
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Switch(
+                    checked = ui.volumeMatch,
+                    onCheckedChange = { audition.toggleVolumeMatch() },
+                    enabled = ui.status == AuditionUi.Status.Ready,
+                )
+                Text("Volume Match", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.weight(1f))
+                ui.masteredLufs?.let {
+                    Text(
+                        "Lands %.1f LUFS".format(it),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            ui.notice?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

@@ -9,6 +9,10 @@ plugins {
 android {
     namespace = "com.yesmaster.app"
     compileSdk = 35
+    // Pin to the provisioned NDK so AGP's strip step finds llvm-strip
+    // (unset, AGP wants its own default NDK and packages the .so
+    // unstripped — ~5 MB of dead weight in the APK).
+    ndkVersion = "27.2.12479018"
 
     defaultConfig {
         applicationId = "com.yesmaster.app"
@@ -118,6 +122,9 @@ val cargoNdk = tasks.register<Exec>("cargoNdk") {
     commandLine(
         cargoExe, "ndk",
         "-t", "arm64-v8a",
+        // Must match minSdk: cargo-ndk defaults to API 21, whose sysroot
+        // predates libaaudio (API 26+) — the audition link fails without it.
+        "--platform", "29",
         "-o", file("src/main/jniLibs").absolutePath,
         "build", "--release",
     )
@@ -134,6 +141,7 @@ dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
     implementation(composeBom)
     implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")

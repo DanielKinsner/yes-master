@@ -49,10 +49,14 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
     private val imports = ImportRepository(application)
     private val exports = ExportRepository(application)
 
+    /** Live audition for the Ready screen — same Rust chain as the render. */
+    val audition = AuditionController(application, viewModelScope)
+
     private val _state = MutableStateFlow<UiState>(UiState.Idle)
     val state: StateFlow<UiState> = _state
 
     fun importTrack(uri: Uri) {
+        audition.release()
         _state.value = UiState.Working("Importing…")
         viewModelScope.launch {
             val imported = try {
@@ -79,11 +83,13 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
                 Wire.analysis(NativeBridge.analyzeFileJson(sourcePath))
             }
             analysis.error?.let { error(it) }
-            _state.value = UiState.Ready(
+            val ready = UiState.Ready(
                 displayName = displayName,
                 sourcePath = sourcePath,
                 analysis = analysis,
             )
+            _state.value = ready
+            armAudition(ready)
         } catch (e: Exception) {
             _state.value = UiState.Error(
                 message = e.message ?: "Analysis failed",
@@ -93,10 +99,29 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    /** Live-retune the audition chain as the user tweaks the Ready screen. */
+    fun auditionParams(style: StandardStyle, loudness: StandardLoudness, intensity: Float) {
+        audition.updateParams(style.id, intensity, loudness.lufs)
+    }
+
+    private fun armAudition(ready: UiState.Ready) {
+        audition.attach(
+            path = ready.sourcePath,
+            analysisLufs = ready.analysis.lufsIntegrated,
+            preset = ready.style.id,
+            intensity = ready.intensity,
+            lufsTarget = ready.loudness.lufs,
+        )
+    }
+
     fun master(style: StandardStyle, loudness: StandardLoudness, intensity: Float) {
         val ready = (_state.value as? UiState.Ready)
             ?.copy(style = style, loudness = loudness, intensity = intensity)
             ?: return
+        // The render shares the process with the live chain; pausing keeps
+        // the audition handle warm for "Master again" without competing for
+        // the audio path mid-render.
+        audition.pause()
         _state.value = UiState.Working("Mastering…")
         viewModelScope.launch {
             try {
@@ -144,13 +169,24 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun backToReady() {
         when (val s = _state.value) {
-            is UiState.Done -> _state.value = s.previous
-            is UiState.Error -> _state.value = s.previous ?: UiState.Idle
+            is UiState.Done -> {
+                _state.value = s.previous
+                armAudition(s.previous)
+            }
+            is UiState.Error -> {
+                _state.value = s.previous ?: UiState.Idle
+                s.previous?.let(::armAudition)
+            }
             else -> Unit
         }
     }
 
     fun reset() {
+        audition.release()
         _state.value = UiState.Idle
+    }
+
+    override fun onCleared() {
+        audition.release()
     }
 }
