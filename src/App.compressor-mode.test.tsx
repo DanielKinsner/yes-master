@@ -2,11 +2,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  AdvancedPanel,
-  activeModifierChips,
-  activeModifierSummary,
-} from "./App";
+import { AdvancedPanel } from "./App";
 import { ADAPTIVE_STRENGTH_DEFAULT } from "./bindings";
 import type {
   AdvancedSettings,
@@ -144,55 +140,6 @@ afterEach(() => {
 });
 
 describe("AdvancedPanel compressor mode", () => {
-  it("summarizes active modifiers without listing neutral defaults", () => {
-    const chips = activeModifierChips(
-      {
-        ...makeSettings({
-          lufs_offset_db: -20,
-          width: 0.95,
-          compression_density: 0.7,
-          compression_mode: "manual",
-        }),
-        output_gain_db: -6.5,
-        delivery_profile: "custom",
-      },
-      false,
-      true,
-    );
-
-    expect(chips.map((chip) => chip.label)).toEqual([
-      "Output -6.5 dB",
-      "Target -20 LUFS",
-      "Width 0.95",
-      "Compressor Manual",
-      "Preview LUFS On",
-    ]);
-  });
-
-  it("shows no active modifier chips for neutral settings and inactive preview toggles", () => {
-    expect(activeModifierChips(makeSettings(), false, false)).toEqual([]);
-  });
-
-  it("collapses active modifiers to one compact summary for the header", () => {
-    const summary = activeModifierSummary(
-      activeModifierChips(
-        {
-          ...makeSettings({ lufs_offset_db: -20, compression_mode: "manual" }),
-          output_gain_db: -6.5,
-          delivery_profile: "custom",
-        },
-        false,
-        true,
-      ),
-    );
-
-    expect(summary?.label).toBe("Active 4");
-    expect(summary?.title).toContain("Output -6.5 dB");
-    expect(summary?.title).toContain("Target -20 LUFS");
-    expect(summary?.title).toContain("Compressor Manual");
-    expect(summary?.title).toContain("Preview LUFS On");
-  });
-
   it("does not show a reset button on delivery profile", async () => {
     const { container, root } = await renderAdvancedPanel({
       settings: makeSettings(),
