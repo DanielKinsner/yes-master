@@ -26,11 +26,19 @@ phase plans as active spec. Use the current code plus the docs listed below.
 
 ## Current Jump-Fix Queue
 
-1. Warning-aware export review flow.
-2. Compressor mode: Preset / Manual / Off.
-3. Already-mastered input regression matrix using private fixtures.
-4. Realtime sweep verification, then removal of temporary diagnostic counters.
-5. Release-gate cleanup: Rust formatting decision and Clippy install/gate.
+The previous five queue items all shipped — see "Implemented Stabilization
+Slices" in `docs/RELEASE_STABILIZATION.md`. Genuinely open:
+
+1. Manual Listening Gate — normal / already-mastered / long-source sweeps and
+   a clean-vs-warning export comparison, by ear (owner signoff).
+2. Reference Retune listening — aggregate runner completed 2026-05-28;
+   listening notes pending. Oomph is the least-matched preset; listen before
+   changing it.
+3. Already-mastered matrix listening signoff (runner evidence complete).
+4. Album channel-count parity (mono vs stereo tracks) — deferred
+   delivery-format slice.
+5. Refactor backlog execution per
+   `docs/reviews/2026-06-10-consolidated-refactor-backlog.md`.
 
 ## Verification
 
