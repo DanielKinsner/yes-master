@@ -2,10 +2,10 @@ use crate::analysis::analyze_one;
 use crate::engine::mastering_render_to_path;
 use crate::exports::export_checks_for_report;
 use crate::types::{
-    AnalysisResult, CommandError, CommandResult, CompressionMode, ExportReport, MasteringSettings,
-    Preset, QualityCheck, QualityLevel, RenderKind, RenderedMeasurements, TrackId,
+    now_iso, AnalysisResult, CommandError, CommandResult, CompressionMode, ExportReport,
+    MasteringSettings, Preset, QualityCheck, QualityLevel, RenderKind, RenderedMeasurements,
+    TrackId,
 };
-use chrono::SecondsFormat;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Component;
@@ -424,10 +424,6 @@ fn sanitize_path_part(value: &str) -> String {
             }
         })
         .collect()
-}
-
-fn now_iso() -> String {
-    chrono::Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
 }
 
 fn normalized_absolute_path(cwd: &Path, path: &Path) -> PathBuf {
