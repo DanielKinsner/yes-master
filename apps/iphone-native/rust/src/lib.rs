@@ -173,7 +173,10 @@ pub(crate) fn native_adaptive_context_for_path(path: &Path) -> Option<NativeAdap
         .map(|analysis| native_adaptive_context_from_analysis(&analysis))
 }
 
-pub(crate) fn export_settings_for_options(
+/// `pub` (not just crate-visible) since 2026-06-10: the Android bridge crate
+/// consumes this facade as an rlib and asserts the same style→preset parity
+/// fixture against it. Visibility-only change; behavior untouched.
+pub fn export_settings_for_options(
     preset: Option<&str>,
     intensity: f32,
     lufs_target: f32,
