@@ -1,14 +1,16 @@
 use crate::analysis::analyze_one;
 use crate::engine::mastering_render_to_path;
+use crate::evidence_lanes::{
+    csv_escape, export_report_for, normalized_absolute_path, preset_slug,
+    resolve_adaptive_render_settings, sanitize_path_part,
+};
 use crate::exports::export_checks_for_report;
 use crate::types::{
-    now_iso, AnalysisResult, CommandError, CommandResult, CompressionMode, ExportReport,
-    MasteringSettings, Preset, QualityCheck, QualityLevel, RenderKind, RenderedMeasurements,
-    TrackId,
+    now_iso, AnalysisResult, CommandError, CommandResult, CompressionMode, MasteringSettings,
+    Preset, QualityCheck, QualityLevel, RenderKind, TrackId,
 };
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::Component;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -306,62 +308,16 @@ pub fn settings_for_reference_preset(
     source_analysis: &AnalysisResult,
     preset: Preset,
 ) -> MasteringSettings {
-    let mut settings = source_analysis.recommended_universal.clone();
-    settings.preset = preset;
-    settings.volume_match = false;
-    settings.source_lufs_integrated = Some(source_analysis.lufs_integrated);
-    settings.advanced.compression_mode = CompressionMode::Preset;
-    // Resolve the adaptive context the SAME way the app's chain entry does (backend
-    // SourceProfile + gate-aware confidence), so reference tuning measures the app's
-    // chain at any gate state, not full-confidence Tier-1. The source is analyzed with
-    // deep = true (above); while confidence gating is off confidence resolves to None
-    // (byte-identical Tier-1) and tracks the app automatically once enabled.
-    settings.advanced.source_profile = crate::types::SourceProfile::from_analysis(source_analysis);
-    crate::profile_store::apply_resolved_confidence(
-        &mut settings,
-        source_analysis.deep_analysis.clone(),
-        false,
-    );
-    settings
-}
-
-fn preset_slug(preset: &Preset) -> &'static str {
-    match preset {
-        Preset::Universal => "universal",
-        Preset::Clarity => "clarity",
-        Preset::Tape => "tape",
-        Preset::Oomph => "oomph",
-        _ => "unsupported",
-    }
+    // Shared with fixture_matrix so the two evidence lanes cannot resolve a
+    // different adaptive context than each other (or the app) — see
+    // evidence_lanes::resolve_adaptive_render_settings and the cross-lane
+    // equivalence test there. Reference tuning always measures the preset
+    // compressor path.
+    resolve_adaptive_render_settings(source_analysis, preset, CompressionMode::Preset)
 }
 
 fn option_gap(yes_value: Option<f32>, reference_value: Option<f32>) -> Option<f32> {
     Some(yes_value? - reference_value?)
-}
-
-fn export_report_for(
-    track_id: &TrackId,
-    output_path: &Path,
-    rendered: &RenderedMeasurements,
-    source_format: &str,
-) -> ExportReport {
-    ExportReport {
-        track_id: track_id.clone(),
-        output_path: output_path.to_string_lossy().to_string(),
-        measured_lufs: rendered.lufs_integrated,
-        measured_true_peak_dbtp: rendered.true_peak_dbtp,
-        measured_dynamic_range_lu: rendered.dynamic_range_lu,
-        source_format: source_format.to_string(),
-        destination_format: "wav".to_string(),
-        sample_rate: rendered.sample_rate,
-        bit_depth: rendered.bit_depth,
-        effective_adaptive_strength: rendered.effective_adaptive_strength,
-        source_profile_digest: rendered.source_profile_digest.clone(),
-        confidence_digest: rendered.confidence_digest.clone(),
-        // Built directly from RenderedMeasurements — always rendered output.
-        measurements_are_rendered: true,
-        checks: Vec::new(),
-    }
 }
 
 fn ledger_csv(rows: &[ReferenceLedgerRow]) -> String {
@@ -403,52 +359,6 @@ fn ledger_csv(rows: &[ReferenceLedgerRow]) -> String {
 
 fn csv_option(value: Option<f32>) -> String {
     value.map(|value| format!("{value:.4}")).unwrap_or_default()
-}
-
-fn csv_escape(value: &str) -> String {
-    if value.contains(',') || value.contains('"') || value.contains('\n') || value.contains('\r') {
-        format!("\"{}\"", value.replace('"', "\"\""))
-    } else {
-        value.to_string()
-    }
-}
-
-fn sanitize_path_part(value: &str) -> String {
-    value
-        .chars()
-        .map(|ch| {
-            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
-                ch
-            } else {
-                '-'
-            }
-        })
-        .collect()
-}
-
-fn normalized_absolute_path(cwd: &Path, path: &Path) -> PathBuf {
-    let absolute = if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        cwd.join(path)
-    };
-    lexically_normalize(&absolute)
-}
-
-fn lexically_normalize(path: &Path) -> PathBuf {
-    let mut normalized = PathBuf::new();
-    for component in path.components() {
-        match component {
-            Component::CurDir => {}
-            Component::ParentDir => {
-                if !normalized.pop() {
-                    normalized.push(component.as_os_str());
-                }
-            }
-            other => normalized.push(other.as_os_str()),
-        }
-    }
-    normalized
 }
 
 #[cfg(test)]
@@ -746,14 +656,7 @@ mod tests {
         );
     }
 
-    fn make_deep_for_test() -> crate::deep_analysis::DeepAnalysis {
-        let sr = 48_000_u32;
-        let n = sr as usize * 2;
-        let omega = 2.0 * std::f32::consts::PI * 1000.0 / sr as f32;
-        let samples: Vec<f32> = (0..n).map(|i| 0.3 * (omega * i as f32).sin()).collect();
-        let windows = crate::deep_analysis::scan_windows(&samples, sr, 1);
-        crate::deep_analysis::DeepAnalysis::from_parts([1.0 / 31.0; 31], windows)
-    }
+    use crate::evidence_lanes::test_support::make_deep_for_test;
 
     #[test]
     fn reference_settings_resolve_confidence_like_the_app() {

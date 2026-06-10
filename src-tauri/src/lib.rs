@@ -7,6 +7,7 @@ pub mod decode;
 pub mod deep_analysis;
 pub mod dsp;
 pub mod engine;
+pub(crate) mod evidence_lanes;
 pub mod exports;
 pub mod files;
 pub mod fixture_matrix;

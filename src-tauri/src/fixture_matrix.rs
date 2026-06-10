@@ -1,10 +1,14 @@
 use crate::analysis::analyze_one;
 use crate::engine::mastering_render_to_path;
+use crate::evidence_lanes::{
+    csv_escape, export_report_for, normalized_absolute_path, preset_slug,
+    resolve_adaptive_render_settings, sanitize_path_part,
+};
 use crate::exports::export_checks_for_report;
 use crate::types::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrivateFixtureManifest {
@@ -118,24 +122,11 @@ pub fn settings_for_matrix_case(
     source_analysis: &AnalysisResult,
     case: &MatrixCase,
 ) -> MasteringSettings {
-    let mut settings = source_analysis.recommended_universal.clone();
-    settings.preset = case.preset.clone();
-    settings.volume_match = false;
-    settings.source_lufs_integrated = Some(source_analysis.lufs_integrated);
-    settings.advanced.compression_mode = case.compression_mode;
-    // Resolve the adaptive context the SAME way the app's chain entry does, so this
-    // evidence lane validates the app's chain at any gate state (not full-confidence
-    // Tier-1): the backend SourceProfile plus the gate-aware confidence. The source
-    // is analyzed with deep = true (above), so DeepAnalysis is present; while
-    // confidence gating is off, confidence resolves to None (byte-identical Tier-1)
-    // and once it flips on this lane tracks the app automatically.
-    settings.advanced.source_profile = crate::types::SourceProfile::from_analysis(source_analysis);
-    crate::profile_store::apply_resolved_confidence(
-        &mut settings,
-        source_analysis.deep_analysis.clone(),
-        false,
-    );
-    settings
+    // Shared with reference_tuning so the two evidence lanes cannot resolve a
+    // different adaptive context than each other (or the app) — see
+    // evidence_lanes::resolve_adaptive_render_settings and the cross-lane
+    // equivalence test there.
+    resolve_adaptive_render_settings(source_analysis, case.preset.clone(), case.compression_mode)
 }
 
 pub fn ledger_row_for(
@@ -288,31 +279,6 @@ pub fn run_fixture_matrix(
     })
 }
 
-fn export_report_for(
-    track_id: &TrackId,
-    output_path: &Path,
-    rendered: &RenderedMeasurements,
-    source_format: &str,
-) -> ExportReport {
-    ExportReport {
-        track_id: track_id.clone(),
-        output_path: output_path.to_string_lossy().to_string(),
-        measured_lufs: rendered.lufs_integrated,
-        measured_true_peak_dbtp: rendered.true_peak_dbtp,
-        measured_dynamic_range_lu: rendered.dynamic_range_lu,
-        source_format: source_format.to_string(),
-        destination_format: "wav".to_string(),
-        sample_rate: rendered.sample_rate,
-        bit_depth: rendered.bit_depth,
-        effective_adaptive_strength: rendered.effective_adaptive_strength,
-        source_profile_digest: rendered.source_profile_digest.clone(),
-        confidence_digest: rendered.confidence_digest.clone(),
-        // Built directly from RenderedMeasurements — always rendered output.
-        measurements_are_rendered: true,
-        checks: Vec::new(),
-    }
-}
-
 fn ledger_csv(rows: &[MatrixLedgerRow]) -> String {
     let mut out = String::from(
         "fixture_id,case_name,preset,compression_mode,source_lufs,rendered_lufs,lufs_delta_db,source_true_peak_dbtp,rendered_true_peak_dbtp,source_dynamic_range_lu,rendered_dynamic_range_lu,dynamic_range_delta_lu,warning_codes,source_path,output_path\n",
@@ -340,41 +306,6 @@ fn ledger_csv(rows: &[MatrixLedgerRow]) -> String {
     out
 }
 
-fn csv_escape(value: &str) -> String {
-    if value.contains(',') || value.contains('"') || value.contains('\n') || value.contains('\r') {
-        format!("\"{}\"", value.replace('"', "\"\""))
-    } else {
-        value.to_string()
-    }
-}
-
-fn sanitize_path_part(value: &str) -> String {
-    value
-        .chars()
-        .map(|ch| {
-            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
-                ch
-            } else {
-                '-'
-            }
-        })
-        .collect()
-}
-
-fn preset_slug(preset: &Preset) -> &'static str {
-    match preset {
-        Preset::Universal => "universal",
-        Preset::Clarity => "clarity",
-        Preset::Tape => "tape",
-        Preset::Spatial => "spatial",
-        Preset::Oomph => "oomph",
-        Preset::Warmth => "warmth",
-        Preset::Punch => "punch",
-        Preset::Loud => "loud",
-        Preset::Custom { .. } => "custom",
-    }
-}
-
 fn compression_mode_slug(mode: CompressionMode) -> &'static str {
     match mode {
         CompressionMode::Preset => "preset",
@@ -393,31 +324,6 @@ fn normalized_manifest_dir(cwd: &Path, manifest_path: &Path) -> CommandResult<Pa
                 manifest_path.display()
             ))
         })
-}
-
-fn normalized_absolute_path(cwd: &Path, path: &Path) -> PathBuf {
-    let absolute = if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        cwd.join(path)
-    };
-    lexically_normalize(&absolute)
-}
-
-fn lexically_normalize(path: &Path) -> PathBuf {
-    let mut normalized = PathBuf::new();
-    for component in path.components() {
-        match component {
-            Component::CurDir => {}
-            Component::ParentDir => {
-                if !normalized.pop() {
-                    normalized.push(component.as_os_str());
-                }
-            }
-            other => normalized.push(other.as_os_str()),
-        }
-    }
-    normalized
 }
 
 #[cfg(test)]
@@ -540,14 +446,7 @@ mod tests {
         );
     }
 
-    fn make_deep_for_test() -> crate::deep_analysis::DeepAnalysis {
-        let sr = 48_000_u32;
-        let n = sr as usize * 2;
-        let omega = 2.0 * std::f32::consts::PI * 1000.0 / sr as f32;
-        let samples: Vec<f32> = (0..n).map(|i| 0.3 * (omega * i as f32).sin()).collect();
-        let windows = crate::deep_analysis::scan_windows(&samples, sr, 1);
-        crate::deep_analysis::DeepAnalysis::from_parts([1.0 / 31.0; 31], windows)
-    }
+    use crate::evidence_lanes::test_support::make_deep_for_test;
 
     #[test]
     fn matrix_case_resolves_confidence_like_the_app() {
