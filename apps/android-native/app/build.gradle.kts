@@ -65,9 +65,19 @@ val cargoNdk = tasks.register<Exec>("cargoNdk") {
     inputs.dir(file("../rust/src"))
     inputs.files(file("../rust/Cargo.toml"), file("../rust/Cargo.lock"))
     // The .so statically links the facade + engine — their sources are
-    // inputs too, so touching shared Rust re-triggers this task.
+    // inputs too, so touching shared Rust re-triggers this task. Manifests,
+    // the engine's build script, and the config it embeds count as well: a
+    // feature edit or tauri.conf change that touches no src/ file must not
+    // leave a stale .so reported UP-TO-DATE (adversarial-review finding).
     inputs.dir(file("../../iphone-native/rust/src"))
+    inputs.files(file("../../iphone-native/rust/Cargo.toml"))
     inputs.dir(file("../../../src-tauri/src"))
+    inputs.files(
+        file("../../../src-tauri/Cargo.toml"),
+        file("../../../src-tauri/build.rs"),
+        file("../../../src-tauri/tauri.conf.json"),
+    )
+    inputs.dir(file("../../../src-tauri/capabilities"))
     outputs.dir(file("src/main/jniLibs"))
 
     val pathSeparator = File.pathSeparator
@@ -98,6 +108,12 @@ val cargoNdk = tasks.register<Exec>("cargoNdk") {
     if (ndkDir != null) {
         environment("ANDROID_NDK_HOME", ndkDir)
     }
+
+    // Exec tasks do not fingerprint commandLine/environment, so an NDK or
+    // cargo swap would otherwise leave the task UP-TO-DATE with a .so built
+    // by the old toolchain.
+    inputs.property("ndkDir", ndkDir ?: "")
+    inputs.property("cargo", cargoExe)
 
     commandLine(
         cargoExe, "ndk",
