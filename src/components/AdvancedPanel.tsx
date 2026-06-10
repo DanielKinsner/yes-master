@@ -21,6 +21,7 @@ import {
   loudnessTargetDisplay,
 } from "../lib/effective-settings";
 import { compressorAutoReadouts } from "../lib/compressor-auto";
+import { adaptiveReadoutEnabled } from "../lib/debug-flags";
 
 /// UI_LAYOUT_REVISION_1600x940 L3 — AdvancedPanel renders four
 /// separate rail cards (Delivery Profile, Advanced Controls,
@@ -136,10 +137,10 @@ function DeliveryProfileCard({
 /// Per-axis live readout of what the adaptive guardrails are trimming, shown
 /// directly under the Adapt Strength slider.
 ///
-/// TODO(owner 2026-06-08): this readout is an ITERATION aid — keep it upfront
-/// while calibrating the guardrails by ear, then HIDE it before release-stable
-/// (gate behind a debug/advanced flag rather than delete, so we can re-surface
-/// it during future tuning). Tracked in docs/ADAPTIVE_DSP_NEXT_STEPS.md.
+/// Iteration aid for calibrating the guardrails by ear. Gated behind the
+/// localStorage debug flag (lib/debug-flags.ts) since 2026-06-09 per the
+/// owner TODO — hidden by default for release, never deleted, re-surfaced
+/// for tuning sessions. Tracked in docs/ADAPTIVE_DSP_NEXT_STEPS.md.
 ///
 /// Each row pairs the REALIZED trim
 /// (post character-floor for EQ; raw for comp/width) with the SOURCE context that
@@ -376,7 +377,10 @@ function AdvancedControlsCard({
           >
             Adaptive applies to Track Master export, not Album renders.
           </div>
-        ) : adaptiveReadout?.active ? (
+        ) : adaptiveReadout?.active && adaptiveReadoutEnabled() ? (
+          // Debug-gated (owner TODO 2026-06-08 / backlog P3): hidden by
+          // default for release; the localStorage flag re-surfaces it for
+          // guardrail calibration sessions.
           <AdaptiveReadout readout={adaptiveReadout} />
         ) : null}
       </div>

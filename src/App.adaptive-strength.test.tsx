@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AdvancedPanel } from "./App";
 import { ADAPTIVE_STRENGTH_DEFAULT } from "./bindings";
+import { setAdaptiveReadoutEnabled } from "./lib/debug-flags";
 import type {
   AdvancedSettings,
   GuardrailReadout,
@@ -164,7 +165,47 @@ describe("AdvancedPanel adaptive strength control", () => {
     });
   });
 
-  it("renders the per-axis adaptive trim readout when active", async () => {
+  it("renders the per-axis adaptive trim readout when active and debug-enabled", async () => {
+    const readout: GuardrailReadout = {
+      active: true,
+      strength: 0.6,
+      bright_trim: 0.5,
+      low_trim: 0,
+      density_trim: 0.2,
+      width_trim: 0.15,
+      brightness_share: 0.34,
+      low_share: 0.3,
+      dynamic_range_db: 4,
+      bright_deadband: 0.3,
+      low_deadband: 0.42,
+      width_corr_deadband: 0.5,
+      stereo_correlation: 0.3,
+    };
+    // P3: the readout is a debug-gated iteration aid — enable the flag the
+    // way a calibration session would.
+    setAdaptiveReadoutEnabled(true);
+    const { container, root } = await renderPanel(settings(0.6), vi.fn(), readout);
+    setAdaptiveReadoutEnabled(false);
+    const text = container.textContent ?? "";
+    expect(text).toContain("Adaptive trims");
+    expect(text).toContain("Highs -50%");
+    expect(text).toContain("Comp -20%");
+    expect(text).toContain("Width -15%");
+    // Source context vs deadband is shown so a -0% axis is legible, not "broken".
+    expect(text).toContain("presence+air 0.34 / 0.30");
+    expect(text).toContain("sub+low 0.30 / 0.42");
+    expect(text).toContain("DR 4.0 dB");
+    expect(text).toContain("corr 0.30 / 0.50");
+    // Lows trimmed 0% AND source below its deadband -> flagged "in range".
+    expect(text).toContain("· in range");
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("hides the readout by default even when active (debug flag unset)", async () => {
+    // P3 negative case: release builds must not show the iteration aid —
+    // active guardrails alone are not enough without the localStorage flag.
     const readout: GuardrailReadout = {
       active: true,
       strength: 0.6,
@@ -181,18 +222,7 @@ describe("AdvancedPanel adaptive strength control", () => {
       stereo_correlation: 0.3,
     };
     const { container, root } = await renderPanel(settings(0.6), vi.fn(), readout);
-    const text = container.textContent ?? "";
-    expect(text).toContain("Adaptive trims");
-    expect(text).toContain("Highs -50%");
-    expect(text).toContain("Comp -20%");
-    expect(text).toContain("Width -15%");
-    // Source context vs deadband is shown so a -0% axis is legible, not "broken".
-    expect(text).toContain("presence+air 0.34 / 0.30");
-    expect(text).toContain("sub+low 0.30 / 0.42");
-    expect(text).toContain("DR 4.0 dB");
-    expect(text).toContain("corr 0.30 / 0.50");
-    // Lows trimmed 0% AND source below its deadband -> flagged "in range".
-    expect(text).toContain("· in range");
+    expect(container.textContent ?? "").not.toContain("Adaptive trims");
     await act(async () => {
       root.unmount();
     });
