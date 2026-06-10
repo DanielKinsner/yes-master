@@ -526,6 +526,82 @@ mod tests {
         assert!(json.contains("lufs_integrated"), "got {json}");
     }
 
+    /// Wire-key pin: `NativeAnalysisResult` (NativeMasteringBridge.swift)
+    /// decodes exactly these keys via `convertFromSnakeCase`. A
+    /// `#[serde(rename)]` or field rename on `AnalysisResult` compiles fine
+    /// on both sides and then crashes the app at runtime — this makes it
+    /// fail here instead, on the real FFI wire.
+    #[test]
+    fn analyze_json_carries_every_key_swift_decodes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        write_sine_wav(&input);
+
+        let input_c = CString::new(input.to_string_lossy().as_bytes()).unwrap();
+        let pointer = unsafe { yes_master_native_analyze_file_json(input_c.as_ptr()) };
+        assert!(!pointer.is_null());
+        let json = unsafe {
+            let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
+            yes_master_native_free_string(pointer);
+            value
+        };
+        let payload: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        for key in ["lufs_integrated", "true_peak_dbtp", "dynamic_range_lu"] {
+            assert!(
+                payload[key].is_number(),
+                "analyze JSON lost Swift-decoded key `{key}`: {json}"
+            );
+        }
+    }
+
+    /// Wire-key pin for the render side: `NativeRenderJob` decodes
+    /// `output_paths` + `measurements`, and `NativeRenderedMeasurements`
+    /// decodes the five keys below. Same runtime-crash class as the analyze
+    /// pin above.
+    #[test]
+    fn render_json_carries_every_key_swift_decodes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        let output_dir = tmp.path().join("rendered");
+        write_sine_wav(&input);
+
+        let input_c = CString::new(input.to_string_lossy().as_bytes()).unwrap();
+        let output_dir_c = CString::new(output_dir.to_string_lossy().as_bytes()).unwrap();
+        let pointer = unsafe {
+            yes_master_native_render_master_json(input_c.as_ptr(), output_dir_c.as_ptr())
+        };
+        assert!(!pointer.is_null());
+        let json = unsafe {
+            let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
+            yes_master_native_free_string(pointer);
+            value
+        };
+        let payload: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+        assert!(
+            payload["output_paths"][0].is_string(),
+            "render JSON lost Swift-decoded key `output_paths`: {json}"
+        );
+        let measurements = &payload["measurements"];
+        assert!(
+            measurements.is_object(),
+            "render JSON lost Swift-decoded key `measurements`: {json}"
+        );
+        for key in ["lufs_integrated", "true_peak_dbtp", "dynamic_range_lu"] {
+            assert!(
+                measurements[key].is_number(),
+                "measurements lost Swift-decoded key `{key}`: {json}"
+            );
+        }
+        for key in ["sample_rate", "bit_depth"] {
+            assert!(
+                measurements[key].as_u64().is_some(),
+                "measurements lost Swift-decoded integer key `{key}`: {json}"
+            );
+        }
+    }
+
     #[test]
     fn render_master_json_creates_unique_outputs_in_directory() {
         let tmp = tempfile::tempdir().unwrap();
