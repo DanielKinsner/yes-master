@@ -48,7 +48,9 @@ pub struct WindowMetrics {
     pub stereo_width: f32,
     /// L/R Pearson correlation over the window; `NaN` for mono.
     pub stereo_correlation: f32,
-    /// 3-band tonal shares (low/mid/high) for temporal brightness clumping.
+    /// 3-band tonal shares (low/mid/high). Retained for Phase-A diagnostics
+    /// and historical tests only — Phase-B confidence consumes the 31-band
+    /// detail fields below, not these.
     pub low: f32,
     pub mid: f32,
     pub high: f32,
