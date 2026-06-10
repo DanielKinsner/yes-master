@@ -1901,6 +1901,100 @@ fn default_settings() -> MasteringSettings {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Golden receipt wire-shape pin.
+//
+// fdbcb34 added `measurements_are_rendered` behind `#[serde(default)]` and the
+// addition shipped without any test noticing the wire shape changed — struct
+// literals catch deletions but not defaulted additions. This snapshot makes
+// every field add/remove/rename on the receipt triple an intentional,
+// reviewable diff of tests/golden/export_report.json.
+//
+// To re-bless after an intentional contract change:
+//   $env:YES_MASTER_UPDATE_GOLDEN = "1"; cargo test export_report_wire_shape
+// then review the JSON diff like any other code change.
+// ---------------------------------------------------------------------------
+
+fn golden_receipt_triple() -> serde_json::Value {
+    // Values chosen to be exact in binary (halves/quarters) so the f32→f64
+    // widening through serde_json::Value stays clean in the committed JSON.
+    let measurements = RenderedMeasurements {
+        lufs_integrated: -13.5,
+        true_peak_dbtp: -1.25,
+        dynamic_range_lu: 8.5,
+        sample_rate: 44_100,
+        bit_depth: 24,
+        effective_adaptive_strength: 0.75,
+        source_profile_digest: Some("bass +1.2 | air -0.4".to_string()),
+        confidence_digest: Some("bass 0.9 | tilt 0.6".to_string()),
+    };
+    let report = ExportReport {
+        track_id: TrackId("golden-track".to_string()),
+        output_path: "out/golden-track.master.wav".to_string(),
+        measured_lufs: -13.5,
+        measured_true_peak_dbtp: -1.25,
+        measured_dynamic_range_lu: 8.5,
+        source_format: "wav".to_string(),
+        destination_format: "wav".to_string(),
+        sample_rate: 44_100,
+        bit_depth: 24,
+        effective_adaptive_strength: 0.75,
+        source_profile_digest: Some("bass +1.2 | air -0.4".to_string()),
+        confidence_digest: Some("bass 0.9 | tilt 0.6".to_string()),
+        measurements_are_rendered: true,
+        checks: vec![
+            QualityCheck {
+                level: QualityLevel::Info,
+                code: "export_ok".to_string(),
+                message: "golden info".to_string(),
+            },
+            QualityCheck {
+                level: QualityLevel::Warning,
+                code: "lufs_very_loud".to_string(),
+                message: "golden warning".to_string(),
+            },
+            QualityCheck {
+                level: QualityLevel::Critical,
+                code: "true_peak_high".to_string(),
+                message: "golden critical".to_string(),
+            },
+        ],
+    };
+    let mut settings = default_settings();
+    settings.advanced.lufs_offset_db = Some(-12.5);
+    settings.advanced.compression_density = Some(0.25);
+    serde_json::json!({
+        "rendered_measurements": measurements,
+        "export_report": report,
+        "mastering_settings": settings,
+    })
+}
+
+#[test]
+fn export_report_wire_shape_matches_golden() {
+    let mut actual =
+        serde_json::to_string_pretty(&golden_receipt_triple()).expect("serialize golden triple");
+    actual.push('\n');
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/export_report.json");
+    if std::env::var("YES_MASTER_UPDATE_GOLDEN").as_deref() == Ok("1") {
+        std::fs::create_dir_all(path.parent().unwrap()).expect("create golden dir");
+        std::fs::write(&path, &actual).expect("write golden file");
+        return;
+    }
+    let expected = std::fs::read_to_string(&path)
+        .expect(
+            "tests/golden/export_report.json missing — generate it with \
+             YES_MASTER_UPDATE_GOLDEN=1 and commit it",
+        )
+        .replace("\r\n", "\n");
+    assert_eq!(
+        actual, expected,
+        "ExportReport/RenderedMeasurements/MasteringSettings wire shape drifted \
+         from the committed golden. If the change is intentional, re-bless with \
+         YES_MASTER_UPDATE_GOLDEN=1 and review the JSON diff."
+    );
+}
+
 fn write_sine_wav(path: &Path, sample_rate: u32, duration_sec: f32, freq: f32, channels: u16) {
     write_sine_wav_at_amplitude(path, sample_rate, duration_sec, freq, channels, 0.5);
 }

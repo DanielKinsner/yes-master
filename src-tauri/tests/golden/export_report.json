@@ -1,0 +1,89 @@
+{
+  "export_report": {
+    "bit_depth": 24,
+    "checks": [
+      {
+        "code": "export_ok",
+        "level": "info",
+        "message": "golden info"
+      },
+      {
+        "code": "lufs_very_loud",
+        "level": "warning",
+        "message": "golden warning"
+      },
+      {
+        "code": "true_peak_high",
+        "level": "critical",
+        "message": "golden critical"
+      }
+    ],
+    "confidence_digest": "bass 0.9 | tilt 0.6",
+    "destination_format": "wav",
+    "effective_adaptive_strength": 0.75,
+    "measured_dynamic_range_lu": 8.5,
+    "measured_lufs": -13.5,
+    "measured_true_peak_dbtp": -1.25,
+    "measurements_are_rendered": true,
+    "output_path": "out/golden-track.master.wav",
+    "sample_rate": 44100,
+    "source_format": "wav",
+    "source_profile_digest": "bass +1.2 | air -0.4",
+    "track_id": "golden-track"
+  },
+  "mastering_settings": {
+    "advanced": {
+      "adaptive_strength": null,
+      "bit_depth": null,
+      "ceiling_dbtp": null,
+      "compression_density": 0.25,
+      "compression_high_attack_ms": null,
+      "compression_high_ratio": null,
+      "compression_high_release_ms": null,
+      "compression_high_threshold_db": null,
+      "compression_link_stereo": null,
+      "compression_low_attack_ms": null,
+      "compression_low_ratio": null,
+      "compression_low_release_ms": null,
+      "compression_low_threshold_db": null,
+      "compression_mid_attack_ms": null,
+      "compression_mid_ratio": null,
+      "compression_mid_release_ms": null,
+      "compression_mid_threshold_db": null,
+      "compression_mode": "preset",
+      "lufs_offset_db": -12.5,
+      "presence_air": null,
+      "source_profile": null,
+      "target_sample_rate": null,
+      "warmth": null,
+      "width": null
+    },
+    "album": null,
+    "delivery_profile": "custom",
+    "eq_high_db": 0.0,
+    "eq_high_mid_db": 0.0,
+    "eq_low_db": 0.0,
+    "eq_low_mid_db": 0.0,
+    "eq_mid_db": 0.0,
+    "eq_sparkle_db": 0.0,
+    "eq_sub_db": 0.0,
+    "input_gain_db": 0.0,
+    "intensity": 0.5,
+    "output_gain_db": 0.0,
+    "preset": {
+      "kind": "universal"
+    },
+    "source_lufs_integrated": null,
+    "volume_match": false
+  },
+  "rendered_measurements": {
+    "bit_depth": 24,
+    "confidence_digest": "bass 0.9 | tilt 0.6",
+    "dynamic_range_lu": 8.5,
+    "effective_adaptive_strength": 0.75,
+    "lufs_integrated": -13.5,
+    "sample_rate": 44100,
+    "source_profile_digest": "bass +1.2 | air -0.4",
+    "true_peak_dbtp": -1.25
+  }
+}
