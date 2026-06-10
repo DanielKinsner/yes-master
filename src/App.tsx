@@ -50,6 +50,7 @@ import {
   loudnessTargetDisplay,
 } from "./lib/effective-settings";
 import { compressorAutoReadouts } from "./lib/compressor-auto";
+import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
 import { isToneFlat } from "./lib/tone-reset";
 import "./App.css";
 
@@ -464,73 +465,19 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   return (
     <ChromeDialog title="Settings" eyebrow="Current defaults" onClose={onClose}>
       <div className="settings-grid">
-        <SettingsGroup
-          title="Audio Preview"
-          rows={[
-            ["Preview LUFS", "Off by default"],
-            ["Volume Match", "Session-only audition"],
-            ["Mastered cache", "Prewarm selected tracks when possible"],
-          ]}
-        />
-        <SettingsGroup
-          title="Export Defaults"
-          rows={[
-            ["Delivery profile", "Streaming Universal"],
-            ["Rendered format", "48 kHz, 24-bit WAV"],
-            ["Warnings", "Advisory unless a technical check is critical"],
-          ]}
-        />
-        <SettingsGroup
-          title="Project Session"
-          rows={[
-            ["Recent session", "Autosaved locally"],
-            ["Project files", ".ams.json Save As / Open"],
-            ["Audio files", "Referenced from disk, not embedded"],
-          ]}
-        />
-        <SettingsGroup
-          title="App Info"
-          rows={[
-            ["Build", "Local desktop build"],
-            ["Privacy", "Private audio stays on this machine"],
-          ]}
-        />
+        {SETTINGS_GROUPS.map((group) => (
+          <SettingsGroup key={group.title} title={group.title} rows={group.rows} />
+        ))}
       </div>
     </ChromeDialog>
   );
 }
 
 export function HelpPanel({ onClose }: { onClose: () => void }) {
-  const sections = [
-    [
-      "Import / Analyze",
-      "Import audio files, then let analysis populate loudness, true peak, dynamics, waveform, and source checks before export.",
-    ],
-    [
-      "Original vs Mastered",
-      "Switch between Original and Mastered from the track header; playback keeps the same playhead where the backend can seek.",
-    ],
-    [
-      "Volume Match / Preview LUFS",
-      "Volume Match is for auditioning only. Preview LUFS estimates export loudness during Mastered playback and does not change the source file.",
-    ],
-    [
-      "Delivery Profile / Format",
-      "Delivery Profile owns target LUFS, ceiling, bit depth, and sample rate. Custom lets you choose Source, 44.1 kHz, 48 kHz, or 96 kHz for Track Master export.",
-    ],
-    [
-      "Export Review",
-      "Quality notes stay advisory so you can make creative choices, while technical mismatches such as delivery sample-rate disagreement are marked critical.",
-    ],
-    [
-      "Save / Open Project",
-      "Save Project writes a .ams.json snapshot. Open Project restores tracks and settings, then refreshes analysis and waveforms when the source files are still available.",
-    ],
-  ];
   return (
     <ChromeDialog title="Help" eyebrow="Track Master guide" onClose={onClose}>
       <div className="help-sections">
-        {sections.map(([title, body]) => (
+        {HELP_SECTIONS.map(([title, body]) => (
           <section className="help-section" key={title}>
             <h3>{title}</h3>
             <p>{body}</p>
