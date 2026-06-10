@@ -247,24 +247,41 @@ stands.
 
 ---
 
-## Execution plan
+## Execution record — completed 2026-06-09
 
-Order is dependency-driven; every commit independently green per repo
-convention. Engine lock applies throughout.
+Every batch landed the same day, each commit independently green. See
+`docs/HANDOFF_2026-06-09_REFACTOR_BACKLOG_EXECUTED.md` for the full handoff.
 
-| Session | Work | Gate to proceed |
-| --- | --- | --- |
-| 1 | B0.1 → B0.2, then B1.1–B1.8 (~10 small commits) | full fast lane green at each commit — first time `cargo test` compiles since `fdbcb34` |
-| 2 | B2.1–B2.4 (4 commits) | each gate smoke-tested by mutating one field locally; bridge lane green |
-| 3 | B3.1 (1–2 commits) | slow fixture lane byte-identical before merge |
-| 4 | B4.1 → B4.2 → B4.3 (3 commits) | npm suites unchanged; visual smoke |
-| 5 | B5.1 (own branch, several commits) | scenarios 1–9 + reducer table green; manual pass of all nav flows |
-| 1 (tail) | P1 cache untrack + P2 approved deletions (F12, F13) | byte-identity SHAs unchanged; clippy clean; bridge lane green |
-| 4 (rider) | P3 AdaptiveReadout localStorage gate | updated positive + new negative test |
+| Item | Commit |
+| --- | --- |
+| B0.1 test-lane repair | `90ea3dd` |
+| B0.2 golden receipt snapshot | `d2a1d8f` |
+| B1.1 dead modifier helpers | `bee997c` |
+| B1.2 Waveform shim | `7722dc8` |
+| B1.3 stale dep | `8886fa3` |
+| B1.4 CLAUDE/AGENTS queue refresh | `5ddca56` |
+| B1.5 WindowMetrics comment | `c5b15fb` |
+| B1.6 shared test builder | `298c317` |
+| B1.7 now_iso unification | `01fc2f6` |
+| B1.8 chrome copy lift | `50192b8` |
+| P1 graphify cache untracked (156 files) | `ce7a651` |
+| P2 process_sample deletion | `ceef9cf` |
+| P2 analyze_tracks_core_lite deletion | `cdbbcd6` |
+| B2.1 bindings drift gate | `a42da13` |
+| B2.2 display-mirror tripwires | `9c860bc` |
+| B2.3 bridge wire-key pins | `4cbe82d` |
+| B2.4 bridge-surface canary | `32329c1` |
+| B3.1 evidence_lanes module | `aedbdb2` |
+| B4.1 ExportReceiptCard extraction | `40c0ed4` |
+| B4.2 AdvancedPanel extraction | `3ffb836` |
+| B4.3 pure-parts slice | `dc710d9` |
+| P3 AdaptiveReadout debug gate | `1f258b4` |
+| B5.1 navigation state machine | `7fdae8b` |
 
-Sequencing rationale: pins before movement (B2 guards B3–B5 for free), small
-moves before the big one (B4 shrinks the B5 diff), engine-adjacent only
-behind the P2 gate. Estimated total: ~19 commits + parked items.
+Still parked: P2's F14 one-pole/soft-knee hoist (owner deferred) and P4
+tauri-specta (B2.1 gate is the dependency-free answer). The engine-locked
+never-act list stands untouched.
 
-*Consolidated at HEAD `e63eebf`, 2026-06-09 (doc series dated 2026-06-10).
-Supersedes the recommendation sections of all four source documents.*
+*Consolidated at HEAD `e63eebf`, executed through `7fdae8b`, 2026-06-09
+(doc series dated 2026-06-10). Supersedes the recommendation sections of
+all four source documents.*
