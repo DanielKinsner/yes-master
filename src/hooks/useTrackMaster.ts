@@ -23,10 +23,10 @@ import {
 import { resetToneSettings } from "../lib/tone-reset";
 import { resetToStandardManaged as resetToStandardManagedSettings } from "../lib/standard-managed";
 import { standardExportSettings } from "../lib/standard-export";
+import { buildExportReport } from "../lib/export-receipt";
 import type {
   AdvancedSettings,
   AnalysisResult,
-  ExportReport,
   GuardrailReadout,
   ImportedTrack,
   LoopRegion,
@@ -41,6 +41,28 @@ import type {
   UserPreset,
   WaveformPeaks,
 } from "../bindings";
+
+// The autosave and Save-As paths must serialize the SAME project snapshot.
+// These were two byte-identical literals edited in lockstep — a real
+// autosave/save-as drift hazard once a field lands in only one of them.
+function buildProjectState(args: {
+  mode: ProjectMode;
+  tracks: ImportedTrack[];
+  settingsMap: ProjectState["track_settings"];
+  albumIntent: ProjectState["album_intent"];
+  overrideAlbum: Iterable<TrackId>;
+}): ProjectState {
+  return {
+    schema_version: 1,
+    mode: args.mode,
+    tracks: args.tracks,
+    track_order: args.tracks.map((t) => t.id),
+    track_settings: args.settingsMap,
+    album_intent: args.albumIntent,
+    track_override_album: Array.from(args.overrideAlbum),
+    last_saved_iso: new Date().toISOString(),
+  };
+}
 
 const DEFAULT_SETTINGS: MasteringSettings = {
   preset: { kind: "universal" },
@@ -593,16 +615,13 @@ export function useTrackMaster() {
   useEffect(() => {
     if (!sessionLoaded) return;
     const handle = setTimeout(() => {
-      const state: ProjectState = {
-        schema_version: 1,
+      const state = buildProjectState({
         mode,
         tracks,
-        track_order: tracks.map((t) => t.id),
-        track_settings: settingsMap,
-        album_intent: albumIntent,
-        track_override_album: Array.from(overrideAlbum),
-        last_saved_iso: new Date().toISOString(),
-      };
+        settingsMap,
+        albumIntent,
+        overrideAlbum,
+      });
       api.autosaveSession(state).catch((err) => {
         console.warn("Autosave failed", err);
       });
@@ -1382,35 +1401,14 @@ export function useTrackMaster() {
           chosenOutputPath,
         );
         const outputPath = job.output_paths[0] ?? "";
-        // Codex audit 2026-05-13 P0 fix: the receipt must describe the
-        // rendered output, not the source analysis. The Rust renderer now
-        // measures the post-chain samples and returns them on job.measurements;
-        // we only fall back to the source analysis when a render path didn't
-        // supply measurements (e.g. album masters, which haven't been wired
-        // through this slice yet).
-        const m = job.measurements ?? null;
-        const report: ExportReport = {
-          track_id: selectedTrackId,
-          output_path: outputPath,
-          measured_lufs: m?.lufs_integrated ?? selectedAnalysis.lufs_integrated,
-          measured_true_peak_dbtp:
-            m?.true_peak_dbtp ?? selectedAnalysis.true_peak_dbtp,
-          measured_dynamic_range_lu:
-            m?.dynamic_range_lu ?? selectedAnalysis.dynamic_range_lu,
-          source_format: selectedTrack?.source_format ?? "unknown",
-          destination_format: "wav",
-          sample_rate: m?.sample_rate ?? 44_100,
-          bit_depth: m?.bit_depth ?? exportSettings.advanced.bit_depth ?? 24,
-          // B5 — adaptive traceability, sourced from the backend render (which
-          // resolved the profile; the FE no longer holds it).
-          effective_adaptive_strength: m?.effective_adaptive_strength ?? 0,
-          source_profile_digest: m?.source_profile_digest ?? null,
-          confidence_digest: m?.confidence_digest ?? null,
-          // Gates the target_not_reached check: only a rendered-output
-          // measurement may be compared against the delivery target.
-          measurements_are_rendered: m != null,
-          checks: [],
-        };
+        const report = buildExportReport({
+          trackId: selectedTrackId,
+          outputPath,
+          job,
+          sourceAnalysis: selectedAnalysis,
+          sourceFormat: selectedTrack?.source_format ?? "unknown",
+          exportSettings,
+        });
         const checks = await api.runExportChecks(report, selectedAnalysis, exportSettings);
         setLastExportReceipt({
           trackId: selectedTrackId,
@@ -1914,16 +1912,13 @@ export function useTrackMaster() {
         setProjectFeedback({ tone: "info", message: "Save project canceled." });
         return;
       }
-      const state: ProjectState = {
-        schema_version: 1,
+      const state = buildProjectState({
         mode,
         tracks,
-        track_order: tracks.map((t) => t.id),
-        track_settings: settingsMap,
-        album_intent: albumIntent,
-        track_override_album: Array.from(overrideAlbum),
-        last_saved_iso: new Date().toISOString(),
-      };
+        settingsMap,
+        albumIntent,
+        overrideAlbum,
+      });
       await api.saveProject(path, state);
       setError(null);
       setProjectFeedback({
