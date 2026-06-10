@@ -37,8 +37,11 @@ Slices" in `docs/RELEASE_STABILIZATION.md`. Genuinely open:
 3. Already-mastered matrix listening signoff (runner evidence complete).
 4. Album channel-count parity (mono vs stereo tracks) — deferred
    delivery-format slice.
-5. Refactor backlog execution per
-   `docs/reviews/2026-06-10-consolidated-refactor-backlog.md`.
+
+The refactor backlog (former item 5) was executed in full on 2026-06-09 —
+see the execution record at the end of
+`docs/reviews/2026-06-10-consolidated-refactor-backlog.md`. Only P2's
+one-pole/soft-knee hoist (owner-deferred) and P4 tauri-specta stay parked.
 
 ## Verification
 
@@ -71,13 +74,18 @@ cargo test
 The Android bridge (`apps/android-native/rust`) re-uses the same shared crate
 AND the iPhone facade crate as an rlib. When you touch shared crate types,
 the facade, or the android crate, run its lane too (host tests + arm64
-cross-check; needs the Android NDK from docs/ANDROID_NATIVE_SPEC.md A0):
+cross-check; needs the toolchain from docs/ANDROID_NATIVE_SPEC.md "Build
+prerequisites" — JDK 17 on JAVA_HOME, SDK+NDK r27.2 via local.properties or
+ANDROID_HOME, rust android targets, cargo-ndk ≥ 3.5.6):
 
 ```powershell
 cd apps/android-native/rust
 cargo test
-cargo ndk -t arm64-v8a check
+cargo ndk -t arm64-v8a --platform 29 check
 ```
+
+`--platform 29` matches minSdk; cargo-ndk's default API 21 sysroot predates
+libaaudio, so the audition link fails without it.
 
 Use the slow fixture lane before DSP/export merges:
 

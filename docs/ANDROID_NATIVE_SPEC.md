@@ -116,6 +116,17 @@ sample_rate / measure_landing / destroy.
 - **Owner QA here**: latency/buffer feel on your physical device(s); this is
   the only by-ear item in the whole project.
 
+**As built (2026-06-10):** AAudio direct (the risk-#2 fallback) instead of
+oboe — the NDK's stable C API needs no cmake/C++ build and zero new Rust
+deps; the stream requests the SOURCE sample rate (chain coefficients are
+computed for it — parity) and lets the OS resample. "Preview LUFS" shipped
+as desktop-Standard's forced-WYSIWYG landing (measure → always apply,
+250 ms settle debounce — the exact iPhone shape), so Volume Match is the
+only audition toggle and the desktop mutual-exclusion rule cannot be
+violated. VolumeMatch.swift's mirror-map question resolved: it is math, so
+it now lives in Rust (`audition::volume_match_linear_gain`, pinned against
+the Swift formula); Kotlin only picks which side is being heard.
+
 ### A4 — Pins + polish (ongoing, slice-sized like the iPhone branches)
 - Kotlin-side wire-key tests (mirror of `NativeMasteringBridge` decode pins).
 - Receipt polish, error states (missing file, unsupported format, storage
@@ -173,8 +184,10 @@ A0–A2 completed 2026-06-10 on `feat/android-native` (A0 `96ebcef`, A1
 - iPhone facade touch: one visibility-only change
   (`export_settings_for_options` `pub(crate)` → `pub`) so the android crate
   can assert the parity fixture; iPhone lane re-verified green.
-- Deliverable: `gradlew assembleDebug` → 31.5 MB arm64 debug APK
-  (engine statically linked, 4.3 MB `.so`, zero Android permissions).
+- Deliverable: `gradlew assembleDebug` → 25.9 MB arm64 debug APK
+  (engine statically linked, 4.3 MB `.so`, zero requested Android
+  permissions). The 31.5 MB first reported was measured before the
+  packaging excludes dropped the two stray cdylibs.
 - Pins landed: analyze/render wire-key tests (Kotlin-decoded keys),
   parity-fixture third (Rust) and fourth (Kotlin JVM) assert-sides,
   wire-samples drift gate consumed by the Gson models.
@@ -184,4 +197,39 @@ A0–A2 completed 2026-06-10 on `feat/android-native` (A0 `96ebcef`, A1
 
 Sideload: `apps/android-native/gradlew assembleDebug` →
 `app/build/outputs/apk/debug/app-debug.apk` → enable "install unknown
-apps" on the phone, copy, tap. Next phase: A3 live audition (oboe).
+apps" on the phone, copy, tap.
+
+Build prerequisites on a fresh machine (the A0–A2 toolchain lived in the
+original build environment, NOT necessarily yours — re-provisioned on the
+owner's Windows machine 2026-06-10): JDK 17 on `JAVA_HOME`, Android SDK
+(platform 35, build-tools 35) + NDK r27.2 with `sdk.dir` in
+`apps/android-native/local.properties` (gitignored) or `ANDROID_HOME`,
+rust targets `aarch64-linux-android`/`x86_64-linux-android`, and
+**cargo-ndk ≥ 3.5.6** — the 16 KB page alignment Android 15+ requires is
+supplied by cargo-ndk's default linker flag, not by NDK r27 itself.
+
+## A3 execution record (2026-06-10)
+
+Landed in four slices on `main` after an adversarial review of A0–A2
+closed 7 confirmed findings (JNI panic guards, truthful MediaStore
+receipt, IS_PENDING finalize guard, rememberSaveable choices, gradlew
+file mode, cargoNdk input coverage, stale APK size):
+
+- Facade: `live_stream` goes `pub` (second visibility-only change; iPhone
+  lane re-verified green).
+- `audition` module: AuditionEngine over the shared LiveStream — UI ops
+  serialized behind one mutex, start() snaps controls per the facade
+  contract, Volume Match math single-sourced in Rust. 11 host tests.
+- `aaudio` module: ~100-line FFI shim, low-latency float, error callback
+  flags a lost stream for rebuild-on-start.
+- Kotlin: AuditionBridge + AuditionController (audio focus, becoming-noisy
+  pause, 10 Hz position poll, EOF auto-pause/restart-from-top, 250 ms
+  landing debounce) + transport card on the Ready screen. JVM tests pin
+  the side-selection/epsilon logic and the landing wire decode.
+
+Known A2/A3 limitation (A4 backlog): no process-death story — a render
+killed in the background is lost (no SavedStateHandle/WorkManager), and
+session state resets to Idle on relaunch.
+
+**Owner QA still pending (D4):** latency/buffer feel on hardware — the
+only by-ear item. Functional flow verified by tests + emulator-free lanes.
