@@ -16,35 +16,16 @@ use yes_master_lib::album;
 use yes_master_lib::album_render::render_album_plan_impl;
 use yes_master_lib::engine::{self, AlbumPlanRenderRequest, AlbumTrackRenderInput};
 use yes_master_lib::types::{
-    AdvancedSettings, AlbumArc, AlbumArcKind, AlbumCharacter, AnalysisResult, DeliveryProfile,
-    InferenceConfidence, MasteringSettings, Preset, SpectralBalance, TrackId, TrackRole,
-    ISO_PLACEHOLDER,
+    AlbumArc, AlbumArcKind, AlbumCharacter, AnalysisResult, InferenceConfidence, SpectralBalance,
+    TrackId, TrackRole, ISO_PLACEHOLDER,
 };
 
 const SR_HZ: u32 = 48_000;
 const TRACK_DURATION_SEC: f32 = 2.0;
 const STEREO: u16 = 2;
 
-fn default_master_settings() -> MasteringSettings {
-    MasteringSettings {
-        preset: Preset::Universal,
-        intensity: 0.5,
-        eq_sub_db: 0.0,
-        eq_low_db: 0.0,
-        eq_low_mid_db: 0.0,
-        eq_mid_db: 0.0,
-        eq_high_mid_db: 0.0,
-        eq_high_db: 0.0,
-        eq_sparkle_db: 0.0,
-        volume_match: false,
-        source_lufs_integrated: None,
-        input_gain_db: 0.0,
-        output_gain_db: 0.0,
-        delivery_profile: DeliveryProfile::Custom,
-        album: None,
-        advanced: AdvancedSettings::default(),
-    }
-}
+mod common;
+use common::default_master_settings;
 
 fn analysis_for(id: &str, energy: f32, transient: f32) -> AnalysisResult {
     AnalysisResult {

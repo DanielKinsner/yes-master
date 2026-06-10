@@ -2,6 +2,9 @@ use std::path::{Path, PathBuf};
 
 use yes_master_lib::*;
 
+mod common;
+use common::default_master_settings;
+
 #[test]
 fn position_nudge_promotes_unsure_first_and_last() {
     let mut first = stub_analysis_with(TrackRole::AlbumTrack, InferenceConfidence::Unsure);
@@ -56,7 +59,7 @@ fn stub_analysis_with(role: TrackRole, confidence: InferenceConfidence) -> Analy
         },
         transient_density: 0.5,
         stereo_width: 0.5,
-        recommended_universal: default_settings(),
+        recommended_universal: default_master_settings(),
         measured_at_iso: "2026-05-11T00:00:00Z".to_string(),
         inferred_role: Some(role),
         role_confidence: Some(confidence),
@@ -402,7 +405,7 @@ fn mastering_render_processes_real_fixture_if_present() {
     let job = engine::mastering_render(
         TrackId("real-render".to_string()),
         &abs,
-        &default_settings(),
+        &default_master_settings(),
         tmp.path(),
         RenderKind::Master,
     )
@@ -553,7 +556,7 @@ async fn phase_12_1_real_fixture_metering_snapshot() {
     let job = engine::mastering_render(
         t.id.clone(),
         &abs,
-        &default_settings(),
+        &default_master_settings(),
         tmp.path(),
         RenderKind::Master,
     )
@@ -695,7 +698,7 @@ async fn run_export_checks_criticals_on_requested_sample_rate_mismatch() {
         measurements_are_rendered: true,
         checks: Vec::new(),
     };
-    let mut settings = default_settings();
+    let mut settings = default_master_settings();
     settings.delivery_profile = DeliveryProfile::StreamingUniversal;
     let checks = exports::run_export_checks(report, None, Some(settings))
         .await
@@ -784,7 +787,7 @@ fn mastering_render_writes_processed_wav() {
     let job = engine::mastering_render(
         TrackId("test-master".to_string()),
         &in_path,
-        &default_settings(),
+        &default_master_settings(),
         tmp.path(),
         RenderKind::Master,
     )
@@ -815,7 +818,7 @@ fn mastering_render_writes_to_explicit_output_path() {
     let job = engine::mastering_render_to_path(
         TrackId("explicit-output".to_string()),
         &in_path,
-        &default_settings(),
+        &default_master_settings(),
         tmp.path(),
         RenderKind::Master,
         &chosen_path,
@@ -847,7 +850,7 @@ fn rendered_measurements_reflect_landed_output_not_source() {
     // source ~7 LU above the streaming target so attenuation must fire.
     write_sine_wav_at_amplitude(&in_path, 44_100, 3.0, 1_000.0, 2, 0.5);
 
-    let mut settings = default_settings();
+    let mut settings = default_master_settings();
     settings.delivery_profile = types::DeliveryProfile::StreamingUniversal;
 
     let job = engine::mastering_render(
@@ -900,7 +903,7 @@ fn export_receipt_records_adaptive_traceability_b5() {
     let in_path = tmp.path().join("adaptive.wav");
     write_sine_wav(&in_path, 44_100, 1.0, 440.0, 2);
 
-    let mut settings = default_settings();
+    let mut settings = default_master_settings();
     settings.advanced.adaptive_strength = Some(1.0);
     settings.advanced.source_profile = Some(SourceProfile {
         spectral_6: SpectralBalance6 {
@@ -986,7 +989,7 @@ fn mastering_render_creates_unique_paths_on_collision() {
     let first = engine::mastering_render(
         TrackId("test-collision".to_string()),
         &in_path,
-        &default_settings(),
+        &default_master_settings(),
         tmp.path(),
         RenderKind::Master,
     )
@@ -994,7 +997,7 @@ fn mastering_render_creates_unique_paths_on_collision() {
     let second = engine::mastering_render(
         TrackId("test-collision".to_string()),
         &in_path,
-        &default_settings(),
+        &default_master_settings(),
         tmp.path(),
         RenderKind::Master,
     )
@@ -1018,19 +1021,19 @@ fn presets_produce_distinct_chain_coefficients() {
     use yes_master_lib::dsp::ChainCoeffs;
     let sample_rate = 44_100;
 
-    let mut universal = default_settings();
+    let mut universal = default_master_settings();
     universal.preset = Preset::Universal;
 
-    let mut clarity = default_settings();
+    let mut clarity = default_master_settings();
     clarity.preset = Preset::Clarity;
 
-    let mut tape = default_settings();
+    let mut tape = default_master_settings();
     tape.preset = Preset::Tape;
 
-    let mut oomph = default_settings();
+    let mut oomph = default_master_settings();
     oomph.preset = Preset::Oomph;
 
-    let mut loud = default_settings();
+    let mut loud = default_master_settings();
     loud.preset = Preset::Loud;
 
     let cu = ChainCoeffs::from_settings(sample_rate, &universal);
@@ -1125,7 +1128,7 @@ fn presets_produce_distinct_chain_coefficients() {
     // Phase A2 specifically: heavy presets (Punch / Loud / Oomph) carry
     // negative low_mid gain (the mud-zone cut) where Universal sits at 0 dB.
     // Verify the new 400 Hz band differentiates Punch from Universal.
-    let mut punch = default_settings();
+    let mut punch = default_master_settings();
     punch.preset = Preset::Punch;
     let cp = ChainCoeffs::from_settings(sample_rate, &punch);
     let cu_lowmid_400 = magnitude_db_at(&cu.low_mid, 400.0, sample_rate as f32);
@@ -1167,7 +1170,7 @@ fn input_and_output_gain_modify_chain_coefficients() {
     use yes_master_lib::dsp::ChainCoeffs;
     let sample_rate = 44_100;
 
-    let mut neutral = default_settings();
+    let mut neutral = default_master_settings();
     neutral.preset = Preset::Universal;
     neutral.intensity = 0.5;
 
@@ -1218,10 +1221,10 @@ fn input_and_output_gain_modify_chain_coefficients() {
 fn intensity_scales_preset_character() {
     use yes_master_lib::dsp::ChainCoeffs;
     let sample_rate = 44_100;
-    let mut low_intensity = default_settings();
+    let mut low_intensity = default_master_settings();
     low_intensity.preset = Preset::Tape;
     low_intensity.intensity = 0.0;
-    let mut high_intensity = default_settings();
+    let mut high_intensity = default_master_settings();
     high_intensity.preset = Preset::Tape;
     high_intensity.intensity = 1.0;
 
@@ -1246,7 +1249,7 @@ fn intensity_scales_preset_character() {
 
 #[test]
 fn dsp_chain_applies_input_gain_at_default_intensity() {
-    let settings = default_settings();
+    let settings = default_master_settings();
     let mut chain = yes_master_lib::dsp::MasteringChain::new(44_100, 1, &settings);
     // Generate ~46 ms of audio (2048 samples) so we comfortably clear the
     // limiter's 3 ms lookahead warmup.
@@ -1360,7 +1363,7 @@ fn limiter_catches_lagrange_intersample_peak() {
     // Samples [a, b, c, d] = [0, X, X, 0] -> midpoint(b,c) = 0.5625*X + 0.5625*X
     // = 1.125 * X. For X = 0.85 the midpoint reaches 0.956 (above the -1 dBFS
     // ceiling of ~0.891) — yet every individual sample stays under the ceiling.
-    let mut settings = default_settings();
+    let mut settings = default_master_settings();
     // Skip the chain's gain stage so we test the limiter alone. Set intensity
     // to zero and use the Universal preset so input gain is the preset's small
     // base (~1.5 dB at intensity 0). The signal already crosses the threshold
@@ -1391,7 +1394,7 @@ fn limiter_catches_lagrange_intersample_peak() {
 
 #[test]
 fn limiter_keeps_loud_signal_under_ceiling() {
-    let mut settings = default_settings();
+    let mut settings = default_master_settings();
     settings.advanced.ceiling_dbtp = Some(-1.0);
     settings.intensity = 1.0; // push the input gain hard
     let mut chain = yes_master_lib::dsp::MasteringChain::new(44_100, 1, &settings);
@@ -1422,13 +1425,13 @@ fn limiter_keeps_loud_signal_under_ceiling() {
 
 #[test]
 fn dsp_low_shelf_boost_raises_low_frequency_energy() {
-    let mut settings = default_settings();
+    let mut settings = default_master_settings();
     settings.eq_low_db = 6.0;
     let mut chain = yes_master_lib::dsp::MasteringChain::new(44_100, 1, &settings);
     let low_freq_signal: Vec<f32> = (0..4_096)
         .map(|i| 0.2 * (i as f32 / 44_100.0 * 2.0 * std::f32::consts::PI * 80.0).sin())
         .collect();
-    let baseline_chain_settings = default_settings();
+    let baseline_chain_settings = default_master_settings();
     let mut baseline_chain =
         yes_master_lib::dsp::MasteringChain::new(44_100, 1, &baseline_chain_settings);
     let mut boosted = low_freq_signal.clone();
@@ -1466,14 +1469,14 @@ fn user_presets_save_list_delete_roundtrip() {
         id: "preset-1".to_string(),
         name: "My Loud".to_string(),
         kind: PresetKind::Track,
-        settings: default_settings(),
+        settings: default_master_settings(),
         created_at_iso: "2026-05-11T00:00:00Z".to_string(),
     };
     let p2 = UserPreset {
         id: "preset-2".to_string(),
         name: "Acoustic Light".to_string(),
         kind: PresetKind::Album,
-        settings: default_settings(),
+        settings: default_master_settings(),
         created_at_iso: "2026-05-11T00:00:01Z".to_string(),
     };
     settings::write_presets(&path, &[p1.clone(), p2.clone()]).expect("write");
@@ -1498,7 +1501,7 @@ fn session_write_and_read_roundtrips() {
     let path = tmp.path().join("session.json");
 
     let mut track_settings = std::collections::HashMap::new();
-    track_settings.insert("alpha".to_string(), default_settings());
+    track_settings.insert("alpha".to_string(), default_master_settings());
 
     let state = ProjectState {
         schema_version: 1,
@@ -1514,7 +1517,7 @@ fn session_write_and_read_roundtrips() {
         }],
         track_order: vec![TrackId("alpha".to_string())],
         track_settings,
-        album_intent: Some(default_settings()),
+        album_intent: Some(default_master_settings()),
         track_override_album: vec![TrackId("alpha".to_string())],
         last_saved_iso: Some("2026-05-11T12:00:00Z".to_string()),
     };
@@ -1573,7 +1576,7 @@ fn lufs_target_attenuates_loud_render_to_target() {
     // attenuation that we can measure cleanly.
     write_sine_wav(&src, 44_100, 3.0, 1_000.0, 2);
 
-    let mut settings = default_settings();
+    let mut settings = default_master_settings();
     settings.advanced.lufs_offset_db = Some(-28.0);
 
     let job = engine::mastering_render(
@@ -1619,7 +1622,7 @@ fn lufs_target_pushes_upward_when_headroom_allows() {
     // Baseline: render with NO target so the chain produces its natural
     // LUFS. Custom preset + intensity 0 gives minimal coloration; lets
     // the source amplitude dominate the loudness.
-    let mut baseline_settings = default_settings();
+    let mut baseline_settings = default_master_settings();
     baseline_settings.preset = Preset::Custom {
         id: "neutral".to_string(),
     };
@@ -1718,7 +1721,7 @@ fn mastering_render_with_heavy_compression_attenuates_loud_section() {
     let in_path = tmp.path().join("loud_sine.wav");
     write_sine_wav(&in_path, 44_100, 5.0, 1_000.0, 2);
 
-    let mut s0 = default_settings();
+    let mut s0 = default_master_settings();
     s0.preset = Preset::Loud;
     s0.intensity = 0.0;
     s0.advanced.compression_density = Some(0.0);
@@ -1772,7 +1775,7 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         },
         transient_density: 0.5,
         stereo_width: 0.5,
-        recommended_universal: default_settings(),
+        recommended_universal: default_master_settings(),
         measured_at_iso: "2026-05-12T12:00:00Z".to_string(),
         inferred_role: None,
         role_confidence: None,
@@ -1786,7 +1789,7 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         energy_density_score: None,
         deep_analysis: None,
     };
-    let mut settings = default_settings();
+    let mut settings = default_master_settings();
     settings.advanced.compression_density = Some(0.5);
     let report = ExportReport {
         track_id: TrackId("t".to_string()),
@@ -1803,7 +1806,7 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         confidence_digest: None,
         // Fabricated stub measurements, not a render — keeps the
         // rendered-only `target_not_reached` advisory out of these
-        // density-advisory assertions even if default_settings() ever
+        // density-advisory assertions even if default_master_settings() ever
         // gains a delivery target.
         measurements_are_rendered: false,
         checks: Vec::new(),
@@ -1821,7 +1824,7 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
 
     // Manual mode is an explicit compressor decision, so the preset-density
     // advisory should not fire for per-band threshold overrides.
-    let mut settings2 = default_settings();
+    let mut settings2 = default_master_settings();
     settings2.advanced.compression_mode = CompressionMode::Manual;
     settings2.advanced.compression_density = Some(0.5);
     settings2.advanced.compression_mid_threshold_db = Some(-30.0);
@@ -1854,7 +1857,7 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         },
         transient_density: 0.5,
         stereo_width: 0.5,
-        recommended_universal: default_settings(),
+        recommended_universal: default_master_settings(),
         measured_at_iso: "2026-05-12T12:00:00Z".to_string(),
         inferred_role: None,
         role_confidence: None,
@@ -1878,27 +1881,6 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         "manual per-band threshold override should suppress the advisory, got: {:?}",
         checks2.iter().map(|c| &c.code).collect::<Vec<_>>()
     );
-}
-
-fn default_settings() -> MasteringSettings {
-    MasteringSettings {
-        preset: Preset::Universal,
-        intensity: 0.5,
-        eq_sub_db: 0.0,
-        eq_low_db: 0.0,
-        eq_low_mid_db: 0.0,
-        eq_mid_db: 0.0,
-        eq_high_mid_db: 0.0,
-        eq_high_db: 0.0,
-        eq_sparkle_db: 0.0,
-        volume_match: false,
-        source_lufs_integrated: None,
-        input_gain_db: 0.0,
-        output_gain_db: 0.0,
-        delivery_profile: types::DeliveryProfile::Custom,
-        album: None,
-        advanced: AdvancedSettings::default(),
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1960,7 +1942,7 @@ fn golden_receipt_triple() -> serde_json::Value {
             },
         ],
     };
-    let mut settings = default_settings();
+    let mut settings = default_master_settings();
     settings.advanced.lufs_offset_db = Some(-12.5);
     settings.advanced.compression_density = Some(0.25);
     serde_json::json!({
