@@ -1352,7 +1352,7 @@ export function useTrackMaster() {
     } finally {
       setIsRendering(false);
     }
-  }, [selectedTrackId, selectedTrack, selectedSettings, selectedAnalysis, markFresh]);
+  }, [selectedTrackId, selectedTrack, selectedSettings, markFresh]);
 
   const runExport = useCallback(
     async (exportSettings: MasteringSettings) => {
