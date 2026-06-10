@@ -355,9 +355,18 @@ mod tests {
         assert_eq!(heavy.preset, Preset::Oomph);
 
         // Back-compat aliases still resolve.
-        assert_eq!(export_settings_for_options(Some("open"), 0.5, -11.0).preset, Preset::Clarity);
-        assert_eq!(export_settings_for_options(Some("warmth"), 0.5, -11.0).preset, Preset::Warmth);
-        assert_eq!(export_settings_for_options(Some("punch"), 0.5, -11.0).preset, Preset::Punch);
+        assert_eq!(
+            export_settings_for_options(Some("open"), 0.5, -11.0).preset,
+            Preset::Clarity
+        );
+        assert_eq!(
+            export_settings_for_options(Some("warmth"), 0.5, -11.0).preset,
+            Preset::Warmth
+        );
+        assert_eq!(
+            export_settings_for_options(Some("punch"), 0.5, -11.0).preset,
+            Preset::Punch
+        );
 
         let fallback = export_settings_for_options(Some("unknown"), -1.0, -11.0);
         assert_eq!(fallback.preset, Preset::Universal);

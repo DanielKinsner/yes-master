@@ -96,10 +96,7 @@ impl OutputSlot {
                 Err(_) => return false,
             }
         }
-        self.stream
-            .as_ref()
-            .expect("stream ensured above")
-            .start()
+        self.stream.as_ref().expect("stream ensured above").start()
     }
 
     #[cfg(not(target_os = "android"))]
@@ -261,7 +258,12 @@ impl AuditionEngine {
     /// `(linear_gain, mastered_lufs)`; `mastered_lufs` is `NEG_INFINITY`
     /// when unavailable. Slow — call from a background thread. Deliberately
     /// NOT under the UI lock (see the module-level threading contract).
-    pub fn measure_landing(&self, preset: Option<&str>, intensity: f32, lufs_target: f32) -> (f32, f32) {
+    pub fn measure_landing(
+        &self,
+        preset: Option<&str>,
+        intensity: f32,
+        lufs_target: f32,
+    ) -> (f32, f32) {
         let preset_c = preset.and_then(|p| CString::new(p).ok());
         let preset_ptr = preset_c.as_ref().map_or(std::ptr::null(), |p| p.as_ptr());
         let mut mastered_lufs = f32::NEG_INFINITY;
@@ -580,7 +582,10 @@ mod jni_shims {
         _class: JClass,
         handle: jlong,
     ) -> jdouble {
-        catch_panic(|| 0.0, || engine(handle).map_or(0.0, |e| e.position_seconds()))
+        catch_panic(
+            || 0.0,
+            || engine(handle).map_or(0.0, |e| e.position_seconds()),
+        )
     }
 
     #[no_mangle]
@@ -589,7 +594,10 @@ mod jni_shims {
         _class: JClass,
         handle: jlong,
     ) -> jdouble {
-        catch_panic(|| 0.0, || engine(handle).map_or(0.0, |e| e.duration_seconds()))
+        catch_panic(
+            || 0.0,
+            || engine(handle).map_or(0.0, |e| e.duration_seconds()),
+        )
     }
 
     #[no_mangle]
@@ -714,7 +722,10 @@ mod tests {
         engine.fill(&mut out, frames);
         // Past-EOF region is zero-filled and the playhead parks at duration.
         let tail = &out[2_000 * engine.channels()..];
-        assert!(tail.iter().all(|s| s.abs() < 1e-6), "EOF tail must be silent");
+        assert!(
+            tail.iter().all(|s| s.abs() < 1e-6),
+            "EOF tail must be silent"
+        );
         assert!((engine.position_seconds() - engine.duration_seconds()).abs() < 1e-6);
     }
 

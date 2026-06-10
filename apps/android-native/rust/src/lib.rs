@@ -74,7 +74,9 @@ pub mod inner {
         }
         // SAFETY: the facade allocated this CString and we free it through
         // the facade's own deallocator immediately after copying.
-        let value = unsafe { CStr::from_ptr(raw) }.to_string_lossy().into_owned();
+        let value = unsafe { CStr::from_ptr(raw) }
+            .to_string_lossy()
+            .into_owned();
         unsafe { native_bridge::yes_master_native_free_string(raw) };
         value
     }
@@ -86,7 +88,9 @@ pub mod inner {
     pub fn bridge_version() -> String {
         let ptr = native_bridge::yes_master_native_bridge_version();
         // SAFETY: static NUL-terminated string owned by the facade.
-        unsafe { CStr::from_ptr(ptr) }.to_string_lossy().into_owned()
+        unsafe { CStr::from_ptr(ptr) }
+            .to_string_lossy()
+            .into_owned()
     }
 
     pub fn supports_import_extension(extension: &str) -> bool {
@@ -121,9 +125,7 @@ pub mod inner {
             return json_error("output dir contains an interior NUL byte");
         };
         let preset_c = preset.and_then(|p| CString::new(p).ok());
-        let preset_ptr = preset_c
-            .as_ref()
-            .map_or(std::ptr::null(), |p| p.as_ptr());
+        let preset_ptr = preset_c.as_ref().map_or(std::ptr::null(), |p| p.as_ptr());
         // SAFETY: all pointers are valid NUL-terminated strings (or null,
         // which the facade treats as "default preset") for the call.
         consume_bridge_string(unsafe {
@@ -153,7 +155,10 @@ mod jni_shims {
         mut env: JNIEnv,
         _class: JClass,
     ) -> jstring {
-        let result = catch_panic(|| "yes-master-bridge/unknown".to_string(), inner::bridge_version);
+        let result = catch_panic(
+            || "yes-master-bridge/unknown".to_string(),
+            inner::bridge_version,
+        );
         to_jstring(&mut env, result)
     }
 
@@ -300,16 +305,15 @@ mod tests {
         let wav = tmp.path().join("source.wav");
         let out = tmp.path().join("rendered");
         write_sine_wav(&wav);
-        let payload: serde_json::Value = serde_json::from_str(
-            &inner::render_master_with_options_json(
+        let payload: serde_json::Value =
+            serde_json::from_str(&inner::render_master_with_options_json(
                 &wav.to_string_lossy(),
                 &out.to_string_lossy(),
                 Some("warm"),
                 0.5,
                 -11.0,
-            ),
-        )
-        .unwrap();
+            ))
+            .unwrap();
         assert!(payload["error"].is_null(), "render errored: {payload}");
         let rendered = payload["output_paths"][0].as_str().expect("output path");
         assert!(Path::new(rendered).exists(), "rendered wav missing");
@@ -318,7 +322,10 @@ mod tests {
             assert!(measurements[key].is_number(), "missing {key}: {payload}");
         }
         for key in ["sample_rate", "bit_depth"] {
-            assert!(measurements[key].as_u64().is_some(), "missing {key}: {payload}");
+            assert!(
+                measurements[key].as_u64().is_some(),
+                "missing {key}: {payload}"
+            );
         }
     }
 
