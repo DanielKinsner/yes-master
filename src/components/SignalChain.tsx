@@ -43,9 +43,11 @@ function presetSaturation(preset: Preset): number {
 }
 
 // Mirrors the per-preset `stereo_width` baselines in
-// src-tauri/src/dsp.rs (PRESET_* calibration). Display-only; kept in sync
-// by hand until the calibration is sourced from Rust (master review §4).
-function presetDefaultWidth(preset: Preset): number {
+// src-tauri/src/dsp.rs (PRESET_* calibration). Display-only; the mirror is
+// tripwired against src/preset-mirrors.json (generated from dsp.rs) in
+// src/lib/preset-mirrors.test.ts, so a retune that forgets this table
+// fails npm test. Exported for that test only.
+export function presetDefaultWidth(preset: Preset): number {
   switch (preset.kind) {
     case "universal":
       return 1.04;

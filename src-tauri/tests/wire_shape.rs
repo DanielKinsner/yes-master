@@ -21,8 +21,8 @@ use yes_master_lib::guardrails::GuardrailReadout;
 use yes_master_lib::types::{
     AdvancedSettings, AlbumArc, AlbumArcKind, AlbumCharacter, AlbumPlan, AlbumTrackEntry,
     AnalysisResult, CompressionMode, InferenceConfidence, JobStatus, PlaybackTick, Preset,
-    RenderJob, RenderKind, RenderedMeasurements, SourceProfile, SpectralBalance,
-    SpectralBalance6, TrackCharacter, TrackId, TrackRole, TransitionSpec,
+    RenderJob, RenderKind, RenderedMeasurements, SourceProfile, SpectralBalance, SpectralBalance6,
+    TrackCharacter, TrackId, TrackRole, TransitionSpec,
 };
 
 mod common;

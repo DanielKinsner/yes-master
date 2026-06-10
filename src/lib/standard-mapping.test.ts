@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Preset } from "../bindings";
+import parity from "../standard-mapping-parity.json";
 import {
   STANDARD_STYLES,
   STANDARD_LOUDNESS,
@@ -72,5 +73,25 @@ describe("standard loudness mapping", () => {
       "medium",
       "high",
     ]);
+  });
+});
+
+// Cross-language pin: the same fixture is asserted by the iPhone bridge test
+// (`standard_style_aliases_match_the_shared_parity_fixture` in
+// apps/iphone-native/rust/src/lib.rs), so the desktop tables and
+// native_preset() cannot drift apart without one side failing.
+describe("standard-mapping-parity.json cross-pin", () => {
+  it("styles match the shared fixture", () => {
+    const fromTables = Object.fromEntries(
+      STANDARD_STYLES.map((s) => [s.id, s.preset.kind]),
+    );
+    expect(fromTables).toEqual(parity.styles);
+  });
+
+  it("loudness steps match the shared fixture (Swift NativeLoudness mirror)", () => {
+    const fromTables = Object.fromEntries(
+      STANDARD_LOUDNESS.map((l) => [l.id, l.lufs]),
+    );
+    expect(fromTables).toEqual(parity.loudness);
   });
 });

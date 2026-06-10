@@ -357,6 +357,36 @@ mod tests {
         assert_eq!(fallback.intensity, 0.0);
     }
 
+    /// Cross-language pin: src/standard-mapping-parity.json is the canonical
+    /// style→preset contract, asserted here AND by
+    /// src/lib/standard-mapping.test.ts on the desktop side, so this
+    /// `native_preset` alias map and the Standard view's tables cannot drift
+    /// apart without one side failing. (The loudness trio in the fixture is
+    /// mapped by Swift's NativeLoudness into the `lufs_target` FFI argument;
+    /// its bridge-side behavior is pinned by the loudness-target test above.)
+    #[test]
+    fn standard_style_aliases_match_the_shared_parity_fixture() {
+        let parity: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../src/standard-mapping-parity.json"))
+                .expect("parse standard-mapping-parity.json");
+        let styles = parity["styles"]
+            .as_object()
+            .expect("styles map in parity fixture");
+        assert!(!styles.is_empty());
+        for (style, expected_kind) in styles {
+            let preset = native_preset(Some(style));
+            let kind = serde_json::to_value(&preset).expect("serialize preset")["kind"]
+                .as_str()
+                .expect("preset kind tag")
+                .to_string();
+            assert_eq!(
+                &kind,
+                expected_kind.as_str().expect("kind string"),
+                "native_preset(\"{style}\") diverged from the shared parity fixture"
+            );
+        }
+    }
+
     #[test]
     fn native_adaptive_context_injects_desktop_profile_fields() {
         let tmp = tempfile::tempdir().unwrap();
