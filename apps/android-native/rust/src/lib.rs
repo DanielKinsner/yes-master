@@ -41,7 +41,17 @@ pub(crate) mod jni_util {
     }
 
     pub(crate) fn from_jstring(env: &mut JNIEnv, value: &JString) -> Option<String> {
-        env.get_string(value).ok().map(|s| s.into())
+        match env.get_string(value) {
+            Ok(s) => Some(s.into()),
+            Err(_) => {
+                // Mirror to_jstring's output-side fix: a failed decode can
+                // leave a Java exception pending, and calling further JNI
+                // functions with one pending is illegal — clear it so the
+                // never-throw contract holds on the input side too.
+                env.exception_clear().ok();
+                None
+            }
+        }
     }
 
     /// Run `f`, mapping a panic to `default()`. A panic must never reach the
@@ -133,7 +143,7 @@ pub mod inner {
 /// failure returns the error-JSON contract rather than throwing.
 mod jni_shims {
     use super::inner;
-    use crate::jni_util::{from_jstring, to_jstring};
+    use crate::jni_util::{catch_panic, from_jstring, to_jstring};
     use jni::objects::{JClass, JString};
     use jni::sys::{jboolean, jfloat, jstring, JNI_FALSE, JNI_TRUE};
     use jni::JNIEnv;
@@ -143,7 +153,8 @@ mod jni_shims {
         mut env: JNIEnv,
         _class: JClass,
     ) -> jstring {
-        to_jstring(&mut env, inner::bridge_version())
+        let result = catch_panic(|| "yes-master-bridge/unknown".to_string(), inner::bridge_version);
+        to_jstring(&mut env, result)
     }
 
     #[no_mangle]
@@ -152,10 +163,14 @@ mod jni_shims {
         _class: JClass,
         extension: JString,
     ) -> jboolean {
-        match from_jstring(&mut env, &extension) {
-            Some(ext) if inner::supports_import_extension(&ext) => JNI_TRUE,
-            _ => JNI_FALSE,
-        }
+        let ext = from_jstring(&mut env, &extension);
+        catch_panic(
+            || JNI_FALSE,
+            || match ext {
+                Some(ext) if inner::supports_import_extension(&ext) => JNI_TRUE,
+                _ => JNI_FALSE,
+            },
+        )
     }
 
     #[no_mangle]
@@ -164,10 +179,14 @@ mod jni_shims {
         _class: JClass,
         path: JString,
     ) -> jstring {
-        let result = match from_jstring(&mut env, &path) {
-            Some(path) => inner::analyze_file_json(&path),
-            None => r#"{"error":"invalid path string"}"#.to_string(),
-        };
+        let path = from_jstring(&mut env, &path);
+        let result = catch_panic(
+            || r#"{"error":"panic during analysis"}"#.to_string(),
+            || match path {
+                Some(path) => inner::analyze_file_json(&path),
+                None => r#"{"error":"invalid path string"}"#.to_string(),
+            },
+        );
         to_jstring(&mut env, result)
     }
 
@@ -190,16 +209,19 @@ mod jni_shims {
         } else {
             from_jstring(&mut env, &preset)
         };
-        let result = match (source, out_dir) {
-            (Some(source), Some(out_dir)) => inner::render_master_with_options_json(
-                &source,
-                &out_dir,
-                preset.as_deref(),
-                intensity,
-                lufs_target,
-            ),
-            _ => r#"{"error":"invalid path strings"}"#.to_string(),
-        };
+        let result = catch_panic(
+            || r#"{"error":"panic during render"}"#.to_string(),
+            || match (source, out_dir) {
+                (Some(source), Some(out_dir)) => inner::render_master_with_options_json(
+                    &source,
+                    &out_dir,
+                    preset.as_deref(),
+                    intensity,
+                    lufs_target,
+                ),
+                _ => r#"{"error":"invalid path strings"}"#.to_string(),
+            },
+        );
         to_jstring(&mut env, result)
     }
 }
