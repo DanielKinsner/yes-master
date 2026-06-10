@@ -7,9 +7,51 @@
 //! boundary. All real logic lives in `inner`, which is plain Rust so the
 //! host test lane covers it without a JVM or a device.
 //!
-//! Live audition (oboe pulling from the facade's live_stream) lands in A3.
+//! Live audition (A3): `audition` drives the facade's `live_stream` (same
+//! chain as desktop/iPhone) and `aaudio` owns the device output stream.
 
 use std::ffi::{c_char, CStr, CString};
+
+#[cfg(target_os = "android")]
+mod aaudio;
+pub mod audition;
+
+/// JNI string helpers shared by the mastering and audition shim modules.
+pub(crate) mod jni_util {
+    use jni::objects::JString;
+    use jni::sys::jstring;
+    use jni::JNIEnv;
+
+    pub(crate) fn to_jstring(env: &mut JNIEnv, value: String) -> jstring {
+        match env.new_string(&value) {
+            Ok(s) => s.into_raw(),
+            Err(_) => {
+                // Result-string allocation failed (realistically: JVM OOM).
+                // Clear the pending Java exception so it cannot propagate
+                // across the boundary — the contract is JSON-or-null, never
+                // a throw — then try the small static error payload. If even
+                // that fails we return null, which the Kotlin wrapper maps
+                // back into the error-JSON contract.
+                env.exception_clear().ok();
+                env.new_string(r#"{"error":"jni string allocation failed"}"#)
+                    .map(|s| s.into_raw())
+                    .unwrap_or(std::ptr::null_mut())
+            }
+        }
+    }
+
+    pub(crate) fn from_jstring(env: &mut JNIEnv, value: &JString) -> Option<String> {
+        env.get_string(value).ok().map(|s| s.into())
+    }
+
+    /// Run `f`, mapping a panic to `default()`. A panic must never reach the
+    /// `extern "system"` boundary — Rust aborts the process on unwind there,
+    /// so a corrupt-file panic deep in the engine would kill the app instead
+    /// of surfacing the error-JSON contract (adversarial-review finding).
+    pub(crate) fn catch_panic<T>(default: impl FnOnce() -> T, f: impl FnOnce() -> T) -> T {
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|_| default())
+    }
+}
 
 /// Plain-Rust core the JNI externs delegate to. Host tests target this
 /// module directly.
@@ -91,31 +133,10 @@ pub mod inner {
 /// failure returns the error-JSON contract rather than throwing.
 mod jni_shims {
     use super::inner;
+    use crate::jni_util::{from_jstring, to_jstring};
     use jni::objects::{JClass, JString};
     use jni::sys::{jboolean, jfloat, jstring, JNI_FALSE, JNI_TRUE};
     use jni::JNIEnv;
-
-    fn to_jstring(env: &mut JNIEnv, value: String) -> jstring {
-        match env.new_string(&value) {
-            Ok(s) => s.into_raw(),
-            Err(_) => {
-                // Result-string allocation failed (realistically: JVM OOM).
-                // Clear the pending Java exception so it cannot propagate
-                // across the boundary — the contract is JSON-or-null, never
-                // a throw — then try the small static error payload. If even
-                // that fails we return null, which the Kotlin wrapper maps
-                // back into the error-JSON contract.
-                env.exception_clear().ok();
-                env.new_string(r#"{"error":"jni string allocation failed"}"#)
-                    .map(|s| s.into_raw())
-                    .unwrap_or(std::ptr::null_mut())
-            }
-        }
-    }
-
-    fn from_jstring(env: &mut JNIEnv, value: &JString) -> Option<String> {
-        env.get_string(value).ok().map(|s| s.into())
-    }
 
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_NativeBridge_bridgeVersionNative(
@@ -183,26 +204,39 @@ mod jni_shims {
     }
 }
 
+/// Shared by this file's tests and the audition module's tests.
 #[cfg(test)]
-mod tests {
-    use super::inner;
+pub(crate) mod test_util {
     use std::path::Path;
 
-    fn write_sine_wav(path: &Path) {
+    pub(crate) fn write_sine_wav(path: &Path, frames: u32, channels: u16, sample_rate: u32) {
         let spec = hound::WavSpec {
-            channels: 2,
-            sample_rate: 44_100,
+            channels,
+            sample_rate,
             bits_per_sample: 16,
             sample_format: hound::SampleFormat::Int,
         };
         let mut writer = hound::WavWriter::create(path, spec).expect("create wav");
-        let omega = 2.0 * std::f32::consts::PI * 440.0 / 44_100.0;
-        for i in 0..(44_100 * 2) {
+        let omega = 2.0 * std::f32::consts::PI * 440.0 / sample_rate as f32;
+        for i in 0..frames {
             let v = (0.4 * (omega * i as f32).sin() * 32_767.0) as i16;
-            writer.write_sample(v).expect("L");
-            writer.write_sample(v).expect("R");
+            for _ in 0..channels {
+                writer.write_sample(v).expect("sample");
+            }
         }
         writer.finalize().expect("finalize");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::inner;
+    use crate::test_util::write_sine_wav as write_sine_wav_with;
+    use std::path::Path;
+
+    fn write_sine_wav(path: &Path) {
+        // 2 s stereo @ 44.1 kHz — what these wire/parity tests always used.
+        write_sine_wav_with(path, 88_200, 2, 44_100);
     }
 
     #[test]

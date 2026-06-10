@@ -10,7 +10,11 @@ use yes_master_lib::{
     RenderKind, SourceProfile, TrackId,
 };
 
-mod live_stream;
+// `pub` so the Android bridge crate (which depends on this facade as an
+// rlib) can drive the same live-audition state via Rust paths instead of
+// duplicating it. Visibility-only: the C ABI and iPhone build are unchanged
+// (same precedent as `export_settings_for_options`).
+pub mod live_stream;
 
 const VERSION: &[u8] = b"yes-master-iphone-native-bridge/0.1.0\0";
 const SUPPORTED_IMPORT_EXTENSIONS: &[&str] = &["wav", "mp3", "m4a", "aac", "flac", "ogg"];
