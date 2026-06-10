@@ -1193,13 +1193,6 @@ function AnalysisSummary({ analysis }: { analysis: AnalysisResult }) {
   );
 }
 
-// Progress surface shown in the waveform deck while a track is prepared.
-// `analyzing` drives a determinate bar from the staged analysis progress
-// (with the current stage label + percent); `loading` shows an indeterminate
-// sweeping bar for the waveform decode (no real fraction available); `idle`
-// is the plain empty state.
-export { WaveformView, WaveformLoading } from "./components/Waveform";
-
 /// UI_LAYOUT_REVISION_1600x940 L1 — slim Transport.
 /// Original/Mastered + Volume Match moved to TrackHeader (their natural
 /// home alongside the track title and analysis chips), so this component

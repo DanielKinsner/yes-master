@@ -2,7 +2,8 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Macros, WaveformLoading, WaveformView } from "./App";
+import { Macros } from "./App";
+import { WaveformLoading, WaveformView } from "./components/Waveform";
 import type { MasteringSettings, WaveformPeaks } from "./bindings";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =

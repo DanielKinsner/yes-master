@@ -3,6 +3,11 @@ import { waveformLoadingView } from "../lib/waveform-progress";
 import { WaveformDbScale } from "./WaveformDbScale";
 import type { LoopRegion, WaveformPeaks } from "../bindings";
 
+// Progress surface shown in the waveform deck while a track is prepared.
+// `analyzing` drives a determinate bar from the staged analysis progress
+// (with the current stage label + percent); `loading` shows an indeterminate
+// sweeping bar for the waveform decode (no real fraction available); `idle`
+// is the plain empty state.
 export function WaveformLoading({
   isAnalyzing,
   isLoadingWaveform,
