@@ -2253,158 +2253,6 @@ impl MasteringChain {
         }
     }
 
-    /// Per-sample API. Bypasses the linked-stereo limiter (which needs a full
-    /// frame to compute peaks). Used only as a legacy path for callers that
-    /// haven't been migrated to `process_frame_inplace`; the soft-clip ceiling
-    /// stays in place as a degraded fallback.
-    pub fn process_sample(&mut self, sample: f32, channel: usize) -> f32 {
-        let idx = if self.states.is_empty() {
-            return sample;
-        } else {
-            channel.min(self.states.len() - 1)
-        };
-        let state = &mut self.states[idx];
-        let mut y = sample * self.coeffs.input_gain_lin;
-        let hp1 = state.sub_hp1.process(&self.coeffs.sub_highpass, y);
-        y = state.sub_hp2.process(&self.coeffs.sub_highpass, hp1);
-        y = state.sub.process(&self.coeffs.sub, y);
-        y = state.low.process(&self.coeffs.low, y);
-        // NOTE: state.low_mid intentionally skipped here. This mirrors the
-        // pre-existing divergence vs process_frame_inplace. Fixing it is a
-        // separate slice with its own byte-identity change accepted explicitly.
-        y = state.mid.process(&self.coeffs.mid, y);
-        y = state.high_mid.process(&self.coeffs.high_mid, y);
-        y = state.high.process(&self.coeffs.high, y);
-        y = state.sparkle.process(&self.coeffs.sparkle, y);
-        y = state.warmth.process(&self.coeffs.warmth, y);
-        y = state.presence_air.process(&self.coeffs.presence_air, y);
-        if self.coeffs.compression_active {
-            let state = &mut self.states[idx];
-            let low_a = state
-                .comp_split
-                .low_lp1
-                .process(&self.coeffs.comp_low_lp, y);
-            let low = state
-                .comp_split
-                .low_lp2
-                .process(&self.coeffs.comp_low_lp, low_a);
-            let m1 = state
-                .comp_split
-                .mid_hp1
-                .process(&self.coeffs.comp_mid_hp, y);
-            let m2 = state
-                .comp_split
-                .mid_hp2
-                .process(&self.coeffs.comp_mid_hp, m1);
-            let m3 = state
-                .comp_split
-                .mid_lp1
-                .process(&self.coeffs.comp_mid_lp, m2);
-            let mid = state
-                .comp_split
-                .mid_lp2
-                .process(&self.coeffs.comp_mid_lp, m3);
-            let h1 = state
-                .comp_split
-                .high_hp1
-                .process(&self.coeffs.comp_high_hp, y);
-            let high = state
-                .comp_split
-                .high_hp2
-                .process(&self.coeffs.comp_high_hp, h1);
-            let bands = [low, mid, high];
-            let band_params: [(f32, f32, f32, f32); 3] = [
-                (
-                    self.coeffs.comp_low_threshold_db,
-                    self.coeffs.comp_low_ratio,
-                    self.coeffs.comp_low_attack_alpha,
-                    self.coeffs.comp_low_release_alpha,
-                ),
-                (
-                    self.coeffs.comp_mid_threshold_db,
-                    self.coeffs.comp_mid_ratio,
-                    self.coeffs.comp_mid_attack_alpha,
-                    self.coeffs.comp_mid_release_alpha,
-                ),
-                (
-                    self.coeffs.comp_high_threshold_db,
-                    self.coeffs.comp_high_ratio,
-                    self.coeffs.comp_high_attack_alpha,
-                    self.coeffs.comp_high_release_alpha,
-                ),
-            ];
-            let makeup_lin = [
-                self.coeffs.comp_low_makeup_lin,
-                self.coeffs.comp_mid_makeup_lin,
-                self.coeffs.comp_high_makeup_lin,
-            ];
-            let knee = self.coeffs.comp_knee_db;
-            let mut sum_y = 0.0f32;
-            for b in 0..3 {
-                let (thr_db, ratio, alpha_a, alpha_r) = band_params[b];
-                let env_ref = match b {
-                    0 => &mut state.comp_low_env,
-                    1 => &mut state.comp_mid_env,
-                    _ => &mut state.comp_high_env,
-                };
-                let detector = bands[b].abs();
-                let alpha = if detector > *env_ref {
-                    alpha_a
-                } else {
-                    alpha_r
-                };
-                *env_ref = alpha * (*env_ref) + (1.0 - alpha) * detector;
-                let env = *env_ref;
-                let env_db = if env <= 1.0e-7 {
-                    -140.0
-                } else {
-                    20.0 * env.log10()
-                };
-                let half_knee = knee * 0.5;
-                let gr_db = if env_db < thr_db - half_knee {
-                    0.0
-                } else if env_db > thr_db + half_knee {
-                    (env_db - thr_db) * (1.0 - 1.0 / ratio)
-                } else {
-                    let x = env_db - (thr_db - half_knee);
-                    let t = x / knee;
-                    let above = (env_db - thr_db) * (1.0 - 1.0 / ratio);
-                    t * t * above.max(0.0)
-                };
-                let g_lin = 10.0_f32.powf(-gr_db.max(0.0) / 20.0);
-                sum_y += bands[b] * g_lin * makeup_lin[b];
-            }
-            y = sum_y;
-        }
-        // Legacy path mirrors process_frame_inplace topology: compressor
-        // first, then transient shaping, so transient lift is not immediately
-        // folded back into compressor gain reduction.
-        if self.coeffs.transient_amount.abs() > 1.0e-5 {
-            let state = &mut self.states[idx];
-            y = process_transient_shaper_sample(
-                y,
-                self.coeffs.transient_amount,
-                &mut state.transient_fast_env,
-                &mut state.transient_slow_env,
-                self.coeffs.transient_fast_attack_alpha,
-                self.coeffs.transient_fast_release_alpha,
-                self.coeffs.transient_slow_attack_alpha,
-                self.coeffs.transient_slow_release_alpha,
-            );
-        }
-        if self.coeffs.saturation_amount > 0.0 {
-            let drive = 1.0 + self.coeffs.saturation_amount * 2.0;
-            y = (y * drive).tanh() / drive.tanh().max(1.0e-3);
-        }
-        let ceiling = self.coeffs.ceiling_lin;
-        if y.abs() > ceiling {
-            let over = y.abs() - ceiling;
-            let shaped = ceiling + over.tanh() * 0.05;
-            y = y.signum() * shaped;
-        }
-        y
-    }
-
     pub fn reset_states(&mut self) {
         for state in self.states.iter_mut() {
             *state = ChannelState::default();
@@ -2657,25 +2505,6 @@ mod tests {
         assert!(
             out < 0.5,
             "negative transient amount should soften an attack, got input 0.5 output {out}"
-        );
-    }
-
-    #[test]
-    fn process_sample_legacy_path_applies_transient_after_compression() {
-        let mut settings = default_master_settings();
-        settings.preset = Preset::Punch;
-        settings.intensity = 0.5;
-        settings.advanced.compression_density = Some(1.0);
-        let mut shaped = MasteringChain::new(48_000, 1, &settings);
-        let mut unshaped = MasteringChain::new(48_000, 1, &settings);
-        unshaped.coeffs.transient_amount = 0.0;
-
-        let shaped_out = shaped.process_sample(0.5, 0);
-        let unshaped_out = unshaped.process_sample(0.5, 0);
-
-        assert!(
-            shaped_out > unshaped_out,
-            "legacy process_sample should apply positive transient shaping after compression; shaped={shaped_out} unshaped={unshaped_out}"
         );
     }
 
@@ -4542,26 +4371,16 @@ mod tests {
         );
     }
 
+    /// The live frame path must apply the low_mid EQ band. (The legacy
+    /// per-sample path that intentionally skipped it was deleted 2026-06-09,
+    /// owner-approved engine-adjacent cleanup; this keeps the positive half
+    /// of that old divergence pin.)
     #[test]
-    fn process_sample_intentionally_skips_low_mid_until_separate_fix_slice() {
+    fn frame_path_applies_low_mid() {
         let mut neutral = default_master_settings();
         neutral.eq_low_mid_db = 0.0;
         let mut boosted = neutral.clone();
         boosted.eq_low_mid_db = 6.0;
-
-        let mut sample_neutral = MasteringChain::new(48_000, 1, &neutral);
-        let mut sample_boosted = MasteringChain::new(48_000, 1, &boosted);
-        let mut sample_max_delta = 0.0_f32;
-        for n in 0..2048 {
-            let x = 0.05 * (2.0 * std::f32::consts::PI * 400.0 * n as f32 / 48_000.0).sin();
-            let a = sample_neutral.process_sample(x, 0);
-            let b = sample_boosted.process_sample(x, 0);
-            sample_max_delta = sample_max_delta.max((a - b).abs());
-        }
-        assert!(
-            sample_max_delta < 1.0e-6,
-            "legacy process_sample should remain unchanged by low_mid until the dedicated fix slice; max_delta={sample_max_delta}"
-        );
 
         let mut frame_neutral = MasteringChain::new(48_000, 1, &neutral);
         let mut frame_boosted = MasteringChain::new(48_000, 1, &boosted);
