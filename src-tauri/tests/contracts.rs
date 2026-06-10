@@ -602,6 +602,7 @@ async fn phase_12_1_real_fixture_metering_snapshot() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        measurements_are_rendered: true,
         checks: Vec::new(),
     };
     let checks = exports::run_export_checks(report, None, None)
@@ -642,6 +643,7 @@ async fn run_export_checks_warns_on_high_true_peak() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        measurements_are_rendered: true,
         checks: Vec::new(),
     };
     let checks = exports::run_export_checks(report, None, None)
@@ -665,6 +667,7 @@ async fn run_export_checks_passes_silently_when_clean() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        measurements_are_rendered: true,
         checks: Vec::new(),
     };
     let checks = exports::run_export_checks(report, None, None)
@@ -689,6 +692,7 @@ async fn run_export_checks_criticals_on_requested_sample_rate_mismatch() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        measurements_are_rendered: true,
         checks: Vec::new(),
     };
     let mut settings = default_settings();
@@ -724,6 +728,7 @@ async fn run_export_checks_warns_on_low_streaming_headroom() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        measurements_are_rendered: true,
         checks: Vec::new(),
     };
     let checks = exports::run_export_checks(report, None, None)
@@ -758,6 +763,7 @@ async fn run_export_checks_streaming_headroom_quiet_at_streaming_ceiling() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        measurements_are_rendered: true,
         checks: Vec::new(),
     };
     let checks = exports::run_export_checks(report, None, None)
@@ -1795,6 +1801,11 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        // Fabricated stub measurements, not a render — keeps the
+        // rendered-only `target_not_reached` advisory out of these
+        // density-advisory assertions even if default_settings() ever
+        // gains a delivery target.
+        measurements_are_rendered: false,
         checks: Vec::new(),
     };
     let checks = exports::run_export_checks(report, Some(analysis), Some(settings))
@@ -1827,6 +1838,7 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        measurements_are_rendered: false,
         checks: Vec::new(),
     };
     let analysis2 = AnalysisResult {
