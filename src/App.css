@@ -5955,3 +5955,21 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
   color: #f3d3d3;
   background: rgba(226, 75, 74, 0.18);
 }
+
+/* "Landing loudness" note: visible while the Mastered audition is still
+   hotter than the loudness target (corrective gain being measured). */
+.landing-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #d9b96b;
+  letter-spacing: 0.02em;
+  animation: landing-note-pulse 1.6s ease-in-out infinite;
+}
+@keyframes landing-note-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-note { animation: none; }
+}
+
