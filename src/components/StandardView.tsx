@@ -25,6 +25,8 @@ import { PresetIcon, PRESET_ACCENT } from "./PresetIcon";
 import { effectiveLoudnessTarget } from "../lib/effective-settings";
 import { standardExportNotes } from "../lib/standard-export";
 import { MasterOutPanel } from "./RightRail";
+import { HintChip } from "./HintChip";
+import { useFirstRunGuide, type FirstRunGuide } from "../hooks/useFirstRunGuide";
 
 type TM = ReturnType<typeof useTrackMaster>;
 
@@ -284,10 +286,12 @@ function useRailSeamAlignment(refs: RailSeamRefs) {
 
 function StandardRightRail({
   tm,
+  guide,
   onEnterAdvanced,
   seamRefs,
 }: {
   tm: TM;
+  guide: FirstRunGuide;
   onEnterAdvanced: () => void;
   seamRefs: RailSeamRefs;
 }) {
@@ -321,12 +325,21 @@ function StandardRightRail({
           <button
             type="button"
             aria-pressed={tm.transport.playbackKind === "master"}
-            className={tm.transport.playbackKind === "master" ? "on" : ""}
+            className={
+              (tm.transport.playbackKind === "master" ? "on" : "") +
+              (guide.step === "flip" ? " guide-pulse" : "")
+            }
             onClick={() => tm.setPlaybackKind("master")}
           >
             Mastered
           </button>
         </div>
+        {guide.step === "flip" && (
+          <HintChip className="hint-chip-flip" onDismiss={guide.dismiss}>
+            Press Play, then flip to <strong>Mastered</strong> to hear the
+            difference.
+          </HintChip>
+        )}
         <MasterOutPanel
           isAnalyzing={tm.isAnalyzing}
           peakDbfs={tm.transport.peakDbfs}
@@ -386,6 +399,10 @@ export function StandardView({
   onEnterAdvanced: () => void;
 }) {
   const s = tm.selectedSettings;
+  const guide = useFirstRunGuide({
+    hasAnalyzedTrack: tm.selectedAnalysis != null,
+    playbackKind: tm.transport.playbackKind,
+  });
   const sourceLufs = tm.selectedAnalysis?.lufs_integrated ?? null;
   // Knob arc follows the active style's tone (Knob's red/gold/cyan are the
   // same hexes as PRESET_ACCENT's oomph/tape/clarity); "blue" when the
@@ -525,6 +542,7 @@ export function StandardView({
 
       <StandardRightRail
         tm={tm}
+        guide={guide}
         onEnterAdvanced={onEnterAdvanced}
         seamRefs={seamRefs}
       />
