@@ -561,3 +561,31 @@ describe("App Standard<->Advanced view transitions", () => {
     });
   });
 });
+
+describe("welcome hero import funnel", () => {
+  it("importing from the hero in an empty Advanced session lands in Standard", async () => {
+    // Owner repro 2026-06-12: last session ended in Advanced, app boots
+    // empty showing the welcome hero inside the Advanced shell; the hero
+    // CTA must funnel into Standard (the default face), not keep Advanced.
+    seedViewMode("advanced");
+    mocks.api.loadRecentSession.mockResolvedValue(null);
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(affordanceText(container)).toBe("‹ Back to Standard");
+    });
+    expect(hasSidebar(container)).toBe(true);
+
+    await click(findButtonByText(container, "Import audio"));
+
+    await waitFor(() => {
+      expect(affordanceText(container)).toBe("Advanced");
+    });
+    expect(hasSidebar(container)).toBe(false);
+    expect(mocks.open).toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+});

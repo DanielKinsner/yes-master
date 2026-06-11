@@ -136,7 +136,18 @@ function App() {
         {tm.selectedTrack ? (
           <TrackMaster tm={tm} />
         ) : (
-          <EmptyState onAdd={tm.openImportDialog} />
+          <EmptyState
+            onAdd={() => {
+              // The welcome hero is the onboarding funnel: importing from
+              // it lands in Standard (the default face) even when the last
+              // session ended in Advanced. With no track loaded the
+              // machine's back-to-standard door is always silent (no
+              // confirm). The pro paths — sidebar "+ Add Tracks", drag-
+              // drop — deliberately keep the current view.
+              nav.requestBackToStandard();
+              void tm.openImportDialog();
+            }}
+          />
         )}
       </main>
       <RightRail
