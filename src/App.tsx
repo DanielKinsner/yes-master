@@ -32,7 +32,7 @@ import type {
 import type { PlaybackKindUI } from "./hooks/useTrackMaster";
 import { LOUDNESS_PROFILES, loudnessTargetDisplay } from "./lib/effective-settings";
 import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
-import { markGuideFinished, resetGuide } from "./lib/first-run-guide";
+import { markGuideFinished, requestGuideReset } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
 import "./App.css";
 
@@ -440,7 +440,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             className="ghost-btn"
-            onClick={() => resetGuide(globalThis.localStorage)}
+            onClick={() => requestGuideReset(globalThis.localStorage)}
           >
             Show first-run tips again
           </button>

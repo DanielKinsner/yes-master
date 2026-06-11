@@ -49,3 +49,12 @@ export function markGuideFinished(
 export function resetGuide(storage: GuideStorage | undefined): void {
   storage?.removeItem(FIRST_RUN_GUIDE_KEY);
 }
+
+/// Fired on window when the user asks to see the tips again, so a mounted
+/// guide revives immediately instead of waiting for the next app launch.
+export const FIRST_RUN_GUIDE_RESET_EVENT = "yes-master:first-run-guide-reset";
+
+export function requestGuideReset(storage: GuideStorage | undefined): void {
+  resetGuide(storage);
+  globalThis.dispatchEvent?.(new Event(FIRST_RUN_GUIDE_RESET_EVENT));
+}

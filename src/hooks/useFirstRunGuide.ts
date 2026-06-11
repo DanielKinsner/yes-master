@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  FIRST_RUN_GUIDE_RESET_EVENT,
   deriveGuideStep,
   guideAlreadyFinished,
   markGuideFinished,
@@ -71,6 +72,20 @@ export function useFirstRunGuide(args: {
     const t = setTimeout(() => setSendOffElapsed(true), SEND_OFF_MS);
     return () => clearTimeout(t);
   }, [step]);
+
+  // Settings' "Show first-run tips again" revives a mounted guide
+  // immediately — without this, the reset only worked after a relaunch.
+  useEffect(() => {
+    const revive = () => {
+      chipWasVisible.current = false;
+      setStarted(true);
+      setFlipped(false);
+      setSendOffElapsed(false);
+      setAdvancedDone(false);
+    };
+    window.addEventListener(FIRST_RUN_GUIDE_RESET_EVENT, revive);
+    return () => window.removeEventListener(FIRST_RUN_GUIDE_RESET_EVENT, revive);
+  }, []);
 
   const dismiss = () => {
     markGuideFinished(storage, "dismissed");

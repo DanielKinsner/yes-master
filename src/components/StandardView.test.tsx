@@ -435,3 +435,22 @@ describe("first-run guide progression", () => {
     await act(async () => root.unmount());
   });
 });
+
+describe("first-run guide live reset", () => {
+  it("Settings reset revives the guide in the running session", async () => {
+    globalThis.localStorage?.setItem(FIRST_RUN_GUIDE_KEY, "done");
+    const tm = fakeTm({
+      transport: { isPlaying: false, currentTimeSec: 0, playbackKind: "source", volumeMatch: false },
+    } as Partial<TM>);
+    const { container, root } = await render(
+      <StandardView tm={tm} onEnterAdvanced={() => {}} />,
+    );
+    expect(container.querySelector(".hint-chip")).toBeNull();
+    await act(async () => {
+      globalThis.localStorage?.removeItem(FIRST_RUN_GUIDE_KEY);
+      window.dispatchEvent(new Event("yes-master:first-run-guide-reset"));
+    });
+    expect(container.querySelector(".hint-chip-flip")).not.toBeNull();
+    await act(async () => root.unmount());
+  });
+});
