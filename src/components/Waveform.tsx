@@ -7,17 +7,10 @@ import {
 } from "react";
 import { waveformLoadingView } from "../lib/waveform-progress";
 import { MORPH_MS } from "../lib/analysis-orb";
+import { prefersReducedMotion } from "../lib/motion";
 import { AnalysisOrb } from "./AnalysisOrb";
 import { WaveformDbScale } from "./WaveformDbScale";
 import type { LoopRegion, WaveformPeaks } from "../bindings";
-
-/// Motion is decorative here; honor the OS-level preference. jsdom has no
-/// matchMedia — its absence means "motion allowed".
-function prefersReducedMotion(): boolean {
-  return (
-    globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false
-  );
-}
 
 // Progress surface shown in the waveform deck while a track is prepared.
 // `analyzing` drives a determinate bar from the staged analysis progress
