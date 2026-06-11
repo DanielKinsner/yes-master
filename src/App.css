@@ -5798,3 +5798,47 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
 .modal-input { flex: 1; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.7rem; color: var(--text-0); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; }
 .danger-btn { background: rgba(255,118,118,0.14); border: 1px solid var(--accent-danger); color: var(--accent-danger); border-radius: 8px; padding: 0.5rem 0.8rem; cursor: pointer; }
+
+/* First-run guide: quiet hint chips + the Mastered-button pulse. */
+.hint-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 7px 10px;
+  border: 1px solid rgba(111, 163, 255, 0.35);
+  border-radius: 8px;
+  background: rgba(42, 107, 242, 0.12);
+  color: #b9cdf2;
+  font-size: 12px;
+  line-height: 1.4;
+  animation: hint-chip-in 240ms ease-out;
+}
+.hint-chip strong { color: #e3edff; font-weight: 600; }
+.hint-chip-text { flex: 1; }
+.hint-chip-x {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: #7d8aa3;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.hint-chip-x:hover { color: #d7e2f5; }
+@keyframes hint-chip-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.std-rail-ab button.guide-pulse {
+  animation: guide-pulse 1.6s ease-in-out infinite;
+}
+@keyframes guide-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(111, 163, 255, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(111, 163, 255, 0.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hint-chip { animation: none; }
+  .std-rail-ab button.guide-pulse { animation: none; }
+}
