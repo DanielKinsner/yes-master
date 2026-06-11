@@ -1980,3 +1980,61 @@ fn real_fixture_path() -> Option<PathBuf> {
     }
     None
 }
+
+/// Real analysis progress (owner ask 2026-06-12): stage callbacks fire at
+/// actual phase boundaries, batch-rescaled, monotone, and finish at 1.0.
+#[tokio::test]
+async fn analyze_tracks_core_reports_monotone_real_progress() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let a = tmp.path().join("a.wav");
+    let b = tmp.path().join("b.wav");
+    write_sine_wav(&a, 44_100, 3.0, 440.0, 2);
+    write_sine_wav(&b, 44_100, 3.0, 220.0, 2);
+
+    let events = std::sync::Mutex::new(Vec::<(f32, String)>::new());
+    let results = engine::analyze_tracks_core_with_progress(
+        vec![
+            engine::AnalyzeRequest {
+                id: TrackId("p1".to_string()),
+                path: a.to_string_lossy().to_string(),
+            },
+            engine::AnalyzeRequest {
+                id: TrackId("p2".to_string()),
+                path: b.to_string_lossy().to_string(),
+            },
+        ],
+        |frac, label| events.lock().unwrap().push((frac, label.to_string())),
+    )
+    .await
+    .expect("analyze");
+    assert_eq!(results.len(), 2);
+
+    let events = events.into_inner().unwrap();
+    assert!(!events.is_empty(), "expected progress events");
+    let mut prev = 0.0f32;
+    for (frac, _) in &events {
+        assert!((0.0..=1.0).contains(frac), "fraction out of range: {frac}");
+        assert!(*frac >= prev, "fraction regressed: {prev} -> {frac}");
+        prev = *frac;
+    }
+    assert_eq!(events.last().unwrap().0, 1.0, "batch must finish at 1.0");
+    // First stage of track 1 starts the batch; track 2 begins past 0.5.
+    assert_eq!(events.first().unwrap().1, "Analyzing audio");
+    assert!(
+        events
+            .iter()
+            .any(|(f, l)| *f >= 0.5 && l == "Analyzing audio"),
+        "expected the second track's decode stage in the upper half"
+    );
+    for expected in [
+        "Checking dynamics",
+        "Evaluating stereo field",
+        "Reading tonal balance",
+        "Building mastering context",
+    ] {
+        assert!(
+            events.iter().any(|(_, l)| l == expected),
+            "missing stage label: {expected}"
+        );
+    }
+}

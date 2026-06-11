@@ -258,6 +258,23 @@ export function onRenderProgress(
   );
 }
 
+/// Real analysis progress: stage callbacks from the ACTUAL phase boundaries
+/// inside the backend analyzer (decode → dynamics → stereo → tonal → deep
+/// scan), batch-rescaled to 0..1. Replaces the paced-timer stage display
+/// whenever events arrive.
+export interface AnalysisProgressEvent {
+  fraction: number;
+  label: string;
+}
+
+export function onAnalysisProgress(
+  handler: (event: AnalysisProgressEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<AnalysisProgressEvent>("analysis:progress", (event) =>
+    handler(event.payload),
+  );
+}
+
 /// Edge-triggered: true while Mastered audition is playing hotter than the
 /// loudness target because the corrective landing gain is still being
 /// measured; false once it crossfades in. Drives the "landing loudness…"

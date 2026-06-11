@@ -45,11 +45,19 @@ Track Master supports:
   import CTA. Never a wall — import and drag-drop always work; reduced
   motion gets a static glyph.
 - An analysis orb: a particle point-cloud animates in the waveform slot
-  while analysis runs (with the existing staged labels/progress), then
+  while analysis runs and persists through the waveform decode, then
   morphs into the track's real waveform when peaks arrive. Presentation
   only — playback readiness never waits on it; any interaction cuts it;
   `prefers-reduced-motion` disables it. Spec:
   `docs/superpowers/specs/2026-06-11-analysis-orb-design.md`.
+- Real analysis progress: the backend emits `analysis:progress` events at
+  the actual analyzer phase boundaries (decode → dynamics → stereo field →
+  tonal balance → deep scan), batch-rescaled across multi-track imports.
+  The UI's stage labels and bar track real work; the old paced timer
+  remains only as a pre-first-event fallback.
+- A clean Standard `Create Master` confirms itself: success card with file
+  name, landed LUFS, and a Show file action. Invalid renders keep the
+  prominent re-render alert; album receipts stay in their own flow.
 
 Track Master Delivery Profile and Delivery Format are authoritative for Track
 Master exports:

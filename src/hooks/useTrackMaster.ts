@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open, save, getCurrentWebview } from "../lib/tauri-runtime";
-import { api, onLandingStatus, onPlaybackTick, onRenderProgress } from "../lib/api";
+import {
+  api,
+  onAnalysisProgress,
+  onLandingStatus,
+  onPlaybackTick,
+  onRenderProgress,
+} from "../lib/api";
 import {
   browserExportLocationStore,
   defaultExportPath,
@@ -287,8 +293,15 @@ export function useTrackMaster() {
   // loudness target because the corrective landing gain is still being
   // measured in the background. Edge-triggered from the backend.
   const [landingPending, setLandingPending] = useState(false);
+  // Real analysis progress from the backend's "analysis:progress" events
+  // (actual phase boundaries). The paced-timer stages below remain only as
+  // a fallback for the moments before the first real event lands.
+  const [realAnalysisProgress, setRealAnalysisProgress] = useState<{
+    label: string;
+    progress: number;
+  } | null>(null);
   const analysisProgress = isAnalyzing
-    ? ANALYSIS_PROGRESS_STAGES[analysisStageIndex]
+    ? (realAnalysisProgress ?? ANALYSIS_PROGRESS_STAGES[analysisStageIndex])
     : null;
   // Phase 7.4 undo/redo: snapshot-based history of the undoable state pieces.
   // Refs (not state) so commitToHistory mutations don't trigger re-renders by
@@ -461,9 +474,15 @@ export function useTrackMaster() {
     let unlistenTick: (() => void) | undefined;
     let unlistenProgress: (() => void) | undefined;
     let unlistenLanding: (() => void) | undefined;
+    let unlistenAnalysis: (() => void) | undefined;
     let renderProgressClearTimer: ReturnType<typeof setTimeout> | undefined;
     onLandingStatus(setLandingPending).then((fn) => {
       unlistenLanding = fn;
+    });
+    onAnalysisProgress((evt) => {
+      setRealAnalysisProgress({ label: evt.label, progress: evt.fraction });
+    }).then((fn) => {
+      unlistenAnalysis = fn;
     });
     onPlaybackTick((tick) => {
       lastPlaybackTickRef.current = {
@@ -514,6 +533,7 @@ export function useTrackMaster() {
       unlistenTick?.();
       unlistenProgress?.();
       unlistenLanding?.();
+      unlistenAnalysis?.();
       if (renderProgressClearTimer) clearTimeout(renderProgressClearTimer);
     };
   }, []);
@@ -521,6 +541,9 @@ export function useTrackMaster() {
   useEffect(() => {
     if (!isAnalyzing) {
       setAnalysisStageIndex(0);
+      // A finished (or failed) analysis must not leak its last real event
+      // into the next run's first frames.
+      setRealAnalysisProgress(null);
       return;
     }
     setAnalysisStageIndex(0);

@@ -175,10 +175,22 @@ export async function mockInvoke<T>(
     }
 
     case "analyze_tracks": {
-      // Real analysis takes seconds; resolve slowly so the browser preview
-      // exercises the staged progress labels and the analysis orb the way
-      // the desktop app does. (Browser-only code — Tauri never loads this.)
-      await new Promise((resolve) => setTimeout(resolve, 4000));
+      // Real analysis takes seconds; resolve slowly AND emit the same
+      // staged "analysis:progress" events the desktop engine now sends, so
+      // the browser preview exercises the real-progress path end to end.
+      // (Browser-only code — Tauri never loads this.)
+      const stages: Array<[number, string]> = [
+        [0.0, "Analyzing audio"],
+        [0.35, "Checking dynamics"],
+        [0.55, "Evaluating stereo field"],
+        [0.65, "Reading tonal balance"],
+        [0.8, "Building mastering context"],
+      ];
+      for (const [fraction, label] of stages) {
+        emitAnalysisProgress(fraction, label);
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
+      emitAnalysisProgress(1.0, "Building mastering context");
       const tracks =
         (args?.tracks as Array<{ id: TrackId; path: string }>) ?? [];
       const results: AnalysisResult[] = tracks.map((t) => ({
@@ -343,6 +355,13 @@ export async function mockListen<T>(
     landingStatusHandlers.add(wrapped as (pending: boolean) => void);
     return () => landingStatusHandlers.delete(wrapped as (pending: boolean) => void);
   }
+  if (channel === "analysis:progress") {
+    const wrapped = (fraction: number, label: string) =>
+      handler({ payload: { fraction, label } as unknown as T });
+    analysisProgressHandlers.add(wrapped as (fraction: number, label: string) => void);
+    return () =>
+      analysisProgressHandlers.delete(wrapped as (fraction: number, label: string) => void);
+  }
   // Unknown channel — return a no-op unlisten.
   console.warn(`[preview-mock] unhandled listen channel: ${channel}`);
   return () => {};
@@ -353,6 +372,13 @@ export async function mockListen<T>(
 const landingStatusHandlers = new Set<(pending: boolean) => void>();
 function emitLandingStatus(pending: boolean): void {
   for (const h of landingStatusHandlers) h(pending);
+}
+
+// Real analysis-progress simulation: analyze_tracks emits the same staged
+// events the desktop engine sends (see mockInvoke).
+const analysisProgressHandlers = new Set<(fraction: number, label: string) => void>();
+function emitAnalysisProgress(fraction: number, label: string): void {
+  for (const h of analysisProgressHandlers) h(fraction, label);
 }
 
 export async function mockOpen(

@@ -34,6 +34,20 @@ pub(crate) fn analyze_one(
     path: &Path,
     deep: bool,
 ) -> CommandResult<AnalysisResult> {
+    analyze_one_with_progress(track_id, path, deep, &|_, _| {})
+}
+
+/// `analyze_one` with stage callbacks at the REAL phase boundaries, so the
+/// UI's analysis progress reports actual work instead of a paced timer
+/// (mirrors the render path's real `render:progress`). `progress(frac,
+/// label)` gets a 0..=1 fraction within THIS track; weights approximate
+/// relative cost (decode dominates for long compressed sources).
+pub(crate) fn analyze_one_with_progress(
+    track_id: TrackId,
+    path: &Path,
+    deep: bool,
+    progress: &dyn Fn(f32, &'static str),
+) -> CommandResult<AnalysisResult> {
     if crate::files::has_parent_dir_component(path) {
         return Err(CommandError::InvalidPath(format!(
             "path traversal not allowed: {}",
@@ -47,11 +61,13 @@ pub(crate) fn analyze_one(
         )));
     }
 
+    progress(0.0, "Analyzing audio");
     let pcm = crate::decode::decode_full(path)?;
     if pcm.samples.is_empty() {
         return Err(CommandError::Decode("no samples decoded".to_string()));
     }
 
+    progress(0.35, "Checking dynamics");
     let channels_u32 = u32::from(pcm.channels.max(1));
     let mut ebu = EbuR128::new(
         channels_u32,
@@ -85,10 +101,12 @@ pub(crate) fn analyze_one(
         -60.0
     };
 
+    progress(0.55, "Evaluating stereo field");
     let stereo_width = compute_stereo_width(&pcm.samples, pcm.channels as usize);
     let spectral_balance = compute_spectral_balance(&pcm.samples, pcm.channels as usize);
     let transient_density = compute_transient_density(&pcm.samples, pcm.channels as usize);
 
+    progress(0.65, "Reading tonal balance");
     // Phase A5: richer measurements. All Optional — they degrade
     // gracefully when the signal is too short or silent.
     let spectral_balance_6band =
@@ -107,6 +125,7 @@ pub(crate) fn analyze_one(
         transient_flux,
     );
 
+    progress(0.8, "Building mastering context");
     // Tier-2 Phase A: dual-resolution deep analysis (additive; never on the wire).
     // Task 9: callers can still pass `deep == false` for low-cost/mobile-lite
     // analysis, but desktop and the current iPhone native bridge both use the
@@ -177,6 +196,7 @@ pub(crate) fn analyze_one(
     let (role, role_conf) = infer_role(lufs_integrated, role_transient_signal, duration_sec);
     let (character, character_conf) = infer_character(&spectral_balance, transient_density);
 
+    progress(1.0, "Building mastering context");
     Ok(AnalysisResult {
         track_id,
         lufs_integrated,

@@ -1,5 +1,5 @@
 use crate::album_render::render_album_plan_impl;
-use crate::analysis::{analyze_one, nudge_role_by_position, sanitize_lufs};
+use crate::analysis::{analyze_one_with_progress, nudge_role_by_position, sanitize_lufs};
 use crate::sample_rate::convert_interleaved;
 use crate::types::*;
 use crate::wav_writer::write_wav;
@@ -26,13 +26,34 @@ pub struct RenderProgress {
     pub fraction: f32,
 }
 
+/// Real analysis progress — emitted on the "analysis:progress" Tauri event
+/// channel during `analyze_tracks`. Stage callbacks fire at the ACTUAL
+/// phase boundaries inside `analyze_one` (decode → dynamics → stereo →
+/// tonal → deep scan), so the UI's bar and labels track real work instead
+/// of a paced timer. `fraction` spans the whole batch (track i of n).
+#[derive(Debug, Serialize, Clone)]
+pub struct AnalysisProgress {
+    pub fraction: f32,
+    pub label: String,
+}
+
 #[tauri::command]
 pub async fn analyze_tracks(
+    app: tauri::AppHandle,
     tracks: Vec<AnalyzeRequest>,
     profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
 ) -> CommandResult<Vec<AnalysisResult>> {
     let requested_ids: Vec<TrackId> = tracks.iter().map(|r| r.id.clone()).collect();
-    let result = analyze_tracks_core(tracks).await;
+    let result = analyze_tracks_core_with_progress(tracks, |fraction, label| {
+        let _ = app.emit(
+            "analysis:progress",
+            AnalysisProgress {
+                fraction,
+                label: label.to_string(),
+            },
+        );
+    })
+    .await;
     match &result {
         Ok(results) => {
             // B2: the backend is the SINGLE point that derives the adaptive source
@@ -65,11 +86,27 @@ pub async fn analyze_tracks(
 pub async fn analyze_tracks_core(
     tracks: Vec<AnalyzeRequest>,
 ) -> CommandResult<Vec<AnalysisResult>> {
+    analyze_tracks_core_with_progress(tracks, |_, _| {}).await
+}
+
+/// `analyze_tracks_core` with a batch-level progress callback. The
+/// per-track 0..=1 stage fraction from `analyze_one_with_progress` is
+/// rescaled across the batch: track i of n spans [i/n, (i+1)/n].
+pub async fn analyze_tracks_core_with_progress(
+    tracks: Vec<AnalyzeRequest>,
+    progress: impl Fn(f32, &str),
+) -> CommandResult<Vec<AnalysisResult>> {
     let total = tracks.len();
     let mut out = Vec::with_capacity(total);
     let mut failures: Vec<(TrackId, String)> = Vec::new();
     for (index, req) in tracks.into_iter().enumerate() {
-        match analyze_one(req.id.clone(), Path::new(&req.path), true) {
+        let track_progress = |frac: f32, label: &'static str| {
+            if total > 0 {
+                progress((index as f32 + frac) / total as f32, label);
+            }
+        };
+        match analyze_one_with_progress(req.id.clone(), Path::new(&req.path), true, &track_progress)
+        {
             Ok(mut result) => {
                 nudge_role_by_position(&mut result, index, total);
                 out.push(result);
