@@ -92,6 +92,6 @@ export function easeInOutQuad(t: number): number {
   return c < 0.5 ? 2 * c * c : 1 - Math.pow(-2 * c + 2, 2) / 2;
 }
 
-export const ORB_PARTICLE_COUNT = 1800;
+export const ORB_PARTICLE_COUNT = 2600;
 export const ORB_SEED = 92;
 export const MORPH_MS = 1400;

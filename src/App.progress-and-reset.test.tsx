@@ -235,16 +235,22 @@ describe("WaveformLoading analysis orb", () => {
     await act(async () => root.unmount());
   });
 
-  it("does not host the orb when idle or merely decoding", async () => {
+  it("keeps the orb through the waveform-decode gap (analyzing -> loading -> morph)", async () => {
+    // Owner note 2026-06-11: the orb vanishing for a bare "Loading
+    // waveform…" second between analysis and the morph broke the visual
+    // thread — it persists through decode now.
     const { container, root } = await render(
       <WaveformLoading isAnalyzing={false} isLoadingWaveform analysisProgress={null} />,
     );
-    expect(container.querySelector("canvas.wf-orb")).toBeNull();
+    expect(container.querySelector("canvas.wf-orb")).not.toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("does not host the orb when idle", async () => {
     const idle = await render(
       <WaveformLoading isAnalyzing={false} isLoadingWaveform={false} analysisProgress={null} />,
     );
     expect(idle.container.querySelector("canvas.wf-orb")).toBeNull();
-    await act(async () => root.unmount());
     await act(async () => idle.root.unmount());
   });
 });

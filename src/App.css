@@ -5972,3 +5972,39 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
 @media (prefers-reduced-motion: reduce) {
   .landing-note { animation: none; }
 }
+
+/* Standard export success card: a clean Create Master now confirms itself
+   instead of leaving the receipt visible only in Advanced. */
+.std-export-done {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border: 1px solid rgba(63, 174, 140, 0.35);
+  border-radius: 8px;
+  background: rgba(63, 174, 140, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: hint-chip-in 240ms ease-out;
+}
+.std-export-done-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #9fe0c8;
+}
+.std-export-done-check { color: #3fae8c; }
+.std-export-done-meta {
+  font-size: 11.5px;
+  color: var(--text-1);
+  word-break: break-all;
+}
+.std-export-done-open {
+  align-self: flex-start;
+  font-size: 11.5px;
+  padding: 3px 10px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .std-export-done { animation: none; }
+}

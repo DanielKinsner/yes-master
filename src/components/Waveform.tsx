@@ -35,8 +35,13 @@ export function WaveformLoading({
   const showBar = view.mode !== "idle";
   const determinate = view.mode === "analyzing" && view.percent !== null;
   // The orb is the engaging face of the analysis wait; the label + bar stay
-  // the honest, screen-reader-visible source of truth underneath it.
-  const showOrb = view.mode === "analyzing" && !prefersReducedMotion();
+  // the honest, screen-reader-visible source of truth underneath it. It
+  // persists through the waveform-decode gap ("loading") so the sequence
+  // reads orb → orb → morph instead of flashing a bare "Loading waveform…"
+  // between analysis and the morph (owner note 2026-06-11).
+  const showOrb =
+    (view.mode === "analyzing" || view.mode === "loading") &&
+    !prefersReducedMotion();
   return (
     <div
       className={

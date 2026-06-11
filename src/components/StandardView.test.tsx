@@ -518,3 +518,64 @@ describe("first-run guide requires audible flip", () => {
     await act(async () => root.unmount());
   });
 });
+
+describe("Standard export receipt", () => {
+  function exportedTm(overrides: Partial<TM> = {}): TM {
+    return fakeTm({
+      lastExportReceipt: {
+        trackId: "t1",
+        outputPath: "C:/renders/Song Master.wav",
+        checks: [],
+        kind: "track",
+        job: { measurements: { lufs_integrated: -14.1 } },
+      },
+      ...overrides,
+    } as unknown as Partial<TM>);
+  }
+
+  it("shows a success card with file name and landed LUFS after a clean export", async () => {
+    const { container, root } = await render(
+      <StandardView tm={exportedTm()} onEnterAdvanced={() => {}} />,
+    );
+    const card = container.querySelector(".std-export-done");
+    expect(card?.textContent).toContain("Master created");
+    expect(card?.textContent).toContain("Song Master.wav");
+    expect(card?.textContent).toContain("-14.1 LUFS");
+    await act(async () => root.unmount());
+  });
+
+  it("shows no success card for an invalid render (hard-stop alert owns the slot)", async () => {
+    const tm = exportedTm({
+      lastExportReceipt: {
+        trackId: "t1",
+        outputPath: "C:/renders/Song Master.wav",
+        checks: [{ code: "non_finite", level: "critical", message: "Render produced non-finite samples" }],
+        kind: "track",
+        job: { measurements: null },
+      },
+    } as unknown as Partial<TM>);
+    const { container, root } = await render(
+      <StandardView tm={tm} onEnterAdvanced={() => {}} />,
+    );
+    expect(container.querySelector(".std-export-done")).toBeNull();
+    expect(container.textContent).toContain("re-render");
+    await act(async () => root.unmount());
+  });
+
+  it("shows no success card for album receipts", async () => {
+    const tm = exportedTm({
+      lastExportReceipt: {
+        trackId: "t1",
+        outputPath: "C:/renders/Album.wav",
+        checks: [],
+        kind: "album",
+        job: { measurements: null },
+      },
+    } as unknown as Partial<TM>);
+    const { container, root } = await render(
+      <StandardView tm={tm} onEnterAdvanced={() => {}} />,
+    );
+    expect(container.querySelector(".std-export-done")).toBeNull();
+    await act(async () => root.unmount());
+  });
+});

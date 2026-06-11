@@ -24,6 +24,7 @@ import { WaveformView } from "./Waveform";
 import { PresetIcon, PRESET_ACCENT } from "./PresetIcon";
 import { effectiveLoudnessTarget } from "../lib/effective-settings";
 import { standardExportNotes } from "../lib/standard-export";
+import { api } from "../lib/api";
 import { MasterOutPanel } from "./RightRail";
 import { HintChip } from "./HintChip";
 import { useFirstRunGuide, type FirstRunGuide } from "../hooks/useFirstRunGuide";
@@ -310,6 +311,18 @@ function StandardRightRail({
   const notes = tm.lastExportReceipt
     ? standardExportNotes(tm.lastExportReceipt.checks)
     : null;
+  // Success receipt (owner note 2026-06-11: a clean Standard export gave no
+  // feedback at all — the receipt only lived in Advanced). Track receipts
+  // only; album exports keep their own flow. Invalid renders keep the
+  // prominent re-render alert instead of a success card.
+  const receipt = tm.lastExportReceipt;
+  const showDone = receipt != null && receipt.kind === "track" && notes != null && !notes.invalid;
+  const doneLufs = showDone
+    ? (receipt.job.measurements?.lufs_integrated ?? null)
+    : null;
+  const doneFileName = showDone
+    ? receipt.outputPath.split(/[\\/]/).pop() ?? receipt.outputPath
+    : null;
   return (
     <aside className="std-rail" ref={seamRefs.rail}>
       <section className="std-rail-card std-rail-preview" ref={seamRefs.preview}>
@@ -401,6 +414,29 @@ function StandardRightRail({
         )}
         {notes?.integrityNote && (
           <p className="std-export-note">{notes.integrityNote}</p>
+        )}
+        {showDone && (
+          <div className="std-export-done" role="status">
+            <div className="std-export-done-head">
+              <span className="std-export-done-check" aria-hidden>
+                ✓
+              </span>
+              Master created
+            </div>
+            <div className="std-export-done-meta">
+              {doneFileName}
+              {doneLufs != null && ` · ${doneLufs.toFixed(1)} LUFS`}
+            </div>
+            <button
+              type="button"
+              className="ghost-btn std-export-done-open"
+              onClick={() => {
+                void api.openOutput(receipt.outputPath);
+              }}
+            >
+              Show file
+            </button>
+          </div>
         )}
       </div>
     </aside>
