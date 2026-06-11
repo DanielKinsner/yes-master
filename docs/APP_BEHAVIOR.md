@@ -34,6 +34,18 @@ Track Master supports:
 - Post-render export receipt/checks.
 - Baseline Settings and contextual Help dialogs.
 - Visible Save/Open Project feedback.
+- A first-run guide in Standard view: action-driven hint chips that walk a
+  new user to the Original→Mastered flip, then a send-off and one Advanced
+  pointer. Dismissible, never blocking, persisted under
+  `yes-master:first-run-guide`, resettable from Settings ("Show first-run
+  tips again"). Entering Advanced or pre-flipping to Mastered ends it
+  silently. Spec: `docs/superpowers/specs/2026-06-11-first-run-guide-design.md`.
+- An analysis orb: a particle point-cloud animates in the waveform slot
+  while analysis runs (with the existing staged labels/progress), then
+  morphs into the track's real waveform when peaks arrive. Presentation
+  only — playback readiness never waits on it; any interaction cuts it;
+  `prefers-reduced-motion` disables it. Spec:
+  `docs/superpowers/specs/2026-06-11-analysis-orb-design.md`.
 
 Track Master Delivery Profile and Delivery Format are authoritative for Track
 Master exports:
