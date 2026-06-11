@@ -1,5 +1,12 @@
-import { useId, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { waveformLoadingView } from "../lib/waveform-progress";
+import { MORPH_MS } from "../lib/analysis-orb";
 import { AnalysisOrb } from "./AnalysisOrb";
 import { WaveformDbScale } from "./WaveformDbScale";
 import type { LoopRegion, WaveformPeaks } from "../bindings";
@@ -112,6 +119,35 @@ export function WaveformView({
 }) {
   const [dragRegion, setDragRegion] = useState<LoopRegion | null>(null);
 
+  // Morph: when this track's analysis JUST finished and peaks arrived, the
+  // orb's particles fly into the real waveform shape for one short window.
+  // Presentation only — the parent timer + any interaction cut it; playback
+  // and seeking never wait on it. (Hooks live above the !peaks return.)
+  const wasAnalyzingNoPeaks = useRef(false);
+  const [morphing, setMorphing] = useState(false);
+  useEffect(() => {
+    if (!peaks) {
+      wasAnalyzingNoPeaks.current = isAnalyzing;
+      return;
+    }
+    if (wasAnalyzingNoPeaks.current) {
+      wasAnalyzingNoPeaks.current = false;
+      if (!prefersReducedMotion()) setMorphing(true);
+    }
+  }, [peaks, isAnalyzing]);
+  useEffect(() => {
+    if (!morphing) return;
+    const cut = () => setMorphing(false);
+    const t = setTimeout(cut, MORPH_MS);
+    window.addEventListener("pointerdown", cut);
+    window.addEventListener("keydown", cut);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("pointerdown", cut);
+      window.removeEventListener("keydown", cut);
+    };
+  }, [morphing]);
+
   // Show the waveform whenever the SELECTED track has peaks; otherwise show the
   // prepare-progress surface (staged analysis bar → indeterminate decode bar →
   // idle "no waveform yet"). Gating on `!peaks` alone — not the GLOBAL
@@ -199,7 +235,8 @@ export function WaveformView({
 
   return (
     <section className="wf-card">
-      <div className="wf-main">
+      <div className={"wf-main" + (morphing ? " is-morphing" : "")}>
+      {morphing && <AnalysisOrb phase="morph" peaks={channel} />}
       <svg
         className="wf"
         viewBox={`0 0 ${W} ${H}`}

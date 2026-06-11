@@ -20,7 +20,7 @@ import {
 import { computeRailAlignment } from "../lib/rail-alignment";
 import type { useTrackMaster } from "../hooks/useTrackMaster";
 import { Knob, intensityLabel } from "./Knob";
-import { WaveformLoading, WaveformView } from "./Waveform";
+import { WaveformView } from "./Waveform";
 import { PresetIcon, PRESET_ACCENT } from "./PresetIcon";
 import { effectiveLoudnessTarget } from "../lib/effective-settings";
 import { standardExportNotes } from "../lib/standard-export";
@@ -470,26 +470,21 @@ export function StandardView({
             </span>
           </div>
           <div className="std-wave">
-            {tm.selectedWaveform ? (
-              <WaveformView
-                peaks={tm.selectedWaveform}
-                isLoading={tm.isLoadingWaveform}
-                isAnalyzing={tm.isAnalyzing}
-                analysisProgress={tm.analysisProgress}
-                currentTimeSec={tm.transport.currentTimeSec}
-                durationSec={tm.selectedTrack?.duration_seconds ?? 0}
-                region={tm.selectedRegion}
-                onSeek={tm.seek}
-                onSetRegion={tm.setRegion}
-                onClearRegion={tm.clearRegion}
-              />
-            ) : (
-              <WaveformLoading
-                isAnalyzing={tm.isAnalyzing}
-                isLoadingWaveform={tm.isLoadingWaveform}
-                analysisProgress={tm.analysisProgress}
-              />
-            )}
+            {/* WaveformView owns the no-peaks branch internally (loading
+                card + orb) AND the analyzing→peaks morph transition — it
+                must stay mounted across that boundary, so no ternary. */}
+            <WaveformView
+              peaks={tm.selectedWaveform}
+              isLoading={tm.isLoadingWaveform}
+              isAnalyzing={tm.isAnalyzing}
+              analysisProgress={tm.analysisProgress}
+              currentTimeSec={tm.transport.currentTimeSec}
+              durationSec={tm.selectedTrack?.duration_seconds ?? 0}
+              region={tm.selectedRegion}
+              onSeek={tm.seek}
+              onSetRegion={tm.setRegion}
+              onClearRegion={tm.clearRegion}
+            />
           </div>
         </div>
 

@@ -248,3 +248,61 @@ describe("WaveformLoading analysis orb", () => {
     await act(async () => idle.root.unmount());
   });
 });
+
+describe("WaveformView morph", () => {
+  const morphPeaks: WaveformPeaks = {
+    track_id: "wf-2",
+    channels: [[0.2, 0.8, 0.5, 0.9]],
+    samples_per_pixel: 512,
+    total_samples: 2048,
+    sample_rate: 44_100,
+  };
+
+  function view(p: { peaks?: WaveformPeaks; isAnalyzing: boolean }) {
+    return (
+      <WaveformView
+        peaks={p.peaks}
+        isLoading={false}
+        isAnalyzing={p.isAnalyzing}
+        analysisProgress={null}
+        currentTimeSec={0}
+        durationSec={10}
+        region={null}
+        onSeek={() => {}}
+        onSetRegion={() => {}}
+        onClearRegion={() => {}}
+      />
+    );
+  }
+
+  it("plays the morph when analysis just finished and peaks arrive, then clears", async () => {
+    vi.useFakeTimers();
+    try {
+      const { container, root } = await render(view({ isAnalyzing: true }));
+      await act(async () => { root.render(view({ peaks: morphPeaks, isAnalyzing: false })); });
+      expect(container.querySelector(".wf-orb.is-morph")).not.toBeNull();
+      expect(container.querySelector(".wf-main.is-morphing")).not.toBeNull();
+      await act(async () => { vi.advanceTimersByTime(1400); });
+      expect(container.querySelector(".wf-orb.is-morph")).toBeNull();
+      await act(async () => root.unmount());
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("cuts the morph on user interaction", async () => {
+    vi.useFakeTimers();
+    try {
+      const { container, root } = await render(view({ isAnalyzing: true }));
+      await act(async () => { root.render(view({ peaks: morphPeaks, isAnalyzing: false })); });
+      expect(container.querySelector(".wf-orb.is-morph")).not.toBeNull();
+      await act(async () => { window.dispatchEvent(new Event("pointerdown")); });
+      expect(container.querySelector(".wf-orb.is-morph")).toBeNull();
+      await act(async () => root.unmount());
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("shows no morph without a preceding analysis", async () => {
+    const { container, root } = await render(view({ peaks: morphPeaks, isAnalyzing: false }));
+    expect(container.querySelector(".wf-orb.is-morph")).toBeNull();
+    await act(async () => root.unmount());
+  });
+});
