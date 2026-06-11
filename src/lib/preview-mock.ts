@@ -139,12 +139,21 @@ let mockPosition = 0;
 const TICK_HZ = 20;
 const TICK_INTERVAL_MS = Math.floor(1000 / TICK_HZ);
 
+// Monotonic id source for preview imports (see import_tracks).
+let mockImportCounter = 0;
+
 export async function mockInvoke<T>(
   cmd: string,
   args?: Record<string, unknown>,
 ): Promise<T> {
   switch (cmd) {
     case "load_recent_session":
+      // `?empty=1` boots the preview with no session — the true first-run
+      // state (EmptyState, auto-select on first import, analysis orb in
+      // the main slot). Default keeps the seeded preview project.
+      if (new URLSearchParams(globalThis.location?.search ?? "").has("empty")) {
+        return null as unknown as T;
+      }
       return PREVIEW_PROJECT as unknown as T;
     case "load_project":
       return PREVIEW_PROJECT as unknown as T;
@@ -154,11 +163,13 @@ export async function mockInvoke<T>(
 
     case "import_tracks": {
       const paths = (args?.paths as string[]) ?? [];
-      const imported: ImportedTrack[] = paths.map((p, i) => ({
+      // Unique per CALL, not per batch index — a second preview import must
+      // not mint the same React key as the first (duplicate-key errors).
+      const imported: ImportedTrack[] = paths.map((p) => ({
         ...PREVIEW_TRACK,
-        id: `${PREVIEW_TRACK_ID}-${i}`,
+        id: `${PREVIEW_TRACK_ID}-${++mockImportCounter}`,
         path: p,
-        display_name: p.split(/[\\/]/).pop() ?? `Track ${i + 1}`,
+        display_name: p.split(/[\\/]/).pop() ?? `Track ${paths.indexOf(p) + 1}`,
       }));
       return imported as unknown as T;
     }
@@ -345,6 +356,19 @@ export function mockWebview(): {
   ) => Promise<UnlistenFn>;
 } {
   return {
-    onDragDropEvent: async () => () => {},
+    onDragDropEvent: async (handler) => {
+      // Browser preview can't receive OS file drops, so expose the handler
+      // as a global: devtools (or agent tooling driving the preview) can
+      // call __previewDropAudio(["C:/demo.wav"]) to exercise the full
+      // import -> analyze -> waveform pipeline, including the analysis orb.
+      const g = globalThis as { __previewDropAudio?: (paths: string[]) => void };
+      const fire = (paths: string[]) => handler({ payload: { type: "drop", paths } });
+      g.__previewDropAudio = fire;
+      return () => {
+        // StrictMode double-mounts: a stale unlisten must not wipe the
+        // re-registered hook — only remove our own registration.
+        if (g.__previewDropAudio === fire) delete g.__previewDropAudio;
+      };
+    },
   };
 }
