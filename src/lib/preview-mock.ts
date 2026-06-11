@@ -136,6 +136,7 @@ function syntheticWaveform(targetPixels: number): WaveformPeaks {
 // have something visually interesting to do.
 let mockPlaying = false;
 let mockPosition = 0;
+let mockLoadedTrackId: TrackId | null = PREVIEW_TRACK_ID;
 const TICK_HZ = 20;
 const TICK_INTERVAL_MS = Math.floor(1000 / TICK_HZ);
 
@@ -209,11 +210,18 @@ export async function mockInvoke<T>(
     }
 
     case "play_track":
+      mockLoadedTrackId = (args?.trackId as TrackId | undefined) ?? PREVIEW_TRACK_ID;
+      mockPosition = (args?.startPositionSec as number | null) ?? mockPosition;
+      mockPlaying = true;
+      return null as unknown as T;
+
     case "resume_playback":
       mockPlaying = true;
       return null as unknown as T;
 
     case "play_master":
+      mockLoadedTrackId = (args?.trackId as TrackId | undefined) ?? PREVIEW_TRACK_ID;
+      mockPosition = (args?.startPositionSec as number | null) ?? mockPosition;
       mockPlaying = true;
       // Mimic the real engine's landing window: Mastered starts hotter than
       // target while the corrective gain is measured, then settles.
@@ -227,6 +235,7 @@ export async function mockInvoke<T>(
 
     case "stop_playback":
       mockPlaying = false;
+      mockLoadedTrackId = null;
       mockPosition = 0;
       return null as unknown as T;
 
@@ -291,16 +300,19 @@ export async function mockInvoke<T>(
       } as unknown as T;
 
     case "render_track_preview":
-    case "render_track_master":
+    case "render_track_master": {
+      const trackId = (args?.trackId as TrackId | undefined) ?? mockLoadedTrackId ?? PREVIEW_TRACK_ID;
+      const outputPath = (args?.outputPath as string | null | undefined) ?? "/preview/output.wav";
       return {
         id: `mock-render-${Date.now()}`,
-        kind: "preview",
-        target_tracks: [PREVIEW_TRACK_ID],
+        kind: cmd === "render_track_master" ? "master" : "preview",
+        target_tracks: [trackId],
         status: { status: "done" },
         progress: 1.0,
         started_at_iso: new Date().toISOString(),
-        output_paths: ["/preview/output.wav"],
+        output_paths: [outputPath],
       } as unknown as T;
+    }
 
     case "run_export_checks":
       return [] as unknown as T;
@@ -333,10 +345,10 @@ export async function mockListen<T>(
       const lufsMomentary = mockPlaying ? -11 + 3 * Math.sin(t * 4) : -120;
       const lufsIntegrated = mockPlaying ? -14.2 + 0.4 * Math.sin(t * 0.6) : -120;
       const tick: PlaybackTick = {
-        track_id: PREVIEW_TRACK_ID,
+        track_id: mockLoadedTrackId,
         position_sec: mockPosition,
         is_playing: mockPlaying,
-        is_loaded: true,
+        is_loaded: mockLoadedTrackId !== null,
         peak_dbfs: peakDb,
         peak_left_dbfs: peakLeft,
         peak_right_dbfs: peakRight,
