@@ -5884,11 +5884,15 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
    state, with a soft entrance. Never a wall - import always works. */
 .empty-hero {
   max-width: 560px;
+  /* The parent (.app-standard) is display:block, so margin:auto can't
+     center vertically — the hero centers its own content instead. */
+  min-height: calc(100vh - 140px);
+  justify-content: center;
   animation: empty-hero-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 .empty-hero-orb {
-  width: min(320px, 42vh);
-  height: min(260px, 34vh);
+  width: min(380px, 50vh);
+  height: min(310px, 40vh);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5918,4 +5922,36 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
 }
 @media (prefers-reduced-motion: reduce) {
   .empty-hero { animation: none; }
+}
+
+/* Standard tracks rail: per-row remove control (parity with Advanced).
+   Hidden until the row is hovered or the control is focused. */
+.std-track-item { position: relative; }
+.std-track-item .std-track-row { width: 100%; }
+.std-track-remove {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, background 120ms ease;
+}
+.std-track-item:hover .std-track-remove,
+.std-track-remove:focus-visible {
+  opacity: 1;
+}
+.std-track-remove:hover {
+  color: #f3d3d3;
+  background: rgba(226, 75, 74, 0.18);
 }

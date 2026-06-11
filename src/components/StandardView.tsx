@@ -132,23 +132,35 @@ function TracksRail({ tm }: { tm: TM }) {
       <div className="std-tracks-head">TRACKS</div>
       <div className="std-tracks-list">
         {tm.tracks.map((t, index) => (
-          <button
-            key={t.id}
-            type="button"
-            className={
-              "std-track-row" + (t.id === tm.selectedTrackId ? " is-active" : "")
-            }
-            onClick={() => tm.selectTrack(t.id)}
-          >
-            <span className="std-track-index" aria-hidden>
-              {(index + 1).toString().padStart(2, "0")}
-            </span>
-            <span className="std-track-copy">
-              <span className="std-track-name">{t.display_name}</span>
-              <span className="std-track-dur">{fmtDuration(t.duration_seconds)}</span>
-            </span>
-            <span className="std-track-meter" aria-hidden />
-          </button>
+          // Wrapper div, not a nested button: the remove × must be its own
+          // interactive element beside the select row (parity with the
+          // Advanced sidebar's remove control).
+          <div className="std-track-item" key={t.id}>
+            <button
+              type="button"
+              className={
+                "std-track-row" + (t.id === tm.selectedTrackId ? " is-active" : "")
+              }
+              onClick={() => tm.selectTrack(t.id)}
+            >
+              <span className="std-track-index" aria-hidden>
+                {(index + 1).toString().padStart(2, "0")}
+              </span>
+              <span className="std-track-copy">
+                <span className="std-track-name">{t.display_name}</span>
+                <span className="std-track-dur">{fmtDuration(t.duration_seconds)}</span>
+              </span>
+              <span className="std-track-meter" aria-hidden />
+            </button>
+            <button
+              type="button"
+              className="std-track-remove"
+              aria-label={`Remove ${t.display_name}`}
+              onClick={() => tm.removeTrack(t.id)}
+            >
+              ×
+            </button>
+          </div>
         ))}
       </div>
       <button

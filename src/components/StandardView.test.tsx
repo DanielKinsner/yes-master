@@ -479,3 +479,17 @@ describe("first-run guide reset while on Mastered", () => {
     await act(async () => root.unmount());
   });
 });
+
+describe("Standard tracks rail remove", () => {
+  it("each row has a remove control routed to removeTrack", async () => {
+    const removeTrack = vi.fn();
+    const { container, root } = await render(
+      <StandardView tm={fakeTm({ removeTrack } as Partial<TM>)} onEnterAdvanced={() => {}} />,
+    );
+    const btn = container.querySelector<HTMLButtonElement>(".std-track-remove");
+    expect(btn).not.toBeNull();
+    await act(async () => { btn!.click(); });
+    expect(removeTrack).toHaveBeenCalledWith("t1");
+    await act(async () => root.unmount());
+  });
+});
