@@ -5972,4 +5972,3 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
 @media (prefers-reduced-motion: reduce) {
   .landing-note { animation: none; }
 }
-

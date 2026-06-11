@@ -27,6 +27,7 @@ export type FirstRunGuide = {
 export function useFirstRunGuide(args: {
   hasAnalyzedTrack: boolean;
   playbackKind: string;
+  isPlaying: boolean;
 }): FirstRunGuide {
   const storage = globalThis.localStorage;
   // Snapshot once at mount: a returning user never re-enters the guide.
@@ -36,11 +37,13 @@ export function useFirstRunGuide(args: {
   const [advancedDone, setAdvancedDone] = useState(false);
   // True once the flip chip has actually been on screen. Distinguishes a
   // guided flip from a fast user who reached Mastered before the guide
-  // could appear — those users are never lectured (silent finish). An
-  // explicit reset pre-arms this: the user ASKED for tips, so the silent
-  // finish must not swallow the revived guide (it advances to the
-  // send-off instead if playback is already on Mastered).
-  const chipWasVisible = useRef(guideWasReset(storage));
+  // could appear — those users are never lectured (silent finish).
+  const chipWasVisible = useRef(false);
+  // An explicit Settings reset is a REQUEST to be shown tips: it bypasses
+  // both the silent finish AND the audible-flip requirement so the click
+  // always produces visible feedback (flip chip on Original, send-off when
+  // already on Mastered).
+  const armedByReset = useRef(guideWasReset(storage));
 
   const rawStep = deriveGuideStep({
     started,
@@ -58,18 +61,28 @@ export function useFirstRunGuide(args: {
 
   useEffect(() => {
     if (args.playbackKind !== "master" || !started) return;
+    if (armedByReset.current) {
+      // Reset path: acknowledge the flip immediately (even paused) so the
+      // Settings action always visibly does something.
+      if (!flipped) {
+        markGuideFinished(storage, "done");
+        setFlipped(true);
+      }
+      return;
+    }
     if (!chipWasVisible.current) {
       markGuideFinished(storage, "done");
       setStarted(false);
       return;
     }
-    if (!flipped) {
-      // The aha happened. Persist immediately — the send-off and Advanced
-      // pointer are session-only from here.
+    if (!flipped && args.isPlaying) {
+      // The aha happened — and was actually HEARD (a paused flip teaches
+      // nothing, so the guide waits for play before completing). Persist
+      // immediately; the send-off and Advanced pointer are session-only.
       markGuideFinished(storage, "done");
       setFlipped(true);
     }
-  }, [args.playbackKind, started, flipped, storage]);
+  }, [args.playbackKind, args.isPlaying, started, flipped, storage]);
 
   useEffect(() => {
     if (step !== "sendoff") return;
@@ -81,7 +94,8 @@ export function useFirstRunGuide(args: {
   // immediately — without this, the reset only worked after a relaunch.
   useEffect(() => {
     const revive = () => {
-      chipWasVisible.current = true;
+      armedByReset.current = true;
+      chipWasVisible.current = false;
       setStarted(true);
       setFlipped(false);
       setSendOffElapsed(false);

@@ -60,12 +60,16 @@ pub fn run() {
                 loop {
                     std::thread::sleep(Duration::from_millis(50));
                     let snap = player_state.snapshot();
+                    // Landing status is evaluated BEFORE the is_loaded gate:
+                    // an unload (stop / track removal) must still flip the
+                    // frontend back to false or the note leaks onto idle.
+                    let landing_pending = snap.is_loaded && snap.landing_pending;
+                    if last_landing_pending != Some(landing_pending) {
+                        last_landing_pending = Some(landing_pending);
+                        let _ = app_handle.emit("landing:status", landing_pending);
+                    }
                     if !snap.is_loaded {
                         continue;
-                    }
-                    if last_landing_pending != Some(snap.landing_pending) {
-                        last_landing_pending = Some(snap.landing_pending);
-                        let _ = app_handle.emit("landing:status", snap.landing_pending);
                     }
                     let tick = PlaybackTick {
                         track_id: snap.track_id,

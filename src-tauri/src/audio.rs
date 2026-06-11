@@ -1448,6 +1448,10 @@ fn process_audio_command(
             if let Some(s) = state.as_mut() {
                 s.sink.stop();
                 s.current_track = None;
+                // Nothing is audible — there is no landing window to report.
+                // Without this, a stop mid-measurement leaks a stale
+                // "landing loudness…" note onto the next/idle state.
+                s.landing_pending = false;
             }
         }
         AudioCommand::Seek {

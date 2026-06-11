@@ -493,3 +493,28 @@ describe("Standard tracks rail remove", () => {
     await act(async () => root.unmount());
   });
 });
+
+describe("first-run guide requires audible flip", () => {
+  function pausedTm(kind: "source" | "master"): TM {
+    return fakeTm({
+      transport: { isPlaying: false, currentTimeSec: 0, playbackKind: kind, volumeMatch: false },
+    } as Partial<TM>);
+  }
+
+  it("a flip while paused does not complete the aha (nothing was heard)", async () => {
+    const { container, root } = await render(
+      <StandardView tm={pausedTm("source")} onEnterAdvanced={() => {}} />,
+    );
+    expect(container.querySelector(".hint-chip-flip")).not.toBeNull();
+    await act(async () => {
+      root.render(<StandardView tm={pausedTm("master")} onEnterAdvanced={() => {}} />);
+    });
+    expect(container.querySelector(".hint-chip-sendoff")).toBeNull();
+    expect(globalThis.localStorage?.getItem(FIRST_RUN_GUIDE_KEY)).toBeNull();
+    await act(async () => {
+      root.render(<StandardView tm={pausedTm("source")} onEnterAdvanced={() => {}} />);
+    });
+    expect(container.querySelector(".hint-chip-flip")).not.toBeNull();
+    await act(async () => root.unmount());
+  });
+});

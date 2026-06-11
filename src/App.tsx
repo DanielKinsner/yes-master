@@ -753,7 +753,9 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
               lufsMomentary={tm.transport.lufsMomentary}
               lufsIntegrated={tm.transport.lufsIntegrated}
               landingPending={
-                tm.landingPending && tm.transport.playbackKind === "master"
+                tm.landingPending &&
+                tm.transport.playbackKind === "master" &&
+                tm.transport.isPlaying
               }
             />
           </div>

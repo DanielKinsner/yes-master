@@ -361,7 +361,9 @@ function StandardRightRail({
           lufsMomentary={tm.transport.lufsMomentary}
           lufsIntegrated={tm.transport.lufsIntegrated}
           landingPending={
-            tm.landingPending && tm.transport.playbackKind === "master"
+            tm.landingPending &&
+            tm.transport.playbackKind === "master" &&
+            tm.transport.isPlaying
           }
         />
       </section>
@@ -417,6 +419,7 @@ export function StandardView({
   const guide = useFirstRunGuide({
     hasAnalyzedTrack: tm.selectedAnalysis != null,
     playbackKind: tm.transport.playbackKind,
+    isPlaying: tm.transport.isPlaying,
   });
   const sourceLufs = tm.selectedAnalysis?.lufs_integrated ?? null;
   // Knob arc follows the active style's tone (Knob's red/gold/cyan are the
