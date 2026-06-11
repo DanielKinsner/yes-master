@@ -1981,7 +1981,7 @@ fn real_fixture_path() -> Option<PathBuf> {
     None
 }
 
-/// Real analysis progress (owner ask 2026-06-12): stage callbacks fire at
+/// Real analysis progress (owner ask 2026-06-11): stage callbacks fire at
 /// actual phase boundaries, batch-rescaled, monotone, and finish at 1.0.
 #[tokio::test]
 async fn analyze_tracks_core_reports_monotone_real_progress() {
