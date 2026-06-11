@@ -1,7 +1,16 @@
 import { useId, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { waveformLoadingView } from "../lib/waveform-progress";
+import { AnalysisOrb } from "./AnalysisOrb";
 import { WaveformDbScale } from "./WaveformDbScale";
 import type { LoopRegion, WaveformPeaks } from "../bindings";
+
+/// Motion is decorative here; honor the OS-level preference. jsdom has no
+/// matchMedia — its absence means "motion allowed".
+function prefersReducedMotion(): boolean {
+  return (
+    globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false
+  );
+}
 
 // Progress surface shown in the waveform deck while a track is prepared.
 // `analyzing` drives a determinate bar from the staged analysis progress
@@ -25,8 +34,16 @@ export function WaveformLoading({
   const labelId = useId();
   const showBar = view.mode !== "idle";
   const determinate = view.mode === "analyzing" && view.percent !== null;
+  // The orb is the engaging face of the analysis wait; the label + bar stay
+  // the honest, screen-reader-visible source of truth underneath it.
+  const showOrb = view.mode === "analyzing" && !prefersReducedMotion();
   return (
-    <div className={`wf-loading wf-loading-${view.mode}`}>
+    <div
+      className={
+        `wf-loading wf-loading-${view.mode}` + (showOrb ? " wf-loading-has-orb" : "")
+      }
+    >
+      {showOrb && <AnalysisOrb phase="orb" />}
       <div className="wf-loading-row">
         {/* Only the stage LABEL is a polite live region, so a screen reader
             announces each stage once ("Reading tonal balance") rather than

@@ -221,3 +221,30 @@ describe("Macros tone reset", () => {
     await act(async () => root.unmount());
   });
 });
+
+describe("WaveformLoading analysis orb", () => {
+  it("hosts the analysis orb while analyzing", async () => {
+    const { container, root } = await render(
+      <WaveformLoading
+        isAnalyzing
+        isLoadingWaveform={false}
+        analysisProgress={{ label: "Checking dynamics", progress: 0.5 }}
+      />,
+    );
+    expect(container.querySelector("canvas.wf-orb")).not.toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("does not host the orb when idle or merely decoding", async () => {
+    const { container, root } = await render(
+      <WaveformLoading isAnalyzing={false} isLoadingWaveform analysisProgress={null} />,
+    );
+    expect(container.querySelector("canvas.wf-orb")).toBeNull();
+    const idle = await render(
+      <WaveformLoading isAnalyzing={false} isLoadingWaveform={false} analysisProgress={null} />,
+    );
+    expect(idle.container.querySelector("canvas.wf-orb")).toBeNull();
+    await act(async () => root.unmount());
+    await act(async () => idle.root.unmount());
+  });
+});
