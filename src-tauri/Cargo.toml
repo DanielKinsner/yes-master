@@ -61,3 +61,15 @@ tempfile = "3"
 default = ["app-runner", "custom-protocol"]
 app-runner = []
 custom-protocol = ["tauri/custom-protocol"]
+
+# Dev builds must keep the realtime DSP chain comfortably above 1x even at
+# 96 kHz: fully unoptimized it measured 0.86x realtime on a 96k stereo
+# source (examples/chain_bench, 2026-06-12) — guaranteed underruns in
+# `tauri dev`. opt-level 1 keeps our own rebuilds fast; dependencies
+# (symphonia, ebur128, rustfft, rodio) get full optimization since they
+# rarely rebuild.
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
