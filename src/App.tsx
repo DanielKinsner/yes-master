@@ -440,7 +440,12 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             className="ghost-btn"
-            onClick={() => requestGuideReset(globalThis.localStorage)}
+            onClick={() => {
+              requestGuideReset(globalThis.localStorage);
+              // Close so the revived chip is visible, not hidden behind
+              // this dialog.
+              onClose();
+            }}
           >
             Show first-run tips again
           </button>

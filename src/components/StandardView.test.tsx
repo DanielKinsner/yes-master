@@ -454,3 +454,28 @@ describe("first-run guide live reset", () => {
     await act(async () => root.unmount());
   });
 });
+
+describe("first-run guide reset while on Mastered", () => {
+  it("live reset on Mastered playback advances to the send-off, never silently dies", async () => {
+    globalThis.localStorage?.setItem(FIRST_RUN_GUIDE_KEY, "done");
+    const { container, root } = await render(
+      <StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />,
+    );
+    expect(container.querySelector(".hint-chip")).toBeNull();
+    await act(async () => {
+      globalThis.localStorage?.setItem(FIRST_RUN_GUIDE_KEY, "reset");
+      window.dispatchEvent(new Event("yes-master:first-run-guide-reset"));
+    });
+    expect(container.querySelector(".hint-chip-sendoff")).not.toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("mount with a pending reset marker on Mastered shows the send-off too", async () => {
+    globalThis.localStorage?.setItem(FIRST_RUN_GUIDE_KEY, "reset");
+    const { container, root } = await render(
+      <StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />,
+    );
+    expect(container.querySelector(".hint-chip-sendoff")).not.toBeNull();
+    await act(async () => root.unmount());
+  });
+});

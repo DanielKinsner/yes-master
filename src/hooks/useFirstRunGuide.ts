@@ -9,6 +9,7 @@ import {
   FIRST_RUN_GUIDE_RESET_EVENT,
   deriveGuideStep,
   guideAlreadyFinished,
+  guideWasReset,
   markGuideFinished,
   type GuideStep,
 } from "../lib/first-run-guide";
@@ -35,8 +36,11 @@ export function useFirstRunGuide(args: {
   const [advancedDone, setAdvancedDone] = useState(false);
   // True once the flip chip has actually been on screen. Distinguishes a
   // guided flip from a fast user who reached Mastered before the guide
-  // could appear — those users are never lectured (silent finish).
-  const chipWasVisible = useRef(false);
+  // could appear — those users are never lectured (silent finish). An
+  // explicit reset pre-arms this: the user ASKED for tips, so the silent
+  // finish must not swallow the revived guide (it advances to the
+  // send-off instead if playback is already on Mastered).
+  const chipWasVisible = useRef(guideWasReset(storage));
 
   const rawStep = deriveGuideStep({
     started,
@@ -77,7 +81,7 @@ export function useFirstRunGuide(args: {
   // immediately — without this, the reset only worked after a relaunch.
   useEffect(() => {
     const revive = () => {
-      chipWasVisible.current = false;
+      chipWasVisible.current = true;
       setStarted(true);
       setFlipped(false);
       setSendOffElapsed(false);

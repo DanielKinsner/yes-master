@@ -54,7 +54,16 @@ export function resetGuide(storage: GuideStorage | undefined): void {
 /// guide revives immediately instead of waiting for the next app launch.
 export const FIRST_RUN_GUIDE_RESET_EVENT = "yes-master:first-run-guide-reset";
 
+/// An explicit reset is a REQUEST to be shown tips — it must never be
+/// swallowed by the fast-user silent finish (e.g. playback already on
+/// Mastered when the user clicks the Settings action). The "reset" marker
+/// records that intent for the next mount; the event revives a mounted
+/// guide immediately.
 export function requestGuideReset(storage: GuideStorage | undefined): void {
-  resetGuide(storage);
+  storage?.setItem(FIRST_RUN_GUIDE_KEY, "reset");
   globalThis.dispatchEvent?.(new Event(FIRST_RUN_GUIDE_RESET_EVENT));
+}
+
+export function guideWasReset(storage: GuideStorage | undefined): boolean {
+  return storage?.getItem(FIRST_RUN_GUIDE_KEY) === "reset";
 }
