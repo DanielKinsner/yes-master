@@ -32,7 +32,7 @@ import type {
 import type { PlaybackKindUI } from "./hooks/useTrackMaster";
 import { LOUDNESS_PROFILES, loudnessTargetDisplay } from "./lib/effective-settings";
 import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
-import { markGuideFinished } from "./lib/first-run-guide";
+import { markGuideFinished, resetGuide } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
 import "./App.css";
 
@@ -436,6 +436,15 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         {SETTINGS_GROUPS.map((group) => (
           <SettingsGroup key={group.title} title={group.title} rows={group.rows} />
         ))}
+        <div className="settings-actions">
+          <button
+            type="button"
+            className="ghost-btn"
+            onClick={() => resetGuide(globalThis.localStorage)}
+          >
+            Show first-run tips again
+          </button>
+        </div>
       </div>
     </ChromeDialog>
   );

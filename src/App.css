@@ -5842,3 +5842,5 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
   .hint-chip { animation: none; }
   .std-rail-ab button.guide-pulse { animation: none; }
 }
+
+.settings-actions { margin-top: 12px; }
