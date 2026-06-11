@@ -164,6 +164,10 @@ export async function mockInvoke<T>(
     }
 
     case "analyze_tracks": {
+      // Real analysis takes seconds; resolve slowly so the browser preview
+      // exercises the staged progress labels and the analysis orb the way
+      // the desktop app does. (Browser-only code — Tauri never loads this.)
+      await new Promise((resolve) => setTimeout(resolve, 4000));
       const tracks =
         (args?.tracks as Array<{ id: TrackId; path: string }>) ?? [];
       const results: AnalysisResult[] = tracks.map((t) => ({
@@ -174,6 +178,9 @@ export async function mockInvoke<T>(
     }
 
     case "prepare_waveform": {
+      // Mirror the real flow's decode gap (analysis ends, THEN peaks land)
+      // so the browser preview exercises the orb -> morph transition.
+      await new Promise((resolve) => setTimeout(resolve, 800));
       const pixels = (args?.targetPixels as number | null) ?? 1600;
       return syntheticWaveform(pixels) as unknown as T;
     }

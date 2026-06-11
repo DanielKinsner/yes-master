@@ -127,14 +127,19 @@ export function WaveformView({
   const [morphing, setMorphing] = useState(false);
   useEffect(() => {
     if (!peaks) {
-      wasAnalyzingNoPeaks.current = isAnalyzing;
+      // Real import flow is sequential: analyze (isAnalyzing), THEN waveform
+      // decode (isLoading), THEN peaks. Latch during analysis, hold through
+      // the decode gap, and clear only when the slot goes fully idle (so a
+      // later track switch with ready peaks doesn't morph).
+      if (isAnalyzing) wasAnalyzingNoPeaks.current = true;
+      else if (!isLoading) wasAnalyzingNoPeaks.current = false;
       return;
     }
     if (wasAnalyzingNoPeaks.current) {
       wasAnalyzingNoPeaks.current = false;
       if (!prefersReducedMotion()) setMorphing(true);
     }
-  }, [peaks, isAnalyzing]);
+  }, [peaks, isAnalyzing, isLoading]);
   useEffect(() => {
     if (!morphing) return;
     const cut = () => setMorphing(false);

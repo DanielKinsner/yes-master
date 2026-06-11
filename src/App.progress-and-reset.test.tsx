@@ -306,3 +306,50 @@ describe("WaveformView morph", () => {
     await act(async () => root.unmount());
   });
 });
+
+describe("WaveformView morph across the real import sequence", () => {
+  const seqPeaks: WaveformPeaks = {
+    track_id: "wf-3",
+    channels: [[0.3, 0.7, 0.4]],
+    samples_per_pixel: 512,
+    total_samples: 1536,
+    sample_rate: 44_100,
+  };
+
+  function seqView(p: { peaks?: WaveformPeaks; isAnalyzing: boolean; isLoading: boolean }) {
+    return (
+      <WaveformView
+        peaks={p.peaks}
+        isLoading={p.isLoading}
+        isAnalyzing={p.isAnalyzing}
+        analysisProgress={null}
+        currentTimeSec={0}
+        durationSec={10}
+        region={null}
+        onSeek={() => {}}
+        onSetRegion={() => {}}
+        onClearRegion={() => {}}
+      />
+    );
+  }
+
+  it("still morphs when peaks arrive AFTER analysis ends (decode gap)", async () => {
+    // Real import flow: analyze (isAnalyzing true -> false), THEN waveform
+    // decode (isLoading true), THEN peaks. The latch must survive the gap.
+    const { container, root } = await render(seqView({ isAnalyzing: true, isLoading: false }));
+    await act(async () => { root.render(seqView({ isAnalyzing: false, isLoading: true })); });
+    await act(async () => { root.render(seqView({ peaks: seqPeaks, isAnalyzing: false, isLoading: false })); });
+    expect(container.querySelector(".wf-orb.is-morph")).not.toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("does not morph when peaks arrive into an idle slot (no analysis ran)", async () => {
+    const { container, root } = await render(seqView({ isAnalyzing: true, isLoading: false }));
+    // Analysis ends and the slot goes fully idle (no decode in flight):
+    // the latch clears, so a later track switch with ready peaks is calm.
+    await act(async () => { root.render(seqView({ isAnalyzing: false, isLoading: false })); });
+    await act(async () => { root.render(seqView({ peaks: seqPeaks, isAnalyzing: false, isLoading: false })); });
+    expect(container.querySelector(".wf-orb.is-morph")).toBeNull();
+    await act(async () => root.unmount());
+  });
+});
