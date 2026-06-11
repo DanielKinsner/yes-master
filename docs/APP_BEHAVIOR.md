@@ -40,6 +40,10 @@ Track Master supports:
   `yes-master:first-run-guide`, resettable from Settings ("Show first-run
   tips again"). Entering Advanced or pre-flipping to Mastered ends it
   silently. Spec: `docs/superpowers/specs/2026-06-11-first-run-guide-design.md`.
+- A first-launch welcome hero: when no track is loaded, the empty state
+  shows the orb idling as the brand visual with the product promise and
+  import CTA. Never a wall — import and drag-drop always work; reduced
+  motion gets a static glyph.
 - An analysis orb: a particle point-cloud animates in the waveform slot
   while analysis runs (with the existing staged labels/progress), then
   morphs into the track's real waveform when peaks arrive. Presentation
