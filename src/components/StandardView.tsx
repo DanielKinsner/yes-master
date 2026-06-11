@@ -420,6 +420,12 @@ export function StandardView({
     exportGroup: useRef<HTMLDivElement | null>(null),
   };
   useRailSeamAlignment(seamRefs);
+  // Any route into Advanced ends the guide — someone who found Advanced
+  // doesn't need first-run tips.
+  const enterAdvanced = () => {
+    guide.noteEnteredAdvanced();
+    onEnterAdvanced();
+  };
   return (
     <div className="standard-view">
       <TracksRail tm={tm} />
@@ -435,6 +441,12 @@ export function StandardView({
                 : "Source not analyzed yet"}
           </p>
         </div>
+
+        {guide.step === "advanced" && (
+          <HintChip className="hint-chip-advanced" onDismiss={guide.dismiss}>
+            Need more control? Try <strong>Advanced</strong> — top right.
+          </HintChip>
+        )}
 
         <div className="std-wave-deck">
           <div className="std-play-stack">
@@ -480,6 +492,13 @@ export function StandardView({
             )}
           </div>
         </div>
+
+        {guide.step === "sendoff" && (
+          <HintChip className="hint-chip-sendoff" onDismiss={guide.dismiss}>
+            That's the whole idea. Presets and Intensity shape the sound —
+            explore.
+          </HintChip>
+        )}
 
         <div className="std-steps">
           <div className="std-step std-step-style">
@@ -543,7 +562,7 @@ export function StandardView({
       <StandardRightRail
         tm={tm}
         guide={guide}
-        onEnterAdvanced={onEnterAdvanced}
+        onEnterAdvanced={enterAdvanced}
         seamRefs={seamRefs}
       />
     </div>

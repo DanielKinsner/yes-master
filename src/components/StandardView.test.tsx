@@ -386,3 +386,52 @@ describe("first-run guide", () => {
     await act(async () => root.unmount());
   });
 });
+
+describe("first-run guide progression", () => {
+  function freshTm(overrides: Partial<TM> = {}): TM {
+    return fakeTm({
+      transport: { isPlaying: false, currentTimeSec: 0, playbackKind: "source", volumeMatch: false },
+      ...overrides,
+    } as Partial<TM>);
+  }
+
+  it("flip -> send-off chip; after the window, the Advanced pointer", async () => {
+    vi.useFakeTimers();
+    try {
+      const { container, root } = await render(
+        <StandardView tm={freshTm()} onEnterAdvanced={() => {}} />,
+      );
+      expect(container.querySelector(".hint-chip-flip")).not.toBeNull();
+      await act(async () => {
+        root.render(
+          <StandardView
+            tm={freshTm({
+              transport: { isPlaying: true, currentTimeSec: 3, playbackKind: "master", volumeMatch: false },
+            } as Partial<TM>)}
+            onEnterAdvanced={() => {}}
+          />,
+        );
+      });
+      expect(container.querySelector(".hint-chip-sendoff")?.textContent).toContain("Presets and Intensity");
+      expect(globalThis.localStorage?.getItem(FIRST_RUN_GUIDE_KEY)).toBe("done");
+      await act(async () => { vi.advanceTimersByTime(6000); });
+      expect(container.querySelector(".hint-chip-sendoff")).toBeNull();
+      expect(container.querySelector(".hint-chip-advanced")?.textContent).toContain("Advanced");
+      await act(async () => root.unmount());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("the rail Change button still enters Advanced and ends the guide", async () => {
+    const onEnterAdvanced = vi.fn();
+    const { container, root } = await render(
+      <StandardView tm={freshTm()} onEnterAdvanced={onEnterAdvanced} />,
+    );
+    const change = container.querySelector<HTMLButtonElement>(".std-delivery-change")!;
+    await act(async () => { change.click(); });
+    expect(onEnterAdvanced).toHaveBeenCalledOnce();
+    expect(globalThis.localStorage?.getItem(FIRST_RUN_GUIDE_KEY)).toBe("done");
+    await act(async () => root.unmount());
+  });
+});

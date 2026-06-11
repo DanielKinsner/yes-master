@@ -32,6 +32,7 @@ import type {
 import type { PlaybackKindUI } from "./hooks/useTrackMaster";
 import { LOUDNESS_PROFILES, loudnessTargetDisplay } from "./lib/effective-settings";
 import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
+import { markGuideFinished } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
 import "./App.css";
 
@@ -90,7 +91,12 @@ function App() {
         onOpenSettings={() => setChromePanel("settings")}
         onOpenHelp={() => setChromePanel("help")}
         viewMode={view === "advanced" ? "advanced" : "standard"}
-        onEnterAdvanced={() => setView("advanced")}
+        onEnterAdvanced={() => {
+          // Entering Advanced from the chrome unmounts StandardView without
+          // notice — end the first-run guide here so it never re-appears.
+          markGuideFinished(globalThis.localStorage, "done");
+          setView("advanced");
+        }}
         onBackToStandard={nav.requestBackToStandard}
       />
     <div className={"app" + (view === "standard" ? " app-standard" : "")}>
