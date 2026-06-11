@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open, save, getCurrentWebview } from "../lib/tauri-runtime";
-import { api, onPlaybackTick, onRenderProgress } from "../lib/api";
+import { api, onLandingStatus, onPlaybackTick, onRenderProgress } from "../lib/api";
 import {
   browserExportLocationStore,
   defaultExportPath,
@@ -283,6 +283,10 @@ export function useTrackMaster() {
     fraction: number;
     kind: "preview" | "master" | "album";
   } | null>(null);
+  // "Landing loudness…": true while Mastered audition plays hotter than the
+  // loudness target because the corrective landing gain is still being
+  // measured in the background. Edge-triggered from the backend.
+  const [landingPending, setLandingPending] = useState(false);
   const analysisProgress = isAnalyzing
     ? ANALYSIS_PROGRESS_STAGES[analysisStageIndex]
     : null;
@@ -456,7 +460,11 @@ export function useTrackMaster() {
   useEffect(() => {
     let unlistenTick: (() => void) | undefined;
     let unlistenProgress: (() => void) | undefined;
+    let unlistenLanding: (() => void) | undefined;
     let renderProgressClearTimer: ReturnType<typeof setTimeout> | undefined;
+    onLandingStatus(setLandingPending).then((fn) => {
+      unlistenLanding = fn;
+    });
     onPlaybackTick((tick) => {
       lastPlaybackTickRef.current = {
         trackId: tick.track_id,
@@ -505,6 +513,7 @@ export function useTrackMaster() {
     return () => {
       unlistenTick?.();
       unlistenProgress?.();
+      unlistenLanding?.();
       if (renderProgressClearTimer) clearTimeout(renderProgressClearTimer);
     };
   }, []);
@@ -2069,6 +2078,7 @@ export function useTrackMaster() {
     transport,
     lastExportReceipt,
     renderProgress,
+    landingPending,
     hadPriorSession,
     undo,
     redo,

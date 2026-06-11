@@ -72,6 +72,7 @@ const mocks = vi.hoisted(() => {
     api,
     onPlaybackTick: vi.fn(),
     onRenderProgress: vi.fn(),
+    onLandingStatus: vi.fn(),
     open: vi.fn(),
     save: vi.fn(),
     onDragDropEvent: vi.fn(),
@@ -82,6 +83,7 @@ vi.mock("./lib/api", () => ({
   api: mocks.api,
   onPlaybackTick: mocks.onPlaybackTick,
   onRenderProgress: mocks.onRenderProgress,
+  onLandingStatus: mocks.onLandingStatus,
 }));
 
 vi.mock("./lib/tauri-runtime", () => ({
@@ -214,6 +216,7 @@ function resetApiMocks() {
   mocks.onDragDropEvent.mockReset();
   mocks.onPlaybackTick.mockReset();
   mocks.onRenderProgress.mockReset();
+  mocks.onLandingStatus.mockReset();
 
   mocks.api.listUserPresets.mockResolvedValue([]);
   mocks.api.loadRecentSession.mockResolvedValue(null);
@@ -227,6 +230,7 @@ function resetApiMocks() {
   mocks.api.stopPlayback.mockResolvedValue(null);
   mocks.onPlaybackTick.mockResolvedValue(() => {});
   mocks.onRenderProgress.mockResolvedValue(() => {});
+  mocks.onLandingStatus.mockResolvedValue(() => {});
   mocks.onDragDropEvent.mockResolvedValue(() => {});
 }
 

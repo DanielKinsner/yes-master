@@ -51,28 +51,39 @@ pub fn run() {
         .setup(|app| {
             let app_handle = app.handle().clone();
             let player_state = app.state::<Arc<audio::AudioPlayer>>().inner().clone();
-            std::thread::spawn(move || loop {
-                std::thread::sleep(Duration::from_millis(50));
-                let snap = player_state.snapshot();
-                if !snap.is_loaded {
-                    continue;
+            std::thread::spawn(move || {
+                // Edge-triggered "landing loudness…" signal: the boolean
+                // payload flips true while the live chain plays with a
+                // still-measuring landing gain, false when the corrective
+                // gain crossfades in. Emitted only on change.
+                let mut last_landing_pending: Option<bool> = None;
+                loop {
+                    std::thread::sleep(Duration::from_millis(50));
+                    let snap = player_state.snapshot();
+                    if !snap.is_loaded {
+                        continue;
+                    }
+                    if last_landing_pending != Some(snap.landing_pending) {
+                        last_landing_pending = Some(snap.landing_pending);
+                        let _ = app_handle.emit("landing:status", snap.landing_pending);
+                    }
+                    let tick = PlaybackTick {
+                        track_id: snap.track_id,
+                        position_sec: snap.position_sec,
+                        is_playing: snap.is_playing,
+                        is_loaded: snap.is_loaded,
+                        peak_dbfs: snap.peak_dbfs,
+                        peak_left_dbfs: snap.peak_left_dbfs,
+                        peak_right_dbfs: snap.peak_right_dbfs,
+                        gr_low_db: snap.gr_low_db,
+                        gr_mid_db: snap.gr_mid_db,
+                        gr_high_db: snap.gr_high_db,
+                        lufs_momentary: snap.lufs_momentary,
+                        lufs_integrated: snap.lufs_integrated,
+                        spectrum_db: snap.spectrum_db,
+                    };
+                    let _ = app_handle.emit("playback:tick", tick);
                 }
-                let tick = PlaybackTick {
-                    track_id: snap.track_id,
-                    position_sec: snap.position_sec,
-                    is_playing: snap.is_playing,
-                    is_loaded: snap.is_loaded,
-                    peak_dbfs: snap.peak_dbfs,
-                    peak_left_dbfs: snap.peak_left_dbfs,
-                    peak_right_dbfs: snap.peak_right_dbfs,
-                    gr_low_db: snap.gr_low_db,
-                    gr_mid_db: snap.gr_mid_db,
-                    gr_high_db: snap.gr_high_db,
-                    lufs_momentary: snap.lufs_momentary,
-                    lufs_integrated: snap.lufs_integrated,
-                    spectrum_db: snap.spectrum_db,
-                };
-                let _ = app_handle.emit("playback:tick", tick);
             });
             Ok(())
         })

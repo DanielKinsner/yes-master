@@ -257,3 +257,13 @@ export function onRenderProgress(
     handler(event.payload),
   );
 }
+
+/// Edge-triggered: true while Mastered audition is playing hotter than the
+/// loudness target because the corrective landing gain is still being
+/// measured; false once it crossfades in. Drives the "landing loudness…"
+/// note by the meters.
+export function onLandingStatus(
+  handler: (pending: boolean) => void,
+): Promise<UnlistenFn> {
+  return listen<boolean>("landing:status", (event) => handler(event.payload));
+}

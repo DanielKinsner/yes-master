@@ -197,9 +197,16 @@ export async function mockInvoke<T>(
     }
 
     case "play_track":
-    case "play_master":
     case "resume_playback":
       mockPlaying = true;
+      return null as unknown as T;
+
+    case "play_master":
+      mockPlaying = true;
+      // Mimic the real engine's landing window: Mastered starts hotter than
+      // target while the corrective gain is measured, then settles.
+      emitLandingStatus(true);
+      setTimeout(() => emitLandingStatus(false), 2500);
       return null as unknown as T;
 
     case "pause_playback":
@@ -331,9 +338,21 @@ export async function mockListen<T>(
     }, TICK_INTERVAL_MS);
     return () => clearInterval(interval);
   }
+  if (channel === "landing:status") {
+    const wrapped = (pending: boolean) => handler({ payload: pending as unknown as T });
+    landingStatusHandlers.add(wrapped as (pending: boolean) => void);
+    return () => landingStatusHandlers.delete(wrapped as (pending: boolean) => void);
+  }
   // Unknown channel — return a no-op unlisten.
   console.warn(`[preview-mock] unhandled listen channel: ${channel}`);
   return () => {};
+}
+
+// "Landing loudness…" simulation plumbing: play_master flips pending on,
+// then off after a short window (see mockInvoke).
+const landingStatusHandlers = new Set<(pending: boolean) => void>();
+function emitLandingStatus(pending: boolean): void {
+  for (const h of landingStatusHandlers) h(pending);
 }
 
 export async function mockOpen(

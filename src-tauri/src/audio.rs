@@ -355,6 +355,12 @@ pub struct PlaybackSnapshot {
     /// Idle states return all-floor. The frontend draws the bins as a
     /// filled area under the EQ response curve.
     pub spectrum_db: Vec<f32>,
+    /// True while Mastered audition is playing with the loudness landing
+    /// requested but the corrective landing gain still being measured —
+    /// the audible level is hotter than the target until the measurement
+    /// crossfades in. Drives the UI's "landing loudness…" note so the
+    /// catch-up window is legible instead of mysterious.
+    pub landing_pending: bool,
 }
 
 impl Default for PlaybackSnapshot {
@@ -373,6 +379,7 @@ impl Default for PlaybackSnapshot {
             lufs_momentary: SILENCE_DBFS,
             lufs_integrated: SILENCE_DBFS,
             spectrum_db: SpectrumAnalyzer::silent(),
+            landing_pending: false,
         }
     }
 }
@@ -738,6 +745,11 @@ struct AudioThreadState {
     /// L4b — FFT analyzer that runs once per snapshot tick and turns
     /// the ring into 32 log-binned dB values for the EQ panel.
     spectrum_analyzer: SpectrumAnalyzer,
+    /// Mirrors `PlaybackSnapshot::landing_pending`: true from the moment a
+    /// live-chain landing measurement is scheduled until the corrective
+    /// gain for the CURRENT generation lands (or landing stops applying —
+    /// cache hit, landing off, Original playback).
+    landing_pending: bool,
 }
 
 #[derive(Clone)]
@@ -1306,6 +1318,10 @@ fn process_audio_command(
                     );
                     coeffs.export_landing_gain_lin = landing_plan.coeff_gain;
                     s.live_landing_gain_lin = landing_plan.remembered_gain;
+                    // Pending = the gain applied right now is NOT the
+                    // measured one for these settings (cache miss). A cache
+                    // hit or landing-off update clears it.
+                    s.landing_pending = preview_lufs_landing && landing_plan.needs_measurement;
                     if preview_lufs_landing {
                         if !landing_plan.needs_measurement {
                             // The current live generation needs no measurement.
@@ -1380,6 +1396,11 @@ fn process_audio_command(
                         // so the audio output thread crossfades to the
                         // accurate gain.
                         s.live_landing_gain_lin = gain;
+                        // The audible gain is now the measured one — the
+                        // "landing loudness…" window is over. (Generation
+                        // mismatch leaves the flag to the newer UpdateChain
+                        // that owns it.)
+                        s.landing_pending = false;
                         if let Some(tx) = s.live_coeffs_tx.as_ref() {
                             let mut coeffs = crate::dsp::ChainCoeffs::from_settings(
                                 s.live_sample_rate,
@@ -1594,6 +1615,7 @@ fn audio_thread(
                     lufs_momentary,
                     lufs_integrated,
                     spectrum_db,
+                    landing_pending: s.landing_pending,
                 }
             }
             _ => PlaybackSnapshot::default(),
@@ -1664,6 +1686,7 @@ fn handle_play(
             integrated_lufs_x100: Arc::new(AtomicI32::new(i32::MIN)),
             spectrum_ring: Arc::new(SpectrumRing::new()),
             spectrum_analyzer: SpectrumAnalyzer::new(pcm.sample_rate),
+            landing_pending: false,
         });
     }
     let s = state.as_mut().expect("state just inserted");
@@ -1711,6 +1734,8 @@ fn handle_play(
     s.live_coeffs_tx = None;
     s.live_coeff_generation = s.live_coeff_generation.wrapping_add(1);
     s.live_landing_gain_lin = 1.0;
+    // Original playback has no mastering chain — no landing to wait on.
+    s.landing_pending = false;
     s.live_sample_rate = sample_rate;
     // Track epoch bump invalidates any in-flight LUFS workers from the
     // previous track. They'll still complete and send PreviewLandingReady,
@@ -1816,6 +1841,7 @@ fn handle_play_master(
             integrated_lufs_x100: Arc::new(AtomicI32::new(i32::MIN)),
             spectrum_ring: Arc::new(SpectrumRing::new()),
             spectrum_analyzer: SpectrumAnalyzer::new(pcm.sample_rate),
+            landing_pending: false,
         });
     }
     let s = state.as_mut().expect("state just inserted");
@@ -1869,6 +1895,10 @@ fn handle_play_master(
         play_master_preview_landing_plan(&s.landing_gain_cache, settings, preview_lufs_landing);
     chain.coeffs.export_landing_gain_lin = landing_plan.initial_gain;
     s.live_landing_gain_lin = chain.coeffs.export_landing_gain_lin;
+    // Fresh Mastered playback on uncached settings starts hotter than the
+    // target until the background measurement crossfades in — surface that
+    // window to the UI ("landing loudness…").
+    s.landing_pending = preview_lufs_landing && landing_plan.needs_measurement;
 
     if landing_plan.needs_measurement
         && try_spawn_lufs_preview_worker(

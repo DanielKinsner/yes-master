@@ -351,3 +351,33 @@ describe("RightRail source checks", () => {
     });
   });
 });
+
+describe("MasterOutPanel landing note", () => {
+  function panel(landingPending: boolean) {
+    return (
+      <MasterOutPanel
+        isAnalyzing={false}
+        peakDbfs={-8.5}
+        peakLeftDbfs={-8.5}
+        peakRightDbfs={-8.5}
+        isPlaying
+        lufsMomentary={-9.7}
+        lufsIntegrated={-10.5}
+        landingPending={landingPending}
+      />
+    );
+  }
+
+  it("shows the landing note while the corrective gain is pending", async () => {
+    const { container, root } = await renderNode(panel(true));
+    const note = container.querySelector(".landing-note");
+    expect(note?.textContent).toContain("Landing loudness");
+    await act(async () => { root.unmount(); });
+  });
+
+  it("hides the note once the landing has settled (and by default)", async () => {
+    const { container, root } = await renderNode(panel(false));
+    expect(container.querySelector(".landing-note")).toBeNull();
+    await act(async () => { root.unmount(); });
+  });
+});

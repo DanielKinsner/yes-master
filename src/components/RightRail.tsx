@@ -183,6 +183,7 @@ export function MasterOutPanel({
   isPlaying,
   lufsMomentary,
   lufsIntegrated,
+  landingPending = false,
 }: {
   isAnalyzing: boolean;
   peakDbfs: number;
@@ -191,6 +192,9 @@ export function MasterOutPanel({
   isPlaying: boolean;
   lufsMomentary: number;
   lufsIntegrated: number;
+  /// True while Mastered audition plays hotter than the loudness target —
+  /// the corrective landing gain is still being measured in the background.
+  landingPending?: boolean;
 }) {
   // This panel is a live output meter. Source/export analysis lives in
   // QualityCheckPanel and export receipts; mixing those fallback values into
@@ -236,6 +240,11 @@ export function MasterOutPanel({
         <Readout label="Since Play" value={integratedDisplay} unit="LUFS" />
         <Readout label="Live Peak" value={peakDisplay} unit="dBFS" />
       </dl>
+      {landingPending && (
+        <p className="landing-note" role="status">
+          Landing loudness… level settles in a moment.
+        </p>
+      )}
     </section>
   );
 }

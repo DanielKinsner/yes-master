@@ -360,6 +360,9 @@ function StandardRightRail({
           isPlaying={tm.transport.isPlaying}
           lufsMomentary={tm.transport.lufsMomentary}
           lufsIntegrated={tm.transport.lufsIntegrated}
+          landingPending={
+            tm.landingPending && tm.transport.playbackKind === "master"
+          }
         />
       </section>
 
