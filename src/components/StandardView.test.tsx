@@ -578,4 +578,23 @@ describe("Standard export receipt", () => {
     expect(container.querySelector(".std-export-done")).toBeNull();
     await act(async () => root.unmount());
   });
+
+  it("ignores receipts that belong to a different selected track", async () => {
+    const tm = exportedTm({
+      lastExportReceipt: {
+        trackId: "other-track",
+        outputPath: "C:/renders/Other Song.wav",
+        checks: [{ code: "non_finite", level: "critical", message: "Other render failed" }],
+        kind: "track",
+        job: { measurements: null },
+      },
+    } as unknown as Partial<TM>);
+    const { container, root } = await render(
+      <StandardView tm={tm} onEnterAdvanced={() => {}} />,
+    );
+    expect(container.querySelector(".std-export-done")).toBeNull();
+    expect(container.textContent).not.toContain("Other Song.wav");
+    expect(container.textContent).not.toContain("Other render failed");
+    await act(async () => root.unmount());
+  });
 });

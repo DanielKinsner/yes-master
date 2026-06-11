@@ -308,15 +308,17 @@ function StandardRightRail({
   onEnterAdvanced: () => void;
   seamRefs: RailSeamRefs;
 }) {
-  const notes = tm.lastExportReceipt
-    ? standardExportNotes(tm.lastExportReceipt.checks)
-    : null;
+  const receipt =
+    tm.lastExportReceipt?.kind === "track" &&
+    tm.lastExportReceipt.trackId === tm.selectedTrackId
+      ? tm.lastExportReceipt
+      : null;
+  const notes = receipt ? standardExportNotes(receipt.checks) : null;
   // Success receipt (owner note 2026-06-11: a clean Standard export gave no
   // feedback at all — the receipt only lived in Advanced). Track receipts
   // only; album exports keep their own flow. Invalid renders keep the
   // prominent re-render alert instead of a success card.
-  const receipt = tm.lastExportReceipt;
-  const showDone = receipt != null && receipt.kind === "track" && notes != null && !notes.invalid;
+  const showDone = receipt != null && notes != null && !notes.invalid;
   const doneLufs = showDone
     ? (receipt.job.measurements?.lufs_integrated ?? null)
     : null;
