@@ -1527,7 +1527,9 @@ export function useTrackMaster() {
         transport.currentTimeSec >= duration - 0.5 &&
         !transport.isPlaying;
       if (!loadedCorrectTrack || !loadedCorrectKind || isAtEnd) {
-        await playWithKind(transport.playbackKind, 0);
+        const startPosition =
+          isAtEnd || !loadedCorrectTrack ? 0 : transport.currentTimeSec;
+        await playWithKind(transport.playbackKind, startPosition);
       } else if (transport.isPlaying) {
         await api.pausePlayback();
       } else {

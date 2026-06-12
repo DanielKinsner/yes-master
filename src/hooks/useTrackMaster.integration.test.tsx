@@ -1095,7 +1095,7 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
-  it("does not start playback when switching original/mastered while paused", async () => {
+  it("does not autoplay on a paused kind switch and resumes at the same playhead", async () => {
     let playbackHandler:
       | ((tick: {
           track_id: string | null;
@@ -1115,7 +1115,10 @@ describe("useTrackMaster integration dispatches", () => {
       playbackHandler = handler;
       return Promise.resolve(() => {});
     });
-    const track = makeTrack("paused-switch-1", "C:/audio/paused switch.wav");
+    const track = {
+      ...makeTrack("paused-switch-1", "C:/audio/paused switch.wav"),
+      duration_seconds: 120,
+    };
     mocks.api.importTracks.mockResolvedValue([track]);
     const harness = await renderHookHarness();
 
@@ -1155,6 +1158,84 @@ describe("useTrackMaster integration dispatches", () => {
     expect(harness.current().transport.isPlaying).toBe(false);
     expect(mocks.api.playMaster).not.toHaveBeenCalled();
     expect(mocks.api.playTrack).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+    await waitFor(() => {
+      expect(mocks.api.playMaster).toHaveBeenCalled();
+    });
+    expect(mocks.api.playMaster.mock.calls.at(-1)?.[3]).toBeCloseTo(42, 1);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("restarts from zero when a paused kind switch resumes at the track end", async () => {
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const track = {
+      ...makeTrack("paused-switch-end", "C:/audio/paused switch end.wav"),
+      duration_seconds: 120,
+    };
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      playbackHandler?.({
+        track_id: track.id,
+        position_sec: 119.75,
+        is_playing: false,
+        is_loaded: true,
+        peak_dbfs: -120,
+        gr_low_db: -120,
+        gr_mid_db: -120,
+        gr_high_db: -120,
+        lufs_momentary: -120,
+        lufs_integrated: -120,
+        spectrum_db: [],
+      });
+    });
+    await waitFor(() => {
+      expect(harness.current().transport.currentTimeSec).toBe(119.75);
+    });
+
+    await act(async () => {
+      await harness.current().setPlaybackKind("master");
+    });
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+
+    await waitFor(() => {
+      expect(mocks.api.playMaster).toHaveBeenCalled();
+    });
+    expect(mocks.api.playMaster.mock.calls.at(-1)?.[3]).toBe(0);
 
     await act(async () => {
       harness.root.unmount();
