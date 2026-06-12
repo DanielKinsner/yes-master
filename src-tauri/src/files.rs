@@ -36,7 +36,7 @@ fn import_one(path_str: &str) -> CommandResult<ImportedTrack> {
         .map(|s| s.to_lowercase())
         .unwrap_or_else(|| "unknown".to_string());
 
-    let metadata = probe_metadata(path).unwrap_or_default();
+    let metadata = probe_metadata(path)?;
 
     Ok(ImportedTrack {
         id: TrackId::new(),

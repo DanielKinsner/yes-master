@@ -250,12 +250,31 @@ async fn import_tracks_rejects_traversal_paths() {
 
 #[tokio::test]
 async fn import_tracks_extracts_display_name_and_format() {
-    let tracks = files::import_tracks(vec!["C:/music/Song Title.flac".to_string()])
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let path = tmp.path().join("Song Title.wav");
+    write_sine_wav(&path, 44_100, 1.0, 440.0, 2);
+
+    let tracks = files::import_tracks(vec![path.to_string_lossy().to_string()])
         .await
         .expect("import ok");
     assert_eq!(tracks.len(), 1);
     assert_eq!(tracks[0].display_name, "Song Title");
-    assert_eq!(tracks[0].source_format, "flac");
+    assert_eq!(tracks[0].source_format, "wav");
+}
+
+#[tokio::test]
+async fn import_tracks_rejects_garbage_wav_instead_of_defaulting_metadata() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let path = tmp.path().join("garbage.wav");
+    std::fs::write(&path, b"not actually a wav").expect("write garbage");
+
+    let err = files::import_tracks(vec![path.to_string_lossy().to_string()])
+        .await
+        .expect_err("expected decode rejection");
+    assert!(
+        matches!(err, CommandError::Decode(_)),
+        "expected Decode, got {err:?}"
+    );
 }
 
 #[tokio::test]
