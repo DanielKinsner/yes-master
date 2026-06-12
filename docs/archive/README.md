@@ -6,7 +6,7 @@ Historical plans, phase notes, prior handoffs, audits, and progress logs remain
 available through git history and in the historical source repo:
 
 ```text
-C:\Users\SM - Dan\Documents\GitHub\album-mastering-studio-claude-build
+..\album-mastering-studio-claude-build
 ```
 
 Use the current docs in this repo first:
