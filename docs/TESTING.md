@@ -38,6 +38,23 @@ cargo test
 The desktop lanes do not compile this bridge. A shared struct or signature can
 drift here while all desktop checks stay green.
 
+## Android Native Bridge Lane
+
+When changing shared Rust types, the iPhone facade crate, `yes_master_lib`
+behavior, adaptive/profile resolution, or the Android bridge crate, also run:
+
+```powershell
+cd apps/android-native/rust
+cargo test
+cargo ndk -t arm64-v8a --platform 29 check
+```
+
+This lane needs the Android toolchain from `docs/ANDROID_NATIVE_SPEC.md`:
+JDK 17 on `JAVA_HOME`, SDK/NDK r27.2 via `local.properties` or
+`ANDROID_HOME`, Rust Android targets, and `cargo-ndk` 3.5.6 or newer.
+`--platform 29` matches `minSdk`; cargo-ndk's default API 21 sysroot predates
+`libaaudio`, so the audition link fails without it.
+
 ## Slow Fixture Lane
 
 Private audio must live under:
