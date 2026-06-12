@@ -2,10 +2,12 @@
 
 This is the active product source of truth for YES Master.
 
-YES Master is a local desktop mastering app for real tracks and real albums. It
-is not a certified mastering engineer replacement, and it is not a throwaway
-private toy. The bar is private-solid: good enough that the owner would trust it
-on personal releases before considering broader distribution.
+YES Master is a local desktop mastering app for real tracks and real albums,
+with iPhone/Android companion apps sharing the same engine (see "Mobile
+Companions" below; desktop ships first). It is not a certified mastering
+engineer replacement, and it is not a throwaway private toy. The bar is
+private-solid: good enough that the owner would trust it on personal releases
+before considering broader distribution.
 
 ## Core Promise
 
@@ -29,17 +31,29 @@ product identity.
 
 ## Primary Workflow
 
-1. Import audio.
-2. Analyze.
+**Standard is the default view.** The primary workflow is Standard's:
+
+1. Import audio (drag-drop or the hero CTA).
+2. Analyze (automatic, with real progress).
 3. Audition Original vs Mastered at the same playhead.
-4. Choose a preset and adjust intensity/tone.
-5. Use the right rail to inspect quality, delivery, and advanced settings.
-6. Export.
-7. Review warnings when present.
+4. Pick a Style (Balanced / Bright / Warm / Heavy) and a loudness
+   (Low −14 / Medium −11 / High −9 LUFS); shape with Intensity.
+5. Create Master — fixed 44.1 kHz / 24-bit WAV at −1 dBTP, no blocking
+   review (see "Standard view — export ceremony" below).
+
+The Advanced view extends this for users who want control:
+
+6. Full preset set, EQ/tone, width/warmth, compressor modes.
+7. Right rail: quality checks, delivery profile/format, advanced settings.
+8. Export with warning-aware review when warnings exist.
 
 Preview/listening is strongly encouraged, but export is allowed after analysis.
 
-## UI Responsibility Split
+## UI Responsibility Split (Advanced view)
+
+Standard deliberately has no judgment rail: one column of creative choices,
+one Create Master action, warnings suppressed per the export ceremony below.
+The split here describes Advanced.
 
 Main UI owns creative sound:
 
@@ -114,10 +128,35 @@ view), the deliberate behavior is:
   Sample rate / bit depth / ceiling are configurable only in Advanced. This
   mirrors the iPhone app's fixed export.
 
+## Adaptive Mastering
+
+What adapts per track today (all shipped, owner-listened 2026-06-11):
+
+- Loudness landing uses the current track/render measurements.
+- A resolved source profile drives Tier-1 guardrails: reduce-only trims to
+  preset brightness/low boosts and a reduce-only scale on compression
+  density, weighted by per-axis confidence and the user's Adapt Strength.
+  A preset stays recognizable by construction (per-axis trim caps).
+
+What deliberately does not adapt today:
+
+- Preset tone tilt is fixed per preset (not reference-matched).
+- Phase-B per-window confidence gating is built but OFF by default,
+  pending the owner calibration sitting.
+
+Direction (decided 2026-06-12, not yet shipped): per-band track-aware
+compression with transient protection and already-mastered stand-down is
+part of the MVP, built reduce-only and gated off until owner calibration —
+spec: `docs/plans/2026-06-12-adaptive-compressor-mvp-spec.md`. Do not
+describe it as current behavior until that spec's final phase lands.
+
 ## Compressor Canon
 
-The current automatic compressor behavior is preset/density fallback. It is not
-track-aware analysis.
+The compressor's baseline is preset/density fallback. It is partially
+track-aware today in exactly one dimension: Tier-1 guardrails scale the
+density macro down (never up) on dense sources when a source profile
+resolves. There is no per-band or transient-aware adaptation yet (see
+Adaptive Mastering above for the decided direction).
 
 Required compressor modes:
 
@@ -163,6 +202,31 @@ YES Master is release-candidate only when:
 - Private-fixture slow lane has been run for DSP/export changes.
 - Windows packaging works locally.
 - Known temporary instrumentation is removed or deliberately documented.
+
+## Mobile Companions (product definition pending)
+
+The repo ships an iPhone app and an Android app (`apps/`) that reuse the
+shared engine. Verified facts: both mirror Standard's fixed export recipe
+(44.1 kHz / 24-bit / −1 dBTP, Standard loudness trio) and resolve the
+adaptive source profile like desktop; engine output is bit-parity-pinned
+against desktop. The v1 public push is desktop-first (decision 2026-06-12);
+mobile execution plans live in `docs/plans/2026-06-12-iphone-shippability-plan.md`
+and `docs/plans/2026-06-12-android-shippability-plan.md`.
+
+**Pending owner definition (do not invent):** mobile audience, scope
+promise, and what is deliberately absent on phones. Captured via the
+canon-refresh interrogation (roadmap S5.4).
+
+## Album Master (product definition pending)
+
+Album Master exists in Advanced: album intent, per-track override, arc
+kinds, album-wide delivery format with mixed-rate resampling, continuous +
+per-track renders with a manifest. Channel-count parity (mono vs stereo)
+is a hard error and deferred.
+
+**Pending owner definition (do not invent):** the album product promise —
+what album mastering means here beyond consistent loudness and flow.
+Captured via the same S5.4 interrogation.
 
 ## Deferred
 

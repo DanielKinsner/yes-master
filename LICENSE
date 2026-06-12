@@ -1,0 +1,38 @@
+YES Master Source-Available License
+
+Copyright (c) 2026 Daniel Kinsner. All rights reserved.
+
+Permission is hereby granted to view, clone, and build this software from
+source for personal, non-commercial evaluation and contribution purposes
+only, subject to the following conditions:
+
+1. NO REDISTRIBUTION. You may not redistribute this software, in source or
+   binary form, modified or unmodified, in whole or in part.
+
+2. NO COMMERCIAL USE. You may not use this software, or any derivative of
+   it, for any commercial purpose, including selling, licensing, offering
+   as a service, or bundling with a commercial product.
+
+3. CONTRIBUTIONS. By submitting a contribution (pull request, patch, or
+   suggestion) you grant the copyright holder a perpetual, worldwide,
+   irrevocable, royalty-free license to use, modify, relicense, and
+   distribute that contribution as part of this software.
+
+4. PRIVATE AUDIO. Audio fixtures referenced by this repository's private
+   test lanes are not part of this software and are not licensed.
+
+5. NO WARRANTY. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+   KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+   IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES
+   OR OTHER LIABILITY ARISING FROM THE USE OF THE SOFTWARE.
+
+6. RESERVATION. All rights not expressly granted above are reserved. This
+   is not an open-source license as defined by the Open Source Initiative.
+
+For commercial licensing inquiries, contact the copyright holder.
+
+Note to the copyright holder: this is a plain-language source-available
+notice. Before wide distribution, consider having it reviewed, or swapping
+it for an established source-available license (e.g. PolyForm Noncommercial
+1.0.0) which carries the same intent with vetted legal text.

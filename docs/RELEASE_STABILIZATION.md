@@ -154,6 +154,16 @@ Latest aggregate evidence is recorded in
 
 ## Active Gates
 
+### Tier-1 Adaptive Voicing Listening
+
+Status: owner-listened and accepted, 2026-06-11. The owner ran a live
+auditioning session (including 96 kHz sources; the dev-profile underrun fix
+`201e746` was made during it, which is the verification artifact). Tier-1
+guardrail constants are not to be reopened without a new listening note.
+Phase-B confidence gating remains OFF by default; its calibration is
+scheduled into the adaptive-compressor calibration sitting (see
+`docs/plans/2026-06-12-adaptive-compressor-mvp-spec.md` §5).
+
 ### Reference Retune Validation
 
 Status: aggregate runner completed on 2026-05-28; listening still pending.
