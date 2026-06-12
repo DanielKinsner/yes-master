@@ -54,6 +54,13 @@ const DENSITY_DR_FULL_DB: f32 = 3.0;
 const DENSITY_LRA_SOFT_LU: f32 = 6.0;
 const DENSITY_LRA_FULL_LU: f32 = 3.0;
 
+// Adaptive Compressor MVP already-mastered classifier. TBD-CALIBRATION:
+// provisional runner-derived inputs only; owner locks by listening in AC-5.
+const ALREADY_MASTERED_HOT_LUFS: f32 = -10.0; // TBD-CALIBRATION
+const ALREADY_MASTERED_TRUE_PEAK_DBBTP: f32 = -1.2; // TBD-CALIBRATION
+const ALREADY_MASTERED_LRA_LU: f32 = 6.0; // TBD-CALIBRATION
+const ALREADY_MASTERED_BAND_PSR_DB: f32 = 8.0; // TBD-CALIBRATION
+
 /// Width (L/R correlation): deadband edge / full-trim floor. Lower correlation
 /// = wider, phasier source. Mono (`None`) never trims width.
 pub(crate) const WIDTH_CORR_DEADBAND: f32 = 0.50;
@@ -83,6 +90,47 @@ fn descending_ramp(value: f32, soft: f32, full: f32) -> f32 {
         return if value <= full { 1.0 } else { 0.0 };
     }
     clamp01((soft - value) / (soft - full))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AlreadyMasteredStandDown {
+    pub stand_down: f32,
+    pub hot_loudness: bool,
+    pub near_ceiling: bool,
+    pub low_lra: bool,
+    pub uniformly_low_psr: bool,
+}
+
+/// Classify "already-mastered" inputs for the adaptive compressor stand-down.
+/// Pure AC-1 plumbing: this does not alter the chain until AC-2 wires it behind
+/// `YES_MASTER_ADAPTIVE_COMPRESSION`.
+pub fn classify_already_mastered_stand_down(
+    lufs_integrated: f32,
+    true_peak_dbtp: f32,
+    dynamic_range_lu: f32,
+    band_psr: Option<crate::deep_analysis::BandPsrStats>,
+) -> AlreadyMasteredStandDown {
+    let hot_loudness = lufs_integrated.is_finite() && lufs_integrated >= ALREADY_MASTERED_HOT_LUFS;
+    let near_ceiling =
+        true_peak_dbtp.is_finite() && true_peak_dbtp >= ALREADY_MASTERED_TRUE_PEAK_DBBTP;
+    let low_lra = dynamic_range_lu.is_finite()
+        && dynamic_range_lu > 0.5
+        && dynamic_range_lu <= ALREADY_MASTERED_LRA_LU;
+    let uniformly_low_psr =
+        band_psr.is_some_and(|psr| psr.all_bands_below(ALREADY_MASTERED_BAND_PSR_DB));
+    let stand_down = if hot_loudness && near_ceiling && low_lra && uniformly_low_psr {
+        1.0
+    } else {
+        0.0
+    };
+
+    AlreadyMasteredStandDown {
+        stand_down,
+        hot_loudness,
+        near_ceiling,
+        low_lra,
+        uniformly_low_psr,
+    }
 }
 
 /// Precomputed defensive trim multipliers for one source at one strength. Each
@@ -594,6 +642,65 @@ mod tests {
             off.trim_bright_db(3.0),
             3.0,
             "zero confidence = no brightness trim"
+        );
+    }
+
+    #[test]
+    fn already_mastered_stand_down_requires_hot_limited_low_lra_and_uniform_low_psr() {
+        use crate::deep_analysis::BandPsrStats;
+
+        let already_mastered = classify_already_mastered_stand_down(
+            -8.5,
+            -0.7,
+            4.2,
+            Some(BandPsrStats {
+                low_p10_db: Some(5.0),
+                mid_p10_db: Some(4.5),
+                high_p10_db: Some(5.5),
+            }),
+        );
+        assert_eq!(already_mastered.stand_down, 1.0);
+        assert!(already_mastered.hot_loudness);
+        assert!(already_mastered.near_ceiling);
+        assert!(already_mastered.low_lra);
+        assert!(already_mastered.uniformly_low_psr);
+
+        let clean_dynamic = classify_already_mastered_stand_down(
+            -14.0,
+            -3.0,
+            11.0,
+            Some(BandPsrStats {
+                low_p10_db: Some(12.0),
+                mid_p10_db: Some(13.0),
+                high_p10_db: Some(12.5),
+            }),
+        );
+        assert_eq!(clean_dynamic.stand_down, 0.0);
+        assert!(!clean_dynamic.hot_loudness);
+        assert!(!clean_dynamic.near_ceiling);
+        assert!(!clean_dynamic.low_lra);
+        assert!(!clean_dynamic.uniformly_low_psr);
+    }
+
+    #[test]
+    fn already_mastered_stand_down_requires_all_three_psr_bands() {
+        use crate::deep_analysis::BandPsrStats;
+
+        let missing_high = classify_already_mastered_stand_down(
+            -8.5,
+            -0.7,
+            4.2,
+            Some(BandPsrStats {
+                low_p10_db: Some(5.0),
+                mid_p10_db: Some(4.5),
+                high_p10_db: None,
+            }),
+        );
+
+        assert_eq!(missing_high.stand_down, 0.0);
+        assert!(
+            !missing_high.uniformly_low_psr,
+            "short/partial-band reads must not classify as already-mastered"
         );
     }
 

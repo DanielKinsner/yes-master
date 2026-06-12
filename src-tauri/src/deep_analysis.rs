@@ -54,6 +54,11 @@ pub struct WindowMetrics {
     pub low: f32,
     pub mid: f32,
     pub high: f32,
+    /// Sample-rate-aware energy shares rolled up to the multiband compressor's
+    /// actual low/mid/high crossover bands.
+    pub comp_low_31: f32,
+    pub comp_mid_31: f32,
+    pub comp_high_31: f32,
     /// Sample-rate-aware one-third-octave detail derived from the same short
     /// window. These feed Phase-B confidence so harsh/sibilant/air/bass behavior
     /// no longer depends on the old approximate 3-band helper.
@@ -230,6 +235,81 @@ impl DeepAnalysis {
     }
 }
 
+/// Low-percentile momentary PSR per compressor band. `None` for a band means
+/// the deep-analysis window set never had enough energy in that band to make a
+/// band-specific read defensible.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BandPsrStats {
+    pub low_p10_db: Option<f32>,
+    pub mid_p10_db: Option<f32>,
+    pub high_p10_db: Option<f32>,
+}
+
+impl BandPsrStats {
+    pub fn all_bands_below(&self, threshold_db: f32) -> bool {
+        [self.low_p10_db, self.mid_p10_db, self.high_p10_db]
+            .into_iter()
+            .all(|psr| psr.is_some_and(|psr| psr <= threshold_db))
+    }
+}
+
+const BAND_PSR_MIN_SHARE: f32 = 0.10;
+
+/// Momentary peak-to-short-term loudness ratio for one deep-analysis window.
+pub fn momentary_psr_db(window: &WindowMetrics) -> Option<f32> {
+    if !window.loudness_key.is_finite()
+        || !window.sample_peak.is_finite()
+        || window.sample_peak <= 0.0
+    {
+        return None;
+    }
+    Some(20.0 * window.sample_peak.max(1.0e-9).log10() - window.loudness_key)
+}
+
+/// Derive low-percentile PSR per compressor band from the retained window
+/// series. The PSR value is measured per window; the sample-rate-aware 31-band
+/// compressor shares decide which band buckets that window can represent.
+pub fn band_psr_p10_db(deep: &DeepAnalysis) -> Option<BandPsrStats> {
+    let mut low = Vec::new();
+    let mut mid = Vec::new();
+    let mut high = Vec::new();
+
+    for window in &deep.windows {
+        let Some(psr) = momentary_psr_db(window) else {
+            continue;
+        };
+        if window.comp_low_31 >= BAND_PSR_MIN_SHARE {
+            low.push(psr);
+        }
+        if window.comp_mid_31 >= BAND_PSR_MIN_SHARE {
+            mid.push(psr);
+        }
+        if window.comp_high_31 >= BAND_PSR_MIN_SHARE {
+            high.push(psr);
+        }
+    }
+
+    let stats = BandPsrStats {
+        low_p10_db: percentile_finite_unsorted(&mut low, 0.10),
+        mid_p10_db: percentile_finite_unsorted(&mut mid, 0.10),
+        high_p10_db: percentile_finite_unsorted(&mut high, 0.10),
+    };
+    if stats.low_p10_db.is_none() && stats.mid_p10_db.is_none() && stats.high_p10_db.is_none() {
+        None
+    } else {
+        Some(stats)
+    }
+}
+
+fn percentile_finite_unsorted(values: &mut Vec<f32>, p: f32) -> Option<f32> {
+    values.retain(|value| value.is_finite());
+    if values.is_empty() {
+        return None;
+    }
+    values.sort_by(|a, b| a.total_cmp(b));
+    Some(percentile_sorted(values, p))
+}
+
 /// Sum band shares whose center frequency falls in the harsh / sibilant ranges.
 /// `bands_31` are one-third-octave shares; `band_center_hz(i)` gives each band's
 /// nominal center. Ranges are half-open [lo, hi) per the tuning constants.
@@ -390,6 +470,9 @@ fn measure_window(
         low: three.low,
         mid: three.mid,
         high: three.high,
+        comp_low_31: detail.comp_low,
+        comp_mid_31: detail.comp_mid,
+        comp_high_31: detail.comp_high,
         low_31: detail.low,
         harsh_31: detail.harsh,
         sibilant_31: detail.sibilant,
@@ -400,6 +483,9 @@ fn measure_window(
 
 #[derive(Debug, Clone, Copy)]
 struct WindowDetail {
+    comp_low: f32,
+    comp_mid: f32,
+    comp_high: f32,
     low: f32,
     harsh: f32,
     sibilant: f32,
@@ -415,6 +501,9 @@ fn window_detail_features(
     let fft_size = fft.len();
     if sample_rate == 0 || mono_slice.len() < fft_size || fft_size < 1024 {
         return WindowDetail {
+            comp_low: 0.0,
+            comp_mid: 0.0,
+            comp_high: 0.0,
             low: 0.0,
             harsh: 0.0,
             sibilant: 0.0,
@@ -438,6 +527,9 @@ fn window_detail_features(
     let bins = fft_size / 2;
     let bin_hz = sample_rate as f32 / fft_size as f32;
     let mut low = 0.0_f64;
+    let mut comp_low = 0.0_f64;
+    let mut comp_mid = 0.0_f64;
+    let mut comp_high = 0.0_f64;
     let mut harsh = 0.0_f64;
     let mut sibilant = 0.0_f64;
     let mut air = 0.0_f64;
@@ -451,6 +543,13 @@ fn window_detail_features(
         let center = band_center_hz(idx);
         let power = (c.re as f64) * (c.re as f64) + (c.im as f64) * (c.im as f64);
         total += power;
+        if center < crate::dsp::LR4_CROSSOVER_LOW_HZ {
+            comp_low += power;
+        } else if center < crate::dsp::LR4_CROSSOVER_HIGH_HZ {
+            comp_mid += power;
+        } else {
+            comp_high += power;
+        }
         if (20.0..250.0).contains(&center) {
             low += power;
         }
@@ -469,6 +568,9 @@ fn window_detail_features(
     }
     if total <= 1.0e-12 {
         return WindowDetail {
+            comp_low: 0.0,
+            comp_mid: 0.0,
+            comp_high: 0.0,
             low: 0.0,
             harsh: 0.0,
             sibilant: 0.0,
@@ -477,11 +579,17 @@ fn window_detail_features(
         };
     }
     let low = (low / total) as f32;
+    let comp_low = (comp_low / total) as f32;
+    let comp_mid = (comp_mid / total) as f32;
+    let comp_high = (comp_high / total) as f32;
     let harsh = (harsh / total) as f32;
     let sibilant = (sibilant / total) as f32;
     let air = (air / total) as f32;
     let upper = (upper / total) as f32;
     WindowDetail {
+        comp_low,
+        comp_mid,
+        comp_high,
         low,
         harsh,
         sibilant,
@@ -704,6 +812,46 @@ mod tests {
         let w = windows.iter().find(|w| w.loudness_key.is_finite()).unwrap();
         let psr = 20.0 * w.sample_peak.max(1e-9).log10() - w.loudness_key;
         assert!(psr.is_finite());
+    }
+
+    #[test]
+    fn band_psr_rollup_distinguishes_dense_tone_from_transient_clicks() {
+        let sr = 48_000_u32;
+        let seconds = 3;
+        let n = sr as usize * seconds;
+        let omega = 2.0 * std::f32::consts::PI * 1000.0 / sr as f32;
+        let dense_tone: Vec<f32> = (0..n).map(|i| 0.35 * (omega * i as f32).sin()).collect();
+        let dense = DeepAnalysis::from_parts([1.0 / 31.0; 31], scan_windows(&dense_tone, sr, 1));
+        let dense_psr = band_psr_p10_db(&dense).expect("dense tone PSR");
+        let dense_mid = dense_psr.mid_p10_db.expect("dense tone mid-band PSR");
+
+        let mut clicks = vec![0.0_f32; n];
+        for i in (0..n).step_by(sr as usize / 4) {
+            clicks[i] = 0.95;
+            if i + 1 < clicks.len() {
+                clicks[i + 1] = -0.95;
+            }
+        }
+        let transient = DeepAnalysis::from_parts([1.0 / 31.0; 31], scan_windows(&clicks, sr, 1));
+        let transient_psr = band_psr_p10_db(&transient).expect("transient PSR");
+        let transient_max = [
+            transient_psr.low_p10_db,
+            transient_psr.mid_p10_db,
+            transient_psr.high_p10_db,
+        ]
+        .into_iter()
+        .flatten()
+        .fold(f32::NEG_INFINITY, f32::max);
+
+        assert!(
+            dense_mid < 8.0,
+            "steady dense tone should have a low mid-band PSR, got {dense_mid}"
+        );
+        assert!(
+            transient_max > dense_mid + 6.0,
+            "transient clicks should retain much higher PSR than dense tone: \
+             dense={dense_mid}, transient={transient_max}"
+        );
     }
 
     #[test]

@@ -1528,8 +1528,8 @@ impl Limiter {
 // channel — that's 8 biquads per channel for the split.
 // ============================================================================
 
-const LR4_CROSSOVER_LOW_HZ: f32 = 120.0;
-const LR4_CROSSOVER_HIGH_HZ: f32 = 4000.0;
+pub(crate) const LR4_CROSSOVER_LOW_HZ: f32 = 120.0;
+pub(crate) const LR4_CROSSOVER_HIGH_HZ: f32 = 4000.0;
 #[allow(clippy::approx_constant)]
 const BUTTERWORTH_Q: f32 = 0.707_106_8; // sqrt(2)/2, pinned by preset byte snapshots
 
