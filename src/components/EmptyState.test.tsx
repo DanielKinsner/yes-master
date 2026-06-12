@@ -2,6 +2,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SUPPORTED_FORMATS_COPY } from "../lib/supported-formats";
 import { EmptyState } from "./EmptyState";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -37,8 +38,9 @@ describe("EmptyState welcome hero", () => {
 
   it("keeps the supported formats footnote", async () => {
     const { container, root } = await render(<EmptyState onAdd={() => {}} />);
-    expect(container.textContent ?? "").toContain("WAV");
-    expect(container.textContent ?? "").toContain("Opus");
+    const text = container.textContent ?? "";
+    expect(text).toContain(`Supports ${SUPPORTED_FORMATS_COPY}.`);
+    expect(text).not.toMatch(/Opus|AIFF|AIF/i);
     await act(async () => root.unmount());
   });
 });

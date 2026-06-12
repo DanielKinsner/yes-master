@@ -30,6 +30,10 @@ import { resetToneSettings } from "../lib/tone-reset";
 import { resetToStandardManaged as resetToStandardManagedSettings } from "../lib/standard-managed";
 import { standardExportSettings } from "../lib/standard-export";
 import { buildExportReport } from "../lib/export-receipt";
+import {
+  AUDIO_DIALOG_FILTER,
+  supportedAudioExtensionFromName,
+} from "../lib/supported-formats";
 import type {
   AdvancedSettings,
   AnalysisResult,
@@ -203,18 +207,6 @@ export function playbackErrorMessage(
   }
   return raw;
 }
-
-const AUDIO_EXTENSIONS = [
-  "wav",
-  "aiff",
-  "aif",
-  "flac",
-  "mp3",
-  "m4a",
-  "aac",
-  "ogg",
-  "opus",
-];
 
 const ANALYSIS_PROGRESS_STAGES = [
   { label: "Analyzing audio", progress: 0.14 },
@@ -1015,12 +1007,7 @@ export function useTrackMaster() {
         } else if (payload.type === "drop") {
           setIsDragOver(false);
           const all = payload.paths ?? [];
-          const audio = all.filter((p) => {
-            const dot = p.lastIndexOf(".");
-            if (dot < 0) return false;
-            const ext = p.slice(dot + 1).toLowerCase();
-            return AUDIO_EXTENSIONS.includes(ext);
-          });
+          const audio = all.filter((p) => supportedAudioExtensionFromName(p));
           if (audio.length > 0) {
             importFilesRef.current(audio).catch((err) => {
               console.warn("drag-drop import failed", err);
@@ -1048,7 +1035,7 @@ export function useTrackMaster() {
     try {
       const selected = await open({
         multiple: true,
-        filters: [{ name: "Audio", extensions: AUDIO_EXTENSIONS }],
+        filters: [AUDIO_DIALOG_FILTER],
       });
       if (!selected) return;
       const paths = Array.isArray(selected) ? selected : [selected];

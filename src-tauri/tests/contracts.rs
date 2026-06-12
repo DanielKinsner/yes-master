@@ -2051,7 +2051,7 @@ fn real_fixture_path() -> Option<PathBuf> {
     // Both paths are checked so the harness works from either the workspace
     // root or from `src-tauri/` (cargo runs tests with cwd = src-tauri).
     const FIXTURE_DIRS: [&str; 2] = ["../private-audio-fixtures", "private-audio-fixtures"];
-    const EXTENSIONS: [&str; 8] = ["wav", "mp3", "flac", "m4a", "aac", "ogg", "opus", "aiff"];
+    let extensions = advertised_audio_extensions_from_ts();
 
     for dir in &FIXTURE_DIRS {
         let dir_path = PathBuf::from(dir);
@@ -2070,12 +2070,62 @@ fn real_fixture_path() -> Option<PathBuf> {
             let Some(ext) = p.extension().and_then(|e| e.to_str()) else {
                 continue;
             };
-            if EXTENSIONS.contains(&ext.to_ascii_lowercase().as_str()) {
+            let ext = ext.to_ascii_lowercase();
+            if extensions.iter().any(|candidate| candidate == &ext) {
                 return Some(p);
             }
         }
     }
     None
+}
+
+fn advertised_audio_extensions_from_ts() -> Vec<String> {
+    let source = include_str!("../../src/lib/supported-formats.ts");
+    let (_, rest) = source
+        .split_once("export const AUDIO_EXTENSIONS = [")
+        .expect("AUDIO_EXTENSIONS literal missing from supported-formats.ts");
+    let (literal, _) = rest
+        .split_once("] as const")
+        .expect("AUDIO_EXTENSIONS literal must use `] as const`");
+    let extensions: Vec<String> = literal
+        .split(',')
+        .filter_map(|item| {
+            let ext = item.trim().trim_matches('"');
+            if ext.is_empty() {
+                None
+            } else {
+                Some(ext.to_string())
+            }
+        })
+        .collect();
+    assert!(!extensions.is_empty(), "no advertised extensions parsed");
+    extensions
+}
+
+#[test]
+fn advertised_extensions_decode() {
+    let fixture_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/formats");
+    for ext in advertised_audio_extensions_from_ts() {
+        let path = fixture_dir.join(format!("synthetic-1s.{ext}"));
+        assert!(
+            path.exists(),
+            "missing synthetic decode fixture for advertised .{ext}: {}",
+            path.display()
+        );
+        let size = std::fs::metadata(&path).expect("fixture metadata").len();
+        assert!(
+            size < 50 * 1024,
+            "synthetic .{ext} fixture must stay below 50 KB, got {size} bytes"
+        );
+        let decoded = decode::decode_full(&path)
+            .unwrap_or_else(|err| panic!("advertised .{ext} fixture failed to decode: {err}"));
+        assert!(
+            !decoded.samples.is_empty(),
+            "advertised .{ext} fixture decoded to no samples"
+        );
+        assert!(decoded.sample_rate > 0, "advertised .{ext} sample rate");
+        assert!(decoded.channels > 0, "advertised .{ext} channels");
+    }
 }
 
 /// Real analysis progress (owner ask 2026-06-11): stage callbacks fire at

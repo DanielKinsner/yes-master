@@ -34,6 +34,7 @@ import { LOUDNESS_PROFILES, loudnessTargetDisplay } from "./lib/effective-settin
 import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
 import { markGuideFinished, requestGuideReset } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
+import { SUPPORTED_FORMATS_COPY } from "./lib/supported-formats";
 import "./App.css";
 
 const PRESET_OPTIONS: { value: Preset; label: string; blurb: string }[] = [
@@ -193,7 +194,7 @@ function App() {
           <div className="drop-overlay-card">
             <div className="drop-overlay-title">Drop to import</div>
             <div className="drop-overlay-hint">
-              WAV · AIFF · FLAC · MP3 · M4A · AAC · OGG · Opus
+              {SUPPORTED_FORMATS_COPY}
             </div>
           </div>
         </div>

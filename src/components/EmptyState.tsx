@@ -7,6 +7,7 @@
 // works; this is just what the empty slot looks like.
 
 import { prefersReducedMotion } from "../lib/motion";
+import { SUPPORTED_FORMATS_COPY } from "../lib/supported-formats";
 import { AnalysisOrb } from "./AnalysisOrb";
 
 export function EmptyState({ onAdd }: { onAdd: () => void }) {
@@ -27,7 +28,7 @@ export function EmptyState({ onAdd }: { onAdd: () => void }) {
         Import audio
       </button>
       <p className="empty-foot">
-        Supports WAV · AIFF · FLAC · MP3 · M4A · AAC · OGG · Opus.
+        Supports {SUPPORTED_FORMATS_COPY}.
       </p>
     </div>
   );
