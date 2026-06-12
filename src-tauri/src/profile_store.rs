@@ -33,6 +33,10 @@ pub struct SourceProfileStore {
     /// the setters sequentially (never holding both). Arc so readers share
     /// cheaply without cloning the per-window series.
     by_track_deep: Mutex<HashMap<TrackId, Arc<crate::deep_analysis::DeepAnalysis>>>,
+    /// Adaptive Compressor already-mastered classification, derived at analysis
+    /// time from loudness, true peak, LRA, and per-band PSR. Stored separately so
+    /// chain entry points never need to keep whole `AnalysisResult`s alive.
+    by_track_stand_down: Mutex<HashMap<TrackId, crate::guardrails::AlreadyMasteredStandDown>>,
 }
 
 impl SourceProfileStore {
@@ -96,12 +100,40 @@ impl SourceProfileStore {
             .and_then(|guard| guard.get(track_id).cloned())
     }
 
+    pub fn set_stand_down(
+        &self,
+        track_id: TrackId,
+        stand_down: Option<crate::guardrails::AlreadyMasteredStandDown>,
+    ) {
+        if let Ok(mut guard) = self.by_track_stand_down.lock() {
+            match stand_down {
+                Some(value) => {
+                    guard.insert(track_id, value);
+                }
+                None => {
+                    guard.remove(&track_id);
+                }
+            }
+        }
+    }
+
+    pub fn get_stand_down(
+        &self,
+        track_id: &TrackId,
+    ) -> Option<crate::guardrails::AlreadyMasteredStandDown> {
+        self.by_track_stand_down
+            .lock()
+            .ok()
+            .and_then(|guard| guard.get(track_id).copied())
+    }
+
     /// Remove both adaptive cache entries for a track. Used when the frontend
     /// removes a track from the session so backend-only DeepAnalysis data does
     /// not linger for the life of the app process.
     pub fn evict(&self, track_id: &TrackId) {
         self.set(track_id.clone(), None);
         self.insert_deep(track_id.clone(), None);
+        self.set_stand_down(track_id.clone(), None);
     }
 }
 
@@ -171,6 +203,35 @@ pub fn apply_resolved_confidence(
     );
 }
 
+/// Adaptive Compressor companion to the profile/confidence injection path.
+/// Resolves backend-owned `CompressionGuards` from the same cached DeepAnalysis
+/// used for confidence plus the already-mastered stand-down summary populated
+/// at analysis time. Gate OFF, album mode, no DeepAnalysis, or no trigger all
+/// resolve to `None`, preserving the AC-2 byte-identity contract.
+pub fn apply_resolved_compression_guards(
+    settings: &mut MasteringSettings,
+    deep: Option<std::sync::Arc<crate::deep_analysis::DeepAnalysis>>,
+    stand_down: Option<crate::guardrails::AlreadyMasteredStandDown>,
+    album: bool,
+) {
+    let strength = settings
+        .advanced
+        .adaptive_strength
+        .unwrap_or(crate::guardrails::ADAPTIVE_STRENGTH_DEFAULT)
+        .clamp(0.0, 1.0);
+    let band_psr = deep
+        .as_deref()
+        .and_then(crate::deep_analysis::band_psr_p10_db);
+    let confidence = settings.advanced.source_confidence.unwrap_or_default();
+    settings.advanced.compression_guards = crate::guardrails::resolve_compression_guards(
+        band_psr,
+        &confidence,
+        stand_down.unwrap_or_else(crate::guardrails::AlreadyMasteredStandDown::identity),
+        strength,
+        !album && crate::guardrails::is_adaptive_compression_enabled(),
+    );
+}
+
 /// Evict cached profiles for any *requested* track that did NOT produce an
 /// analysis result. A hard analysis failure (missing / unreadable / decode
 /// error) is skipped under `analyze_tracks_core`'s partial-success policy, so
@@ -190,6 +251,7 @@ pub fn prune_failed_profiles(
         if !succeeded.contains(id) {
             store.set(id.clone(), None);
             store.insert_deep(id.clone(), None);
+            store.set_stand_down(id.clone(), None);
         }
     }
 }

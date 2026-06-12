@@ -5,7 +5,9 @@ use std::sync::Arc;
 
 use yes_master_lib::{
     engine::{analyze_tracks_core, mastering_render, AnalyzeRequest},
-    profile_store::{apply_resolved_confidence, apply_resolved_profile},
+    profile_store::{
+        apply_resolved_compression_guards, apply_resolved_confidence, apply_resolved_profile,
+    },
     AdvancedSettings, AnalysisResult, CompressionMode, DeliveryProfile, MasteringSettings, Preset,
     RenderKind, SourceProfile, TrackId,
 };
@@ -156,13 +158,24 @@ pub(crate) struct NativeAdaptiveContext {
     source_lufs_integrated: f32,
     source_profile: Option<SourceProfile>,
     deep_analysis: Option<Arc<yes_master_lib::deep_analysis::DeepAnalysis>>,
+    stand_down: yes_master_lib::guardrails::AlreadyMasteredStandDown,
 }
 
 fn native_adaptive_context_from_analysis(analysis: &AnalysisResult) -> NativeAdaptiveContext {
+    let band_psr = analysis
+        .deep_analysis
+        .as_deref()
+        .and_then(yes_master_lib::deep_analysis::band_psr_p10_db);
     NativeAdaptiveContext {
         source_lufs_integrated: analysis.lufs_integrated,
         source_profile: SourceProfile::from_analysis(analysis),
         deep_analysis: analysis.deep_analysis.clone(),
+        stand_down: yes_master_lib::guardrails::classify_already_mastered_stand_down(
+            analysis.lufs_integrated,
+            analysis.true_peak_dbtp,
+            analysis.dynamic_range_lu,
+            band_psr,
+        ),
     }
 }
 
@@ -197,6 +210,7 @@ pub(crate) fn export_settings_for_options_with_context(
     // The native bridge has no Tauri `run()` startup hook. Mirror desktop/headless
     // startup here so YES_MASTER_CONFIDENCE_GATING=1 can exercise Phase B.
     yes_master_lib::confidence::init_confidence_gating_from_env();
+    yes_master_lib::guardrails::init_adaptive_compression_from_env();
     let mut settings = MasteringSettings {
         preset: native_preset(preset),
         intensity: intensity.clamp(0.0, 1.0),
@@ -249,6 +263,12 @@ pub(crate) fn export_settings_for_options_with_context(
         settings.source_lufs_integrated = Some(context.source_lufs_integrated);
         apply_resolved_profile(&mut settings, context.source_profile, false);
         apply_resolved_confidence(&mut settings, context.deep_analysis.clone(), false);
+        apply_resolved_compression_guards(
+            &mut settings,
+            context.deep_analysis.clone(),
+            Some(context.stand_down),
+            false,
+        );
     }
     settings
 }

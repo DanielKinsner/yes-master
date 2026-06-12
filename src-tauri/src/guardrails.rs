@@ -14,6 +14,7 @@
 use crate::confidence::Confidence;
 use crate::types::{MasteringSettings, SourceProfile, TrackId};
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Default Adapt Strength when the user hasn't set one (on by default). Owner
 /// starting point (2026-06-03 listening): a moderate **0.5** — kept conservative
@@ -60,6 +61,44 @@ const ALREADY_MASTERED_HOT_LUFS: f32 = -10.0; // TBD-CALIBRATION
 const ALREADY_MASTERED_TRUE_PEAK_DBBTP: f32 = -1.2; // TBD-CALIBRATION
 const ALREADY_MASTERED_LRA_LU: f32 = 6.0; // TBD-CALIBRATION
 const ALREADY_MASTERED_BAND_PSR_DB: f32 = 8.0; // TBD-CALIBRATION
+const BAND_PSR_SOFT_DB: f32 = 12.0; // TBD-CALIBRATION
+const BAND_PSR_FULL_DB: f32 = 8.0; // TBD-CALIBRATION
+const BAND_COMPRESSION_DENSITY_CAP: f32 = 0.45; // TBD-CALIBRATION
+const BAND_THRESHOLD_LIFT_MAX_DB: f32 = 4.0; // TBD-CALIBRATION
+const BAND_RATIO_EASE_CAP: f32 = 0.35; // TBD-CALIBRATION
+
+/// Owner-calibration gate for the Adaptive Compressor MVP. Off by default so
+/// every committed AC slice remains byte-identical until the listening session
+/// explicitly flips it.
+static ADAPTIVE_COMPRESSION: AtomicBool = AtomicBool::new(false);
+
+pub fn is_adaptive_compression_enabled() -> bool {
+    ADAPTIVE_COMPRESSION.load(Ordering::Relaxed)
+}
+
+pub fn set_adaptive_compression_enabled(enabled: bool) -> bool {
+    ADAPTIVE_COMPRESSION.swap(enabled, Ordering::Relaxed)
+}
+
+pub fn init_adaptive_compression_from_env() {
+    if let Ok(v) = std::env::var("YES_MASTER_ADAPTIVE_COMPRESSION") {
+        let on = matches!(
+            v.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "on" | "yes"
+        );
+        set_adaptive_compression_enabled(on);
+    }
+}
+
+#[tauri::command]
+pub fn set_adaptive_compression(enabled: bool) -> bool {
+    set_adaptive_compression_enabled(enabled)
+}
+
+#[tauri::command]
+pub fn adaptive_compression_enabled() -> bool {
+    is_adaptive_compression_enabled()
+}
 
 /// Width (L/R correlation): deadband edge / full-trim floor. Lower correlation
 /// = wider, phasier source. Mono (`None`) never trims width.
@@ -101,6 +140,18 @@ pub struct AlreadyMasteredStandDown {
     pub uniformly_low_psr: bool,
 }
 
+impl AlreadyMasteredStandDown {
+    pub fn identity() -> Self {
+        Self {
+            stand_down: 0.0,
+            hot_loudness: false,
+            near_ceiling: false,
+            low_lra: false,
+            uniformly_low_psr: false,
+        }
+    }
+}
+
 /// Classify "already-mastered" inputs for the adaptive compressor stand-down.
 /// Pure AC-1 plumbing: this does not alter the chain until AC-2 wires it behind
 /// `YES_MASTER_ADAPTIVE_COMPRESSION`.
@@ -131,6 +182,146 @@ pub fn classify_already_mastered_stand_down(
         low_lra,
         uniformly_low_psr,
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub struct BandCompressionGuard {
+    pub density_mult: f32,
+    pub threshold_lift_db: f32,
+    pub ratio_mult: f32,
+}
+
+impl BandCompressionGuard {
+    pub fn identity() -> Self {
+        Self {
+            density_mult: 1.0,
+            threshold_lift_db: 0.0,
+            ratio_mult: 1.0,
+        }
+    }
+
+    fn from_amount(amount: f32) -> Self {
+        let amount = clamp01(amount);
+        if amount <= 1.0e-6 {
+            return Self::identity();
+        }
+        Self {
+            density_mult: 1.0 - amount * BAND_COMPRESSION_DENSITY_CAP,
+            threshold_lift_db: amount * BAND_THRESHOLD_LIFT_MAX_DB,
+            ratio_mult: 1.0 - amount * BAND_RATIO_EASE_CAP,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum GuardReason {
+    LowBandDense,
+    MidBandDense,
+    HighBandDense,
+    AlreadyMastered,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct CompressionGuards {
+    pub low: BandCompressionGuard,
+    pub mid: BandCompressionGuard,
+    pub high: BandCompressionGuard,
+    pub stand_down: f32,
+    pub reasons: Vec<GuardReason>,
+}
+
+impl CompressionGuards {
+    pub fn identity() -> Self {
+        Self {
+            low: BandCompressionGuard::identity(),
+            mid: BandCompressionGuard::identity(),
+            high: BandCompressionGuard::identity(),
+            stand_down: 0.0,
+            reasons: Vec::new(),
+        }
+    }
+}
+
+/// Resolve per-band adaptive compressor guards from DeepAnalysis-derived PSR and
+/// the already-mastered classifier. Pure AC-2 core: callers pass the rollout gate
+/// explicitly so tests can prove gate-OFF identity without relying on process
+/// globals.
+pub fn resolve_compression_guards(
+    band_psr: Option<crate::deep_analysis::BandPsrStats>,
+    confidence: &Confidence,
+    stand_down: AlreadyMasteredStandDown,
+    strength: f32,
+    gating_enabled: bool,
+) -> Option<CompressionGuards> {
+    if !gating_enabled {
+        return None;
+    }
+    let strength = clamp01(strength);
+    if strength <= 0.0 {
+        return None;
+    }
+    let density_confidence = clamp01(confidence.density.confidence);
+    if density_confidence <= 0.0 {
+        return None;
+    }
+
+    let stand_down_amount = clamp01(stand_down.stand_down) * strength * density_confidence;
+    let low_amount = band_guard_amount(
+        band_psr.and_then(|p| p.low_p10_db),
+        strength,
+        density_confidence,
+    );
+    let mid_amount = band_guard_amount(
+        band_psr.and_then(|p| p.mid_p10_db),
+        strength,
+        density_confidence,
+    );
+    let high_amount = band_guard_amount(
+        band_psr.and_then(|p| p.high_p10_db),
+        strength,
+        density_confidence,
+    );
+
+    let low = BandCompressionGuard::from_amount(low_amount.max(stand_down_amount));
+    let mid = BandCompressionGuard::from_amount(mid_amount.max(stand_down_amount));
+    let high = BandCompressionGuard::from_amount(high_amount.max(stand_down_amount));
+    if low == BandCompressionGuard::identity()
+        && mid == BandCompressionGuard::identity()
+        && high == BandCompressionGuard::identity()
+        && stand_down_amount <= 1.0e-6
+    {
+        return None;
+    }
+
+    let mut reasons = Vec::new();
+    if low_amount > 1.0e-6 {
+        reasons.push(GuardReason::LowBandDense);
+    }
+    if mid_amount > 1.0e-6 {
+        reasons.push(GuardReason::MidBandDense);
+    }
+    if high_amount > 1.0e-6 {
+        reasons.push(GuardReason::HighBandDense);
+    }
+    if stand_down_amount > 1.0e-6 {
+        reasons.push(GuardReason::AlreadyMastered);
+    }
+
+    Some(CompressionGuards {
+        low,
+        mid,
+        high,
+        stand_down: stand_down_amount,
+        reasons,
+    })
+}
+
+fn band_guard_amount(psr_db: Option<f32>, strength: f32, confidence: f32) -> f32 {
+    let Some(psr_db) = psr_db.filter(|value| value.is_finite()) else {
+        return 0.0;
+    };
+    descending_ramp(psr_db, BAND_PSR_SOFT_DB, BAND_PSR_FULL_DB) * strength * confidence
 }
 
 /// Precomputed defensive trim multipliers for one source at one strength. Each
@@ -413,8 +604,17 @@ pub fn guardrail_readout(
     let album = album.unwrap_or(false);
     let cached = track_id.as_ref().and_then(|t| profile_store.get(t));
     let cached_deep = track_id.as_ref().and_then(|t| profile_store.get_deep(t));
+    let cached_stand_down = track_id
+        .as_ref()
+        .and_then(|t| profile_store.get_stand_down(t));
     crate::profile_store::apply_resolved_profile(&mut settings, cached, album);
-    crate::profile_store::apply_resolved_confidence(&mut settings, cached_deep, album);
+    crate::profile_store::apply_resolved_confidence(&mut settings, cached_deep.clone(), album);
+    crate::profile_store::apply_resolved_compression_guards(
+        &mut settings,
+        cached_deep,
+        cached_stand_down,
+        album,
+    );
     readout_for(&settings)
 }
 
@@ -702,6 +902,127 @@ mod tests {
             !missing_high.uniformly_low_psr,
             "short/partial-band reads must not classify as already-mastered"
         );
+    }
+
+    #[test]
+    fn compression_guards_resolve_dense_bands_reduce_only_when_gate_on() {
+        use crate::confidence::Confidence;
+        use crate::deep_analysis::BandPsrStats;
+
+        let guards = resolve_compression_guards(
+            Some(BandPsrStats {
+                low_p10_db: Some(5.0),
+                mid_p10_db: Some(13.0),
+                high_p10_db: Some(4.0),
+            }),
+            &Confidence::full(),
+            AlreadyMasteredStandDown::identity(),
+            1.0,
+            true,
+        )
+        .expect("dense low/high bands should resolve guards");
+
+        assert!(guards.low.density_mult < 1.0);
+        assert!(guards.low.threshold_lift_db > 0.0);
+        assert!(guards.low.ratio_mult < 1.0);
+        assert_eq!(guards.mid, BandCompressionGuard::identity());
+        assert!(guards.high.density_mult < 1.0);
+        assert!(
+            guards.reasons.contains(&GuardReason::LowBandDense)
+                && guards.reasons.contains(&GuardReason::HighBandDense)
+        );
+    }
+
+    #[test]
+    fn compression_guards_stay_identity_for_dynamic_or_low_confidence_sources() {
+        use crate::confidence::{AxisConfidence, Confidence};
+        use crate::deep_analysis::BandPsrStats;
+
+        let dynamic = resolve_compression_guards(
+            Some(BandPsrStats {
+                low_p10_db: Some(14.0),
+                mid_p10_db: Some(15.0),
+                high_p10_db: Some(16.0),
+            }),
+            &Confidence::full(),
+            AlreadyMasteredStandDown::identity(),
+            1.0,
+            true,
+        );
+        assert_eq!(
+            dynamic, None,
+            "dynamic/high-PSR source should stay preset-flat"
+        );
+
+        let mut low_confidence = Confidence::full();
+        low_confidence.density = AxisConfidence {
+            coverage: 0.0,
+            consistency: 1.0,
+            confidence: 0.0,
+        };
+        let gated_out = resolve_compression_guards(
+            Some(BandPsrStats {
+                low_p10_db: Some(4.0),
+                mid_p10_db: Some(4.0),
+                high_p10_db: Some(4.0),
+            }),
+            &low_confidence,
+            AlreadyMasteredStandDown::identity(),
+            1.0,
+            true,
+        );
+        assert_eq!(
+            gated_out, None,
+            "zero density confidence should hold adaptation at identity"
+        );
+    }
+
+    #[test]
+    fn compression_guards_stand_down_source_gets_maximum_easing() {
+        use crate::confidence::Confidence;
+
+        let guards = resolve_compression_guards(
+            None,
+            &Confidence::full(),
+            AlreadyMasteredStandDown {
+                stand_down: 1.0,
+                hot_loudness: true,
+                near_ceiling: true,
+                low_lra: true,
+                uniformly_low_psr: true,
+            },
+            1.0,
+            true,
+        )
+        .expect("stand-down should resolve guards even without band PSR buckets");
+
+        assert_eq!(guards.stand_down, 1.0);
+        assert_eq!(guards.low, guards.mid);
+        assert_eq!(guards.mid, guards.high);
+        assert!(guards.low.density_mult <= 0.65);
+        assert!(guards.low.threshold_lift_db >= 3.0);
+        assert!(guards.low.ratio_mult < 0.80);
+        assert!(guards.reasons.contains(&GuardReason::AlreadyMastered));
+    }
+
+    #[test]
+    fn compression_guards_gate_off_is_none_even_with_dense_inputs() {
+        use crate::confidence::Confidence;
+        use crate::deep_analysis::BandPsrStats;
+
+        let guards = resolve_compression_guards(
+            Some(BandPsrStats {
+                low_p10_db: Some(4.0),
+                mid_p10_db: Some(4.0),
+                high_p10_db: Some(4.0),
+            }),
+            &Confidence::full(),
+            AlreadyMasteredStandDown::identity(),
+            1.0,
+            false,
+        );
+
+        assert_eq!(guards, None);
     }
 
     fn settings_with(

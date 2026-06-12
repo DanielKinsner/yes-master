@@ -81,6 +81,7 @@ fn advanced_sample() -> AdvancedSettings {
         // #[serde(skip)] — backend-internal, never serialized, so it is
         // correctly invisible to this wire gate and absent from bindings.ts.
         source_confidence: None,
+        compression_guards: None,
     }
 }
 

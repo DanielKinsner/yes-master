@@ -1391,10 +1391,20 @@ fn process_audio_command(
                     .current_track
                     .as_ref()
                     .and_then(|t| profile_store.get_deep(t));
+                let cached_stand_down = s
+                    .current_track
+                    .as_ref()
+                    .and_then(|t| profile_store.get_stand_down(t));
                 crate::profile_store::apply_resolved_profile(&mut settings, cached, s.live_album);
                 crate::profile_store::apply_resolved_confidence(
                     &mut settings,
+                    cached_deep.clone(),
+                    s.live_album,
+                );
+                crate::profile_store::apply_resolved_compression_guards(
+                    &mut settings,
                     cached_deep,
+                    cached_stand_down,
                     s.live_album,
                 );
                 let sample_rate = s.live_sample_rate;
@@ -1864,14 +1874,17 @@ fn handle_play_master(
     // settings drive the chain build AND the preview-landing measurement, so live
     // audition stays WYSIWYG with export.
     let mut settings = settings.clone();
+    let cached_deep = profile_store.get_deep(&track_id);
     crate::profile_store::apply_resolved_profile(
         &mut settings,
         profile_store.get(&track_id),
         album,
     );
-    crate::profile_store::apply_resolved_confidence(
+    crate::profile_store::apply_resolved_confidence(&mut settings, cached_deep.clone(), album);
+    crate::profile_store::apply_resolved_compression_guards(
         &mut settings,
-        profile_store.get_deep(&track_id),
+        cached_deep,
+        profile_store.get_stand_down(&track_id),
         album,
     );
     let settings = &settings;

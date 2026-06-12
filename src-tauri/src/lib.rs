@@ -38,6 +38,7 @@ pub fn run() {
     // Seed the Phase B confidence gate from the environment (stays off unless
     // YES_MASTER_CONFIDENCE_GATING is set) before any chain resolves confidence.
     crate::confidence::init_confidence_gating_from_env();
+    crate::guardrails::init_adaptive_compression_from_env();
     let player = Arc::new(audio::AudioPlayer::new());
     // B2: the backend owns deriving the adaptive source profile. The same store
     // instance is shared with the audio thread (owned by `player`) and managed
@@ -119,6 +120,8 @@ pub fn run() {
             profile_store::evict_source_profile,
             confidence::set_confidence_gating,
             confidence::confidence_gating_enabled,
+            guardrails::set_adaptive_compression,
+            guardrails::adaptive_compression_enabled,
             project::save_project,
             project::autosave_session,
             project::load_recent_session,

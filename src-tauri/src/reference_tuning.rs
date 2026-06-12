@@ -198,6 +198,7 @@ pub fn run_reference_tuning_dir(
     // Headless evidence runner: mirror desktop startup so
     // YES_MASTER_CONFIDENCE_GATING=1 can validate the Phase B gate without a UI.
     crate::confidence::init_confidence_gating_from_env();
+    crate::guardrails::init_adaptive_compression_from_env();
     let cwd = std::env::current_dir().map_err(|e| CommandError::Io(format!("current dir: {e}")))?;
     let output_dir = normalized_absolute_path(&cwd, output_dir);
     let suite = discover_reference_suite(reference_dir)?;

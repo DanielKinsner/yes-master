@@ -47,10 +47,14 @@ fn bridge_function_surface_still_resolves() {
     let _ = yes_master_lib::engine::analyze_tracks_core;
     let _ = yes_master_lib::engine::mastering_render;
     let _ = yes_master_lib::engine::preview_landing;
+    let _ = yes_master_lib::profile_store::apply_resolved_compression_guards;
     let _ = yes_master_lib::profile_store::apply_resolved_confidence;
     let _ = yes_master_lib::profile_store::apply_resolved_profile;
     let _ = yes_master_lib::decode::decode_full;
     let _ = yes_master_lib::confidence::init_confidence_gating_from_env;
     let _ = yes_master_lib::confidence::is_confidence_gating_enabled;
     let _ = yes_master_lib::confidence::resolve_source_confidence;
+    let _ = yes_master_lib::guardrails::init_adaptive_compression_from_env;
+    let _ = yes_master_lib::guardrails::is_adaptive_compression_enabled;
+    let _ = yes_master_lib::guardrails::resolve_compression_guards;
 }

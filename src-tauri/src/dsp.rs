@@ -1013,13 +1013,48 @@ impl ChainCoeffs {
             + OVERDRIVE_RATIO * overdrive)
             .max(1.0);
 
+        let compression_shape = |density: f32| -> (f32, f32) {
+            let density = density.clamp(0.0, 1.0);
+            let engagement = (density * 2.0).min(1.0);
+            let overdrive = (density * 2.0 - 1.0).max(0.0);
+            let threshold =
+                preset.compressor_threshold_dbfs * engagement + OVERDRIVE_THRESHOLD_DB * overdrive;
+            let ratio =
+                (1.0 + (preset.compressor_ratio - 1.0) * engagement + OVERDRIVE_RATIO * overdrive)
+                    .max(1.0);
+            (threshold, ratio)
+        };
+        let adaptive_compression_guards = settings
+            .advanced
+            .compression_guards
+            .as_ref()
+            .filter(|_| matches!(compression_mode, CompressionMode::Preset))
+            .filter(|_| crate::guardrails::is_adaptive_compression_enabled());
+        let guarded_preset_shape =
+            |guard: Option<&crate::guardrails::BandCompressionGuard>| -> (f32, f32) {
+                let Some(guard) = guard else {
+                    return (preset_threshold_db, preset_ratio);
+                };
+                let (threshold, ratio) = compression_shape(density * guard.density_mult);
+                (
+                    (threshold + guard.threshold_lift_db.max(0.0)).min(0.0),
+                    (ratio * guard.ratio_mult).max(1.0),
+                )
+            };
+        let (preset_low_threshold_db, preset_low_ratio) =
+            guarded_preset_shape(adaptive_compression_guards.map(|g| &g.low));
+        let (preset_mid_threshold_db, preset_mid_ratio) =
+            guarded_preset_shape(adaptive_compression_guards.map(|g| &g.mid));
+        let (preset_high_threshold_db, preset_high_ratio) =
+            guarded_preset_shape(adaptive_compression_guards.map(|g| &g.high));
+
         let comp_low_threshold_db = if manual_compression {
             settings
                 .advanced
                 .compression_low_threshold_db
                 .unwrap_or(preset_threshold_db)
         } else {
-            preset_threshold_db
+            preset_low_threshold_db
         };
         let comp_mid_threshold_db = if manual_compression {
             settings
@@ -1027,7 +1062,7 @@ impl ChainCoeffs {
                 .compression_mid_threshold_db
                 .unwrap_or(preset_threshold_db)
         } else {
-            preset_threshold_db
+            preset_mid_threshold_db
         };
         let comp_high_threshold_db = if manual_compression {
             settings
@@ -1035,7 +1070,7 @@ impl ChainCoeffs {
                 .compression_high_threshold_db
                 .unwrap_or(preset_threshold_db)
         } else {
-            preset_threshold_db
+            preset_high_threshold_db
         };
 
         let comp_low_ratio = if manual_compression {
@@ -1044,7 +1079,7 @@ impl ChainCoeffs {
                 .compression_low_ratio
                 .unwrap_or(preset_ratio)
         } else {
-            preset_ratio
+            preset_low_ratio
         }
         .max(1.0);
         let comp_mid_ratio = if manual_compression {
@@ -1053,7 +1088,7 @@ impl ChainCoeffs {
                 .compression_mid_ratio
                 .unwrap_or(preset_ratio)
         } else {
-            preset_ratio
+            preset_mid_ratio
         }
         .max(1.0);
         let comp_high_ratio = if manual_compression {
@@ -1062,7 +1097,7 @@ impl ChainCoeffs {
                 .compression_high_ratio
                 .unwrap_or(preset_ratio)
         } else {
-            preset_ratio
+            preset_high_ratio
         }
         .max(1.0);
 
@@ -2303,6 +2338,111 @@ mod tests {
         (a - b).abs() <= tol
     }
 
+    static ADAPTIVE_GATE_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn push_biquad_bits(out: &mut Vec<u32>, c: &BiquadCoeffs) {
+        out.extend([
+            c.b0.to_bits(),
+            c.b1.to_bits(),
+            c.b2.to_bits(),
+            c.a1.to_bits(),
+            c.a2.to_bits(),
+        ]);
+    }
+
+    fn chain_coeff_signature(c: &ChainCoeffs) -> Vec<u32> {
+        let mut out = Vec::new();
+        for b in [
+            &c.sub_highpass,
+            &c.sub,
+            &c.low,
+            &c.low_mid,
+            &c.mid,
+            &c.high_mid,
+            &c.high,
+            &c.sparkle,
+            &c.warmth,
+            &c.presence_air,
+            &c.comp_low_lp,
+            &c.comp_mid_hp,
+            &c.comp_mid_lp,
+            &c.comp_high_hp,
+        ] {
+            push_biquad_bits(&mut out, b);
+        }
+        out.extend([
+            c.transient_amount.to_bits(),
+            c.transient_fast_attack_alpha.to_bits(),
+            c.transient_fast_release_alpha.to_bits(),
+            c.transient_slow_attack_alpha.to_bits(),
+            c.transient_slow_release_alpha.to_bits(),
+            c.input_gain_lin.to_bits(),
+            c.saturation_amount.to_bits(),
+            c.ceiling_lin.to_bits(),
+            c.user_output_gain_lin.to_bits(),
+            c.volume_match_gain_lin.to_bits(),
+            c.export_landing_gain_lin.to_bits(),
+            c.width_side_scale.to_bits(),
+            c.compression_active as u32,
+            c.comp_low_threshold_db.to_bits(),
+            c.comp_low_ratio.to_bits(),
+            c.comp_low_attack_alpha.to_bits(),
+            c.comp_low_release_alpha.to_bits(),
+            c.comp_low_makeup_db.to_bits(),
+            c.comp_low_makeup_lin.to_bits(),
+            c.comp_mid_threshold_db.to_bits(),
+            c.comp_mid_ratio.to_bits(),
+            c.comp_mid_attack_alpha.to_bits(),
+            c.comp_mid_release_alpha.to_bits(),
+            c.comp_mid_makeup_db.to_bits(),
+            c.comp_mid_makeup_lin.to_bits(),
+            c.comp_high_threshold_db.to_bits(),
+            c.comp_high_ratio.to_bits(),
+            c.comp_high_attack_alpha.to_bits(),
+            c.comp_high_release_alpha.to_bits(),
+            c.comp_high_makeup_db.to_bits(),
+            c.comp_high_makeup_lin.to_bits(),
+            c.comp_knee_db.to_bits(),
+            c.comp_link_stereo as u32,
+        ]);
+        out
+    }
+
+    struct AdaptiveGateReset(bool);
+
+    impl Drop for AdaptiveGateReset {
+        fn drop(&mut self) {
+            crate::guardrails::set_adaptive_compression_enabled(self.0);
+        }
+    }
+
+    fn adaptive_gate_for_test(enabled: bool) -> AdaptiveGateReset {
+        let previous = crate::guardrails::set_adaptive_compression_enabled(enabled);
+        AdaptiveGateReset(previous)
+    }
+
+    fn maximum_compression_guards() -> crate::guardrails::CompressionGuards {
+        crate::guardrails::CompressionGuards {
+            low: crate::guardrails::BandCompressionGuard {
+                density_mult: 0.55,
+                threshold_lift_db: 4.0,
+                ratio_mult: 0.65,
+            },
+            mid: crate::guardrails::BandCompressionGuard {
+                density_mult: 0.55,
+                threshold_lift_db: 4.0,
+                ratio_mult: 0.65,
+            },
+            high: crate::guardrails::BandCompressionGuard {
+                density_mult: 0.55,
+                threshold_lift_db: 4.0,
+                ratio_mult: 0.65,
+            },
+            stand_down: 1.0,
+            reasons: vec![crate::guardrails::GuardReason::AlreadyMastered],
+        }
+    }
+
     /// Magnitude (in dB) of a biquad's frequency response at a given Hz value.
     /// Evaluates the transfer function `H(z) = (b0 + b1*z^-1 + b2*z^-2) /
     /// (1 + a1*z^-1 + a2*z^-2)` at `z = e^(j*omega)` where `omega = 2*pi*f/sr`.
@@ -3328,6 +3468,202 @@ mod tests {
         assert_eq!(zero.low.b0, no_profile.low.b0);
         assert_eq!(zero.width_side_scale, no_profile.width_side_scale);
         assert_eq!(zero.comp_low_threshold_db, no_profile.comp_low_threshold_db);
+    }
+
+    #[test]
+    fn adaptive_compression_gate_off_keeps_coeffs_byte_identical_even_with_stale_guards() {
+        let _lock = ADAPTIVE_GATE_TEST_LOCK.lock().expect("adaptive gate lock");
+        let _reset = adaptive_gate_for_test(false);
+
+        let mut settings = default_master_settings();
+        settings.preset = Preset::Loud;
+        settings.intensity = 0.5;
+        settings.advanced.compression_density = Some(0.75);
+        let baseline = ChainCoeffs::from_settings(48_000, &settings);
+
+        settings.advanced.compression_guards = Some(maximum_compression_guards());
+        let stale_guarded = ChainCoeffs::from_settings(48_000, &settings);
+
+        assert_eq!(
+            chain_coeff_signature(&stale_guarded),
+            chain_coeff_signature(&baseline),
+            "AC gate OFF must ignore stale compressor guards byte-for-byte"
+        );
+    }
+
+    #[test]
+    fn adaptive_compression_gate_on_eases_preset_compressor_reduce_only() {
+        let _lock = ADAPTIVE_GATE_TEST_LOCK.lock().expect("adaptive gate lock");
+        let _reset = adaptive_gate_for_test(true);
+
+        let mut settings = default_master_settings();
+        settings.preset = Preset::Loud;
+        settings.intensity = 0.5;
+        settings.advanced.compression_density = Some(0.75);
+        let baseline = ChainCoeffs::from_settings(48_000, &settings);
+
+        settings.advanced.compression_guards = Some(maximum_compression_guards());
+        let adapted = ChainCoeffs::from_settings(48_000, &settings);
+
+        for (
+            band,
+            base_threshold,
+            adapted_threshold,
+            base_ratio,
+            adapted_ratio,
+            base_makeup,
+            adapted_makeup,
+        ) in [
+            (
+                "low",
+                baseline.comp_low_threshold_db,
+                adapted.comp_low_threshold_db,
+                baseline.comp_low_ratio,
+                adapted.comp_low_ratio,
+                baseline.comp_low_makeup_db,
+                adapted.comp_low_makeup_db,
+            ),
+            (
+                "mid",
+                baseline.comp_mid_threshold_db,
+                adapted.comp_mid_threshold_db,
+                baseline.comp_mid_ratio,
+                adapted.comp_mid_ratio,
+                baseline.comp_mid_makeup_db,
+                adapted.comp_mid_makeup_db,
+            ),
+            (
+                "high",
+                baseline.comp_high_threshold_db,
+                adapted.comp_high_threshold_db,
+                baseline.comp_high_ratio,
+                adapted.comp_high_ratio,
+                baseline.comp_high_makeup_db,
+                adapted.comp_high_makeup_db,
+            ),
+        ] {
+            assert!(
+                adapted_threshold > base_threshold,
+                "{band} threshold should lift toward 0 dBFS, base={base_threshold} adapted={adapted_threshold}"
+            );
+            assert!(
+                adapted_ratio <= base_ratio,
+                "{band} ratio must not increase, base={base_ratio} adapted={adapted_ratio}"
+            );
+            assert!(
+                adapted_makeup <= base_makeup,
+                "{band} makeup must not increase, base={base_makeup} adapted={adapted_makeup}"
+            );
+        }
+
+        assert_eq!(
+            adapted.ceiling_lin.to_bits(),
+            baseline.ceiling_lin.to_bits()
+        );
+        assert_eq!(
+            adapted.export_landing_gain_lin.to_bits(),
+            baseline.export_landing_gain_lin.to_bits()
+        );
+        assert_eq!(
+            adapted.user_output_gain_lin.to_bits(),
+            baseline.user_output_gain_lin.to_bits()
+        );
+    }
+
+    #[test]
+    fn adaptive_compression_random_resolutions_are_reduce_only() {
+        use crate::confidence::{AxisConfidence, Confidence};
+        use crate::deep_analysis::BandPsrStats;
+
+        let _lock = ADAPTIVE_GATE_TEST_LOCK.lock().expect("adaptive gate lock");
+        let _reset = adaptive_gate_for_test(true);
+        let mut rng = 0x00A5_1C02_u32;
+        let mut next_unit = || {
+            rng = rng.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            (rng >> 8) as f32 / 16_777_215.0
+        };
+
+        for _ in 0..128 {
+            let mut settings = default_master_settings();
+            settings.preset = Preset::Loud;
+            settings.intensity = next_unit();
+            settings.advanced.compression_density = Some(next_unit());
+            let baseline = ChainCoeffs::from_settings(48_000, &settings);
+
+            let band_psr = Some(BandPsrStats {
+                low_p10_db: Some(4.0 + next_unit() * 16.0),
+                mid_p10_db: Some(4.0 + next_unit() * 16.0),
+                high_p10_db: Some(4.0 + next_unit() * 16.0),
+            });
+            let density_confidence = next_unit();
+            let confidence = Confidence {
+                density: AxisConfidence {
+                    coverage: 1.0,
+                    consistency: density_confidence,
+                    confidence: density_confidence,
+                },
+                ..Confidence::full()
+            };
+            settings.advanced.compression_guards = crate::guardrails::resolve_compression_guards(
+                band_psr,
+                &confidence,
+                crate::guardrails::AlreadyMasteredStandDown::identity(),
+                next_unit(),
+                true,
+            );
+            let adapted = ChainCoeffs::from_settings(48_000, &settings);
+
+            for (
+                band,
+                base_threshold,
+                adapted_threshold,
+                base_ratio,
+                adapted_ratio,
+                base_makeup,
+                adapted_makeup,
+            ) in [
+                (
+                    "low",
+                    baseline.comp_low_threshold_db,
+                    adapted.comp_low_threshold_db,
+                    baseline.comp_low_ratio,
+                    adapted.comp_low_ratio,
+                    baseline.comp_low_makeup_db,
+                    adapted.comp_low_makeup_db,
+                ),
+                (
+                    "mid",
+                    baseline.comp_mid_threshold_db,
+                    adapted.comp_mid_threshold_db,
+                    baseline.comp_mid_ratio,
+                    adapted.comp_mid_ratio,
+                    baseline.comp_mid_makeup_db,
+                    adapted.comp_mid_makeup_db,
+                ),
+                (
+                    "high",
+                    baseline.comp_high_threshold_db,
+                    adapted.comp_high_threshold_db,
+                    baseline.comp_high_ratio,
+                    adapted.comp_high_ratio,
+                    baseline.comp_high_makeup_db,
+                    adapted.comp_high_makeup_db,
+                ),
+            ] {
+                assert!(
+                    adapted_threshold >= base_threshold,
+                    "{band} threshold got more aggressive: base={base_threshold} adapted={adapted_threshold}"
+                );
+                assert!(
+                    adapted_ratio <= base_ratio,
+                    "{band} ratio got more aggressive: base={base_ratio} adapted={adapted_ratio}"
+                );
+                assert!(
+                    adapted_makeup <= base_makeup,
+                    "{band} makeup increased: base={base_makeup} adapted={adapted_makeup}"
+                );
+            }
+        }
     }
 
     #[test]

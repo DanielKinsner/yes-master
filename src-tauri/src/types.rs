@@ -737,6 +737,11 @@ pub struct AdvancedSettings {
     /// stays byte-identical to Tier-1). Resolved by `apply_resolved_confidence`.
     #[serde(skip)]
     pub source_confidence: Option<crate::confidence::Confidence>,
+    /// Adaptive Compressor MVP: backend-resolved, gate-controlled per-band
+    /// compressor easing. `serde(skip)` keeps AC-2 wire-clean; stale values are
+    /// ignored unless the shared runtime gate is ON.
+    #[serde(skip)]
+    pub compression_guards: Option<crate::guardrails::CompressionGuards>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

@@ -137,6 +137,14 @@ export const api = {
   confidenceGatingEnabled: () =>
     invoke<boolean>("confidence_gating_enabled"),
 
+  // Adaptive Compressor owner-calibration gate. Default off: gate-on work is
+  // available for listening sessions without changing the validated preset path.
+  setAdaptiveCompression: (enabled: boolean) =>
+    invoke<boolean>("set_adaptive_compression", { enabled }),
+
+  adaptiveCompressionEnabled: () =>
+    invoke<boolean>("adaptive_compression_enabled"),
+
   playTrack: (
     trackId: TrackId,
     trackPath: string,

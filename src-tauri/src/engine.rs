@@ -145,6 +145,19 @@ pub fn populate_profile_store(
         // `None` (e.g. the soft "too short" path) clears any stale entry, keeping
         // the two maps in lockstep.
         profile_store.insert_deep(result.track_id.clone(), result.deep_analysis.clone());
+        let band_psr = result
+            .deep_analysis
+            .as_deref()
+            .and_then(crate::deep_analysis::band_psr_p10_db);
+        profile_store.set_stand_down(
+            result.track_id.clone(),
+            Some(crate::guardrails::classify_already_mastered_stand_down(
+                result.lufs_integrated,
+                result.true_peak_dbtp,
+                result.dynamic_range_lu,
+                band_psr,
+            )),
+        );
     }
 }
 
@@ -439,14 +452,17 @@ pub async fn render_track_preview(
     // B2: the backend owns the adaptive profile. Track Master is the adaptive
     // surface (album renders via render_album_plan), so album = false; any
     // FE-supplied profile is honored as an override.
+    let cached_deep = profile_store.get_deep(&track_id);
     crate::profile_store::apply_resolved_profile(
         &mut settings,
         profile_store.get(&track_id),
         false,
     );
-    crate::profile_store::apply_resolved_confidence(
+    crate::profile_store::apply_resolved_confidence(&mut settings, cached_deep.clone(), false);
+    crate::profile_store::apply_resolved_compression_guards(
         &mut settings,
-        profile_store.get_deep(&track_id),
+        cached_deep,
+        profile_store.get_stand_down(&track_id),
         false,
     );
     let out_dir = render_output_dir(&app, RenderKind::Preview)?;
@@ -484,14 +500,17 @@ pub async fn render_track_master(
 ) -> CommandResult<RenderJob> {
     // B2: backend-owned profile (override > backend-derived cache; album = false
     // because album exports go through render_album_plan, which strips it).
+    let cached_deep = profile_store.get_deep(&track_id);
     crate::profile_store::apply_resolved_profile(
         &mut settings,
         profile_store.get(&track_id),
         false,
     );
-    crate::profile_store::apply_resolved_confidence(
+    crate::profile_store::apply_resolved_confidence(&mut settings, cached_deep.clone(), false);
+    crate::profile_store::apply_resolved_compression_guards(
         &mut settings,
-        profile_store.get_deep(&track_id),
+        cached_deep,
+        profile_store.get_stand_down(&track_id),
         false,
     );
     let out_dir = render_output_dir(&app, RenderKind::Master)?;
