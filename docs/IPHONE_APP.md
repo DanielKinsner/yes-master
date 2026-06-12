@@ -17,7 +17,7 @@ The shipped Simple-only flow keeps adaptive analysis hidden behind the Rust
 bridge:
 
 - Import one track.
-- Pick one of four tone presets: Balanced, Warm, Open, Punch.
+- Pick one of four Standard styles: Balanced, Bright, Warm, Heavy.
 - Set preset intensity with a slider (the manual safety valve against overcooking).
 - Choose loudness: Low, Medium, High.
 - Toggle Original / Mastered at the same playhead.
@@ -34,14 +34,16 @@ the current shared engine.
 
 ## Preset Mapping
 
-The phone labels map to existing desktop DSP presets:
+The phone labels use the shipped Standard vocabulary. The source of truth is
+`src/standard-mapping-parity.json`, which is shared across desktop, iPhone, and
+Android parity tests.
 
 | iPhone label | Existing preset |
 | --- | --- |
 | Balanced | Universal |
-| Warm | Warmth |
-| Open | Clarity |
-| Punch | Punch |
+| Bright | Clarity |
+| Warm | Tape |
+| Heavy | Oomph |
 
 No Loud tile is needed in v1 because loudness is its own Simple control.
 
