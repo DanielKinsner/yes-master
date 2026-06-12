@@ -48,7 +48,7 @@ cargo clippy --all-targets --target-dir target\codex-rc -- -D warnings
 
 Run:
 ```powershell
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" checkout -b album-sample-rate-parity
+git -C "." checkout -b album-sample-rate-parity
 ```
 Expected: `Switched to a new branch 'album-sample-rate-parity'`.
 
@@ -56,7 +56,7 @@ Expected: `Switched to a new branch 'album-sample-rate-parity'`.
 
 Run:
 ```powershell
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" status
+git -C "." status
 ```
 Expected: on `album-sample-rate-parity`; only pre-existing untracked scratch (`.claude/`, `test-output/`) and the cosmetic `src-tauri/Cargo.toml` line-ending entry, if present. Do not stage those.
 
@@ -106,7 +106,7 @@ fn album_plan_roundtrips_explicit_delivery_fields() {
 
 Run:
 ```powershell
-cd "C:\Users\SM - Dan\Documents\GitHub\yes-master\src-tauri"
+cd "src-tauri"
 cargo test --lib --target-dir target\codex-rc album_plan_ 2>&1
 ```
 Expected: compile error (no field `delivery_sample_rate` on `AlbumPlan`).
@@ -148,9 +148,9 @@ Expected: both new tests PASS. (Build will still fail elsewhere — the literals
 The crate won't compile until `album.rs` literals are fixed (Task 2). Do Task 2 Step 1–2 now, then commit Task 1 + Task 2 together:
 
 ```powershell
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" add src-tauri/src/types.rs src-tauri/src/album.rs
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" commit -m "feat(album): add serde-default delivery_sample_rate/bit_depth to AlbumPlan"
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" push -u origin album-sample-rate-parity
+git -C "." add src-tauri/src/types.rs src-tauri/src/album.rs
+git -C "." commit -m "feat(album): add serde-default delivery_sample_rate/bit_depth to AlbumPlan"
+git -C "." push -u origin album-sample-rate-parity
 ```
 
 ---
@@ -296,9 +296,9 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```powershell
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" add src-tauri/src/decode.rs
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" commit -m "feat(decode): add header-only probe_sample_rate helper"
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" push
+git -C "." add src-tauri/src/decode.rs
+git -C "." commit -m "feat(decode): add header-only probe_sample_rate helper"
+git -C "." push
 ```
 
 ---
@@ -371,9 +371,9 @@ Expected: all three PASS.
 - [ ] **Step 5: Commit**
 
 ```powershell
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" add src-tauri/src/album_render.rs
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" commit -m "feat(album): add resolve_album_sample_rate (Auto = highest source rate)"
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" push
+git -C "." add src-tauri/src/album_render.rs
+git -C "." commit -m "feat(album): add resolve_album_sample_rate (Auto = highest source rate)"
+git -C "." push
 ```
 
 ---
@@ -658,9 +658,9 @@ Expected: all green. Fix any clippy/fmt issues before committing.
 - [ ] **Step 6: Commit**
 
 ```powershell
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" add src-tauri/src/album_render.rs src-tauri/tests/album_sample_rate.rs
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" commit -m "feat(album): resample tracks to one delivery rate; drop mixed-rate hard-fail"
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" push
+git -C "." add src-tauri/src/album_render.rs src-tauri/tests/album_sample_rate.rs
+git -C "." commit -m "feat(album): resample tracks to one delivery rate; drop mixed-rate hard-fail"
+git -C "." push
 ```
 
 ---
@@ -721,9 +721,9 @@ Expected: green.
 - [ ] **Step 4: Commit**
 
 ```powershell
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" add src-tauri/src/engine.rs
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" commit -m "feat(album): accept delivery format in plan_album request"
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" push
+git -C "." add src-tauri/src/engine.rs
+git -C "." commit -m "feat(album): accept delivery format in plan_album request"
+git -C "." push
 ```
 
 ---
@@ -777,7 +777,7 @@ export interface AlbumPlan {
 
 Run:
 ```powershell
-cd "C:\Users\SM - Dan\Documents\GitHub\yes-master"
+cd "."
 npm run build 2>&1
 ```
 Expected: build succeeds (no new callers broken — `planAlbum`'s new args are optional).
@@ -785,9 +785,9 @@ Expected: build succeeds (no new callers broken — `planAlbum`'s new args are o
 - [ ] **Step 4: Commit**
 
 ```powershell
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" add src/bindings.ts src/lib/api.ts
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" commit -m "feat(album): frontend AlbumPlan delivery fields + planAlbum args"
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" push
+git -C "." add src/bindings.ts src/lib/api.ts
+git -C "." commit -m "feat(album): frontend AlbumPlan delivery fields + planAlbum args"
+git -C "." push
 ```
 
 ---
@@ -857,9 +857,9 @@ Expected: success.
 - [ ] **Step 5: Commit**
 
 ```powershell
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" add src/hooks/useTrackMaster.ts
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" commit -m "feat(album): hold album delivery-format choice in useTrackMaster"
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" push
+git -C "." add src/hooks/useTrackMaster.ts
+git -C "." commit -m "feat(album): hold album delivery-format choice in useTrackMaster"
+git -C "." push
 ```
 
 ---
@@ -1017,9 +1017,9 @@ Expected: AlbumPanel tests PASS; full suite green; build succeeds.
 - [ ] **Step 6: Commit**
 
 ```powershell
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" add src/components/AlbumPanel.tsx src/components/AlbumPanel.test.tsx src/App.tsx
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" commit -m "feat(album): Delivery Format (rate + bit depth) controls on Album panel"
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" push
+git -C "." add src/components/AlbumPanel.tsx src/components/AlbumPanel.test.tsx src/App.tsx
+git -C "." commit -m "feat(album): Delivery Format (rate + bit depth) controls on Album panel"
+git -C "." push
 ```
 
 ---
@@ -1039,7 +1039,7 @@ In `docs/RELEASE_STABILIZATION.md`, under Deferred, remove "full Album Master de
 
 Run:
 ```powershell
-cd "C:\Users\SM - Dan\Documents\GitHub\yes-master"
+cd "."
 npm test
 npm run build
 cd src-tauri
@@ -1052,9 +1052,9 @@ Expected: all green.
 - [ ] **Step 3: Commit + push**
 
 ```powershell
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" add docs/APP_BEHAVIOR.md docs/RELEASE_STABILIZATION.md
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" commit -m "docs(album): record sample-rate parity; channel parity still deferred"
-git -C "C:\Users\SM - Dan\Documents\GitHub\yes-master" push
+git -C "." add docs/APP_BEHAVIOR.md docs/RELEASE_STABILIZATION.md
+git -C "." commit -m "docs(album): record sample-rate parity; channel parity still deferred"
+git -C "." push
 ```
 
 - [ ] **Step 4: Hand back to the user**
