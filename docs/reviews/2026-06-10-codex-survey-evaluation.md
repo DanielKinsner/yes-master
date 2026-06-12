@@ -275,7 +275,7 @@ of silent, which is the achievable win.
 The technical claims all verify, and then some:
 
 - `graphify-out/manifest.json` contains **234 occurrences** of the *other*
-  machine's absolute paths (`C:\Users\SM - Dan\...`) plus mtimes;
+  machine's absolute paths (`<home>\...`) plus mtimes;
   `cache/stat-index.json` is keyed by the same absolute paths with
   `mtime_ns`; 154 cache files are tracked (79 `cache/ast/` + 74
   `cache/semantic/` + stat-index — the handoff's "63 cache/ast" count is
