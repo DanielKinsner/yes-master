@@ -3,10 +3,12 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import type {
   AlbumArc,
   AlbumPlan,
+  AnalysisProgress,
   AnalysisResult,
   ExportReport,
   GuardrailReadout,
   ImportedTrack,
+  LandingStatus,
   LoopRegion,
   MasteringSettings,
   PlaybackTick,
@@ -48,8 +50,8 @@ export const api = {
   importTracks: (paths: string[]) =>
     invoke<ImportedTrack[]>("import_tracks", { paths }),
 
-  analyzeTracks: (tracks: Array<{ id: TrackId; path: string }>) =>
-    invoke<AnalysisResult[]>("analyze_tracks", { tracks }),
+  analyzeTracks: (tracks: Array<{ id: TrackId; path: string }>, batchId?: string) =>
+    invoke<AnalysisResult[]>("analyze_tracks", { tracks, batchId: batchId ?? null }),
 
   renderTrackPreview: (
     trackId: TrackId,
@@ -262,10 +264,7 @@ export function onRenderProgress(
 /// inside the backend analyzer (decode → dynamics → stereo → tonal → deep
 /// scan), batch-rescaled to 0..1. Replaces the paced-timer stage display
 /// whenever events arrive.
-export interface AnalysisProgressEvent {
-  fraction: number;
-  label: string;
-}
+export type AnalysisProgressEvent = AnalysisProgress;
 
 export function onAnalysisProgress(
   handler: (event: AnalysisProgressEvent) => void,
@@ -279,8 +278,12 @@ export function onAnalysisProgress(
 /// loudness target because the corrective landing gain is still being
 /// measured; false once it crossfades in. Drives the "landing loudness…"
 /// note by the meters.
+export type LandingStatusEvent = LandingStatus;
+
 export function onLandingStatus(
-  handler: (pending: boolean) => void,
+  handler: (pending: boolean, event: LandingStatusEvent) => void,
 ): Promise<UnlistenFn> {
-  return listen<boolean>("landing:status", (event) => handler(event.payload));
+  return listen<LandingStatusEvent>("landing:status", (event) =>
+    handler(event.payload.pending, event.payload),
+  );
 }

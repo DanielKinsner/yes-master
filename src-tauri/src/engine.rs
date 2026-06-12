@@ -26,31 +26,27 @@ pub struct RenderProgress {
     pub fraction: f32,
 }
 
-/// Real analysis progress — emitted on the "analysis:progress" Tauri event
-/// channel during `analyze_tracks`. Stage callbacks fire at the ACTUAL
-/// phase boundaries inside `analyze_one` (decode → dynamics → stereo →
-/// tonal → deep scan), so the UI's bar and labels track real work instead
-/// of a paced timer. `fraction` spans the whole batch (track i of n).
-#[derive(Debug, Serialize, Clone)]
-pub struct AnalysisProgress {
-    pub fraction: f32,
-    pub label: String,
+pub fn analysis_progress_event(batch_id: &str, fraction: f32, label: &str) -> AnalysisProgress {
+    AnalysisProgress {
+        batch_id: batch_id.to_string(),
+        fraction,
+        label: label.to_string(),
+    }
 }
 
 #[tauri::command]
 pub async fn analyze_tracks(
     app: tauri::AppHandle,
     tracks: Vec<AnalyzeRequest>,
+    batch_id: Option<String>,
     profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
 ) -> CommandResult<Vec<AnalysisResult>> {
     let requested_ids: Vec<TrackId> = tracks.iter().map(|r| r.id.clone()).collect();
+    let batch_id = batch_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let result = analyze_tracks_core_with_progress(tracks, |fraction, label| {
         let _ = app.emit(
             "analysis:progress",
-            AnalysisProgress {
-                fraction,
-                label: label.to_string(),
-            },
+            analysis_progress_event(&batch_id, fraction, label),
         );
     })
     .await;

@@ -443,6 +443,17 @@ export interface UserPreset {
 // Rust's CommandError is serialized to a string via Display, so on the JS side it arrives as a string.
 export type CommandError = string;
 
+export interface AnalysisProgress {
+  batch_id: string;
+  fraction: number;
+  label: string;
+}
+
+export interface LandingStatus {
+  track_id: TrackId | null;
+  pending: boolean;
+}
+
 export interface PlaybackTick {
   track_id: TrackId | null;
   position_sec: number;

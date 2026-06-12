@@ -20,9 +20,10 @@ use std::path::Path;
 use yes_master_lib::guardrails::GuardrailReadout;
 use yes_master_lib::types::{
     AdvancedSettings, AlbumArc, AlbumArcKind, AlbumCharacter, AlbumPlan, AlbumTrackEntry,
-    AnalysisResult, CompressionMode, InferenceConfidence, JobStatus, PlaybackTick, Preset,
-    RenderJob, RenderKind, RenderedMeasurements, SourceProfile, SpectralBalance, SpectralBalance6,
-    TrackCharacter, TrackId, TrackRole, TransitionSpec,
+    AnalysisProgress, AnalysisResult, CompressionMode, InferenceConfidence, JobStatus,
+    LandingStatus, PlaybackTick, Preset, RenderJob, RenderKind, RenderedMeasurements,
+    SourceProfile, SpectralBalance, SpectralBalance6, TrackCharacter, TrackId, TrackRole,
+    TransitionSpec,
 };
 
 mod common;
@@ -164,6 +165,21 @@ fn rendered_measurements_sample() -> RenderedMeasurements {
     }
 }
 
+fn analysis_progress_sample() -> AnalysisProgress {
+    AnalysisProgress {
+        batch_id: "wire-batch".to_string(),
+        fraction: 0.5,
+        label: "Reading tonal balance".to_string(),
+    }
+}
+
+fn landing_status_sample() -> LandingStatus {
+    LandingStatus {
+        track_id: Some(TrackId("wire-sample".to_string())),
+        pending: true,
+    }
+}
+
 fn render_job_sample() -> RenderJob {
     RenderJob {
         id: "wire-job".to_string(),
@@ -223,8 +239,10 @@ fn wire_samples() -> serde_json::Value {
         "advanced": advanced_sample(),
         "album_plan": album_plan_sample(),
         "album_track_entry": album_track_entry_sample(),
+        "analysis_progress": analysis_progress_sample(),
         "analysis_result": analysis_result_sample(),
         "guardrail_readout": guardrail_readout_sample(),
+        "landing_status": landing_status_sample(),
         "mastering_settings": mastering_settings_sample(),
         "playback_tick": playback_tick_sample(),
         "render_job": render_job_sample(),

@@ -75,6 +75,11 @@
     "role_locked": true,
     "track_id": "wire-sample"
   },
+  "analysis_progress": {
+    "batch_id": "wire-batch",
+    "fraction": 0.5,
+    "label": "Reading tonal balance"
+  },
   "analysis_result": {
     "character_confidence": "moderate",
     "dynamic_range_lu": 8.0,
@@ -167,6 +172,10 @@
     "strength": 0.5,
     "width_corr_deadband": 0.25,
     "width_trim": 0.25
+  },
+  "landing_status": {
+    "pending": true,
+    "track_id": "wire-sample"
   },
   "mastering_settings": {
     "advanced": {

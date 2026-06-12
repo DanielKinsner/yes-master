@@ -934,6 +934,23 @@ pub fn now_iso() -> String {
     chrono::Utc::now().to_rfc3339()
 }
 
+/// Real analysis progress emitted on the `analysis:progress` event channel.
+/// `batch_id` lets the frontend ignore late events from superseded analyses.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct AnalysisProgress {
+    pub batch_id: String,
+    pub fraction: f32,
+    pub label: String,
+}
+
+/// Edge-triggered loudness-landing status emitted on `landing:status`.
+/// `track_id` keeps the UI from painting one track's catch-up note on another.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct LandingStatus {
+    pub track_id: Option<TrackId>,
+    pub pending: bool,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PlaybackTick {
     pub track_id: Option<TrackId>,

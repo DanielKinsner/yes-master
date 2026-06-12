@@ -2128,6 +2128,23 @@ fn advertised_extensions_decode() {
     }
 }
 
+#[test]
+fn async_event_identity_payloads_serialize_request_and_track_ids() {
+    let progress = engine::analysis_progress_event("batch-red", 0.5, "Reading tonal balance");
+    let progress_json = serde_json::to_value(&progress).expect("analysis progress json");
+    assert_eq!(progress_json["batch_id"], "batch-red");
+    assert_eq!(progress_json["fraction"], 0.5);
+    assert_eq!(progress_json["label"], "Reading tonal balance");
+
+    let landing = LandingStatus {
+        track_id: Some(TrackId("track-red".to_string())),
+        pending: true,
+    };
+    let landing_json = serde_json::to_value(&landing).expect("landing status json");
+    assert_eq!(landing_json["track_id"], "track-red");
+    assert_eq!(landing_json["pending"], true);
+}
+
 /// Real analysis progress (owner ask 2026-06-11): stage callbacks fire at
 /// actual phase boundaries, batch-rescaled, monotone, and finish at 1.0.
 #[tokio::test]

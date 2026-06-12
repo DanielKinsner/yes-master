@@ -24,8 +24,10 @@ import type {
   AdvancedSettings,
   AlbumPlan,
   AlbumTrackEntry,
+  AnalysisProgress,
   AnalysisResult,
   GuardrailReadout,
+  LandingStatus,
   MasteringSettings,
   PlaybackTick,
   RenderJob,
@@ -57,6 +59,13 @@ export type Drift_AlbumTrackEntry_TsOnly = AssertNever<
   TsOnly<typeof samples.album_track_entry, AlbumTrackEntry>
 >;
 
+export type Drift_AnalysisProgress_RustOnly = AssertNever<
+  RustOnly<typeof samples.analysis_progress, AnalysisProgress>
+>;
+export type Drift_AnalysisProgress_TsOnly = AssertNever<
+  TsOnly<typeof samples.analysis_progress, AnalysisProgress>
+>;
+
 // Allowlist: `deep_analysis` is backend-internal (profile store + iPhone
 // bridge consume it in Rust); bindings.ts mirrors only the FE-relevant
 // subset of AnalysisResult on purpose.
@@ -72,6 +81,13 @@ export type Drift_GuardrailReadout_RustOnly = AssertNever<
 >;
 export type Drift_GuardrailReadout_TsOnly = AssertNever<
   TsOnly<typeof samples.guardrail_readout, GuardrailReadout>
+>;
+
+export type Drift_LandingStatus_RustOnly = AssertNever<
+  RustOnly<typeof samples.landing_status, LandingStatus>
+>;
+export type Drift_LandingStatus_TsOnly = AssertNever<
+  TsOnly<typeof samples.landing_status, LandingStatus>
 >;
 
 export type Drift_MasteringSettings_RustOnly = AssertNever<
@@ -110,8 +126,10 @@ describe("wire-samples drift gate", () => {
       "advanced",
       "album_plan",
       "album_track_entry",
+      "analysis_progress",
       "analysis_result",
       "guardrail_readout",
+      "landing_status",
       "mastering_settings",
       "playback_tick",
       "render_job",
