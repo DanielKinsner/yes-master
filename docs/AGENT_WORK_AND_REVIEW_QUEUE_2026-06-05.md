@@ -394,7 +394,7 @@ git diff --check
 ## Copy-Paste Prompt For Claude: Review First
 
 ```text
-You are working in C:\Users\SM - Dan\Documents\GitHub\yes-master on main.
+You are working in `.` on main.
 
 Read these first:
 - AGENTS.md
@@ -439,7 +439,7 @@ unless your review finds a higher-priority objective bug.
 ## Copy-Paste Prompt For Claude: Execute One Task
 
 ```text
-You are working in C:\Users\SM - Dan\Documents\GitHub\yes-master on main.
+You are working in `.` on main.
 
 Use docs/AGENT_WORK_AND_REVIEW_QUEUE_2026-06-05.md as the active task queue.
 Pick exactly one task unless I specify otherwise. Keep the change small.
