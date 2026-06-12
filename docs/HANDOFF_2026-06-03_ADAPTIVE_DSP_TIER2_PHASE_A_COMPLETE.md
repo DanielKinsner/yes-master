@@ -257,7 +257,7 @@ bound on `DeepAnalysis`; `bindings.ts` needs no change; deserializes to `None`).
 
 ## 6. Build / test / verify (exact commands)
 
-Repo: `C:\Users\SM - Dan\Documents\GitHub\yes-master`. **Use `--target-dir target/codex-rc`**
+Repo: `.`. **Use `--target-dir target/codex-rc`**
 for cargo so you don't lock a running app's `target/`.
 
 ```powershell
