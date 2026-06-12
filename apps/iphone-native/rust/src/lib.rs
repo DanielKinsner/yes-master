@@ -304,6 +304,208 @@ fn error_to_ffi(message: &str) -> *mut c_char {
 mod tests {
     use super::*;
 
+    #[test]
+    fn committed_header_matches_exported_ffi_surface() {
+        let header = include_str!("../include/yes_master_native_bridge.h");
+        assert!(
+            header.contains("typedef struct YMLiveHandle YMLiveHandle;"),
+            "the committed header must expose the live stream as an opaque handle"
+        );
+
+        let header_declarations = parse_header_declarations(header);
+        let rust_declarations = parse_rust_exported_declarations(&[
+            include_str!("lib.rs"),
+            include_str!("live_stream.rs"),
+        ]);
+
+        assert_eq!(header_declarations, rust_declarations);
+    }
+
+    #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+    struct FfiDeclaration {
+        name: String,
+        return_type: String,
+        args: Vec<String>,
+    }
+
+    fn parse_header_declarations(header: &str) -> Vec<FfiDeclaration> {
+        let header = strip_block_comments(header);
+        let header = header
+            .lines()
+            .filter_map(|line| {
+                let line = line.trim();
+                if line.is_empty()
+                    || line.starts_with('#')
+                    || line == "extern \"C\" {"
+                    || line == "}"
+                {
+                    None
+                } else {
+                    Some(line)
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        let mut declarations = header
+            .split(';')
+            .filter(|statement| statement.contains("yes_master_native_"))
+            .map(parse_header_declaration)
+            .collect::<Vec<_>>();
+        declarations.sort();
+        declarations
+    }
+
+    fn parse_header_declaration(statement: &str) -> FfiDeclaration {
+        let statement = normalize_ws(statement);
+        let open = statement
+            .find('(')
+            .unwrap_or_else(|| panic!("header declaration missing `(`: {statement}"));
+        let close = statement
+            .rfind(')')
+            .unwrap_or_else(|| panic!("header declaration missing `)`: {statement}"));
+        let before_args = statement[..open].trim();
+        let name_start = before_args
+            .find("yes_master_native_")
+            .unwrap_or_else(|| panic!("header declaration missing FFI name: {statement}"));
+        let name = before_args[name_start..].trim().to_owned();
+        let return_type = normalize_c_type(&before_args[..name_start]);
+        let args = statement[open + 1..close]
+            .split(',')
+            .filter_map(parse_c_arg_type)
+            .collect();
+
+        FfiDeclaration {
+            name,
+            return_type,
+            args,
+        }
+    }
+
+    fn parse_rust_exported_declarations(sources: &[&str]) -> Vec<FfiDeclaration> {
+        const FN_PREFIX: &str = "extern \"C\" fn ";
+        const FFI_PREFIX: &str = "yes_master_native_";
+
+        let needle = format!("{FN_PREFIX}{FFI_PREFIX}");
+        let mut declarations = Vec::new();
+
+        for source in sources {
+            let mut search_start = 0;
+            while let Some(relative_index) = source[search_start..].find(&needle) {
+                let name_start = search_start + relative_index + FN_PREFIX.len();
+                let open = source[name_start..]
+                    .find('(')
+                    .map(|index| name_start + index)
+                    .unwrap_or_else(|| panic!("Rust FFI declaration missing `(`"));
+                let name = source[name_start..open].trim().to_owned();
+                let close = source[open + 1..]
+                    .find(')')
+                    .map(|index| open + 1 + index)
+                    .unwrap_or_else(|| panic!("Rust FFI declaration missing `)`: {name}"));
+                let args = source[open + 1..close]
+                    .split(',')
+                    .filter_map(parse_rust_arg_type)
+                    .collect();
+                let return_type = rust_return_type_after(&source[close + 1..]);
+
+                declarations.push(FfiDeclaration {
+                    name,
+                    return_type,
+                    args,
+                });
+                search_start = close + 1;
+            }
+        }
+
+        declarations.sort();
+        declarations
+    }
+
+    fn parse_rust_arg_type(arg: &str) -> Option<String> {
+        let arg = arg.trim();
+        if arg.is_empty() {
+            return None;
+        }
+        let (_, rust_type) = arg
+            .split_once(':')
+            .unwrap_or_else(|| panic!("Rust FFI argument missing type: {arg}"));
+        Some(map_rust_type_to_c(rust_type.trim()))
+    }
+
+    fn rust_return_type_after(after_params: &str) -> String {
+        let after_params = after_params.trim_start();
+        let Some(after_arrow) = after_params.strip_prefix("->") else {
+            return "void".to_owned();
+        };
+        let end = after_arrow
+            .find('{')
+            .or_else(|| after_arrow.find('\n'))
+            .unwrap_or(after_arrow.len());
+        map_rust_type_to_c(after_arrow[..end].trim())
+    }
+
+    fn map_rust_type_to_c(rust_type: &str) -> String {
+        match rust_type {
+            "*const c_char" => "const char *",
+            "*mut c_char" => "char *",
+            "*mut f32" => "float *",
+            "*mut LiveStream" => "YMLiveHandle *",
+            "*const LiveStream" => "const YMLiveHandle *",
+            "bool" => "bool",
+            "f32" => "float",
+            "f64" => "double",
+            "u32" => "uint32_t",
+            unsupported => panic!("unsupported Rust FFI type `{unsupported}`"),
+        }
+        .to_owned()
+    }
+
+    fn parse_c_arg_type(arg: &str) -> Option<String> {
+        let arg = normalize_c_type(arg);
+        if arg.is_empty() || arg == "void" {
+            return None;
+        }
+        let (c_type, name) = arg
+            .rsplit_once(' ')
+            .unwrap_or_else(|| panic!("C FFI argument missing name: {arg}"));
+        if name.starts_with('*') {
+            Some(normalize_c_type(&format!("{c_type} *")))
+        } else {
+            Some(normalize_c_type(c_type))
+        }
+    }
+
+    fn strip_block_comments(input: &str) -> String {
+        let mut output = String::new();
+        let mut rest = input;
+
+        while let Some(start) = rest.find("/*") {
+            output.push_str(&rest[..start]);
+            let after_start = &rest[start + 2..];
+            let Some(end) = after_start.find("*/") else {
+                return output;
+            };
+            rest = &after_start[end + 2..];
+        }
+
+        output.push_str(rest);
+        output
+    }
+
+    fn normalize_c_type(value: &str) -> String {
+        let without_extra_ws = normalize_ws(value);
+        normalize_ws(
+            &without_extra_ws
+                .replace(" *", "*")
+                .replace("* ", "*")
+                .replace('*', " *"),
+        )
+    }
+
+    fn normalize_ws(value: &str) -> String {
+        value.split_whitespace().collect::<Vec<_>>().join(" ")
+    }
+
     fn standard_parity_fixture() -> serde_json::Value {
         serde_json::from_str(include_str!("../../../../src/standard-mapping-parity.json"))
             .expect("parse standard-mapping-parity.json")
