@@ -8,6 +8,7 @@ use std::time::Duration;
 /// Sentinel dBFS value reported when the peak window saw no signal. JSON can't
 /// round-trip -inf, so we use a finite "well below audible" floor instead.
 pub const SILENCE_DBFS: f32 = -120.0;
+const INTERNAL_STATE_POISONED: &str = "internal state poisoned; restart the app";
 
 /// Convert a non-negative linear sample magnitude to dBFS, with a silence
 /// sentinel for inputs at or below 0. Caller is responsible for ensuring the
@@ -156,12 +157,12 @@ pub async fn prewarm_decode(
     // check the target still matches before writing — so a slow
     // prewarm that resolves AFTER a newer selection silently drops
     // its result instead of evicting the newer cache entry.
-    player.set_prewarm_target(canonical.clone());
+    player.set_prewarm_target(canonical.clone())?;
 
     // Idempotency guard: if the prewarm cache already holds this
     // entry, skip the decode entirely. The frontend can safely call
     // prewarm_decode on every track-select without thrashing.
-    if player.prewarm_cache_hit(&canonical, mtime) {
+    if player.prewarm_cache_hit(&canonical, mtime)? {
         return Ok(());
     }
 
@@ -189,7 +190,7 @@ pub async fn prewarm_decode(
     // B's prewarm finishes and writes B; A's prewarm finishes and
     // would overwrite B with A. Without the guard, the user clicks
     // Mastered on B and pays a cold decode again.
-    if !player.prewarm_target_matches(&canonical) {
+    if !player.prewarm_target_matches(&canonical)? {
         return Ok(());
     }
 
@@ -197,7 +198,7 @@ pub async fn prewarm_decode(
         canonical_path: canonical,
         mtime,
         pcm: decoded,
-    });
+    })?;
     Ok(())
 }
 
@@ -470,12 +471,13 @@ impl AudioPlayer {
     /// `prewarm_decode` so a slow decode can check whether its target
     /// has been superseded before it commits a stale entry to the
     /// shared cache.
-    pub(crate) fn set_prewarm_target(&self, canonical: PathBuf) {
+    pub(crate) fn set_prewarm_target(&self, canonical: PathBuf) -> CommandResult<()> {
         let mut guard = self
             .prewarm_target
             .lock()
-            .expect("prewarm target mutex poisoned");
+            .map_err(|_| CommandError::Other(INTERNAL_STATE_POISONED.to_string()))?;
         *guard = Some(canonical);
+        Ok(())
     }
 
     /// Returns true when `canonical` matches the most-recently-set
@@ -483,15 +485,15 @@ impl AudioPlayer {
     /// target has moved on to a different path. Called by
     /// `prewarm_decode` after its decode finishes to decide whether
     /// to write to the cache or drop the stale result.
-    pub(crate) fn prewarm_target_matches(&self, canonical: &Path) -> bool {
+    pub(crate) fn prewarm_target_matches(&self, canonical: &Path) -> CommandResult<bool> {
         let guard = self
             .prewarm_target
             .lock()
-            .expect("prewarm target mutex poisoned");
-        match guard.as_ref() {
+            .map_err(|_| CommandError::Other(INTERNAL_STATE_POISONED.to_string()))?;
+        Ok(match guard.as_ref() {
             Some(target) => target == canonical,
             None => false,
-        }
+        })
     }
 
     /// Returns true when the prewarm cache already holds an entry
@@ -502,26 +504,27 @@ impl AudioPlayer {
         &self,
         canonical_path: &Path,
         mtime: Option<std::time::SystemTime>,
-    ) -> bool {
+    ) -> CommandResult<bool> {
         let guard = self
             .prewarm_cache
             .lock()
-            .expect("prewarm cache mutex poisoned");
-        match guard.as_ref() {
+            .map_err(|_| CommandError::Other(INTERNAL_STATE_POISONED.to_string()))?;
+        Ok(match guard.as_ref() {
             Some(entry) => entry.canonical_path == canonical_path && entry.mtime == mtime,
             None => false,
-        }
+        })
     }
 
     /// Replace the prewarm cache entry. Single-slot LRU: any prior
     /// entry is dropped. Called by `prewarm_decode` after a successful
     /// off-thread decode.
-    pub(crate) fn set_prewarm_cache(&self, entry: DecodedCacheEntry) {
+    pub(crate) fn set_prewarm_cache(&self, entry: DecodedCacheEntry) -> CommandResult<()> {
         let mut guard = self
             .prewarm_cache
             .lock()
-            .expect("prewarm cache mutex poisoned");
+            .map_err(|_| CommandError::Other(INTERNAL_STATE_POISONED.to_string()))?;
         *guard = Some(entry);
+        Ok(())
     }
 
     /// Shared deadline for an audio-thread play reply. Source (`play_track`)
@@ -630,8 +633,11 @@ impl AudioPlayer {
             .map_err(CommandError::Other)
     }
 
-    pub fn snapshot(&self) -> PlaybackSnapshot {
-        self.snapshot.read().expect("snapshot read").clone()
+    pub fn snapshot(&self) -> CommandResult<PlaybackSnapshot> {
+        self.snapshot
+            .read()
+            .map_err(|_| CommandError::Other(INTERNAL_STATE_POISONED.to_string()))
+            .map(|snapshot| snapshot.clone())
     }
 
     fn send(&self, cmd: AudioCommand) -> Result<(), String> {
@@ -787,6 +793,12 @@ struct PreviewLandingCache {
     by_hash: HashMap<u64, f32>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum LandingSettingsHash {
+    Stable(u64),
+    AlwaysMiss,
+}
+
 impl PreviewLandingCache {
     fn new() -> Self {
         Self {
@@ -812,7 +824,9 @@ impl PreviewLandingCache {
     where
         F: FnOnce(&MasteringSettings) -> f32,
     {
-        let hash = settings_landing_hash(settings);
+        let LandingSettingsHash::Stable(hash) = settings_landing_hash(settings) else {
+            return compute(settings);
+        };
         if let Some(&cached) = self.by_hash.get(&hash) {
             return cached;
         }
@@ -822,13 +836,16 @@ impl PreviewLandingCache {
     }
 
     fn get(&self, settings: &MasteringSettings) -> Option<f32> {
-        let hash = settings_landing_hash(settings);
-        self.by_hash.get(&hash).copied()
+        match settings_landing_hash(settings) {
+            LandingSettingsHash::Stable(hash) => self.by_hash.get(&hash).copied(),
+            LandingSettingsHash::AlwaysMiss => None,
+        }
     }
 
     fn insert(&mut self, settings: &MasteringSettings, gain: f32) {
-        let hash = settings_landing_hash(settings);
-        self.by_hash.insert(hash, gain);
+        if let LandingSettingsHash::Stable(hash) = settings_landing_hash(settings) {
+            self.by_hash.insert(hash, gain);
+        }
     }
 }
 
@@ -913,15 +930,94 @@ fn update_chain_preview_landing_plan(
 ///     the chain measurement but not the measurement itself. Stripped
 ///     so analysis updates (which inject this field) don't bust the
 ///     cache.
-fn settings_landing_hash(settings: &MasteringSettings) -> u64 {
+fn option_f32_is_finite(value: Option<f32>) -> bool {
+    value.map_or(true, f32::is_finite)
+}
+
+fn source_profile_is_finite(profile: SourceProfile) -> bool {
+    [
+        profile.spectral_6.sub,
+        profile.spectral_6.low,
+        profile.spectral_6.low_mid,
+        profile.spectral_6.mid,
+        profile.spectral_6.presence,
+        profile.spectral_6.air,
+        profile.dynamic_range_p95_p10_db,
+        profile.dynamic_range_lu,
+        profile.stereo_width,
+    ]
+    .into_iter()
+    .all(f32::is_finite)
+        && option_f32_is_finite(profile.stereo_correlation)
+}
+
+fn album_plan_is_finite(plan: &AlbumPlan) -> bool {
+    plan.intensity.is_finite()
+        && plan
+            .tracks
+            .iter()
+            .all(|track| track.arc_lufs_offset_db.is_finite() && track.intensity_scale.is_finite())
+        && plan
+            .transitions
+            .iter()
+            .all(|transition| transition.duration_seconds.is_finite())
+}
+
+fn settings_landing_values_are_finite(settings: &MasteringSettings) -> bool {
+    [
+        settings.intensity,
+        settings.eq_sub_db,
+        settings.eq_low_db,
+        settings.eq_low_mid_db,
+        settings.eq_mid_db,
+        settings.eq_high_mid_db,
+        settings.eq_high_db,
+        settings.eq_sparkle_db,
+        settings.input_gain_db,
+        settings.output_gain_db,
+    ]
+    .into_iter()
+    .all(f32::is_finite)
+        && settings.album.as_ref().map_or(true, album_plan_is_finite)
+        && option_f32_is_finite(settings.advanced.lufs_offset_db)
+        && option_f32_is_finite(settings.advanced.ceiling_dbtp)
+        && option_f32_is_finite(settings.advanced.width)
+        && option_f32_is_finite(settings.advanced.warmth)
+        && option_f32_is_finite(settings.advanced.presence_air)
+        && option_f32_is_finite(settings.advanced.compression_density)
+        && option_f32_is_finite(settings.advanced.compression_low_threshold_db)
+        && option_f32_is_finite(settings.advanced.compression_low_ratio)
+        && option_f32_is_finite(settings.advanced.compression_low_attack_ms)
+        && option_f32_is_finite(settings.advanced.compression_low_release_ms)
+        && option_f32_is_finite(settings.advanced.compression_mid_threshold_db)
+        && option_f32_is_finite(settings.advanced.compression_mid_ratio)
+        && option_f32_is_finite(settings.advanced.compression_mid_attack_ms)
+        && option_f32_is_finite(settings.advanced.compression_mid_release_ms)
+        && option_f32_is_finite(settings.advanced.compression_high_threshold_db)
+        && option_f32_is_finite(settings.advanced.compression_high_ratio)
+        && option_f32_is_finite(settings.advanced.compression_high_attack_ms)
+        && option_f32_is_finite(settings.advanced.compression_high_release_ms)
+        && option_f32_is_finite(settings.advanced.adaptive_strength)
+        && settings
+            .advanced
+            .source_profile
+            .map_or(true, source_profile_is_finite)
+}
+
+fn settings_landing_hash(settings: &MasteringSettings) -> LandingSettingsHash {
     use std::hash::{Hash, Hasher};
     let mut to_hash = settings.clone();
     to_hash.volume_match = false;
     to_hash.source_lufs_integrated = None;
-    let json = serde_json::to_string(&to_hash).unwrap_or_default();
+    if !settings_landing_values_are_finite(&to_hash) {
+        return LandingSettingsHash::AlwaysMiss;
+    }
+    let Ok(json) = serde_json::to_string(&to_hash) else {
+        return LandingSettingsHash::AlwaysMiss;
+    };
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     json.hash(&mut hasher);
-    hasher.finish()
+    LandingSettingsHash::Stable(hasher.finish())
 }
 
 fn export_landing_gain_lin_for_preview(
@@ -2055,7 +2151,7 @@ mod tests {
     fn prewarm_cache_empty_after_construction() {
         let player = AudioPlayer::new();
         let path = std::path::PathBuf::from("/tmp/a.wav");
-        assert!(!player.prewarm_cache_hit(&path, None));
+        assert!(!player.prewarm_cache_hit(&path, None).unwrap());
     }
 
     /// After set, the same (path, mtime) reports a hit. The whole
@@ -2065,16 +2161,18 @@ mod tests {
         let player = AudioPlayer::new();
         let path = std::path::PathBuf::from("/tmp/a.wav");
         let mtime = Some(std::time::SystemTime::UNIX_EPOCH);
-        player.set_prewarm_cache(DecodedCacheEntry {
-            canonical_path: path.clone(),
-            mtime,
-            pcm: DecodedPcm {
-                samples: vec![0.0, 0.0],
-                sample_rate: 48_000,
-                channels: 2,
-            },
-        });
-        assert!(player.prewarm_cache_hit(&path, mtime));
+        player
+            .set_prewarm_cache(DecodedCacheEntry {
+                canonical_path: path.clone(),
+                mtime,
+                pcm: DecodedPcm {
+                    samples: vec![0.0, 0.0],
+                    sample_rate: 48_000,
+                    channels: 2,
+                },
+            })
+            .unwrap();
+        assert!(player.prewarm_cache_hit(&path, mtime).unwrap());
     }
 
     /// Different path → miss. Cache distinguishes by canonical path.
@@ -2084,16 +2182,18 @@ mod tests {
         let path_a = std::path::PathBuf::from("/tmp/a.wav");
         let path_b = std::path::PathBuf::from("/tmp/b.wav");
         let mtime = Some(std::time::SystemTime::UNIX_EPOCH);
-        player.set_prewarm_cache(DecodedCacheEntry {
-            canonical_path: path_a,
-            mtime,
-            pcm: DecodedPcm {
-                samples: vec![],
-                sample_rate: 48_000,
-                channels: 2,
-            },
-        });
-        assert!(!player.prewarm_cache_hit(&path_b, mtime));
+        player
+            .set_prewarm_cache(DecodedCacheEntry {
+                canonical_path: path_a,
+                mtime,
+                pcm: DecodedPcm {
+                    samples: vec![],
+                    sample_rate: 48_000,
+                    channels: 2,
+                },
+            })
+            .unwrap();
+        assert!(!player.prewarm_cache_hit(&path_b, mtime).unwrap());
     }
 
     /// Same path, different mtime → miss. The file was re-saved /
@@ -2106,16 +2206,18 @@ mod tests {
         let old_mtime = Some(std::time::SystemTime::UNIX_EPOCH);
         let new_mtime =
             Some(std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(60));
-        player.set_prewarm_cache(DecodedCacheEntry {
-            canonical_path: path.clone(),
-            mtime: old_mtime,
-            pcm: DecodedPcm {
-                samples: vec![],
-                sample_rate: 48_000,
-                channels: 2,
-            },
-        });
-        assert!(!player.prewarm_cache_hit(&path, new_mtime));
+        player
+            .set_prewarm_cache(DecodedCacheEntry {
+                canonical_path: path.clone(),
+                mtime: old_mtime,
+                pcm: DecodedPcm {
+                    samples: vec![],
+                    sample_rate: 48_000,
+                    channels: 2,
+                },
+            })
+            .unwrap();
+        assert!(!player.prewarm_cache_hit(&path, new_mtime).unwrap());
     }
 
     /// set_prewarm_cache replaces the prior entry — single-slot LRU.
@@ -2126,27 +2228,31 @@ mod tests {
         let path_a = std::path::PathBuf::from("/tmp/a.wav");
         let path_b = std::path::PathBuf::from("/tmp/b.wav");
         let mtime = Some(std::time::SystemTime::UNIX_EPOCH);
-        player.set_prewarm_cache(DecodedCacheEntry {
-            canonical_path: path_a.clone(),
-            mtime,
-            pcm: DecodedPcm {
-                samples: vec![],
-                sample_rate: 48_000,
-                channels: 2,
-            },
-        });
-        assert!(player.prewarm_cache_hit(&path_a, mtime));
-        player.set_prewarm_cache(DecodedCacheEntry {
-            canonical_path: path_b.clone(),
-            mtime,
-            pcm: DecodedPcm {
-                samples: vec![],
-                sample_rate: 48_000,
-                channels: 2,
-            },
-        });
-        assert!(!player.prewarm_cache_hit(&path_a, mtime));
-        assert!(player.prewarm_cache_hit(&path_b, mtime));
+        player
+            .set_prewarm_cache(DecodedCacheEntry {
+                canonical_path: path_a.clone(),
+                mtime,
+                pcm: DecodedPcm {
+                    samples: vec![],
+                    sample_rate: 48_000,
+                    channels: 2,
+                },
+            })
+            .unwrap();
+        assert!(player.prewarm_cache_hit(&path_a, mtime).unwrap());
+        player
+            .set_prewarm_cache(DecodedCacheEntry {
+                canonical_path: path_b.clone(),
+                mtime,
+                pcm: DecodedPcm {
+                    samples: vec![],
+                    sample_rate: 48_000,
+                    channels: 2,
+                },
+            })
+            .unwrap();
+        assert!(!player.prewarm_cache_hit(&path_a, mtime).unwrap());
+        assert!(player.prewarm_cache_hit(&path_b, mtime).unwrap());
     }
 
     // ----- Prewarm target guard (stale-prewarm-evicts-newer fix) ----
@@ -2160,7 +2266,7 @@ mod tests {
     fn prewarm_target_unset_matches_nothing() {
         let player = AudioPlayer::new();
         let path = std::path::PathBuf::from("/tmp/a.wav");
-        assert!(!player.prewarm_target_matches(&path));
+        assert!(!player.prewarm_target_matches(&path).unwrap());
     }
 
     /// set + check on the same path → match. Trivial pass-through
@@ -2170,8 +2276,8 @@ mod tests {
     fn prewarm_target_matches_after_set_with_same_path() {
         let player = AudioPlayer::new();
         let path = std::path::PathBuf::from("/tmp/a.wav");
-        player.set_prewarm_target(path.clone());
-        assert!(player.prewarm_target_matches(&path));
+        player.set_prewarm_target(path.clone()).unwrap();
+        assert!(player.prewarm_target_matches(&path).unwrap());
     }
 
     /// set A → check B reports false. The discriminator: a slow
@@ -2182,8 +2288,8 @@ mod tests {
         let player = AudioPlayer::new();
         let path_a = std::path::PathBuf::from("/tmp/a.wav");
         let path_b = std::path::PathBuf::from("/tmp/b.wav");
-        player.set_prewarm_target(path_a);
-        assert!(!player.prewarm_target_matches(&path_b));
+        player.set_prewarm_target(path_a).unwrap();
+        assert!(!player.prewarm_target_matches(&path_b).unwrap());
     }
 
     /// set A → set B → check A reports false (LIFO replacement).
@@ -2196,17 +2302,68 @@ mod tests {
         let player = AudioPlayer::new();
         let path_a = std::path::PathBuf::from("/tmp/a.wav");
         let path_b = std::path::PathBuf::from("/tmp/b.wav");
-        player.set_prewarm_target(path_a.clone());
-        player.set_prewarm_target(path_b.clone());
+        player.set_prewarm_target(path_a.clone()).unwrap();
+        player.set_prewarm_target(path_b.clone()).unwrap();
         assert!(
-            !player.prewarm_target_matches(&path_a),
+            !player.prewarm_target_matches(&path_a).unwrap(),
             "slow prewarm A must NOT match after newer set B — \
              this is the stale-prewarm-evicts-newer guard"
         );
         assert!(
-            player.prewarm_target_matches(&path_b),
+            player.prewarm_target_matches(&path_b).unwrap(),
             "current target B should still match itself"
         );
+    }
+
+    fn assert_internal_state_poisoned<T>(result: CommandResult<T>) {
+        match result {
+            Err(CommandError::Other(message)) => assert_eq!(message, INTERNAL_STATE_POISONED),
+            _ => panic!("expected internal-state poison error"),
+        }
+    }
+
+    #[test]
+    fn prewarm_and_snapshot_poisoned_locks_return_command_errors() {
+        let player = AudioPlayer::new();
+        let target = player.prewarm_target.clone();
+        let _ = std::panic::catch_unwind(move || {
+            let _guard = target.lock().unwrap();
+            panic!("poison prewarm target");
+        });
+        assert_internal_state_poisoned(
+            player.set_prewarm_target(std::path::PathBuf::from("/tmp/a.wav")),
+        );
+        assert_internal_state_poisoned(
+            player.prewarm_target_matches(&std::path::PathBuf::from("/tmp/a.wav")),
+        );
+
+        let player = AudioPlayer::new();
+        let cache = player.prewarm_cache.clone();
+        let _ = std::panic::catch_unwind(move || {
+            let _guard = cache.lock().unwrap();
+            panic!("poison prewarm cache");
+        });
+        let entry = DecodedCacheEntry {
+            canonical_path: std::path::PathBuf::from("/tmp/a.wav"),
+            mtime: None,
+            pcm: DecodedPcm {
+                samples: vec![0.0, 0.0],
+                sample_rate: 48_000,
+                channels: 2,
+            },
+        };
+        assert_internal_state_poisoned(player.set_prewarm_cache(entry));
+        assert_internal_state_poisoned(
+            player.prewarm_cache_hit(&std::path::PathBuf::from("/tmp/a.wav"), None),
+        );
+
+        let player = AudioPlayer::new();
+        let snapshot = player.snapshot.clone();
+        let _ = std::panic::catch_unwind(move || {
+            let _guard = snapshot.write().unwrap();
+            panic!("poison snapshot");
+        });
+        assert_internal_state_poisoned(player.snapshot());
     }
 
     /// resolve_pcm_with_caches: tier-2 hit returns the prewarmed PCM
@@ -2334,6 +2491,34 @@ mod tests {
             settings_landing_hash(&b),
             "source LUFS injection must not invalidate the cache"
         );
+    }
+
+    #[test]
+    fn landing_cache_always_misses_when_settings_do_not_serialize() {
+        let settings = settings_with_intensity(f32::NAN);
+        assert_eq!(
+            settings_landing_hash(&settings),
+            LandingSettingsHash::AlwaysMiss
+        );
+
+        let mut cache = PreviewLandingCache::new();
+        let mut compute_calls = 0usize;
+        let first = cache.get_or_compute(&settings, |_| {
+            compute_calls += 1;
+            0.1
+        });
+        let second = cache.get_or_compute(&settings, |_| {
+            compute_calls += 1;
+            0.2
+        });
+
+        assert_eq!(first, 0.1);
+        assert_eq!(second, 0.2);
+        assert_eq!(compute_calls, 2, "non-serializable settings must not cache");
+        assert_eq!(cache.len(), 0, "AlwaysMiss settings must not be stored");
+        assert!(cache.get(&settings).is_none());
+        cache.insert(&settings, 0.3);
+        assert_eq!(cache.len(), 0, "direct insert must also skip AlwaysMiss");
     }
 
     /// Cache miss invokes `compute` and stores the result; cache hit
