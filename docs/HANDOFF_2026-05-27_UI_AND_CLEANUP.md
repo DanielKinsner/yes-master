@@ -1,7 +1,7 @@
 # Handoff - Track Header UI And Cleanup
 
 Date: 2026-05-27
-Repo: `C:\Users\SM - Dan\Documents\GitHub\yes-master`
+Repo: `.`
 Branch at handoff: `main`
 Base pushed head before this addendum: `02613a3 Polish track header controls and add handoff`
 
