@@ -308,6 +308,30 @@ async fn prepare_waveform_decodes_synthetic_wav() {
 }
 
 #[tokio::test]
+async fn prepare_waveform_clamps_absurd_target_pixels() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let path = tmp.path().join("sine.wav");
+    write_sine_wav(&path, 44_100, 2.0, 440.0, 2);
+
+    let result = audio::prepare_waveform(
+        TrackId("track-huge-waveform".to_string()),
+        path.to_string_lossy().to_string(),
+        Some(u32::MAX),
+    )
+    .await
+    .expect("waveform ok");
+
+    assert_eq!(result.channels.len(), 2, "stereo expected");
+    for peaks in &result.channels {
+        assert!(
+            peaks.len() <= 16_384,
+            "expected target clamp to cap peaks, got {}",
+            peaks.len()
+        );
+    }
+}
+
+#[tokio::test]
 async fn prepare_waveform_rejects_empty_path() {
     let err = audio::prepare_waveform(TrackId("t".to_string()), String::new(), Some(100))
         .await

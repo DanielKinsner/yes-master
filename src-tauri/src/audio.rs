@@ -22,12 +22,11 @@ fn linear_to_dbfs(linear: f32) -> f32 {
 
 use std::collections::HashMap;
 
-use crate::decode::{decode_full, decode_to_peaks, DecodedPcm};
+use crate::decode::{clamp_waveform_target_pixels, decode_full, decode_to_peaks, DecodedPcm};
 use crate::sources::{LiveCoeffUpdate, MasteringSource, MeteredPcmSource};
 use crate::spectrum::{SpectrumAnalyzer, SpectrumRing};
 
 const DEFAULT_TARGET_PIXELS: u32 = 1000;
-const MIN_TARGET_PIXELS: u32 = 64;
 
 #[tauri::command]
 pub async fn prepare_waveform(
@@ -44,9 +43,7 @@ pub async fn prepare_waveform(
             "path traversal not allowed: {track_path}"
         )));
     }
-    let pixels = target_pixels
-        .unwrap_or(DEFAULT_TARGET_PIXELS)
-        .max(MIN_TARGET_PIXELS);
+    let pixels = clamp_waveform_target_pixels(target_pixels.unwrap_or(DEFAULT_TARGET_PIXELS));
     let decoded = decode_to_peaks(path, pixels)?;
     Ok(WaveformPeaks {
         track_id,

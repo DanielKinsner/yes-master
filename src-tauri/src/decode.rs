@@ -37,7 +37,30 @@ pub struct DecodedPcm {
     pub channels: u16,
 }
 
+pub const MIN_WAVEFORM_PIXELS: u32 = 64;
+pub const MAX_WAVEFORM_PIXELS: u32 = 16_384;
+
+pub fn clamp_waveform_target_pixels(target_pixels: u32) -> u32 {
+    target_pixels.clamp(MIN_WAVEFORM_PIXELS, MAX_WAVEFORM_PIXELS)
+}
+
+fn estimated_decode_capacity(
+    n_frames: Option<u64>,
+    channel_count: u16,
+    file_size_bytes: u64,
+) -> usize {
+    let Some(frames) = n_frames else {
+        return 0;
+    };
+    let claimed = frames.saturating_mul(u64::from(channel_count));
+    let file_bound = file_size_bytes.saturating_mul(8);
+    claimed.min(file_bound).min(usize::MAX as u64) as usize
+}
+
 pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
+    let file_size_bytes = std::fs::metadata(path)
+        .map_err(|e| CommandError::Io(e.to_string()))?
+        .len();
     let file = std::fs::File::open(path).map_err(|e| CommandError::Io(e.to_string()))?;
     let mss = MediaSourceStream::new(Box::new(file), Default::default());
     let mut hint = Hint::new();
@@ -67,11 +90,8 @@ pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
         .map(|c| c.count())
         .unwrap_or(2)
         .max(1) as u16;
-    let estimated_capacity = track
-        .codec_params
-        .n_frames
-        .unwrap_or(0)
-        .saturating_mul(channel_count as u64) as usize;
+    let estimated_capacity =
+        estimated_decode_capacity(track.codec_params.n_frames, channel_count, file_size_bytes);
 
     let mut decoder = symphonia::default::get_codecs()
         .make(&track.codec_params, &DecoderOptions::default())
@@ -116,6 +136,7 @@ pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
 }
 
 pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<DecodedPeaks> {
+    let target_pixels = clamp_waveform_target_pixels(target_pixels);
     let file = std::fs::File::open(path).map_err(|e| CommandError::Io(e.to_string()))?;
     let mss = MediaSourceStream::new(Box::new(file), Default::default());
     let mut hint = Hint::new();
@@ -269,6 +290,44 @@ mod tests {
             w.write_sample(0_i16).expect("write");
         }
         w.finalize().expect("finalize");
+    }
+
+    fn write_overclaimed_wav(path: &Path) {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"RIFF");
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        bytes.extend_from_slice(b"WAVE");
+        bytes.extend_from_slice(b"fmt ");
+        bytes.extend_from_slice(&16_u32.to_le_bytes());
+        bytes.extend_from_slice(&1_u16.to_le_bytes());
+        bytes.extend_from_slice(&2_u16.to_le_bytes());
+        bytes.extend_from_slice(&44_100_u32.to_le_bytes());
+        bytes.extend_from_slice(&(44_100_u32 * 2 * 2).to_le_bytes());
+        bytes.extend_from_slice(&4_u16.to_le_bytes());
+        bytes.extend_from_slice(&16_u16.to_le_bytes());
+        bytes.extend_from_slice(b"data");
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        bytes.extend_from_slice(&[0_u8; 64]);
+        std::fs::write(path, bytes).expect("write overclaimed wav");
+    }
+
+    #[test]
+    fn estimated_decode_capacity_is_bounded_by_file_size() {
+        assert_eq!(
+            estimated_decode_capacity(Some(u32::MAX as u64), 2, 256),
+            2_048
+        );
+        assert_eq!(estimated_decode_capacity(Some(10), 2, 10_000), 20);
+        assert_eq!(estimated_decode_capacity(None, 2, 256), 0);
+    }
+
+    #[test]
+    fn decode_full_returns_for_tiny_wav_with_absurd_frame_claim() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let p = tmp.path().join("overclaimed.wav");
+        write_overclaimed_wav(&p);
+        let result = std::panic::catch_unwind(|| decode_full(&p));
+        assert!(result.is_ok(), "decode_full panicked");
     }
 
     #[test]
