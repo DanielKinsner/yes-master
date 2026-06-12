@@ -4,7 +4,7 @@ build/
 target/
 # Scratch target dir used by the dev-binary-lock workaround
 # (`cargo test --target-dir target-tests` when `npm run tauri dev` is
-# holding `target/debug/album-mastering-studio.exe` open). Pattern is
+# holding `target/debug/yes-master.exe` open). Pattern is
 # distinct from `target/` so list it separately.
 target-tests/
 out/
