@@ -6,22 +6,43 @@
 // non-blocking integrity note, hard-stops still surfaced (design spec §6).
 
 import type { MasteringSettings, QualityCheck } from "../bindings";
+import parity from "../standard-mapping-parity.json";
 import { effectiveLoudnessTarget } from "./effective-settings";
+
+export const STANDARD_EXPORT_DELIVERY: {
+  sampleRate: number;
+  bitDepth: number;
+  ceilingDbtp: number;
+  lufsClamp: readonly [number, number];
+} = {
+  sampleRate: parity.delivery.sample_rate,
+  bitDepth: parity.delivery.bit_depth,
+  ceilingDbtp: parity.delivery.ceiling_dbtp,
+  lufsClamp: parity.delivery.lufs_clamp as [number, number],
+};
+
+function clampStandardTarget(target: number | null): number | null {
+  if (target === null) {
+    return null;
+  }
+  const [minLufs, maxLufs] = STANDARD_EXPORT_DELIVERY.lufsClamp;
+  return Math.min(maxLufs, Math.max(minLufs, target));
+}
 
 /// Wrap the live Standard settings into the known-safe delivery format,
 /// preserving the loudness the user (or the default profile) is targeting.
 /// Mirrors apps/iphone-native/rust/src/lib.rs::export_settings_for_options.
 export function standardExportSettings(s: MasteringSettings): MasteringSettings {
-  const target = effectiveLoudnessTarget(s);
+  const target = clampStandardTarget(effectiveLoudnessTarget(s));
   return {
     ...s,
     delivery_profile: "custom",
     advanced: {
       ...s.advanced,
       lufs_offset_db: target,
-      ceiling_dbtp: -1,
-      bit_depth: 24,
-      target_sample_rate: 44_100,
+      ceiling_dbtp: STANDARD_EXPORT_DELIVERY.ceilingDbtp,
+      bit_depth: STANDARD_EXPORT_DELIVERY.bitDepth,
+      target_sample_rate: STANDARD_EXPORT_DELIVERY.sampleRate,
     },
   };
 }

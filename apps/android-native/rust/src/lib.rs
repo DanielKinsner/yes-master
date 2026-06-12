@@ -261,6 +261,37 @@ mod tests {
     use crate::test_util::write_sine_wav as write_sine_wav_with;
     use std::path::Path;
 
+    fn standard_parity_fixture() -> serde_json::Value {
+        serde_json::from_str(include_str!("../../../../src/standard-mapping-parity.json"))
+            .expect("parse standard-mapping-parity.json")
+    }
+
+    fn parity_delivery(parity: &serde_json::Value) -> &serde_json::Map<String, serde_json::Value> {
+        parity["delivery"]
+            .as_object()
+            .expect("delivery object in standard-mapping-parity.json")
+    }
+
+    fn delivery_u32(delivery: &serde_json::Map<String, serde_json::Value>, key: &str) -> u32 {
+        delivery[key].as_u64().expect(key) as u32
+    }
+
+    fn delivery_u16(delivery: &serde_json::Map<String, serde_json::Value>, key: &str) -> u16 {
+        delivery[key].as_u64().expect(key) as u16
+    }
+
+    fn delivery_f32(delivery: &serde_json::Map<String, serde_json::Value>, key: &str) -> f32 {
+        delivery[key].as_f64().expect(key) as f32
+    }
+
+    fn delivery_lufs_clamp(delivery: &serde_json::Map<String, serde_json::Value>) -> [f32; 2] {
+        let values = delivery["lufs_clamp"].as_array().expect("lufs_clamp");
+        [
+            values[0].as_f64().expect("lufs min") as f32,
+            values[1].as_f64().expect("lufs max") as f32,
+        ]
+    }
+
     fn write_sine_wav(path: &Path) {
         // 2 s stereo @ 44.1 kHz — what these wire/parity tests always used.
         write_sine_wav_with(path, 88_200, 2, 44_100);
@@ -334,9 +365,7 @@ mod tests {
     /// to the same engine presets.
     #[test]
     fn standard_style_aliases_match_the_shared_parity_fixture() {
-        let parity: serde_json::Value =
-            serde_json::from_str(include_str!("../../../../src/standard-mapping-parity.json"))
-                .expect("parse parity fixture");
+        let parity = standard_parity_fixture();
         let styles = parity["styles"].as_object().expect("styles map");
         assert!(!styles.is_empty());
         for (style, expected_kind) in styles {
@@ -351,5 +380,33 @@ mod tests {
                 "Android style \"{style}\" diverged from the shared parity fixture"
             );
         }
+    }
+
+    #[test]
+    fn fixed_delivery_recipe_matches_the_shared_parity_fixture() {
+        let parity = standard_parity_fixture();
+        let delivery = parity_delivery(&parity);
+        let settings = native_bridge::export_settings_for_options(Some("balanced"), 0.5, -11.0);
+
+        assert_eq!(
+            settings.effective_ceiling_dbtp(),
+            delivery_f32(delivery, "ceiling_dbtp")
+        );
+        assert_eq!(
+            settings.effective_bit_depth(),
+            delivery_u16(delivery, "bit_depth")
+        );
+        assert_eq!(
+            settings.effective_sample_rate(48_000),
+            delivery_u32(delivery, "sample_rate")
+        );
+
+        let [min_lufs, max_lufs] = delivery_lufs_clamp(delivery);
+        let clamped_low =
+            native_bridge::export_settings_for_options(Some("balanced"), 0.5, min_lufs - 10.0);
+        assert_eq!(clamped_low.effective_target_lufs(), Some(min_lufs));
+        let clamped_high =
+            native_bridge::export_settings_for_options(Some("balanced"), 0.5, max_lufs + 10.0);
+        assert_eq!(clamped_high.effective_target_lufs(), Some(max_lufs));
     }
 }

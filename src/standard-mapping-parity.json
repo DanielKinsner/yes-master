@@ -1,5 +1,5 @@
 {
-  "_readme": "Canonical Standard-vocabulary contract, pinned from BOTH language sides: src/lib/standard-mapping.test.ts asserts the TS tables match, and the bridge test standard_style_aliases_match_the_shared_parity_fixture in apps/iphone-native/rust/src/lib.rs asserts native_preset() maps each style id to the same engine preset. The loudness trio is mapped in Swift (NativeLoudness -> the lufs_target FFI argument), so its cross-pin lives in the TS test plus the bridge's loudness-target test. Change this file and all consumers together.",
+  "_readme": "Canonical Standard-vocabulary and fixed export recipe contract. Five consumers assert it: src/lib/standard-mapping.test.ts (desktop style/loudness), src/lib/standard-export.test.ts (desktop delivery recipe), apps/iphone-native/rust/src/lib.rs (iPhone bridge style/delivery/clamp), apps/android-native/rust/src/lib.rs (Android bridge style/delivery/clamp), and apps/iphone-native/YESMasterNativeTests/NativeLoudnessTests.swift (Swift style/loudness resource). Change this file and all consumers together.",
   "styles": {
     "balanced": "universal",
     "bright": "clarity",
@@ -10,5 +10,11 @@
     "low": -14,
     "medium": -11,
     "high": -9
+  },
+  "delivery": {
+    "sample_rate": 44100,
+    "bit_depth": 24,
+    "ceiling_dbtp": -1,
+    "lufs_clamp": [-24, -6]
   }
 }

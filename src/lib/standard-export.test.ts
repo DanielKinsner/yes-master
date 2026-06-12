@@ -2,7 +2,22 @@
 import { describe, expect, it } from "vitest";
 
 import type { MasteringSettings, QualityCheck } from "../bindings";
+import parity from "../standard-mapping-parity.json";
 import { standardExportSettings, standardExportNotes } from "./standard-export";
+
+interface StandardDeliveryFixture {
+  sample_rate: number;
+  bit_depth: number;
+  ceiling_dbtp: number;
+  lufs_clamp: number[];
+}
+
+function parityDelivery(): StandardDeliveryFixture {
+  const delivery = (parity as { delivery?: StandardDeliveryFixture }).delivery;
+  expect(delivery, "standard-mapping-parity.json must pin Standard delivery").toBeDefined();
+  expect(delivery?.lufs_clamp, "Standard delivery lufs_clamp must be a two-value window").toHaveLength(2);
+  return delivery!;
+}
 
 function settings(overrides: Partial<MasteringSettings["advanced"]> = {}): MasteringSettings {
   return {
@@ -34,12 +49,24 @@ function settings(overrides: Partial<MasteringSettings["advanced"]> = {}): Maste
 describe("standardExportSettings", () => {
   it("pins Custom / 44.1k / 24-bit / -1 dBTP and captures the effective loudness", () => {
     // Fresh streaming-universal track: effective target is -14 via the profile.
+    const delivery = parityDelivery();
     const out = standardExportSettings(settings());
     expect(out.delivery_profile).toBe("custom");
     expect(out.advanced.lufs_offset_db).toBe(-14);
-    expect(out.advanced.target_sample_rate).toBe(44_100);
-    expect(out.advanced.bit_depth).toBe(24);
-    expect(out.advanced.ceiling_dbtp).toBe(-1);
+    expect(out.advanced.target_sample_rate).toBe(delivery.sample_rate);
+    expect(out.advanced.bit_depth).toBe(delivery.bit_depth);
+    expect(out.advanced.ceiling_dbtp).toBe(delivery.ceiling_dbtp);
+  });
+
+  it("pins the shared Standard loudness clamp from the parity fixture", () => {
+    const [minLufs, maxLufs] = parityDelivery().lufs_clamp;
+    const tooQuiet = settings({ lufs_offset_db: minLufs - 10 });
+    tooQuiet.delivery_profile = "custom";
+    expect(standardExportSettings(tooQuiet).advanced.lufs_offset_db).toBe(minLufs);
+
+    const tooHot = settings({ lufs_offset_db: maxLufs + 10 });
+    tooHot.delivery_profile = "custom";
+    expect(standardExportSettings(tooHot).advanced.lufs_offset_db).toBe(maxLufs);
   });
 
   it("keeps an explicit custom loudness target", () => {

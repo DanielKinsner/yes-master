@@ -254,12 +254,8 @@ pub(crate) fn export_settings_for_options_with_context(
 }
 
 fn native_preset(preset: Option<&str>) -> Preset {
-    match preset
-        .unwrap_or("balanced")
-        .trim()
-        .to_ascii_lowercase()
-        .as_str()
-    {
+    let normalized = preset.unwrap_or("balanced").trim().to_ascii_lowercase();
+    match normalized.as_str() {
         "balanced" | "universal" => Preset::Universal,
         "bright" | "clarity" | "open" => Preset::Clarity,
         "warm" | "tape" => Preset::Tape,
@@ -267,7 +263,13 @@ fn native_preset(preset: Option<&str>) -> Preset {
         // Back-compat aliases for older builds / saved payloads.
         "warmth" => Preset::Warmth,
         "punch" => Preset::Punch,
-        _ => Preset::Universal,
+        _ => {
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "yes-master native bridge: unknown Standard preset `{normalized}`, falling back to balanced"
+            );
+            Preset::Universal
+        }
     }
 }
 
@@ -302,6 +304,41 @@ fn error_to_ffi(message: &str) -> *mut c_char {
 mod tests {
     use super::*;
 
+    fn standard_parity_fixture() -> serde_json::Value {
+        serde_json::from_str(include_str!("../../../../src/standard-mapping-parity.json"))
+            .expect("parse standard-mapping-parity.json")
+    }
+
+    fn parity_delivery(parity: &serde_json::Value) -> &serde_json::Map<String, serde_json::Value> {
+        parity["delivery"]
+            .as_object()
+            .expect("delivery object in standard-mapping-parity.json")
+    }
+
+    fn delivery_u32(delivery: &serde_json::Map<String, serde_json::Value>, key: &str) -> u32 {
+        delivery[key].as_u64().expect(key) as u32
+    }
+
+    fn delivery_u16(delivery: &serde_json::Map<String, serde_json::Value>, key: &str) -> u16 {
+        delivery[key].as_u64().expect(key) as u16
+    }
+
+    fn delivery_f32(delivery: &serde_json::Map<String, serde_json::Value>, key: &str) -> f32 {
+        delivery[key].as_f64().expect(key) as f32
+    }
+
+    fn delivery_lufs_clamp(delivery: &serde_json::Map<String, serde_json::Value>) -> [f32; 2] {
+        let values = delivery["lufs_clamp"].as_array().expect("lufs_clamp");
+        [
+            values[0].as_f64().expect("lufs min") as f32,
+            values[1].as_f64().expect("lufs max") as f32,
+        ]
+    }
+
+    fn parity_loudness(parity: &serde_json::Value, key: &str) -> f32 {
+        parity["loudness"][key].as_f64().expect(key) as f32
+    }
+
     #[test]
     fn keeps_native_import_filter_aligned_to_shared_decoder_support() {
         for extension in ["wav", "mp3", "m4a", "aac", "flac", "ogg"] {
@@ -317,26 +354,44 @@ mod tests {
 
     #[test]
     fn fixed_export_settings_match_simple_iphone_target() {
+        let parity = standard_parity_fixture();
+        let delivery = parity_delivery(&parity);
         let settings = fixed_export_settings();
 
         assert_eq!(settings.effective_target_lufs(), Some(-11.0));
-        assert_eq!(settings.effective_ceiling_dbtp(), -1.0);
-        assert_eq!(settings.effective_bit_depth(), 24);
-        assert_eq!(settings.effective_sample_rate(48_000), 44_100);
+        assert_eq!(
+            settings.effective_ceiling_dbtp(),
+            delivery_f32(delivery, "ceiling_dbtp")
+        );
+        assert_eq!(
+            settings.effective_bit_depth(),
+            delivery_u16(delivery, "bit_depth")
+        );
+        assert_eq!(
+            settings.effective_sample_rate(48_000),
+            delivery_u32(delivery, "sample_rate")
+        );
         assert!(!settings.volume_match);
     }
 
     #[test]
     fn native_options_map_loudness_target() {
-        let low = export_settings_for_options(Some("balanced"), 0.5, -14.0);
-        assert_eq!(low.effective_target_lufs(), Some(-14.0));
+        let parity = standard_parity_fixture();
+        let low_target = parity_loudness(&parity, "low");
+        let high_target = parity_loudness(&parity, "high");
+        let [min_lufs, max_lufs] = delivery_lufs_clamp(parity_delivery(&parity));
 
-        let high = export_settings_for_options(Some("balanced"), 0.5, -9.0);
-        assert_eq!(high.effective_target_lufs(), Some(-9.0));
+        let low = export_settings_for_options(Some("balanced"), 0.5, low_target);
+        assert_eq!(low.effective_target_lufs(), Some(low_target));
+
+        let high = export_settings_for_options(Some("balanced"), 0.5, high_target);
+        assert_eq!(high.effective_target_lufs(), Some(high_target));
 
         // out-of-range is clamped to a safe mastering window
-        let clamped = export_settings_for_options(Some("balanced"), 0.5, 5.0);
-        assert_eq!(clamped.effective_target_lufs(), Some(-6.0));
+        let clamped_low = export_settings_for_options(Some("balanced"), 0.5, min_lufs - 10.0);
+        assert_eq!(clamped_low.effective_target_lufs(), Some(min_lufs));
+        let clamped_high = export_settings_for_options(Some("balanced"), 0.5, max_lufs + 10.0);
+        assert_eq!(clamped_high.effective_target_lufs(), Some(max_lufs));
     }
 
     #[test]
@@ -382,9 +437,7 @@ mod tests {
     /// its bridge-side behavior is pinned by the loudness-target test above.)
     #[test]
     fn standard_style_aliases_match_the_shared_parity_fixture() {
-        let parity: serde_json::Value =
-            serde_json::from_str(include_str!("../../../../src/standard-mapping-parity.json"))
-                .expect("parse standard-mapping-parity.json");
+        let parity = standard_parity_fixture();
         let styles = parity["styles"]
             .as_object()
             .expect("styles map in parity fixture");
