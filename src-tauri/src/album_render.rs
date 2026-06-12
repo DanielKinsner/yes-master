@@ -57,6 +57,36 @@ fn sanitize_for_filename(s: &str) -> String {
     }
 }
 
+fn unique_child_path(out_dir: &Path, base_name: &str) -> CommandResult<PathBuf> {
+    let candidate = out_dir.join(base_name);
+    if !candidate.exists() {
+        return Ok(candidate);
+    }
+
+    let base = Path::new(base_name);
+    let stem = base
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .filter(|s| !s.is_empty())
+        .unwrap_or("render");
+    let extension = base.extension().and_then(|s| s.to_str());
+
+    for n in 2..1000 {
+        let name = match extension {
+            Some(ext) if !ext.is_empty() => format!("{stem}-{n}.{ext}"),
+            _ => format!("{stem}-{n}"),
+        };
+        let alt = out_dir.join(name);
+        if !alt.exists() {
+            return Ok(alt);
+        }
+    }
+
+    Err(CommandError::Io(format!(
+        "could not generate unique path for {base_name}"
+    )))
+}
+
 /// Shadow a per-track `MasteringSettings` with the album plan's offsets:
 ///   * advanced.lufs_offset_db is REPLACED with
 ///     `effective_target_lufs() + arc_lufs_offset_db` so the per-track
@@ -368,7 +398,7 @@ pub fn render_album_plan_impl(
         let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("track");
         let safe = sanitize_for_filename(stem);
         let per_track_name = format!("{:02}-{}.wav", entry.position, safe);
-        let per_track_path = out_dir.join(&per_track_name);
+        let per_track_path = unique_child_path(out_dir, &per_track_name)?;
         write_wav(
             &per_track_path,
             &samples,
@@ -413,7 +443,7 @@ pub fn render_album_plan_impl(
         .map_err(|e| CommandError::Io(e.to_string()))?;
 
     // Manifest.
-    let manifest_path = out_dir.join("manifest.json");
+    let manifest_path = unique_child_path(out_dir, "manifest.json")?;
     let manifest = AlbumManifest {
         plan: &request.plan,
         rendered_at_iso: now_iso(),
@@ -443,19 +473,7 @@ fn unique_album_path(out_dir: &Path) -> CommandResult<PathBuf> {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let candidate = out_dir.join(format!("album_continuous_{ts}.wav"));
-    if !candidate.exists() {
-        return Ok(candidate);
-    }
-    for n in 1..1000 {
-        let alt = out_dir.join(format!("album_continuous_{ts}_{n}.wav"));
-        if !alt.exists() {
-            return Ok(alt);
-        }
-    }
-    Err(CommandError::Io(
-        "could not generate unique album path".to_string(),
-    ))
+    unique_child_path(out_dir, &format!("album_continuous_{ts}.wav"))
 }
 
 #[cfg(test)]

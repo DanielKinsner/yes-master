@@ -129,6 +129,80 @@ fn album_render_single_track_edge() {
 }
 
 #[test]
+fn album_render_repeated_plan_keeps_prior_per_track_files_and_manifest() {
+    let tmp = TempDir::new().expect("tempdir");
+    let sr = 48_000_u32;
+    let one_second_frames = sr as usize;
+    let omega = 2.0 * std::f32::consts::PI * 440.0 / sr as f32;
+    let samples: Vec<f32> = (0..one_second_frames)
+        .map(|i| 0.3 * (omega * i as f32).sin())
+        .collect();
+    let path = tmp.path().join("solo.wav");
+    write_wav_mono(&path, sr, &samples);
+
+    let analysis = fake_analysis("solo", TrackRole::AlbumTrack, None, 0.5, 0.5);
+    let analyses = [analysis];
+    let refs: Vec<&AnalysisResult> = analyses.iter().collect();
+    let plan = album::build_album_plan(
+        "Solo".to_string(),
+        &refs,
+        &[1.0],
+        AlbumArc::Preset {
+            preset: AlbumArcKind::Cinematic,
+        },
+        1.0,
+    );
+    let request = AlbumPlanRenderRequest {
+        plan,
+        tracks: vec![AlbumTrackRenderInput {
+            track_id: TrackId("solo".to_string()),
+            source_path: path.to_string_lossy().to_string(),
+            settings: default_master_settings(),
+        }],
+    };
+    let out_dir = tmp.path().join("repeat_out");
+
+    let first = render_album_plan_impl(&request, &out_dir, None).expect("first render");
+    let first_track_path = PathBuf::from(&first.tracks[0].output_path);
+    let first_manifest_path = PathBuf::from(&first.manifest_path);
+    let first_track_bytes = std::fs::read(&first_track_path).expect("read first track");
+    let first_manifest_bytes = std::fs::read(&first_manifest_path).expect("read first manifest");
+
+    let second = render_album_plan_impl(&request, &out_dir, None).expect("second render");
+    let second_track_path = PathBuf::from(&second.tracks[0].output_path);
+    let second_manifest_path = PathBuf::from(&second.manifest_path);
+
+    assert_ne!(
+        first_track_path, second_track_path,
+        "second render must not reuse the first per-track path"
+    );
+    assert_ne!(
+        first_manifest_path, second_manifest_path,
+        "second render must not reuse the first manifest path"
+    );
+    assert_eq!(
+        std::fs::read(&first_track_path).expect("reread first track"),
+        first_track_bytes,
+        "first per-track WAV must survive byte-identical"
+    );
+    assert_eq!(
+        std::fs::read(&first_manifest_path).expect("reread first manifest"),
+        first_manifest_bytes,
+        "first manifest must survive byte-identical"
+    );
+
+    let second_manifest_json =
+        std::fs::read_to_string(&second_manifest_path).expect("read second manifest");
+    let parsed: serde_json::Value =
+        serde_json::from_str(&second_manifest_json).expect("second manifest is valid JSON");
+    assert_eq!(
+        parsed["tracks"][0]["output_path"].as_str().unwrap(),
+        second_track_path.to_string_lossy(),
+        "manifest must list the actual unique per-track filename"
+    );
+}
+
+#[test]
 fn album_render_three_tracks_smoke() {
     let tmp = TempDir::new().expect("tempdir");
     let sr = 48_000_u32;
