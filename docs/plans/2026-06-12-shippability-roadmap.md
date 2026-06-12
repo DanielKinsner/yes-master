@@ -431,9 +431,9 @@ Rewrite README top: what YES Master is (one paragraph from PRODUCT.md's
 core promise), screenshot placeholder block, platform support
 (Windows/macOS desktop; mobile in development), build-from-source for both
 OSes (PowerShell AND bash variants), license pointer, "internal docs" note.
-Move verification-lane detail to `docs/TESTING.md`. Scrub `SM - Dan`
+Move verification-lane detail to `docs/TESTING.md`. Scrub machine-local
 absolute paths from the 9 tracked docs (repo-relative paths).
-**Verify:** `git grep -c "SM - Dan"` → 0 tracked hits;
+**Verify:** no tracked local-username hits remain;
 `git grep -l "C:\\\\Users"` → test files only.
 
 ### S5.2 — Baseline CSP (PKG-05/RS-10 tail)
