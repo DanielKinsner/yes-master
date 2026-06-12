@@ -2,7 +2,7 @@
 
 ## Scope
 
-- Repo: `C:\Users\SM - Dan\Documents\GitHub\yes-master`
+- Repo: `.`
 - Branch reviewed: `main` at `b5d0771`
 - Adaptive/deep-analysis range reviewed: `2877c6d..HEAD`, where `2877c6d` is the adaptive guardrails merge point.
 - Required docs read: `docs/PRODUCT.md`, `docs/APP_BEHAVIOR.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md`, `docs/RELEASE_STABILIZATION.md`.
