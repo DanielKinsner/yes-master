@@ -36,7 +36,7 @@ hunk-by-hunk): Gate C (739b4c1, e105756, 0d65d6f, c65b8b9, e9062a3,
 useTrackMaster.ts, the file with the most async-state history.
 
 In flight (two prompts issued, may or may not have run yet):
-1. A short docs-only session: "SM - Dan" path scrub (9 docs), .gitignore
+1. A short docs-only session: local-path scrub (9 docs), .gitignore
    comment, TESTING.md android lane, IPHONE_APP.md preset table,
    verify-fast.ps1 android lane (= S5.1-scrub + S5.3). Many tiny commits
    by design (owner's request).
