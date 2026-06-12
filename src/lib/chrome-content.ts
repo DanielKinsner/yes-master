@@ -2,6 +2,21 @@
 // React tree so copy edits don't touch App.tsx; the exact strings are pinned
 // by App.chrome.test.tsx.
 
+import { STANDARD_EXPORT_DELIVERY } from "./standard-export";
+
+function formatSampleRate(sampleRate: number): string {
+  const khz = sampleRate / 1_000;
+  return Number.isInteger(khz) ? `${khz} kHz` : `${khz.toFixed(1)} kHz`;
+}
+
+function formatDbtp(value: number): string {
+  return value < 0 ? `−${Math.abs(value)} dBTP` : `${value} dBTP`;
+}
+
+function standardExportFormatCopy(): string {
+  return `${formatSampleRate(STANDARD_EXPORT_DELIVERY.sampleRate)}, ${STANDARD_EXPORT_DELIVERY.bitDepth}-bit WAV, ${formatDbtp(STANDARD_EXPORT_DELIVERY.ceilingDbtp)}`;
+}
+
 export const SETTINGS_GROUPS: Array<{
   title: string;
   rows: Array<[string, string]>;
@@ -17,8 +32,8 @@ export const SETTINGS_GROUPS: Array<{
   {
     title: "Export Defaults",
     rows: [
-      ["Delivery profile", "Streaming Universal"],
-      ["Rendered format", "48 kHz, 24-bit WAV"],
+      ["Standard · Create Master", standardExportFormatCopy()],
+      ["Advanced · delivery profile", "Streaming Universal — 48 kHz, 24-bit WAV"],
       ["Warnings", "Advisory unless a technical check is critical"],
     ],
   },
@@ -41,6 +56,10 @@ export const SETTINGS_GROUPS: Array<{
 
 export const HELP_SECTIONS: Array<[string, string]> = [
   [
+    "Standard view",
+    "Styles choose the character, Low / Medium / High sets loudness, and Create Master writes a finished WAV next to the source without overwriting it.",
+  ],
+  [
     "Import / Analyze",
     "Import audio files, then let analysis populate loudness, true peak, dynamics, waveform, and source checks before export.",
   ],
@@ -59,6 +78,14 @@ export const HELP_SECTIONS: Array<[string, string]> = [
   [
     "Export Review",
     "Quality notes stay advisory so you can make creative choices, while technical mismatches such as delivery sample-rate disagreement are marked critical.",
+  ],
+  [
+    "Keyboard shortcuts",
+    "Space toggles playback. Ctrl/Cmd+Z/Y undo and redo. Shift+drag loop region is Advanced only.",
+  ],
+  [
+    "Glossary",
+    "LUFS is overall loudness, dBTP is true-peak headroom, and dynamic range is how much the track breathes between quiet and loud moments.",
   ],
   [
     "Save / Open Project",
