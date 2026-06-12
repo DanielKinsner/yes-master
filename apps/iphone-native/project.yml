@@ -63,6 +63,7 @@ targets:
         PRODUCT_NAME: YESMasterNativeTests
         PRODUCT_MODULE_NAME: YESMasterNativeTests
         PRODUCT_BUNDLE_IDENTIFIER: com.yesmaster.iphone.native.tests
+        GENERATE_INFOPLIST_FILE: YES
         HEADER_SEARCH_PATHS:
           - $(PROJECT_DIR)/rust/include
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/YES Master Native.app/YES Master Native"
