@@ -942,14 +942,7 @@ mod tests {
         );
     }
 
-    /// Byte-exact lock on the 6-band output (adversarial review must-fix #1). The
-    /// other 6-band tests are relative (sums-to-unity / mid>0.5 / low>bright) and
-    /// would NOT catch a value shift. Phase A adds a PARALLEL 31-band accumulation;
-    /// this asserts the 6 floats are bit-identical before and after that change.
-    /// If a future Phase B intentionally rerolls the 6-band from the 31-band, THIS
-    /// test is the gate that forces an explicit decision.
-    #[test]
-    fn spectral_balance_6band_is_byte_exact_golden() {
+    fn spectral_balance_6band_snapshot_fixture() -> [f32; 6] {
         let sr = 48_000_u32;
         // Deterministic broadband fixture: summed sines exciting four of the six
         // bands (sub, low_mid, presence, air); `low`/`mid` stay near-zero so the
@@ -965,6 +958,53 @@ mod tests {
             samples.push(s);
         }
         let bal = compute_spectral_balance_6band(&samples, sr, 1).expect("balance");
+        [
+            bal.sub,
+            bal.low,
+            bal.low_mid,
+            bal.mid,
+            bal.presence,
+            bal.air,
+        ]
+    }
+
+    fn write_f32le(path: &std::path::Path, samples: &[f32]) {
+        let mut bytes = Vec::with_capacity(std::mem::size_of_val(samples));
+        for sample in samples {
+            bytes.extend_from_slice(&sample.to_le_bytes());
+        }
+        std::fs::write(path, bytes).expect("write f32 diagnostic buffer");
+    }
+
+    #[test]
+    #[ignore = "writes raw snapshot buffers for cross-platform CI comparison"]
+    fn snapshot_diagnostics_write_analysis_buffers() {
+        let out_dir = std::env::var("SNAPSHOT_DIAGNOSTIC_DIR")
+            .expect("SNAPSHOT_DIAGNOSTIC_DIR must point at an artifact directory");
+        let out_dir = std::path::PathBuf::from(out_dir).join("analysis");
+        std::fs::create_dir_all(&out_dir).expect("create analysis diagnostic directory");
+
+        let values = spectral_balance_6band_snapshot_fixture();
+        write_f32le(&out_dir.join("spectral_balance_6band.f32le"), &values);
+        std::fs::write(
+            out_dir.join("manifest.json"),
+            format!(
+                "{{\"case\":\"spectral_balance_6band\",\"sample_count\":{},\"values\":{:?}}}\n",
+                values.len(),
+                values
+            ),
+        )
+        .expect("write analysis diagnostic manifest");
+    }
+
+    /// Byte-exact lock on the 6-band output (adversarial review must-fix #1). The
+    /// other 6-band tests are relative (sums-to-unity / mid>0.5 / low>bright) and
+    /// would NOT catch a value shift. Phase A adds a PARALLEL 31-band accumulation;
+    /// this asserts the 6 floats are bit-identical before and after that change.
+    /// If a future Phase B intentionally rerolls the 6-band from the 31-band, THIS
+    /// test is the gate that forces an explicit decision.
+    #[test]
+    fn spectral_balance_6band_is_byte_exact_golden() {
         // Pinned golden constants captured from today's code (Phase A pre-refactor).
         // These are the literal f32 Debug values, which round-trip exactly, so the
         // assertion is truly byte-exact rather than a self-comparison tautology.
@@ -977,17 +1017,7 @@ mod tests {
             0.17286925,
             0.07683022,
         ];
-        assert_eq!(
-            [
-                bal.sub,
-                bal.low,
-                bal.low_mid,
-                bal.mid,
-                bal.presence,
-                bal.air
-            ],
-            golden
-        );
+        assert_eq!(spectral_balance_6band_snapshot_fixture(), golden);
     }
 
     #[test]

@@ -13,6 +13,61 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  snapshot-diagnostics:
+    name: Snapshot diagnostics (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-snapshot-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-snapshot-cargo-
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Frontend build
+        run: npm run build
+
+      - name: Write snapshot diagnostics
+        shell: pwsh
+        working-directory: src-tauri
+        run: |
+          New-Item -ItemType Directory -Force -Path snapshot-diagnostics | Out-Null
+          $env:SNAPSHOT_DIAGNOSTIC_DIR = (Resolve-Path snapshot-diagnostics).Path
+          cargo test --lib snapshot_diagnostics -- --ignored --nocapture
+
+      - name: Upload snapshot diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-diagnostics-${{ runner.os }}
+          path: src-tauri/snapshot-diagnostics
+          if-no-files-found: error
+
   windows:
     name: Windows desktop and host bridge lanes
     runs-on: windows-latest

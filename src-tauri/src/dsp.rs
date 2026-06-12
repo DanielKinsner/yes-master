@@ -3424,6 +3424,20 @@ mod tests {
             format!("{:x}", hasher.finalize())
         }
 
+        fn write_f32le(path: &std::path::Path, samples: &[f32]) {
+            let mut bytes = Vec::with_capacity(std::mem::size_of_val(samples));
+            for sample in samples {
+                bytes.extend_from_slice(&sample.to_le_bytes());
+            }
+            std::fs::write(path, bytes).expect("write f32 diagnostic buffer");
+        }
+
+        fn peak_rms(samples: &[f32]) -> (f32, f32) {
+            let peak = samples.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
+            let mean_square = samples.iter().map(|s| s * s).sum::<f32>() / samples.len() as f32;
+            (peak, mean_square.sqrt())
+        }
+
         fn expected_platform_sha(
             windows_sha: &'static str,
             macos_sha: &'static str,
@@ -3448,6 +3462,50 @@ mod tests {
             let a = synth_pink_stereo(512, PROBE_PEAK);
             let b = synth_pink_stereo(512, PROBE_PEAK);
             assert_eq!(a, b);
+        }
+
+        #[test]
+        #[ignore = "writes raw snapshot buffers for cross-platform CI comparison"]
+        fn snapshot_diagnostics_write_preset_buffers() {
+            let out_dir = std::env::var("SNAPSHOT_DIAGNOSTIC_DIR")
+                .expect("SNAPSHOT_DIAGNOSTIC_DIR must point at an artifact directory");
+            let out_dir = std::path::PathBuf::from(out_dir).join("preset-byte-identity");
+            std::fs::create_dir_all(&out_dir).expect("create preset diagnostic directory");
+
+            let cases = vec![
+                ("universal", Preset::Universal),
+                ("clarity", Preset::Clarity),
+                ("tape", Preset::Tape),
+                ("spatial", Preset::Spatial),
+                ("oomph", Preset::Oomph),
+                ("warmth", Preset::Warmth),
+                ("punch", Preset::Punch),
+                ("loud", Preset::Loud),
+                (
+                    "custom",
+                    Preset::Custom {
+                        id: "byte-identity".to_string(),
+                    },
+                ),
+            ];
+
+            let mut manifest = String::from("[\n");
+            for (index, (name, preset)) in cases.into_iter().enumerate() {
+                let samples = render_preset(preset);
+                write_f32le(&out_dir.join(format!("{name}.f32le")), &samples);
+                let (peak, rms) = peak_rms(&samples);
+                if index > 0 {
+                    manifest.push_str(",\n");
+                }
+                manifest.push_str(&format!(
+                    "  {{\"case\":\"{name}\",\"sample_count\":{},\"sha256_f32le\":\"{}\",\"peak\":{peak:?},\"rms\":{rms:?}}}",
+                    samples.len(),
+                    sha256_f32_le(&samples),
+                ));
+            }
+            manifest.push_str("\n]\n");
+            std::fs::write(out_dir.join("manifest.json"), manifest)
+                .expect("write preset diagnostic manifest");
         }
 
         #[test]
