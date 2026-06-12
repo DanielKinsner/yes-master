@@ -1836,7 +1836,9 @@ describe("useTrackMaster integration dispatches", () => {
       await harness.current().exportAlbumPlan();
     });
 
-    const renderTracks = mocks.api.renderAlbumPlan.mock.calls.at(-1)?.[1];
+    const renderTracks = mocks.api.renderAlbumPlan.mock.calls.at(-1)?.[1] as
+      | import("../lib/api").AlbumTrackRenderInput[]
+      | undefined;
     expect(renderTracks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -1863,6 +1865,83 @@ describe("useTrackMaster integration dispatches", () => {
         }),
       ]),
     );
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("uses fresh album intent after an album override is toggled back off", async () => {
+    const first = makeTrack("album-fresh-1", "C:/audio/album fresh one.wav");
+    const second = makeTrack("album-fresh-2", "C:/audio/album fresh two.wav");
+    const plan = makeAlbumPlan([first.id, second.id]);
+    const outputDir = "/Users/daniel/Desktop/Album Masters";
+    mocks.api.importTracks.mockResolvedValue([first, second]);
+    mocks.api.analyzeTracks.mockResolvedValue([
+      makeAnalysis(first.id),
+      makeAnalysis(second.id),
+    ]);
+    mocks.open.mockResolvedValue(outputDir);
+    mocks.api.planAlbum.mockResolvedValue(plan);
+    mocks.api.renderAlbumPlan.mockResolvedValue({
+      album_wav_path: `${outputDir}/album_continuous_1.wav`,
+      manifest_path: `${outputDir}/manifest.json`,
+      tracks: [],
+    });
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([first.path, second.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().tracks).toHaveLength(2);
+    });
+
+    await act(async () => {
+      harness.current().setMode("album");
+    });
+    await act(async () => {
+      harness.current().setDeliveryProfile("cd");
+    });
+    await act(async () => {
+      harness.current().selectTrack(second.id);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(second.id);
+    });
+
+    await act(async () => {
+      harness.current().toggleOverrideAlbum(second.id);
+    });
+    expect(harness.current().selectedIsOverriding).toBe(true);
+    await act(async () => {
+      harness.current().setPreset({ kind: "oomph" });
+    });
+    expect(harness.current().selectedSettings.preset).toEqual({ kind: "oomph" });
+    await act(async () => {
+      harness.current().toggleOverrideAlbum(second.id);
+    });
+    expect(harness.current().followingAlbumIntent).toBe(true);
+
+    const albumIntent = harness.current().albumIntent;
+    const divergentSettings: MasteringSettings = {
+      ...albumIntent,
+      preset: { kind: "oomph" },
+    };
+
+    await act(async () => {
+      await harness.current().exportAlbumPlan();
+    });
+
+    const renderTracks =
+      (mocks.api.renderAlbumPlan.mock.calls.at(-1)?.[1] as
+        | import("../lib/api").AlbumTrackRenderInput[]
+        | undefined) ?? [];
+    const secondRenderInput = renderTracks.find(
+      (track) => track.track_id === second.id,
+    );
+    expect(secondRenderInput?.settings).toEqual(albumIntent);
+    expect(secondRenderInput?.settings).not.toEqual(divergentSettings);
 
     await act(async () => {
       harness.root.unmount();

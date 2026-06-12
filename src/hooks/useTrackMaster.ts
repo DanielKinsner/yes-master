@@ -1325,6 +1325,7 @@ export function useTrackMaster() {
     analysisMap,
     settingsMap,
     albumIntent,
+    overrideAlbum,
     albumArcKind,
     albumIntensity,
     albumTitle,
