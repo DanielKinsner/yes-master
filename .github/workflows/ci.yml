@@ -186,7 +186,21 @@ jobs:
 
       - name: iPhone Swift tests
         working-directory: apps/iphone-native
-        run: xcodebuild test -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination 'platform=iOS Simulator,name=iPhone 16'
+        run: |
+          set -euo pipefail
+          SIMULATOR_UDID="$(xcrun simctl list devices available --json | python3 -c 'import json, sys; devices=json.load(sys.stdin).get("devices", {}); preferred=("iPhone 16", "iPhone 15", "iPhone 14"); all_devices=[device for runtime in devices.values() for device in runtime if device.get("isAvailable")]; candidates=[device for device in all_devices if device.get("name", "").startswith("iPhone")] or all_devices; candidates.sort(key=lambda device: next((i for i, name in enumerate(preferred) if device.get("name") == name), len(preferred))); print(candidates[0]["udid"] if candidates else "")')"
+          if [ -z "$SIMULATOR_UDID" ]; then
+            RUNTIME_ID="$(xcrun simctl list runtimes --json | python3 -c 'import json, sys; runtimes=[runtime for runtime in json.load(sys.stdin).get("runtimes", []) if runtime.get("isAvailable") and runtime.get("platform") == "iOS"]; runtimes.sort(key=lambda runtime: runtime.get("version", ""), reverse=True); print(runtimes[0]["identifier"] if runtimes else "")')"
+            DEVICE_TYPE="$(xcrun simctl list devicetypes --json | python3 -c 'import json, sys; preferred=("iPhone 16", "iPhone 15", "iPhone 14"); types=json.load(sys.stdin).get("devicetypes", []); candidates=[device_type for device_type in types if device_type.get("name") in preferred] or [device_type for device_type in types if device_type.get("name", "").startswith("iPhone")]; candidates.sort(key=lambda device_type: next((i for i, name in enumerate(preferred) if device_type.get("name") == name), len(preferred))); print(candidates[0]["identifier"] if candidates else "")')"
+            if [ -z "$RUNTIME_ID" ] || [ -z "$DEVICE_TYPE" ]; then
+              xcrun simctl list
+              exit 70
+            fi
+            SIMULATOR_UDID="$(xcrun simctl create 'YES Master CI iPhone' "$DEVICE_TYPE" "$RUNTIME_ID")"
+          fi
+          xcrun simctl boot "$SIMULATOR_UDID" || true
+          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+          xcodebuild test -project YESMasterNative.xcodeproj -scheme YESMasterNative -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" CODE_SIGNING_ALLOWED=NO
 
   android:
     name: Android host JVM lane
