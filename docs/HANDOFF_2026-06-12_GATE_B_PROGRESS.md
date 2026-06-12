@@ -60,3 +60,24 @@
 ## Owner Questions
 - No active owner question blocks Gate B continuation.
 - Owner listening signoffs remain pending per plan: Manual Listening Gate, Reference Retune, already-mastered matrix.
+
+## Reviewer Addendum (Claude, 2026-06-12, read-only verification)
+- Verified accurate: commit↔slice mapping, stash@{0} exists as described,
+  frontend suite green at HEAD (43 files / 392 tests, up from 42/387 —
+  the new slice tests are real).
+- GAP THIS DOC LEAVES OPEN — make this the FIRST task of the next session:
+  every CI run is red, including runs AFTER 0d630f1 (the Mac snapshot
+  fix), and no failure reason is recorded. Local Windows lane passes, so
+  suspect a workflow/environment issue (most likely the macOS job's
+  xcodebuild/simulator step, pre-flagged as flaky in roadmap S0.1).
+  Diagnose with `gh run view <id> --log-failed`, fix the workflow or
+  report findings, and do NOT proceed past one more slice until CI is
+  green — an always-red pipeline is worse than none because reviewers
+  stop reading it.
+- Stash fragility: apply stash@{0} (S2.3) onto a branch and commit it
+  EARLY in the next session, before other work can conflict with it.
+  Review it against roadmap S2.3 before merging — the subagent's claim is
+  unreviewed.
+- Note: 02c3ade ("docs: add preset reference analysis") landed on main
+  mid-run from outside this agent session; next session should not treat
+  it as reviewed.
