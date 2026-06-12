@@ -1,41 +1,114 @@
 # YES Master
 
-YES Master is a local desktop mastering app for finished tracks and album
-drafts. It runs as a Tauri + React + TypeScript frontend with a Rust audio/DSP
-backend.
+YES Master is a local-first audio mastering app for finished tracks and
+albums. Drop in audio, hear what the mastering chain is doing in real time,
+shape it, and export a technically checked master — without your audio ever
+leaving your machine.
 
-The product goal is private-solid first: a musician or producer should be able
-to trust it on real material before any public-release discussion.
+Desktop (Windows + macOS) is the primary product: a Tauri 2 + React/TypeScript
+frontend over a Rust audio/DSP backend. iPhone and Android companion apps live
+in `apps/` and reuse the same Rust engine through native bridges, with
+bit-parity-pinned output against desktop.
 
-## Current Product Shape
+License: source-available, proprietary — see `LICENSE`.
 
-- Track Master is the primary workflow.
-- Album Master exists and should remain intact, but Track Master stabilization
-  is the next release gate.
-- Main UI is for creative shaping: preset, intensity, EQ, tone, saturation,
-  width, compression, and limiter choices.
-- Right rail is for judgment and delivery: quality checks, delivery profile,
-  advanced controls, per-band compressor detail, format, and export review.
-- Export warnings are advisory when technically possible. The user can decide
-  to export a risky master, but the app must make that risk visible.
-- Source files are never destructively edited.
-- Private audio fixtures may be used locally and must never be committed.
+## What it is today
 
-## Setup
+**Two views, one engine:**
+
+- **Standard** (default): pick a Style (Balanced / Bright / Warm / Heavy) and
+  a loudness (−14 / −11 / −9 LUFS), audition Original vs Mastered at the same
+  playhead, Create Master. Exports a fixed known-safe format: 44.1 kHz /
+  24-bit WAV at a −1 dBTP ceiling. No blocking review ceremony; cosmetic
+  warnings are suppressed, genuine integrity problems are never hidden.
+- **Advanced**: the full surface — eight presets, intensity, 7-band visual
+  EQ/tone, width/warmth, explicit compressor modes (Preset / Manual / Off,
+  with per-band detail), delivery profiles and formats (44.1/48/96 kHz,
+  16/24-bit), live metering (peak, LUFS, gain reduction, spectrum), and a
+  warning-aware export review with a post-render receipt (delivered LUFS,
+  true peak, dynamic range, check results).
+
+**The engine** (Rust, shared by all platforms):
+
+- Real-time audition: the full mastering chain (subsonic filter → EQ →
+  multiband compression → width/warmth → limiter with lookahead → LUFS
+  landing) runs live during playback; control changes apply while audio plays.
+- Analysis: decode → dynamics → stereo field → tonal balance → deep per-window
+  scan (crest, momentary loudness, 31-band detail), emitting real progress
+  events to the UI.
+- Adaptive mastering, Tier 1 (shipped, owner-listened): each track resolves a
+  source profile that drives reduce-only guardrails — preset brightness/low
+  trims and compression-density scaling, weighted by per-axis confidence and a
+  user-facing Adapt Strength control. Presets stay recognizable by
+  construction (per-axis trim caps).
+- Safety invariants, enforced by tests: exports never overwrite source files
+  or prior renders; Volume Match is audition-only and can never change export
+  level; export warnings are advisory unless the output is technically
+  invalid; quality checks measure the rendered file, not assumptions.
+
+**Album Master** (Advanced): album-wide intent with per-track overrides,
+album delivery format with mixed-rate resampling, continuous + per-track
+renders with a manifest.
+
+**Projects:** `.ams.json` save/open, autosaved recent session with restore,
+waveform/peaks rebuilt from referenced source files (audio is referenced from
+disk, never embedded).
+
+## Where it's heading
+
+The active plan is a staged shippability push, executed by coding agents
+against hyperdetailed specs, with CI (Windows + macOS + Android lanes on
+every push) as the verification floor and owner listening sessions as the
+only human gates:
+
+1. **Correctness first** (done): audio-corruption and overwrite-protection
+   fixes, frontend state races, cross-platform DSP snapshot verification on
+   real macOS hardware.
+2. **Contract hardening** (in progress): a single supported-format contract
+   wired from UI copy to decoder; identity-carrying progress events; a
+   cross-language parity fixture pinning the Standard export recipe across
+   TypeScript, desktop Rust, iPhone, and Android so no platform can drift
+   silently.
+3. **Adaptive compressor (MVP feature work)**: per-band track-aware
+   compression with transient protection (PSR-based) and already-mastered
+   stand-down — built strictly reduce-only so its output space is bounded by
+   the already-validated preset sound, shipped behind a runtime gate, and
+   enabled only after a by-ear A/B calibration session. Spec:
+   `docs/plans/2026-06-12-adaptive-compressor-mvp-spec.md`.
+4. **Public desktop release** (desktop-first decision, 2026-06-12): version
+   0.1.0, CI-verified Windows MSI/NSIS and macOS builds. Code signing,
+   notarization, and autoupdate are deliberately deferred.
+5. **Mobile follow-on**: the iPhone and Android apps mirror Standard's fixed
+   export and already share the engine; store-readiness (privacy manifest,
+   signing, lifecycle hardening) is planned but sequenced after desktop. Plans:
+   `docs/plans/2026-06-12-iphone-shippability-plan.md`,
+   `docs/plans/2026-06-12-android-shippability-plan.md`.
+
+Overall scope, stated plainly: a mastering tool a musician can trust on real
+releases — competitive with cloud mastering services on adaptiveness, but
+local, inspectable, and honest about what it measured and what it changed.
+Not in scope: DAW features, recording/editing, cloud processing, or a
+certified-engineer replacement.
+
+The full findings registry behind the plan is
+`docs/reviews/2026-06-12-master-shippability-audit.md`; the slice-by-slice
+execution spec is `docs/plans/2026-06-12-shippability-roadmap.md`.
+
+## Build from source
+
+Prerequisites: Node 22+, Rust (stable), and the Tauri 2 platform
+prerequisites for your OS.
 
 ```powershell
 npm install
+npm run tauri dev      # development app
+npm run build:windows  # Windows MSI + NSIS bundles
+npm run build:mac      # macOS app + dmg (on a Mac)
 ```
 
-## Run
+## Verification lanes
 
-```powershell
-npm run tauri dev
-```
-
-## Fast Verification
-
-From the repo root:
+Fast lane, from the repo root:
 
 ```powershell
 npm test
@@ -52,11 +125,10 @@ cargo test --lib --target-dir target\codex-rc
 cargo test --target-dir target\codex-rc
 ```
 
-## iPhone Native Bridge Lane
-
-When changing shared Rust types, `yes_master_lib` behavior, adaptive/profile
-resolution, or `#[tauri::command]` signatures that the phone bridge may depend
-on, also run:
+Mobile bridge lanes (required when shared Rust types, `yes_master_lib`
+behavior, adaptive/profile resolution, or `#[tauri::command]` signatures
+change — desktop lanes do not compile the bridges, so drift is silent without
+them):
 
 ```powershell
 cd apps/iphone-native/rust
@@ -64,13 +136,22 @@ cargo check --all-targets
 cargo test
 ```
 
-The desktop lanes do not compile this bridge. A shared struct or signature can
-drift here while all desktop checks stay green.
+```powershell
+cd apps/android-native/rust
+cargo test
+cargo ndk -t arm64-v8a --platform 29 check
+```
 
-## Slow Fixture Lane
+The Android cross-check needs the toolchain described in
+`docs/ANDROID_NATIVE_SPEC.md` (JDK 17, SDK + NDK r27.2, cargo-ndk ≥ 3.5.6).
 
-Use this only when local private fixtures exist under
-`private-audio-fixtures/`.
+CI runs the Windows, macOS (including iPhone Swift tests), and Android JVM
+lanes plus cross-platform DSP snapshot diagnostics on every push to `main`.
+
+## Slow fixture lane
+
+Only when local private fixtures exist under `private-audio-fixtures/`
+(private audio is local-only and must never be committed):
 
 ```powershell
 cd src-tauri
@@ -79,19 +160,22 @@ cargo test --target-dir target\codex-rc
 Remove-Item Env:\AMS_RUN_REAL_FIXTURE
 ```
 
-The fixture lane is required before merging work that touches DSP, render,
-LUFS landing, WAV writing, export checks, or source/master parity.
+Required before merging work that touches DSP, render, LUFS landing, WAV
+writing, export checks, or source/master parity.
 
 ## Documentation
 
-Read these first:
+Active canon (read in this order):
 
-- `docs/PRODUCT.md`
-- `docs/APP_BEHAVIOR.md`
+- `docs/PRODUCT.md` — product source of truth
+- `docs/APP_BEHAVIOR.md` — what the app does today
 - `docs/ARCHITECTURE.md`
 - `docs/TESTING.md`
-- `docs/RELEASE_STABILIZATION.md`
-- `docs/RELEASE_EVIDENCE_2026-05-28.md`
+- `docs/RELEASE_STABILIZATION.md` — active gates and shipped slices
 
-Historical handoffs, old phase plans, and prior-session notes live in git
-history and in the archived source repo. They are not active product spec.
+Active plans: `docs/plans/2026-06-12-*.md` (desktop / iPhone / Android
+shippability, the adaptive-compressor spec, and the master roadmap).
+
+Historical handoffs, old phase plans, and prior-session reviews under `docs/`
+are working records, not active product spec. When prose and code disagree,
+current code plus the canon docs above win.
