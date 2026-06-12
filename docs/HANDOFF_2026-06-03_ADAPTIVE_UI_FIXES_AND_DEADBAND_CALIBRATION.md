@@ -254,7 +254,7 @@ Whether it should do *more* is a taste call.
 
 ## 5. What is verified GREEN right now (as of `2cb097f`, then full validation)
 
-Run from repo root `C:\Users\Daniel Kinsner\OneDrive\Documents\GitHub\yes-master`:
+Run from repo root `.`:
 - `npm test` → **158 passed** (19 files).
 - `npm run build` → clean (tsc + vite).
 - `cd src-tauri && cargo test --lib --target-dir target/codex-rc` → **248 passed**;
