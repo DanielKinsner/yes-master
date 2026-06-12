@@ -95,7 +95,7 @@ because the agent verifies its own output by running the suite. Paste with
 
 ## Job 4 — graphify ECP + merge hygiene (cheap; run last or while watching Job 1)
 
-1. In the ECP repo: `/graphify "C:\Users\SM - Dan\Documents\GitHub\ecp"` —
+1. In the ECP repo: `/graphify "..\ecp"` —
    build ECP's knowledge graph, commit it the same way as yes-master's
    (track `graph.json`, `cache/`, `manifest.json`, labels, report; gitignore
    `.graphify_python`, `.graphify_root`, `graph.html`).
