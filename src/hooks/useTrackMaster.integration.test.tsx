@@ -2267,6 +2267,284 @@ describe("tone reset", () => {
 });
 
 describe("staged analysis progress", () => {
+  it("keeps overlapping imports analyzing and ignores stale batch progress", async () => {
+    let emitAnalysisProgress:
+      | ((event: { batch_id: string; fraction: number; label: string }) => void)
+      | undefined;
+    mocks.onAnalysisProgress.mockImplementation((handler) => {
+      emitAnalysisProgress = handler;
+      return Promise.resolve(() => {});
+    });
+
+    const first = makeTrack("batch-a", "C:/audio/batch-a.wav");
+    const second = makeTrack("batch-b", "C:/audio/batch-b.wav");
+    mocks.api.importTracks.mockImplementation(async (paths: string[]) =>
+      paths[0] === first.path ? [first] : [second],
+    );
+    const analyzeResolvers: Array<(value: AnalysisResult[]) => void> = [];
+    mocks.api.analyzeTracks.mockImplementation(
+      () =>
+        new Promise<AnalysisResult[]>((resolve) => {
+          analyzeResolvers.push(resolve);
+        }),
+    );
+
+    const harness = await renderHookHarness();
+    let firstImport!: Promise<void>;
+    await act(async () => {
+      firstImport = harness.current().importFiles([first.path]);
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(harness.current().isAnalyzing).toBe(true);
+      expect(analyzeResolvers).toHaveLength(1);
+    });
+
+    let secondImport!: Promise<void>;
+    await act(async () => {
+      secondImport = harness.current().importFiles([second.path]);
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(harness.current().isAnalyzing).toBe(true);
+      expect(analyzeResolvers).toHaveLength(2);
+      expect(emitAnalysisProgress).toBeDefined();
+    });
+
+    const firstBatch = mocks.api.analyzeTracks.mock.calls[0]?.[1] as string;
+    const secondBatch = mocks.api.analyzeTracks.mock.calls[1]?.[1] as string;
+    expect(firstBatch).toBeTruthy();
+    expect(secondBatch).toBeTruthy();
+    expect(firstBatch).not.toBe(secondBatch);
+
+    await act(async () => {
+      emitAnalysisProgress?.({
+        batch_id: secondBatch,
+        fraction: 0.25,
+        label: "Import B",
+      });
+    });
+    expect(harness.current().analysisProgress).toEqual({
+      label: "Import B",
+      progress: 0.25,
+    });
+
+    await act(async () => {
+      analyzeResolvers[0]([makeAnalysis(first.id)]);
+      await firstImport;
+    });
+    expect(harness.current().isAnalyzing).toBe(true);
+
+    await act(async () => {
+      emitAnalysisProgress?.({
+        batch_id: firstBatch,
+        fraction: 0.95,
+        label: "Late import A",
+      });
+    });
+    expect(harness.current().analysisProgress).toEqual({
+      label: "Import B",
+      progress: 0.25,
+    });
+
+    await act(async () => {
+      analyzeResolvers[1]([makeAnalysis(second.id)]);
+      await secondImport;
+    });
+    await waitFor(() => {
+      expect(harness.current().isAnalyzing).toBe(false);
+    });
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("merges a late session-restore analysis without evicting imported analysis", async () => {
+    const restored = makeTrack("restore-late", "C:/audio/restore-late.wav");
+    const imported = makeTrack("import-during-restore", "C:/audio/import-during-restore.wav");
+    mocks.api.loadRecentSession.mockResolvedValue(makeProjectState(restored));
+    mocks.api.importTracks.mockResolvedValue([imported]);
+
+    const analyzeResolvers: Array<(value: AnalysisResult[]) => void> = [];
+    mocks.api.analyzeTracks.mockImplementation(
+      () =>
+        new Promise<AnalysisResult[]>((resolve) => {
+          analyzeResolvers.push(resolve);
+        }),
+    );
+
+    const harness = await renderHookHarness();
+    await waitFor(() => {
+      expect(harness.current().tracks.map((track) => track.id)).toContain(restored.id);
+      expect(analyzeResolvers).toHaveLength(1);
+    });
+
+    let importDone!: Promise<void>;
+    await act(async () => {
+      importDone = harness.current().importFiles([imported.path]);
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(analyzeResolvers).toHaveLength(2);
+    });
+
+    await act(async () => {
+      analyzeResolvers[1]([makeAnalysis(imported.id)]);
+      await importDone;
+    });
+    await act(async () => {
+      harness.current().selectTrack(imported.id);
+    });
+    expect(harness.current().selectedAnalysis?.track_id).toBe(imported.id);
+
+    await act(async () => {
+      analyzeResolvers[0]([makeAnalysis(restored.id)]);
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(mocks.api.prepareWaveform).toHaveBeenCalledWith(restored.id, restored.path, 1200);
+    });
+    await act(async () => {
+      harness.current().selectTrack(imported.id);
+    });
+    expect(harness.current().selectedAnalysis?.track_id).toBe(imported.id);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("shows analyzing state while session restore analysis is pending", async () => {
+    const restored = makeTrack("restore-pending", "C:/audio/restore-pending.wav");
+    mocks.api.loadRecentSession.mockResolvedValue(makeProjectState(restored));
+    let resolveRestore!: (value: AnalysisResult[]) => void;
+    mocks.api.analyzeTracks.mockReturnValue(
+      new Promise<AnalysisResult[]>((resolve) => {
+        resolveRestore = resolve;
+      }),
+    );
+
+    const harness = await renderHookHarness();
+    await waitFor(() => {
+      expect(harness.current().isAnalyzing).toBe(true);
+      expect(harness.current().analysisProgress?.label).toBe("Analyzing audio");
+    });
+
+    await act(async () => {
+      resolveRestore([makeAnalysis(restored.id)]);
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(harness.current().isAnalyzing).toBe(false);
+    });
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("ignores playback ticks for a non-selected track", async () => {
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const first = makeTrack("tick-a", "C:/audio/tick-a.wav");
+    const second = makeTrack("tick-b", "C:/audio/tick-b.wav");
+    mocks.api.importTracks.mockResolvedValue([first, second]);
+    mocks.api.analyzeTracks.mockResolvedValue([
+      makeAnalysis(first.id),
+      makeAnalysis(second.id),
+    ]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([first.path, second.path]);
+    });
+    await act(async () => {
+      harness.current().selectTrack(second.id);
+    });
+    expect(harness.current().transport.currentTimeSec).toBe(0);
+
+    await act(async () => {
+      playbackHandler?.({
+        track_id: first.id,
+        position_sec: 17,
+        is_playing: true,
+        is_loaded: true,
+        peak_dbfs: -6,
+        gr_low_db: -120,
+        gr_mid_db: -120,
+        gr_high_db: -120,
+        lufs_momentary: -12,
+        lufs_integrated: -14,
+        spectrum_db: [-30],
+      });
+    });
+    expect(harness.current().transport.currentTimeSec).toBe(0);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("ignores landing status events for a non-selected track", async () => {
+    let landingHandler:
+      | ((
+          pending: boolean,
+          event: { track_id: string | null; pending: boolean },
+        ) => void)
+      | undefined;
+    mocks.onLandingStatus.mockImplementation((handler) => {
+      landingHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const first = makeTrack("landing-a", "C:/audio/landing-a.wav");
+    const second = makeTrack("landing-b", "C:/audio/landing-b.wav");
+    mocks.api.importTracks.mockResolvedValue([first, second]);
+    mocks.api.analyzeTracks.mockResolvedValue([
+      makeAnalysis(first.id),
+      makeAnalysis(second.id),
+    ]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([first.path, second.path]);
+    });
+    await act(async () => {
+      harness.current().selectTrack(second.id);
+    });
+
+    await act(async () => {
+      landingHandler?.(true, { track_id: first.id, pending: true });
+    });
+    expect(harness.current().landingPending).toBe(false);
+
+    await act(async () => {
+      landingHandler?.(true, { track_id: second.id, pending: true });
+    });
+    expect(harness.current().landingPending).toBe(true);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("advances stages while analyzing, clamps at the last, then clears on completion", async () => {
     const track = makeTrack("track-a", "/in/a.wav");
     mocks.api.importTracks.mockResolvedValue([track]);

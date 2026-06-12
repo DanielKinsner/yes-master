@@ -208,6 +208,13 @@ export function playbackErrorMessage(
   return raw;
 }
 
+let analysisBatchSeq = 0;
+
+function nextAnalysisBatchId(): string {
+  analysisBatchSeq += 1;
+  return `analysis-${Date.now()}-${analysisBatchSeq}`;
+}
+
 const ANALYSIS_PROGRESS_STAGES = [
   { label: "Analyzing audio", progress: 0.14 },
   { label: "Reading tonal balance", progress: 0.32 },
@@ -224,7 +231,7 @@ export function useTrackMaster() {
   const [waveformMap, setWaveformMap] = useState<Record<TrackId, WaveformPeaks>>({});
   const [settingsMap, setSettingsMap] = useState<Record<TrackId, MasteringSettings>>({});
   const [staleSet, setStaleSet] = useState<Set<TrackId>>(new Set());
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisInFlightCount, setAnalysisInFlightCount] = useState(0);
   const [analysisStageIndex, setAnalysisStageIndex] = useState(0);
   const [isLoadingWaveform, setIsLoadingWaveform] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
@@ -292,6 +299,7 @@ export function useTrackMaster() {
     label: string;
     progress: number;
   } | null>(null);
+  const isAnalyzing = analysisInFlightCount > 0;
   const analysisProgress = isAnalyzing
     ? (realAnalysisProgress ?? ANALYSIS_PROGRESS_STAGES[analysisStageIndex])
     : null;
@@ -340,6 +348,10 @@ export function useTrackMaster() {
   //
   // Renaming preserved as `withSourceLufs` to keep diffs small; the
   // comment block above is the source of truth for what it actually does.
+  const currentAnalysisBatchRef = useRef<string | null>(null);
+  const analysisInFlightRef = useRef(0);
+  const selectedTrackIdRef = useRef<TrackId | null>(null);
+  selectedTrackIdRef.current = selectedTrackId;
   const volumeMatchRef = useRef(false);
   const exportLufsPreviewRef = useRef(false);
   // Internal "force WYSIWYG" flag, distinct from the user-facing Advanced
@@ -361,6 +373,24 @@ export function useTrackMaster() {
     () => exportLufsPreviewRef.current || (forceWysiwygRef.current && !volumeMatchRef.current),
     [],
   );
+  const beginAnalysis = useCallback(() => {
+    const batchId = nextAnalysisBatchId();
+    currentAnalysisBatchRef.current = batchId;
+    analysisInFlightRef.current += 1;
+    setAnalysisInFlightCount(analysisInFlightRef.current);
+    return batchId;
+  }, []);
+
+  const finishAnalysis = useCallback((batchId: string) => {
+    analysisInFlightRef.current = Math.max(0, analysisInFlightRef.current - 1);
+    if (analysisInFlightRef.current === 0) {
+      currentAnalysisBatchRef.current = null;
+    } else if (currentAnalysisBatchRef.current === batchId) {
+      currentAnalysisBatchRef.current = null;
+    }
+    setAnalysisInFlightCount(analysisInFlightRef.current);
+  }, []);
+
   // React-state glue around `applyChainDispatchOverrides` (Vitest-
   // tested). Pulls volumeMatchRef + analysisMap from the hook's
   // closure; the override rules themselves live in the pure helper.
@@ -468,22 +498,33 @@ export function useTrackMaster() {
     let unlistenLanding: (() => void) | undefined;
     let unlistenAnalysis: (() => void) | undefined;
     let renderProgressClearTimer: ReturnType<typeof setTimeout> | undefined;
-    onLandingStatus(setLandingPending).then((fn) => {
+    onLandingStatus((pending, event) => {
+      const selectedId = selectedTrackIdRef.current;
+      if (event.track_id && selectedId && event.track_id !== selectedId) {
+        return;
+      }
+      setLandingPending(pending);
+    }).then((fn) => {
       unlistenLanding = fn;
     });
     onAnalysisProgress((evt) => {
+      if (evt.batch_id !== currentAnalysisBatchRef.current) return;
       setRealAnalysisProgress({ label: evt.label, progress: evt.fraction });
     }).then((fn) => {
       unlistenAnalysis = fn;
     });
     onPlaybackTick((tick) => {
+      setLoadedTrackId(tick.is_loaded ? tick.track_id : null);
+      const selectedId = selectedTrackIdRef.current;
+      if (tick.is_loaded && selectedId && tick.track_id !== selectedId) {
+        return;
+      }
       lastPlaybackTickRef.current = {
         trackId: tick.track_id,
         positionSec: tick.position_sec,
         isPlaying: tick.is_playing,
         receivedAtMs: Date.now(),
       };
-      setLoadedTrackId(tick.is_loaded ? tick.track_id : null);
       setTransport((t) => ({
         ...t,
         currentTimeSec: tick.position_sec,
@@ -601,17 +642,21 @@ export function useTrackMaster() {
 
         // Best-effort re-analyze + re-waveform for restored tracks.
         if (restoredTracks.length > 0) {
+          const batchId = beginAnalysis();
           try {
             const results = await api.analyzeTracks(
               restoredTracks.map((t) => ({ id: t.id, path: t.path })),
+              batchId,
             );
             if (!cancelled) {
               const map: Record<TrackId, AnalysisResult> = {};
               for (const r of results) map[r.track_id] = r;
-              setAnalysisMap(map);
+              setAnalysisMap((prev) => ({ ...prev, ...map }));
             }
           } catch (err) {
             console.warn("Session restore: analyze failed", err);
+          } finally {
+            if (!cancelled) finishAnalysis(batchId);
           }
           for (const t of restoredTracks) {
             if (cancelled) break;
@@ -633,7 +678,7 @@ export function useTrackMaster() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [beginAnalysis, finishAnalysis]);
 
   // Phase 7.2: debounced autosave on relevant state changes.
   useEffect(() => {
@@ -942,10 +987,11 @@ export function useTrackMaster() {
           });
         }
 
-        setIsAnalyzing(true);
+        const batchId = beginAnalysis();
         try {
           const results = await api.analyzeTracks(
             imported.map((t) => ({ id: t.id, path: t.path })),
+            batchId,
           );
           setAnalysisMap((prev) => {
             const next = { ...prev };
@@ -963,7 +1009,7 @@ export function useTrackMaster() {
             return next;
           });
         } finally {
-          setIsAnalyzing(false);
+          finishAnalysis(batchId);
         }
 
         setIsLoadingWaveform(true);
@@ -979,7 +1025,7 @@ export function useTrackMaster() {
         setError(messageOf(err));
       }
     },
-    [selectedTrackId, markStale],
+    [selectedTrackId, markStale, beginAnalysis, finishAnalysis],
   );
 
   // Keep the ref in sync with the latest importFiles closure so the long-lived
@@ -2017,9 +2063,11 @@ export function useTrackMaster() {
       // Best-effort re-analyze + re-waveform for the restored tracks so the
       // user lands in a working state without manually pressing Analyze.
       if (state.tracks && state.tracks.length > 0) {
+        const batchId = beginAnalysis();
         try {
           const results = await api.analyzeTracks(
             state.tracks.map((t) => ({ id: t.id, path: t.path })),
+            batchId,
           );
           const nextAnalysis: Record<TrackId, AnalysisResult> = {};
           for (const r of results) nextAnalysis[r.track_id] = r;
@@ -2027,6 +2075,8 @@ export function useTrackMaster() {
         } catch (err) {
           analysisRecoveryFailed = true;
           console.warn("Re-analyze on open failed", err);
+        } finally {
+          finishAnalysis(batchId);
         }
         for (const t of state.tracks) {
           try {
@@ -2063,7 +2113,7 @@ export function useTrackMaster() {
       setProjectFeedback(null);
       setError(messageOf(err));
     }
-  }, []);
+  }, [beginAnalysis, finishAnalysis]);
 
   const reorderTracks = useCallback((fromIndex: number, toIndex: number) => {
     setTracks((prev) => {
