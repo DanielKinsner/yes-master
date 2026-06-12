@@ -71,6 +71,9 @@ function App() {
     leaveAlbumMode: () => tm.setMode("track"),
   });
   const { view, setView } = nav;
+  const selectedExportReceipt =
+    tm.lastExportReceipt?.trackId === tm.selectedTrackId ? tm.lastExportReceipt : null;
+  const selectedExportChecks = selectedExportReceipt?.checks;
 
   // WYSIWYG: the live Mastered audition equals the export only when the
   // loudness landing + limiter are applied in real time. Standard forces
@@ -152,7 +155,7 @@ function App() {
       </main>
       <RightRail
         analysis={tm.selectedAnalysis}
-        lastChecks={tm.lastExportReceipt?.checks}
+        lastChecks={selectedExportChecks}
         advancedSlot={
           tm.selectedTrack ? (
             <AdvancedPanel
@@ -204,9 +207,9 @@ function App() {
           onClose={tm.clearProjectFeedback}
         />
       ) : null}
-      {tm.lastExportReceipt && view === "advanced" && (
+      {selectedExportReceipt && view === "advanced" && (
         <ExportReceiptCard
-          receipt={tm.lastExportReceipt}
+          receipt={selectedExportReceipt}
           onClose={tm.clearExportReceipt}
         />
       )}
@@ -244,6 +247,9 @@ function App() {
 
 function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
   const analysis = tm.selectedAnalysis;
+  const selectedExportReceipt =
+    tm.lastExportReceipt?.trackId === tm.selectedTrackId ? tm.lastExportReceipt : null;
+  const selectedExportChecks = selectedExportReceipt?.checks;
   const peak = tm.transport.peakDbfs;
   const liveLufs = tm.transport.lufsIntegrated;
   const isPlaying = tm.transport.isPlaying;
@@ -283,19 +289,19 @@ function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         />
         <StatusDot
           tone={
-            tm.lastExportReceipt
-              ? tm.lastExportReceipt.checks.some((c) => c.level === "critical")
+            selectedExportChecks
+              ? selectedExportChecks.some((c) => c.level === "critical")
                 ? "bad"
-                : tm.lastExportReceipt.checks.some((c) => c.level === "warning")
+                : selectedExportChecks.some((c) => c.level === "warning")
                 ? "warn"
                 : "ok"
               : "idle"
           }
           label={
-            tm.lastExportReceipt
-              ? tm.lastExportReceipt.checks.some((c) => c.level === "critical")
+            selectedExportChecks
+              ? selectedExportChecks.some((c) => c.level === "critical")
                 ? "Quality failed"
-                : tm.lastExportReceipt.checks.some((c) => c.level === "warning")
+                : selectedExportChecks.some((c) => c.level === "warning")
                 ? "Quality review"
                 : "Quality OK"
               : "Quality —"

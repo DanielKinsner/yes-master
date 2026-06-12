@@ -35,6 +35,13 @@ const track: ImportedTrack = {
   channels: 2,
 };
 
+const secondTrack: ImportedTrack = {
+  ...track,
+  id: "album-track-2",
+  path: "/audio/album-track-2.wav",
+  display_name: "album-track-2.wav",
+};
+
 const settings: MasteringSettings = {
   preset: { kind: "universal" },
   intensity: 0.5,
@@ -245,6 +252,9 @@ describe("album export actions", () => {
   it("shows a quiet export journey and clean result on completed exports", async () => {
     mocks.tm = {
       ...baseTrackMasterState(),
+      selectedTrackId: track.id,
+      selectedTrack: track,
+      selectedSettings: settings,
       lastExportReceipt: {
         trackId: track.id,
         outputPath: "/Users/daniel/Masters/album-track-1__master.wav",
@@ -278,6 +288,9 @@ describe("album export actions", () => {
   it("renders the delivered master's LUFS/TP/LRA from job.measurements", async () => {
     mocks.tm = {
       ...baseTrackMasterState(),
+      selectedTrackId: track.id,
+      selectedTrack: track,
+      selectedSettings: settings,
       lastExportReceipt: {
         trackId: track.id,
         outputPath: "/Users/daniel/Masters/album-track-1__master.wav",
@@ -324,6 +337,9 @@ describe("album export actions", () => {
   it("omits the delivered-measurements row when a render path supplies none", async () => {
     mocks.tm = {
       ...baseTrackMasterState(),
+      selectedTrackId: track.id,
+      selectedTrack: track,
+      selectedSettings: settings,
       lastExportReceipt: {
         trackId: track.id,
         outputPath: "/Users/daniel/Masters/album-track-1__master.wav",
@@ -347,6 +363,9 @@ describe("album export actions", () => {
   it("marks completed exports for review when quality checks warn", async () => {
     mocks.tm = {
       ...baseTrackMasterState(),
+      selectedTrackId: track.id,
+      selectedTrack: track,
+      selectedSettings: settings,
       lastExportReceipt: {
         trackId: track.id,
         outputPath: "/Users/daniel/Masters/album-track-1__master.wav",
@@ -387,6 +406,40 @@ describe("album export actions", () => {
     );
 
     expect(exportButton).toBeTruthy();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("scopes Advanced export checks and receipt to the selected track", async () => {
+    mocks.tm = {
+      ...baseTrackMasterState(),
+      mode: "track",
+      tracks: [track, secondTrack],
+      selectedTrackId: secondTrack.id,
+      selectedTrack: secondTrack,
+      selectedAnalysis: { ...hotAnalysis, track_id: secondTrack.id },
+      selectedSettings: settings,
+      lastExportReceipt: {
+        trackId: track.id,
+        outputPath: "/Users/daniel/Masters/album-track-1__master.wav",
+        checks: [cleanCheck],
+        job: renderJob(["/Users/daniel/Masters/album-track-1__master.wav"]),
+        kind: "track",
+      },
+    };
+
+    const { container, root } = await renderApp();
+
+    expect(container.textContent).toContain("SOURCE CHECK");
+    const exportButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Export With Review",
+    );
+    expect(exportButton).toBeTruthy();
+    expect(container.querySelector(".receipt-backdrop")).toBeNull();
+    expect(container.textContent).toContain("Quality —");
+    expect(container.textContent).not.toContain("Quality OK");
 
     await act(async () => {
       root.unmount();
