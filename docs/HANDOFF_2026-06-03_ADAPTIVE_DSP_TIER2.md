@@ -100,7 +100,7 @@ gate any new behavior on the profile being present.
 
 ## 5. Build / test / verify (exact commands)
 
-Repo root: `C:\Users\Daniel Kinsner\OneDrive\Documents\GitHub\yes-master`.
+Repo root: `.`.
 
 ```powershell
 npm test                 # frontend (vitest) — currently 162 pass
