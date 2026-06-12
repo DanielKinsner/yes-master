@@ -1114,6 +1114,16 @@ export function useTrackMaster() {
         delete next[id];
         return next;
       });
+      setRegionByTrack((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setOverrideAlbum((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       api.evictSourceProfile(id).catch(() => {
         /* best-effort backend cache cleanup */
       });
@@ -1127,7 +1137,7 @@ export function useTrackMaster() {
         setSelectedTrackId(remaining.length > 0 ? remaining[0].id : null);
       }
     },
-    [selectedTrackId, tracks],
+    [loadedTrackId, selectedTrackId, tracks],
   );
 
   const setPreset = useCallback(

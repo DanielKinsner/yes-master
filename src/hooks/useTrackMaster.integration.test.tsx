@@ -509,6 +509,131 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("stops playback when removing the loaded track", async () => {
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const track = makeTrack("remove-playing-1", "C:/audio/playing.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+      expect(playbackHandler).toBeDefined();
+    });
+
+    await act(async () => {
+      playbackHandler?.({
+        track_id: track.id,
+        position_sec: 3,
+        is_playing: true,
+        is_loaded: true,
+        peak_dbfs: -12,
+        gr_low_db: -120,
+        gr_mid_db: -120,
+        gr_high_db: -120,
+        lufs_momentary: -14,
+        lufs_integrated: -14,
+        spectrum_db: [],
+      });
+    });
+    await waitFor(() => {
+      expect(harness.current().transport.isPlaying).toBe(true);
+    });
+
+    mocks.api.stopPlayback.mockClear();
+    await act(async () => {
+      harness.current().removeTrack(track.id);
+    });
+
+    expect(mocks.api.stopPlayback).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("does not stop playback when removing a non-loaded track", async () => {
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const loadedTrack = makeTrack("remove-loaded-1", "C:/audio/loaded.wav");
+    const otherTrack = makeTrack("remove-other-1", "C:/audio/other.wav");
+    mocks.api.importTracks.mockResolvedValue([loadedTrack, otherTrack]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([loadedTrack.path, otherTrack.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().tracks).toHaveLength(2);
+      expect(playbackHandler).toBeDefined();
+    });
+
+    await act(async () => {
+      playbackHandler?.({
+        track_id: loadedTrack.id,
+        position_sec: 3,
+        is_playing: true,
+        is_loaded: true,
+        peak_dbfs: -12,
+        gr_low_db: -120,
+        gr_mid_db: -120,
+        gr_high_db: -120,
+        lufs_momentary: -14,
+        lufs_integrated: -14,
+        spectrum_db: [],
+      });
+    });
+    await waitFor(() => {
+      expect(harness.current().transport.isPlaying).toBe(true);
+    });
+
+    mocks.api.stopPlayback.mockClear();
+    await act(async () => {
+      harness.current().removeTrack(otherTrack.id);
+    });
+
+    expect(mocks.api.stopPlayback).not.toHaveBeenCalled();
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("bakes delivery profile defaults into editable Advanced fields and lets Custom inherit them", async () => {
     const track = makeTrack("profile-1", "C:/audio/profile.wav");
     mocks.api.importTracks.mockResolvedValue([track]);
