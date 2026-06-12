@@ -51,8 +51,23 @@ impl BiquadCoeffs {
         Some(gain_db)
     }
 
+    #[inline]
+    fn nyquist_safe_freq_hz(sample_rate: f32, freq_hz: f32) -> Option<f32> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 || !freq_hz.is_finite() || freq_hz <= 0.0
+        {
+            return None;
+        }
+        // RBJ cookbook formulas require omega < pi. Clamp at 90% of Nyquist
+        // in the constructors so every shelf/peak/Butterworth caller shares
+        // the same low-sample-rate stability guard.
+        Some(freq_hz.min(sample_rate * 0.45))
+    }
+
     pub fn low_shelf(sample_rate: f32, freq_hz: f32, gain_db: f32, slope: f32) -> Self {
         let Some(gain_db) = Self::sanitize_shelf_gain_db(gain_db) else {
+            return Self::identity();
+        };
+        let Some(freq_hz) = Self::nyquist_safe_freq_hz(sample_rate, freq_hz) else {
             return Self::identity();
         };
         let a = 10.0_f32.powf(gain_db / 40.0);
@@ -82,6 +97,9 @@ impl BiquadCoeffs {
         let Some(gain_db) = Self::sanitize_shelf_gain_db(gain_db) else {
             return Self::identity();
         };
+        let Some(freq_hz) = Self::nyquist_safe_freq_hz(sample_rate, freq_hz) else {
+            return Self::identity();
+        };
         let a = 10.0_f32.powf(gain_db / 40.0);
         let omega = 2.0 * PI * freq_hz / sample_rate;
         let cos_o = omega.cos();
@@ -108,6 +126,9 @@ impl BiquadCoeffs {
     /// Butterworth low-pass (RBJ cookbook, Q=0.7071 for one stage). For an
     /// LR4 crossover (-24 dB/oct), cascade two of these at the same corner.
     pub fn butter_lp(sample_rate: f32, freq_hz: f32, q: f32) -> Self {
+        let Some(freq_hz) = Self::nyquist_safe_freq_hz(sample_rate, freq_hz) else {
+            return Self::identity();
+        };
         let omega = 2.0 * PI * freq_hz / sample_rate;
         let cos_o = omega.cos();
         let sin_o = omega.sin();
@@ -130,6 +151,9 @@ impl BiquadCoeffs {
     /// Butterworth high-pass (RBJ cookbook, Q=0.7071 for one stage). Cascade
     /// two of these for an LR4 -24 dB/oct slope.
     pub fn butter_hp(sample_rate: f32, freq_hz: f32, q: f32) -> Self {
+        let Some(freq_hz) = Self::nyquist_safe_freq_hz(sample_rate, freq_hz) else {
+            return Self::identity();
+        };
         let omega = 2.0 * PI * freq_hz / sample_rate;
         let cos_o = omega.cos();
         let sin_o = omega.sin();
@@ -218,6 +242,9 @@ impl BiquadCoeffs {
 
     pub fn peaking(sample_rate: f32, freq_hz: f32, q: f32, gain_db: f32) -> Self {
         let Some(gain_db) = Self::sanitize_shelf_gain_db(gain_db) else {
+            return Self::identity();
+        };
+        let Some(freq_hz) = Self::nyquist_safe_freq_hz(sample_rate, freq_hz) else {
             return Self::identity();
         };
         let a = 10.0_f32.powf(gain_db / 40.0);
@@ -3021,6 +3048,58 @@ mod tests {
             delivery_profile: DeliveryProfile::Custom,
             album: None,
             advanced: AdvancedSettings::default(),
+        }
+    }
+
+    #[test]
+    fn chain_is_finite_at_all_supported_rates() {
+        let sample_rates = [8_000_u32, 11_025, 16_000, 22_050, 32_000, 44_100];
+        let presets = [
+            Preset::Universal,
+            Preset::Clarity,
+            Preset::Tape,
+            Preset::Spatial,
+            Preset::Oomph,
+            Preset::Warmth,
+            Preset::Punch,
+            Preset::Loud,
+            Preset::Custom {
+                id: "finite-rate".to_string(),
+            },
+        ];
+        let variants = ["base", "presence_air", "sparkle", "presence_air_sparkle"];
+
+        for sr in sample_rates {
+            for preset in &presets {
+                for variant in variants {
+                    let mut settings = default_master_settings();
+                    settings.preset = preset.clone();
+                    settings.intensity = 1.0;
+                    if variant.contains("presence_air") {
+                        settings.advanced.presence_air = Some(1.0);
+                    }
+                    if variant.contains("sparkle") {
+                        settings.eq_sparkle_db = 3.0;
+                    }
+
+                    let mut chain = MasteringChain::new(sr, 2, &settings);
+                    for n in 0..sr as usize {
+                        let s = (2.0 * PI * 440.0 * n as f32 / sr as f32).sin() * 0.3;
+                        let mut frame = [s, s];
+                        chain.process_frame_inplace(&mut frame);
+                        for sample in frame {
+                            assert!(
+                                sample.is_finite(),
+                                "{preset:?} {variant} at {sr} Hz emitted non-finite sample"
+                            );
+                            assert!(
+                                sample.abs() < 4.0,
+                                "{preset:?} {variant} at {sr} Hz emitted runaway sample {sample}"
+                            );
+                        }
+                    }
+                }
+            }
         }
     }
 
