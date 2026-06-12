@@ -8,7 +8,9 @@ use crate::engine::{
 };
 use crate::sample_rate::convert_interleaved;
 use crate::types::*;
-use crate::wav_writer::{wav_spec, write_samples_into_writer, write_wav};
+use crate::wav_writer::{
+    replace_with_tmp, unique_tmp_path, wav_spec, write_samples_into_writer, write_wav,
+};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -421,26 +423,35 @@ pub fn render_album_plan_impl(
     // frames per TransitionSpec.
     let album_path = unique_album_path(out_dir)?;
     let spec = wav_spec(common_channels, album_sample_rate, bit_depth)?;
-    let mut album_writer =
-        hound::WavWriter::create(&album_path, spec).map_err(|e| CommandError::Io(e.to_string()))?;
-    for (i, samples) in rendered_samples.iter().enumerate() {
-        write_samples_into_writer(&mut album_writer, samples, bit_depth)?;
-        if i + 1 < rendered_samples.len() {
-            // Transition slot between track i and track i+1.
-            if let Some(t) = request.plan.transitions.get(i) {
-                if matches!(t.kind, TransitionKind::Gap) {
-                    let gap_seconds = t.duration_seconds.clamp(0.0, 5.0);
-                    let gap_frames = (gap_seconds * album_sample_rate as f32) as usize;
-                    let gap_samples = gap_frames * common_channels as usize;
-                    let zeros = vec![0.0_f32; gap_samples];
-                    write_samples_into_writer(&mut album_writer, &zeros, bit_depth)?;
+    let album_tmp_path = unique_tmp_path(&album_path)?;
+    let album_write_result = (|| -> CommandResult<()> {
+        let mut album_writer = hound::WavWriter::create(&album_tmp_path, spec)
+            .map_err(|e| CommandError::Io(e.to_string()))?;
+        for (i, samples) in rendered_samples.iter().enumerate() {
+            write_samples_into_writer(&mut album_writer, samples, bit_depth)?;
+            if i + 1 < rendered_samples.len() {
+                // Transition slot between track i and track i+1.
+                if let Some(t) = request.plan.transitions.get(i) {
+                    if matches!(t.kind, TransitionKind::Gap) {
+                        let gap_seconds = t.duration_seconds.clamp(0.0, 5.0);
+                        let gap_frames = (gap_seconds * album_sample_rate as f32) as usize;
+                        let gap_samples = gap_frames * common_channels as usize;
+                        let zeros = vec![0.0_f32; gap_samples];
+                        write_samples_into_writer(&mut album_writer, &zeros, bit_depth)?;
+                    }
                 }
             }
         }
+        album_writer
+            .finalize()
+            .map_err(|e| CommandError::Io(e.to_string()))?;
+        Ok(())
+    })();
+    if let Err(err) = album_write_result {
+        let _ = std::fs::remove_file(&album_tmp_path);
+        return Err(err);
     }
-    album_writer
-        .finalize()
-        .map_err(|e| CommandError::Io(e.to_string()))?;
+    replace_with_tmp(&album_tmp_path, &album_path)?;
 
     // Manifest.
     let manifest_path = unique_child_path(out_dir, "manifest.json")?;

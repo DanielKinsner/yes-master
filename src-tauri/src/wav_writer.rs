@@ -163,6 +163,50 @@ pub(crate) fn write_wav(
     channels: u16,
     bit_depth: u16,
 ) -> CommandResult<()> {
+    let tmp_path = unique_tmp_path(path)?;
+    let result = write_wav_direct(&tmp_path, samples, sample_rate, channels, bit_depth)
+        .and_then(|_| replace_with_tmp(&tmp_path, path));
+    if result.is_err() {
+        let _ = std::fs::remove_file(&tmp_path);
+    }
+    result
+}
+
+pub(crate) fn unique_tmp_path(path: &Path) -> CommandResult<std::path::PathBuf> {
+    let file_name = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| CommandError::InvalidPath("output path must include a file name".into()))?;
+    let parent = path.parent().unwrap_or_else(|| Path::new(""));
+    for _ in 0..1000 {
+        let candidate = parent.join(format!("{file_name}.{}.tmp", uuid::Uuid::new_v4()));
+        if !candidate.exists() {
+            return Ok(candidate);
+        }
+    }
+    Err(CommandError::Io(
+        "could not generate unique temporary output path".to_string(),
+    ))
+}
+
+pub(crate) fn replace_with_tmp(tmp_path: &Path, final_path: &Path) -> CommandResult<()> {
+    match std::fs::rename(tmp_path, final_path) {
+        Ok(()) => Ok(()),
+        Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists && final_path.is_file() => {
+            std::fs::remove_file(final_path).map_err(|e| CommandError::Io(e.to_string()))?;
+            std::fs::rename(tmp_path, final_path).map_err(|e| CommandError::Io(e.to_string()))
+        }
+        Err(err) => Err(CommandError::Io(err.to_string())),
+    }
+}
+
+fn write_wav_direct(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    bit_depth: u16,
+) -> CommandResult<()> {
     let (bits, fmt) = match bit_depth {
         16 => (16u16, hound::SampleFormat::Int),
         24 => (24u16, hound::SampleFormat::Int),

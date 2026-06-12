@@ -757,6 +757,60 @@ fn mastering_render_writes_to_explicit_output_path() {
     assert!(chosen_path.exists(), "chosen output file not written");
 }
 
+#[test]
+fn mastering_render_rejects_explicit_output_that_matches_source_path() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let in_path = tmp.path().join("input.wav");
+    write_sine_wav(&in_path, 44_100, 0.5, 440.0, 2);
+    let source_before = std::fs::read(&in_path).expect("read source before");
+
+    let err = engine::mastering_render_to_path(
+        TrackId("source-overwrite".to_string()),
+        &in_path,
+        &default_master_settings(),
+        tmp.path(),
+        RenderKind::Master,
+        &in_path,
+    )
+    .expect_err("rendering to the source path must be rejected");
+
+    assert!(
+        matches!(err, CommandError::InvalidPath(ref message) if message == "output path would overwrite the source file"),
+        "unexpected error: {err:?}"
+    );
+    assert_eq!(
+        std::fs::read(&in_path).expect("read source after"),
+        source_before,
+        "source bytes must be unchanged when explicit output equals source"
+    );
+}
+
+#[test]
+fn mastering_render_write_failure_leaves_final_output_absent() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let in_path = tmp.path().join("input.wav");
+    write_sine_wav(&in_path, 44_100, 0.5, 440.0, 2);
+    let parent_blocker = tmp.path().join("not-a-directory");
+    std::fs::write(&parent_blocker, b"blocker").expect("write blocker file");
+    let chosen_path = parent_blocker.join("master.wav");
+
+    let result = engine::mastering_render_to_path(
+        TrackId("write-failure".to_string()),
+        &in_path,
+        &default_master_settings(),
+        tmp.path(),
+        RenderKind::Master,
+        &chosen_path,
+    );
+
+    assert!(result.is_err(), "invalid output parent must fail");
+    assert!(
+        !chosen_path.exists(),
+        "failed render must not leave a final output at {}",
+        chosen_path.to_string_lossy()
+    );
+}
+
 /// Codex audit 2026-05-13 P0 regression: the export receipt must describe
 /// the rendered output, not the source analysis. Synthesizes a loud sine,
 /// renders with a known LUFS target (StreamingUniversal → -14 LUFS), and

@@ -697,6 +697,10 @@ pub fn mastering_render_with_progress(
             "source file not found: {source_path_str}"
         )));
     }
+    let out_path = match output_path {
+        Some(path) => explicit_output_path(path, source_path)?,
+        None => unique_output_path(out_dir, source_path, &track_id, kind)?,
+    };
 
     let pcm = crate::decode::decode_full(source_path)?;
     if pcm.samples.is_empty() {
@@ -841,10 +845,6 @@ pub fn mastering_render_with_progress(
         source_profile_digest,
         confidence_digest,
     };
-    let out_path = match output_path {
-        Some(path) => explicit_output_path(path)?,
-        None => unique_output_path(out_dir, source_path, &track_id, kind)?,
-    };
     write_wav(
         &out_path,
         &samples,
@@ -868,7 +868,25 @@ pub fn mastering_render_with_progress(
     })
 }
 
-fn explicit_output_path(path: &Path) -> CommandResult<PathBuf> {
+fn comparable_existing_or_parent_path(path: &Path) -> PathBuf {
+    if let Ok(canonical) = path.canonicalize() {
+        return canonical;
+    }
+
+    let Some(file_name) = path.file_name() else {
+        return path.to_path_buf();
+    };
+    let parent = path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    parent
+        .canonicalize()
+        .map(|p| p.join(file_name))
+        .unwrap_or_else(|_| path.to_path_buf())
+}
+
+fn explicit_output_path(path: &Path, source_path: &Path) -> CommandResult<PathBuf> {
     if path.as_os_str().is_empty() {
         return Err(CommandError::InvalidPath("empty output path".to_string()));
     }
@@ -882,6 +900,11 @@ fn explicit_output_path(path: &Path) -> CommandResult<PathBuf> {
         if !parent.as_os_str().is_empty() {
             std::fs::create_dir_all(parent).map_err(|e| CommandError::Io(e.to_string()))?;
         }
+    }
+    if comparable_existing_or_parent_path(path) == comparable_existing_or_parent_path(source_path) {
+        return Err(CommandError::InvalidPath(
+            "output path would overwrite the source file".to_string(),
+        ));
     }
     Ok(path.to_path_buf())
 }
@@ -960,9 +983,11 @@ mod tests {
     #[test]
     fn explicit_output_path_creates_parent_for_native_path() {
         let tmp = tempfile::tempdir().expect("tempdir");
+        let source = tmp.path().join("source.wav");
+        std::fs::write(&source, b"source").expect("write source");
         let chosen = tmp.path().join("Masters").join("track master.wav");
 
-        let out_path = explicit_output_path(&chosen).expect("explicit output path");
+        let out_path = explicit_output_path(&chosen, &source).expect("explicit output path");
 
         assert_eq!(out_path, chosen);
         assert!(
@@ -975,13 +1000,15 @@ mod tests {
     #[test]
     fn explicit_output_path_creates_parent_for_windows_backslash_path() {
         let tmp = tempfile::tempdir().expect("tempdir");
+        let source = tmp.path().join("source.wav");
+        std::fs::write(&source, b"source").expect("write source");
         let chosen = format!(
             "{}\\Masters\\track master.wav",
             tmp.path().to_string_lossy()
         );
         let chosen = PathBuf::from(chosen);
 
-        let out_path = explicit_output_path(&chosen).expect("explicit output path");
+        let out_path = explicit_output_path(&chosen, &source).expect("explicit output path");
 
         assert_eq!(out_path, chosen);
         assert!(
