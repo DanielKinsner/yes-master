@@ -997,6 +997,30 @@ mod tests {
         .expect("write analysis diagnostic manifest");
     }
 
+    fn expected_platform_spectral_balance_6band() -> [f32; 6] {
+        if cfg!(target_os = "macos") {
+            // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
+            // max_abs_delta vs Windows CI: 5.960464477539063e-8.
+            [
+                0.4801928,
+                3.287484e-10,
+                0.2701077,
+                8.422952e-9,
+                0.17286927,
+                0.07683024,
+            ]
+        } else {
+            [
+                0.48019287,
+                3.2878075e-10,
+                0.27010766,
+                8.422937e-9,
+                0.17286925,
+                0.07683022,
+            ]
+        }
+    }
+
     /// Byte-exact lock on the 6-band output (adversarial review must-fix #1). The
     /// other 6-band tests are relative (sums-to-unity / mid>0.5 / low>bright) and
     /// would NOT catch a value shift. Phase A adds a PARALLEL 31-band accumulation;
@@ -1005,19 +1029,10 @@ mod tests {
     /// test is the gate that forces an explicit decision.
     #[test]
     fn spectral_balance_6band_is_byte_exact_golden() {
-        // Pinned golden constants captured from today's code (Phase A pre-refactor).
-        // These are the literal f32 Debug values, which round-trip exactly, so the
-        // assertion is truly byte-exact rather than a self-comparison tautology.
-        let golden: [f32; 6] = [
-            // sub, low, low_mid, mid, presence, air
-            0.48019287,
-            3.2878075e-10,
-            0.27010766,
-            8.422937e-9,
-            0.17286925,
-            0.07683022,
-        ];
-        assert_eq!(spectral_balance_6band_snapshot_fixture(), golden);
+        assert_eq!(
+            spectral_balance_6band_snapshot_fixture(),
+            expected_platform_spectral_balance_6band()
+        );
     }
 
     #[test]

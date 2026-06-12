@@ -3594,7 +3594,9 @@ mod tests {
                 Preset::Universal,
                 expected_platform_sha(
                     "51a3d4dbe8138deb376d746d352b57360639adbe727ee307beb7f70179fa34e1",
-                    "51a3d4dbe8138deb376d746d352b57360639adbe727ee307beb7f70179fa34e1",
+                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
+                    // max_abs_delta vs Windows CI: 5.960464477539063e-8.
+                    "a14b8610bba3ad309be5557d4427ad13b86b4707484e35c5b086c3107c642d23",
                 ),
             );
         }
@@ -3606,7 +3608,9 @@ mod tests {
                 Preset::Clarity,
                 expected_platform_sha(
                     "add6210476f2c135738d68334b3e23d30c8657a786621b27e94f6debcb93d02b",
-                    "add6210476f2c135738d68334b3e23d30c8657a786621b27e94f6debcb93d02b",
+                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
+                    // max_abs_delta vs Windows CI: 5.960464477539063e-8.
+                    "f839ab949ce6680948a5143635d02d1f5f9797603271115a8172d045b7139b5c",
                 ),
             );
         }
@@ -3618,7 +3622,9 @@ mod tests {
                 Preset::Tape,
                 expected_platform_sha(
                     "71d69e666f9838e6199da32645cc17693175a04637d9ec868f52926a026c596c",
-                    "71d69e666f9838e6199da32645cc17693175a04637d9ec868f52926a026c596c",
+                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
+                    // max_abs_delta vs Windows CI: 5.960464477539063e-8.
+                    "2ccaeda814082bbc29a28aa330856d48482be4e5942f5b229d83e2d4338909a7",
                 ),
             );
         }
@@ -3630,6 +3636,8 @@ mod tests {
                 Preset::Spatial,
                 expected_platform_sha(
                     "8185f556c3faa4ccb5983778ac428f1976a971f9bcc3e68a59d65a7bfe0e98a0",
+                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
+                    // max_abs_delta vs Windows CI: 5.960464477539063e-8.
                     "2a7da89b1f2a63d6ee18982712e27aaaa2855c9885c0f69f34095ed469eaae62",
                 ),
             );
@@ -3642,7 +3650,9 @@ mod tests {
                 Preset::Oomph,
                 expected_platform_sha(
                     "97f3b17ef7f5679091a383625089e2e6e73c91586ccacb7403ee3367087749a7",
-                    "97f3b17ef7f5679091a383625089e2e6e73c91586ccacb7403ee3367087749a7",
+                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
+                    // max_abs_delta vs Windows CI: 5.960464477539063e-8.
+                    "9b3e8f288f75f883b42839d3262b232b7f844d7feadc9c1e7f2c6f193b401d7a",
                 ),
             );
         }
@@ -3654,6 +3664,8 @@ mod tests {
                 Preset::Warmth,
                 expected_platform_sha(
                     "9d1433b7bdcebf1fd45010ffeab5bbf2dba82099673bb5b5d38dace993cf95cc",
+                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
+                    // max_abs_delta vs Windows CI: 5.960464477539063e-8.
                     "5d6840bb6eeb8ae9fbe50d12401f2e19d62e395e13a0aa0551fcdd0a6f52c02d",
                 ),
             );
@@ -3666,6 +3678,8 @@ mod tests {
                 Preset::Punch,
                 expected_platform_sha(
                     "e9d8fe1423c6a31a4b3a9f5a99c15ef1da1f90cd45531a2345f24b870946d716",
+                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
+                    // max_abs_delta vs Windows CI: 1.1920928955078125e-7.
                     "12fa771e5b66b4a96c00ab4feb1ebced2ce65d9d5ea717de7d5c548e036c2751",
                 ),
             );
@@ -3678,6 +3692,8 @@ mod tests {
                 Preset::Loud,
                 expected_platform_sha(
                     "695c05a8cded5e7bd994ff14a4fd139aab4a83cc393faad63737e9512952cf4e",
+                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
+                    // max_abs_delta vs Windows CI: 2.384185791015625e-7.
                     "8bd4fa9a2993b02c516e332eb2e22cbf021830a96fc630ce6c3ea1496980d63c",
                 ),
             );
