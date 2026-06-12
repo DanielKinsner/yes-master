@@ -447,7 +447,7 @@ retires this permanently.
 
 **PKG-05 [P2] [A] Go-public hygiene batch:** `csp: null` in
 `tauri.conf.json:23-25` (set a baseline; the frontend renders user-controlled
-strings); local username `SM - Dan` leaks in 9 tracked docs (scrub to
+strings); local usernames leak in tracked docs (scrub to
 repo-relative paths; history-scrub not worth it); README is written for
 agents/owner, not the public ("before any public-release discussion" in a
 public repo is self-contradictory; no screenshot/license/install guidance);
