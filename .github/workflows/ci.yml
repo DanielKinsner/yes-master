@@ -112,6 +112,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Frontend build
+        run: npm run build
+
       - name: Desktop Rust tests
         working-directory: src-tauri
         run: cargo test
