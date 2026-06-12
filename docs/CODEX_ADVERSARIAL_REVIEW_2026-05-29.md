@@ -2,7 +2,7 @@
 
 ## Scope
 
-Target repo: `C:\Users\SM - Dan\Documents\GitHub\yes-master`
+Target repo: `.`
 
 Review focus: bloat, dead code, bad or incorrect DSP math, CSS/UX/UI hygiene,
 unwired or poorly wired surfaces, and general product-risk cleanup. This was a
