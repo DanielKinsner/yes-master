@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("all", "frontend", "rust", "iphone")]
+    [ValidateSet("all", "frontend", "rust", "iphone", "android")]
     [string]$Lane = "all"
 )
 
@@ -73,6 +73,55 @@ function Invoke-IphoneLane {
     }
 }
 
+function Test-AndroidLaneAvailable {
+    $missing = @()
+    if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
+        $missing += "cargo"
+    }
+    if (-not (Get-Command cargo-ndk -ErrorAction SilentlyContinue)) {
+        $missing += "cargo-ndk"
+    }
+    if (-not ($env:JAVA_HOME -or (Get-Command java -ErrorAction SilentlyContinue))) {
+        $missing += "JDK/JAVA_HOME"
+    }
+    $localProperties = Join-Path $repoRoot "apps\android-native\local.properties"
+    if (-not ($env:ANDROID_HOME -or (Test-Path $localProperties))) {
+        $missing += "ANDROID_HOME or apps\android-native\local.properties"
+    }
+    $targets = if (Get-Command rustup -ErrorAction SilentlyContinue) {
+        rustup target list --installed
+    } else {
+        @()
+    }
+    if ($targets -notcontains "aarch64-linux-android") {
+        $missing += "Rust target aarch64-linux-android"
+    }
+
+    if ($missing.Count -gt 0) {
+        Write-Host ""
+        Write-Host "Skipping Android lane; missing: $($missing -join ', ')." -ForegroundColor Yellow
+        return $false
+    }
+
+    return $true
+}
+
+function Invoke-AndroidLane {
+    if (-not (Test-AndroidLaneAvailable)) {
+        return
+    }
+
+    Invoke-Step "android rust bridge tests" {
+        Set-Location (Join-Path $repoRoot "apps\android-native\rust")
+        cargo test
+    }
+
+    Invoke-Step "android rust bridge arm64 check" {
+        Set-Location (Join-Path $repoRoot "apps\android-native\rust")
+        cargo ndk -t arm64-v8a --platform 29 check
+    }
+}
+
 try {
     Set-Location $repoRoot
 
@@ -80,10 +129,12 @@ try {
         "frontend" { Invoke-FrontendLane }
         "rust" { Invoke-RustLane }
         "iphone" { Invoke-IphoneLane }
+        "android" { Invoke-AndroidLane }
         default {
             Invoke-FrontendLane
             Invoke-RustLane
             Invoke-IphoneLane
+            Invoke-AndroidLane
         }
     }
 
