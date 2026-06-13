@@ -759,10 +759,24 @@ pub struct ChainCoeffs {
     pub comp_link_stereo: bool,
 }
 
+/// Clamp `value` into `[lo, hi]`, falling back to `default` when `value` is not
+/// finite (NaN/Inf). For any finite input this is identical to
+/// `value.clamp(lo, hi)`, so it changes no rendered audio — it only stops a NaN
+/// setting (which `f32::clamp` passes straight through) from poisoning the gain
+/// math and turning every output sample into NaN.
+#[inline]
+fn clamp_finite_or(value: f32, default: f32, lo: f32, hi: f32) -> f32 {
+    if value.is_finite() {
+        value.clamp(lo, hi)
+    } else {
+        default.clamp(lo, hi)
+    }
+}
+
 impl ChainCoeffs {
     pub fn from_settings(sample_rate: u32, settings: &MasteringSettings) -> Self {
         let sr = sample_rate as f32;
-        let intensity = settings.intensity.clamp(0.0, 1.0);
+        let intensity = clamp_finite_or(settings.intensity, 0.5, 0.0, 1.0);
 
         // Per-PRODUCT.md, Intensity is a macro that "should change how hard the
         // preset works across multiple parameters" — not a volume knob. So each
@@ -886,7 +900,7 @@ impl ChainCoeffs {
         // gain is the standard mastering "back off the source" knob — useful
         // when an already-mastered track would otherwise clip after the
         // preset's baseline gain push lands on top of it.
-        let user_input_gain_db = settings.input_gain_db.clamp(-24.0, 24.0);
+        let user_input_gain_db = clamp_finite_or(settings.input_gain_db, 0.0, -24.0, 24.0);
         let input_gain_db = preset_gain_db * preset_scale + user_input_gain_db;
         let input_gain_lin = 10.0_f32.powf(input_gain_db / 20.0);
 
@@ -894,12 +908,12 @@ impl ChainCoeffs {
 
         // Phase A3 — effective ceiling: delivery profile shadows the user's
         // explicit advanced.ceiling_dbtp when the profile is non-Custom.
-        let ceiling_db = settings.effective_ceiling_dbtp().clamp(-6.0, 0.0);
+        let ceiling_db = clamp_finite_or(settings.effective_ceiling_dbtp(), -1.0, -6.0, 0.0);
         let ceiling_lin = 10.0_f32.powf(ceiling_db / 20.0);
 
         // Post-limiter user-trim. Clamped to the same ±24 dB range as input
         // gain for symmetric extremes; default 0 dB.
-        let user_output_gain_db = settings.output_gain_db.clamp(-24.0, 24.0);
+        let user_output_gain_db = clamp_finite_or(settings.output_gain_db, 0.0, -24.0, 24.0);
         let user_output_gain_lin = 10.0_f32.powf(user_output_gain_db / 20.0);
 
         // Volume Match attenuation is computed AFTER the compressor block
@@ -3187,6 +3201,29 @@ mod tests {
             album: None,
             advanced: AdvancedSettings::default(),
         }
+    }
+
+    #[test]
+    fn non_finite_settings_do_not_poison_chain_gains() {
+        let mut settings = default_master_settings();
+        settings.intensity = f32::NAN;
+        settings.input_gain_db = f32::INFINITY;
+        settings.output_gain_db = f32::NAN;
+
+        let coeffs = ChainCoeffs::from_settings(48_000, &settings);
+
+        assert!(
+            coeffs.input_gain_lin.is_finite(),
+            "NaN/Inf settings must not produce a non-finite input gain"
+        );
+        assert!(
+            coeffs.user_output_gain_lin.is_finite(),
+            "NaN/Inf settings must not produce a non-finite output gain"
+        );
+        assert!(
+            coeffs.ceiling_lin.is_finite() && coeffs.ceiling_lin > 0.0,
+            "ceiling must stay finite and positive"
+        );
     }
 
     #[test]
