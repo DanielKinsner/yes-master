@@ -39,4 +39,21 @@ describe("Tauri security config", () => {
     expect(directives["style-src"]).toEqual(expect.arrayContaining(["'self'", "'unsafe-inline'"]));
     expect(directives["font-src"]).toEqual(expect.arrayContaining(["'self'", "data:"]));
   });
+
+  test("does not weaken the policy with eval, wildcards, or arbitrary remote origins", () => {
+    const config = readJson("src-tauri/tauri.conf.json");
+    const directives = parseCsp(config.app?.security?.csp);
+    const allowedRemoteOrigins = ["http://ipc.localhost", "http://asset.localhost"];
+
+    for (const source of Object.values(directives).flat()) {
+      expect(source).not.toBe("'unsafe-eval'");
+      expect(source).not.toContain("*");
+      // Bare scheme wildcards (http:/https:) would admit any network origin.
+      expect(source).not.toBe("http:");
+      expect(source).not.toBe("https:");
+      if (/^https?:\/\//.test(source)) {
+        expect(allowedRemoteOrigins).toContain(source);
+      }
+    }
+  });
 });
