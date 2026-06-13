@@ -43,23 +43,26 @@ impl SourceProfileStore {
     /// Insert (or replace) the derived profile for a track. Called by
     /// `analyze_tracks` after `SourceProfile::from_analysis` succeeds.
     pub fn insert(&self, track_id: TrackId, profile: SourceProfile) {
-        if let Ok(mut guard) = self.by_track.lock() {
-            guard.insert(track_id, profile);
-        }
+        self.by_track
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .insert(track_id, profile);
     }
 
     /// Insert when `profile` is `Some`, otherwise clear any prior entry. Used so
     /// a re-analysis that can no longer derive a profile (e.g. a now-too-short
     /// source) doesn't leave a stale one behind.
     pub fn set(&self, track_id: TrackId, profile: Option<SourceProfile>) {
-        if let Ok(mut guard) = self.by_track.lock() {
-            match profile {
-                Some(p) => {
-                    guard.insert(track_id, p);
-                }
-                None => {
-                    guard.remove(&track_id);
-                }
+        let mut guard = self
+            .by_track
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        match profile {
+            Some(p) => {
+                guard.insert(track_id, p);
+            }
+            None => {
+                guard.remove(&track_id);
             }
         }
     }
@@ -69,8 +72,9 @@ impl SourceProfileStore {
     pub fn get(&self, track_id: &TrackId) -> Option<SourceProfile> {
         self.by_track
             .lock()
-            .ok()
-            .and_then(|guard| guard.get(track_id).copied())
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .get(track_id)
+            .copied()
     }
 
     /// Insert when `Some`, otherwise clear any prior entry (mirrors `set` for the
@@ -80,14 +84,16 @@ impl SourceProfileStore {
         track_id: TrackId,
         deep: Option<Arc<crate::deep_analysis::DeepAnalysis>>,
     ) {
-        if let Ok(mut guard) = self.by_track_deep.lock() {
-            match deep {
-                Some(d) => {
-                    guard.insert(track_id, d);
-                }
-                None => {
-                    guard.remove(&track_id);
-                }
+        let mut guard = self
+            .by_track_deep
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        match deep {
+            Some(d) => {
+                guard.insert(track_id, d);
+            }
+            None => {
+                guard.remove(&track_id);
             }
         }
     }
@@ -96,8 +102,9 @@ impl SourceProfileStore {
     pub fn get_deep(&self, track_id: &TrackId) -> Option<Arc<crate::deep_analysis::DeepAnalysis>> {
         self.by_track_deep
             .lock()
-            .ok()
-            .and_then(|guard| guard.get(track_id).cloned())
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .get(track_id)
+            .cloned()
     }
 
     pub fn set_stand_down(
@@ -105,14 +112,16 @@ impl SourceProfileStore {
         track_id: TrackId,
         stand_down: Option<crate::guardrails::AlreadyMasteredStandDown>,
     ) {
-        if let Ok(mut guard) = self.by_track_stand_down.lock() {
-            match stand_down {
-                Some(value) => {
-                    guard.insert(track_id, value);
-                }
-                None => {
-                    guard.remove(&track_id);
-                }
+        let mut guard = self
+            .by_track_stand_down
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        match stand_down {
+            Some(value) => {
+                guard.insert(track_id, value);
+            }
+            None => {
+                guard.remove(&track_id);
             }
         }
     }
@@ -123,8 +132,9 @@ impl SourceProfileStore {
     ) -> Option<crate::guardrails::AlreadyMasteredStandDown> {
         self.by_track_stand_down
             .lock()
-            .ok()
-            .and_then(|guard| guard.get(track_id).copied())
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .get(track_id)
+            .copied()
     }
 
     /// Remove both adaptive cache entries for a track. Used when the frontend
@@ -476,17 +486,22 @@ mod tests {
     }
 
     #[test]
-    fn confidence_gating_off_by_default_resolves_to_none() {
+    fn confidence_gating_off_resolves_to_none() {
         // Owner-calibration gate: while confidence gating is off (the default), even a
         // present deep read resolves to None, so the chain stays byte-identical Tier-1.
-        if crate::confidence::is_confidence_gating_enabled() {
-            return; // gate is on (post-calibration); this default no longer applies.
-        }
+        // Force the gate OFF under the shared lock (restoring afterwards) so this
+        // asserts a concrete contract instead of silently no-opping if the default is
+        // ever flipped during calibration.
+        let _lock = crate::guardrails::ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let prev = crate::confidence::set_confidence_gating_enabled(false);
         let mut s = settings_with(None);
         apply_resolved_confidence(&mut s, Some(std::sync::Arc::new(make_test_deep())), false);
+        crate::confidence::set_confidence_gating_enabled(prev);
         assert!(
             s.advanced.source_confidence.is_none(),
-            "confidence gating must be inert by default"
+            "confidence gating must be inert when the gate is off"
         );
     }
 
