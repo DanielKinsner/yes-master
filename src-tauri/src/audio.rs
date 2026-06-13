@@ -1727,10 +1727,24 @@ fn audio_thread(
             }
             _ => PlaybackSnapshot::default(),
         };
-        if let Ok(mut w) = snapshot.write() {
-            *w = next_snap;
-        }
+        // Recover a poisoned snapshot lock instead of silently skipping the
+        // update — PlaybackSnapshot is plain data, so a panic elsewhere must not
+        // freeze the frontend on stale state.
+        let mut w = snapshot
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        *w = next_snap;
     }
+}
+
+/// The seek offset to apply when (re)starting playback at a saved playhead
+/// (e.g. an Original<->Mastered switch passing the prior position). Returns
+/// `None` — start from 0 — for any non-positive or non-finite request, so a bad
+/// position can never seek backwards or panic `Duration::from_secs_f64`. For any
+/// finite `> 0.0` value this is identical to the previous inline guard.
+fn seek_target(start_position_sec: f64) -> Option<Duration> {
+    (start_position_sec.is_finite() && start_position_sec > 0.0)
+        .then(|| Duration::from_secs_f64(start_position_sec))
 }
 
 fn handle_play(
@@ -1831,9 +1845,9 @@ fn handle_play(
 
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(source);
-    if start_position_sec > 0.0 {
+    if let Some(offset) = seek_target(start_position_sec) {
         // Best-effort seek; for some formats this can fail and we fall back to start.
-        let _ = new_sink.try_seek(Duration::from_secs_f64(start_position_sec));
+        let _ = new_sink.try_seek(offset);
     }
     new_sink.play();
     s.sink = new_sink;
@@ -2038,8 +2052,8 @@ fn handle_play_master(
 
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(mastering_source);
-    if start_position_sec > 0.0 {
-        let _ = new_sink.try_seek(Duration::from_secs_f64(start_position_sec));
+    if let Some(offset) = seek_target(start_position_sec) {
+        let _ = new_sink.try_seek(offset);
     }
     new_sink.play();
     s.sink = new_sink;
@@ -2066,6 +2080,22 @@ fn handle_play_master(
 mod tests {
     use super::*;
     use crate::dsp::{ChainCoeffs, MasteringChain};
+
+    #[test]
+    fn seek_target_honors_positive_offsets_and_gates_the_rest() {
+        // Playhead preservation on an Original<->Mastered switch sends the prior
+        // position as start_position_sec; a positive finite offset must seek there.
+        assert_eq!(
+            seek_target(2.5),
+            Some(Duration::from_secs_f64(2.5)),
+            "a positive offset must be honored"
+        );
+        // Start-from-zero / invalid requests must not seek (and must not panic).
+        assert_eq!(seek_target(0.0), None);
+        assert_eq!(seek_target(-3.0), None);
+        assert_eq!(seek_target(f64::NAN), None);
+        assert_eq!(seek_target(f64::INFINITY), None);
+    }
 
     fn settings_with_intensity(intensity: f32) -> MasteringSettings {
         // Phase A4: with the preset compressor wired in (engaged by
