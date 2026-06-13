@@ -750,9 +750,7 @@ export function useTrackMaster() {
     null,
   );
   const [compressionPlan, setCompressionPlan] = useState<CompressionPlan | null>(null);
-  const [adaptiveCompressionGate, setAdaptiveCompressionGate] = useState<boolean | null>(
-    null,
-  );
+  const [adaptiveCompressionGate, setAdaptiveCompressionGate] = useState(false);
   const guardrailReadoutReq = useRef(0);
   const compressionPlanSurface = useRef<string | null>(null);
 
@@ -760,11 +758,15 @@ export function useTrackMaster() {
     let cancelled = false;
     Promise.resolve(api.adaptiveCompressionEnabled?.())
       .then((enabled) => {
-        if (!cancelled && typeof enabled === "boolean") {
-          setAdaptiveCompressionGate(enabled);
+        if (!cancelled) {
+          setAdaptiveCompressionGate(typeof enabled === "boolean" ? enabled : false);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) {
+          setAdaptiveCompressionGate(false);
+        }
+      });
 
     if (typeof window === "undefined") {
       return () => {
@@ -795,15 +797,10 @@ export function useTrackMaster() {
       compressionPlanSurface.current = null;
       return;
     }
-    const hasAdaptiveCompressionGateReader =
-      typeof api.adaptiveCompressionEnabled === "function";
-    if (hasAdaptiveCompressionGateReader && adaptiveCompressionGate === null) {
-      return;
-    }
     const reqId = ++guardrailReadoutReq.current;
     void selectedAnalysis; // dep: refetch when analysis lands so the store is ready
     const album = mode === "album";
-    const surface = `${selectedTrackId}:${album}:${adaptiveCompressionGate ?? "untracked"}`;
+    const surface = `${selectedTrackId}:${album}:${adaptiveCompressionGate}`;
     if (compressionPlanSurface.current !== surface) {
       setCompressionPlan(null);
     }
@@ -811,9 +808,15 @@ export function useTrackMaster() {
       api.guardrailReadout?.(selectedSettings, selectedTrackId, album),
     )
       .then((r) => {
-        if (r && guardrailReadoutReq.current === reqId) setGuardrailReadout(r);
+        if (guardrailReadoutReq.current === reqId) {
+          setGuardrailReadout(r ?? null);
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (guardrailReadoutReq.current === reqId) {
+          setGuardrailReadout(null);
+        }
+      });
     Promise.resolve(
       api.resolveCompressionPlan?.(selectedSettings, selectedTrackId, album),
     )
@@ -823,7 +826,12 @@ export function useTrackMaster() {
           setCompressionPlan(plan ?? null);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (guardrailReadoutReq.current === reqId) {
+          compressionPlanSurface.current = surface;
+          setCompressionPlan(null);
+        }
+      });
   }, [
     selectedTrackId,
     selectedSettings,

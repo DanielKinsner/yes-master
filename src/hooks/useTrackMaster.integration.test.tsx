@@ -14,6 +14,7 @@ import type {
   AnalysisResult,
   AlbumPlan,
   CompressionPlan,
+  GuardrailReadout,
   ImportedTrack,
   MasteringSettings,
   ProjectState,
@@ -254,6 +255,25 @@ function makeCompressionPlan(active: boolean, digest: string): CompressionPlan {
       : [],
     guidance: active ? "Low band is already dense." : null,
     digest,
+  };
+}
+
+function makeGuardrailReadout(active: boolean): GuardrailReadout {
+  return {
+    active,
+    strength: 0.5,
+    bright_trim: active ? 0.2 : 0,
+    low_trim: 0,
+    density_trim: 0,
+    width_trim: 0,
+    brightness_share: active ? 0.42 : 0.2,
+    low_share: 0.3,
+    dynamic_range_db: 8,
+    bright_deadband: 0.3,
+    low_deadband: 0.42,
+    width_corr_deadband: 0.5,
+    stereo_correlation: 0.8,
+    confidence: null,
   };
 }
 
@@ -1014,6 +1034,73 @@ describe("useTrackMaster integration dispatches", () => {
     });
     await waitFor(() => {
       expect(harness.current().compressionPlan).toEqual(nextPlan);
+    });
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("fetches adaptive readouts when the adaptive compression gate reader is unavailable", async () => {
+    const track = makeTrack("adaptive-gate-unavailable", "C:/audio/gate-unavailable.wav");
+    const readout = makeGuardrailReadout(true);
+    const plan = makeCompressionPlan(false, "fallback gate");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.api.adaptiveCompressionEnabled.mockResolvedValue(null);
+    mocks.api.guardrailReadout.mockResolvedValue(readout);
+    mocks.api.resolveCompressionPlan.mockResolvedValue(plan);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+
+    await waitFor(() => {
+      expect(mocks.api.guardrailReadout).toHaveBeenCalledWith(
+        expect.any(Object),
+        track.id,
+        false,
+      );
+      expect(mocks.api.resolveCompressionPlan).toHaveBeenCalledWith(
+        expect.any(Object),
+        track.id,
+        false,
+      );
+    });
+    await waitFor(() => {
+      expect(harness.current().guardrailReadout).toEqual(readout);
+      expect(harness.current().compressionPlan).toEqual(plan);
+    });
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("clears stale guardrail readout when the latest backend read returns null", async () => {
+    const track = makeTrack("guardrail-null", "C:/audio/guardrail-null.wav");
+    const readout = makeGuardrailReadout(true);
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.api.guardrailReadout.mockResolvedValue(readout);
+    mocks.api.resolveCompressionPlan.mockResolvedValue(null);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().guardrailReadout).toEqual(readout);
+    });
+
+    const callsBefore = mocks.api.guardrailReadout.mock.calls.length;
+    mocks.api.guardrailReadout.mockResolvedValue(null);
+    await act(async () => {
+      harness.current().setIntensity(0.66);
+    });
+
+    await waitFor(() => {
+      expect(mocks.api.guardrailReadout.mock.calls.length).toBeGreaterThan(callsBefore);
+      expect(harness.current().guardrailReadout).toBeNull();
     });
     await act(async () => {
       harness.root.unmount();
