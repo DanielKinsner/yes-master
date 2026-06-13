@@ -203,6 +203,29 @@ mod tests {
         }
     }
 
+    #[test]
+    fn evidence_gate_state_serializes_both_gate_flags() {
+        // The evidence reports embed EvidenceGateState so a future diff can tell
+        // which gates were live for a run. Lock its wire shape with concrete
+        // values, independent of the live gate, so a field rename / serde(skip)
+        // is caught.
+        let json = serde_json::to_value(EvidenceGateState {
+            confidence_gate_enabled: true,
+            adaptive_compression_enabled: false,
+        })
+        .expect("serialize gate state");
+        assert_eq!(
+            json.get("confidence_gate_enabled")
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            json.get("adaptive_compression_enabled")
+                .and_then(|v| v.as_bool()),
+            Some(false)
+        );
+    }
+
     fn synthetic_analysis() -> AnalysisResult {
         AnalysisResult {
             track_id: TrackId("cross-lane".to_string()),
