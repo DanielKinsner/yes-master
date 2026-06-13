@@ -25,7 +25,10 @@ function runVerifyFast(args: string[]) {
   );
 }
 
-describe("verify-fast.ps1 Android prerequisite handling", () => {
+// The verification lane (and this PowerShell-driven test) is Windows-only per
+// CLAUDE.md, so skip the suite cleanly off-Windows instead of failing on a
+// missing powershell.exe / wrong exit codes on a Mac dev machine.
+describe.runIf(process.platform === "win32")("verify-fast.ps1 Android prerequisite handling", () => {
   test("fails the Android lane when prerequisites are missing by default", () => {
     const result = runVerifyFast(["-Lane", "android"]);
     const output = `${result.stdout}\n${result.stderr}`;
