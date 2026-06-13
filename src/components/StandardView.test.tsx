@@ -125,6 +125,7 @@ function fakeTm(overrides: Partial<TM> = {}): TM {
     selectedSettings: fakeSettings(),
     isAnalyzing: false, isLoadingWaveform: false, analysisProgress: null,
     isExporting: false, isRendering: false, lastExportReceipt: null,
+    renderProgress: null,
     transport: { isPlaying: false, currentTimeSec: 0, playbackKind: "master", volumeMatch: false },
     selectedRegion: null,
     setPreset: noop, setIntensity: noop, setLoudnessTarget: noop,
@@ -358,6 +359,33 @@ describe("StandardRightRail", () => {
       "Source not analyzed yet",
     );
     await act(async () => root.unmount());
+  });
+
+  it("shows real render progress while creating a master and hides it when progress is null", async () => {
+    const busy = await render(
+      <StandardView
+        tm={fakeTm({
+          isRendering: true,
+          renderProgress: { kind: "master", fraction: 0.4 },
+        })}
+        onEnterAdvanced={() => {}}
+      />,
+    );
+    const label = busy.container.querySelector(".std-render-progress-label");
+    expect(label?.textContent).toBe("Master render 40%");
+    const bar = busy.container.querySelector<HTMLElement>(".std-render-progress [role='progressbar']");
+    expect(bar?.getAttribute("aria-valuenow")).toBe("40");
+    expect(bar?.querySelector<HTMLElement>(".std-render-progress-fill")?.style.width).toBe("40%");
+    await act(async () => busy.root.unmount());
+
+    const idle = await render(
+      <StandardView
+        tm={fakeTm({ isRendering: true, renderProgress: null })}
+        onEnterAdvanced={() => {}}
+      />,
+    );
+    expect(idle.container.querySelector(".std-render-progress")).toBeNull();
+    await act(async () => idle.root.unmount());
   });
 });
 

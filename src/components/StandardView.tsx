@@ -336,6 +336,17 @@ function StandardRightRail({
   const doneFileName = showDone
     ? receipt.outputPath.split(/[\\/]/).pop() ?? receipt.outputPath
     : null;
+  const activeRenderProgress =
+    (tm.isRendering || tm.isExporting) && tm.renderProgress
+      ? {
+          percent: Math.round(
+            Math.max(0, Math.min(1, tm.renderProgress.fraction)) * 100,
+          ),
+          label: `${tm.renderProgress.kind[0].toUpperCase()}${tm.renderProgress.kind.slice(
+            1,
+          )} render`,
+        }
+      : null;
   return (
     <aside className="std-rail" ref={seamRefs.rail}>
       <section className="std-rail-card std-rail-preview" ref={seamRefs.preview}>
@@ -420,6 +431,26 @@ function StandardRightRail({
               ? "Preparing…"
               : "Create Master"}
         </button>
+        {activeRenderProgress && (
+          <div className="std-render-progress" role="status" aria-live="polite">
+            <div className="std-render-progress-label">
+              {activeRenderProgress.label} {activeRenderProgress.percent}%
+            </div>
+            <div
+              className="std-render-progress-track"
+              role="progressbar"
+              aria-label={activeRenderProgress.label}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={activeRenderProgress.percent}
+            >
+              <span
+                className="std-render-progress-fill"
+                style={{ width: `${activeRenderProgress.percent}%` }}
+              />
+            </div>
+          </div>
+        )}
         {notes?.invalid && (
           <p className="std-export-block" role="alert">
             Saved, but this master has a problem — re-render: {notes.invalidMessage}

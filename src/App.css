@@ -5852,6 +5852,29 @@ button.primary.std-create-master:active:not(:disabled) { transform: translateY(0
 /* Single dim: faded hero gradient, glow off — not opacity stacked on
    button.primary:disabled's muted palette. */
 button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+.std-render-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--text-1);
+  font-size: 0.76rem;
+}
+.std-render-progress-label {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.std-render-progress-track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(236, 240, 250, 0.11);
+}
+.std-render-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent-deep), var(--accent-bright));
+}
 .std-export-block { color: var(--accent-danger); font-size: 0.82rem; margin: 0; }
 .std-export-note { color: var(--text-2); font-size: 0.78rem; margin: 0; }
 
