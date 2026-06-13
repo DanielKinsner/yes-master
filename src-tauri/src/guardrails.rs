@@ -159,8 +159,11 @@ impl AlreadyMasteredStandDown {
 }
 
 /// Classify "already-mastered" inputs for the adaptive compressor stand-down.
-/// Pure AC-1 plumbing: this does not alter the chain until AC-2 wires it behind
-/// `YES_MASTER_ADAPTIVE_COMPRESSION`.
+/// Always evaluated at analysis time and cached in the `SourceProfileStore`;
+/// whether the result reaches the chain is decided in
+/// `profile_store::apply_resolved_compression_guards`, which is gated by
+/// `is_adaptive_compression_enabled()` (`ADAPTIVE_COMPRESSION`, default OFF) and
+/// bypassed for album renders.
 pub fn classify_already_mastered_stand_down(
     lufs_integrated: f32,
     true_peak_dbtp: f32,
