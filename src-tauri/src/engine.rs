@@ -569,6 +569,25 @@ pub struct AlbumPlanRenderRequest {
     pub tracks: Vec<AlbumTrackRenderInput>,
 }
 
+/// Reject empty or `..`-bearing per-track source paths before any album render
+/// decodes them, mirroring the guard `mastering_render_with_progress` applies to
+/// single-track sources. Album rendering decodes each `source_path` directly, so
+/// without this the album path was the one place a traversal path slipped through.
+pub(crate) fn validate_album_source_paths(tracks: &[AlbumTrackRenderInput]) -> CommandResult<()> {
+    for input in tracks {
+        if input.source_path.is_empty() {
+            return Err(CommandError::InvalidPath("empty path".to_string()));
+        }
+        if crate::files::has_parent_dir_component(Path::new(&input.source_path)) {
+            return Err(CommandError::InvalidPath(format!(
+                "path traversal not allowed: {}",
+                input.source_path
+            )));
+        }
+    }
+    Ok(())
+}
+
 #[derive(Debug, Serialize, Clone)]
 pub struct AlbumTrackRenderRecord {
     pub track_id: TrackId,
@@ -908,6 +927,12 @@ fn explicit_output_path(path: &Path, source_path: &Path) -> CommandResult<PathBu
     if path.as_os_str().is_empty() {
         return Err(CommandError::InvalidPath("empty output path".to_string()));
     }
+    if crate::files::has_parent_dir_component(path) {
+        return Err(CommandError::InvalidPath(format!(
+            "path traversal not allowed: {}",
+            path.to_string_lossy()
+        )));
+    }
     if path.file_name().is_none() {
         return Err(CommandError::InvalidPath(format!(
             "output path must include a file name: {}",
@@ -932,6 +957,12 @@ fn explicit_output_dir(path: &Path) -> CommandResult<PathBuf> {
         return Err(CommandError::InvalidPath(
             "empty output directory".to_string(),
         ));
+    }
+    if crate::files::has_parent_dir_component(path) {
+        return Err(CommandError::InvalidPath(format!(
+            "path traversal not allowed: {}",
+            path.to_string_lossy()
+        )));
     }
     std::fs::create_dir_all(path).map_err(|e| CommandError::Io(e.to_string()))?;
     Ok(path.to_path_buf())
@@ -994,6 +1025,28 @@ mod tests {
 
         assert!(
             matches!(err, CommandError::InvalidPath(ref message) if message == "empty output directory"),
+            "unexpected error: {err:?}"
+        );
+    }
+
+    #[test]
+    fn explicit_output_dir_rejects_path_traversal() {
+        let err = explicit_output_dir(Path::new("../escape/Album"))
+            .expect_err("traversal dir should fail");
+
+        assert!(
+            matches!(err, CommandError::InvalidPath(ref m) if m.contains("path traversal not allowed")),
+            "unexpected error: {err:?}"
+        );
+    }
+
+    #[test]
+    fn explicit_output_path_rejects_path_traversal() {
+        let err = explicit_output_path(Path::new("../escape/out.wav"), Path::new("source.wav"))
+            .expect_err("traversal output path should fail");
+
+        assert!(
+            matches!(err, CommandError::InvalidPath(ref m) if m.contains("path traversal not allowed")),
             "unexpected error: {err:?}"
         );
     }

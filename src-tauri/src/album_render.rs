@@ -248,6 +248,21 @@ mod adaptive_scope_tests {
             "album shadow must strip backend-only compression guards"
         );
     }
+
+    #[test]
+    fn album_source_path_validation_rejects_traversal() {
+        let inputs = vec![crate::engine::AlbumTrackRenderInput {
+            track_id: crate::types::TrackId("t".to_string()),
+            source_path: "../escape/track.wav".to_string(),
+            settings: settings_with_profile(None),
+        }];
+        let err = crate::engine::validate_album_source_paths(&inputs)
+            .expect_err("traversal source path must be rejected");
+        assert!(
+            matches!(err, CommandError::InvalidPath(ref m) if m.contains("path traversal not allowed")),
+            "unexpected error: {err:?}"
+        );
+    }
 }
 
 pub fn render_album_plan_impl(
@@ -258,6 +273,7 @@ pub fn render_album_plan_impl(
     if request.plan.tracks.is_empty() {
         return Err(CommandError::Other("AlbumPlan has no tracks".to_string()));
     }
+    crate::engine::validate_album_source_paths(&request.tracks)?;
     // Lookup: TrackId -> (source_path, settings).
     let settings_by_id: std::collections::HashMap<&str, &AlbumTrackRenderInput> = request
         .tracks
