@@ -13,10 +13,25 @@
 
 use std::path::{Component, Path, PathBuf};
 
+use serde::{Deserialize, Serialize};
+
 use crate::types::{
     AnalysisResult, CompressionMode, ExportReport, MasteringSettings, Preset, RenderedMeasurements,
     TrackId,
 };
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub struct EvidenceGateState {
+    pub confidence_gate_enabled: bool,
+    pub adaptive_compression_enabled: bool,
+}
+
+pub(crate) fn current_gate_state() -> EvidenceGateState {
+    EvidenceGateState {
+        confidence_gate_enabled: crate::confidence::is_confidence_gating_enabled(),
+        adaptive_compression_enabled: crate::guardrails::is_adaptive_compression_enabled(),
+    }
+}
 
 /// Resolve render settings for an evidence-lane case the SAME way the app's
 /// chain entry does: clone the source's recommended settings, pin the case's

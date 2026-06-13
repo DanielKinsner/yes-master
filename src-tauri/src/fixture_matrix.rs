@@ -1,8 +1,8 @@
 use crate::analysis::analyze_one;
 use crate::engine::mastering_render_to_path;
 use crate::evidence_lanes::{
-    csv_escape, export_report_for, normalized_absolute_path, preset_slug,
-    resolve_adaptive_render_settings, sanitize_path_part,
+    csv_escape, current_gate_state, export_report_for, normalized_absolute_path, preset_slug,
+    resolve_adaptive_render_settings, sanitize_path_part, EvidenceGateState,
 };
 use crate::exports::export_checks_for_report;
 use crate::types::*;
@@ -77,6 +77,8 @@ pub struct MatrixLedgerRow {
     pub lufs_delta_db: f32,
     pub dynamic_range_delta_lu: f32,
     pub warning_codes: Vec<String>,
+    pub confidence_gate_enabled: bool,
+    pub adaptive_compression_enabled: bool,
     pub output_path: String,
 }
 
@@ -85,6 +87,7 @@ pub struct PrivateFixtureMatrixReport {
     pub generated_at_iso: String,
     pub manifest_path: String,
     pub output_dir: String,
+    pub gate_state: EvidenceGateState,
     pub cases: Vec<MatrixCase>,
     pub rows: Vec<MatrixLedgerRow>,
 }
@@ -138,6 +141,7 @@ pub fn ledger_row_for(
     output_path: &Path,
     checks: &[QualityCheck],
 ) -> MatrixLedgerRow {
+    let gate_state = current_gate_state();
     MatrixLedgerRow {
         fixture_id: fixture_id.to_string(),
         source_path: source_path.to_string_lossy().to_string(),
@@ -157,6 +161,8 @@ pub fn ledger_row_for(
             .filter(|check| !matches!(check.level, QualityLevel::Info))
             .map(|check| check.code.clone())
             .collect(),
+        confidence_gate_enabled: gate_state.confidence_gate_enabled,
+        adaptive_compression_enabled: gate_state.adaptive_compression_enabled,
         output_path: output_path.to_string_lossy().to_string(),
     }
 }
@@ -190,6 +196,7 @@ pub fn run_fixture_matrix(
     // YES_MASTER_CONFIDENCE_GATING=1 can validate the Phase B gate without a UI.
     crate::confidence::init_confidence_gating_from_env();
     crate::guardrails::init_adaptive_compression_from_env();
+    let gate_state = current_gate_state();
     let manifest_dir = manifest_path.parent().unwrap_or_else(|| Path::new("."));
     let cases = default_already_mastered_matrix();
     let render_dir = output_dir.join("renders");
@@ -260,6 +267,7 @@ pub fn run_fixture_matrix(
         generated_at_iso: now_iso(),
         manifest_path: manifest_path.to_string_lossy().to_string(),
         output_dir: output_dir.to_string_lossy().to_string(),
+        gate_state,
         cases,
         rows: rows.clone(),
     };
@@ -282,11 +290,11 @@ pub fn run_fixture_matrix(
 
 fn ledger_csv(rows: &[MatrixLedgerRow]) -> String {
     let mut out = String::from(
-        "fixture_id,case_name,preset,compression_mode,source_lufs,rendered_lufs,lufs_delta_db,source_true_peak_dbtp,rendered_true_peak_dbtp,source_dynamic_range_lu,rendered_dynamic_range_lu,dynamic_range_delta_lu,warning_codes,source_path,output_path\n",
+        "fixture_id,case_name,preset,compression_mode,source_lufs,rendered_lufs,lufs_delta_db,source_true_peak_dbtp,rendered_true_peak_dbtp,source_dynamic_range_lu,rendered_dynamic_range_lu,dynamic_range_delta_lu,warning_codes,confidence_gate_enabled,adaptive_compression_enabled,source_path,output_path\n",
     );
     for row in rows {
         out.push_str(&format!(
-            "{},{},{},{},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{},{},{}\n",
+            "{},{},{},{},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{},{},{},{},{}\n",
             csv_escape(&row.fixture_id),
             csv_escape(&row.case_name),
             csv_escape(preset_slug(&row.preset)),
@@ -300,6 +308,8 @@ fn ledger_csv(rows: &[MatrixLedgerRow]) -> String {
             row.rendered_dynamic_range_lu,
             row.dynamic_range_delta_lu,
             csv_escape(&row.warning_codes.join("|")),
+            row.confidence_gate_enabled,
+            row.adaptive_compression_enabled,
             csv_escape(&row.source_path),
             csv_escape(&row.output_path),
         ));
@@ -533,6 +543,18 @@ mod tests {
         );
         assert!((row.lufs_delta_db - 1.6).abs() < 0.01);
         assert!((row.dynamic_range_delta_lu - -1.1).abs() < 0.01);
+        assert_eq!(
+            row.confidence_gate_enabled,
+            crate::confidence::is_confidence_gating_enabled()
+        );
+        assert_eq!(
+            row.adaptive_compression_enabled,
+            crate::guardrails::is_adaptive_compression_enabled()
+        );
+
+        let csv = ledger_csv(&[row]);
+        let header = csv.lines().next().expect("csv header");
+        assert!(header.contains("confidence_gate_enabled,adaptive_compression_enabled"));
     }
 
     #[test]

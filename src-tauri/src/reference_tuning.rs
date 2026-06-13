@@ -1,8 +1,8 @@
 use crate::analysis::analyze_one;
 use crate::engine::mastering_render_to_path;
 use crate::evidence_lanes::{
-    csv_escape, export_report_for, normalized_absolute_path, preset_slug,
-    resolve_adaptive_render_settings, sanitize_path_part,
+    csv_escape, current_gate_state, export_report_for, normalized_absolute_path, preset_slug,
+    resolve_adaptive_render_settings, sanitize_path_part, EvidenceGateState,
 };
 use crate::exports::export_checks_for_report;
 use crate::types::{
@@ -51,6 +51,8 @@ pub struct ReferenceLedgerRow {
     pub transient_flux_gap: Option<f32>,
     pub stereo_correlation_gap: Option<f32>,
     pub warning_codes: Vec<String>,
+    pub confidence_gate_enabled: bool,
+    pub adaptive_compression_enabled: bool,
     pub reference_path: String,
     pub yes_output_path: String,
 }
@@ -62,6 +64,7 @@ pub struct ReferenceTuningReport {
     pub output_dir: String,
     pub track_label: String,
     pub source_path: String,
+    pub gate_state: EvidenceGateState,
     pub rows: Vec<ReferenceLedgerRow>,
 }
 
@@ -152,6 +155,7 @@ pub fn comparison_row_for(
     yes_output_path: &Path,
     checks: &[QualityCheck],
 ) -> ReferenceLedgerRow {
+    let gate_state = current_gate_state();
     ReferenceLedgerRow {
         track_label: track_label.to_string(),
         preset,
@@ -186,6 +190,8 @@ pub fn comparison_row_for(
             .filter(|check| !matches!(check.level, QualityLevel::Info))
             .map(|check| check.code.clone())
             .collect(),
+        confidence_gate_enabled: gate_state.confidence_gate_enabled,
+        adaptive_compression_enabled: gate_state.adaptive_compression_enabled,
         reference_path: reference_path.to_string_lossy().to_string(),
         yes_output_path: yes_output_path.to_string_lossy().to_string(),
     }
@@ -199,6 +205,7 @@ pub fn run_reference_tuning_dir(
     // YES_MASTER_CONFIDENCE_GATING=1 can validate the Phase B gate without a UI.
     crate::confidence::init_confidence_gating_from_env();
     crate::guardrails::init_adaptive_compression_from_env();
+    let gate_state = current_gate_state();
     let cwd = std::env::current_dir().map_err(|e| CommandError::Io(format!("current dir: {e}")))?;
     let output_dir = normalized_absolute_path(&cwd, output_dir);
     let suite = discover_reference_suite(reference_dir)?;
@@ -286,6 +293,7 @@ pub fn run_reference_tuning_dir(
         output_dir: output_dir.to_string_lossy().to_string(),
         track_label: suite.track_label.clone(),
         source_path: suite.source_path.to_string_lossy().to_string(),
+        gate_state,
         rows: rows.clone(),
     };
     let report_path = output_dir.join("reference-tuning-report.json");
@@ -323,11 +331,11 @@ fn option_gap(yes_value: Option<f32>, reference_value: Option<f32>) -> Option<f3
 
 fn ledger_csv(rows: &[ReferenceLedgerRow]) -> String {
     let mut out = String::from(
-        "track_label,preset,source_lufs,reference_lufs,yes_lufs,reference_lufs_delta_db,yes_lufs_delta_db,lufs_gap_db,source_dynamic_range_lu,reference_dynamic_range_lu,yes_dynamic_range_lu,reference_dynamic_range_delta_lu,yes_dynamic_range_delta_lu,dynamic_range_gap_lu,spectral_low_gap,spectral_mid_gap,spectral_high_gap,transient_density_gap,stereo_width_gap,energy_density_gap,transient_flux_gap,stereo_correlation_gap,warning_codes,reference_path,yes_output_path\n",
+        "track_label,preset,source_lufs,reference_lufs,yes_lufs,reference_lufs_delta_db,yes_lufs_delta_db,lufs_gap_db,source_dynamic_range_lu,reference_dynamic_range_lu,yes_dynamic_range_lu,reference_dynamic_range_delta_lu,yes_dynamic_range_delta_lu,dynamic_range_gap_lu,spectral_low_gap,spectral_mid_gap,spectral_high_gap,transient_density_gap,stereo_width_gap,energy_density_gap,transient_flux_gap,stereo_correlation_gap,warning_codes,confidence_gate_enabled,adaptive_compression_enabled,reference_path,yes_output_path\n",
     );
     for row in rows {
         out.push_str(&format!(
-            "{},{},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.4},{:.4},{:.4},{:.4},{:.4},{},{},{},{},{},{}\n",
+            "{},{},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.4},{:.4},{:.4},{:.4},{:.4},{},{},{},{},{},{},{},{}\n",
             csv_escape(&row.track_label),
             csv_escape(preset_slug(&row.preset)),
             row.source_lufs,
@@ -351,6 +359,8 @@ fn ledger_csv(rows: &[ReferenceLedgerRow]) -> String {
             csv_option(row.transient_flux_gap),
             csv_option(row.stereo_correlation_gap),
             csv_escape(&row.warning_codes.join("|")),
+            row.confidence_gate_enabled,
+            row.adaptive_compression_enabled,
             csv_escape(&row.reference_path),
             csv_escape(&row.yes_output_path),
         ));
@@ -596,6 +606,18 @@ mod tests {
         assert!((row.transient_density_gap - -0.08).abs() < 0.01);
         assert!((row.stereo_width_gap - -0.06).abs() < 0.01);
         assert_eq!(row.warning_codes, vec!["dynamic_range_changed"]);
+        assert_eq!(
+            row.confidence_gate_enabled,
+            crate::confidence::is_confidence_gating_enabled()
+        );
+        assert_eq!(
+            row.adaptive_compression_enabled,
+            crate::guardrails::is_adaptive_compression_enabled()
+        );
+
+        let csv = ledger_csv(&[row]);
+        let header = csv.lines().next().expect("csv header");
+        assert!(header.contains("confidence_gate_enabled,adaptive_compression_enabled"));
     }
 
     #[test]
