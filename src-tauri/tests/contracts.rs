@@ -7,6 +7,20 @@ use common::default_master_settings;
 
 static ADAPTIVE_COMPRESSION_GATE_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
+struct AdaptiveCompressionGateReset(bool);
+
+impl Drop for AdaptiveCompressionGateReset {
+    fn drop(&mut self) {
+        yes_master_lib::guardrails::set_adaptive_compression_enabled(self.0);
+    }
+}
+
+fn adaptive_compression_gate_for_test(enabled: bool) -> AdaptiveCompressionGateReset {
+    AdaptiveCompressionGateReset(
+        yes_master_lib::guardrails::set_adaptive_compression_enabled(enabled),
+    )
+}
+
 #[test]
 fn position_nudge_promotes_unsure_first_and_last() {
     let mut first = stub_analysis_with(TrackRole::AlbumTrack, InferenceConfidence::Unsure);
@@ -932,13 +946,7 @@ fn export_receipt_records_adaptive_traceability_b5() {
     let _lock = ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
         .lock()
         .expect("adaptive compression gate test lock");
-    struct GateReset(bool);
-    impl Drop for GateReset {
-        fn drop(&mut self) {
-            yes_master_lib::guardrails::set_adaptive_compression_enabled(self.0);
-        }
-    }
-    let _gate = GateReset(yes_master_lib::guardrails::set_adaptive_compression_enabled(true));
+    let _gate = adaptive_compression_gate_for_test(true);
     let tmp = tempfile::tempdir().expect("tempdir");
     let in_path = tmp.path().join("adaptive.wav");
     write_sine_wav(&in_path, 44_100, 1.0, 440.0, 2);
@@ -1051,6 +1059,65 @@ fn export_receipt_records_adaptive_traceability_b5() {
     assert_eq!(m3.source_profile_digest, None);
     assert_eq!(m3.confidence_digest, None);
     assert_eq!(m3.compression_digest, None);
+}
+
+#[test]
+fn export_receipt_ignores_stale_compression_guards_when_gate_off() {
+    let _lock = ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
+        .lock()
+        .expect("adaptive compression gate test lock");
+    let _gate = adaptive_compression_gate_for_test(false);
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let in_path = tmp.path().join("stale-guards.wav");
+    write_sine_wav(&in_path, 44_100, 1.0, 440.0, 2);
+
+    let mut settings = default_master_settings();
+    settings.advanced.adaptive_strength = Some(1.0);
+    settings.advanced.source_profile = Some(SourceProfile {
+        spectral_6: SpectralBalance6 {
+            sub: 0.08,
+            low: 0.22,
+            low_mid: 0.2,
+            mid: 0.2,
+            presence: 0.2,
+            air: 0.2,
+        },
+        dynamic_range_p95_p10_db: 2.0,
+        dynamic_range_lu: 2.0,
+        stereo_correlation: Some(0.1),
+        stereo_width: 1.2,
+    });
+    settings.advanced.source_confidence = Some(confidence::Confidence::full());
+    settings.advanced.compression_guards = Some(yes_master_lib::guardrails::CompressionGuards {
+        low: yes_master_lib::guardrails::BandCompressionGuard {
+            density_mult: 0.80,
+            threshold_lift_db: 2.0,
+            ratio_mult: 0.90,
+        },
+        mid: yes_master_lib::guardrails::BandCompressionGuard::identity(),
+        high: yes_master_lib::guardrails::BandCompressionGuard {
+            density_mult: 0.75,
+            threshold_lift_db: 2.4,
+            ratio_mult: 0.88,
+        },
+        stand_down: 0.25,
+        reasons: vec![yes_master_lib::guardrails::GuardReason::LowBandDense],
+    });
+
+    let job = engine::mastering_render(
+        TrackId("stale-compression-guards".to_string()),
+        &in_path,
+        &settings,
+        tmp.path(),
+        RenderKind::Master,
+    )
+    .expect("render ok");
+    let m = job.measurements.expect("measurements");
+
+    assert_eq!(
+        m.compression_digest, None,
+        "gate-off renders must not report stale adaptive-compressor guards"
+    );
 }
 
 #[test]

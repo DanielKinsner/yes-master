@@ -23,6 +23,10 @@ data class WireMeasurements(
     @SerializedName("dynamic_range_lu") val dynamicRangeLu: Double,
     @SerializedName("sample_rate") val sampleRate: Int,
     @SerializedName("bit_depth") val bitDepth: Int,
+    @SerializedName("effective_adaptive_strength") val effectiveAdaptiveStrength: Double = 0.0,
+    @SerializedName("source_profile_digest") val sourceProfileDigest: String? = null,
+    @SerializedName("confidence_digest") val confidenceDigest: String? = null,
+    @SerializedName("compression_digest") val compressionDigest: String? = null,
 )
 
 data class WireRenderJob(

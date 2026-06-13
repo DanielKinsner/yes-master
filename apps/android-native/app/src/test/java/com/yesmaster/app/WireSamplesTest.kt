@@ -42,6 +42,13 @@ class WireSamplesTest {
         assertEquals(8.5, measurements.dynamicRangeLu, 1e-9)
         assertEquals(48_000, measurements.sampleRate)
         assertEquals(24, measurements.bitDepth)
+        assertEquals(0.75, measurements.effectiveAdaptiveStrength, 1e-9)
+        assertEquals("bass +1.2 | air -0.4", measurements.sourceProfileDigest)
+        assertEquals("bass 0.9 | tilt 0.6", measurements.confidenceDigest)
+        assertTrue(
+            "compression digest missing adaptive trace",
+            measurements.compressionDigest?.contains("compression eased low 20%") == true,
+        )
     }
 
     @Test
