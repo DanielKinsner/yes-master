@@ -1,12 +1,15 @@
 param(
     [ValidateSet("all", "frontend", "rust", "iphone", "android")]
-    [string]$Lane = "all"
+    [string]$Lane = "all",
+
+    [switch]$AllowAndroidSkip
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $originalLocation = Get-Location
+$skippedLanes = [System.Collections.Generic.List[string]]::new()
 
 function Invoke-Step {
     param(
@@ -73,7 +76,7 @@ function Invoke-IphoneLane {
     }
 }
 
-function Test-AndroidLaneAvailable {
+function Get-AndroidLaneMissingPrerequisites {
     $missing = @()
     if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
         $missing += "cargo"
@@ -97,18 +100,23 @@ function Test-AndroidLaneAvailable {
         $missing += "Rust target aarch64-linux-android"
     }
 
-    if ($missing.Count -gt 0) {
-        Write-Host ""
-        Write-Host "Skipping Android lane; missing: $($missing -join ', ')." -ForegroundColor Yellow
-        return $false
-    }
-
-    return $true
+    return $missing
 }
 
 function Invoke-AndroidLane {
-    if (-not (Test-AndroidLaneAvailable)) {
-        return
+    $missing = Get-AndroidLaneMissingPrerequisites
+
+    if ($missing.Count -gt 0) {
+        $message = "Android lane unavailable; missing: $($missing -join ', ')."
+        if ($AllowAndroidSkip) {
+            $skippedLanes.Add("android")
+            Write-Host ""
+            Write-Host "Skipping Android lane by explicit -AllowAndroidSkip; missing: $($missing -join ', ')." -ForegroundColor Yellow
+            return
+        }
+
+        Write-Host ""
+        throw "$message Pass -AllowAndroidSkip to record an intentional non-green skip."
     }
 
     Invoke-Step "android rust bridge tests" {
@@ -140,7 +148,11 @@ try {
 
     Write-Host ""
     $laneLabel = if ($Lane -eq "all") { "Fast verification lane" } else { "$Lane lane" }
-    Write-Host "$laneLabel passed." -ForegroundColor Green
+    if ($skippedLanes.Count -gt 0) {
+        Write-Host "$laneLabel completed with skipped lane(s): $($skippedLanes -join ', ')." -ForegroundColor Yellow
+    } else {
+        Write-Host "$laneLabel passed." -ForegroundColor Green
+    }
 } finally {
     Set-Location $originalLocation
 }
