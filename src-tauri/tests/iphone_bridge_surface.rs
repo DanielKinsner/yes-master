@@ -15,6 +15,10 @@
 
 use yes_master_lib::dsp::{ChainCoeffs, MasteringChain};
 use yes_master_lib::engine::AnalyzeRequest;
+use yes_master_lib::guardrails::{
+    AlreadyMasteredStandDown, CompressionBandPlan, CompressionGuards, CompressionPlan,
+    CompressionPlanReason, GuardReason,
+};
 use yes_master_lib::{
     AdvancedSettings, AnalysisResult, CompressionMode, DeliveryProfile, MasteringSettings, Preset,
     RenderKind, SourceProfile, TrackId,
@@ -37,6 +41,12 @@ fn bridge_type_surface(
     _: ChainCoeffs,
     _: MasteringChain,
     _: yes_master_lib::deep_analysis::DeepAnalysis,
+    _: AlreadyMasteredStandDown,
+    _: CompressionBandPlan,
+    _: CompressionGuards,
+    _: CompressionPlan,
+    _: CompressionPlanReason,
+    _: GuardReason,
 ) {
 }
 
@@ -56,5 +66,8 @@ fn bridge_function_surface_still_resolves() {
     let _ = yes_master_lib::confidence::resolve_source_confidence;
     let _ = yes_master_lib::guardrails::init_adaptive_compression_from_env;
     let _ = yes_master_lib::guardrails::is_adaptive_compression_enabled;
+    let _ = yes_master_lib::guardrails::set_adaptive_compression_enabled;
+    let _ = yes_master_lib::guardrails::classify_already_mastered_stand_down;
+    let _ = yes_master_lib::guardrails::compression_plan_for_resolved_settings;
     let _ = yes_master_lib::guardrails::resolve_compression_guards;
 }

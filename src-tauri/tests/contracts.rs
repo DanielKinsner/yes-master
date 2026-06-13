@@ -5,6 +5,8 @@ use yes_master_lib::*;
 mod common;
 use common::default_master_settings;
 
+static ADAPTIVE_COMPRESSION_GATE_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[test]
 fn position_nudge_promotes_unsure_first_and_last() {
     let mut first = stub_analysis_with(TrackRole::AlbumTrack, InferenceConfidence::Unsure);
@@ -927,6 +929,9 @@ fn rendered_measurements_reflect_landed_output_not_source() {
 #[test]
 fn export_receipt_records_adaptive_traceability_b5() {
     // B5 — a delivered master must record what adaptation produced it.
+    let _lock = ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
+        .lock()
+        .expect("adaptive compression gate test lock");
     struct GateReset(bool);
     impl Drop for GateReset {
         fn drop(&mut self) {

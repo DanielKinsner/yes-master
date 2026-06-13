@@ -72,6 +72,10 @@ const BAND_RATIO_EASE_CAP: f32 = 0.35; // TBD-CALIBRATION
 /// explicitly flips it.
 static ADAPTIVE_COMPRESSION: AtomicBool = AtomicBool::new(false);
 
+#[cfg(test)]
+pub(crate) static ADAPTIVE_COMPRESSION_GATE_TEST_LOCK: std::sync::Mutex<()> =
+    std::sync::Mutex::new(());
+
 pub fn is_adaptive_compression_enabled() -> bool {
     ADAPTIVE_COMPRESSION.load(Ordering::Relaxed)
 }
@@ -1209,6 +1213,9 @@ mod tests {
     fn compression_plan_reports_backend_resolved_adaptive_values() {
         use crate::confidence::Confidence;
 
+        let _lock = ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
+            .lock()
+            .expect("adaptive compression gate test lock");
         let _gate = AdaptiveCompressionGateReset::set(true);
         let mut settings = settings_with(None, Some(1.0));
         settings.advanced.source_confidence = Some(Confidence::full());

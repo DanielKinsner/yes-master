@@ -2338,8 +2338,6 @@ mod tests {
         (a - b).abs() <= tol
     }
 
-    static ADAPTIVE_GATE_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
     fn push_biquad_bits(out: &mut Vec<u32>, c: &BiquadCoeffs) {
         out.extend([
             c.b0.to_bits(),
@@ -3472,7 +3470,9 @@ mod tests {
 
     #[test]
     fn adaptive_compression_gate_off_keeps_coeffs_byte_identical_even_with_stale_guards() {
-        let _lock = ADAPTIVE_GATE_TEST_LOCK.lock().expect("adaptive gate lock");
+        let _lock = crate::guardrails::ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
+            .lock()
+            .expect("adaptive gate lock");
         let _reset = adaptive_gate_for_test(false);
 
         let mut settings = default_master_settings();
@@ -3493,7 +3493,9 @@ mod tests {
 
     #[test]
     fn adaptive_compression_gate_on_eases_preset_compressor_reduce_only() {
-        let _lock = ADAPTIVE_GATE_TEST_LOCK.lock().expect("adaptive gate lock");
+        let _lock = crate::guardrails::ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
+            .lock()
+            .expect("adaptive gate lock");
         let _reset = adaptive_gate_for_test(true);
 
         let mut settings = default_master_settings();
@@ -3575,7 +3577,9 @@ mod tests {
         use crate::confidence::{AxisConfidence, Confidence};
         use crate::deep_analysis::BandPsrStats;
 
-        let _lock = ADAPTIVE_GATE_TEST_LOCK.lock().expect("adaptive gate lock");
+        let _lock = crate::guardrails::ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
+            .lock()
+            .expect("adaptive gate lock");
         let _reset = adaptive_gate_for_test(true);
         let mut rng = 0x00A5_1C02_u32;
         let mut next_unit = || {

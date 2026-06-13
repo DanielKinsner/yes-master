@@ -346,6 +346,9 @@ mod tests {
 
     #[test]
     fn evidence_lanes_apply_the_same_compression_guards_as_the_app() {
+        let _lock = crate::guardrails::ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
+            .lock()
+            .expect("adaptive compression gate test lock");
         let _gate = AdaptiveCompressionGateReset::set(true);
         let mut analysis = synthetic_analysis();
         analysis.lufs_integrated = -9.0;

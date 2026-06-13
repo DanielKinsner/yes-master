@@ -710,6 +710,9 @@ pub unsafe extern "C" fn yes_master_native_live_destroy(handle: *mut LiveStream)
 mod tests {
     use super::*;
     use std::ffi::CString;
+    use std::sync::Mutex;
+
+    static ADAPTIVE_COMPRESSION_GATE_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     fn write_sine_wav(path: &std::path::Path, frames: u32, channels: u16) {
         let spec = hound::WavSpec {
@@ -1064,7 +1067,61 @@ mod tests {
     }
 
     #[test]
+    fn adaptive_compressor_gate_off_live_output_matches_desktop_chain_bit_for_bit() {
+        let _lock = ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
+            .lock()
+            .expect("adaptive compression gate test lock");
+        let _gate = adaptive_compression_gate_for_test(false);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("dense-gate-off.wav");
+        write_dense_wav(&path, 48_000 * 4, 2);
+
+        let pcm = yes_master_lib::decode::decode_full(&path).unwrap();
+        let channels = pcm.channels as usize;
+        let total = pcm.samples.len() / channels;
+        let context = crate::native_adaptive_context_for_path(&path).expect("adaptive context");
+        let settings = crate::export_settings_for_options_with_context(
+            Some("heavy"),
+            1.0,
+            -9.0,
+            Some(&context),
+        );
+        let plan = yes_master_lib::guardrails::compression_plan_for_resolved_settings(&settings);
+        assert!(
+            !plan.active,
+            "gate-off dense fixture must not resolve active adaptive compression guards: {plan:?}"
+        );
+
+        let mut reference = pcm.samples.clone();
+        let mut chain = MasteringChain::new(pcm.sample_rate, channels, &settings);
+        chain.process_interleaved(&mut reference, channels);
+
+        let c = CString::new(path.to_string_lossy().as_bytes()).unwrap();
+        let preset = CString::new("heavy").unwrap();
+        let handle =
+            unsafe { yes_master_native_live_create(c.as_ptr(), preset.as_ptr(), 1.0, -9.0) };
+        assert!(!handle.is_null());
+        let mut live = vec![0.0f32; total * channels];
+        unsafe {
+            yes_master_native_live_process(handle, live.as_mut_ptr(), total as u32);
+            yes_master_native_live_destroy(handle);
+        }
+
+        let max_diff = reference
+            .iter()
+            .zip(live.iter())
+            .fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
+        assert!(
+            max_diff < 1e-6,
+            "iPhone gate-off adaptive-compressor output must equal the desktop MasteringChain; max_diff={max_diff}"
+        );
+    }
+
+    #[test]
     fn adaptive_compressor_live_output_matches_desktop_chain_bit_for_bit() {
+        let _lock = ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
+            .lock()
+            .expect("adaptive compression gate test lock");
         let _gate = adaptive_compression_gate_for_test(true);
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("dense.wav");

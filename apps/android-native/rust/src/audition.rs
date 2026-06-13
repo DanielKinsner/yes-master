@@ -617,6 +617,8 @@ mod tests {
     use crate::test_util::{write_dense_wav, write_sine_wav};
     use yes_master_lib::dsp::MasteringChain;
 
+    static ADAPTIVE_COMPRESSION_GATE_TEST_LOCK: Mutex<()> = Mutex::new(());
+
     struct AdaptiveCompressionGateReset(bool);
 
     impl Drop for AdaptiveCompressionGateReset {
@@ -825,7 +827,51 @@ mod tests {
     }
 
     #[test]
+    fn adaptive_compressor_gate_off_output_matches_desktop_chain_bit_for_bit() {
+        let _lock = ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
+            .lock()
+            .expect("adaptive compression gate test lock");
+        let _gate = adaptive_compression_gate_for_test(false);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("dense-gate-off.wav");
+        write_dense_wav(&path, 48_000 * 4, 2, 48_000);
+
+        let pcm = yes_master_lib::decode::decode_full(&path).expect("decode");
+        let channels = pcm.channels as usize;
+        let total = pcm.samples.len() / channels;
+        let settings = desktop_adaptive_settings_for_path(&path, Some("heavy"), 1.0, -9.0);
+        let plan = yes_master_lib::guardrails::compression_plan_for_resolved_settings(&settings);
+        assert!(
+            !plan.active,
+            "gate-off dense fixture must not resolve active adaptive compression guards: {plan:?}"
+        );
+
+        let mut reference = pcm.samples.clone();
+        let mut chain = MasteringChain::new(pcm.sample_rate, channels, &settings);
+        chain.process_interleaved(&mut reference, channels);
+
+        let engine = AuditionEngine::create(&path.to_string_lossy(), Some("heavy"), 1.0, -9.0)
+            .expect("engine");
+        engine.set_bypass(false);
+        assert!(engine.start());
+        let mut android = vec![0.0f32; total * channels];
+        assert_eq!(engine.fill(&mut android, total as u32), total as u32);
+
+        let max_diff = reference
+            .iter()
+            .zip(android.iter())
+            .fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
+        assert!(
+            max_diff < 1e-6,
+            "Android gate-off adaptive-compressor output must equal the desktop MasteringChain; max_diff={max_diff}"
+        );
+    }
+
+    #[test]
     fn adaptive_compressor_output_matches_desktop_chain_bit_for_bit() {
+        let _lock = ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
+            .lock()
+            .expect("adaptive compression gate test lock");
         let _gate = adaptive_compression_gate_for_test(true);
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("dense.wav");
