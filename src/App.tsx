@@ -204,15 +204,20 @@ function App() {
           </div>
         </div>
       )}
-      {tm.error ? (
-        <Toast message={tm.error} tone="danger" onClose={tm.clearError} />
-      ) : tm.projectFeedback ? (
-        <Toast
-          message={tm.projectFeedback.message}
-          tone={tm.projectFeedback.tone}
-          onClose={tm.clearProjectFeedback}
-        />
-      ) : null}
+      {(tm.error || tm.projectFeedback) && (
+        <div className="toast-stack" aria-live="polite">
+          {tm.error && (
+            <Toast message={tm.error} tone="danger" onClose={tm.clearError} />
+          )}
+          {tm.projectFeedback && (
+            <Toast
+              message={tm.projectFeedback.message}
+              tone={tm.projectFeedback.tone}
+              onClose={tm.clearProjectFeedback}
+            />
+          )}
+        </div>
+      )}
       {selectedExportReceipt && view === "advanced" && (
         <ExportReceiptCard
           receipt={selectedExportReceipt}

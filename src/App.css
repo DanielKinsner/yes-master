@@ -2662,6 +2662,16 @@ button.primary:disabled {
 }
 
 /* Toast */
+.toast-stack {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  z-index: 100;
+}
+
 .toast {
   position: fixed;
   bottom: 1.5rem;
@@ -2678,6 +2688,12 @@ button.primary:disabled {
   color: var(--text-0);
   font-size: 0.85rem;
   z-index: 100;
+}
+
+.toast-stack .toast {
+  position: static;
+  right: auto;
+  bottom: auto;
 }
 
 .toast-ok {

@@ -30,6 +30,7 @@ import { resetToneSettings } from "../lib/tone-reset";
 import { resetToStandardManaged as resetToStandardManagedSettings } from "../lib/standard-managed";
 import { standardExportSettings } from "../lib/standard-export";
 import { buildExportReport } from "../lib/export-receipt";
+import { userErrorMessage, type UserErrorContext } from "../lib/user-errors";
 import {
   AUDIO_DIALOG_FILTER,
   SUPPORTED_FORMATS_COPY,
@@ -203,8 +204,8 @@ export function shouldPushLiveChainForSettingsEdit({
 /// (no `"Error: "` prefix); anything else stringifies. Used by every catch
 /// that calls `setError`, so thrown `Error`s and raw string rejections render
 /// identically.
-export function messageOf(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+export function messageOf(err: unknown, context?: UserErrorContext): string {
+  return userErrorMessage(err, context);
 }
 
 export function playbackErrorMessage(
@@ -1087,7 +1088,7 @@ export function useTrackMaster() {
 
         await rebuildWaveforms(imported);
       } catch (err) {
-        setError(messageOf(err));
+        setError(messageOf(err, { name: projectDisplayName(paths[0] ?? "") }));
       }
     },
     [selectedTrackId, markStale, analyzeKnownTracks, rebuildWaveforms],
