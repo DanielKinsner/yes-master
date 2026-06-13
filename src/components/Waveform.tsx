@@ -100,6 +100,7 @@ export function WaveformView({
   currentTimeSec,
   durationSec,
   region,
+  showRegionHint = true,
   onSeek,
   onSetRegion,
   onClearRegion,
@@ -111,6 +112,7 @@ export function WaveformView({
   currentTimeSec: number;
   durationSec: number;
   region: LoopRegion | null;
+  showRegionHint?: boolean;
   onSeek: (positionSec: number) => void;
   onSetRegion: (region: LoopRegion) => void;
   onClearRegion: () => void;
@@ -249,7 +251,11 @@ export function WaveformView({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         role="slider"
-        aria-label="Waveform — click to seek, shift+drag to set a loop region"
+        aria-label={
+          showRegionHint
+            ? "Waveform — click to seek, shift+drag to set a loop region"
+            : "Waveform — click to seek"
+        }
         aria-valuemin={0}
         aria-valuemax={durationSec}
         aria-valuenow={currentTimeSec}
@@ -287,9 +293,11 @@ export function WaveformView({
         region={displayRegion}
         onSeek={onSeek}
       />
-      <p className="wf-hint">
-        Click to seek. Shift+drag to define a loop region. Shift+click clears it.
-      </p>
+      {showRegionHint && (
+        <p className="wf-hint">
+          Click to seek. Shift+drag to define a loop region. Shift+click clears it.
+        </p>
+      )}
     </section>
   );
 }

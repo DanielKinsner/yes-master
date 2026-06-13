@@ -859,6 +859,7 @@ function DeliveryFormatCard({
           ]}
           onChange={onSampleRate}
         />
+        <p className="format-note">Track Master exports WAV files.</p>
       </div>
     </section>
   );

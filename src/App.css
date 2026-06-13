@@ -1986,8 +1986,8 @@ button.primary:disabled {
 .tile-label {
   font-weight: 600;
   font-size: 0.8rem;
-  letter-spacing: 0.02em;
-  line-height: 1;
+  letter-spacing: 0;
+  line-height: 1.12;
 }
 
 /* Restructure slice B: blurb hidden entirely on the compact strip;
@@ -3507,6 +3507,13 @@ button.primary:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+}
+
+.format-note {
+  margin: 0.1rem 0 0;
+  color: var(--text-2);
+  font-size: 0.72rem;
+  line-height: 1.25;
 }
 
 /* Advanced drawer: its body carries both .advanced-grid and .rail-card-body,
@@ -5844,6 +5851,7 @@ button.primary:disabled {
 }
 .std-delivery-name { font-size: 0.92rem; font-weight: 600; color: var(--text-0); }
 .std-delivery-spec { font-size: 0.76rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.std-delivery-note { font-size: 0.72rem; color: var(--text-2); line-height: 1.25; }
 .std-delivery-change {
   align-self: flex-start;
   min-height: 34px;

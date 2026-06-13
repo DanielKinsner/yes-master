@@ -191,4 +191,26 @@ describe("App user-facing errors", () => {
       root.unmount();
     });
   });
+
+  it("explains that Album Master opens in the Advanced view", async () => {
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(buttonByText(container, "Import audio")).toBeTruthy();
+    });
+
+    await act(async () => {
+      buttonByText(container, "Album Master").click();
+    });
+
+    await waitFor(() => {
+      expect(container.textContent).toContain(
+        "Album Master lives in the Advanced view.",
+      );
+    });
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
 });

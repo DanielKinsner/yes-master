@@ -326,6 +326,9 @@ describe("StandardRightRail", () => {
     const { container, root } = await render(<StandardView tm={fakeTm({ setVolumeMatch })} onEnterAdvanced={() => {}} />);
     const toggle = container.querySelector<HTMLButtonElement>(".std-volume-match")!;
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    expect(toggle.title).toBe(
+      "Aligns playback loudness for fair tone comparison. Export level is unchanged.",
+    );
     await act(async () => { toggle.click(); });
     expect(setVolumeMatch).toHaveBeenCalledWith(true);
     await act(async () => root.unmount());
@@ -336,9 +339,28 @@ describe("StandardRightRail", () => {
     const { container, root } = await render(
       <StandardView tm={fakeTm()} onEnterAdvanced={onEnterAdvanced} />,
     );
+    expect(container.textContent).toContain("Create Master writes a WAV file.");
     const change = container.querySelector<HTMLButtonElement>(".std-delivery-change")!;
     await act(async () => { change.click(); });
     expect(onEnterAdvanced).toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("does not show Advanced-only loop-region hint copy in Standard", async () => {
+    const waveform = {
+      track_id: "t1",
+      channels: [[0.2, 0.4, 0.3]],
+      samples_per_pixel: 512,
+      total_samples: 1536,
+      sample_rate: 44_100,
+    };
+    const { container, root } = await render(
+      <StandardView
+        tm={fakeTm({ selectedWaveform: waveform } as Partial<TM>)}
+        onEnterAdvanced={() => {}}
+      />,
+    );
+    expect(container.textContent).not.toContain("Shift+drag");
     await act(async () => root.unmount());
   });
 

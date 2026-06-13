@@ -356,6 +356,7 @@ function StandardRightRail({
             type="button"
             className={`toolbar-toggle std-volume-match ${tm.transport.volumeMatch ? "is-on" : ""}`}
             aria-pressed={tm.transport.volumeMatch}
+            title="Aligns playback loudness for fair tone comparison. Export level is unchanged."
             onClick={() => tm.setVolumeMatch(!tm.transport.volumeMatch)}
           >
             <span className="toolbar-toggle-box" aria-hidden />
@@ -411,6 +412,7 @@ function StandardRightRail({
             "Streaming" would read as a live profile next to a −9 LUFS target. */}
         <div className="std-delivery-name">Standard WAV</div>
         <div className="std-delivery-spec">44.1 kHz · 24-bit · −1 dBTP</div>
+        <div className="std-delivery-note">Create Master writes a WAV file.</div>
         <button type="button" className="ghost-btn std-delivery-change" onClick={onEnterAdvanced}>
           Change
         </button>
@@ -579,6 +581,7 @@ export function StandardView({
               currentTimeSec={tm.transport.currentTimeSec}
               durationSec={tm.selectedTrack?.duration_seconds ?? 0}
               region={tm.selectedRegion}
+              showRegionHint={false}
               onSeek={tm.seek}
               onSetRegion={tm.setRegion}
               onClearRegion={tm.clearRegion}

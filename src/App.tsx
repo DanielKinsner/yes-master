@@ -35,6 +35,7 @@ import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
 import { markGuideFinished, requestGuideReset } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
 import { SUPPORTED_FORMATS_COPY } from "./lib/supported-formats";
+import { STANDARD_STYLES, presetToStyle } from "./lib/standard-mapping";
 import "./App.css";
 
 const PRESET_OPTIONS: { value: Preset; label: string; blurb: string }[] = [
@@ -51,6 +52,7 @@ const PRESET_OPTIONS: { value: Preset; label: string; blurb: string }[] = [
 function App() {
   const tm = useTrackMaster();
   const [chromePanel, setChromePanel] = useState<"settings" | "help" | null>(null);
+  const [modeNotice, setModeNotice] = useState<string | null>(null);
   useWebviewZoomShortcuts();
 
   // B5.1: Standard/Advanced/Album navigation is ONE legal-state machine
@@ -85,11 +87,20 @@ function App() {
     tm.setForceWysiwyg(view === "standard");
   }, [view, tm.setForceWysiwyg]);
 
+  const handleModeChange = (nextMode: "track" | "album") => {
+    if (nextMode === "album" && view === "standard") {
+      setModeNotice("Album Master lives in the Advanced view.");
+    } else {
+      setModeNotice(null);
+    }
+    tm.setMode(nextMode);
+  };
+
   return (
     <div className="app-root">
       <TopHeader
         mode={tm.mode}
-        onModeChange={tm.setMode}
+        onModeChange={handleModeChange}
         onSaveProject={tm.saveProjectAs}
         onOpenProject={tm.openProjectFromDisk}
         onOpenSettings={() => setChromePanel("settings")}
@@ -204,10 +215,17 @@ function App() {
           </div>
         </div>
       )}
-      {(tm.error || tm.projectFeedback) && (
+      {(tm.error || tm.projectFeedback || modeNotice) && (
         <div className="toast-stack" aria-live="polite">
           {tm.error && (
             <Toast message={tm.error} tone="danger" onClose={tm.clearError} />
+          )}
+          {modeNotice && (
+            <Toast
+              message={modeNotice}
+              tone="info"
+              onClose={() => setModeNotice(null)}
+            />
           )}
           {tm.projectFeedback && (
             <Toast
@@ -590,6 +608,12 @@ function BackToStandardConfirm({
       </div>
     </div>
   );
+}
+
+function standardAliasForPreset(preset: Preset): string | null {
+  const styleId = presetToStyle(preset);
+  const style = STANDARD_STYLES.find((candidate) => candidate.id === styleId);
+  return style ? `${style.label} in Standard` : null;
 }
 
 function Sidebar({
@@ -1372,6 +1396,7 @@ export function PresetTiles({
         {PRESET_OPTIONS.map((p) => {
           const active = isPresetActive(selected, p.value);
           const accent = PRESET_ACCENT[p.value.kind];
+          const standardAlias = standardAliasForPreset(p.value);
           return (
             <button
               key={p.label}
@@ -1382,7 +1407,9 @@ export function PresetTiles({
               title={`${p.label} — ${p.blurb}`}
             >
               <PresetIcon kind={p.value.kind} className="tile-icon" />
-              <span className="tile-label">{p.label}</span>
+              <span className="tile-label">
+                {standardAlias ? `${p.label} · ${standardAlias}` : p.label}
+              </span>
               <span className="tile-blurb">{p.blurb}</span>
             </button>
           );

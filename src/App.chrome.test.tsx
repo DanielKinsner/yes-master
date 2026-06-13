@@ -2,7 +2,7 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { HelpPanel, SettingsPanel, TopHeader, TrackHeader } from "./App";
+import { HelpPanel, PresetTiles, SettingsPanel, TopHeader, TrackHeader } from "./App";
 import type { ImportedTrack } from "./bindings";
 import { STANDARD_EXPORT_DELIVERY } from "./lib/standard-export";
 
@@ -251,6 +251,27 @@ describe("advanced track header", () => {
     });
     expect(container.querySelector<HTMLButtonElement>(".track-reanalyze")?.disabled).toBe(true);
 
+    await act(async () => {
+      root.unmount();
+    });
+  });
+});
+
+describe("advanced preset tiles", () => {
+  it("bridges Advanced presets to their Standard style names", async () => {
+    const { container, root } = await renderNode(
+      <PresetTiles
+        selected={{ kind: "universal" }}
+        onChange={vi.fn()}
+        savingPreset={false}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(container.textContent).toContain("Universal · Balanced in Standard");
+    expect(container.textContent).toContain("Clarity · Bright in Standard");
+    expect(container.textContent).toContain("Tape · Warm in Standard");
+    expect(container.textContent).toContain("Oomph · Heavy in Standard");
     await act(async () => {
       root.unmount();
     });
