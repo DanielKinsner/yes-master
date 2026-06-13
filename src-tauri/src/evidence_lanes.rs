@@ -25,7 +25,9 @@ use crate::types::{
 /// source must be analyzed with `deep = true` so Phase B confidence CAN
 /// resolve; while confidence gating is off it resolves to `None`
 /// (byte-identical Tier-1), and once the gate flips on the lanes track the
-/// app automatically.
+/// app automatically. Adaptive-compressor guards follow the same app path:
+/// gate off is inert, gate on consumes the deep per-band PSR and the
+/// already-mastered stand-down classifier.
 pub(crate) fn resolve_adaptive_render_settings(
     source_analysis: &AnalysisResult,
     preset: Preset,
@@ -40,6 +42,22 @@ pub(crate) fn resolve_adaptive_render_settings(
     crate::profile_store::apply_resolved_confidence(
         &mut settings,
         source_analysis.deep_analysis.clone(),
+        false,
+    );
+    let band_psr = source_analysis
+        .deep_analysis
+        .as_deref()
+        .and_then(crate::deep_analysis::band_psr_p10_db);
+    let stand_down = crate::guardrails::classify_already_mastered_stand_down(
+        source_analysis.lufs_integrated,
+        source_analysis.true_peak_dbtp,
+        source_analysis.dynamic_range_lu,
+        band_psr,
+    );
+    crate::profile_store::apply_resolved_compression_guards(
+        &mut settings,
+        source_analysis.deep_analysis.clone(),
+        Some(stand_down),
         false,
     );
     settings
@@ -156,6 +174,20 @@ mod tests {
     };
     use std::sync::Arc;
 
+    struct AdaptiveCompressionGateReset(bool);
+
+    impl AdaptiveCompressionGateReset {
+        fn set(enabled: bool) -> Self {
+            Self(crate::guardrails::set_adaptive_compression_enabled(enabled))
+        }
+    }
+
+    impl Drop for AdaptiveCompressionGateReset {
+        fn drop(&mut self) {
+            crate::guardrails::set_adaptive_compression_enabled(self.0);
+        }
+    }
+
     fn synthetic_analysis() -> AnalysisResult {
         AnalysisResult {
             track_id: TrackId("cross-lane".to_string()),
@@ -210,6 +242,63 @@ mod tests {
         }
     }
 
+    fn dense_deep_for_test() -> crate::deep_analysis::DeepAnalysis {
+        let window = crate::deep_analysis::WindowMetrics {
+            loudness_key: -6.0,
+            sample_peak: 1.0,
+            crest: 1.4,
+            stereo_width: 0.4,
+            stereo_correlation: 0.4,
+            low: 0.34,
+            mid: 0.33,
+            high: 0.33,
+            comp_low_31: 0.34,
+            comp_mid_31: 0.33,
+            comp_high_31: 0.33,
+            low_31: 0.34,
+            harsh_31: 0.12,
+            sibilant_31: 0.12,
+            air_31: 0.09,
+            tilt_31: 0.0,
+        };
+        crate::deep_analysis::DeepAnalysis::from_parts([1.0 / 31.0; 31], vec![window; 8])
+    }
+
+    fn app_resolved_settings(
+        source_analysis: &AnalysisResult,
+        preset: Preset,
+        compression_mode: CompressionMode,
+    ) -> MasteringSettings {
+        let mut settings = source_analysis.recommended_universal.clone();
+        settings.preset = preset;
+        settings.volume_match = false;
+        settings.source_lufs_integrated = Some(source_analysis.lufs_integrated);
+        settings.advanced.compression_mode = compression_mode;
+        settings.advanced.source_profile =
+            crate::types::SourceProfile::from_analysis(source_analysis);
+        crate::profile_store::apply_resolved_confidence(
+            &mut settings,
+            source_analysis.deep_analysis.clone(),
+            false,
+        );
+        let band_psr = source_analysis
+            .deep_analysis
+            .as_deref()
+            .and_then(crate::deep_analysis::band_psr_p10_db);
+        crate::profile_store::apply_resolved_compression_guards(
+            &mut settings,
+            source_analysis.deep_analysis.clone(),
+            Some(crate::guardrails::classify_already_mastered_stand_down(
+                source_analysis.lufs_integrated,
+                source_analysis.true_peak_dbtp,
+                source_analysis.dynamic_range_lu,
+                band_psr,
+            )),
+            false,
+        );
+        settings
+    }
+
     /// The drift class each lane's own pin cannot see: both lanes staying
     /// individually green while resolving DIFFERENT adaptive contexts for
     /// the same source. Identical inputs through both public wrappers must
@@ -253,5 +342,46 @@ mod tests {
         let confidence = |s: &MasteringSettings| format!("{:?}", s.advanced.source_confidence);
         assert_eq!(confidence(&from_matrix), confidence(&from_reference));
         assert_eq!(confidence(&from_matrix), confidence(&from_shared));
+    }
+
+    #[test]
+    fn evidence_lanes_apply_the_same_compression_guards_as_the_app() {
+        let _gate = AdaptiveCompressionGateReset::set(true);
+        let mut analysis = synthetic_analysis();
+        analysis.lufs_integrated = -9.0;
+        analysis.true_peak_dbtp = -0.4;
+        analysis.dynamic_range_lu = 4.0;
+        analysis.deep_analysis = Some(Arc::new(dense_deep_for_test()));
+        let preset = Preset::Universal;
+
+        let from_matrix = settings_for_matrix_case(
+            &analysis,
+            &MatrixCase {
+                name: "universal-preset".to_string(),
+                preset: preset.clone(),
+                compression_mode: CompressionMode::Preset,
+            },
+        );
+        let from_reference = settings_for_reference_preset(&analysis, preset.clone());
+        let from_shared =
+            resolve_adaptive_render_settings(&analysis, preset.clone(), CompressionMode::Preset);
+        let expected = app_resolved_settings(&analysis, preset, CompressionMode::Preset);
+
+        assert!(
+            expected.advanced.compression_guards.is_some(),
+            "synthetic dense/already-mastered source should trigger adaptive compression guards"
+        );
+        assert_eq!(
+            from_matrix.advanced.compression_guards, expected.advanced.compression_guards,
+            "fixture matrix must render with the app-resolved compression guards"
+        );
+        assert_eq!(
+            from_reference.advanced.compression_guards, expected.advanced.compression_guards,
+            "reference tuning must render with the app-resolved compression guards"
+        );
+        assert_eq!(
+            from_shared.advanced.compression_guards, expected.advanced.compression_guards,
+            "shared evidence resolver must inject app-resolved compression guards"
+        );
     }
 }
