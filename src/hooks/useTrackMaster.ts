@@ -302,6 +302,14 @@ export function useTrackMaster() {
     fraction: number;
     kind: "preview" | "master" | "album";
   } | null>(null);
+  const clearIncompleteRenderProgress = useCallback(
+    (kind: "preview" | "master" | "album") => {
+      setRenderProgress((prev) =>
+        prev?.kind === kind && prev.fraction < 1.0 ? null : prev,
+      );
+    },
+    [],
+  );
   // "Landing loudness…": true while Mastered audition plays hotter than the
   // loudness target because the corrective landing gain is still being
   // measured in the background. Edge-triggered from the backend.
@@ -1419,6 +1427,7 @@ export function useTrackMaster() {
     } catch (err) {
       setError(messageOf(err));
     } finally {
+      clearIncompleteRenderProgress("album");
       setAlbumRendering(false);
     }
   }, [
@@ -1432,6 +1441,7 @@ export function useTrackMaster() {
     albumTitle,
     albumSampleRate,
     albumBitDepth,
+    clearIncompleteRenderProgress,
   ]);
 
   /// Phase A3 — pick a delivery profile. Replaces lufs_offset_db /
@@ -1513,9 +1523,16 @@ export function useTrackMaster() {
     } catch (err) {
       setError(messageOf(err));
     } finally {
+      clearIncompleteRenderProgress("preview");
       setIsRendering(false);
     }
-  }, [selectedTrackId, selectedTrack, selectedSettings, markFresh]);
+  }, [
+    selectedTrackId,
+    selectedTrack,
+    selectedSettings,
+    markFresh,
+    clearIncompleteRenderProgress,
+  ]);
 
   const runExport = useCallback(
     async (exportSettings: MasteringSettings) => {
@@ -1564,10 +1581,11 @@ export function useTrackMaster() {
       } catch (err) {
         setError(messageOf(err));
       } finally {
+        clearIncompleteRenderProgress("master");
         setIsExporting(false);
       }
     },
-    [selectedTrackId, selectedAnalysis, selectedTrack],
+    [selectedTrackId, selectedAnalysis, selectedTrack, clearIncompleteRenderProgress],
   );
 
   const exportMaster = useCallback(

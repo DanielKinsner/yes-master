@@ -2711,7 +2711,7 @@ describe("staged analysis progress", () => {
 });
 
 describe("render progress timer", () => {
-  it("a previous render's completion clear does not wipe a newly-started render", async () => {
+  function captureRenderProgress() {
     let emitRenderProgress!: (evt: {
       fraction: number;
       kind: "preview" | "master" | "album";
@@ -2720,18 +2720,23 @@ describe("render progress timer", () => {
       emitRenderProgress = cb;
       return Promise.resolve(() => {});
     });
+    return () => emitRenderProgress;
+  }
+
+  it("a previous render's completion clear does not wipe a newly-started render", async () => {
+    const getEmitRenderProgress = captureRenderProgress();
 
     const harness = await renderHookHarness();
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
       // Render A completes -> schedules the 600ms "clear the bar" timer.
       await act(async () => {
-        emitRenderProgress({ fraction: 1.0, kind: "master" });
+        getEmitRenderProgress()({ fraction: 1.0, kind: "master" });
       });
       // Render B starts <600ms later (a fresh, non-completion event).
       await act(async () => {
         vi.advanceTimersByTime(100);
-        emitRenderProgress({ fraction: 0.1, kind: "master" });
+        getEmitRenderProgress()({ fraction: 0.1, kind: "master" });
       });
       // Past A's 600ms window: its stale clear must NOT have fired.
       await act(async () => {
@@ -2743,6 +2748,110 @@ describe("render progress timer", () => {
       });
     } finally {
       vi.useRealTimers();
+      await act(async () => {
+        harness.root.unmount();
+      });
+    }
+  });
+
+  it("clears incomplete preview progress when preview rendering fails", async () => {
+    const getEmitRenderProgress = captureRenderProgress();
+    const track = makeTrack("preview-error", "C:/audio/preview-error.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.api.renderTrackPreview.mockImplementation(async () => {
+      getEmitRenderProgress()({ fraction: 0.42, kind: "preview" });
+      throw new Error("preview render failed");
+    });
+    const harness = await renderHookHarness();
+
+    try {
+      await act(async () => {
+        await harness.current().importFiles([track.path]);
+      });
+      await waitFor(() => {
+        expect(harness.current().selectedTrackId).toBe(track.id);
+      });
+
+      await act(async () => {
+        await harness.current().updatePreview();
+      });
+
+      expect(harness.current().error).toContain("preview render failed");
+      expect(harness.current().isRendering).toBe(false);
+      expect(harness.current().renderProgress).toBeNull();
+    } finally {
+      await act(async () => {
+        harness.root.unmount();
+      });
+    }
+  });
+
+  it("clears incomplete master progress when master rendering fails", async () => {
+    const getEmitRenderProgress = captureRenderProgress();
+    const track = makeTrack("master-error", "C:/audio/master-error.wav");
+    const outputPath = "/Users/daniel/Desktop/master-error.wav";
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.save.mockResolvedValue(outputPath);
+    mocks.api.renderTrackMaster.mockImplementation(async () => {
+      getEmitRenderProgress()({ fraction: 0.53, kind: "master" });
+      throw new Error("master render failed");
+    });
+    const harness = await renderHookHarness();
+
+    try {
+      await act(async () => {
+        await harness.current().importFiles([track.path]);
+      });
+      await waitFor(() => {
+        expect(harness.current().selectedTrackId).toBe(track.id);
+      });
+
+      await act(async () => {
+        await harness.current().exportMaster();
+      });
+
+      expect(harness.current().error).toContain("master render failed");
+      expect(harness.current().isExporting).toBe(false);
+      expect(harness.current().renderProgress).toBeNull();
+    } finally {
+      await act(async () => {
+        harness.root.unmount();
+      });
+    }
+  });
+
+  it("clears stale master progress when export is cancelled before rendering", async () => {
+    const getEmitRenderProgress = captureRenderProgress();
+    const track = makeTrack("master-cancel", "C:/audio/master-cancel.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.save.mockResolvedValue(null);
+    const harness = await renderHookHarness();
+
+    try {
+      await act(async () => {
+        await harness.current().importFiles([track.path]);
+      });
+      await waitFor(() => {
+        expect(harness.current().selectedTrackId).toBe(track.id);
+      });
+      await act(async () => {
+        getEmitRenderProgress()({ fraction: 0.31, kind: "master" });
+      });
+      expect(harness.current().renderProgress).toEqual({
+        fraction: 0.31,
+        kind: "master",
+      });
+
+      await act(async () => {
+        await harness.current().exportMaster();
+      });
+
+      expect(mocks.api.renderTrackMaster).not.toHaveBeenCalled();
+      expect(harness.current().renderProgress).toBeNull();
+    } finally {
       await act(async () => {
         harness.root.unmount();
       });
