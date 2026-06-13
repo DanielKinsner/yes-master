@@ -970,6 +970,69 @@ export function useTrackMaster() {
   // re-attach on every render of the hook.
   const importFilesRef = useRef<(paths: string[]) => Promise<void>>(async () => {});
 
+  const analyzeKnownTracks = useCallback(
+    async (targetTracks: ImportedTrack[]): Promise<AnalysisResult[]> => {
+      if (targetTracks.length === 0) return [];
+      const batchId = beginAnalysis();
+      try {
+        const results = await api.analyzeTracks(
+          targetTracks.map((t) => ({ id: t.id, path: t.path })),
+          batchId,
+        );
+        setAnalysisMap((prev) => {
+          const next = { ...prev };
+          for (const r of results) next[r.track_id] = r;
+          return next;
+        });
+        return results;
+      } finally {
+        finishAnalysis(batchId);
+      }
+    },
+    [beginAnalysis, finishAnalysis],
+  );
+
+  const rebuildWaveforms = useCallback(async (targetTracks: ImportedTrack[]) => {
+    if (targetTracks.length === 0) return;
+    setIsLoadingWaveform(true);
+    try {
+      for (const track of targetTracks) {
+        const wf = await api.prepareWaveform(track.id, track.path, 1200);
+        setWaveformMap((prev) => ({ ...prev, [track.id]: wf }));
+      }
+    } finally {
+      setIsLoadingWaveform(false);
+    }
+  }, []);
+
+  const reanalyzeTracks = useCallback(
+    async (targetTracks: ImportedTrack[]) => {
+      if (targetTracks.length === 0) return;
+      setError(null);
+      setProjectFeedback(null);
+      try {
+        await analyzeKnownTracks(targetTracks);
+        await rebuildWaveforms(targetTracks);
+      } catch (err) {
+        setError(messageOf(err));
+      }
+    },
+    [analyzeKnownTracks, rebuildWaveforms],
+  );
+
+  const reanalyzeTrack = useCallback(
+    async (id: TrackId) => {
+      const track = tracks.find((t) => t.id === id);
+      if (!track) return;
+      await reanalyzeTracks([track]);
+    },
+    [tracks, reanalyzeTracks],
+  );
+
+  const reanalyzeAll = useCallback(async () => {
+    await reanalyzeTracks(tracks);
+  }, [tracks, reanalyzeTracks]);
+
   const importFiles = useCallback(
     async (paths: string[]) => {
       if (paths.length === 0) return;
@@ -998,45 +1061,24 @@ export function useTrackMaster() {
           });
         }
 
-        const batchId = beginAnalysis();
-        try {
-          const results = await api.analyzeTracks(
-            imported.map((t) => ({ id: t.id, path: t.path })),
-            batchId,
-          );
-          setAnalysisMap((prev) => {
-            const next = { ...prev };
-            for (const r of results) next[r.track_id] = r;
-            return next;
-          });
-          setSettingsMap((prev) => {
-            const next = { ...prev };
-            for (const r of results) {
-              const current = next[r.track_id] ?? DEFAULT_SETTINGS;
-              if (current.preset.kind === "universal") {
-                next[r.track_id] = r.recommended_universal;
-              }
+        const results = await analyzeKnownTracks(imported);
+        setSettingsMap((prev) => {
+          const next = { ...prev };
+          for (const r of results) {
+            const current = next[r.track_id] ?? DEFAULT_SETTINGS;
+            if (current.preset.kind === "universal") {
+              next[r.track_id] = r.recommended_universal;
             }
-            return next;
-          });
-        } finally {
-          finishAnalysis(batchId);
-        }
-
-        setIsLoadingWaveform(true);
-        try {
-          for (const track of imported) {
-            const wf = await api.prepareWaveform(track.id, track.path, 1200);
-            setWaveformMap((prev) => ({ ...prev, [track.id]: wf }));
           }
-        } finally {
-          setIsLoadingWaveform(false);
-        }
+          return next;
+        });
+
+        await rebuildWaveforms(imported);
       } catch (err) {
         setError(messageOf(err));
       }
     },
-    [selectedTrackId, markStale, beginAnalysis, finishAnalysis],
+    [selectedTrackId, markStale, analyzeKnownTracks, rebuildWaveforms],
   );
 
   // Keep the ref in sync with the latest importFiles closure so the long-lived
@@ -2171,6 +2213,8 @@ export function useTrackMaster() {
 
     openImportDialog,
     importFiles,
+    reanalyzeTrack,
+    reanalyzeAll,
     selectTrack,
     removeTrack,
     setPreset,

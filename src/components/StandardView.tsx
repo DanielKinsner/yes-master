@@ -184,6 +184,17 @@ function TracksRail({ tm }: { tm: TM }) {
             ? "Analyzed"
             : "Not analyzed"}
       </div>
+      {!tm.isAnalyzing && !tm.selectedAnalysis && tm.selectedTrackId && (
+        <button
+          type="button"
+          className="ghost-btn std-reanalyze-track"
+          onClick={() => {
+            void tm.reanalyzeTrack(tm.selectedTrackId!);
+          }}
+        >
+          Re-analyze
+        </button>
+      )}
     </aside>
   );
 }

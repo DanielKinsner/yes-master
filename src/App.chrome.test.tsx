@@ -2,7 +2,8 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { HelpPanel, SettingsPanel, TopHeader } from "./App";
+import { HelpPanel, SettingsPanel, TopHeader, TrackHeader } from "./App";
+import type { ImportedTrack } from "./bindings";
 import { STANDARD_EXPORT_DELIVERY } from "./lib/standard-export";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean })
@@ -182,6 +183,74 @@ describe("top chrome", () => {
     });
 
     expect(onClose).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      root.unmount();
+    });
+  });
+});
+
+describe("advanced track header", () => {
+  it("wires the manual re-analyze action", async () => {
+    const onReanalyze = vi.fn();
+    const track: ImportedTrack = {
+      id: "track-1",
+      path: "C:/audio/track-1.wav",
+      display_name: "Track One.wav",
+      source_format: "wav",
+      duration_seconds: 120,
+      sample_rate: 44_100,
+      channels: 2,
+    };
+    const { container, root } = await renderNode(
+      <TrackHeader
+        track={track}
+        analysis={undefined}
+        playbackKind="master"
+        volumeMatch={false}
+        exportLufsPreview={false}
+        isAnalyzing={false}
+        analysisProgress={null}
+        isRendering={false}
+        isPlaying={false}
+        renderProgress={null}
+        onPlaybackKindChange={vi.fn()}
+        onVolumeMatchChange={vi.fn()}
+        onExportLufsPreviewChange={vi.fn()}
+        onReanalyze={onReanalyze}
+      />,
+    );
+
+    const reanalyze = container.querySelector<HTMLButtonElement>(".track-reanalyze")!;
+    expect(reanalyze.textContent).toContain("Re-analyze");
+    expect(reanalyze.disabled).toBe(false);
+
+    await act(async () => {
+      reanalyze.click();
+    });
+    expect(onReanalyze).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.render(
+        <TrackHeader
+          track={track}
+          analysis={undefined}
+          playbackKind="master"
+          volumeMatch={false}
+          exportLufsPreview={false}
+          isAnalyzing={true}
+          analysisProgress={{ label: "Analyzing audio", progress: 0.14 }}
+          isRendering={false}
+          isPlaying={false}
+          renderProgress={null}
+          onPlaybackKindChange={vi.fn()}
+          onVolumeMatchChange={vi.fn()}
+          onExportLufsPreviewChange={vi.fn()}
+          onReanalyze={onReanalyze}
+        />,
+      );
+    });
+    expect(container.querySelector<HTMLButtonElement>(".track-reanalyze")?.disabled).toBe(true);
+
     await act(async () => {
       root.unmount();
     });

@@ -890,6 +890,12 @@ button.primary:disabled {
   min-width: max-content;
 }
 
+.track-reanalyze {
+  min-height: 30px;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.74rem;
+}
+
 .session-status {
   display: inline-flex;
   align-items: center;
@@ -5391,6 +5397,13 @@ button.primary:disabled {
 .std-status-dot { width: 9px; height: 9px; border-radius: 50%; background: #6cd08a; box-shadow: 0 0 8px rgba(108,208,138,0.8); }
 /* "Not analyzed": the dot must not glow green when there is no analysis. */
 .std-tracks-status.is-idle .std-status-dot { background: var(--text-2); box-shadow: none; }
+.std-reanalyze-track {
+  align-self: flex-start;
+  min-height: 34px;
+  margin-top: 0.25rem;
+  padding-inline: 0.75rem;
+  font-size: 0.76rem;
+}
 
 /* ---- center ---- */
 /* Standard center is intentionally not its own scroll region. The controls

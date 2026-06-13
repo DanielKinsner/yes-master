@@ -809,6 +809,46 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("reanalyzes a failed-restore track and merges the recovered analysis", async () => {
+    const track = makeTrack("project-retry", "C:/audio/moved-retry.wav");
+    mocks.open.mockResolvedValue("C:/projects/moved-retry.ams.json");
+    mocks.api.loadProject.mockResolvedValue(makeProjectState(track));
+    mocks.api.analyzeTracks.mockRejectedValueOnce(new Error("missing source"));
+    mocks.api.prepareWaveform.mockRejectedValueOnce(new Error("missing source"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const harness = await renderHookHarness();
+
+    try {
+      await act(async () => {
+        await harness.current().openProjectFromDisk();
+      });
+      expect(harness.current().selectedTrackId).toBe(track.id);
+      expect(harness.current().selectedAnalysis).toBeUndefined();
+
+      mocks.api.analyzeTracks.mockClear();
+      mocks.api.prepareWaveform.mockClear();
+      mocks.api.analyzeTracks.mockResolvedValueOnce([makeAnalysis(track.id)]);
+      mocks.api.prepareWaveform.mockResolvedValueOnce(makeWaveform(track.id));
+
+      await act(async () => {
+        await harness.current().reanalyzeTrack(track.id);
+      });
+
+      expect(mocks.api.analyzeTracks).toHaveBeenCalledWith(
+        [{ id: track.id, path: track.path }],
+        expect.stringMatching(/^analysis-\d+-\d+$/),
+      );
+      expect(mocks.api.prepareWaveform).toHaveBeenCalledWith(track.id, track.path, 1200);
+      expect(harness.current().selectedAnalysis?.track_id).toBe(track.id);
+      expect(harness.current().isAnalyzing).toBe(false);
+    } finally {
+      warn.mockRestore();
+    }
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("uses the error channel for unsupported project schemas", async () => {
     const track = makeTrack("project-3", "C:/audio/project.wav");
     mocks.open.mockResolvedValue("C:/projects/old.ams.json");

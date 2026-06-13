@@ -130,6 +130,7 @@ function fakeTm(overrides: Partial<TM> = {}): TM {
     setPreset: noop, setIntensity: noop, setLoudnessTarget: noop,
     setPlaybackKind: noop, setVolumeMatch: noop, togglePlay: noop, seek: noop,
     setRegion: noop, clearRegion: noop, openImportDialog: noop, selectTrack: noop,
+    reanalyzeTrack: noop, reanalyzeAll: noop,
     exportStandardMaster: noop, clearExportReceipt: noop,
     ...overrides,
   } as unknown as TM;
@@ -276,6 +277,31 @@ describe("TracksRail", () => {
     expect(idleChip.textContent).toContain("Not analyzed");
     expect(idleChip.classList.contains("is-idle")).toBe(true);
     await act(async () => idle.root.unmount());
+  });
+
+  it("offers re-analysis for an unanalyzed track and keeps Create Master disabled until analysis returns", async () => {
+    const reanalyzeTrack = vi.fn();
+    const idle = await render(
+      <StandardView
+        tm={fakeTm({ selectedAnalysis: undefined, reanalyzeTrack })}
+        onEnterAdvanced={() => {}}
+      />,
+    );
+    const reanalyze = idle.container.querySelector<HTMLButtonElement>(".std-reanalyze-track")!;
+    expect(reanalyze.textContent).toContain("Re-analyze");
+    const idleCreate = idle.container.querySelector<HTMLButtonElement>(".std-create-master")!;
+    expect(idleCreate.disabled).toBe(true);
+
+    await act(async () => { reanalyze.click(); });
+    expect(reanalyzeTrack).toHaveBeenCalledWith("t1");
+    await act(async () => idle.root.unmount());
+
+    const analyzed = await render(
+      <StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />,
+    );
+    expect(analyzed.container.querySelector(".std-reanalyze-track")).toBeNull();
+    expect(analyzed.container.querySelector<HTMLButtonElement>(".std-create-master")?.disabled).toBe(false);
+    await act(async () => analyzed.root.unmount());
   });
 });
 

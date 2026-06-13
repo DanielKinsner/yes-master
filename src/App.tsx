@@ -777,6 +777,9 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           onPlaybackKindChange={tm.setPlaybackKind}
           onVolumeMatchChange={tm.setVolumeMatch}
           onExportLufsPreviewChange={tm.setExportLufsPreview}
+          onReanalyze={() => {
+            void tm.reanalyzeTrack(track.id);
+          }}
         />
         <div className="wf-deck">
           <Transport
@@ -890,7 +893,7 @@ function OverrideBanner({
   );
 }
 
-function TrackHeader({
+export function TrackHeader({
   track,
   analysis,
   playbackKind,
@@ -904,6 +907,7 @@ function TrackHeader({
   onPlaybackKindChange,
   onVolumeMatchChange,
   onExportLufsPreviewChange,
+  onReanalyze,
 }: {
   track: ImportedTrack;
   analysis: AnalysisResult | undefined;
@@ -918,6 +922,7 @@ function TrackHeader({
   onPlaybackKindChange: (kind: PlaybackKindUI) => void;
   onVolumeMatchChange: (on: boolean) => void;
   onExportLufsPreviewChange: (on: boolean) => void;
+  onReanalyze: () => void;
 }) {
   const chips: { key: string; label: string }[] = [];
   if (track.source_format) {
@@ -960,6 +965,15 @@ function TrackHeader({
             </div>
           </div>
           <div className="track-header-actions">
+            <button
+              type="button"
+              className="ghost-btn track-reanalyze"
+              disabled={isAnalyzing}
+              onClick={onReanalyze}
+              title="Analyze this track again"
+            >
+              Re-analyze
+            </button>
             <DeckPreviewOptions
               playbackKind={playbackKind}
               volumeMatch={volumeMatch}
