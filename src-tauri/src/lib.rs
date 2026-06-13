@@ -116,6 +116,7 @@ pub fn run() {
             audio::set_loop_region,
             exports::run_export_checks,
             guardrails::guardrail_readout,
+            guardrails::resolve_compression_plan,
             exports::open_output,
             profile_store::evict_source_profile,
             confidence::set_confidence_gating,

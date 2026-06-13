@@ -31,6 +31,8 @@ function job(): RenderJob {
       effective_adaptive_strength: 0.5,
       source_profile_digest: "bass +1.2",
       confidence_digest: null,
+      compression_digest:
+        "compression eased low 20% / mid 16% / high 25%; stand-down 0.00; density confidence 1.00",
     },
   };
 }
@@ -72,6 +74,7 @@ describe("ExportReceiptCard", () => {
     expect(container.textContent).toContain("Export complete");
     expect(container.textContent).toContain("Master -13.5 LUFS");
     expect(container.textContent).toContain("Source · bass +1.2");
+    expect(container.textContent).toContain("Compression · compression eased low 20%");
   });
 
   it("renders the review medallion for warnings", () => {

@@ -320,6 +320,36 @@ export interface GuardrailReadout {
   confidence?: Confidence | null;
 }
 
+export type GuardReason =
+  | "low_band_dense"
+  | "mid_band_dense"
+  | "high_band_dense"
+  | "already_mastered";
+
+export interface CompressionBandPlan {
+  threshold_db: number;
+  ratio: number;
+  density_mult: number;
+  threshold_lift_db: number;
+  ratio_mult: number;
+  adaptive: boolean;
+}
+
+export interface CompressionPlanReason {
+  code: GuardReason;
+  message: string;
+}
+
+export interface CompressionPlan {
+  active: boolean;
+  low: CompressionBandPlan;
+  mid: CompressionBandPlan;
+  high: CompressionBandPlan;
+  reasons: CompressionPlanReason[];
+  guidance?: string | null;
+  digest?: string | null;
+}
+
 export interface AnalysisResult {
   track_id: TrackId;
   lufs_integrated: number;
@@ -376,6 +406,9 @@ export interface RenderedMeasurements {
   // Tier-2 Phase B traceability: per-axis confidence digest that gated adaptation,
   // or null when confidence gating was inert.
   confidence_digest?: string | null;
+  // Adaptive Compressor MVP traceability: backend-resolved guard summary for
+  // per-band compression easing, or null while the gate is off/inert.
+  compression_digest?: string | null;
 }
 
 export interface RenderJob {
@@ -411,6 +444,7 @@ export interface ExportReport {
   effective_adaptive_strength?: number;
   source_profile_digest?: string | null;
   confidence_digest?: string | null;
+  compression_digest?: string | null;
   // True when the measured_* fields describe the rendered output rather than
   // the legacy source-analysis fallback; gates target-comparison checks.
   measurements_are_rendered?: boolean;

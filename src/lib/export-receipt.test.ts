@@ -74,6 +74,8 @@ const MEASUREMENTS: RenderedMeasurements = {
   effective_adaptive_strength: 0.5,
   source_profile_digest: "bass +1.2",
   confidence_digest: null,
+  compression_digest:
+    "compression eased low 20% / mid 16% / high 25%; stand-down 0.00; density confidence 1.00",
 };
 
 function job(measurements: RenderedMeasurements | null): RenderJob {
@@ -111,6 +113,7 @@ describe("buildExportReport", () => {
     expect(report.bit_depth).toBe(24);
     expect(report.effective_adaptive_strength).toBe(0.5);
     expect(report.source_profile_digest).toBe("bass +1.2");
+    expect(report.compression_digest).toContain("compression eased low 20%");
   });
 
   it("falls back to source analysis and stays unmarked without measurements", () => {
@@ -126,6 +129,7 @@ describe("buildExportReport", () => {
     expect(report.bit_depth).toBe(24);
     expect(report.effective_adaptive_strength).toBe(0);
     expect(report.source_profile_digest).toBeNull();
+    expect(report.compression_digest).toBeNull();
   });
 
   it("prefers the user bit depth over the 24-bit default when unrendered", () => {

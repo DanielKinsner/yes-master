@@ -812,6 +812,10 @@ pub struct RenderedMeasurements {
     /// strength 0). `#[serde(default)]` for back-compat with older receipts.
     #[serde(default)]
     pub confidence_digest: Option<String>,
+    /// Adaptive Compressor MVP traceability: backend-resolved guard summary for
+    /// per-band compression easing, or `None` while the gate is off/inert.
+    #[serde(default)]
+    pub compression_digest: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -848,6 +852,8 @@ pub struct ExportReport {
     pub source_profile_digest: Option<String>,
     #[serde(default)]
     pub confidence_digest: Option<String>,
+    #[serde(default)]
+    pub compression_digest: Option<String>,
     /// 2026-06-09 export-metrics inquiry — true when the measured_* fields
     /// describe the rendered output (`RenderedMeasurements`) rather than the
     /// legacy source-analysis fallback. Gates checks that compare delivered

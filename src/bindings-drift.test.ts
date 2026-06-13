@@ -26,6 +26,7 @@ import type {
   AlbumTrackEntry,
   AnalysisProgress,
   AnalysisResult,
+  CompressionPlan,
   GuardrailReadout,
   LandingStatus,
   MasteringSettings,
@@ -74,6 +75,13 @@ export type Drift_AnalysisResult_RustOnly = AssertNever<
 >;
 export type Drift_AnalysisResult_TsOnly = AssertNever<
   TsOnly<typeof samples.analysis_result, AnalysisResult>
+>;
+
+export type Drift_CompressionPlan_RustOnly = AssertNever<
+  RustOnly<typeof samples.compression_plan, CompressionPlan>
+>;
+export type Drift_CompressionPlan_TsOnly = AssertNever<
+  TsOnly<typeof samples.compression_plan, CompressionPlan>
 >;
 
 export type Drift_GuardrailReadout_RustOnly = AssertNever<
@@ -128,6 +136,7 @@ describe("wire-samples drift gate", () => {
       "album_track_entry",
       "analysis_progress",
       "analysis_result",
+      "compression_plan",
       "guardrail_readout",
       "landing_status",
       "mastering_settings",

@@ -66,6 +66,7 @@ pub(crate) fn export_report_for(
         effective_adaptive_strength: rendered.effective_adaptive_strength,
         source_profile_digest: rendered.source_profile_digest.clone(),
         confidence_digest: rendered.confidence_digest.clone(),
+        compression_digest: rendered.compression_digest.clone(),
         measurements_are_rendered: true,
         checks: Vec::new(),
     }

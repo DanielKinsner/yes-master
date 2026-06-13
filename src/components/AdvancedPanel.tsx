@@ -4,6 +4,7 @@ import { GainField, NumberField, PanelResetButton, SelectField } from "./fields"
 import type {
   AnalysisResult,
   CompressionMode,
+  CompressionPlan,
   DeliveryProfile,
   GuardrailReadout,
   MasteringSettings,
@@ -40,6 +41,7 @@ export function AdvancedPanel({
   onDeliverySampleRate,
   showDeliveryFormat = true,
   adaptiveReadout,
+  compressionPlan,
   albumMode = false,
 }: {
   analysis?: AnalysisResult;
@@ -56,6 +58,7 @@ export function AdvancedPanel({
   /// confusing duplicate. Defaults true → Track Master is unchanged.
   showDeliveryFormat?: boolean;
   adaptiveReadout?: GuardrailReadout | null;
+  compressionPlan?: CompressionPlan | null;
   albumMode?: boolean;
 }) {
   const a = settings.advanced;
@@ -87,6 +90,7 @@ export function AdvancedPanel({
         a={a}
         onAdvanced={onAdvanced}
         onUpdate={update}
+        compressionPlan={compressionPlan}
       />
       {showDeliveryFormat && (
         <DeliveryFormatCard
@@ -394,6 +398,7 @@ function PerBandCompressorCard({
   a,
   onAdvanced,
   onUpdate,
+  compressionPlan,
 }: {
   analysis?: AnalysisResult;
   settings: MasteringSettings;
@@ -403,6 +408,7 @@ function PerBandCompressorCard({
     field: keyof MasteringSettings["advanced"],
     value: number | boolean | null,
   ) => void;
+  compressionPlan?: CompressionPlan | null;
 }) {
   type Band = "low" | "mid" | "high";
   const [active, setActive] = useState<Band>("low");
@@ -410,6 +416,8 @@ function PerBandCompressorCard({
   const presetSummary = presetCompressionSummary(settings, autoReadouts.low);
   const compressorMode: CompressionMode = a.compression_mode ?? "preset";
   const manualEnabled = compressorMode === "manual";
+  const adaptivePlan =
+    compressorMode === "preset" && compressionPlan?.active ? compressionPlan : null;
   const sourceLooksCompressed =
     (analysis?.dynamic_range_lu ?? Number.POSITIVE_INFINITY) < 6.0;
   const setCompressorMode = (mode: CompressionMode) => {
@@ -535,6 +543,26 @@ function PerBandCompressorCard({
       {!manualEnabled && compressorMode === "preset" && (
         <div className="compressor-preset-summary">{presetSummary}</div>
       )}
+      {adaptivePlan?.guidance && (
+        <div className="compressor-adaptive-guidance" role="note">
+          {adaptivePlan.guidance}
+        </div>
+      )}
+      {adaptivePlan && (
+        <div className="compressor-adaptive-bands" aria-label="Adaptive compressor plan">
+          {(["low", "mid", "high"] as Band[]).map((band) => (
+            <div key={band} className="compressor-adaptive-band">
+              <span>
+                {bandLabel(band)} {adaptivePlan[band].threshold_db.toFixed(1)} dB ·{" "}
+                {adaptivePlan[band].ratio.toFixed(1)}:1
+              </span>
+              {adaptivePlan[band].adaptive && (
+                <span className="compressor-adaptive-tag">Adaptive</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       {!manualEnabled && compressorMode === "off" && (
         <div className="compressor-preset-summary">
           Per-band controls inactive.
@@ -586,6 +614,10 @@ function PerBandCompressorCard({
       )}
     </section>
   );
+}
+
+function bandLabel(band: "low" | "mid" | "high"): string {
+  return band === "low" ? "Low" : band === "mid" ? "Mid" : "High";
 }
 
 function CompressionKnobGrid({

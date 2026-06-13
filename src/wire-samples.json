@@ -157,6 +157,41 @@
     "transient_flux": 0.5,
     "true_peak_dbtp": -1.0
   },
+  "compression_plan": {
+    "active": true,
+    "digest": "compression eased low 20% / mid 0% / high 25%; stand-down 0.00; density confidence 1.00",
+    "guidance": "Low band is already dense - easing compression there.",
+    "high": {
+      "adaptive": true,
+      "density_mult": 0.75,
+      "ratio": 1.2000000476837158,
+      "ratio_mult": 0.8799999952316284,
+      "threshold_db": -9.5,
+      "threshold_lift_db": 2.4000000953674316
+    },
+    "low": {
+      "adaptive": true,
+      "density_mult": 0.800000011920929,
+      "ratio": 1.25,
+      "ratio_mult": 0.8999999761581421,
+      "threshold_db": -10.5,
+      "threshold_lift_db": 2.0
+    },
+    "mid": {
+      "adaptive": false,
+      "density_mult": 1.0,
+      "ratio": 1.4500000476837158,
+      "ratio_mult": 1.0,
+      "threshold_db": -12.5,
+      "threshold_lift_db": 0.0
+    },
+    "reasons": [
+      {
+        "code": "low_band_dense",
+        "message": "Low band is already dense - easing compression there."
+      }
+    ]
+  },
   "guardrail_readout": {
     "active": true,
     "bright_deadband": 0.0625,
@@ -284,6 +319,7 @@
     "kind": "master",
     "measurements": {
       "bit_depth": 24,
+      "compression_digest": "compression eased low 20% / mid 16% / high 25%; stand-down 0.00; density confidence 1.00",
       "confidence_digest": "bass 0.9 | tilt 0.6",
       "dynamic_range_lu": 8.5,
       "effective_adaptive_strength": 0.75,
@@ -306,6 +342,7 @@
   },
   "rendered_measurements": {
     "bit_depth": 24,
+    "compression_digest": "compression eased low 20% / mid 16% / high 25%; stand-down 0.00; density confidence 1.00",
     "confidence_digest": "bass 0.9 | tilt 0.6",
     "dynamic_range_lu": 8.5,
     "effective_adaptive_strength": 0.75,

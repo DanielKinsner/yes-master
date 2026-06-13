@@ -37,6 +37,7 @@ import {
 import type {
   AdvancedSettings,
   AnalysisResult,
+  CompressionPlan,
   GuardrailReadout,
   ImportedTrack,
   LoopRegion,
@@ -726,19 +727,29 @@ export function useTrackMaster() {
   const [guardrailReadout, setGuardrailReadout] = useState<GuardrailReadout | null>(
     null,
   );
+  const [compressionPlan, setCompressionPlan] = useState<CompressionPlan | null>(null);
   const guardrailReadoutReq = useRef(0);
   useEffect(() => {
     if (!selectedTrackId) {
       setGuardrailReadout(null);
+      setCompressionPlan(null);
       return;
     }
     const reqId = ++guardrailReadoutReq.current;
     void selectedAnalysis; // dep: refetch when analysis lands so the store is ready
+    setCompressionPlan(null);
     Promise.resolve(
       api.guardrailReadout?.(selectedSettings, selectedTrackId, mode === "album"),
     )
       .then((r) => {
         if (r && guardrailReadoutReq.current === reqId) setGuardrailReadout(r);
+      })
+      .catch(() => {});
+    Promise.resolve(
+      api.resolveCompressionPlan?.(selectedSettings, selectedTrackId, mode === "album"),
+    )
+      .then((plan) => {
+        if (plan && guardrailReadoutReq.current === reqId) setCompressionPlan(plan);
       })
       .catch(() => {});
   }, [selectedTrackId, selectedSettings, selectedAnalysis, mode]);
@@ -2191,6 +2202,7 @@ export function useTrackMaster() {
     exportAlbumPlan,
     updatePreview,
     guardrailReadout,
+    compressionPlan,
     exportMaster,
     exportStandardMaster,
     togglePlay,

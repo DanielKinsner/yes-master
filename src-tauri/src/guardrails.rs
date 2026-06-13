@@ -243,6 +243,33 @@ impl CompressionGuards {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub struct CompressionBandPlan {
+    pub threshold_db: f32,
+    pub ratio: f32,
+    pub density_mult: f32,
+    pub threshold_lift_db: f32,
+    pub ratio_mult: f32,
+    pub adaptive: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct CompressionPlanReason {
+    pub code: GuardReason,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct CompressionPlan {
+    pub active: bool,
+    pub low: CompressionBandPlan,
+    pub mid: CompressionBandPlan,
+    pub high: CompressionBandPlan,
+    pub reasons: Vec<CompressionPlanReason>,
+    pub guidance: Option<String>,
+    pub digest: Option<String>,
+}
+
 /// Resolve per-band adaptive compressor guards from DeepAnalysis-derived PSR and
 /// the already-mastered classifier. Pure AC-2 core: callers pass the rollout gate
 /// explicitly so tests can prove gate-OFF identity without relying on process
@@ -322,6 +349,121 @@ fn band_guard_amount(psr_db: Option<f32>, strength: f32, confidence: f32) -> f32
         return 0.0;
     };
     descending_ramp(psr_db, BAND_PSR_SOFT_DB, BAND_PSR_FULL_DB) * strength * confidence
+}
+
+pub fn compression_plan_for_resolved_settings(settings: &MasteringSettings) -> CompressionPlan {
+    let coeffs = crate::dsp::ChainCoeffs::from_settings(44_100, settings);
+    let adaptive_strength = settings
+        .advanced
+        .adaptive_strength
+        .unwrap_or(ADAPTIVE_STRENGTH_DEFAULT)
+        .clamp(0.0, 1.0);
+    let guards = settings
+        .advanced
+        .compression_guards
+        .as_ref()
+        .filter(|_| {
+            matches!(
+                settings.advanced.compression_mode,
+                crate::types::CompressionMode::Preset
+            )
+        })
+        .filter(|_| adaptive_strength > 0.0)
+        .filter(|_| is_adaptive_compression_enabled());
+    let confidence = settings
+        .advanced
+        .source_confidence
+        .unwrap_or_default()
+        .density
+        .confidence
+        .clamp(0.0, 1.0);
+    let active = guards.is_some();
+    let reasons = guards.map_or_else(Vec::new, |g| {
+        g.reasons
+            .iter()
+            .copied()
+            .map(|code| CompressionPlanReason {
+                code,
+                message: guard_reason_message(code).to_string(),
+            })
+            .collect()
+    });
+    let guidance = if reasons.is_empty() {
+        None
+    } else {
+        Some(
+            reasons
+                .iter()
+                .map(|reason| reason.message.as_str())
+                .collect::<Vec<_>>()
+                .join(" "),
+        )
+    };
+    let digest = guards.map(|g| compression_guard_digest(g, confidence));
+    CompressionPlan {
+        active,
+        low: band_plan(
+            coeffs.comp_low_threshold_db,
+            coeffs.comp_low_ratio,
+            guards.map(|g| &g.low),
+        ),
+        mid: band_plan(
+            coeffs.comp_mid_threshold_db,
+            coeffs.comp_mid_ratio,
+            guards.map(|g| &g.mid),
+        ),
+        high: band_plan(
+            coeffs.comp_high_threshold_db,
+            coeffs.comp_high_ratio,
+            guards.map(|g| &g.high),
+        ),
+        reasons,
+        guidance,
+        digest,
+    }
+}
+
+fn band_plan(
+    threshold_db: f32,
+    ratio: f32,
+    guard: Option<&BandCompressionGuard>,
+) -> CompressionBandPlan {
+    let guard = guard
+        .copied()
+        .unwrap_or_else(BandCompressionGuard::identity);
+    CompressionBandPlan {
+        threshold_db,
+        ratio,
+        density_mult: guard.density_mult,
+        threshold_lift_db: guard.threshold_lift_db,
+        ratio_mult: guard.ratio_mult,
+        adaptive: guard != BandCompressionGuard::identity(),
+    }
+}
+
+fn guard_reason_message(reason: GuardReason) -> &'static str {
+    match reason {
+        GuardReason::LowBandDense => "Low band is already dense - easing compression there.",
+        GuardReason::MidBandDense => "Mid band is already dense - easing compression there.",
+        GuardReason::HighBandDense => "High band is already dense - easing compression there.",
+        GuardReason::AlreadyMastered => {
+            "Source looks already mastered - easing compression across all bands."
+        }
+    }
+}
+
+fn compression_guard_digest(guards: &CompressionGuards, density_confidence: f32) -> String {
+    fn eased_pct(guard: BandCompressionGuard) -> i32 {
+        (((1.0 - guard.density_mult).clamp(0.0, 1.0) * 100.0).round()) as i32
+    }
+    format!(
+        "compression eased low {}% / mid {}% / high {}%; stand-down {:.2}; density confidence {:.2}",
+        eased_pct(guards.low),
+        eased_pct(guards.mid),
+        eased_pct(guards.high),
+        guards.stand_down.clamp(0.0, 1.0),
+        density_confidence.clamp(0.0, 1.0)
+    )
 }
 
 /// Precomputed defensive trim multipliers for one source at one strength. Each
@@ -618,10 +760,48 @@ pub fn guardrail_readout(
     readout_for(&settings)
 }
 
+#[tauri::command]
+pub fn resolve_compression_plan(
+    mut settings: MasteringSettings,
+    track_id: Option<TrackId>,
+    album: Option<bool>,
+    profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
+) -> CompressionPlan {
+    let album = album.unwrap_or(false);
+    let cached = track_id.as_ref().and_then(|t| profile_store.get(t));
+    let cached_deep = track_id.as_ref().and_then(|t| profile_store.get_deep(t));
+    let cached_stand_down = track_id
+        .as_ref()
+        .and_then(|t| profile_store.get_stand_down(t));
+    crate::profile_store::apply_resolved_profile(&mut settings, cached, album);
+    crate::profile_store::apply_resolved_confidence(&mut settings, cached_deep.clone(), album);
+    crate::profile_store::apply_resolved_compression_guards(
+        &mut settings,
+        cached_deep,
+        cached_stand_down,
+        album,
+    );
+    compression_plan_for_resolved_settings(&settings)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::types::{SourceProfile, SpectralBalance6};
+
+    struct AdaptiveCompressionGateReset(bool);
+
+    impl AdaptiveCompressionGateReset {
+        fn set(enabled: bool) -> Self {
+            Self(set_adaptive_compression_enabled(enabled))
+        }
+    }
+
+    impl Drop for AdaptiveCompressionGateReset {
+        fn drop(&mut self) {
+            set_adaptive_compression_enabled(self.0);
+        }
+    }
 
     fn profile(
         presence: f32,
@@ -1023,6 +1203,61 @@ mod tests {
         );
 
         assert_eq!(guards, None);
+    }
+
+    #[test]
+    fn compression_plan_reports_backend_resolved_adaptive_values() {
+        use crate::confidence::Confidence;
+
+        let _gate = AdaptiveCompressionGateReset::set(true);
+        let mut settings = settings_with(None, Some(1.0));
+        settings.advanced.source_confidence = Some(Confidence::full());
+        settings.advanced.compression_guards = Some(CompressionGuards {
+            low: BandCompressionGuard {
+                density_mult: 0.80,
+                threshold_lift_db: 2.0,
+                ratio_mult: 0.90,
+            },
+            mid: BandCompressionGuard::identity(),
+            high: BandCompressionGuard {
+                density_mult: 0.75,
+                threshold_lift_db: 2.4,
+                ratio_mult: 0.88,
+            },
+            stand_down: 0.25,
+            reasons: vec![GuardReason::LowBandDense, GuardReason::HighBandDense],
+        });
+
+        let plan = compression_plan_for_resolved_settings(&settings);
+
+        assert!(plan.active);
+        assert!(plan.low.adaptive);
+        assert!(!plan.mid.adaptive);
+        assert!(plan.high.adaptive);
+        assert!(
+            plan.low.threshold_db > plan.mid.threshold_db,
+            "low threshold should be softened by the backend guard plan: {:?}",
+            plan
+        );
+        assert!(
+            plan.low.ratio < plan.mid.ratio,
+            "low ratio should be eased by the backend guard plan: {:?}",
+            plan
+        );
+        assert!(
+            plan.guidance
+                .as_deref()
+                .unwrap_or_default()
+                .contains("Low band is already dense"),
+            "{plan:?}"
+        );
+        assert!(
+            plan.digest
+                .as_deref()
+                .unwrap_or_default()
+                .contains("compression eased low 20%"),
+            "{plan:?}"
+        );
     }
 
     fn settings_with(

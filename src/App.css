@@ -3610,6 +3610,49 @@ button.primary:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+.compressor-adaptive-guidance {
+  color: var(--text-1);
+  background: rgba(125, 210, 173, 0.08);
+  border: 1px solid rgba(125, 210, 173, 0.22);
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  padding: 0.42rem 0.5rem;
+  margin-top: 0.45rem;
+}
+
+.compressor-adaptive-bands {
+  display: grid;
+  gap: 0.28rem;
+  margin-top: 0.42rem;
+}
+
+.compressor-adaptive-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  min-height: 1.75rem;
+  color: var(--text-1);
+  background: rgba(13, 16, 24, 0.42);
+  border: 1px solid rgba(125, 210, 173, 0.14);
+  border-radius: var(--radius-sm);
+  padding: 0.32rem 0.45rem;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.compressor-adaptive-tag {
+  flex: 0 0 auto;
+  color: #0d1713;
+  background: #7dd2ad;
+  border-radius: 999px;
+  padding: 0.12rem 0.38rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
 .per-band-tabs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

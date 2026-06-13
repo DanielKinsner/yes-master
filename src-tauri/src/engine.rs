@@ -850,6 +850,8 @@ pub fn mastering_render_with_progress(
         .filter(|_| render_settings.advanced.source_profile.is_some())
         .filter(|_| effective_adaptive_strength > 0.0)
         .map(|c| c.digest());
+    let compression_digest =
+        crate::guardrails::compression_plan_for_resolved_settings(&render_settings).digest;
     let measurements = RenderedMeasurements {
         lufs_integrated: measured_lufs,
         true_peak_dbtp: measured_true_peak_dbtp,
@@ -859,6 +861,7 @@ pub fn mastering_render_with_progress(
         effective_adaptive_strength,
         source_profile_digest,
         confidence_digest,
+        compression_digest,
     };
     write_wav(
         &out_path,

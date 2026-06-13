@@ -18,6 +18,7 @@
         "message": "golden critical"
       }
     ],
+    "compression_digest": "compression eased low 20% / mid 16% / high 25%; stand-down 0.00; density confidence 1.00",
     "confidence_digest": "bass 0.9 | tilt 0.6",
     "destination_format": "wav",
     "effective_adaptive_strength": 0.75,
@@ -78,6 +79,7 @@
   },
   "rendered_measurements": {
     "bit_depth": 24,
+    "compression_digest": "compression eased low 20% / mid 16% / high 25%; stand-down 0.00; density confidence 1.00",
     "confidence_digest": "bass 0.9 | tilt 0.6",
     "dynamic_range_lu": 8.5,
     "effective_adaptive_strength": 0.75,

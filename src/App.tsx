@@ -171,6 +171,7 @@ function App() {
               onDeliverySampleRate={tm.setDeliverySampleRate}
               showDeliveryFormat={tm.mode !== "album"}
               adaptiveReadout={tm.guardrailReadout}
+              compressionPlan={tm.compressionPlan}
               albumMode={tm.mode === "album"}
             />
           ) : undefined

@@ -17,7 +17,9 @@
 
 use std::path::Path;
 
-use yes_master_lib::guardrails::GuardrailReadout;
+use yes_master_lib::guardrails::{
+    CompressionBandPlan, CompressionPlan, CompressionPlanReason, GuardReason, GuardrailReadout,
+};
 use yes_master_lib::types::{
     AdvancedSettings, AlbumArc, AlbumArcKind, AlbumCharacter, AlbumPlan, AlbumTrackEntry,
     AnalysisProgress, AnalysisResult, CompressionMode, InferenceConfidence, JobStatus,
@@ -163,6 +165,49 @@ fn rendered_measurements_sample() -> RenderedMeasurements {
         effective_adaptive_strength: 0.75,
         source_profile_digest: Some("bass +1.2 | air -0.4".to_string()),
         confidence_digest: Some("bass 0.9 | tilt 0.6".to_string()),
+        compression_digest: Some(
+            "compression eased low 20% / mid 16% / high 25%; stand-down 0.00; density confidence 1.00"
+                .to_string(),
+        ),
+    }
+}
+
+fn compression_plan_sample() -> CompressionPlan {
+    CompressionPlan {
+        active: true,
+        low: CompressionBandPlan {
+            threshold_db: -10.5,
+            ratio: 1.25,
+            density_mult: 0.8,
+            threshold_lift_db: 2.0,
+            ratio_mult: 0.9,
+            adaptive: true,
+        },
+        mid: CompressionBandPlan {
+            threshold_db: -12.5,
+            ratio: 1.45,
+            density_mult: 1.0,
+            threshold_lift_db: 0.0,
+            ratio_mult: 1.0,
+            adaptive: false,
+        },
+        high: CompressionBandPlan {
+            threshold_db: -9.5,
+            ratio: 1.2,
+            density_mult: 0.75,
+            threshold_lift_db: 2.4,
+            ratio_mult: 0.88,
+            adaptive: true,
+        },
+        reasons: vec![CompressionPlanReason {
+            code: GuardReason::LowBandDense,
+            message: "Low band is already dense - easing compression there.".to_string(),
+        }],
+        guidance: Some("Low band is already dense - easing compression there.".to_string()),
+        digest: Some(
+            "compression eased low 20% / mid 0% / high 25%; stand-down 0.00; density confidence 1.00"
+                .to_string(),
+        ),
     }
 }
 
@@ -242,6 +287,7 @@ fn wire_samples() -> serde_json::Value {
         "album_track_entry": album_track_entry_sample(),
         "analysis_progress": analysis_progress_sample(),
         "analysis_result": analysis_result_sample(),
+        "compression_plan": compression_plan_sample(),
         "guardrail_readout": guardrail_readout_sample(),
         "landing_status": landing_status_sample(),
         "mastering_settings": mastering_settings_sample(),

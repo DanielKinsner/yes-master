@@ -500,6 +500,7 @@ mod tests {
             effective_adaptive_strength: 0.0,
             source_profile_digest: None,
             confidence_digest: None,
+            compression_digest: None,
         };
         let checks = vec![
             QualityCheck {

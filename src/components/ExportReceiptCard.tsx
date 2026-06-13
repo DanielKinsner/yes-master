@@ -119,6 +119,11 @@ export function ExportReceiptCard({
             ) : (
               <span>Adaptive: off</span>
             )}
+            {measurements.compression_digest && (
+              <span title="Backend-resolved adaptive compressor guard summary">
+                Compression · {measurements.compression_digest}
+              </span>
+            )}
           </div>
         )}
         {receipt.checks.length > 0 && (

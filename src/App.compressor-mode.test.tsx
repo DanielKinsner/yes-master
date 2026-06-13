@@ -7,6 +7,7 @@ import { ADAPTIVE_STRENGTH_DEFAULT } from "./bindings";
 import type {
   AdvancedSettings,
   AnalysisResult,
+  CompressionPlan,
   MasteringSettings,
   Preset,
 } from "./bindings";
@@ -71,6 +72,7 @@ async function renderAdvancedPanel(props: {
   onDeliveryProfile?: (profile: MasteringSettings["delivery_profile"]) => void;
   onDeliveryBitDepth?: (bitDepth: number | null) => void;
   onDeliverySampleRate?: (sampleRate: number | null) => void;
+  compressionPlan?: CompressionPlan | null;
 }): Promise<{ container: HTMLDivElement; root: Root }> {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -87,10 +89,50 @@ async function renderAdvancedPanel(props: {
         onDeliveryProfile={props.onDeliveryProfile ?? vi.fn()}
         onDeliveryBitDepth={props.onDeliveryBitDepth ?? vi.fn()}
         onDeliverySampleRate={props.onDeliverySampleRate ?? vi.fn()}
+        compressionPlan={props.compressionPlan ?? null}
       />,
     );
   });
   return { container, root };
+}
+
+function adaptiveCompressionPlan(): CompressionPlan {
+  return {
+    active: true,
+    low: {
+      threshold_db: -10.5,
+      ratio: 1.3,
+      density_mult: 0.8,
+      threshold_lift_db: 2,
+      ratio_mult: 0.9,
+      adaptive: true,
+    },
+    mid: {
+      threshold_db: -11,
+      ratio: 1.35,
+      density_mult: 0.84,
+      threshold_lift_db: 1.6,
+      ratio_mult: 0.92,
+      adaptive: true,
+    },
+    high: {
+      threshold_db: -9.5,
+      ratio: 1.25,
+      density_mult: 0.75,
+      threshold_lift_db: 2.4,
+      ratio_mult: 0.88,
+      adaptive: true,
+    },
+    reasons: [
+      {
+        code: "low_band_dense",
+        message: "Low band is already dense - easing compression there.",
+      },
+    ],
+    guidance: "Low band is already dense - easing compression there.",
+    digest:
+      "compression eased low 20% / mid 16% / high 25%; stand-down 0.00; density confidence 1.00",
+  };
 }
 
 function compressionInputs(container: Element): HTMLInputElement[] {
@@ -454,6 +496,46 @@ describe("AdvancedPanel compressor mode", () => {
 
     await act(async () => {
       preset.root.unmount();
+    });
+  });
+
+  it("renders backend-resolved Adaptive tags, guidance, and values only in Preset mode", async () => {
+    const plan = adaptiveCompressionPlan();
+    const preset = await renderAdvancedPanel({
+      settings: makeSettings({ compression_mode: "preset" }),
+      compressionPlan: plan,
+    });
+
+    expect(preset.container.querySelectorAll(".compressor-adaptive-tag")).toHaveLength(3);
+    expect(preset.container.textContent).toContain(
+      "Low band is already dense - easing compression there.",
+    );
+    expect(preset.container.textContent).toContain("Low -10.5 dB · 1.3:1");
+    expect(preset.container.textContent).toContain("Mid -11.0 dB · 1.4:1");
+    expect(preset.container.textContent).toContain("High -9.5 dB · 1.3:1");
+
+    await act(async () => {
+      preset.root.unmount();
+    });
+
+    const manual = await renderAdvancedPanel({
+      settings: makeSettings({ compression_mode: "manual" }),
+      compressionPlan: plan,
+    });
+    expect(manual.container.querySelector(".compressor-adaptive-tag")).toBeNull();
+    expect(manual.container.textContent).not.toContain("Low band is already dense");
+    await act(async () => {
+      manual.root.unmount();
+    });
+
+    const off = await renderAdvancedPanel({
+      settings: makeSettings({ compression_mode: "off" }),
+      compressionPlan: plan,
+    });
+    expect(off.container.querySelector(".compressor-adaptive-tag")).toBeNull();
+    expect(off.container.textContent).not.toContain("Low band is already dense");
+    await act(async () => {
+      off.root.unmount();
     });
   });
 });

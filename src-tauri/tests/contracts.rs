@@ -573,6 +573,7 @@ async fn phase_12_1_real_fixture_metering_snapshot() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        compression_digest: None,
         measurements_are_rendered: true,
         checks: Vec::new(),
     };
@@ -614,6 +615,7 @@ async fn run_export_checks_warns_on_high_true_peak() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        compression_digest: None,
         measurements_are_rendered: true,
         checks: Vec::new(),
     };
@@ -638,6 +640,7 @@ async fn run_export_checks_passes_silently_when_clean() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        compression_digest: None,
         measurements_are_rendered: true,
         checks: Vec::new(),
     };
@@ -663,6 +666,7 @@ async fn run_export_checks_criticals_on_requested_sample_rate_mismatch() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        compression_digest: None,
         measurements_are_rendered: true,
         checks: Vec::new(),
     };
@@ -699,6 +703,7 @@ async fn run_export_checks_warns_on_low_streaming_headroom() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        compression_digest: None,
         measurements_are_rendered: true,
         checks: Vec::new(),
     };
@@ -734,6 +739,7 @@ async fn run_export_checks_streaming_headroom_quiet_at_streaming_ceiling() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        compression_digest: None,
         measurements_are_rendered: true,
         checks: Vec::new(),
     };
@@ -921,6 +927,13 @@ fn rendered_measurements_reflect_landed_output_not_source() {
 #[test]
 fn export_receipt_records_adaptive_traceability_b5() {
     // B5 — a delivered master must record what adaptation produced it.
+    struct GateReset(bool);
+    impl Drop for GateReset {
+        fn drop(&mut self) {
+            yes_master_lib::guardrails::set_adaptive_compression_enabled(self.0);
+        }
+    }
+    let _gate = GateReset(yes_master_lib::guardrails::set_adaptive_compression_enabled(true));
     let tmp = tempfile::tempdir().expect("tempdir");
     let in_path = tmp.path().join("adaptive.wav");
     write_sine_wav(&in_path, 44_100, 1.0, 440.0, 2);
@@ -942,6 +955,24 @@ fn export_receipt_records_adaptive_traceability_b5() {
         stereo_width: 1.2,
     });
     settings.advanced.source_confidence = Some(confidence::Confidence::full());
+    settings.advanced.compression_guards = Some(yes_master_lib::guardrails::CompressionGuards {
+        low: yes_master_lib::guardrails::BandCompressionGuard {
+            density_mult: 0.80,
+            threshold_lift_db: 2.0,
+            ratio_mult: 0.90,
+        },
+        mid: yes_master_lib::guardrails::BandCompressionGuard::identity(),
+        high: yes_master_lib::guardrails::BandCompressionGuard {
+            density_mult: 0.75,
+            threshold_lift_db: 2.4,
+            ratio_mult: 0.88,
+        },
+        stand_down: 0.25,
+        reasons: vec![
+            yes_master_lib::guardrails::GuardReason::LowBandDense,
+            yes_master_lib::guardrails::GuardReason::HighBandDense,
+        ],
+    });
 
     let job = engine::mastering_render(
         TrackId("adaptive".to_string()),
@@ -962,10 +993,19 @@ fn export_receipt_records_adaptive_traceability_b5() {
         Some("bright 1.00 / low 1.00 / density 1.00 / width 1.00"),
         "confidence digest should persist when confidence shaped active adaptation"
     );
+    assert!(
+        m.compression_digest
+            .as_deref()
+            .unwrap_or_default()
+            .contains("compression eased low 20%"),
+        "compression digest should persist when adaptive compressor guards were active: {:?}",
+        m.compression_digest
+    );
 
     // Strength 0 => guardrails inert => no digest recorded, even with a profile.
     let mut flat = settings.clone();
     flat.advanced.adaptive_strength = Some(0.0);
+    flat.advanced.compression_guards = None;
     let job2 = engine::mastering_render(
         TrackId("flat".to_string()),
         &in_path,
@@ -983,12 +1023,17 @@ fn export_receipt_records_adaptive_traceability_b5() {
         m2.confidence_digest, None,
         "strength 0 must record no confidence shaping"
     );
+    assert_eq!(
+        m2.compression_digest, None,
+        "strength 0 must record no adaptive compressor shaping"
+    );
     assert_eq!(m2.effective_adaptive_strength, 0.0);
 
     // Confidence without a source profile cannot shape guardrails; do not record a
     // misleading confidence digest for an inactive adaptive path.
     let mut no_profile = settings;
     no_profile.advanced.source_profile = None;
+    no_profile.advanced.compression_guards = None;
     let job3 = engine::mastering_render(
         TrackId("confidence-no-profile".to_string()),
         &in_path,
@@ -1000,6 +1045,7 @@ fn export_receipt_records_adaptive_traceability_b5() {
     let m3 = job3.measurements.expect("measurements");
     assert_eq!(m3.source_profile_digest, None);
     assert_eq!(m3.confidence_digest, None);
+    assert_eq!(m3.compression_digest, None);
 }
 
 #[test]
@@ -1826,6 +1872,7 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        compression_digest: None,
         // Fabricated stub measurements, not a render — keeps the
         // rendered-only `target_not_reached` advisory out of these
         // density-advisory assertions even if default_master_settings() ever
@@ -1863,6 +1910,7 @@ async fn run_export_checks_warns_on_compressed_source_with_heavy_density() {
         effective_adaptive_strength: 0.0,
         source_profile_digest: None,
         confidence_digest: None,
+        compression_digest: None,
         measurements_are_rendered: false,
         checks: Vec::new(),
     };
@@ -1931,6 +1979,10 @@ fn golden_receipt_triple() -> serde_json::Value {
         effective_adaptive_strength: 0.75,
         source_profile_digest: Some("bass +1.2 | air -0.4".to_string()),
         confidence_digest: Some("bass 0.9 | tilt 0.6".to_string()),
+        compression_digest: Some(
+            "compression eased low 20% / mid 16% / high 25%; stand-down 0.00; density confidence 1.00"
+                .to_string(),
+        ),
     };
     let report = ExportReport {
         track_id: TrackId("golden-track".to_string()),
@@ -1945,6 +1997,10 @@ fn golden_receipt_triple() -> serde_json::Value {
         effective_adaptive_strength: 0.75,
         source_profile_digest: Some("bass +1.2 | air -0.4".to_string()),
         confidence_digest: Some("bass 0.9 | tilt 0.6".to_string()),
+        compression_digest: Some(
+            "compression eased low 20% / mid 16% / high 25%; stand-down 0.00; density confidence 1.00"
+                .to_string(),
+        ),
         measurements_are_rendered: true,
         checks: vec![
             QualityCheck {

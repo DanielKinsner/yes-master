@@ -5,6 +5,7 @@ import type {
   AlbumPlan,
   AnalysisProgress,
   AnalysisResult,
+  CompressionPlan,
   ExportReport,
   GuardrailReadout,
   ImportedTrack,
@@ -194,6 +195,17 @@ export const api = {
     album = false,
   ) =>
     invoke<GuardrailReadout>("guardrail_readout", {
+      settings,
+      trackId: trackId ?? null,
+      album,
+    }),
+
+  resolveCompressionPlan: (
+    settings: MasteringSettings,
+    trackId?: TrackId | null,
+    album = false,
+  ) =>
+    invoke<CompressionPlan>("resolve_compression_plan", {
       settings,
       trackId: trackId ?? null,
       album,
