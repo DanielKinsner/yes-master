@@ -1324,16 +1324,21 @@ export function PresetTiles({
   selected: Preset;
   onChange: (preset: Preset) => void;
   savingPreset: boolean;
-  onSave: (name: string) => void;
+  onSave: (name: string) => Promise<boolean>;
 }) {
   const [name, setName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) return;
-    onSave(name);
-    setName("");
-    setIsSaving(false);
+    // Only clear the form once the save actually succeeds — otherwise a failed
+    // save (e.g. empty/duplicate name rejected by the backend) silently wipes
+    // the in-progress name and collapses the input.
+    const saved = await onSave(name);
+    if (saved) {
+      setName("");
+      setIsSaving(false);
+    }
   };
 
   return (
