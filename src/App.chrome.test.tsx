@@ -45,6 +45,58 @@ afterEach(() => {
 });
 
 describe("top chrome", () => {
+  it("wires undo and redo header buttons to history state", async () => {
+    const onUndo = vi.fn();
+    const onRedo = vi.fn();
+    const baseProps = {
+      mode: "track" as const,
+      onModeChange: vi.fn(),
+      onSaveProject: vi.fn(),
+      onOpenProject: vi.fn(),
+      onOpenSettings: vi.fn(),
+      onOpenHelp: vi.fn(),
+      viewMode: "standard" as const,
+      onEnterAdvanced: vi.fn(),
+      onBackToStandard: vi.fn(),
+      onUndo,
+      onRedo,
+    };
+    const { container, root } = await renderNode(
+      <TopHeader {...baseProps} canUndo={false} canRedo={true} />,
+    );
+
+    const undo = buttonByLabel(container, "Undo — Ctrl+Z");
+    const redo = buttonByLabel(container, "Redo — Ctrl+Y");
+    expect(undo.disabled).toBe(true);
+    expect(undo.title).toBe("Undo — Ctrl+Z");
+    expect(redo.disabled).toBe(false);
+    expect(redo.title).toBe("Redo — Ctrl+Y");
+
+    await act(async () => {
+      undo.click();
+      redo.click();
+    });
+    expect(onUndo).not.toHaveBeenCalled();
+    expect(onRedo).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.render(<TopHeader {...baseProps} canUndo={true} canRedo={false} />);
+    });
+    expect(buttonByLabel(container, "Undo — Ctrl+Z").disabled).toBe(false);
+    expect(buttonByLabel(container, "Redo — Ctrl+Y").disabled).toBe(true);
+
+    await act(async () => {
+      buttonByLabel(container, "Undo — Ctrl+Z").click();
+      buttonByLabel(container, "Redo — Ctrl+Y").click();
+    });
+    expect(onUndo).toHaveBeenCalledTimes(1);
+    expect(onRedo).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("wires Settings and Help as active top-header buttons", async () => {
     const onOpenSettings = vi.fn();
     const onOpenHelp = vi.fn();
@@ -59,6 +111,10 @@ describe("top chrome", () => {
         viewMode="advanced"
         onEnterAdvanced={vi.fn()}
         onBackToStandard={vi.fn()}
+        canUndo={false}
+        canRedo={false}
+        onUndo={vi.fn()}
+        onRedo={vi.fn()}
       />,
     );
 

@@ -90,13 +90,14 @@ Current behavior:
 - Settings edits, user presets, undo/redo, and album intent edits share the
   same "Mastered chain is loaded" predicate.
 - The old mostly empty undo/redo/readiness strip is gone.
-- Undo/redo are compact header tools; analysis/readiness lives with track
-  metadata.
+- Undo/redo now have compact header buttons plus keyboard shortcuts;
+  analysis/readiness lives with track metadata.
 - The accepted centered Track Master / Album Master header layout remains.
 
 Verification coverage:
 
 - `src/hooks/useTrackMaster.integration.test.tsx`
+- `src/App.chrome.test.tsx`
 - `src/App.layout-css.test.ts`
 - Local ignored screenshots summarized in
   `docs/RELEASE_EVIDENCE_2026-05-28.md`.

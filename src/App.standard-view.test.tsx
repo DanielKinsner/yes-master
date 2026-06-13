@@ -24,6 +24,8 @@ describe("TopHeader Standard/Advanced affordance", () => {
         mode="track" onModeChange={() => {}}
         onSaveProject={() => {}} onOpenProject={() => {}}
         onOpenSettings={() => {}} onOpenHelp={() => {}}
+        canUndo={false} canRedo={false}
+        onUndo={() => {}} onRedo={() => {}}
         viewMode="standard" onEnterAdvanced={() => {}} onBackToStandard={() => {}}
       />,
     );
@@ -38,6 +40,8 @@ describe("TopHeader Standard/Advanced affordance", () => {
         mode="track" onModeChange={() => {}}
         onSaveProject={() => {}} onOpenProject={() => {}}
         onOpenSettings={() => {}} onOpenHelp={() => {}}
+        canUndo={false} canRedo={false}
+        onUndo={() => {}} onRedo={() => {}}
         viewMode="advanced" onEnterAdvanced={() => {}} onBackToStandard={() => {}}
       />,
     );

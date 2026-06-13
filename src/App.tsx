@@ -94,6 +94,10 @@ function App() {
         onOpenProject={tm.openProjectFromDisk}
         onOpenSettings={() => setChromePanel("settings")}
         onOpenHelp={() => setChromePanel("help")}
+        canUndo={tm.canUndo}
+        canRedo={tm.canRedo}
+        onUndo={tm.undo}
+        onRedo={tm.redo}
         viewMode={view === "advanced" ? "advanced" : "standard"}
         onEnterAdvanced={() => {
           // Entering Advanced from the chrome unmounts StandardView without
@@ -337,6 +341,10 @@ export function TopHeader({
   onOpenProject,
   onOpenSettings,
   onOpenHelp,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   viewMode,
   onEnterAdvanced,
   onBackToStandard,
@@ -347,6 +355,10 @@ export function TopHeader({
   onOpenProject: () => void;
   onOpenSettings: () => void;
   onOpenHelp: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
   viewMode: "standard" | "advanced";
   onEnterAdvanced: () => void;
   onBackToStandard: () => void;
@@ -385,6 +397,32 @@ export function TopHeader({
         </button>
       </nav>
       <div className="top-header-right">
+        <button
+          type="button"
+          className="icon-tile"
+          aria-label="Undo — Ctrl+Z"
+          title="Undo — Ctrl+Z"
+          disabled={!canUndo}
+          onClick={onUndo}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 14 4 9l5-5" />
+            <path d="M4 9h10a6 6 0 0 1 0 12h-1" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          className="icon-tile"
+          aria-label="Redo — Ctrl+Y"
+          title="Redo — Ctrl+Y"
+          disabled={!canRedo}
+          onClick={onRedo}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 14 5-5-5-5" />
+            <path d="M20 9H10a6 6 0 0 0 0 12h1" />
+          </svg>
+        </button>
         {viewMode === "standard" ? (
           <button type="button" className="ghost-btn top-advanced" onClick={onEnterAdvanced}>
             Advanced
