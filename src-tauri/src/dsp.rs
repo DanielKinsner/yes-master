@@ -773,6 +773,15 @@ fn clamp_finite_or(value: f32, default: f32, lo: f32, hi: f32) -> f32 {
     }
 }
 
+#[inline]
+fn finite_or(value: f32, default: f32) -> f32 {
+    if value.is_finite() {
+        value
+    } else {
+        default
+    }
+}
+
 impl ChainCoeffs {
     pub fn from_settings(sample_rate: u32, settings: &MasteringSettings) -> Self {
         let sr = sample_rate as f32;
@@ -815,11 +824,15 @@ impl ChainCoeffs {
         // is byte-identical to the non-adaptive path, which is what keeps the
         // `preset_byte_identity` snapshots stable.
         // See docs/plans/2026-06-02-001-adaptive-dsp-tier1-guardrails.md.
-        let effective_adaptive_strength = settings
-            .advanced
-            .adaptive_strength
-            .unwrap_or(crate::guardrails::ADAPTIVE_STRENGTH_DEFAULT)
-            .clamp(0.0, 1.0);
+        let effective_adaptive_strength = clamp_finite_or(
+            settings
+                .advanced
+                .adaptive_strength
+                .unwrap_or(crate::guardrails::ADAPTIVE_STRENGTH_DEFAULT),
+            crate::guardrails::ADAPTIVE_STRENGTH_DEFAULT,
+            0.0,
+            1.0,
+        );
         // Tier-2 Phase B: per-axis confidence gates each trim (reduce-only). `None`
         // (no DeepAnalysis: short clip / mobile / FE settings) => full => byte-identical.
         let source_confidence = settings.advanced.source_confidence.unwrap_or_default();
@@ -877,18 +890,15 @@ impl ChainCoeffs {
         // into [0, 1] then scaled to a 0..+4 dB lift. When the slider is None or
         // zero, `BiquadCoeffs::low_shelf` returns identity via its built-in
         // early-return at `gain_db < 1e-4`.
-        let warmth_db = settings.advanced.warmth.unwrap_or(0.0).clamp(0.0, 1.0) * 4.0;
+        let warmth_db =
+            clamp_finite_or(settings.advanced.warmth.unwrap_or(0.0), 0.0, 0.0, 1.0) * 4.0;
         let warmth = BiquadCoeffs::low_shelf(sr, 300.0, warmth_db, 0.7);
 
         // Phase 12.2 — Advanced presence/air (high-shelf @ 10 kHz). Same clamp +
         // scale pattern as warmth. Sits above the main High band (6 kHz) so the
         // two controls shape distinct perceptual regions.
-        let presence_air_db = settings
-            .advanced
-            .presence_air
-            .unwrap_or(0.0)
-            .clamp(0.0, 1.0)
-            * 4.0;
+        let presence_air_db =
+            clamp_finite_or(settings.advanced.presence_air.unwrap_or(0.0), 0.0, 0.0, 1.0) * 4.0;
         let presence_air = BiquadCoeffs::high_shelf(sr, 10_000.0, presence_air_db, 0.7);
         let transient_amount = (preset.transient_punch * preset_scale).clamp(-0.25, 0.25);
         let transient_fast_attack_alpha = alpha_from_time_ms(sr, 1.0);
@@ -961,11 +971,12 @@ impl ChainCoeffs {
         let guarded_preset_width = guardrails
             .as_ref()
             .map_or(preset_width, |g| g.trim_width(preset_width));
-        let width_side_scale = settings
-            .advanced
-            .width
-            .unwrap_or(guarded_preset_width)
-            .clamp(0.0, 2.0);
+        let width_side_scale = clamp_finite_or(
+            settings.advanced.width.unwrap_or(guarded_preset_width),
+            guarded_preset_width,
+            0.0,
+            2.0,
+        );
 
         // ----- Phase A4: preset-driven multiband compressor -----
         //
@@ -1000,11 +1011,15 @@ impl ChainCoeffs {
         let density = if compression_off {
             0.0
         } else {
-            let base = settings
-                .advanced
-                .compression_density
-                .unwrap_or(default_density_for_preset)
-                .clamp(0.0, 1.0);
+            let base = clamp_finite_or(
+                settings
+                    .advanced
+                    .compression_density
+                    .unwrap_or(default_density_for_preset),
+                default_density_for_preset,
+                0.0,
+                1.0,
+            );
             // Tier-1 guardrail softens compression on already-dense sources, but
             // only in Preset mode — Manual per-band values are explicit user
             // overrides and must not be second-guessed.
@@ -1028,7 +1043,7 @@ impl ChainCoeffs {
             .max(1.0);
 
         let compression_shape = |density: f32| -> (f32, f32) {
-            let density = density.clamp(0.0, 1.0);
+            let density = clamp_finite_or(density, 0.0, 0.0, 1.0);
             let engagement = (density * 2.0).min(1.0);
             let overdrive = (density * 2.0 - 1.0).max(0.0);
             let threshold =
@@ -1049,10 +1064,13 @@ impl ChainCoeffs {
                 let Some(guard) = guard else {
                     return (preset_threshold_db, preset_ratio);
                 };
-                let (threshold, ratio) = compression_shape(density * guard.density_mult);
+                let density_mult = clamp_finite_or(guard.density_mult, 1.0, 0.0, 1.0);
+                let threshold_lift_db = finite_or(guard.threshold_lift_db, 0.0).max(0.0);
+                let ratio_mult = finite_or(guard.ratio_mult, 1.0).max(0.0);
+                let (threshold, ratio) = compression_shape(density * density_mult);
                 (
-                    (threshold + guard.threshold_lift_db.max(0.0)).min(0.0),
-                    (ratio * guard.ratio_mult).max(1.0),
+                    (threshold + threshold_lift_db).min(0.0),
+                    (ratio * ratio_mult).max(1.0),
                 )
             };
         let (preset_low_threshold_db, preset_low_ratio) =
@@ -1063,108 +1081,144 @@ impl ChainCoeffs {
             guarded_preset_shape(adaptive_compression_guards.map(|g| &g.high));
 
         let comp_low_threshold_db = if manual_compression {
-            settings
-                .advanced
-                .compression_low_threshold_db
-                .unwrap_or(preset_threshold_db)
+            finite_or(
+                settings
+                    .advanced
+                    .compression_low_threshold_db
+                    .unwrap_or(preset_threshold_db),
+                preset_threshold_db,
+            )
         } else {
             preset_low_threshold_db
         };
         let comp_mid_threshold_db = if manual_compression {
-            settings
-                .advanced
-                .compression_mid_threshold_db
-                .unwrap_or(preset_threshold_db)
+            finite_or(
+                settings
+                    .advanced
+                    .compression_mid_threshold_db
+                    .unwrap_or(preset_threshold_db),
+                preset_threshold_db,
+            )
         } else {
             preset_mid_threshold_db
         };
         let comp_high_threshold_db = if manual_compression {
-            settings
-                .advanced
-                .compression_high_threshold_db
-                .unwrap_or(preset_threshold_db)
+            finite_or(
+                settings
+                    .advanced
+                    .compression_high_threshold_db
+                    .unwrap_or(preset_threshold_db),
+                preset_threshold_db,
+            )
         } else {
             preset_high_threshold_db
         };
 
         let comp_low_ratio = if manual_compression {
-            settings
-                .advanced
-                .compression_low_ratio
-                .unwrap_or(preset_ratio)
+            finite_or(
+                settings
+                    .advanced
+                    .compression_low_ratio
+                    .unwrap_or(preset_ratio),
+                preset_ratio,
+            )
         } else {
             preset_low_ratio
         }
         .max(1.0);
         let comp_mid_ratio = if manual_compression {
-            settings
-                .advanced
-                .compression_mid_ratio
-                .unwrap_or(preset_ratio)
+            finite_or(
+                settings
+                    .advanced
+                    .compression_mid_ratio
+                    .unwrap_or(preset_ratio),
+                preset_ratio,
+            )
         } else {
             preset_mid_ratio
         }
         .max(1.0);
         let comp_high_ratio = if manual_compression {
-            settings
-                .advanced
-                .compression_high_ratio
-                .unwrap_or(preset_ratio)
+            finite_or(
+                settings
+                    .advanced
+                    .compression_high_ratio
+                    .unwrap_or(preset_ratio),
+                preset_ratio,
+            )
         } else {
             preset_high_ratio
         }
         .max(1.0);
 
         let low_attack_ms = if manual_compression {
-            settings
-                .advanced
-                .compression_low_attack_ms
-                .unwrap_or(preset.compressor_attack_ms)
+            finite_or(
+                settings
+                    .advanced
+                    .compression_low_attack_ms
+                    .unwrap_or(preset.compressor_attack_ms),
+                preset.compressor_attack_ms,
+            )
         } else {
             preset.compressor_attack_ms
         }
         .max(0.1);
         let low_release_ms = if manual_compression {
-            settings
-                .advanced
-                .compression_low_release_ms
-                .unwrap_or(preset.compressor_release_ms)
+            finite_or(
+                settings
+                    .advanced
+                    .compression_low_release_ms
+                    .unwrap_or(preset.compressor_release_ms),
+                preset.compressor_release_ms,
+            )
         } else {
             preset.compressor_release_ms
         }
         .max(0.1);
         let mid_attack_ms = if manual_compression {
-            settings
-                .advanced
-                .compression_mid_attack_ms
-                .unwrap_or(preset.compressor_attack_ms)
+            finite_or(
+                settings
+                    .advanced
+                    .compression_mid_attack_ms
+                    .unwrap_or(preset.compressor_attack_ms),
+                preset.compressor_attack_ms,
+            )
         } else {
             preset.compressor_attack_ms
         }
         .max(0.1);
         let mid_release_ms = if manual_compression {
-            settings
-                .advanced
-                .compression_mid_release_ms
-                .unwrap_or(preset.compressor_release_ms)
+            finite_or(
+                settings
+                    .advanced
+                    .compression_mid_release_ms
+                    .unwrap_or(preset.compressor_release_ms),
+                preset.compressor_release_ms,
+            )
         } else {
             preset.compressor_release_ms
         }
         .max(0.1);
         let high_attack_ms = if manual_compression {
-            settings
-                .advanced
-                .compression_high_attack_ms
-                .unwrap_or(preset.compressor_attack_ms)
+            finite_or(
+                settings
+                    .advanced
+                    .compression_high_attack_ms
+                    .unwrap_or(preset.compressor_attack_ms),
+                preset.compressor_attack_ms,
+            )
         } else {
             preset.compressor_attack_ms
         }
         .max(0.1);
         let high_release_ms = if manual_compression {
-            settings
-                .advanced
-                .compression_high_release_ms
-                .unwrap_or(preset.compressor_release_ms)
+            finite_or(
+                settings
+                    .advanced
+                    .compression_high_release_ms
+                    .unwrap_or(preset.compressor_release_ms),
+                preset.compressor_release_ms,
+            )
         } else {
             preset.compressor_release_ms
         }
@@ -1228,9 +1282,10 @@ impl ChainCoeffs {
             let raw_push_db =
                 input_gain_db + avg_makeup_db + saturation_correction_db + user_output_gain_db;
             const TYPICAL_CREST_DB: f32 = 6.0;
-            let effective_push_db = if let Some(source_lufs) = settings.source_lufs_integrated {
-                let ceiling_dbtp = settings.effective_ceiling_dbtp();
-                let max_real_push_db = (ceiling_dbtp - TYPICAL_CREST_DB - source_lufs).max(0.0);
+            let effective_push_db = if let Some(source_lufs) =
+                settings.source_lufs_integrated.filter(|v| v.is_finite())
+            {
+                let max_real_push_db = (ceiling_db - TYPICAL_CREST_DB - source_lufs).max(0.0);
                 raw_push_db.min(max_real_push_db)
             } else {
                 // No source LUFS available — fall back to raw estimate.
@@ -1239,7 +1294,7 @@ impl ChainCoeffs {
                 // a moment later once analysis lands).
                 raw_push_db
             };
-            let attenuation_db = (-effective_push_db).clamp(-24.0, 0.0);
+            let attenuation_db = clamp_finite_or(-effective_push_db, 0.0, -24.0, 0.0);
             10.0_f32.powf(attenuation_db / 20.0)
         } else {
             1.0
@@ -2009,7 +2064,7 @@ impl MasteringChain {
     pub fn new(sample_rate: u32, channels: usize, settings: &MasteringSettings) -> Self {
         let coeffs = ChainCoeffs::from_settings(sample_rate, settings);
         let states = (0..channels).map(|_| ChannelState::default()).collect();
-        let ceiling_dbfs = settings.effective_ceiling_dbtp().clamp(-6.0, 0.0);
+        let ceiling_dbfs = clamp_finite_or(settings.effective_ceiling_dbtp(), -1.0, -6.0, 0.0);
         let limiter = Limiter::new(
             sample_rate,
             channels,
@@ -3209,21 +3264,46 @@ mod tests {
         settings.intensity = f32::NAN;
         settings.input_gain_db = f32::INFINITY;
         settings.output_gain_db = f32::NAN;
+        settings.volume_match = true;
+        settings.source_lufs_integrated = Some(f32::NAN);
+        settings.advanced.adaptive_strength = Some(f32::NAN);
+        settings.advanced.ceiling_dbtp = Some(f32::NAN);
+        settings.advanced.width = Some(f32::NAN);
+        settings.advanced.warmth = Some(f32::INFINITY);
+        settings.advanced.presence_air = Some(f32::NAN);
+        settings.advanced.compression_mode = CompressionMode::Manual;
+        settings.advanced.compression_density = Some(f32::NAN);
+        settings.advanced.compression_low_threshold_db = Some(f32::NAN);
+        settings.advanced.compression_low_ratio = Some(f32::NAN);
+        settings.advanced.compression_low_attack_ms = Some(f32::NAN);
+        settings.advanced.compression_low_release_ms = Some(f32::INFINITY);
+        settings.advanced.compression_mid_threshold_db = Some(f32::INFINITY);
+        settings.advanced.compression_mid_ratio = Some(f32::NAN);
+        settings.advanced.compression_mid_attack_ms = Some(f32::NAN);
+        settings.advanced.compression_mid_release_ms = Some(f32::NAN);
+        settings.advanced.compression_high_threshold_db = Some(f32::NAN);
+        settings.advanced.compression_high_ratio = Some(f32::INFINITY);
+        settings.advanced.compression_high_attack_ms = Some(f32::NAN);
+        settings.advanced.compression_high_release_ms = Some(f32::NAN);
 
-        let coeffs = ChainCoeffs::from_settings(48_000, &settings);
+        let mut chain = MasteringChain::new(48_000, 2, &settings);
 
-        assert!(
-            coeffs.input_gain_lin.is_finite(),
-            "NaN/Inf settings must not produce a non-finite input gain"
-        );
-        assert!(
-            coeffs.user_output_gain_lin.is_finite(),
-            "NaN/Inf settings must not produce a non-finite output gain"
-        );
-        assert!(
-            coeffs.ceiling_lin.is_finite() && coeffs.ceiling_lin > 0.0,
-            "ceiling must stay finite and positive"
-        );
+        assert!(chain.coeffs.input_gain_lin.is_finite());
+        assert!(chain.coeffs.user_output_gain_lin.is_finite());
+        assert!(chain.coeffs.ceiling_lin.is_finite() && chain.coeffs.ceiling_lin > 0.0);
+        assert!(chain.coeffs.width_side_scale.is_finite());
+        assert!(chain.coeffs.volume_match_gain_lin.is_finite());
+        assert!(chain.limiter.ceiling_lin.is_finite() && chain.limiter.ceiling_lin > 0.0);
+
+        for n in 0..4_800 {
+            let s = (2.0 * PI * 440.0 * n as f32 / 48_000.0).sin() * 0.3;
+            let mut frame = [s, -s];
+            chain.process_frame_inplace(&mut frame);
+            assert!(
+                frame.iter().all(|sample| sample.is_finite()),
+                "non-finite settings must not emit non-finite samples: {frame:?}"
+            );
+        }
     }
 
     #[test]
