@@ -21,6 +21,7 @@ import type {
   WaveformPeaks,
 } from "../bindings";
 import { lastExportDirectory } from "../lib/export-location";
+import { SUPPORTED_FORMATS_COPY } from "../lib/supported-formats";
 import {
   playbackErrorMessage,
   shouldPushLiveChainForSettingsEdit,
@@ -482,6 +483,33 @@ describe("useTrackMaster integration dispatches", () => {
     });
 
     expect(mocks.api.prewarmDecode).toHaveBeenCalledWith(track.path);
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("surfaces unsupported drop feedback when every dropped file is rejected", async () => {
+    let dragDropHandler:
+      | ((event: { payload: { type: "drop"; paths: string[] } }) => void)
+      | undefined;
+    mocks.onDragDropEvent.mockImplementation((handler) => {
+      dragDropHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const harness = await renderHookHarness();
+    await waitFor(() => {
+      expect(dragDropHandler).toBeDefined();
+    });
+
+    await act(async () => {
+      dragDropHandler?.({
+        payload: { type: "drop", paths: ["C:/video/a.mp4"] },
+      });
+    });
+
+    expect(mocks.api.importTracks).not.toHaveBeenCalled();
+    expect(harness.current().error).toContain("MP4");
+    expect(harness.current().error).toContain(SUPPORTED_FORMATS_COPY);
     await act(async () => {
       harness.root.unmount();
     });

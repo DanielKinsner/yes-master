@@ -32,6 +32,7 @@ import { standardExportSettings } from "../lib/standard-export";
 import { buildExportReport } from "../lib/export-receipt";
 import {
   AUDIO_DIALOG_FILTER,
+  SUPPORTED_FORMATS_COPY,
   supportedAudioExtensionFromName,
 } from "../lib/supported-formats";
 import type {
@@ -132,6 +133,17 @@ function ensureWavExtension(path: string): string {
 
 function projectDisplayName(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
+}
+
+function extensionLabel(path: string): string {
+  const name = path.split(/[\\/]/).filter(Boolean).pop() ?? path;
+  const ext = name.includes(".") ? name.split(".").pop()?.trim() : "";
+  return ext ? ext.toUpperCase() : "no extension";
+}
+
+function unsupportedDropMessage(paths: string[]): string {
+  const rejected = Array.from(new Set(paths.map(extensionLabel))).join(", ");
+  return `Unsupported file type${paths.length === 1 ? "" : "s"}: ${rejected}. Supported audio: ${SUPPORTED_FORMATS_COPY}.`;
 }
 
 async function chooseAlbumExportFolder(): Promise<string | null> {
@@ -1111,6 +1123,8 @@ export function useTrackMaster() {
             importFilesRef.current(audio).catch((err) => {
               console.warn("drag-drop import failed", err);
             });
+          } else if (all.length > 0) {
+            setError(unsupportedDropMessage(all));
           }
         }
       })
