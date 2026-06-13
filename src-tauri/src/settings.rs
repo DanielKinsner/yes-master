@@ -1,10 +1,15 @@
 use crate::types::*;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use tauri::Manager;
 
 const PRESETS_FILENAME: &str = "user_presets.json";
-const PRESETS_TMP_FILENAME: &str = "user_presets.json.tmp";
+
+/// Serializes the read-modify-write in `save_user_preset` / `delete_user_preset`
+/// so two concurrent command invocations can't each read the same list, mutate
+/// it independently, and have the last writer silently drop the other's change.
+static PRESETS_LOCK: Mutex<()> = Mutex::new(());
 
 #[tauri::command]
 pub async fn save_user_preset(
@@ -19,6 +24,9 @@ pub async fn save_user_preset(
             "preset name cannot be empty".to_string(),
         ));
     }
+    let _guard = PRESETS_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     let path = presets_path(&app)?;
     let mut presets = read_presets(&path).unwrap_or_default();
     let preset = UserPreset {
@@ -44,6 +52,9 @@ pub async fn delete_user_preset(id: String, app: tauri::AppHandle) -> CommandRes
     if id.is_empty() {
         return Err(CommandError::Other("preset id cannot be empty".to_string()));
     }
+    let _guard = PRESETS_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
     let path = presets_path(&app)?;
     let mut presets = read_presets(&path).unwrap_or_default();
     let before = presets.len();
@@ -75,10 +86,13 @@ pub fn read_presets(path: &Path) -> CommandResult<Vec<UserPreset>> {
 pub fn write_presets(path: &Path, presets: &[UserPreset]) -> CommandResult<()> {
     let json = serde_json::to_vec_pretty(presets)
         .map_err(|e| CommandError::Other(format!("serialize presets: {e}")))?;
+    // Unique per-write tmp name so a concurrent writer can't collide on (and
+    // corrupt) a shared scratch file before the atomic rename.
+    let tmp_name = format!("{PRESETS_FILENAME}.{}.tmp", uuid::Uuid::new_v4());
     let tmp_path = path
         .parent()
-        .map(|p| p.join(PRESETS_TMP_FILENAME))
-        .unwrap_or_else(|| PathBuf::from(PRESETS_TMP_FILENAME));
+        .map(|p| p.join(&tmp_name))
+        .unwrap_or_else(|| PathBuf::from(&tmp_name));
     std::fs::write(&tmp_path, &json).map_err(|e| CommandError::Io(e.to_string()))?;
     std::fs::rename(&tmp_path, path).map_err(|e| CommandError::Io(e.to_string()))?;
     Ok(())
