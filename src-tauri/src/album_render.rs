@@ -131,9 +131,11 @@ fn apply_album_shadow(
     }
     shadowed.intensity = (shadowed.intensity + bias.intensity_offset).clamp(0.0, 1.5);
 
-    // Album Master is non-adaptive (owner decision): strip any source_profile so a
-    // stale / hand-built / API payload can't make album renders adaptive (B1/B9).
+    // Album Master is non-adaptive (owner decision): strip adaptive internals so
+    // a stale / hand-built / API payload can't make album renders adaptive (B1/B9).
     shadowed.advanced.source_profile = None;
+    shadowed.advanced.source_confidence = None;
+    shadowed.advanced.compression_guards = None;
 
     shadowed
 }
@@ -210,6 +212,40 @@ mod adaptive_scope_tests {
         assert!(
             stripped.advanced.source_profile.is_none(),
             "album shadow must strip an incoming profile"
+        );
+    }
+
+    #[test]
+    fn album_shadow_strips_backend_internal_adaptive_fields() {
+        let bright = crate::types::SourceProfile {
+            spectral_6: crate::types::SpectralBalance6 {
+                sub: 0.1,
+                low: 0.2,
+                low_mid: 0.2,
+                mid: 0.2,
+                presence: 0.15,
+                air: 0.15,
+            },
+            dynamic_range_p95_p10_db: 8.0,
+            dynamic_range_lu: 8.0,
+            stereo_correlation: Some(0.5),
+            stereo_width: 1.0,
+        };
+        let mut settings = settings_with_profile(Some(bright));
+        settings.advanced.source_confidence = Some(crate::confidence::Confidence::full());
+        settings.advanced.compression_guards =
+            Some(crate::guardrails::CompressionGuards::identity());
+
+        let stripped = apply_album_shadow(&settings, &album_entry(), 0.5, 0.0, 0.5);
+
+        assert!(stripped.advanced.source_profile.is_none());
+        assert!(
+            stripped.advanced.source_confidence.is_none(),
+            "album shadow must strip backend-only source confidence"
+        );
+        assert!(
+            stripped.advanced.compression_guards.is_none(),
+            "album shadow must strip backend-only compression guards"
         );
     }
 }
