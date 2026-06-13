@@ -525,15 +525,30 @@ mod tests {
             },
         ];
 
-        let row = ledger_row_for(
-            "coat-test",
-            &PathBuf::from("C:/private/coat.wav"),
-            &case,
-            &analysis,
-            &render,
-            &PathBuf::from("C:/private/out.wav"),
-            &checks,
-        );
+        // Build the row with both gates flipped ON (defaults are OFF) so the
+        // captured gate columns can be asserted against a known-true value
+        // rather than the same getter they are sourced from — the latter would
+        // pass even if the capture were hardcoded. Restore inside the lock so
+        // the gate state can't leak even if a later assertion panics.
+        let row = {
+            let _lock = crate::guardrails::ADAPTIVE_COMPRESSION_GATE_TEST_LOCK
+                .lock()
+                .expect("adaptive compression gate test lock");
+            let prev_adaptive = crate::guardrails::set_adaptive_compression_enabled(true);
+            let prev_confidence = crate::confidence::set_confidence_gating_enabled(true);
+            let row = ledger_row_for(
+                "coat-test",
+                &PathBuf::from("C:/private/coat.wav"),
+                &case,
+                &analysis,
+                &render,
+                &PathBuf::from("C:/private/out.wav"),
+                &checks,
+            );
+            crate::confidence::set_confidence_gating_enabled(prev_confidence);
+            crate::guardrails::set_adaptive_compression_enabled(prev_adaptive);
+            row
+        };
 
         assert_eq!(row.fixture_id, "coat-test");
         assert_eq!(row.case_name, "universal-preset");
@@ -543,13 +558,13 @@ mod tests {
         );
         assert!((row.lufs_delta_db - 1.6).abs() < 0.01);
         assert!((row.dynamic_range_delta_lu - -1.1).abs() < 0.01);
-        assert_eq!(
+        assert!(
             row.confidence_gate_enabled,
-            crate::confidence::is_confidence_gating_enabled()
+            "ledger row must capture the live confidence gate state"
         );
-        assert_eq!(
+        assert!(
             row.adaptive_compression_enabled,
-            crate::guardrails::is_adaptive_compression_enabled()
+            "ledger row must capture the live adaptive compression gate state"
         );
 
         let csv = ledger_csv(&[row]);
