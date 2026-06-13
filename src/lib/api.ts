@@ -22,6 +22,15 @@ import type {
   WaveformPeaks,
 } from "../bindings";
 
+export const ADAPTIVE_COMPRESSION_GATE_EVENT = "yes-master:adaptive-compression-gate";
+
+function publishAdaptiveCompressionGate(enabled: boolean) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent<boolean>(ADAPTIVE_COMPRESSION_GATE_EVENT, { detail: enabled }),
+  );
+}
+
 /// Phase B: render_album_plan return shape.
 export interface AlbumTrackRenderRecord {
   track_id: TrackId;
@@ -140,8 +149,11 @@ export const api = {
 
   // Adaptive Compressor owner-calibration gate. Default off: gate-on work is
   // available for listening sessions without changing the validated preset path.
-  setAdaptiveCompression: (enabled: boolean) =>
-    invoke<boolean>("set_adaptive_compression", { enabled }),
+  setAdaptiveCompression: async (enabled: boolean) => {
+    const next = await invoke<boolean>("set_adaptive_compression", { enabled });
+    publishAdaptiveCompressionGate(next);
+    return next;
+  },
 
   adaptiveCompressionEnabled: () =>
     invoke<boolean>("adaptive_compression_enabled"),

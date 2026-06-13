@@ -13,6 +13,7 @@ import {
 import type {
   AnalysisResult,
   AlbumPlan,
+  CompressionPlan,
   ImportedTrack,
   MasteringSettings,
   ProjectState,
@@ -57,6 +58,9 @@ const mocks = vi.hoisted(() => {
     stopPlayback: vi.fn(),
     seekPlayback: vi.fn(),
     setLoopRegion: vi.fn(),
+    guardrailReadout: vi.fn(),
+    resolveCompressionPlan: vi.fn(),
+    adaptiveCompressionEnabled: vi.fn(),
     planAlbum: vi.fn(),
     renderAlbumPlan: vi.fn(),
   };
@@ -73,6 +77,7 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock("../lib/api", () => ({
+  ADAPTIVE_COMPRESSION_GATE_EVENT: "yes-master:adaptive-compression-gate",
   api: mocks.api,
   onPlaybackTick: mocks.onPlaybackTick,
   onRenderProgress: mocks.onRenderProgress,
@@ -230,6 +235,36 @@ function makeAlbumPlan(trackIds: string[]): AlbumPlan {
   };
 }
 
+function makeCompressionPlan(active: boolean, digest: string): CompressionPlan {
+  const band = {
+    threshold_db: -10,
+    ratio: 1.2,
+    density_mult: 0.9,
+    threshold_lift_db: active ? 1 : 0,
+    ratio_mult: active ? 0.9 : 1,
+    adaptive: active,
+  };
+  return {
+    active,
+    low: band,
+    mid: band,
+    high: band,
+    reasons: active
+      ? [{ code: "low_band_dense", message: "Low band is already dense." }]
+      : [],
+    guidance: active ? "Low band is already dense." : null,
+    digest,
+  };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((innerResolve) => {
+    resolve = innerResolve;
+  });
+  return { promise, resolve };
+}
+
 function HookHarness({
   onRender,
 }: {
@@ -306,6 +341,9 @@ function resetApiMocks() {
   mocks.api.stopPlayback.mockResolvedValue(null);
   mocks.api.playMaster.mockResolvedValue(null);
   mocks.api.updateChain.mockResolvedValue(null);
+  mocks.api.guardrailReadout.mockResolvedValue(null);
+  mocks.api.resolveCompressionPlan.mockResolvedValue(null);
+  mocks.api.adaptiveCompressionEnabled.mockResolvedValue(false);
   mocks.onPlaybackTick.mockResolvedValue(() => {});
   mocks.onRenderProgress.mockResolvedValue(() => {});
   mocks.onLandingStatus.mockResolvedValue(() => {});
@@ -937,6 +975,81 @@ describe("useTrackMaster integration dispatches", () => {
 
     expect(harness.current().error).toContain("missing source");
     expect(harness.current().previewStale).toBe(true);
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("keeps the current compression plan visible while refetching for the same track", async () => {
+    const track = makeTrack("compression-plan-refetch", "C:/audio/plan-refetch.wav");
+    const firstPlan = makeCompressionPlan(true, "first plan");
+    const nextPlan = makeCompressionPlan(true, "next plan");
+    const pendingPlan = deferred<CompressionPlan>();
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.api.resolveCompressionPlan.mockResolvedValue(firstPlan);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().compressionPlan).toEqual(firstPlan);
+    });
+
+    const callsBefore = mocks.api.resolveCompressionPlan.mock.calls.length;
+    mocks.api.resolveCompressionPlan.mockReturnValue(pendingPlan.promise);
+    await act(async () => {
+      harness.current().setIntensity(0.73);
+    });
+    await waitFor(() => {
+      expect(mocks.api.resolveCompressionPlan.mock.calls.length).toBeGreaterThan(callsBefore);
+    });
+
+    expect(harness.current().compressionPlan).toEqual(firstPlan);
+
+    await act(async () => {
+      pendingPlan.resolve(nextPlan);
+      await pendingPlan.promise;
+    });
+    await waitFor(() => {
+      expect(harness.current().compressionPlan).toEqual(nextPlan);
+    });
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("refetches the compression plan when the adaptive compression gate changes", async () => {
+    const track = makeTrack("compression-plan-gate", "C:/audio/plan-gate.wav");
+    const gateOffPlan = makeCompressionPlan(false, "gate off");
+    const gateOnPlan = makeCompressionPlan(true, "gate on");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.api.resolveCompressionPlan.mockResolvedValue(gateOffPlan);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().compressionPlan).toEqual(gateOffPlan);
+    });
+
+    const callsBefore = mocks.api.resolveCompressionPlan.mock.calls.length;
+    mocks.api.resolveCompressionPlan.mockResolvedValue(gateOnPlan);
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("yes-master:adaptive-compression-gate", { detail: true }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(mocks.api.resolveCompressionPlan.mock.calls.length).toBeGreaterThan(callsBefore);
+    });
+    await waitFor(() => {
+      expect(harness.current().compressionPlan).toEqual(gateOnPlan);
+    });
     await act(async () => {
       harness.root.unmount();
     });

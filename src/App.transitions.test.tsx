@@ -81,6 +81,7 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock("./lib/api", () => ({
+  ADAPTIVE_COMPRESSION_GATE_EVENT: "yes-master:adaptive-compression-gate",
   api: mocks.api,
   onPlaybackTick: mocks.onPlaybackTick,
   onRenderProgress: mocks.onRenderProgress,

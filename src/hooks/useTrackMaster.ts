@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open, save, getCurrentWebview } from "../lib/tauri-runtime";
 import {
+  ADAPTIVE_COMPRESSION_GATE_EVENT,
   api,
   onAnalysisProgress,
   onLandingStatus,
@@ -749,31 +750,87 @@ export function useTrackMaster() {
     null,
   );
   const [compressionPlan, setCompressionPlan] = useState<CompressionPlan | null>(null);
+  const [adaptiveCompressionGate, setAdaptiveCompressionGate] = useState<boolean | null>(
+    null,
+  );
   const guardrailReadoutReq = useRef(0);
+  const compressionPlanSurface = useRef<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.resolve(api.adaptiveCompressionEnabled?.())
+      .then((enabled) => {
+        if (!cancelled && typeof enabled === "boolean") {
+          setAdaptiveCompressionGate(enabled);
+        }
+      })
+      .catch(() => {});
+
+    if (typeof window === "undefined") {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const onAdaptiveCompressionGate = (event: Event) => {
+      const enabled = (event as CustomEvent<boolean>).detail;
+      if (typeof enabled === "boolean") {
+        setAdaptiveCompressionGate(enabled);
+      }
+    };
+    window.addEventListener(ADAPTIVE_COMPRESSION_GATE_EVENT, onAdaptiveCompressionGate);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(
+        ADAPTIVE_COMPRESSION_GATE_EVENT,
+        onAdaptiveCompressionGate,
+      );
+    };
+  }, []);
+
   useEffect(() => {
     if (!selectedTrackId) {
       setGuardrailReadout(null);
       setCompressionPlan(null);
+      compressionPlanSurface.current = null;
+      return;
+    }
+    const hasAdaptiveCompressionGateReader =
+      typeof api.adaptiveCompressionEnabled === "function";
+    if (hasAdaptiveCompressionGateReader && adaptiveCompressionGate === null) {
       return;
     }
     const reqId = ++guardrailReadoutReq.current;
     void selectedAnalysis; // dep: refetch when analysis lands so the store is ready
-    setCompressionPlan(null);
+    const album = mode === "album";
+    const surface = `${selectedTrackId}:${album}:${adaptiveCompressionGate ?? "untracked"}`;
+    if (compressionPlanSurface.current !== surface) {
+      setCompressionPlan(null);
+    }
     Promise.resolve(
-      api.guardrailReadout?.(selectedSettings, selectedTrackId, mode === "album"),
+      api.guardrailReadout?.(selectedSettings, selectedTrackId, album),
     )
       .then((r) => {
         if (r && guardrailReadoutReq.current === reqId) setGuardrailReadout(r);
       })
       .catch(() => {});
     Promise.resolve(
-      api.resolveCompressionPlan?.(selectedSettings, selectedTrackId, mode === "album"),
+      api.resolveCompressionPlan?.(selectedSettings, selectedTrackId, album),
     )
       .then((plan) => {
-        if (plan && guardrailReadoutReq.current === reqId) setCompressionPlan(plan);
+        if (guardrailReadoutReq.current === reqId) {
+          compressionPlanSurface.current = surface;
+          setCompressionPlan(plan ?? null);
+        }
       })
       .catch(() => {});
-  }, [selectedTrackId, selectedSettings, selectedAnalysis, mode]);
+  }, [
+    selectedTrackId,
+    selectedSettings,
+    selectedAnalysis,
+    mode,
+    adaptiveCompressionGate,
+  ]);
 
   const estimatedPlaybackPositionSec = useCallback(() => {
     const tick = lastPlaybackTickRef.current;
