@@ -19,6 +19,7 @@ native_bridge = { package = "yes-master-iphone-native-bridge", path = "../../iph
 yes_master_lib = { package = "yes-master", path = "../../../src-tauri", default-features = false }
 
 [dev-dependencies]
+futures-executor = "0.3"
 hound = "3"
 tempfile = "3"
 

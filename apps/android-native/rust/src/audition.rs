@@ -614,7 +614,69 @@ mod jni_shims {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::write_sine_wav;
+    use crate::test_util::{write_dense_wav, write_sine_wav};
+    use yes_master_lib::dsp::MasteringChain;
+
+    struct AdaptiveCompressionGateReset(bool);
+
+    impl Drop for AdaptiveCompressionGateReset {
+        fn drop(&mut self) {
+            yes_master_lib::guardrails::set_adaptive_compression_enabled(self.0);
+        }
+    }
+
+    fn adaptive_compression_gate_for_test(enabled: bool) -> AdaptiveCompressionGateReset {
+        AdaptiveCompressionGateReset(
+            yes_master_lib::guardrails::set_adaptive_compression_enabled(enabled),
+        )
+    }
+
+    fn desktop_adaptive_settings_for_path(
+        path: &std::path::Path,
+        preset: Option<&str>,
+        intensity: f32,
+        lufs_target: f32,
+    ) -> yes_master_lib::MasteringSettings {
+        let request = yes_master_lib::engine::AnalyzeRequest {
+            id: yes_master_lib::TrackId::new(),
+            path: path.to_string_lossy().into_owned(),
+        };
+        let analysis =
+            futures_executor::block_on(yes_master_lib::engine::analyze_tracks_core(vec![request]))
+                .expect("analyze dense fixture")
+                .pop()
+                .expect("analysis result");
+        let band_psr = analysis
+            .deep_analysis
+            .as_deref()
+            .and_then(yes_master_lib::deep_analysis::band_psr_p10_db);
+        let stand_down = yes_master_lib::guardrails::classify_already_mastered_stand_down(
+            analysis.lufs_integrated,
+            analysis.true_peak_dbtp,
+            analysis.dynamic_range_lu,
+            band_psr,
+        );
+        let mut settings =
+            native_bridge::export_settings_for_options(preset, intensity, lufs_target);
+        settings.source_lufs_integrated = Some(analysis.lufs_integrated);
+        yes_master_lib::profile_store::apply_resolved_profile(
+            &mut settings,
+            yes_master_lib::SourceProfile::from_analysis(&analysis),
+            false,
+        );
+        yes_master_lib::profile_store::apply_resolved_confidence(
+            &mut settings,
+            analysis.deep_analysis.clone(),
+            false,
+        );
+        yes_master_lib::profile_store::apply_resolved_compression_guards(
+            &mut settings,
+            analysis.deep_analysis.clone(),
+            Some(stand_down),
+            false,
+        );
+        settings
+    }
 
     fn make_engine(frames: u32) -> Box<AuditionEngine> {
         let dir = tempfile::tempdir().unwrap();
@@ -760,6 +822,44 @@ mod tests {
         assert!(lufs_quiet.is_finite() && lufs_loud.is_finite());
         assert!(gain_loud >= gain_quiet - 1e-6);
         assert!(lufs_loud >= lufs_quiet - 1e-3);
+    }
+
+    #[test]
+    fn adaptive_compressor_output_matches_desktop_chain_bit_for_bit() {
+        let _gate = adaptive_compression_gate_for_test(true);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("dense.wav");
+        write_dense_wav(&path, 48_000 * 4, 2, 48_000);
+
+        let pcm = yes_master_lib::decode::decode_full(&path).expect("decode");
+        let channels = pcm.channels as usize;
+        let total = pcm.samples.len() / channels;
+        let settings = desktop_adaptive_settings_for_path(&path, Some("heavy"), 1.0, -9.0);
+        let plan = yes_master_lib::guardrails::compression_plan_for_resolved_settings(&settings);
+        assert!(
+            plan.active,
+            "dense fixture must resolve adaptive compression guards: {plan:?}"
+        );
+
+        let mut reference = pcm.samples.clone();
+        let mut chain = MasteringChain::new(pcm.sample_rate, channels, &settings);
+        chain.process_interleaved(&mut reference, channels);
+
+        let engine = AuditionEngine::create(&path.to_string_lossy(), Some("heavy"), 1.0, -9.0)
+            .expect("engine");
+        engine.set_bypass(false);
+        assert!(engine.start());
+        let mut android = vec![0.0f32; total * channels];
+        assert_eq!(engine.fill(&mut android, total as u32), total as u32);
+
+        let max_diff = reference
+            .iter()
+            .zip(android.iter())
+            .fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
+        assert!(
+            max_diff < 1e-6,
+            "Android adaptive-compressor output must equal the desktop MasteringChain; max_diff={max_diff}"
+        );
     }
 
     /// Pin against the iPhone's VolumeMatch.swift: reference is the QUIETER

@@ -5378,6 +5378,7 @@ dependencies = [
 name = "yes-master-android-bridge"
 version = "0.1.0"
 dependencies = [
+ "futures-executor",
  "hound",
  "jni",
  "serde_json",

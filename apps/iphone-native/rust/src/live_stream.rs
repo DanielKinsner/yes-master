@@ -730,6 +730,49 @@ mod tests {
         writer.finalize().unwrap();
     }
 
+    fn write_dense_wav(path: &std::path::Path, frames: u32, channels: u16) {
+        let spec = hound::WavSpec {
+            channels,
+            sample_rate: 48_000,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut writer = hound::WavWriter::create(path, spec).unwrap();
+        let tones = [95.0, 180.0, 430.0, 1_200.0, 3_600.0, 8_400.0];
+        for n in 0..frames {
+            let t = n as f32 / 48_000.0;
+            let raw = tones
+                .iter()
+                .enumerate()
+                .map(|(index, hz)| {
+                    let phase = (index as f32 * 0.17).fract();
+                    ((t * hz + phase) * std::f32::consts::TAU).sin()
+                })
+                .sum::<f32>()
+                / tones.len() as f32;
+            let sample = (raw * 4.0).tanh() * 0.72;
+            let value = (sample.clamp(-0.95, 0.95) * i16::MAX as f32) as i16;
+            for _ in 0..channels {
+                writer.write_sample(value).unwrap();
+            }
+        }
+        writer.finalize().unwrap();
+    }
+
+    struct AdaptiveCompressionGateReset(bool);
+
+    impl Drop for AdaptiveCompressionGateReset {
+        fn drop(&mut self) {
+            yes_master_lib::guardrails::set_adaptive_compression_enabled(self.0);
+        }
+    }
+
+    fn adaptive_compression_gate_for_test(enabled: bool) -> AdaptiveCompressionGateReset {
+        AdaptiveCompressionGateReset(
+            yes_master_lib::guardrails::set_adaptive_compression_enabled(enabled),
+        )
+    }
+
     /// Build a stream straight from a temp WAV via the real create path.
     fn make_stream(frames: u32, channels: u16) -> *mut LiveStream {
         let dir = tempfile::tempdir().unwrap();
@@ -1017,6 +1060,54 @@ mod tests {
         assert!(
             max_diff < 1e-6,
             "iPhone live output must equal the desktop MasteringChain; max_diff={max_diff}"
+        );
+    }
+
+    #[test]
+    fn adaptive_compressor_live_output_matches_desktop_chain_bit_for_bit() {
+        let _gate = adaptive_compression_gate_for_test(true);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("dense.wav");
+        write_dense_wav(&path, 48_000 * 4, 2);
+
+        let pcm = yes_master_lib::decode::decode_full(&path).unwrap();
+        let channels = pcm.channels as usize;
+        let total = pcm.samples.len() / channels;
+        let context = crate::native_adaptive_context_for_path(&path).expect("adaptive context");
+        let settings = crate::export_settings_for_options_with_context(
+            Some("heavy"),
+            1.0,
+            -9.0,
+            Some(&context),
+        );
+        let plan = yes_master_lib::guardrails::compression_plan_for_resolved_settings(&settings);
+        assert!(
+            plan.active,
+            "dense fixture must resolve adaptive compression guards: {plan:?}"
+        );
+
+        let mut reference = pcm.samples.clone();
+        let mut chain = MasteringChain::new(pcm.sample_rate, channels, &settings);
+        chain.process_interleaved(&mut reference, channels);
+
+        let c = CString::new(path.to_string_lossy().as_bytes()).unwrap();
+        let preset = CString::new("heavy").unwrap();
+        let handle =
+            unsafe { yes_master_native_live_create(c.as_ptr(), preset.as_ptr(), 1.0, -9.0) };
+        assert!(!handle.is_null());
+        let mut live = vec![0.0f32; total * channels];
+        unsafe {
+            yes_master_native_live_process(handle, live.as_mut_ptr(), total as u32);
+            yes_master_native_live_destroy(handle);
+        }
+
+        let max_diff = reference
+            .iter()
+            .zip(live.iter())
+            .fold(0.0f32, |m, (a, b)| m.max((a - b).abs()));
+        assert!(
+            max_diff < 1e-6,
+            "iPhone adaptive-compressor output must equal the desktop MasteringChain; max_diff={max_diff}"
         );
     }
 

@@ -253,6 +253,35 @@ pub(crate) mod test_util {
         }
         writer.finalize().expect("finalize");
     }
+
+    pub(crate) fn write_dense_wav(path: &Path, frames: u32, channels: u16, sample_rate: u32) {
+        let spec = hound::WavSpec {
+            channels,
+            sample_rate,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut writer = hound::WavWriter::create(path, spec).expect("create wav");
+        let tones = [95.0, 180.0, 430.0, 1_200.0, 3_600.0, 8_400.0];
+        for i in 0..frames {
+            let t = i as f32 / sample_rate as f32;
+            let raw = tones
+                .iter()
+                .enumerate()
+                .map(|(index, hz)| {
+                    let phase = (index as f32 * 0.17).fract();
+                    ((t * hz + phase) * std::f32::consts::TAU).sin()
+                })
+                .sum::<f32>()
+                / tones.len() as f32;
+            let sample = (raw * 4.0).tanh() * 0.72;
+            let value = (sample.clamp(-0.95, 0.95) * i16::MAX as f32) as i16;
+            for _ in 0..channels {
+                writer.write_sample(value).expect("sample");
+            }
+        }
+        writer.finalize().expect("finalize");
+    }
 }
 
 #[cfg(test)]
