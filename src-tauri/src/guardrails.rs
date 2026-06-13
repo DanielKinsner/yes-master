@@ -8,8 +8,10 @@
 //! character floor keep presets recognizable at any strength; one `strength`
 //! value scales every trim.
 //!
-//! All triggers read level-invariant shares/ratios from [`SourceProfile`], so no
-//! LUFS normalization is needed before comparison.
+//! EQ guardrail triggers read level-invariant shares/ratios from
+//! [`SourceProfile`]. Adaptive-compressor density and stand-down checks also
+//! use measured LUFS, true peak, LRA, and per-band PSR in their native units, so
+//! no pre-normalization pass is needed before comparison.
 
 use crate::confidence::Confidence;
 use crate::types::{MasteringSettings, SourceProfile, TrackId};
