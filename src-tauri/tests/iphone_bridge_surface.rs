@@ -70,4 +70,6 @@ fn bridge_function_surface_still_resolves() {
     let _ = yes_master_lib::guardrails::classify_already_mastered_stand_down;
     let _ = yes_master_lib::guardrails::compression_plan_for_resolved_settings;
     let _ = yes_master_lib::guardrails::resolve_compression_guards;
+    let _ = yes_master_lib::deep_analysis::band_psr_p10_db;
+    let _ = yes_master_lib::SourceProfile::from_analysis;
 }
