@@ -1030,7 +1030,9 @@ export function useTrackMaster() {
     async (targetTracks: ImportedTrack[]) => {
       if (targetTracks.length === 0) return;
       setError(null);
-      setProjectFeedback(null);
+      for (const track of targetTracks) {
+        markStale(track.id);
+      }
       try {
         await analyzeKnownTracks(targetTracks);
         await rebuildWaveforms(targetTracks);
@@ -1038,7 +1040,7 @@ export function useTrackMaster() {
         setError(messageOf(err));
       }
     },
-    [analyzeKnownTracks, rebuildWaveforms],
+    [analyzeKnownTracks, rebuildWaveforms, markStale],
   );
 
   const reanalyzeTrack = useCallback(

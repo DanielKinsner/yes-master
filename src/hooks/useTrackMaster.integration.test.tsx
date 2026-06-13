@@ -877,6 +877,71 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("keeps moved-project recovery feedback visible when reanalysis still cannot find the source", async () => {
+    const track = makeTrack("project-retry-missing", "C:/audio/still-missing.wav");
+    mocks.open.mockResolvedValue("C:/projects/still-missing.ams.json");
+    mocks.api.loadProject.mockResolvedValue(makeProjectState(track));
+    mocks.api.analyzeTracks.mockRejectedValue(new Error("missing source"));
+    mocks.api.prepareWaveform.mockRejectedValue(new Error("missing source"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const harness = await renderHookHarness();
+
+    try {
+      await act(async () => {
+        await harness.current().openProjectFromDisk();
+      });
+      const recoveryFeedback = harness.current().projectFeedback;
+      expect(recoveryFeedback).toEqual({
+        tone: "warn",
+        message:
+          "Project opened from still-missing.ams.json; analysis could not be refreshed; 1 waveform could not be rebuilt.",
+      });
+
+      await act(async () => {
+        await harness.current().reanalyzeTrack(track.id);
+      });
+
+      expect(harness.current().projectFeedback).toEqual(recoveryFeedback);
+      expect(harness.current().error).toContain("missing source");
+      expect(harness.current().selectedAnalysis).toBeUndefined();
+    } finally {
+      warn.mockRestore();
+    }
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("marks a recovered preview stale when reanalysis loses the source again", async () => {
+    const track = makeTrack("reanalyze-stale", "C:/audio/reanalyze-stale.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.api.renderTrackPreview.mockResolvedValue(makeRenderJob("C:/out/reanalyze-stale.wav"));
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+    await act(async () => {
+      await harness.current().updatePreview();
+    });
+    expect(harness.current().previewStale).toBe(false);
+
+    mocks.api.analyzeTracks.mockRejectedValueOnce(new Error("missing source"));
+    await act(async () => {
+      await harness.current().reanalyzeTrack(track.id);
+    });
+
+    expect(harness.current().error).toContain("missing source");
+    expect(harness.current().previewStale).toBe(true);
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("uses the error channel for unsupported project schemas", async () => {
     const track = makeTrack("project-3", "C:/audio/project.wav");
     mocks.open.mockResolvedValue("C:/projects/old.ams.json");
