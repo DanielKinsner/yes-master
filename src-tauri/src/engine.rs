@@ -949,7 +949,40 @@ fn explicit_output_path(path: &Path, source_path: &Path) -> CommandResult<PathBu
             "output path would overwrite the source file".to_string(),
         ));
     }
+    // Non-negotiable: never overwrite a prior render by default. If the
+    // chosen path already exists (and isn't the source, handled above —
+    // e.g. the user accepted "Replace" in the save dialog), save to a
+    // unique sibling instead. Same `__{n}` collision suffix as
+    // `unique_output_path` so the two render paths stay consistent.
+    if path.exists() {
+        return uniquify_existing_path(path);
+    }
     Ok(path.to_path_buf())
+}
+
+/// Appends a `__{n}` suffix before the extension until the path no longer
+/// collides, mirroring the collision convention in `unique_output_path`.
+/// Preserves the user's chosen stem and extension so the saved file is
+/// still recognizably the master they named.
+fn uniquify_existing_path(path: &Path) -> CommandResult<PathBuf> {
+    let parent = path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("master");
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("wav");
+    for n in 1..1000 {
+        let alt = parent.join(format!("{stem}__{n}.{ext}"));
+        if !alt.exists() {
+            return Ok(alt);
+        }
+    }
+    Err(CommandError::Io(
+        "could not generate unique output path".to_string(),
+    ))
 }
 
 fn explicit_output_dir(path: &Path) -> CommandResult<PathBuf> {
@@ -1064,6 +1097,40 @@ mod tests {
         assert!(
             chosen.parent().expect("parent").is_dir(),
             "selected output parent should be created"
+        );
+    }
+
+    /// L15 regression: an explicit output path that collides with an
+    /// existing prior render must NOT overwrite it. The function returns a
+    /// unique sibling in the same directory that does not yet exist, so a
+    /// user accepting "Replace" in the save dialog never clobbers a prior
+    /// master.
+    #[test]
+    fn explicit_output_path_uniquifies_when_target_already_exists() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let source = tmp.path().join("source.wav");
+        std::fs::write(&source, b"source").expect("write source");
+        let chosen = tmp.path().join("track master.wav");
+        std::fs::write(&chosen, b"prior render").expect("write prior render");
+
+        let out_path = explicit_output_path(&chosen, &source).expect("explicit output path");
+
+        assert_ne!(
+            out_path, chosen,
+            "must not return the colliding path that holds a prior render"
+        );
+        assert_eq!(
+            out_path.parent(),
+            chosen.parent(),
+            "unique sibling must live in the same directory"
+        );
+        assert!(
+            !out_path.exists(),
+            "returned path must not yet exist (it was uniquified)"
+        );
+        assert!(
+            chosen.exists(),
+            "the prior render must be left intact, not overwritten"
         );
     }
 

@@ -885,6 +885,16 @@ fn play_master_preview_landing_plan(
     }
 }
 
+/// When a completed worker drains a pending measurement whose result is
+/// ALREADY cached, the landing window is over only if that pending
+/// measurement is still the live setting. Mirrors the
+/// `generation == s.live_coeff_generation` test in the normal worker-
+/// completion branch: a generation mismatch leaves `landing_pending` to
+/// the newer UpdateChain that owns it.
+fn drain_clears_landing_pending(pending_generation: u64, live_generation: u64) -> bool {
+    pending_generation == live_generation
+}
+
 fn update_chain_preview_landing_plan(
     cache: &PreviewLandingCache,
     settings: &MasteringSettings,
@@ -1522,7 +1532,19 @@ fn process_audio_command(
                     {
                         if s.landing_gain_cache.get(&pending_settings).is_some() {
                             // Already cached (e.g. the user landed back on a
-                            // measured setting). Nothing to do.
+                            // measured setting). No follow-up worker needed —
+                            // but if the pending generation is still the live
+                            // one, the cache already covers the live settings,
+                            // so the landing window is over. Mirror the
+                            // gen-match clear at the normal-completion branch
+                            // above; without this the "landing loudness…" note
+                            // stays stuck until the next settings change.
+                            if drain_clears_landing_pending(
+                                pending_generation,
+                                s.live_coeff_generation,
+                            ) {
+                                s.landing_pending = false;
+                            }
                         } else if try_spawn_lufs_preview_worker(
                             s.decoded_cache.as_ref(),
                             s.live_sample_rate,
@@ -2669,6 +2691,51 @@ mod tests {
 
         assert!((plan.initial_gain - 0.42).abs() < f32::EPSILON);
         assert!(!plan.needs_measurement);
+    }
+
+    /// L2 regression: a worker completes and drains a pending measurement
+    /// whose result is ALREADY cached and whose generation is still the
+    /// live one. The cached gain covers the live settings, so the
+    /// "landing loudness…" window is over — `landing_pending` must clear.
+    /// Before the fix this branch did nothing and the flag stuck true
+    /// until the next settings change.
+    #[test]
+    fn drain_already_cached_clears_landing_pending_when_generation_is_live() {
+        // Model the handler's cached-pending drain: the pending settings
+        // hash hit the cache and the pending generation equals the live
+        // generation captured on the last UpdateChain.
+        let mut cache = PreviewLandingCache::new();
+        let pending_settings = settings_with_intensity(0.5);
+        cache.insert(&pending_settings, 0.42);
+        let live_generation: u64 = 7;
+        let pending_generation: u64 = live_generation;
+
+        assert!(
+            cache.get(&pending_settings).is_some(),
+            "scenario precondition: pending result must already be cached",
+        );
+        let mut landing_pending = true;
+        if cache.get(&pending_settings).is_some()
+            && drain_clears_landing_pending(pending_generation, live_generation)
+        {
+            landing_pending = false;
+        }
+
+        assert!(
+            !landing_pending,
+            "cached-pending drain at the live generation must end the landing window",
+        );
+    }
+
+    /// Counterpart: the drained pending measurement is for a generation
+    /// the user has already moved past. The newer UpdateChain owns the
+    /// flag, so the drain must NOT clear it here.
+    #[test]
+    fn drain_already_cached_leaves_landing_pending_when_generation_is_stale() {
+        assert!(
+            !drain_clears_landing_pending(5, 7),
+            "a stale pending generation must not clear the live landing window",
+        );
     }
 
     #[test]
