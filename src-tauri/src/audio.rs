@@ -1,6 +1,6 @@
 use crate::types::*;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicI32, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
@@ -674,6 +674,11 @@ struct AudioThreadState {
     handle: rodio::OutputStreamHandle,
     sink: rodio::Sink,
     current_track: Option<TrackId>,
+    /// L10 — fade-out trigger shared with the currently-playing source. On an
+    /// Original<->Mastered swap the audio thread sets this so the outgoing
+    /// source ramps to silence and ends (its sink is detached to drain), then
+    /// re-points this at the incoming source's own trigger for the next toggle.
+    live_fade_out: Arc<AtomicBool>,
     /// B2: whether the currently-loaded Mastered playback is album mode (which is
     /// non-adaptive). Set on `play_master`; read by the settings-only
     /// `update_chain` path to keep album audition byte-flat without re-sending the
@@ -1784,6 +1789,23 @@ fn seek_target(start_position_sec: f64) -> Option<Duration> {
         .then(|| Duration::from_secs_f64(start_position_sec))
 }
 
+/// L10 — build the swap fade envelope for an incoming source.
+///
+/// `is_swap` is true only for a mid-play Original<->Mastered toggle (same track,
+/// already audible). A swap fades the new source in behind a silent lead-in so
+/// the outgoing fade-out never overlaps it; a fresh play gets no audible ramp
+/// (`0/0`) so the track's start is untouched. Either way the source carries
+/// `fade_out_trigger` so a *later* toggle can fade *it* out.
+fn build_swap_fade(
+    sample_rate: u32,
+    is_swap: bool,
+    fade_out_trigger: Arc<AtomicBool>,
+) -> crate::sources::FadeEnvelope {
+    let frames = crate::sources::swap_fade_frames(sample_rate);
+    let (lead_in, fade_in) = if is_swap { (frames, frames) } else { (0, 0) };
+    crate::sources::FadeEnvelope::new(lead_in, fade_in, frames, fade_out_trigger)
+}
+
 fn handle_play(
     state: &mut Option<AudioThreadState>,
     track_id: TrackId,
@@ -1823,6 +1845,8 @@ fn handle_play(
             handle,
             sink,
             current_track: None,
+            // Replaced with the first source's trigger before playback starts.
+            live_fade_out: Arc::new(AtomicBool::new(false)),
             live_album: false,
             loop_region: None,
             live_coeffs_tx: None,
@@ -1848,7 +1872,16 @@ fn handle_play(
         });
     }
     let s = state.as_mut().expect("state just inserted");
-    s.sink.stop();
+    // L10 — a mid-play Original<->Mastered toggle on the SAME track is a "swap":
+    // fade the outgoing source out (it ends, and its detached sink drains) and
+    // fade the incoming one in. A fresh play / track switch hard-stops as before.
+    let is_swap =
+        s.current_track.as_ref() == Some(&track_id) && !s.sink.empty() && !s.sink.is_paused();
+    if is_swap {
+        s.live_fade_out.store(true, Ordering::Relaxed);
+    } else {
+        s.sink.stop();
+    }
     s.spectrum_analyzer.reset();
 
     s.decoded_cache = Some(DecodedCacheEntry {
@@ -1868,6 +1901,10 @@ fn handle_play(
     s.spectrum_analyzer = SpectrumAnalyzer::new(pcm.sample_rate);
 
     let sample_rate = pcm.sample_rate;
+    // L10 — the incoming source carries its own fade-out trigger so the *next*
+    // toggle can fade it out; on a swap it also fades in behind a silent lead-in.
+    let new_fade_out = Arc::new(AtomicBool::new(false));
+    let fade = build_swap_fade(sample_rate, is_swap, new_fade_out.clone());
     let source = MeteredPcmSource::new(
         pcm.samples,
         pcm.channels,
@@ -1878,7 +1915,8 @@ fn handle_play(
         s.lufs_x100.clone(),
         s.integrated_lufs_x100.clone(),
         s.spectrum_ring.clone(),
-    );
+    )
+    .with_swap_fade(fade);
 
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(source);
@@ -1887,7 +1925,14 @@ fn handle_play(
         let _ = new_sink.try_seek(offset);
     }
     new_sink.play();
-    s.sink = new_sink;
+    // L10 — swap in the new sink. On a swap, detach the old one so Drop doesn't
+    // hard-stop the outgoing source mid-fade; its triggered fade-out ends the
+    // source, draining the detached sink. (Non-swap was already stopped above.)
+    let old_sink = std::mem::replace(&mut s.sink, new_sink);
+    if is_swap {
+        old_sink.detach();
+    }
+    s.live_fade_out = new_fade_out;
     s.current_track = Some(track_id);
     s.live_coeffs_tx = None;
     s.live_coeff_generation = s.live_coeff_generation.wrapping_add(1);
@@ -1981,6 +2026,8 @@ fn handle_play_master(
             handle,
             sink,
             current_track: None,
+            // Replaced with the first source's trigger before playback starts.
+            live_fade_out: Arc::new(AtomicBool::new(false)),
             live_album: false,
             loop_region: None,
             live_coeffs_tx: None,
@@ -2006,7 +2053,16 @@ fn handle_play_master(
         });
     }
     let s = state.as_mut().expect("state just inserted");
-    s.sink.stop();
+    // L10 — a mid-play Original<->Mastered toggle on the SAME track is a "swap":
+    // fade the outgoing source out (it ends, and its detached sink drains) and
+    // fade the incoming one in. A fresh play / track switch hard-stops as before.
+    let is_swap =
+        s.current_track.as_ref() == Some(&track_id) && !s.sink.empty() && !s.sink.is_paused();
+    if is_swap {
+        s.live_fade_out.store(true, Ordering::Relaxed);
+    } else {
+        s.sink.stop();
+    }
     s.spectrum_analyzer.reset();
 
     // Update the cache (replace any prior entry — single-slot LRU is fine
@@ -2073,6 +2129,10 @@ fn handle_play_master(
     {
         s.lufs_worker_in_flight = true;
     }
+    // L10 — the incoming source carries its own fade-out trigger so the *next*
+    // toggle can fade it out; on a swap it also fades in behind a silent lead-in.
+    let new_fade_out = Arc::new(AtomicBool::new(false));
+    let fade = build_swap_fade(pcm.sample_rate, is_swap, new_fade_out.clone());
     let mastering_source = MasteringSource::new(
         pcm.samples,
         pcm.channels,
@@ -2085,7 +2145,8 @@ fn handle_play_master(
         s.lufs_x100.clone(),
         s.integrated_lufs_x100.clone(),
         s.spectrum_ring.clone(),
-    );
+    )
+    .with_swap_fade(fade);
 
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(mastering_source);
@@ -2093,7 +2154,14 @@ fn handle_play_master(
         let _ = new_sink.try_seek(offset);
     }
     new_sink.play();
-    s.sink = new_sink;
+    // L10 — swap in the new sink. On a swap, detach the old one so Drop doesn't
+    // hard-stop the outgoing source mid-fade; its triggered fade-out ends the
+    // source, draining the detached sink. (Non-swap was already stopped above.)
+    let old_sink = std::mem::replace(&mut s.sink, new_sink);
+    if is_swap {
+        old_sink.detach();
+    }
+    s.live_fade_out = new_fade_out;
     s.current_track = Some(track_id);
     // B2: remember album-ness so the settings-only update_chain path stays flat
     // for album audition without re-sending the flag on every live edit.

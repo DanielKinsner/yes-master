@@ -15,12 +15,131 @@
 //! mono signal into a `SpectrumRing`; the audio thread's snapshot tick
 //! reads from those slots without ever blocking the audio loop.
 
-use std::sync::atomic::{AtomicI32, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::time::Duration;
 
 use crate::spectrum::SpectrumRing;
+
+/// Length of the click-suppressing fade applied on an Original<->Mastered swap
+/// (L10). ~22 ms is long enough to mask the zero-crossing discontinuity that
+/// made the toggle click, short enough that audition stays responsive.
+pub(crate) const SWAP_FADE_MS: usize = 22;
+
+/// `SWAP_FADE_MS` expressed in frames at `sample_rate` (min 1 so the ramp math
+/// never divides by zero on a degenerate rate).
+pub(crate) fn swap_fade_frames(sample_rate: u32) -> usize {
+    ((sample_rate as usize).saturating_mul(SWAP_FADE_MS) / 1000).max(1)
+}
+
+/// Per-frame outcome of the swap fade envelope.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) enum FrameFade {
+    /// Scale the produced frame by this gain (`1.0` = untouched).
+    Gain(f32),
+    /// A triggered fade-out has fully rolled off — the source must end (return
+    /// `None`) so its detached sink drains and self-cleans.
+    End,
+}
+
+/// Click-free gain envelope for Original<->Mastered swaps, evaluated once per
+/// frame *inside* the source (see [`MeteredPcmSource`] / [`MasteringSource`]).
+///
+/// Why not rodio's `FadeIn`/`FadeOut` combinators: their ramp clock is driven by
+/// elapsed playback time, and `Sink::try_seek` sets that clock to the seek
+/// target — so wrapping a source in `fade_in` and then seeking to a non-zero
+/// playhead skips the fade entirely. Counting *emitted frames* here decouples
+/// the fade from the seek, which is exactly the "seek first, then fade in"
+/// sequence a playhead-preserving swap needs.
+///
+/// A swap drives the envelope on two sources, sequentially (never a dual-sink
+/// crossfade):
+/// - the **outgoing** source is triggered via `fade_out` (a flag the audio
+///   thread sets at swap time); it ramps `last_gain -> 0` over `fade_out_frames`
+///   then ends, so its detached sink drains.
+/// - the **incoming** source stays silent for `lead_in_frames` (so the outgoing
+///   fade-out is never audible at the same instant) then ramps `0 -> 1` over
+///   `fade_in_frames`.
+///
+/// A fresh play (no prior source to replace) uses `lead_in_frames == 0` and
+/// `fade_in_frames == 0`, so it is identical to ungated playback; it still
+/// carries a `fade_out` trigger so a *later* toggle can fade it out.
+pub(crate) struct FadeEnvelope {
+    lead_in_frames: usize,
+    fade_in_frames: usize,
+    fade_out_frames: usize,
+    fade_out: Arc<AtomicBool>,
+    emitted_frames: usize,
+    fade_out_remaining: Option<usize>,
+    fade_out_start_gain: f32,
+    last_gain: f32,
+}
+
+impl FadeEnvelope {
+    pub(crate) fn new(
+        lead_in_frames: usize,
+        fade_in_frames: usize,
+        fade_out_frames: usize,
+        fade_out: Arc<AtomicBool>,
+    ) -> Self {
+        Self {
+            lead_in_frames,
+            fade_in_frames,
+            fade_out_frames,
+            fade_out,
+            emitted_frames: 0,
+            fade_out_remaining: None,
+            fade_out_start_gain: 1.0,
+            last_gain: 1.0,
+        }
+    }
+
+    /// An envelope that never alters the signal — used by non-swap construction
+    /// (and tests). Its trigger is private (nothing else clones it), so it can
+    /// never fire.
+    pub(crate) fn inactive() -> Self {
+        Self::new(0, 0, 0, Arc::new(AtomicBool::new(false)))
+    }
+
+    /// Advance the envelope by one frame and return the gain to apply (or `End`
+    /// once a triggered fade-out has fully rolled off). Call exactly once per
+    /// produced frame.
+    pub(crate) fn advance_frame(&mut self) -> FrameFade {
+        // A swap was requested on this (outgoing) source: latch the fade-out,
+        // starting from whatever gain we last emitted so a re-toggle mid-fade
+        // never jumps back to full scale (guards rapid toggling).
+        if self.fade_out_remaining.is_none() && self.fade_out.load(Ordering::Relaxed) {
+            self.fade_out_remaining = Some(self.fade_out_frames);
+            self.fade_out_start_gain = self.last_gain;
+        }
+        if let Some(remaining) = self.fade_out_remaining {
+            if remaining == 0 {
+                return FrameFade::End;
+            }
+            // Ramp start_gain -> ~0 across fade_out_frames. With realistic frame
+            // counts (~1000 at 48 kHz) the final pre-`End` frame sits near
+            // -60 dB, so the cut to silence is inaudible.
+            let progress = remaining as f32 / self.fade_out_frames.max(1) as f32;
+            let gain = self.fade_out_start_gain * progress;
+            self.fade_out_remaining = Some(remaining - 1);
+            self.last_gain = gain;
+            return FrameFade::Gain(gain);
+        }
+
+        let gain = if self.emitted_frames < self.lead_in_frames {
+            0.0
+        } else if self.emitted_frames < self.lead_in_frames + self.fade_in_frames {
+            let k = self.emitted_frames - self.lead_in_frames;
+            (k as f32 + 1.0) / self.fade_in_frames.max(1) as f32
+        } else {
+            1.0
+        };
+        self.emitted_frames += 1;
+        self.last_gain = gain;
+        FrameFade::Gain(gain)
+    }
+}
 
 pub(crate) struct LiveCoeffUpdate {
     pub(crate) generation: u64,
@@ -79,6 +198,9 @@ pub(crate) struct MeteredPcmSource {
     integrated_lufs_meter: crate::dsp::IntegratedLufs,
     integrated_lufs_x100: Arc<AtomicI32>,
     spectrum_ring: Arc<SpectrumRing>,
+    /// L10 — click-free Original<->Mastered swap fade. Inactive by default; the
+    /// live audio path installs a real one via [`Self::with_swap_fade`].
+    fade: FadeEnvelope,
 }
 
 impl MeteredPcmSource {
@@ -110,7 +232,15 @@ impl MeteredPcmSource {
             integrated_lufs_meter: crate::dsp::IntegratedLufs::new(sample_rate),
             integrated_lufs_x100,
             spectrum_ring,
+            fade: FadeEnvelope::inactive(),
         }
+    }
+
+    /// Install the L10 swap fade envelope. Only the live audio path calls this;
+    /// tests and other construction keep the inactive default from [`Self::new`].
+    pub(crate) fn with_swap_fade(mut self, fade: FadeEnvelope) -> Self {
+        self.fade = fade;
+        self
     }
 }
 
@@ -123,6 +253,12 @@ impl Iterator for MeteredPcmSource {
             if self.position >= self.samples.len() {
                 return None;
             }
+            // L10 — advance the swap fade once per frame. `End` means a triggered
+            // fade-out finished, so the source ends and its detached sink drains.
+            let fade_gain = match self.fade.advance_frame() {
+                FrameFade::End => return None,
+                FrameFade::Gain(g) => g,
+            };
 
             for i in 0..channels {
                 self.frame[i] = if self.position + i < self.samples.len() {
@@ -132,6 +268,13 @@ impl Iterator for MeteredPcmSource {
                 };
             }
             self.position += channels;
+
+            // Apply the fade before metering so the meters track what is heard.
+            if fade_gain != 1.0 {
+                for v in &mut self.frame[..channels] {
+                    *v *= fade_gain;
+                }
+            }
 
             let mut frame_peak = 0.0f32;
             for v in &self.frame[..channels] {
@@ -258,6 +401,9 @@ pub(crate) struct MasteringSource {
     /// reads it and runs an FFT to produce the EQ panel's live
     /// spectrum.
     spectrum_ring: Arc<SpectrumRing>,
+    /// L10 — click-free Original<->Mastered swap fade. Inactive by default; the
+    /// live audio path installs a real one via [`Self::with_swap_fade`].
+    fade: FadeEnvelope,
 }
 
 impl MasteringSource {
@@ -302,7 +448,15 @@ impl MasteringSource {
             integrated_lufs_meter: crate::dsp::IntegratedLufs::new(sample_rate),
             integrated_lufs_x100,
             spectrum_ring,
+            fade: FadeEnvelope::inactive(),
         }
+    }
+
+    /// Install the L10 swap fade envelope. Only the live audio path calls this;
+    /// tests and other construction keep the inactive default from [`Self::new`].
+    pub(crate) fn with_swap_fade(mut self, fade: FadeEnvelope) -> Self {
+        self.fade = fade;
+        self
     }
 }
 
@@ -316,6 +470,12 @@ impl Iterator for MasteringSource {
             if self.position >= self.samples.len() {
                 return None;
             }
+            // L10 — advance the swap fade once per frame. `End` means a triggered
+            // fade-out finished, so the source ends and its detached sink drains.
+            let fade_gain = match self.fade.advance_frame() {
+                FrameFade::End => return None,
+                FrameFade::Gain(g) => g,
+            };
 
             // Pull one frame out of the source PCM. If we're short at the end
             // of the file, zero-pad — keeps the limiter happy.
@@ -395,6 +555,14 @@ impl Iterator for MasteringSource {
                         .take()
                         .expect("pending_chain just checked");
                     self.crossfade_total = 0;
+                }
+            }
+
+            // L10 — apply the swap fade to the post-chain frame before metering,
+            // so the meters track what is actually heard during the fade.
+            if fade_gain != 1.0 {
+                for v in &mut self.frame_main[..channels] {
+                    *v *= fade_gain;
                 }
             }
 
@@ -529,6 +697,182 @@ mod meter_input_tests {
         assert!(
             (delta - 3.0103).abs() < 0.1,
             "duplicated-mono should read ~3.01 LU hotter than single-channel; got {delta}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod swap_fade_tests {
+    //! L10 — the Original<->Mastered swap fade. The fade lives inside the source
+    //! (decoupled from `try_seek`) so the playhead is preserved while the click
+    //! is suppressed; the audio command thread never blocks.
+    use super::*;
+    use rodio::Source as _;
+    use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32};
+
+    fn metered(
+        samples: Vec<f32>,
+        channels: u16,
+        sample_rate: u32,
+        fade: FadeEnvelope,
+    ) -> MeteredPcmSource {
+        MeteredPcmSource::new(
+            samples,
+            channels,
+            sample_rate,
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicI32::new(i32::MIN)),
+            Arc::new(AtomicI32::new(i32::MIN)),
+            Arc::new(SpectrumRing::new()),
+        )
+        .with_swap_fade(fade)
+    }
+
+    #[test]
+    fn fade_in_stays_silent_through_lead_in_then_ramps_to_unity() {
+        let trigger = Arc::new(AtomicBool::new(false));
+        let mut env = FadeEnvelope::new(2, 4, 4, trigger);
+        // Lead-in: silent so the outgoing source's fade-out never overlaps.
+        assert_eq!(env.advance_frame(), FrameFade::Gain(0.0));
+        assert_eq!(env.advance_frame(), FrameFade::Gain(0.0));
+        // Fade-in ramps 0 -> 1 across four frames.
+        assert_eq!(env.advance_frame(), FrameFade::Gain(0.25));
+        assert_eq!(env.advance_frame(), FrameFade::Gain(0.5));
+        assert_eq!(env.advance_frame(), FrameFade::Gain(0.75));
+        assert_eq!(env.advance_frame(), FrameFade::Gain(1.0));
+        // Steady state thereafter.
+        assert_eq!(env.advance_frame(), FrameFade::Gain(1.0));
+    }
+
+    #[test]
+    fn fade_out_ramps_from_full_then_ends() {
+        let trigger = Arc::new(AtomicBool::new(false));
+        // No lead-in / fade-in: models a fresh-play source that is later toggled.
+        let mut env = FadeEnvelope::new(0, 0, 4, trigger.clone());
+        assert_eq!(env.advance_frame(), FrameFade::Gain(1.0));
+        // A toggle requests this (outgoing) source fade out and end.
+        trigger.store(true, Ordering::Relaxed);
+        assert_eq!(env.advance_frame(), FrameFade::Gain(1.0)); // 1.0 * 4/4
+        assert_eq!(env.advance_frame(), FrameFade::Gain(0.75));
+        assert_eq!(env.advance_frame(), FrameFade::Gain(0.5));
+        assert_eq!(env.advance_frame(), FrameFade::Gain(0.25));
+        assert_eq!(env.advance_frame(), FrameFade::End);
+        // Once ended it stays ended (the source returns None forever).
+        assert_eq!(env.advance_frame(), FrameFade::End);
+    }
+
+    #[test]
+    fn re_toggle_mid_fade_in_fades_out_from_partial_gain_not_full() {
+        // Guards rapid re-toggling: the fade-out must start from whatever gain
+        // the source last emitted, never jump back to unity (which would click).
+        let trigger = Arc::new(AtomicBool::new(false));
+        let mut env = FadeEnvelope::new(0, 4, 4, trigger.clone());
+        assert_eq!(env.advance_frame(), FrameFade::Gain(0.25)); // partway through fade-in
+        trigger.store(true, Ordering::Relaxed);
+        assert_eq!(env.advance_frame(), FrameFade::Gain(0.25)); // 0.25 * 4/4
+        assert_eq!(env.advance_frame(), FrameFade::Gain(0.1875)); // 0.25 * 3/4
+        assert_eq!(env.advance_frame(), FrameFade::Gain(0.125)); // 0.25 * 2/4
+        assert_eq!(env.advance_frame(), FrameFade::Gain(0.0625)); // 0.25 * 1/4
+        assert_eq!(env.advance_frame(), FrameFade::End);
+    }
+
+    #[test]
+    fn inactive_envelope_passes_signal_through_unchanged() {
+        // Fresh play / tests: gain is always unity and the source never ends early.
+        let mut env = FadeEnvelope::inactive();
+        for _ in 0..1000 {
+            assert_eq!(env.advance_frame(), FrameFade::Gain(1.0));
+        }
+    }
+
+    #[test]
+    fn swap_fade_in_suppresses_startup_click_and_reaches_unity() {
+        // A constant full-scale signal: with the fade installed the first audible
+        // sample is near silence (no click) and the ramp climbs to full scale.
+        let sr = 48_000;
+        let frames = 8usize;
+        let trigger = Arc::new(AtomicBool::new(false));
+        let env = FadeEnvelope::new(0, frames, frames, trigger);
+        let mut src = metered(vec![1.0f32; 64], 1, sr, env);
+
+        let first = src.next().expect("sample");
+        assert!(first < 0.5, "fade-in must start near silence, got {first}");
+        let mut last = first;
+        for _ in 1..frames {
+            let v = src.next().expect("sample");
+            assert!(
+                v >= last - 1e-6,
+                "fade-in must be monotonic non-decreasing, {v} < {last}"
+            );
+            last = v;
+        }
+        assert!(
+            (last - 1.0).abs() < 1e-6,
+            "fade-in must reach unity, got {last}"
+        );
+    }
+
+    #[test]
+    fn swap_preserves_playhead_under_lead_in_then_fade_in() {
+        // Ramp signal (sample value == frame index) so the seeked position is
+        // observable in the output. Seek to frame 10, lead-in 3, fade-in 3.
+        let sr = 1_000;
+        let samples: Vec<f32> = (0..200).map(|i| i as f32).collect();
+        let trigger = Arc::new(AtomicBool::new(false));
+        let env = FadeEnvelope::new(3, 3, 3, trigger);
+        let mut src = metered(samples, 1, sr, env);
+
+        // Playhead preservation: seek to 10 ms == frame 10 at 1 kHz mono.
+        src.try_seek(Duration::from_secs_f64(0.010)).expect("seek");
+
+        // Lead-in: three silent frames (consuming source frames 10, 11, 12).
+        assert_eq!(src.next(), Some(0.0));
+        assert_eq!(src.next(), Some(0.0));
+        assert_eq!(src.next(), Some(0.0));
+        // First audible frame is source frame 13 (== seek 10 + lead-in 3),
+        // scaled by the first fade-in step (1/3). Had the seek been dropped it
+        // would be frame 3 -> 1.0; landing on ~4.333 proves the playhead held.
+        let first_audible = src.next().expect("sample");
+        assert!(
+            (first_audible - 13.0 / 3.0).abs() < 1e-3,
+            "expected source frame 13 * 1/3 ≈ 4.333 (playhead preserved), got {first_audible}"
+        );
+    }
+
+    #[test]
+    fn swap_keeps_playing_with_fade_installed_on_idle_sink() {
+        // Device-free sink (no OutputStream): proves isPlaying stays true and the
+        // playhead advances while the swap fade is active.
+        let sr = 48_000;
+        let channels = 2u16;
+        let frames = swap_fade_frames(sr);
+        let samples = vec![0.5f32; sr as usize * channels as usize * 2];
+        let trigger = Arc::new(AtomicBool::new(false));
+        let env = FadeEnvelope::new(frames, frames, frames, trigger);
+        let src = metered(samples, channels, sr, env);
+
+        let (sink, mut queue) = rodio::Sink::new_idle();
+        sink.append(src);
+        sink.play();
+        // Pull ~0.2 s so the sink's periodic position tracking advances.
+        let pulls = sr as usize * channels as usize / 5;
+        let mut produced = 0usize;
+        for _ in 0..pulls {
+            if queue.next().is_some() {
+                produced += 1;
+            }
+        }
+        assert!(produced > 0, "idle sink must produce samples");
+        assert!(
+            !sink.is_paused() && !sink.empty(),
+            "isPlaying must stay true across the swap"
+        );
+        assert!(
+            sink.get_pos() > Duration::ZERO,
+            "playhead must advance during playback, got {:?}",
+            sink.get_pos()
         );
     }
 }
