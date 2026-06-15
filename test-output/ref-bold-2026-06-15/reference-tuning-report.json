@@ -1,0 +1,149 @@
+{
+  "generated_at_iso": "2026-06-15T20:07:20.032432400+00:00",
+  "reference_dir": "C:/Users/SM - Dan/Documents/GitHub/yes-master/tests for presets",
+  "output_dir": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\ref-bold-2026-06-15",
+  "track_label": "It’s a coat",
+  "source_path": "\\\\?\\C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\tests for presets\\It’s a coat-original-test.wav",
+  "gate_state": {
+    "confidence_gate_enabled": false,
+    "adaptive_compression_enabled": false
+  },
+  "rows": [
+    {
+      "track_label": "It’s a coat",
+      "preset": {
+        "kind": "universal"
+      },
+      "source_lufs": -12.3312845,
+      "reference_lufs": -10.528514,
+      "yes_lufs": -13.999999,
+      "reference_lufs_delta_db": 1.8027706,
+      "yes_lufs_delta_db": -1.6687145,
+      "lufs_gap_db": -3.4714851,
+      "source_dynamic_range_lu": 4.0627484,
+      "reference_dynamic_range_lu": 3.2922277,
+      "yes_dynamic_range_lu": 3.4170501,
+      "reference_dynamic_range_delta_lu": -0.7705207,
+      "yes_dynamic_range_delta_lu": -0.6456983,
+      "dynamic_range_gap_lu": 0.12482238,
+      "spectral_low_gap": 0.023561,
+      "spectral_mid_gap": -0.0231449,
+      "spectral_high_gap": -0.00041607022,
+      "transient_density_gap": 0.0,
+      "stereo_width_gap": 0.0023153573,
+      "energy_density_gap": -0.052812964,
+      "transient_flux_gap": 0.001351919,
+      "stereo_correlation_gap": -0.0046855807,
+      "warning_codes": [
+        "dynamic_range_low",
+        "comp_density_on_compressed_source"
+      ],
+      "confidence_gate_enabled": false,
+      "adaptive_compression_enabled": false,
+      "reference_path": "\\\\?\\C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\tests for presets\\It’s a coat-universal-test.wav",
+      "yes_output_path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\ref-bold-2026-06-15\\renders\\It-s-a-coat-universal-yes-master.wav"
+    },
+    {
+      "track_label": "It’s a coat",
+      "preset": {
+        "kind": "clarity"
+      },
+      "source_lufs": -12.3312845,
+      "reference_lufs": -12.041307,
+      "yes_lufs": -13.999999,
+      "reference_lufs_delta_db": 0.28997707,
+      "yes_lufs_delta_db": -1.6687145,
+      "lufs_gap_db": -1.9586916,
+      "source_dynamic_range_lu": 4.0627484,
+      "reference_dynamic_range_lu": 3.6861963,
+      "yes_dynamic_range_lu": 3.643307,
+      "reference_dynamic_range_delta_lu": -0.3765521,
+      "yes_dynamic_range_delta_lu": -0.41944146,
+      "dynamic_range_gap_lu": -0.042889357,
+      "spectral_low_gap": -0.05482015,
+      "spectral_mid_gap": 0.042086333,
+      "spectral_high_gap": 0.0127337985,
+      "transient_density_gap": 0.0,
+      "stereo_width_gap": 0.029514886,
+      "energy_density_gap": 0.00911966,
+      "transient_flux_gap": -0.009911127,
+      "stereo_correlation_gap": -0.05902821,
+      "warning_codes": [
+        "dynamic_range_low",
+        "comp_density_on_compressed_source"
+      ],
+      "confidence_gate_enabled": false,
+      "adaptive_compression_enabled": false,
+      "reference_path": "\\\\?\\C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\tests for presets\\It’s a coat-clarity-test.wav",
+      "yes_output_path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\ref-bold-2026-06-15\\renders\\It-s-a-coat-clarity-yes-master.wav"
+    },
+    {
+      "track_label": "It’s a coat",
+      "preset": {
+        "kind": "oomph"
+      },
+      "source_lufs": -12.3312845,
+      "reference_lufs": -11.871157,
+      "yes_lufs": -14.0,
+      "reference_lufs_delta_db": 0.46012783,
+      "yes_lufs_delta_db": -1.6687155,
+      "lufs_gap_db": -2.1288433,
+      "source_dynamic_range_lu": 4.0627484,
+      "reference_dynamic_range_lu": 3.3686502,
+      "yes_dynamic_range_lu": 3.031837,
+      "reference_dynamic_range_delta_lu": -0.69409823,
+      "yes_dynamic_range_delta_lu": -1.0309114,
+      "dynamic_range_gap_lu": -0.3368132,
+      "spectral_low_gap": -0.12222242,
+      "spectral_mid_gap": 0.114005506,
+      "spectral_high_gap": 0.008216949,
+      "transient_density_gap": 0.0,
+      "stereo_width_gap": 0.02746147,
+      "energy_density_gap": 0.028411537,
+      "transient_flux_gap": -0.009289261,
+      "stereo_correlation_gap": -0.054905653,
+      "warning_codes": [
+        "dynamic_range_low",
+        "comp_density_on_compressed_source"
+      ],
+      "confidence_gate_enabled": false,
+      "adaptive_compression_enabled": false,
+      "reference_path": "\\\\?\\C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\tests for presets\\It’s a coat-oomph-test.wav",
+      "yes_output_path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\ref-bold-2026-06-15\\renders\\It-s-a-coat-oomph-yes-master.wav"
+    },
+    {
+      "track_label": "It’s a coat",
+      "preset": {
+        "kind": "tape"
+      },
+      "source_lufs": -12.3312845,
+      "reference_lufs": -9.905651,
+      "yes_lufs": -14.0,
+      "reference_lufs_delta_db": 2.4256334,
+      "yes_lufs_delta_db": -1.6687155,
+      "lufs_gap_db": -4.094349,
+      "source_dynamic_range_lu": 4.0627484,
+      "reference_dynamic_range_lu": 3.261187,
+      "yes_dynamic_range_lu": 2.7517083,
+      "reference_dynamic_range_delta_lu": -0.80156136,
+      "yes_dynamic_range_delta_lu": -1.3110402,
+      "dynamic_range_gap_lu": -0.5094788,
+      "spectral_low_gap": 0.05894354,
+      "spectral_mid_gap": -0.016768813,
+      "spectral_high_gap": -0.04217471,
+      "transient_density_gap": 0.0,
+      "stereo_width_gap": -0.006212458,
+      "energy_density_gap": -0.09150499,
+      "transient_flux_gap": -0.0011726953,
+      "stereo_correlation_gap": 0.0124153495,
+      "warning_codes": [
+        "dynamic_range_low",
+        "comp_density_on_compressed_source"
+      ],
+      "confidence_gate_enabled": false,
+      "adaptive_compression_enabled": false,
+      "reference_path": "\\\\?\\C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\tests for presets\\It’s a coat-tape-test.wav",
+      "yes_output_path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\ref-bold-2026-06-15\\renders\\It-s-a-coat-tape-yes-master.wav"
+    }
+  ]
+}

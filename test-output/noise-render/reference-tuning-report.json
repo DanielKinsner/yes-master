@@ -1,0 +1,149 @@
+{
+  "generated_at_iso": "2026-06-15T21:22:51.613670400+00:00",
+  "reference_dir": "C:/Users/SM - Dan/Documents/GitHub/yes-master/test-output/noise-src",
+  "output_dir": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\noise-render",
+  "track_label": "noise",
+  "source_path": "\\\\?\\C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\noise-src\\noise-original-test.wav",
+  "gate_state": {
+    "confidence_gate_enabled": false,
+    "adaptive_compression_enabled": false
+  },
+  "rows": [
+    {
+      "track_label": "noise",
+      "preset": {
+        "kind": "universal"
+      },
+      "source_lufs": -25.494387,
+      "reference_lufs": -25.494387,
+      "yes_lufs": -14.0,
+      "reference_lufs_delta_db": 0.0,
+      "yes_lufs_delta_db": 11.494387,
+      "lufs_gap_db": 11.494387,
+      "source_dynamic_range_lu": 0.05326597,
+      "reference_dynamic_range_lu": 0.05326597,
+      "yes_dynamic_range_lu": 0.047461037,
+      "reference_dynamic_range_delta_lu": 0.0,
+      "yes_dynamic_range_delta_lu": -0.0058049336,
+      "dynamic_range_gap_lu": -0.0058049336,
+      "spectral_low_gap": -0.37522253,
+      "spectral_mid_gap": 0.28065628,
+      "spectral_high_gap": 0.09456629,
+      "transient_density_gap": 0.0,
+      "stereo_width_gap": -0.06958747,
+      "energy_density_gap": 0.26878187,
+      "transient_flux_gap": -0.028245037,
+      "stereo_correlation_gap": 0.04296541,
+      "warning_codes": [
+        "dynamic_range_low",
+        "comp_density_on_compressed_source"
+      ],
+      "confidence_gate_enabled": false,
+      "adaptive_compression_enabled": false,
+      "reference_path": "\\\\?\\C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\noise-src\\noise-universal-test.wav",
+      "yes_output_path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\noise-render\\renders\\noise-universal-yes-master.wav"
+    },
+    {
+      "track_label": "noise",
+      "preset": {
+        "kind": "clarity"
+      },
+      "source_lufs": -25.494387,
+      "reference_lufs": -25.494387,
+      "yes_lufs": -14.0,
+      "reference_lufs_delta_db": 0.0,
+      "yes_lufs_delta_db": 11.494387,
+      "lufs_gap_db": 11.494387,
+      "source_dynamic_range_lu": 0.05326597,
+      "reference_dynamic_range_lu": 0.05326597,
+      "yes_dynamic_range_lu": 0.043421376,
+      "reference_dynamic_range_delta_lu": 0.0,
+      "yes_dynamic_range_delta_lu": -0.009844594,
+      "dynamic_range_gap_lu": -0.009844594,
+      "spectral_low_gap": -0.42002517,
+      "spectral_mid_gap": 0.28160417,
+      "spectral_high_gap": 0.138421,
+      "transient_density_gap": 0.0,
+      "stereo_width_gap": -0.07252556,
+      "energy_density_gap": 0.30378887,
+      "transient_flux_gap": -0.031770688,
+      "stereo_correlation_gap": 0.048910726,
+      "warning_codes": [
+        "dynamic_range_low",
+        "comp_density_on_compressed_source"
+      ],
+      "confidence_gate_enabled": false,
+      "adaptive_compression_enabled": false,
+      "reference_path": "\\\\?\\C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\noise-src\\noise-clarity-test.wav",
+      "yes_output_path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\noise-render\\renders\\noise-clarity-yes-master.wav"
+    },
+    {
+      "track_label": "noise",
+      "preset": {
+        "kind": "oomph"
+      },
+      "source_lufs": -25.494387,
+      "reference_lufs": -25.494387,
+      "yes_lufs": -13.999999,
+      "reference_lufs_delta_db": 0.0,
+      "yes_lufs_delta_db": 11.494388,
+      "lufs_gap_db": 11.494388,
+      "source_dynamic_range_lu": 0.05326597,
+      "reference_dynamic_range_lu": 0.05326597,
+      "yes_dynamic_range_lu": 0.047843248,
+      "reference_dynamic_range_delta_lu": 0.0,
+      "yes_dynamic_range_delta_lu": -0.0054227225,
+      "dynamic_range_gap_lu": -0.0054227225,
+      "spectral_low_gap": -0.1952556,
+      "spectral_mid_gap": 0.1703949,
+      "spectral_high_gap": 0.02486071,
+      "transient_density_gap": 0.0,
+      "stereo_width_gap": -0.10852635,
+      "energy_density_gap": 0.21012804,
+      "transient_flux_gap": -0.010097362,
+      "stereo_correlation_gap": 0.12180424,
+      "warning_codes": [
+        "dynamic_range_low",
+        "comp_density_on_compressed_source"
+      ],
+      "confidence_gate_enabled": false,
+      "adaptive_compression_enabled": false,
+      "reference_path": "\\\\?\\C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\noise-src\\noise-oomph-test.wav",
+      "yes_output_path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\noise-render\\renders\\noise-oomph-yes-master.wav"
+    },
+    {
+      "track_label": "noise",
+      "preset": {
+        "kind": "tape"
+      },
+      "source_lufs": -25.494387,
+      "reference_lufs": -25.494387,
+      "yes_lufs": -14.0,
+      "reference_lufs_delta_db": 0.0,
+      "yes_lufs_delta_db": 11.494387,
+      "lufs_gap_db": 11.494387,
+      "source_dynamic_range_lu": 0.05326597,
+      "reference_dynamic_range_lu": 0.05326597,
+      "yes_dynamic_range_lu": 0.058838204,
+      "reference_dynamic_range_delta_lu": 0.0,
+      "yes_dynamic_range_delta_lu": 0.0055722333,
+      "dynamic_range_gap_lu": 0.0055722333,
+      "spectral_low_gap": -0.3417326,
+      "spectral_mid_gap": 0.30347556,
+      "spectral_high_gap": 0.038257062,
+      "transient_density_gap": 0.0,
+      "stereo_width_gap": -0.09408423,
+      "energy_density_gap": 0.23259267,
+      "transient_flux_gap": -0.024497379,
+      "stereo_correlation_gap": 0.09257881,
+      "warning_codes": [
+        "dynamic_range_low",
+        "comp_density_on_compressed_source"
+      ],
+      "confidence_gate_enabled": false,
+      "adaptive_compression_enabled": false,
+      "reference_path": "\\\\?\\C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\noise-src\\noise-tape-test.wav",
+      "yes_output_path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\noise-render\\renders\\noise-tape-yes-master.wav"
+    }
+  ]
+}
