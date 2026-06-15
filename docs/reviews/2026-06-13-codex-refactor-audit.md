@@ -2,6 +2,13 @@
 
 Report-only audit. No source changes were made.
 
+> **Reconciliation note — 2026-06-15:** All three P1 findings (F-01, F-02, F-03)
+> were verified **closed in current `main`** (HEAD `a1e2da7`). This audit was run
+> against a tree that predated the S3.x contract-hardening slices, so its P1
+> line references describe pre-merge code. Shipped fixes: F-01 → S3.1 (`739b4c1`),
+> F-02 → S3.4 (`e9062a3`), F-03 → S3.2 (`e105756` + `0d65d6f`). Per-finding status
+> notes are inline below. The P2 findings (F-04…F-09) were not re-verified here.
+
 ## Executive summary
 
 Overall health grade: B for shipped behavior, C+ for refactor readiness.
@@ -57,6 +64,15 @@ None found.
 
 ### F-01 - Desktop advertises and accepts AIFF/Opus that the shipped decode stack and native bridges do not support
 
+> **Status 2026-06-15: CLOSED by S3.1 (`739b4c1`).** The desktop import surface now
+> derives from a single `src/lib/supported-formats.ts` contract listing only
+> `wav, mp3, m4a, aac, flac, ogg`; no AIFF/Opus remains in the UI list, the dialog
+> filter, or the displayed copy. Verified in current `main`: `supported-formats.ts`,
+> the `AUDIO_DIALOG_FILTER` import at `useTrackMaster.ts:36`, and the negative
+> assertions in `supported-formats.test.ts` / `EmptyState.test.tsx`. The
+> `useTrackMaster.ts:207-216` lines cited below are pre-S3.1. (The `files.rs:39`
+> probe-swallow sub-point is tracked separately under the S1.5 robustness work.)
+
 Evidence:
 
 | File | Line | Excerpt or measurement |
@@ -90,6 +106,13 @@ Add a desktop contract test that compares the UI-supported extension list, file-
 
 ### F-02 - Settings chrome preserves an ambiguous 48 kHz default while Standard export is fixed at 44.1 kHz
 
+> **Status 2026-06-15: CLOSED by S3.4 (`e9062a3`).** `src/lib/chrome-content.ts`
+> now derives the Standard row from `STANDARD_EXPORT_DELIVERY` via
+> `standardExportFormatCopy()` (44.1 kHz / 24-bit WAV / −1 dBTP) and shows a
+> separate `Advanced · delivery profile` row for the 48 kHz Streaming Universal
+> profile. `App.chrome.test.tsx` asserts both rows from the same helper, so the
+> copy can no longer drift from the exported values.
+
 Evidence:
 
 | File | Line | Excerpt or measurement |
@@ -117,6 +140,14 @@ Mechanical test:
 Update `App.chrome.test.tsx` so it asserts view-specific export defaults from the same helper used by export code, not a hard-coded standalone string. Add a regression assertion for `44.1 kHz` in Standard-facing copy.
 
 ### F-03 - Analysis progress events are global and generationless, so stale jobs can paint current UI state
+
+> **Status 2026-06-15: CLOSED by S3.2 (`e105756` + `0d65d6f`).** `AnalysisProgress`
+> now carries `batch_id` (`src-tauri/src/types.rs:952`, emitted via
+> `engine.rs:analysis_progress_event`); the frontend ignores late events from
+> superseded analyses and merges a late session-restore without evicting the
+> current track's analysis. Covered by `useTrackMaster.integration.test.tsx`
+> (overlapping-imports stale-filter + late-restore merge) and the Rust contract
+> test `async_event_identity_payloads_serialize`.
 
 Evidence:
 
