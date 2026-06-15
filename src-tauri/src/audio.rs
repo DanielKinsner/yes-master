@@ -1530,20 +1530,35 @@ fn process_audio_command(
                     if let Some((pending_settings, pending_generation)) =
                         s.lufs_worker_pending.take()
                     {
-                        if s.landing_gain_cache.get(&pending_settings).is_some() {
-                            // Already cached (e.g. the user landed back on a
-                            // measured setting). No follow-up worker needed —
-                            // but if the pending generation is still the live
-                            // one, the cache already covers the live settings,
-                            // so the landing window is over. Mirror the
-                            // gen-match clear at the normal-completion branch
-                            // above; without this the "landing loudness…" note
-                            // stays stuck until the next settings change.
+                        if let Some(cached_gain) = s.landing_gain_cache.get(&pending_settings) {
+                            // Already cached (e.g. the user wiggled back to a
+                            // measured setting while the prior worker was still
+                            // in flight). No follow-up worker needed. If the
+                            // pending generation is still the live one, the
+                            // cache covers the live settings: promote it to the
+                            // active landing scalar (crossfade via
+                            // LiveCoeffUpdate) and end the landing window — just
+                            // like the normal worker-completion branch above.
+                            // Clearing the flag alone would leave the audio on
+                            // the last-known scalar while the UI reports the
+                            // landing is complete.
                             if drain_clears_landing_pending(
                                 pending_generation,
                                 s.live_coeff_generation,
                             ) {
+                                s.live_landing_gain_lin = cached_gain;
                                 s.landing_pending = false;
+                                if let Some(tx) = s.live_coeffs_tx.as_ref() {
+                                    let mut coeffs = crate::dsp::ChainCoeffs::from_settings(
+                                        s.live_sample_rate,
+                                        &pending_settings,
+                                    );
+                                    coeffs.export_landing_gain_lin = cached_gain;
+                                    let _ = tx.send(LiveCoeffUpdate {
+                                        generation: pending_generation,
+                                        coeffs,
+                                    });
+                                }
                             }
                         } else if try_spawn_lufs_preview_worker(
                             s.decoded_cache.as_ref(),
