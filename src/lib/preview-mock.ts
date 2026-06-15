@@ -407,23 +407,6 @@ export async function mockSave(): Promise<string | null> {
   return null;
 }
 
-export function mockWindow(): {
-  onCloseRequested: (
-    handler: (event: { preventDefault: () => void }) => void | Promise<void>,
-  ) => Promise<UnlistenFn>;
-} {
-  return {
-    // Browser preview has no OS window close to intercept.
-    onCloseRequested: async () => () => {},
-  };
-}
-
-export async function mockConfirm(): Promise<boolean> {
-  // Browser preview: no real window to close, so this is never reached in
-  // practice. Default to "yes, close" to match an unguarded browser tab.
-  return true;
-}
-
 export function mockWebview(): {
   onDragDropEvent: (
     handler: (event: { payload: unknown }) => void,

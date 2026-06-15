@@ -1,12 +1,9 @@
 import {
   useEffect,
-  useRef,
   useState,
   type DragEvent as ReactDragEvent,
 } from "react";
 import { useTrackMaster } from "./hooks/useTrackMaster";
-import { getCurrentWindow, confirm as confirmDialog } from "./lib/tauri-runtime";
-import { shouldConfirmClose, type InFlightWork } from "./lib/close-guard";
 import { useNavigationMachine } from "./hooks/useNavigationMachine";
 import { StandardView } from "./components/StandardView";
 import { hasNonManagedEdits } from "./lib/standard-managed";
@@ -89,44 +86,6 @@ function App() {
     if (view === null) return;
     tm.setForceWysiwyg(view === "standard");
   }, [view, tm.setForceWysiwyg]);
-
-  // S6.8: close-guard. Quitting while a render/export is in flight would discard
-  // the in-progress file silently. Keep the latest in-flight state in a ref so
-  // the close handler (registered once) always sees current values.
-  const inFlightRef = useRef<InFlightWork>({
-    isExporting: false,
-    isRendering: false,
-    albumRendering: false,
-  });
-  inFlightRef.current = {
-    isExporting: tm.isExporting,
-    isRendering: tm.isRendering,
-    albumRendering: tm.albumRendering,
-  };
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    let cancelled = false;
-    void getCurrentWindow()
-      .onCloseRequested(async (event) => {
-        if (!shouldConfirmClose(inFlightRef.current)) return;
-        const proceed = await confirmDialog(
-          "An export or render is still running. Quit anyway? The file in progress will be discarded.",
-          { title: "Quit YES Master?", kind: "warning" },
-        );
-        if (!proceed) event.preventDefault();
-      })
-      .then((stop) => {
-        if (cancelled) stop();
-        else unlisten = stop;
-      })
-      .catch(() => {
-        /* no window to guard (browser preview / test env) */
-      });
-    return () => {
-      cancelled = true;
-      if (unlisten) unlisten();
-    };
-  }, []);
 
   const handleModeChange = (nextMode: "track" | "album") => {
     if (nextMode === "album" && view === "standard") {
