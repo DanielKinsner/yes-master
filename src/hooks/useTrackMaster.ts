@@ -1151,6 +1151,13 @@ export function useTrackMaster() {
         // playing. Reset the meters back to their silence sentinels too.
         const selected = imported[0];
         setSelectedTrackId(selected.id);
+        // Sync the ref synchronously — it is otherwise only refreshed on the
+        // next render. A late playback tick for the PREVIOUS track can land in
+        // the window before React commits; without this the tick guard would
+        // read the stale (old) selected id, match it, and re-paint the old
+        // track's "playing" state + meters onto the fresh import — exactly the
+        // stale state the reset just below clears.
+        selectedTrackIdRef.current = selected.id;
         setTransport((t) => ({
           ...t,
           isPlaying: false,

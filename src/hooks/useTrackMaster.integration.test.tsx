@@ -626,6 +626,31 @@ describe("useTrackMaster integration dispatches", () => {
     expect(transport.lufsIntegrated).toBe(-120);
     expect(transport.spectrumDb).toEqual([]);
 
+    // A late tick for the PREVIOUS track (the backend's 50ms loop can emit one
+    // right after import) must be rejected by the selection guard — not
+    // re-paint the old track's playing state. importFiles syncs
+    // selectedTrackIdRef synchronously so the guard sees the new selection even
+    // before React commits.
+    await act(async () => {
+      playbackHandler?.({
+        track_id: first.id,
+        position_sec: 9,
+        is_playing: true,
+        is_loaded: true,
+        peak_dbfs: -4,
+        gr_low_db: -5,
+        gr_mid_db: -6,
+        gr_high_db: -3,
+        lufs_momentary: -9,
+        lufs_integrated: -10,
+        spectrum_db: [-12, -10, -8],
+      });
+    });
+    const afterStaleTick = harness.current().transport;
+    expect(afterStaleTick.isPlaying).toBe(false);
+    expect(afterStaleTick.peakDbfs).toBe(-120);
+    expect(afterStaleTick.lufsIntegrated).toBe(-120);
+
     await act(async () => {
       harness.root.unmount();
     });
