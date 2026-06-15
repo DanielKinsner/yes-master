@@ -350,6 +350,35 @@ describe("RightRail source checks", () => {
       root.unmount();
     });
   });
+
+  it("keeps audit WAV rendering disabled until analysis exists", async () => {
+    const onUpdatePreview = vi.fn();
+    const { container, root } = await renderNode(
+      <RightRail
+        analysis={undefined}
+        lastChecks={undefined}
+        canExport={false}
+        isExporting={false}
+        isRendering={false}
+        onExport={vi.fn()}
+        previewStale
+        canRenderPreview={false}
+        onUpdatePreview={onUpdatePreview}
+      />,
+    );
+
+    const auditButton = container.querySelector<HTMLButtonElement>(".right-rail-audit")!;
+    expect(auditButton.disabled).toBe(true);
+    expect(auditButton.title).toBe("Analyze a track first.");
+    await act(async () => {
+      auditButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onUpdatePreview).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
 });
 
 describe("MasterOutPanel landing note", () => {

@@ -321,6 +321,33 @@ describe("StandardRightRail", () => {
     await act(async () => root.unmount());
   });
 
+  it("disables Mastered until the selected track has analysis", async () => {
+    const setPlaybackKind = vi.fn();
+    const base = fakeTm();
+    const { container, root } = await render(
+      <StandardView
+        tm={fakeTm({
+          selectedAnalysis: undefined,
+          transport: {
+            ...base.transport,
+            playbackKind: "source",
+          },
+          setPlaybackKind,
+        })}
+        onEnterAdvanced={() => {}}
+      />,
+    );
+    const mastered = Array.from(
+      container.querySelectorAll<HTMLButtonElement>(".std-rail-ab button"),
+    ).find((b) => b.textContent === "Mastered")!;
+
+    expect(mastered.disabled).toBe(true);
+    expect(mastered.title).toBe("Analyze this track before using Mastered playback.");
+    await act(async () => { mastered.click(); });
+    expect(setPlaybackKind).not.toHaveBeenCalledWith("master");
+    await act(async () => root.unmount());
+  });
+
   it("Volume Match toggle routes to setVolumeMatch with the flipped value", async () => {
     const setVolumeMatch = vi.fn();
     const { container, root } = await render(<StandardView tm={fakeTm({ setVolumeMatch })} onEnterAdvanced={() => {}} />);

@@ -311,11 +311,13 @@ function useRailSeamAlignment(refs: RailSeamRefs) {
 function StandardRightRail({
   tm,
   guide,
+  canUseMaster,
   onEnterAdvanced,
   seamRefs,
 }: {
   tm: TM;
   guide: FirstRunGuide;
+  canUseMaster: boolean;
   onEnterAdvanced: () => void;
   seamRefs: RailSeamRefs;
 }) {
@@ -375,6 +377,12 @@ function StandardRightRail({
           <button
             type="button"
             aria-pressed={tm.transport.playbackKind === "master"}
+            disabled={!canUseMaster}
+            title={
+              !canUseMaster
+                ? "Analyze this track before using Mastered playback."
+                : undefined
+            }
             className={
               (tm.transport.playbackKind === "master" ? "on" : "") +
               (guide.step === "flip" ? " guide-pulse" : "")
@@ -498,8 +506,9 @@ export function StandardView({
   onEnterAdvanced: () => void;
 }) {
   const s = tm.selectedSettings;
+  const canUseMaster = tm.selectedAnalysis != null;
   const guide = useFirstRunGuide({
-    hasAnalyzedTrack: tm.selectedAnalysis != null,
+    hasAnalyzedTrack: canUseMaster,
     playbackKind: tm.transport.playbackKind,
     isPlaying: tm.transport.isPlaying,
   });
@@ -658,6 +667,7 @@ export function StandardView({
       <StandardRightRail
         tm={tm}
         guide={guide}
+        canUseMaster={canUseMaster}
         onEnterAdvanced={enterAdvanced}
         seamRefs={seamRefs}
       />

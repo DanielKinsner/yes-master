@@ -223,6 +223,9 @@ export function playbackErrorMessage(
   return raw;
 }
 
+const MASTERED_REQUIRES_ANALYSIS_MESSAGE =
+  "Analyze this track before using Mastered playback.";
+
 let analysisBatchSeq = 0;
 
 function nextAnalysisBatchId(): string {
@@ -1570,6 +1573,10 @@ export function useTrackMaster() {
 
   const updatePreview = useCallback(async () => {
     if (!selectedTrackId || !selectedTrack) return;
+    if (!selectedAnalysis) {
+      setError(MASTERED_REQUIRES_ANALYSIS_MESSAGE);
+      return;
+    }
     setIsRendering(true);
     setError(null);
     try {
@@ -1596,6 +1603,7 @@ export function useTrackMaster() {
   }, [
     selectedTrackId,
     selectedTrack,
+    selectedAnalysis,
     selectedSettings,
     markFresh,
     clearIncompleteRenderProgress,
@@ -1671,15 +1679,16 @@ export function useTrackMaster() {
       if (kind === "source") {
         await api.playTrack(selectedTrackId, selectedTrack.path, positionSec);
       } else {
+        if (!selectedAnalysis) {
+          throw new Error(MASTERED_REQUIRES_ANALYSIS_MESSAGE);
+        }
         // Phase 5: mastered playback streams the source through the live DSP
         // chain — no offline render required, settings changes are audible
         // immediately via updateChain.
         //
         // Inject source-LUFS so Volume Match resolves to the proper
-        // "match the source's measured loudness" path on the FIRST chain
-        // build, not just on subsequent updateSettings calls. The
-        // analysis-arrival useEffect below covers the case where Play
-        // beat the auto-analyze.
+        // "match the source's measured loudness" path on the first chain
+        // build.
         try {
           await api.playMaster(
             selectedTrackId,
@@ -1701,6 +1710,7 @@ export function useTrackMaster() {
       selectedTrack,
       selectedTrackId,
       selectedSettings,
+      selectedAnalysis,
       withSourceLufs,
       mode,
       effectivePreviewLanding,
@@ -1808,6 +1818,10 @@ export function useTrackMaster() {
   const setPlaybackKind = useCallback(
     async (kind: PlaybackKindUI) => {
       if (!selectedTrackId) return;
+      if (kind === "master" && !selectedAnalysis) {
+        setError(MASTERED_REQUIRES_ANALYSIS_MESSAGE);
+        return;
+      }
       setTransport((t) => ({ ...t, playbackKind: kind }));
       // Mid-playback swap: only call backend play methods while audio is
       // actively running. A loaded-but-paused track should let the user choose
@@ -1823,6 +1837,7 @@ export function useTrackMaster() {
     },
     [
       selectedTrackId,
+      selectedAnalysis,
       loadedTrackId,
       transport.isPlaying,
       estimatedPlaybackPositionSec,

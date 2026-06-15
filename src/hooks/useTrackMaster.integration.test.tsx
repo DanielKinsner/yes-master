@@ -352,7 +352,10 @@ function resetApiMocks() {
   mocks.api.listUserPresets.mockResolvedValue([]);
   mocks.api.loadRecentSession.mockResolvedValue(null);
   mocks.api.importTracks.mockResolvedValue([]);
-  mocks.api.analyzeTracks.mockResolvedValue([]);
+  mocks.api.analyzeTracks.mockImplementation(
+    (tracks: Array<{ id: TrackId }>) =>
+      Promise.resolve((tracks ?? []).map((track) => makeAnalysis(track.id))),
+  );
   mocks.api.prepareWaveform.mockImplementation((trackId: string) =>
     Promise.resolve(makeWaveform(trackId)),
   );
@@ -1200,6 +1203,48 @@ describe("useTrackMaster integration dispatches", () => {
         false, // album flag — Track mode
       );
     });
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("requires analysis before Mastered audition or audit render, but still allows Original playback", async () => {
+    const track = makeTrack("unanalyzed-1", "C:/audio/unanalyzed.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+    expect(harness.current().selectedAnalysis).toBeUndefined();
+
+    await act(async () => {
+      await harness.current().setPlaybackKind("master");
+    });
+    expect(harness.current().transport.playbackKind).toBe("source");
+    expect(harness.current().error).toBe(
+      "Analyze this track before using Mastered playback.",
+    );
+    expect(mocks.api.playMaster).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await harness.current().updatePreview();
+    });
+    expect(mocks.api.renderTrackPreview).not.toHaveBeenCalled();
+    expect(harness.current().error).toBe(
+      "Analyze this track before using Mastered playback.",
+    );
+
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+    expect(mocks.api.playTrack).toHaveBeenCalledWith(track.id, track.path, 0);
+    expect(mocks.api.playMaster).not.toHaveBeenCalled();
+
     await act(async () => {
       harness.root.unmount();
     });

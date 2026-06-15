@@ -106,7 +106,7 @@ export function RightRail({
               isExporting
                 ? "Disabled while an export is in progress — they share render state."
                 : !canRenderPreview
-                ? "Import a track first."
+                ? "Analyze a track first."
                 : "Render a temporary WAV with the current settings so you can audit it in another player or DAW. Not required for live audition — the Original/Mastered toggle plays through the chain in real time."
             }
           >

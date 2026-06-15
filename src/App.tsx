@@ -195,7 +195,7 @@ function App() {
         isExporting={tm.isExporting}
         isRendering={tm.isRendering}
         previewStale={tm.previewStale}
-        canRenderPreview={!!tm.selectedTrack}
+        canRenderPreview={!!tm.selectedAnalysis}
         onUpdatePreview={tm.updatePreview}
         onExport={tm.exportMaster}
       />
@@ -1005,6 +1005,7 @@ export function TrackHeader({
             </button>
             <DeckPreviewOptions
               playbackKind={playbackKind}
+              canUseMaster={!!analysis}
               volumeMatch={volumeMatch}
               exportLufsPreview={exportLufsPreview}
               onPlaybackKindChange={onPlaybackKindChange}
@@ -1074,6 +1075,7 @@ function SessionStatus({
 
 function DeckPreviewOptions({
   playbackKind,
+  canUseMaster,
   volumeMatch,
   exportLufsPreview,
   onPlaybackKindChange,
@@ -1081,6 +1083,7 @@ function DeckPreviewOptions({
   onExportLufsPreviewChange,
 }: {
   playbackKind: PlaybackKindUI;
+  canUseMaster: boolean;
   volumeMatch: boolean;
   exportLufsPreview: boolean;
   onPlaybackKindChange: (kind: PlaybackKindUI) => void;
@@ -1101,6 +1104,8 @@ function DeckPreviewOptions({
           <button
             type="button"
             className={playbackKind === "master" ? "on" : ""}
+            disabled={!canUseMaster}
+            title={!canUseMaster ? "Analyze this track before using Mastered playback." : undefined}
             onClick={() => onPlaybackKindChange("master")}
           >
             Mastered
