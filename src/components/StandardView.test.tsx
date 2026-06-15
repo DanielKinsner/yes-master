@@ -10,19 +10,23 @@ import {
   sourceLufsCopy,
 } from "./StandardView";
 import type { useTrackMaster } from "../hooks/useTrackMaster";
-import { FIRST_RUN_GUIDE_KEY } from "../lib/first-run-guide";
+import type { FirstRunGuide } from "../hooks/useFirstRunGuide";
+import type { GuideStep } from "../lib/first-run-guide";
 
 type TM = ReturnType<typeof useTrackMaster>;
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// StandardView no longer owns the first-run hook (the hint floats at the App
+// root now — see useFirstRunGuide.test.tsx). It just consumes a guide prop, so
+// mounting it never touches localStorage and needs no per-test storage reset.
 afterEach(() => {
   document.body.innerHTML = "";
-  // Mounting StandardView with playbackKind "master" (fakeTm's default)
-  // makes the first-run guide self-finish and persist — clear it so tests
-  // stay order-independent.
-  globalThis.localStorage?.removeItem(FIRST_RUN_GUIDE_KEY);
 });
+
+function guideStub(step: GuideStep | null, overrides: Partial<FirstRunGuide> = {}): FirstRunGuide {
+  return { step, dismiss: () => {}, noteEnteredAdvanced: () => {}, ...overrides };
+}
 
 async function render(node: React.ReactElement) {
   const container = document.createElement("div");
@@ -457,9 +461,12 @@ describe("StandardRightRail", () => {
   });
 });
 
-describe("first-run guide", () => {
-  afterEach(() => { globalThis.localStorage?.removeItem(FIRST_RUN_GUIDE_KEY); });
-
+describe("first-run guide pulse", () => {
+  // StandardView no longer renders the hint copy — it floats at the App root
+  // (FirstRunOverlay). What StandardView still owns is the Mastered-button
+  // pulse, driven straight off the guide.step prop. The hook's behaviour
+  // (when a step is null, storage, dismissal) is covered in
+  // hooks/useFirstRunGuide.test.tsx.
   function freshTm(overrides: Partial<TM> = {}): TM {
     return fakeTm({
       transport: { isPlaying: false, currentTimeSec: 0, playbackKind: "source", volumeMatch: false },
@@ -467,49 +474,32 @@ describe("first-run guide", () => {
     } as Partial<TM>);
   }
 
-  it("shows the flip chip and pulses Mastered once a track is analyzed on Original", async () => {
-    const { container, root } = await render(
-      <StandardView tm={freshTm()} onEnterAdvanced={() => {}} />,
-    );
-    expect(container.querySelector(".hint-chip-flip")?.textContent).toContain("Mastered");
-    const mastered = Array.from(
+  function masteredBtn(container: HTMLElement): HTMLButtonElement {
+    return Array.from(
       container.querySelectorAll<HTMLButtonElement>(".std-rail-ab button"),
     ).find((b) => b.textContent === "Mastered")!;
-    expect(mastered.classList.contains("guide-pulse")).toBe(true);
-    await act(async () => root.unmount());
-  });
+  }
 
-  it("never shows when storage says the guide already finished", async () => {
-    globalThis.localStorage?.setItem(FIRST_RUN_GUIDE_KEY, "done");
+  it("pulses the Mastered A/B on the flip step and renders no inline chip", async () => {
     const { container, root } = await render(
-      <StandardView tm={freshTm()} onEnterAdvanced={() => {}} />,
+      <StandardView tm={freshTm()} guide={guideStub("flip")} onEnterAdvanced={() => {}} />,
     );
+    expect(masteredBtn(container).classList.contains("guide-pulse")).toBe(true);
+    // The hint copy moved out of the rails into the App-root overlay.
     expect(container.querySelector(".hint-chip")).toBeNull();
     await act(async () => root.unmount());
   });
 
-  it("never shows for a fast user already on Mastered (and self-finishes)", async () => {
+  it("does not pulse once the guide has no active step", async () => {
     const { container, root } = await render(
-      <StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />,
+      <StandardView tm={freshTm()} guide={guideStub(null)} onEnterAdvanced={() => {}} />,
     );
-    expect(container.querySelector(".hint-chip")).toBeNull();
-    expect(globalThis.localStorage?.getItem(FIRST_RUN_GUIDE_KEY)).toBe("done");
-    await act(async () => root.unmount());
-  });
-
-  it("x dismisses the guide permanently", async () => {
-    const { container, root } = await render(
-      <StandardView tm={freshTm()} onEnterAdvanced={() => {}} />,
-    );
-    const x = container.querySelector<HTMLButtonElement>(".hint-chip-x")!;
-    await act(async () => { x.click(); });
-    expect(container.querySelector(".hint-chip")).toBeNull();
-    expect(globalThis.localStorage?.getItem(FIRST_RUN_GUIDE_KEY)).toBe("dismissed");
+    expect(masteredBtn(container).classList.contains("guide-pulse")).toBe(false);
     await act(async () => root.unmount());
   });
 });
 
-describe("first-run guide progression", () => {
+describe("first-run guide wiring", () => {
   function freshTm(overrides: Partial<TM> = {}): TM {
     return fakeTm({
       transport: { isPlaying: false, currentTimeSec: 0, playbackKind: "source", volumeMatch: false },
@@ -517,87 +507,25 @@ describe("first-run guide progression", () => {
     } as Partial<TM>);
   }
 
-  it("flip -> send-off chip; after the window, the Advanced pointer", async () => {
-    vi.useFakeTimers();
-    try {
-      const { container, root } = await render(
-        <StandardView tm={freshTm()} onEnterAdvanced={() => {}} />,
-      );
-      expect(container.querySelector(".hint-chip-flip")).not.toBeNull();
-      await act(async () => {
-        root.render(
-          <StandardView
-            tm={freshTm({
-              transport: { isPlaying: true, currentTimeSec: 3, playbackKind: "master", volumeMatch: false },
-            } as Partial<TM>)}
-            onEnterAdvanced={() => {}}
-          />,
-        );
-      });
-      expect(container.querySelector(".hint-chip-sendoff")?.textContent).toContain("Presets and Intensity");
-      expect(globalThis.localStorage?.getItem(FIRST_RUN_GUIDE_KEY)).toBe("done");
-      await act(async () => { vi.advanceTimersByTime(6000); });
-      expect(container.querySelector(".hint-chip-sendoff")).toBeNull();
-      expect(container.querySelector(".hint-chip-advanced")?.textContent).toContain("Advanced");
-      await act(async () => root.unmount());
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("the rail Change button still enters Advanced and ends the guide", async () => {
+  // Step progression (flip → send-off → advanced) is the hook's job, now
+  // covered in hooks/useFirstRunGuide.test.tsx. StandardView's contribution is
+  // the wiring: entering Advanced from the rail must both switch views and
+  // finish the guide via the prop's noteEnteredAdvanced (the hook persists
+  // "done" inside it).
+  it("the rail Change button enters Advanced AND finishes the guide", async () => {
     const onEnterAdvanced = vi.fn();
+    const noteEnteredAdvanced = vi.fn();
     const { container, root } = await render(
-      <StandardView tm={freshTm()} onEnterAdvanced={onEnterAdvanced} />,
+      <StandardView
+        tm={freshTm()}
+        guide={guideStub("advanced", { noteEnteredAdvanced })}
+        onEnterAdvanced={onEnterAdvanced}
+      />,
     );
     const change = container.querySelector<HTMLButtonElement>(".std-delivery-change")!;
     await act(async () => { change.click(); });
+    expect(noteEnteredAdvanced).toHaveBeenCalledOnce();
     expect(onEnterAdvanced).toHaveBeenCalledOnce();
-    expect(globalThis.localStorage?.getItem(FIRST_RUN_GUIDE_KEY)).toBe("done");
-    await act(async () => root.unmount());
-  });
-});
-
-describe("first-run guide live reset", () => {
-  it("Settings reset revives the guide in the running session", async () => {
-    globalThis.localStorage?.setItem(FIRST_RUN_GUIDE_KEY, "done");
-    const tm = fakeTm({
-      transport: { isPlaying: false, currentTimeSec: 0, playbackKind: "source", volumeMatch: false },
-    } as Partial<TM>);
-    const { container, root } = await render(
-      <StandardView tm={tm} onEnterAdvanced={() => {}} />,
-    );
-    expect(container.querySelector(".hint-chip")).toBeNull();
-    await act(async () => {
-      globalThis.localStorage?.removeItem(FIRST_RUN_GUIDE_KEY);
-      window.dispatchEvent(new Event("yes-master:first-run-guide-reset"));
-    });
-    expect(container.querySelector(".hint-chip-flip")).not.toBeNull();
-    await act(async () => root.unmount());
-  });
-});
-
-describe("first-run guide reset while on Mastered", () => {
-  it("live reset on Mastered playback advances to the send-off, never silently dies", async () => {
-    globalThis.localStorage?.setItem(FIRST_RUN_GUIDE_KEY, "done");
-    const { container, root } = await render(
-      <StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />,
-    );
-    expect(container.querySelector(".hint-chip")).toBeNull();
-    await act(async () => {
-      globalThis.localStorage?.setItem(FIRST_RUN_GUIDE_KEY, "reset");
-      window.dispatchEvent(new Event("yes-master:first-run-guide-reset"));
-    });
-    expect(container.querySelector(".hint-chip-sendoff")).not.toBeNull();
-    await act(async () => root.unmount());
-  });
-
-  it("mount with a pending reset marker on Mastered shows the send-off too", async () => {
-    globalThis.localStorage?.setItem(FIRST_RUN_GUIDE_KEY, "reset");
-    const { container, root } = await render(
-      <StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />,
-    );
-    expect(container.querySelector(".hint-chip-sendoff")).not.toBeNull();
     await act(async () => root.unmount());
   });
 });
@@ -612,31 +540,6 @@ describe("Standard tracks rail remove", () => {
     expect(btn).not.toBeNull();
     await act(async () => { btn!.click(); });
     expect(removeTrack).toHaveBeenCalledWith("t1");
-    await act(async () => root.unmount());
-  });
-});
-
-describe("first-run guide requires audible flip", () => {
-  function pausedTm(kind: "source" | "master"): TM {
-    return fakeTm({
-      transport: { isPlaying: false, currentTimeSec: 0, playbackKind: kind, volumeMatch: false },
-    } as Partial<TM>);
-  }
-
-  it("a flip while paused does not complete the aha (nothing was heard)", async () => {
-    const { container, root } = await render(
-      <StandardView tm={pausedTm("source")} onEnterAdvanced={() => {}} />,
-    );
-    expect(container.querySelector(".hint-chip-flip")).not.toBeNull();
-    await act(async () => {
-      root.render(<StandardView tm={pausedTm("master")} onEnterAdvanced={() => {}} />);
-    });
-    expect(container.querySelector(".hint-chip-sendoff")).toBeNull();
-    expect(globalThis.localStorage?.getItem(FIRST_RUN_GUIDE_KEY)).toBeNull();
-    await act(async () => {
-      root.render(<StandardView tm={pausedTm("source")} onEnterAdvanced={() => {}} />);
-    });
-    expect(container.querySelector(".hint-chip-flip")).not.toBeNull();
     await act(async () => root.unmount());
   });
 });

@@ -5956,6 +5956,36 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
   .std-rail-ab button.guide-pulse { animation: none; }
 }
 
+/* L9: the first-run hint floats over the layout instead of pushing the rails.
+   position:fixed + z-index are set inline on the element (so stacking holds
+   regardless of stylesheet load order); placement per step lives here. Each
+   coachmark sits near what it points at: the Mastered A/B in the right rail,
+   the Advanced button in the header, and the workspace centre for the
+   send-off. */
+.first-run-overlay {
+  max-width: min(300px, 80vw);
+}
+/* Drop the inline-flow margin the chip carried in the rails, and lift it as a
+   floating layer so it reads above the console. */
+.first-run-overlay .hint-chip {
+  margin-top: 0;
+  box-shadow: 0 14px 34px rgba(4, 7, 14, 0.45);
+  backdrop-filter: blur(6px);
+}
+.first-run-overlay-flip {
+  top: 150px;
+  right: 28px;
+}
+.first-run-overlay-advanced {
+  top: 60px;
+  right: 24px;
+}
+.first-run-overlay-sendoff {
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+}
+
 .settings-actions { margin-top: 12px; }
 
 /* Analysis orb: particle canvas during analysis + the morph overlay. */

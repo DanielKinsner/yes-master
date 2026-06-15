@@ -26,10 +26,21 @@ import { effectiveLoudnessTarget } from "../lib/effective-settings";
 import { standardExportNotes } from "../lib/standard-export";
 import { api } from "../lib/api";
 import { MasterOutPanel } from "./RightRail";
-import { HintChip } from "./HintChip";
-import { useFirstRunGuide, type FirstRunGuide } from "../hooks/useFirstRunGuide";
+// L9: the hint copy now lives in FirstRunOverlay, rendered once at the App
+// root. The guide STATE still arrives here as a prop so the Mastered A/B can
+// pulse and entering Advanced can finish the guide — but the chip no longer
+// renders inline in the rails (it used to push their layout).
+import type { FirstRunGuide } from "../hooks/useFirstRunGuide";
 
 type TM = ReturnType<typeof useTrackMaster>;
+
+// Inert guide for callers that don't drive the first-run flow (e.g. unit
+// tests rendering StandardView in isolation). App always passes the live one.
+const NO_GUIDE: FirstRunGuide = {
+  step: null,
+  dismiss: () => {},
+  noteEnteredAdvanced: () => {},
+};
 
 function fmtDuration(sec: number | null | undefined): string {
   if (sec == null || !Number.isFinite(sec)) return "";
@@ -391,12 +402,6 @@ function StandardRightRail({
             Mastered
           </button>
         </div>
-        {guide.step === "flip" && (
-          <HintChip className="hint-chip-flip" onDismiss={guide.dismiss}>
-            Press Play, then flip to <strong>Mastered</strong> to hear the
-            difference.
-          </HintChip>
-        )}
         <MasterOutPanel
           isAnalyzing={tm.isAnalyzing}
           peakDbfs={tm.transport.peakDbfs}
@@ -508,19 +513,18 @@ function StandardRightRail({
 
 export function StandardView({
   tm,
+  guide = NO_GUIDE,
   onEnterAdvanced,
 }: {
   tm: TM;
+  // First-run guide state (owned by App so the hint can float at the root).
+  // Optional only so isolated unit renders stay terse; App always supplies it.
+  guide?: FirstRunGuide;
   // Required: a missed wiring must fail tsc, not ship a dead 'Change' button.
   onEnterAdvanced: () => void;
 }) {
   const s = tm.selectedSettings;
   const canUseMaster = tm.selectedAnalysis != null;
-  const guide = useFirstRunGuide({
-    hasAnalyzedTrack: canUseMaster,
-    playbackKind: tm.transport.playbackKind,
-    isPlaying: tm.transport.isPlaying,
-  });
   const sourceLufs = tm.selectedAnalysis?.lufs_integrated ?? null;
   // Knob arc follows the active style's tone (Knob's red/gold/cyan are the
   // same hexes as PRESET_ACCENT's oomph/tape/clarity); "blue" when the
@@ -559,12 +563,6 @@ export function StandardView({
                 : "Source not analyzed yet"}
           </p>
         </div>
-
-        {guide.step === "advanced" && (
-          <HintChip className="hint-chip-advanced" onDismiss={guide.dismiss}>
-            Need more control? Try <strong>Advanced</strong> — top right.
-          </HintChip>
-        )}
 
         <div className="std-wave-deck">
           <div className="std-play-stack">
@@ -606,13 +604,6 @@ export function StandardView({
             />
           </div>
         </div>
-
-        {guide.step === "sendoff" && (
-          <HintChip className="hint-chip-sendoff" onDismiss={guide.dismiss}>
-            That's the whole idea. Presets and Intensity shape the sound —
-            explore.
-          </HintChip>
-        )}
 
         <div className="std-steps">
           <div className="std-step std-step-style">

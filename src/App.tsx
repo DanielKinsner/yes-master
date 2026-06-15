@@ -5,7 +5,9 @@ import {
 } from "react";
 import { useTrackMaster } from "./hooks/useTrackMaster";
 import { useNavigationMachine } from "./hooks/useNavigationMachine";
+import { useFirstRunGuide } from "./hooks/useFirstRunGuide";
 import { StandardView } from "./components/StandardView";
+import { FirstRunOverlay } from "./components/FirstRunOverlay";
 import { hasNonManagedEdits } from "./lib/standard-managed";
 import { PresetIcon, PRESET_ACCENT } from "./components/PresetIcon";
 import { RightRail, MasterOutPanel } from "./components/RightRail";
@@ -32,7 +34,7 @@ import type {
 import type { PlaybackKindUI } from "./hooks/useTrackMaster";
 import { LOUDNESS_PROFILES, loudnessTargetDisplay } from "./lib/effective-settings";
 import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
-import { markGuideFinished, requestGuideReset } from "./lib/first-run-guide";
+import { requestGuideReset } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
 import { SUPPORTED_FORMATS_COPY } from "./lib/supported-formats";
 import "./App.css";
@@ -77,6 +79,16 @@ function App() {
     leaveAlbumMode: () => tm.setMode("track"),
   });
   const { view, setView } = nav;
+  // First-run guide lives at the root now (L9): the hint renders as a floating
+  // FirstRunOverlay below, and StandardView only consumes the step for the
+  // Mastered-button pulse. Lifting the hook out of StandardView also lets the
+  // header's Advanced affordance finish the guide through its own state rather
+  // than poking localStorage behind the hook's back.
+  const guide = useFirstRunGuide({
+    hasAnalyzedTrack: tm.selectedAnalysis != null,
+    playbackKind: tm.transport.playbackKind,
+    isPlaying: tm.transport.isPlaying,
+  });
   const selectedExportReceipt =
     tm.lastExportReceipt?.trackId === tm.selectedTrackId ? tm.lastExportReceipt : null;
   const selectedExportChecks = selectedExportReceipt?.checks;
@@ -114,9 +126,10 @@ function App() {
         onRedo={tm.redo}
         viewMode={view === "advanced" ? "advanced" : "standard"}
         onEnterAdvanced={() => {
-          // Entering Advanced from the chrome unmounts StandardView without
-          // notice — end the first-run guide here so it never re-appears.
-          markGuideFinished(globalThis.localStorage, "done");
+          // Entering Advanced from the chrome ends the first-run guide so it
+          // never re-appears. noteEnteredAdvanced persists "done" AND clears
+          // the live step, so the floating overlay drops immediately.
+          guide.noteEnteredAdvanced();
           setView("advanced");
         }}
         onBackToStandard={nav.requestBackToStandard}
@@ -205,9 +218,18 @@ function App() {
         </>
       )}
       {view === "standard" && tm.selectedTrack && (
-        <StandardView tm={tm} onEnterAdvanced={() => setView("advanced")} />
+        // StandardView's own enterAdvanced wrapper finishes the guide before
+        // switching, so this handler only owns the view change.
+        <StandardView tm={tm} guide={guide} onEnterAdvanced={() => setView("advanced")} />
       )}
       {view === "standard" && !tm.selectedTrack && <EmptyState onAdd={tm.openImportDialog} />}
+      {/* First-run coachmark (L9): a floating sibling of the drop/toast
+          overlays, not an inline rail chip. Only Standard's flow drives it;
+          gate on the same condition that mounts StandardView so a stale step
+          can't surface in Advanced (e.g. an Album bounce). */}
+      {view === "standard" && tm.selectedTrack && (
+        <FirstRunOverlay step={guide.step} onDismiss={guide.dismiss} />
+      )}
       {tm.isDragOver && (
         <div className="drop-overlay" aria-hidden>
           <div className="drop-overlay-card">
