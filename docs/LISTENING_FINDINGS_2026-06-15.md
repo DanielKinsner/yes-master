@@ -175,8 +175,24 @@ Deferred follow-ups (not regressions):
 - **L12** preset voicing/character — parked on `preset-bold-experiment`, gated by
   the measurement harness per the plan.
 
-Watch item (raised by the L2 implementer): the fix clears the done-flag but does
-not *promote* the cached landing gain into the live chain on that exact drain —
-the live scalar updates on the next `UpdateChain`. If owner listening ever shows
-an audible lag on that specific path, promoting the gain there is a scoped
-follow-up, not part of this flag fix.
+### Adversarial review pass (2026-06-15)
+
+Six independent skeptics tried to break each committed fix. Four survived clean
+(L15, L11, L7/L8, L6/L14 — including an exhaustive search confirming the
+`StandardStyleId` ids are never persisted). Two real issues were found and fixed:
+
+- `70ca1ca` — **L2 gain promotion.** The drain-branch flag-clear was incomplete:
+  it cleared `landing_pending` without promoting the cached gain to the live
+  chain, so on the "wiggle away then back while the worker is still in flight"
+  path the UI said "landing complete" while the audio stayed on the last-known
+  scalar until the next `UpdateChain`. The drain branch now promotes the cached
+  gain (via a `LiveCoeffUpdate` crossfade) exactly like the worker-completion
+  branch. (Resolves the watch item.)
+- `676c567` — **L4/L5 stale-tick race.** `importFiles` set `selectedTrackId`, but
+  the tick guard's ref (`selectedTrackIdRef`) only synced on the next render, so
+  a late tick for the previous track could repaint the old playing state before
+  React committed. The ref is now synced synchronously on import; a regression
+  assertion covers the guard rejecting a post-import old-track tick.
+
+All lanes re-run green after both fixes (vitest 440, cargo full + slow fixture,
+iPhone bridge check).
