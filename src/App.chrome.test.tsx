@@ -258,7 +258,7 @@ describe("advanced track header", () => {
 });
 
 describe("advanced preset tiles", () => {
-  it("bridges Advanced presets to their Standard style names", async () => {
+  it("shows unified preset names — first four mirror Standard, no alias suffix", async () => {
     const { container, root } = await renderNode(
       <PresetTiles
         selected={{ kind: "universal" }}
@@ -268,10 +268,17 @@ describe("advanced preset tiles", () => {
       />,
     );
 
-    expect(container.textContent).toContain("Universal · Balanced in Standard");
-    expect(container.textContent).toContain("Clarity · Bright in Standard");
-    expect(container.textContent).toContain("Tape · Warm in Standard");
-    expect(container.textContent).toContain("Oomph · Heavy in Standard");
+    const text = container.textContent ?? "";
+    // Both views now use the canonical names — the old "· … in Standard"
+    // alias suffix is gone (preset-name unification).
+    for (const name of ["Universal", "Clarity", "Tape", "Oomph"]) {
+      expect(text).toContain(name);
+    }
+    expect(text).not.toContain("in Standard");
+    // The four Standard tiles lead the Advanced list in the same order, so
+    // Oomph sits ahead of Spatial (the unification ordering decision).
+    expect(text.indexOf("Oomph")).toBeGreaterThan(-1);
+    expect(text.indexOf("Oomph")).toBeLessThan(text.indexOf("Spatial"));
     await act(async () => {
       root.unmount();
     });

@@ -34,17 +34,25 @@ describe("standard style mapping (the reference-4)", () => {
   });
 
   it("exposes exactly four ordered tiles with metadata", () => {
+    // Internal ids stay stable (routing key + iPhone parity pin); only the
+    // user-facing labels were unified to the canonical preset names.
     expect(STANDARD_STYLES.map((s) => s.id)).toEqual([
       "balanced",
       "bright",
       "warm",
       "heavy",
     ]);
-    expect(STANDARD_STYLES[0]).toMatchObject({ label: "Balanced", subtitle: "Clean balance", tone: "blue" });
-    expect(STANDARD_STYLES[1]).toMatchObject({ label: "Bright",   subtitle: "Air & detail",  tone: "cyan" });
-    expect(STANDARD_STYLES[2]).toMatchObject({ label: "Warm",     subtitle: "Glue & body",   tone: "gold" });
+    expect(STANDARD_STYLES[0]).toMatchObject({ label: "Universal", tone: "blue" });
+    expect(STANDARD_STYLES[1]).toMatchObject({ label: "Clarity",   tone: "cyan" });
+    expect(STANDARD_STYLES[2]).toMatchObject({ label: "Tape",      tone: "gold" });
     // "red" matches Oomph's PRESET_ACCENT + artwork across both views.
-    expect(STANDARD_STYLES[3]).toMatchObject({ label: "Heavy",    subtitle: "Sub & weight",  tone: "red" });
+    expect(STANDARD_STYLES[3]).toMatchObject({ label: "Oomph",     tone: "red" });
+  });
+
+  it("no longer carries a per-tile subtitle (labels unified, subtitle dropped)", () => {
+    for (const s of STANDARD_STYLES) {
+      expect(s).not.toHaveProperty("subtitle");
+    }
   });
 });
 

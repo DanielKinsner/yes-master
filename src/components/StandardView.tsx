@@ -3,8 +3,8 @@
 // Standard view — the default desktop face. Phase 2 layout: the 3-column
 // Advanced shell (Tracks rail · center controls · Preview/Delivery/Export
 // rail) so the flip to Advanced is seamless. Style tiles reuse the Advanced
-// preset artwork (PresetIcon) so Balanced/Bright/Warm/Heavy read as the same
-// Universal/Clarity/Tape/Oomph presets in Advanced. Intensity is the shared
+// preset artwork (PresetIcon) and now share its names — Universal/Clarity/
+// Tape/Oomph read identically across both views. Intensity is the shared
 // Knob. One transport (no duplicates). Binds to per-track selectedSettings.
 
 import { useLayoutEffect, useRef, type RefObject } from "react";
@@ -93,7 +93,6 @@ export function StyleTiles({
               <PresetIcon kind={tilePreset.kind} />
             </span>
             <span className="std-tile-label">{s.label}</span>
-            <span className="std-tile-subtitle">{s.subtitle}</span>
           </button>
         );
       })}
@@ -489,6 +488,16 @@ function StandardRightRail({
               }}
             >
               Show file
+            </button>
+            {/* Standard stays lean: the full ExportReceiptCard lives in
+                Advanced. This hands off there — the receipt is held in
+                tm.lastExportReceipt, so it survives the view switch. */}
+            <button
+              type="button"
+              className="ghost-btn std-export-done-report"
+              onClick={onEnterAdvanced}
+            >
+              View full report
             </button>
           </div>
         )}

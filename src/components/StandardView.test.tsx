@@ -38,7 +38,7 @@ describe("StyleTiles", () => {
       <StyleTiles preset={{ kind: "universal" }} onSelect={() => {}} />,
     );
     const text = container.textContent ?? "";
-    for (const label of ["Balanced", "Bright", "Warm", "Heavy"]) {
+    for (const label of ["Universal", "Clarity", "Tape", "Oomph"]) {
       expect(text).toContain(label);
     }
     await act(async () => root.unmount());
@@ -49,7 +49,7 @@ describe("StyleTiles", () => {
       <StyleTiles preset={{ kind: "tape" }} onSelect={() => {}} />,
     );
     const active = container.querySelector(".std-tile.is-active");
-    expect(active?.textContent).toContain("Warm");
+    expect(active?.textContent).toContain("Tape");
     await act(async () => root.unmount());
   });
 
@@ -59,8 +59,8 @@ describe("StyleTiles", () => {
       <StyleTiles preset={{ kind: "universal" }} onSelect={onSelect} />,
     );
     const tiles = Array.from(container.querySelectorAll<HTMLButtonElement>(".std-tile"));
-    const heavy = tiles.find((t) => t.textContent?.includes("Heavy"))!;
-    await act(async () => { heavy.click(); });
+    const oomph = tiles.find((t) => t.textContent?.includes("Oomph"))!;
+    await act(async () => { oomph.click(); });
     expect(onSelect).toHaveBeenCalledWith({ kind: "oomph" });
     await act(async () => root.unmount());
   });
@@ -141,7 +141,7 @@ describe("StandardView", () => {
   it("renders style tiles, an intensity control, loudness steps, and the Create Master CTA", async () => {
     const { container, root } = await render(<StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />);
     const text = container.textContent ?? "";
-    expect(text).toContain("Balanced");
+    expect(text).toContain("Universal");
     expect(text).toContain("Low");
     expect(text).toContain("Create Master");
     await act(async () => root.unmount());
@@ -151,8 +151,7 @@ describe("StandardView", () => {
     const setPreset = vi.fn();
     const { container, root } = await render(<StandardView tm={fakeTm({ setPreset })} onEnterAdvanced={() => {}} />);
     const tiles = Array.from(container.querySelectorAll<HTMLButtonElement>(".std-tile"));
-    tiles.find((t) => t.textContent?.includes("Bright"))!;
-    await act(async () => { tiles.find((t) => t.textContent?.includes("Bright"))!.click(); });
+    await act(async () => { tiles.find((t) => t.textContent?.includes("Clarity"))!.click(); });
     expect(setPreset).toHaveBeenCalledWith({ kind: "clarity" });
     await act(async () => root.unmount());
   });
@@ -436,6 +435,26 @@ describe("StandardRightRail", () => {
     expect(idle.container.querySelector(".std-render-progress")).toBeNull();
     await act(async () => idle.root.unmount());
   });
+
+  it("shows render progress during EXPORT (isExporting), not just preview render", async () => {
+    const exporting = await render(
+      <StandardView
+        tm={fakeTm({
+          isExporting: true,
+          renderProgress: { kind: "master", fraction: 0.6 },
+        })}
+        onEnterAdvanced={() => {}}
+      />,
+    );
+    const label = exporting.container.querySelector(".std-render-progress-label");
+    expect(label?.textContent).toBe("Master render 60%");
+    const bar = exporting.container.querySelector<HTMLElement>(
+      ".std-render-progress [role='progressbar']",
+    );
+    expect(bar?.getAttribute("aria-valuenow")).toBe("60");
+    expect(bar?.querySelector<HTMLElement>(".std-render-progress-fill")?.style.width).toBe("60%");
+    await act(async () => exporting.root.unmount());
+  });
 });
 
 describe("first-run guide", () => {
@@ -644,6 +663,18 @@ describe("Standard export receipt", () => {
     expect(card?.textContent).toContain("Master created");
     expect(card?.textContent).toContain("Song Master.wav");
     expect(card?.textContent).toContain("-14.1 LUFS");
+    await act(async () => root.unmount());
+  });
+
+  it("'View full report' affordance hands off to Advanced (where the full receipt renders)", async () => {
+    const onEnterAdvanced = vi.fn();
+    const { container, root } = await render(
+      <StandardView tm={exportedTm()} onEnterAdvanced={onEnterAdvanced} />,
+    );
+    const report = container.querySelector<HTMLButtonElement>(".std-export-done-report")!;
+    expect(report.textContent).toContain("View full report");
+    await act(async () => { report.click(); });
+    expect(onEnterAdvanced).toHaveBeenCalledOnce();
     await act(async () => root.unmount());
   });
 

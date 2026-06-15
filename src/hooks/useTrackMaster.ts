@@ -1142,15 +1142,40 @@ export function useTrackMaster() {
         const newIds = imported.map((t) => t.id);
         for (const id of newIds) markStale(id);
 
-        if (selectedTrackId === null) {
-          setSelectedTrackId(imported[0].id);
-          // Prewarm the newly auto-selected import. Same rationale
-          // as selectTrack: the user is likely to click Mastered
-          // shortly after import. Fire-and-forget.
-          api.prewarmDecode(imported[0].path).catch(() => {
-            /* opportunistic; cold decode path still works */
-          });
-        }
+        // Always jump to the newly imported track (not only when nothing was
+        // selected before). Replicate selectTrack's transport/meter reset
+        // INLINE — we cannot call selectTrack here because `imported[0]` is not
+        // in `tracks` state yet on this render. Without the reset, a prior
+        // track's "playing" transport and live meter readings leak onto the
+        // fresh import: an active play button and moving meters with nothing
+        // playing. Reset the meters back to their silence sentinels too.
+        const selected = imported[0];
+        setSelectedTrackId(selected.id);
+        setTransport((t) => ({
+          ...t,
+          isPlaying: false,
+          currentTimeSec: 0,
+          loop: false,
+          peakDbfs: -120,
+          peakLeftDbfs: -120,
+          peakRightDbfs: -120,
+          compressionGr: { low: -120, mid: -120, high: -120 },
+          lufsMomentary: -120,
+          lufsIntegrated: -120,
+          spectrumDb: [],
+        }));
+        api.stopPlayback().catch(() => {
+          /* swallow — best-effort */
+        });
+        api.setLoopRegion(null).catch(() => {
+          /* swallow — best-effort */
+        });
+        // Prewarm the newly auto-selected import. Same rationale as selectTrack:
+        // the user is likely to click Mastered shortly after import.
+        // Fire-and-forget.
+        api.prewarmDecode(selected.path).catch(() => {
+          /* opportunistic; cold decode path still works */
+        });
 
         const results = await analyzeKnownTracks(imported);
         setSettingsMap((prev) => {
@@ -1169,7 +1194,7 @@ export function useTrackMaster() {
         setError(messageOf(err, { name: projectDisplayName(paths[0] ?? "") }));
       }
     },
-    [selectedTrackId, markStale, analyzeKnownTracks, rebuildWaveforms],
+    [markStale, analyzeKnownTracks, rebuildWaveforms],
   );
 
   // Keep the ref in sync with the latest importFiles closure so the long-lived

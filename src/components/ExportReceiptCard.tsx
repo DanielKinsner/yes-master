@@ -157,7 +157,9 @@ function exportQualitySummary(checks: QualityCheck[]): {
     return {
       tone: "review",
       label: "Review",
-      detail: pluralize(warning, "item to review"),
+      // Pluralize only the noun, not the whole phrase — pluralize() appends "s"
+      // to its argument, so "item to review" became "items to reviews".
+      detail: `${pluralize(warning, "item")} to review`,
     };
   }
   return {

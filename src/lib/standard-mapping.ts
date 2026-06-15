@@ -14,20 +14,25 @@ export type StandardTone = "blue" | "cyan" | "gold" | "red";
 
 /// The four tiles, in display order, with the metadata the UI renders.
 /// `tone` reuses the Knob/accent tone vocabulary already in the app.
+///
+/// Owner decision (preset-name unification): both views show the canonical
+/// preset names — Universal/Clarity/Tape/Oomph, no subtitle. The internal
+/// `id` values stay balanced/bright/warm/heavy: they are the in-memory
+/// tile<->preset routing key, not persisted anywhere (and the iPhone bridge
+/// parity fixture pins them), so renaming a label never touches the DSP.
 export const STANDARD_STYLES: ReadonlyArray<{
   id: StandardStyleId;
   label: string;
-  subtitle: string;
   preset: Preset;
   tone: StandardTone; // accent tone, drives the tile's accent color
 }> = [
-  { id: "balanced", label: "Balanced", subtitle: "Clean balance", preset: { kind: "universal" }, tone: "blue" },
-  { id: "bright", label: "Bright", subtitle: "Air & detail", preset: { kind: "clarity" }, tone: "cyan" },
-  { id: "warm", label: "Warm", subtitle: "Glue & body", preset: { kind: "tape" }, tone: "gold" },
+  { id: "balanced", label: "Universal", preset: { kind: "universal" }, tone: "blue" },
+  { id: "bright", label: "Clarity", preset: { kind: "clarity" }, tone: "cyan" },
+  { id: "warm", label: "Tape", preset: { kind: "tape" }, tone: "gold" },
   // Heavy is "red", not purple: Oomph's accent everywhere else (PRESET_ACCENT,
   // the red speaker artwork) is #f87171, and Knob's "red" is the same hex —
   // one hue per preset across both views (visual-parity pass).
-  { id: "heavy", label: "Heavy", subtitle: "Sub & weight", preset: { kind: "oomph" }, tone: "red" },
+  { id: "heavy", label: "Oomph", preset: { kind: "oomph" }, tone: "red" },
 ];
 
 /// The three loudness steps, in display order (matches the iPhone's

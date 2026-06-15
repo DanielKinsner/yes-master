@@ -35,15 +35,18 @@ import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
 import { markGuideFinished, requestGuideReset } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
 import { SUPPORTED_FORMATS_COPY } from "./lib/supported-formats";
-import { STANDARD_STYLES, presetToStyle } from "./lib/standard-mapping";
 import "./App.css";
 
+// The first four mirror the Standard tiles (Universal/Clarity/Tape/Oomph) in
+// the same order, per the preset-name unification decision — so the four a
+// Standard user knows sit at the front when they flip to Advanced. Keep Oomph
+// ahead of Spatial; don't "tidy" this back.
 const PRESET_OPTIONS: { value: Preset; label: string; blurb: string }[] = [
   { value: { kind: "universal" }, label: "Universal", blurb: "Safe, well-rounded default" },
   { value: { kind: "clarity" }, label: "Clarity", blurb: "Vocal/upper-mid definition" },
   { value: { kind: "tape" }, label: "Tape", blurb: "Saturation, glue, softer top" },
-  { value: { kind: "spatial" }, label: "Spatial", blurb: "Width and depth" },
   { value: { kind: "oomph" }, label: "Oomph", blurb: "Low-end weight, punch" },
+  { value: { kind: "spatial" }, label: "Spatial", blurb: "Width and depth" },
   { value: { kind: "warmth" }, label: "Warmth", blurb: "Fuller, smoother body" },
   { value: { kind: "punch" }, label: "Punch", blurb: "Transient impact" },
   { value: { kind: "loud" }, label: "Loud", blurb: "Density + level, with safety" },
@@ -581,8 +584,8 @@ function BackToStandardConfirm({
       <div className="modal-card">
         <h2 className="modal-title">Back to Standard</h2>
         <p className="modal-body">
-          Back to Standard resets your manual edits to the preset&apos;s clean
-          sound. Save them as a preset first?
+          Back to Standard clears your advanced edits but keeps your style,
+          intensity, and loudness settings. Save them as a preset first?
         </p>
         <div className="modal-save-row">
           <input
@@ -608,12 +611,6 @@ function BackToStandardConfirm({
       </div>
     </div>
   );
-}
-
-function standardAliasForPreset(preset: Preset): string | null {
-  const styleId = presetToStyle(preset);
-  const style = STANDARD_STYLES.find((candidate) => candidate.id === styleId);
-  return style ? `${style.label} in Standard` : null;
 }
 
 function Sidebar({
@@ -1406,7 +1403,6 @@ export function PresetTiles({
         {PRESET_OPTIONS.map((p) => {
           const active = isPresetActive(selected, p.value);
           const accent = PRESET_ACCENT[p.value.kind];
-          const standardAlias = standardAliasForPreset(p.value);
           return (
             <button
               key={p.label}
@@ -1417,9 +1413,7 @@ export function PresetTiles({
               title={`${p.label} — ${p.blurb}`}
             >
               <PresetIcon kind={p.value.kind} className="tile-icon" />
-              <span className="tile-label">
-                {standardAlias ? `${p.label} · ${standardAlias}` : p.label}
-              </span>
+              <span className="tile-label">{p.label}</span>
               <span className="tile-blurb">{p.blurb}</span>
             </button>
           );

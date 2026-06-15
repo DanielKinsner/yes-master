@@ -77,7 +77,7 @@ describe("ExportReceiptCard", () => {
     expect(container.textContent).toContain("Compression · compression eased low 20%");
   });
 
-  it("renders the review medallion for warnings", () => {
+  it("renders the review medallion for a single warning without double-pluralizing", () => {
     const container = render(
       <ExportReceiptCard
         receipt={receipt([
@@ -88,6 +88,22 @@ describe("ExportReceiptCard", () => {
     );
     expect(container.querySelector(".receipt-medallion-review")).not.toBeNull();
     expect(container.textContent).toContain("1 item to review");
+    expect(container.textContent).not.toContain("reviews");
+  });
+
+  it("pluralizes only the noun for multiple warnings", () => {
+    const container = render(
+      <ExportReceiptCard
+        receipt={receipt([
+          { level: "warning", code: "lufs_very_loud", message: "loud" },
+          { level: "warning", code: "true_peak_high", message: "peak" },
+        ])}
+        onClose={() => {}}
+      />,
+    );
+    expect(container.querySelector(".receipt-medallion-review")).not.toBeNull();
+    expect(container.textContent).toContain("2 items to review");
+    expect(container.textContent).not.toContain("reviews");
   });
 
   it("renders needs-attention and qualifies the header for criticals", () => {

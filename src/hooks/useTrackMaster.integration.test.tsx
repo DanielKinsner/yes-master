@@ -549,6 +549,88 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("auto-selects a fresh import and resets stale playing/meter state from the prior track", async () => {
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const first = makeTrack("import-reset-first", "C:/audio/first.wav");
+    const second = makeTrack("import-reset-second", "C:/audio/second.wav");
+    mocks.api.importTracks.mockResolvedValueOnce([first]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([first.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(first.id);
+      expect(playbackHandler).toBeDefined();
+    });
+
+    // Establish "playing" transport plus live (non-sentinel) meter readings on
+    // the first track, as a real playback tick would.
+    await act(async () => {
+      playbackHandler?.({
+        track_id: first.id,
+        position_sec: 4,
+        is_playing: true,
+        is_loaded: true,
+        peak_dbfs: -6,
+        gr_low_db: -3,
+        gr_mid_db: -4,
+        gr_high_db: -2,
+        lufs_momentary: -11,
+        lufs_integrated: -12,
+        spectrum_db: [-20, -18, -16],
+      });
+    });
+    await waitFor(() => {
+      expect(harness.current().transport.isPlaying).toBe(true);
+      expect(harness.current().transport.peakDbfs).toBe(-6);
+    });
+
+    // Import a second track. It must jump to the new import AND clear the stale
+    // playing/meter state so no phantom transport or moving meters leak.
+    mocks.api.importTracks.mockResolvedValueOnce([second]);
+    await act(async () => {
+      await harness.current().importFiles([second.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(second.id);
+    });
+
+    const transport = harness.current().transport;
+    expect(transport.isPlaying).toBe(false);
+    expect(transport.currentTimeSec).toBe(0);
+    expect(transport.loop).toBe(false);
+    expect(transport.peakDbfs).toBe(-120);
+    expect(transport.peakLeftDbfs).toBe(-120);
+    expect(transport.peakRightDbfs).toBe(-120);
+    expect(transport.compressionGr).toEqual({ low: -120, mid: -120, high: -120 });
+    expect(transport.lufsMomentary).toBe(-120);
+    expect(transport.lufsIntegrated).toBe(-120);
+    expect(transport.spectrumDb).toEqual([]);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("surfaces unsupported drop feedback when every dropped file is rejected", async () => {
     let dragDropHandler:
       | ((event: { payload: { type: "drop"; paths: string[] } }) => void)

@@ -5649,8 +5649,6 @@ button.primary:disabled {
 }
 .std-tile-label { font-size: 0.98rem; font-weight: 600; letter-spacing: 0.02em; }
 .std-tile.is-active .std-tile-label { color: var(--tile-accent, var(--accent)); }
-.std-tile-subtitle { font-size: 0.76rem; color: var(--text-2); }
-.std-tile.is-active .std-tile-subtitle { color: var(--text-1); }
 
 /* Class-targeted (not :nth-child) so inserting/reordering steps can't
    silently move the knob grid to the wrong card. */

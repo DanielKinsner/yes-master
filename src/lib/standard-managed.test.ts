@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { MasteringSettings } from "../bindings";
+import { ADAPTIVE_STRENGTH_DEFAULT } from "../bindings";
 import { hasNonManagedEdits, resetToStandardManaged, shouldForceAdvancedOnStandardEntry } from "./standard-managed";
 
 function base(overrides: Partial<MasteringSettings> = {}): MasteringSettings {
@@ -150,6 +151,50 @@ describe("resetToStandardManaged", () => {
     const input = base({ eq_low_db: 5 });
     resetToStandardManaged(input);
     expect(input.eq_low_db).toBe(5);
+  });
+
+  // Pins the contract the "Back to Standard" dialog copy promises (L6):
+  // style + intensity + loudness/delivery survive; every Advanced-only edit
+  // is the only thing cleared.
+  it("keeps style, intensity, and the loudness/delivery target while clearing Advanced-only fields", () => {
+    const dirty = base({
+      preset: { kind: "clarity" },
+      intensity: 0.41,
+      delivery_profile: "streaming-universal",
+      eq_mid_db: 2.5,
+      input_gain_db: 1,
+      output_gain_db: -1,
+      advanced: {
+        ...base().advanced,
+        lufs_offset_db: -9,
+        width: 0.4,
+        warmth: 0.3,
+        presence_air: 0.2,
+        compression_mode: "manual",
+        compression_density: 0.5,
+        compression_mid_ratio: 2,
+        adaptive_strength: 0.9,
+      },
+    });
+    const clean = resetToStandardManaged(dirty);
+
+    // Managed (kept by the copy's promise):
+    expect(clean.preset).toEqual({ kind: "clarity" });
+    expect(clean.intensity).toBe(0.41);
+    expect(clean.delivery_profile).toBe("streaming-universal");
+    expect(clean.advanced.lufs_offset_db).toBe(-9);
+
+    // Advanced-only (cleared):
+    expect(clean.eq_mid_db).toBe(0);
+    expect(clean.input_gain_db).toBe(0);
+    expect(clean.output_gain_db).toBe(0);
+    expect(clean.advanced.width).toBeNull();
+    expect(clean.advanced.warmth).toBeNull();
+    expect(clean.advanced.presence_air).toBeNull();
+    expect(clean.advanced.compression_mode).toBe("preset");
+    expect(clean.advanced.compression_density).toBeNull();
+    expect(clean.advanced.compression_mid_ratio).toBeNull();
+    expect(clean.advanced.adaptive_strength).toBe(ADAPTIVE_STRENGTH_DEFAULT);
   });
 });
 
