@@ -95,6 +95,10 @@ vi.mock("./lib/tauri-runtime", () => ({
   getCurrentWebview: () => ({
     onDragDropEvent: mocks.onDragDropEvent,
   }),
+  getCurrentWindow: () => ({
+    onCloseRequested: async () => () => {},
+  }),
+  confirm: async () => true,
 }));
 
 const DEFAULT_SETTINGS: MasteringSettings = {
