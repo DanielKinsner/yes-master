@@ -398,6 +398,11 @@ pub struct PresetCalibration {
     pub baseline_gain_push_db: f32,
 }
 
+// BOLD voicing experiment (2026-06-15): internal global character dial — NOT
+// user-facing. 1.0 = ship default / byte-identical. Higher = all presets bolder;
+// lower = all presets tamer at once. Applied to `preset_scale` in from_settings.
+pub const PRESET_CHARACTER_SCALE: f32 = 1.0;
+
 // Rationale comments below encode listening intent inferred from the existing
 // calibration table; the original Python reference repo wasn't accessible from
 // this Mac. Cross-check against mastering.py when next on a machine that has it.
@@ -405,15 +410,16 @@ const PRESET_UNIVERSAL: PresetCalibration = PresetCalibration {
     // Cross-genre safe default. Private reference tuning (2026-05-26) kept the
     // air lift but backed off compression so already-mastered sources keep
     // closer movement against external Universal references.
+    // BOLD experiment 2026-06-15: confident, balanced polish (was a ~1.5 dB whisper).
     sub_db: 0.0,
-    low_shelf_db: 0.3,
-    low_mid_db: -0.1,
-    presence_db: 0.0,
+    low_shelf_db: 2.2,
+    low_mid_db: -0.5,
+    presence_db: 0.4,
     high_mid_db: 0.0,
-    air_db: 1.1,
+    air_db: 1.2,
     sparkle_db: 0.0,
-    warmth: 0.03,
-    stereo_width: 1.04,
+    warmth: 0.10,
+    stereo_width: 1.06,
     // Light lift keeps the safe default slightly alive without making transients a named feature.
     transient_punch: 0.04,
     // 24 Hz removes transport and room rumble while staying below useful lows on most material.
@@ -432,15 +438,16 @@ const PRESET_CLARITY: PresetCalibration = PresetCalibration {
     // Vocal / detail / definition. Private reference tuning (2026-05-26)
     // restored a little low support and backed off compression so the preset
     // reads polished instead of over-flattened on already-mastered material.
+    // BOLD experiment 2026-06-15: clearly the BRIGHT/detail preset (air + 3.5k articulation).
     sub_db: 0.0,
-    low_shelf_db: 0.6,
-    low_mid_db: -1.0,
-    presence_db: -0.8,
-    high_mid_db: 0.0,
-    air_db: 1.7,
-    sparkle_db: 0.0,
-    warmth: 0.025,
-    stereo_width: 1.02,
+    low_shelf_db: 1.7,
+    low_mid_db: -1.4,
+    presence_db: -0.4,
+    high_mid_db: 1.1,
+    air_db: 1.9,
+    sparkle_db: 0.4,
+    warmth: 0.04,
+    stereo_width: 1.05,
     // Small lift adds articulation to match the air shelf without turning Clarity into Punch.
     transient_punch: 0.05,
     // 28 Hz gives the vocal/detail preset a cleaner floor where sub weight is not the goal.
@@ -460,15 +467,17 @@ const PRESET_TAPE: PresetCalibration = PresetCalibration {
     // Glue, softened top, fuller low body. Private reference tuning
     // (2026-05-26) softened the air push and reduced compression depth so Tape
     // stays textured without crushing more movement than the reference.
+    // BOLD experiment 2026-06-15: clearly the WARM/dark preset — saturation + body,
+    // rolled-off top (the opposite of Clarity, not a near-twin).
     sub_db: 0.0,
-    low_shelf_db: 0.0,
-    low_mid_db: 0.3,
-    presence_db: -1.4,
+    low_shelf_db: 1.9,
+    low_mid_db: 0.9,
+    presence_db: -1.6,
     high_mid_db: 0.0,
-    air_db: 1.9,
-    sparkle_db: 0.0,
-    warmth: 0.10,
-    stereo_width: 0.99,
+    air_db: -1.2,
+    sparkle_db: -0.8,
+    warmth: 0.27,
+    stereo_width: 0.98,
     // Negative punch rounds attacks so the tape-glue character reads softened, not snappy.
     transient_punch: -0.03,
     // 24 Hz preserves low-body warmth while clearing subsonic headroom waste.
@@ -514,17 +523,19 @@ const PRESET_OOMPH: PresetCalibration = PresetCalibration {
     // Sub/low lift + low-mid scoop. Private reference tuning (2026-05-26)
     // pushed low weight and reduced compression depth after Oomph measured too
     // mid-forward and too flattened against the external reference.
+    // BOLD experiment 2026-06-15: keep the big low-end anchor; ease the top cut +
+    // add punch so it isn't dull at high intensity.
     sub_db: 0.0,
     low_shelf_db: 4.2,
     low_mid_db: -3.0,
-    presence_db: -2.6,
+    presence_db: -1.8,
     high_mid_db: 0.0,
-    air_db: -1.2,
+    air_db: -0.6,
     sparkle_db: 0.0,
-    warmth: 0.045,
+    warmth: 0.09,
     stereo_width: 0.95,
     // Moderate lift restores kick and bass impact after the deep low-mid scoop.
-    transient_punch: 0.08,
+    transient_punch: 0.12,
     // 22 Hz keeps the lowest useful weight because Oomph is the sub-forward preset.
     highpass_hz: 22.0,
     target_lufs: -12.0,
@@ -803,7 +814,7 @@ impl ChainCoeffs {
         // baseline, so dialing in a custom tweak doesn't erase the preset's
         // signature sound. Numbers below were tuned conservatively for a
         // first pass — Phase 12.1 listening on real material will calibrate.
-        let preset_scale = 0.4 + 1.2 * intensity;
+        let preset_scale = (0.4 + 1.2 * intensity) * PRESET_CHARACTER_SCALE;
 
         // Phase B.1: per-preset baselines come from the PresetCalibration
         // table. EQ map:
