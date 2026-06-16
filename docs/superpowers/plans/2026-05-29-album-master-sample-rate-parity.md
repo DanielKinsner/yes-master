@@ -1031,6 +1031,12 @@ git -C "." push
 
 - [ ] **Step 1: Update docs**
 
+> SUPERSEDED 2026-06-16: the "channel-count mismatch remains a hard error
+> (deferred)" line below is no longer true. Mixed mono/stereo albums now render
+> stereo (mono sources upmixed; `>2ch` folds to stereo). See the authoritative
+> `docs/APP_BEHAVIOR.md` and the Wave 9 album channel-parity record in
+> `docs/plans/2026-06-12-shippability-roadmap.md`.
+
 In `docs/APP_BEHAVIOR.md`, where Album Master's same-sample-rate limitation is described, replace it with: Album Master now resamples each track to one album delivery rate (chosen via the Album panel's Delivery Format control; Auto = highest source rate), honoring delivery sample rate + bit depth. Channel-count mismatch (mono vs stereo) remains a hard error (deferred).
 
 In `docs/RELEASE_STABILIZATION.md`, under Deferred, remove "full Album Master delivery parity" wording for sample rate, and note channel-mismatch parity remains the deferred item.

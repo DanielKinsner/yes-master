@@ -714,6 +714,15 @@ so the mechanical ship queue can close without waiting for multi-day ear work.
 - **S9.7** Branch hygiene (UF-E): executed 2026-06-16. `origin/vera/standard-polish`
   and `origin/vera/ui-overhaul` were stale Vera-era experiment snapshots, not
   launch baselines; both remote branch names were deleted.
+- **Album channel-count parity** (was on the do-not-do list as a deferred slice;
+  promoted to mechanical and executed 2026-06-16 — no new `S9.N` number to avoid
+  colliding with the "former S9.8" reference in Wave 10). `resolve_album_channels`
+  + `convert_channel_count` resolve one album-wide channel count: all-mono albums
+  stay mono, any stereo presence renders stereo (mono sources upmixed), and `>2ch`
+  sources fold to stereo so loudness stays on stereo BS.1770 weights. Receipt +
+  manifest carry per-track source/rendered channel counts. Tests:
+  `src-tauri/tests/album_sample_rate.rs`, `album_render.rs` resolve_tests, and
+  `src/components/AlbumPanel.test.tsx`.
 
 ---
 
@@ -800,8 +809,9 @@ Wave 0–9 queue.
 - DSP retune / preset calibration without owner listening notes.
 - The parked one-pole/soft-knee hoist; tauri-specta.
 - Splitting `App.css` structurally; broad `useTrackMaster` decomposition.
-- Reference-track UX expansion; signing/notarization/autoupdate;
-  album channel-count parity (deferred slice).
+- Reference-track UX expansion; signing/notarization/autoupdate.
+  (Album channel-count parity was promoted from this list to mechanical and
+  shipped 2026-06-16 — see the album channel-parity record under Wave 9.)
 - New image-optimization runtime dependencies.
 - Updating DSP snapshots to make a failing test pass (review-rejection
   offense; see global rule 2).
