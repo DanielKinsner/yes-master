@@ -43,33 +43,41 @@ pub async fn analyze_tracks(
 ) -> CommandResult<Vec<AnalysisResult>> {
     let requested_ids: Vec<TrackId> = tracks.iter().map(|r| r.id.clone()).collect();
     let batch_id = batch_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
-    let result = analyze_tracks_core_with_progress(tracks, |fraction, label| {
-        let _ = app.emit(
-            "analysis:progress",
-            analysis_progress_event(&batch_id, fraction, label),
-        );
+    let profile_store = profile_store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let result = analyze_tracks_core_with_progress_sync(tracks, |fraction, label| {
+            let _ = app.emit(
+                "analysis:progress",
+                analysis_progress_event(&batch_id, fraction, label),
+            );
+        });
+        match &result {
+            Ok(results) => {
+                // B2: the backend is the SINGLE point that derives the adaptive source
+                // profile (kills the dual TS/Rust mapper). The render / readout commands
+                // and the live chain resolve from this store instead of an FE-injected
+                // profile.
+                populate_profile_store(&profile_store, results);
+                // Evict stale profiles for any requested track that HARD-failed analysis
+                // (skipped under the partial-success policy). Otherwise a re-analysis
+                // whose source moved / was replaced under a persisted TrackId would keep
+                // adapting the audition from old audio.
+                let succeeded: Vec<TrackId> = results.iter().map(|r| r.track_id.clone()).collect();
+                crate::profile_store::prune_failed_profiles(
+                    &profile_store,
+                    &requested_ids,
+                    &succeeded,
+                );
+            }
+            Err(_) => {
+                // Every requested track failed — evict any stale profiles outright.
+                crate::profile_store::prune_failed_profiles(&profile_store, &requested_ids, &[]);
+            }
+        }
+        result
     })
-    .await;
-    match &result {
-        Ok(results) => {
-            // B2: the backend is the SINGLE point that derives the adaptive source
-            // profile (kills the dual TS/Rust mapper). The render / readout commands
-            // and the live chain resolve from this store instead of an FE-injected
-            // profile.
-            populate_profile_store(&profile_store, results);
-            // Evict stale profiles for any requested track that HARD-failed analysis
-            // (skipped under the partial-success policy). Otherwise a re-analysis
-            // whose source moved / was replaced under a persisted TrackId would keep
-            // adapting the audition from old audio.
-            let succeeded: Vec<TrackId> = results.iter().map(|r| r.track_id.clone()).collect();
-            crate::profile_store::prune_failed_profiles(&profile_store, &requested_ids, &succeeded);
-        }
-        Err(_) => {
-            // Every requested track failed — evict any stale profiles outright.
-            crate::profile_store::prune_failed_profiles(&profile_store, &requested_ids, &[]);
-        }
-    }
-    result
+    .await
+    .map_err(|e| CommandError::Other(format!("analyze task: {e}")))?
 }
 
 /// Analysis core, free of the Tauri `State` so unit / contract tests can call it
@@ -485,15 +493,19 @@ pub async fn render_track_preview(
             },
         );
     };
-    mastering_render_with_progress(
-        track_id,
-        Path::new(&track_path),
-        &settings,
-        &out_dir,
-        RenderKind::Preview,
-        Some(&on_progress),
-        None,
-    )
+    tauri::async_runtime::spawn_blocking(move || {
+        mastering_render_with_progress(
+            track_id,
+            Path::new(&track_path),
+            &settings,
+            &out_dir,
+            RenderKind::Preview,
+            Some(&on_progress),
+            None,
+        )
+    })
+    .await
+    .map_err(|e| CommandError::Other(format!("preview render task: {e}")))?
 }
 
 #[tauri::command]
@@ -521,7 +533,7 @@ pub async fn render_track_master(
         false,
     );
     let out_dir = render_output_dir(&app, RenderKind::Master)?;
-    let explicit_output_path = output_path.as_deref().map(Path::new);
+    let explicit_output_path = output_path.map(PathBuf::from);
     let track_id_for_progress = track_id.clone();
     let app_for_progress = app.clone();
     let on_progress = move |fraction: f32| {
@@ -534,15 +546,19 @@ pub async fn render_track_master(
             },
         );
     };
-    mastering_render_with_progress(
-        track_id,
-        Path::new(&track_path),
-        &settings,
-        &out_dir,
-        RenderKind::Master,
-        Some(&on_progress),
-        explicit_output_path,
-    )
+    tauri::async_runtime::spawn_blocking(move || {
+        mastering_render_with_progress(
+            track_id,
+            Path::new(&track_path),
+            &settings,
+            &out_dir,
+            RenderKind::Master,
+            Some(&on_progress),
+            explicit_output_path.as_deref(),
+        )
+    })
+    .await
+    .map_err(|e| CommandError::Other(format!("master render task: {e}")))?
 }
 
 // ============================================================================
@@ -662,7 +678,11 @@ pub async fn render_album_plan(
             },
         );
     };
-    render_album_plan_impl(&request, &out_dir, Some(&on_progress))
+    tauri::async_runtime::spawn_blocking(move || {
+        render_album_plan_impl(&request, &out_dir, Some(&on_progress))
+    })
+    .await
+    .map_err(|e| CommandError::Other(format!("album render task: {e}")))?
 }
 
 pub fn render_output_dir(app: &tauri::AppHandle, kind: RenderKind) -> CommandResult<PathBuf> {
