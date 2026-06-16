@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YES Master Global Confidence Audit - Plain English - 2026-06-16</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111317;
+      --panel: #191d24;
+      --panel-2: #202631;
+      --text: #eef2f8;
+      --muted: #aeb8c8;
+      --line: #344053;
+      --accent: #8fd3ff;
+      --warn: #ffd36b;
+      --bad: #ff8b8b;
+      --ok: #92d59c;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font: 16px/1.55 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    main {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 40px 22px 64px;
+    }
+
+    header {
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 36px 0 14px;
+      font-size: 1.45rem;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+    }
+
+    p {
+      margin: 0 0 14px;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+      color: #d7e9ff;
+    }
+
+    .deck {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin: 20px 0 8px;
+    }
+
+    .card,
+    .finding,
+    .note {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .card strong {
+      display: block;
+      color: var(--text);
+      font-size: 1.05rem;
+      margin-bottom: 4px;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .finding {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px 16px;
+      margin: 14px 0;
+    }
+
+    .badge {
+      min-width: 44px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.82rem;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+    }
+
+    .p1 {
+      color: var(--bad);
+      border-color: rgba(255, 139, 139, 0.45);
+    }
+
+    .p2 {
+      color: var(--warn);
+      border-color: rgba(255, 211, 107, 0.45);
+    }
+
+    .p3 {
+      color: var(--accent);
+      border-color: rgba(143, 211, 255, 0.45);
+    }
+
+    .finding p:last-child,
+    .note p:last-child {
+      margin-bottom: 0;
+    }
+
+    ul {
+      margin: 8px 0 0;
+      padding-left: 1.25rem;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    .summary-line {
+      font-size: 1.12rem;
+      max-width: 820px;
+      color: var(--muted);
+    }
+
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: var(--panel);
+      padding: 14px 16px;
+      border-radius: 6px;
+      margin: 18px 0;
+    }
+
+    .ok {
+      color: var(--ok);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>YES Master Global Confidence Audit</h1>
+      <p class="summary-line">Plain-English readout from the repo-wide confidence and archaeology audit on 2026-06-16.</p>
+    </header>
+
+    <section>
+      <h2>Bottom Line</h2>
+      <p>YES Master does not look like a repo where the whole product is secretly off the rails. Track Master, export safety, album format rendering, mobile bridge parity, and private-audio hygiene all have real evidence behind them.</p>
+      <p>The risk is more specific: a handful of important promises are split across code, docs, and tests. The largest issue is that Album Master can export from live UI choices that are not saved into project files. The second big one is that desktop live Preview LUFS is not using the same rendered-rate measurement path that export and iPhone live preview use.</p>
+      <div class="deck">
+        <div class="card">
+          <strong>Confidence</strong>
+          <span class="muted">Medium-high for Track Master core. Medium for Album/project persistence. Medium-low for docs navigation.</span>
+        </div>
+        <div class="card">
+          <strong>Biggest Risk</strong>
+          <span class="muted">Saved Album projects can reopen with different Album-panel choices than the user expects.</span>
+        </div>
+        <div class="card">
+          <strong>Most Confusing Area</strong>
+          <span class="muted">Current-looking docs that are actually historical or partially stale.</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>The Short List</h2>
+
+      <article class="finding">
+        <span class="badge p1">P1</span>
+        <div>
+          <h3>Album projects do not save all Album-panel choices</h3>
+          <p>The app saves the tracks, per-track settings, album intent, and override flags. It does not save the live Album-panel values for arc, title, intensity, sample rate, or bit depth. Those same values are used when exporting an album.</p>
+          <p>Plain English: a user can set up an album, save it, reopen it later, and accidentally export with default or Auto choices instead of the choices they made.</p>
+        </div>
+      </article>
+
+      <article class="finding">
+        <span class="badge p1">P1</span>
+        <div>
+          <h3>Desktop live Preview LUFS can disagree with export</h3>
+          <p>The offline renderer and the shared preview helper measure loudness after sample-rate conversion. Desktop live audition has its own path that measures at the source sample rate. iPhone live preview already uses the shared helper.</p>
+          <p>Plain English: for 48 kHz or 96 kHz sources, the thing you hear live on desktop may not land exactly like the file the app exports.</p>
+        </div>
+      </article>
+
+      <article class="finding">
+        <span class="badge p2">P2</span>
+        <div>
+          <h3>Partial analysis failures can be invisible</h3>
+          <p>If a batch has several tracks and one fails analysis, the backend returns the successful tracks and logs the failure to stderr. The frontend does not clearly detect that one requested track is missing from the results.</p>
+          <p>Plain English: one bad or moved file can leave a track sitting in the app without analysis while the overall operation still looks successful.</p>
+        </div>
+      </article>
+
+      <article class="finding">
+        <span class="badge p2">P2</span>
+        <div>
+          <h3>Android native ARM64 checks are not in CI</h3>
+          <p>The local docs require an Android Rust host test and an ARM64 <code>cargo ndk</code> check. CI runs Android JVM tests and host bridge tests, but not the actual ARM64 native check.</p>
+          <p>Plain English: a pull request can go green while a real Android native build/link issue is still hiding.</p>
+        </div>
+      </article>
+
+      <article class="finding">
+        <span class="badge p2">P2</span>
+        <div>
+          <h3>Album fold-down happens, but the UI does not say it happened</h3>
+          <p>The backend correctly folds above-stereo sources down to stereo and records it in report data. The Album receipt only shows upmix advisories, not fold-down advisories.</p>
+          <p>Plain English: the app does the right audio conversion but does not tell the user about one important kind of conversion.</p>
+        </div>
+      </article>
+    </section>
+
+    <section>
+      <h2>Docs That Need Care</h2>
+      <p>Several docs still look current but describe older states. These are not all product bugs, but they are dangerous for future agents.</p>
+      <ul>
+        <li><code>README.md</code> still says Standard styles are Balanced, Bright, Warm, Heavy. The app now shows Universal, Clarity, Tape, Oomph.</li>
+        <li><code>APP_BEHAVIOR.md</code> still says the private fixture matrix needs a longer run. Release evidence says the run completed; listening signoff remains.</li>
+        <li><code>ANDROID_NATIVE_SPEC.md</code> still describes A4 as ongoing and says there is no process-death restore. Wave 9 says that catch-up shipped.</li>
+        <li><code>docs/IPHONE_APP.md</code> points to an iPhone handoff that says it is historical and also contains stale "authoritative" control names.</li>
+        <li><code>ADAPTIVE_DSP_NEXT_STEPS.md</code> still sounds like Tier-1 guardrails are not accepted, while current release docs say owner listening accepted them on 2026-06-11.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Cleanup Debt</h2>
+      <p>The largest cleanup hotspot is <code>src/App.css</code>. It still contains old selector families that no production TypeScript/TSX files appear to use. That makes future UI work harder because old CSS can look intentional.</p>
+      <ul>
+        <li>Examples: <code>.empty-state-glyph</code>, <code>.analysis-summary-icon</code>, <code>.quality-summary-*</code>, <code>.workspace-section-label</code>, <code>.advanced-panel-slot</code>, and <code>.advanced-slot-body</code>.</li>
+        <li>The roadmap already described a CSS selector inventory test. That idea is still useful, but the old class counts are stale and should be regenerated.</li>
+        <li>Rust comments near Album rendering still describe the pre-Wave-9 world where mixed sample rates or channels failed. The code and tests now do better than the comments say.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Things That Looked Scary But Checked Out</h2>
+      <div class="note">
+        <p><span class="ok">Export overwrite protection:</span> normal render paths reject source overwrite and uniquify prior renders. I did not find a material current-flow overwrite bug.</p>
+        <p><span class="ok">Album mixed-rate/mixed-channel backend:</span> this is shipped and tested. The issues are UI receipt copy and stale comments, not backend render behavior.</p>
+        <p><span class="ok">Original/Mastered switching:</span> the playhead preservation path is wired through the current transport time.</p>
+        <p><span class="ok">Private audio:</span> private fixtures and generated renders are ignored. The tracked test-output exception appears intentional.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>What I Would Do Next</h2>
+      <div class="callout">
+        <p>Fix the two P1s first: Album project persistence, then desktop live Preview LUFS rendered-rate parity. After that, fix partial analysis feedback and Android native verification. Docs cleanup can happen in a separate, low-risk pass.</p>
+      </div>
+      <p>The current state is workable, but the repo needs a little truth consolidation. The code has done a lot of the hard work; now the saved-project contract, live-preview parity, and docs need to catch up.</p>
+    </section>
+  </main>
+</body>
+</html>
