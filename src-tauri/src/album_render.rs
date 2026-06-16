@@ -28,9 +28,19 @@ fn resolve_album_sample_rate(requested: Option<u32>, source_rates: &[u32]) -> u3
 
 /// Resolve the album-wide output channel count. Auto keeps all-mono albums
 /// mono, but mixed mono/stereo albums render stereo so stereo sources are not
-/// downmixed and mono sources can be safely duplicated.
+/// downmixed and mono sources can be safely duplicated. The product is
+/// stereo-only (BS.1770 loudness uses stereo channel weights), so the result is
+/// capped at 2: a source with more than two channels is folded to stereo by
+/// `convert_channel_count` rather than producing a pseudo-surround album whose
+/// loudness would land under multichannel weights and not compare to other
+/// masters.
 fn resolve_album_channels(source_channels: &[u16]) -> u16 {
-    source_channels.iter().copied().max().unwrap_or(2).max(1)
+    source_channels
+        .iter()
+        .copied()
+        .max()
+        .unwrap_or(2)
+        .clamp(1, 2)
 }
 
 fn convert_channel_count(
@@ -647,6 +657,22 @@ mod resolve_tests {
     fn mono_to_stereo_duplicates_samples() {
         let converted = convert_channel_count(vec![0.25, -0.5], 1, 2).expect("convert");
         assert_eq!(converted, vec![0.25, 0.25, -0.5, -0.5]);
+    }
+
+    #[test]
+    fn more_than_stereo_sources_cap_at_stereo() {
+        // The product is stereo-only: a >2ch source must not push the album to
+        // a pseudo-surround channel count whose loudness lands under
+        // multichannel BS.1770 weights. It folds to stereo instead.
+        assert_eq!(resolve_album_channels(&[6, 2]), 2);
+        assert_eq!(resolve_album_channels(&[1, 6]), 2);
+    }
+
+    #[test]
+    fn surround_source_downmixes_to_stereo() {
+        // 4ch frame -> stereo: L = mean(ch0,ch1), R = mean(ch2,ch3).
+        let converted = convert_channel_count(vec![1.0, 3.0, 5.0, 7.0], 4, 2).expect("convert");
+        assert_eq!(converted, vec![2.0, 6.0]);
     }
 }
 
