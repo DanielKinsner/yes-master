@@ -14,6 +14,53 @@ protocol MasteringRenderer {
 
 extension NativeMasteringBridge: MasteringRenderer {}
 
+enum AuditionErrorState: Equatable {
+    case noSelection
+    case importCancelled
+    case unsupportedExtension(String)
+    case sourceUnavailable
+    case emptyFile
+    case unreadableContainer(String)
+    case importFailed
+    case decodeFailed
+    case playbackFailed
+    case analysisFailed(String)
+    case masterUnavailable
+    case renderNoOutput
+    case renderFailed(String)
+
+    var message: String {
+        switch self {
+        case .noSelection:
+            "No track was selected."
+        case .importCancelled:
+            "Import was cancelled."
+        case .unsupportedExtension(let fileExtension):
+            fileExtension.isEmpty
+                ? "That file is not supported yet."
+                : ".\(fileExtension) is not supported yet."
+        case .sourceUnavailable:
+            "That file is not available. Make sure it finished downloading, then try again."
+        case .emptyFile:
+            "That file looks empty. Make sure it finished downloading, then try again."
+        case .unreadableContainer(let fileExtension):
+            ".\(fileExtension) was selected, but it does not look like readable audio."
+        case .importFailed:
+            "Track could not be imported. Try another supported audio file."
+        case .decodeFailed:
+            "The file imported, but the audio could not be read. Try a standard WAV, MP3, or M4A."
+        case .playbackFailed:
+            "Playback could not start. Try another supported audio file."
+        case .analysisFailed(let message), .renderFailed(let message):
+            message
+        case .masterUnavailable:
+            "Import and analyze a track before creating a master."
+        case .renderNoOutput:
+            "Master render finished but no WAV was returned."
+        }
+    }
+}
+
 /// Owns audition behavior: import/analyze once, play Original immediately, hear
 /// Mastered live, switch sides on one preserved timeline, and change
 /// Style/Intensity/Loudness live — all without rendering a preview WAV. Create
@@ -42,6 +89,7 @@ final class AuditionController: ObservableObject {
     @Published private(set) var isAnalyzing = false
     @Published private(set) var isRendering = false
     @Published private(set) var isPlaying = false
+    @Published private(set) var errorState: AuditionErrorState?
     @Published var statusText = "Import a track to begin."
 
     let supportedImportContentTypes: [UTType]
@@ -54,6 +102,7 @@ final class AuditionController: ObservableObject {
     private(set) var analysisTask: Task<Void, Never>?
     private(set) var renderTask: Task<Void, Never>?
     private var landingTask: Task<Void, Never>?
+    private var landingGeneration: UInt64 = 0
     private var positionTimer: Timer?
     private var wasPlayingBeforeInterruption = false
     private var notificationObservers: [NSObjectProtocol] = []
@@ -76,27 +125,46 @@ final class AuditionController: ObservableObject {
         notificationObservers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
+    private func setStatus(_ message: String) {
+        errorState = nil
+        statusText = message
+    }
+
+    private func setError(_ state: AuditionErrorState) {
+        errorState = state
+        statusText = state.message
+    }
+
+    @discardableResult
+    private func bumpLandingGeneration() -> UInt64 {
+        landingGeneration &+= 1
+        return landingGeneration
+    }
+
     // MARK: - Import / analyze
 
     func handleImportResult(_ result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
             guard let sourceURL = urls.first else {
-                statusText = "No track was selected."
+                setError(.noSelection)
                 return
             }
             importTrack(from: sourceURL)
         case .failure:
-            statusText = "Import was cancelled."
+            setError(.importCancelled)
         }
     }
 
     func importTrack(from sourceURL: URL) {
         do {
+            landingTask?.cancel()
+            bumpLandingGeneration()
             analysisTask?.cancel()
             renderTask?.cancel()
             isAnalyzing = false
             isRendering = false
+            setStatus("Importing track...")
             let track = try importStore.importTrack(
                 from: sourceURL,
                 supportedExtensions: renderer.supportedImportExtensions
@@ -119,22 +187,21 @@ final class AuditionController: ObservableObject {
             renderStorage.enforceLimit(in: renderStorage.importsDirectory, max: 20)
 
             guard loaded else {
-                statusText = "The file imported, but the audio could not be read. Try a standard WAV, MP3, or M4A."
+                setError(.decodeFailed)
                 return
             }
             analyze(track)
             scheduleLandingRefresh()
         } catch ImportedTrackStore.ImportError.unsupportedExtension(let fileExtension) {
-            let label = fileExtension.isEmpty ? "that file" : ".\(fileExtension)"
-            statusText = "\(label) is not supported yet. Use \(renderer.supportedImportExtensions.joined(separator: ", "))."
+            setError(.unsupportedExtension(fileExtension))
         } catch ImportedTrackStore.ImportError.sourceUnavailable {
-            statusText = "That file is not available. Make sure it finished downloading, then try again."
+            setError(.sourceUnavailable)
         } catch ImportedTrackStore.ImportError.emptyFile {
-            statusText = "That file looks empty. Make sure it finished downloading, then try again."
+            setError(.emptyFile)
         } catch ImportedTrackStore.ImportError.unreadableContainer(let fileExtension) {
-            statusText = ".\(fileExtension) was selected, but it does not look like readable audio."
+            setError(.unreadableContainer(fileExtension))
         } catch {
-            statusText = "Track could not be imported. Try another supported audio file."
+            setError(.importFailed)
         }
     }
 
@@ -142,7 +209,7 @@ final class AuditionController: ObservableObject {
         analysisTask?.cancel()
         analysisResult = nil
         isAnalyzing = true
-        statusText = "Analyzing audio..."
+        setStatus("Analyzing audio...")
 
         let renderer = renderer
         analysisTask = Task {
@@ -156,10 +223,10 @@ final class AuditionController: ObservableObject {
             case .success(let analysis):
                 analysisResult = analysis
                 applyVolumeMatch() // original LUFS is now known; landing fills mastered LUFS
-                statusText = "Ready. Press play to audition."
+                setStatus("Ready. Press play to audition.")
             case .failure(let error):
                 analysisResult = nil
-                statusText = friendlyAudioErrorMessage(error)
+                setError(audioErrorState(error, fallback: .analysisFailed))
             }
         }
     }
@@ -172,18 +239,20 @@ final class AuditionController: ObservableObject {
 
     func togglePlayback() {
         guard canPlay else {
-            statusText = importedTrack == nil
-                ? "Import and analyze a track before playback."
-                : "Analyzing — just a moment."
+            if importedTrack == nil {
+                setError(.analysisFailed("Import and analyze a track before playback."))
+            } else {
+                setStatus("Analyzing — just a moment.")
+            }
             return
         }
         if isPlaying {
             stopPlayback()
-            statusText = "Playback paused."
+            setStatus("Playback paused.")
         } else {
             startPlayback()
             if isPlaying {
-                statusText = "Playing \(selectedSide.rawValue.lowercased()) track."
+                setStatus("Playing \(selectedSide.rawValue.lowercased()) track.")
             }
         }
     }
@@ -200,7 +269,7 @@ final class AuditionController: ObservableObject {
             isPlaying = true
             startPositionTimer()
         } catch {
-            statusText = "Playback could not start. Try another supported audio file."
+            setError(.playbackFailed)
         }
     }
 
@@ -211,7 +280,7 @@ final class AuditionController: ObservableObject {
         guard isPlaying, engine.durationSeconds > 0 else { return }
         if engine.positionSeconds >= engine.durationSeconds - 0.02 {
             stopPlayback()
-            statusText = "Reached the end. Press play to listen again."
+            setStatus("Reached the end. Press play to listen again.")
         }
     }
 
@@ -241,7 +310,7 @@ final class AuditionController: ObservableObject {
         wasPlayingBeforeInterruption = isPlaying
         if isPlaying {
             stopPlayback()
-            statusText = "Paused for an interruption."
+            setStatus("Paused for an interruption.")
         }
     }
 
@@ -253,7 +322,7 @@ final class AuditionController: ObservableObject {
         if shouldResume {
             startPlayback()
             if isPlaying {
-                statusText = "Playing \(selectedSide.rawValue.lowercased()) track."
+                setStatus("Playing \(selectedSide.rawValue.lowercased()) track.")
             }
         }
     }
@@ -263,7 +332,7 @@ final class AuditionController: ObservableObject {
     func handleAudioRouteLost() {
         if isPlaying {
             stopPlayback()
-            statusText = "Output changed. Press play to continue."
+            setStatus("Output changed. Press play to continue.")
         }
     }
 
@@ -311,7 +380,7 @@ final class AuditionController: ObservableObject {
         selectedSide = side
         engine.setOriginal(side == .original)
         applyVolumeMatch()
-        statusText = "Switched to \(side.rawValue.lowercased()) at the same spot."
+        setStatus("Switched to \(side.rawValue.lowercased()) at the same spot.")
     }
 
     // MARK: - Live settings (no render)
@@ -348,6 +417,10 @@ final class AuditionController: ObservableObject {
     /// Volume Match needs. Routes through the same landing math as Create Master,
     /// so the live preview lands ≈ where the full render will.
     func refreshLanding() async {
+        await refreshLanding(generation: landingGeneration)
+    }
+
+    private func refreshLanding(generation: UInt64) async {
         guard let stream = engine.stream else { return }
         let preset = selectedPreset.bridgeIdentifier
         let intensity = Float(presetIntensity)
@@ -355,6 +428,7 @@ final class AuditionController: ObservableObject {
         let result = await Task.detached {
             stream.measureLanding(preset: preset, intensity: intensity, loudnessTarget: loudness)
         }.value
+        guard generation == landingGeneration, !Task.isCancelled else { return }
         engine.setLandingGain(linearGain: result.gain)
         if result.masteredLufs.isFinite {
             masteredLufs = result.masteredLufs
@@ -364,10 +438,11 @@ final class AuditionController: ObservableObject {
 
     private func scheduleLandingRefresh() {
         landingTask?.cancel()
+        let generation = bumpLandingGeneration()
         landingTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 250_000_000) // settle after the last change
             if Task.isCancelled { return }
-            await self?.refreshLanding()
+            await self?.refreshLanding(generation: generation)
         }
     }
 
@@ -404,13 +479,13 @@ final class AuditionController: ObservableObject {
 
     func createMaster() {
         guard let track = importedTrack, analysisResult != nil else {
-            statusText = "Import and analyze a track before creating a master."
+            setError(.masterUnavailable)
             return
         }
         renderTask?.cancel()
         isRendering = true
         shareMasterURL = nil
-        statusText = "Creating master..."
+        setStatus("Creating master...")
 
         let renderer = renderer
         let sourceURL = track.localURL
@@ -429,28 +504,31 @@ final class AuditionController: ObservableObject {
             switch result {
             case .success(let job):
                 guard let outputPath = job.outputPaths.first else {
-                    statusText = "Master render finished but no WAV was returned."
+                    setError(.renderNoOutput)
                     return
                 }
                 shareMasterURL = URL(fileURLWithPath: outputPath)
                 masteredLufs = job.measurements?.lufsIntegrated
                 renderStorage.enforceLimit(in: renderStorage.mastersDirectory, max: 20)
                 applyVolumeMatch()
-                statusText = "Master created. Share it anytime."
+                setStatus("Master created. Share it anytime.")
             case .failure(let error):
                 shareMasterURL = nil
-                statusText = friendlyAudioErrorMessage(error)
+                setError(audioErrorState(error, fallback: .renderFailed))
             }
         }
     }
 
-    private func friendlyAudioErrorMessage(_ error: Error) -> String {
+    private func audioErrorState(
+        _ error: Error,
+        fallback: (String) -> AuditionErrorState
+    ) -> AuditionErrorState {
         let message = error.localizedDescription
         if message.localizedCaseInsensitiveContains("no suitable format reader")
             || message.localizedCaseInsensitiveContains("decode error") {
-            return "The file imported, but the audio could not be read. Try a standard WAV, MP3, or M4A."
+            return .decodeFailed
         }
-        return message
+        return fallback(message)
     }
 
 }

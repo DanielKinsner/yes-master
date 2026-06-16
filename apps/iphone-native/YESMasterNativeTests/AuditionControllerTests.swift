@@ -99,6 +99,34 @@ final class AuditionControllerTests: XCTestCase {
         XCTAssertEqual(ctx.controller.statusText, "Master created. Share it anytime.")
     }
 
+    func testUnsupportedImportUsesExplicitErrorState() async throws {
+        let ctx = try makeLoadedController()
+        await ctx.controller.analysisTask?.value
+        let unsupported = ctx.tempBase.appendingPathComponent("source.aiff")
+        try Self.writeWav(to: unsupported)
+
+        ctx.controller.importTrack(from: unsupported)
+
+        XCTAssertEqual(ctx.controller.errorState, .unsupportedExtension("aiff"))
+        XCTAssertEqual(ctx.controller.statusText, ".aiff is not supported yet.")
+    }
+
+    func testSuccessfulImportClearsExplicitErrorState() async throws {
+        let ctx = try makeLoadedController()
+        await ctx.controller.analysisTask?.value
+        let unsupported = ctx.tempBase.appendingPathComponent("source.aiff")
+        try Self.writeWav(to: unsupported)
+        ctx.controller.importTrack(from: unsupported)
+        XCTAssertNotNil(ctx.controller.errorState)
+
+        let supported = ctx.tempBase.appendingPathComponent("second.wav")
+        try Self.writeWav(to: supported)
+        ctx.controller.importTrack(from: supported)
+
+        XCTAssertNil(ctx.controller.errorState)
+        XCTAssertEqual(ctx.controller.statusText, "Analyzing audio...")
+    }
+
     func testVolumeMatchToggleForwardsAuditionGain() throws {
         let ctx = try makeLoadedController()
         XCTAssertFalse(ctx.controller.volumeMatchEnabled)
@@ -153,6 +181,22 @@ final class AuditionControllerTests: XCTestCase {
         let gain = try XCTUnwrap(ctx.stream.lastVolumeMatch)
         XCTAssertLessThan(gain, 1.0)
         XCTAssertGreaterThan(gain, 0.8)
+    }
+
+    func testStaleLandingRefreshDoesNotOverwriteNewerSettings() async throws {
+        let ctx = try makeLoadedController()
+        await ctx.controller.analysisTask?.value
+        ctx.stream.measureDelay = 0.08
+        ctx.stream.stubLandingGain = 0.4
+
+        let stale = Task { await ctx.controller.refreshLanding() }
+        try await Task.sleep(nanoseconds: 10_000_000)
+        ctx.stream.stubLandingGain = 0.9
+        ctx.controller.setLoudness(.high)
+        await stale.value
+
+        XCTAssertNil(ctx.stream.lastLandingGain, "stale landing result must not reach the engine")
+        XCTAssertNil(ctx.controller.masteredLufs, "stale mastered LUFS must not reach Volume Match")
     }
 
     func testInterruptionPausesThenResumesWhenAllowed() async throws {
@@ -258,6 +302,7 @@ private final class RecordingStream: LiveAuditionStreaming {
     var lastLandingGain: Float?
     var stubLandingGain: Float = 0.7
     var stubMasteredLufs: Double = -11.0
+    var measureDelay: TimeInterval = 0
 
     func render(into buffer: UnsafeMutablePointer<Float>, frames: UInt32) -> UInt32 { frames }
     func snapControlsToTargets() {}
@@ -272,6 +317,9 @@ private final class RecordingStream: LiveAuditionStreaming {
         positionSeconds = seconds
     }
     func measureLanding(preset: String, intensity: Float, loudnessTarget: Float) -> (gain: Float, masteredLufs: Double) {
+        if measureDelay > 0 {
+            Thread.sleep(forTimeInterval: measureDelay)
+        }
         (stubLandingGain, stubMasteredLufs)
     }
 }

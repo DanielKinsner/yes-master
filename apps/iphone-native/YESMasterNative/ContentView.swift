@@ -631,8 +631,8 @@ struct ContentView: View {
 
     @ViewBuilder
     private var errorStatus: some View {
-        if shouldShowStatusText {
-            Text(controller.statusText)
+        if let errorState = controller.errorState {
+            Text(errorState.message)
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(Color(red: 0.72, green: 0.79, blue: 0.92))
                 .multilineTextAlignment(.center)
@@ -692,18 +692,6 @@ struct ContentView: View {
 
     private var trackChipTitle: String {
         controller.importedTrack?.displayName ?? "Import track"
-    }
-
-    private var shouldShowStatusText: Bool {
-        let lowercasedStatus = controller.statusText.lowercased()
-        return lowercasedStatus.contains("failed")
-            || lowercasedStatus.contains("could not")
-            || lowercasedStatus.contains("not supported")
-            || lowercasedStatus.contains("empty")
-            || lowercasedStatus.contains("not look like")
-            || lowercasedStatus.contains("try ")
-            || lowercasedStatus.contains("no track was selected")
-            || lowercasedStatus.contains("cancelled")
     }
 
     private var intensityLabel: String {
