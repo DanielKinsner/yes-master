@@ -251,6 +251,8 @@ fn unique_child_path(out_dir: &Path, base_name: &str) -> CommandResult<PathBuf> 
 ///   * advanced.lufs_offset_db is REPLACED with
 ///     `effective_target_lufs() + arc_lufs_offset_db` so the per-track
 ///     render lands at the arc-modulated target.
+///   * delivery intent is preserved as Custom-equivalent advanced fields so
+///     the arc target is not shadowed by a non-Custom profile.
 ///   * intensity is multiplied by intensity_scale (clamped to [0, 1.5]).
 fn apply_album_shadow(
     settings: &MasteringSettings,
@@ -261,7 +263,15 @@ fn apply_album_shadow(
 ) -> MasteringSettings {
     let mut shadowed = settings.clone();
     let base_target = shadowed.effective_target_lufs().unwrap_or(-14.0);
+    let ceiling_dbtp = shadowed.effective_ceiling_dbtp();
+    let bit_depth = shadowed.effective_bit_depth();
+    let target_sample_rate = shadowed.requested_delivery_sample_rate();
+
+    shadowed.delivery_profile = DeliveryProfile::Custom;
     shadowed.advanced.lufs_offset_db = Some(base_target + entry.arc_lufs_offset_db);
+    shadowed.advanced.ceiling_dbtp = Some(ceiling_dbtp);
+    shadowed.advanced.bit_depth = Some(bit_depth);
+    shadowed.advanced.target_sample_rate = target_sample_rate;
     shadowed.intensity = (shadowed.intensity * entry.intensity_scale).clamp(0.0, 1.5);
 
     // Phase B+ Step 7: apply the per-character mastering bias on top of
@@ -371,6 +381,21 @@ mod adaptive_scope_tests {
             stripped.advanced.source_profile.is_none(),
             "album shadow must strip an incoming profile"
         );
+    }
+
+    #[test]
+    fn album_shadow_applies_arc_target_under_profile_delivery_intent() {
+        let mut settings = settings_with_profile(None);
+        settings.delivery_profile = crate::types::DeliveryProfile::StreamingUniversal;
+        let mut entry = album_entry();
+        entry.arc_lufs_offset_db = 1.5;
+
+        let shadowed = apply_album_shadow(&settings, &entry, 0.5, 0.0, 0.5);
+
+        assert_eq!(shadowed.effective_target_lufs(), Some(-12.5));
+        assert!((shadowed.effective_ceiling_dbtp() - -1.0).abs() < 1.0e-6);
+        assert_eq!(shadowed.effective_bit_depth(), 24);
+        assert_eq!(shadowed.effective_sample_rate(96_000), 48_000);
     }
 
     #[test]
