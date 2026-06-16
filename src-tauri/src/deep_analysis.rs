@@ -680,6 +680,27 @@ mod tests {
         (a - b).abs() < 1e-5
     }
 
+    fn window_metric_bits(window: &WindowMetrics) -> [u32; 16] {
+        [
+            window.loudness_key.to_bits(),
+            window.sample_peak.to_bits(),
+            window.crest.to_bits(),
+            window.stereo_width.to_bits(),
+            window.stereo_correlation.to_bits(),
+            window.low.to_bits(),
+            window.mid.to_bits(),
+            window.high.to_bits(),
+            window.comp_low_31.to_bits(),
+            window.comp_mid_31.to_bits(),
+            window.comp_high_31.to_bits(),
+            window.low_31.to_bits(),
+            window.harsh_31.to_bits(),
+            window.sibilant_31.to_bits(),
+            window.air_31.to_bits(),
+            window.tilt_31.to_bits(),
+        ]
+    }
+
     #[test]
     fn percentile_of_sorted_is_linear_interpolated() {
         let v = [0.0_f32, 1.0, 2.0, 3.0, 4.0];
@@ -772,6 +793,64 @@ mod tests {
             assert!((w.low + w.mid + w.high - 1.0).abs() < 0.05);
             // mono → correlation is NaN, width 0
             assert!(w.stereo_correlation.is_nan());
+        }
+    }
+
+    #[test]
+    fn scan_windows_matches_fixed_full_metric_fixture() {
+        let sr = 48_000_u32;
+        let frames = SHORT_WINDOW + SHORT_HOP;
+        let mut samples = Vec::with_capacity(frames * 2);
+        for i in 0..frames {
+            let l = (((i * 17 + 11) % 257) as f32 / 128.0 - 1.0) * 0.41;
+            let r = (((i * 29 + 7) % 263) as f32 / 131.0 - 1.0) * 0.37;
+            samples.push(l);
+            samples.push(r);
+        }
+
+        let windows = scan_windows(&samples, sr, 2);
+        let expected = [
+            [
+                3_242_875_236,
+                1_053_273_620,
+                1_075_574_712,
+                1_056_964_498,
+                920_402_093,
+                987_294_494,
+                1_058_191_413,
+                1_054_455_467,
+                778_431_265,
+                1_052_326_102,
+                1_059_283_861,
+                919_440_903,
+                1_051_980_982,
+                1_053_122_930,
+                1_042_109_556,
+                1_063_507_546,
+            ],
+            [
+                3_242_887_790,
+                1_053_226_234,
+                1_075_533_567,
+                1_056_951_073,
+                978_623_375,
+                986_776_872,
+                1_058_180_669,
+                1_054_478_976,
+                781_233_218,
+                1_051_673_207,
+                1_059_610_309,
+                952_033_446,
+                1_051_577_123,
+                1_052_679_867,
+                1_041_752_903,
+                1_062_993_847,
+            ],
+        ];
+
+        assert_eq!(windows.len(), expected.len());
+        for (window, expected_bits) in windows.iter().zip(expected) {
+            assert_eq!(window_metric_bits(window), expected_bits);
         }
     }
 
