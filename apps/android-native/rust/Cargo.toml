@@ -16,12 +16,12 @@ serde_json = "1"
 # rlib instead of duplicating it. Renaming the package is parked (it would
 # churn the Xcode project); the alias keeps call sites honest.
 native_bridge = { package = "yes-master-iphone-native-bridge", path = "../../iphone-native/rust" }
-yes_master_lib = { package = "yes-master", path = "../../../src-tauri", default-features = false }
 
 [dev-dependencies]
 futures-executor = "0.3"
 hound = "3"
 tempfile = "3"
+yes_master_lib = { package = "yes-master", path = "../../../src-tauri", default-features = false }
 
 # Same trick as the iPhone bridge: engine deps at release speed even in dev
 # builds so on-device DSP is realistic while the bridge stays fast to build.
