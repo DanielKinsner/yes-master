@@ -82,13 +82,20 @@ pub async fn analyze_tracks(
 pub async fn analyze_tracks_core(
     tracks: Vec<AnalyzeRequest>,
 ) -> CommandResult<Vec<AnalysisResult>> {
-    analyze_tracks_core_with_progress(tracks, |_, _| {}).await
+    analyze_tracks_core_with_progress_sync(tracks, |_, _| {})
 }
 
 /// `analyze_tracks_core` with a batch-level progress callback. The
 /// per-track 0..=1 stage fraction from `analyze_one_with_progress` is
 /// rescaled across the batch: track i of n spans [i/n, (i+1)/n].
 pub async fn analyze_tracks_core_with_progress(
+    tracks: Vec<AnalyzeRequest>,
+    progress: impl Fn(f32, &str),
+) -> CommandResult<Vec<AnalysisResult>> {
+    analyze_tracks_core_with_progress_sync(tracks, progress)
+}
+
+pub fn analyze_tracks_core_with_progress_sync(
     tracks: Vec<AnalyzeRequest>,
     progress: impl Fn(f32, &str),
 ) -> CommandResult<Vec<AnalysisResult>> {
