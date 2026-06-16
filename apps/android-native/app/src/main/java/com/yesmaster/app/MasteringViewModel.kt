@@ -31,6 +31,7 @@ sealed interface UiState {
     data class Done(
         val displayName: String,
         val savedTo: String,
+        val savedUri: String,
         val measurements: WireMeasurements?,
         /** Kept so "Master again" can return to Ready without re-analyzing. */
         val previous: Ready,
@@ -199,6 +200,7 @@ class MasteringViewModel(
                 _state.value = UiState.Done(
                     displayName = ready.displayName,
                     savedTo = published.displayPath,
+                    savedUri = published.uri.toString(),
                     measurements = job.measurements,
                     previous = ready,
                 )

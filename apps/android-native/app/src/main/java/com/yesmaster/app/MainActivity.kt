@@ -1,5 +1,8 @@
 package com.yesmaster.app
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -42,6 +45,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
@@ -328,6 +332,7 @@ private fun AuditionCard(audition: AuditionController) {
 
 @Composable
 private fun DoneScreen(done: UiState.Done, onAgain: () -> Unit, onNew: () -> Unit) {
+    val context = LocalContext.current
     ScreenColumn {
         Text("Master saved", style = MaterialTheme.typography.headlineMedium)
         Text(done.savedTo, style = MaterialTheme.typography.bodyMedium)
@@ -343,6 +348,18 @@ private fun DoneScreen(done: UiState.Done, onAgain: () -> Unit, onNew: () -> Uni
             }
         }
         Spacer(Modifier.weight(1f))
+        Button(
+            onClick = { context.startActivity(Intent.createChooser(DoneIntents.share(done.savedUri), "Share Master")) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Share Master")
+        }
+        OutlinedButton(
+            onClick = { context.tryStartActivity(DoneIntents.play(done.savedUri)) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Play Master")
+        }
         Button(onClick = onAgain, modifier = Modifier.fillMaxWidth()) {
             Text("Master again with different settings")
         }
@@ -350,6 +367,36 @@ private fun DoneScreen(done: UiState.Done, onAgain: () -> Unit, onNew: () -> Uni
             Text("Start over")
         }
     }
+}
+
+object DoneIntents {
+    data class Spec(val action: String, val type: String, val savedUri: String, val streamExtra: Boolean)
+
+    fun shareSpec(savedUri: String): Spec =
+        Spec(Intent.ACTION_SEND, "audio/wav", savedUri, streamExtra = true)
+
+    fun playSpec(savedUri: String): Spec =
+        Spec(Intent.ACTION_VIEW, "audio/wav", savedUri, streamExtra = false)
+
+    fun share(savedUri: String): Intent = shareSpec(savedUri).toIntent()
+
+    fun play(savedUri: String): Intent = playSpec(savedUri).toIntent()
+
+    private fun Spec.toIntent(): Intent {
+        val uri = Uri.parse(savedUri)
+        val intent = Intent(action)
+            .setType(type)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        return if (streamExtra) {
+            intent.putExtra(Intent.EXTRA_STREAM, uri)
+        } else {
+            intent.setDataAndType(uri, type)
+        }
+    }
+}
+
+private fun Context.tryStartActivity(intent: Intent) {
+    runCatching { startActivity(intent) }
 }
 
 @Composable
