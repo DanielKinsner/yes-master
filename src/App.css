@@ -2927,12 +2927,6 @@ button.primary:disabled {
   border-color: var(--accent);
 }
 
-.receipt-path.primary-path {
-  border-color: var(--accent);
-  color: var(--text-0);
-  background: rgba(107, 158, 255, 0.06);
-}
-
 .receipt-checks {
   display: flex;
   flex-direction: column;
