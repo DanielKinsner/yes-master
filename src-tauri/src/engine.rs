@@ -638,12 +638,18 @@ pub struct AlbumTrackRenderRecord {
     pub position: u32,
     pub output_path: String,
     pub measured_lufs: f32,
+    pub source_sample_rate: u32,
+    pub rendered_sample_rate: u32,
 }
 
 #[derive(Debug, Serialize, Clone)]
 pub struct AlbumRenderReport {
     pub album_wav_path: String,
     pub manifest_path: String,
+    pub requested_sample_rate: Option<u32>,
+    pub rendered_sample_rate: u32,
+    pub source_sample_rates: Vec<u32>,
+    pub bit_depth: u16,
     pub tracks: Vec<AlbumTrackRenderRecord>,
 }
 

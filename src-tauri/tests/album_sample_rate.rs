@@ -114,12 +114,19 @@ fn mixed_source_rates_resample_to_common_album_rate() {
     // and every output WAV must be 48 kHz.
     let tmp = TempDir::new().expect("tempdir");
     let report = render_two_track_album(&tmp, 44_100, 48_000, Some(48_000), None);
+    assert_eq!(report.requested_sample_rate, Some(48_000));
+    assert_eq!(report.rendered_sample_rate, 48_000);
+    assert_eq!(report.source_sample_rates, vec![44_100, 48_000]);
+    assert_eq!(report.bit_depth, 24);
     for rec in &report.tracks {
         let spec = hound::WavReader::open(&rec.output_path)
             .expect("open track")
             .spec();
         assert_eq!(spec.sample_rate, 48_000, "per-track WAV must be 48 kHz");
+        assert_eq!(rec.rendered_sample_rate, 48_000);
     }
+    assert_eq!(report.tracks[0].source_sample_rate, 44_100);
+    assert_eq!(report.tracks[1].source_sample_rate, 48_000);
     let album_spec = hound::WavReader::open(&report.album_wav_path)
         .expect("open album")
         .spec();
@@ -130,6 +137,10 @@ fn mixed_source_rates_resample_to_common_album_rate() {
 fn explicit_cd_delivery_downsamples_48k_sources_to_44100_16bit() {
     let tmp = TempDir::new().expect("tempdir");
     let report = render_two_track_album(&tmp, 48_000, 48_000, Some(44_100), Some(16));
+    assert_eq!(report.requested_sample_rate, Some(44_100));
+    assert_eq!(report.rendered_sample_rate, 44_100);
+    assert_eq!(report.source_sample_rates, vec![48_000, 48_000]);
+    assert_eq!(report.bit_depth, 16);
     let album_spec = hound::WavReader::open(&report.album_wav_path)
         .expect("open album")
         .spec();
@@ -146,6 +157,9 @@ fn auto_delivery_picks_highest_source_rate() {
     // No explicit delivery; sources are 44.1 + 48 → album should be 48 kHz.
     let tmp = TempDir::new().expect("tempdir");
     let report = render_two_track_album(&tmp, 44_100, 48_000, None, None);
+    assert_eq!(report.requested_sample_rate, None);
+    assert_eq!(report.rendered_sample_rate, 48_000);
+    assert_eq!(report.source_sample_rates, vec![44_100, 48_000]);
     let album_spec = hound::WavReader::open(&report.album_wav_path)
         .expect("open album")
         .spec();

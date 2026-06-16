@@ -467,6 +467,8 @@ pub fn render_album_plan_impl(
             position: entry.position,
             output_path: per_track_path.to_string_lossy().to_string(),
             measured_lufs,
+            source_sample_rate: pcm.sample_rate,
+            rendered_sample_rate: album_sample_rate,
         });
         rendered_samples.push(samples);
     }
@@ -527,6 +529,10 @@ pub fn render_album_plan_impl(
     Ok(AlbumRenderReport {
         album_wav_path: album_path.to_string_lossy().to_string(),
         manifest_path: manifest_path.to_string_lossy().to_string(),
+        requested_sample_rate: request.plan.delivery_sample_rate,
+        rendered_sample_rate: album_sample_rate,
+        source_sample_rates: source_rates,
+        bit_depth,
         tracks: track_records,
     })
 }
