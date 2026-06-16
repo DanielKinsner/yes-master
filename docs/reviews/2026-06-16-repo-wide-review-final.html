@@ -1,0 +1,1022 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Repo-Wide Review — YES Master — Final Consolidated — 2026-06-16</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background:#fafaf9; }
+    .badge { font-size:.66rem; letter-spacing:.05em; text-transform:uppercase; font-weight:600; }
+    .crit  { background:#fee2e2; color:#991b1b; }
+    .high  { background:#ffedd5; color:#9a3412; }
+    .med   { background:#fef3c7; color:#92400e; }
+    .low   { background:#e2e8f0; color:#334155; }
+    .now   { background:#dcfce7; color:#166534; }
+    .hold  { background:#e0e7ff; color:#3730a3; }
+    .clean { background:#f1f5f9; color:#475569; }
+    .verified { background:#cffafe; color:#155e75; }
+    .spec  { background:#faf5ff; color:#6b21a8; }
+    .dim   { background:#f8fafc; color:#64748b; border:1px solid #e2e8f0; }
+    .untracked { background:#fee2e2; color:#9f1239; }
+    .tracked   { background:#ecfccb; color:#3f6212; }
+    .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+    .card { scroll-margin-top:1rem; }
+    details > summary { cursor:pointer; list-style:none; }
+    details > summary::-webkit-details-marker { display:none; }
+    a.anchor { color:#0e7490; text-decoration:none; }
+    a.anchor:hover { text-decoration:underline; }
+    @media print { .noprint{display:none} body{background:#fff} }
+  </style>
+</head>
+<body class="bg-stone-50 text-slate-900 font-sans">
+<main class="max-w-5xl mx-auto px-6 py-12 space-y-12">
+
+  <!-- ============ HEADER ============ -->
+  <header class="space-y-3">
+    <p class="text-xs uppercase tracking-widest text-slate-500">Read-only audit · 2026-06-16</p>
+    <h1 class="text-4xl md:text-5xl font-serif font-semibold leading-tight">Repo-Wide Review — YES Master · Final Consolidated</h1>
+    <p class="text-slate-600 text-[15px] leading-relaxed max-w-3xl">
+      An exhaustive, whole-repo audit across <strong>8 dimensions × the repo's real subsystems</strong>
+      (Rust DSP/engine, realtime audio, album, export, the TypeScript state machine + UI, both phone
+      bridges and apps, the wire contract, docs/spec, and styling). This is <em>not</em> a diff review —
+      finders read the whole codebase and its own product docs, then every candidate was attacked by
+      <strong>3 independent skeptic agents</strong> and kept only on a majority "real" verdict.
+    </p>
+    <div class="flex flex-wrap gap-2 pt-1">
+      <span class="rounded-full px-3 py-1 badge verified">48 verified + cross-checks (#5b) + merged confidence-audit (#19, #20, process/docs)</span>
+      <span class="rounded-full px-3 py-1 badge low">59 candidates refuted / dropped</span>
+      <span class="rounded-full px-3 py-1 badge spec">12 speculative (verify throttled)</span>
+      <span class="rounded-full px-3 py-1 badge dim">771 agents · 17M tokens · ~49 min</span>
+    </div>
+    <p class="text-[13px] text-slate-500 pt-1 max-w-3xl">
+      <strong>Rev 2 — cross-checked against current code (Codex pass, 2026-06-16).</strong> Net changes:
+      added one finding Claude missed (desktop Preview-LUFS sample-rate drift, #5b); reduced the album
+      "overwrites prior renders" finding (#5) to low-priority source-path/symlink/TOCTOU hardening after a preservation test was
+      confirmed; corrected the coverage caveat (the <span class="mono">dsp.rs</span> Nyquist clamp is already
+      shipped, the iPhone bridge was independently cleared). Verdict diffs are marked
+      <span class="badge spec rounded px-1">rev 2</span> inline.
+    </p>
+    <p class="text-[13px] text-slate-500 pt-1 max-w-3xl">
+      <strong>Rev 3 — merged with the separate <span class="mono">2026-06-16-global-confidence-audit</span> (deduped).</strong>
+      This file is now the single consolidated picture from both passes. The confidence-audit was strong on persistence/docs/CI/archaeology
+      where my pass was strong on correctness/safety. Folded in (each re-verified here): the <strong>Album Save/Open data-loss P1 (#19)</strong>
+      my pass missed; the <strong>partial-analysis-failure visibility gap (#20)</strong>; and a new
+      <a class="anchor" href="#process">Process, CI &amp; docs-drift</a> section plus a
+      <a class="anchor" href="#nonfindings">Non-findings (ruled out)</a> section. On the one place the two passes disagreed —
+      album-overwrite — the confidence-audit was right (non-finding); my #5 is downgraded to Low to match.
+      Rev-3 additions are tagged <span class="badge spec rounded px-1">rev 3</span>.
+    </p>
+  </header>
+
+  <!-- ============ COVERAGE HONESTY ============ -->
+  <section class="rounded-lg border border-amber-200 bg-amber-50 p-5 text-[14px] leading-relaxed space-y-2">
+    <h2 class="font-semibold text-amber-900 text-base">Coverage &amp; honesty (read this first)</h2>
+    <p class="text-amber-900">
+      The run fought a <strong>sustained server-side rate limit</strong> (the API gateway's tokens-per-minute
+      throttle — explicitly <em>not</em> an account usage cap). It still completed, but with two consequences
+      you should weigh:
+    </p>
+    <ul class="list-disc pl-5 text-amber-900 space-y-1">
+      <li><strong>The 48 verified findings are the strongest signal in the report.</strong> Each one had ≥2 of 3 skeptics actually run and
+        agree it was real. Rev-2/Rev-3 notes mark the few places where later cross-checks changed severity or wording.</li>
+      <li><strong>One finder unit was lost entirely</strong> — "forgotten features across the plan docs (D6)".
+        I rebuilt that coverage myself, inline, from the plan-of-record
+        (<span class="mono">docs/plans/2026-06-12-shippability-roadmap.md</span>) — see
+        <a class="anchor" href="#roadmap">§ Tracked vs untracked</a>. That section is single-reviewer, not
+        3-skeptic-verified.</li>
+      <li><strong>A few code areas showed zero confirmed findings, and a follow-up Codex cross-check
+        (<span class="badge spec rounded px-1">rev 2</span>) resolved most of the ambiguity:</strong>
+        <ul class="list-disc pl-5 mt-1 space-y-1">
+          <li><span class="mono">dsp.rs</span> — <strong>the scary low-rate stability path is cleared</strong>. The
+            Nyquist clamp <span class="mono">nyquist_safe_freq_hz</span> (dsp.rs:55-64, used in every biquad
+            constructor) is already shipped, and the all-supported-rates finiteness pin exists. My first draft
+            wrongly implied S1.1 was still open — it isn't.</li>
+          <li><span class="mono">guardrails.rs</span> — no material bug found in the reviewed release path; the only item is a calibration note
+            (see Speculative). <span class="mono">iPhone bridge</span> — independently cleared: fixed-export
+            pins, adaptive injection, the shared <span class="mono">engine::preview_landing</span>, byte-parity,
+            bypass/playhead, and Volume-Match export invariance are all genuinely pinned. Treat these specific scary paths as
+            cross-checked, not merely "throttled."</li>
+          <li><span class="mono">audio.rs</span> — this is where the throttle genuinely cost a finding: the
+            Codex pass surfaced the desktop Preview-LUFS sample-rate drift (#5b below) that this run missed.
+            So for the metering/landing paths, "not proven clean" was the right caution.</li>
+        </ul>
+        When all 3 skeptics got throttled, a candidate fell into "refuted" as <em>unverifiable</em>, not
+        <em>proven false</em> — so absence of a finding in an un-cross-checked area still isn't proof of cleanliness.</li>
+      <li>The 12 <a class="anchor" href="#speculative">speculative</a> findings are candidates whose
+        verification was throttled — several are <strong>corroborated by the roadmap</strong>, meaning the concern class is already known.
+        Verify them before treating them as proven bugs.</li>
+    </ul>
+    <p class="text-amber-900">
+      Bottom line: this is a strong, trustworthy core audit with clearly-marked edges — not a clean bill of
+      health for the un-surfaced areas. A short off-peak re-run of the remaining safety-critical audio/analyzer finders would
+      close the gap.
+    </p>
+  </section>
+
+  <!-- ============ SO WHAT ============ -->
+  <section class="space-y-4">
+    <h2 class="text-2xl font-serif font-semibold">The "so what" — in plain English</h2>
+    <p class="text-[15px] text-slate-700 leading-relaxed max-w-3xl">
+      YES Master is in good shape structurally and is unusually well-documented; most of what the audit found
+      is <em>narrow correctness</em> and <em>missing safety nets around the non-negotiables</em>, not rot.
+      But there are a handful of real teeth. Here is what actually matters:
+    </p>
+    <ol class="space-y-3 text-[15px] leading-relaxed">
+      <li class="rounded-lg bg-white border border-slate-200 p-4">
+        <strong>1. One genuine crasher, on Android.</strong> A multi-channel import (or a phone that opens the
+        audio output at fewer channels than the source) makes the Android audio engine write past the end of
+        its buffer <em>on the real-time audio thread</em> — memory corruption, i.e. a crash or worse. It's the
+        only <span class="badge crit rounded px-1">critical</span>. The good news: it's already on the roadmap
+        as S4.3, just not built yet.
+      </li>
+      <li class="rounded-lg bg-white border border-slate-200 p-4">
+        <strong>2. Album Master's headline feature is silently switched off.</strong> The album "loudness arc"
+        (the thing that makes tracks rise and fall across an album) is computed and then thrown away on the
+        default delivery profile — every track lands at flat −14 LUFS. Tone still moves; loudness doesn't.
+        Nobody's tracking this. (High.)
+      </li>
+      <li class="rounded-lg bg-white border border-slate-200 p-4">
+        <strong>3. Saving a preset can wipe all your presets.</strong> If the presets file ever fails to parse
+        (e.g. after a routine settings-schema change), the next "save preset" silently overwrites the file with
+        just the one new preset — every earlier preset gone, no error. Real, untracked data loss. (High.)
+      </li>
+      <li class="rounded-lg bg-white border border-slate-200 p-4">
+        <strong>4. The export "this master is corrupt" safety check can never actually fire.</strong> The spec
+        promises a post-render critical when a render goes non-finite (NaN/Inf). But the only value it checks is
+        laundered to a finite number first, and nothing scans the actual samples — so a corrupt master would be
+        written and reported as a clean ~−70 LUFS file. (High potential; needs the DSP to misbehave to trigger.)
+      </li>
+      <li class="rounded-lg bg-white border border-emerald-200 p-4">
+        <strong>4b. <span class="badge spec rounded px-1">rev 2</span> Desktop "Export LUFS" preview can lie on
+        48/96k sources.</strong> The live preview computes its landing level on the <em>un-resampled source</em>,
+        while the actual export resamples to 44.1k (Standard) first and lands there — so what you hear in preview
+        isn't what lands in the file, for any source whose rate ≠ the export rate. The iPhone app was already
+        fixed for exactly this; desktop wasn't. Codex flagged this as priority #1; it directly dents the
+        "audition at the same level" promise. (Medium — the exported file is correct; only the preview drifts.)
+      </li>
+      <li class="rounded-lg bg-white border border-slate-200 p-4">
+        <strong>5. Two sacred non-negotiables need cheap tripwire tests.</strong>
+        "Volume Match never changes export level" (album path), "Original/Mastered preserves the playhead,"
+        are each one careless edit from breaking, with no behavior-level pinning test to catch it. Export overwrite behavior itself
+        checked out after cross-review; keep only the low-priority hardening note in #5. These tripwires are cheap, additive work.
+      </li>
+    </ol>
+    <p class="text-[15px] text-slate-700 leading-relaxed max-w-3xl">
+      Everything else is medium correctness polish (stale meters on track-switch, an off-grid Standard loudness
+      leak, a private-path gap in <span class="mono">.gitignore</span>) and a long tail of safe cleanup (dead
+      code, duplicated helpers, CSS band-aids). The <a class="anchor" href="#plan">plan at the end</a> sequences
+      all of it.
+    </p>
+  </section>
+
+  <!-- ============ METHOD ============ -->
+  <section class="space-y-3 text-[14px] text-slate-600 leading-relaxed">
+    <h2 class="text-lg font-serif font-semibold text-slate-800">How "Fix now" vs "Hold" was decided</h2>
+    <p>
+      Derived from the project's own non-negotiables (CLAUDE.md): <strong>bugs and additive guardrails =
+      Fix now</strong>; <strong>structural refactors of working, stability-critical paths (DSP chain, export
+      writer, the audio hot loop) = Hold til post-ship</strong> — because Track Master stabilization comes
+      before re-shaping working spec-critical code. Pure-cosmetic and dead-code cleanup is its own low-risk
+      backlog. Each card also carries a <span class="badge tracked rounded px-1">tracked</span> /
+      <span class="badge untracked rounded px-1">untracked</span> tag mapping it to the
+      <span class="mono">2026-06-12-shippability-roadmap.md</span> slice that already owns it (or noting it's new).
+    </p>
+    <p class="text-slate-500">
+      Subsystems read: Rust backend (~24 files incl. <span class="mono">dsp.rs</span> 5.2k lines,
+      <span class="mono">audio.rs</span> 3.9k), React/TS frontend (~60 files incl.
+      <span class="mono">useTrackMaster.ts</span> 2.3k), iPhone (Swift + Rust bridge), Android (Kotlin + Rust
+      bridge), the <span class="mono">bindings.ts</span> wire contract, and all of <span class="mono">docs/</span>.
+    </p>
+  </section>
+
+  <!-- ============ FIX NOW: CRITICAL / HIGH ============ -->
+  <section class="space-y-4">
+    <h2 class="text-2xl font-serif font-semibold border-b border-slate-200 pb-2">Fix now · Critical &amp; High</h2>
+
+    <article id="f1" class="card rounded-lg border border-red-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge crit">critical</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified 3/3</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D1+D3 · Android audio</span>
+        <span class="rounded-full px-2 py-0.5 badge tracked">tracked · S4.3 (AN-02)</span>
+      </div>
+      <h3 class="text-lg font-semibold">Android audio callback writes out-of-bounds for multi-channel sources (memory corruption on the RT thread)</h3>
+      <p class="mono text-xs text-slate-600">apps/android-native/rust/src/aaudio.rs:98-110, 137-164</p>
+      <p class="text-sm"><strong>What:</strong> <span class="mono">open()</span> only <em>requests</em> the channel count via
+        <span class="mono">AAudioStreamBuilder_setChannelCount</span> and never reads back
+        <span class="mono">AAudioStream_getChannelCount</span>. The data callback then sizes its output slice from the
+        <em>source</em> channel count: <span class="mono">from_raw_parts_mut(audio_data, frames * pump.channels())</span>.
+        AAudio's request is advisory; when the OS opens fewer channels (a 6-channel import on a 2-channel phone, or a
+        stereo source routed to a mono device), <span class="mono">pump.fill</span> writes <span class="mono">frames×6</span>
+        floats into a <span class="mono">frames×2</span> buffer. The live decode path applies no fold-down
+        (that only happens in album/render delivery), so a 5.1 file reaches here at 6 channels.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> An out-of-bounds heap write on the real-time audio callback thread,
+        reachable by a normal user importing a multichannel file — undefined behavior, crash, or silent corruption. The iPhone
+        path is guarded (its render block bounds each channel); Android has no equivalent. This is the only critical.</p>
+      <p class="text-sm"><strong>Fix:</strong> After <span class="mono">openStream</span>, query the <em>actual</em>
+        channel count / sample rate / format; size the callback slice from the actual count and either down/up-mix or refuse to
+        start on mismatch. (Exactly what roadmap slice <strong>S4.3</strong> already specifies.)</p>
+    </article>
+
+    <article id="f2" class="card rounded-lg border border-orange-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge high">high</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified 3/3</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D5 · Album</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">untracked · new</span>
+      </div>
+      <h3 class="text-lg font-semibold">Album loudness arc is silently discarded under the default delivery profile — every track lands flat</h3>
+      <p class="mono text-xs text-slate-600">src-tauri/src/album_render.rs:263-264 · types.rs:617-621</p>
+      <p class="text-sm"><strong>What:</strong> <span class="mono">apply_album_shadow</span> writes the arc-modulated target into
+        <span class="mono">advanced.lufs_offset_db</span>. But <span class="mono">effective_target_lufs()</span> is
+        <span class="mono">delivery_profile.target_lufs().or(advanced.lufs_offset_db)</span> — for any non-Custom profile the
+        profile wins and the offset is ignored. Default album intent uses <span class="mono">streaming-universal</span> and the
+        Album panel exposes no profile control, so the arc (and the character loudness pulls) become a no-op: every track lands at
+        flat −14 LUFS. The one landing test deliberately uses arc=0; the sample-rate tests that use a real arc use
+        <span class="mono">DeliveryProfile::Custom</span>, masking it.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> APP_BEHAVIOR.md and PRODUCT.md sell Album Master as arc kinds + album
+        intensity driving an album-wide loudness arc. On the default path the headline feature is inert — tone still moves
+        (those fields aren't shadowed) but loudness doesn't. Likely a real code bug, not doc staleness.</p>
+      <p class="text-sm"><strong>Fix:</strong> In the album shadow, force a Custom-equivalent landing so
+        <span class="mono">effective_target_lufs()</span> returns the arc-modulated value (mirror the existing adaptive-field
+        stripping at <span class="mono">album_render.rs:294-296</span>), or land against an explicit absolute target. Add a test
+        that a non-zero arc under a non-Custom profile actually shifts landed LUFS between positions.</p>
+    </article>
+
+    <article id="f3" class="card rounded-lg border border-orange-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge high">high</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified 3/3</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D1 · Persistence</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">untracked · new</span>
+      </div>
+      <h3 class="text-lg font-semibold">Saving/deleting a user preset wipes ALL presets when the file fails to parse</h3>
+      <p class="mono text-xs text-slate-600">src-tauri/src/settings.rs:31, 40, 59, 66, 83</p>
+      <p class="text-sm"><strong>What:</strong> <span class="mono">save_user_preset</span> does
+        <span class="mono">read_presets(&amp;path).unwrap_or_default()</span> then pushes + writes. But
+        <span class="mono">read_presets</span> returns <span class="mono">Err</span> on any JSON parse failure (only a <em>missing</em>
+        file yields empty). <span class="mono">UserPreset</span> embeds <span class="mono">MasteringSettings</span>, which has
+        required non-<span class="mono">#[serde(default)]</span> fields — so one preset written under an older/newer schema makes the
+        <em>entire</em> vector fail to parse. <span class="mono">unwrap_or_default()</span> swallows that into an empty vec and the next
+        save atomically overwrites the file with only the new preset.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> Silent, permanent user-data loss triggered by routine schema evolution —
+        no error shown. This is <em>not</em> covered by roadmap S1.5 (which lists audio.rs/files.rs/project.rs, not the presets path).</p>
+      <p class="text-sm"><strong>Fix:</strong> On parse error, do not fall back to default-and-overwrite — surface the error (refuse to
+        save, tell the user the file is unreadable) or back up the unparseable file before writing.</p>
+    </article>
+
+    <article id="f4" class="card rounded-lg border border-orange-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge high">high</span>
+        <span class="rounded-full px-2 py-0.5 badge med">likelihood: med</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified 2/3</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D1 · Export integrity</span>
+        <span class="rounded-full px-2 py-0.5 badge tracked">rev 2 · S1.1 cause shipped; detection gap remains</span>
+      </div>
+      <h3 class="text-lg font-semibold">Non-finite (NaN/Inf) render samples are written to the master, and the spec's post-render "corrupt render" critical can never fire</h3>
+      <p class="mono text-xs text-slate-600">src-tauri/src/engine.rs:861-963 · analysis.rs:265-271 · exports.rs:135 · wav_writer.rs:248</p>
+      <p class="text-sm"><strong>What:</strong> The only post-chain integrity signal is
+        <span class="mono">sanitize_lufs(ebu.loudness_global())</span>, and <span class="mono">sanitize_lufs</span> maps any
+        non-finite reading to a finite −70.0. Samples then go straight to <span class="mono">write_wav</span> with no NaN/Inf scan;
+        the writer passes NaN through (<span class="mono">f32::NAN.clamp(-1,1)</span> is still NaN; int casts NaN→0 = silent dropouts).
+        So <span class="mono">measured_lufs</span> is always finite and the
+        <span class="mono">if !report.measured_lufs.is_finite()</span> critical in <span class="mono">exports.rs:135</span> can never trip.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> If the chain ever emits NaN/Inf (divide-by-zero, denormal blowup, coefficient
+        instability), the app writes a corrupt / silently-zeroed master and reports a clean ~−70 LUFS. Skeptics rated likelihood medium
+        (needs the DSP to actually misbehave) and the consequence is "ships a broken master that looks fine."
+        <span class="rounded bg-violet-50 border border-violet-200 px-1 text-[12px] text-violet-900">rev 2</span>
+        The most likely low-rate cause — Nyquist instability — is <strong>already closed</strong> by the shipped
+        <span class="mono">nyquist_safe_freq_hz</span> clamp (S1.1, dsp.rs:55-64), which lowers the trigger probability further. But the
+        <em>detection</em> gap is independent and remains: nothing scans the rendered samples, so any future NaN source still ships silently.</p>
+      <p class="text-sm"><strong>Fix:</strong> Add a finite-sample scan
+        (<span class="mono">samples.iter().all(|s| s.is_finite())</span>) before <span class="mono">write_wav</span> and raise a
+        post-render Critical on failure — or stop sanitizing the measured LUFS that feeds the receipt so the existing critical can fire.</p>
+    </article>
+
+    <article id="f5" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge low" style="text-decoration:line-through;opacity:.6">high</span>
+        <span class="rounded-full px-2 py-0.5 badge low">downgraded → low</span>
+        <span class="rounded-full px-2 py-0.5 badge spec">rev 3 · meta-review of Codex</span>
+        <span class="rounded-full px-2 py-0.5 badge hold">low hardening</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D8 · Export integrity</span>
+        <span class="rounded-full px-2 py-0.5 badge tracked">RS-02 done · RS-03 tail open</span>
+      </div>
+      <h3 class="text-lg font-semibold">Album path lacks the single-track <em>source-path</em> overwrite guard (but it does NOT overwrite prior renders)</h3>
+      <p class="mono text-xs text-slate-600">src-tauri/src/album_render.rs:617-628 · tests/album_render.rs:131 (preservation test) · cf. engine.rs explicit_output_path guard</p>
+      <p class="rounded bg-violet-50 border border-violet-200 px-3 py-2 text-[13px] text-violet-900">
+        <strong>Rev 2 correction (Codex):</strong> my first draft overcalled this as High "overwrites prior renders." That part is
+        <strong>wrong</strong> — the album path already uses unique child paths for per-track files, manifest, and album WAV, and there's a
+        passing preservation test (<span class="mono">album_render_repeated_plan_keeps_prior_per_track_files_and_manifest</span>,
+        tests/album_render.rs:131) proving a second render keeps the first byte-identical. So roadmap <strong>S1.2 / RS-02</strong> looks
+        <em>done</em>. The legitimate residual is narrower and downgraded to Low.</p>
+      <p class="rounded bg-violet-50 border border-violet-200 px-3 py-2 text-[13px] text-violet-900">
+        <strong>Rev 3 (my meta-review of Codex):</strong> verifying the residual showed it's even smaller than Codex implied. The album path
+        already <em>validates</em> source paths (<span class="mono">validate_album_source_paths</span>, album_render.rs:434) and routes every
+        output through <span class="mono">unique_child_path</span>, which skips any name that already <span class="mono">.exists()</span>
+        (album_render.rs:222) — so it won't clobber an existing source either. The single-track path additionally has an <em>explicit</em>
+        symmetric guard (<span class="mono">engine.rs:1005</span>: "output path would overwrite the source file"). So this is now
+        <strong>Low</strong>.</p>
+      <p class="text-sm"><strong>What remains (defense-in-depth):</strong> the album path lacks the single-track's explicit
+        <span class="mono">output == source</span> canonical comparison. Realistic clobber is already prevented by existing-path uniquifying,
+        and the WAV writes already use temp files + rename; the genuine residual is narrow TOCTOU / symlink / canonical-path hardening.</p>
+      <p class="text-sm"><strong>Fix:</strong> for parity, extend the single-track <span class="mono">output == source</span> guard +
+        canonical-path test coverage to the album explicit-dir path. Low priority.</p>
+    </article>
+  </section>
+
+  <!-- ============ FIX NOW: MEDIUM ============ -->
+  <section class="space-y-4">
+    <h2 class="text-2xl font-serif font-semibold border-b border-slate-200 pb-2">Fix now · Medium (correctness + non-negotiable tripwires)</h2>
+
+    <article id="f5b" class="card rounded-lg border border-emerald-300 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge spec">rev 2 · Codex catch</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now · priority #1 (Codex)</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D1 · Desktop preview</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">untracked on desktop · iPhone fixed (S9.4)</span>
+      </div>
+      <h3 class="text-lg font-semibold">Desktop live Preview-LUFS landing is measured at the source rate, not the render rate — WYSIWYG drift on 48/96k sources</h3>
+      <p class="mono text-xs text-slate-600">src-tauri/src/audio.rs:1059-1094 (no resample) vs engine.rs:461-477 (render_preview_landing_window resamples) · export lands at render rate: engine.rs:832-840, 890-903 · iPhone uses the shared path: live_stream.rs:727</p>
+      <p class="text-sm"><strong>What:</strong> The desktop preview worker <span class="mono">export_landing_gain_lin_for_preview</span>
+        builds its chain and measures integrated LUFS + true-peak at the <em>source</em> <span class="mono">sample_rate</span> and never
+        resamples. But the export path resamples to <span class="mono">effective_sample_rate</span> <em>before</em> measuring + landing
+        (engine.rs:832-840 → 890-903), and the <em>shared</em> <span class="mono">engine::preview_landing</span> deliberately resamples
+        the window to the render rate first (engine.rs:472-474, pinned by the test at engine.rs:1217). The iPhone bridge routes through
+        that shared function (live_stream.rs:727, "so the live preview lands at the same level"); desktop duplicates the window helper
+        but omits the resample wrapper.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> The preview landing gain is applied to what you <em>hear</em> when the Export-LUFS
+        preview is on. For any source whose rate ≠ the export rate (a 48/96k import → 44.1k Standard), the audible preview level can differ
+        from the delivered file — it dents the core "audition Original vs Mastered at the same level / WYSIWYG" promise. The exported WAV
+        itself is correct, so this is preview accuracy, not a broken master (Medium). This is the desktop twin of the iPhone
+        <strong>S9.4 / UF-B4</strong> fix that already shipped (Wave 9) — desktop was left behind. Codex ranked it priority #1, and the
+        separate global-confidence-audit found it independently (P1) — the <strong>most-confirmed finding across all three passes</strong>.</p>
+      <p class="text-sm"><strong>Fix:</strong> Route the desktop preview worker through the shared, already-tested
+        <span class="mono">engine::preview_landing</span> (or its <span class="mono">render_preview_landing_window</span>) instead of the
+        local source-rate path. <span class="font-medium">Bonus:</span> this also resolves the "preview_landing_window duplicated in
+        engine.rs/audio.rs" Hold item — they were never behaviorally identical, and consolidating onto the shared path is the single fix.</p>
+    </article>
+
+    <article id="f6" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D1 · FE state</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">untracked · new</span>
+      </div>
+      <h3 class="text-lg font-semibold">selectTrack leaks the previous track's live meters onto a newly-selected paused track</h3>
+      <p class="mono text-xs text-slate-600">src/hooks/useTrackMaster.ts:1272-1298</p>
+      <p class="text-sm"><strong>What:</strong> <span class="mono">selectTrack</span> resets only
+        <span class="mono">isPlaying/currentTimeSec/loop</span> and leaves peak / GR / momentary &amp; integrated LUFS / spectrum at the
+        previous track's last values. The sibling <em>import</em> path explicitly resets all of these to their −120/[] sentinels (and the
+        integration test pins that) — <span class="mono">selectTrack</span> has no equivalent.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> Clicking a different track after auditioning one shows the prior track's moving
+        meters frozen on a not-playing track; if you never press play, no tick overwrites them — the exact "moving meters with nothing
+        playing" state the import path was hardened against. (Matches the manual finding in the 2026-06-15 stabilization plan: "live meters
+        with nothing playing.")</p>
+      <p class="text-sm"><strong>Fix:</strong> Reset the meter sentinels in <span class="mono">selectTrack</span>'s
+        <span class="mono">setTransport</span> updater, mirroring <span class="mono">importFiles</span>; add a meter-reset assertion.</p>
+    </article>
+
+    <article id="f7" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D1 · FE race</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">untracked · new</span>
+      </div>
+      <h3 class="text-lg font-semibold">selectTrack doesn't sync selectedTrackIdRef, so a late tick for the old track can repaint it</h3>
+      <p class="mono text-xs text-slate-600">src/hooks/useTrackMaster.ts:1272-1280 (ref read at 544-547)</p>
+      <p class="text-sm"><strong>What:</strong> <span class="mono">selectTrack</span> calls <span class="mono">setSelectedTrackId(id)</span>
+        but never writes <span class="mono">selectedTrackIdRef.current = id</span> (the ref only updates on next render commit). The tick
+        guard reads that ref to gate by selection. <span class="mono">importFiles</span> writes the ref synchronously for exactly this race
+        (with a comment explaining it); <span class="mono">selectTrack</span> omits it.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> Switching tracks while the old one plays — <span class="mono">stopPlayback()</span>
+        is async — lets a late tick for the old track land before React commits; the stale ref still matches the old id, the guard passes, and
+        the old track's position/meters paint over the fresh selection. The integration test can't catch it because <span class="mono">act()</span>
+        flushes the commit first.</p>
+      <p class="text-sm"><strong>Fix:</strong> Set <span class="mono">selectedTrackIdRef.current = id;</span> immediately after
+        <span class="mono">setSelectedTrackId(id)</span>, mirroring import.</p>
+    </article>
+
+    <article id="f8" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D1 · Android lifecycle</span>
+        <span class="rounded-full px-2 py-0.5 badge tracked">tracked · S4.2 (AN-01)</span>
+      </div>
+      <h3 class="text-lg font-semibold">Android measureLanding runs an uninterruptible JNI call against a handle release() can free (use-after-free)</h3>
+      <p class="mono text-xs text-slate-600">apps/android-native/app/.../AuditionController.kt:316-333, 375-388</p>
+      <p class="text-sm"><strong>What:</strong> The 250 ms-delayed landing refresh captures the handle and only checks
+        <span class="mono">handle != h</span> <em>after</em> <span class="mono">measureLanding</span> returns; coroutine cancellation can't stop
+        an in-flight JNI call. <span class="mono">release()</span> cancels the job and immediately
+        <span class="mono">destroyNative(h)</span> on the same handle.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> A track-switch / teardown during the in-flight measurement can free the engine while
+        <span class="mono">measure_landing</span> still dereferences it — the same rapid-re-attach class the create path was already hardened
+        against (commit 2eceac4). Roadmap S4.2 specifies the fix (join the landing job before destroy + a Rust-side RwLock).</p>
+      <p class="text-sm"><strong>Fix:</strong> Serialize destroy against in-flight landing/measure (join, or refcount/lock on the Rust side).</p>
+    </article>
+
+    <article id="f9" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D1 · FE transport</span>
+        <span class="rounded-full px-2 py-0.5 badge tracked">partial · S2.1 (FE-01)</span>
+      </div>
+      <h3 class="text-lg font-semibold">togglePlay treats the final 0.5 s as "at end" and restarts from 0 instead of resuming</h3>
+      <p class="mono text-xs text-slate-600">src/hooks/useTrackMaster.ts:1763-1771 (seek mirror 1894-1904)</p>
+      <p class="text-sm"><strong>What:</strong> <span class="mono">isAtEnd = currentTimeSec &gt;= duration - 0.5 &amp;&amp; !isPlaying</span>, and
+        the start position becomes 0 when <span class="mono">isAtEnd</span>. A track paused anywhere in its last half-second restarts from 0;
+        for sub-0.5 s sources the condition is true at position 0, so the first play always reloads-from-0. The fixed 0.5 s absolute threshold is
+        the wrong magnitude for "true EOF" detection.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> Pause near the end → play replays the whole track. Roadmap S2.1 rewrites this
+        <span class="mono">isAtEnd</span> line for the kind-switch case but does not necessarily tighten the 0.5 s window itself.</p>
+      <p class="text-sm"><strong>Fix:</strong> Tighten the EOF epsilon (e.g. 0.05 s) or have the backend report an explicit ended/empty-sink flag,
+        so only genuine EOF triggers reload-from-0.</p>
+    </article>
+
+    <article id="f10" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified 3/3</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D1 · Standard recipe</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">untracked · new</span>
+      </div>
+      <h3 class="text-lg font-semibold">Standard export can inherit an off-grid loudness target set in Advanced</h3>
+      <p class="mono text-xs text-slate-600">src/lib/standard-export.ts:24-48 · standard-managed.ts:12-106</p>
+      <p class="text-sm"><strong>What:</strong> <span class="mono">clampStandardTarget</span> only clamps to [−24, −6], not to the Standard grid
+        (−14/−11/−9). The Standard-entry guard keys on <span class="mono">hasNonManagedEdits</span>, which never inspects
+        <span class="mono">delivery_profile</span> / <span class="mono">lufs_offset_db</span> / ceiling / bit-depth / sample-rate, and the reset
+        leaves <span class="mono">delivery_profile</span> untouched. So a track edited in Advanced to e.g. Apple Music (−16) returns to Standard
+        without being bounced to Advanced, and "Create Master" ships at −16, not a Standard step.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> Standard's contract is a fixed recipe at Standard loudness. The segmented control shows
+        no active tile for the off-grid value, yet the export uses it — silently wrong target (format stays correct, so the file is valid).</p>
+      <p class="text-sm"><strong>Fix:</strong> Include <span class="mono">delivery_profile</span> in <span class="mono">hasNonManagedEdits</span>
+        (bounce to Advanced), or reset profile+loudness to a Standard default on return, or snap <span class="mono">clampStandardTarget</span> to the
+        nearest Standard step.</p>
+    </article>
+
+    <article id="f11" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D1 · Import metadata</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">untracked · new</span>
+      </div>
+      <h3 class="text-lg font-semibold">Imported metadata reads default_track() while decode picks the first non-NULL codec track — they can disagree</h3>
+      <p class="mono text-xs text-slate-600">src-tauri/src/files.rs:76 vs decode.rs:88-90, 164-166, 276-278</p>
+      <p class="text-sm"><strong>What:</strong> <span class="mono">probe_metadata</span> reads sample-rate/channels/frames from
+        <span class="mono">format.default_track()</span>; every decode path instead selects the first track with
+        <span class="mono">codec != CODEC_TYPE_NULL</span>. Containers can carry a metadata/cover-art track first.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> When the default track isn't the audio track, import shows wrong/empty
+        duration/rate/channels even though decode processes a different track — displayed metadata doesn't describe the audio that gets mastered.</p>
+      <p class="text-sm"><strong>Fix:</strong> Make <span class="mono">probe_metadata</span> select the track the same way the decoders do
+        (first non-NULL codec).</p>
+    </article>
+
+    <article id="f12" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D3 · Private data</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">untracked · new</span>
+      </div>
+      <h3 class="text-lg font-semibold">.gitignore re-exposes test-output/ to private-path CSV/JSON ledgers</h3>
+      <p class="mono text-xs text-slate-600">.gitignore:62-73 · fixture_matrix.rs:293, 313</p>
+      <p class="text-sm"><strong>What:</strong> Line 62 <span class="mono">!test-output/</span> un-ignores the whole directory (to track one
+        fixture). The re-ignores after it only cover <span class="mono">*.png</span>, <span class="mono">*.log</span>, and the two
+        <span class="mono">private-*</span> globs — there is no <span class="mono">*.csv</span> / <span class="mono">*.json</span> / subfolder rule.
+        <span class="mono">git check-ignore</span> confirms <span class="mono">test-output/run-summary.json</span> and
+        <span class="mono">test-output/myrun/ledger.csv</span> are <em>trackable</em>. The fixture-matrix runner writes CSVs whose columns embed
+        absolute <span class="mono">source_path</span>/<span class="mono">output_path</span> to private audio.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> An evidence run with <span class="mono">--output</span> pointed at any non-<span class="mono">private-*</span>
+        subdir produces a file full of absolute private-audio paths that <span class="mono">git add</span> would stage — violating "private audio never
+        belongs in git."</p>
+      <p class="text-sm"><strong>Fix:</strong> Default-deny: ignore <span class="mono">test-output/**</span>, then re-include only the one tracked
+        fixture path. At minimum add <span class="mono">*.csv</span>/<span class="mono">*.json</span>/<span class="mono">*.txt</span> + a subfolder ignore.</p>
+    </article>
+
+    <article id="f13" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D8 · Private data</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">untracked · new</span>
+      </div>
+      <h3 class="text-lg font-semibold">Render temp files use a .tmp suffix that .gitignore's audio rules don't cover</h3>
+      <p class="mono text-xs text-slate-600">src-tauri/src/wav_writer.rs:175-190 · album_render.rs:649, 674</p>
+      <p class="text-sm"><strong>What:</strong> The writer renders the full audio into <span class="mono">&lt;name&gt;.wav.&lt;uuid&gt;.tmp</span> then
+        renames; on failure it best-effort removes the tmp (error ignored). <span class="mono">.gitignore</span> ignores
+        <span class="mono">*.wav</span> etc. but has no <span class="mono">*.tmp</span> rule, so an orphaned tmp ending in
+        <span class="mono">.tmp</span> isn't matched.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> If a render targets a directory inside the repo and the rename+cleanup both fail, the
+        leftover <span class="mono">.tmp</span> holds a full rendered private master that <span class="mono">git add</span> would stage. Narrow, but a real
+        private-audio-in-git path.</p>
+      <p class="text-sm"><strong>Fix (additive):</strong> Add <span class="mono">*.tmp</span> (or <span class="mono">*.wav.*.tmp</span>) to the private-audio
+        section, plus a tiny test asserting the generated tmp name matches a gitignored pattern.</p>
+    </article>
+
+    <article id="f14" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge high">non-negotiable</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D8 · Volume Match</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">untracked · new</span>
+      </div>
+      <h3 class="text-lg font-semibold">Album export's Volume-Match guard has no pinning test (one deleted line leaks VM into the exported level)</h3>
+      <p class="mono text-xs text-slate-600">src-tauri/src/album_render.rs:565</p>
+      <p class="text-sm"><strong>What:</strong> <span class="mono">apply_album_shadow</span> clones the user's settings verbatim (VM flag can be
+        true); the only thing neutralizing it before <span class="mono">MasteringChain::new</span> is the single line
+        <span class="mono">shadowed.volume_match = false;</span>. The Track-Master invariant is pinned by
+        <span class="mono">tests/export_volume_match.rs</span> (byte-identical WAV with VM on/off) — but that exercises the engine guard only. There is
+        no equivalent album test.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> "Volume Match must not change the exported level" rests, for albums, on one line — and a
+        future edit removing it would pass the entire suite silently, shipping an album attenuated by the VM scalar.</p>
+      <p class="text-sm"><strong>Fix (additive, no restructure):</strong> Add an album-render pinning test: render a 2-track plan with
+        <span class="mono">volume_match: true</span> and again with <span class="mono">false</span>; assert byte-identical WAV.</p>
+    </article>
+
+    <article id="f15" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge high">non-negotiable</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D8 · Playhead</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">untracked · new</span>
+      </div>
+      <h3 class="text-lg font-semibold">Original/Mastered swap relies on seek wiring with no integration test proving it actually seeks</h3>
+      <p class="mono text-xs text-slate-600">src-tauri/src/audio.rs:2233-2235 (mirror 2000-2003)</p>
+      <p class="text-sm"><strong>What:</strong> Playhead preservation across a swap depends on
+        <span class="mono">if let Some(offset) = seek_target(start_position_sec) { new_sink.try_seek(offset) }</span> inside the swap branch.
+        <span class="mono">seek_target</span> is unit-tested in isolation and there's a source-level swap test, but <em>nothing</em> ties them: no test
+        asserts that <span class="mono">handle_play_master</span> with a non-zero start actually seeks the new sink. Removing/reordering the seek block,
+        or a 0.0 start, silently restarts from the top.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> "Original/Mastered switching must preserve the playhead" is satisfied only by that one
+        call surviving inside the swap branch, and the FE→BE position plumbing has no behavioral test on the BE half.</p>
+      <p class="text-sm"><strong>Fix (additive):</strong> Add a backend test that drives the swap path with an idle sink and asserts output starts at the
+        requested frame, not 0.</p>
+    </article>
+
+    <article id="f16" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D2 · Standard recipe</span>
+        <span class="rounded-full px-2 py-0.5 badge tracked">partial · S3.3/S3.4</span>
+      </div>
+      <h3 class="text-lg font-semibold">Desktop Standard "delivery format" label is a hardcoded string, not derived from the canonical recipe</h3>
+      <p class="mono text-xs text-slate-600">src/components/StandardView.tsx:420</p>
+      <p class="text-sm"><strong>What:</strong> The label hardcodes <span class="mono">"44.1 kHz · 24-bit · −1 dBTP"</span> as a literal instead of
+        interpolating <span class="mono">STANDARD_EXPORT_DELIVERY</span> (which sources from <span class="mono">standard-mapping-parity.json</span>). It's the only
+        delivery-spec surface that is neither parity-pinned nor measurement-derived.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> Editing the recipe (a supported single-file change that passes the parity tests) would leave this
+        label lying about the delivered format. Partially covered by S3.3 (recipe→parity fixture) / S3.4 (truthful chrome copy), but this specific label isn't named.</p>
+      <p class="text-sm"><strong>Fix:</strong> Render the label from <span class="mono">STANDARD_EXPORT_DELIVERY</span>, or assert it in
+        <span class="mono">standard-export.test.ts</span>.</p>
+    </article>
+
+    <article id="f17" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified 3/3</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D2 · Wire contract</span>
+        <span class="rounded-full px-2 py-0.5 badge tracked">partial · S3.3 / tauri-specta parked</span>
+      </div>
+      <h3 class="text-lg font-semibold">DELIVERY_PROFILE_* tables in bindings.ts are a hand-mirror of Rust DeliveryProfile with no cross-language pin</h3>
+      <p class="mono text-xs text-slate-600">src/bindings.ts:101-143 vs src-tauri/src/types.rs:274-330</p>
+      <p class="text-sm"><strong>What:</strong> Four TS records (target LUFS / ceiling / bit-depth / sample-rate per profile) duplicate the Rust
+        <span class="mono">DeliveryProfile</span> methods. They agree today, but nothing pins them — and via the profile→Custom flip, these TS values are written
+        into <span class="mono">advanced.*</span> and used verbatim at render. It's the lone un-pinned hand-mirror in an otherwise fully-pinned contract
+        (presets, Standard recipe, and wire keys all have drift tests).</p>
+      <p class="text-sm"><strong>Why it matters:</strong> Retuning a profile in <span class="mono">types.rs</span> (the documented source of truth) without
+        updating <span class="mono">bindings.ts</span> ships a wrong exported loudness/ceiling/format — exactly the read-direction trust failure
+        <span class="mono">effective-settings.ts</span> exists to prevent.</p>
+      <p class="text-sm"><strong>Fix:</strong> Emit the Rust value table to a fixture and assert the TS records against it (like
+        <span class="mono">preset-mirrors.test.ts</span>), or land the parked tauri-specta generation.</p>
+    </article>
+
+    <article id="f18" class="card rounded-lg border border-amber-200 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge low">low→cheap</span>
+        <span class="rounded-full px-2 py-0.5 badge verified">✓ verified</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D1 · Album</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">untracked · new</span>
+      </div>
+      <h3 class="text-lg font-semibold">Album per-track measured LUFS is un-sanitized — a silent track serializes −inf as JSON null</h3>
+      <p class="mono text-xs text-slate-600">src-tauri/src/engine.rs:337-350 · album_render.rs:630 · bindings.ts:436</p>
+      <p class="text-sm"><strong>What:</strong> <span class="mono">measure_integrated_lufs</span> returns the raw ebur128 reading with no
+        <span class="mono">sanitize_lufs</span> wrapper (unlike the single-track path). A silent/near-silent track returns −inf, which serde serializes as
+        <span class="mono">null</span> — violating the <span class="mono">measured_lufs: number</span> binding.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> A silent intro/outro/spacer track yields <span class="mono">"measured_lufs": null</span> in the
+        manifest. (Skeptics rated it low because no frontend currently reads that field, but it's a 1-line correctness fix that closes a wire-contract hole.)</p>
+      <p class="text-sm"><strong>Fix:</strong> Wrap the album-path measurement in <span class="mono">sanitize_lufs</span>, matching the single-track receipt path.</p>
+    </article>
+    <article id="f19" class="card rounded-lg border border-emerald-300 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge high">high</span>
+        <span class="rounded-full px-2 py-0.5 badge spec">rev 3 · global-confidence-audit catch</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D1 · Persistence / contract</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">my report missed this</span>
+      </div>
+      <h3 class="text-lg font-semibold">Save/Open Project silently drops every Album-panel choice (arc, title, intensity, delivery format)</h3>
+      <p class="mono text-xs text-slate-600">src/hooks/useTrackMaster.ts:62-79 (buildProjectState) · 1447-1469 (live state) · 1503-1513 (used at export) · bindings.ts:462 · APP_BEHAVIOR.md:91</p>
+      <p class="text-sm"><strong>What:</strong> <span class="mono">buildProjectState</span> serializes only <span class="mono">album_intent</span>
+        (plus mode/tracks/settings/overrides). The Album panel's <span class="mono">albumArcKind</span>, <span class="mono">albumIntensity</span>,
+        <span class="mono">albumTitle</span>, <span class="mono">albumSampleRate</span>, and <span class="mono">albumBitDepth</span> are separate React
+        state (useTrackMaster.ts:1447-1469) that the album export reads directly (1503-1513) — but <span class="mono">ProjectState</span>
+        (bindings.ts:462 / types.rs) has no fields for them. So a saved album reopens with those choices reset to defaults
+        (Cinematic / 1.0 / "" / null / null).</p>
+      <p class="text-sm"><strong>Why it matters:</strong> APP_BEHAVIOR.md:91 says Open Project restores state. A user reopens an album session
+        and unknowingly exports a different arc/title/delivery-format than they saved — silent contract drift on a data-integrity path.</p>
+      <p class="text-sm"><strong>Fix:</strong> extend the project schema (backwards-compatible defaults for old <span class="mono">.ams.json</span>) with the
+        album-panel choices, wire them through <span class="mono">buildProjectState</span> + restore, and add a Save/Open round-trip test (+ Rust
+        schema/default tests if shared types change).</p>
+      <p class="rounded bg-violet-50 border border-violet-200 px-3 py-2 text-[13px] text-violet-900">
+        <strong>Provenance:</strong> surfaced by the separate <span class="mono">2026-06-16-global-confidence-audit</span> (P1), independently
+        verified here. My repo-wide finders checked <span class="mono">useTrackMaster</span> for state-machine races but never cross-checked the
+        persistence <em>schema</em> against the album state — a genuine coverage gap in my pass.</p>
+    </article>
+
+    <article id="f20" class="card rounded-lg border border-emerald-300 bg-white p-5 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2 py-0.5 badge med">medium</span>
+        <span class="rounded-full px-2 py-0.5 badge spec">rev 3 · global-confidence-audit (P2)</span>
+        <span class="rounded-full px-2 py-0.5 badge now">fix now</span>
+        <span class="rounded-full px-2 py-0.5 badge dim">D1 · Analysis recovery</span>
+        <span class="rounded-full px-2 py-0.5 badge untracked">my report had only the privacy half</span>
+      </div>
+      <h3 class="text-lg font-semibold">Partial analysis failures are stderr-only — a bad/moved source in a batch leaves a track silently unanalyzed</h3>
+      <p class="mono text-xs text-slate-600">src-tauri/src/engine.rs:130-141 (eprintln-only) · src/hooks/useTrackMaster.ts:1135 (imports appended) · :2275 (recovery only on full reject) · APP_BEHAVIOR.md:91</p>
+      <p class="text-sm"><strong>What:</strong> The backend partial-success policy returns the successes and logs each failure with
+        <span class="mono">eprintln!</span> only (engine.rs:130-141 — verified; it's the one logging line in the backend). Import appends all
+        tracks before analysis returns; Open Project flags recovery only when <span class="mono">api.analyzeTracks</span> rejects <em>entirely</em>
+        (useTrackMaster.ts:2275), and the existing recovery test covers whole-call rejection, not partial success with missing result IDs.</p>
+      <p class="text-sm"><strong>Why it matters:</strong> One bad/moved source in a multi-track import or reopen leaves that track unanalyzed with
+        no visible feedback — the session looks clean while analysis state is missing, contradicting APP_BEHAVIOR.md:91 ("reports recovery
+        issues needing user action"). <span class="text-slate-500">(My report flagged only the <em>privacy</em> angle of that same
+        <span class="mono">eprintln</span> — the confidence-audit caught the more important user-feedback gap.)</span></p>
+      <p class="text-sm"><strong>Fix:</strong> return structured partial failures from the command (or detect requested-but-absent IDs on the
+        frontend), show calm per-track recovery feedback, and keep retry/re-analyze clear. Add hook integration tests for the partial-success
+        import and Open-Project cases.</p>
+    </article>
+  </section>
+
+  <!-- ============ HOLD ============ -->
+  <section class="space-y-4">
+    <h2 class="text-2xl font-serif font-semibold border-b border-slate-200 pb-2">Hold til post-ship · refactors of working, stability-critical paths</h2>
+    <p class="text-[14px] text-slate-600 max-w-3xl">These are real debt, but each one restructures code on a path the non-negotiables protect
+      (the export writer, the audio hot loop, the analysis compute). Per "Track Master stabilization before re-shaping working code," do them in the
+      roadmap's deliberate cleanup wave (Wave 7) with the byte-identity guards, not under ship pressure. Add the <em>tripwire test</em> now if one is cheap.</p>
+
+    <div class="grid gap-3">
+      <article class="rounded-lg border border-indigo-100 bg-white p-4 text-sm space-y-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="rounded-full px-2 py-0.5 badge low">low</span><span class="rounded-full px-2 py-0.5 badge hold">hold</span>
+          <span class="rounded-full px-2 py-0.5 badge dim">D8 · audio hot path</span><span class="rounded-full px-2 py-0.5 badge tracked">tracked · S7.7 / S9.3</span>
+          <span class="font-semibold ml-1">Live audition allocates on the audio thread per coefficient update</span>
+        </div>
+        <p class="mono text-xs text-slate-500">src-tauri/src/sources.rs:519-523 · dsp.rs:2121-2149</p>
+        <p><strong>What:</strong> Every knob move rebuilds the chain via <span class="mono">with_coeffs_inheriting_state</span>, which heap-clones the
+          state vec + limiter buffers — on the rodio pull (audio) thread. A real-time-safe variant (<span class="mono">overwrite_with_coeffs_inheriting_state</span>)
+          exists but is referenced only by its own unit test. <strong>Why hold:</strong> wiring it touches the working hot loop; the design itself documents the
+          intent to be alloc-free, and the RT-safe path is built — this is finishing it carefully, in Wave 7's callback-alloc slice (S7.7). <strong>Do now:</strong>
+          a tripwire test that locks the chosen behavior so the RT-safe path isn't silently deleted.</p>
+      </article>
+
+      <article class="rounded-lg border border-indigo-100 bg-white p-4 text-sm space-y-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="rounded-full px-2 py-0.5 badge low">low</span><span class="rounded-full px-2 py-0.5 badge hold">hold</span>
+          <span class="rounded-full px-2 py-0.5 badge dim">D4 · export writer</span><span class="rounded-full px-2 py-0.5 badge untracked">untracked · new</span>
+          <span class="font-semibold ml-1">write_wav_direct re-implements wav_spec + the dither write loop (with a dead unreachable!())</span>
+        </div>
+        <p class="mono text-xs text-slate-500">src-tauri/src/wav_writer.rs:210-253</p>
+        <p><strong>What:</strong> The Track-Master export path duplicates the bit-depth match and the per-sample TPDF loop verbatim from
+          <span class="mono">wav_spec</span>/<span class="mono">write_samples_into_writer</span> (a test even asserts the two stay byte-identical). A dither change
+          would silently miss Track-Master exports. <strong>Why hold:</strong> it's the export-bytes path — refactor with the byte-identity snapshot guard, in Wave 7.</p>
+      </article>
+
+      <article class="rounded-lg border border-indigo-100 bg-white p-4 text-sm space-y-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="rounded-full px-2 py-0.5 badge low">low</span><span class="rounded-full px-2 py-0.5 badge hold">hold</span>
+          <span class="rounded-full px-2 py-0.5 badge dim">D4 · preview/landing</span><span class="rounded-full px-2 py-0.5 badge spec">rev 2 · re-scoped → see #5b</span>
+          <span class="font-semibold ml-1">preview_landing_window duplicated in engine.rs and audio.rs — and the copies aren't behaviorally identical</span>
+        </div>
+        <p class="mono text-xs text-slate-500">src-tauri/src/audio.rs:1149-1158 ≡ engine.rs:450-459 (window helper); divergence at the callers</p>
+        <p><strong>What (rev 2):</strong> The 8.0 s <em>window</em> helper is byte-identical in both files — but the engine wraps it in
+          <span class="mono">render_preview_landing_window</span> (which resamples to the render rate), while the desktop
+          <span class="mono">audio.rs</span> caller does not. So this "harmless duplication" was actually masking the real
+          <a class="anchor" href="#f5b">Preview-LUFS drift bug (#5b)</a>. <strong>Fix:</strong> don't just dedup the window helper —
+          route the desktop preview through the shared <span class="mono">engine::preview_landing</span>, which deletes the duplication and
+          fixes #5b in one move.</p>
+      </article>
+
+      <article class="rounded-lg border border-indigo-100 bg-white p-4 text-sm space-y-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="rounded-full px-2 py-0.5 badge low">low</span><span class="rounded-full px-2 py-0.5 badge hold">hold</span>
+          <span class="rounded-full px-2 py-0.5 badge dim">D4 · analysis compute</span><span class="rounded-full px-2 py-0.5 badge tracked">near · S7.5</span>
+          <span class="font-semibold ml-1">DeepAnalysis computes per-window 3-band shares + per-axis strata consumed only by tests</span>
+        </div>
+        <p class="mono text-xs text-slate-500">src-tauri/src/deep_analysis.rs:51-81</p>
+        <p><strong>What:</strong> <span class="mono">from_parts</span> runs sort+IQR+stratified means over five axes every analysis, but production reads only
+          <span class="mono">crest.dispersion</span>; the rest is self-documented "retained for future Phase-C / tests only." <strong>Why hold:</strong> it's analysis compute on a
+          DSP-adjacent path and is bloat-by-design (documented) — drop or gate it in the Wave 7 deep-analysis slice (S7.5 is the adjacent perf slice).</p>
+      </article>
+
+      <article class="rounded-lg border border-indigo-100 bg-white p-4 text-sm space-y-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="rounded-full px-2 py-0.5 badge low">low</span><span class="rounded-full px-2 py-0.5 badge hold">hold</span>
+          <span class="rounded-full px-2 py-0.5 badge dim">D4 · guardrails</span><span class="rounded-full px-2 py-0.5 badge untracked">untracked · new</span>
+          <span class="font-semibold ml-1">Duplicated adaptive-resolve preamble in the two guardrail commands</span>
+        </div>
+        <p class="mono text-xs text-slate-500">src-tauri/src/guardrails.rs:755-768 ≡ 779-792</p>
+        <p><strong>What:</strong> <span class="mono">guardrail_readout</span> and <span class="mono">resolve_compression_plan</span> share an identical 13-line
+          cache-fetch + 3-call resolve preamble that must stay in lockstep. <strong>Fix:</strong> extract one private helper. Touches the adaptive path — Wave 7.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ CLEANUP ============ -->
+  <section class="space-y-4">
+    <h2 class="text-2xl font-serif font-semibold border-b border-slate-200 pb-2">Cleanup backlog · low severity, safe anytime</h2>
+    <p class="text-[14px] text-slate-600 max-w-3xl">Dead code, stale comments/docs, CSS band-aids, and low-threat footguns. None block ship; most belong in the
+      roadmap's net-negative Wave 7. Grouped to keep them out of the way.</p>
+
+    <h3 class="text-sm font-semibold text-slate-700 mt-2">Dead code &amp; stale rules (D4 / D6)</h3>
+    <ul class="text-[13.5px] space-y-1.5 list-disc pl-5 text-slate-700">
+      <li><strong>Dead FE wire wrappers:</strong> <span class="mono">api.setConfidenceGating</span> / <span class="mono">confidenceGatingEnabled</span> have zero callers (Phase-B uses the env var). <span class="mono">src/lib/api.ts:152-158</span> — delete.</li>
+      <li><strong>Dead wrapper:</strong> <span class="mono">shouldForceAdvancedOnStandardEntry</span> is test-only; production calls the plain predicate; its "kept for existing callers" comment is false. <span class="mono">src/lib/standard-managed.ts:108-121</span>.</li>
+      <li><strong>Unused exported type:</strong> <span class="mono">CommandError = string</span> is exported, never imported. <span class="mono">src/bindings.ts:477-478</span>.</li>
+      <li><strong>Dead enum variant:</strong> <span class="mono">CommandError::NotImplemented</span> is never constructed anywhere. <span class="mono">src-tauri/src/types.rs:908-909</span>.</li>
+      <li><strong>Dead/shadowed value:</strong> <span class="mono">recommended_universal</span> computes a per-track <span class="mono">lufs_offset_db</span> that <span class="mono">effective_target_lufs()</span> always shadows with the profile −14. Reads as personalization that does nothing. <span class="mono">src-tauri/src/analysis.rs:176-185</span> — drop or comment.</li>
+      <li><strong>No-op wrapper (speculative):</strong> <span class="mono">levelClass</span> returns its input verbatim. <span class="mono">src/components/ExportReceiptCard.tsx:198-200</span>.</li>
+    </ul>
+
+    <h3 class="text-sm font-semibold text-slate-700 mt-3">Stale comments / docs (D5) — likely DOC-STALE, not code bugs</h3>
+    <ul class="text-[13.5px] space-y-1.5 list-disc pl-5 text-slate-700">
+      <li><strong>Stale code comments (2 sites):</strong> <span class="mono">engine.rs:599-600</span> says album mixed-rate/channel sources "fail with a clear error", and <span class="badge spec rounded px-1">rev 3</span> <span class="mono">types.rs:242-244</span> says "Album Master still requires matching source rates for this release-candidate pass" — both are stale; the code now resamples + folds (Wave 9). Reword/delete both.</li>
+      <li><strong>Doc vs code:</strong> Album "Auto" bit depth uses per-track delivery settings (default 24), not the source file's bit depth as APP_BEHAVIOR.md:78 states (the probe doesn't even read bits-per-sample). <span class="mono">album_render.rs:458-466</span> — reword the doc to "first-track delivery bit depth (default 24)".</li>
+      <li><strong>Unreachable UI branch:</strong> AlbumPanel's "requested vs got" sample-rate mismatch note can never fire (explicit album rate is honored verbatim). <span class="mono">src/components/AlbumPanel.tsx:91-93</span> — remove or annotate as deliberate defensive UI.</li>
+    </ul>
+
+    <h3 class="text-sm font-semibold text-slate-700 mt-3">Cross-platform parity nits (D2)</h3>
+    <ul class="text-[13.5px] space-y-1.5 list-disc pl-5 text-slate-700">
+      <li><strong>Default Standard loudness differs by platform:</strong> desktop fresh track = −14 (Low) via the default profile; iPhone &amp; Android default to −11 (Medium). Recipe/options are pinned; the default isn't. <span class="mono">AuditionController.swift:79 · MasteringViewModel.kt:28</span> — pick one canonical default or document the divergence.</li>
+      <li><strong>Android test gap:</strong> the Android crate's extension-support test omits <span class="mono">"aac"</span> (iPhone pins the full set). <span class="mono">apps/android-native/rust/src/lib.rs:347</span>.</li>
+      <li><strong>Advisory message drift:</strong> Android hardcodes a second supported-extension list purely for the rejection message; the gate itself calls Rust (so audio stays correct, only the text can drift). <span class="mono">Repositories.kt:53</span>.</li>
+    </ul>
+
+    <h3 class="text-sm font-semibold text-slate-700 mt-3">Low-threat footguns &amp; defensive gaps (D1 / D3)</h3>
+    <ul class="text-[13.5px] space-y-1.5 list-disc pl-5 text-slate-700">
+      <li><strong>Private path in stderr:</strong> the analyze-failure log prints the full source path to stderr (the one logging line in the backend). <span class="mono">src-tauri/src/engine.rs:140-142</span> — redact to filename or gate behind a debug flag. <span class="text-slate-400">(D3 + D8 reported this; same line.)</span></li>
+      <li><strong>open_output path footgun:</strong> spawns a file-manager on a frontend-supplied path not required to be absolute/canonical (rejects empty + <span class="mono">..</span>, no shell injection). <span class="mono">src-tauri/src/exports.rs:180-225</span> — canonicalize/require absolute, ideally constrain to app-produced paths.</li>
+      <li><strong>Export TOCTOU:</strong> between the uniqueness <span class="mono">exists()</span> check and the tmp→final rename, a file created in the window can be delete-replaced. <span class="mono">src-tauri/src/engine.rs:1015-1018</span> — use create-new semantics (covered by roadmap S1.3's tmp+rename).</li>
+      <li><strong>Incomplete finite guard:</strong> <span class="mono">ceiling_bounded_landing_delta_db</span> guards target/measured LUFS but not <span class="mono">measured_true_peak_dbtp</span> or <span class="mono">ceiling_dbtp</span>; a NaN ceiling makes the upward branch a silent no-op. Not reachable from JSON today. <span class="mono">src-tauri/src/engine.rs:224-245</span>.</li>
+    </ul>
+
+    <h3 class="text-sm font-semibold text-slate-700 mt-3">CSS band-aids (D7) — Wave 7 / S7.1</h3>
+    <ul class="text-[13.5px] space-y-1.5 list-disc pl-5 text-slate-700">
+      <li><strong>Duplicate property:</strong> <span class="mono">.track-title</span> declares <span class="mono">margin</span> twice in one rule (first is dead) with a comment that misdescribes it as letter-spacing. <span class="mono">src/App.css:960-967</span>.</li>
+      <li><strong>Split selector:</strong> <span class="mono">.wf</span> base styles spread across three rule blocks, with <span class="mono">height:100%</span> in one and <span class="mono">flex:1; min-height:180px</span> in another fighting each other. <span class="mono">src/App.css:1208, 1214, 1237</span> — consolidate.</li>
+      <li><strong>Override re-undoes base:</strong> <span class="mono">.toast</span> sets <span class="mono">position:fixed</span> + geometry, then <span class="mono">.toast-stack .toast</span> resets it to <span class="mono">static</span>; the container should own positioning. <span class="mono">src/App.css:2326-2348</span>.</li>
+      <li><strong>(speculative)</strong> Dead <span class="mono">.chain-link</span> / <span class="mono">.chain-stage-detail</span> blocks (~30 lines of layout + a keyframe) are <span class="mono">display:none</span>. <span class="mono">App.css:3978-4018</span>. And a self-documented specificity workaround at <span class="mono">.rail-card-advanced .advanced-grid</span> (<span class="mono">App.css:3164-3174</span>).</li>
+      <li><span class="badge spec rounded px-1">rev 3 · confidence-audit</span> <strong>Additional orphaned-selector candidates</strong> (audit-reported, confirm each with a source scan before deleting): <span class="mono">.empty-state-glyph</span> (App.css:679), <span class="mono">.analysis-summary-icon/-status</span> (~1022), <span class="mono">.user-preset-empty</span> (1845), <span class="mono">.quality-summary-*</span> (~2965), <span class="mono">.workspace-section-label</span> (3651), <span class="mono">.advanced-panel-slot/.advanced-slot-body</span> (~3781). All belong in the Wave-7 S7.1 dead-selector inventory.</li>
+    </ul>
+  </section>
+
+  <!-- ============ PROCESS / CI / DOCS DRIFT (merged from confidence-audit) ============ -->
+  <section id="process" class="space-y-4">
+    <h2 class="text-2xl font-serif font-semibold border-b border-slate-200 pb-2">Process, CI &amp; docs drift <span class="badge spec rounded px-2 py-0.5 align-middle">rev 3 · merged from the confidence-audit</span></h2>
+    <p class="text-[14px] text-slate-600 max-w-3xl">Not code bugs — verification gaps and documentation that can misroute agents/users. The confidence-audit's strongest lane.
+      Each is cited; I re-verified the first three in code.</p>
+
+    <h3 class="text-sm font-semibold text-slate-700 mt-2">Verification / UI gaps (verified)</h3>
+    <ul class="text-[13.5px] space-y-1.5 list-disc pl-5 text-slate-700">
+      <li><strong>Android ARM64 native check isn't CI-enforced</strong> (Medium). <span class="mono">docs/TESTING.md:47</span> requires
+        <span class="mono">cargo ndk -t arm64-v8a --platform 29 check</span>, but the CI Android job runs only <span class="mono">./gradlew test</span>
+        (<span class="mono">.github/workflows/ci.yml:232</span>) — so JNI link/package/alignment regressions can pass CI. Android now carries real adaptive
+        logic, so this matters. <em>Fix:</em> add the ndk check to CI, or explicitly label it a required local-only gate.</li>
+      <li><strong>Above-stereo fold-down isn't shown on the album receipt</strong> (Low/Medium). The backend folds &gt;2ch → stereo and reports it,
+        but AlbumPanel derives only <span class="mono">upmixedChannels</span> (<span class="mono">AlbumPanel.tsx:85</span>) and renders "Upmixed source"
+        only — no fold-down advisory. A real delivery conversion is hidden from the review surface. <em>Fix:</em> add fold-down copy + a receipt test
+        with <span class="mono">source_channels:[6,2] → rendered:2</span>.</li>
+    </ul>
+
+    <h3 class="text-sm font-semibold text-slate-700 mt-3">Docs drift that misroutes agents/users (verified / audit-reported)</h3>
+    <ul class="text-[13.5px] space-y-1.5 list-disc pl-5 text-slate-700">
+      <li><strong>README still uses the old Standard style names</strong> (verified). <span class="mono">README.md:19</span> says "Balanced / Bright /
+        Warm / Heavy"; the shipped user-facing labels are Universal / Clarity / Tape / Oomph (<span class="mono">PRODUCT.md:39</span>,
+        <span class="mono">standard-mapping.test.ts</span>). README is release-facing. <em>Fix:</em> refresh the README wording.</li>
+      <li><strong>APP_BEHAVIOR vs RELEASE_STABILIZATION disagree on the private fixture matrix</strong> (audit-reported). APP_BEHAVIOR.md:191 says it
+        "still needs a longer unattended run"; RELEASE_STABILIZATION.md:205 + the evidence doc say the full 18-row manifest completed 2026-05-28.
+        Reality: runner evidence is complete, only the <em>listening</em> signoff remains. <em>Fix:</em> reword the APP_BEHAVIOR gap to "listening
+        signoff remains," so agents don't rerun the wrong gate.</li>
+      <li><strong><span class="mono">verify:fast</span> means "all lanes," not the docs' fast lane</strong> (audit-reported). <span class="mono">package.json:15</span>
+        → <span class="mono">verify-fast.ps1</span> defaults to every lane incl. Android prerequisites, while TESTING.md frames Fast Lane as desktop-only with
+        mobile conditional. <em>Fix:</em> rename the script or align the docs/labels.</li>
+      <li><strong>Superseded docs still read as active</strong> (audit-reported archaeology — owner cleanup, not bugs):
+        <span class="mono">AGENT_WORK_AND_REVIEW_QUEUE_2026-06-05.md</span> presents itself as a live queue; <span class="mono">ANDROID_NATIVE_SPEC.md</span>
+        says A4 is ongoing / process-death restore absent (shipped in Wave 9); <span class="mono">IPHONE_APP.md:5</span> points at a handoff that says it's
+        historical/stale; <span class="mono">ADAPTIVE_DSP_NEXT_STEPS.md</span> frames Tier-1 finish as remaining and says <span class="mono">stereo_width</span>
+        is unused (it's retained/used per Wave 9 S9.6). Add "superseded" banners or archive them.</li>
+    </ul>
+  </section>
+
+  <!-- ============ NON-FINDINGS (ruled out) ============ -->
+  <section id="nonfindings" class="space-y-3">
+    <h2 class="text-2xl font-serif font-semibold border-b border-slate-200 pb-2">Non-findings — ruled out by cross-checks <span class="badge spec rounded px-2 py-0.5 align-middle">rev 3</span></h2>
+    <p class="text-[14px] text-slate-600 max-w-3xl">Things one or both passes investigated and cleared. Documenting what's <em>not</em> broken is as useful as the bug list —
+      it stops the same ground being re-litigated.</p>
+    <ul class="text-[13.5px] space-y-1.5 list-disc pl-5 text-slate-700">
+      <li><strong>Export never overwrites source/prior renders</strong> — both passes now agree this is solid (uniquify + source-guard at
+        <span class="mono">engine.rs:1005</span> + tests). This is where my first draft was wrong and the confidence-audit was right; #5 is downgraded to Low.</li>
+      <li><strong>Album mixed-rate / mixed-channel backend</strong> — shipped and covered (Wave 9); the only residue is UI receipt copy (#fold-down above) and stale comments.</li>
+      <li><strong>Standard fixed export recipe</strong> — code + tests match the product docs (44.1 kHz / 24-bit / −1 dBTP, −14/−11/−9).</li>
+      <li><strong>Original/Mastered playhead preservation</strong> — wired through the seek path. (I still recommend the missing <em>pinning test</em>, #15 — the behavior is right, the safety net isn't.)</li>
+      <li><strong>Analysis progress / batch identity</strong> — exists and filters stale progress; the real residue is partial-<em>failure</em> visibility (#20).</li>
+      <li><strong><span class="mono">dsp.rs</span> low-rate stability</strong> — Nyquist clamp shipped (<span class="mono">dsp.rs:55-64</span>) + the all-rates finiteness pin (<span class="mono">dsp.rs:3378</span>). The scary low-rate path is cleared.</li>
+      <li><strong><span class="mono">guardrails.rs</span> LRA floor</strong> — intentional sentinel, stand-down gated off. <strong>iPhone bridge</strong> — independently cleared on the scary paths reviewed here.</li>
+      <li class="text-rose-800"><strong>One disagreement worth flagging:</strong> the confidence-audit called <span class="mono">.gitignore</span> a non-finding ("covers private fixtures/renders"). My pass found it does <em>not</em> cover <span class="mono">test-output/*.csv|*.json</span> or subfolders (verified with <span class="mono">git check-ignore</span>) — see #12. Treat #12 as the live word here.</li>
+    </ul>
+  </section>
+
+  <!-- ============ SPECULATIVE ============ -->
+  <section id="speculative" class="space-y-3">
+    <h2 class="text-2xl font-serif font-semibold border-b border-slate-200 pb-2">Speculative · verification was throttled (not confirmed)</h2>
+    <p class="text-[14px] text-slate-600 max-w-3xl">These got a minority "real" vote because their skeptics were rate-limited mid-run, not because they were
+      refuted. Listed for awareness. <strong>Bold ones are corroborated by the roadmap</strong> — treat the concern class as real, but verify the exact failure before fixing.</p>
+    <ul class="text-[13.5px] space-y-2 list-disc pl-5 text-slate-700">
+      <li><strong>Decode channel-count is header-derived, decoupled from the actual sample stream</strong> (×3 findings, medium) — a malformed/odd container where the header disagrees with decoded buffers can miscount frames, mis-deinterleave the master, or expose downstream assumptions. A panic/OOB still needs a proving fixture before being claimed. <span class="mono">decode.rs:93-141, 169-225</span>. <span class="badge tracked rounded px-1">corroborated · S1.4 (RS-04/RS-06)</span></li>
+      <li><strong>Album/track export don't mutually gate</strong> (medium) — both buttons ignore the other's in-flight flag, so concurrent invocations can race shared render state. The audit-WAV vs export pair <em>is</em> cross-gated, showing the omission. <span class="mono">src/components/AlbumPanel.tsx:118-125</span>.</li>
+      <li><span class="mono">RenderedMeasurements.dynamic_range_lu</span> silently becomes 0.0 on non-finite LRA, which then trips a misleading "dynamic_range_low" warning (low, advisory). <span class="mono">engine.rs:865-867, 935</span>.</li>
+      <li><span class="badge spec rounded px-1">rev 2 · reclassified</span> The <span class="mono">dynamic_range_lu &gt; 0.5</span> floor in the already-mastered stand-down (<span class="mono">guardrails.rs:176-178</span>) is <strong>not a bug</strong> — Codex confirmed it's intentional sentinel handling for unknown/near-zero LRA readings, and the whole stand-down path is gated OFF by default (<span class="mono">ADAPTIVE_COMPRESSION = false</span>) and bypassed for albums. Keep only as a <em>calibration note</em>: revisit whether a genuinely-crushed &lt;0.5 LU master should count as "maximally dense" before broadly enabling adaptive compression (Wave 10 / S10.3).</li>
+      <li><span class="mono">loudnessTargetDisplay</span>/<span class="mono">profileIdForLufs</span> render the literal text "NaN" for a non-finite target (low; input normally range-controlled). <span class="mono">src/lib/effective-settings.ts:83-118</span>.</li>
+      <li><span class="mono">effective_ceiling_dbtp()</span> returns a non-finite Custom ceiling unguarded, unlike its LUFS sibling (low; not reachable from JSON). <span class="mono">src-tauri/src/types.rs:626-631</span>.</li>
+    </ul>
+  </section>
+
+  <!-- ============ ROADMAP CROSS-REF ============ -->
+  <section id="roadmap" class="space-y-4">
+    <h2 class="text-2xl font-serif font-semibold border-b border-slate-200 pb-2">Tracked vs untracked — reconstructing the lost "forgotten features" pass</h2>
+    <p class="text-[14px] text-slate-600 max-w-3xl">The one finder unit the throttle killed was "promised-but-unbuilt across the plan docs." I rebuilt it from the
+      plan-of-record (<span class="mono">docs/plans/2026-06-12-shippability-roadmap.md</span>) — <em>single-reviewer, not 3-skeptic-verified</em>. The headline: the
+      project is <strong>unusually well-tracked</strong>; very little is genuinely "forgotten." The audit's value is two-fold — (a) it confirms which planned work is
+      still open, and (b) it found real issues the roadmap doesn't cover.</p>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-[13.5px] space-y-2">
+        <h3 class="font-semibold text-emerald-900">Tracked &amp; intentionally parked (no alarm)</h3>
+        <ul class="list-disc pl-4 space-y-1 text-emerald-900">
+          <li>Phase-B per-window confidence gating — built, OFF by default, calibration moved to Wave 10 (S10.3).</li>
+          <li>Adaptive per-band compressor MVP — decided IN the MVP, built reduce-only, gated off pending Wave 10 calibration (spec exists).</li>
+          <li>Adaptive guardrail per-axis readout — owner-gated behind a localStorage debug flag ("hide, don't delete"). <span class="mono">debug-flags.ts</span>.</li>
+          <li>Visual-EQ horizontal drag — deliberately omitted in V1 (engine has no variable bands yet); UI correctly refuses to promise it. <span class="mono">VisualEqPanel.tsx:16-20</span>.</li>
+          <li>Signing / notarization / autoupdate / store distribution; reference-track UX; one-pole/soft-knee hoist; tauri-specta — all explicitly deferred.</li>
+        </ul>
+      </div>
+      <div class="rounded-lg border border-sky-200 bg-sky-50 p-4 text-[13.5px] space-y-2">
+        <h3 class="font-semibold text-sky-900">Tracked — mixed status (<span class="badge spec rounded px-1">rev 2 corrected</span>)</h3>
+        <ul class="list-disc pl-4 space-y-1 text-sky-900">
+          <li><strong>Wave 1 is partially landed, not unstarted</strong> (my first draft overstated this). Confirmed <em>done</em> in current code:
+            <strong>S1.1</strong> Nyquist clamp (RS-01, dsp.rs:55-64), <strong>S1.2</strong> album per-track collision-avoidance (RS-02, proven by the
+            preservation test at tests/album_render.rs:131), and tmp-then-rename writing.</li>
+          <li><strong>Wave 1 residue still open:</strong> S1.3's <em>source-path</em> overwrite guard for the album explicit-dir path (RS-03 tail, see #5),
+            and S1.4 decode channel-count reconciliation (RS-04/06, see the speculative decode findings).</li>
+          <li>S4.2 Android destroy/measure race, S4.3 AAudio verification — re-found and still open (Fix-now #1, #8).</li>
+          <li>S3.3/S3.4 recipe-parity + truthful chrome copy — partially re-found (#16, #17).</li>
+          <li><strong>S9.4 (UF-B4) live-vs-export landing rate</strong> — shipped for <em>iPhone</em>, but the desktop twin is still open (new #5b).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="rounded-lg border border-rose-200 bg-rose-50 p-4 text-[13.5px] space-y-2">
+      <h3 class="font-semibold text-rose-900">Genuinely untracked — the audit's net-new contributions (not on the roadmap)</h3>
+      <ul class="list-disc pl-4 space-y-1 text-rose-900">
+        <li><strong>Desktop Preview-LUFS source-rate drift</strong> (#5b, medium — <span class="badge spec rounded px-1">rev 2, Codex</span>) — iPhone was fixed (S9.4); desktop wasn't.</li>
+        <li><strong>Album loudness arc inert on the default profile</strong> (#2, high) — the headline album feature silently disabled.</li>
+        <li><strong>Preset-file silent wipe on parse failure</strong> (#3, high) — untracked data loss.</li>
+        <li><strong>NaN/Inf post-render detection can't fire</strong> (#4, high) — S1.1 removes a cause but adds no detection.</li>
+        <li><strong>selectTrack meter leak + ref race</strong> (#6, #7) — Wave 2 covers other FE-state bugs, not these.</li>
+        <li><strong>Standard off-grid loudness leak</strong> (#10), <strong>import metadata mismatch</strong> (#11), <strong>.gitignore test-output gap</strong> (#12), <strong>.tmp not gitignored</strong> (#13).</li>
+        <li><strong>Missing pinning tests</strong> for the album Volume-Match invariant (#14) and the Original/Mastered playhead seek (#15).</li>
+      </ul>
+      <p class="text-rose-900 pt-1">A note for PRODUCT.md: it is mid-refresh (roadmap S5.4 is owner-gated). Several "drift" findings here are really PRODUCT.md being slightly
+        behind the code (Standard-first flow, mobile/album definitions) — the doc, not the code, is what's stale, which matches your heads-up.</p>
+    </div>
+  </section>
+
+  <!-- ============ THE PLAN ============ -->
+  <section id="plan" class="space-y-4">
+    <h2 class="text-2xl font-serif font-semibold border-b border-slate-200 pb-2">The plan — sequenced</h2>
+    <p class="text-[14px] text-slate-600 max-w-3xl">Ordered by risk-reduction-per-effort, mapped onto the existing roadmap waves so it slots into your current
+      operating model (implementer does a slice; Claude reviews against "Done means"). Net-new items get a suggested home.</p>
+
+    <ol class="space-y-3 text-[14px]">
+      <li class="rounded-lg bg-white border border-slate-200 p-4">
+        <div class="font-semibold text-slate-900">Step 1 — Land the untracked safety teeth (new mini-wave, ~1–2 days)</div>
+        <p class="text-slate-700 mt-1">These are high-impact, untracked, and mostly small. Each lands with the named test, observed failing first.</p>
+        <ul class="list-disc pl-5 mt-1 text-slate-700 space-y-0.5">
+          <li><span class="badge spec rounded px-1">rev 2</span> Desktop Preview-LUFS drift (#5b) — route the desktop preview through the shared <span class="mono">engine::preview_landing</span> (also deletes the duplicated window helper). Codex priority #1.</li>
+          <li>Album loudness arc fix (#2) — force Custom-equivalent landing in the album shadow + the arc-shifts-LUFS test.</li>
+          <li>Preset-file wipe guard (#3) — refuse-or-backup on parse error.</li>
+          <li>Post-render NaN/Inf scan (#4) — finite-sample check before write + post-render Critical (the Nyquist cause is already closed, so this is purely the detection net).</li>
+          <li>The two <span class="mono">selectTrack</span> fixes (#6, #7) — meter reset + synchronous ref write.</li>
+          <li>.gitignore default-deny for <span class="mono">test-output/</span> (#12) + <span class="mono">*.tmp</span> (#13).</li>
+          <li><span class="badge spec rounded px-1">rev 3</span> Album Save/Open persistence (#19) — add album-panel choices to the project schema (backwards-compatible) + round-trip test. The confidence-audit's #1.</li>
+          <li><span class="badge spec rounded px-1">rev 3</span> Partial-analysis visibility (#20) — surface per-track analysis failures instead of stderr-only.</li>
+        </ul>
+      </li>
+      <li class="rounded-lg bg-white border border-slate-200 p-4">
+        <div class="font-semibold text-slate-900">Step 2 — Finish roadmap Wave 1 (audio-correctness P0s) — <span class="badge spec rounded px-1">rev 2</span> partially done</div>
+        <p class="text-slate-700 mt-1">Corrected after the code cross-check: <strong>S1.1 (Nyquist) and S1.2 (album per-track overwrite) are already shipped</strong>,
+          and tmp-then-rename writing is present. What's left in this wave's spirit: optional <strong>S1.3 canonical source-path hardening for the album
+          explicit-dir path</strong> (#5, now Low) and <strong>S1.4 decode allocation clamps + channel-count reconciliation</strong> (the speculative decode
+          findings — not yet cross-checked, verify before closing).</p>
+      </li>
+      <li class="rounded-lg bg-white border border-slate-200 p-4">
+        <div class="font-semibold text-slate-900">Step 3 — Add the non-negotiable tripwire tests (cheap, additive, do alongside Steps 1–2)</div>
+        <p class="text-slate-700 mt-1">Album Volume-Match byte-identity test (#14) and the Original/Mastered swap-seeks test (#15). These are pure safety nets — no behavior
+          change — and they protect two sacred invariants that currently rest on one line each.</p>
+      </li>
+      <li class="rounded-lg bg-white border border-slate-200 p-4">
+        <div class="font-semibold text-slate-900">Step 4 — Frontend correctness + contract pins (roadmap Waves 2–3)</div>
+        <p class="text-slate-700 mt-1">togglePlay EOF window (#9, fold into S2.1), Standard off-grid loudness leak (#10), import metadata track-selection (#11), the Standard delivery
+          label (#16) and the DELIVERY_PROFILE cross-language pin (#17, fold into S3.3), and the album/track export mutual-gate (speculative).</p>
+      </li>
+      <li class="rounded-lg bg-white border border-slate-200 p-4">
+        <div class="font-semibold text-slate-900">Step 5 — Mobile crash class (roadmap Wave 4) — before mobile ships, not desktop-blocking</div>
+        <p class="text-slate-700 mt-1">Android AAudio channel/format read-back (#1, the critical — S4.3) and the destroy/measure race (#8, S4.2). Desktop v1 can ship without these;
+          they gate the mobile release.</p>
+      </li>
+      <li class="rounded-lg bg-white border border-slate-200 p-4">
+        <div class="font-semibold text-slate-900">Step 6 — Cleanup &amp; the net-negative wave (roadmap Wave 7)</div>
+        <p class="text-slate-700 mt-1">All the <span class="mono">Hold</span> refactors (export-writer dedup, preview-window dedup, DeepAnalysis strata, guardrails preamble, the
+          callback-alloc wiring) plus the whole cleanup backlog (dead code, stale comments, CSS band-aids, footguns) — done deliberately with the byte-identity guards,
+          after stabilization, not under ship pressure.</p>
+      </li>
+      <li class="rounded-lg bg-white border border-slate-200 p-4">
+        <div class="font-semibold text-slate-900">Step 7 — Doc canon (roadmap S5.4, owner-gated) &amp; an off-peak re-audit of the gap</div>
+        <p class="text-slate-700 mt-1">Refresh PRODUCT.md to Standard-first + defined mobile/album scope (resolves the D5 "drift" that is really doc-staleness). And, to close this
+          audit's coverage gap, re-run the remaining safety-critical Rust finders around <span class="mono">audio.rs</span>,
+          analyzers, decode/channel reconciliation, and any mobile paths not already cross-checked at an off-peak time so verification isn't throttled.</p>
+      </li>
+      <li class="rounded-lg bg-white border border-slate-200 p-4">
+        <div class="font-semibold text-slate-900">Step 8 — <span class="badge spec rounded px-1">rev 3</span> Docs, CI &amp; process drift (quick wins, parallel to everything)</div>
+        <p class="text-slate-700 mt-1">From the merged confidence-audit, none of these touch DSP/audio so they can land anytime: enforce (or explicitly document) the
+          <strong>Android ARM64 CI gate</strong>, add the <strong>fold-down receipt</strong> copy + test, and clear the <strong>docs-drift cluster</strong> —
+          README style names, the APP_BEHAVIOR fixture-matrix wording, <span class="mono">verify:fast</span> naming, the stale Album comments
+          (<span class="mono">engine.rs:599</span> + <span class="mono">types.rs:242</span>), and "superseded" banners on the archaeology docs. Bundle the CSS
+          dead-selector inventory (both passes' lists) into Wave-7 S7.1.</p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============ START HERE ============ -->
+  <section class="rounded-lg bg-slate-900 p-6 text-white">
+    <div class="text-xs uppercase tracking-widest text-slate-300">Start here · updated rev 2</div>
+    <h2 class="mt-1 text-2xl font-serif font-semibold">Three small, untracked desktop fixes: Preview-LUFS drift (#5b), album loudness arc (#2), preset-file wipe (#3).</h2>
+    <p class="mt-2 text-slate-200 max-w-3xl text-[14px] leading-relaxed">
+      After the code cross-check, the desktop short-list tightened. The Android critical (#1) is scarier but it's already on the roadmap (S4.3) and gates
+      <em>mobile</em>, not desktop v1. The highest-value desktop work is the trio that is <em>both</em> impactful <em>and</em> untracked: the
+      <strong>Preview-LUFS drift</strong> (#5b — Codex's #1; reuse the shared, already-tested <span class="mono">engine::preview_landing</span>, which also
+      kills a duplication), the <strong>album loudness arc</strong> landing flat (your headline album feature, quietly inert), and the
+      <strong>preset save</strong> that can wipe every preset on a routine schema change. All three are small, self-contained, with obvious tests. Land them, add the two
+      one-line tripwire tests for the Volume-Match and playhead invariants (#14, #15), then close out Wave 1's residue (#5, decode). That's the highest safety-per-hour path.
+    </p>
+  </section>
+
+  <footer class="text-xs text-slate-400 pt-6 border-t border-slate-200">
+    Generated by the repo-wide-review skill · 48 verified (3-skeptic majority) + 12 throttle-limited speculative · read-only audit ·
+    no private audio, renders, or secrets referenced (paths only). Coverage caveats stated in the header.
+    <br>Rev 2 (2026-06-16): reconciled against current code via a Codex cross-check — added #5b (Preview-LUFS drift), downgraded #5
+    (album overwrite → source-path hardening), corrected the <span class="mono">dsp.rs</span>/<span class="mono">guardrails.rs</span>/iPhone
+    coverage notes. Items changed in rev 2 are tagged inline.
+    <br>Rev 3 (2026-06-16): merged + deduped with the separate <span class="mono">2026-06-16-global-confidence-audit</span> — added #19 (album
+    Save/Open data loss) and #20 (partial-analysis visibility), a Process/CI/docs-drift section, and a Non-findings section; downgraded #5 to Low
+    after verifying the residual. This file is now the single consolidated audit of record. Rev-3 additions tagged inline.</footer>
+
+</main>
+</body>
+</html>
