@@ -5675,8 +5675,8 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
   animation: empty-hero-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 .empty-hero-orb {
-  width: min(380px, 50vh);
-  height: min(310px, 40vh);
+  width: min(456px, 60vh);
+  height: min(372px, 48vh);
   display: flex;
   align-items: center;
   justify-content: center;
