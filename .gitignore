@@ -44,7 +44,9 @@ renders/
 test-output/
 test-output/private-fixture-matrix/
 test-output/private-reference-tuning/
+test-output/**
 *.wav
+*.wav.*.tmp
 *.aiff
 *.aif
 *.flac
@@ -62,16 +64,9 @@ test-output/private-reference-tuning/
 !test-output/
 !test-output/tauri-project-dialogs-smoke/
 !test-output/tauri-project-dialogs-smoke/native-dialog-save-as.ams.json
-test-output/ui-rc/
-# Glob covers dated matrix runs too (e.g. private-fixture-matrix-full-2026-05-28).
-test-output/private-fixture-matrix*/
-test-output/private-reference-tuning*/
-test-output/preset-verify/
-# Loose generated artifacts at the test-output root (UI screenshots, logs) are
-# never tracked; the dialog-smoke .ams.json fixture above is the only exception.
-# (Needed because `!test-output/` above un-ignores the whole dir for that fixture.)
-test-output/*.png
-test-output/*.log
+# The default-deny `test-output/**` above keeps private CSV/JSON ledgers,
+# screenshots, logs, and rendered masters ignored even when new runner folders
+# are added. The dialog-smoke .ams.json fixture above is the only exception.
 
 # graphify knowledge graph (graphify-out/). graph.json, community labels, and
 # GRAPH_REPORT.md are path-clean shared artifacts and stay tracked. The
