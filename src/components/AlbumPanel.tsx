@@ -14,6 +14,7 @@
 import type { AlbumArcKind, ImportedTrack } from "../bindings";
 import { ALBUM_ARC_DISPLAY } from "../bindings";
 import type { AlbumRenderReport } from "../lib/api";
+import { formatDuration } from "../lib/time-format";
 
 type AlbumPanelProps = {
   tracks: ImportedTrack[];
@@ -31,13 +32,6 @@ type AlbumPanelProps = {
   onAlbumSampleRate: (v: number | null) => void;
   onAlbumBitDepth: (v: number | null) => void;
 };
-
-function formatAlbumDuration(seconds: number): string {
-  const total = Math.max(0, Math.round(seconds));
-  const minutes = Math.floor(total / 60);
-  const remaining = total % 60;
-  return `${minutes}:${remaining.toString().padStart(2, "0")}`;
-}
 
 export function AlbumPanel({
   tracks,
@@ -75,7 +69,7 @@ export function AlbumPanel({
             {totalSeconds > 0 && (
               <>
                 <span className="dim"> · </span>
-                <strong>{formatAlbumDuration(totalSeconds)}</strong>
+                <strong>{formatDuration(totalSeconds)}</strong>
               </>
             )}
           </span>

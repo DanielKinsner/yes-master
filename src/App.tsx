@@ -37,6 +37,7 @@ import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
 import { requestGuideReset } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
 import { SUPPORTED_FORMATS_COPY } from "./lib/supported-formats";
+import { formatDuration } from "./lib/time-format";
 import "./App.css";
 
 // The first four mirror the Standard tiles (Universal/Clarity/Tape/Oomph) in
@@ -1156,13 +1157,6 @@ function DeckPreviewOptions({
       </div>
     </div>
   );
-}
-
-function formatDuration(seconds: number): string {
-  const total = Math.max(0, Math.round(seconds));
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 /// Plain-English commentary on the analysis numbers — one line per dimension.

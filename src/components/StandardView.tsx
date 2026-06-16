@@ -26,6 +26,7 @@ import { effectiveLoudnessTarget } from "../lib/effective-settings";
 import { standardExportNotes } from "../lib/standard-export";
 import { api } from "../lib/api";
 import { MasterOutPanel } from "./RightRail";
+import { formatDuration } from "../lib/time-format";
 // L9: the hint copy now lives in FirstRunOverlay, rendered once at the App
 // root. The guide STATE still arrives here as a prop so the Mastered A/B can
 // pulse and entering Advanced can finish the guide — but the chip no longer
@@ -41,13 +42,6 @@ const NO_GUIDE: FirstRunGuide = {
   dismiss: () => {},
   noteEnteredAdvanced: () => {},
 };
-
-function fmtDuration(sec: number | null | undefined): string {
-  if (sec == null || !Number.isFinite(sec)) return "";
-  const m = Math.floor(sec / 60);
-  const r = Math.floor(sec % 60);
-  return `${m}:${r.toString().padStart(2, "0")}`;
-}
 
 /// Truthful hero subtitle: the qualifier is derived from the measurement
 /// against the user's selected loudness target (±1.5 LU reads as "close"
@@ -159,7 +153,7 @@ function TracksRail({ tm }: { tm: TM }) {
               </span>
               <span className="std-track-copy">
                 <span className="std-track-name">{t.display_name}</span>
-                <span className="std-track-dur">{fmtDuration(t.duration_seconds)}</span>
+                <span className="std-track-dur">{formatDuration(t.duration_seconds)}</span>
               </span>
               <span className="std-track-meter" aria-hidden />
             </button>
@@ -583,7 +577,7 @@ export function StandardView({
               </span>
             </button>
             <span className="std-time">
-              {fmtDuration(tm.transport.currentTimeSec)} / {fmtDuration(tm.selectedTrack?.duration_seconds)}
+              {formatDuration(tm.transport.currentTimeSec)} / {formatDuration(tm.selectedTrack?.duration_seconds)}
             </span>
           </div>
           <div className="std-wave">
