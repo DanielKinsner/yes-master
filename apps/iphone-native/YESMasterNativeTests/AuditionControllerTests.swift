@@ -18,17 +18,15 @@ final class AuditionControllerTests: XCTestCase {
         XCTAssertEqual(ctx.renderer.renderCount, 0, "analysis must not render")
     }
 
-    func testAnalysisProgressUsesStagedStatusUntilAnalysisFinishes() async throws {
+    func testAnalysisUsesHonestIndeterminateStatusUntilAnalysisFinishes() async throws {
         let renderer = FakeRenderer()
         renderer.analysisDelay = 0.10
         let ctx = try makeLoadedController(renderer: renderer)
 
         XCTAssertTrue(ctx.controller.isAnalyzing)
-        XCTAssertEqual(ctx.controller.statusText, "Analyzing audio")
-        XCTAssertEqual(ctx.controller.analysisProgress ?? 0, 0.14, accuracy: 0.001)
+        XCTAssertEqual(ctx.controller.statusText, "Analyzing audio...")
 
         await ctx.controller.analysisTask?.value
-        XCTAssertNil(ctx.controller.analysisProgress)
         XCTAssertEqual(ctx.controller.statusText, "Ready. Press play to audition.")
     }
 
@@ -87,7 +85,7 @@ final class AuditionControllerTests: XCTestCase {
         XCTAssertEqual(ctx.renderer.lastRenderOptions?.preset, "balanced")
     }
 
-    func testRenderProgressUsesStagedStatusUntilMasterFinishes() async throws {
+    func testRenderUsesHonestIndeterminateStatusUntilMasterFinishes() async throws {
         let renderer = FakeRenderer()
         renderer.renderDelay = 0.10
         let ctx = try makeLoadedController(renderer: renderer)
@@ -95,11 +93,9 @@ final class AuditionControllerTests: XCTestCase {
 
         ctx.controller.createMaster()
         XCTAssertTrue(ctx.controller.isRendering)
-        XCTAssertEqual(ctx.controller.statusText, "Building mastering chain")
-        XCTAssertEqual(ctx.controller.renderProgress ?? 0, 0.18, accuracy: 0.001)
+        XCTAssertEqual(ctx.controller.statusText, "Creating master...")
 
         await ctx.controller.renderTask?.value
-        XCTAssertNil(ctx.controller.renderProgress)
         XCTAssertEqual(ctx.controller.statusText, "Master created. Share it anytime.")
     }
 

@@ -290,10 +290,6 @@ struct ContentView: View {
                     Spacer(minLength: 0)
                 }
 
-                ProgressView(value: processingProgressValue)
-                    .tint(Color(red: 0.43, green: 0.86, blue: 0.94))
-                    .frame(height: 3)
-                    .scaleEffect(x: 1, y: 0.72, anchor: .center)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
@@ -679,10 +675,6 @@ struct ContentView: View {
             return "Ready"
         }
         return controller.importedTrack == nil ? "Ready" : "Loaded"
-    }
-
-    private var processingProgressValue: Double {
-        controller.analysisProgress ?? controller.renderProgress ?? 0.12
     }
 
     private var heroSymbol: String {
