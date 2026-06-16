@@ -3,6 +3,7 @@ package com.yesmaster.app
 import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,7 +45,10 @@ sealed interface UiState {
     ) : UiState
 }
 
-class MasteringViewModel(application: Application) : AndroidViewModel(application) {
+class MasteringViewModel(
+    application: Application,
+    private val savedState: SavedStateHandle,
+) : AndroidViewModel(application) {
 
     private val imports = ImportRepository(application)
     private val exports = ExportRepository(application)
@@ -54,6 +58,13 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _state = MutableStateFlow<UiState>(UiState.Idle)
     val state: StateFlow<UiState> = _state
+
+    init {
+        restoreReadyFromSavedState()?.let { ready ->
+            _state.value = ready
+            armAudition(ready)
+        }
+    }
 
     fun importTrack(uri: Uri) {
         audition.release()
@@ -110,6 +121,7 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
                 sourcePath = sourcePath,
                 analysis = analysis,
             )
+            persistReady(ready)
             _state.value = ready
             armAudition(ready)
         } catch (e: LinkageError) {
@@ -146,6 +158,7 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
         val ready = (_state.value as? UiState.Ready)
             ?.copy(style = style, loudness = loudness, intensity = intensity)
             ?: return
+        persistReady(ready)
         // The render shares the process with the live chain; pausing keeps
         // the audition handle warm for "Master again" without competing for
         // the audio path mid-render.
@@ -213,6 +226,7 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun reset() {
         audition.release()
+        clearSavedReady()
         _state.value = UiState.Idle
     }
 
@@ -227,5 +241,75 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
         is SecurityException -> "Android blocked access to the music library. Check storage permissions and try again."
         is IllegalArgumentException -> "Android could not create that music-library entry. Try a shorter track name."
         else -> error.message ?: "Mastering failed"
+    }
+
+    private fun persistReady(ready: UiState.Ready) {
+        savedState[ReadyStatePersistence.KEY_SOURCE_PATH] = ready.sourcePath
+        savedState[ReadyStatePersistence.KEY_DISPLAY_NAME] = ready.displayName
+        savedState[ReadyStatePersistence.KEY_ANALYSIS_JSON] = Wire.gson.toJson(ready.analysis)
+        savedState[ReadyStatePersistence.KEY_STYLE_ID] = ready.style.id
+        savedState[ReadyStatePersistence.KEY_LOUDNESS_ID] = ready.loudness.id
+        savedState[ReadyStatePersistence.KEY_INTENSITY] = ready.intensity
+    }
+
+    private fun restoreReadyFromSavedState(): UiState.Ready? {
+        val ready = ReadyStatePersistence.restore(
+            sourcePath = savedState[ReadyStatePersistence.KEY_SOURCE_PATH],
+            displayName = savedState[ReadyStatePersistence.KEY_DISPLAY_NAME],
+            analysisJson = savedState[ReadyStatePersistence.KEY_ANALYSIS_JSON],
+            styleId = savedState[ReadyStatePersistence.KEY_STYLE_ID],
+            loudnessId = savedState[ReadyStatePersistence.KEY_LOUDNESS_ID],
+            intensity = savedState[ReadyStatePersistence.KEY_INTENSITY],
+        )
+        if (ready == null || !File(ready.sourcePath).exists()) {
+            clearSavedReady()
+            return null
+        }
+        return ready
+    }
+
+    private fun clearSavedReady() {
+        ReadyStatePersistence.keys.forEach { key -> savedState.remove<Any>(key) }
+    }
+}
+
+object ReadyStatePersistence {
+    const val KEY_SOURCE_PATH = "ready.sourcePath"
+    const val KEY_DISPLAY_NAME = "ready.displayName"
+    const val KEY_ANALYSIS_JSON = "ready.analysisJson"
+    const val KEY_STYLE_ID = "ready.styleId"
+    const val KEY_LOUDNESS_ID = "ready.loudnessId"
+    const val KEY_INTENSITY = "ready.intensity"
+
+    val keys = listOf(
+        KEY_SOURCE_PATH,
+        KEY_DISPLAY_NAME,
+        KEY_ANALYSIS_JSON,
+        KEY_STYLE_ID,
+        KEY_LOUDNESS_ID,
+        KEY_INTENSITY,
+    )
+
+    fun restore(
+        sourcePath: String?,
+        displayName: String?,
+        analysisJson: String?,
+        styleId: String?,
+        loudnessId: String?,
+        intensity: Float?,
+    ): UiState.Ready? {
+        if (sourcePath.isNullOrBlank() || displayName.isNullOrBlank() || analysisJson.isNullOrBlank()) {
+            return null
+        }
+        val analysis = runCatching { Wire.analysis(analysisJson) }.getOrNull() ?: return null
+        return UiState.Ready(
+            displayName = displayName,
+            sourcePath = sourcePath,
+            analysis = analysis,
+            style = StandardStyle.entries.firstOrNull { it.id == styleId } ?: StandardStyle.BALANCED,
+            loudness = StandardLoudness.entries.firstOrNull { it.id == loudnessId }
+                ?: StandardLoudness.MEDIUM,
+            intensity = intensity?.coerceIn(0f, 1f) ?: 0.5f,
+        )
     }
 }
