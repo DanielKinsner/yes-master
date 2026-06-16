@@ -24,13 +24,10 @@
 //!
 //! ## Real-time discipline in `process`
 //!
-//! No locks, no logging, no JSON, no blocking. The only heap allocation is the
-//! `MasteringChain` state clone done by `with_coeffs_inheriting_state` when a
-//! parameter change arrives — bounded to the coefficient-check interval, never
-//! in steady-state playback. This is ported verbatim from the desktop
-//! `MasteringSource`. Replacing that clone with a preallocated double-buffer is
-//! the first planned RT-hardening follow-up. `process` is wrapped in
-//! `catch_unwind` at the FFI boundary so a panic can never unwind into C.
+//! No locks, no logging, no JSON, no blocking, and no heap allocation. Parameter
+//! changes reuse a preallocated pending `MasteringChain` and crossfade it in.
+//! `process` is wrapped in `catch_unwind` at the FFI boundary so a panic can
+//! never unwind into C.
 
 use std::cell::UnsafeCell;
 use std::os::raw::c_char;
@@ -117,6 +114,20 @@ fn sanitize_gain(value: f32) -> f32 {
     }
 }
 
+#[inline]
+fn enable_flush_to_zero_for_audio_thread() {
+    #[cfg(all(target_arch = "aarch64", any(target_os = "ios", target_os = "macos")))]
+    unsafe {
+        const FPCR_FZ: u64 = 1 << 24;
+        let fpcr: u64;
+        std::arch::asm!("mrs {fpcr}, fpcr", fpcr = out(reg) fpcr, options(nomem, nostack));
+        let updated = fpcr | FPCR_FZ;
+        if updated != fpcr {
+            std::arch::asm!("msr fpcr, {fpcr}", fpcr = in(reg) updated, options(nomem, nostack));
+        }
+    }
+}
+
 /// Audio-thread-only playback state. Reached exclusively from `process` via the
 /// handle's `UnsafeCell`.
 struct AudioCore {
@@ -124,7 +135,8 @@ struct AudioCore {
     channels: usize,
     total_frames: usize,
     chain: MasteringChain,
-    pending_chain: Option<MasteringChain>,
+    pending_chain: MasteringChain,
+    has_pending_chain: bool,
     crossfade_remaining: usize,
     crossfade_total: usize,
     coeffs_rx: Receiver<LiveCoeffUpdate>,
@@ -150,6 +162,7 @@ impl AudioCore {
     /// number of frames actually written (short at end-of-file; the remainder of
     /// `out` is zero-filled). Real-time safe: see the module docs.
     fn process(&mut self, out: &mut [f32], frames: usize, shared: &Shared) {
+        enable_flush_to_zero_for_audio_thread();
         let channels = self.channels;
 
         // 1. Drain the coefficient channel ONCE per block, before anything else
@@ -175,15 +188,26 @@ impl AudioCore {
                 // Promote an in-flight pending chain to main before arming the
                 // next so a sustained sweep bounds the 2x-DSP window to one
                 // crossfade interval and keeps tracking the latest settings.
-                if let Some(prev_pending) = self.pending_chain.take() {
-                    self.chain = prev_pending;
+                if self.has_pending_chain {
+                    std::mem::swap(&mut self.chain, &mut self.pending_chain);
+                    self.has_pending_chain = false;
                 }
-                self.pending_chain = Some(MasteringChain::with_coeffs_inheriting_state(
-                    update.coeffs,
-                    &self.chain,
-                ));
-                self.crossfade_remaining = COEFFS_CROSSFADE_FRAMES;
-                self.crossfade_total = COEFFS_CROSSFADE_FRAMES;
+                if self
+                    .pending_chain
+                    .overwrite_with_coeffs_inheriting_state(update.coeffs, &self.chain)
+                {
+                    self.has_pending_chain = true;
+                    self.crossfade_remaining = COEFFS_CROSSFADE_FRAMES;
+                    self.crossfade_total = COEFFS_CROSSFADE_FRAMES;
+                } else {
+                    debug_assert!(
+                        false,
+                        "preallocated live chain shape must match the active chain"
+                    );
+                    self.chain.coeffs = update.coeffs;
+                    self.crossfade_remaining = 0;
+                    self.crossfade_total = 0;
+                }
             }
         }
 
@@ -194,8 +218,9 @@ impl AudioCore {
         //    new position starts clean instead of ringing the old state.
         let seek = shared.seek_target_frame.swap(NO_SEEK, Ordering::Acquire);
         if seek != NO_SEEK {
-            if let Some(pending) = self.pending_chain.take() {
-                self.chain = pending;
+            if self.has_pending_chain {
+                std::mem::swap(&mut self.chain, &mut self.pending_chain);
+                self.has_pending_chain = false;
             }
             self.chain.reset_states();
             self.crossfade_remaining = 0;
@@ -261,15 +286,12 @@ impl AudioCore {
             self.chain
                 .process_frame_inplace(&mut self.frame_main[..channels]);
 
-            if self.pending_chain.is_some() && self.crossfade_total > 0 {
+            if self.has_pending_chain && self.crossfade_total > 0 {
                 for ch in 0..channels {
                     self.frame_pending[ch] = self.frame_in[ch];
                 }
-                let pending = self
-                    .pending_chain
-                    .as_mut()
-                    .expect("pending_chain just checked is_some");
-                pending.process_frame_inplace(&mut self.frame_pending[..channels]);
+                self.pending_chain
+                    .process_frame_inplace(&mut self.frame_pending[..channels]);
                 let t = 1.0 - (self.crossfade_remaining as f32 / self.crossfade_total as f32);
                 let inv_t = 1.0 - t;
                 for ch in 0..channels {
@@ -277,10 +299,8 @@ impl AudioCore {
                 }
                 self.crossfade_remaining = self.crossfade_remaining.saturating_sub(1);
                 if self.crossfade_remaining == 0 {
-                    self.chain = self
-                        .pending_chain
-                        .take()
-                        .expect("pending_chain just checked is_some");
+                    std::mem::swap(&mut self.chain, &mut self.pending_chain);
+                    self.has_pending_chain = false;
                     self.crossfade_total = 0;
                 }
             }
@@ -350,6 +370,7 @@ impl LiveStream {
             adaptive_context.as_ref(),
         );
         let chain = MasteringChain::new(sample_rate, channels, &settings);
+        let pending_chain = MasteringChain::new(sample_rate, channels, &settings);
 
         let (coeffs_tx, coeffs_rx) = mpsc::channel();
         let core = AudioCore {
@@ -357,7 +378,8 @@ impl LiveStream {
             channels,
             total_frames,
             chain,
-            pending_chain: None,
+            pending_chain,
+            has_pending_chain: false,
             crossfade_remaining: 0,
             crossfade_total: 0,
             coeffs_rx,
@@ -933,6 +955,29 @@ mod tests {
             let mut out = vec![0.0f32; frames as usize * 2];
             let written = yes_master_native_live_process(handle, out.as_mut_ptr(), frames);
             assert_eq!(written, frames);
+            yes_master_native_live_destroy(handle);
+        }
+    }
+
+    #[test]
+    fn set_params_reuses_preallocated_pending_chain() {
+        let handle = make_stream(4_000, 2);
+        assert!(!handle.is_null());
+        unsafe {
+            let pending_states_ptr = {
+                let core = &mut *(*handle).core.get();
+                core.pending_chain.states.as_ptr()
+            };
+
+            let warm = CString::new("warm").unwrap();
+            yes_master_native_live_set_params(handle, warm.as_ptr(), 0.9, -9.0);
+            let mut out = vec![0.0f32; 64 * 2];
+            yes_master_native_live_process(handle, out.as_mut_ptr(), 64);
+
+            let core = &mut *(*handle).core.get();
+            assert!(core.has_pending_chain, "first block should arm a crossfade");
+            assert_eq!(core.pending_chain.states.as_ptr(), pending_states_ptr);
+
             yes_master_native_live_destroy(handle);
         }
     }
