@@ -326,8 +326,7 @@ function StandardRightRail({
   seamRefs: RailSeamRefs;
 }) {
   const receipt =
-    tm.lastExportReceipt?.kind === "track" &&
-    tm.lastExportReceipt.trackId === tm.selectedTrackId
+    tm.lastExportReceipt?.trackId === tm.selectedTrackId
       ? tm.lastExportReceipt
       : null;
   const notes = receipt ? standardExportNotes(receipt.checks) : null;

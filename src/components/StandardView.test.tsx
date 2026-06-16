@@ -599,23 +599,6 @@ describe("Standard export receipt", () => {
     await act(async () => root.unmount());
   });
 
-  it("shows no success card for album receipts", async () => {
-    const tm = exportedTm({
-      lastExportReceipt: {
-        trackId: "t1",
-        outputPath: "C:/renders/Album.wav",
-        checks: [],
-        kind: "album",
-        job: { measurements: null },
-      },
-    } as unknown as Partial<TM>);
-    const { container, root } = await render(
-      <StandardView tm={tm} onEnterAdvanced={() => {}} />,
-    );
-    expect(container.querySelector(".std-export-done")).toBeNull();
-    await act(async () => root.unmount());
-  });
-
   it("ignores receipts that belong to a different selected track", async () => {
     const tm = exportedTm({
       lastExportReceipt: {

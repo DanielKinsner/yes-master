@@ -168,7 +168,7 @@ export interface ExportReceipt {
   outputPath: string;
   checks: QualityCheck[];
   job: RenderJob;
-  kind: "track" | "album";
+  kind: "track";
 }
 
 export interface ProjectFeedback {

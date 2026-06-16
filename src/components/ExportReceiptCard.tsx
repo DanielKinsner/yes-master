@@ -17,19 +17,17 @@ export function ExportReceiptCard({
       console.error("openOutput failed", err);
     }
   };
-  const isAlbum = receipt.kind === "album";
   const paths = receipt.job.output_paths;
   const measurements = receipt.job.measurements ?? null;
   const quality = exportQualitySummary(receipt.checks);
-  const exportNoun = isAlbum ? "Album export" : "Export";
   // A Critical quality row means the saved file needs attention — don't present
   // it as an unqualified "complete". The file IS written and valid (criticals are
   // advisory format/loudness flags), so "saved" stays accurate while the header
   // matches the "Needs attention" medallion instead of contradicting it. (F4.)
   const headerTitle =
     quality.tone === "attention"
-      ? `${exportNoun} saved — needs attention`
-      : `${exportNoun} complete`;
+      ? "Export saved — needs attention"
+      : "Export complete";
   const journeySteps = ["Analyze", "Master", "Quality", "Saved"];
   return (
     <div className="receipt-backdrop" onClick={onClose}>
@@ -37,7 +35,7 @@ export function ExportReceiptCard({
         <header className="receipt-header">
           <div className="receipt-title-group">
             <span className="receipt-eyebrow">
-              {isAlbum ? "Album master" : "Track master"}
+              Track master
             </span>
             <h2>{headerTitle}</h2>
           </div>
@@ -67,15 +65,14 @@ export function ExportReceiptCard({
             <button
               key={path + i}
               type="button"
-              className={"receipt-path" + (isAlbum && i === 0 ? " primary-path" : "")}
+              className="receipt-path"
               onClick={() => reveal(path)}
               title="Reveal in file manager"
             >
               <span className="receipt-path-name">
-                {isAlbum && i === 0 ? "Continuous album" : fileNameFromPath(path)}
+                {fileNameFromPath(path)}
               </span>
               <span className="receipt-path-full">
-                {isAlbum && i === 0 ? `${fileNameFromPath(path)} · ` : ""}
                 {path}
               </span>
             </button>
