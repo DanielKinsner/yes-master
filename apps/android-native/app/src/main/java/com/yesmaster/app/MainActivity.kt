@@ -349,7 +349,7 @@ private fun DoneScreen(done: UiState.Done, onAgain: () -> Unit, onNew: () -> Uni
         }
         Spacer(Modifier.weight(1f))
         Button(
-            onClick = { context.startActivity(Intent.createChooser(DoneIntents.share(done.savedUri), "Share Master")) },
+            onClick = { context.tryStartActivity(Intent.createChooser(DoneIntents.share(done.savedUri), "Share Master")) },
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Share Master")

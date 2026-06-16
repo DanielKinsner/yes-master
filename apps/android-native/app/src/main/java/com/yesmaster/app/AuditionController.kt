@@ -8,10 +8,13 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,6 +48,46 @@ internal object AuditionMath {
     /** Playback tick: reaching the end auto-pauses so play means "again". */
     fun reachedEnd(positionSeconds: Double, durationSeconds: Double): Boolean =
         durationSeconds > 0 && positionSeconds >= durationSeconds - 0.02
+}
+
+/**
+ * Coroutine helper for the one ownership hazard in [AuditionController.attach]:
+ * the background decode + handle creation. Split out (like [AuditionMath]) so
+ * the JVM test lane can pin the cancellation behavior without loading the
+ * native library or an Android [Context].
+ */
+internal object AuditionAttach {
+    /**
+     * Run [create] (the whole-file decode + native engine alloc) on
+     * [ioDispatcher] and return its handle for the caller to own — UNLESS this
+     * coroutine was cancelled while the decode was in flight (a different track
+     * was attached). [create] is an uninterruptible JNI call, so cancellation
+     * cannot stop it: it always completes and yields a live handle. If we are
+     * no longer the active attach, that orphaned handle is freed via [destroy]
+     * here so it can never leak.
+     */
+    suspend fun createOrRelease(
+        ioDispatcher: CoroutineDispatcher,
+        create: () -> Long,
+        destroy: (Long) -> Unit,
+    ): Long {
+        // The handle is captured into an outer var INSIDE the block, not via
+        // `val h = withContext { create() }`: if we were cancelled during the
+        // decode, `withContext` throws CancellationException as it resumes and
+        // discards the block's return value, so the handle would never reach
+        // an assignment outside the block — and leak. Held here, the `finally`
+        // can always free it if ownership is never transferred to the caller.
+        var created = 0L
+        try {
+            withContext(ioDispatcher) { created = create() }
+            currentCoroutineContext().ensureActive()
+            val handle = created
+            created = 0L // ownership transferred to the caller
+            return handle
+        } finally {
+            if (created != 0L) destroy(created)
+        }
+    }
 }
 
 data class AuditionUi(
@@ -150,9 +193,11 @@ class AuditionController(
         sourcePath = path
         _state.update { AuditionUi(status = AuditionUi.Status.Preparing) }
         prepareJob = scope.launch {
-            val created = withContext(Dispatchers.IO) {
-                AuditionBridge.createNative(path, preset, intensity, lufsTarget)
-            }
+            val created = AuditionAttach.createOrRelease(
+                ioDispatcher = Dispatchers.IO,
+                create = { AuditionBridge.createNative(path, preset, intensity, lufsTarget) },
+                destroy = { AuditionBridge.destroyNative(it) },
+            )
             if (created == 0L) {
                 _state.update {
                     it.copy(
