@@ -124,7 +124,13 @@ pub mod inner {
         let Ok(out_dir) = CString::new(output_dir) else {
             return json_error("output dir contains an interior NUL byte");
         };
-        let preset_c = preset.and_then(|p| CString::new(p).ok());
+        let preset_c = match preset {
+            Some(p) => match CString::new(p) {
+                Ok(preset) => Some(preset),
+                Err(_) => return json_error("preset contains an interior NUL byte"),
+            },
+            None => None,
+        };
         let preset_ptr = preset_c.as_ref().map_or(std::ptr::null(), |p| p.as_ptr());
         // SAFETY: all pointers are valid NUL-terminated strings (or null,
         // which the facade treats as "default preset") for the call.
@@ -210,20 +216,25 @@ mod jni_shims {
         // A null Java string arrives as a null JString; treat it as "no
         // preset" (the facade defaults to balanced/Universal).
         let preset = if preset.is_null() {
-            None
+            Ok(None)
         } else {
             from_jstring(&mut env, &preset)
+                .map(Some)
+                .ok_or_else(|| r#"{"error":"invalid preset string"}"#.to_string())
         };
         let result = catch_panic(
             || r#"{"error":"panic during render"}"#.to_string(),
-            || match (source, out_dir) {
-                (Some(source), Some(out_dir)) => inner::render_master_with_options_json(
-                    &source,
-                    &out_dir,
-                    preset.as_deref(),
-                    intensity,
-                    lufs_target,
-                ),
+            || match (source, out_dir, preset) {
+                (Some(source), Some(out_dir), Ok(preset)) => {
+                    inner::render_master_with_options_json(
+                        &source,
+                        &out_dir,
+                        preset.as_deref(),
+                        intensity,
+                        lufs_target,
+                    )
+                }
+                (_, _, Err(error)) => error,
                 _ => r#"{"error":"invalid path strings"}"#.to_string(),
             },
         );
@@ -387,6 +398,29 @@ mod tests {
                 "missing {key}: {payload}"
             );
         }
+    }
+
+    #[test]
+    fn render_rejects_nul_poisoned_preset() {
+        let tmp = tempfile::tempdir().unwrap();
+        let wav = tmp.path().join("source.wav");
+        let out = tmp.path().join("rendered");
+        write_sine_wav(&wav);
+
+        let payload: serde_json::Value =
+            serde_json::from_str(&inner::render_master_with_options_json(
+                &wav.to_string_lossy(),
+                &out.to_string_lossy(),
+                Some("warm\0balanced"),
+                0.5,
+                -11.0,
+            ))
+            .unwrap();
+
+        assert_eq!(
+            payload["error"], "preset contains an interior NUL byte",
+            "render should reject an invalid preset instead of defaulting: {payload}"
+        );
     }
 
     /// Third assert-side of src/standard-mapping-parity.json (desktop TS and
