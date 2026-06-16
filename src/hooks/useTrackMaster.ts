@@ -1272,7 +1272,20 @@ export function useTrackMaster() {
   const selectTrack = useCallback(
     (id: TrackId) => {
       setSelectedTrackId(id);
-      setTransport((t) => ({ ...t, isPlaying: false, currentTimeSec: 0, loop: false }));
+      selectedTrackIdRef.current = id;
+      setTransport((t) => ({
+        ...t,
+        isPlaying: false,
+        currentTimeSec: 0,
+        loop: false,
+        peakDbfs: -120,
+        peakLeftDbfs: -120,
+        peakRightDbfs: -120,
+        compressionGr: { low: -120, mid: -120, high: -120 },
+        lufsMomentary: -120,
+        lufsIntegrated: -120,
+        spectrumDb: [],
+      }));
       if (loadedTrackId && loadedTrackId !== id) {
         api.stopPlayback().catch(() => {
           /* swallow — best-effort */

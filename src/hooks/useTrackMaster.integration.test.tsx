@@ -656,6 +656,151 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("selectTrack resets stale playing and meter state from the prior track", async () => {
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const first = makeTrack("select-reset-first", "C:/audio/select-first.wav");
+    const second = makeTrack("select-reset-second", "C:/audio/select-second.wav");
+    mocks.api.importTracks.mockResolvedValue([first, second]);
+    mocks.api.analyzeTracks.mockResolvedValue([
+      makeAnalysis(first.id),
+      makeAnalysis(second.id),
+    ]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([first.path, second.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(first.id);
+      expect(playbackHandler).toBeDefined();
+    });
+
+    await act(async () => {
+      playbackHandler?.({
+        track_id: first.id,
+        position_sec: 5,
+        is_playing: true,
+        is_loaded: true,
+        peak_dbfs: -5,
+        gr_low_db: -3,
+        gr_mid_db: -4,
+        gr_high_db: -2,
+        lufs_momentary: -10,
+        lufs_integrated: -11,
+        spectrum_db: [-24, -20, -16],
+      });
+    });
+    await waitFor(() => {
+      expect(harness.current().transport.peakDbfs).toBe(-5);
+    });
+
+    await act(async () => {
+      harness.current().selectTrack(second.id);
+    });
+
+    expect(harness.current().selectedTrackId).toBe(second.id);
+    const transport = harness.current().transport;
+    expect(transport.isPlaying).toBe(false);
+    expect(transport.currentTimeSec).toBe(0);
+    expect(transport.loop).toBe(false);
+    expect(transport.peakDbfs).toBe(-120);
+    expect(transport.peakLeftDbfs).toBe(-120);
+    expect(transport.peakRightDbfs).toBe(-120);
+    expect(transport.compressionGr).toEqual({ low: -120, mid: -120, high: -120 });
+    expect(transport.lufsMomentary).toBe(-120);
+    expect(transport.lufsIntegrated).toBe(-120);
+    expect(transport.spectrumDb).toEqual([]);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("selectTrack rejects stale old-track ticks before React commits selection", async () => {
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const first = makeTrack("select-race-first", "C:/audio/race-first.wav");
+    const second = makeTrack("select-race-second", "C:/audio/race-second.wav");
+    mocks.api.importTracks.mockResolvedValue([first, second]);
+    mocks.api.analyzeTracks.mockResolvedValue([
+      makeAnalysis(first.id),
+      makeAnalysis(second.id),
+    ]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([first.path, second.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(first.id);
+      expect(playbackHandler).toBeDefined();
+    });
+
+    await act(async () => {
+      harness.current().selectTrack(second.id);
+      playbackHandler?.({
+        track_id: first.id,
+        position_sec: 9,
+        is_playing: true,
+        is_loaded: true,
+        peak_dbfs: -4,
+        gr_low_db: -5,
+        gr_mid_db: -6,
+        gr_high_db: -3,
+        lufs_momentary: -9,
+        lufs_integrated: -10,
+        spectrum_db: [-12, -10, -8],
+      });
+    });
+
+    expect(harness.current().selectedTrackId).toBe(second.id);
+    const transport = harness.current().transport;
+    expect(transport.isPlaying).toBe(false);
+    expect(transport.currentTimeSec).toBe(0);
+    expect(transport.peakDbfs).toBe(-120);
+    expect(transport.lufsIntegrated).toBe(-120);
+    expect(transport.spectrumDb).toEqual([]);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("surfaces unsupported drop feedback when every dropped file is rejected", async () => {
     let dragDropHandler:
       | ((event: { payload: { type: "drop"; paths: string[] } }) => void)
