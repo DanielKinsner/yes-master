@@ -6,6 +6,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val nativeAbis = listOf("arm64-v8a")
+
 android {
     namespace = "com.yesmaster.app"
     compileSdk = 35
@@ -23,7 +25,7 @@ android {
         ndk {
             // Sideload MVP targets real hardware; emulator x86_64 can be
             // added to this list when wanted.
-            abiFilters += listOf("arm64-v8a")
+            abiFilters += nativeAbis
         }
     }
 
@@ -120,13 +122,15 @@ val cargoNdk = tasks.register<Exec>("cargoNdk") {
     inputs.property("cargo", cargoExe)
 
     commandLine(
-        cargoExe, "ndk",
-        "-t", "arm64-v8a",
-        // Must match minSdk: cargo-ndk defaults to API 21, whose sysroot
-        // predates libaaudio (API 26+) — the audition link fails without it.
-        "--platform", "29",
-        "-o", file("src/main/jniLibs").absolutePath,
-        "build", "--release",
+        listOf(cargoExe, "ndk") +
+            nativeAbis.flatMap { listOf("-t", it) } +
+            listOf(
+                // Must match minSdk: cargo-ndk defaults to API 21, whose sysroot
+                // predates libaaudio (API 26+) — the audition link fails without it.
+                "--platform", "29",
+                "-o", file("src/main/jniLibs").absolutePath,
+                "build", "--release",
+            )
     )
 }
 
