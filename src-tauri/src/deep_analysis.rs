@@ -358,6 +358,7 @@ pub fn scan_windows(samples: &[f32], sample_rate: u32, channels: usize) -> Vec<W
     let detail_fft = planner.plan_fft_forward(detail_fft_size);
 
     let mut out = Vec::new();
+    let mut mono_scratch = Vec::with_capacity(SHORT_WINDOW);
     let mut start = 0usize;
     while start + SHORT_WINDOW <= total_frames {
         out.push(measure_window(
@@ -370,6 +371,7 @@ pub fn scan_windows(samples: &[f32], sample_rate: u32, channels: usize) -> Vec<W
             &pre,
             &rlb,
             &detail_fft,
+            &mut mono_scratch,
         ));
         start += hop;
     }
@@ -403,8 +405,10 @@ fn measure_window(
     pre: &BiquadCoeffs,
     rlb: &BiquadCoeffs,
     detail_fft: &Arc<dyn Fft<f32>>,
+    mono_scratch: &mut Vec<f32>,
 ) -> WindowMetrics {
     // mono sum + L/R for this window
+    mono_scratch.clear();
     let mut peak = 0.0_f32;
     let mut sum_sq = 0.0_f64;
     let mut sum_l = 0.0_f64;
@@ -418,6 +422,7 @@ fn measure_window(
         sum_sq += (mono as f64) * (mono as f64);
         sum_l += l as f64;
         sum_r += r as f64;
+        mono_scratch.push(mono);
     }
     let rms = (sum_sq / window as f64).sqrt() as f32;
     let crest = if rms > 1e-9 { peak / rms } else { 1.0 };
@@ -435,24 +440,11 @@ fn measure_window(
         f32::NEG_INFINITY
     };
 
-    // 3-band tonal on the window (reuse the crate helper on a mono slice copy).
-    // TODO(phase-b/perf): allocates a mono copy per window just to reuse
-    // compute_spectral_balance; consider a borrowed/iterator view if window
-    // counts grow.
-    let mono_slice: Vec<f32> = (0..window)
-        .map(|f| {
-            let base = (start + f) * channels;
-            if channels > 1 {
-                0.5 * (samples[base] + samples[base + 1])
-            } else {
-                samples[base]
-            }
-        })
-        .collect();
+    let mono_slice = mono_scratch.as_slice();
     // The 3-band read is retained for Phase-A diagnostics and historical tests.
     // Phase-B confidence consumes the sample-rate-aware 31-band detail below.
-    let three = crate::analysis::compute_spectral_balance(&mono_slice, 1);
-    let detail = window_detail_features(&mono_slice, sample_rate, detail_fft);
+    let three = crate::analysis::compute_spectral_balance(mono_slice, 1);
+    let detail = window_detail_features(mono_slice, sample_rate, detail_fft);
 
     // stereo: width = side/(mid+side); correlation via two-pass.
     let (width, corr) = if channels > 1 {
