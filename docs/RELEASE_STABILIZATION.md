@@ -153,6 +153,30 @@ Current behavior:
 Latest aggregate evidence is recorded in
 `docs/RELEASE_EVIDENCE_2026-05-28.md`.
 
+### Wave 9 Mechanical Reconciliation
+
+Status: implemented on 2026-06-16; taste/listening calibration remains Wave 10.
+
+Current behavior:
+
+- Android A4 catch-up is complete: fail-fast import support checks, import-cache
+  pruning, Ready-state process-death restore, Done-screen share/play actions,
+  monochrome launcher icon, and bridge/build tidiness riders.
+- iPhone live audition measures landing at the rendered sample rate and no
+  longer allocates a replacement mastering chain inside the render callback.
+- Album export reports rendered delivery format, per-track source/rendered
+  sample rates, and frontend upsample/requested-vs-rendered receipt copy.
+- `stereo_width` is retained as an active analysis/planning metric; new taste
+  wiring waits for Wave 10.
+- Stale Vera experiment branches were removed from `origin`.
+
+Verification coverage:
+
+- Android JVM tests, Android Rust host tests, and the Gradle native-alignment
+  task.
+- iPhone Rust bridge check/tests.
+- Focused Rust album sample-rate tests and AlbumPanel frontend test.
+
 ## Active Gates
 
 ### Tier-1 Adaptive Voicing Listening

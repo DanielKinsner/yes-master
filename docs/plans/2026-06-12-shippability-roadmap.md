@@ -672,6 +672,10 @@ test where feasible. RS-09 (limiter flush) is NOT here — owner decision.
 
 ## Wave 9 — Unattended-feature reconciliation (audit Part 4.2)
 
+Status: mechanical slices S9.1-S9.7 executed on 2026-06-16; remaining taste,
+listening, calibration, mobile-background, and signing work is Wave 10 /
+owner-decision work.
+
 The handoff comb surfaced work that was promised, half-built, or queued and
 then dropped without a recorded decision. Wave 9 exists to close the mechanical
 loops by building, by recording an explicit deferral, or by deleting dead seams.
