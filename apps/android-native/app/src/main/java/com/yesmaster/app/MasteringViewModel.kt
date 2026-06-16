@@ -59,8 +59,27 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
         audition.release()
         _state.value = UiState.Working("Importing…")
         viewModelScope.launch {
+            val displayName = try {
+                withContext(Dispatchers.IO) { imports.displayName(uri) }
+            } catch (e: Exception) {
+                _state.value = UiState.Error(e.message ?: "Could not read the selected file name.")
+                return@launch
+            }
+            val extension = ImportPolicy.extensionToCheck(displayName)
+            if (extension != null) {
+                val supported = try {
+                    NativeBridge.supportsImportExtension(extension)
+                } catch (e: LinkageError) {
+                    _state.value = UiState.Error(nativeBridgeUnavailableMessage(e))
+                    return@launch
+                }
+                if (!supported) {
+                    _state.value = UiState.Error(ImportPolicy.unsupportedMessage(extension))
+                    return@launch
+                }
+            }
             val imported = try {
-                withContext(Dispatchers.IO) { imports.copyToCache(uri) }
+                withContext(Dispatchers.IO) { imports.copyToCache(uri, displayName) }
             } catch (e: Exception) {
                 _state.value = UiState.Error(e.message ?: "Import failed")
                 return@launch
@@ -82,7 +101,10 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
             val analysis = withContext(Dispatchers.IO) {
                 Wire.analysis(NativeBridge.analyzeFileJson(sourcePath))
             }
-            analysis.error?.let { error(it) }
+            analysis.error?.let {
+                _state.value = UiState.Error(message = it)
+                return
+            }
             val ready = UiState.Ready(
                 displayName = displayName,
                 sourcePath = sourcePath,
@@ -90,6 +112,12 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
             )
             _state.value = ready
             armAudition(ready)
+        } catch (e: LinkageError) {
+            _state.value = UiState.Error(
+                message = nativeBridgeUnavailableMessage(e),
+                retrySourcePath = sourcePath,
+                retryDisplayName = displayName,
+            )
         } catch (e: Exception) {
             _state.value = UiState.Error(
                 message = e.message ?: "Analysis failed",
@@ -161,8 +189,10 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
                     measurements = job.measurements,
                     previous = ready,
                 )
+            } catch (e: LinkageError) {
+                _state.value = UiState.Error(nativeBridgeUnavailableMessage(e), previous = ready)
             } catch (e: Exception) {
-                _state.value = UiState.Error(e.message ?: "Mastering failed", previous = ready)
+                _state.value = UiState.Error(masteringFailureMessage(e), previous = ready)
             }
         }
     }
@@ -188,5 +218,14 @@ class MasteringViewModel(application: Application) : AndroidViewModel(applicatio
 
     override fun onCleared() {
         audition.release()
+    }
+
+    private fun nativeBridgeUnavailableMessage(error: LinkageError): String =
+        "Native audio bridge could not load. Reinstall YES Master and try again. (${error.javaClass.simpleName})"
+
+    private fun masteringFailureMessage(error: Exception): String = when (error) {
+        is SecurityException -> "Android blocked access to the music library. Check storage permissions and try again."
+        is IllegalArgumentException -> "Android could not create that music-library entry. Try a shorter track name."
+        else -> error.message ?: "Mastering failed"
     }
 }

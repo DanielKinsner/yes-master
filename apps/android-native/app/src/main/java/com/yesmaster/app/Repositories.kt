@@ -17,8 +17,9 @@ class ImportRepository(private val context: Context) {
 
     data class Imported(val file: File, val displayName: String)
 
-    fun copyToCache(uri: Uri): Imported {
-        val displayName = queryDisplayName(uri) ?: "imported-audio"
+    fun displayName(uri: Uri): String = queryDisplayName(uri) ?: "imported-audio"
+
+    fun copyToCache(uri: Uri, displayName: String = displayName(uri)): Imported {
         val safeName = displayName.replace(Regex("[^A-Za-z0-9._-]"), "-")
         val dir = File(context.cacheDir, "imports").apply { mkdirs() }
         val target = File(dir, "${System.currentTimeMillis()}-$safeName")
@@ -33,6 +34,20 @@ class ImportRepository(private val context: Context) {
             val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
             if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
         }
+}
+
+object ImportPolicy {
+    val supportedImportExtensions = listOf("wav", "mp3", "m4a", "aac", "flac", "ogg")
+
+    fun extensionToCheck(displayName: String): String? {
+        val extension = displayName.substringAfterLast('.', missingDelimiterValue = "")
+            .trim()
+            .lowercase()
+        return extension.ifEmpty { null }
+    }
+
+    fun unsupportedMessage(extension: String): String =
+        ".${extension.lowercase()} is not supported yet. Use ${supportedImportExtensions.joinToString(", ")}."
 }
 
 /**
