@@ -312,6 +312,16 @@ async function click(el: HTMLElement): Promise<void> {
   });
 }
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 beforeEach(() => {
   installTestLocalStorage();
   localStorage.clear();
@@ -345,7 +355,8 @@ describe("App Standard<->Advanced view transitions", () => {
     // settles AFTER first paint. The desk gate must NOT paint during that null
     // frame (null === "advanced" is false), so the first committed frame shows
     // chrome only — no Sidebar — then resolves to Standard.
-    mocks.api.loadRecentSession.mockResolvedValue(null);
+    const sessionProbe = deferred<ProjectState | null>();
+    mocks.api.loadRecentSession.mockReturnValue(sessionProbe.promise);
 
     const container = document.createElement("div");
     document.body.appendChild(container);
@@ -361,7 +372,11 @@ describe("App Standard<->Advanced view transitions", () => {
     // First frame: view is still null, so the desk must be absent.
     expect(container.querySelector("aside.sidebar")).toBeNull();
 
-    // Now let the probe settle and confirm we resolve to Standard.
+    // Now let the probe settle inside act and confirm we resolve to Standard.
+    await act(async () => {
+      sessionProbe.resolve(null);
+      await sessionProbe.promise;
+    });
     await waitFor(() => {
       expect(affordanceText(container)).toBe("Advanced");
     });
