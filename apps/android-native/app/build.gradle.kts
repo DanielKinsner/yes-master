@@ -7,6 +7,7 @@ plugins {
 }
 
 val nativeAbis = listOf("arm64-v8a")
+val pinnedNdkVersion = "27.2.12479018"
 
 android {
     namespace = "com.yesmaster.app"
@@ -14,7 +15,7 @@ android {
     // Pin to the provisioned NDK so AGP's strip step finds llvm-strip
     // (unset, AGP wants its own default NDK and packages the .so
     // unstripped — ~5 MB of dead weight in the APK).
-    ndkVersion = "27.2.12479018"
+    ndkVersion = pinnedNdkVersion
 
     defaultConfig {
         applicationId = "com.yesmaster.app"
@@ -105,11 +106,15 @@ val cargoNdk = tasks.register<Exec>("cargoNdk") {
                 localProperties.inputStream().use { properties.load(it) }
             }
             val sdkDir = properties.getProperty("sdk.dir") ?: System.getenv("ANDROID_HOME")
-            sdkDir
-                ?.let { File(it, "ndk").listFiles() }
-                ?.filter { it.isDirectory }
-                ?.maxByOrNull { it.name }
+            val pinnedNdk = sdkDir?.let { File(it, "ndk/$pinnedNdkVersion") }
+            pinnedNdk
+                ?.takeIf { it.isDirectory }
                 ?.absolutePath
+                ?: sdkDir
+                    ?.let { File(it, "ndk").listFiles() }
+                    ?.filter { it.isDirectory }
+                    ?.maxByOrNull { it.name }
+                    ?.absolutePath
         }
     if (ndkDir != null) {
         environment("ANDROID_NDK_HOME", ndkDir)
