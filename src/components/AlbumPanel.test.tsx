@@ -82,4 +82,35 @@ describe("AlbumPanel delivery format", () => {
     });
     expect(props.onAlbumBitDepth).toHaveBeenCalledWith(null);
   });
+
+  it("shows the rendered delivery format and upsample advisory", async () => {
+    const props = {
+      ...baseProps(),
+      albumExportReport: {
+        album_wav_path: "C:/Masters/album_continuous.wav",
+        manifest_path: "C:/Masters/manifest.json",
+        requested_sample_rate: null,
+        rendered_sample_rate: 48_000,
+        source_sample_rates: [44_100, 48_000],
+        bit_depth: 24,
+        tracks: [
+          {
+            track_id: "track-1",
+            position: 1,
+            output_path: "C:/Masters/01-track.wav",
+            measured_lufs: -14,
+            source_sample_rate: 44_100,
+            rendered_sample_rate: 48_000,
+          },
+        ],
+      },
+    };
+
+    const { container } = await renderNode(<AlbumPanel {...props} />);
+
+    const receipt = container.querySelector(".album-export-receipt");
+    expect(receipt?.textContent).toContain("rendered 48 kHz / 24-bit");
+    expect(receipt?.textContent).toContain("requested Auto");
+    expect(receipt?.textContent).toContain("Upsampled source 44.1 kHz");
+  });
 });

@@ -37,11 +37,17 @@ export interface AlbumTrackRenderRecord {
   position: number;
   output_path: string;
   measured_lufs: number;
+  source_sample_rate: number;
+  rendered_sample_rate: number;
 }
 
 export interface AlbumRenderReport {
   album_wav_path: string;
   manifest_path: string;
+  requested_sample_rate: number | null;
+  rendered_sample_rate: number;
+  source_sample_rates: number[];
+  bit_depth: number;
   tracks: AlbumTrackRenderRecord[];
 }
 

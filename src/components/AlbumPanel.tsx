@@ -13,6 +13,7 @@
 
 import type { AlbumArcKind, ImportedTrack } from "../bindings";
 import { ALBUM_ARC_DISPLAY } from "../bindings";
+import { formatBitDepth, formatSampleRate } from "./ExportReceiptCard";
 import type { AlbumRenderReport } from "../lib/api";
 import { formatDuration } from "../lib/time-format";
 
@@ -59,6 +60,22 @@ export function AlbumPanel({
     (acc, t) => acc + (t.duration_seconds ?? 0),
     0,
   );
+  const renderedRate =
+    albumExportReport && formatSampleRate(albumExportReport.rendered_sample_rate);
+  const requestedRate =
+    albumExportReport?.requested_sample_rate == null
+      ? "Auto"
+      : formatSampleRate(albumExportReport.requested_sample_rate);
+  const sourceRates = Array.from(
+    new Set(albumExportReport?.source_sample_rates ?? []),
+  ).sort((a, b) => a - b);
+  const upsampledRates =
+    albumExportReport == null
+      ? []
+      : sourceRates.filter((rate) => rate < albumExportReport.rendered_sample_rate);
+  const requestedMismatch =
+    albumExportReport?.requested_sample_rate != null &&
+    albumExportReport.requested_sample_rate !== albumExportReport.rendered_sample_rate;
   return (
     <section className="album-panel">
       <header className="album-panel-head">
@@ -168,9 +185,17 @@ export function AlbumPanel({
             {albumExportReport.album_wav_path}
           </code>
           <span className="album-export-receipt-meta">
-            {albumExportReport.tracks.length} tracks · manifest:{" "}
+            {albumExportReport.tracks.length} tracks · rendered {renderedRate} /{" "}
+            {formatBitDepth(albumExportReport.bit_depth)} · requested{" "}
+            {requestedRate}
+            {requestedMismatch && `, got ${renderedRate}`} · manifest:{" "}
             {albumExportReport.manifest_path}
           </span>
+          {upsampledRates.length > 0 && (
+            <span className="album-export-receipt-advisory">
+              Upsampled source {upsampledRates.map(formatSampleRate).join(", ")}
+            </span>
+          )}
         </div>
       )}
     </section>
