@@ -18,27 +18,11 @@ pub async fn save_user_preset(
     settings: MasteringSettings,
     app: tauri::AppHandle,
 ) -> CommandResult<UserPreset> {
-    let trimmed = name.trim().to_string();
-    if trimmed.is_empty() {
-        return Err(CommandError::Other(
-            "preset name cannot be empty".to_string(),
-        ));
-    }
     let _guard = PRESETS_LOCK
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let path = presets_path(&app)?;
-    let mut presets = read_presets(&path).unwrap_or_default();
-    let preset = UserPreset {
-        id: uuid::Uuid::new_v4().to_string(),
-        name: trimmed,
-        kind,
-        settings,
-        created_at_iso: now_iso(),
-    };
-    presets.push(preset.clone());
-    write_presets(&path, &presets)?;
-    Ok(preset)
+    save_user_preset_at_path(&path, &name, kind, settings)
 }
 
 #[tauri::command]
@@ -49,21 +33,11 @@ pub async fn list_user_presets(app: tauri::AppHandle) -> CommandResult<Vec<UserP
 
 #[tauri::command]
 pub async fn delete_user_preset(id: String, app: tauri::AppHandle) -> CommandResult<()> {
-    if id.is_empty() {
-        return Err(CommandError::Other("preset id cannot be empty".to_string()));
-    }
     let _guard = PRESETS_LOCK
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let path = presets_path(&app)?;
-    let mut presets = read_presets(&path).unwrap_or_default();
-    let before = presets.len();
-    presets.retain(|p| p.id != id);
-    if presets.len() == before {
-        // Idempotent: deleting a missing preset is a no-op success.
-        return Ok(());
-    }
-    write_presets(&path, &presets)
+    delete_user_preset_at_path(&path, &id)
 }
 
 fn presets_path(app: &tauri::AppHandle) -> CommandResult<PathBuf> {
@@ -73,6 +47,45 @@ fn presets_path(app: &tauri::AppHandle) -> CommandResult<PathBuf> {
         .map_err(|e| CommandError::Other(format!("app_data_dir: {e}")))?;
     std::fs::create_dir_all(&app_data).map_err(|e| CommandError::Io(e.to_string()))?;
     Ok(app_data.join(PRESETS_FILENAME))
+}
+
+pub fn save_user_preset_at_path(
+    path: &Path,
+    name: &str,
+    kind: PresetKind,
+    settings: MasteringSettings,
+) -> CommandResult<UserPreset> {
+    let trimmed = name.trim().to_string();
+    if trimmed.is_empty() {
+        return Err(CommandError::Other(
+            "preset name cannot be empty".to_string(),
+        ));
+    }
+    let mut presets = read_presets(path)?;
+    let preset = UserPreset {
+        id: uuid::Uuid::new_v4().to_string(),
+        name: trimmed,
+        kind,
+        settings,
+        created_at_iso: now_iso(),
+    };
+    presets.push(preset.clone());
+    write_presets(path, &presets)?;
+    Ok(preset)
+}
+
+pub fn delete_user_preset_at_path(path: &Path, id: &str) -> CommandResult<()> {
+    if id.is_empty() {
+        return Err(CommandError::Other("preset id cannot be empty".to_string()));
+    }
+    let mut presets = read_presets(path)?;
+    let before = presets.len();
+    presets.retain(|p| p.id != id);
+    if presets.len() == before {
+        // Idempotent: deleting a missing preset is a no-op success.
+        return Ok(());
+    }
+    write_presets(path, &presets)
 }
 
 pub fn read_presets(path: &Path) -> CommandResult<Vec<UserPreset>> {

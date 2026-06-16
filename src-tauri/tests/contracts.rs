@@ -1636,6 +1636,49 @@ fn user_presets_save_list_delete_roundtrip() {
 }
 
 #[test]
+fn user_presets_save_refuses_to_overwrite_unreadable_file() {
+    use yes_master_lib::settings;
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let path = tmp.path().join("user_presets.json");
+    let original = b"{not valid preset json";
+    std::fs::write(&path, original).expect("write corrupt presets");
+
+    let result = settings::save_user_preset_at_path(
+        &path,
+        "New Preset",
+        PresetKind::Track,
+        default_master_settings(),
+    );
+
+    assert!(result.is_err(), "parse failure must refuse preset save");
+    assert_eq!(
+        std::fs::read(&path).expect("read corrupt presets"),
+        original,
+        "unreadable preset file must remain unchanged"
+    );
+}
+
+#[test]
+fn user_presets_delete_refuses_to_ignore_unreadable_file() {
+    use yes_master_lib::settings;
+
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let path = tmp.path().join("user_presets.json");
+    let original = b"{not valid preset json";
+    std::fs::write(&path, original).expect("write corrupt presets");
+
+    let result = settings::delete_user_preset_at_path(&path, "preset-1");
+
+    assert!(result.is_err(), "parse failure must refuse preset delete");
+    assert_eq!(
+        std::fs::read(&path).expect("read corrupt presets"),
+        original,
+        "unreadable preset file must remain unchanged"
+    );
+}
+
+#[test]
 fn session_write_and_read_roundtrips() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let path = tmp.path().join("session.json");
