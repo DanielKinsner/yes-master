@@ -1,8 +1,9 @@
 // UI restyle slice 4b — Visual EQ panel v1.
 //
 // Renders a log-frequency / linear-dB grid with seven draggable EQ nodes
-// (Sub / Low / Low-Mid / Mid / High-Mid / High / Sparkle) pinned to the frequencies the Rust chain
-// actually uses (see `ChainCoeffs::from_settings` in src-tauri/src/dsp.rs:
+// (Sub / Low / Low-Mid / Mid / High-Mid / High / Sparkle) pinned to the
+// frequencies the Rust chain actually uses (see `ChainCoeffs::from_settings`
+// in src-tauri/src/dsp.rs:
 // 80 Hz peak Q=0.8, 200 Hz low shelf, 400 Hz peak Q=0.9, 1500 Hz peak
 // Q=0.8, 3500 Hz peak Q=0.9, 6000 Hz high shelf, 12000 Hz high shelf).
 // Vertical drag changes a band's gain; double-click resets the
@@ -20,8 +21,7 @@
 //   * Warmth + Presence/Air nodes (different units — 0..1 saturation
 //     drive vs dB EQ — would need separate scaling and don't fit the
 //     same plot cleanly).
-//   * Live FFT spectrum fill (requires plumbing audio-thread FFT to
-//     the frontend; v2 work).
+// Live FFT spectrum can render as an underlay when `spectrumDb` is supplied.
 
 import { useCallback, useRef, useState } from "react";
 import type { MasteringSettings } from "../bindings";
