@@ -403,7 +403,6 @@ function StandardRightRail({
           isPlaying={tm.transport.isPlaying}
           lufsMomentary={tm.transport.lufsMomentary}
           lufsIntegrated={tm.transport.lufsIntegrated}
-          targetLufs={effectiveLoudnessTarget(tm.selectedSettings)}
           meterMode="standard"
           landingPending={
             tm.landingPending &&

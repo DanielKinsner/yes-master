@@ -183,7 +183,6 @@ export function MasterOutPanel({
   isPlaying,
   lufsMomentary,
   lufsIntegrated,
-  targetLufs = null,
   landingPending = false,
   meterMode = "advanced",
 }: {
@@ -194,9 +193,6 @@ export function MasterOutPanel({
   isPlaying: boolean;
   lufsMomentary: number;
   lufsIntegrated: number;
-  /// Selected delivery/export target. Standard shows this separately so the
-  /// live short-window readout is not mistaken for the chosen LUFS target.
-  targetLufs?: number | null;
   /// True while Mastered audition plays hotter than the loudness target —
   /// the corrective landing gain is still being measured in the background.
   landingPending?: boolean;
@@ -220,26 +216,22 @@ export function MasterOutPanel({
   const integratedDisplay =
     liveIntegrated !== undefined ? liveIntegrated.toFixed(1) : "—";
   const peakDisplay = livePeak !== undefined ? livePeak.toFixed(1) : "—";
-  const targetDisplay =
-    meterMode === "standard" && targetLufs != null && Number.isFinite(targetLufs)
-      ? `${targetLufs.toFixed(0)} LUFS`
-      : null;
   const readouts =
     meterMode === "standard"
       ? [
           {
-            label: "Live Now",
+            label: "Loudness",
             value: momentaryDisplay,
             unit: "LUFS",
             title:
-              "Short live loudness window. Loud sections can read hotter than the selected target.",
+              "Short live loudness window. This is not the selected target.",
           },
           {
-            label: "Play Avg",
+            label: "Since Play",
             value: integratedDisplay,
             unit: "LUFS",
             title:
-              "Average loudness since playback started. It changes with the section you are hearing; the export target is shown in the header.",
+              "Average loudness since playback started. It changes with the section you are hearing.",
           },
           {
             label: "Peak",
@@ -276,28 +268,15 @@ export function MasterOutPanel({
     <section className={`panel master-out ${isPlaying ? "is-live" : "is-idle"}`}>
       <header className="panel-head">
         <span className="panel-title">MASTER OUT</span>
-        <span className="panel-status-stack">
-          {targetDisplay && (
-            <span
-              className="panel-target-pill"
-              title="Selected export loudness target. Live readouts can differ by section."
-            >
-              TARGET {targetDisplay}
-            </span>
-          )}
-          {isPlaying ? (
-            <span
-              className="panel-live-pill"
-              title="Live stereo peak (L/R) plus loudness readouts, metering playback in real time."
-            >
-              <span className="panel-live-dot" aria-hidden /> LIVE
-            </span>
-          ) : isAnalyzing ? (
-            <span className="panel-hint">analyzing…</span>
-          ) : (
-            <span className="panel-hint">idle</span>
-          )}
-        </span>
+        {isPlaying ? (
+          <span className="panel-live-pill" title="Live stereo peak (L/R) plus loudness readouts, metering playback in real time.">
+            <span className="panel-live-dot" aria-hidden /> LIVE
+          </span>
+        ) : isAnalyzing ? (
+          <span className="panel-hint">analyzing…</span>
+        ) : (
+          <span className="panel-hint">idle</span>
+        )}
       </header>
       <div className="lufs-meter">
         <div className="lufs-bars">

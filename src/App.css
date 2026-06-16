@@ -2739,27 +2739,6 @@ button.primary:disabled {
   text-transform: uppercase;
 }
 
-.panel-status-stack {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
-.panel-target-pill {
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 0.14rem 0.42rem;
-  border-radius: 999px;
-  border: 1px solid rgba(111, 163, 255, 0.35);
-  color: #b9cdf2;
-  background: rgba(42, 107, 242, 0.12);
-}
-
 .panel-live-pill {
   display: inline-flex;
   align-items: center;
@@ -5449,9 +5428,6 @@ button.primary:disabled {
 .std-rail .master-out .panel-head {
   padding: 0.25rem 0 0.1rem;
   border: 0;
-}
-.std-rail .master-out .panel-status-stack {
-  gap: 0.28rem;
 }
 .std-rail .master-out .panel-title {
   font-size: 0.68rem;
