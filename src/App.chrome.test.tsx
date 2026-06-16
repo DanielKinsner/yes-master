@@ -275,6 +275,10 @@ describe("advanced preset tiles", () => {
       expect(text).toContain(name);
     }
     expect(text).not.toContain("in Standard");
+    expect(text).not.toContain("Safe, well-rounded default");
+    expect(text).not.toContain("Vocal/upper-mid definition");
+    expect(text).not.toContain("Saturation, glue, softer top");
+    expect(text).not.toContain("Low-end weight, punch");
     // The four Standard tiles lead the Advanced list in the same order, so
     // Oomph sits ahead of Spatial (the unification ordering decision).
     expect(text.indexOf("Oomph")).toBeGreaterThan(-1);

@@ -139,12 +139,42 @@ describe("MasterOutPanel", () => {
     );
 
     expect(container.textContent).toContain("LIVE");
-    expect(container.textContent).toContain("Momentary");
-    expect(container.textContent).toContain("Since Play");
-    expect(container.textContent).toContain("Live Peak");
+    expect(container.textContent).toContain("Momentary LUFS");
+    expect(container.textContent).toContain("Since-play LUFS");
+    expect(container.textContent).toContain("Live peak dBFS");
     expect(container.textContent).toContain("-9.7");
     expect(container.textContent).toContain("-10.5");
     expect(container.textContent).toContain("-8.5");
+    expect(container.querySelector(".readout")?.getAttribute("title")).toContain(
+      "Short-window live loudness",
+    );
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("uses simpler readout labels in Standard mode", async () => {
+    const { container, root } = await renderNode(
+      <MasterOutPanel
+        isAnalyzing={false}
+        peakDbfs={-8.5}
+        peakLeftDbfs={-8.5}
+        peakRightDbfs={-8.5}
+        isPlaying
+        lufsMomentary={-9.7}
+        lufsIntegrated={-10.5}
+        meterMode="standard"
+      />,
+    );
+
+    expect(container.textContent).toContain("Loudness");
+    expect(container.textContent).toContain("Since Play");
+    expect(container.textContent).toContain("Peak");
+    expect(container.textContent).not.toContain("Momentary LUFS");
+    expect(container.querySelector(".readout")?.getAttribute("title")).toContain(
+      "not the selected target",
+    );
 
     await act(async () => {
       root.unmount();

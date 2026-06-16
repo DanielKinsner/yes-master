@@ -184,6 +184,7 @@ export function MasterOutPanel({
   lufsMomentary,
   lufsIntegrated,
   landingPending = false,
+  meterMode = "advanced",
 }: {
   isAnalyzing: boolean;
   peakDbfs: number;
@@ -195,6 +196,8 @@ export function MasterOutPanel({
   /// True while Mastered audition plays hotter than the loudness target —
   /// the corrective landing gain is still being measured in the background.
   landingPending?: boolean;
+  /// Standard uses plain language; Advanced keeps the exact technical terms.
+  meterMode?: "standard" | "advanced";
 }) {
   // This panel is a live output meter. Source/export analysis lives in
   // QualityCheckPanel and export receipts; mixing those fallback values into
@@ -213,6 +216,53 @@ export function MasterOutPanel({
   const integratedDisplay =
     liveIntegrated !== undefined ? liveIntegrated.toFixed(1) : "—";
   const peakDisplay = livePeak !== undefined ? livePeak.toFixed(1) : "—";
+  const readouts =
+    meterMode === "standard"
+      ? [
+          {
+            label: "Loudness",
+            value: momentaryDisplay,
+            unit: "LUFS",
+            title:
+              "Short live loudness window. This is not the selected target.",
+          },
+          {
+            label: "Since Play",
+            value: integratedDisplay,
+            unit: "LUFS",
+            title:
+              "Average loudness since playback started. It changes with the section you are hearing.",
+          },
+          {
+            label: "Peak",
+            value: peakDisplay,
+            unit: "dBFS",
+            title: "Live digital peak level. Peaks use dBFS, not LUFS.",
+          },
+        ]
+      : [
+          {
+            label: "Momentary LUFS",
+            value: momentaryDisplay,
+            unit: "",
+            title:
+              "Short-window live loudness. This is not the selected delivery target.",
+          },
+          {
+            label: "Since-play LUFS",
+            value: integratedDisplay,
+            unit: "",
+            title:
+              "Integrated loudness over the current playback run, not the full export measurement.",
+          },
+          {
+            label: "Live peak dBFS",
+            value: peakDisplay,
+            unit: "",
+            title:
+              "Live digital peak level. Use export receipts for rendered true-peak checks.",
+          },
+        ];
 
   return (
     <section className={`panel master-out ${isPlaying ? "is-live" : "is-idle"}`}>
@@ -236,9 +286,9 @@ export function MasterOutPanel({
         <PeakScale />
       </div>
       <dl className="master-readouts">
-        <Readout label="Momentary" value={momentaryDisplay} unit="LUFS" />
-        <Readout label="Since Play" value={integratedDisplay} unit="LUFS" />
-        <Readout label="Live Peak" value={peakDisplay} unit="dBFS" />
+        {readouts.map((readout) => (
+          <Readout key={readout.label} {...readout} />
+        ))}
       </dl>
       {landingPending && (
         <p className="landing-note" role="status">
@@ -297,13 +347,15 @@ function Readout({
   label,
   value,
   unit,
+  title,
 }: {
   label: string;
   value: string;
   unit: string;
+  title: string;
 }) {
   return (
-    <div className="readout">
+    <div className="readout" title={title}>
       <dt className="readout-label">{label}</dt>
       <dd className="readout-value">
         <span className="readout-number">{value}</span>

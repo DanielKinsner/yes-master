@@ -1990,13 +1990,6 @@ button.primary:disabled {
   line-height: 1.12;
 }
 
-/* Restructure slice B: blurb hidden entirely on the compact strip;
-   browser title-attribute on the button still surfaces it on hover
-   for users who want the description without burning vertical space. */
-.tile-blurb {
-  display: none;
-}
-
 .tile:hover {
   border-color: var(--border-strong);
   transform: translateY(-1px);

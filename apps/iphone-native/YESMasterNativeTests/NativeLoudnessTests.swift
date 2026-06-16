@@ -29,6 +29,13 @@ final class NativeLoudnessTests: XCTestCase {
         }
     }
 
+    func testStyleLabelsUseCanonicalPresetNames() {
+        XCTAssertEqual(
+            NativeStylePreset.allCases.map(\.rawValue),
+            ["Universal", "Clarity", "Tape", "Oomph"]
+        )
+    }
+
     private struct StandardParityFixture: Decodable {
         let styles: [String: String]
         let loudness: [String: Float]

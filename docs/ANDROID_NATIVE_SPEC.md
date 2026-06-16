@@ -98,7 +98,7 @@ sample_rate / measure_landing / destroy.
   AAudio mature, covers the vast majority of devices — owner can lower
   later if wanted).
 - Flow: SAF import (copy to cache) → analyze (progress UI) → style tiles
-  (Balanced/Bright/Warm/Heavy) + loudness (Low/Medium/High) + intensity →
+  (Universal/Clarity/Tape/Oomph) + loudness (Low/Medium/High) + intensity →
   render master → MediaStore export → receipt (same JSON keys as the
   desktop receipt; wire-key test on the Kotlin decode side).
 - Deliverable: debug APK you can sideload and use end-to-end **without**

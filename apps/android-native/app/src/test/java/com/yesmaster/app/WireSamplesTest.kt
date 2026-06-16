@@ -72,4 +72,12 @@ class WireSamplesTest {
             )
         }
     }
+
+    @Test
+    fun styleLabelsUseCanonicalPresetNames() {
+        assertEquals(
+            listOf("Universal", "Clarity", "Tape", "Oomph"),
+            StandardStyle.entries.map { it.label },
+        )
+    }
 }

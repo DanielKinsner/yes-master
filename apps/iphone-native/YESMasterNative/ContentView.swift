@@ -1,21 +1,12 @@
 import SwiftUI
 
 enum NativeStylePreset: String, CaseIterable, Identifiable {
-    case balanced = "Balanced"
-    case bright = "Bright"
-    case warm = "Warm"
-    case heavy = "Heavy"
+    case balanced = "Universal"
+    case bright = "Clarity"
+    case warm = "Tape"
+    case heavy = "Oomph"
 
     var id: String { rawValue }
-
-    var subtitle: String {
-        switch self {
-        case .balanced: "Clean balance"
-        case .bright: "Air & detail"
-        case .warm: "Glue & body"
-        case .heavy: "Sub & weight"
-        }
-    }
 
     var symbol: String {
         switch self {
@@ -31,7 +22,7 @@ enum NativeStylePreset: String, CaseIterable, Identifiable {
         case .balanced: Color(red: 0.25, green: 0.57, blue: 1.0)   // blue
         case .bright: Color(red: 0.27, green: 0.88, blue: 0.96)    // cyan
         case .warm: Color(red: 1.0, green: 0.72, blue: 0.30)       // amber
-        case .heavy: Color(red: 0.66, green: 0.45, blue: 0.96)     // violet
+        case .heavy: Color(red: 0.97, green: 0.44, blue: 0.44)     // Oomph red
         }
     }
 
@@ -481,18 +472,10 @@ struct ContentView: View {
                                     .foregroundStyle(preset.accent)
                             }
 
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(preset.rawValue)
-                                    .font(.system(size: 13, weight: .heavy))
-                                    .foregroundStyle(.white)
-                                    .lineLimit(1)
-
-                                Text(preset.subtitle)
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(Color(red: 0.60, green: 0.67, blue: 0.80))
-                                    .lineLimit(1)
-                                    .multilineTextAlignment(.leading)
-                            }
+                            Text(preset.rawValue)
+                                .font(.system(size: 13, weight: .heavy))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .frame(height: 58)

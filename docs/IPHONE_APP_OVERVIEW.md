@@ -10,7 +10,7 @@ playback, and export.
 ## What It Can Do
 
 - Import one song from the phone.
-- Let the user choose a mastering style: Balanced, Bright, Warm, or Heavy.
+- Let the user choose a mastering style: Universal, Clarity, Tape, or Oomph.
 - Let the user set preset intensity with a slider.
 - Let the user choose loudness: Low, Medium, or High.
 - Audition the original and mastered versions without losing the playhead.

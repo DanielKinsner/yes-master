@@ -860,6 +860,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
               isPlaying={tm.transport.isPlaying}
               lufsMomentary={tm.transport.lufsMomentary}
               lufsIntegrated={tm.transport.lufsIntegrated}
+              meterMode="advanced"
               landingPending={
                 tm.landingPending &&
                 tm.transport.playbackKind === "master" &&
@@ -1436,7 +1437,6 @@ export function PresetTiles({
             >
               <PresetIcon kind={p.value.kind} className="tile-icon" />
               <span className="tile-label">{p.label}</span>
-              <span className="tile-blurb">{p.blurb}</span>
             </button>
           );
         })}

@@ -34,7 +34,10 @@ Track Master supports:
 - Post-render export receipt/checks.
 - Baseline Settings and contextual Help dialogs.
 - Visible Save/Open Project feedback.
-- A first-run guide in Standard view: action-driven hint chips that walk a
+- Live Master Out meters with plain Standard labels and technical Advanced
+  labels/tooltips: live loudness is not the selected target, since-play LUFS is
+  the current playback run, and peak is dBFS/peak behavior.
+- A first-run guide in Standard view: subtle floating coachmarks that walk a
   new user to the Original→Mastered flip, then a send-off and one Advanced
   pointer. Dismissible, never blocking, persisted under
   `yes-master:first-run-guide`, resettable from Settings ("Show first-run

@@ -196,12 +196,6 @@ private fun ReadyScreen(
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text(candidate.label, style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            candidate.subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (selected) MaterialTheme.colorScheme.onPrimary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
                 }
             }

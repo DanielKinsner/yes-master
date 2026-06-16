@@ -2,7 +2,7 @@
 //
 // Stateful shell around the pure deriveGuideStep machine. Owns the
 // localStorage gate, the "fast user" silent finish, the aha persistence,
-// and the send-off display window. Rendering lives in StandardView.
+// and the send-off display window. Rendering lives in FirstRunOverlay.
 
 import { useEffect, useRef, useState } from "react";
 import {

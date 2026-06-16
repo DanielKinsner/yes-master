@@ -36,7 +36,7 @@ product identity.
 1. Import audio (drag-drop or the hero CTA).
 2. Analyze (automatic, with real progress).
 3. Audition Original vs Mastered at the same playhead.
-4. Pick a Style (Balanced / Bright / Warm / Heavy) and a loudness
+4. Pick a Style (Universal / Clarity / Tape / Oomph) and a loudness
    (Low −14 / Medium −11 / High −9 LUFS); shape with Intensity.
 5. Create Master — fixed 44.1 kHz / 24-bit WAV at −1 dBTP, no blocking
    review (see "Standard view — export ceremony" below).

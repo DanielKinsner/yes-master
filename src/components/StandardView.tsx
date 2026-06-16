@@ -410,6 +410,7 @@ function StandardRightRail({
           isPlaying={tm.transport.isPlaying}
           lufsMomentary={tm.transport.lufsMomentary}
           lufsIntegrated={tm.transport.lufsIntegrated}
+          meterMode="standard"
           landingPending={
             tm.landingPending &&
             tm.transport.playbackKind === "master" &&
