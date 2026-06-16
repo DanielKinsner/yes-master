@@ -26,6 +26,56 @@ fn resolve_album_sample_rate(requested: Option<u32>, source_rates: &[u32]) -> u3
     source_rates.iter().copied().max().unwrap_or(48_000)
 }
 
+/// Resolve the album-wide output channel count. Auto keeps all-mono albums
+/// mono, but mixed mono/stereo albums render stereo so stereo sources are not
+/// downmixed and mono sources can be safely duplicated.
+fn resolve_album_channels(source_channels: &[u16]) -> u16 {
+    source_channels.iter().copied().max().unwrap_or(2).max(1)
+}
+
+fn convert_channel_count(
+    samples: Vec<f32>,
+    source_channels: u16,
+    target_channels: u16,
+) -> CommandResult<Vec<f32>> {
+    let source_channels = source_channels.max(1) as usize;
+    let target_channels = target_channels.max(1) as usize;
+    if source_channels == target_channels {
+        return Ok(samples);
+    }
+    if samples.len() % source_channels != 0 {
+        return Err(CommandError::Other(format!(
+            "sample count {} is not divisible by source channel count {}",
+            samples.len(),
+            source_channels
+        )));
+    }
+
+    let frames = samples.len() / source_channels;
+    let mut converted = Vec::with_capacity(frames * target_channels);
+    for frame in samples.chunks_exact(source_channels) {
+        if target_channels > source_channels {
+            if source_channels == 1 {
+                converted.extend(std::iter::repeat(frame[0]).take(target_channels));
+            } else {
+                converted.extend_from_slice(frame);
+                let fill = *frame.last().unwrap_or(&0.0);
+                converted.extend(std::iter::repeat(fill).take(target_channels - source_channels));
+            }
+        } else {
+            for out_ch in 0..target_channels {
+                let start = out_ch * source_channels / target_channels;
+                let end = ((out_ch + 1) * source_channels / target_channels)
+                    .max(start + 1)
+                    .min(source_channels);
+                let sum: f32 = frame[start..end].iter().copied().sum();
+                converted.push(sum / (end - start) as f32);
+            }
+        }
+    }
+    Ok(converted)
+}
+
 #[derive(Debug, Serialize)]
 struct AlbumManifest<'a> {
     plan: &'a AlbumPlan,
@@ -286,14 +336,17 @@ pub fn render_album_plan_impl(
     // (probed cheaply from headers). Bit depth: explicit request wins, else
     // the historical first-track effective_bit_depth().
     let mut source_rates: Vec<u32> = Vec::with_capacity(request.plan.tracks.len());
+    let mut source_channels: Vec<u16> = Vec::with_capacity(request.plan.tracks.len());
     for t in &request.plan.tracks {
         if let Some(input) = settings_by_id.get(t.track_id.as_str()) {
-            let probed = crate::decode::probe_sample_rate(Path::new(&input.source_path))?;
-            source_rates.push(probed);
+            let probed = crate::decode::probe_audio_format(Path::new(&input.source_path))?;
+            source_rates.push(probed.sample_rate);
+            source_channels.push(probed.channels);
         }
     }
     let album_sample_rate =
         resolve_album_sample_rate(request.plan.delivery_sample_rate, &source_rates);
+    let album_channels = resolve_album_channels(&source_channels);
     let bit_depth = request.plan.delivery_bit_depth.unwrap_or_else(|| {
         request
             .plan
@@ -324,7 +377,6 @@ pub fn render_album_plan_impl(
     //   inject Gap silence frames per TransitionSpec, finalize.
     let mut rendered_samples: Vec<Vec<f32>> = Vec::with_capacity(total_tracks);
     let mut track_records: Vec<AlbumTrackRenderRecord> = Vec::with_capacity(total_tracks);
-    let mut common_channels: u16 = 0;
 
     for (i, entry) in request.plan.tracks.iter().enumerate() {
         let input = settings_by_id
@@ -350,17 +402,7 @@ pub fn render_album_plan_impl(
                 input.source_path
             )));
         }
-        // Sample-rate differences are now resolved by resampling each track
-        // to `album_sample_rate` (below). Only a channel-count mismatch is a
-        // hard error — channel parity is a separate, still-deferred concern.
-        if i == 0 {
-            common_channels = pcm.channels.max(1);
-        } else if pcm.channels != common_channels {
-            return Err(CommandError::Other(format!(
-                "album channel mismatch on {}: {} ch vs album {} ch",
-                input.source_path, pcm.channels, common_channels
-            )));
-        }
+        let source_channel_count = pcm.channels.max(1);
 
         // Per-track curve value for the per-character mastering bias.
         // For Preset arcs we resample the 6-point curve to actual track
@@ -384,17 +426,23 @@ pub fn render_album_plan_impl(
         // (the prior literal, treated as "neutral") if any input is
         // unavailable - matches `compute_energy_density_score`'s contract.
         let energy_density_score = {
-            let lufs = measure_integrated_lufs(&pcm.samples, pcm.sample_rate, pcm.channels)
+            let lufs = measure_integrated_lufs(&pcm.samples, pcm.sample_rate, source_channel_count)
                 .unwrap_or(-30.0);
             let spec6 = compute_spectral_balance_6band(
                 &pcm.samples,
                 pcm.sample_rate,
-                pcm.channels as usize,
+                source_channel_count as usize,
             );
-            let dr =
-                compute_dynamic_range_p95_p10(&pcm.samples, pcm.sample_rate, pcm.channels as usize);
-            let tflux =
-                compute_transient_flux(&pcm.samples, pcm.sample_rate, pcm.channels as usize);
+            let dr = compute_dynamic_range_p95_p10(
+                &pcm.samples,
+                pcm.sample_rate,
+                source_channel_count as usize,
+            );
+            let tflux = compute_transient_flux(
+                &pcm.samples,
+                pcm.sample_rate,
+                source_channel_count as usize,
+            );
             compute_energy_density_score(lufs, spec6.as_ref(), dr, tflux)
         };
         let energy_density = energy_density_score.unwrap_or(0.5);
@@ -408,7 +456,7 @@ pub fn render_album_plan_impl(
         let mut shadowed = shadowed;
         shadowed.volume_match = false;
         let mut samples = pcm.samples;
-        let channels_usize = pcm.channels.max(1) as usize;
+        let channels_usize = source_channel_count as usize;
         let mut chain = crate::dsp::MasteringChain::new(pcm.sample_rate, channels_usize, &shadowed);
         const CHUNK_FRAMES: usize = 4096;
         let chunk_samples = CHUNK_FRAMES * channels_usize;
@@ -430,8 +478,18 @@ pub fn render_album_plan_impl(
         // land. `convert_interleaved` would copy even on a match, so guard
         // it to avoid a needless full-buffer clone on already-matching tracks.
         if pcm.sample_rate != album_sample_rate {
-            samples =
-                convert_interleaved(&samples, pcm.sample_rate, album_sample_rate, pcm.channels)?;
+            samples = convert_interleaved(
+                &samples,
+                pcm.sample_rate,
+                album_sample_rate,
+                source_channel_count,
+            )?;
+        }
+
+        let mut rendered_channel_count = source_channel_count;
+        if rendered_channel_count != album_channels {
+            samples = convert_channel_count(samples, rendered_channel_count, album_channels)?;
+            rendered_channel_count = album_channels;
         }
 
         // Per-track ceiling-bounded LUFS landing on the album-plan
@@ -444,7 +502,7 @@ pub fn render_album_plan_impl(
         measure_and_apply_ceiling_bounded_landing(
             &mut samples,
             album_sample_rate,
-            pcm.channels,
+            rendered_channel_count,
             &shadowed,
         )?;
 
@@ -457,11 +515,12 @@ pub fn render_album_plan_impl(
             &per_track_path,
             &samples,
             album_sample_rate,
-            pcm.channels,
+            rendered_channel_count,
             bit_depth,
         )?;
 
-        let measured_lufs = measure_integrated_lufs(&samples, album_sample_rate, pcm.channels)?;
+        let measured_lufs =
+            measure_integrated_lufs(&samples, album_sample_rate, rendered_channel_count)?;
         track_records.push(AlbumTrackRenderRecord {
             track_id: entry.track_id.clone(),
             position: entry.position,
@@ -469,6 +528,8 @@ pub fn render_album_plan_impl(
             measured_lufs,
             source_sample_rate: pcm.sample_rate,
             rendered_sample_rate: album_sample_rate,
+            source_channels: source_channel_count,
+            rendered_channels: rendered_channel_count,
         });
         rendered_samples.push(samples);
     }
@@ -476,7 +537,7 @@ pub fn render_album_plan_impl(
     // Pass 2 - assemble the continuous album.wav, inserting silence
     // frames per TransitionSpec.
     let album_path = unique_album_path(out_dir)?;
-    let spec = wav_spec(common_channels, album_sample_rate, bit_depth)?;
+    let spec = wav_spec(album_channels, album_sample_rate, bit_depth)?;
     let album_tmp_path = unique_tmp_path(&album_path)?;
     let album_write_result = (|| -> CommandResult<()> {
         let mut album_writer = hound::WavWriter::create(&album_tmp_path, spec)
@@ -489,7 +550,7 @@ pub fn render_album_plan_impl(
                     if matches!(t.kind, TransitionKind::Gap) {
                         let gap_seconds = t.duration_seconds.clamp(0.0, 5.0);
                         let gap_frames = (gap_seconds * album_sample_rate as f32) as usize;
-                        let gap_samples = gap_frames * common_channels as usize;
+                        let gap_samples = gap_frames * album_channels as usize;
                         let zeros = vec![0.0_f32; gap_samples];
                         write_samples_into_writer(&mut album_writer, &zeros, bit_depth)?;
                     }
@@ -513,7 +574,7 @@ pub fn render_album_plan_impl(
         plan: &request.plan,
         rendered_at_iso: now_iso(),
         sample_rate: album_sample_rate,
-        channels: common_channels,
+        channels: album_channels,
         bit_depth,
         album_wav_path: &album_path.to_string_lossy(),
         tracks: &track_records,
@@ -533,6 +594,8 @@ pub fn render_album_plan_impl(
         rendered_sample_rate: album_sample_rate,
         source_sample_rates: source_rates,
         bit_depth,
+        rendered_channels: album_channels,
+        source_channels,
         tracks: track_records,
     })
 }
@@ -568,6 +631,22 @@ mod resolve_tests {
     #[test]
     fn auto_with_no_sources_falls_back_to_48k() {
         assert_eq!(resolve_album_sample_rate(None, &[]), 48_000);
+    }
+
+    #[test]
+    fn all_mono_sources_render_mono() {
+        assert_eq!(resolve_album_channels(&[1, 1]), 1);
+    }
+
+    #[test]
+    fn mixed_mono_stereo_sources_render_stereo() {
+        assert_eq!(resolve_album_channels(&[1, 2]), 2);
+    }
+
+    #[test]
+    fn mono_to_stereo_duplicates_samples() {
+        let converted = convert_channel_count(vec![0.25, -0.5], 1, 2).expect("convert");
+        assert_eq!(converted, vec![0.25, 0.25, -0.5, -0.5]);
     }
 }
 

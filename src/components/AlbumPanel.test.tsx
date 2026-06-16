@@ -93,6 +93,8 @@ describe("AlbumPanel delivery format", () => {
         rendered_sample_rate: 48_000,
         source_sample_rates: [44_100, 48_000],
         bit_depth: 24,
+        rendered_channels: 2,
+        source_channels: [1, 2],
         tracks: [
           {
             track_id: "track-1",
@@ -101,6 +103,8 @@ describe("AlbumPanel delivery format", () => {
             measured_lufs: -14,
             source_sample_rate: 44_100,
             rendered_sample_rate: 48_000,
+            source_channels: 1,
+            rendered_channels: 2,
           },
         ],
       },
@@ -109,8 +113,9 @@ describe("AlbumPanel delivery format", () => {
     const { container } = await renderNode(<AlbumPanel {...props} />);
 
     const receipt = container.querySelector(".album-export-receipt");
-    expect(receipt?.textContent).toContain("rendered 48 kHz / 24-bit");
+    expect(receipt?.textContent).toContain("rendered 48 kHz / 24-bit / stereo");
     expect(receipt?.textContent).toContain("requested Auto");
     expect(receipt?.textContent).toContain("Upsampled source 44.1 kHz");
+    expect(receipt?.textContent).toContain("Upmixed source mono");
   });
 });

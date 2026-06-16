@@ -26,10 +26,9 @@ Verification coverage:
 - `src-tauri/tests/delivery_profile_render.rs`
 - `src-tauri/tests/contracts.rs`
 
-Album Master sample-rate + bit-depth delivery parity has landed (album-wide
-Delivery Format, mixed-source resampling; see
-`src-tauri/tests/album_sample_rate.rs`). Channel-count parity (mono vs stereo
-tracks) remains deferred.
+Album Master delivery-format parity has landed (album-wide sample rate,
+bit-depth, mixed-source resampling, and mono/stereo channel-count resolution; see
+`src-tauri/tests/album_sample_rate.rs`).
 
 ### Project Chrome And Help
 
@@ -165,7 +164,7 @@ Current behavior:
 - iPhone live audition measures landing at the rendered sample rate and no
   longer allocates a replacement mastering chain inside the render callback.
 - Album export reports rendered delivery format, per-track source/rendered
-  sample rates, and frontend upsample/requested-vs-rendered receipt copy.
+  sample rates and channel counts, and frontend upsample/upmix receipt copy.
 - `stereo_width` is retained as an active analysis/planning metric; new taste
   wiring waits for Wave 10.
 - Stale Vera experiment branches were removed from `origin`.

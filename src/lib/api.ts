@@ -39,6 +39,8 @@ export interface AlbumTrackRenderRecord {
   measured_lufs: number;
   source_sample_rate: number;
   rendered_sample_rate: number;
+  source_channels: number;
+  rendered_channels: number;
 }
 
 export interface AlbumRenderReport {
@@ -48,6 +50,8 @@ export interface AlbumRenderReport {
   rendered_sample_rate: number;
   source_sample_rates: number[];
   bit_depth: number;
+  rendered_channels: number;
+  source_channels: number[];
   tracks: AlbumTrackRenderRecord[];
 }
 

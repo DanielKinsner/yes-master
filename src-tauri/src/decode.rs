@@ -37,6 +37,12 @@ pub struct DecodedPcm {
     pub channels: u16,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ProbedAudioFormat {
+    pub sample_rate: u32,
+    pub channels: u16,
+}
+
 pub const MIN_WAVEFORM_PIXELS: u32 = 64;
 pub const MAX_WAVEFORM_PIXELS: u32 = 16_384;
 
@@ -246,11 +252,10 @@ pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<Decoded
     })
 }
 
-/// Read just the container/codec header to learn the source sample rate
-/// without decoding any audio. Used by the album render path to resolve
-/// the Auto delivery rate (= highest source rate) cheaply, before any
-/// track is processed.
-pub fn probe_sample_rate(path: &Path) -> CommandResult<u32> {
+/// Read just the container/codec header to learn the source format without
+/// decoding any audio. Used by the album render path to resolve album-wide
+/// delivery format before any track is processed.
+pub fn probe_audio_format(path: &Path) -> CommandResult<ProbedAudioFormat> {
     let file = std::fs::File::open(path).map_err(|e| CommandError::Io(e.to_string()))?;
     let mss = MediaSourceStream::new(Box::new(file), Default::default());
     let mut hint = Hint::new();
@@ -271,7 +276,21 @@ pub fn probe_sample_rate(path: &Path) -> CommandResult<u32> {
         .iter()
         .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
         .ok_or_else(|| CommandError::Decode("no decodable track".to_string()))?;
-    Ok(track.codec_params.sample_rate.unwrap_or(44_100))
+    Ok(ProbedAudioFormat {
+        sample_rate: track.codec_params.sample_rate.unwrap_or(44_100),
+        channels: track
+            .codec_params
+            .channels
+            .map(|c| c.count())
+            .unwrap_or(2)
+            .max(1) as u16,
+    })
+}
+
+/// Read just the container/codec header to learn the source sample rate
+/// without decoding any audio. Kept as the narrow helper for existing callers.
+pub fn probe_sample_rate(path: &Path) -> CommandResult<u32> {
+    Ok(probe_audio_format(path)?.sample_rate)
 }
 
 #[cfg(test)]
@@ -336,6 +355,16 @@ mod tests {
         let p = tmp.path().join("probe.wav");
         write_silence_wav(&p, 44_100);
         assert_eq!(probe_sample_rate(&p).expect("probe"), 44_100);
+    }
+
+    #[test]
+    fn probe_audio_format_reads_header_rate_and_channels() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let p = tmp.path().join("probe-format.wav");
+        write_silence_wav(&p, 48_000);
+        let probed = probe_audio_format(&p).expect("probe format");
+        assert_eq!(probed.sample_rate, 48_000);
+        assert_eq!(probed.channels, 1);
     }
 
     // Unsupported / garbage input must surface as a Decode error, never a

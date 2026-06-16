@@ -640,6 +640,8 @@ pub struct AlbumTrackRenderRecord {
     pub measured_lufs: f32,
     pub source_sample_rate: u32,
     pub rendered_sample_rate: u32,
+    pub source_channels: u16,
+    pub rendered_channels: u16,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -650,6 +652,8 @@ pub struct AlbumRenderReport {
     pub rendered_sample_rate: u32,
     pub source_sample_rates: Vec<u32>,
     pub bit_depth: u16,
+    pub rendered_channels: u16,
+    pub source_channels: Vec<u16>,
     pub tracks: Vec<AlbumTrackRenderRecord>,
 }
 

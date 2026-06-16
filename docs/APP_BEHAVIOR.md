@@ -75,10 +75,11 @@ Master exports:
   issue.
 
 Album Master now honors an album-wide Delivery Format (sample rate + bit depth,
-chosen on the Album panel; Auto = highest source rate / first-track bit depth). It
-resamples each track to that single album rate, so albums built from mixed-rate
-sources render one continuous file instead of failing. Channel-count parity
-(mono vs stereo tracks) remains a hard error and is still deferred.
+chosen on the Album panel; Auto = highest source rate / first-track bit depth).
+It resamples each track to that single album rate and resolves one album-wide
+channel count. Mixed mono/stereo albums render stereo, with mono tracks upmixed,
+so mixed-rate and mixed mono/stereo albums render one continuous file instead of
+failing.
 
 Mastered preview readiness timeouts surface recoverable user-facing guidance
 instead of silent non-playback.
@@ -190,7 +191,5 @@ further subjective retune.
 2. The full private fixture matrix needs a longer unattended run after the
    representative subset completed.
 3. Oomph needs listening notes before another targeted tuning pass.
-4. Album Master sample-rate + bit-depth delivery parity has landed; only
-   channel-count parity (mono vs stereo tracks) remains deferred.
-5. Public signing, notarization, autoupdate, and store-style distribution remain
+4. Public signing, notarization, autoupdate, and store-style distribution remain
    deferred.

@@ -17,6 +17,12 @@ import { formatBitDepth, formatSampleRate } from "./ExportReceiptCard";
 import type { AlbumRenderReport } from "../lib/api";
 import { formatDuration } from "../lib/time-format";
 
+function formatChannelCount(channels: number): string {
+  if (channels === 1) return "mono";
+  if (channels === 2) return "stereo";
+  return `${channels} ch`;
+}
+
 type AlbumPanelProps = {
   tracks: ImportedTrack[];
   albumArcKind: AlbumArcKind;
@@ -73,6 +79,15 @@ export function AlbumPanel({
     albumExportReport == null
       ? []
       : sourceRates.filter((rate) => rate < albumExportReport.rendered_sample_rate);
+  const sourceChannels = Array.from(
+    new Set(albumExportReport?.source_channels ?? []),
+  ).sort((a, b) => a - b);
+  const upmixedChannels =
+    albumExportReport == null
+      ? []
+      : sourceChannels.filter(
+          (channels) => channels < albumExportReport.rendered_channels,
+        );
   const requestedMismatch =
     albumExportReport?.requested_sample_rate != null &&
     albumExportReport.requested_sample_rate !== albumExportReport.rendered_sample_rate;
@@ -186,14 +201,20 @@ export function AlbumPanel({
           </code>
           <span className="album-export-receipt-meta">
             {albumExportReport.tracks.length} tracks · rendered {renderedRate} /{" "}
-            {formatBitDepth(albumExportReport.bit_depth)} · requested{" "}
-            {requestedRate}
+            {formatBitDepth(albumExportReport.bit_depth)} /{" "}
+            {formatChannelCount(albumExportReport.rendered_channels)} ·
+            requested {requestedRate}
             {requestedMismatch && `, got ${renderedRate}`} · manifest:{" "}
             {albumExportReport.manifest_path}
           </span>
           {upsampledRates.length > 0 && (
             <span className="album-export-receipt-advisory">
               Upsampled source {upsampledRates.map(formatSampleRate).join(", ")}
+            </span>
+          )}
+          {upmixedChannels.length > 0 && (
+            <span className="album-export-receipt-advisory">
+              Upmixed source {upmixedChannels.map(formatChannelCount).join(", ")}
             </span>
           )}
         </div>

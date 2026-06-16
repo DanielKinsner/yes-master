@@ -45,9 +45,9 @@ fn fake_analysis(id: &str) -> AnalysisResult {
     }
 }
 
-fn write_sine_mono(path: &PathBuf, sample_rate: u32, seconds: f32) {
+fn write_sine_wav(path: &PathBuf, sample_rate: u32, channels: u16, seconds: f32) {
     let spec = WavSpec {
-        channels: 1,
+        channels,
         sample_rate,
         bits_per_sample: 16,
         sample_format: SampleFormat::Int,
@@ -57,7 +57,9 @@ fn write_sine_mono(path: &PathBuf, sample_rate: u32, seconds: f32) {
     let omega = 2.0 * std::f32::consts::PI * 440.0 / sample_rate as f32;
     for i in 0..frames {
         let s = 0.3 * (omega * i as f32).sin();
-        w.write_sample((s * 32767.0) as i16).expect("write");
+        for _ in 0..channels {
+            w.write_sample((s * 32767.0) as i16).expect("write");
+        }
     }
     w.finalize().expect("finalize");
 }
@@ -70,10 +72,30 @@ fn render_two_track_album(
     delivery_sample_rate: Option<u32>,
     delivery_bit_depth: Option<u16>,
 ) -> AlbumRenderReport {
+    render_two_track_album_with_channels(
+        tmp,
+        rate_a,
+        1,
+        rate_b,
+        1,
+        delivery_sample_rate,
+        delivery_bit_depth,
+    )
+}
+
+fn render_two_track_album_with_channels(
+    tmp: &TempDir,
+    rate_a: u32,
+    channels_a: u16,
+    rate_b: u32,
+    channels_b: u16,
+    delivery_sample_rate: Option<u32>,
+    delivery_bit_depth: Option<u16>,
+) -> AlbumRenderReport {
     let a = tmp.path().join("a.wav");
     let b = tmp.path().join("b.wav");
-    write_sine_mono(&a, rate_a, 1.0);
-    write_sine_mono(&b, rate_b, 1.0);
+    write_sine_wav(&a, rate_a, channels_a, 1.0);
+    write_sine_wav(&b, rate_b, channels_b, 1.0);
 
     let analyses = [fake_analysis("a"), fake_analysis("b")];
     let refs: Vec<&AnalysisResult> = analyses.iter().collect();
@@ -131,6 +153,42 @@ fn mixed_source_rates_resample_to_common_album_rate() {
         .expect("open album")
         .spec();
     assert_eq!(album_spec.sample_rate, 48_000, "album.wav must be 48 kHz");
+}
+
+#[test]
+fn mixed_mono_and_stereo_sources_render_common_stereo_album() {
+    let tmp = TempDir::new().expect("tempdir");
+    let report =
+        render_two_track_album_with_channels(&tmp, 44_100, 1, 48_000, 2, Some(48_000), Some(24));
+
+    assert_eq!(report.source_channels, vec![1, 2]);
+    assert_eq!(report.rendered_channels, 2);
+    assert_eq!(report.tracks[0].source_channels, 1);
+    assert_eq!(report.tracks[0].rendered_channels, 2);
+    assert_eq!(report.tracks[1].source_channels, 2);
+    assert_eq!(report.tracks[1].rendered_channels, 2);
+
+    for rec in &report.tracks {
+        let spec = hound::WavReader::open(&rec.output_path)
+            .expect("open track")
+            .spec();
+        assert_eq!(spec.channels, 2, "per-track WAV must render stereo");
+        assert_eq!(spec.sample_rate, 48_000);
+        assert_eq!(spec.bits_per_sample, 24);
+    }
+
+    let album_spec = hound::WavReader::open(&report.album_wav_path)
+        .expect("open album")
+        .spec();
+    assert_eq!(album_spec.channels, 2, "album.wav must render stereo");
+    assert_eq!(album_spec.sample_rate, 48_000);
+    assert_eq!(album_spec.bits_per_sample, 24);
+
+    let manifest = std::fs::read_to_string(&report.manifest_path).expect("manifest");
+    let parsed: serde_json::Value = serde_json::from_str(&manifest).expect("json");
+    assert_eq!(parsed["channels"], 2);
+    assert_eq!(parsed["tracks"][0]["source_channels"], 1);
+    assert_eq!(parsed["tracks"][0]["rendered_channels"], 2);
 }
 
 #[test]
