@@ -1615,6 +1615,25 @@ impl Limiter {
         self.gain = 1.0;
     }
 
+    fn copy_state_from(&mut self, prior: &Self) -> bool {
+        if self.buffer.len() != prior.buffer.len()
+            || self.oldest_frame_buf.len() != prior.oldest_frame_buf.len()
+        {
+            return false;
+        }
+        self.channels = prior.channels;
+        self.ceiling_lin = prior.ceiling_lin;
+        self.lookahead_frames = prior.lookahead_frames;
+        self.release_coef = prior.release_coef;
+        self.buffer.copy_from_slice(&prior.buffer);
+        self.head_frame = prior.head_frame;
+        self.filled_frames = prior.filled_frames;
+        self.gain = prior.gain;
+        self.oldest_frame_buf
+            .copy_from_slice(&prior.oldest_frame_buf);
+        true
+    }
+
     /// Read the channel sample at logical frame offset `f` (0 = oldest sample
     /// still in the buffer, `filled_frames - 1` = most recently written).
     fn frame_sample(&self, f: usize, c: usize) -> f32 {
@@ -2106,6 +2125,27 @@ impl MasteringChain {
             limiter: prior.limiter.clone(),
             gr_snapshots: prior.gr_snapshots.clone(),
         }
+    }
+
+    /// Reuse this chain's allocations while installing fresh coefficients and
+    /// inheriting the prior chain's state. This is the real-time-safe sibling of
+    /// [`Self::with_coeffs_inheriting_state`]: it succeeds only when the
+    /// preallocated target was built for the same channel/rate shape.
+    pub fn overwrite_with_coeffs_inheriting_state(
+        &mut self,
+        coeffs: ChainCoeffs,
+        prior: &Self,
+    ) -> bool {
+        if self.states.len() != prior.states.len() || !self.limiter.copy_state_from(&prior.limiter)
+        {
+            return false;
+        }
+        self.coeffs = coeffs;
+        for (dst, src) in self.states.iter_mut().zip(prior.states.iter()) {
+            dst.clone_from(src);
+        }
+        self.gr_snapshots = prior.gr_snapshots.clone();
+        true
     }
 
     /// Process one interleaved frame in place. Runs gain → 7-band EQ →
@@ -3304,6 +3344,34 @@ mod tests {
                 "non-finite settings must not emit non-finite samples: {frame:?}"
             );
         }
+    }
+
+    #[test]
+    fn overwrite_with_coeffs_inheriting_state_reuses_allocations() {
+        let mut prior_settings = default_master_settings();
+        prior_settings.input_gain_db = -3.0;
+        let mut prior = MasteringChain::new(48_000, 2, &prior_settings);
+        for n in 0..256 {
+            let s = (2.0 * PI * 440.0 * n as f32 / 48_000.0).sin() * 0.4;
+            prior.process_frame_inplace(&mut [s, -s]);
+        }
+
+        let mut target_settings = default_master_settings();
+        target_settings.input_gain_db = 3.0;
+        let mut target = MasteringChain::new(48_000, 2, &target_settings);
+        let states_ptr = target.states.as_ptr();
+        let limiter_buffer_ptr = target.limiter.buffer.as_ptr();
+        let limiter_oldest_ptr = target.limiter.oldest_frame_buf.as_ptr();
+        let coeffs = ChainCoeffs::from_settings(48_000, &target_settings);
+
+        assert!(target.overwrite_with_coeffs_inheriting_state(coeffs, &prior));
+
+        assert_eq!(target.states.as_ptr(), states_ptr);
+        assert_eq!(target.limiter.buffer.as_ptr(), limiter_buffer_ptr);
+        assert_eq!(target.limiter.oldest_frame_buf.as_ptr(), limiter_oldest_ptr);
+        assert_eq!(target.limiter.head_frame, prior.limiter.head_frame);
+        assert_eq!(target.limiter.filled_frames, prior.limiter.filled_frames);
+        assert!((target.coeffs.input_gain_lin - coeffs.input_gain_lin).abs() < 1.0e-6);
     }
 
     #[test]
