@@ -163,6 +163,11 @@ pub(crate) fn write_wav(
     channels: u16,
     bit_depth: u16,
 ) -> CommandResult<()> {
+    if let Some(index) = samples.iter().position(|sample| !sample.is_finite()) {
+        return Err(CommandError::Render(format!(
+            "rendered samples contain non-finite value at index {index}"
+        )));
+    }
     let tmp_path = unique_tmp_path(path)?;
     let result = write_wav_direct(&tmp_path, samples, sample_rate, channels, bit_depth)
         .and_then(|_| replace_with_tmp(&tmp_path, path));
@@ -293,6 +298,32 @@ mod tests {
         assert_eq!(
             sha256_file(&out),
             "816224efa3de11b822957fa46fd674100b9ecf5f157e1225761d70b524adfb91"
+        );
+    }
+
+    #[test]
+    fn write_wav_rejects_non_finite_samples_before_writing() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let out = tmp.path().join("non-finite.wav");
+        let samples = [0.0, f32::NAN, 0.25, f32::INFINITY];
+
+        let err =
+            write_wav(&out, &samples, 48_000, 1, 16).expect_err("non-finite samples must fail");
+
+        assert!(
+            matches!(err, CommandError::Render(ref message) if message.contains("non-finite")),
+            "unexpected error: {err:?}"
+        );
+        assert!(
+            !out.exists(),
+            "non-finite render must not leave a final WAV"
+        );
+        assert!(
+            fs::read_dir(tmp.path())
+                .expect("read tempdir")
+                .next()
+                .is_none(),
+            "non-finite render must not leave temporary WAVs"
         );
     }
 
