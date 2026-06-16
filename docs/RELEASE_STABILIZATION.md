@@ -167,7 +167,8 @@ scheduled into the adaptive-compressor calibration sitting (see
 
 ### Reference Retune Validation
 
-Status: aggregate runner completed on 2026-05-28; listening still pending.
+Status: aggregate runner completed on 2026-05-28; listening/taste work moved
+to Wave 10 on 2026-06-16 so the mechanical shippability list can close first.
 
 - Re-run the private reference tuning runner after DSP/preset changes.
 - Use listening notes before any further subjective preset tuning.
@@ -180,7 +181,7 @@ Status: aggregate runner completed on 2026-05-28; listening still pending.
 Status: full local manifest completed on 2026-05-28 (18 cases, `--release`
 example build). No silent regression; aggregate in
 `docs/RELEASE_EVIDENCE_2026-05-28.md`. The earlier timeout was a debug-build cost
-only. Listening signoff is still pending.
+only. Listening signoff moved to Wave 10 on 2026-06-16.
 
 - Re-run the private fixture matrix for DSP/export changes.
 - Capture source/render LUFS, true peak, dynamic range, and warning codes.
@@ -211,7 +212,7 @@ Status: complete on 2026-05-28.
 
 ### Manual Listening Gate
 
-Status: pending.
+Status: deferred to Wave 10 on 2026-06-16.
 
 - Verify normal, already-mastered/compressed, and long edge-case sources by ear.
 - Sweep Intensity, EQ/tone, output gain, compressor controls, Preview LUFS, and
@@ -225,4 +226,4 @@ Status: pending.
 - Autoupdate.
 - Reference-track UX.
 - Album dashboard/report expansion.
-- Subjective preset retuning without fresh listening notes.
+- Subjective preset retuning / listening calibration (Wave 10).

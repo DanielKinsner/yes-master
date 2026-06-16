@@ -15,9 +15,10 @@ and line numbers, this document carries the how.
   and "Reviewer checks" sections. The implementer must paste lane output
   (test counts, exit codes) into the PR/commit description — review is
   evidence-based, not vibes-based.
-- **The user is NOT in the loop** for any slice in Waves 0–7. The only
-  user-gated work is quarantined in "Owner decision queue" and "Listening
-  gate" at the end; no slice blocks on them unless its entry says so.
+- **The user is NOT in the loop** for any mechanical slice in Waves 0–9.
+  Taste, listening, calibration, keystore, and mobile-background-mode calls are
+  quarantined in Wave 10 / the owner decision queue; no earlier slice blocks on
+  them unless its entry says so.
 
 ### Global rules for the implementer
 
@@ -66,9 +67,11 @@ and line numbers, this document carries the how.
 
 Wave 0 (infra) → Wave 1 (audio-correctness P0s) → Wave 2 (frontend P1s) →
 Wave 3 (contracts) → Wave 4 (mobile crash class) → Wave 5 (go-public) →
-Wave 6 (UX) → Wave 7 (cleanup). Within a wave, slices are independent unless
-marked. Waves 2 and 3 can interleave with Wave 1. Wave 0 first — it makes
-everything else verifiable without the owner's machine.
+Wave 6 (UX) → Wave 7 (cleanup) → Wave 8 (mobile store-readiness mechanics) →
+Wave 9 (unattended mechanical reconciliation) → Wave 10 (taste/listening).
+Within a wave, slices are independent unless marked. Waves 2 and 3 can
+interleave with Wave 1. Wave 0 first — it makes everything else verifiable
+without the owner's machine.
 
 ---
 
@@ -670,10 +673,10 @@ test where feasible. RS-09 (limiter flush) is NOT here — owner decision.
 ## Wave 9 — Unattended-feature reconciliation (audit Part 4.2)
 
 The handoff comb surfaced work that was promised, half-built, or queued and
-then dropped without a recorded decision. Wave 9 exists to close every one
-of those loops — by building, by recording an explicit deferral, or by
-deleting dead seams. None of it blocks Waves 0–7. Items marked **[decision]**
-go through the owner interrogation (global rule 7) first.
+then dropped without a recorded decision. Wave 9 exists to close the mechanical
+loops by building, by recording an explicit deferral, or by deleting dead seams.
+None of it blocks Waves 0–7. Decision/taste/listening items now live in Wave 10
+so the mechanical ship queue can close without waiting for multi-day ear work.
 
 **Mechanical slices (no owner gate; implement like any other wave):**
 - **S9.1** Android A4 catch-up (UF-C2, UF-C3, UF-C4): wire the dead
@@ -705,27 +708,32 @@ go through the owner interrogation (global rule 7) first.
 - **S9.7** Branch hygiene (UF-E): one-sentence disposition for
   `origin/vera/standard-polish` and `origin/vera/ui-overhaul`, then delete.
 
-**Decision-gated (run the interrogation, then spec):**
-- **S9.8 [decision]** Phase B confidence calibration session (UF-A5) — the
-  playbook (`docs/OWNER_LISTENING_SESSION_PLAYBOOK_2026-06-05.md` §2) is the
-  script; the only agent work is scheduling support + the constant-lock
-  commit afterward. Until it runs, the entire Tier-2 investment stays
-  dormant — this is the highest-leverage listening hour available.
-- **S9.9 [decision]** Adaptive engine follow-ons (UF-A2 tilt-vs-reference,
-  UF-A3 density-cap reshape, UF-A4 loss budget, UF-A6 PSR transient
-  protection, UF-A7 already-mastered stand-down, UF-A8 measured neutral,
-  UF-A10 AnalysisSummary): present as a menu in the interrogation; UF-A6 +
-  UF-A7 are the highest product value (the already-mastered stress class)
-  and natural successors to S9.8.
-- **S9.10 [decision]** Compressor intelligence (audit Part 4.3): optional
-  pre-launch suggestion layer (per-band card reads existing deep-analysis/
-  profile data, recommends density/mode, one-click apply through normal
-  controls — no render-path change, no listening gate); post-launch
-  **Adaptive Tier 3: track-aware compression** specced with full listening
-  ceremony, sequenced after S9.8.
-- **S9.11 [decision]** iPhone Instruments RT profiling pass (UF-B1) +
-  intensity-perceptibility call (UF-B5) — owner Mac/ear time; bundle with
-  the mobile-shipping decision.
+---
+
+## Wave 10 — Taste/listening/calibration (deferred owner work)
+
+Wave 10 is deliberately after the mechanical shippability queue. The owner
+wants the app in a perfect testable state first, then can spend a couple of
+days on taste without holding UX/UI or correctness work hostage.
+
+- **S10.1** Manual Listening Gate: normal, already-mastered/compressed,
+  long-source, 8 kHz, and 11.025 kHz sweeps; clean-vs-warning export
+  comparison by ear.
+- **S10.2** Reference Retune / preset voicing: Oomph caution, measurement
+  harness, numeric fingerprints, and any DSP constant retune. No preset retune
+  lands before this wave.
+- **S10.3** Already-mastered matrix listening signoff and Phase-B confidence
+  calibration (former S9.8 / UF-A5). Until it runs, Tier-2 confidence remains
+  dormant.
+- **S10.4** Adaptive engine follow-ons (former S9.9): tilt-vs-reference,
+  density-cap reshape, loss budget, PSR transient protection,
+  already-mastered stand-down, measured neutral, and AnalysisSummary.
+- **S10.5** Compressor intelligence / Adaptive Tier 3 (former S9.10), if the
+  owner still wants it after the measured/taste pass.
+- **S10.6** iPhone Instruments RT profiling and intensity-perceptibility call
+  (former S9.11), bundled with the mobile-shipping decision.
+- **S10.7** Mobile background-audio behavior and Android signing/keystore work
+  when mobile shipping is scheduled.
 
 ## Decisions recorded 2026-06-12 (owner-answered; these supersede the
 matching queue items and any conflicting text above)
@@ -741,12 +749,11 @@ matching queue items and any conflicting text above)
 - **D3 Adaptive compressor is IN the MVP.** Spec:
   `2026-06-12-adaptive-compressor-mvp-spec.md` (supersedes S9.10's
   post-launch framing and the pre-launch suggestion-layer option — do not
-  build the suggestion layer). Owner commits listening-gate time on Mac,
-  Windows, and iPhone.
+  build the suggestion layer). The owner moved the listening/calibration
+  sitting to Wave 10 on 2026-06-16.
 - **D4 Tier-1 adaptive voicing is owner-listened and accepted** (2026-06-11
   live session, 96 kHz auditioning; `201e746` is the artifact). Recorded in
-  RELEASE_STABILIZATION. The Phase-B confidence calibration (S9.8) can be
-  bundled into the adaptive-compressor calibration sitting (spec §5).
+  RELEASE_STABILIZATION. New taste/listening work now waits for Wave 10.
 
 ## Owner decision queue (the ONLY user-gated items; async — answer in any
 order, nothing in Waves 0–7 blocks on them except where named)
@@ -762,7 +769,7 @@ order, nothing in Waves 0–7 blocks on them except where named)
    explicitly; if yes, it needs a snapshot-regeneration slice + a listening
    spot-check. Default: defer, document as known behavior.
 5. **Background audio on mobile (IP-04/S8.6)** and **Android keystore
-   (S8.5)** — only when mobile shipping is scheduled.
+   (S8.5)** — Wave 10 / mobile-shipping decision.
 6. **Eight presets vs curated grouping (UX-08):** taste/listening-dependent
    per working style — needs your listening note before any change. Default:
    no change.
@@ -770,16 +777,16 @@ order, nothing in Waves 0–7 blocks on them except where named)
    plans authored).
 8. **Compressor:** ~~decided~~ — see D3 above (adaptive compressor in MVP
    per the spec; suggestion layer superseded).
-9. **Phase B calibration hour (S9.8):** owner accepts listening time; run
-   it in the adaptive-compressor calibration sitting (spec §5) — see D4.
+9. **Phase B calibration hour:** moved to Wave 10 — see D4 and S10.3.
 
-## Listening gate (quarantined; unchanged from RELEASE_STABILIZATION.md)
+## Listening gate (quarantined in Wave 10)
 
 Manual Listening Gate, Reference Retune listening (Oomph caution), and
 already-mastered matrix signoff remain owner-by-ear items. **One addition:**
 include an 8 kHz and an 11.025 kHz source in the manual sweep — after S1.1
 they must play/export cleanly (pre-S1.1 they screech; that contrast is the
-audible proof the fix mattered).
+audible proof the fix mattered). These no longer block closing the mechanical
+Wave 0–9 queue.
 
 ## Do-not-do list (carried from Codex, still in force)
 

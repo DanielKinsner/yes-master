@@ -25,7 +25,7 @@ four FE P1 state bugs fixed and pinned; advertised import formats all
 actually decode (XP-01); repo is public-presentable (LICENSE ✓, version,
 README, scrub, CI green on windows + macos); adaptive compressor landed
 gate-OFF at minimum, with the AC-5 flip done or an explicit owner ship-OFF
-decision; owner listening gates signed.
+decision; owner listening/taste gates explicitly deferred to Wave 10.
 
 ## Launch sequence
 
@@ -65,23 +65,18 @@ LOC wave; schedule whenever an implementer session is free — nothing
 depends on it, nothing in it blocks launch except S7.3 (clean test lane)
 which should land before CI is treated as the release gate.
 
-**Gate H — listening sign-off (owner; the only human gates):**
+**Gate H — Wave 10 listening/taste sign-off (owner; deferred 2026-06-16):**
 
-*Session 1 (owner has committed time 2026-06-13):* run the existing Manual
-Listening Gate items from `docs/RELEASE_STABILIZATION.md` — normal /
-already-mastered / long-source sweeps, control sweeps during playback,
-long-source seek with Preview LUFS, clean-vs-warning export comparison by
-ear. PLUS the S5.4 / decision-queue interrogation (canon questions: mobile
-product definition, Album Master promise, adaptive-engine wording,
-mode-pill label preference). PLUS, if convenient, the Phase-B confidence
-playbook (`docs/OWNER_LISTENING_SESSION_PLAYBOOK_2026-06-05.md` §2) — same
-fixtures, same sitting. NOTE: do NOT run the 8 kHz/11.025 kHz check until
-S1.1 has landed (pre-fix those files screech by design; post-fix they are
-the audible proof).
+Listening no longer blocks closing the mechanical shippability list. Wave 10
+owns the existing Manual Listening Gate items from `docs/RELEASE_STABILIZATION.md`
+— normal / already-mastered / long-source sweeps, control sweeps during
+playback, long-source seek with Preview LUFS, clean-vs-warning export
+comparison by ear — plus the 8 kHz / 11.025 kHz audible proof and preset
+voicing work.
 
-*Session 2 (after AC-4):* the adaptive-compressor calibration per spec §5,
-producing the AC-5 flip commit. Mac/Windows/iPhone spot-checks as the
-owner offered.
+Adaptive-compressor calibration, Phase-B confidence, and preset voicing also
+live in Wave 10 so the owner can spend a couple days on taste after the app is
+otherwise in a complete testable state.
 
 **Gate I — ship:** tag `v0.1.0`; `npm run build:windows` + `npm run
 build:mac` artifacts from CI or local; README screenshot; repo public.
@@ -94,9 +89,8 @@ caveat in the README install section).
   (2026-06-11 live 96 kHz session; `201e746` exists because of it) —
   recorded in RELEASE_STABILIZATION. Do not reopen Tier-1 constants.
 - Oomph remains the least-reference-matched preset; no preset retuning
-  without a fresh listening note (unchanged canon).
+  outside Wave 10.
 - Open owner decisions that do NOT block desktop launch: min-window size
   (default: document 1440×860 requirement in README), internal-docs
   pruning (default: keep + disclaimer), limiter flush RS-09 (default:
-  defer, documented), Wave 9 adaptive-engine menu items (S9.9 — present at
-  Session 1 if time allows).
+  defer, documented), Wave 10 adaptive-engine/menu/listening items.

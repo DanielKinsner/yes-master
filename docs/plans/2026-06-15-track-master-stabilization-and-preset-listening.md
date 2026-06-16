@@ -6,8 +6,9 @@ Repo: `C:\Users\SM - Dan\Documents\GitHub\yes-master`.
 
 This is a living decision-level plan. It captures the current manual-test
 findings, locks the product decisions made so far, and defines how the shared
-Track Master presets should sound before any DSP retuning happens. It is not
-yet the final file-by-file coding plan.
+Track Master presets should sound before any DSP retuning happens. As of
+2026-06-16, the retune/listening portion is Wave 10 work, after the mechanical
+shippability queue is complete.
 
 ## Purpose
 
@@ -86,7 +87,7 @@ unification). Additions and corrections:
 
 The owner cannot run extended/multi-session listening (solo dev, limited time,
 44.1/16 test material only). Keep the Listening Matrix as the *spec of what good
-looks like*, but change the **gate**:
+looks like*, but move the **gate** to Wave 10:
 
 - Build a **measurement harness**: render each preset over fixed signals (pink
   noise + available WAVs) and report per-band tonal delta vs source, dynamics,
@@ -197,8 +198,9 @@ become more apparent, that is a failed preset-feel result.
    - Confirm Standard and Advanced call the same intended preset paths.
 6. Research external mastering references as anchors, not rules, before citing
    them in product or tuning decisions.
-7. Run the listening matrix.
-8. Only retune DSP constants after repeatable listening notes exist.
+7. Defer the listening matrix and any taste calibration to Wave 10.
+8. Only retune DSP constants inside Wave 10, after repeatable notes or
+   measurement fingerprints exist.
 
 ## Stabilization Acceptance Criteria
 

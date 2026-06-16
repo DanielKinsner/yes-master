@@ -171,9 +171,9 @@ Confirmed correct, no change needed:
 Deferred follow-ups (not regressions):
 - **L9** first-run tips → overlay/coachmarks (self-contained UI re-architecture).
 - **L10** Original↔Mastered crossfade — touches the real-time audio path and
-  needs ear validation; defer to a studio-monitor session.
+  needs ear validation; Wave 10.
 - **L12** preset voicing/character — parked on `preset-bold-experiment`, gated by
-  the measurement harness per the plan.
+  the measurement harness per the plan; Wave 10.
 
 ### Adversarial review pass (2026-06-15)
 
