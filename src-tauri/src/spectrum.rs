@@ -70,6 +70,8 @@ impl Default for SpectrumRing {
 /// smoothing state. Owned by `AudioThreadState`; runs on the audio
 /// thread's snapshot tick path.
 pub struct SpectrumAnalyzer {
+    #[cfg(test)]
+    sample_rate: u32,
     fft: std::sync::Arc<dyn rustfft::Fft<f32>>,
     scratch: Vec<Complex<f32>>,
     time_domain: Vec<f32>,
@@ -113,6 +115,8 @@ impl SpectrumAnalyzer {
             bin_ends[b] = e;
         }
         Self {
+            #[cfg(test)]
+            sample_rate,
             fft,
             scratch: vec![Complex::new(0.0, 0.0); SPECTRUM_N_SAMPLES],
             time_domain: vec![0.0; SPECTRUM_N_SAMPLES],
@@ -175,5 +179,10 @@ impl SpectrumAnalyzer {
         for v in &mut self.prev_db {
             *v = SPECTRUM_FLOOR_DB;
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn sample_rate(&self) -> u32 {
+        self.sample_rate
     }
 }

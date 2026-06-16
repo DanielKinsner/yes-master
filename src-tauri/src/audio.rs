@@ -1878,6 +1878,10 @@ fn build_swap_fade(
     crate::sources::FadeEnvelope::new(lead_in, fade_in, frames, fade_out_trigger)
 }
 
+fn rebuild_spectrum_analyzer_for_playback(analyzer: &mut SpectrumAnalyzer, sample_rate: u32) {
+    *analyzer = SpectrumAnalyzer::new(sample_rate);
+}
+
 fn handle_play(
     state: &mut Option<AudioThreadState>,
     track_id: TrackId,
@@ -1957,8 +1961,6 @@ fn handle_play(
     } else {
         s.sink.stop();
     }
-    s.spectrum_analyzer.reset();
-
     s.decoded_cache = Some(DecodedCacheEntry {
         canonical_path: canonical,
         mtime,
@@ -1973,7 +1975,7 @@ fn handle_play(
     s.gr_high.store(0, Ordering::Relaxed);
     s.lufs_x100.store(i32::MIN, Ordering::Relaxed);
     s.integrated_lufs_x100.store(i32::MIN, Ordering::Relaxed);
-    s.spectrum_analyzer = SpectrumAnalyzer::new(pcm.sample_rate);
+    rebuild_spectrum_analyzer_for_playback(&mut s.spectrum_analyzer, pcm.sample_rate);
 
     let sample_rate = pcm.sample_rate;
     // L10 — the incoming source carries its own fade-out trigger so the *next*
@@ -2141,7 +2143,7 @@ fn handle_play_master(
     } else {
         s.sink.stop();
     }
-    s.spectrum_analyzer.reset();
+    rebuild_spectrum_analyzer_for_playback(&mut s.spectrum_analyzer, pcm.sample_rate);
 
     // Update the cache (replace any prior entry — single-slot LRU is fine
     // for the typical "one or two fixtures" Track Master workflow).
@@ -2278,6 +2280,16 @@ mod tests {
         assert_eq!(seek_target(-3.0), None);
         assert_eq!(seek_target(f64::NAN), None);
         assert_eq!(seek_target(f64::INFINITY), None);
+    }
+
+    #[test]
+    fn spectrum_analyzer_rebuild_uses_playback_sample_rate() {
+        let mut analyzer = SpectrumAnalyzer::new(44_100);
+        assert_eq!(analyzer.sample_rate(), 44_100);
+
+        rebuild_spectrum_analyzer_for_playback(&mut analyzer, 96_000);
+
+        assert_eq!(analyzer.sample_rate(), 96_000);
     }
 
     fn settings_with_intensity(intensity: f32) -> MasteringSettings {
