@@ -393,14 +393,16 @@ pub fn preview_landing(
         return Ok(unity);
     }
 
-    let channels_usize = channels.max(1) as usize;
-    let mut rendered = preview_landing_window(samples, sample_rate, channels);
-    let mut chain = crate::dsp::MasteringChain::new(sample_rate, channels_usize, &render_settings);
-    chain.process_interleaved(&mut rendered, channels_usize);
+    let (rendered, rendered_sample_rate) =
+        render_preview_landing_window(samples, sample_rate, channels, &render_settings)?;
 
     let channels_u32 = u32::from(channels.max(1));
-    let mut ebu = EbuR128::new(channels_u32, sample_rate, Mode::I | Mode::TRUE_PEAK)
-        .map_err(|e| CommandError::Render(format!("ebur128 init: {e}")))?;
+    let mut ebu = EbuR128::new(
+        channels_u32,
+        rendered_sample_rate,
+        Mode::I | Mode::TRUE_PEAK,
+    )
+    .map_err(|e| CommandError::Render(format!("ebur128 init: {e}")))?;
     ebu.add_frames_f32(&rendered)
         .map_err(|e| CommandError::Render(format!("ebur128 feed: {e}")))?;
     let measured = sanitize_lufs(
@@ -454,6 +456,25 @@ fn preview_landing_window(samples: &[f32], sample_rate: u32, channels: u16) -> V
     let start = start_frame * channels_usize;
     let end = ((start_frame + window_frames) * channels_usize).min(samples.len());
     samples[start..end].to_vec()
+}
+
+fn render_preview_landing_window(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+) -> CommandResult<(Vec<f32>, u32)> {
+    let channels_usize = channels.max(1) as usize;
+    let mut rendered = preview_landing_window(samples, sample_rate, channels);
+    let mut chain = crate::dsp::MasteringChain::new(sample_rate, channels_usize, settings);
+    chain.process_interleaved(&mut rendered, channels_usize);
+
+    let rendered_sample_rate = settings.effective_sample_rate(sample_rate);
+    if rendered_sample_rate != sample_rate {
+        rendered = convert_interleaved(&rendered, sample_rate, rendered_sample_rate, channels)?;
+    }
+
+    Ok((rendered, rendered_sample_rate))
 }
 
 #[tauri::command]
@@ -1180,6 +1201,62 @@ mod tests {
             out_path.parent().expect("parent").is_dir(),
             "Windows backslash output parent should be created"
         );
+    }
+
+    #[test]
+    fn preview_landing_window_uses_effective_render_sample_rate() {
+        let source_rate = 48_000u32;
+        let render_rate = 44_100u32;
+        let channels = 2u16;
+        let frames = source_rate as usize * 8;
+        let omega = std::f32::consts::TAU * 440.0 / source_rate as f32;
+        let mut samples = Vec::with_capacity(frames * channels as usize);
+        for i in 0..frames {
+            let sample = 0.25 * (omega * i as f32).sin();
+            for _ in 0..channels {
+                samples.push(sample);
+            }
+        }
+        let settings = MasteringSettings {
+            preset: Preset::Universal,
+            intensity: 0.5,
+            eq_sub_db: 0.0,
+            eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
+            eq_mid_db: 0.0,
+            eq_high_mid_db: 0.0,
+            eq_high_db: 0.0,
+            eq_sparkle_db: 0.0,
+            volume_match: false,
+            source_lufs_integrated: None,
+            input_gain_db: 0.0,
+            output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
+            album: None,
+            advanced: AdvancedSettings {
+                lufs_offset_db: Some(-14.0),
+                ceiling_dbtp: Some(-1.0),
+                target_sample_rate: Some(render_rate),
+                ..Default::default()
+            },
+        };
+
+        let (rendered, measured_rate) =
+            render_preview_landing_window(&samples, source_rate, channels, &settings)
+                .expect("render preview landing window");
+
+        assert_eq!(measured_rate, render_rate);
+        let rendered_frames = rendered.len() / channels as usize;
+        let expected_frames = render_rate as usize * 8;
+        assert!(
+            rendered_frames.abs_diff(expected_frames) <= 1,
+            "landing measurement window should be resampled to render rate; \
+             got {rendered_frames} frames, expected {expected_frames}"
+        );
+        let landing =
+            preview_landing(&samples, source_rate, channels, &settings).expect("preview landing");
+        assert!(landing.gain_lin.is_finite());
+        assert!(landing.mastered_lufs.is_finite());
     }
 
     // ========================================================================
