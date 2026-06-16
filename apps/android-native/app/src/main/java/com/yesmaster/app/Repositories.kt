@@ -26,6 +26,7 @@ class ImportRepository(private val context: Context) {
         context.contentResolver.openInputStream(uri)?.use { input ->
             target.outputStream().use { output -> input.copyTo(output) }
         } ?: error("Could not open the selected file")
+        ImportCache.pruneKeeping(target)
         return Imported(target, displayName)
     }
 
@@ -34,6 +35,18 @@ class ImportRepository(private val context: Context) {
             val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
             if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
         }
+}
+
+object ImportCache {
+    fun pruneKeeping(keep: File) {
+        val dir = keep.parentFile ?: return
+        val keepCanonical = keep.canonicalFile
+        dir.listFiles()?.forEach { candidate ->
+            if (candidate.canonicalFile != keepCanonical) {
+                candidate.deleteRecursively()
+            }
+        }
+    }
 }
 
 object ImportPolicy {
