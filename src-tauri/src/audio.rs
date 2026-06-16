@@ -1,6 +1,6 @@
 use crate::types::*;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
@@ -268,12 +268,14 @@ pub async fn set_loop_region(
 
 enum AudioCommand {
     Play {
+        request_epoch: u64,
         track_id: TrackId,
         path: PathBuf,
         start_position_sec: f64,
         reply: Sender<Result<(), String>>,
     },
     PlayMaster {
+        request_epoch: u64,
         track_id: TrackId,
         path: PathBuf,
         settings: MasteringSettings,
@@ -416,6 +418,10 @@ pub struct AudioPlayer {
     /// evict the newer entry from the single-slot cache (Codex review).
     /// Stale prewarms drop their result silently.
     prewarm_target: Arc<Mutex<Option<PathBuf>>>,
+    /// Monotonic cancellation token for play commands. Each Play/PlayMaster
+    /// captures the current value; timeouts and Stop advance it so a slow stale
+    /// decode cannot start playback after the caller has given up or moved on.
+    play_request_epoch: Arc<AtomicU64>,
     /// B2: backend-owned cache of derived adaptive source profiles, keyed by
     /// track. Populated by `analyze_tracks`; read by the render / readout
     /// commands and (cloned into the audio thread) by the live `update_chain`
@@ -428,10 +434,12 @@ impl AudioPlayer {
         let snapshot = Arc::new(RwLock::new(PlaybackSnapshot::default()));
         let prewarm_cache: SharedDecodedCache = Arc::new(Mutex::new(None));
         let prewarm_target: Arc<Mutex<Option<PathBuf>>> = Arc::new(Mutex::new(None));
+        let play_request_epoch = Arc::new(AtomicU64::new(0));
         let profile_store = Arc::new(crate::profile_store::SourceProfileStore::default());
         let (tx, rx) = mpsc::channel::<AudioCommand>();
         let snap_for_thread = snapshot.clone();
         let prewarm_for_thread = prewarm_cache.clone();
+        let play_epoch_for_thread = play_request_epoch.clone();
         let tx_for_thread = tx.clone();
         // B2: the audio thread resolves the adaptive profile from the same store
         // for the settings-only `update_chain` path (which has no track id and
@@ -445,6 +453,7 @@ impl AudioPlayer {
                     tx_for_thread,
                     snap_for_thread,
                     prewarm_for_thread,
+                    play_epoch_for_thread,
                     store_for_thread,
                 )
             })
@@ -454,6 +463,7 @@ impl AudioPlayer {
             snapshot,
             prewarm_cache,
             prewarm_target,
+            play_request_epoch,
             profile_store,
         }
     }
@@ -541,7 +551,9 @@ impl AudioPlayer {
         start_position_sec: f64,
     ) -> CommandResult<()> {
         let (reply_tx, reply_rx) = mpsc::channel();
+        let request_epoch = issue_play_request_epoch(&self.play_request_epoch);
         self.send(AudioCommand::Play {
+            request_epoch,
             track_id,
             path: path.to_path_buf(),
             start_position_sec: start_position_sec.max(0.0),
@@ -551,10 +563,13 @@ impl AudioPlayer {
         match reply_rx.recv_timeout(Self::PLAYBACK_REPLY_TIMEOUT) {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(CommandError::Other(e)),
-            Err(_) => Err(CommandError::Other(format!(
-                "Original preview did not become ready within {} seconds; the file may still be decoding",
-                Self::PLAYBACK_REPLY_TIMEOUT.as_secs()
-            ))),
+            Err(_) => {
+                cancel_play_request_epoch(&self.play_request_epoch, request_epoch);
+                Err(CommandError::Other(format!(
+                    "Original preview did not become ready within {} seconds; the file may still be decoding",
+                    Self::PLAYBACK_REPLY_TIMEOUT.as_secs()
+                )))
+            }
         }
     }
 
@@ -568,7 +583,9 @@ impl AudioPlayer {
         album: bool,
     ) -> CommandResult<()> {
         let (reply_tx, reply_rx) = mpsc::channel();
+        let request_epoch = issue_play_request_epoch(&self.play_request_epoch);
         self.send(AudioCommand::PlayMaster {
+            request_epoch,
             track_id,
             path: path.to_path_buf(),
             settings,
@@ -581,10 +598,13 @@ impl AudioPlayer {
         match reply_rx.recv_timeout(Self::PLAYBACK_REPLY_TIMEOUT) {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(CommandError::Other(e)),
-            Err(_) => Err(CommandError::Other(format!(
-                "Mastered preview did not become ready within {} seconds; the file may still be decoding",
-                Self::PLAYBACK_REPLY_TIMEOUT.as_secs()
-            ))),
+            Err(_) => {
+                cancel_play_request_epoch(&self.play_request_epoch, request_epoch);
+                Err(CommandError::Other(format!(
+                    "Mastered preview did not become ready within {} seconds; the file may still be decoding",
+                    Self::PLAYBACK_REPLY_TIMEOUT.as_secs()
+                )))
+            }
         }
     }
 
@@ -611,6 +631,7 @@ impl AudioPlayer {
     }
 
     pub fn stop(&self) {
+        cancel_any_play_request_epoch(&self.play_request_epoch);
         let _ = self.send(AudioCommand::Stop);
     }
 
@@ -1252,6 +1273,31 @@ fn resolve_pcm_with_caches(
     Ok(decoded)
 }
 
+fn issue_play_request_epoch(epoch: &AtomicU64) -> u64 {
+    epoch.fetch_add(1, Ordering::AcqRel).wrapping_add(1)
+}
+
+fn cancel_play_request_epoch(epoch: &AtomicU64, request_epoch: u64) {
+    let _ = epoch.compare_exchange(
+        request_epoch,
+        request_epoch.wrapping_add(1),
+        Ordering::AcqRel,
+        Ordering::Acquire,
+    );
+}
+
+fn cancel_any_play_request_epoch(epoch: &AtomicU64) {
+    epoch.fetch_add(1, Ordering::AcqRel);
+}
+
+fn ensure_play_request_current(epoch: &AtomicU64, request_epoch: u64) -> Result<(), String> {
+    if epoch.load(Ordering::Acquire) == request_epoch {
+        Ok(())
+    } else {
+        Err("play request cancelled".to_string())
+    }
+}
+
 /// True for commands that change which track is loaded into the audio
 /// thread. UpdateChain coalescing MUST NOT cross these — a stale
 /// UpdateChain queued before a track switch would otherwise apply old
@@ -1351,20 +1397,34 @@ fn process_audio_command(
     cmd: AudioCommand,
     state: &mut Option<AudioThreadState>,
     prewarm_cache: &SharedDecodedCache,
+    play_request_epoch: &Arc<AtomicU64>,
     command_tx: &Sender<AudioCommand>,
     profile_store: &Arc<crate::profile_store::SourceProfileStore>,
 ) -> bool {
     match cmd {
         AudioCommand::Play {
+            request_epoch,
             track_id,
             path,
             start_position_sec,
             reply,
         } => {
-            let outcome = handle_play(state, track_id, &path, start_position_sec, prewarm_cache);
+            let outcome =
+                ensure_play_request_current(play_request_epoch, request_epoch).and_then(|_| {
+                    handle_play(
+                        state,
+                        track_id,
+                        &path,
+                        start_position_sec,
+                        prewarm_cache,
+                        play_request_epoch,
+                        request_epoch,
+                    )
+                });
             let _ = reply.send(outcome);
         }
         AudioCommand::PlayMaster {
+            request_epoch,
             track_id,
             path,
             settings,
@@ -1373,18 +1433,23 @@ fn process_audio_command(
             album,
             reply,
         } => {
-            let outcome = handle_play_master(
-                state,
-                track_id,
-                &path,
-                &settings,
-                start_position_sec,
-                preview_lufs_landing,
-                album,
-                prewarm_cache,
-                command_tx,
-                profile_store,
-            );
+            let outcome =
+                ensure_play_request_current(play_request_epoch, request_epoch).and_then(|_| {
+                    handle_play_master(
+                        state,
+                        track_id,
+                        &path,
+                        &settings,
+                        start_position_sec,
+                        preview_lufs_landing,
+                        album,
+                        prewarm_cache,
+                        play_request_epoch,
+                        request_epoch,
+                        command_tx,
+                        profile_store,
+                    )
+                });
             let _ = reply.send(outcome);
         }
         AudioCommand::UpdateChain {
@@ -1627,6 +1692,7 @@ fn audio_thread(
     command_tx: Sender<AudioCommand>,
     snapshot: Arc<RwLock<PlaybackSnapshot>>,
     prewarm_cache: SharedDecodedCache,
+    play_request_epoch: Arc<AtomicU64>,
     profile_store: Arc<crate::profile_store::SourceProfileStore>,
 ) {
     let mut state: Option<AudioThreadState> = None;
@@ -1673,8 +1739,14 @@ fn audio_thread(
 
             let sequenced = coalesced_command_sequence(buffered);
             for c in sequenced {
-                if process_audio_command(c, &mut state, &prewarm_cache, &command_tx, &profile_store)
-                {
+                if process_audio_command(
+                    c,
+                    &mut state,
+                    &prewarm_cache,
+                    &play_request_epoch,
+                    &command_tx,
+                    &profile_store,
+                ) {
                     shutdown_requested = true;
                 }
             }
@@ -1812,12 +1884,15 @@ fn handle_play(
     path: &Path,
     start_position_sec: f64,
     prewarm_cache: &SharedDecodedCache,
+    play_request_epoch: &AtomicU64,
+    request_epoch: u64,
 ) -> Result<(), String> {
     let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
     let mtime = std::fs::metadata(&canonical)
         .ok()
         .and_then(|m| m.modified().ok());
     let pcm = resolve_pcm_with_caches(state.as_ref(), prewarm_cache, path, &canonical, mtime)?;
+    ensure_play_request_current(play_request_epoch, request_epoch)?;
 
     // Track-change cache invalidation. The decoded_cache write a few lines
     // below would otherwise look "same path" to the next play_master, which
@@ -1962,6 +2037,8 @@ fn handle_play_master(
     preview_lufs_landing: bool,
     album: bool,
     prewarm_cache: &SharedDecodedCache,
+    play_request_epoch: &AtomicU64,
+    request_epoch: u64,
     command_tx: &Sender<AudioCommand>,
     profile_store: &Arc<crate::profile_store::SourceProfileStore>,
 ) -> Result<(), String> {
@@ -1998,6 +2075,7 @@ fn handle_play_master(
         .ok()
         .and_then(|m| m.modified().ok());
     let pcm = resolve_pcm_with_caches(state.as_ref(), prewarm_cache, path, &canonical, mtime)?;
+    ensure_play_request_current(play_request_epoch, request_epoch)?;
 
     // Cache invalidation: clear the landing-gain cache when canonical
     // path OR mtime differs from the prior decoded cache entry. Same-
@@ -2833,6 +2911,39 @@ mod tests {
         assert!(!plan.needs_measurement);
     }
 
+    #[test]
+    fn play_request_timeout_cancel_rejects_that_epoch() {
+        let epoch = AtomicU64::new(0);
+        let request_epoch = issue_play_request_epoch(&epoch);
+        assert!(ensure_play_request_current(&epoch, request_epoch).is_ok());
+
+        cancel_play_request_epoch(&epoch, request_epoch);
+
+        assert!(ensure_play_request_current(&epoch, request_epoch).is_err());
+    }
+
+    #[test]
+    fn play_request_timeout_cancel_does_not_cancel_newer_epoch() {
+        let epoch = AtomicU64::new(0);
+        let stale_epoch = issue_play_request_epoch(&epoch);
+        let newer_epoch = issue_play_request_epoch(&epoch);
+
+        cancel_play_request_epoch(&epoch, stale_epoch);
+
+        assert!(ensure_play_request_current(&epoch, stale_epoch).is_err());
+        assert!(ensure_play_request_current(&epoch, newer_epoch).is_ok());
+    }
+
+    #[test]
+    fn stop_cancels_any_pending_play_request_epoch() {
+        let epoch = AtomicU64::new(0);
+        let request_epoch = issue_play_request_epoch(&epoch);
+
+        cancel_any_play_request_epoch(&epoch);
+
+        assert!(ensure_play_request_current(&epoch, request_epoch).is_err());
+    }
+
     // ========================================================================
     // Coalescing — mechanical gates for the knob-spam-protection layer.
     // coalesced_command_sequence() is the entire flow. If it stops
@@ -2847,6 +2958,7 @@ mod tests {
     fn dummy_play_master(track_id: &str) -> AudioCommand {
         let (reply, _rx) = mpsc::channel();
         AudioCommand::PlayMaster {
+            request_epoch: 1,
             track_id: TrackId(track_id.to_string()),
             path: std::path::PathBuf::from(format!("/tmp/{track_id}.wav")),
             settings: settings_with_intensity(0.5),
@@ -2860,6 +2972,7 @@ mod tests {
     fn dummy_play(track_id: &str) -> AudioCommand {
         let (reply, _rx) = mpsc::channel();
         AudioCommand::Play {
+            request_epoch: 1,
             track_id: TrackId(track_id.to_string()),
             path: std::path::PathBuf::from(format!("/tmp/{track_id}.wav")),
             start_position_sec: 0.0,
