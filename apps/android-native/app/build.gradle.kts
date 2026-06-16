@@ -8,6 +8,40 @@ plugins {
 
 val nativeAbis = listOf("arm64-v8a")
 val pinnedNdkVersion = "27.2.12479018"
+val minimumLoadSegmentAlignment = 0x4000L
+
+val resolveConfiguredNdkDir = {
+    System.getenv("ANDROID_NDK_HOME")
+        ?: run {
+            val properties = Properties()
+            val localProperties = rootProject.file("local.properties")
+            if (localProperties.isFile) {
+                localProperties.inputStream().use { properties.load(it) }
+            }
+            val sdkDir = properties.getProperty("sdk.dir") ?: System.getenv("ANDROID_HOME")
+            val pinnedNdk = sdkDir?.let { File(it, "ndk/$pinnedNdkVersion") }
+            pinnedNdk
+                ?.takeIf { it.isDirectory }
+                ?.absolutePath
+                ?: sdkDir
+                    ?.let { File(it, "ndk").listFiles() }
+                    ?.filter { it.isDirectory }
+                    ?.maxByOrNull { it.name }
+                    ?.absolutePath
+        }
+}
+
+val findLlvmReadelf = { ndkDir: String ->
+    val executableName = if (System.getProperty("os.name").lowercase().contains("windows")) {
+        "llvm-readelf.exe"
+    } else {
+        "llvm-readelf"
+    }
+    File(ndkDir, "toolchains/llvm/prebuilt")
+        .listFiles()
+        ?.map { File(it, "bin/$executableName") }
+        ?.firstOrNull { it.isFile }
+}
 
 android {
     namespace = "com.yesmaster.app"
@@ -98,24 +132,7 @@ val cargoNdk = tasks.register<Exec>("cargoNdk") {
         ?.absolutePath
         ?: "cargo"
 
-    val ndkDir = System.getenv("ANDROID_NDK_HOME")
-        ?: run {
-            val properties = Properties()
-            val localProperties = rootProject.file("local.properties")
-            if (localProperties.isFile) {
-                localProperties.inputStream().use { properties.load(it) }
-            }
-            val sdkDir = properties.getProperty("sdk.dir") ?: System.getenv("ANDROID_HOME")
-            val pinnedNdk = sdkDir?.let { File(it, "ndk/$pinnedNdkVersion") }
-            pinnedNdk
-                ?.takeIf { it.isDirectory }
-                ?.absolutePath
-                ?: sdkDir
-                    ?.let { File(it, "ndk").listFiles() }
-                    ?.filter { it.isDirectory }
-                    ?.maxByOrNull { it.name }
-                    ?.absolutePath
-        }
+    val ndkDir = resolveConfiguredNdkDir()
     if (ndkDir != null) {
         environment("ANDROID_NDK_HOME", ndkDir)
     }
@@ -139,11 +156,54 @@ val cargoNdk = tasks.register<Exec>("cargoNdk") {
     )
 }
 
+val verifyNativeLoadAlignment = tasks.register("verifyNativeLoadAlignment") {
+    dependsOn(cargoNdk)
+    val nativeLibs = fileTree("src/main/jniLibs") {
+        include("**/*.so")
+    }
+    inputs.files(nativeLibs)
+    inputs.property("minimumLoadSegmentAlignment", minimumLoadSegmentAlignment)
+
+    doLast {
+        val ndkDir = resolveConfiguredNdkDir()
+            ?: throw GradleException("ANDROID_NDK_HOME, local.properties sdk.dir, or ANDROID_HOME must point to NDK $pinnedNdkVersion")
+        val readelf = findLlvmReadelf(ndkDir)
+            ?: throw GradleException("llvm-readelf not found under $ndkDir")
+        val loadLine = Regex("""^\s*LOAD\s+.*\s(0x[0-9a-fA-F]+)\s*$""")
+        val failures = mutableListOf<String>()
+
+        nativeLibs.files.sortedBy { it.absolutePath }.forEach { lib ->
+            val output = providers.exec {
+                commandLine(readelf.absolutePath, "--program-headers", "--wide", lib.absolutePath)
+            }.standardOutput.asText.get()
+            val alignments = output
+                .lineSequence()
+                .mapNotNull { loadLine.find(it)?.groupValues?.get(1) }
+                .toList()
+            if (alignments.isEmpty()) {
+                failures += "${lib.name}: no LOAD segments reported"
+                return@forEach
+            }
+            alignments
+                .map { it to it.removePrefix("0x").toLong(16) }
+                .filter { (_, alignment) -> alignment < minimumLoadSegmentAlignment }
+                .forEach { (raw, _) -> failures += "${lib.name}: LOAD segment align=$raw" }
+        }
+
+        if (failures.isNotEmpty()) {
+            throw GradleException(
+                "Native libraries must use LOAD segment alignment >= 0x${minimumLoadSegmentAlignment.toString(16)}:\n" +
+                    failures.joinToString("\n")
+            )
+        }
+    }
+}
+
 // Hook into jniLib merging only — APK packaging needs the .so, but the JVM
 // unit-test lane (the wire drift gate's fourth consumer) must stay runnable
 // on a machine with no Rust or NDK installed.
 tasks.matching { it.name.matches(Regex("merge.*JniLibFolders")) }.configureEach {
-    dependsOn(cargoNdk)
+    dependsOn(verifyNativeLoadAlignment)
 }
 
 dependencies {
