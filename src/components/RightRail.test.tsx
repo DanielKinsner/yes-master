@@ -164,16 +164,19 @@ describe("MasterOutPanel", () => {
         isPlaying
         lufsMomentary={-9.7}
         lufsIntegrated={-10.5}
+        targetLufs={-14}
         meterMode="standard"
       />,
     );
 
-    expect(container.textContent).toContain("Loudness");
-    expect(container.textContent).toContain("Since Play");
+    expect(container.textContent).toContain("TARGET -14 LUFS");
+    expect(container.textContent).toContain("Live Now");
+    expect(container.textContent).toContain("Play Avg");
     expect(container.textContent).toContain("Peak");
+    expect(container.textContent).not.toContain("Loudness");
     expect(container.textContent).not.toContain("Momentary LUFS");
     expect(container.querySelector(".readout")?.getAttribute("title")).toContain(
-      "not the selected target",
+      "Loud sections can read hotter",
     );
 
     await act(async () => {

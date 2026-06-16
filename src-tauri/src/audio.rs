@@ -2375,6 +2375,37 @@ mod tests {
         assert_eq!(raw_coeffs.export_landing_gain_lin, 1.0);
     }
 
+    #[test]
+    fn live_preview_landing_hits_standard_loudness_trio() {
+        let sample_rate = 48_000;
+        let channels: u16 = 2;
+        let mut samples = sine_signal(sample_rate as usize * 4, sample_rate, channels);
+        for sample in samples.iter_mut() {
+            *sample *= 0.02;
+        }
+
+        for target in [-14.0_f32, -11.0, -9.0] {
+            let mut settings = settings_with_intensity(0.5);
+            settings.advanced.lufs_offset_db = Some(target);
+            settings.advanced.ceiling_dbtp = Some(-1.0);
+
+            let coeffs = live_preview_coeffs(sample_rate, channels, &samples, &settings, true)
+                .expect("preview coeffs for standard target");
+            let mut rendered = samples.clone();
+            let mut chain = MasteringChain::new(sample_rate, channels as usize, &settings);
+            chain.coeffs.export_landing_gain_lin = coeffs.export_landing_gain_lin;
+            chain.process_interleaved(&mut rendered, channels as usize);
+
+            let measured = crate::engine::measure_integrated_lufs(&rendered, sample_rate, channels)
+                .expect("measure standard preview landing");
+            assert!(
+                (measured - target).abs() < 0.5,
+                "expected live preview landing near Standard target {target:.1} LUFS, \
+                 got {measured:.2}"
+            );
+        }
+    }
+
     // ========================================================================
     // Prewarm decode cache — mechanical gates for the off-thread decode
     // cache that eliminates the 1-2 s freeze on first Mastered click

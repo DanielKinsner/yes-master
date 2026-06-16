@@ -34,9 +34,10 @@ Track Master supports:
 - Post-render export receipt/checks.
 - Baseline Settings and contextual Help dialogs.
 - Visible Save/Open Project feedback.
-- Live Master Out meters with plain Standard labels and technical Advanced
-  labels/tooltips: live loudness is not the selected target, since-play LUFS is
-  the current playback run, and peak is dBFS/peak behavior.
+- Live Master Out meters with Standard's selected target shown separately from
+  the live readouts: `Live Now` is the short loudness window, `Play Avg` is the
+  current playback run, and `Peak` is dBFS/peak behavior. Advanced keeps the
+  exact technical labels/tooltips.
 - A first-run guide in Standard view: subtle floating coachmarks that walk a
   new user to the Original→Mastered flip, then a send-off and one Advanced
   pointer. Dismissible, never blocking, persisted under
