@@ -18,8 +18,8 @@ use yes_master_lib::album;
 use yes_master_lib::album_render::render_album_plan_impl;
 use yes_master_lib::engine::{AlbumPlanRenderRequest, AlbumTrackRenderInput};
 use yes_master_lib::types::{
-    AlbumArc, AlbumArcKind, AnalysisResult, InferenceConfidence, SpectralBalance, TrackCharacter,
-    TrackId, TrackRole, ISO_PLACEHOLDER,
+    AlbumArc, AlbumArcKind, AlbumPlan, AlbumTrackEntry, AnalysisResult, InferenceConfidence,
+    SpectralBalance, TrackCharacter, TrackId, TrackRole, TransitionSpec, ISO_PLACEHOLDER,
 };
 
 mod common;
@@ -200,6 +200,111 @@ fn album_render_repeated_plan_keeps_prior_per_track_files_and_manifest() {
         second_track_path.to_string_lossy(),
         "manifest must list the actual unique per-track filename"
     );
+}
+
+#[test]
+fn album_render_output_is_byte_identical_with_volume_match_on_or_off() {
+    let tmp = TempDir::new().expect("tempdir");
+    let sr = 48_000_u32;
+    let one_second_frames = sr as usize;
+    let omega_a = 2.0 * std::f32::consts::PI * 440.0 / sr as f32;
+    let omega_b = 2.0 * std::f32::consts::PI * 880.0 / sr as f32;
+    let first_samples: Vec<f32> = (0..one_second_frames)
+        .map(|i| 0.35 * (omega_a * i as f32).sin())
+        .collect();
+    let second_samples: Vec<f32> = (0..one_second_frames)
+        .map(|i| 0.2 * (omega_b * i as f32).sin())
+        .collect();
+    let first_path = tmp.path().join("vm-first.wav");
+    let second_path = tmp.path().join("vm-second.wav");
+    write_wav_mono(&first_path, sr, &first_samples);
+    write_wav_mono(&second_path, sr, &second_samples);
+
+    let plan = AlbumPlan {
+        title: "Volume Match Tripwire".to_string(),
+        arc: AlbumArc::Custom {
+            lufs_offsets: vec![0.0, 0.0],
+        },
+        tracks: vec![
+            AlbumTrackEntry {
+                track_id: TrackId("vm-first".to_string()),
+                position: 1,
+                role: TrackRole::AlbumTrack,
+                role_locked: false,
+                arc_lufs_offset_db: 0.0,
+                intensity_scale: 1.0,
+                album_character: None,
+            },
+            AlbumTrackEntry {
+                track_id: TrackId("vm-second".to_string()),
+                position: 2,
+                role: TrackRole::AlbumTrack,
+                role_locked: false,
+                arc_lufs_offset_db: 0.0,
+                intensity_scale: 1.0,
+                album_character: None,
+            },
+        ],
+        transitions: vec![TransitionSpec::direct()],
+        intensity: 1.0,
+        delivery_sample_rate: None,
+        delivery_bit_depth: Some(24),
+    };
+
+    let mut off_settings = default_master_settings();
+    off_settings.volume_match = false;
+    off_settings.source_lufs_integrated = Some(-18.0);
+    let mut on_settings = off_settings.clone();
+    on_settings.volume_match = true;
+
+    let off_request = AlbumPlanRenderRequest {
+        plan: plan.clone(),
+        tracks: vec![
+            AlbumTrackRenderInput {
+                track_id: TrackId("vm-first".to_string()),
+                source_path: first_path.to_string_lossy().to_string(),
+                settings: off_settings.clone(),
+            },
+            AlbumTrackRenderInput {
+                track_id: TrackId("vm-second".to_string()),
+                source_path: second_path.to_string_lossy().to_string(),
+                settings: off_settings,
+            },
+        ],
+    };
+    let on_request = AlbumPlanRenderRequest {
+        plan,
+        tracks: vec![
+            AlbumTrackRenderInput {
+                track_id: TrackId("vm-first".to_string()),
+                source_path: first_path.to_string_lossy().to_string(),
+                settings: on_settings.clone(),
+            },
+            AlbumTrackRenderInput {
+                track_id: TrackId("vm-second".to_string()),
+                source_path: second_path.to_string_lossy().to_string(),
+                settings: on_settings,
+            },
+        ],
+    };
+
+    let off_report =
+        render_album_plan_impl(&off_request, &tmp.path().join("vm-off"), None).expect("render off");
+    let on_report =
+        render_album_plan_impl(&on_request, &tmp.path().join("vm-on"), None).expect("render on");
+
+    assert_eq!(
+        std::fs::read(&off_report.album_wav_path).expect("read VM-off album"),
+        std::fs::read(&on_report.album_wav_path).expect("read VM-on album"),
+        "Volume Match is audition-only and must not change album export bytes"
+    );
+    for (off, on) in off_report.tracks.iter().zip(on_report.tracks.iter()) {
+        assert_eq!(
+            std::fs::read(&off.output_path).expect("read VM-off track"),
+            std::fs::read(&on.output_path).expect("read VM-on track"),
+            "Volume Match must not change per-track album export bytes"
+        );
+    }
 }
 
 #[test]
