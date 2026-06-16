@@ -146,14 +146,14 @@ pub mod inner {
 mod jni_shims {
     use super::inner;
     use crate::jni_util::{catch_panic, from_jstring, to_jstring};
-    use jni::objects::{JClass, JString};
+    use jni::objects::{JObject, JString};
     use jni::sys::{jboolean, jfloat, jstring, JNI_FALSE, JNI_TRUE};
     use jni::JNIEnv;
 
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_NativeBridge_bridgeVersionNative(
         mut env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
     ) -> jstring {
         let result = catch_panic(
             || "yes-master-bridge/unknown".to_string(),
@@ -165,7 +165,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_NativeBridge_supportsImportExtension(
         mut env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         extension: JString,
     ) -> jboolean {
         let ext = from_jstring(&mut env, &extension);
@@ -181,7 +181,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_NativeBridge_analyzeFileJsonNative(
         mut env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         path: JString,
     ) -> jstring {
         let path = from_jstring(&mut env, &path);
@@ -198,7 +198,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_NativeBridge_renderMasterWithOptionsJsonNative(
         mut env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         source_path: JString,
         output_dir: JString,
         preset: JString,

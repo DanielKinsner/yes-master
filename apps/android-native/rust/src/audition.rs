@@ -361,7 +361,7 @@ pub(crate) fn landing_json(gain_lin: f32, mastered_lufs: f32) -> String {
 mod jni_shims {
     use super::{landing_json, volume_match_linear_gain, AuditionEngine};
     use crate::jni_util::{catch_panic, from_jstring, to_jstring};
-    use jni::objects::{JClass, JString};
+    use jni::objects::{JObject, JString};
     use jni::sys::{jboolean, jdouble, jfloat, jlong, jstring, JNI_FALSE, JNI_TRUE};
     use jni::JNIEnv;
 
@@ -385,7 +385,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_createNative(
         mut env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         source_path: JString,
         preset: JString,
         intensity: jfloat,
@@ -407,7 +407,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_destroyNative(
         _env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         handle: jlong,
     ) {
         if handle != 0 {
@@ -422,7 +422,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_startNative(
         _env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         handle: jlong,
     ) -> jboolean {
         catch_panic(
@@ -437,7 +437,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_pauseNative(
         _env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         handle: jlong,
     ) {
         catch_panic(
@@ -453,7 +453,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_isPlayingNative(
         _env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         handle: jlong,
     ) -> jboolean {
         catch_panic(
@@ -468,7 +468,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_setBypassNative(
         _env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         handle: jlong,
         original: jboolean,
     ) {
@@ -485,7 +485,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_setParamsNative(
         mut env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         handle: jlong,
         preset: JString,
         intensity: jfloat,
@@ -505,7 +505,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_setVolumeMatchNative(
         _env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         handle: jlong,
         linear_gain: jfloat,
     ) {
@@ -522,7 +522,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_setLandingGainNative(
         _env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         handle: jlong,
         linear_gain: jfloat,
     ) {
@@ -539,7 +539,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_measureLandingNative(
         mut env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         handle: jlong,
         preset: JString,
         intensity: jfloat,
@@ -562,7 +562,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_seekNative(
         _env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         handle: jlong,
         position_seconds: jdouble,
     ) {
@@ -579,7 +579,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_positionSecondsNative(
         _env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         handle: jlong,
     ) -> jdouble {
         catch_panic(
@@ -591,7 +591,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_durationSecondsNative(
         _env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         handle: jlong,
     ) -> jdouble {
         catch_panic(
@@ -603,7 +603,7 @@ mod jni_shims {
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_AuditionBridge_volumeMatchGainNative(
         _env: JNIEnv,
-        _class: JClass,
+        _this: JObject,
         side_lufs: jdouble,
         other_lufs: jdouble,
     ) -> jfloat {
