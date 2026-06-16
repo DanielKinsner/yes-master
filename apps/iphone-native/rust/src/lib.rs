@@ -116,12 +116,15 @@ pub unsafe extern "C" fn yes_master_native_render_master_with_options_json(
 
     let source_path = Path::new(&source_path);
     let output_dir = Path::new(&output_dir);
-    let adaptive_context = native_adaptive_context_for_path(source_path);
+    let adaptive_context = match resolve_native_adaptive_context_for_path(source_path) {
+        Ok(context) => context,
+        Err(error) => return error_to_ffi(&format!("adaptive context failed: {error}")),
+    };
     let settings = export_settings_for_options_with_context(
         unsafe { ffi_string(preset) }.as_deref(),
         intensity,
         lufs_target,
-        adaptive_context.as_ref(),
+        Some(&adaptive_context),
     );
 
     if let Err(error) = std::fs::create_dir_all(output_dir) {
@@ -180,14 +183,20 @@ fn native_adaptive_context_from_analysis(analysis: &AnalysisResult) -> NativeAda
 }
 
 pub(crate) fn native_adaptive_context_for_path(path: &Path) -> Option<NativeAdaptiveContext> {
+    resolve_native_adaptive_context_for_path(path).ok()
+}
+
+fn resolve_native_adaptive_context_for_path(path: &Path) -> Result<NativeAdaptiveContext, String> {
     let request = AnalyzeRequest {
         id: TrackId::new(),
         path: path.to_string_lossy().into_owned(),
     };
-    futures_executor::block_on(analyze_tracks_core(vec![request]))
-        .ok()
-        .and_then(|mut results| results.pop())
-        .map(|analysis| native_adaptive_context_from_analysis(&analysis))
+    let mut results = futures_executor::block_on(analyze_tracks_core(vec![request]))
+        .map_err(|e| e.to_string())?;
+    let analysis = results
+        .pop()
+        .ok_or_else(|| "analysis returned no result".to_string())?;
+    Ok(native_adaptive_context_from_analysis(&analysis))
 }
 
 /// `pub` (not just crate-visible) since 2026-06-10: the Android bridge crate
@@ -981,6 +990,39 @@ mod tests {
         );
 
         assert!(output.exists(), "rendered WAV was not written");
+    }
+
+    #[test]
+    fn render_master_surfaces_adaptive_context_failure() {
+        let tmp = tempfile::tempdir().unwrap();
+        let missing = tmp.path().join("missing.wav");
+        let output_dir = tmp.path().join("rendered");
+        let missing = CString::new(missing.to_string_lossy().as_bytes()).unwrap();
+        let output_dir = CString::new(output_dir.to_string_lossy().as_bytes()).unwrap();
+        let preset = CString::new("balanced").unwrap();
+
+        let pointer = unsafe {
+            yes_master_native_render_master_with_options_json(
+                missing.as_ptr(),
+                output_dir.as_ptr(),
+                preset.as_ptr(),
+                0.5,
+                -11.0,
+            )
+        };
+        assert!(!pointer.is_null());
+
+        let json = unsafe {
+            let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
+            yes_master_native_free_string(pointer);
+            value
+        };
+        let payload: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let message = payload["error"].as_str().expect("error payload");
+        assert!(
+            message.contains("adaptive context failed"),
+            "render must surface context failure; got {message}"
+        );
     }
 
     fn render_master_for_test(
