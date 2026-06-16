@@ -38,44 +38,69 @@ pub unsafe extern "C" fn yes_master_native_supports_import_extension(
 
 #[no_mangle]
 pub extern "C" fn yes_master_native_fixed_export_settings_json() -> *mut c_char {
-    string_to_ffi(
-        serde_json::to_string(&fixed_export_settings())
-            .unwrap_or_else(|error| format!(r#"{{"error":"{error}"}}"#)),
+    catch_ffi_panic(
+        || error_to_ffi("internal error"),
+        || {
+            string_to_ffi(
+                serde_json::to_string(&fixed_export_settings())
+                    .unwrap_or_else(|error| format!(r#"{{"error":"{error}"}}"#)),
+            )
+        },
     )
 }
 
+/// Test-only sentinel path that forces an internal `panic!` inside
+/// [`yes_master_native_analyze_file_json`], so the panic-containment guard can
+/// be exercised over the real FFI surface without a corrupt fixture.
+#[cfg(test)]
+pub(crate) const PANIC_SENTINEL_PATH: &str = "__yes_master_force_internal_panic__";
+
 #[no_mangle]
 pub unsafe extern "C" fn yes_master_native_analyze_file_json(path: *const c_char) -> *mut c_char {
-    let Some(path) = ffi_string(path) else {
-        return error_to_ffi("missing path");
-    };
+    // Read the C string in the `unsafe fn` body — a closure would not inherit
+    // its implicit unsafe context — so the guarded work below is fully safe.
+    let path = ffi_string(path);
+    catch_ffi_panic(
+        || error_to_ffi("internal error"),
+        move || {
+            let Some(path) = path else {
+                return error_to_ffi("missing path");
+            };
 
-    if path.trim().is_empty() {
-        return error_to_ffi("missing path");
-    }
-
-    let request = AnalyzeRequest {
-        id: TrackId::new(),
-        path,
-    };
-
-    // The native bridge has no Tauri runtime, so it calls the State-free core
-    // (the `analyze_tracks` command takes a `tauri::State<SourceProfileStore>`
-    // that can't exist here). Use the same deep-capable analysis entry as
-    // desktop; `DeepAnalysis` stays Rust-internal via serde(skip), but render/live
-    // settings can resolve adaptive profile + confidence from it below.
-    match futures_executor::block_on(analyze_tracks_core(vec![request])) {
-        Ok(mut results) => {
-            if let Some(result) = results.pop() {
-                string_to_ffi(serde_json::to_string(&result).unwrap_or_else(|error| {
-                    format!(r#"{{"error":"analysis serialization failed: {error}"}}"#)
-                }))
-            } else {
-                error_to_ffi("analysis returned no result")
+            if path.trim().is_empty() {
+                return error_to_ffi("missing path");
             }
-        }
-        Err(error) => error_to_ffi(&error.to_string()),
-    }
+
+            #[cfg(test)]
+            if path == PANIC_SENTINEL_PATH {
+                panic!("injected internal panic for FFI containment test");
+            }
+
+            let request = AnalyzeRequest {
+                id: TrackId::new(),
+                path,
+            };
+
+            // The native bridge has no Tauri runtime, so it calls the State-free
+            // core (the `analyze_tracks` command takes a
+            // `tauri::State<SourceProfileStore>` that can't exist here). Use the
+            // same deep-capable analysis entry as desktop; `DeepAnalysis` stays
+            // Rust-internal via serde(skip), but render/live settings can resolve
+            // adaptive profile + confidence from it below.
+            match futures_executor::block_on(analyze_tracks_core(vec![request])) {
+                Ok(mut results) => {
+                    if let Some(result) = results.pop() {
+                        string_to_ffi(serde_json::to_string(&result).unwrap_or_else(|error| {
+                            format!(r#"{{"error":"analysis serialization failed: {error}"}}"#)
+                        }))
+                    } else {
+                        error_to_ffi("analysis returned no result")
+                    }
+                }
+                Err(error) => error_to_ffi(&error.to_string()),
+            }
+        },
+    )
 }
 
 #[no_mangle]
@@ -100,49 +125,59 @@ pub unsafe extern "C" fn yes_master_native_render_master_with_options_json(
     intensity: f32,
     lufs_target: f32,
 ) -> *mut c_char {
-    let Some(source_path) = ffi_string(source_path) else {
-        return error_to_ffi("missing source path");
-    };
-    let Some(output_dir) = ffi_string(output_dir) else {
-        return error_to_ffi("missing output directory");
-    };
+    // Read the C strings in the `unsafe fn` body (a closure would not inherit
+    // its implicit unsafe context); the guarded work below is then fully safe.
+    let source_path = ffi_string(source_path);
+    let output_dir = ffi_string(output_dir);
+    let preset = ffi_string(preset);
+    catch_ffi_panic(
+        || error_to_ffi("internal error"),
+        move || {
+            let Some(source_path) = source_path else {
+                return error_to_ffi("missing source path");
+            };
+            let Some(output_dir) = output_dir else {
+                return error_to_ffi("missing output directory");
+            };
 
-    if source_path.trim().is_empty() {
-        return error_to_ffi("missing source path");
-    }
-    if output_dir.trim().is_empty() {
-        return error_to_ffi("missing output directory");
-    }
+            if source_path.trim().is_empty() {
+                return error_to_ffi("missing source path");
+            }
+            if output_dir.trim().is_empty() {
+                return error_to_ffi("missing output directory");
+            }
 
-    let source_path = Path::new(&source_path);
-    let output_dir = Path::new(&output_dir);
-    let adaptive_context = match resolve_native_adaptive_context_for_path(source_path) {
-        Ok(context) => context,
-        Err(error) => return error_to_ffi(&format!("adaptive context failed: {error}")),
-    };
-    let settings = export_settings_for_options_with_context(
-        unsafe { ffi_string(preset) }.as_deref(),
-        intensity,
-        lufs_target,
-        Some(&adaptive_context),
-    );
+            let source_path = Path::new(&source_path);
+            let output_dir = Path::new(&output_dir);
+            let adaptive_context = match resolve_native_adaptive_context_for_path(source_path) {
+                Ok(context) => context,
+                Err(error) => return error_to_ffi(&format!("adaptive context failed: {error}")),
+            };
+            let settings = export_settings_for_options_with_context(
+                preset.as_deref(),
+                intensity,
+                lufs_target,
+                Some(&adaptive_context),
+            );
 
-    if let Err(error) = std::fs::create_dir_all(output_dir) {
-        return error_to_ffi(&error.to_string());
-    }
+            if let Err(error) = std::fs::create_dir_all(output_dir) {
+                return error_to_ffi(&error.to_string());
+            }
 
-    match mastering_render(
-        TrackId::new(),
-        source_path,
-        &settings,
-        output_dir,
-        RenderKind::Master,
-    ) {
-        Ok(job) => string_to_ffi(serde_json::to_string(&job).unwrap_or_else(|error| {
-            format!(r#"{{"error":"render serialization failed: {error}"}}"#)
-        })),
-        Err(error) => error_to_ffi(&error.to_string()),
-    }
+            match mastering_render(
+                TrackId::new(),
+                source_path,
+                &settings,
+                output_dir,
+                RenderKind::Master,
+            ) {
+                Ok(job) => string_to_ffi(serde_json::to_string(&job).unwrap_or_else(|error| {
+                    format!(r#"{{"error":"render serialization failed: {error}"}}"#)
+                })),
+                Err(error) => error_to_ffi(&error.to_string()),
+            }
+        },
+    )
 }
 
 #[no_mangle]
@@ -327,6 +362,17 @@ fn string_to_ffi(value: String) -> *mut c_char {
 
 fn error_to_ffi(message: &str) -> *mut c_char {
     string_to_ffi(serde_json::json!({ "error": message }).to_string())
+}
+
+/// Run an FFI body, mapping any internal panic to `default()`. A panic must
+/// never unwind across `extern "C"`: since Rust 1.81 that is a defined clean
+/// process *abort*, so a panic deep in `yes_master_lib` (corrupt input, serde,
+/// the async executor) would kill the host app instead of surfacing the
+/// JSON/null error contract the C header promises. Mirrors the Android bridge's
+/// `catch_panic` and the real-time `live_process` guard. `pub(crate)` so
+/// `live_stream` can reuse it.
+pub(crate) fn catch_ffi_panic<T>(default: impl FnOnce() -> T, body: impl FnOnce() -> T) -> T {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(body)).unwrap_or_else(|_| default())
 }
 
 #[cfg(test)]
@@ -742,6 +788,28 @@ mod tests {
 
         assert!(json.contains(r#""error""#), "got {json}");
         assert!(json.contains("source file not found"), "got {json}");
+    }
+
+    // A panic deep in the shared engine must surface as the error-JSON contract,
+    // not unwind across `extern "C"` (a clean process abort since Rust 1.81 ==
+    // the host app crashes). Mirrors the Android bridge's `catch_panic` defaults.
+    // The sentinel path forces a `panic!` inside the guarded body; the guard must
+    // turn it into `{"error":"internal error"}`.
+    #[test]
+    fn analyze_file_json_contains_internal_panic() {
+        let sentinel = CString::new(PANIC_SENTINEL_PATH).unwrap();
+
+        let pointer = unsafe { yes_master_native_analyze_file_json(sentinel.as_ptr()) };
+        assert!(!pointer.is_null(), "guarded FFI must return a payload, not abort");
+
+        let json = unsafe {
+            let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
+            yes_master_native_free_string(pointer);
+            value
+        };
+
+        assert!(json.contains(r#""error""#), "panic must surface as error JSON: {json}");
+        assert!(json.contains("internal error"), "got {json}");
     }
 
     #[test]

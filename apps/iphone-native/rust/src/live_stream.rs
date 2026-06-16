@@ -40,8 +40,8 @@ use std::sync::Arc;
 use yes_master_lib::dsp::{ChainCoeffs, MasteringChain};
 
 use crate::{
-    export_settings_for_options_with_context, ffi_string, native_adaptive_context_for_path,
-    NativeAdaptiveContext,
+    catch_ffi_panic, export_settings_for_options_with_context, ffi_string,
+    native_adaptive_context_for_path, NativeAdaptiveContext,
 };
 
 /// Crossfade length between the old and new chain when coefficients change.
@@ -445,17 +445,28 @@ pub unsafe extern "C" fn yes_master_native_live_create(
     intensity: f32,
     lufs_target: f32,
 ) -> *mut LiveStream {
-    let Some(path) = ffi_string(source_path) else {
-        return std::ptr::null_mut();
-    };
-    if path.trim().is_empty() {
-        return std::ptr::null_mut();
-    }
+    // Read the C strings in the `unsafe fn` body (a closure would not inherit
+    // its implicit unsafe context); the guarded decode/build below is then safe.
+    // create() decodes + analyzes (the same panic-capable engine path
+    // analyze_file_json guards) plus builds the chain, so a corrupt file must
+    // yield NULL — its existing failure signal — rather than abort the app.
+    let path = ffi_string(source_path);
     let preset = ffi_string(preset);
-    match LiveStream::create(Path::new(&path), preset.as_deref(), intensity, lufs_target) {
-        Some(stream) => Box::into_raw(Box::new(stream)),
-        None => std::ptr::null_mut(),
-    }
+    catch_ffi_panic(
+        || std::ptr::null_mut(),
+        move || {
+            let Some(path) = path else {
+                return std::ptr::null_mut();
+            };
+            if path.trim().is_empty() {
+                return std::ptr::null_mut();
+            }
+            match LiveStream::create(Path::new(&path), preset.as_deref(), intensity, lufs_target) {
+                Some(stream) => Box::into_raw(Box::new(stream)),
+                None => std::ptr::null_mut(),
+            }
+        },
+    )
 }
 
 /// Fill `out_interleaved` with up to `frames` frames (interleaved, channel count
@@ -529,8 +540,16 @@ pub unsafe extern "C" fn yes_master_native_live_set_params(
     if handle.is_null() {
         return;
     }
+    // Read the handle + C string in the `unsafe fn` body (a closure would not
+    // inherit its implicit unsafe context); the guarded coefficient rebuild
+    // (export settings + ChainCoeffs::from_settings) is then safe. Dropping the
+    // update on panic matches set_params' existing best-effort send semantics.
+    let stream = &*handle;
     let preset = ffi_string(preset);
-    (*handle).set_params(preset.as_deref(), intensity, lufs_target);
+    catch_ffi_panic(
+        || (),
+        move || stream.set_params(preset.as_deref(), intensity, lufs_target),
+    );
 }
 
 /// Set the audition-only Volume Match gain (linear; `1.0` = unity). Applied to
@@ -688,33 +707,39 @@ pub unsafe extern "C" fn yes_master_native_live_measure_landing(
     if handle.is_null() {
         return 1.0;
     }
+    // Read the handle + C string in the `unsafe fn` body (a closure would not
+    // inherit its implicit unsafe context); the guarded measurement is then safe.
     let stream = &*handle;
     let preset = ffi_string(preset);
-    let settings = export_settings_for_options_with_context(
-        preset.as_deref(),
-        intensity,
-        lufs_target,
-        stream.adaptive_context.as_ref(),
+
+    // A panic deep in the engine must never unwind across `extern "C"` (a clean
+    // process abort since Rust 1.81). On panic fall back to the documented safe
+    // default: unity gain and an unavailable (NEG_INFINITY) mastered LUFS.
+    let (gain, mastered_lufs) = catch_ffi_panic(
+        || (1.0, f32::NEG_INFINITY),
+        move || {
+            let settings = export_settings_for_options_with_context(
+                preset.as_deref(),
+                intensity,
+                lufs_target,
+                stream.adaptive_context.as_ref(),
+            );
+            match yes_master_lib::engine::preview_landing(
+                &stream.samples,
+                stream.sample_rate,
+                stream.channels as u16,
+                &settings,
+            ) {
+                Ok(landing) => (landing.gain_lin, landing.mastered_lufs),
+                Err(_) => (1.0, f32::NEG_INFINITY),
+            }
+        },
     );
-    match yes_master_lib::engine::preview_landing(
-        &stream.samples,
-        stream.sample_rate,
-        stream.channels as u16,
-        &settings,
-    ) {
-        Ok(landing) => {
-            if !out_mastered_lufs.is_null() {
-                *out_mastered_lufs = landing.mastered_lufs;
-            }
-            landing.gain_lin
-        }
-        Err(_) => {
-            if !out_mastered_lufs.is_null() {
-                *out_mastered_lufs = f32::NEG_INFINITY;
-            }
-            1.0
-        }
+
+    if !out_mastered_lufs.is_null() {
+        *out_mastered_lufs = mastered_lufs;
     }
+    gain
 }
 
 /// Free a handle from [`yes_master_native_live_create`].
