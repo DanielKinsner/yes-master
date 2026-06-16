@@ -707,8 +707,9 @@ so the mechanical ship queue can close without waiting for multi-day ear work.
   album transition/texture scoring, source-profile finiteness checks, reference
   tuning ledgers, and preset/DSP width baselines. No new stereo-width taste
   wiring lands before Wave 10.
-- **S9.7** Branch hygiene (UF-E): one-sentence disposition for
-  `origin/vera/standard-polish` and `origin/vera/ui-overhaul`, then delete.
+- **S9.7** Branch hygiene (UF-E): executed 2026-06-16. `origin/vera/standard-polish`
+  and `origin/vera/ui-overhaul` were stale Vera-era experiment snapshots, not
+  launch baselines; both remote branch names were deleted.
 
 ---
 
