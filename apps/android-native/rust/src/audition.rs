@@ -140,6 +140,13 @@ unsafe impl Send for AuditionEngine {}
 unsafe impl Sync for AuditionEngine {}
 
 impl AuditionEngine {
+    fn preset_cstring(preset: Option<&str>) -> Option<Option<CString>> {
+        match preset {
+            Some(preset) => CString::new(preset).ok().map(Some),
+            None => Some(None),
+        }
+    }
+
     /// Decode `path` and build an engine initialized with the given Simple
     /// controls. `None` on a missing/undecodable file or NUL-poisoned input.
     /// Not real-time safe (decodes the whole file) — call off the UI thread.
@@ -150,7 +157,7 @@ impl AuditionEngine {
         lufs_target: f32,
     ) -> Option<Box<Self>> {
         let path_c = CString::new(path).ok()?;
-        let preset_c = preset.and_then(|p| CString::new(p).ok());
+        let preset_c = Self::preset_cstring(preset)?;
         let preset_ptr = preset_c.as_ref().map_or(std::ptr::null(), |p| p.as_ptr());
         // SAFETY: valid NUL-terminated strings (or null preset) for the call.
         let live = unsafe {
@@ -225,7 +232,9 @@ impl AuditionEngine {
     /// the audio thread and crossfaded in by the facade.
     pub fn set_params(&self, preset: Option<&str>, intensity: f32, lufs_target: f32) {
         let _ui = self.ui_lock();
-        let preset_c = preset.and_then(|p| CString::new(p).ok());
+        let Some(preset_c) = Self::preset_cstring(preset) else {
+            return;
+        };
         let preset_ptr = preset_c.as_ref().map_or(std::ptr::null(), |p| p.as_ptr());
         // SAFETY: valid live handle and C strings; UI-side call under the lock.
         unsafe {
@@ -264,7 +273,9 @@ impl AuditionEngine {
         intensity: f32,
         lufs_target: f32,
     ) -> (f32, f32) {
-        let preset_c = preset.and_then(|p| CString::new(p).ok());
+        let Some(preset_c) = Self::preset_cstring(preset) else {
+            return (1.0, f32::NEG_INFINITY);
+        };
         let preset_ptr = preset_c.as_ref().map_or(std::ptr::null(), |p| p.as_ptr());
         let mut mastered_lufs = f32::NEG_INFINITY;
         // SAFETY: valid live handle, valid C strings, valid out pointer. The
@@ -374,11 +385,11 @@ mod jni_shims {
         Some(unsafe { &*(handle as *const AuditionEngine) })
     }
 
-    fn optional_string(env: &mut JNIEnv, value: &JString) -> Option<String> {
+    fn optional_string(env: &mut JNIEnv, value: &JString) -> Result<Option<String>, ()> {
         if value.is_null() {
-            None
+            Ok(None)
         } else {
-            from_jstring(env, value)
+            from_jstring(env, value).map(Some).ok_or(())
         }
     }
 
@@ -394,7 +405,9 @@ mod jni_shims {
         let Some(path) = from_jstring(&mut env, &source_path) else {
             return 0;
         };
-        let preset = optional_string(&mut env, &preset);
+        let Ok(preset) = optional_string(&mut env, &preset) else {
+            return 0;
+        };
         catch_panic(
             || 0,
             || match AuditionEngine::create(&path, preset.as_deref(), intensity, lufs_target) {
@@ -495,7 +508,7 @@ mod jni_shims {
         catch_panic(
             || (),
             || {
-                if let Some(e) = engine(handle) {
+                if let (Some(e), Ok(preset)) = (engine(handle), preset) {
                     e.set_params(preset.as_deref(), intensity, lufs_target);
                 }
             },
@@ -548,12 +561,13 @@ mod jni_shims {
         let preset = optional_string(&mut env, &preset);
         let result = catch_panic(
             || r#"{"error":"panic during landing measurement"}"#.to_string(),
-            || match engine(handle) {
-                Some(e) => {
+            || match (engine(handle), preset) {
+                (Some(e), Ok(preset)) => {
                     let (gain, lufs) = e.measure_landing(preset.as_deref(), intensity, lufs_target);
                     landing_json(gain, lufs)
                 }
-                None => r#"{"error":"invalid audition handle"}"#.to_string(),
+                (_, Err(_)) => r#"{"error":"invalid preset string"}"#.to_string(),
+                (None, _) => r#"{"error":"invalid audition handle"}"#.to_string(),
             },
         );
         to_jstring(&mut env, result)
@@ -697,6 +711,19 @@ mod tests {
     }
 
     #[test]
+    fn create_rejects_nul_poisoned_preset() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("src.wav");
+        write_sine_wav(&path, 2_000, 2, 48_000);
+
+        assert!(
+            AuditionEngine::create(&path.to_string_lossy(), Some("warm\0balanced"), 0.5, -11.0)
+                .is_none(),
+            "audition create should reject an invalid preset instead of defaulting"
+        );
+    }
+
+    #[test]
     fn create_reports_the_decoded_track_format() {
         let engine = make_engine(48_000); // 1.0 s stereo @ 48 kHz
         assert_eq!(engine.channels(), 2);
@@ -824,6 +851,16 @@ mod tests {
         assert!(lufs_quiet.is_finite() && lufs_loud.is_finite());
         assert!(gain_loud >= gain_quiet - 1e-6);
         assert!(lufs_loud >= lufs_quiet - 1e-3);
+    }
+
+    #[test]
+    fn measure_landing_rejects_nul_poisoned_preset_neutrally() {
+        let engine = make_engine(48_000 * 10);
+
+        let (gain, lufs) = engine.measure_landing(Some("warm\0balanced"), 0.5, -11.0);
+
+        assert_eq!(gain, 1.0);
+        assert_eq!(lufs, f32::NEG_INFINITY);
     }
 
     #[test]
