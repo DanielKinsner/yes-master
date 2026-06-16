@@ -199,10 +199,9 @@ pub fn populate_profile_store(
 //     apply. For callers that don't already have LUFS+TP measurements
 //     in hand (album-simple, album-plan).
 //
-// The audio.rs live-preview helper uses the pure-math tier directly
-// because it returns a gain scalar rather than mutating samples, and
-// because its ebur128 setup is measured on a 8 s window (perf
-// optimization that the offline render paths intentionally don't share).
+// The audio.rs live-preview helper delegates to `preview_landing` below and
+// returns its gain scalar, so desktop and phone audition measure the same
+// render-rate window before applying the pure landing math.
 // ============================================================================
 
 /// Compute the LUFS-landing delta in dB given pre-measured loudness +

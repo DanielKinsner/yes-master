@@ -1062,88 +1062,9 @@ fn export_landing_gain_lin_for_preview(
     channels: u16,
     settings: &MasteringSettings,
 ) -> Result<f32, String> {
-    let mut render_settings = settings.clone();
-    render_settings.volume_match = false;
-    let Some(target_lufs) = render_settings.effective_target_lufs() else {
-        return Ok(1.0);
-    };
-    if !target_lufs.is_finite() {
-        return Ok(1.0);
-    }
-
-    // Perf: measure a middle window of the track instead of the full
-    // PCM. Full chain + BS.1770 on a 3 min stereo 48 kHz track is
-    // ~17M samples = ~200-500 ms per call. Every settings change
-    // triggers one of these (when the Export LUFS toggle is on), so
-    // knob spam queues 5-10 expensive measurements behind a seek and
-    // the audio thread hits the "audio seek reply timeout" 15 s window
-    // (Dan, observed on aggressive tweaking). An 8 s window cuts cost
-    // by ~15-20x while staying long enough for BS.1770 integrated
-    // gating to behave (multiple 400 ms blocks needed); the result
-    // sits within ~0.5 dB of full-track for normal music, which is
-    // tighter than the chain push estimate's own error budget.
-    //
-    // Caching by settings hash and async measurement on a worker
-    // thread are bigger wins but deferred — this is the smallest
-    // change that removes the audible cliff.
-    let channels_usize = channels.max(1) as usize;
-    // Window via the shared helper (identical centering math as the worker
-    // path) so the 8 s preview slice has a single source of truth.
-    let mut rendered = preview_landing_window(samples, sample_rate, channels);
-    let mut chain = crate::dsp::MasteringChain::new(sample_rate, channels_usize, &render_settings);
-    chain.process_interleaved(&mut rendered, channels_usize);
-
-    // Measure post-chain integrated LUFS and BS.1770 true-peak. Both are
-    // needed for the ceiling-bounded landing math at engine.rs (see the
-    // long comment block there for the rationale). Replicates the same
-    // ebur128 call shape the export path uses at engine.rs:1607-1644.
-    let channels_u32 = u32::from(channels.max(1));
-    let mut ebu = ebur128::EbuR128::new(
-        channels_u32,
-        sample_rate,
-        ebur128::Mode::I | ebur128::Mode::TRUE_PEAK,
-    )
-    .map_err(|e| format!("ebur128 init: {e}"))?;
-    ebu.add_frames_f32(&rendered)
-        .map_err(|e| format!("ebur128 feed: {e}"))?;
-    let measured = ebu
-        .loudness_global()
-        .map_err(|e| format!("ebur128 global: {e}"))? as f32;
-    if !measured.is_finite() || measured <= -70.0 {
-        return Ok(1.0);
-    }
-    let mut peak_lin: f64 = 0.0;
-    for ch in 0..channels_u32 {
-        let tp = ebu.true_peak(ch).map_err(|e| format!("ebur128 tp: {e}"))?;
-        if tp > peak_lin {
-            peak_lin = tp;
-        }
-    }
-    let measured_true_peak_dbtp = if peak_lin > 0.0 {
-        (20.0 * peak_lin.log10()) as f32
-    } else {
-        -60.0
-    };
-
-    // Route through the shared ceiling-bounded math (engine.rs) so the
-    // live-preview path applies exactly the same delta as the offline
-    // render paths — preview-to-export parity is the load-bearing
-    // property here. The helper returns the applied delta in dB; the
-    // preview path converts that to a linear gain scalar (rather than
-    // mutating samples) because it ships through `ChainCoeffs` for the
-    // live audio thread to apply per frame.
-    let ceiling_dbtp = render_settings.effective_ceiling_dbtp();
-    let applied_delta_db = crate::engine::ceiling_bounded_landing_delta_db(
-        measured,
-        measured_true_peak_dbtp,
-        target_lufs,
-        ceiling_dbtp,
-    );
-    if applied_delta_db != 0.0 {
-        Ok(10.0_f32.powf(applied_delta_db / 20.0))
-    } else {
-        Ok(1.0)
-    }
+    crate::engine::preview_landing(samples, sample_rate, channels, settings)
+        .map(|landing| landing.gain_lin)
+        .map_err(|e| e.to_string())
 }
 
 fn preview_landing_window(samples: &[f32], sample_rate: u32, channels: u16) -> Vec<f32> {
@@ -2335,6 +2256,19 @@ mod tests {
         samples
     }
 
+    fn high_band_mismatch_signal(frames: usize, sample_rate: u32, channels: u16) -> Vec<f32> {
+        let mut samples = Vec::with_capacity(frames * channels as usize);
+        let low_omega = std::f32::consts::TAU * 1000.0 / sample_rate as f32;
+        let high_omega = std::f32::consts::TAU * 23_000.0 / sample_rate as f32;
+        for n in 0..frames {
+            let v = 0.05 * (low_omega * n as f32).sin() + 0.3 * (high_omega * n as f32).sin();
+            for _ in 0..channels {
+                samples.push(v);
+            }
+        }
+        samples
+    }
+
     fn rms(samples: &[f32]) -> f32 {
         if samples.is_empty() {
             return 0.0;
@@ -2373,6 +2307,30 @@ mod tests {
         let raw_coeffs = live_preview_coeffs(sample_rate, channels, &samples, &settings, false)
             .expect("raw preview coeffs");
         assert_eq!(raw_coeffs.export_landing_gain_lin, 1.0);
+    }
+
+    #[test]
+    fn live_preview_coeffs_match_engine_preview_landing_at_render_rate() {
+        let source_rate = 48_000;
+        let render_rate = 44_100;
+        let channels: u16 = 2;
+        let samples = high_band_mismatch_signal(source_rate as usize * 8, source_rate, channels);
+        let mut settings = settings_with_intensity(0.5);
+        settings.advanced.lufs_offset_db = Some(-18.0);
+        settings.advanced.ceiling_dbtp = Some(-1.0);
+        settings.advanced.target_sample_rate = Some(render_rate);
+
+        let coeffs = live_preview_coeffs(source_rate, channels, &samples, &settings, true)
+            .expect("preview coeffs");
+        let landing = crate::engine::preview_landing(&samples, source_rate, channels, &settings)
+            .expect("engine preview landing");
+
+        assert!(
+            (coeffs.export_landing_gain_lin - landing.gain_lin).abs() < 1.0e-6,
+            "desktop live preview must use the render-rate landing path; live={}, engine={}",
+            coeffs.export_landing_gain_lin,
+            landing.gain_lin
+        );
     }
 
     // ========================================================================
