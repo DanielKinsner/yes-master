@@ -43,6 +43,102 @@ fn resolve_album_channels(source_channels: &[u16]) -> u16 {
         .clamp(1, 2)
 }
 
+const SURROUND_DOWNMIX_GAIN: f32 = 0.707_106_77;
+
+fn add_downmix_sample(acc: &mut f32, weight_sum: &mut f32, sample: f32, weight: f32) {
+    *acc += sample * weight;
+    *weight_sum += weight;
+}
+
+fn downmix_frame_to_stereo(frame: &[f32]) -> [f32; 2] {
+    if frame.is_empty() {
+        return [0.0, 0.0];
+    }
+    if frame.len() == 1 {
+        return [frame[0], frame[0]];
+    }
+    if frame.len() == 2 {
+        return [frame[0], frame[1]];
+    }
+
+    let mut left = 0.0;
+    let mut right = 0.0;
+    let mut left_weight = 0.0;
+    let mut right_weight = 0.0;
+
+    add_downmix_sample(&mut left, &mut left_weight, frame[0], 1.0);
+    add_downmix_sample(&mut right, &mut right_weight, frame[1], 1.0);
+
+    match frame.len() {
+        3 => {
+            add_downmix_sample(&mut left, &mut left_weight, frame[2], SURROUND_DOWNMIX_GAIN);
+            add_downmix_sample(
+                &mut right,
+                &mut right_weight,
+                frame[2],
+                SURROUND_DOWNMIX_GAIN,
+            );
+        }
+        4 => {
+            add_downmix_sample(&mut left, &mut left_weight, frame[2], SURROUND_DOWNMIX_GAIN);
+            add_downmix_sample(
+                &mut right,
+                &mut right_weight,
+                frame[3],
+                SURROUND_DOWNMIX_GAIN,
+            );
+        }
+        5 => {
+            add_downmix_sample(&mut left, &mut left_weight, frame[2], SURROUND_DOWNMIX_GAIN);
+            add_downmix_sample(
+                &mut right,
+                &mut right_weight,
+                frame[2],
+                SURROUND_DOWNMIX_GAIN,
+            );
+            add_downmix_sample(&mut left, &mut left_weight, frame[3], SURROUND_DOWNMIX_GAIN);
+            add_downmix_sample(
+                &mut right,
+                &mut right_weight,
+                frame[4],
+                SURROUND_DOWNMIX_GAIN,
+            );
+        }
+        _ => {
+            add_downmix_sample(&mut left, &mut left_weight, frame[2], SURROUND_DOWNMIX_GAIN);
+            add_downmix_sample(
+                &mut right,
+                &mut right_weight,
+                frame[2],
+                SURROUND_DOWNMIX_GAIN,
+            );
+            // Common 5.1 order is L, R, C, LFE, Ls, Rs. LFE is intentionally
+            // not folded into stereo delivery.
+            add_downmix_sample(&mut left, &mut left_weight, frame[4], SURROUND_DOWNMIX_GAIN);
+            add_downmix_sample(
+                &mut right,
+                &mut right_weight,
+                frame[5],
+                SURROUND_DOWNMIX_GAIN,
+            );
+            for (offset, sample) in frame.iter().copied().enumerate().skip(6) {
+                if offset % 2 == 0 {
+                    add_downmix_sample(&mut left, &mut left_weight, sample, SURROUND_DOWNMIX_GAIN);
+                } else {
+                    add_downmix_sample(
+                        &mut right,
+                        &mut right_weight,
+                        sample,
+                        SURROUND_DOWNMIX_GAIN,
+                    );
+                }
+            }
+        }
+    }
+
+    [left / left_weight.max(1.0), right / right_weight.max(1.0)]
+}
+
 fn convert_channel_count(
     samples: Vec<f32>,
     source_channels: u16,
@@ -72,6 +168,8 @@ fn convert_channel_count(
                 let fill = *frame.last().unwrap_or(&0.0);
                 converted.extend(std::iter::repeat(fill).take(target_channels - source_channels));
             }
+        } else if target_channels == 2 && source_channels > 2 {
+            converted.extend_from_slice(&downmix_frame_to_stereo(frame));
         } else {
             for out_ch in 0..target_channels {
                 let start = out_ch * source_channels / target_channels;
@@ -670,9 +768,27 @@ mod resolve_tests {
 
     #[test]
     fn surround_source_downmixes_to_stereo() {
-        // 4ch frame -> stereo: L = mean(ch0,ch1), R = mean(ch2,ch3).
-        let converted = convert_channel_count(vec![1.0, 3.0, 5.0, 7.0], 4, 2).expect("convert");
-        assert_eq!(converted, vec![2.0, 6.0]);
+        // Common 5.1 frame order: L, R, C, LFE, Ls, Rs. The LFE channel is
+        // excluded from the stereo fold and the front L/R pair stays anchored.
+        let converted =
+            convert_channel_count(vec![1.0, 10.0, 3.0, 100.0, 5.0, 7.0], 6, 2).expect("convert");
+        let weight = 1.0 + (SURROUND_DOWNMIX_GAIN * 2.0);
+        let expected_left =
+            (1.0 + (3.0 * SURROUND_DOWNMIX_GAIN) + (5.0 * SURROUND_DOWNMIX_GAIN)) / weight;
+        let expected_right =
+            (10.0 + (3.0 * SURROUND_DOWNMIX_GAIN) + (7.0 * SURROUND_DOWNMIX_GAIN)) / weight;
+        assert!((converted[0] - expected_left).abs() < 0.000_001);
+        assert!((converted[1] - expected_right).abs() < 0.000_001);
+    }
+
+    #[test]
+    fn quad_source_preserves_front_pair_while_folding_rears() {
+        let converted = convert_channel_count(vec![1.0, 10.0, 5.0, 7.0], 4, 2).expect("convert");
+        let weight = 1.0 + SURROUND_DOWNMIX_GAIN;
+        let expected_left = (1.0 + (5.0 * SURROUND_DOWNMIX_GAIN)) / weight;
+        let expected_right = (10.0 + (7.0 * SURROUND_DOWNMIX_GAIN)) / weight;
+        assert!((converted[0] - expected_left).abs() < 0.000_001);
+        assert!((converted[1] - expected_right).abs() < 0.000_001);
     }
 }
 

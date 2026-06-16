@@ -192,6 +192,40 @@ fn mixed_mono_and_stereo_sources_render_common_stereo_album() {
 }
 
 #[test]
+fn above_stereo_sources_fold_to_stereo_album_delivery() {
+    let tmp = TempDir::new().expect("tempdir");
+    let report =
+        render_two_track_album_with_channels(&tmp, 48_000, 6, 48_000, 2, Some(48_000), Some(24));
+
+    assert_eq!(report.source_channels, vec![6, 2]);
+    assert_eq!(report.rendered_channels, 2);
+    assert_eq!(report.tracks[0].source_channels, 6);
+    assert_eq!(report.tracks[0].rendered_channels, 2);
+    assert_eq!(report.tracks[1].source_channels, 2);
+    assert_eq!(report.tracks[1].rendered_channels, 2);
+
+    for rec in &report.tracks {
+        let spec = hound::WavReader::open(&rec.output_path)
+            .expect("open track")
+            .spec();
+        assert_eq!(spec.channels, 2, "per-track WAV must render stereo");
+        assert_eq!(spec.sample_rate, 48_000);
+        assert_eq!(spec.bits_per_sample, 24);
+    }
+
+    let album_spec = hound::WavReader::open(&report.album_wav_path)
+        .expect("open album")
+        .spec();
+    assert_eq!(album_spec.channels, 2, "album.wav must render stereo");
+
+    let manifest = std::fs::read_to_string(&report.manifest_path).expect("manifest");
+    let parsed: serde_json::Value = serde_json::from_str(&manifest).expect("json");
+    assert_eq!(parsed["channels"], 2);
+    assert_eq!(parsed["tracks"][0]["source_channels"], 6);
+    assert_eq!(parsed["tracks"][0]["rendered_channels"], 2);
+}
+
+#[test]
 fn explicit_cd_delivery_downsamples_48k_sources_to_44100_16bit() {
     let tmp = TempDir::new().expect("tempdir");
     let report = render_two_track_album(&tmp, 48_000, 48_000, Some(44_100), Some(16));
