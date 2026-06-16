@@ -702,9 +702,11 @@ so the mechanical ship queue can close without waiting for multi-day ear work.
   sample-rate fields to `AlbumRenderReport`, surface the upsample advisory
   line and the requested-vs-rendered album check (mirror Track Master's).
   Rust + frontend + both pinned tests.
-- **S9.6** `stereo_width` disposition (UF-A1): DEFAULT = delete the dead
-  field path (it is unread); if the owner instead says wire it, that
-  becomes a listening-gated M slice. One-line owner ping, then execute.
+- **S9.6** `stereo_width` disposition (UF-A1): code-reality disposition
+  recorded 2026-06-16 — retain. The field is read by the analysis summary UI,
+  album transition/texture scoring, source-profile finiteness checks, reference
+  tuning ledgers, and preset/DSP width baselines. No new stereo-width taste
+  wiring lands before Wave 10.
 - **S9.7** Branch hygiene (UF-E): one-sentence disposition for
   `origin/vera/standard-polish` and `origin/vera/ui-overhaul`, then delete.
 
