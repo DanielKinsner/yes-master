@@ -36,9 +36,10 @@ Slices" in `docs/RELEASE_STABILIZATION.md`. Genuinely open:
    changing it.
 3. Already-mastered matrix listening signoff (runner evidence complete).
 
-Album mixed mono/stereo channel-count parity shipped 2026-06-16 (see the
-"Wave 9 Mechanical Reconciliation" section in
-`docs/RELEASE_STABILIZATION.md`); it is no longer a deferred slice.
+Album channel-count parity shipped 2026-06-16 (mixed mono/stereo resolution plus
+above-stereo fold-down to stereo delivery; see the "Wave 9 Mechanical
+Reconciliation" section in `docs/RELEASE_STABILIZATION.md`); it is no longer a
+deferred slice.
 
 The refactor backlog (former item 5) was executed in full on 2026-06-09 —
 see the execution record at the end of

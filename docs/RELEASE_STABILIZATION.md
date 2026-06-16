@@ -27,7 +27,8 @@ Verification coverage:
 - `src-tauri/tests/contracts.rs`
 
 Album Master delivery-format parity has landed (album-wide sample rate,
-bit-depth, mixed-source resampling, and mono/stereo channel-count resolution; see
+bit-depth, mixed-source resampling, mono/stereo channel-count resolution, and
+above-stereo source fold-down to stereo delivery; see
 `src-tauri/tests/album_sample_rate.rs`).
 
 ### Project Chrome And Help

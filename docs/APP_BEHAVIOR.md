@@ -78,8 +78,8 @@ Album Master now honors an album-wide Delivery Format (sample rate + bit depth,
 chosen on the Album panel; Auto = highest source rate / first-track bit depth).
 It resamples each track to that single album rate and resolves one album-wide
 channel count. Mixed mono/stereo albums render stereo, with mono tracks upmixed,
-so mixed-rate and mixed mono/stereo albums render one continuous file instead of
-failing.
+and sources above stereo fold down to stereo delivery. Mixed-rate and mixed
+channel-count albums therefore render one continuous file instead of failing.
 
 Mastered preview readiness timeouts surface recoverable user-facing guidance
 instead of silent non-playback.

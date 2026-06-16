@@ -221,8 +221,8 @@ canon-refresh interrogation (roadmap S5.4).
 
 Album Master exists in Advanced: album intent, per-track override, arc
 kinds, album-wide delivery format with mixed-rate resampling, continuous +
-per-track renders with a manifest, and mixed mono/stereo channel-count
-resolution.
+per-track renders with a manifest, mixed mono/stereo channel-count resolution,
+and above-stereo source fold-down to stereo delivery.
 
 **Pending owner definition (do not invent):** the album product promise —
 what album mastering means here beyond consistent loudness and flow.
