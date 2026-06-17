@@ -1103,6 +1103,63 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("round-trips album panel choices through Save and Open Project", async () => {
+    const track = makeTrack("album-project", "C:/audio/album-project.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.save.mockResolvedValue("C:/projects/album.ams.json");
+    const firstHarness = await renderHookHarness();
+
+    await act(async () => {
+      await firstHarness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(firstHarness.current().selectedTrackId).toBe(track.id);
+    });
+    await act(async () => {
+      firstHarness.current().setMode("album");
+      firstHarness.current().setAlbumArc("club-peak");
+      firstHarness.current().setAlbumIntensity(1.65);
+      firstHarness.current().setAlbumTitle("Late Night Sequence");
+      firstHarness.current().setAlbumSampleRate(96_000);
+      firstHarness.current().setAlbumBitDepth(16);
+    });
+
+    await act(async () => {
+      await firstHarness.current().saveProjectAs();
+    });
+    const savedState = mocks.api.saveProject.mock.calls.at(-1)?.[1] as ProjectState;
+    expect(savedState).toMatchObject({
+      mode: "album",
+      album_arc_kind: "club-peak",
+      album_intensity: 1.65,
+      album_title: "Late Night Sequence",
+      album_sample_rate: 96_000,
+      album_bit_depth: 16,
+    });
+    await act(async () => {
+      firstHarness.root.unmount();
+    });
+
+    mocks.open.mockResolvedValue("C:/projects/album.ams.json");
+    mocks.api.loadProject.mockResolvedValue(savedState);
+    const secondHarness = await renderHookHarness();
+
+    await act(async () => {
+      await secondHarness.current().openProjectFromDisk();
+    });
+
+    expect(secondHarness.current().mode).toBe("album");
+    expect(secondHarness.current().albumArcKind).toBe("club-peak");
+    expect(secondHarness.current().albumIntensity).toBe(1.65);
+    expect(secondHarness.current().albumTitle).toBe("Late Night Sequence");
+    expect(secondHarness.current().albumSampleRate).toBe(96_000);
+    expect(secondHarness.current().albumBitDepth).toBe(16);
+
+    await act(async () => {
+      secondHarness.root.unmount();
+    });
+  });
+
   it("reports open cancellation without loading or mutating project state", async () => {
     mocks.open.mockResolvedValue(null);
     const harness = await renderHookHarness();

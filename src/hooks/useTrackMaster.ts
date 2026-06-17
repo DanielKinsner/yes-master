@@ -39,6 +39,7 @@ import {
 } from "../lib/supported-formats";
 import type {
   AdvancedSettings,
+  AlbumArcKind,
   AnalysisResult,
   CompressionPlan,
   GuardrailReadout,
@@ -64,6 +65,11 @@ function buildProjectState(args: {
   tracks: ImportedTrack[];
   settingsMap: ProjectState["track_settings"];
   albumIntent: ProjectState["album_intent"];
+  albumArcKind: AlbumArcKind;
+  albumIntensity: number;
+  albumTitle: string;
+  albumSampleRate: number | null;
+  albumBitDepth: number | null;
   overrideAlbum: Iterable<TrackId>;
 }): ProjectState {
   return {
@@ -73,6 +79,11 @@ function buildProjectState(args: {
     track_order: args.tracks.map((t) => t.id),
     track_settings: args.settingsMap,
     album_intent: args.albumIntent,
+    album_arc_kind: args.albumArcKind,
+    album_intensity: args.albumIntensity,
+    album_title: args.albumTitle,
+    album_sample_rate: args.albumSampleRate,
+    album_bit_depth: args.albumBitDepth,
     track_override_album: Array.from(args.overrideAlbum),
     last_saved_iso: new Date().toISOString(),
   };
@@ -293,6 +304,30 @@ export function useTrackMaster() {
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [hadPriorSession, setHadPriorSession] = useState<boolean | null>(null);
   const [overrideAlbum, setOverrideAlbum] = useState<Set<TrackId>>(new Set());
+  // Phase B — Album Master mode controls. Stored on the hook because the
+  // AlbumPlan is rebuilt at export time from current tracks + analyses +
+  // arc + intensity + delivery choices.
+  const [albumArcKind, setAlbumArcKind] = useState<AlbumArcKind>("cinematic");
+  const [albumIntensity, setAlbumIntensityState] = useState<number>(1.0);
+  const [albumTitle, setAlbumTitle] = useState<string>("");
+  const setAlbumArc = useCallback((kind: AlbumArcKind) => setAlbumArcKind(kind), []);
+  const setAlbumIntensity = useCallback((v: number) => {
+    setAlbumIntensityState(Math.max(0, Math.min(2, v)));
+  }, []);
+  // Album delivery format. `null` = Auto (backend resolves: rate = highest
+  // source rate, bit depth = first-track effective).
+  const [albumSampleRate, setAlbumSampleRateState] = useState<number | null>(
+    null,
+  );
+  const [albumBitDepth, setAlbumBitDepthState] = useState<number | null>(null);
+  const setAlbumSampleRate = useCallback(
+    (v: number | null) => setAlbumSampleRateState(v),
+    [],
+  );
+  const setAlbumBitDepth = useCallback(
+    (v: number | null) => setAlbumBitDepthState(v),
+    [],
+  );
   const [userPresets, setUserPresets] = useState<UserPreset[]>([]);
   const [savingPreset, setSavingPreset] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -662,6 +697,11 @@ export function useTrackMaster() {
         if (session.track_settings) setSettingsMap(session.track_settings);
         if (session.mode) setMode(session.mode);
         if (session.album_intent) setAlbumIntent(session.album_intent);
+        setAlbumArcKind(session.album_arc_kind ?? "cinematic");
+        setAlbumIntensityState(Math.max(0, Math.min(2, session.album_intensity ?? 1.0)));
+        setAlbumTitle(session.album_title ?? "");
+        setAlbumSampleRateState(session.album_sample_rate ?? null);
+        setAlbumBitDepthState(session.album_bit_depth ?? null);
         if (session.track_override_album) {
           setOverrideAlbum(new Set(session.track_override_album));
         }
@@ -715,6 +755,11 @@ export function useTrackMaster() {
         tracks,
         settingsMap,
         albumIntent,
+        albumArcKind,
+        albumIntensity,
+        albumTitle,
+        albumSampleRate,
+        albumBitDepth,
         overrideAlbum,
       });
       api.autosaveSession(state).catch((err) => {
@@ -722,7 +767,19 @@ export function useTrackMaster() {
       });
     }, 1500);
     return () => clearTimeout(handle);
-  }, [sessionLoaded, mode, tracks, settingsMap, albumIntent, overrideAlbum]);
+  }, [
+    sessionLoaded,
+    mode,
+    tracks,
+    settingsMap,
+    albumIntent,
+    albumArcKind,
+    albumIntensity,
+    albumTitle,
+    albumSampleRate,
+    albumBitDepth,
+    overrideAlbum,
+  ]);
 
   const selectedTrack = useMemo(
     () => tracks.find((t) => t.id === selectedTrackId),
@@ -1453,41 +1510,9 @@ export function useTrackMaster() {
     [selectedTrackId, updateSettings],
   );
 
-  // Phase B — Album Master mode controls. Stored on the hook (not
-  // serialized in MasteringSettings.album yet — the AlbumPlan is rebuilt
-  // at export time from current tracks + analyses + arc + intensity, so
-  // the hook only persists the user's *choice* of arc and intensity).
-  const [albumArcKind, setAlbumArcKind] =
-    useState<import("../bindings").AlbumArcKind>("cinematic");
-  const [albumIntensity, setAlbumIntensityState] = useState<number>(1.0);
-  const [albumTitle, setAlbumTitle] = useState<string>("");
   const [albumRendering, setAlbumRendering] = useState<boolean>(false);
   const [albumExportReport, setAlbumExportReport] =
     useState<import("../lib/api").AlbumRenderReport | null>(null);
-
-  const setAlbumArc = useCallback(
-    (kind: import("../bindings").AlbumArcKind) => setAlbumArcKind(kind),
-    [],
-  );
-  const setAlbumIntensity = useCallback((v: number) => {
-    setAlbumIntensityState(Math.max(0, Math.min(2, v)));
-  }, []);
-
-  // Album delivery format. `null` = Auto (backend resolves: rate = highest
-  // source rate, bit depth = first-track effective). Not persisted in track
-  // settings — rebuilt at export like arc/intensity.
-  const [albumSampleRate, setAlbumSampleRateState] = useState<number | null>(
-    null,
-  );
-  const [albumBitDepth, setAlbumBitDepthState] = useState<number | null>(null);
-  const setAlbumSampleRate = useCallback(
-    (v: number | null) => setAlbumSampleRateState(v),
-    [],
-  );
-  const setAlbumBitDepth = useCallback(
-    (v: number | null) => setAlbumBitDepthState(v),
-    [],
-  );
 
   /// Phase B: build + render the album via the new AlbumPlan path. Picks
   /// up the current tracks, per-track analyses, per-track settings,
@@ -2208,6 +2233,11 @@ export function useTrackMaster() {
         tracks,
         settingsMap,
         albumIntent,
+        albumArcKind,
+        albumIntensity,
+        albumTitle,
+        albumSampleRate,
+        albumBitDepth,
         overrideAlbum,
       });
       await api.saveProject(path, state);
@@ -2226,6 +2256,11 @@ export function useTrackMaster() {
     tracks,
     settingsMap,
     albumIntent,
+    albumArcKind,
+    albumIntensity,
+    albumTitle,
+    albumSampleRate,
+    albumBitDepth,
     overrideAlbum,
   ]);
 
@@ -2261,6 +2296,11 @@ export function useTrackMaster() {
       setSettingsMap(state.track_settings ?? {});
       setMode(state.mode);
       if (state.album_intent) setAlbumIntent(state.album_intent);
+      setAlbumArcKind(state.album_arc_kind ?? "cinematic");
+      setAlbumIntensityState(Math.max(0, Math.min(2, state.album_intensity ?? 1.0)));
+      setAlbumTitle(state.album_title ?? "");
+      setAlbumSampleRateState(state.album_sample_rate ?? null);
+      setAlbumBitDepthState(state.album_bit_depth ?? null);
       setOverrideAlbum(new Set(state.track_override_album ?? []));
       if (state.tracks && state.tracks.length > 0) {
         setSelectedTrackId(state.tracks[0].id);

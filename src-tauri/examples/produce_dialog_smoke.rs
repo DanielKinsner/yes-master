@@ -64,6 +64,11 @@ fn main() {
         track_order: vec![track_id.clone(), track2_id.clone()],
         track_settings,
         album_intent: None,
+        album_arc_kind: AlbumArcKind::Cinematic,
+        album_intensity: 1.0,
+        album_title: String::new(),
+        album_sample_rate: None,
+        album_bit_depth: None,
         track_override_album: Vec::new(),
         last_saved_iso: Some("2026-05-13T00:00:00Z".to_string()),
     };

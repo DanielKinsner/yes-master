@@ -1701,6 +1701,11 @@ fn session_write_and_read_roundtrips() {
         track_order: vec![TrackId("alpha".to_string())],
         track_settings,
         album_intent: Some(default_master_settings()),
+        album_arc_kind: AlbumArcKind::ClubPeak,
+        album_intensity: 1.35,
+        album_title: "Saved Album Choices".to_string(),
+        album_sample_rate: Some(96_000),
+        album_bit_depth: Some(16),
         track_override_album: vec![TrackId("alpha".to_string())],
         last_saved_iso: Some("2026-05-11T12:00:00Z".to_string()),
     };
@@ -1721,6 +1726,39 @@ fn session_write_and_read_roundtrips() {
         restored.track_override_album[0],
         TrackId("alpha".to_string())
     );
+    assert!(matches!(restored.album_arc_kind, AlbumArcKind::ClubPeak));
+    assert_eq!(restored.album_intensity, 1.35);
+    assert_eq!(restored.album_title, "Saved Album Choices");
+    assert_eq!(restored.album_sample_rate, Some(96_000));
+    assert_eq!(restored.album_bit_depth, Some(16));
+}
+
+#[test]
+fn session_read_defaults_album_panel_choices_for_legacy_project() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let path = tmp.path().join("legacy-session.json");
+    std::fs::write(
+        &path,
+        r#"{
+  "schema_version": 1,
+  "mode": "album",
+  "tracks": [],
+  "track_order": [],
+  "track_settings": {},
+  "album_intent": null,
+  "track_override_album": [],
+  "last_saved_iso": null
+}"#,
+    )
+    .expect("write legacy session");
+
+    let restored = project::read_session(&path).expect("read legacy session");
+
+    assert!(matches!(restored.album_arc_kind, AlbumArcKind::Cinematic));
+    assert_eq!(restored.album_intensity, 1.0);
+    assert_eq!(restored.album_title, "");
+    assert_eq!(restored.album_sample_rate, None);
+    assert_eq!(restored.album_bit_depth, None);
 }
 
 #[test]
@@ -1736,6 +1774,11 @@ fn session_write_is_atomic_against_existing_file() {
         track_order: Vec::new(),
         track_settings: std::collections::HashMap::new(),
         album_intent: None,
+        album_arc_kind: AlbumArcKind::Cinematic,
+        album_intensity: 1.0,
+        album_title: String::new(),
+        album_sample_rate: None,
+        album_bit_depth: None,
         track_override_album: Vec::new(),
         last_saved_iso: None,
     };

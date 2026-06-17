@@ -389,11 +389,12 @@ impl AlbumCharacter {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum AlbumArcKind {
     /// Codex curve (0.32, 0.52, 0.78, 1.00, 0.70, 0.46). Invitation →
     /// climb → peak → release → afterglow.
+    #[default]
     Cinematic,
     /// Codex curve (0.78, 0.66, 0.55, 0.43, 0.34, 0.28). Bright → dim →
     /// private.
@@ -878,12 +879,29 @@ pub struct ProjectState {
     pub track_order: Vec<TrackId>,
     pub track_settings: HashMap<String, MasteringSettings>,
     pub album_intent: Option<MasteringSettings>,
+    /// Album-panel choices that live outside `album_intent` and are used
+    /// when building the AlbumPlan at export time. Defaulted so older
+    /// project/session files reopen with the same visible UI defaults.
+    #[serde(default)]
+    pub album_arc_kind: AlbumArcKind,
+    #[serde(default = "default_album_intensity")]
+    pub album_intensity: f32,
+    #[serde(default)]
+    pub album_title: String,
+    #[serde(default)]
+    pub album_sample_rate: Option<u32>,
+    #[serde(default)]
+    pub album_bit_depth: Option<u16>,
     /// Set of track IDs whose per-track `track_settings` should override the
     /// shared `album_intent` during album rendering. Defaulted so older
     /// sessions (without this field) deserialize cleanly as "no overrides."
     #[serde(default)]
     pub track_override_album: Vec<TrackId>,
     pub last_saved_iso: Option<String>,
+}
+
+fn default_album_intensity() -> f32 {
+    1.0
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

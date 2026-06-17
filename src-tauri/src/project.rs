@@ -120,6 +120,11 @@ mod tests {
             track_order: vec![track_id],
             track_settings: std::collections::HashMap::new(),
             album_intent: None,
+            album_arc_kind: AlbumArcKind::Cinematic,
+            album_intensity: 1.0,
+            album_title: String::new(),
+            album_sample_rate: None,
+            album_bit_depth: None,
             track_override_album: Vec::new(),
             last_saved_iso: Some(format!("2026-06-12T12:00:00Z-{id}")),
         }

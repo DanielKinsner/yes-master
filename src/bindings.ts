@@ -460,6 +460,11 @@ export interface ProjectState {
   track_order: TrackId[];
   track_settings: Record<string, MasteringSettings>;
   album_intent: MasteringSettings | null;
+  album_arc_kind?: AlbumArcKind;
+  album_intensity?: number;
+  album_title?: string;
+  album_sample_rate?: number | null;
+  album_bit_depth?: number | null;
   track_override_album?: TrackId[];
   last_saved_iso: string | null;
 }
