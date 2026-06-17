@@ -962,7 +962,7 @@ pub fn mastering_render_with_progress(
     })
 }
 
-fn comparable_existing_or_parent_path(path: &Path) -> PathBuf {
+pub(crate) fn comparable_existing_or_parent_path(path: &Path) -> PathBuf {
     if let Ok(canonical) = path.canonicalize() {
         return canonical;
     }

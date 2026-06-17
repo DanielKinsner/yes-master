@@ -3,8 +3,9 @@ use crate::analysis::{
     compute_transient_flux, sanitize_lufs,
 };
 use crate::engine::{
-    measure_and_apply_ceiling_bounded_landing, measure_integrated_lufs, AlbumPlanRenderRequest,
-    AlbumRenderReport, AlbumTrackRenderInput, AlbumTrackRenderRecord,
+    comparable_existing_or_parent_path, measure_and_apply_ceiling_bounded_landing,
+    measure_integrated_lufs, AlbumPlanRenderRequest, AlbumRenderReport, AlbumTrackRenderInput,
+    AlbumTrackRenderRecord,
 };
 use crate::sample_rate::convert_interleaved;
 use crate::types::*;
@@ -217,8 +218,29 @@ fn sanitize_for_filename(s: &str) -> String {
     }
 }
 
-fn unique_child_path(out_dir: &Path, base_name: &str) -> CommandResult<PathBuf> {
+fn reject_album_output_source_collision(
+    candidate: &Path,
+    source_paths: &[PathBuf],
+) -> CommandResult<()> {
+    let comparable_candidate = comparable_existing_or_parent_path(candidate);
+    if source_paths
+        .iter()
+        .any(|source| comparable_candidate == comparable_existing_or_parent_path(source))
+    {
+        return Err(CommandError::InvalidPath(
+            "album output path would overwrite a source file".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn unique_child_path_avoiding_sources(
+    out_dir: &Path,
+    base_name: &str,
+    source_paths: &[PathBuf],
+) -> CommandResult<PathBuf> {
     let candidate = out_dir.join(base_name);
+    reject_album_output_source_collision(&candidate, source_paths)?;
     if !candidate.exists() {
         return Ok(candidate);
     }
@@ -237,6 +259,7 @@ fn unique_child_path(out_dir: &Path, base_name: &str) -> CommandResult<PathBuf> 
             _ => format!("{stem}-{n}"),
         };
         let alt = out_dir.join(name);
+        reject_album_output_source_collision(&alt, source_paths)?;
         if !alt.exists() {
             return Ok(alt);
         }
@@ -463,6 +486,11 @@ pub fn render_album_plan_impl(
         .iter()
         .map(|t| (t.track_id.as_str(), t))
         .collect();
+    let source_paths: Vec<PathBuf> = request
+        .tracks
+        .iter()
+        .map(|input| PathBuf::from(&input.source_path))
+        .collect();
 
     // Resolve the single album delivery format BEFORE processing any track.
     // Sample rate: explicit request wins, else Auto = highest source rate
@@ -643,7 +671,8 @@ pub fn render_album_plan_impl(
         let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("track");
         let safe = sanitize_for_filename(stem);
         let per_track_name = format!("{:02}-{}.wav", entry.position, safe);
-        let per_track_path = unique_child_path(out_dir, &per_track_name)?;
+        let per_track_path =
+            unique_child_path_avoiding_sources(out_dir, &per_track_name, &source_paths)?;
         write_wav(
             &per_track_path,
             &samples,
@@ -672,7 +701,7 @@ pub fn render_album_plan_impl(
 
     // Pass 2 - assemble the continuous album.wav, inserting silence
     // frames per TransitionSpec.
-    let album_path = unique_album_path(out_dir)?;
+    let album_path = unique_album_path(out_dir, &source_paths)?;
     let spec = wav_spec(album_channels, album_sample_rate, bit_depth)?;
     let album_tmp_path = unique_tmp_path(&album_path)?;
     let album_write_result = (|| -> CommandResult<()> {
@@ -705,7 +734,8 @@ pub fn render_album_plan_impl(
     replace_with_tmp(&album_tmp_path, &album_path)?;
 
     // Manifest.
-    let manifest_path = unique_child_path(out_dir, "manifest.json")?;
+    let manifest_path =
+        unique_child_path_avoiding_sources(out_dir, "manifest.json", &source_paths)?;
     let manifest = AlbumManifest {
         plan: &request.plan,
         rendered_at_iso: now_iso(),
@@ -736,12 +766,12 @@ pub fn render_album_plan_impl(
     })
 }
 
-fn unique_album_path(out_dir: &Path) -> CommandResult<PathBuf> {
+fn unique_album_path(out_dir: &Path, source_paths: &[PathBuf]) -> CommandResult<PathBuf> {
     let ts = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    unique_child_path(out_dir, &format!("album_continuous_{ts}.wav"))
+    unique_child_path_avoiding_sources(out_dir, &format!("album_continuous_{ts}.wav"), source_paths)
 }
 
 #[cfg(test)]
@@ -834,10 +864,10 @@ mod unique_path_tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let out = dir.path();
 
-        let first = unique_album_path(out).expect("first path");
+        let first = unique_album_path(out, &[]).expect("first path");
         fs::write(&first, b"first").expect("write first");
 
-        let second = unique_album_path(out).expect("second path");
+        let second = unique_album_path(out, &[]).expect("second path");
         assert_ne!(first, second, "second render must not reuse the first path");
         fs::write(&second, b"second").expect("write second");
 
@@ -855,5 +885,30 @@ mod unique_path_tests {
             );
             assert!(name.ends_with(".wav"), "unexpected suffix: {name}");
         }
+    }
+
+    #[test]
+    fn album_child_path_rejects_source_path_collision_instead_of_suffixing() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let out = dir.path();
+        let source = out.join("album_continuous_source.wav");
+        fs::write(&source, b"source").expect("write source");
+
+        let err = unique_child_path_avoiding_sources(
+            out,
+            "album_continuous_source.wav",
+            std::slice::from_ref(&source),
+        )
+        .expect_err("album child path must reject a source collision");
+
+        assert!(
+            matches!(err, CommandError::InvalidPath(ref message) if message == "album output path would overwrite a source file"),
+            "unexpected error: {err:?}"
+        );
+        assert_eq!(
+            fs::read(&source).expect("read source"),
+            b"source",
+            "source bytes must remain untouched"
+        );
     }
 }
