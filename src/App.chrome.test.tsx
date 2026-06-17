@@ -2,7 +2,14 @@ import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { HelpPanel, PresetTiles, SettingsPanel, TopHeader, TrackHeader } from "./App";
+import {
+  HelpPanel,
+  PresetTiles,
+  SettingsPanel,
+  TopHeader,
+  TrackHeader,
+  type AudioOutputSettingsState,
+} from "./App";
 import type { ImportedTrack } from "./bindings";
 import { STANDARD_EXPORT_DELIVERY } from "./lib/standard-export";
 
@@ -138,6 +145,7 @@ describe("top chrome", () => {
     );
 
     expect(container.textContent).toContain("Audio Preview");
+    expect(container.textContent).toContain("Audio Output");
     expect(container.textContent).toContain("Current defaults");
     expect(container.textContent).toContain("Standard · Create Master");
     expect(container.textContent).toContain(expectedStandardExportDefaults());
@@ -150,6 +158,52 @@ describe("top chrome", () => {
     });
 
     expect(onClose).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("renders an audio output selector in Settings", async () => {
+    const onSelect = vi.fn().mockResolvedValue(undefined);
+    const onRefresh = vi.fn().mockResolvedValue(undefined);
+    const audioOutput: AudioOutputSettingsState = {
+      devices: [
+        { id: "Speakers", name: "Speakers", is_default: true, is_selected: false },
+        { id: "Studio Monitor", name: "Studio Monitor", is_default: false, is_selected: true },
+      ],
+      selectedDeviceId: "Studio Monitor",
+      isLoading: false,
+      message: "Audio output saved.",
+      error: null,
+      onSelect,
+      onRefresh,
+    };
+
+    const { container, root } = await renderNode(
+      <SettingsPanel audioOutput={audioOutput} onClose={vi.fn()} />,
+    );
+
+    const select = container.querySelector("#audio-output-device");
+    expect(select).toBeInstanceOf(HTMLSelectElement);
+    expect((select as HTMLSelectElement).value).toBe("Studio Monitor");
+    expect(container.textContent).toContain("System default (Speakers)");
+    expect(container.textContent).toContain("Audio output saved.");
+
+    await act(async () => {
+      (select as HTMLSelectElement).value = "Speakers";
+      select?.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(onSelect).toHaveBeenCalledWith("Speakers");
+
+    const refresh = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Refresh",
+    );
+    expect(refresh).toBeInstanceOf(HTMLButtonElement);
+    await act(async () => {
+      (refresh as HTMLButtonElement).click();
+    });
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+
     await act(async () => {
       root.unmount();
     });

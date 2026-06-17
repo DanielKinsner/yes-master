@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useState,
   type DragEvent as ReactDragEvent,
@@ -26,6 +27,7 @@ import { ExportReceiptCard } from "./components/ExportReceiptCard";
 import { WaveformView } from "./components/Waveform";
 import type {
   AnalysisResult,
+  AudioOutputDevice,
   ImportedTrack,
   MasteringSettings,
   Preset,
@@ -34,6 +36,7 @@ import type {
 import type { PlaybackKindUI } from "./hooks/useTrackMaster";
 import { LOUDNESS_PROFILES, loudnessTargetDisplay } from "./lib/effective-settings";
 import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
+import { api } from "./lib/api";
 import { requestGuideReset } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
 import { SUPPORTED_FORMATS_COPY } from "./lib/supported-formats";
@@ -55,8 +58,166 @@ const PRESET_OPTIONS: { value: Preset; label: string; blurb: string }[] = [
   { value: { kind: "loud" }, label: "Loud", blurb: "Density + level, with safety" },
 ];
 
+const AUDIO_OUTPUT_STORAGE_KEY = "yes-master:audio-output-device";
+const SYSTEM_DEFAULT_AUDIO_OUTPUT = "system-default";
+
+export interface AudioOutputSettingsState {
+  devices: AudioOutputDevice[];
+  selectedDeviceId: string;
+  isLoading: boolean;
+  message: string | null;
+  error: string | null;
+  onSelect: (deviceId: string) => Promise<void>;
+  onRefresh: () => Promise<void>;
+}
+
+function storedAudioOutputDevice(storage: Storage | undefined | null): string {
+  const stored = storage?.getItem(AUDIO_OUTPUT_STORAGE_KEY)?.trim();
+  return stored || SYSTEM_DEFAULT_AUDIO_OUTPUT;
+}
+
+function persistAudioOutputDevice(
+  storage: Storage | undefined | null,
+  deviceId: string,
+) {
+  if (!storage) return;
+  if (deviceId === SYSTEM_DEFAULT_AUDIO_OUTPUT) {
+    storage.removeItem(AUDIO_OUTPUT_STORAGE_KEY);
+  } else {
+    storage.setItem(AUDIO_OUTPUT_STORAGE_KEY, deviceId);
+  }
+}
+
+function audioOutputErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+function useAudioOutputSettings(): AudioOutputSettingsState {
+  const [devices, setDevices] = useState<AudioOutputDevice[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState(() =>
+    storedAudioOutputDevice(globalThis.localStorage),
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const nextDevices = await api.listAudioOutputDevices();
+      setDevices(nextDevices);
+      setError(null);
+    } catch (err) {
+      setError(`Could not read audio outputs. ${audioOutputErrorMessage(err)}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const applyStoredOutput = async () => {
+      setIsLoading(true);
+      const stored = storedAudioOutputDevice(globalThis.localStorage);
+      try {
+        await api.setAudioOutputDevice(
+          stored === SYSTEM_DEFAULT_AUDIO_OUTPUT ? null : stored,
+        );
+        const nextDevices = await api.listAudioOutputDevices();
+        if (cancelled) return;
+        setSelectedDeviceId(stored);
+        setDevices(nextDevices);
+        setError(null);
+      } catch (err) {
+        if (cancelled) return;
+        persistAudioOutputDevice(globalThis.localStorage, SYSTEM_DEFAULT_AUDIO_OUTPUT);
+        setSelectedDeviceId(SYSTEM_DEFAULT_AUDIO_OUTPUT);
+        const fallbackError = `Could not use the saved audio output. Using system default. ${audioOutputErrorMessage(err)}`;
+        setError(
+          fallbackError,
+        );
+        try {
+          await api.setAudioOutputDevice(null);
+        } catch {
+          // Keep the original saved-device error visible; the device list can
+          // still let the user pick a working non-default output.
+        }
+        try {
+          const nextDevices = await api.listAudioOutputDevices();
+          if (!cancelled) setDevices(nextDevices);
+        } catch (listErr) {
+          if (!cancelled) {
+            setError(
+              `${fallbackError} Could not read audio outputs. ${audioOutputErrorMessage(listErr)}`,
+            );
+          }
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void applyStoredOutput();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const onSelect = useCallback(
+    async (deviceId: string) => {
+      const nextDeviceId = deviceId || SYSTEM_DEFAULT_AUDIO_OUTPUT;
+      const previousDeviceId = selectedDeviceId;
+      setSelectedDeviceId(nextDeviceId);
+      setIsLoading(true);
+      setMessage(null);
+      setError(null);
+      try {
+        await api.setAudioOutputDevice(
+          nextDeviceId === SYSTEM_DEFAULT_AUDIO_OUTPUT ? null : nextDeviceId,
+        );
+        persistAudioOutputDevice(globalThis.localStorage, nextDeviceId);
+        const nextDevices = await api.listAudioOutputDevices();
+        setDevices(nextDevices);
+        setMessage(
+          nextDeviceId === SYSTEM_DEFAULT_AUDIO_OUTPUT
+            ? "Using system default."
+            : "Audio output saved. Press Play to audition through that device.",
+        );
+      } catch (err) {
+        setSelectedDeviceId(previousDeviceId);
+        persistAudioOutputDevice(globalThis.localStorage, previousDeviceId);
+        setError(`Could not switch audio output. ${audioOutputErrorMessage(err)}`);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [selectedDeviceId],
+  );
+
+  return {
+    devices,
+    selectedDeviceId,
+    isLoading,
+    message,
+    error,
+    onSelect,
+    onRefresh: refresh,
+  };
+}
+
+const EMPTY_AUDIO_OUTPUT_SETTINGS: AudioOutputSettingsState = {
+  devices: [],
+  selectedDeviceId: SYSTEM_DEFAULT_AUDIO_OUTPUT,
+  isLoading: false,
+  message: null,
+  error: null,
+  onSelect: async () => {},
+  onRefresh: async () => {},
+};
+
 function App() {
   const tm = useTrackMaster();
+  const audioOutput = useAudioOutputSettings();
   const [chromePanel, setChromePanel] = useState<"settings" | "help" | null>(null);
   const [modeNotice, setModeNotice] = useState<string | null>(null);
   useWebviewZoomShortcuts();
@@ -269,7 +430,10 @@ function App() {
         />
       )}
       {chromePanel === "settings" && (
-        <SettingsPanel onClose={() => setChromePanel(null)} />
+        <SettingsPanel
+          audioOutput={audioOutput}
+          onClose={() => setChromePanel(null)}
+        />
       )}
       {chromePanel === "help" && (
         <HelpPanel onClose={() => setChromePanel(null)} />
@@ -535,10 +699,17 @@ export function TopHeader({
   );
 }
 
-export function SettingsPanel({ onClose }: { onClose: () => void }) {
+export function SettingsPanel({
+  audioOutput = EMPTY_AUDIO_OUTPUT_SETTINGS,
+  onClose,
+}: {
+  audioOutput?: AudioOutputSettingsState;
+  onClose: () => void;
+}) {
   return (
     <ChromeDialog title="Settings" eyebrow="Current defaults" onClose={onClose}>
       <div className="settings-grid">
+        <AudioOutputSelector audioOutput={audioOutput} />
         {SETTINGS_GROUPS.map((group) => (
           <SettingsGroup key={group.title} title={group.title} rows={group.rows} />
         ))}
@@ -558,6 +729,59 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </ChromeDialog>
+  );
+}
+
+function AudioOutputSelector({
+  audioOutput,
+}: {
+  audioOutput: AudioOutputSettingsState;
+}) {
+  const defaultDevice = audioOutput.devices.find((device) => device.is_default);
+  const selectedDeviceId = audioOutput.selectedDeviceId || SYSTEM_DEFAULT_AUDIO_OUTPUT;
+
+  return (
+    <section className="settings-group settings-audio-output">
+      <div className="settings-group-head">
+        <h3>Audio Output</h3>
+        <button
+          type="button"
+          className="ghost-btn settings-refresh-btn"
+          disabled={audioOutput.isLoading}
+          onClick={() => {
+            void audioOutput.onRefresh();
+          }}
+        >
+          Refresh
+        </button>
+      </div>
+      <label className="settings-field-label" htmlFor="audio-output-device">
+        Playback device
+      </label>
+      <select
+        id="audio-output-device"
+        className="settings-select"
+        value={selectedDeviceId}
+        disabled={audioOutput.isLoading}
+        onChange={(event) => {
+          void audioOutput.onSelect(event.currentTarget.value);
+        }}
+      >
+        <option value={SYSTEM_DEFAULT_AUDIO_OUTPUT}>
+          {defaultDevice ? `System default (${defaultDevice.name})` : "System default"}
+        </option>
+        {audioOutput.devices.map((device) => (
+          <option key={device.id} value={device.id}>
+            {device.name}
+          </option>
+        ))}
+      </select>
+      <div className="settings-audio-output-status" aria-live="polite">
+        {audioOutput.error ??
+          audioOutput.message ??
+          (audioOutput.isLoading ? "Checking outputs..." : "Ready")}
+      </div>
+    </section>
   );
 }
 

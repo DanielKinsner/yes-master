@@ -413,6 +413,52 @@ select {
   font-size: 0.9rem;
 }
 
+.settings-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+
+.settings-group-head h3 {
+  margin: 0;
+}
+
+.settings-refresh-btn {
+  min-height: 28px;
+  padding: 0 0.65rem;
+  font-size: 0.78rem;
+}
+
+.settings-audio-output {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-field-label {
+  color: var(--text-2);
+  font-size: 0.77rem;
+}
+
+.settings-select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-1);
+  color: var(--text-0);
+  padding: 0 0.65rem;
+}
+
+.settings-audio-output-status {
+  min-height: 1.15rem;
+  color: var(--text-1);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .settings-group dl {
   display: grid;
   gap: 0.55rem;
