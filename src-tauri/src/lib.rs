@@ -105,6 +105,8 @@ pub fn run() {
             engine::plan_album,
             engine::render_album_plan,
             audio::prepare_waveform,
+            audio::list_audio_output_devices,
+            audio::set_audio_output_device,
             audio::play_track,
             audio::play_master,
             audio::update_chain,

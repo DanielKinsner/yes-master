@@ -26,8 +26,18 @@ use std::collections::HashMap;
 use crate::decode::{clamp_waveform_target_pixels, decode_full, decode_to_peaks, DecodedPcm};
 use crate::sources::{LiveCoeffUpdate, MasteringSource, MeteredPcmSource};
 use crate::spectrum::{SpectrumAnalyzer, SpectrumRing};
+use rodio::cpal::traits::{DeviceTrait, HostTrait};
 
 const DEFAULT_TARGET_PIXELS: u32 = 1000;
+const SYSTEM_DEFAULT_OUTPUT_DEVICE_ID: &str = "system-default";
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct AudioOutputDevice {
+    pub id: String,
+    pub name: String,
+    pub is_default: bool,
+    pub is_selected: bool,
+}
 
 #[tauri::command]
 pub async fn prepare_waveform(
@@ -72,6 +82,21 @@ pub async fn play_track(
         )));
     }
     player.play_track(track_id, path, start_position_sec.unwrap_or(0.0))
+}
+
+#[tauri::command]
+pub async fn list_audio_output_devices(
+    player: tauri::State<'_, Arc<AudioPlayer>>,
+) -> CommandResult<Vec<AudioOutputDevice>> {
+    player.list_output_devices()
+}
+
+#[tauri::command]
+pub async fn set_audio_output_device(
+    device_id: Option<String>,
+    player: tauri::State<'_, Arc<AudioPlayer>>,
+) -> CommandResult<()> {
+    player.set_output_device(device_id)
 }
 
 #[tauri::command]
@@ -306,6 +331,10 @@ enum AudioCommand {
         settings: MasteringSettings,
         gain: f32,
     },
+    SetOutputDevice {
+        device_name: Option<String>,
+        reply: Sender<Result<(), String>>,
+    },
     Pause,
     Resume,
     Stop,
@@ -401,9 +430,85 @@ impl Default for PlaybackSnapshot {
 ///     time they click Mastered, the PCM is already in the slot.
 type SharedDecodedCache = Arc<Mutex<Option<DecodedCacheEntry>>>;
 
+fn normalize_output_device_id(device_id: Option<String>) -> Option<String> {
+    device_id
+        .map(|id| id.trim().to_string())
+        .filter(|id| !id.is_empty() && id != SYSTEM_DEFAULT_OUTPUT_DEVICE_ID)
+}
+
+fn default_output_device_name() -> Option<String> {
+    rodio::cpal::default_host()
+        .default_output_device()
+        .and_then(|device| device.name().ok())
+}
+
+fn output_device_by_name(name: &str) -> Result<rodio::Device, String> {
+    let host = rodio::cpal::default_host();
+    let mut devices = host
+        .output_devices()
+        .map_err(|e| format!("audio output devices unavailable: {e}"))?;
+    devices
+        .find(|device| device.name().ok().as_deref() == Some(name))
+        .ok_or_else(|| format!("audio output device not found: {name}"))
+}
+
+fn output_devices_for_selection(
+    selected_device_name: Option<&str>,
+) -> Result<Vec<AudioOutputDevice>, String> {
+    let host = rodio::cpal::default_host();
+    let default_name = default_output_device_name();
+    let devices = host
+        .output_devices()
+        .map_err(|e| format!("audio output devices unavailable: {e}"))?;
+    let mut seen = std::collections::HashSet::new();
+    let mut output = Vec::new();
+
+    for device in devices {
+        let name = device
+            .name()
+            .unwrap_or_else(|_| "Unknown output device".to_string());
+        if !seen.insert(name.clone()) {
+            continue;
+        }
+        output.push(AudioOutputDevice {
+            id: name.clone(),
+            is_default: default_name.as_deref() == Some(name.as_str()),
+            is_selected: selected_device_name == Some(name.as_str()),
+            name,
+        });
+    }
+
+    Ok(output)
+}
+
+fn open_output_stream(
+    selected_device_name: Option<&str>,
+) -> Result<(rodio::OutputStream, rodio::OutputStreamHandle), String> {
+    match selected_device_name {
+        Some(name) => {
+            let device = output_device_by_name(name)?;
+            rodio::OutputStream::try_from_device(&device)
+                .map_err(|e| format!("audio output device unavailable ({name}): {e}"))
+        }
+        None => {
+            rodio::OutputStream::try_default().map_err(|e| format!("audio device unavailable: {e}"))
+        }
+    }
+}
+
+fn read_selected_output_device_name(
+    selected_output_device_name: &Arc<RwLock<Option<String>>>,
+) -> Result<Option<String>, String> {
+    selected_output_device_name
+        .read()
+        .map_err(|_| INTERNAL_STATE_POISONED.to_string())
+        .map(|guard| guard.clone())
+}
+
 pub struct AudioPlayer {
     tx: Mutex<Option<Sender<AudioCommand>>>,
     snapshot: Arc<RwLock<PlaybackSnapshot>>,
+    selected_output_device_name: Arc<RwLock<Option<String>>>,
     /// Shared opportunistic decode cache. Populated by `prewarm_decode`
     /// and read (with fallback to fresh decode) by `handle_play_master`
     /// / `handle_play`. Wrapped in a Mutex rather than RwLock because
@@ -432,12 +537,14 @@ pub struct AudioPlayer {
 impl AudioPlayer {
     pub fn new() -> Self {
         let snapshot = Arc::new(RwLock::new(PlaybackSnapshot::default()));
+        let selected_output_device_name: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
         let prewarm_cache: SharedDecodedCache = Arc::new(Mutex::new(None));
         let prewarm_target: Arc<Mutex<Option<PathBuf>>> = Arc::new(Mutex::new(None));
         let play_request_epoch = Arc::new(AtomicU64::new(0));
         let profile_store = Arc::new(crate::profile_store::SourceProfileStore::default());
         let (tx, rx) = mpsc::channel::<AudioCommand>();
         let snap_for_thread = snapshot.clone();
+        let selected_output_for_thread = selected_output_device_name.clone();
         let prewarm_for_thread = prewarm_cache.clone();
         let play_epoch_for_thread = play_request_epoch.clone();
         let tx_for_thread = tx.clone();
@@ -452,6 +559,7 @@ impl AudioPlayer {
                     rx,
                     tx_for_thread,
                     snap_for_thread,
+                    selected_output_for_thread,
                     prewarm_for_thread,
                     play_epoch_for_thread,
                     store_for_thread,
@@ -461,6 +569,7 @@ impl AudioPlayer {
         Self {
             tx: Mutex::new(Some(tx)),
             snapshot,
+            selected_output_device_name,
             prewarm_cache,
             prewarm_target,
             play_request_epoch,
@@ -622,6 +731,57 @@ impl AudioPlayer {
         .map_err(CommandError::Other)
     }
 
+    pub fn list_output_devices(&self) -> CommandResult<Vec<AudioOutputDevice>> {
+        let selected = self
+            .selected_output_device_name
+            .read()
+            .map_err(|_| CommandError::Other(INTERNAL_STATE_POISONED.to_string()))?
+            .clone();
+        output_devices_for_selection(selected.as_deref()).map_err(CommandError::Other)
+    }
+
+    pub fn set_output_device(&self, device_id: Option<String>) -> CommandResult<()> {
+        let normalized = normalize_output_device_id(device_id);
+        let previous = {
+            let mut guard = self
+                .selected_output_device_name
+                .write()
+                .map_err(|_| CommandError::Other(INTERNAL_STATE_POISONED.to_string()))?;
+            let previous = guard.clone();
+            *guard = normalized.clone();
+            previous
+        };
+
+        let (reply_tx, reply_rx) = mpsc::channel();
+        if let Err(e) = self.send(AudioCommand::SetOutputDevice {
+            device_name: normalized,
+            reply: reply_tx,
+        }) {
+            if let Ok(mut guard) = self.selected_output_device_name.write() {
+                *guard = previous;
+            }
+            return Err(CommandError::Other(e));
+        }
+
+        match reply_rx.recv_timeout(Duration::from_secs(5)) {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(e)) => {
+                if let Ok(mut guard) = self.selected_output_device_name.write() {
+                    *guard = previous;
+                }
+                Err(CommandError::Other(e))
+            }
+            Err(_) => {
+                if let Ok(mut guard) = self.selected_output_device_name.write() {
+                    *guard = previous;
+                }
+                Err(CommandError::Other(
+                    "audio output device selection reply timeout".to_string(),
+                ))
+            }
+        }
+    }
+
     pub fn pause(&self) {
         let _ = self.send(AudioCommand::Pause);
     }
@@ -779,6 +939,42 @@ struct AudioThreadState {
     /// gain for the CURRENT generation lands (or landing stops applying —
     /// cache hit, landing off, Original playback).
     landing_pending: bool,
+}
+
+impl AudioThreadState {
+    fn open(selected_device_name: Option<&str>, initial_sample_rate: u32) -> Result<Self, String> {
+        let (stream, handle) = open_output_stream(selected_device_name)?;
+        let sink = rodio::Sink::try_new(&handle).map_err(|e| e.to_string())?;
+        Ok(Self {
+            _stream: stream,
+            handle,
+            sink,
+            current_track: None,
+            live_fade_out: Arc::new(AtomicBool::new(false)),
+            live_album: false,
+            loop_region: None,
+            live_coeffs_tx: None,
+            live_coeff_generation: 0,
+            live_landing_gain_lin: 1.0,
+            live_sample_rate: initial_sample_rate,
+            track_epoch: 0,
+            lufs_worker_in_flight: false,
+            lufs_worker_pending: None,
+            decoded_cache: None,
+            landing_gain_cache: PreviewLandingCache::new(),
+            peak_linear: Arc::new(AtomicU32::new(0)),
+            peak_left_linear: Arc::new(AtomicU32::new(0)),
+            peak_right_linear: Arc::new(AtomicU32::new(0)),
+            gr_low: Arc::new(AtomicU32::new(0)),
+            gr_mid: Arc::new(AtomicU32::new(0)),
+            gr_high: Arc::new(AtomicU32::new(0)),
+            lufs_x100: Arc::new(AtomicI32::new(i32::MIN)),
+            integrated_lufs_x100: Arc::new(AtomicI32::new(i32::MIN)),
+            spectrum_ring: Arc::new(SpectrumRing::new()),
+            spectrum_analyzer: SpectrumAnalyzer::new(initial_sample_rate),
+            landing_pending: false,
+        })
+    }
 }
 
 #[derive(Clone)]
@@ -1227,7 +1423,10 @@ fn ensure_play_request_current(epoch: &AtomicU64, request_epoch: u64) -> Result<
 fn is_playback_barrier(cmd: &AudioCommand) -> bool {
     matches!(
         cmd,
-        AudioCommand::Play { .. } | AudioCommand::PlayMaster { .. } | AudioCommand::Stop
+        AudioCommand::Play { .. }
+            | AudioCommand::PlayMaster { .. }
+            | AudioCommand::SetOutputDevice { .. }
+            | AudioCommand::Stop
     )
 }
 
@@ -1317,6 +1516,7 @@ fn should_invalidate_landing_cache(
 fn process_audio_command(
     cmd: AudioCommand,
     state: &mut Option<AudioThreadState>,
+    selected_output_device_name: &Arc<RwLock<Option<String>>>,
     prewarm_cache: &SharedDecodedCache,
     play_request_epoch: &Arc<AtomicU64>,
     command_tx: &Sender<AudioCommand>,
@@ -1337,6 +1537,7 @@ fn process_audio_command(
                         track_id,
                         &path,
                         start_position_sec,
+                        selected_output_device_name,
                         prewarm_cache,
                         play_request_epoch,
                         request_epoch,
@@ -1364,6 +1565,7 @@ fn process_audio_command(
                         start_position_sec,
                         preview_lufs_landing,
                         album,
+                        selected_output_device_name,
                         prewarm_cache,
                         play_request_epoch,
                         request_epoch,
@@ -1565,6 +1767,22 @@ fn process_audio_command(
                 }
             }
         }
+        AudioCommand::SetOutputDevice { device_name, reply } => {
+            let outcome = read_selected_output_device_name(selected_output_device_name).and_then(
+                |current_device_name| {
+                    if current_device_name != device_name {
+                        return Ok(());
+                    }
+                    AudioThreadState::open(device_name.as_deref(), 44_100).map(|new_state| {
+                        if let Some(s) = state.as_mut() {
+                            s.sink.stop();
+                        }
+                        *state = Some(new_state);
+                    })
+                },
+            );
+            let _ = reply.send(outcome);
+        }
         AudioCommand::Pause => {
             if let Some(s) = state.as_ref() {
                 s.sink.pause();
@@ -1612,6 +1830,7 @@ fn audio_thread(
     rx: mpsc::Receiver<AudioCommand>,
     command_tx: Sender<AudioCommand>,
     snapshot: Arc<RwLock<PlaybackSnapshot>>,
+    selected_output_device_name: Arc<RwLock<Option<String>>>,
     prewarm_cache: SharedDecodedCache,
     play_request_epoch: Arc<AtomicU64>,
     profile_store: Arc<crate::profile_store::SourceProfileStore>,
@@ -1663,6 +1882,7 @@ fn audio_thread(
                 if process_audio_command(
                     c,
                     &mut state,
+                    &selected_output_device_name,
                     &prewarm_cache,
                     &play_request_epoch,
                     &command_tx,
@@ -1825,11 +2045,13 @@ fn rebuild_spectrum_analyzer_for_playback(analyzer: &mut SpectrumAnalyzer, sampl
     *analyzer = SpectrumAnalyzer::new(sample_rate);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_play(
     state: &mut Option<AudioThreadState>,
     track_id: TrackId,
     path: &Path,
     start_position_sec: f64,
+    selected_output_device_name: &Arc<RwLock<Option<String>>>,
     prewarm_cache: &SharedDecodedCache,
     play_request_epoch: &AtomicU64,
     request_epoch: u64,
@@ -1859,39 +2081,11 @@ fn handle_play(
     }
 
     if state.is_none() {
-        let (stream, handle) = rodio::OutputStream::try_default()
-            .map_err(|e| format!("audio device unavailable: {e}"))?;
-        let sink = rodio::Sink::try_new(&handle).map_err(|e| e.to_string())?;
-        *state = Some(AudioThreadState {
-            _stream: stream,
-            handle,
-            sink,
-            current_track: None,
-            // Replaced with the first source's trigger before playback starts.
-            live_fade_out: Arc::new(AtomicBool::new(false)),
-            live_album: false,
-            loop_region: None,
-            live_coeffs_tx: None,
-            live_coeff_generation: 0,
-            live_landing_gain_lin: 1.0,
-            live_sample_rate: pcm.sample_rate,
-            track_epoch: 0,
-            lufs_worker_in_flight: false,
-            lufs_worker_pending: None,
-            decoded_cache: None,
-            landing_gain_cache: PreviewLandingCache::new(),
-            peak_linear: Arc::new(AtomicU32::new(0)),
-            peak_left_linear: Arc::new(AtomicU32::new(0)),
-            peak_right_linear: Arc::new(AtomicU32::new(0)),
-            gr_low: Arc::new(AtomicU32::new(0)),
-            gr_mid: Arc::new(AtomicU32::new(0)),
-            gr_high: Arc::new(AtomicU32::new(0)),
-            lufs_x100: Arc::new(AtomicI32::new(i32::MIN)),
-            integrated_lufs_x100: Arc::new(AtomicI32::new(i32::MIN)),
-            spectrum_ring: Arc::new(SpectrumRing::new()),
-            spectrum_analyzer: SpectrumAnalyzer::new(pcm.sample_rate),
-            landing_pending: false,
-        });
+        let selected = read_selected_output_device_name(selected_output_device_name)?;
+        *state = Some(AudioThreadState::open(
+            selected.as_deref(),
+            pcm.sample_rate,
+        )?);
     }
     let s = state.as_mut().expect("state just inserted");
     // L10 — a mid-play Original<->Mastered toggle on the SAME track is a "swap":
@@ -1977,6 +2171,7 @@ fn handle_play_master(
     start_position_sec: f64,
     preview_lufs_landing: bool,
     album: bool,
+    selected_output_device_name: &Arc<RwLock<Option<String>>>,
     prewarm_cache: &SharedDecodedCache,
     play_request_epoch: &AtomicU64,
     request_epoch: u64,
@@ -2037,39 +2232,11 @@ fn handle_play_master(
     }
 
     if state.is_none() {
-        let (stream, handle) = rodio::OutputStream::try_default()
-            .map_err(|e| format!("audio device unavailable: {e}"))?;
-        let sink = rodio::Sink::try_new(&handle).map_err(|e| e.to_string())?;
-        *state = Some(AudioThreadState {
-            _stream: stream,
-            handle,
-            sink,
-            current_track: None,
-            // Replaced with the first source's trigger before playback starts.
-            live_fade_out: Arc::new(AtomicBool::new(false)),
-            live_album: false,
-            loop_region: None,
-            live_coeffs_tx: None,
-            live_coeff_generation: 0,
-            live_landing_gain_lin: 1.0,
-            live_sample_rate: pcm.sample_rate,
-            track_epoch: 0,
-            lufs_worker_in_flight: false,
-            lufs_worker_pending: None,
-            decoded_cache: None,
-            landing_gain_cache: PreviewLandingCache::new(),
-            peak_linear: Arc::new(AtomicU32::new(0)),
-            peak_left_linear: Arc::new(AtomicU32::new(0)),
-            peak_right_linear: Arc::new(AtomicU32::new(0)),
-            gr_low: Arc::new(AtomicU32::new(0)),
-            gr_mid: Arc::new(AtomicU32::new(0)),
-            gr_high: Arc::new(AtomicU32::new(0)),
-            lufs_x100: Arc::new(AtomicI32::new(i32::MIN)),
-            integrated_lufs_x100: Arc::new(AtomicI32::new(i32::MIN)),
-            spectrum_ring: Arc::new(SpectrumRing::new()),
-            spectrum_analyzer: SpectrumAnalyzer::new(pcm.sample_rate),
-            landing_pending: false,
-        });
+        let selected = read_selected_output_device_name(selected_output_device_name)?;
+        *state = Some(AudioThreadState::open(
+            selected.as_deref(),
+            pcm.sample_rate,
+        )?);
     }
     let s = state.as_mut().expect("state just inserted");
     // L10 — a mid-play Original<->Mastered toggle on the SAME track is a "swap":
@@ -2998,6 +3165,14 @@ mod tests {
         }
     }
 
+    fn dummy_set_output_device(name: Option<&str>) -> AudioCommand {
+        let (reply, _rx) = mpsc::channel();
+        AudioCommand::SetOutputDevice {
+            device_name: name.map(str::to_string),
+            reply,
+        }
+    }
+
     fn update_chain_with_intensity(intensity: f32, preview: bool) -> AudioCommand {
         AudioCommand::UpdateChain {
             settings: settings_with_intensity(intensity),
@@ -3020,6 +3195,20 @@ mod tests {
     fn coalesce_handles_empty_buffer() {
         let result = coalesced_command_sequence(vec![]);
         assert!(result.is_empty());
+    }
+
+    #[test]
+    fn normalize_output_device_id_treats_system_default_as_none() {
+        assert_eq!(normalize_output_device_id(None), None);
+        assert_eq!(normalize_output_device_id(Some("".to_string())), None);
+        assert_eq!(
+            normalize_output_device_id(Some(SYSTEM_DEFAULT_OUTPUT_DEVICE_ID.to_string())),
+            None
+        );
+        assert_eq!(
+            normalize_output_device_id(Some("  Studio Monitor  ".to_string())),
+            Some("Studio Monitor".to_string())
+        );
     }
 
     #[test]
@@ -3208,6 +3397,51 @@ mod tests {
         assert_eq!(update_chain_intensity(&result[0]), Some(0.1));
         assert!(matches!(result[1], AudioCommand::Play { .. }));
         assert_eq!(update_chain_intensity(&result[2]), Some(0.9));
+    }
+
+    /// Changing output devices reopens the stream and stops current
+    /// playback, so it is a barrier too. UpdateChains on either side
+    /// must not be coalesced across that device reset.
+    #[test]
+    fn coalesce_does_not_cross_set_output_device_barrier() {
+        let buffered = vec![
+            update_chain_with_intensity(0.1, false),
+            dummy_set_output_device(Some("Studio Monitor")),
+            update_chain_with_intensity(0.9, true),
+        ];
+        let result = coalesced_command_sequence(buffered);
+        assert_eq!(result.len(), 3);
+        assert_eq!(update_chain_intensity(&result[0]), Some(0.1));
+        assert!(matches!(result[1], AudioCommand::SetOutputDevice { .. }));
+        assert_eq!(update_chain_intensity(&result[2]), Some(0.9));
+    }
+
+    #[test]
+    fn stale_set_output_device_command_does_not_open_state() {
+        let mut state = None;
+        let selected_output_device_name = Arc::new(RwLock::new(Some("Current Output".to_string())));
+        let prewarm_cache = Arc::new(Mutex::new(None));
+        let play_request_epoch = Arc::new(AtomicU64::new(0));
+        let (command_tx, _command_rx) = mpsc::channel();
+        let profile_store = Arc::new(crate::profile_store::SourceProfileStore::default());
+        let (reply, reply_rx) = mpsc::channel();
+
+        let should_shutdown = process_audio_command(
+            AudioCommand::SetOutputDevice {
+                device_name: Some("Stale Output".to_string()),
+                reply,
+            },
+            &mut state,
+            &selected_output_device_name,
+            &prewarm_cache,
+            &play_request_epoch,
+            &command_tx,
+            &profile_store,
+        );
+
+        assert!(!should_shutdown);
+        assert!(state.is_none());
+        assert_eq!(reply_rx.recv().expect("reply"), Ok(()));
     }
 
     /// Stop is a barrier — clears current_track. UpdateChains after
