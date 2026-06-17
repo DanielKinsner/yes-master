@@ -2,6 +2,11 @@
 
 ## Fast Lane
 
+This section is the desktop fast lane. `npm run verify:fast` is the umbrella
+all-lanes runner: frontend, desktop Rust, iPhone bridge, and Android bridge.
+Use `verify:frontend`, `verify:rust`, `verify:iphone`, or `verify:android` to
+run one lane directly.
+
 Run from repo root:
 
 ```powershell

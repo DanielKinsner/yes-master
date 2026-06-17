@@ -147,7 +147,7 @@ try {
     }
 
     Write-Host ""
-    $laneLabel = if ($Lane -eq "all") { "Fast verification lane" } else { "$Lane lane" }
+    $laneLabel = if ($Lane -eq "all") { "All verification lanes" } else { "$Lane lane" }
     if ($skippedLanes.Count -gt 0) {
         Write-Host "$laneLabel completed with skipped lane(s): $($skippedLanes -join ', ')." -ForegroundColor Yellow
     } else {
