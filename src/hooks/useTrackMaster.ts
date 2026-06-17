@@ -255,6 +255,20 @@ export function playbackErrorMessage(
 const MASTERED_REQUIRES_ANALYSIS_MESSAGE =
   "Analyze this track before using Mastered playback.";
 
+const EOF_RESTART_EPSILON_SEC = 0.05;
+
+function isPausedAtEffectiveEnd(
+  positionSec: number,
+  durationSec: number,
+  isPlaying: boolean,
+): boolean {
+  if (!Number.isFinite(durationSec) || isPlaying) return false;
+  if (durationSec <= EOF_RESTART_EPSILON_SEC) {
+    return positionSec >= durationSec;
+  }
+  return positionSec >= durationSec - EOF_RESTART_EPSILON_SEC;
+}
+
 let analysisBatchSeq = 0;
 
 function nextAnalysisBatchId(): string {
@@ -1825,10 +1839,11 @@ export function useTrackMaster() {
       // the playhead is at (or essentially at) the duration AND we're not
       // currently playing, treat this as "re-load and play from start".
       const duration = selectedTrack.duration_seconds ?? Infinity;
-      const isAtEnd =
-        Number.isFinite(duration) &&
-        transport.currentTimeSec >= duration - 0.5 &&
-        !transport.isPlaying;
+      const isAtEnd = isPausedAtEffectiveEnd(
+        transport.currentTimeSec,
+        duration,
+        transport.isPlaying,
+      );
       if (!loadedCorrectTrack || !loadedCorrectKind || isAtEnd) {
         const startPosition =
           isAtEnd || !loadedCorrectTrack ? 0 : transport.currentTimeSec;
@@ -1956,10 +1971,11 @@ export function useTrackMaster() {
       // no-op on the backend. Re-prepare the source at the click position
       // so the next play actually starts from the new playhead.
       const duration = selectedTrack.duration_seconds ?? Infinity;
-      const wasAtEnd =
-        Number.isFinite(duration) &&
-        transport.currentTimeSec >= duration - 0.5 &&
-        !transport.isPlaying;
+      const wasAtEnd = isPausedAtEffectiveEnd(
+        transport.currentTimeSec,
+        duration,
+        transport.isPlaying,
+      );
       if (loadedTrackId === selectedTrack.id) {
         try {
           if (wasAtEnd) {

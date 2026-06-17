@@ -2047,7 +2047,7 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
-  it("restarts from zero when a paused kind switch resumes at the track end", async () => {
+  it("resumes instead of restarting when paused in the final half-second", async () => {
     let playbackHandler:
       | ((tick: {
           track_id: string | null;
@@ -2110,7 +2110,75 @@ describe("useTrackMaster integration dispatches", () => {
     await waitFor(() => {
       expect(mocks.api.playMaster).toHaveBeenCalled();
     });
-    expect(mocks.api.playMaster.mock.calls.at(-1)?.[3]).toBe(0);
+    expect(mocks.api.playMaster.mock.calls.at(-1)?.[3]).toBeCloseTo(119.75, 3);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("resumes a loaded sub-half-second source from zero instead of reloading it", async () => {
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const track = {
+      ...makeTrack("short-loaded", "C:/audio/short-loaded.wav"),
+      duration_seconds: 0.4,
+    };
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+    await waitFor(() => {
+      expect(mocks.api.playTrack).toHaveBeenCalledWith(track.id, track.path, 0);
+    });
+    await act(async () => {
+      playbackHandler?.({
+        track_id: track.id,
+        position_sec: 0,
+        is_playing: false,
+        is_loaded: true,
+        peak_dbfs: -120,
+        gr_low_db: -120,
+        gr_mid_db: -120,
+        gr_high_db: -120,
+        lufs_momentary: -120,
+        lufs_integrated: -120,
+        spectrum_db: [],
+      });
+    });
+
+    mocks.api.playTrack.mockClear();
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+
+    expect(mocks.api.playTrack).not.toHaveBeenCalled();
+    expect(mocks.api.resumePlayback).toHaveBeenCalled();
 
     await act(async () => {
       harness.root.unmount();
