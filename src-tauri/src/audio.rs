@@ -1263,6 +1263,42 @@ fn export_landing_gain_lin_for_preview(
         .map_err(|e| e.to_string())
 }
 
+fn apply_preview_volume_match_gain(
+    coeffs: &mut crate::dsp::ChainCoeffs,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+) {
+    if !settings.volume_match {
+        return;
+    }
+    if let Ok(gain) =
+        crate::engine::preview_volume_match_gain(samples, sample_rate, channels, settings)
+    {
+        if gain.is_finite() && gain > 0.0 {
+            coeffs.volume_match_gain_lin = gain;
+        }
+    }
+}
+
+fn apply_preview_volume_match_gain_from_cache(
+    coeffs: &mut crate::dsp::ChainCoeffs,
+    decoded_cache: Option<&DecodedCacheEntry>,
+    settings: &MasteringSettings,
+) {
+    let Some(cache_entry) = decoded_cache else {
+        return;
+    };
+    apply_preview_volume_match_gain(
+        coeffs,
+        cache_entry.pcm.samples.as_slice(),
+        cache_entry.pcm.sample_rate,
+        cache_entry.pcm.channels,
+        settings,
+    );
+}
+
 fn preview_landing_window(samples: &[f32], sample_rate: u32, channels: u16) -> Vec<f32> {
     const PREVIEW_WINDOW_SECS: f32 = 8.0;
     let channels_usize = channels.max(1) as usize;
@@ -1333,6 +1369,7 @@ fn live_preview_coeffs(
     preview_lufs_landing: bool,
 ) -> Result<crate::dsp::ChainCoeffs, String> {
     let mut coeffs = crate::dsp::ChainCoeffs::from_settings(sample_rate, settings);
+    apply_preview_volume_match_gain(&mut coeffs, samples, sample_rate, channels, settings);
     if preview_lufs_landing {
         coeffs.export_landing_gain_lin =
             export_landing_gain_lin_for_preview(samples, sample_rate, channels, settings)?;
@@ -1616,6 +1653,11 @@ fn process_audio_command(
 
                 if let Some(tx) = s.live_coeffs_tx.as_ref() {
                     let mut coeffs = crate::dsp::ChainCoeffs::from_settings(sample_rate, &settings);
+                    apply_preview_volume_match_gain_from_cache(
+                        &mut coeffs,
+                        s.decoded_cache.as_ref(),
+                        &settings,
+                    );
                     let landing_plan = update_chain_preview_landing_plan(
                         &s.landing_gain_cache,
                         &settings,
@@ -1712,6 +1754,11 @@ fn process_audio_command(
                                 s.live_sample_rate,
                                 &settings,
                             );
+                            apply_preview_volume_match_gain_from_cache(
+                                &mut coeffs,
+                                s.decoded_cache.as_ref(),
+                                &settings,
+                            );
                             coeffs.export_landing_gain_lin = gain;
                             let _ = tx.send(LiveCoeffUpdate { generation, coeffs });
                         }
@@ -1744,6 +1791,11 @@ fn process_audio_command(
                                 if let Some(tx) = s.live_coeffs_tx.as_ref() {
                                     let mut coeffs = crate::dsp::ChainCoeffs::from_settings(
                                         s.live_sample_rate,
+                                        &pending_settings,
+                                    );
+                                    apply_preview_volume_match_gain_from_cache(
+                                        &mut coeffs,
+                                        s.decoded_cache.as_ref(),
                                         &pending_settings,
                                     );
                                     coeffs.export_landing_gain_lin = cached_gain;
@@ -2297,6 +2349,13 @@ fn handle_play_master(
     let landing_plan =
         play_master_preview_landing_plan(&s.landing_gain_cache, settings, preview_lufs_landing);
     chain.coeffs.export_landing_gain_lin = landing_plan.initial_gain;
+    apply_preview_volume_match_gain(
+        &mut chain.coeffs,
+        pcm.samples.as_slice(),
+        pcm.sample_rate,
+        pcm.channels,
+        settings,
+    );
     s.live_landing_gain_lin = chain.coeffs.export_landing_gain_lin;
     // Fresh Mastered playback on uncached settings starts hotter than the
     // target until the background measurement crossfades in — surface that
@@ -2460,10 +2519,20 @@ mod tests {
     }
 
     fn sine_signal(frames: usize, sample_rate: u32, channels: u16) -> Vec<f32> {
+        sine_signal_at(frames, sample_rate, channels, 1000.0, 0.3)
+    }
+
+    fn sine_signal_at(
+        frames: usize,
+        sample_rate: u32,
+        channels: u16,
+        freq_hz: f32,
+        amp_lin: f32,
+    ) -> Vec<f32> {
         let mut samples = Vec::with_capacity(frames * channels as usize);
+        let omega = std::f32::consts::TAU * freq_hz / sample_rate as f32;
         for n in 0..frames {
-            let v =
-                0.3 * (n as f32 / sample_rate as f32 * 2.0 * std::f32::consts::PI * 1000.0).sin();
+            let v = amp_lin * (omega * n as f32).sin();
             for _ in 0..channels {
                 samples.push(v);
             }
@@ -2522,6 +2591,41 @@ mod tests {
         let raw_coeffs = live_preview_coeffs(sample_rate, channels, &samples, &settings, false)
             .expect("raw preview coeffs");
         assert_eq!(raw_coeffs.export_landing_gain_lin, 1.0);
+    }
+
+    #[test]
+    fn live_preview_volume_match_measures_advanced_eq_loudness() {
+        let sample_rate = 48_000;
+        let channels: u16 = 2;
+        let samples = sine_signal_at(
+            sample_rate as usize * 8,
+            sample_rate,
+            channels,
+            400.0,
+            10.0_f32.powf(-30.0 / 20.0),
+        );
+        let source_lufs = crate::engine::measure_integrated_lufs(&samples, sample_rate, channels)
+            .expect("source lufs");
+        let mut settings = settings_with_intensity(0.0);
+        settings.eq_low_mid_db = 12.0;
+        settings.volume_match = true;
+        settings.source_lufs_integrated = Some(source_lufs);
+
+        let coeffs = live_preview_coeffs(sample_rate, channels, &samples, &settings, false)
+            .expect("preview coeffs");
+        let mut rendered = samples.clone();
+        let mut chain = MasteringChain::new(sample_rate, channels as usize, &settings);
+        chain.coeffs.volume_match_gain_lin = coeffs.volume_match_gain_lin;
+        chain.process_interleaved(&mut rendered, channels as usize);
+        let matched_lufs = crate::engine::measure_integrated_lufs(&rendered, sample_rate, channels)
+            .expect("matched lufs");
+
+        assert!(
+            (matched_lufs - source_lufs).abs() <= 1.0,
+            "Volume Match should measure Advanced EQ moves instead of relying on \
+             the static gain-stage estimate; source={source_lufs:.2} LUFS, \
+             matched={matched_lufs:.2} LUFS"
+        );
     }
 
     #[test]

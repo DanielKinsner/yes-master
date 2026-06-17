@@ -443,6 +443,45 @@ pub fn preview_landing(
     })
 }
 
+/// Compute audition-only Volume Match for live preview by measuring the same
+/// representative window before and after the mastering chain. The gain is
+/// attenuation-only: if the mastered side is not louder than the source, it
+/// returns unity rather than boosting.
+pub(crate) fn preview_volume_match_gain(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+) -> CommandResult<f32> {
+    let mut render_settings = settings.clone();
+    render_settings.volume_match = false;
+    let source_window = preview_landing_window(samples, sample_rate, channels);
+    let source_lufs = sanitize_lufs(measure_integrated_lufs(
+        &source_window,
+        sample_rate,
+        channels,
+    )?);
+    if !source_lufs.is_finite() || source_lufs <= -70.0 {
+        return Ok(1.0);
+    }
+
+    let mut mastered_window = source_window.clone();
+    let channels_usize = channels.max(1) as usize;
+    let mut chain = crate::dsp::MasteringChain::new(sample_rate, channels_usize, &render_settings);
+    chain.process_interleaved(&mut mastered_window, channels_usize);
+    let mastered_lufs = sanitize_lufs(measure_integrated_lufs(
+        &mastered_window,
+        sample_rate,
+        channels,
+    )?);
+    if !mastered_lufs.is_finite() || mastered_lufs <= source_lufs {
+        return Ok(1.0);
+    }
+
+    let attenuation_db = (source_lufs - mastered_lufs).clamp(-24.0, 0.0);
+    Ok(10.0_f32.powf(attenuation_db / 20.0))
+}
+
 /// The representative ~8 s middle window the preview landing measures, instead
 /// of the full track (≈15-20× cheaper, within ~0.5 dB of full-track for normal
 /// music). Same centering math as the desktop preview path.
