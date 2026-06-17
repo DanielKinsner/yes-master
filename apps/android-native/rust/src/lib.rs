@@ -14,6 +14,8 @@ use std::ffi::{c_char, CStr, CString};
 
 #[cfg(target_os = "android")]
 mod aaudio;
+#[cfg(any(target_os = "android", test))]
+mod aaudio_config;
 pub mod audition;
 
 /// JNI string helpers shared by the mastering and audition shim modules.

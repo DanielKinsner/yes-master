@@ -18,6 +18,10 @@
 
 use std::os::raw::c_void;
 
+use crate::aaudio_config::{
+    callback_buffer_samples, validate_actual_stream, AaudioResult, ActualStreamConfig,
+    AAUDIO_FORMAT_PCM_FLOAT,
+};
 use crate::audition::Pump;
 
 // --- FFI surface (only the symbols this module uses) ---------------------
@@ -31,10 +35,7 @@ struct AAudioStreamHandle {
     _opaque: [u8; 0],
 }
 
-type AaudioResult = i32;
-
 const AAUDIO_OK: AaudioResult = 0;
-const AAUDIO_FORMAT_PCM_FLOAT: i32 = 2;
 const AAUDIO_PERFORMANCE_MODE_LOW_LATENCY: i32 = 12;
 const AAUDIO_USAGE_MEDIA: i32 = 1;
 const AAUDIO_CALLBACK_RESULT_CONTINUE: i32 = 0;
@@ -75,6 +76,9 @@ extern "C" {
         stream: *mut *mut AAudioStreamHandle,
     ) -> AaudioResult;
     fn AAudioStreamBuilder_delete(builder: *mut AAudioStreamBuilder) -> AaudioResult;
+    fn AAudioStream_getChannelCount(stream: *mut AAudioStreamHandle) -> i32;
+    fn AAudioStream_getFormat(stream: *mut AAudioStreamHandle) -> i32;
+    fn AAudioStream_getSampleRate(stream: *mut AAudioStreamHandle) -> i32;
     fn AAudioStream_requestStart(stream: *mut AAudioStreamHandle) -> AaudioResult;
     fn AAudioStream_requestPause(stream: *mut AAudioStreamHandle) -> AaudioResult;
     fn AAudioStream_requestStop(stream: *mut AAudioStreamHandle) -> AaudioResult;
@@ -89,6 +93,11 @@ extern "C" {
 
 // --- Callbacks ------------------------------------------------------------
 
+struct CallbackState {
+    pump: *const Pump,
+    channels: usize,
+}
+
 /// Audio-thread entry point. Real-time discipline is inherited: `Pump::fill`
 /// is the facade's `live_process` (no locks, no allocation in steady state,
 /// panic-contained, zero-fills past EOF), so the only work added here is
@@ -101,10 +110,16 @@ unsafe extern "C" fn data_callback(
     audio_data: *mut c_void,
     num_frames: i32,
 ) -> i32 {
-    let pump = &*(user_data as *const Pump);
+    if user_data.is_null() || audio_data.is_null() {
+        return AAUDIO_CALLBACK_RESULT_CONTINUE;
+    }
+    let state = &*(user_data as *const CallbackState);
     let frames = num_frames.max(0) as u32;
-    let out =
-        std::slice::from_raw_parts_mut(audio_data as *mut f32, frames as usize * pump.channels());
+    let out = std::slice::from_raw_parts_mut(
+        audio_data as *mut f32,
+        callback_buffer_samples(num_frames, state.channels),
+    );
+    let pump = &*state.pump;
     pump.fill(out, frames);
     AAUDIO_CALLBACK_RESULT_CONTINUE
 }
@@ -117,7 +132,11 @@ unsafe extern "C" fn error_callback(
     user_data: *mut c_void,
     _error: AaudioResult,
 ) {
-    (*(user_data as *const Pump)).on_stream_error();
+    if user_data.is_null() {
+        return;
+    }
+    let state = &*(user_data as *const CallbackState);
+    (*state.pump).on_stream_error();
 }
 
 // --- Safe wrapper ----------------------------------------------------------
@@ -127,6 +146,7 @@ unsafe extern "C" fn error_callback(
 /// this stream down (blocking) before the pump or live handle is freed.
 pub(crate) struct OutputStream {
     stream: *mut AAudioStreamHandle,
+    _callback_state: Box<CallbackState>,
 }
 
 // SAFETY: the raw stream handle is only touched from UI-side calls, which
@@ -141,7 +161,11 @@ impl OutputStream {
         if rc != AAUDIO_OK || builder.is_null() {
             return Err(rc);
         }
-        let pump_ptr = pump as *const Pump as *mut c_void;
+        let mut callback_state = Box::new(CallbackState {
+            pump: pump as *const Pump,
+            channels: pump.channels(),
+        });
+        let callback_ptr = callback_state.as_mut() as *mut CallbackState as *mut c_void;
         let mut stream: *mut AAudioStreamHandle = std::ptr::null_mut();
         // SAFETY: builder is valid; setters are plain stores; openStream
         // writes the out-pointer which is checked below.
@@ -151,8 +175,8 @@ impl OutputStream {
             AAudioStreamBuilder_setSampleRate(builder, sample_rate.max(1) as i32);
             AAudioStreamBuilder_setPerformanceMode(builder, AAUDIO_PERFORMANCE_MODE_LOW_LATENCY);
             AAudioStreamBuilder_setUsage(builder, AAUDIO_USAGE_MEDIA);
-            AAudioStreamBuilder_setDataCallback(builder, data_callback, pump_ptr);
-            AAudioStreamBuilder_setErrorCallback(builder, error_callback, pump_ptr);
+            AAudioStreamBuilder_setDataCallback(builder, data_callback, callback_ptr);
+            AAudioStreamBuilder_setErrorCallback(builder, error_callback, callback_ptr);
             let rc = AAudioStreamBuilder_openStream(builder, &mut stream);
             AAudioStreamBuilder_delete(builder);
             rc
@@ -160,7 +184,21 @@ impl OutputStream {
         if rc != AAUDIO_OK || stream.is_null() {
             return Err(rc);
         }
-        Ok(Self { stream })
+        let actual = unsafe { actual_stream_config(stream) };
+        let actual = match actual
+            .and_then(|actual| validate_actual_stream(actual, pump.channels()).map(|()| actual))
+        {
+            Ok(actual) => actual,
+            Err(err) => {
+                unsafe { AAudioStream_close(stream) };
+                return Err(err);
+            }
+        };
+        callback_state.channels = actual.channel_count;
+        Ok(Self {
+            stream,
+            _callback_state: callback_state,
+        })
     }
 
     pub(crate) fn start(&self) -> bool {
@@ -174,6 +212,16 @@ impl OutputStream {
         // SAFETY: open stream handle owned by self.
         unsafe { AAudioStream_requestPause(self.stream) };
     }
+}
+
+unsafe fn actual_stream_config(
+    stream: *mut AAudioStreamHandle,
+) -> Result<ActualStreamConfig, AaudioResult> {
+    ActualStreamConfig::from_raw(
+        AAudioStream_getChannelCount(stream),
+        AAudioStream_getSampleRate(stream),
+        AAudioStream_getFormat(stream),
+    )
 }
 
 impl Drop for OutputStream {
