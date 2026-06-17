@@ -383,6 +383,13 @@ export interface WaveformPeaks {
   sample_rate: number;
 }
 
+export interface AudioOutputDevice {
+  id: string;
+  name: string;
+  is_default: boolean;
+  is_selected: boolean;
+}
+
 export type RenderKind = "preview" | "master" | "album";
 
 export type JobStatus =

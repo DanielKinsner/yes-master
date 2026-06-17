@@ -5,6 +5,7 @@ import type {
   AlbumPlan,
   AnalysisProgress,
   AnalysisResult,
+  AudioOutputDevice,
   CompressionPlan,
   ExportReport,
   GuardrailReadout,
@@ -107,6 +108,12 @@ export const api = {
       trackPath,
       targetPixels: targetPixels ?? null,
     }),
+
+  listAudioOutputDevices: () =>
+    invoke<AudioOutputDevice[]>("list_audio_output_devices"),
+
+  setAudioOutputDevice: (deviceId: string | null) =>
+    invoke<null>("set_audio_output_device", { deviceId }),
 
   runExportChecks: (
     report: ExportReport,

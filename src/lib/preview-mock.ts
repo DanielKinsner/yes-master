@@ -11,6 +11,7 @@
 
 import type {
   AnalysisResult,
+  AudioOutputDevice,
   ImportedTrack,
   MasteringSettings,
   PlaybackTick,
@@ -23,6 +24,22 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 
 const PREVIEW_TRACK_ID = "preview-track-1";
 const PREVIEW_DURATION = 245;
+let mockSelectedAudioOutput: string | null = null;
+
+const MOCK_AUDIO_OUTPUTS: AudioOutputDevice[] = [
+  {
+    id: "Preview Speakers",
+    name: "Preview Speakers",
+    is_default: true,
+    is_selected: false,
+  },
+  {
+    id: "Preview Headphones",
+    name: "Preview Headphones",
+    is_default: false,
+    is_selected: false,
+  },
+];
 
 const DEFAULT_ADVANCED: MasteringSettings["advanced"] = {
   lufs_offset_db: null,
@@ -208,6 +225,16 @@ export async function mockInvoke<T>(
       const pixels = (args?.targetPixels as number | null) ?? 1600;
       return syntheticWaveform(pixels) as unknown as T;
     }
+
+    case "list_audio_output_devices":
+      return MOCK_AUDIO_OUTPUTS.map((device) => ({
+        ...device,
+        is_selected: mockSelectedAudioOutput === device.id,
+      })) as unknown as T;
+
+    case "set_audio_output_device":
+      mockSelectedAudioOutput = (args?.deviceId as string | null) ?? null;
+      return null as unknown as T;
 
     case "play_track":
       mockLoadedTrackId = (args?.trackId as TrackId | undefined) ?? PREVIEW_TRACK_ID;
