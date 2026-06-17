@@ -595,8 +595,9 @@ pub async fn render_track_master(
 // `arc_lufs_offset_db` (added to the effective LUFS target) and
 // `intensity_scale` (multiplied onto `settings.intensity`).
 //
-// Sample-rate / channel-count mismatches between tracks fail with a
-// clear error — resampling is deferred to a future phase.
+// Album export resolves one delivery sample rate and channel count up front;
+// mixed-rate tracks are resampled, and mono/stereo/above-stereo sources are
+// converted or folded into that album delivery shape.
 // ============================================================================
 
 #[derive(Debug, Deserialize)]

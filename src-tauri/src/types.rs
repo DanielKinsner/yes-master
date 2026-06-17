@@ -240,8 +240,8 @@ pub enum Preset {
 /// `bit_depth` / `target_sample_rate` exactly as set."
 ///
 /// Sample rate is captured per profile and Track Master export honors it
-/// through the offline SRC path. Album Master still requires matching source
-/// rates for this release-candidate pass.
+/// through the offline SRC path. Album Master resolves one album-wide delivery
+/// sample rate/channel count and converts source files into that shape.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum DeliveryProfile {
