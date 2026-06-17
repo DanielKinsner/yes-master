@@ -58,15 +58,15 @@ describe("standardExportSettings", () => {
     expect(out.advanced.ceiling_dbtp).toBe(delivery.ceiling_dbtp);
   });
 
-  it("pins the shared Standard loudness clamp from the parity fixture", () => {
+  it("clamps unsafe loudness input before snapping to the Standard grid", () => {
     const [minLufs, maxLufs] = parityDelivery().lufs_clamp;
     const tooQuiet = settings({ lufs_offset_db: minLufs - 10 });
     tooQuiet.delivery_profile = "custom";
-    expect(standardExportSettings(tooQuiet).advanced.lufs_offset_db).toBe(minLufs);
+    expect(standardExportSettings(tooQuiet).advanced.lufs_offset_db).toBe(-14);
 
     const tooHot = settings({ lufs_offset_db: maxLufs + 10 });
     tooHot.delivery_profile = "custom";
-    expect(standardExportSettings(tooHot).advanced.lufs_offset_db).toBe(maxLufs);
+    expect(standardExportSettings(tooHot).advanced.lufs_offset_db).toBe(-9);
   });
 
   it("keeps an explicit custom loudness target", () => {
@@ -79,6 +79,17 @@ describe("standardExportSettings", () => {
     custom.delivery_profile = "custom";
     custom.advanced.lufs_offset_db = -9;
     expect(standardExportSettings(custom).advanced.lufs_offset_db).toBe(-9);
+  });
+
+  it("snaps Advanced-only loudness targets back to the Standard grid", () => {
+    const appleMusic = settings();
+    appleMusic.delivery_profile = "apple-music";
+    expect(standardExportSettings(appleMusic).advanced.lufs_offset_db).toBe(-14);
+
+    const offGridCustom = settings();
+    offGridCustom.delivery_profile = "custom";
+    offGridCustom.advanced.lufs_offset_db = -12;
+    expect(standardExportSettings(offGridCustom).advanced.lufs_offset_db).toBe(-11);
   });
 
   it("does not mutate its input", () => {

@@ -8,6 +8,7 @@
 import type { MasteringSettings, QualityCheck } from "../bindings";
 import parity from "../standard-mapping-parity.json";
 import { effectiveLoudnessTarget } from "./effective-settings";
+import { STANDARD_LOUDNESS } from "./standard-mapping";
 
 export const STANDARD_EXPORT_DELIVERY: {
   sampleRate: number;
@@ -29,11 +30,25 @@ function clampStandardTarget(target: number | null): number | null {
   return Math.min(maxLufs, Math.max(minLufs, target));
 }
 
+function snapStandardTarget(target: number | null): number | null {
+  const clamped = clampStandardTarget(target);
+  if (clamped === null) {
+    return null;
+  }
+  return STANDARD_LOUDNESS.reduce((closest, candidate) =>
+    Math.abs(candidate.lufs - clamped) < Math.abs(closest.lufs - clamped)
+      ? candidate
+      : closest,
+  ).lufs;
+}
+
 /// Wrap the live Standard settings into the known-safe delivery format,
-/// preserving the loudness the user (or the default profile) is targeting.
-/// Mirrors apps/iphone-native/rust/src/lib.rs::export_settings_for_options.
+/// landing the loudness on Standard's Low/Medium/High grid even when the
+/// live settings came back from Advanced with an off-grid profile/target.
+/// Mirrors apps/iphone-native/rust/src/lib.rs::export_settings_for_options
+/// for the fixed delivery recipe.
 export function standardExportSettings(s: MasteringSettings): MasteringSettings {
-  const target = clampStandardTarget(effectiveLoudnessTarget(s));
+  const target = snapStandardTarget(effectiveLoudnessTarget(s));
   return {
     ...s,
     delivery_profile: "custom",
