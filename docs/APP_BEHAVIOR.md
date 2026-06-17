@@ -188,8 +188,8 @@ further subjective retune.
 
 1. Manual listening signoff is still required; automated tests cannot approve
    taste.
-2. The full private fixture matrix needs a longer unattended run after the
-   representative subset completed.
+2. The full private fixture matrix runner evidence is complete; listening
+   signoff on already-mastered outputs remains.
 3. Oomph needs listening notes before another targeted tuning pass.
 4. Public signing, notarization, autoupdate, and store-style distribution remain
    deferred.
