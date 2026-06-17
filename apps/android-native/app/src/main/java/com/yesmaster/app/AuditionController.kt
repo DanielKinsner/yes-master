@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -86,6 +87,29 @@ internal object AuditionAttach {
             return handle
         } finally {
             if (created != 0L) destroy(created)
+        }
+    }
+}
+
+/**
+ * Coroutine helper for the second native-handle lifetime hazard: landing
+ * measurement is an uninterruptible JNI call, so cancelling its coroutine does
+ * not stop the native code immediately. Destroy must wait until that job has
+ * fully unwound before freeing the handle.
+ */
+internal object AuditionRelease {
+    fun destroyAfterLanding(
+        scope: CoroutineScope,
+        ioDispatcher: CoroutineDispatcher,
+        landingJob: Job?,
+        handle: Long,
+        destroy: (Long) -> Unit,
+    ): Job? {
+        if (handle == 0L) return null
+        landingJob?.cancel()
+        return scope.launch(ioDispatcher + NonCancellable) {
+            landingJob?.join()
+            destroy(handle)
         }
     }
 }
@@ -374,7 +398,8 @@ class AuditionController(
 
     fun release() {
         prepareJob?.cancel()
-        landingJob?.cancel()
+        val landingToJoin = landingJob
+        landingJob = null
         pollJob?.cancel()
         unregisterNoisy()
         abandonFocus()
@@ -382,7 +407,13 @@ class AuditionController(
         handle = 0L
         sourcePath = null
         if (h != 0L) {
-            AuditionBridge.destroyNative(h)
+            AuditionRelease.destroyAfterLanding(
+                scope = scope,
+                ioDispatcher = Dispatchers.IO,
+                landingJob = landingToJoin,
+                handle = h,
+                destroy = { AuditionBridge.destroyNative(it) },
+            )
         }
         _state.update { AuditionUi() }
     }
