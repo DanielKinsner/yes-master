@@ -63,6 +63,25 @@ fn estimated_decode_capacity(
     claimed.min(file_bound).min(usize::MAX as u64) as usize
 }
 
+fn decoded_channel_count(decoded: &AudioBufferRef<'_>) -> CommandResult<u16> {
+    let channels = decoded.spec().channels.count().max(1);
+    u16::try_from(channels)
+        .map_err(|_| CommandError::Decode(format!("unsupported decoded channel count {channels}")))
+}
+
+fn reconcile_decoded_channel_count(observed: &mut Option<u16>, actual: u16) -> CommandResult<u16> {
+    match *observed {
+        Some(previous) if previous == actual => Ok(previous),
+        Some(previous) => Err(CommandError::Decode(format!(
+            "decoded channel count changed from {previous} to {actual}"
+        ))),
+        None => {
+            *observed = Some(actual);
+            Ok(actual)
+        }
+    }
+}
+
 pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
     let file_size_bytes = std::fs::metadata(path)
         .map_err(|e| CommandError::Io(e.to_string()))?
@@ -104,6 +123,7 @@ pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
         .map_err(|e| CommandError::Decode(e.to_string()))?;
 
     let mut sample_buf: Option<SampleBuffer<f32>> = None;
+    let mut observed_channel_count: Option<u16> = None;
     let mut samples: Vec<f32> = Vec::with_capacity(estimated_capacity);
 
     loop {
@@ -124,6 +144,8 @@ pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
             Err(SymphoniaError::DecodeError(_)) => continue,
             Err(e) => return Err(CommandError::Decode(e.to_string())),
         };
+        let actual_channel_count = decoded_channel_count(&decoded)?;
+        reconcile_decoded_channel_count(&mut observed_channel_count, actual_channel_count)?;
         if sample_buf.is_none() {
             let spec = *decoded.spec();
             let duration = decoded.capacity() as u64;
@@ -137,7 +159,7 @@ pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
     Ok(DecodedPcm {
         samples,
         sample_rate,
-        channels: channel_count,
+        channels: observed_channel_count.unwrap_or(channel_count),
     })
 }
 
@@ -184,9 +206,9 @@ pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<Decoded
         (sample_rate / 50).max(1)
     };
 
-    let mut channel_peaks: Vec<Vec<f32>> =
-        vec![Vec::with_capacity(target_pixels as usize); channel_count];
-    let mut running_max: Vec<f32> = vec![0.0; channel_count];
+    let mut channel_peaks: Vec<Vec<f32>> = Vec::new();
+    let mut running_max: Vec<f32> = Vec::new();
+    let mut observed_channel_count: Option<u16> = None;
     let mut window_frames: u64 = 0;
     let mut total_decoded_frames: u64 = 0;
     let mut sample_buf: Option<SampleBuffer<f32>> = None;
@@ -209,6 +231,14 @@ pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<Decoded
             Err(SymphoniaError::DecodeError(_)) => continue,
             Err(e) => return Err(CommandError::Decode(e.to_string())),
         };
+        let actual_channel_count = decoded_channel_count(&decoded)?;
+        let decoded_channels =
+            reconcile_decoded_channel_count(&mut observed_channel_count, actual_channel_count)?
+                as usize;
+        if channel_peaks.is_empty() {
+            channel_peaks = vec![Vec::with_capacity(target_pixels as usize); decoded_channels];
+            running_max = vec![0.0; decoded_channels];
+        }
         if sample_buf.is_none() {
             let spec = *decoded.spec();
             let duration = decoded.capacity() as u64;
@@ -217,19 +247,19 @@ pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<Decoded
         let sbuf = sample_buf.as_mut().unwrap();
         sbuf.copy_interleaved_ref(decoded);
         let samples = sbuf.samples();
-        let frames = samples.len() / channel_count.max(1);
+        let frames = samples.len() / decoded_channels.max(1);
         total_decoded_frames += frames as u64;
 
         for frame in 0..frames {
-            for ch in 0..channel_count {
-                let v = samples[frame * channel_count + ch].abs();
+            for ch in 0..decoded_channels {
+                let v = samples[frame * decoded_channels + ch].abs();
                 if v > running_max[ch] {
                     running_max[ch] = v;
                 }
             }
             window_frames += 1;
             if window_frames >= u64::from(samples_per_pixel) {
-                for ch in 0..channel_count {
+                for ch in 0..decoded_channels {
                     channel_peaks[ch].push(running_max[ch]);
                     running_max[ch] = 0.0;
                 }
@@ -238,8 +268,12 @@ pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<Decoded
         }
     }
 
+    if channel_peaks.is_empty() {
+        channel_peaks = vec![Vec::new(); channel_count];
+    }
+
     if window_frames > 0 {
-        for ch in 0..channel_count {
+        for ch in 0..channel_peaks.len() {
             channel_peaks[ch].push(running_max[ch]);
         }
     }
@@ -338,6 +372,26 @@ mod tests {
         );
         assert_eq!(estimated_decode_capacity(Some(10), 2, 10_000), 20);
         assert_eq!(estimated_decode_capacity(None, 2, 256), 0);
+    }
+
+    #[test]
+    fn decoded_channel_count_reconciliation_rejects_mid_stream_changes() {
+        let mut observed = None;
+        assert_eq!(
+            reconcile_decoded_channel_count(&mut observed, 1).expect("first channel count"),
+            1
+        );
+        assert_eq!(
+            reconcile_decoded_channel_count(&mut observed, 1).expect("same channel count"),
+            1
+        );
+
+        let err = reconcile_decoded_channel_count(&mut observed, 2).expect_err("changed channels");
+        assert!(matches!(
+            err,
+            CommandError::Decode(message)
+                if message.contains("decoded channel count changed from 1 to 2")
+        ));
     }
 
     #[test]
