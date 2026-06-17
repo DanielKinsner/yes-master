@@ -118,4 +118,37 @@ describe("AlbumPanel delivery format", () => {
     expect(receipt?.textContent).toContain("Upsampled source 44.1 kHz");
     expect(receipt?.textContent).toContain("Upmixed source mono");
   });
+
+  it("shows fold-down advisory for above-stereo album sources", async () => {
+    const props = {
+      ...baseProps(),
+      albumExportReport: {
+        album_wav_path: "C:/Masters/album_continuous.wav",
+        manifest_path: "C:/Masters/manifest.json",
+        requested_sample_rate: null,
+        rendered_sample_rate: 48_000,
+        source_sample_rates: [48_000],
+        bit_depth: 24,
+        rendered_channels: 2,
+        source_channels: [2, 4],
+        tracks: [
+          {
+            track_id: "track-1",
+            position: 1,
+            output_path: "C:/Masters/01-track.wav",
+            measured_lufs: -14,
+            source_sample_rate: 48_000,
+            rendered_sample_rate: 48_000,
+            source_channels: 4,
+            rendered_channels: 2,
+          },
+        ],
+      },
+    };
+
+    const { container } = await renderNode(<AlbumPanel {...props} />);
+
+    const receipt = container.querySelector(".album-export-receipt");
+    expect(receipt?.textContent).toContain("Folded source 4 ch to stereo");
+  });
 });

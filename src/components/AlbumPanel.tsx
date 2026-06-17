@@ -88,6 +88,12 @@ export function AlbumPanel({
       : sourceChannels.filter(
           (channels) => channels < albumExportReport.rendered_channels,
         );
+  const foldedChannels =
+    albumExportReport == null
+      ? []
+      : sourceChannels.filter(
+          (channels) => channels > albumExportReport.rendered_channels,
+        );
   const requestedMismatch =
     albumExportReport?.requested_sample_rate != null &&
     albumExportReport.requested_sample_rate !== albumExportReport.rendered_sample_rate;
@@ -215,6 +221,12 @@ export function AlbumPanel({
           {upmixedChannels.length > 0 && (
             <span className="album-export-receipt-advisory">
               Upmixed source {upmixedChannels.map(formatChannelCount).join(", ")}
+            </span>
+          )}
+          {foldedChannels.length > 0 && (
+            <span className="album-export-receipt-advisory">
+              Folded source {foldedChannels.map(formatChannelCount).join(", ")} to{" "}
+              {formatChannelCount(albumExportReport.rendered_channels)}
             </span>
           )}
         </div>
