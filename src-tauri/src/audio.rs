@@ -1782,6 +1782,28 @@ fn seek_target(start_position_sec: f64) -> Option<Duration> {
         .then(|| Duration::from_secs_f64(start_position_sec))
 }
 
+trait PlaybackSink {
+    fn try_seek_position(&self, offset: Duration);
+    fn play_from_current_position(&self);
+}
+
+impl PlaybackSink for rodio::Sink {
+    fn try_seek_position(&self, offset: Duration) {
+        let _ = self.try_seek(offset);
+    }
+
+    fn play_from_current_position(&self) {
+        self.play();
+    }
+}
+
+fn play_sink_from_start_position(sink: &impl PlaybackSink, start_position_sec: f64) {
+    if let Some(offset) = seek_target(start_position_sec) {
+        sink.try_seek_position(offset);
+    }
+    sink.play_from_current_position();
+}
+
 /// L10 — build the swap fade envelope for an incoming source.
 ///
 /// `is_swap` is true only for a mid-play Original<->Mastered toggle (same track,
@@ -1918,11 +1940,7 @@ fn handle_play(
 
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(source);
-    if let Some(offset) = seek_target(start_position_sec) {
-        // Best-effort seek; for some formats this can fail and we fall back to start.
-        let _ = new_sink.try_seek(offset);
-    }
-    new_sink.play();
+    play_sink_from_start_position(&new_sink, start_position_sec);
     // L10 — swap in the new sink. On a swap, detach the old one so Drop doesn't
     // hard-stop the outgoing source mid-fade; its triggered fade-out ends the
     // source, draining the detached sink. (Non-swap was already stopped above.)
@@ -2151,10 +2169,7 @@ fn handle_play_master(
 
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(mastering_source);
-    if let Some(offset) = seek_target(start_position_sec) {
-        let _ = new_sink.try_seek(offset);
-    }
-    new_sink.play();
+    play_sink_from_start_position(&new_sink, start_position_sec);
     // L10 — swap in the new sink. On a swap, detach the old one so Drop doesn't
     // hard-stop the outgoing source mid-fade; its triggered fade-out ends the
     // source, draining the detached sink. (Non-swap was already stopped above.)
@@ -2201,6 +2216,39 @@ mod tests {
         assert_eq!(seek_target(-3.0), None);
         assert_eq!(seek_target(f64::NAN), None);
         assert_eq!(seek_target(f64::INFINITY), None);
+    }
+
+    #[test]
+    fn play_sink_from_start_position_seeks_new_sink_before_play() {
+        struct RecordingSink {
+            events: Mutex<Vec<&'static str>>,
+            seek: Mutex<Option<Duration>>,
+        }
+
+        impl PlaybackSink for RecordingSink {
+            fn try_seek_position(&self, offset: Duration) {
+                self.events.lock().expect("events").push("seek");
+                *self.seek.lock().expect("seek") = Some(offset);
+            }
+
+            fn play_from_current_position(&self) {
+                self.events.lock().expect("events").push("play");
+            }
+        }
+
+        let sink = RecordingSink {
+            events: Mutex::new(Vec::new()),
+            seek: Mutex::new(None),
+        };
+
+        play_sink_from_start_position(&sink, 2.5);
+
+        assert_eq!(*sink.seek.lock().expect("seek"), seek_target(2.5));
+        assert_eq!(
+            sink.events.lock().expect("events").as_slice(),
+            ["seek", "play"],
+            "new live sinks must seek to the preserved playhead before starting"
+        );
     }
 
     #[test]
