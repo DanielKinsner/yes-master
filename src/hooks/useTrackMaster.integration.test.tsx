@@ -1207,6 +1207,44 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("surfaces partial-success open-project analysis gaps as project feedback", async () => {
+    const first = makeTrack("project-partial-ok", "C:/audio/project-partial-ok.wav");
+    const second = makeTrack("project-partial-missing", "C:/audio/project-partial-missing.wav");
+    const state = {
+      ...makeProjectState(first),
+      tracks: [first, second],
+      track_order: [first.id, second.id],
+      track_settings: {
+        [first.id]: DEFAULT_SETTINGS,
+        [second.id]: DEFAULT_SETTINGS,
+      },
+    };
+    mocks.open.mockResolvedValue("C:/projects/partial.ams.json");
+    mocks.api.loadProject.mockResolvedValue(state);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(first.id)]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().openProjectFromDisk();
+    });
+
+    expect(harness.current().selectedAnalysis?.track_id).toBe(first.id);
+    await act(async () => {
+      harness.current().selectTrack(second.id);
+    });
+    expect(harness.current().selectedAnalysis).toBeUndefined();
+    expect(harness.current().projectFeedback).toEqual({
+      tone: "warn",
+      message:
+        "Project opened from partial.ams.json; 1 track still needs analysis: project-partial-missing.wav.",
+    });
+    expect(harness.current().error).toBeNull();
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("reanalyzes a failed-restore track and merges the recovered analysis", async () => {
     const track = makeTrack("project-retry", "C:/audio/moved-retry.wav");
     mocks.open.mockResolvedValue("C:/projects/moved-retry.ams.json");
@@ -1307,6 +1345,31 @@ describe("useTrackMaster integration dispatches", () => {
 
     expect(harness.current().error).toContain("missing source");
     expect(harness.current().previewStale).toBe(true);
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("surfaces partial-success import analysis gaps in the error channel", async () => {
+    const first = makeTrack("import-partial-ok", "C:/audio/import-partial-ok.wav");
+    const second = makeTrack("import-partial-missing", "C:/audio/import-partial-missing.wav");
+    mocks.api.importTracks.mockResolvedValue([first, second]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(first.id)]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([first.path, second.path]);
+    });
+
+    expect(harness.current().selectedAnalysis?.track_id).toBe(first.id);
+    await act(async () => {
+      harness.current().selectTrack(second.id);
+    });
+    expect(harness.current().selectedAnalysis).toBeUndefined();
+    expect(harness.current().error).toBe(
+      "1 track still needs analysis: import-partial-missing.wav.",
+    );
+
     await act(async () => {
       harness.root.unmount();
     });

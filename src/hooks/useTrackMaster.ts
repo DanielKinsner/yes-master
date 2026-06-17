@@ -159,6 +159,24 @@ function unsupportedDropMessage(paths: string[]): string {
   return `Unsupported file type${paths.length === 1 ? "" : "s"}: ${rejected}. Supported audio: ${SUPPORTED_FORMATS_COPY}.`;
 }
 
+function missingAnalysisTracks(
+  targetTracks: ImportedTrack[],
+  results: AnalysisResult[],
+): ImportedTrack[] {
+  const analyzedIds = new Set(results.map((result) => result.track_id));
+  return targetTracks.filter((track) => !analyzedIds.has(track.id));
+}
+
+function analysisGapSummary(missingTracks: ImportedTrack[]): string {
+  const count = missingTracks.length;
+  const names = missingTracks
+    .map((track) => track.display_name || projectDisplayName(track.path))
+    .join(", ");
+  return `${count} track${count === 1 ? "" : "s"} still ${
+    count === 1 ? "needs" : "need"
+  } analysis: ${names}`;
+}
+
 async function chooseAlbumExportFolder(): Promise<string | null> {
   const store = browserExportLocationStore();
   const selected = await open({
@@ -1159,8 +1177,12 @@ export function useTrackMaster() {
         markStale(track.id);
       }
       try {
-        await analyzeKnownTracks(targetTracks);
+        const results = await analyzeKnownTracks(targetTracks);
+        const missing = missingAnalysisTracks(targetTracks, results);
         await rebuildWaveforms(targetTracks);
+        if (missing.length > 0) {
+          setError(`${analysisGapSummary(missing)}.`);
+        }
       } catch (err) {
         setError(messageOf(err));
       }
@@ -1242,6 +1264,7 @@ export function useTrackMaster() {
         });
 
         const results = await analyzeKnownTracks(imported);
+        const missing = missingAnalysisTracks(imported, results);
         setSettingsMap((prev) => {
           const next = { ...prev };
           for (const r of results) {
@@ -1254,6 +1277,9 @@ export function useTrackMaster() {
         });
 
         await rebuildWaveforms(imported);
+        if (missing.length > 0) {
+          setError(`${analysisGapSummary(missing)}.`);
+        }
       } catch (err) {
         setError(messageOf(err, { name: projectDisplayName(paths[0] ?? "") }));
       }
@@ -2291,6 +2317,7 @@ export function useTrackMaster() {
         return;
       }
       let analysisRecoveryFailed = false;
+      let missingAnalysis: ImportedTrack[] = [];
       let waveformRecoveryFailures = 0;
       setTracks(state.tracks ?? []);
       setSettingsMap(state.track_settings ?? {});
@@ -2325,6 +2352,7 @@ export function useTrackMaster() {
           const nextAnalysis: Record<TrackId, AnalysisResult> = {};
           for (const r of results) nextAnalysis[r.track_id] = r;
           setAnalysisMap(nextAnalysis);
+          missingAnalysis = missingAnalysisTracks(state.tracks, results);
         } catch (err) {
           analysisRecoveryFailed = true;
           console.warn("Re-analyze on open failed", err);
@@ -2344,6 +2372,9 @@ export function useTrackMaster() {
       const recoveryNotes: string[] = [];
       if (analysisRecoveryFailed) {
         recoveryNotes.push("analysis could not be refreshed");
+      }
+      if (missingAnalysis.length > 0) {
+        recoveryNotes.push(analysisGapSummary(missingAnalysis));
       }
       if (waveformRecoveryFailures > 0) {
         recoveryNotes.push(
