@@ -4,10 +4,42 @@ This plan turns `docs/reviews/2026-06-16-repo-wide-review-final.html` into an im
 
 ## Current State
 
-- No source-code fixes are intentionally in progress from Codex. An accidental prototype of #5b and #2 was reverted before this plan was written.
+- This queue was executed on `main` in small pushed commits after the final review. Do not re-run completed slices below unless new evidence reopens them.
 - The final review file is already saved as `docs/reviews/2026-06-16-repo-wide-review-final.html`.
 - Pre-existing untracked review artifacts may appear in `git status`; do not stage them unless the user explicitly asks.
 - Treat the current code plus the required product docs as live truth. Do not treat older handoffs or phase plans as canonical.
+
+## Execution Status - 2026-06-17
+
+Completed implementation slices:
+
+- A1 #5b Desktop Preview-LUFS drift: `a0fc718`
+- A2 #2 Album loudness arc: `e796977`
+- A3 #3 preset parse-failure guard: `c6e7fe9`
+- A4 #4 non-finite rendered sample rejection: `bdb5a97`
+- A5 #6/#7 track-selection meter/ref state: `e65b781`
+- B1 #12/#13 private-output ignores: `9e90893`
+- B2 #14 album Volume Match tripwire: `642d7e7`
+- B3 #15 Original/Mastered playhead tripwire: `ee15e14`
+- B4 #18 album measured-LUFS sanitization: `2c4d2f5`
+- C1 #19 album project choices persistence: `3e0d41d`
+- C2 #20 partial-analysis visibility: `82752e9`
+- C3 #9 near-end playback restart threshold: `b9c9d55`
+- C4 #10 Standard off-grid loudness snap: `ce4aaf7`
+- C5 #11 import metadata track selection: `bc33e53`
+- C6 #16 Standard delivery label source of truth: `e6e36a7`
+- C7 #17 DeliveryProfile Rust/TS parity pin: `1688da6`
+- D1 #1 Android AAudio read-back/validation: `5428662`
+- D2 #8 Android landing/release serialization: `800ba13`
+- E1 #5 album source-path guard: `fb6d98b`
+- E2 decode channel-count reconciliation: `f61195f`
+- E3 mechanical docs/CI/process quick wins: `188f242`, `a1c7b36`, `cac7d2c`, `4009cae`, `147ef6d`, `e5e52e7`, `49dc621`
+
+Remaining by design:
+
+- Product-canonical doc refreshes remain owner-gated. Do not rewrite `docs/PRODUCT.md` or broader product canon from this plan without explicit owner approval.
+- Manual listening gates remain outside this implementation plan: normal/already-mastered/long-source sweeps, Reference Retune listening notes, and already-mastered matrix listening signoff.
+- The "Hold Until After Stabilization" list below remains parked cleanup/refactor work, not unfinished correctness work from this queue.
 
 ## Required Reading
 
@@ -55,7 +87,7 @@ Desktop v1 stabilization comes before mobile expansion. Android criticals gate A
 
 ### A1. #5b Desktop Preview-LUFS drift
 
-Status: open  
+Status: complete - `a0fc718`
 Priority: first desktop fix  
 Source: final review #5b  
 Files likely involved: `src-tauri/src/audio.rs`, `src-tauri/src/engine.rs`
@@ -84,7 +116,7 @@ cargo fmt --check
 
 ### A2. #2 Album loudness arc discarded under default delivery profile
 
-Status: open  
+Status: complete - `e796977`
 Priority: second desktop fix  
 Source: final review #2  
 Files likely involved: `src-tauri/src/album_render.rs`, `src-tauri/src/types.rs`
@@ -114,7 +146,7 @@ cargo fmt --check
 
 ### A3. #3 Preset-file parse failure can wipe all user presets
 
-Status: open  
+Status: complete - `c6e7fe9`
 Priority: third desktop fix  
 Source: final review #3  
 Files likely involved: `src-tauri/src/settings.rs`, `src-tauri/tests/contracts.rs`
@@ -144,7 +176,7 @@ cargo fmt --check
 
 ### A4. #4 Post-render NaN/Inf detection gap
 
-Status: open  
+Status: complete - `bdb5a97`
 Priority: high, after A1-A3  
 Source: final review #4  
 Files likely involved: `src-tauri/src/engine.rs`, `src-tauri/src/exports.rs`, `src-tauri/src/wav_writer.rs`
@@ -172,7 +204,7 @@ cargo fmt --check
 
 ### A5. #6 and #7 selectTrack stale UI state
 
-Status: open  
+Status: complete - `e65b781`
 Priority: medium, small frontend state fix  
 Source: final review #6 and #7  
 Files likely involved: `src/hooks/useTrackMaster.ts`, hook tests
@@ -196,7 +228,7 @@ npm run build
 
 ### B1. #12 and #13 private-data gitignore hardening
 
-Status: open  
+Status: complete - `9e90893`
 Priority: medium, additive  
 Files likely involved: `.gitignore`, fixture/gitignore tests if present
 
@@ -210,7 +242,7 @@ Do:
 
 ### B2. #14 Album Volume Match export tripwire
 
-Status: open  
+Status: complete - `642d7e7`
 Priority: medium, additive test  
 Files likely involved: `src-tauri/tests/album_render.rs`, `src-tauri/src/album_render.rs`
 
@@ -220,7 +252,7 @@ Do:
 
 ### B3. #15 Original/Mastered swap playhead tripwire
 
-Status: open  
+Status: complete - `ee15e14`
 Priority: medium, additive test  
 Files likely involved: `src-tauri/src/audio.rs`, audio tests
 
@@ -230,7 +262,7 @@ Do:
 
 ### B4. #18 Album measured LUFS sanitization
 
-Status: open  
+Status: complete - `2c4d2f5`
 Priority: low but cheap  
 Files likely involved: `src-tauri/src/engine.rs`, `src-tauri/src/album_render.rs`, `src/bindings.ts`
 
@@ -242,7 +274,7 @@ Do:
 
 ### C1. #19 Save/Open Project drops Album-panel choices
 
-Status: open  
+Status: complete - `3e0d41d`
 Priority: high  
 Files likely involved: `src/hooks/useTrackMaster.ts`, `src/bindings.ts`, `src-tauri/src/types.rs`, project tests
 
@@ -256,7 +288,7 @@ Run mobile bridge tests if shared Rust types change.
 
 ### C2. #20 Partial analysis failures are stderr-only
 
-Status: open  
+Status: complete - `82752e9`
 Priority: medium  
 Files likely involved: `src-tauri/src/engine.rs`, `src/hooks/useTrackMaster.ts`, import/open-project tests
 
@@ -267,7 +299,7 @@ Do:
 
 ### C3. #9 togglePlay near-end restart threshold
 
-Status: open  
+Status: complete - `b9c9d55`
 Priority: medium  
 Files likely involved: `src/hooks/useTrackMaster.ts`
 
@@ -277,7 +309,7 @@ Do:
 
 ### C4. #10 Standard export off-grid loudness target
 
-Status: open  
+Status: complete - `ce4aaf7`
 Priority: medium  
 Files likely involved: `src/lib/standard-export.ts`, `src/lib/standard-managed.ts`, frontend tests
 
@@ -288,7 +320,7 @@ Do:
 
 ### C5. #11 Import metadata track selection
 
-Status: open  
+Status: complete - `bc33e53`
 Priority: medium  
 Files likely involved: `src-tauri/src/files.rs`, `src-tauri/src/decode.rs`
 
@@ -298,7 +330,7 @@ Do:
 
 ### C6. #16 Standard delivery label source of truth
 
-Status: open  
+Status: complete - `e6e36a7`
 Priority: medium  
 Files likely involved: `src/components/StandardView.tsx`, `src/lib/standard-export.ts`, tests
 
@@ -308,7 +340,7 @@ Do:
 
 ### C7. #17 DeliveryProfile Rust/TS parity pin
 
-Status: open  
+Status: complete - `1688da6`
 Priority: medium  
 Files likely involved: `src/bindings.ts`, `src-tauri/src/types.rs`, parity fixture/tests
 
@@ -323,7 +355,7 @@ These gate mobile release. They do not need to block desktop-only stabilization 
 
 ### D1. #1 Android AAudio callback channel-count OOB
 
-Status: open  
+Status: complete - `5428662`
 Priority: critical for Android  
 Files likely involved: `apps/android-native/rust/src/aaudio.rs`
 
@@ -343,7 +375,7 @@ cargo ndk -t arm64-v8a --platform 29 check
 
 ### D2. #8 Android measureLanding vs release race
 
-Status: open  
+Status: complete - `800ba13`
 Priority: medium for Android  
 Files likely involved: Android `AuditionController.kt`, Android Rust facade
 
@@ -356,7 +388,7 @@ Do:
 
 ### E1. #5 album source-path hardening
 
-Status: low  
+Status: complete - `fb6d98b`
 Do:
 - Treat as parity hardening, not a prior-render overwrite bug.
 - Add canonical `output == source` guard to album explicit-dir path if low-risk.
@@ -364,7 +396,7 @@ Do:
 
 ### E2. Decode/channel-count speculative findings
 
-Status: verify first  
+Status: complete - `f61195f`; no panic/OOB claim was made without a proving fixture.
 Do:
 - Re-audit `decode.rs` channel-count and allocation assumptions before changing code.
 - Do not claim panic/OOB without a proving fixture.
@@ -372,7 +404,7 @@ Do:
 
 ### E3. Docs, CI, and process drift
 
-Status: parallel quick wins, owner-gated where noted  
+Status: complete for mechanical quick wins; broader product-canonical refresh remains owner-gated.
 Do:
 - Enforce or document the Android ARM64 CI gate.
 - Add fold-down receipt copy and tests.

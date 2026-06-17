@@ -5,6 +5,16 @@ with `docs/PRODUCT.md` and `docs/APP_BEHAVIOR.md`.
 
 ## Implemented Stabilization Slices
 
+### Final Repo-Wide Review Implementation
+
+Status: mechanical queue implemented on 2026-06-17.
+
+The 2026-06-16 final repo-wide review implementation queue was executed on
+`main` in small pushed commits. The durable execution ledger is
+`docs/plans/2026-06-16-final-review-implementation-plan.md`; it marks the
+A1-E3 slices complete and names the remaining owner-gated listening/product-doc
+work plus the parked cleanup/refactor backlog.
+
 ### Track Master Delivery Format
 
 Status: implemented for Track Master.

@@ -36,6 +36,11 @@ Slices" in `docs/RELEASE_STABILIZATION.md`. Genuinely open:
    changing it.
 3. Already-mastered matrix listening signoff (runner evidence complete).
 
+The 2026-06-16 final repo-wide review implementation queue has also shipped.
+See `docs/plans/2026-06-16-final-review-implementation-plan.md` for the commit
+ledger and remaining owner-gated/parked items; do not treat that plan as an
+open queue.
+
 Album channel-count parity shipped 2026-06-16 (mixed mono/stereo resolution plus
 above-stereo fold-down to stereo delivery; see the "Wave 9 Mechanical
 Reconciliation" section in `docs/RELEASE_STABILIZATION.md`); it is no longer a
