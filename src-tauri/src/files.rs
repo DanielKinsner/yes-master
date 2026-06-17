@@ -1,7 +1,9 @@
 use crate::types::*;
 use std::path::{Component, Path};
 
+use symphonia::core::codecs::CODEC_TYPE_NULL;
 use symphonia::core::formats::FormatOptions;
+use symphonia::core::formats::Track;
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::Hint;
@@ -56,6 +58,12 @@ struct TrackMetadata {
     channels: Option<u16>,
 }
 
+fn first_decodable_track(tracks: &[Track]) -> Option<&Track> {
+    tracks
+        .iter()
+        .find(|track| track.codec_params.codec != CODEC_TYPE_NULL)
+}
+
 fn probe_metadata(path: &Path) -> CommandResult<TrackMetadata> {
     let file = std::fs::File::open(path).map_err(|e| CommandError::Io(e.to_string()))?;
     let mss = MediaSourceStream::new(Box::new(file), Default::default());
@@ -72,9 +80,8 @@ fn probe_metadata(path: &Path) -> CommandResult<TrackMetadata> {
         )
         .map_err(|e| CommandError::Decode(e.to_string()))?;
     let format = probed.format;
-    let track = format
-        .default_track()
-        .ok_or_else(|| CommandError::Decode("no default track".to_string()))?;
+    let track = first_decodable_track(format.tracks())
+        .ok_or_else(|| CommandError::Decode("no decodable track".to_string()))?;
     let params = &track.codec_params;
     let sample_rate = params.sample_rate;
     let channels = params.channels.map(|c| c.count() as u16);
@@ -87,4 +94,34 @@ fn probe_metadata(path: &Path) -> CommandResult<TrackMetadata> {
         sample_rate,
         channels,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use symphonia::core::audio::Channels;
+    use symphonia::core::codecs::{CodecParameters, CODEC_TYPE_PCM_S16LE};
+
+    fn audio_track(id: u32, sample_rate: u32, channels: Channels) -> Track {
+        let mut params = CodecParameters::new();
+        params
+            .for_codec(CODEC_TYPE_PCM_S16LE)
+            .with_sample_rate(sample_rate)
+            .with_channels(channels)
+            .with_n_frames(u64::from(sample_rate));
+        Track::new(id, params)
+    }
+
+    #[test]
+    fn metadata_track_selection_skips_null_tracks_before_audio() {
+        let tracks = vec![
+            Track::new(1, CodecParameters::new()),
+            audio_track(7, 48_000, Channels::FRONT_LEFT | Channels::FRONT_RIGHT),
+        ];
+
+        let selected = first_decodable_track(&tracks).expect("audio track");
+        assert_eq!(selected.id, 7);
+        assert_eq!(selected.codec_params.sample_rate, Some(48_000));
+        assert_eq!(selected.codec_params.channels.map(|c| c.count()), Some(2));
+    }
 }
