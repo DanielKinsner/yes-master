@@ -1,8 +1,13 @@
 # YES Master iPhone App
 
+> **Status note:** the linked `apps/iphone-native/HANDOFF.md` is historical.
+> Use current code and `apps/iphone-native/README.md` for implementation status
+> before executing old handoff steps.
+
 The iPhone app lives at `apps/iphone-native`. It is a SwiftUI-native app that
 replaces the earlier Tauri iPhone prototype. See `apps/iphone-native/README.md`
-and `apps/iphone-native/HANDOFF.md` for current status and development notes.
+for current status and `apps/iphone-native/HANDOFF.md` for historical
+development notes.
 
 ## Boundary
 

@@ -1,5 +1,9 @@
 # Adaptive DSP — Next Steps & Backlog
 
+> **Superseded status note:** retained for adaptive-DSP archaeology. Verify any
+> open item against current code plus `docs/RELEASE_STABILIZATION.md` before
+> acting; older Tier-1 and `stereo_width` backlog notes below may be stale.
+
 Single entry point for what's left on the adaptive/smart DSP. **Status:** merged
 to `main` on 2026-06-03 (merge `2877c6d`), but the owner's by-ear listening signoff
 / calibration is **still pending** — the guardrail numbers are provisional

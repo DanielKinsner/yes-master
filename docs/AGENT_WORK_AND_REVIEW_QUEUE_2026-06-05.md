@@ -1,5 +1,9 @@
 # YES Master Agent Work And Review Queue
 
+> **Superseded:** retained for archaeology only. Do not execute this as the
+> active work queue; use `AGENTS.md`, current code, and
+> `docs/RELEASE_STABILIZATION.md` for the live stabilization state.
+
 Purpose: give Claude or another agent a safe, current, human-out-of-loop task list
 for YES Master, plus an adversarial review prompt to run before implementation.
 

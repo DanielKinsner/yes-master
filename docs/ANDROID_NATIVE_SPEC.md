@@ -1,5 +1,10 @@
 # Android Native App — Build Spec
 
+> **Superseded status note:** retained for architecture and historical context.
+> Use current code, `AGENTS.md`, `docs/TESTING.md`, and
+> `docs/RELEASE_STABILIZATION.md` for live Android status and verification
+> gates; do not treat the phase checklist below as the active queue.
+
 Spec date 2026-06-10. Owner-readable; written to be skimmed on a phone.
 Branch: `feat/android-native`. Execution follows the autonomous-build
 pattern: small green commits, full verification per phase, handoff at the
