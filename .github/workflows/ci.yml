@@ -216,11 +216,19 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Install Android SDK packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked --version 3.5.6
 
       - name: Remove local SDK override
         run: rm -f local.properties
@@ -232,3 +240,7 @@ jobs:
       - name: Android JVM tests
         working-directory: apps/android-native
         run: ./gradlew test
+
+      - name: Android ARM64 Rust check
+        working-directory: apps/android-native/rust
+        run: cargo ndk -t arm64-v8a --platform 29 check
