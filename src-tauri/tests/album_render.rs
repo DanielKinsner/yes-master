@@ -308,6 +308,62 @@ fn album_render_output_is_byte_identical_with_volume_match_on_or_off() {
 }
 
 #[test]
+fn album_render_sanitizes_silent_track_measured_lufs_in_manifest() {
+    let tmp = TempDir::new().expect("tempdir");
+    let sr = 48_000_u32;
+    let path = tmp.path().join("silent.wav");
+    let samples = vec![0.0_f32; sr as usize];
+    write_wav_mono(&path, sr, &samples);
+
+    let plan = AlbumPlan {
+        title: "Silent LUFS Tripwire".to_string(),
+        arc: AlbumArc::Custom {
+            lufs_offsets: vec![0.0],
+        },
+        tracks: vec![AlbumTrackEntry {
+            track_id: TrackId("silent".to_string()),
+            position: 1,
+            role: TrackRole::AlbumTrack,
+            role_locked: false,
+            arc_lufs_offset_db: 0.0,
+            intensity_scale: 1.0,
+            album_character: None,
+        }],
+        transitions: vec![],
+        intensity: 1.0,
+        delivery_sample_rate: None,
+        delivery_bit_depth: Some(24),
+    };
+    let request = AlbumPlanRenderRequest {
+        plan,
+        tracks: vec![AlbumTrackRenderInput {
+            track_id: TrackId("silent".to_string()),
+            source_path: path.to_string_lossy().to_string(),
+            settings: default_master_settings(),
+        }],
+    };
+
+    let report =
+        render_album_plan_impl(&request, &tmp.path().join("silent_out"), None).expect("render");
+    assert_eq!(report.tracks.len(), 1);
+    assert!(
+        report.tracks[0].measured_lufs.is_finite(),
+        "silent track report LUFS must be finite"
+    );
+    assert_eq!(report.tracks[0].measured_lufs, -70.0);
+
+    let manifest_json = std::fs::read_to_string(&report.manifest_path).expect("read manifest");
+    let parsed: serde_json::Value =
+        serde_json::from_str(&manifest_json).expect("manifest is valid JSON");
+    let measured = &parsed["tracks"][0]["measured_lufs"];
+    assert!(
+        measured.is_number(),
+        "silent track manifest LUFS must be a number, got {measured}"
+    );
+    assert_eq!(measured.as_f64(), Some(-70.0));
+}
+
+#[test]
 fn album_render_three_tracks_smoke() {
     let tmp = TempDir::new().expect("tempdir");
     let sr = 48_000_u32;

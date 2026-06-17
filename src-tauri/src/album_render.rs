@@ -1,6 +1,6 @@
 use crate::analysis::{
     compute_dynamic_range_p95_p10, compute_energy_density_score, compute_spectral_balance_6band,
-    compute_transient_flux,
+    compute_transient_flux, sanitize_lufs,
 };
 use crate::engine::{
     measure_and_apply_ceiling_bounded_landing, measure_integrated_lufs, AlbumPlanRenderRequest,
@@ -652,8 +652,11 @@ pub fn render_album_plan_impl(
             bit_depth,
         )?;
 
-        let measured_lufs =
-            measure_integrated_lufs(&samples, album_sample_rate, rendered_channel_count)?;
+        let measured_lufs = sanitize_lufs(measure_integrated_lufs(
+            &samples,
+            album_sample_rate,
+            rendered_channel_count,
+        )?);
         track_records.push(AlbumTrackRenderRecord {
             track_id: entry.track_id.clone(),
             position: entry.position,
