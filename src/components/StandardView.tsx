@@ -23,7 +23,7 @@ import { Knob, intensityLabel } from "./Knob";
 import { WaveformView } from "./Waveform";
 import { PresetIcon, PRESET_ACCENT } from "./PresetIcon";
 import { effectiveLoudnessTarget } from "../lib/effective-settings";
-import { standardExportNotes } from "../lib/standard-export";
+import { standardDeliverySpecLabel, standardExportNotes } from "../lib/standard-export";
 import { api } from "../lib/api";
 import { MasterOutPanel } from "./RightRail";
 import { formatDuration } from "../lib/time-format";
@@ -417,7 +417,7 @@ function StandardRightRail({
         {/* State-free name: the recipe is fixed (standardExportSettings), and
             "Streaming" would read as a live profile next to a −9 LUFS target. */}
         <div className="std-delivery-name">Standard WAV</div>
-        <div className="std-delivery-spec">44.1 kHz · 24-bit · −1 dBTP</div>
+        <div className="std-delivery-spec">{standardDeliverySpecLabel()}</div>
         <div className="std-delivery-note">Create Master writes a WAV file.</div>
         <button type="button" className="ghost-btn std-delivery-change" onClick={onEnterAdvanced}>
           Change

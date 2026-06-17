@@ -1,4 +1,5 @@
 // src/components/StandardView.test.tsx
+import { readFileSync } from "node:fs";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +13,7 @@ import {
 import type { useTrackMaster } from "../hooks/useTrackMaster";
 import type { FirstRunGuide } from "../hooks/useFirstRunGuide";
 import type { GuideStep } from "../lib/first-run-guide";
+import { standardDeliverySpecLabel } from "../lib/standard-export";
 
 type TM = ReturnType<typeof useTrackMaster>;
 
@@ -34,6 +36,10 @@ async function render(node: React.ReactElement) {
   const root = createRoot(container);
   await act(async () => { root.render(node); });
   return { container, root };
+}
+
+function standardViewSource(): string {
+  return readFileSync("src/components/StandardView.tsx", "utf8");
 }
 
 describe("StyleTiles", () => {
@@ -373,6 +379,17 @@ describe("StandardRightRail", () => {
     const change = container.querySelector<HTMLButtonElement>(".std-delivery-change")!;
     await act(async () => { change.click(); });
     expect(onEnterAdvanced).toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("renders the delivery spec from the canonical Standard export recipe", async () => {
+    expect(standardViewSource()).not.toContain("44.1 kHz · 24-bit · −1 dBTP");
+    const { container, root } = await render(
+      <StandardView tm={fakeTm()} onEnterAdvanced={() => {}} />,
+    );
+    expect(container.querySelector(".std-delivery-spec")?.textContent).toBe(
+      standardDeliverySpecLabel(),
+    );
     await act(async () => root.unmount());
   });
 

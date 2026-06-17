@@ -22,6 +22,19 @@ export const STANDARD_EXPORT_DELIVERY: {
   lufsClamp: parity.delivery.lufs_clamp as [number, number],
 };
 
+function formatSampleRate(sampleRate: number): string {
+  const khz = sampleRate / 1_000;
+  return Number.isInteger(khz) ? `${khz} kHz` : `${khz.toFixed(1)} kHz`;
+}
+
+function formatDbtp(value: number): string {
+  return value < 0 ? `−${Math.abs(value)} dBTP` : `${value} dBTP`;
+}
+
+export function standardDeliverySpecLabel(): string {
+  return `${formatSampleRate(STANDARD_EXPORT_DELIVERY.sampleRate)} · ${STANDARD_EXPORT_DELIVERY.bitDepth}-bit · ${formatDbtp(STANDARD_EXPORT_DELIVERY.ceilingDbtp)}`;
+}
+
 function clampStandardTarget(target: number | null): number | null {
   if (target === null) {
     return null;
