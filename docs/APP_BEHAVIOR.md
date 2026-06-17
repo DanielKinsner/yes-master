@@ -91,6 +91,9 @@ instead of silent non-playback.
 - Open Project restores state, selects a track when possible, and reports
   recovery issues that need user action.
 - Settings covers current baseline app defaults and app info.
+- Settings includes an Audio Output selector. System default is the fallback;
+  choosing a named output stores the device name locally and reopens the
+  playback stream so the next Original/Mastered audition uses that device.
 - Help explains current Import/Analyze, Original vs Mastered, Volume Match vs
   Preview LUFS, Delivery Profile/Format, Export Review, and Save/Open behavior.
 
