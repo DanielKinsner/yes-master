@@ -16,7 +16,7 @@ License: source-available, proprietary — see `LICENSE`.
 
 **Two views, one engine:**
 
-- **Standard** (default): pick a Style (Balanced / Bright / Warm / Heavy) and
+- **Standard** (default): pick a Style (Universal / Clarity / Tape / Oomph) and
   a loudness (−14 / −11 / −9 LUFS), audition Original vs Mastered at the same
   playhead, Create Master. Exports a fixed known-safe format: 44.1 kHz /
   24-bit WAV at a −1 dBTP ceiling. No blocking review ceremony; cosmetic
