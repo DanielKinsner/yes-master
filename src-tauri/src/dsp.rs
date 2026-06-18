@@ -435,17 +435,17 @@ const PRESET_CLARITY: PresetCalibration = PresetCalibration {
     sub_db: 0.0,
     low_shelf_db: 0.6,
     low_mid_db: -1.0,
-    presence_db: -0.8,
+    presence_db: 0.1,
     high_mid_db: 0.0,
-    air_db: 1.7,
+    air_db: 2.2,
     sparkle_db: 0.0,
     warmth: 0.025,
-    stereo_width: 1.02,
+    stereo_width: 1.08,
     // Small lift adds articulation to match the air shelf without turning Clarity into Punch.
     transient_punch: 0.05,
     // 28 Hz gives the vocal/detail preset a cleaner floor where sub weight is not the goal.
     highpass_hz: 28.0,
-    target_lufs: -13.4,
+    target_lufs: -13.0,
     ceiling_dbfs: -1.0,
     compressor_threshold_dbfs: -12.5,
     compressor_ratio: 1.45,
@@ -462,13 +462,13 @@ const PRESET_TAPE: PresetCalibration = PresetCalibration {
     // stays textured without crushing more movement than the reference.
     sub_db: 0.0,
     low_shelf_db: 0.0,
-    low_mid_db: 0.3,
+    low_mid_db: 0.65,
     presence_db: -1.4,
     high_mid_db: 0.0,
-    air_db: 1.9,
+    air_db: 0.9,
     sparkle_db: 0.0,
-    warmth: 0.10,
-    stereo_width: 0.99,
+    warmth: 0.14,
+    stereo_width: 0.94,
     // Negative punch rounds attacks so the tape-glue character reads softened, not snappy.
     transient_punch: -0.03,
     // 24 Hz preserves low-body warmth while clearing subsonic headroom waste.
@@ -518,14 +518,14 @@ const PRESET_OOMPH: PresetCalibration = PresetCalibration {
     // pushed low weight and reduced compression depth after Oomph measured too
     // mid-forward and too flattened against the external reference.
     sub_db: 0.0,
-    low_shelf_db: 4.2,
+    low_shelf_db: 5.1,
     low_mid_db: -3.0,
     presence_db: -2.6,
     high_mid_db: 0.0,
-    air_db: -1.2,
+    air_db: -1.9,
     sparkle_db: 0.0,
     warmth: 0.045,
-    stereo_width: 0.95,
+    stereo_width: 0.86,
     // Moderate lift restores kick and bass impact after the deep low-mid scoop.
     transient_punch: 0.08,
     // 22 Hz keeps the lowest useful weight because Oomph is the sub-forward preset.
@@ -544,13 +544,13 @@ const PRESET_OOMPH: PresetCalibration = PresetCalibration {
 const PRESET_WARMTH: PresetCalibration = PresetCalibration {
     // Conservative target line 257. Fuller body, softer top, soft glue.
     sub_db: 0.0,
-    low_shelf_db: 0.8,
-    low_mid_db: 0.7,
+    low_shelf_db: 1.4,
+    low_mid_db: 1.1,
     presence_db: -1.8,
     high_mid_db: 0.0,
-    air_db: -0.8,
+    air_db: -1.6,
     sparkle_db: 0.0,
-    warmth: 0.08,
+    warmth: 0.12,
     stereo_width: 0.98,
     // Negative punch softens edges so the added body reads smooth rather than assertive.
     transient_punch: -0.05,
@@ -573,17 +573,17 @@ const PRESET_PUNCH: PresetCalibration = PresetCalibration {
     sub_db: 0.0,
     low_shelf_db: 0.8,
     low_mid_db: -1.8,
-    presence_db: 1.6,
+    presence_db: 2.2,
     high_mid_db: 0.0,
     air_db: 0.8,
     sparkle_db: 0.0,
     warmth: 0.035,
     stereo_width: 1.04,
     // Largest lift because Punch's job is impact and forwardness, not density.
-    transient_punch: 0.14,
+    transient_punch: 0.18,
     // 28 Hz tightens lows above the sub floor so punch reads controlled rather than bloated.
     highpass_hz: 28.0,
-    target_lufs: -10.9,
+    target_lufs: -11.5,
     ceiling_dbfs: -0.8,
     compressor_threshold_dbfs: -20.0,
     compressor_ratio: 2.8,
@@ -610,10 +610,10 @@ const PRESET_LOUD: PresetCalibration = PresetCalibration {
     transient_punch: 0.12,
     // 30 Hz buys limiter headroom for the loudest preset where deep subs are least useful.
     highpass_hz: 30.0,
-    target_lufs: -10.4,
+    target_lufs: -9.3,
     ceiling_dbfs: -0.8,
     compressor_threshold_dbfs: -23.0,
-    compressor_ratio: 3.5,
+    compressor_ratio: 4.0,
     compressor_attack_ms: 15.0,
     compressor_release_ms: 180.0,
     science_note: "Strongest density and limiting; assertive but not smashed — \
