@@ -226,31 +226,39 @@ body {
 
 .landing-proof {
   display: grid;
-  gap: 24px;
-  margin: 34px 0 0;
+  gap: 18px;
+  margin: 28px 0 0;
   padding: 0;
   list-style: none;
 }
 
 .landing-proof li {
   display: grid;
-  gap: 5px;
-  max-width: 420px;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  max-width: 470px;
   padding: 0;
-  color: #c7d7f2;
 }
 
-.landing-proof strong {
-  color: var(--landing-ink);
-  font-family: var(--landing-display);
-  font-size: 18px;
-  line-height: 1.1;
+.landing-proof-icon {
+  width: 46px;
+  height: 46px;
 }
 
-.landing-proof span {
-  color: var(--landing-muted);
+.landing-proof li p {
+  width: auto;
+  margin: 0;
+  font-family: var(--landing-font);
   font-size: 14px;
-  line-height: 1.35;
+  line-height: 1.4;
+  font-weight: 400;
+  color: var(--landing-muted);
+}
+
+.landing-proof li strong {
+  color: var(--landing-ink);
+  font-weight: 850;
 }
 
 .landing-next {
@@ -284,11 +292,11 @@ body {
   }
 
   .landing-hero-copy {
-    width: min(560px, 52%);
+    width: min(600px, 54%);
   }
 
   .landing-hero h1 {
-    font-size: clamp(66px, 6vw, 88px);
+    font-size: clamp(64px, 5.4vw, 80px);
   }
 
   .landing-hero p {
