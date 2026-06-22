@@ -494,10 +494,10 @@ const PRESET_SPATIAL: PresetCalibration = PresetCalibration {
     air_db: 1.3,
     sparkle_db: 0.0,
     warmth: 0.04,
-    // Candidate (pending listening signoff): widened 1.16 -> 1.40 so Spatial reads
-    // clearly as the wide preset. Measured L/R correlation change on the stereo_field
-    // probe: -0.091 (1.16) -> ~-0.17 (1.40). Pure M/S side-scale, still mono-safe-ish.
-    stereo_width: 1.40,
+    // Candidate (pending listening signoff): widened 1.16 -> 1.50 (full lean) so Spatial
+    // reads clearly as the wide preset. Measured L/R correlation change on the stereo_field
+    // probe: -0.091 (1.16) -> -0.258 (1.40); 1.50 pushes wider still. Pure M/S side-scale.
+    stereo_width: 1.50,
     // Tiny lift keeps widened material from feeling smeared without pushing attacks forward.
     transient_punch: 0.03,
     // 24 Hz avoids low-image wobble while staying below audible bass weight.
