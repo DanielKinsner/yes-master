@@ -114,3 +114,4 @@ Remove-Item Env:\AMS_RUN_REAL_FIXTURE
 - Do not call a slice complete because the UI resembles the goal; verify the
   behavior.
 - Commit in very small chunks
+- When decisions have been made that contradict Product.md ask the user if you should update it as well as other documentation i.e. the readme
