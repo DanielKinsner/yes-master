@@ -1,6 +1,6 @@
 import desktopStandardImage from "./assets/landing/desktop-standard-ui.png";
 import desktopAdvancedImage from "./assets/landing/desktop-advanced-ui.png";
-import advancedAngledImage from "./assets/landing/advanced-angled-ui.png";
+import heroFullscreenImage from "./assets/landing/hero-fullscreen-control-room.png";
 import iphoneStandardImage from "./assets/landing/iphone-standard-ui.jpg";
 import brandIcon from "./assets/landing/yes-master-icon.png";
 
@@ -57,7 +57,7 @@ export default function LandingPage() {
       <nav className="landing-nav" aria-label="YES Master">
         <a className="landing-brand" href="#top" aria-label="YES Master home">
           <img src={brandIcon} alt="" />
-          <span>YES Master</span>
+          <span>Y.E.S. Master</span>
         </a>
         <div className="landing-nav-links">
           <a href="#standard">Standard</a>
@@ -70,6 +70,12 @@ export default function LandingPage() {
       </nav>
 
       <section id="top" className="landing-hero" aria-labelledby="landing-title">
+        <img
+          className="landing-hero-scene"
+          src={heroFullscreenImage}
+          alt=""
+          aria-hidden="true"
+        />
         <div className="landing-hero-copy">
           <span className="landing-eyebrow">Y.E.S. Master / Your Endgame Sound</span>
           <h1 id="landing-title">
@@ -89,18 +95,29 @@ export default function LandingPage() {
             </a>
           </div>
           <ul className="landing-proof" aria-label="YES Master highlights">
-            <li>Mac and Windows desktop</li>
-            <li>Local-first mastering</li>
-            <li>Original/Mastered at one playhead</li>
-            <li>Measured export checks</li>
+            <li>
+              <strong>Local-first</strong>
+              <span>
+                Your tracks never leave your machine. No uploads, no cloud, no
+                waiting.
+              </span>
+            </li>
+            <li>
+              <strong>Real-time control</strong>
+              <span>
+                Hear every change as you make it. Shape tone, loudness, and
+                width by ear.
+              </span>
+            </li>
+            <li>
+              <strong>Release-ready</strong>
+              <span>
+                Technically checked and true-peak safe. Ship a master you can
+                trust.
+              </span>
+            </li>
           </ul>
         </div>
-        <figure className="landing-hero-visual">
-          <img
-            src={advancedAngledImage}
-            alt="Angled Y.E.S. Master Advanced interface on a studio desk"
-          />
-        </figure>
         <a className="landing-next" href="#standard">
           <span>Next: the simple path</span>
           <span>Scroll</span>
