@@ -544,13 +544,13 @@ const PRESET_OOMPH: PresetCalibration = PresetCalibration {
 const PRESET_WARMTH: PresetCalibration = PresetCalibration {
     // Conservative target line 257. Fuller body, softer top, soft glue.
     sub_db: 0.0,
-    low_shelf_db: 1.4,
-    low_mid_db: 1.1,
+    low_shelf_db: 1.65,
+    low_mid_db: 1.3,
     presence_db: -1.8,
     high_mid_db: 0.0,
-    air_db: -1.6,
+    air_db: -1.95,
     sparkle_db: 0.0,
-    warmth: 0.12,
+    warmth: 0.14,
     stereo_width: 0.98,
     // Negative punch softens edges so the added body reads smooth rather than assertive.
     transient_punch: -0.05,
