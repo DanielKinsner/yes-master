@@ -413,7 +413,7 @@ depends on them yet.
   `docs/HANDOFF_2026-06-03_ADAPTIVE_DSP_TIER2.md` (the engine, B2 backend‑owned profile,
   data flow, `preset_byte_identity`).
 - **Tier‑1 build handoff (historical):** `docs/HANDOFF_2026-06-02_ADAPTIVE_DSP_TIER1.md`.
-- **Adversarial review validated this round:** `docs/reviews/2026-06-03-codex-adversarial-repo-review.md`.
+- **Adversarial review validated this round:** `docs/archive/reviews/2026-06-03-codex-adversarial-repo-review.md`.
 - **Phase A commits:** `git log --oneline 90946ab..091b288` (Tasks 1→10).
 
 ---

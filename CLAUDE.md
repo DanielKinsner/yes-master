@@ -43,7 +43,7 @@ deferred slice.
 
 The refactor backlog (former item 5) was executed in full on 2026-06-09 —
 see the execution record at the end of
-`docs/reviews/2026-06-10-consolidated-refactor-backlog.md`. Only P2's
+`docs/archive/reviews/2026-06-10-consolidated-refactor-backlog.md`. Only P2's
 one-pole/soft-knee hoist (owner-deferred) and P4 tauri-specta stay parked.
 
 ## Verification

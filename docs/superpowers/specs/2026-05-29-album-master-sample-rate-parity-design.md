@@ -3,7 +3,7 @@ title: Album Master Sample-Rate Parity — Design
 status: approved
 created: 2026-05-29
 origin: brainstorming session 2026-05-29
-supersedes_scope: "Deferred to Follow-Up Work" item in docs/plans/2026-05-28-001-release-candidate-finish-plan.md (full Album Master delivery-format parity)
+supersedes_scope: "Deferred to Follow-Up Work" item in docs/archive/plans/2026-05-28-001-release-candidate-finish-plan.md (full Album Master delivery-format parity)
 ---
 
 # Album Master Sample-Rate Parity — Design

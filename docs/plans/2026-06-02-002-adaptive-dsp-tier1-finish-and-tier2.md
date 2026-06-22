@@ -2,8 +2,8 @@
 
 Date: 2026-06-02
 Branch: `feat/adaptive-dsp-guardrails`
-Context: post-review (`docs/reviews/2026-06-02-adaptive-dsp-tier1-review.md`,
-`docs/reviews/2026-06-03-adaptive-dsp-desktop-review.md`), verified against the
+Context: post-review (`docs/archive/reviews/2026-06-02-adaptive-dsp-tier1-review.md`,
+`docs/archive/reviews/2026-06-03-adaptive-dsp-desktop-review.md`), verified against the
 code by a fan-out workflow. The **mechanical bugs are already fixed** (see
 "Already done"). This plan covers the **taste / new-math / architecture**
 decisions that need Dan's ear or a design call before implementing.

@@ -29,8 +29,8 @@ recognizable at any strength.
 
 ## Post-review update (2026-06-02)
 
-Two independent reviews (`docs/reviews/2026-06-02-adaptive-dsp-tier1-review.md`,
-`docs/reviews/2026-06-03-adaptive-dsp-desktop-review.md`) were verified against
+Two independent reviews (`docs/archive/reviews/2026-06-02-adaptive-dsp-tier1-review.md`,
+`docs/archive/reviews/2026-06-03-adaptive-dsp-desktop-review.md`) were verified against
 the code by a fan-out workflow, and their real bugs fixed. Fixed: the `LRA=0.0`
 density misfire (`f6c7cc8`); the preview + slow-lane wiring gaps that made the
 evidence lane render the *old* chain (`dc62dab`, + invariant tests `27f2a4c`);

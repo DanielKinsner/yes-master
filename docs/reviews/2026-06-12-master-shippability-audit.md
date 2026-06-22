@@ -3,7 +3,7 @@
 Audit-only pass. No source changes were made. This document is the consolidated
 source of truth for "is the whole repo — desktop app, iPhone app, Android app —
 a shippable piece of software across all devices," superseding (and absorbing)
-`docs/reviews/2026-06-13-codex-refactor-audit.md`.
+`docs/archive/reviews/2026-06-13-codex-refactor-audit.md`.
 
 Companion document: `docs/plans/2026-06-12-shippability-roadmap.md` — the
 execution plan that turns every finding below into an implementable slice.
@@ -399,7 +399,7 @@ the gating item for any distribution. Owner decision (keystore) + config.
 themed icons render a blob); Done screen shows a path with no share/play
 action (iPhone has ShareLink); `copyToCache` never checks
 `supportsImportExtension` before copying hundreds of MB (already item B2 in
-`docs/plans/2026-06-10-001-android-a4-action-plan.md`); no
+`docs/archive/plans/2026-06-10-001-android-a4-action-plan.md`); no
 MediaSession/foreground service (backgrounded render is lost — planned B1).
 
 ### 2.6 Mobile-shared memory (MB)
@@ -650,7 +650,7 @@ roadmap as S4.4):**
   the volume cue) — taste decision, needs a listening note. Low / decision.
 
 **UF-C — The Android A4 action plan
-(`docs/plans/2026-06-10-001-android-a4-action-plan.md`) was queued as
+(`docs/archive/plans/2026-06-10-001-android-a4-action-plan.md`) was queued as
 "next session" in ANDROID_NATIVE_SPEC.md and never executed** (zero
 android-native commits after A3). These are app-correctness items, distinct
 from Wave 8's store-readiness:

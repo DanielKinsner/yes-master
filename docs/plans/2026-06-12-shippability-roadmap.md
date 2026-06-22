@@ -688,7 +688,7 @@ so the mechanical ship queue can close without waiting for multi-day ear work.
   before `copyToCache` — merges with S8.4's check), add import-cache
   reaping (keep current + N most-recent, reap on attach), land the
   tidiness riders. Tests per the A4 plan
-  (`docs/plans/2026-06-10-001-android-a4-action-plan.md` — treat it as the
+  (`docs/archive/plans/2026-06-10-001-android-a4-action-plan.md` — treat it as the
   spec; it was queued and never run). Android lane.
 - **S9.2** Android process-death restore (UF-C1): SavedStateHandle per the
   A4 plan's B1 section. Android lane + a JVM state-restore test.

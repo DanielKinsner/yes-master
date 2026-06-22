@@ -37,7 +37,7 @@ Slices" in `docs/RELEASE_STABILIZATION.md`. Genuinely open:
 3. Already-mastered matrix listening signoff (runner evidence complete).
 
 The 2026-06-16 final repo-wide review implementation queue has also shipped.
-See `docs/plans/2026-06-16-final-review-implementation-plan.md` for the commit
+See `docs/archive/plans/2026-06-16-final-review-implementation-plan.md` for the commit
 ledger and remaining owner-gated/parked items; do not treat that plan as an
 open queue.
 
@@ -48,7 +48,7 @@ deferred slice.
 
 The refactor backlog (former item 5) was executed in full on 2026-06-09 —
 see the execution record at the end of
-`docs/reviews/2026-06-10-consolidated-refactor-backlog.md`. Only P2's
+`docs/archive/reviews/2026-06-10-consolidated-refactor-backlog.md`. Only P2's
 one-pole/soft-knee hoist (owner-deferred) and P4 tauri-specta stay parked.
 
 ## Verification

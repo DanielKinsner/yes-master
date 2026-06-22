@@ -15,7 +15,7 @@ procedure, not a backlog — the backlog lives in `docs/ADAPTIVE_DSP_NEXT_STEPS.
 - This session is about **advancing** — deciding whether to turn the next tier *on* and locking its
   provisional numbers by ear. It is a taste/identity gate, not a correctness one.
 - The whole 2026-06-03 GLOBAL review is triaged and **closed on code**: 15 already-fixed, 3 stale, 0 open
-  objective defects (`docs/reviews/2026-06-05-adaptive-dsp-GLOBAL-review-triage.md`). The only open adaptive
+  objective defects (`docs/archive/reviews/2026-06-05-adaptive-dsp-GLOBAL-review-triage.md`). The only open adaptive
   items are the taste/owner ones below.
 
 ## 1. Pre-flight
@@ -110,8 +110,8 @@ Prioritized; status as of this writing:
 ## 5. Pointers
 
 - Phase B architecture + gate: `docs/HANDOFF_2026-06-04_ADAPTIVE_DSP_TIER2_PHASE_B_CONFIDENCE.md`.
-- Backlog: `docs/ADAPTIVE_DSP_NEXT_STEPS.md`. Agent queue: `docs/AGENT_WORK_AND_REVIEW_QUEUE_2026-06-05.md`.
-- GLOBAL-review triage: `docs/reviews/2026-06-05-adaptive-dsp-GLOBAL-review-triage.md`.
+- Backlog: `docs/ADAPTIVE_DSP_NEXT_STEPS.md`. Agent queue: `docs/archive/AGENT_WORK_AND_REVIEW_QUEUE_2026-06-05.md`.
+- GLOBAL-review triage: `docs/archive/reviews/2026-06-05-adaptive-dsp-GLOBAL-review-triage.md`.
 - Constants: `src-tauri/src/confidence.rs` (Phase B) · `src-tauri/src/guardrails.rs` (Tier-1).
 - Per-axis readout: `src/App.tsx` `AdaptiveReadout` ← `guardrail_readout` command.
 

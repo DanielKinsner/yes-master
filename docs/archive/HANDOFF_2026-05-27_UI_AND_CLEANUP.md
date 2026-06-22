@@ -138,9 +138,9 @@ The docs/hook cleanup and review artifacts were committed in
 - `docs/RELEASE_STABILIZATION.md`
 - `docs/TESTING.md`
 - `src/hooks/useTrackMaster.ts`
-- `docs/CODEX_WIRING_REVIEW_2026-05-27.md`
+- `docs/archive/CODEX_WIRING_REVIEW_2026-05-27.md`
 
-`docs/CODEX_WIRING_REVIEW_2026-05-27.md` is the deeper wiring and cleanup review.
+`docs/archive/CODEX_WIRING_REVIEW_2026-05-27.md` is the deeper wiring and cleanup review.
 Do not duplicate it here; use it as evidence, but note its new post-review
 status section before treating any item as open.
 
@@ -180,7 +180,7 @@ ignored CSV/JSON ledgers or rendered WAVs.
 1. Re-open the app visually and confirm the accepted header layout still feels
    right with the user's real viewport and the `It's a coat` fixture.
 2. If continuing cleanup, start with the still-open wiring risks in
-   `docs/CODEX_WIRING_REVIEW_2026-05-27.md`, not the already-resolved safe
+   `docs/archive/CODEX_WIRING_REVIEW_2026-05-27.md`, not the already-resolved safe
    deletes.
 3. Decide the two loudness-target surfaces: right-rail LUFS target vs. center
    loudness dropdown. They currently write the same field with different

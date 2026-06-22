@@ -1,6 +1,6 @@
 # Handoff — Consolidated Refactor Backlog Executed (2026-06-09)
 
-The full backlog from `docs/reviews/2026-06-10-consolidated-refactor-backlog.md`
+The full backlog from `docs/archive/reviews/2026-06-10-consolidated-refactor-backlog.md`
 (the four-survey consolidation) executed in one pass: 23 commits, every one
 independently green, engine lock respected throughout. Owner decisions taken
 before execution: untrack the graphify cache (P1a), engine-adjacent deletions

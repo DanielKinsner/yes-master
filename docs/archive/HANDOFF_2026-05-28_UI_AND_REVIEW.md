@@ -10,8 +10,8 @@ Read `CLAUDE.md` first (required reading + verification commands).
   Working tree is clean. Latest commit at handoff time: `66a0f60`.
 - Two bodies of work landed this session, both fully verified and pushed:
   1. **Independent code-review fixes + fixture-matrix evidence.** See
-     `docs/review-2026-05-28.md` (the original review, all 15 items addressed),
-     `docs/RELEASE_EVIDENCE_2026-05-28.md`, and `docs/RELEASE_STABILIZATION.md`
+     `docs/archive/review-2026-05-28.md` (the original review, all 15 items addressed),
+     `docs/archive/RELEASE_EVIDENCE_2026-05-28.md`, and `docs/RELEASE_STABILIZATION.md`
      (the "Already-Mastered Input Matrix" gate is now marked complete — full
      18-case run passed, no silent regression).
   2. **A UI pass** (commits between `b4fa970` and `66a0f60` — run
@@ -35,7 +35,7 @@ for a recap.
   the plan's Scope Boundaries). Do not widen Album scope without the user.
 - **Oomph preset** is the least-matched against references; do not retune any
   preset without fresh listening notes (plan Key Decision 7).
-- **Active plan of record:** `docs/plans/2026-05-28-001-release-candidate-finish-plan.md`.
+- **Active plan of record:** `docs/archive/plans/2026-05-28-001-release-candidate-finish-plan.md`.
   Most of its units are complete in prior sessions; treat it as the source of
   truth for remaining RC scope, not this handoff.
 

@@ -11,7 +11,7 @@ Status: mechanical queue implemented on 2026-06-17.
 
 The 2026-06-16 final repo-wide review implementation queue was executed on
 `main` in small pushed commits. The durable execution ledger is
-`docs/plans/2026-06-16-final-review-implementation-plan.md`; it marks the
+`docs/archive/plans/2026-06-16-final-review-implementation-plan.md`; it marks the
 A1-E3 slices complete and names the remaining owner-gated listening/product-doc
 work plus the parked cleanup/refactor backlog.
 
@@ -110,7 +110,7 @@ Verification coverage:
 - `src/App.chrome.test.tsx`
 - `src/App.layout-css.test.ts`
 - Local ignored screenshots summarized in
-  `docs/RELEASE_EVIDENCE_2026-05-28.md`.
+  `docs/archive/RELEASE_EVIDENCE_2026-05-28.md`.
 
 ### Export Review
 
@@ -161,7 +161,7 @@ Current behavior:
   be committed.
 
 Latest aggregate evidence is recorded in
-`docs/RELEASE_EVIDENCE_2026-05-28.md`.
+`docs/archive/RELEASE_EVIDENCE_2026-05-28.md`.
 
 ### Wave 9 Mechanical Reconciliation
 
@@ -214,7 +214,7 @@ to Wave 10 on 2026-06-16 so the mechanical shippability list can close first.
 
 Status: full local manifest completed on 2026-05-28 (18 cases, `--release`
 example build). No silent regression; aggregate in
-`docs/RELEASE_EVIDENCE_2026-05-28.md`. The earlier timeout was a debug-build cost
+`docs/archive/RELEASE_EVIDENCE_2026-05-28.md`. The earlier timeout was a debug-build cost
 only. Listening signoff moved to Wave 10 on 2026-06-16.
 
 - Re-run the private fixture matrix for DSP/export changes.
@@ -242,7 +242,7 @@ Status: complete on 2026-05-28.
 - Clippy was installed locally and passes with `-D warnings`.
 - `npm test`, `npm run build`, `cargo test --lib`, `cargo test`, and
   `npm run build:windows` are green. See
-  `docs/RELEASE_EVIDENCE_2026-05-28.md`.
+  `docs/archive/RELEASE_EVIDENCE_2026-05-28.md`.
 
 ### Manual Listening Gate
 

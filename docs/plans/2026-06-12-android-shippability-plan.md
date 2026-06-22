@@ -8,7 +8,7 @@ implementer.
 Parent docs: `docs/reviews/2026-06-12-master-shippability-audit.md`
 (AN-01..AN-04, MB-01, UF-C1..C4),
 `docs/plans/2026-06-12-shippability-roadmap.md` (global rules — rule 7:
-interrogate the owner), `docs/plans/2026-06-10-001-android-a4-action-plan.md`
+interrogate the owner), `docs/archive/plans/2026-06-10-001-android-a4-action-plan.md`
 (**treat as active spec** — it was queued as "next session" in
 ANDROID_NATIVE_SPEC.md and never executed; this plan absorbs it),
 `docs/plans/2026-06-12-adaptive-compressor-mvp-spec.md` (AC-4 touches this

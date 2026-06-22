@@ -240,7 +240,7 @@ session state resets to Idle on relaunch.
 only by-ear item. Functional flow verified by tests + emulator-free lanes.
 
 **Next session:** execute
-`docs/plans/2026-06-10-001-android-a4-action-plan.md` — batched A4 work
+`docs/archive/plans/2026-06-10-001-android-a4-action-plan.md` — batched A4 work
 (process-death restore, import fail-fast, cache reaping, bridge tidiness)
 with anchors, lane commands, and the already-fixed list so nothing is
 redone.

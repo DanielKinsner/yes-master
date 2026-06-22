@@ -53,7 +53,7 @@ should DSP constants be retuned from structured listening notes.
 ## Reviewer Reconciliation (Claude, 2026-06-15)
 
 External verification pass against the manual-test catalog in
-`docs/LISTENING_FINDINGS_2026-06-15.md`. This plan converges with that catalog on
+`docs/archive/LISTENING_FINDINGS_2026-06-15.md`. This plan converges with that catalog on
 the major calls (bugs before tuning, the preset regression/wiring audit, name
 unification). Additions and corrections:
 

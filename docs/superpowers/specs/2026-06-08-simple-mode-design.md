@@ -2,7 +2,7 @@
 
 Date: 2026-06-08 (rev 3 — owner + Codex review folded in)
 Status: approved design, ready for implementation planning
-Builds on: `docs/SIMPLE_ADVANCED_MODE_NOTE_2026-05-29.md`, `docs/ENGINE_REFERENCE.md`, the iPhone app (`apps/iphone-native`)
+Builds on: `docs/archive/SIMPLE_ADVANCED_MODE_NOTE_2026-05-29.md`, `docs/ENGINE_REFERENCE.md`, the iPhone app (`apps/iphone-native`)
 
 > Working title was "Simple Mode." **It isn't a lesser mode — it's THE mode.** The default view *is* YES Master; **Advanced** is a door power users step through. No "Simple" badge in the product; internally we call the default **Standard** (vs **Advanced**).
 

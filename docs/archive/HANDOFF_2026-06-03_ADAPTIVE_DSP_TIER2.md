@@ -194,5 +194,5 @@ Live backlog: `docs/ADAPTIVE_DSP_NEXT_STEPS.md`.
 - Spec: `docs/plans/2026-06-02-001-adaptive-dsp-tier1-guardrails.md`
 - Finish/Tier-2 plan (options + rationale): `docs/plans/2026-06-02-002-adaptive-dsp-tier1-finish-and-tier2.md`
 - Backlog / entry point: `docs/ADAPTIVE_DSP_NEXT_STEPS.md`
-- The review you're coding from: `docs/reviews/2026-06-03-adaptive-dsp-TRUE-master-review.md`
+- The review you're coding from: `docs/archive/reviews/2026-06-03-adaptive-dsp-TRUE-master-review.md`
 - Original build handoff (historical): `docs/HANDOFF_2026-06-02_ADAPTIVE_DSP_TIER1.md`

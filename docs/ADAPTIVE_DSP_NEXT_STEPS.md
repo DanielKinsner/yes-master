@@ -135,7 +135,7 @@ Tune in one place: `src-tauri/src/guardrails.rs`.
   **or** a simple mode" — and we deliberately built the adaptive **engine first**
   so it could be the trustworthy substance behind Simple Mode. That makes Simple
   Mode the natural next product step now that the engine exists.
-  Spec: `docs/SIMPLE_ADVANCED_MODE_NOTE_2026-05-29.md`.
+  Spec: `docs/archive/SIMPLE_ADVANCED_MODE_NOTE_2026-05-29.md`.
 
 ## 🎧 Calibration gate (owner, before release-stable)
 
@@ -163,4 +163,4 @@ Tune in one place: `src-tauri/src/guardrails.rs`.
 - Finish plan (detail + options): `docs/plans/2026-06-02-002-adaptive-dsp-tier1-finish-and-tier2.md`
 - Spec: `docs/plans/2026-06-02-001-adaptive-dsp-tier1-guardrails.md`
 - Handoff (start here to code): `docs/HANDOFF_2026-06-03_ADAPTIVE_DSP_TIER2.md`
-- Reviews: `docs/reviews/2026-06-02-adaptive-dsp-tier1-review.md`, `docs/reviews/2026-06-03-adaptive-dsp-desktop-review.md`, `docs/reviews/2026-06-03-adaptive-dsp-GLOBAL-review.md` (all tracked)
+- Reviews: `docs/archive/reviews/2026-06-02-adaptive-dsp-tier1-review.md`, `docs/archive/reviews/2026-06-03-adaptive-dsp-desktop-review.md`, `docs/reviews/2026-06-03-adaptive-dsp-GLOBAL-review.md` (all tracked)
