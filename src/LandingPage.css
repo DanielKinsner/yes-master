@@ -483,8 +483,13 @@ body {
     padding-top: 70px;
   }
 
+  .landing-hero-copy {
+    min-width: 0;
+  }
+
   .landing-hero h1 {
-    font-size: 66px;
+    font-size: 58px;
+    line-height: 0.9;
   }
 
   .landing-hero p {
@@ -507,6 +512,31 @@ body {
 
   .landing-preset {
     min-height: 190px;
+  }
+}
+
+@media (max-width: 420px) {
+  .landing-hero h1 {
+    font-size: 52px;
+  }
+
+  .landing-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .landing-actions .landing-button {
+    width: 100%;
+  }
+
+  .landing-proof li {
+    width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .landing-hero h1 {
+    font-size: 46px;
   }
 }
 
