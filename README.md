@@ -1,14 +1,17 @@
 # YES Master
 
-YES Master is a local-first audio mastering app for finished tracks and
-albums. Drop in audio, hear what the mastering chain is doing in real time,
-shape it, and export a technically checked master — without your audio ever
-leaving your machine.
+**Local-first mastering you can actually trust.** Drop in a finished track or
+album, hear exactly what the chain is doing in real time, shape it to taste, and
+export a technically-checked master — all on your machine, your audio never
+uploaded.
 
-Desktop (Windows + macOS) is the primary product: a Tauri 2 + React/TypeScript
-frontend over a Rust audio/DSP backend. iPhone and Android companion apps live
-in `apps/` and reuse the same Rust engine through native bridges, with
-bit-parity-pinned output against desktop.
+No cloud. No black box. YES Master *measures what it did and shows you* — live
+meters, quality checks, and a post-render receipt — so you can push as hard as
+you want and still know the truth about the file you're shipping.
+
+Desktop (Windows + macOS) is the product: a Tauri 2 + React/TypeScript frontend
+over a Rust DSP engine. iPhone and Android companions in `apps/` reuse that same
+engine through native bridges, with output bit-parity-pinned to desktop.
 
 License: source-available, proprietary — see `LICENSE`.
 
@@ -30,21 +33,21 @@ License: source-available, proprietary — see `LICENSE`.
 
 **The engine** (Rust, shared by all platforms):
 
-- Real-time audition: the full mastering chain (subsonic filter → EQ →
-  multiband compression → width/warmth → limiter with lookahead → LUFS
-  landing) runs live during playback; control changes apply while audio plays.
-- Analysis: decode → dynamics → stereo field → tonal balance → deep per-window
-  scan (crest, momentary loudness, 31-band detail), emitting real progress
-  events to the UI.
-- Adaptive mastering, Tier 1 (shipped, owner-listened): each track resolves a
-  source profile that drives reduce-only guardrails — preset brightness/low
-  trims and compression-density scaling, weighted by per-axis confidence and a
-  user-facing Adapt Strength control. Presets stay recognizable by
-  construction (per-axis trim caps).
-- Safety invariants, enforced by tests: exports never overwrite source files
-  or prior renders; Volume Match is audition-only and can never change export
-  level; export warnings are advisory unless the output is technically
-  invalid; quality checks measure the rendered file, not assumptions.
+- **Real-time audition** — the full chain (subsonic filter → EQ → multiband
+  compression → width/warmth → lookahead limiter → LUFS landing) runs live
+  during playback; control changes apply *while the audio is playing*.
+- **Analysis** — decode → dynamics → stereo field → tonal balance → deep
+  per-window scan (crest, momentary loudness, 31-band detail), with real
+  progress events to the UI.
+- **Adaptive mastering (Tier 1, shipped + owner-listened)** — each track
+  resolves a source profile that drives *reduce-only* guardrails: trim preset
+  brightness/low boosts, scale compression density, weighted by per-axis
+  confidence and an Adapt Strength control. Presets stay recognizable by
+  construction (per-axis trim caps) — it tames, never overcooks.
+- **Safety, enforced by tests** — exports never overwrite source files or prior
+  renders; Volume Match is audition-only and can never change export level;
+  warnings are advisory unless the output is technically invalid; quality
+  checks measure the *rendered file*, not assumptions.
 
 **Album Master** (Advanced): album-wide intent with per-track overrides,
 album delivery format with mixed-rate resampling, continuous + per-track
