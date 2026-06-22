@@ -610,10 +610,10 @@ const PRESET_LOUD: PresetCalibration = PresetCalibration {
     transient_punch: 0.12,
     // 30 Hz buys limiter headroom for the loudest preset where deep subs are least useful.
     highpass_hz: 30.0,
-    target_lufs: -9.3,
+    target_lufs: -8.8,
     ceiling_dbfs: -0.8,
     compressor_threshold_dbfs: -23.0,
-    compressor_ratio: 4.0,
+    compressor_ratio: 4.2,
     compressor_attack_ms: 15.0,
     compressor_release_ms: 180.0,
     science_note: "Strongest density and limiting; assertive but not smashed — \
