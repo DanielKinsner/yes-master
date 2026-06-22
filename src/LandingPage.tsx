@@ -1,8 +1,11 @@
 import desktopStandardImage from "./assets/landing/desktop-standard-ui.png";
 import desktopAdvancedImage from "./assets/landing/desktop-advanced-ui.png";
-import heroFullscreenImage from "./assets/landing/hero-control-room-clean.png";
+import heroFullscreenImage from "./assets/landing/hero-control-room-studio.jpg";
 import iphoneStandardImage from "./assets/landing/iphone-standard-ui.jpg";
 import brandIcon from "./assets/landing/yes-master-icon.png";
+import iconLocalFirst from "./assets/landing/icon-local-first.png";
+import iconRealtime from "./assets/landing/icon-realtime.png";
+import iconReleaseReady from "./assets/landing/icon-release-ready.png";
 
 type PresetStory = {
   name: string;
@@ -106,15 +109,33 @@ export default function LandingPage() {
           aria-hidden="true"
         />
         <div className="landing-hero-copy">
-          <span className="landing-eyebrow">Y.E.S. Master / Your Endgame Sound</span>
+          <span className="landing-eyebrow">Y.E.S. Master / Instantly master your track</span>
           <h1 id="landing-title">
             Your Endgame <span>Sound.</span>
           </h1>
-          <p>
-            Drop in a real track. Hear the mastering chain in real time. Export
-            a technically checked master without your music ever leaving your
-            machine.
-          </p>
+          <ul className="landing-proof" aria-label="YES Master highlights">
+            <li>
+              <img className="landing-proof-icon" src={iconLocalFirst} alt="" aria-hidden="true" />
+              <p>
+                <strong>Local-first</strong> — Your tracks never leave your
+                machine. No uploads, no cloud, no waiting.
+              </p>
+            </li>
+            <li>
+              <img className="landing-proof-icon" src={iconRealtime} alt="" aria-hidden="true" />
+              <p>
+                <strong>Real-time control</strong> — Hear every change as you
+                make it. Shape tone, loudness, and width by ear.
+              </p>
+            </li>
+            <li>
+              <img className="landing-proof-icon" src={iconReleaseReady} alt="" aria-hidden="true" />
+              <p>
+                <strong>Release-ready</strong> — Technically checked and
+                true-peak safe. Ship a master you can trust.
+              </p>
+            </li>
+          </ul>
           <div className="landing-actions">
             <a className="landing-button landing-button-primary" href="#get-started">
               Join desktop beta
@@ -123,29 +144,6 @@ export default function LandingPage() {
               See Advanced control
             </a>
           </div>
-          <ul className="landing-proof" aria-label="YES Master highlights">
-            <li>
-              <strong>Local-first</strong>
-              <span>
-                Your tracks never leave your machine. No uploads, no cloud, no
-                waiting.
-              </span>
-            </li>
-            <li>
-              <strong>Real-time control</strong>
-              <span>
-                Hear every change as you make it. Shape tone, loudness, and
-                width by ear.
-              </span>
-            </li>
-            <li>
-              <strong>Release-ready</strong>
-              <span>
-                Technically checked and true-peak safe. Ship a master you can
-                trust.
-              </span>
-            </li>
-          </ul>
         </div>
         <a className="landing-next" href="#standard">
           <span>Next: the simple path</span>
