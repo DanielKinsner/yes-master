@@ -140,7 +140,10 @@ What adapts per track today (all shipped, owner-listened 2026-06-11):
 
 What deliberately does not adapt today:
 
-- Preset tone tilt is fixed per preset (not reference-matched).
+- Preset tone tilt is fixed per preset (not reference-matched). The fixed
+  voicing was re-tuned to an owner-directed "85% lean" on 2026-06-22 (commit
+  659bea5; `custom` untouched) — Windows-verified, with macOS listening and
+  snapshot regen still pending (see `docs/OPEN_THREADS_AND_DECISIONS.md`).
 - Phase-B per-window confidence gating is built but OFF by default,
   pending the owner calibration sitting.
 
@@ -200,7 +203,8 @@ YES Master is release-candidate only when:
   without clear warnings and review.
 - Warnings are visible before the user treats the export as done.
 - Private-fixture slow lane has been run for DSP/export changes.
-- Windows packaging works locally.
+- Windows packaging works locally. (v0.1.0 MSI/NSIS built and installed
+  2026-06-22; a parallel macOS build/install criterion is still owner-pending.)
 - Known temporary instrumentation is removed or deliberately documented.
 
 ## Mobile Companions (product definition pending)
@@ -228,6 +232,16 @@ and above-stereo source fold-down to stereo delivery.
 what album mastering means here beyond consistent loudness and flow.
 Captured via the same S5.4 interrogation.
 
+## Public Surface (role pending)
+
+A public marketing landing page ships in-repo (`src/LandingPage.tsx` / `.css`,
+Vercel-deployed; the desktop binary routes a browser visit to it). Source-of-
+truth copy is `docs/landing-brief.md`, with an `npm run verify:landing` lane.
+
+**Pending owner definition (do not invent):** the landing page's product role
+(marketing-only vs download/onboarding) and whether it is a supported surface.
+Captured via the S5.4 canon refresh.
+
 ## Deferred
 
 - Public code signing/notarization.
@@ -235,4 +249,5 @@ Captured via the same S5.4 interrogation.
 - Store-style distribution.
 - New reference-track UX.
 - Major Album Master dashboard/report expansion.
-- Subjective preset retuning without fresh listening notes.
+- Further subjective preset retuning beyond the 2026-06-22 "85% lean", without
+  fresh listening notes.
