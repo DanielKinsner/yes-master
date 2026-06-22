@@ -462,13 +462,13 @@ const PRESET_TAPE: PresetCalibration = PresetCalibration {
     // stays textured without crushing more movement than the reference.
     sub_db: 0.0,
     low_shelf_db: 0.0,
-    low_mid_db: 0.65,
+    low_mid_db: 0.8,
     presence_db: -1.4,
     high_mid_db: 0.0,
-    air_db: 0.9,
+    air_db: 0.5,
     sparkle_db: 0.0,
-    warmth: 0.14,
-    stereo_width: 0.94,
+    warmth: 0.16,
+    stereo_width: 0.92,
     // Negative punch rounds attacks so the tape-glue character reads softened, not snappy.
     transient_punch: -0.03,
     // 24 Hz preserves low-body warmth while clearing subsonic headroom waste.
