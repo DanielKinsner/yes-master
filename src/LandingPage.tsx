@@ -1,4 +1,5 @@
 import desktopStandardImage from "./assets/landing/desktop-standard-ui.png";
+import desktopAdvancedImage from "./assets/landing/desktop-advanced-ui.png";
 import iphoneStandardImage from "./assets/landing/iphone-standard-ui.jpg";
 import brandIcon from "./assets/landing/yes-master-icon.png";
 
@@ -31,6 +32,24 @@ const presetStories: PresetStory[] = [
   },
 ];
 
+const advancedStories: PresetStory[] = [
+  {
+    name: "Creative control",
+    tone: "Main surface",
+    copy: "Shape EQ, tone, warmth, air, stereo width, saturation, limiter feel, and the full preset set while the track keeps playing.",
+  },
+  {
+    name: "Judgment rail",
+    tone: "Right rail",
+    copy: "Quality checks, delivery profile, compressor mode, format, and warning-aware export review stay visible beside the sound.",
+  },
+  {
+    name: "Album path",
+    tone: "Long form",
+    copy: "Build album-wide delivery with continuous renders, per-track files, mixed-source handling, and a manifest for the release folder.",
+  },
+];
+
 export default function LandingPage() {
   return (
     <main className="landing-page">
@@ -41,8 +60,8 @@ export default function LandingPage() {
         </a>
         <div className="landing-nav-links">
           <a href="#standard">Standard</a>
-          <a href="#mobile">Mobile</a>
           <a href="#advanced">Advanced</a>
+          <a href="#mobile">Mobile</a>
           <a className="landing-nav-cta" href="#get-started">
             Join desktop beta
           </a>
@@ -116,6 +135,65 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section id="advanced" className="landing-section landing-advanced">
+        <div className="landing-advanced-copy">
+          <p className="landing-label">Advanced</p>
+          <h2>When the track needs hands on the chain.</h2>
+          <p>
+            Advanced opens the mastering desk without hiding the consequences.
+            The main surface stays musical: waveform, A/B audition, presets,
+            intensity, EQ, width, warmth, saturation, compressor behavior, and
+            limiter feel. The right rail stays honest: source checks, delivery
+            profile, format, review warnings, and export decisions.
+          </p>
+        </div>
+
+        <figure className="landing-advanced-frame">
+          <img
+            src={desktopAdvancedImage}
+            alt="YES Master Advanced desktop interface with waveform, EQ, compressor controls, delivery profile, and export review rail"
+          />
+          <figcaption>
+            Creative controls stay in the workspace. Review, format, and export
+            decisions stay in the rail.
+          </figcaption>
+        </figure>
+
+        <div className="landing-advanced-grid" aria-label="YES Master Advanced capabilities">
+          {advancedStories.map((story) => (
+            <article className="landing-advanced-card" key={story.name}>
+              <span>{story.tone}</span>
+              <h3>{story.name}</h3>
+              <p>{story.copy}</p>
+            </article>
+          ))}
+        </div>
+
+        <ol className="landing-advanced-flow" aria-label="Advanced workflow">
+          <li>
+            <span>01</span>
+            <strong>Listen</strong>
+            Original and Mastered stay locked to the same playhead.
+          </li>
+          <li>
+            <span>02</span>
+            <strong>Shape</strong>
+            Dial musical changes without leaving the audition surface.
+          </li>
+          <li>
+            <span>03</span>
+            <strong>Review</strong>
+            Loudness, true peak, dynamic range, and integrity checks stay visible.
+          </li>
+          <li>
+            <span>04</span>
+            <strong>Deliver</strong>
+            Export a master, or build the album path when the release is bigger
+            than one track.
+          </li>
+        </ol>
+      </section>
+
       <section id="mobile" className="landing-section landing-mobile">
         <div className="landing-mobile-media">
           <img src={iphoneStandardImage} alt="YES Master iPhone companion interface" />
@@ -133,32 +211,6 @@ export default function LandingPage() {
             Desktop still leads the release. Mobile extends the same local,
             listen-first promise into a smaller, faster surface.
           </p>
-        </div>
-      </section>
-
-      <section id="advanced" className="landing-section landing-advanced">
-        <div className="landing-section-copy">
-          <p className="landing-label">Advanced</p>
-          <h2>Open the control room when the track asks for it.</h2>
-          <p>
-            Advanced keeps creative sound in the main surface and judgment in
-            the rail: visual EQ, width, warmth, compressor modes, delivery
-            profiles, quality checks, export review, and album rendering paths.
-          </p>
-        </div>
-        <div className="landing-feature-list">
-          <article>
-            <h3>Hear it live</h3>
-            <p>Controls respond during playback, and A/B comparison preserves the playhead.</p>
-          </article>
-          <article>
-            <h3>See the consequences</h3>
-            <p>Rendered output is checked for loudness, true peak, dynamic range, and integrity.</p>
-          </article>
-          <article>
-            <h3>Export with intent</h3>
-            <p>Use safe Standard defaults or open Advanced delivery settings for the target.</p>
-          </article>
         </div>
       </section>
 
