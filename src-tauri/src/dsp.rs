@@ -406,19 +406,19 @@ const PRESET_UNIVERSAL: PresetCalibration = PresetCalibration {
     // air lift but backed off compression so already-mastered sources keep
     // closer movement against external Universal references.
     sub_db: 0.0,
-    low_shelf_db: 0.3,
+    low_shelf_db: 0.8,
     low_mid_db: -0.1,
-    presence_db: 0.0,
+    presence_db: 0.4,
     high_mid_db: 0.0,
-    air_db: 1.1,
+    air_db: 1.6,
     sparkle_db: 0.0,
-    warmth: 0.03,
-    stereo_width: 1.04,
+    warmth: 0.06,
+    stereo_width: 1.12,
     // Light lift keeps the safe default slightly alive without making transients a named feature.
     transient_punch: 0.04,
     // 24 Hz removes transport and room rumble while staying below useful lows on most material.
     highpass_hz: 24.0,
-    target_lufs: -14.0,
+    target_lufs: -12.5,
     ceiling_dbfs: -1.0,
     compressor_threshold_dbfs: -12.5,
     compressor_ratio: 1.45,
