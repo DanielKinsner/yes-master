@@ -179,10 +179,6 @@ body {
   pointer-events: none;
 }
 
-.landing-hero-hotspots {
-  display: none;
-}
-
 .landing-hero-copy {
   position: relative;
   z-index: 1;
@@ -257,24 +253,6 @@ body {
   line-height: 1.35;
 }
 
-.landing-page .landing-hotspot {
-  position: absolute;
-  display: block;
-  overflow: hidden;
-  color: transparent;
-  font-size: 0;
-  line-height: 0;
-  text-indent: -9999px;
-  white-space: nowrap;
-  border-radius: 8px;
-}
-
-.landing-page .landing-hotspot:focus-visible {
-  outline: 2px solid var(--landing-blue-bright);
-  outline-offset: 3px;
-  background: rgba(77, 139, 255, 0.12);
-}
-
 .landing-next {
   position: absolute;
   left: 72px;
@@ -290,84 +268,37 @@ body {
 }
 
 @media (min-width: 1081px) {
-  .landing-nav,
-  .landing-hero-copy,
-  .landing-next {
-    display: none;
-  }
-
+  /*
+   * Desktop hero: real HTML copy over a text-free, cover-fitted studio
+   * background. The old approach hid the real copy/nav and showed a flat comp
+   * PNG stretched to the container (distorting it) with %-positioned hotspots
+   * that drifted at any non-native aspect ratio. Cover crops instead of
+   * stretching, so the scene stays crisp at every viewport ratio.
+   */
   .landing-hero {
-    min-height: 100vh;
-    padding: 0;
-    align-items: stretch;
+    padding: 150px 80px 112px;
   }
 
   .landing-hero-scene {
-    z-index: 0;
-    object-fit: fill;
-    object-position: center;
-    filter: none;
+    object-position: 62% center;
   }
 
-  .landing-hero::before,
-  .landing-hero::after {
-    display: none;
+  .landing-hero-copy {
+    width: min(560px, 52%);
   }
 
-  .landing-hero-hotspots {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    display: block;
+  .landing-hero h1 {
+    font-size: clamp(66px, 6vw, 88px);
   }
 
-  .landing-hotspot-brand {
-    left: 2%;
-    top: 2.5%;
-    width: 20%;
-    height: 7%;
+  .landing-hero p {
+    width: min(520px, 100%);
+    font-size: 22px;
   }
 
-  .landing-hotspot-standard {
-    left: 67%;
-    top: 3.2%;
-    width: 6.4%;
-    height: 4.6%;
-  }
-
-  .landing-hotspot-advanced {
-    left: 73.6%;
-    top: 3.2%;
-    width: 7%;
-    height: 4.6%;
-  }
-
-  .landing-hotspot-mobile {
-    left: 80.6%;
-    top: 3.2%;
-    width: 5.6%;
-    height: 4.6%;
-  }
-
-  .landing-hotspot-nav-cta {
-    left: 84.6%;
-    top: 2.2%;
-    width: 12.2%;
-    height: 6.2%;
-  }
-
-  .landing-hotspot-hero-cta {
-    left: 4.6%;
-    top: 82%;
-    width: 11.2%;
-    height: 5.6%;
-  }
-
-  .landing-hotspot-hero-secondary {
-    left: 16.4%;
-    top: 82%;
-    width: 13%;
-    height: 5.6%;
+  .landing-next {
+    left: 80px;
+    right: 80px;
   }
 }
 
@@ -405,10 +336,6 @@ body {
   .landing-hero::after {
     display: block;
     height: 28%;
-  }
-
-  .landing-hero-hotspots {
-    display: none;
   }
 
   .landing-hero-copy {

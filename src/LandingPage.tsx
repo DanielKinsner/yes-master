@@ -1,6 +1,6 @@
 import desktopStandardImage from "./assets/landing/desktop-standard-ui.png";
 import desktopAdvancedImage from "./assets/landing/desktop-advanced-ui.png";
-import heroFullscreenImage from "./assets/landing/hero-fullscreen-control-room.png";
+import heroFullscreenImage from "./assets/landing/hero-control-room-clean.png";
 import iphoneStandardImage from "./assets/landing/iphone-standard-ui.jpg";
 import brandIcon from "./assets/landing/yes-master-icon.png";
 
@@ -105,29 +105,6 @@ export default function LandingPage() {
           alt=""
           aria-hidden="true"
         />
-        <div className="landing-hero-hotspots" aria-label="Hero navigation">
-          <a className="landing-hotspot landing-hotspot-brand" href="#top">
-            Y.E.S. Master
-          </a>
-          <a className="landing-hotspot landing-hotspot-standard" href="#standard">
-            Standard
-          </a>
-          <a className="landing-hotspot landing-hotspot-advanced" href="#advanced">
-            Advanced
-          </a>
-          <a className="landing-hotspot landing-hotspot-mobile" href="#mobile">
-            Mobile
-          </a>
-          <a className="landing-hotspot landing-hotspot-nav-cta" href="#get-started">
-            Join desktop beta
-          </a>
-          <a className="landing-hotspot landing-hotspot-hero-cta" href="#get-started">
-            Join desktop beta
-          </a>
-          <a className="landing-hotspot landing-hotspot-hero-secondary" href="#advanced">
-            See Advanced control
-          </a>
-        </div>
         <div className="landing-hero-copy">
           <span className="landing-eyebrow">Y.E.S. Master / Your Endgame Sound</span>
           <h1 id="landing-title">
