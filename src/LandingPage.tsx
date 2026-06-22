@@ -1,6 +1,6 @@
 import desktopStandardImage from "./assets/landing/desktop-standard-ui.png";
 import desktopAdvancedImage from "./assets/landing/desktop-advanced-ui.png";
-import heroFullscreenImage from "./assets/landing/hero-control-room-clean.png";
+import heroFullscreenImage from "./assets/landing/hero-control-room-studio.jpg";
 import iphoneStandardImage from "./assets/landing/iphone-standard-ui.jpg";
 import brandIcon from "./assets/landing/yes-master-icon.png";
 
