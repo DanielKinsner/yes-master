@@ -1,4 +1,5 @@
 import desktopStandardImage from "./assets/landing/desktop-standard-ui.png";
+import desktopAdvancedImage from "./assets/landing/desktop-advanced-ui.png";
 import advancedAngledImage from "./assets/landing/advanced-angled-ui.png";
 import iphoneStandardImage from "./assets/landing/iphone-standard-ui.jpg";
 import brandIcon from "./assets/landing/yes-master-icon.png";
@@ -69,35 +70,37 @@ export default function LandingPage() {
       </nav>
 
       <section id="top" className="landing-hero" aria-labelledby="landing-title">
-        <img
-          className="landing-hero-media"
-          src={desktopStandardImage}
-          alt=""
-          aria-hidden="true"
-        />
-        <div className="landing-hero-shade" aria-hidden="true" />
         <div className="landing-hero-copy">
           <span className="landing-eyebrow">Y.E.S. Master / Your Endgame Sound</span>
-          <h1 id="landing-title">YES Master</h1>
+          <h1 id="landing-title">
+            Your Endgame <span>Sound.</span>
+          </h1>
           <p>
-            Local-first mastering for musicians who want to hear the change,
-            make the call, and export a technically checked master without
-            sending private audio to the cloud.
+            Drop in a real track. Hear the mastering chain in real time. Export
+            a technically checked master without your music ever leaving your
+            machine.
           </p>
           <div className="landing-actions">
             <a className="landing-button landing-button-primary" href="#get-started">
               Join desktop beta
             </a>
-            <a className="landing-button landing-button-secondary" href="#standard">
-              See Standard mode
+            <a className="landing-button landing-button-secondary" href="#advanced">
+              See Advanced control
             </a>
           </div>
           <ul className="landing-proof" aria-label="YES Master highlights">
             <li>Mac and Windows desktop</li>
-            <li>Original/Mastered audition at the same playhead</li>
-            <li>Local audio, measured exports, no source overwrite by default</li>
+            <li>Local-first mastering</li>
+            <li>Original/Mastered at one playhead</li>
+            <li>Measured export checks</li>
           </ul>
         </div>
+        <figure className="landing-hero-visual">
+          <img
+            src={advancedAngledImage}
+            alt="Angled Y.E.S. Master Advanced interface on a studio desk"
+          />
+        </figure>
         <a className="landing-next" href="#standard">
           <span>Next: the simple path</span>
           <span>Scroll</span>
@@ -151,8 +154,8 @@ export default function LandingPage() {
 
         <figure className="landing-advanced-frame">
           <img
-            src={advancedAngledImage}
-            alt="Angled YES Master Advanced interface with waveform, EQ, compressor controls, delivery profile, and export review rail"
+            src={desktopAdvancedImage}
+            alt="YES Master Advanced interface with waveform, EQ, compressor controls, delivery profile, and export review rail"
           />
           <figcaption>
             Creative controls stay in the workspace. Review, format, and export
