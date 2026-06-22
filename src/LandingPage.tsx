@@ -1,6 +1,6 @@
 import desktopStandardImage from "./assets/landing/desktop-standard-ui.png";
 import iphoneStandardImage from "./assets/landing/iphone-standard-ui.jpg";
-import brandIcon from "../src-tauri/icons/32x32.png";
+import brandIcon from "./assets/landing/yes-master-icon.png";
 
 type PresetStory = {
   name: string;
