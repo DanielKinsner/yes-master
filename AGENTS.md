@@ -3,6 +3,11 @@
 This is the active YES Master repo. Do not treat old handoff files or prior
 phase plans as active spec. Use the current code plus the docs listed below.
 
+> **AGENTS.md and CLAUDE.md are kept byte-identical — edit both together.**
+> Live work queue + owner decisions: `docs/OPEN_THREADS_AND_DECISIONS.md`.
+> Shipped history: `docs/CHANGELOG.md`. Idea backlog: `docs/IDEAS_BACKLOG.md`.
+> Retired handoffs/reviews/plans: `docs/archive/`.
+
 ## Required Reading
 
 1. `docs/PRODUCT.md`
@@ -13,7 +18,10 @@ phase plans as active spec. Use the current code plus the docs listed below.
 
 ## Non-Negotiables
 
-- Local desktop app for Mac and Windows. Linux remains deferred.
+- Local-first desktop app — Mac and Windows are the primary stabilization
+  target (Linux deferred). The same engine also powers CI-tested native
+  iPhone/Android bridges and a public web landing page; formal product-scope
+  phrasing is an open owner decision (see `docs/OPEN_THREADS_AND_DECISIONS.md`).
 - Track Master stabilization comes before new feature expansion.
 - Real-time or near-real-time audition must stay responsive.
 - Original/Mastered switching must preserve playhead.
@@ -22,18 +30,34 @@ phase plans as active spec. Use the current code plus the docs listed below.
 - Export warnings are advisory unless the export is technically invalid.
 - Users may overcook their own track, but the app must show clear metering,
   warnings, and review states.
-- Private audio and rendered private masters never belong in git.
+- The Adaptive Compressor MVP is built but **gated OFF by default** (owner
+  calibration pending). Do not enable it or change its `TBD-CALIBRATION`
+  constants without an owner listening signoff.
+- Private audio and rendered private masters never belong in git, unless they're
+  test files used for data/research — ask the user if they're needed, since he
+  moves across a lot of machines.
 
 ## Current Jump-Fix Queue
 
 The previous five queue items all shipped — see "Implemented Stabilization
-Slices" in `docs/RELEASE_STABILIZATION.md`. Genuinely open:
+Slices" in `docs/RELEASE_STABILIZATION.md`. The full live queue and owner
+decisions live in `docs/OPEN_THREADS_AND_DECISIONS.md`.
+
+**Most recent DSP change:** the 8 character presets were re-voiced to the
+"85% lean" (commit `659bea5`; `custom` untouched). Windows byte-identity
+snapshots were regenerated and the Windows build is installed, but the 7 macOS
+snapshot SHAs are Windows placeholders — so the **macOS CI snapshot lane is RED
+until regenerated on a Mac** (`docs/HANDOFF_2026-06-22_MACOS_VERIFICATION.md`).
+Listen before any further preset retuning.
+
+Owner-gated listening signoffs, **deferred to Wave 10** (per
+`docs/RELEASE_STABILIZATION.md`) — not the immediate queue:
 
 1. Manual Listening Gate — normal / already-mastered / long-source sweeps and
    a clean-vs-warning export comparison, by ear (owner signoff).
 2. Reference Retune listening — aggregate runner completed 2026-05-28;
    listening notes pending. Oomph is the least-matched preset; listen before
-   changing it.
+   changing it. Re-run after the 85% lean.
 3. Already-mastered matrix listening signoff (runner evidence complete).
 
 The 2026-06-16 final repo-wide review implementation queue has also shipped.
@@ -65,6 +89,16 @@ cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings
 cargo test --lib --target-dir target\codex-rc
 cargo test --target-dir target\codex-rc
 ```
+
+The `target\codex-rc` target-dir is a **local convention** (avoids clobbering
+other build dirs); CI uses the default target and runs plain `cargo fmt --check`,
+`cargo clippy --all-targets -- -D warnings`, and `cargo test`. CI runs Windows,
+macOS, and Android lanes on every push, and the **macOS lane runs `cargo test`**
+— so the preset byte-identity snapshots gate there (currently RED; see the
+Jump-Fix note above). `npm run verify:fast` / `verify:rust` / `verify:iphone` /
+`verify:android` wrap these lanes. If you touch the web landing page, run
+`npm run verify:landing` (whether the landing page is in agent scope is an open
+owner decision — see `docs/OPEN_THREADS_AND_DECISIONS.md`).
 
 When you touch shared crate types or `#[tauri::command]` signatures, also build
 AND test the iPhone native bridge — it re-uses `yes_master_lib` but none of the
@@ -113,5 +147,6 @@ Remove-Item Env:\AMS_RUN_REAL_FIXTURE
   changing preset calibration.
 - Do not call a slice complete because the UI resembles the goal; verify the
   behavior.
-- Commit in very small chunks
-- When decisions have been made that contradict Product.md ask the user if you should update it as well as other documentation i.e. the readme
+- Commit in very small chunks.
+- When decisions have been made that contradict `docs/PRODUCT.md`, ask the user
+  if you should update it as well as other documentation (e.g. the README).
