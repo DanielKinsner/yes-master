@@ -518,14 +518,14 @@ const PRESET_OOMPH: PresetCalibration = PresetCalibration {
     // pushed low weight and reduced compression depth after Oomph measured too
     // mid-forward and too flattened against the external reference.
     sub_db: 0.0,
-    low_shelf_db: 5.1,
+    low_shelf_db: 5.5,
     low_mid_db: -3.0,
     presence_db: -2.6,
     high_mid_db: 0.0,
-    air_db: -1.9,
+    air_db: -2.2,
     sparkle_db: 0.0,
     warmth: 0.045,
-    stereo_width: 0.86,
+    stereo_width: 0.82,
     // Moderate lift restores kick and bass impact after the deep low-mid scoop.
     transient_punch: 0.08,
     // 22 Hz keeps the lowest useful weight because Oomph is the sub-forward preset.
