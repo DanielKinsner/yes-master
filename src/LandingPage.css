@@ -166,6 +166,16 @@ body {
   width: min(850px, 100%);
 }
 
+.landing-eyebrow {
+  display: inline-flex;
+  margin-bottom: 20px;
+  color: var(--landing-blue-bright);
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .landing-hero h1 {
   margin: 0;
   font-family: var(--landing-display);

@@ -1,5 +1,5 @@
 import desktopStandardImage from "./assets/landing/desktop-standard-ui.png";
-import desktopAdvancedImage from "./assets/landing/desktop-advanced-ui.png";
+import advancedAngledImage from "./assets/landing/advanced-angled-ui.png";
 import iphoneStandardImage from "./assets/landing/iphone-standard-ui.jpg";
 import brandIcon from "./assets/landing/yes-master-icon.png";
 
@@ -77,6 +77,7 @@ export default function LandingPage() {
         />
         <div className="landing-hero-shade" aria-hidden="true" />
         <div className="landing-hero-copy">
+          <span className="landing-eyebrow">Y.E.S. Master / Your Endgame Sound</span>
           <h1 id="landing-title">YES Master</h1>
           <p>
             Local-first mastering for musicians who want to hear the change,
@@ -137,7 +138,7 @@ export default function LandingPage() {
 
       <section id="advanced" className="landing-section landing-advanced">
         <div className="landing-advanced-copy">
-          <p className="landing-label">Advanced</p>
+          <p className="landing-label">Advanced / Your Endgame Sound</p>
           <h2>When the track needs hands on the chain.</h2>
           <p>
             Advanced opens the mastering desk without hiding the consequences.
@@ -150,8 +151,8 @@ export default function LandingPage() {
 
         <figure className="landing-advanced-frame">
           <img
-            src={desktopAdvancedImage}
-            alt="YES Master Advanced desktop interface with waveform, EQ, compressor controls, delivery profile, and export review rail"
+            src={advancedAngledImage}
+            alt="Angled YES Master Advanced interface with waveform, EQ, compressor controls, delivery profile, and export review rail"
           />
           <figcaption>
             Creative controls stay in the workspace. Review, format, and export
