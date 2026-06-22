@@ -118,10 +118,10 @@ body {
 
 .landing-nav-cta,
 .landing-button-primary {
-  color: #08111f;
+  color: #1c0d00;
   border-color: transparent;
-  background: linear-gradient(180deg, #a8c6ff 0%, var(--landing-blue) 100%);
-  box-shadow: 0 16px 42px rgba(77, 139, 255, 0.25);
+  background: linear-gradient(180deg, #ffb15a 0%, #e07c1c 100%);
+  box-shadow: 0 16px 42px rgba(224, 124, 28, 0.32);
 }
 
 .landing-page .landing-nav-cta,
@@ -284,7 +284,8 @@ body {
    * stretching, so the scene stays crisp at every viewport ratio.
    */
   .landing-hero {
-    padding: 150px 80px 112px;
+    align-items: flex-start;
+    padding: 104px 80px 80px;
   }
 
   .landing-hero-scene {
@@ -1249,9 +1250,9 @@ body {
   min-width: 330px;
   border-radius: 8px;
   padding: 18px 26px;
-  background: linear-gradient(180deg, #8fb5ff, #1f69ff);
-  color: #071120;
-  box-shadow: 0 22px 70px rgba(31, 105, 255, 0.35);
+  background: linear-gradient(180deg, #ffb15a, #e07c1c);
+  color: #1c0d00;
+  box-shadow: 0 22px 70px rgba(224, 124, 28, 0.38);
   font-weight: 950;
 }
 

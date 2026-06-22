@@ -109,7 +109,7 @@ export default function LandingPage() {
           aria-hidden="true"
         />
         <div className="landing-hero-copy">
-          <span className="landing-eyebrow">Y.E.S. Master / Your Endgame Sound</span>
+          <span className="landing-eyebrow">Y.E.S. Master / Instantly master your track</span>
           <h1 id="landing-title">
             Your Endgame <span>Sound.</span>
           </h1>
