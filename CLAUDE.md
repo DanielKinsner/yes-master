@@ -22,7 +22,7 @@ phase plans as active spec. Use the current code plus the docs listed below.
 - Export warnings are advisory unless the export is technically invalid.
 - Users may overcook their own track, but the app must show clear metering,
   warnings, and review states.
-- Private audio and rendered private masters never belong in git.
+- Private audio and rendered private masters never belong in git, unless they're test files used for data/research... ask the user if they're needed since he moves on a lot of machines.
 
 ## Current Jump-Fix Queue
 
