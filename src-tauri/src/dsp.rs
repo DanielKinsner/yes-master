@@ -4121,10 +4121,10 @@ mod tests {
                 "Universal",
                 Preset::Universal,
                 expected_platform_sha(
-                    "51a3d4dbe8138deb376d746d352b57360639adbe727ee307beb7f70179fa34e1",
-                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
-                    // max_abs_delta vs Windows CI: 5.960464477539063e-8.
-                    "a14b8610bba3ad309be5557d4427ad13b86b4707484e35c5b086c3107c642d23",
+                    "582aeb1ac558b664aa0ea044b247c3232d10a7810bbb52e2ee48177529488ebd",
+                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
+                    "582aeb1ac558b664aa0ea044b247c3232d10a7810bbb52e2ee48177529488ebd",
                 ),
             );
         }
@@ -4135,10 +4135,10 @@ mod tests {
                 "Clarity",
                 Preset::Clarity,
                 expected_platform_sha(
-                    "add6210476f2c135738d68334b3e23d30c8657a786621b27e94f6debcb93d02b",
-                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
-                    // max_abs_delta vs Windows CI: 5.960464477539063e-8.
-                    "f839ab949ce6680948a5143635d02d1f5f9797603271115a8172d045b7139b5c",
+                    "eea1117bac3d1f9761998af752d5bbe0969a85cc6cd3ceb8ffbbb48c56fd8b41",
+                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
+                    "eea1117bac3d1f9761998af752d5bbe0969a85cc6cd3ceb8ffbbb48c56fd8b41",
                 ),
             );
         }
@@ -4149,10 +4149,10 @@ mod tests {
                 "Tape",
                 Preset::Tape,
                 expected_platform_sha(
-                    "71d69e666f9838e6199da32645cc17693175a04637d9ec868f52926a026c596c",
-                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
-                    // max_abs_delta vs Windows CI: 5.960464477539063e-8.
-                    "2ccaeda814082bbc29a28aa330856d48482be4e5942f5b229d83e2d4338909a7",
+                    "c0b90ae1682ef4712221d56425fcc5bd44bbd2dd54164b24b09bb4ffe00f3663",
+                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
+                    "c0b90ae1682ef4712221d56425fcc5bd44bbd2dd54164b24b09bb4ffe00f3663",
                 ),
             );
         }
@@ -4177,10 +4177,10 @@ mod tests {
                 "Oomph",
                 Preset::Oomph,
                 expected_platform_sha(
-                    "97f3b17ef7f5679091a383625089e2e6e73c91586ccacb7403ee3367087749a7",
-                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
-                    // max_abs_delta vs Windows CI: 5.960464477539063e-8.
-                    "9b3e8f288f75f883b42839d3262b232b7f844d7feadc9c1e7f2c6f193b401d7a",
+                    "a0f4fd527e6a206e6abd83676dac0e01e2baa05bbde35079779e63cf088e6a00",
+                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
+                    "a0f4fd527e6a206e6abd83676dac0e01e2baa05bbde35079779e63cf088e6a00",
                 ),
             );
         }
@@ -4191,10 +4191,10 @@ mod tests {
                 "Warmth",
                 Preset::Warmth,
                 expected_platform_sha(
-                    "9d1433b7bdcebf1fd45010ffeab5bbf2dba82099673bb5b5d38dace993cf95cc",
-                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
-                    // max_abs_delta vs Windows CI: 5.960464477539063e-8.
-                    "5d6840bb6eeb8ae9fbe50d12401f2e19d62e395e13a0aa0551fcdd0a6f52c02d",
+                    "19d6246eefcaf967223d0139fdd099d196e213267cdebc4130052a7a8ce3c4dd",
+                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
+                    "19d6246eefcaf967223d0139fdd099d196e213267cdebc4130052a7a8ce3c4dd",
                 ),
             );
         }
@@ -4205,10 +4205,10 @@ mod tests {
                 "Punch",
                 Preset::Punch,
                 expected_platform_sha(
-                    "e9d8fe1423c6a31a4b3a9f5a99c15ef1da1f90cd45531a2345f24b870946d716",
-                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
-                    // max_abs_delta vs Windows CI: 1.1920928955078125e-7.
-                    "12fa771e5b66b4a96c00ab4feb1ebced2ce65d9d5ea717de7d5c548e036c2751",
+                    "1242a35fdc307fffaaf0e430018f9600825fe039523a91b2760d0c71590ab66f",
+                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
+                    "1242a35fdc307fffaaf0e430018f9600825fe039523a91b2760d0c71590ab66f",
                 ),
             );
         }
@@ -4219,10 +4219,10 @@ mod tests {
                 "Loud",
                 Preset::Loud,
                 expected_platform_sha(
-                    "695c05a8cded5e7bd994ff14a4fd139aab4a83cc393faad63737e9512952cf4e",
-                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
-                    // max_abs_delta vs Windows CI: 2.384185791015625e-7.
-                    "8bd4fa9a2993b02c516e332eb2e22cbf021830a96fc630ce6c3ea1496980d63c",
+                    "1672a0b4af7a5b7d213f6fc13b8cfb0fa4dd7db288b143f598ca12f5d1e2ba41",
+                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
+                    "1672a0b4af7a5b7d213f6fc13b8cfb0fa4dd7db288b143f598ca12f5d1e2ba41",
                 ),
             );
         }
