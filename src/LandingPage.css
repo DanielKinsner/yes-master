@@ -92,6 +92,10 @@ body {
   color: var(--landing-ink);
 }
 
+.landing-nav-links .landing-nav-cta:hover {
+  color: #08111f;
+}
+
 .landing-nav-cta,
 .landing-button {
   display: inline-flex;
@@ -111,6 +115,11 @@ body {
   border-color: transparent;
   background: linear-gradient(180deg, #a8c6ff 0%, var(--landing-blue) 100%);
   box-shadow: 0 16px 42px rgba(77, 139, 255, 0.25);
+}
+
+.landing-page .landing-nav-cta,
+.landing-page .landing-button-primary {
+  color: #08111f;
 }
 
 .landing-button-secondary {
@@ -456,12 +465,15 @@ body {
 
   .landing-nav-links {
     width: 100%;
-    gap: 16px;
-    overflow-x: auto;
-    padding-bottom: 3px;
+    display: grid;
+    grid-template-columns: repeat(3, max-content);
+    gap: 12px 18px;
+    overflow: visible;
   }
 
   .landing-nav-cta {
+    grid-column: 1 / -1;
+    justify-self: start;
     min-height: 38px;
     padding: 0 14px;
   }
