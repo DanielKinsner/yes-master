@@ -33,7 +33,7 @@ function stamp() {
 function expectedComposition(width, height) {
   if (width <= 680) return "overlay";
   if (width <= 1080) return "overlay";
-  return width / height <= 5 / 3 ? "overlay" : "image-map";
+  return "image-map";
 }
 
 const url = option("--url") ?? process.env.LANDING_URL ?? "http://127.0.0.1:5177/";
@@ -128,8 +128,9 @@ for (const [width, height] of matrix) {
   if (metrics.horizontalOverflow) {
     failures.push(`${width}x${height}: horizontal overflow (${metrics.scrollWidth} > ${metrics.clientWidth})`);
   }
-  if (metrics.imageFit !== "cover") {
-    failures.push(`${width}x${height}: hero image fit is ${metrics.imageFit}, expected cover`);
+  const expectedFit = expected === "image-map" ? "fill" : "cover";
+  if (metrics.imageFit !== expectedFit) {
+    failures.push(`${width}x${height}: hero image fit is ${metrics.imageFit}, expected ${expectedFit}`);
   }
   if (metrics.brokenImages.length > 0) {
     failures.push(`${width}x${height}: broken images ${metrics.brokenImages.join(", ")}`);

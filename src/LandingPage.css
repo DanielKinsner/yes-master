@@ -304,7 +304,7 @@ body {
 
   .landing-hero-scene {
     z-index: 0;
-    object-fit: cover;
+    object-fit: fill;
     object-position: center;
     filter: none;
   }
@@ -368,51 +368,6 @@ body {
     top: 82%;
     width: 13%;
     height: 5.6%;
-  }
-}
-
-@media (min-width: 1081px) and (max-aspect-ratio: 5 / 3) {
-  .landing-nav {
-    display: flex;
-  }
-
-  .landing-hero {
-    align-items: center;
-    padding: 118px 64px 88px;
-  }
-
-  .landing-hero-scene {
-    z-index: -4;
-    object-fit: cover;
-    object-position: 68% center;
-    opacity: 0.88;
-    filter: saturate(1.04) contrast(1.06);
-  }
-
-  .landing-hero::before {
-    display: block;
-    background:
-      linear-gradient(90deg, #030509 0%, #030509 38%, rgba(3, 5, 9, 0.96) 48%, rgba(3, 5, 9, 0.58) 72%, rgba(3, 5, 9, 0.2) 100%),
-      linear-gradient(180deg, rgba(3, 5, 9, 0.46) 0%, rgba(3, 5, 9, 0.08) 34%, rgba(3, 5, 9, 0.72) 100%);
-  }
-
-  .landing-hero::after {
-    display: block;
-    height: 28%;
-  }
-
-  .landing-hero-hotspots {
-    display: none;
-  }
-
-  .landing-hero-copy {
-    display: block;
-  }
-
-  .landing-next {
-    display: flex;
-    left: 64px;
-    right: 64px;
   }
 }
 
@@ -1184,6 +1139,8 @@ body {
 .landing-proof-panel {
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   min-height: 520px;
   border: 1px solid rgba(128, 173, 255, 0.24);
   border-radius: 8px;
@@ -1262,7 +1219,7 @@ body {
 }
 
 .landing-mini-console {
-  margin-top: 28px;
+  margin-top: auto;
   border: 1px solid var(--landing-line);
   border-radius: 8px;
   padding: 16px;
@@ -1297,7 +1254,7 @@ body {
 }
 
 .landing-panel-image {
-  margin: 28px 0 0;
+  margin: auto 0 0;
   overflow: hidden;
   border: 1px solid var(--landing-line);
   border-radius: 8px;
@@ -1310,24 +1267,21 @@ body {
 .landing-panel-image img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: top center;
 }
 
 .landing-panel-image-standard {
-  aspect-ratio: 1.36;
+  margin-top: 18px;
+  aspect-ratio: 16 / 9;
 }
 
 .landing-panel-image:not(.landing-panel-image-standard) {
   aspect-ratio: 16 / 9;
 }
 
-.landing-panel-image:not(.landing-panel-image-standard) img {
-  transform: scale(1.1);
-}
-
 .landing-receipt {
-  margin: 28px 0 0;
+  margin: auto 0 0;
   border: 1px solid var(--landing-line);
   border-radius: 8px;
   padding: 14px 16px;
