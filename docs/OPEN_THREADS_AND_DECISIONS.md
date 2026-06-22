@@ -1,0 +1,103 @@
+# YES Master — Open Threads & Owner Decisions
+
+The single place where **genuinely-open work** and **decisions only the owner can
+make** are logged so nothing gets silently dropped. Companion to
+**docs/CHANGELOG.md** (shipped history) and **docs/IDEAS_BACKLOG.md** (wishlist).
+
+Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
+close rather than letting them rot in scattered docs.
+
+> **State of the project (2026-06-22):** late stabilization. The two big mechanical
+> queues (the final repo-wide review A1–E3, and the shippability roadmap S0–S7 +
+> AC-1…AC-4) are **fully shipped on main**. What remains is almost entirely
+> **owner-gated taste/listening work** plus a handful of explicit decisions. The
+> single most actionable open thread is the **macOS snapshot verification (CI red)**.
+> One owner listening sitting could close most of the listening gates at once.
+
+---
+
+## Part A — Open threads (loose-ends ledger)
+
+### OPEN — actionable now
+
+| # | Thread | Source | Action |
+|---|---|---|---|
+| 1 | **macOS byte-identity snapshot SHAs** for the 85% lean (regen 7 hashes + smoke test) | HANDOFF_2026-06-22_MACOS_VERIFICATION.md | On Apple Silicon: `cd src-tauri && cargo test --lib preset_byte_identity`, record the 7 `left` hashes into the 2nd arg of each `expected_platform_sha(...)`, run the smoke checklist, commit only dsp.rs, push, confirm CI green. **Most actionable open thread (CI is red).** |
+
+### OPEN — owner-gated (listening / taste)
+
+| # | Thread | Source | Action |
+|---|---|---|---|
+| 2 | **AC-5 Adaptive Compressor calibration + default-gate flip** | adaptive-compressor-mvp-spec §5; HANDOFF_2026-06-13_AC5_CALIBRATION_PREP | Owner listening session. AC-1…AC-4 shipped; queue private fixtures, run OFF-vs-ON A/B, capture keep/adjust/reject per constant, land a single AC-5 flip commit (lock 9 constants, flip default, regen snapshots, update PRODUCT/APP_BEHAVIOR). Ship gate-OFF until then. |
+| 3 | **Phase-B confidence gating** calibration + default flip | RELEASE_STABILIZATION Active Gates; AC-5 prep | Owner-gated; bundle into the AC-5 sitting (same fixtures/ears). Decide whether the default flips ON in a separate commit. No code change before listening notes. |
+| 4 | **Manual Listening Gate** (normal / already-mastered / long-source sweeps + clean-vs-warning export by ear) | Jump-Fix #1; deferred to Wave 10 | Owner by-ear pass. Include 8 kHz + 11.025 kHz sources (Nyquist clamp proof). Sweep Intensity/EQ/gain/compressor/Preview-LUFS/Volume-Match during playback; export clean + warning case, compare. Record a listening-note doc. |
+| 5 | **Reference Retune listening notes** (Oomph least-matched) | Jump-Fix #2; deferred to Wave 10 | Re-run the private reference-tuning runner **after the 85% lean**, capture per-preset notes (Oomph: bolder without mud/pumping). Don't change export LUFS landing or compressor semantics. Pairs with idea: build the preset-fingerprint harness so future retunes are mechanically gated. |
+| 6 | **Already-mastered matrix listening signoff** | Jump-Fix #3; deferred to Wave 10 | Owner by-ear signoff against existing aggregate evidence; pairs with AC-5 stand-down listening. Re-run since the 85% lean is a DSP change. |
+| 7 | **Confirm the 85% lean resolved the "characterless presets" regression** | 2026-06-15 stabilization plan | Part of the Manual Listening Gate: confirm Universal/Clarity/Tape/Oomph are audibly distinct at matched loudness post-85%-lean. If still too similar, capture a listening note before further retune. |
+
+### OPEN — roadmap / scope (no listening required)
+
+| # | Thread | Source | Action |
+|---|---|---|---|
+| 8 | **PRODUCT.md / APP_BEHAVIOR.md canon refresh (S5.4)** — Standard-first workflow, Mobile, Album Master, honest Adaptive wording | roadmap S5.4 | Owner interrogation (mobile scope, album promise, adaptive/compressor wording), then rewrite. See Part B Q7–Q10. Tie the compressor-canon update to AC-5. |
+| 9 | **Tier-1 adaptive follow-ons** (tilt-vs-reference brightness, density-cap reshape, stereo_width co-trigger, per-axis EQ floors, LRA→Option) | ADAPTIVE_DSP_NEXT_STEPS; roadmap S10.4 | Wave 10 taste work. Tilt-vs-reference is highest-value. Gate every constant change behind a listening note + fingerprint test. |
+| 10 | **Tier-2 "smart" milestone** (measured-neutral per-preset, PSR/crest loop, corrective curve, reference matching, resonance/sibilance) | ADAPTIVE_DSP_NEXT_STEPS; roadmap S10.4/5 | Post-v1. B3 loss-budget + PSR transient protection are the most defensible first steps. See IDEAS_BACKLOG. |
+| 11 | **Mobile store-readiness** (iPhone PrivacyInfo/real-progress/error-enum; Android signing+keystore; background-audio) | roadmap Wave 8 / S8.x | Owner-gated, out of desktop-v1 scope. Android signing blocked on owner keystore. |
+
+### UNKNOWN — verify before acting
+
+| # | Thread | Action |
+|---|---|---|
+| 12 | Does the shipped **Standard view** satisfy the original "Simple Mode" ask, or is a further-simplified mode still wanted? | Confirm with owner. Likely already-shipped-in-substance. |
+| 13 | review-2026-05-28 findings 8 (idle vs live session dots identical) & 15 (play_track 5s vs play_master 15s timeout asymmetry) | Verify they were reconciled in current code. |
+
+### Confirmed SHIPPED (closed — listed so they aren't re-opened)
+
+- AdaptiveReadout debug-flag gating (`src/lib/debug-flags.ts`, default OFF).
+- 2026-06-16 final repo-wide review queue (A1–E3, slices #1–#20).
+- Shippability roadmap mechanical waves S0–S7 + AC-1…AC-4.
+- Album channel-count parity (mixed mono/stereo + above-stereo fold-down).
+- Realtime sweep confirmation gate (responsive sweep accepted; diagnostic counters removed).
+
+---
+
+## Part B — Owner decisions (flags)
+
+Things the recon could not resolve without you. Grouped; **the preset/listening
+cluster can mostly close in one sitting.**
+
+### Presets & listening
+1. Is the **85% preset lean** (commit `659bea5`) **final**, or still a candidate pending the macOS regen/listen?
+2. Post-85%-lean, are Universal/Clarity/Tape/Oomph **audibly distinct at matched loudness**?
+3. **AC-5** session: keep/adjust/reject each of the 9 `TBD-CALIBRATION` constants; flip the default gate ON?
+4. In the same sitting, does **Phase-B `CONFIDENCE_GATING`** flip ON (separate commit)?
+5. **Mode-pill label**: keep "Preset" or relabel to "Adaptive" in the calibrated UI?
+6. **Eight presets vs a curated grouping** (UX-08) — change anything? (Needs a listening note first.)
+
+### Product canon (S5.4 — needs an interrogation)
+7. What is the **mobile** product promise (audience, scope, deliberate absences)?
+8. What does **Album Master** promise beyond consistent loudness?
+9. How should the **adaptive engine** be described honestly in PRODUCT.md / APP_BEHAVIOR.md?
+10. What is the **marketing landing page's** product role (marketing-only vs download/onboarding), and should PRODUCT.md name it as a public surface?
+
+### Agent-file scope
+11. Is the **landing page / web build in-scope for agent work** (add `verify:landing` + `docs/landing-brief.md` to Required Reading), or hands-off like the Next.js storefront?
+12. Broaden the "Local desktop app for Mac and Windows" non-negotiable to acknowledge iPhone + Android (and web)? *(Recommended yes — the CI already runs the mobile lanes.)*
+
+### Packaging / platform
+13. Confirm **macOS build/install status** — add a parallel macOS-packaging release criterion to PRODUCT.md?
+14. **Android signing/bundleRelease** is blocked on you providing a keystore — when?
+15. Mobile **background-audio** behavior (UIBackgroundModes / foreground service) — v1 limitation or build it?
+
+### Roadmap owner-decision queue
+16. **Min window size** for 1366×768 laptops — document the requirement (cheap default) or schedule a layout slice?
+17. **RS-09 limiter flush/tail** (~3 ms export-byte change) — defer + document (default), or accept (own snapshot-regenerating commit + listening spot-check)?
+18. **Stereo_width disposition** — wire it as a width co-trigger or delete the inert carried field?
+19. Confirm the **parked items stay parked**: P2 one-pole/soft-knee hoist + P4 tauri-specta (on the do-not-do list) — leave alone?
+
+### Low-risk doc-accuracy checks (I can do these on request)
+20. `IPHONE_APP_OVERVIEW.md` preset vocabulary vs the shipped Standard 8-preset set (flagged for preset-name drift).
+21. `ENGINE_REFERENCE.md` preset-calibration table predates the 85% lean — EQ/dB numbers likely stale vs shipped.
+
+### Branding (parked)
+22. **"Y.E.S. Master" / "Your Endgame Sound"** vs the current **"YES Master"** — a brand decision you parked. It cascades across PRODUCT.md, AGENTS.md/CLAUDE.md, README, and the landing copy. Until you call it, docs keep the current "YES Master" naming.
