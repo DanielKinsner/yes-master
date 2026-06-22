@@ -113,3 +113,4 @@ Remove-Item Env:\AMS_RUN_REAL_FIXTURE
   changing preset calibration.
 - Do not call a slice complete because the UI resembles the goal; verify the
   behavior.
+- Commit in very small chunks
