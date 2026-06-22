@@ -406,19 +406,19 @@ const PRESET_UNIVERSAL: PresetCalibration = PresetCalibration {
     // air lift but backed off compression so already-mastered sources keep
     // closer movement against external Universal references.
     sub_db: 0.0,
-    low_shelf_db: 0.8,
+    low_shelf_db: 0.72,
     low_mid_db: -0.1,
-    presence_db: 0.4,
+    presence_db: 0.34,
     high_mid_db: 0.0,
-    air_db: 1.6,
+    air_db: 1.53,
     sparkle_db: 0.0,
-    warmth: 0.06,
-    stereo_width: 1.12,
+    warmth: 0.055,
+    stereo_width: 1.11,
     // Light lift keeps the safe default slightly alive without making transients a named feature.
     transient_punch: 0.04,
     // 24 Hz removes transport and room rumble while staying below useful lows on most material.
     highpass_hz: 24.0,
-    target_lufs: -12.5,
+    target_lufs: -12.72,
     ceiling_dbfs: -1.0,
     compressor_threshold_dbfs: -12.5,
     compressor_ratio: 1.45,
@@ -435,17 +435,17 @@ const PRESET_CLARITY: PresetCalibration = PresetCalibration {
     sub_db: 0.0,
     low_shelf_db: 0.6,
     low_mid_db: -1.0,
-    presence_db: 0.5,
+    presence_db: 0.30,
     high_mid_db: 0.0,
-    air_db: 2.4,
+    air_db: 2.29,
     sparkle_db: 0.0,
     warmth: 0.025,
-    stereo_width: 1.10,
+    stereo_width: 1.09,
     // Small lift adds articulation to match the air shelf without turning Clarity into Punch.
     transient_punch: 0.05,
     // 28 Hz gives the vocal/detail preset a cleaner floor where sub weight is not the goal.
     highpass_hz: 28.0,
-    target_lufs: -12.8,
+    target_lufs: -12.89,
     ceiling_dbfs: -1.0,
     compressor_threshold_dbfs: -12.5,
     compressor_ratio: 1.45,
@@ -462,13 +462,13 @@ const PRESET_TAPE: PresetCalibration = PresetCalibration {
     // stays textured without crushing more movement than the reference.
     sub_db: 0.0,
     low_shelf_db: 0.0,
-    low_mid_db: 0.8,
+    low_mid_db: 0.72,
     presence_db: -1.4,
     high_mid_db: 0.0,
-    air_db: 0.5,
+    air_db: 0.71,
     sparkle_db: 0.0,
-    warmth: 0.16,
-    stereo_width: 0.92,
+    warmth: 0.15,
+    stereo_width: 0.93,
     // Negative punch rounds attacks so the tape-glue character reads softened, not snappy.
     transient_punch: -0.03,
     // 24 Hz preserves low-body warmth while clearing subsonic headroom waste.
@@ -494,10 +494,10 @@ const PRESET_SPATIAL: PresetCalibration = PresetCalibration {
     air_db: 1.3,
     sparkle_db: 0.0,
     warmth: 0.04,
-    // Candidate (pending listening signoff): widened 1.16 -> 1.50 (full lean) so Spatial
+    // 85% distinctiveness lean (owner-directed 2026-06-22): widened 1.16 -> 1.45 so Spatial
     // reads clearly as the wide preset. Measured L/R correlation change on the stereo_field
-    // probe: -0.091 (1.16) -> -0.258 (1.40); 1.50 pushes wider still. Pure M/S side-scale.
-    stereo_width: 1.50,
+    // probe: -0.091 (1.16) -> -0.258 (1.40); 1.45 sits just past that. Pure M/S side-scale.
+    stereo_width: 1.45,
     // Tiny lift keeps widened material from feeling smeared without pushing attacks forward.
     transient_punch: 0.03,
     // 24 Hz avoids low-image wobble while staying below audible bass weight.
@@ -518,14 +518,14 @@ const PRESET_OOMPH: PresetCalibration = PresetCalibration {
     // pushed low weight and reduced compression depth after Oomph measured too
     // mid-forward and too flattened against the external reference.
     sub_db: 0.0,
-    low_shelf_db: 5.5,
+    low_shelf_db: 5.30,
     low_mid_db: -3.0,
     presence_db: -2.6,
     high_mid_db: 0.0,
-    air_db: -2.2,
+    air_db: -2.05,
     sparkle_db: 0.0,
     warmth: 0.045,
-    stereo_width: 0.82,
+    stereo_width: 0.84,
     // Moderate lift restores kick and bass impact after the deep low-mid scoop.
     transient_punch: 0.08,
     // 22 Hz keeps the lowest useful weight because Oomph is the sub-forward preset.
@@ -544,13 +544,13 @@ const PRESET_OOMPH: PresetCalibration = PresetCalibration {
 const PRESET_WARMTH: PresetCalibration = PresetCalibration {
     // Conservative target line 257. Fuller body, softer top, soft glue.
     sub_db: 0.0,
-    low_shelf_db: 1.65,
-    low_mid_db: 1.3,
+    low_shelf_db: 1.52,
+    low_mid_db: 1.21,
     presence_db: -1.8,
     high_mid_db: 0.0,
-    air_db: -1.95,
+    air_db: -1.78,
     sparkle_db: 0.0,
-    warmth: 0.14,
+    warmth: 0.13,
     stereo_width: 0.98,
     // Negative punch softens edges so the added body reads smooth rather than assertive.
     transient_punch: -0.05,
@@ -573,17 +573,17 @@ const PRESET_PUNCH: PresetCalibration = PresetCalibration {
     sub_db: 0.0,
     low_shelf_db: 0.8,
     low_mid_db: -1.8,
-    presence_db: 2.45,
+    presence_db: 2.32,
     high_mid_db: 0.0,
     air_db: 0.8,
     sparkle_db: 0.0,
     warmth: 0.035,
     stereo_width: 1.04,
     // Largest lift because Punch's job is impact and forwardness, not density.
-    transient_punch: 0.20,
+    transient_punch: 0.19,
     // 28 Hz tightens lows above the sub floor so punch reads controlled rather than bloated.
     highpass_hz: 28.0,
-    target_lufs: -11.75,
+    target_lufs: -11.62,
     ceiling_dbfs: -0.8,
     compressor_threshold_dbfs: -20.0,
     compressor_ratio: 2.8,
@@ -610,10 +610,10 @@ const PRESET_LOUD: PresetCalibration = PresetCalibration {
     transient_punch: 0.12,
     // 30 Hz buys limiter headroom for the loudest preset where deep subs are least useful.
     highpass_hz: 30.0,
-    target_lufs: -8.8,
+    target_lufs: -9.04,
     ceiling_dbfs: -0.8,
     compressor_threshold_dbfs: -23.0,
-    compressor_ratio: 4.2,
+    compressor_ratio: 4.09,
     compressor_attack_ms: 15.0,
     compressor_release_ms: 180.0,
     science_note: "Strongest density and limiting; assertive but not smashed — \
@@ -4121,10 +4121,10 @@ mod tests {
                 "Universal",
                 Preset::Universal,
                 expected_platform_sha(
-                    "582aeb1ac558b664aa0ea044b247c3232d10a7810bbb52e2ee48177529488ebd",
-                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    "fd8377b103f8c20c0f95e4571d1f6588a79be5ee448ce14c915363d22e687ebe",
+                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
                     // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "582aeb1ac558b664aa0ea044b247c3232d10a7810bbb52e2ee48177529488ebd",
+                    "fd8377b103f8c20c0f95e4571d1f6588a79be5ee448ce14c915363d22e687ebe",
                 ),
             );
         }
@@ -4135,10 +4135,10 @@ mod tests {
                 "Clarity",
                 Preset::Clarity,
                 expected_platform_sha(
-                    "eea1117bac3d1f9761998af752d5bbe0969a85cc6cd3ceb8ffbbb48c56fd8b41",
-                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    "e91137eea1a936bbd514c123152d7f63d524049e039f2aebdd4bcc5b898ea427",
+                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
                     // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "eea1117bac3d1f9761998af752d5bbe0969a85cc6cd3ceb8ffbbb48c56fd8b41",
+                    "e91137eea1a936bbd514c123152d7f63d524049e039f2aebdd4bcc5b898ea427",
                 ),
             );
         }
@@ -4149,10 +4149,10 @@ mod tests {
                 "Tape",
                 Preset::Tape,
                 expected_platform_sha(
-                    "c0b90ae1682ef4712221d56425fcc5bd44bbd2dd54164b24b09bb4ffe00f3663",
-                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    "09bb604bfd17fd4995f3d27af5fb0546a107772ee1facb81873d05a33fdc0f68",
+                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
                     // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "c0b90ae1682ef4712221d56425fcc5bd44bbd2dd54164b24b09bb4ffe00f3663",
+                    "09bb604bfd17fd4995f3d27af5fb0546a107772ee1facb81873d05a33fdc0f68",
                 ),
             );
         }
@@ -4177,10 +4177,10 @@ mod tests {
                 "Oomph",
                 Preset::Oomph,
                 expected_platform_sha(
-                    "a0f4fd527e6a206e6abd83676dac0e01e2baa05bbde35079779e63cf088e6a00",
-                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    "b941c64bb127b5d71b0e7195ed20f8e748d7888022eed96de9dea1c815630ea0",
+                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
                     // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "a0f4fd527e6a206e6abd83676dac0e01e2baa05bbde35079779e63cf088e6a00",
+                    "b941c64bb127b5d71b0e7195ed20f8e748d7888022eed96de9dea1c815630ea0",
                 ),
             );
         }
@@ -4191,10 +4191,10 @@ mod tests {
                 "Warmth",
                 Preset::Warmth,
                 expected_platform_sha(
-                    "19d6246eefcaf967223d0139fdd099d196e213267cdebc4130052a7a8ce3c4dd",
-                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    "5460bbfc534f5ae68dbb10dd498b2882ab785e475e4fe6dd9867924310561197",
+                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
                     // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "19d6246eefcaf967223d0139fdd099d196e213267cdebc4130052a7a8ce3c4dd",
+                    "5460bbfc534f5ae68dbb10dd498b2882ab785e475e4fe6dd9867924310561197",
                 ),
             );
         }
@@ -4205,10 +4205,10 @@ mod tests {
                 "Punch",
                 Preset::Punch,
                 expected_platform_sha(
-                    "1242a35fdc307fffaaf0e430018f9600825fe039523a91b2760d0c71590ab66f",
-                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    "f6e7ec7f978dc669548d94f3efc633417daffb14f01315962495bcb99ddb6a25",
+                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
                     // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "1242a35fdc307fffaaf0e430018f9600825fe039523a91b2760d0c71590ab66f",
+                    "f6e7ec7f978dc669548d94f3efc633417daffb14f01315962495bcb99ddb6a25",
                 ),
             );
         }
@@ -4219,10 +4219,10 @@ mod tests {
                 "Loud",
                 Preset::Loud,
                 expected_platform_sha(
-                    "1672a0b4af7a5b7d213f6fc13b8cfb0fa4dd7db288b143f598ca12f5d1e2ba41",
-                    // 2026-06-18 preset re-voicing (100% lean): Windows hash regenerated;
+                    "c37c6d4fc5978b53c903761d58d2fc1eb9f5c2f02919e2833be8644f6178b566",
+                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
                     // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "1672a0b4af7a5b7d213f6fc13b8cfb0fa4dd7db288b143f598ca12f5d1e2ba41",
+                    "c37c6d4fc5978b53c903761d58d2fc1eb9f5c2f02919e2833be8644f6178b566",
                 ),
             );
         }
