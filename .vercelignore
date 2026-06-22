@@ -1,0 +1,34 @@
+# Keep Vercel CLI uploads focused on the Vite web app.
+.git
+.github
+.claude
+.vercel
+
+node_modules
+dist
+build
+target
+target-tests
+
+src-tauri
+apps
+test-output
+private-audio-fixtures
+tests for presets
+outputs
+renders
+graphify-out
+docs
+scripts
+
+*.tsbuildinfo
+*.wav
+*.wav.*.tmp
+*.aiff
+*.aif
+*.flac
+*.mp3
+*.m4a
+*.aac
+*.ogg
+*.opus

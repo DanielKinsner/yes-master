@@ -92,3 +92,5 @@ Thumbs.db
 # Claude Code local workspace config (e.g. launch.json) — local-only, not shared.
 .claude/
 docs/READING_THE_METERS.md
+
+.vercel
