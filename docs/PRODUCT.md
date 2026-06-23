@@ -142,8 +142,9 @@ What deliberately does not adapt today:
 
 - Preset tone tilt is fixed per preset (not reference-matched). The fixed
   voicing was re-tuned to an owner-directed "85% lean" on 2026-06-22 (commit
-  659bea5; `custom` untouched) — Windows-verified, with macOS listening and
-  snapshot regen still pending (see `docs/OPEN_THREADS_AND_DECISIONS.md`).
+  659bea5; `custom` untouched) — Windows-verified; macOS byte-identity snapshot
+  work is closed/superseded, while owner listening remains pending (see
+  `docs/OPEN_THREADS_AND_DECISIONS.md`).
 - Phase-B per-window confidence gating is built but OFF by default,
   pending the owner calibration sitting.
 
