@@ -51,16 +51,16 @@ export default function Hero() {
           Your Endgame <span className="block text-brand">Sound.</span>
         </h1>
 
-        <ul className="flex flex-col gap-4">
+        <ul className="flex flex-col gap-5">
           {points.map((point) => (
-            <li key={point.title} className="relative min-h-11 pl-14">
+            <li key={point.title} className="relative max-w-[340px] pl-16">
               <img
                 src={point.icon}
                 alt=""
                 aria-hidden="true"
-                className="absolute left-0 top-1/2 h-11 w-11 -translate-y-1/2"
+                className="absolute left-0 top-1/2 h-12 w-12 -translate-y-1/2"
               />
-              <p className="text-[15px] leading-snug text-muted">
+              <p className="text-base leading-snug text-muted">
                 <strong className="font-extrabold text-ink">
                   {point.title}
                 </strong>{" "}
