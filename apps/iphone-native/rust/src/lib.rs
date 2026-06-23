@@ -149,6 +149,16 @@ pub unsafe extern "C" fn yes_master_native_render_master_with_options_json(
 
             let source_path = Path::new(&source_path);
             let output_dir = Path::new(&output_dir);
+            // §15 — `create_dir_all(output_dir)` below runs BEFORE the render's
+            // own source-path guard, so a crafted `output_dir` (e.g. ../../..)
+            // would create directories outside the app sandbox. Reject `..`
+            // traversal on both paths here. Legitimate mobile paths are absolute
+            // scoped-storage dirs with no `..`, so this never rejects a real one.
+            if yes_master_lib::files::has_parent_dir_component(output_dir)
+                || yes_master_lib::files::has_parent_dir_component(source_path)
+            {
+                return error_to_ffi("path traversal not allowed");
+            }
             let adaptive_context = match resolve_native_adaptive_context_for_path(source_path) {
                 Ok(context) => context,
                 Err(error) => return error_to_ffi(&format!("adaptive context failed: {error}")),
@@ -1058,6 +1068,50 @@ mod tests {
         );
 
         assert!(output.exists(), "rendered WAV was not written");
+    }
+
+    #[test]
+    fn render_master_rejects_output_dir_traversal_before_creating_dirs() {
+        // §15 — a `..`-bearing output_dir must be rejected BEFORE create_dir_all,
+        // so the mobile bridge cannot create directories outside the sandbox.
+        let tmp = tempfile::tempdir().unwrap();
+        let input = tmp.path().join("source.wav");
+        write_sine_wav(&input);
+        let escaping = tmp.path().join("sub").join("..").join("escaped-masters");
+
+        let input_c = CString::new(input.to_string_lossy().as_bytes()).unwrap();
+        let output_dir_c = CString::new(escaping.to_string_lossy().as_bytes()).unwrap();
+        let preset = CString::new("balanced").unwrap();
+        let pointer = unsafe {
+            yes_master_native_render_master_with_options_json(
+                input_c.as_ptr(),
+                output_dir_c.as_ptr(),
+                preset.as_ptr(),
+                0.5,
+                -11.0,
+            )
+        };
+        assert!(!pointer.is_null());
+        let json = unsafe {
+            let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
+            yes_master_native_free_string(pointer);
+            value
+        };
+
+        let payload: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert!(
+            payload["error"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("path traversal"),
+            "expected a path-traversal error, got: {json}"
+        );
+        // The guard ran before create_dir_all, so nothing was created.
+        assert!(
+            !tmp.path().join("escaped-masters").exists(),
+            "create_dir_all ran despite the traversal guard"
+        );
+        assert!(!tmp.path().join("sub").exists());
     }
 
     #[test]

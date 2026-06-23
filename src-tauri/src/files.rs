@@ -13,7 +13,16 @@ pub async fn import_tracks(paths: Vec<String>) -> CommandResult<Vec<ImportedTrac
     paths.into_iter().map(|p| import_one(&p)).collect()
 }
 
-pub(crate) fn has_parent_dir_component(path: &Path) -> bool {
+/// Reject `..` traversal components. Shared guard: the desktop commands and the
+/// mobile native facade (`apps/iphone-native/rust`) both call it. `pub` so the
+/// facade crate can guard `output_dir` before it `create_dir_all`s it (§15).
+///
+/// NOTE: this only blocks literal `..`. Absolute paths are intentionally allowed
+/// — this is a local-first desktop app where the user picks arbitrary files via
+/// native dialogs, so confining to a base dir would break import/export. A
+/// sandboxed/base-confined mode is an owner product decision (see
+/// docs/OPEN_THREADS_AND_DECISIONS.md), not a guard bug.
+pub fn has_parent_dir_component(path: &Path) -> bool {
     path.components().any(|c| matches!(c, Component::ParentDir))
 }
 
@@ -110,6 +119,45 @@ mod tests {
             .with_channels(channels)
             .with_n_frames(u64::from(sample_rate));
         Track::new(id, params)
+    }
+
+    #[test]
+    fn parent_dir_guard_rejects_traversal_but_allows_absolute_paths() {
+        // §14 — pin the guard's contract. `..` anywhere is rejected...
+        assert!(has_parent_dir_component(Path::new("../secret.wav")));
+        assert!(has_parent_dir_component(Path::new(
+            "music/../../etc/passwd"
+        )));
+        assert!(has_parent_dir_component(Path::new("a/b/../c")));
+        // ...including when a symlink-looking component is followed by `..`.
+        assert!(has_parent_dir_component(Path::new("link/../escape")));
+
+        // Absolute paths WITHOUT `..` are intentionally ALLOWED: this is a
+        // local-first desktop app where the user picks arbitrary files via
+        // native dialogs, so import/export legitimately span the whole
+        // filesystem. Base-dir confinement / symlink-target rejection would
+        // break that and is an owner sandbox decision (see OPEN_THREADS), not a
+        // guard bug — this assertion documents that intent.
+        assert!(!has_parent_dir_component(Path::new("/home/me/song.wav")));
+        assert!(!has_parent_dir_component(Path::new("song.wav")));
+        #[cfg(windows)]
+        {
+            assert!(!has_parent_dir_component(Path::new(
+                r"C:\Users\me\song.wav"
+            )));
+            assert!(has_parent_dir_component(Path::new(
+                r"C:\Users\me\..\..\Windows"
+            )));
+        }
+    }
+
+    #[test]
+    fn import_one_rejects_a_traversal_path() {
+        let err = import_one("../escape.wav").expect_err("traversal must be rejected");
+        assert!(
+            matches!(err, CommandError::InvalidPath(ref m) if m.contains("path traversal")),
+            "unexpected error: {err:?}"
+        );
     }
 
     #[test]
