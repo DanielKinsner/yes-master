@@ -32,16 +32,17 @@ export default function Hero() {
         aria-hidden="true"
         className="absolute inset-0 -z-20 h-full w-full object-cover object-[62%_center]"
       />
-      {/* Readability scrim: a soft veil on phones, left-weighted on desktop so
-          the image breathes on the right while the text stays legible. */}
+      {/* Readability veil — phones only (text sits over the whole image there).
+          On desktop there is NO gradient; the studio image's own dark left
+          backs the copy. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 -z-10 bg-gradient-to-t from-night/90 via-night/55 to-night/40 md:bg-gradient-to-r md:from-night/85 md:via-night/30 md:to-transparent"
+        className="absolute inset-0 -z-10 bg-gradient-to-t from-night/90 via-night/55 to-night/40 md:hidden"
       />
 
       {/* Copy column. A normal block (so its width can never exceed the
           screen), full width on phones, ~half on desktop. */}
-      <div className="relative mx-auto flex min-h-svh max-w-7xl flex-col justify-start gap-6 px-5 pt-28 pb-16 sm:px-8 md:justify-center md:py-24 lg:w-[54%] lg:pl-12">
+      <div className="relative mx-auto flex min-h-svh max-w-7xl flex-col justify-start gap-6 px-5 pt-28 pb-20 sm:px-8 lg:w-[54%] lg:pl-12">
         <span className="text-xs font-black uppercase tracking-wide text-brand-soft">
           Y.E.S. Master / Instantly master your track
         </span>
@@ -69,7 +70,7 @@ export default function Hero() {
           ))}
         </ul>
 
-        <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row md:mt-auto">
           <a
             href="#get-started"
             className="inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-b from-cta-light to-cta-deep px-5 py-3 font-extrabold text-[#1c0d00] shadow-lg shadow-cta-deep/30 sm:w-auto"
