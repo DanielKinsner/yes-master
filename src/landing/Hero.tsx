@@ -24,10 +24,7 @@ const points = [
 
 export default function Hero() {
   return (
-    <section
-      id="top"
-      className="relative isolate flex min-h-svh items-center overflow-hidden"
-    >
+    <section id="top" className="relative isolate min-h-svh overflow-hidden">
       {/* Background: the studio + app photo. object-cover crops, never stretches. */}
       <img
         src={heroBg}
@@ -42,8 +39,9 @@ export default function Hero() {
         className="absolute inset-0 -z-10 bg-gradient-to-t from-night/90 via-night/55 to-night/40 md:bg-gradient-to-r md:from-night/85 md:via-night/30 md:to-transparent"
       />
 
-      {/* Copy column. Full width on phones, ~half on desktop. */}
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-5 pt-28 pb-16 sm:px-8 md:min-h-[72svh] md:justify-center md:py-0 lg:w-[54%] lg:pl-12">
+      {/* Copy column. A normal block (so its width can never exceed the
+          screen), full width on phones, ~half on desktop. */}
+      <div className="relative mx-auto flex min-h-svh max-w-7xl flex-col justify-start gap-6 px-5 pt-28 pb-16 sm:px-8 md:justify-center md:py-24 lg:w-[54%] lg:pl-12">
         <span className="text-xs font-black uppercase tracking-wide text-brand-soft">
           Y.E.S. Master / Instantly master your track
         </span>
@@ -54,12 +52,12 @@ export default function Hero() {
 
         <ul className="flex flex-col gap-4">
           {points.map((point) => (
-            <li key={point.title} className="flex items-center gap-3">
+            <li key={point.title} className="relative min-h-11 pl-14">
               <img
                 src={point.icon}
                 alt=""
                 aria-hidden="true"
-                className="h-11 w-11 shrink-0"
+                className="absolute left-0 top-1/2 h-11 w-11 -translate-y-1/2"
               />
               <p className="text-[15px] leading-snug text-muted">
                 <strong className="font-extrabold text-ink">
@@ -71,7 +69,7 @@ export default function Hero() {
           ))}
         </ul>
 
-        <div className="mt-2 flex flex-col gap-3 sm:flex-row md:mt-auto">
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row">
           <a
             href="#get-started"
             className="inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-b from-cta-light to-cta-deep px-5 py-3 font-extrabold text-[#1c0d00] shadow-lg shadow-cta-deep/30 sm:w-auto"
