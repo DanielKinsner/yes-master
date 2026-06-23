@@ -53,12 +53,12 @@ export default function Hero() {
 
         <ul className="flex flex-col gap-5">
           {points.map((point) => (
-            <li key={point.title} className="relative max-w-[340px] pl-16">
+            <li key={point.title} className="relative max-w-[360px] pl-[72px]">
               <img
                 src={point.icon}
                 alt=""
                 aria-hidden="true"
-                className="absolute left-0 top-1/2 h-12 w-12 -translate-y-1/2"
+                className="absolute left-0 top-0 h-14 w-14"
               />
               <p className="text-base leading-snug text-muted">
                 <strong className="font-extrabold text-ink">
