@@ -8,5 +8,9 @@ func volumeMatchGainDb(sideLufs: Double, otherLufs: Double) -> Double {
 }
 
 func volumeMatchLinearGain(sideLufs: Double, otherLufs: Double) -> Float {
-    Float(pow(10.0, volumeMatchGainDb(sideLufs: sideLufs, otherLufs: otherLufs) / 20.0))
+    // §2 — non-finite inputs (e.g. -inf LUFS for digital silence) fall back to
+    // unity, mirroring the Android-Rust copy (audition.rs volume_match_linear_gain)
+    // so a non-finite measured LUFS can never produce a non-finite gain.
+    guard sideLufs.isFinite, otherLufs.isFinite else { return 1.0 }
+    return Float(pow(10.0, volumeMatchGainDb(sideLufs: sideLufs, otherLufs: otherLufs) / 20.0))
 }

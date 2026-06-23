@@ -4119,22 +4119,91 @@ mod tests {
             (peak, mean_square.sqrt())
         }
 
-        fn expected_platform_sha(
-            windows_sha: &'static str,
-            macos_sha: &'static str,
-        ) -> &'static str {
-            if cfg!(target_os = "macos") {
-                macos_sha
-            } else {
-                windows_sha
-            }
+        // Architecture- and OS-independent golden (replaces the old per-OS
+        // exact-byte SHA, which split Windows vs macOS purely because of ~6e-8
+        // last-ULP libm rounding and would have spuriously failed on x86_64
+        // macOS). The chain output is compared against ONE stored reference
+        // within a tight tolerance: comfortably above the platform rounding,
+        // far below any structural DSP drift. This changes ONLY the test's
+        // comparison — the real-time chain is untouched.
+
+        /// Decimation factor for the golden comparison: keep every Nth STEREO
+        /// frame across the full 1 s render. Keeps the committed reference tiny
+        /// while still sampling the entire signal, so a continuous DSP drift
+        /// (which is what a coefficient/topology change produces) always shows.
+        const GOLDEN_FRAME_STRIDE: usize = 16;
+        /// Per-sample tolerance vs the stored reference. ~17x the measured
+        /// Windows↔macOS-arm64 rounding (5.96e-8), far below any real drift.
+        const GOLDEN_TOLERANCE: f32 = 1.0e-6;
+
+        fn decimate_frames(interleaved: &[f32]) -> Vec<f32> {
+            interleaved
+                .chunks_exact(STEREO)
+                .step_by(GOLDEN_FRAME_STRIDE)
+                .flatten()
+                .copied()
+                .collect()
         }
 
-        fn assert_preset_sha(name: &str, preset: Preset, expected_sha: &str) {
-            let observed = sha256_f32_le(&render_preset(preset));
+        fn reference_path(name: &str) -> std::path::PathBuf {
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("tests/golden/preset_byte_identity")
+                .join(format!("{name}.f32le"))
+        }
+
+        fn read_f32le(path: &std::path::Path) -> Vec<f32> {
+            let bytes = std::fs::read(path).unwrap_or_else(|e| {
+                panic!(
+                    "missing golden reference {} ({e}); regenerate with \
+                     YES_MASTER_UPDATE_GOLDEN=1 cargo test --lib preset_byte_identity",
+                    path.display()
+                )
+            });
+            bytes
+                .chunks_exact(4)
+                .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+                .collect()
+        }
+
+        fn max_abs_delta(a: &[f32], b: &[f32]) -> f32 {
+            // NaN-propagating max: `f32::max` would silently DROP a NaN delta, so
+            // a future drift that emits NaN output could pass the golden. Sticky
+            // NaN means the assert (`delta < tol`) fails on any non-finite drift.
+            a.iter()
+                .zip(b.iter())
+                .map(|(x, y)| (x - y).abs())
+                .fold(0.0_f32, |acc, v| {
+                    if acc.is_nan() || v.is_nan() {
+                        f32::NAN
+                    } else {
+                        acc.max(v)
+                    }
+                })
+        }
+
+        /// Assert the rendered chain output matches the single stored reference
+        /// within `GOLDEN_TOLERANCE`. Set `YES_MASTER_UPDATE_GOLDEN=1` to
+        /// (re)write the reference (do this only after a deliberate DSP change).
+        fn assert_preset_matches_reference(name: &str, preset: Preset) {
+            let rendered = decimate_frames(&render_preset(preset));
+            let path = reference_path(name);
+            if std::env::var("YES_MASTER_UPDATE_GOLDEN").as_deref() == Ok("1") {
+                std::fs::create_dir_all(path.parent().unwrap()).expect("create golden dir");
+                write_f32le(&path, &rendered);
+                return;
+            }
+            let reference = read_f32le(&path);
             assert_eq!(
-                observed, expected_sha,
-                "{name} chain-output SHA changed; investigate DSP drift before updating snapshots"
+                rendered.len(),
+                reference.len(),
+                "{name} golden length changed; investigate DSP drift before regenerating"
+            );
+            let delta = max_abs_delta(&rendered, &reference);
+            assert!(
+                delta < GOLDEN_TOLERANCE,
+                "{name} chain output drifted from the golden by max_abs_delta {delta} \
+                 (tolerance {GOLDEN_TOLERANCE}); investigate DSP drift before regenerating \
+                 with YES_MASTER_UPDATE_GOLDEN=1"
             );
         }
 
@@ -4190,125 +4259,52 @@ mod tests {
         }
 
         #[test]
-        fn universal_chain_output_sha_snapshot_matches() {
-            assert_preset_sha(
-                "Universal",
-                Preset::Universal,
-                expected_platform_sha(
-                    "fd8377b103f8c20c0f95e4571d1f6588a79be5ee448ce14c915363d22e687ebe",
-                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
-                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
-                    "6751134fbe6d806a70704a3ba659c05a5c5d4339b386af1259ab8e51c470c0b3",
-                ),
-            );
+        fn universal_chain_output_matches_golden() {
+            assert_preset_matches_reference("universal", Preset::Universal);
         }
 
         #[test]
-        fn clarity_chain_output_sha_snapshot_matches() {
-            assert_preset_sha(
-                "Clarity",
-                Preset::Clarity,
-                expected_platform_sha(
-                    "e91137eea1a936bbd514c123152d7f63d524049e039f2aebdd4bcc5b898ea427",
-                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
-                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
-                    "d6c783d1773f920bf61c8042763b9314422bde7ec1064fe005cf2b6adcd94e67",
-                ),
-            );
+        fn clarity_chain_output_matches_golden() {
+            assert_preset_matches_reference("clarity", Preset::Clarity);
         }
 
         #[test]
-        fn tape_chain_output_sha_snapshot_matches() {
-            assert_preset_sha(
-                "Tape",
-                Preset::Tape,
-                expected_platform_sha(
-                    "09bb604bfd17fd4995f3d27af5fb0546a107772ee1facb81873d05a33fdc0f68",
-                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
-                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
-                    "59d5f3d00c28e57cba20dbb0cb49ed4b020c83373c3204df51094b5dc9a6ab08",
-                ),
-            );
+        fn tape_chain_output_matches_golden() {
+            assert_preset_matches_reference("tape", Preset::Tape);
         }
 
         #[test]
-        fn spatial_chain_output_sha_snapshot_matches() {
-            assert_preset_sha(
-                "Spatial",
-                Preset::Spatial,
-                expected_platform_sha(
-                    "8185f556c3faa4ccb5983778ac428f1976a971f9bcc3e68a59d65a7bfe0e98a0",
-                    // PKG-04 observed 2026-06-12 on GitHub Actions macos-15-arm64;
-                    // max_abs_delta vs Windows CI: 5.960464477539063e-8.
-                    "2a7da89b1f2a63d6ee18982712e27aaaa2855c9885c0f69f34095ed469eaae62",
-                ),
-            );
+        fn spatial_chain_output_matches_golden() {
+            assert_preset_matches_reference("spatial", Preset::Spatial);
         }
 
         #[test]
-        fn oomph_chain_output_sha_snapshot_matches() {
-            assert_preset_sha(
-                "Oomph",
-                Preset::Oomph,
-                expected_platform_sha(
-                    "b941c64bb127b5d71b0e7195ed20f8e748d7888022eed96de9dea1c815630ea0",
-                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
-                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
-                    "09888d94dc4b513eca15834b0090cf8c2c12026d072b8cb74da68e52f59c1eef",
-                ),
-            );
+        fn oomph_chain_output_matches_golden() {
+            assert_preset_matches_reference("oomph", Preset::Oomph);
         }
 
         #[test]
-        fn warmth_chain_output_sha_snapshot_matches() {
-            assert_preset_sha(
-                "Warmth",
-                Preset::Warmth,
-                expected_platform_sha(
-                    "5460bbfc534f5ae68dbb10dd498b2882ab785e475e4fe6dd9867924310561197",
-                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
-                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
-                    "158aee07e81f98ab83de0d3e0c559e2adbfcaf4775f24b75e2060b00733757dc",
-                ),
-            );
+        fn warmth_chain_output_matches_golden() {
+            assert_preset_matches_reference("warmth", Preset::Warmth);
         }
 
         #[test]
-        fn punch_chain_output_sha_snapshot_matches() {
-            assert_preset_sha(
-                "Punch",
-                Preset::Punch,
-                expected_platform_sha(
-                    "f6e7ec7f978dc669548d94f3efc633417daffb14f01315962495bcb99ddb6a25",
-                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
-                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
-                    "6c45997122f50037b5705563c98e2e869a80b0c2947a8c361833bc4a34a63c6f",
-                ),
-            );
+        fn punch_chain_output_matches_golden() {
+            assert_preset_matches_reference("punch", Preset::Punch);
         }
 
         #[test]
-        fn loud_chain_output_sha_snapshot_matches() {
-            assert_preset_sha(
-                "Loud",
-                Preset::Loud,
-                expected_platform_sha(
-                    "c37c6d4fc5978b53c903761d58d2fc1eb9f5c2f02919e2833be8644f6178b566",
-                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
-                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
-                    "19789afbd375be6de46ef5e8ccec4666b681ec24212ee8b5d880bb672d656ae0",
-                ),
-            );
+        fn loud_chain_output_matches_golden() {
+            assert_preset_matches_reference("loud", Preset::Loud);
         }
 
         #[test]
-        fn custom_chain_output_sha_snapshot_matches() {
-            assert_preset_sha(
-                "Custom",
+        fn custom_chain_output_matches_golden() {
+            assert_preset_matches_reference(
+                "custom",
                 Preset::Custom {
                     id: "byte-identity".to_string(),
                 },
-                "d678eddc263064eea169959047e581f8c589a23a84896c9d534966e60919c3b0",
             );
         }
     }

@@ -11,4 +11,14 @@ final class VolumeMatchTests: XCTestCase {
         XCTAssertLessThanOrEqual(volumeMatchLinearGain(sideLufs: -11, otherLufs: -18), 1.0)
         XCTAssertEqual(volumeMatchLinearGain(sideLufs: -18, otherLufs: -11), 1.0, accuracy: 0.0001)
     }
+
+    func testNonFiniteInputFallsBackToUnity() {
+        // §2 — a non-finite measured LUFS (e.g. -inf for digital silence) must
+        // never produce a non-finite gain. Mirrors the Android-Rust guard test
+        // (audition.rs volume_match_linear_gain non-finite cases).
+        XCTAssertEqual(volumeMatchLinearGain(sideLufs: -.infinity, otherLufs: -10), 1.0)
+        XCTAssertEqual(volumeMatchLinearGain(sideLufs: -10, otherLufs: .nan), 1.0)
+        XCTAssertEqual(volumeMatchLinearGain(sideLufs: .infinity, otherLufs: .infinity), 1.0)
+        XCTAssertTrue(volumeMatchLinearGain(sideLufs: -.infinity, otherLufs: -10).isFinite)
+    }
 }
