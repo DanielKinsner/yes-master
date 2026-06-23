@@ -2122,10 +2122,18 @@ impl MasteringChain {
     /// between old and new coefficients without re-ringing the filters or
     /// dropping the limiter's gain envelope from zero state.
     pub fn with_coeffs_inheriting_state(coeffs: ChainCoeffs, prior: &Self) -> Self {
+        let mut limiter = prior.limiter.clone();
+        // §4 — carry the NEW effective ceiling so a live delivery-profile /
+        // ceiling edit clamps to the new limit immediately (matching a fresh
+        // `MasteringChain::new`), while preserving the limiter's envelope and
+        // lookahead state for a click-free update. `coeffs.ceiling_lin` is
+        // computed from the same clamped `effective_ceiling_dbtp()` the limiter
+        // uses, so this is exactly the value a rebuilt limiter would hold.
+        limiter.ceiling_lin = coeffs.ceiling_lin;
         Self {
             coeffs,
             states: prior.states.clone(),
-            limiter: prior.limiter.clone(),
+            limiter,
             gr_snapshots: prior.gr_snapshots.clone(),
         }
     }
@@ -2143,6 +2151,10 @@ impl MasteringChain {
         {
             return false;
         }
+        // `copy_state_from` re-installed the PRIOR ceiling along with the
+        // envelope; override it with the new coeffs' ceiling so a live ceiling
+        // change actually takes effect (§4). Read before `coeffs` is moved below.
+        self.limiter.ceiling_lin = coeffs.ceiling_lin;
         self.coeffs = coeffs;
         for (dst, src) in self.states.iter_mut().zip(prior.states.iter()) {
             dst.clone_from(src);
@@ -3299,6 +3311,68 @@ mod tests {
             album: None,
             advanced: AdvancedSettings::default(),
         }
+    }
+
+    #[test]
+    fn live_coeff_update_applies_the_new_ceiling_to_the_audition_limiter() {
+        // §4 — a live delivery-profile / ceiling change routes through the
+        // inherit-state coeff-update paths (NOT a fresh MasteringChain::new), so
+        // those paths must carry the new ceiling onto the limiter. Before the fix
+        // they cloned the prior limiter verbatim and kept the OLD ceiling.
+        let sr = 48_000u32;
+        let ch = 2usize;
+        let mut settings_a = default_master_settings();
+        settings_a.input_gain_db = 12.0; // drive the signal hard into the limiter
+        settings_a.advanced.ceiling_dbtp = Some(-1.0);
+        let mut settings_b = settings_a.clone();
+        settings_b.advanced.ceiling_dbtp = Some(-6.0);
+
+        let ceiling_a = 10.0_f32.powf(-1.0 / 20.0); // ≈ 0.8913
+        let ceiling_b = 10.0_f32.powf(-6.0 / 20.0); // ≈ 0.5012
+
+        let prior = MasteringChain::new(sr, ch, &settings_a);
+        assert!((prior.limiter.ceiling_lin - ceiling_a).abs() < 1.0e-6);
+
+        // 1) allocating inherit path installs the new ceiling.
+        let coeffs_b = ChainCoeffs::from_settings(sr, &settings_b);
+        let mut live = MasteringChain::with_coeffs_inheriting_state(coeffs_b, &prior);
+        assert!(
+            (live.limiter.ceiling_lin - ceiling_b).abs() < 1.0e-6,
+            "with_coeffs_inheriting_state kept the old ceiling: {}",
+            live.limiter.ceiling_lin
+        );
+
+        // 2) real-time-safe overwrite path installs the new ceiling too. The
+        //    preallocated target is built for settings_a, then inherits prior and
+        //    is overwritten with settings_b coeffs — the result must clamp to B.
+        let coeffs_b2 = ChainCoeffs::from_settings(sr, &settings_b);
+        let mut target = MasteringChain::new(sr, ch, &settings_a);
+        assert!(target.overwrite_with_coeffs_inheriting_state(coeffs_b2, &prior));
+        assert!(
+            (target.limiter.ceiling_lin - ceiling_b).abs() < 1.0e-6,
+            "overwrite_with_coeffs_inheriting_state kept the old ceiling: {}",
+            target.limiter.ceiling_lin
+        );
+
+        // 3) behavioral: a hot sine through the live chain must clamp to the NEW
+        //    (lower) ceiling, demonstrably below the OLD one.
+        let omega = 2.0 * std::f32::consts::PI * 1_000.0 / sr as f32;
+        let mut peak = 0.0_f32;
+        for i in 0..(sr as usize / 2) {
+            let s = 0.98 * (omega * i as f32).sin();
+            let mut frame = [s, s];
+            live.process_frame_inplace(&mut frame);
+            peak = peak.max(frame[0].abs()).max(frame[1].abs());
+        }
+        assert!(
+            peak <= ceiling_b + 5.0e-3,
+            "live output must clamp to the new ceiling {ceiling_b}, saw peak {peak}"
+        );
+        assert!(
+            peak < ceiling_a - 1.0e-2,
+            "live output peak {peak} must be well below the OLD ceiling {ceiling_a} \
+             (proves the live ceiling change took effect)"
+        );
     }
 
     #[test]
