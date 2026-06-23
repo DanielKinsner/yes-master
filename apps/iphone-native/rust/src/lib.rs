@@ -810,7 +810,10 @@ mod tests {
         let sentinel = CString::new(PANIC_SENTINEL_PATH).unwrap();
 
         let pointer = unsafe { yes_master_native_analyze_file_json(sentinel.as_ptr()) };
-        assert!(!pointer.is_null(), "guarded FFI must return a payload, not abort");
+        assert!(
+            !pointer.is_null(),
+            "guarded FFI must return a payload, not abort"
+        );
 
         let json = unsafe {
             let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
@@ -818,7 +821,10 @@ mod tests {
             value
         };
 
-        assert!(json.contains(r#""error""#), "panic must surface as error JSON: {json}");
+        assert!(
+            json.contains(r#""error""#),
+            "panic must surface as error JSON: {json}"
+        );
         assert!(json.contains("internal error"), "got {json}");
     }
 
