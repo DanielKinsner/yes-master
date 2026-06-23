@@ -461,6 +461,12 @@ pub unsafe extern "C" fn yes_master_native_live_create(
             if path.trim().is_empty() {
                 return std::ptr::null_mut();
             }
+            // §15 — the live audition path decodes the source file too; reject
+            // `..` traversal here as well so it matches the render path's guard
+            // (a rejected path yields NULL, the existing failure signal).
+            if yes_master_lib::files::has_parent_dir_component(Path::new(&path)) {
+                return std::ptr::null_mut();
+            }
             match LiveStream::create(Path::new(&path), preset.as_deref(), intensity, lufs_target) {
                 Some(stream) => Box::into_raw(Box::new(stream)),
                 None => std::ptr::null_mut(),
@@ -760,6 +766,15 @@ mod tests {
     use std::sync::Mutex;
 
     static ADAPTIVE_COMPRESSION_GATE_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn live_create_rejects_traversal_source_paths() {
+        // §15 — a `..`-bearing source path must yield NULL before any decode.
+        let path = CString::new("../escape.wav").unwrap();
+        let stream =
+            unsafe { yes_master_native_live_create(path.as_ptr(), std::ptr::null(), 0.5, -11.0) };
+        assert!(stream.is_null(), "traversal source path must be rejected");
+    }
 
     fn write_sine_wav(path: &std::path::Path, frames: u32, channels: u16) {
         let spec = hound::WavSpec {
