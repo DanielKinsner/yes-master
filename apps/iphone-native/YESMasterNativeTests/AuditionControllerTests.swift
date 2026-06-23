@@ -320,7 +320,7 @@ private final class RecordingStream: LiveAuditionStreaming {
         if measureDelay > 0 {
             Thread.sleep(forTimeInterval: measureDelay)
         }
-        (stubLandingGain, stubMasteredLufs)
+        return (stubLandingGain, stubMasteredLufs)
     }
 }
 
