@@ -17,7 +17,6 @@ object NativeBridge {
 
     private const val NULL_BRIDGE = """{"error":"native bridge returned null"}"""
 
-    private external fun bridgeVersionNative(): String?
     private external fun analyzeFileJsonNative(path: String): String?
     private external fun renderMasterWithOptionsJsonNative(
         sourcePath: String,
@@ -28,8 +27,6 @@ object NativeBridge {
     ): String?
 
     external fun supportsImportExtension(extension: String): Boolean
-
-    fun bridgeVersion(): String = bridgeVersionNative() ?: NULL_BRIDGE
 
     fun analyzeFileJson(path: String): String = analyzeFileJsonNative(path) ?: NULL_BRIDGE
 

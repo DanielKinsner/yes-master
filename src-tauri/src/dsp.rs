@@ -1697,43 +1697,6 @@ pub(crate) fn split_lr4_into_bands(x: f32, state: &mut LR4State) -> (f32, f32, f
     (low, mid, high)
 }
 
-/// Peak-detector envelope follower. One-pole smoothing with separate attack
-/// and release time constants. `env_n = (alpha * env_{n-1}) + ((1 - alpha) *
-/// |x_n|)` where `alpha = exp(-1 / (time_ms/1000 * sr))`. The selected alpha
-/// depends on whether the signal is rising (use attack) or decaying (use
-/// release).
-#[derive(Debug, Clone)]
-pub struct EnvelopeFollower {
-    pub env: f32,
-    pub alpha_attack: f32,
-    pub alpha_release: f32,
-}
-
-impl EnvelopeFollower {
-    pub fn new(sample_rate: f32, attack_ms: f32, release_ms: f32) -> Self {
-        Self {
-            env: 0.0,
-            alpha_attack: alpha_from_time_ms(sample_rate, attack_ms),
-            alpha_release: alpha_from_time_ms(sample_rate, release_ms),
-        }
-    }
-
-    #[inline]
-    pub fn process(&mut self, x_abs: f32) -> f32 {
-        let alpha = if x_abs > self.env {
-            self.alpha_attack
-        } else {
-            self.alpha_release
-        };
-        self.env = alpha * self.env + (1.0 - alpha) * x_abs;
-        self.env
-    }
-
-    pub fn reset(&mut self) {
-        self.env = 0.0;
-    }
-}
-
 #[inline]
 fn alpha_from_time_ms(sample_rate: f32, time_ms: f32) -> f32 {
     if time_ms <= 0.0 || sample_rate <= 0.0 {
@@ -4517,33 +4480,6 @@ mod tests {
         assert!(
             c.ceiling_lin > 0.0 && c.ceiling_lin < 1.0,
             "Off mode must preserve limiter ceiling protection"
-        );
-    }
-
-    #[test]
-    fn envelope_follower_attack_release_time_constants() {
-        let sr = 44_100.0f32;
-        let mut env = EnvelopeFollower::new(sr, 10.0, 100.0);
-        let attack_samples = (sr * 0.010) as usize;
-        let mut last = 0.0f32;
-        for _ in 0..attack_samples {
-            last = env.process(1.0);
-        }
-        assert!(
-            last >= 0.63,
-            "after 10 ms (attack tau) of step input, env should be >= 0.63 \
-             (1 - 1/e); got {}",
-            last
-        );
-        let release_samples = (sr * 0.100) as usize;
-        for _ in 0..release_samples {
-            last = env.process(0.0);
-        }
-        assert!(
-            last <= 0.37,
-            "after 100 ms (release tau) of zero input, env should be <= 0.37 \
-             (1/e); got {}",
-            last
         );
     }
 

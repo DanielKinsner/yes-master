@@ -328,23 +328,6 @@ impl DeliveryProfile {
             Self::Custom => None,
         }
     }
-
-    pub fn is_custom(&self) -> bool {
-        matches!(self, Self::Custom)
-    }
-
-    pub fn display_name(&self) -> &'static str {
-        match self {
-            Self::StreamingUniversal => "Streaming (Spotify / YouTube / Tidal / Amazon)",
-            Self::AppleMusic => "Apple Music",
-            Self::Cd => "CD (16-bit)",
-            Self::VinylPremaster => "Vinyl Premaster",
-            Self::LoudRock => "Loud Rock / Aggressive",
-            Self::BroadcastEu => "Broadcast EU (EBU R128)",
-            Self::BroadcastUs => "Broadcast US (ATSC A/85)",
-            Self::Custom => "Custom",
-        }
-    }
 }
 
 // ============================================================================
@@ -378,17 +361,6 @@ pub enum AlbumCharacter {
     ReturnAcoustic,
 }
 
-impl AlbumCharacter {
-    pub fn display_name(&self) -> &'static str {
-        match self {
-            Self::AcousticFolk => "Acoustic / Folk",
-            Self::Transition => "Transition",
-            Self::HeavyDjent => "Heavy / Djent",
-            Self::ReturnAcoustic => "Return / Acoustic",
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum AlbumArcKind {
@@ -416,15 +388,6 @@ impl AlbumArcKind {
             Self::Afterhours => [0.78, 0.66, 0.55, 0.43, 0.34, 0.28],
             Self::ClubPeak => [0.46, 0.62, 0.78, 0.96, 1.00, 0.74],
             Self::FeverDream => [0.58, 0.34, 0.86, 0.48, 1.00, 0.39],
-        }
-    }
-
-    pub fn display_name(&self) -> &'static str {
-        match self {
-            Self::Cinematic => "Cinematic",
-            Self::Afterhours => "Afterhours",
-            Self::ClubPeak => "Club Peak",
-            Self::FeverDream => "Fever Dream",
         }
     }
 }
@@ -923,8 +886,6 @@ pub struct UserPreset {
 
 #[derive(Debug, Error, Clone)]
 pub enum CommandError {
-    #[error("not implemented: {0}")]
-    NotImplemented(String),
     #[error("invalid path: {0}")]
     InvalidPath(String),
     #[error("decode error: {0}")]

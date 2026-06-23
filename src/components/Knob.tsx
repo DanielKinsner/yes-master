@@ -22,7 +22,6 @@ export type KnobTone =
   | "cyan"
   | "green"
   | "purple"
-  | "pink"
   | "gold"
   | "orange"
   | "red";
@@ -39,7 +38,6 @@ const TONE_COLOR: Record<KnobTone, string> = {
   cyan: "#22d3ee",
   green: "#34d399",
   purple: "#a78bfa",
-  pink: "#f472b6",
   gold: "#fbbf24",
   orange: "#fb923c",
   red: "#f87171",
