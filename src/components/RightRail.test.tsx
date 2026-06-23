@@ -324,6 +324,61 @@ describe("RightRail source checks", () => {
     });
   });
 
+  it("does not double-fire Export Anyway while an export is already in flight (§6)", async () => {
+    const onExport = vi.fn();
+    const { container, root } = await renderNode(
+      <RightRail
+        analysis={HOT_SOURCE_ANALYSIS}
+        lastChecks={undefined}
+        canExport
+        isExporting={false}
+        isRendering={false}
+        onExport={onExport}
+        previewStale={false}
+        canRenderPreview
+        onUpdatePreview={vi.fn()}
+      />,
+    );
+
+    const exportButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Export With Review",
+    ) as HTMLButtonElement | undefined;
+    await act(async () => {
+      exportButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    // An export is now under way — re-render with isExporting=true. The review
+    // panel stays open (analysis/lastChecks unchanged).
+    await act(async () => {
+      root.render(
+        <RightRail
+          analysis={HOT_SOURCE_ANALYSIS}
+          lastChecks={undefined}
+          canExport
+          isExporting={true}
+          isRendering={false}
+          onExport={onExport}
+          previewStale={false}
+          canRenderPreview
+          onUpdatePreview={vi.fn()}
+        />,
+      );
+    });
+
+    const anywayButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Export Anyway",
+    ) as HTMLButtonElement | undefined;
+    await act(async () => {
+      anywayButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onExport).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("exports immediately when current checks are clean", async () => {
     const onExport = vi.fn();
     const { container, root } = await renderNode(

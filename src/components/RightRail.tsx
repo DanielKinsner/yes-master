@@ -81,6 +81,9 @@ export function RightRail({
   };
 
   const handleExportAnyway = () => {
+    // Honor the same in-flight guard the primary button enforces — otherwise a
+    // second click while an export/render is running double-fires onExport (§6).
+    if (!canExport || isExporting || isRendering) return;
     setReviewOpen(false);
     onExport();
   };
