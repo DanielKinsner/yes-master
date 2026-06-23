@@ -184,6 +184,12 @@ jobs:
         working-directory: apps/iphone-native
         run: xcodegen generate
 
+      - name: Clear stale iOS Rust artifacts
+        working-directory: apps/iphone-native/rust
+        run: |
+          cargo clean --target aarch64-apple-ios-sim
+          cargo clean --target x86_64-apple-ios
+
       - name: iPhone Swift tests
         working-directory: apps/iphone-native
         run: |
