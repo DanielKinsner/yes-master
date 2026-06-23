@@ -74,6 +74,24 @@ class WireSamplesTest {
     }
 
     @Test
+    fun malformedNativeJsonDecodesToErrorDefaultsInsteadOfThrowing() {
+        // §6 — a malformed or empty native payload must NOT throw (that would
+        // crash the audition landing coroutine). It decodes to an error-bearing
+        // default the caller short-circuits on.
+        val landing = Wire.landing("{ this is not json")
+        assertNotNull("malformed landing must carry an error", landing.error)
+        assertEquals(1f, landing.gainLin, 1e-9f)
+
+        assertNotNull("empty landing must carry an error", Wire.landing("").error)
+        assertNotNull("\"null\" landing must carry an error", Wire.landing("null").error)
+        assertNotNull("malformed analysis must carry an error", Wire.analysis("}{").error)
+        assertNotNull(
+            "malformed render job must carry an error",
+            Wire.renderJob("not json at all").error,
+        )
+    }
+
+    @Test
     fun styleLabelsUseCanonicalPresetNames() {
         assertEquals(
             listOf("Universal", "Clarity", "Tape", "Oomph"),

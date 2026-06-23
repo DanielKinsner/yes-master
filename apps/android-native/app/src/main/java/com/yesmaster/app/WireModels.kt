@@ -50,7 +50,30 @@ data class WireLanding(
 object Wire {
     val gson: Gson = Gson()
 
-    fun analysis(json: String): WireAnalysis = gson.fromJson(json, WireAnalysis::class.java)
-    fun renderJob(json: String): WireRenderJob = gson.fromJson(json, WireRenderJob::class.java)
-    fun landing(json: String): WireLanding = gson.fromJson(json, WireLanding::class.java)
+    // §6 — the native bridge hands these JSON strings to Gson on a background
+    // dispatcher (e.g. AuditionController.measureLanding). A malformed or empty
+    // payload would otherwise throw JsonSyntaxException (or return null) and
+    // crash the coroutine. Decode defensively: any parse failure becomes an
+    // error-bearing default that callers already short-circuit on via `.error`.
+    private fun <T> parse(json: String, klass: Class<T>, fallback: () -> T): T =
+        try {
+            gson.fromJson(json, klass) ?: fallback()
+        } catch (_: com.google.gson.JsonParseException) {
+            fallback()
+        }
+
+    fun analysis(json: String): WireAnalysis =
+        parse(json, WireAnalysis::class.java) {
+            WireAnalysis(0.0, 0.0, 0.0, error = "malformed analysis payload")
+        }
+
+    fun renderJob(json: String): WireRenderJob =
+        parse(json, WireRenderJob::class.java) {
+            WireRenderJob(error = "malformed render-job payload")
+        }
+
+    fun landing(json: String): WireLanding =
+        parse(json, WireLanding::class.java) {
+            WireLanding(error = "malformed landing payload")
+        }
 }
