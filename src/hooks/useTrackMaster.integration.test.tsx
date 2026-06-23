@@ -988,6 +988,79 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("clears stale playing/meters off the auto-selected sibling when removing the loaded+playing track (§3)", async () => {
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const playing = makeTrack("remove-sibling-A", "C:/audio/a.wav");
+    const sibling = makeTrack("remove-sibling-B", "C:/audio/b.wav");
+    mocks.api.importTracks.mockResolvedValue([playing, sibling]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([playing.path, sibling.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().tracks).toHaveLength(2);
+      expect(harness.current().selectedTrackId).toBe(playing.id);
+      expect(playbackHandler).toBeDefined();
+    });
+
+    // Drive a "playing" tick with live (non-silence) meters on the selected track.
+    await act(async () => {
+      playbackHandler?.({
+        track_id: playing.id,
+        position_sec: 3,
+        is_playing: true,
+        is_loaded: true,
+        peak_dbfs: -6,
+        gr_low_db: -2,
+        gr_mid_db: -1,
+        gr_high_db: -3,
+        lufs_momentary: -10,
+        lufs_integrated: -11,
+        spectrum_db: [-30, -24],
+      });
+    });
+    await waitFor(() => {
+      expect(harness.current().transport.isPlaying).toBe(true);
+      expect(harness.current().transport.peakDbfs).toBe(-6);
+    });
+
+    await act(async () => {
+      harness.current().removeTrack(playing.id);
+    });
+
+    // The sibling is auto-selected and must NOT inherit a stale "playing"
+    // indicator or frozen meter values.
+    const after = harness.current();
+    expect(after.selectedTrackId).toBe(sibling.id);
+    expect(after.transport.isPlaying).toBe(false);
+    expect(after.transport.peakDbfs).toBe(-120);
+    expect(after.transport.lufsIntegrated).toBe(-120);
+    expect(after.transport.compressionGr).toEqual({ low: -120, mid: -120, high: -120 });
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("bakes delivery profile defaults into editable Advanced fields and lets Custom inherit them", async () => {
     const track = makeTrack("profile-1", "C:/audio/profile.wav");
     mocks.api.importTracks.mockResolvedValue([track]);

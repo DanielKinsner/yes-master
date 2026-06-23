@@ -1452,6 +1452,22 @@ export function useTrackMaster() {
         api.stopPlayback().catch(() => {
           /* swallow — best-effort */
         });
+        // The loaded chain is gone — clear the predicate and reset the live
+        // transport/meter state so the auto-selected sibling does not inherit a
+        // stale "playing" indicator or frozen meter values (§3).
+        setLoadedTrackId(null);
+        setTransport((t) => ({
+          ...t,
+          isPlaying: false,
+          currentTimeSec: 0,
+          peakDbfs: -120,
+          peakLeftDbfs: -120,
+          peakRightDbfs: -120,
+          compressionGr: { low: -120, mid: -120, high: -120 },
+          lufsMomentary: -120,
+          lufsIntegrated: -120,
+          spectrumDb: [],
+        }));
       }
       if (selectedTrackId === id) {
         const remaining = tracks.filter((t) => t.id !== id);
