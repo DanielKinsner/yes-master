@@ -12,6 +12,45 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-06-23 — Repo-wide audit remediation (macOS-weighted)
+
+Executed the 2026-06-23 audit plan
+(`docs/reviews/2026-06-23-repo-wide-audit-macos-focus.md`), Batches A–H, in
+small pushed commits with per-fix TDD and CI verification. All behavior-
+preserving except the explicit Batch C bug fixes; no preset/DSP voicing changed.
+
+- **Cross-platform goldens made arch/OS-independent (§1).** Replaced the per-OS
+  exact-byte preset SHAs + the `deep_analysis` `[u32;16]` and `analysis` 6-band
+  exact-equality goldens with a single reference compared within a tight
+  tolerance (decimated `max_abs_delta < 1e-6` for the chain output; scale-aware
+  value tolerance for the metrics). An Intel/x86_64 Mac now passes by
+  construction — no per-OS SHA regen ever needed again. Real-time DSP untouched;
+  confirmed green on macOS-arm64 CI and still fails on a synthetic drift.
+- **Live-audition correctness (Batch C).** §3 `removeTrack` no longer leaks a
+  stale playing/meter/loop state onto the auto-selected sibling; §4 a live
+  delivery-profile/ceiling change now reaches the audition limiter (was clamping
+  to the OLD ceiling until restart — broke "A/B matches export"); §5 an
+  Album↔Track switch mid-audition re-pushes the live chain.
+- **Stabilization tripwire tests (Batch A)** pinning the non-negotiables:
+  adaptive-compressor gate OFF by default, Volume-Match export-level invariance,
+  compressor-Off scope, VM-off default, and the wav write-primitive contract.
+- **Wire-drift gate hardened (Batch B):** recurse into nested struct types and
+  register the previously-ungated wire types (`ProjectState`, album render
+  payloads, `ExportReport`/`QualityCheck`/`UserPreset`, device/waveform).
+- **Small correctness (Batch D):** concurrent analysis-batch progress no longer
+  dropped; "Export Anyway" honors the export re-entrancy guard; Android native-
+  JSON Gson parses are crash-guarded.
+- **Security hardening (Batch E):** the shared mobile facade now rejects `..`
+  traversal on `output_dir`/`source_path` before `create_dir_all`/decode (closed
+  a sandbox-escape on both bridges); desktop path contract pinned + Swift
+  VolumeMatch finite-guard.
+- **Doc drift (Batch G):** landing style names corrected to Universal/Clarity/
+  Tape/Oomph; `ENGINE_REFERENCE.md` preset table + worked example regenerated
+  from the shipped 85%-lean constants; the macOS-SHA open thread closed.
+- **Dead-code delete (Batch H):** 3.2 MB of unreferenced landing PNGs + verified-
+  dead Rust/FE/mobile symbols removed (4 list items were found genuinely used
+  and kept).
+
 ## 2026-06-22 — Preset 85% lean + docs hygiene
 
 - **Presets re-voiced to the "85% lean."** All 8 character presets

@@ -20,6 +20,43 @@ verification; refuted findings are not listed.
 
 ---
 
+## Remediation status (executed 2026-06-23)
+
+Batches A–H executed in small pushed commits with per-fix TDD + CI verification.
+
+- **Batch A (§7–§10) — DONE.** Tripwire tests for the adaptive gate (OFF default),
+  VM export invariant (FE; backend already pinned), compressor-Off scope, VM-off
+  default, and the wav write primitive.
+- **Batch B (§11–§13) — DONE.** Drift gate now recurses into nested structs and
+  registers ProjectState, album payloads, export/quality/preset, device/waveform
+  (+ nested ImportedTrack). Proven to bite in both directions.
+- **Batch C (§3,§4,§5) — DONE.** removeTrack transport/meter/loop reset; live
+  ceiling reaches the audition limiter (regression-tested; **owner ear-check
+  recommended, see below**); Album↔Track mid-audition re-push.
+- **Batch D (§6) — DONE.** Analysis-batch progress set; Export-Anyway guard;
+  Android Gson crash-guard (+ a follow-up fix for a restore-path regression the
+  guard surfaced). §6d (album TOCTOU) skipped — already mitigated by the existing
+  dedup; §6e (iPhone double-decode) is perf-only, noted.
+- **Batch E (§14–§16) — DONE.** §15 real fix: mobile facade rejects `..` on
+  output_dir/source_path before create_dir_all/decode. §14: desktop contract
+  pinned (absolute paths intentionally allowed; base-confinement is an owner
+  decision). §16: already mitigated in current code.
+- **Batch F (§1,§2) — DONE.** Per-OS exact-byte goldens replaced with
+  arch/OS-independent tolerance goldens; Swift VolumeMatch finite-guard.
+  Confirmed green on macOS-arm64 CI; still fails on synthetic drift.
+- **Batch G (§17–§19) — DONE.** Landing style names; ENGINE_REFERENCE regen;
+  macOS-SHA thread closed.
+- **Batch H (D4) — PARTIAL.** 3.2 MB PNGs + clean Rust/FE/mobile dead symbols
+  deleted; 4 list items were genuinely used and kept; a verified-dead-but-test-
+  entangled tail is deferred (OPEN_THREADS #11b).
+- **Batch I (D7) — DEFERRED.** CSS refactors need browser verification the agent
+  sandbox can't provide; the plan's `.toast` rec is imprecise (would drop live
+  styling). See OPEN_THREADS #11a.
+- **Owner-gated backlog — left parked** as instructed (S5.4 canon, preset-
+  fingerprint harness, stereo_width disposition, AC-5 calibration).
+
+---
+
 ## How to read this
 
 Each finding is tagged **Fix now** or **Hold / owner-gated**, derived from your `CLAUDE.md`

@@ -44,6 +44,8 @@ resolved; see "Confirmed SHIPPED" below. Remaining threads are owner-gated._
 | 9 | **Tier-1 adaptive follow-ons** (tilt-vs-reference brightness, density-cap reshape, stereo_width co-trigger, per-axis EQ floors, LRA→Option) | ADAPTIVE_DSP_NEXT_STEPS; roadmap S10.4 | Wave 10 taste work. Tilt-vs-reference is highest-value. Gate every constant change behind a listening note + fingerprint test. |
 | 10 | **Tier-2 "smart" milestone** (measured-neutral per-preset, PSR/crest loop, corrective curve, reference matching, resonance/sibilance) | ADAPTIVE_DSP_NEXT_STEPS; roadmap S10.4/5 | Post-v1. B3 loss-budget + PSR transient protection are the most defensible first steps. See IDEAS_BACKLOG. |
 | 11 | **Mobile store-readiness** (iPhone PrivacyInfo/real-progress/error-enum; Android signing+keystore; background-audio) | roadmap Wave 8 / S8.x | Owner-gated, out of desktop-v1 scope. Android signing blocked on owner keystore. |
+| 11a | **CSS styling-debt batch (audit D7, 10 items)** — `.toast`/`.std-tile`/`.tile:hover` dedup, rail-width + z-index tokenization, dead `.chain-link` CSS, `.adaptive-readout` inline→class | 2026-06-23 audit Batch I | **Deferred — needs a browser.** CSS refactors can't be visually verified in the headless agent sandbox (dev server can't bind; `verify:landing` fails `ERR_CONNECTION_REFUSED`), and the plan's recs are imprecise (e.g. "delete the `.toast` base block" would actually drop live `background/border/padding`, not just the overridden `position`). Do these in a session with a working preview. |
+| 11b | **Dead-code tail (audit D4 leftovers)** — `profile_store::insert`, `LandingGainCache` test helpers, `deep_analysis` `harsh_share`/`sibilant_share`, AdvancedPanel `bandFields` auto-strings, `shouldForceAdvancedOnStandardEntry`, iphone `cdylib` crate-type | 2026-06-23 audit Batch H | Verified-dead but **test-entangled / mobile-unverifiable-locally**; left for a focused follow-up delete commit (each needs its test callers updated or a CI round-trip). |
 
 ### UNKNOWN — verify before acting
 
@@ -92,6 +94,7 @@ cluster can mostly close in one sitting.**
 12. Broaden the "Local desktop app for Mac and Windows" non-negotiable to acknowledge iPhone + Android (and web)? *(Recommended yes — the CI already runs the mobile lanes.)*
 
 ### Packaging / platform
+12a. **Path sandboxing (audit §14).** The desktop path guard intentionally rejects only `..` and ALLOWS absolute paths — required for the native-file-picker model (the user imports/exports arbitrary locations). Base-dir confinement / symlink-target rejection would break that, so it's a product decision: keep the current model, or introduce a sandboxed mode? (The mobile bridges ARE now `..`-guarded — audit §15.) Default: keep current desktop model.
 13. Confirm **macOS build/install status** — add a parallel macOS-packaging release criterion to PRODUCT.md?
 14. **Android signing/bundleRelease** is blocked on you providing a keystore — when?
 15. Mobile **background-audio** behavior (UIBackgroundModes / foreground service) — v1 limitation or build it?
