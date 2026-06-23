@@ -635,4 +635,41 @@ mod tests {
             );
         }
     }
+
+    /// Characterization test (§10): the write primitive itself has NO
+    /// overwrite protection — `write_wav` -> `replace_with_tmp` atomically
+    /// replaces an existing final path. The "exports never overwrite by
+    /// default" guarantee is enforced entirely by the *callers*
+    /// (`unique_output_path` / `explicit_output_path` existence checks in
+    /// engine.rs / album_render.rs), NOT here. This test pins that contract so
+    /// a future caller does not mistakenly assume the primitive will refuse to
+    /// clobber an existing file.
+    #[test]
+    fn write_wav_replaces_an_existing_final_path_overwrite_guard_is_callers_job() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let out = tmp.path().join("overwrite-me.wav");
+
+        write_wav(&out, &[-0.5, 0.0, 0.5], 48_000, 1, 16).expect("first write");
+        let first_bytes = fs::read(&out).expect("read first write");
+
+        // A second write of different content to the SAME path replaces it.
+        write_wav(&out, &[0.25, -0.25, 0.75, -0.75], 48_000, 1, 16).expect("second write");
+        let second_bytes = fs::read(&out).expect("read second write");
+
+        assert_ne!(
+            first_bytes, second_bytes,
+            "the write primitive replaced the file in place; if this ever starts \
+             refusing to overwrite, the caller-side overwrite guards must be revisited"
+        );
+        let mut reader = hound::WavReader::open(&out).expect("open replaced wav");
+        let decoded: Vec<i16> = reader
+            .samples::<i16>()
+            .collect::<Result<Vec<_>, _>>()
+            .expect("decode replaced samples");
+        assert_eq!(
+            decoded.len(),
+            4,
+            "final file holds the second write's samples"
+        );
+    }
 }
