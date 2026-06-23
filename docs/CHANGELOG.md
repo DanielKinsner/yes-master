@@ -20,8 +20,9 @@ Dates are milestone dates, not exact commit times.
   earlier full-100% pass after listening. Windows byte-identity snapshots
   regenerated; Windows desktop build rebuilt and installed. (`659bea5`)
 - **macOS verification handoff** added — `docs/HANDOFF_2026-06-22_MACOS_VERIFICATION.md`.
-  The 7 macOS snapshot SHAs are Windows placeholders, so the macOS CI snapshot
-  lane is **red** until regenerated on a real Mac. (`3d6818a`)
+  The 7 macOS snapshot SHAs were initially Windows placeholders (`3d6818a`);
+  real Apple Silicon SHAs landed in `cc03d56`, and the follow-up deep-analysis
+  per-OS fixture bits landed in `88853dc`.
 - **README** sharpened (local-first, "no black box" framing). (`8d2e20a`)
 - **Docs hygiene pass**: 31 completed/superseded docs archived under
   `docs/archive/` with status banners; this ledger system (CHANGELOG /
@@ -90,6 +91,6 @@ Dates are milestone dates, not exact commit times.
 ### Still in flight (not shipped)
 
 See **docs/OPEN_THREADS_AND_DECISIONS.md** for the live list. Headlines:
-macOS snapshot regen (CI red), the AC-5 adaptive-compressor listening session +
-Phase-B gate flip, the three Wave-10 listening signoffs, the PRODUCT.md S5.4
-canon refresh (mobile/album/adaptive wording), and mobile store-readiness.
+the AC-5 adaptive-compressor listening session + Phase-B gate flip, the three
+Wave-10 listening signoffs, the PRODUCT.md S5.4 canon refresh
+(mobile/album/adaptive wording), and mobile store-readiness.

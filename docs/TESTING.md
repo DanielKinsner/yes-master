@@ -56,7 +56,7 @@ cargo ndk -t arm64-v8a --platform 29 check
 
 This lane needs the Android toolchain from `docs/ANDROID_NATIVE_SPEC.md`:
 JDK 17 on `JAVA_HOME`, SDK/NDK r27.2 via `local.properties` or
-`ANDROID_HOME`, Rust Android targets, and `cargo-ndk` 3.5.6 or newer.
+`ANDROID_HOME`, Rust Android targets, and `cargo-ndk` 4.1.2 or newer.
 `--platform 29` matches `minSdk`; cargo-ndk's default API 21 sysroot predates
 `libaaudio`, so the audition link fails without it.
 

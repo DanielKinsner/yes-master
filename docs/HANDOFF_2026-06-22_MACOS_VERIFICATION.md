@@ -1,5 +1,9 @@
 # Handoff — macOS Verification (2026-06-22)
 
+> **Status:** Resolved on 2026-06-22 on Apple Silicon. The original handoff
+> below is historical; see **RESOLUTION — 2026-06-22** at the end before
+> treating any macOS SHA task as open.
+
 **For:** a coding agent running on a real **MacBook** (you).
 **From:** the Windows session that just shipped the preset **85% lean** recalibration.
 **Repo state:** `main` @ `659bea5` — `presets: 85% lean across the lineup (back off from full 100%)`.

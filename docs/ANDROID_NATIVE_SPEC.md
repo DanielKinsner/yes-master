@@ -210,7 +210,7 @@ owner's Windows machine 2026-06-10): JDK 17 on `JAVA_HOME`, Android SDK
 (platform 35, build-tools 35) + NDK r27.2 with `sdk.dir` in
 `apps/android-native/local.properties` (gitignored) or `ANDROID_HOME`,
 rust targets `aarch64-linux-android`/`x86_64-linux-android`, and
-**cargo-ndk ≥ 3.5.6** — the 16 KB page alignment Android 15+ requires is
+**cargo-ndk 4.1.2 or newer** — the 16 KB page alignment Android 15+ requires is
 supplied by cargo-ndk's default linker flag, not by NDK r27 itself.
 
 ## A3 execution record (2026-06-10)

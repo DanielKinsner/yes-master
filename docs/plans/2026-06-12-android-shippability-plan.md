@@ -13,7 +13,7 @@ interrogate the owner), `docs/archive/plans/2026-06-10-001-android-a4-action-pla
 ANDROID_NATIVE_SPEC.md and never executed; this plan absorbs it),
 `docs/plans/2026-06-12-adaptive-compressor-mvp-spec.md` (AC-4 touches this
 app's bridge tests). Toolchain prerequisites: docs/ANDROID_NATIVE_SPEC.md
-"Build prerequisites" (JDK 17, NDK r27.2, cargo-ndk ≥3.5.6,
+"Build prerequisites" (JDK 17, NDK r27.2, cargo-ndk 4.1.2 or newer,
 `--platform 29`).
 
 Current state, one paragraph: Kotlin app + Rust crate reusing the shared

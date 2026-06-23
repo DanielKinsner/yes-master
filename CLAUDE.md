@@ -45,10 +45,11 @@ decisions live in `docs/OPEN_THREADS_AND_DECISIONS.md`.
 
 **Most recent DSP change:** the 8 character presets were re-voiced to the
 "85% lean" (commit `659bea5`; `custom` untouched). Windows byte-identity
-snapshots were regenerated and the Windows build is installed, but the 7 macOS
-snapshot SHAs are Windows placeholders — so the **macOS CI snapshot lane is RED
-until regenerated on a Mac** (`docs/HANDOFF_2026-06-22_MACOS_VERIFICATION.md`).
-Listen before any further preset retuning.
+snapshots were regenerated and the Windows build is installed. The macOS
+snapshot SHAs were recorded on Apple Silicon in `cc03d56`, and the follow-up
+deep-analysis per-OS fixture bits landed in `88853dc`, so the Mac SHA issue is
+closed; do not treat snapshot regeneration as open. Listen before any further
+preset retuning.
 
 Owner-gated listening signoffs, **deferred to Wave 10** (per
 `docs/RELEASE_STABILIZATION.md`) — not the immediate queue:
@@ -94,8 +95,8 @@ The `target\codex-rc` target-dir is a **local convention** (avoids clobbering
 other build dirs); CI uses the default target and runs plain `cargo fmt --check`,
 `cargo clippy --all-targets -- -D warnings`, and `cargo test`. CI runs Windows,
 macOS, and Android lanes on every push, and the **macOS lane runs `cargo test`**
-— so the preset byte-identity snapshots gate there (currently RED; see the
-Jump-Fix note above). `npm run verify:fast` / `verify:rust` / `verify:iphone` /
+— so the preset byte-identity snapshots gate there. `npm run verify:fast` /
+`verify:rust` / `verify:iphone` /
 `verify:android` wrap these lanes. If you touch the web landing page, run
 `npm run verify:landing` (whether the landing page is in agent scope is an open
 owner decision — see `docs/OPEN_THREADS_AND_DECISIONS.md`).
@@ -118,7 +119,7 @@ AND the iPhone facade crate as an rlib. When you touch shared crate types,
 the facade, or the android crate, run its lane too (host tests + arm64
 cross-check; needs the toolchain from docs/ANDROID_NATIVE_SPEC.md "Build
 prerequisites" — JDK 17 on JAVA_HOME, SDK+NDK r27.2 via local.properties or
-ANDROID_HOME, rust android targets, cargo-ndk ≥ 3.5.6):
+ANDROID_HOME, rust android targets, cargo-ndk 4.1.2 or newer):
 
 ```powershell
 cd apps/android-native/rust

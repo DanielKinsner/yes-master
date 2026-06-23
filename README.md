@@ -146,7 +146,7 @@ cargo ndk -t arm64-v8a --platform 29 check
 ```
 
 The Android cross-check needs the toolchain described in
-`docs/ANDROID_NATIVE_SPEC.md` (JDK 17, SDK + NDK r27.2, cargo-ndk ≥ 3.5.6).
+`docs/ANDROID_NATIVE_SPEC.md` (JDK 17, SDK + NDK r27.2, cargo-ndk 4.1.2 or newer).
 
 CI runs the Windows, macOS (including iPhone Swift tests), and Android JVM
 lanes plus cross-platform DSP snapshot diagnostics on every push to `main`.
