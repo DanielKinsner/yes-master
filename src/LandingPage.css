@@ -165,8 +165,8 @@ body {
   z-index: -2;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(3, 5, 9, 0.99) 0%, rgba(3, 5, 9, 0.96) 34%, rgba(3, 5, 9, 0.76) 43%, rgba(3, 5, 9, 0.18) 59%, rgba(3, 5, 9, 0.08) 100%),
-    linear-gradient(180deg, rgba(3, 5, 9, 0.62) 0%, rgba(3, 5, 9, 0.08) 28%, rgba(3, 5, 9, 0.3) 100%);
+    linear-gradient(90deg, rgba(3, 5, 9, 0.74) 0%, rgba(3, 5, 9, 0.52) 26%, rgba(3, 5, 9, 0.22) 44%, rgba(3, 5, 9, 0.04) 62%, rgba(3, 5, 9, 0) 100%),
+    linear-gradient(180deg, rgba(3, 5, 9, 0.32) 0%, rgba(3, 5, 9, 0) 26%, rgba(3, 5, 9, 0.18) 100%);
 }
 
 .landing-hero::after {
@@ -175,7 +175,7 @@ body {
   inset: auto 0 0;
   z-index: -1;
   height: 22%;
-  background: linear-gradient(180deg, transparent, rgba(3, 5, 9, 0.84));
+  background: linear-gradient(180deg, transparent, rgba(3, 5, 9, 0.5));
   pointer-events: none;
 }
 
@@ -234,24 +234,24 @@ body {
 
 .landing-proof li {
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr);
+  grid-template-columns: 48px minmax(0, 1fr);
   gap: 16px;
   align-items: center;
-  max-width: 470px;
+  max-width: 392px;
   padding: 0;
 }
 
 .landing-proof-icon {
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
 }
 
 .landing-proof li p {
   width: auto;
   margin: 0;
   font-family: var(--landing-font);
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: 15.5px;
+  line-height: 1.5;
   font-weight: 400;
   color: var(--landing-muted);
 }
