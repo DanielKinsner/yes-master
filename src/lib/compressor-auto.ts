@@ -28,7 +28,7 @@ const PRESET_COMPRESSOR: Record<Preset["kind"], PresetCompressorCalibration> = {
   oomph: { thresholdDb: -15.5, ratio: 1.7, attackMs: 25, releaseMs: 280 },
   warmth: { thresholdDb: -19, ratio: 2.0, attackMs: 20, releaseMs: 280 },
   punch: { thresholdDb: -20, ratio: 2.8, attackMs: 10, releaseMs: 100 },
-  loud: { thresholdDb: -23, ratio: 3.5, attackMs: 15, releaseMs: 180 },
+  loud: { thresholdDb: -23, ratio: 4.09, attackMs: 15, releaseMs: 180 },
   custom: { thresholdDb: -16, ratio: 1.8, attackMs: 15, releaseMs: 200 },
 };
 

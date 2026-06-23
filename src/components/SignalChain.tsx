@@ -50,15 +50,15 @@ function presetSaturation(preset: Preset): number {
 export function presetDefaultWidth(preset: Preset): number {
   switch (preset.kind) {
     case "universal":
-      return 1.04;
+      return 1.11;
     case "clarity":
-      return 1.02;
+      return 1.09;
     case "tape":
-      return 0.99;
+      return 0.93;
     case "spatial":
-      return 1.16;
+      return 1.45;
     case "oomph":
-      return 0.95;
+      return 0.84;
     case "warmth":
       return 0.98;
     case "punch":

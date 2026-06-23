@@ -15,7 +15,7 @@
     },
     "loud": {
       "attack_ms": 15.0,
-      "ratio": 3.5,
+      "ratio": 4.09,
       "release_ms": 180.0,
       "threshold_db": -23.0
     },
@@ -57,14 +57,14 @@
     }
   },
   "stereo_width": {
-    "clarity": 1.02,
+    "clarity": 1.09,
     "custom": 1.0,
     "loud": 1.03,
-    "oomph": 0.95,
+    "oomph": 0.84,
     "punch": 1.04,
-    "spatial": 1.16,
-    "tape": 0.99,
-    "universal": 1.04,
+    "spatial": 1.45,
+    "tape": 0.93,
+    "universal": 1.11,
     "warmth": 0.98
   }
 }

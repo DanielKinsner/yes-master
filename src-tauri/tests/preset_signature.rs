@@ -233,9 +233,9 @@ fn preset_signatures_match_calibration_tuples() {
         ),
         // Clarity: post-A4 conservative target = air boost, low-mid AND
         // presence cut. Signature is "air clearly above mids" — no longer
-        // a presence boost. Observed air-vs-mud +1.38, air-vs-presence
-        // +1.65; presence-vs-mud collapsed to -0.27 (presence cut deeper
-        // than the assertion's old direction).
+        // a presence boost. The owner-accepted 85% lean keeps the air lift
+        // subtler than the full-reference fit; observed air-vs-mud +1.54,
+        // air-vs-presence +0.94.
         (
             "Clarity",
             Preset::Clarity,
@@ -245,8 +245,8 @@ fn preset_signatures_match_calibration_tuples() {
                     "air vs presence",
                     f_air,
                     f_presence,
-                    |d| d >= 1.0,
-                    ">= +1.0 dB",
+                    |d| d >= 0.9,
+                    ">= +0.9 dB",
                 ),
             ],
         ),

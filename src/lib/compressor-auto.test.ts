@@ -76,7 +76,7 @@ describe("compressorAutoReadouts", () => {
 
     expect(auto.low).toMatchObject({
       thresholdLabel: "-26.0 dB",
-      ratioLabel: "4.0:1",
+      ratioLabel: "4.6:1",
       attackLabel: "15 ms",
       releaseLabel: "180 ms",
     });
