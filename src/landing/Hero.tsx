@@ -42,7 +42,7 @@ export default function Hero() {
 
       {/* Copy column. A normal block (so its width can never exceed the
           screen), full width on phones, ~half on desktop. */}
-      <div className="relative mx-auto flex min-h-svh max-w-7xl flex-col justify-start gap-6 px-5 pt-28 pb-20 sm:px-8 lg:w-[54%] lg:pl-12">
+      <div className="relative flex min-h-svh w-full flex-col justify-start gap-6 px-5 pt-28 pb-20 sm:px-8 lg:w-[54%] lg:max-w-[600px] lg:pl-16">
         <span className="text-xs font-black uppercase tracking-wide text-brand-soft">
           Y.E.S. Master / Instantly master your track
         </span>
