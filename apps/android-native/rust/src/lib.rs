@@ -87,14 +87,6 @@ pub mod inner {
         serde_json::json!({ "error": message }).to_string()
     }
 
-    pub fn bridge_version() -> String {
-        let ptr = native_bridge::yes_master_native_bridge_version();
-        // SAFETY: static NUL-terminated string owned by the facade.
-        unsafe { CStr::from_ptr(ptr) }
-            .to_string_lossy()
-            .into_owned()
-    }
-
     pub fn supports_import_extension(extension: &str) -> bool {
         let Ok(extension) = CString::new(extension) else {
             return false;
@@ -157,18 +149,6 @@ mod jni_shims {
     use jni::objects::{JObject, JString};
     use jni::sys::{jboolean, jfloat, jstring, JNI_FALSE, JNI_TRUE};
     use jni::JNIEnv;
-
-    #[no_mangle]
-    pub extern "system" fn Java_com_yesmaster_app_NativeBridge_bridgeVersionNative(
-        mut env: JNIEnv,
-        _this: JObject,
-    ) -> jstring {
-        let result = catch_panic(
-            || "yes-master-bridge/unknown".to_string(),
-            inner::bridge_version,
-        );
-        to_jstring(&mut env, result)
-    }
 
     #[no_mangle]
     pub extern "system" fn Java_com_yesmaster_app_NativeBridge_supportsImportExtension(
@@ -337,11 +317,6 @@ mod tests {
     fn write_sine_wav(path: &Path) {
         // 2 s stereo @ 44.1 kHz — what these wire/parity tests always used.
         write_sine_wav_with(path, 88_200, 2, 44_100);
-    }
-
-    #[test]
-    fn version_links_the_shared_facade() {
-        assert!(inner::bridge_version().contains("yes-master"));
     }
 
     #[test]
