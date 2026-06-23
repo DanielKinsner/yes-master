@@ -494,6 +494,19 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("defaults a fresh track's Volume Match OFF (non-negotiable: VM off by default)", async () => {
+    const harness = await renderHookHarness();
+
+    // With no track edited, selectedSettings falls back to the production
+    // DEFAULT_SETTINGS literal; this pins volume_match:false there so a flip of
+    // the default would be caught.
+    expect(harness.current().selectedSettings.volume_match).toBe(false);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("keeps Volume Match and Preview LUFS mutually exclusive", async () => {
     const harness = await renderHookHarness();
 

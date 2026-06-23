@@ -170,6 +170,27 @@ describe("effectiveSampleRate", () => {
   });
 });
 
+describe("export level is independent of Volume Match (non-negotiable)", () => {
+  // PRODUCT.md: "Volume Match ... does not change export level." The backend
+  // proves the rendered samples are identical with VM on/off
+  // (src-tauri/tests/export_volume_match.rs); this pins the frontend side —
+  // every accessor that determines the export's effective level/format reads
+  // the same value regardless of the VM toggle that the export payload carries.
+  it("leaves target, ceiling, bit depth, and sample rate unchanged when VM toggles", () => {
+    const off = makeSettings("custom", {
+      lufs_offset_db: -12,
+      ceiling_dbtp: -1.5,
+      bit_depth: 24,
+      target_sample_rate: 48_000,
+    });
+    const on: MasteringSettings = { ...off, volume_match: true };
+    expect(effectiveLoudnessTarget(on)).toBe(effectiveLoudnessTarget(off));
+    expect(effectiveCeilingDbtp(on)).toBe(effectiveCeilingDbtp(off));
+    expect(effectiveBitDepth(on)).toBe(effectiveBitDepth(off));
+    expect(effectiveSampleRate(on)).toBe(effectiveSampleRate(off));
+  });
+});
+
 describe("LOUDNESS_PROFILES (quick-select dropdown options)", () => {
   it("exposes the four canonical dropdown entries", () => {
     // Single source of truth — the rendered <option> list AND the

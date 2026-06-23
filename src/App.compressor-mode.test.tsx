@@ -475,6 +475,45 @@ describe("AdvancedPanel compressor mode", () => {
     });
   });
 
+  it("Compressor Off mutates only compression_mode, leaving limiter/ceiling/LUFS/format intact", async () => {
+    // Non-negotiable (PRODUCT.md): the Off tab bypasses *creative* compression
+    // only. It must not touch the limiter, ceiling protection, LUFS landing, or
+    // the delivery format — those live in other `advanced` fields. Seed every
+    // such field with a non-default value and prove switching to Off flips
+    // exactly one key.
+    const seededAdvanced: Partial<AdvancedSettings> = {
+      ceiling_dbtp: -2, // ceiling protection
+      lufs_offset_db: -13, // LUFS landing
+      bit_depth: 24, // delivery format
+      target_sample_rate: 96_000, // delivery format
+      compression_low_threshold_db: -18, // a manual band override
+      compression_low_ratio: 2.0,
+      compression_mode: "preset",
+    };
+    const onAdvanced = vi.fn();
+    const { container, root } = await renderAdvancedPanel({
+      settings: makeSettings(seededAdvanced),
+      onAdvanced,
+    });
+
+    await act(async () => {
+      buttonNamed(container, "Off").dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+    });
+
+    expect(onAdvanced).toHaveBeenCalledTimes(1);
+    expect(onAdvanced).toHaveBeenCalledWith({
+      ...DEFAULT_ADVANCED,
+      ...seededAdvanced,
+      compression_mode: "off",
+    });
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("uses preset fallback labels and source guidance instead of Auto copy", async () => {
     const manual = await renderAdvancedPanel({
       analysis: makeAnalysis(4.8),
