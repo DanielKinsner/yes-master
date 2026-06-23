@@ -226,7 +226,7 @@ final class AuditionController: ObservableObject {
                 setStatus("Ready. Press play to audition.")
             case .failure(let error):
                 analysisResult = nil
-                setError(audioErrorState(error, fallback: .analysisFailed))
+                setError(audioErrorState(error, fallback: AuditionErrorState.analysisFailed))
             }
         }
     }
@@ -514,7 +514,7 @@ final class AuditionController: ObservableObject {
                 setStatus("Master created. Share it anytime.")
             case .failure(let error):
                 shareMasterURL = nil
-                setError(audioErrorState(error, fallback: .renderFailed))
+                setError(audioErrorState(error, fallback: AuditionErrorState.renderFailed))
             }
         }
     }
