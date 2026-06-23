@@ -4122,9 +4122,9 @@ mod tests {
                 Preset::Universal,
                 expected_platform_sha(
                     "fd8377b103f8c20c0f95e4571d1f6588a79be5ee448ce14c915363d22e687ebe",
-                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
-                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "fd8377b103f8c20c0f95e4571d1f6588a79be5ee448ce14c915363d22e687ebe",
+                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
+                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
+                    "6751134fbe6d806a70704a3ba659c05a5c5d4339b386af1259ab8e51c470c0b3",
                 ),
             );
         }
@@ -4136,9 +4136,9 @@ mod tests {
                 Preset::Clarity,
                 expected_platform_sha(
                     "e91137eea1a936bbd514c123152d7f63d524049e039f2aebdd4bcc5b898ea427",
-                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
-                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "e91137eea1a936bbd514c123152d7f63d524049e039f2aebdd4bcc5b898ea427",
+                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
+                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
+                    "d6c783d1773f920bf61c8042763b9314422bde7ec1064fe005cf2b6adcd94e67",
                 ),
             );
         }
@@ -4150,9 +4150,9 @@ mod tests {
                 Preset::Tape,
                 expected_platform_sha(
                     "09bb604bfd17fd4995f3d27af5fb0546a107772ee1facb81873d05a33fdc0f68",
-                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
-                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "09bb604bfd17fd4995f3d27af5fb0546a107772ee1facb81873d05a33fdc0f68",
+                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
+                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
+                    "59d5f3d00c28e57cba20dbb0cb49ed4b020c83373c3204df51094b5dc9a6ab08",
                 ),
             );
         }
@@ -4178,9 +4178,9 @@ mod tests {
                 Preset::Oomph,
                 expected_platform_sha(
                     "b941c64bb127b5d71b0e7195ed20f8e748d7888022eed96de9dea1c815630ea0",
-                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
-                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "b941c64bb127b5d71b0e7195ed20f8e748d7888022eed96de9dea1c815630ea0",
+                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
+                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
+                    "09888d94dc4b513eca15834b0090cf8c2c12026d072b8cb74da68e52f59c1eef",
                 ),
             );
         }
@@ -4192,9 +4192,9 @@ mod tests {
                 Preset::Warmth,
                 expected_platform_sha(
                     "5460bbfc534f5ae68dbb10dd498b2882ab785e475e4fe6dd9867924310561197",
-                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
-                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "5460bbfc534f5ae68dbb10dd498b2882ab785e475e4fe6dd9867924310561197",
+                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
+                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
+                    "158aee07e81f98ab83de0d3e0c559e2adbfcaf4775f24b75e2060b00733757dc",
                 ),
             );
         }
@@ -4206,9 +4206,9 @@ mod tests {
                 Preset::Punch,
                 expected_platform_sha(
                     "f6e7ec7f978dc669548d94f3efc633417daffb14f01315962495bcb99ddb6a25",
-                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
-                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "f6e7ec7f978dc669548d94f3efc633417daffb14f01315962495bcb99ddb6a25",
+                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
+                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
+                    "6c45997122f50037b5705563c98e2e869a80b0c2947a8c361833bc4a34a63c6f",
                 ),
             );
         }
@@ -4220,9 +4220,9 @@ mod tests {
                 Preset::Loud,
                 expected_platform_sha(
                     "c37c6d4fc5978b53c903761d58d2fc1eb9f5c2f02919e2833be8644f6178b566",
-                    // 2026-06-22 preset 85% lean (owner-directed): Windows hash regenerated;
-                    // macOS value below is a PLACEHOLDER (= Windows) — regenerate on a Mac.
-                    "c37c6d4fc5978b53c903761d58d2fc1eb9f5c2f02919e2833be8644f6178b566",
+                    // 2026-06-22 preset 85% lean: Windows hash above unchanged; macOS hash below
+                    // observed on local Apple Silicon (arm64) macOS 26.5 (rustc 1.95 and 1.96 agree).
+                    "19789afbd375be6de46ef5e8ccec4666b681ec24212ee8b5d880bb672d656ae0",
                 ),
             );
         }
