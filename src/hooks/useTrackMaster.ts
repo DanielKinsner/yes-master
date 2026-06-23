@@ -441,7 +441,11 @@ export function useTrackMaster() {
   //
   // Renaming preserved as `withSourceLufs` to keep diffs small; the
   // comment block above is the source of truth for what it actually does.
-  const currentAnalysisBatchRef = useRef<string | null>(null);
+  // The SET of in-flight analysis batch ids (§6). Tracking a set rather than a
+  // single "current" id means a batch finishing never drops a *different* batch's
+  // analysis:progress events — the old single-ref design nulled the ref when the
+  // most-recent batch finished first, silently dropping an earlier batch's progress.
+  const inFlightAnalysisBatchesRef = useRef<Set<string>>(new Set());
   const analysisInFlightRef = useRef(0);
   const selectedTrackIdRef = useRef<TrackId | null>(null);
   selectedTrackIdRef.current = selectedTrackId;
@@ -468,19 +472,15 @@ export function useTrackMaster() {
   );
   const beginAnalysis = useCallback(() => {
     const batchId = nextAnalysisBatchId();
-    currentAnalysisBatchRef.current = batchId;
-    analysisInFlightRef.current += 1;
+    inFlightAnalysisBatchesRef.current.add(batchId);
+    analysisInFlightRef.current = inFlightAnalysisBatchesRef.current.size;
     setAnalysisInFlightCount(analysisInFlightRef.current);
     return batchId;
   }, []);
 
   const finishAnalysis = useCallback((batchId: string) => {
-    analysisInFlightRef.current = Math.max(0, analysisInFlightRef.current - 1);
-    if (analysisInFlightRef.current === 0) {
-      currentAnalysisBatchRef.current = null;
-    } else if (currentAnalysisBatchRef.current === batchId) {
-      currentAnalysisBatchRef.current = null;
-    }
+    inFlightAnalysisBatchesRef.current.delete(batchId);
+    analysisInFlightRef.current = inFlightAnalysisBatchesRef.current.size;
     setAnalysisInFlightCount(analysisInFlightRef.current);
   }, []);
 
@@ -601,7 +601,7 @@ export function useTrackMaster() {
       unlistenLanding = fn;
     });
     onAnalysisProgress((evt) => {
-      if (evt.batch_id !== currentAnalysisBatchRef.current) return;
+      if (!inFlightAnalysisBatchesRef.current.has(evt.batch_id)) return;
       setRealAnalysisProgress({ label: evt.label, progress: evt.fraction });
     }).then((fn) => {
       unlistenAnalysis = fn;

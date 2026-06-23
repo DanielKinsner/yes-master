@@ -1675,6 +1675,70 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("keeps an earlier analysis batch's progress after a later batch finishes first (§6)", async () => {
+    let progressHandler:
+      | ((evt: { batch_id: string; label: string; fraction: number }) => void)
+      | undefined;
+    mocks.onAnalysisProgress.mockImplementation((handler) => {
+      progressHandler = handler;
+      return Promise.resolve(() => {});
+    });
+
+    const batchIds: string[] = [];
+    const resolvers: Record<string, (v: AnalysisResult[]) => void> = {};
+    mocks.api.analyzeTracks.mockImplementation(
+      (_tracks: Array<{ id: TrackId }>, batchId: string) => {
+        batchIds.push(batchId);
+        const d = deferred<AnalysisResult[]>();
+        resolvers[batchId] = d.resolve;
+        return d.promise;
+      },
+    );
+
+    const trackA = makeTrack("batch-a", "C:/audio/batch-a.wav");
+    const trackB = makeTrack("batch-b", "C:/audio/batch-b.wav");
+    mocks.api.importTracks.mockImplementation((paths: string[]) =>
+      Promise.resolve([paths[0].includes("batch-a") ? trackA : trackB]),
+    );
+
+    const harness = await renderHookHarness();
+
+    // Two analysis batches in flight (neither analyzeTracks promise resolved).
+    let importA: Promise<void> | undefined;
+    await act(async () => {
+      importA = harness.current().importFiles([trackA.path]);
+    });
+    await waitFor(() => expect(batchIds).toHaveLength(1));
+    let importB: Promise<void> | undefined;
+    await act(async () => {
+      importB = harness.current().importFiles([trackB.path]);
+    });
+    await waitFor(() => expect(batchIds).toHaveLength(2));
+
+    const [batchA, batchB] = batchIds;
+
+    // The LATER batch (B) finishes first.
+    await act(async () => {
+      resolvers[batchB]([]);
+      await importB;
+    });
+
+    // A progress event for the still-running EARLIER batch (A) must still show.
+    await act(async () => {
+      progressHandler?.({ batch_id: batchA, label: "Reading tonal balance", fraction: 0.42 });
+    });
+    expect(harness.current().analysisProgress?.label).toBe("Reading tonal balance");
+    expect(harness.current().analysisProgress?.progress).toBe(0.42);
+
+    await act(async () => {
+      resolvers[batchA]([]);
+      await importA;
+    });
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("re-pushes the live chain when switching Album<->Track during Mastered playback (§5)", async () => {
     const track = makeTrack("mode-switch-1", "C:/audio/modeswitch.wav");
     mocks.api.importTracks.mockResolvedValue([track]);
