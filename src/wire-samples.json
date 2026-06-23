@@ -66,6 +66,34 @@
       }
     ]
   },
+  "album_render_report": {
+    "album_wav_path": "out/album.wav",
+    "bit_depth": 24,
+    "manifest_path": "out/album.manifest.json",
+    "rendered_channels": 2,
+    "rendered_sample_rate": 48000,
+    "requested_sample_rate": 48000,
+    "source_channels": [
+      2,
+      2
+    ],
+    "source_sample_rates": [
+      44100,
+      48000
+    ],
+    "tracks": [
+      {
+        "measured_lufs": -13.5,
+        "output_path": "out/wire-sample.master.wav",
+        "position": 1,
+        "rendered_channels": 2,
+        "rendered_sample_rate": 48000,
+        "source_channels": 2,
+        "source_sample_rate": 44100,
+        "track_id": "wire-sample"
+      }
+    ]
+  },
   "album_track_entry": {
     "album_character": "heavy-djent",
     "arc_lufs_offset_db": -1.5,
@@ -73,6 +101,94 @@
     "position": 1,
     "role": "opener",
     "role_locked": true,
+    "track_id": "wire-sample"
+  },
+  "album_track_render_input": {
+    "settings": {
+      "advanced": {
+        "adaptive_strength": 0.5,
+        "bit_depth": 24,
+        "ceiling_dbtp": -1.0,
+        "compression_density": 0.5,
+        "compression_high_attack_ms": 5.0,
+        "compression_high_ratio": 2.5,
+        "compression_high_release_ms": 90.0,
+        "compression_high_threshold_db": -20.0,
+        "compression_link_stereo": true,
+        "compression_low_attack_ms": 10.0,
+        "compression_low_ratio": 2.0,
+        "compression_low_release_ms": 120.0,
+        "compression_low_threshold_db": -24.0,
+        "compression_mid_attack_ms": 8.0,
+        "compression_mid_ratio": 2.0,
+        "compression_mid_release_ms": 110.0,
+        "compression_mid_threshold_db": -22.0,
+        "compression_mode": "manual",
+        "lufs_offset_db": -12.5,
+        "presence_air": 0.25,
+        "source_profile": {
+          "dynamic_range_lu": 8.5,
+          "dynamic_range_p95_p10_db": 9.5,
+          "spectral_6": {
+            "air": 0.125,
+            "low": 0.25,
+            "low_mid": 0.1875,
+            "mid": 0.1875,
+            "presence": 0.125,
+            "sub": 0.125
+          },
+          "stereo_correlation": 0.5,
+          "stereo_width": 0.5
+        },
+        "target_sample_rate": 48000,
+        "warmth": 0.25,
+        "width": 1.25
+      },
+      "album": {
+        "arc": {
+          "kind": "preset",
+          "preset": "cinematic"
+        },
+        "delivery_bit_depth": 24,
+        "delivery_sample_rate": 48000,
+        "intensity": 1.0,
+        "title": "Wire Sample",
+        "tracks": [
+          {
+            "album_character": "heavy-djent",
+            "arc_lufs_offset_db": -1.5,
+            "intensity_scale": 1.0,
+            "position": 1,
+            "role": "opener",
+            "role_locked": true,
+            "track_id": "wire-sample"
+          }
+        ],
+        "transitions": [
+          {
+            "duration_seconds": 1.5,
+            "kind": "gap"
+          }
+        ]
+      },
+      "delivery_profile": "custom",
+      "eq_high_db": 0.0,
+      "eq_high_mid_db": 0.0,
+      "eq_low_db": 0.0,
+      "eq_low_mid_db": 0.0,
+      "eq_mid_db": 0.0,
+      "eq_sparkle_db": 0.0,
+      "eq_sub_db": 0.0,
+      "input_gain_db": 0.0,
+      "intensity": 0.5,
+      "output_gain_db": 0.0,
+      "preset": {
+        "kind": "universal"
+      },
+      "source_lufs_integrated": -12.5,
+      "volume_match": false
+    },
+    "source_path": "C:/music/wire-sample.wav",
     "track_id": "wire-sample"
   },
   "analysis_progress": {
@@ -157,6 +273,12 @@
     "transient_flux": 0.5,
     "true_peak_dbtp": -1.0
   },
+  "audio_output_device": {
+    "id": "wire-device",
+    "is_default": true,
+    "is_selected": true,
+    "name": "Wire Output"
+  },
   "compression_plan": {
     "active": true,
     "digest": "compression eased low 20% / mid 0% / high 25%; stand-down 0.00; density confidence 1.00",
@@ -192,12 +314,56 @@
       }
     ]
   },
+  "export_report": {
+    "bit_depth": 24,
+    "checks": [
+      {
+        "code": "true_peak_near_ceiling",
+        "level": "warning",
+        "message": "True peak is close to the ceiling."
+      }
+    ],
+    "compression_digest": "compression eased low 20%",
+    "confidence_digest": "bass 0.9 | tilt 0.6",
+    "destination_format": "wav 24-bit 48 kHz",
+    "effective_adaptive_strength": 0.5,
+    "measured_dynamic_range_lu": 8.5,
+    "measured_lufs": -13.5,
+    "measured_true_peak_dbtp": -1.25,
+    "measurements_are_rendered": true,
+    "output_path": "out/wire-sample.master.wav",
+    "sample_rate": 48000,
+    "source_format": "wav",
+    "source_profile_digest": "bass +1.2 | air -0.4",
+    "track_id": "wire-sample"
+  },
   "guardrail_readout": {
     "active": true,
     "bright_deadband": 0.0625,
     "bright_trim": 0.25,
     "brightness_share": 0.25,
-    "confidence": null,
+    "confidence": {
+      "bright": {
+        "confidence": 1.0,
+        "consistency": 1.0,
+        "coverage": 1.0
+      },
+      "density": {
+        "confidence": 1.0,
+        "consistency": 1.0,
+        "coverage": 1.0
+      },
+      "low": {
+        "confidence": 1.0,
+        "consistency": 1.0,
+        "coverage": 1.0
+      },
+      "width": {
+        "confidence": 1.0,
+        "consistency": 1.0,
+        "coverage": 1.0
+      }
+    },
     "density_trim": 0.25,
     "dynamic_range_db": 9.5,
     "low_deadband": 0.0625,
@@ -314,6 +480,203 @@
     ],
     "track_id": "wire-sample"
   },
+  "project_state": {
+    "album_arc_kind": "cinematic",
+    "album_bit_depth": 24,
+    "album_intensity": 1.0,
+    "album_intent": {
+      "advanced": {
+        "adaptive_strength": 0.5,
+        "bit_depth": 24,
+        "ceiling_dbtp": -1.0,
+        "compression_density": 0.5,
+        "compression_high_attack_ms": 5.0,
+        "compression_high_ratio": 2.5,
+        "compression_high_release_ms": 90.0,
+        "compression_high_threshold_db": -20.0,
+        "compression_link_stereo": true,
+        "compression_low_attack_ms": 10.0,
+        "compression_low_ratio": 2.0,
+        "compression_low_release_ms": 120.0,
+        "compression_low_threshold_db": -24.0,
+        "compression_mid_attack_ms": 8.0,
+        "compression_mid_ratio": 2.0,
+        "compression_mid_release_ms": 110.0,
+        "compression_mid_threshold_db": -22.0,
+        "compression_mode": "manual",
+        "lufs_offset_db": -12.5,
+        "presence_air": 0.25,
+        "source_profile": {
+          "dynamic_range_lu": 8.5,
+          "dynamic_range_p95_p10_db": 9.5,
+          "spectral_6": {
+            "air": 0.125,
+            "low": 0.25,
+            "low_mid": 0.1875,
+            "mid": 0.1875,
+            "presence": 0.125,
+            "sub": 0.125
+          },
+          "stereo_correlation": 0.5,
+          "stereo_width": 0.5
+        },
+        "target_sample_rate": 48000,
+        "warmth": 0.25,
+        "width": 1.25
+      },
+      "album": {
+        "arc": {
+          "kind": "preset",
+          "preset": "cinematic"
+        },
+        "delivery_bit_depth": 24,
+        "delivery_sample_rate": 48000,
+        "intensity": 1.0,
+        "title": "Wire Sample",
+        "tracks": [
+          {
+            "album_character": "heavy-djent",
+            "arc_lufs_offset_db": -1.5,
+            "intensity_scale": 1.0,
+            "position": 1,
+            "role": "opener",
+            "role_locked": true,
+            "track_id": "wire-sample"
+          }
+        ],
+        "transitions": [
+          {
+            "duration_seconds": 1.5,
+            "kind": "gap"
+          }
+        ]
+      },
+      "delivery_profile": "custom",
+      "eq_high_db": 0.0,
+      "eq_high_mid_db": 0.0,
+      "eq_low_db": 0.0,
+      "eq_low_mid_db": 0.0,
+      "eq_mid_db": 0.0,
+      "eq_sparkle_db": 0.0,
+      "eq_sub_db": 0.0,
+      "input_gain_db": 0.0,
+      "intensity": 0.5,
+      "output_gain_db": 0.0,
+      "preset": {
+        "kind": "universal"
+      },
+      "source_lufs_integrated": -12.5,
+      "volume_match": false
+    },
+    "album_sample_rate": 48000,
+    "album_title": "Wire Sample",
+    "last_saved_iso": "2026-06-09T00:00:00+00:00",
+    "mode": "track",
+    "schema_version": 1,
+    "track_order": [
+      "wire-sample"
+    ],
+    "track_override_album": [
+      "wire-sample"
+    ],
+    "track_settings": {
+      "wire-sample": {
+        "advanced": {
+          "adaptive_strength": 0.5,
+          "bit_depth": 24,
+          "ceiling_dbtp": -1.0,
+          "compression_density": 0.5,
+          "compression_high_attack_ms": 5.0,
+          "compression_high_ratio": 2.5,
+          "compression_high_release_ms": 90.0,
+          "compression_high_threshold_db": -20.0,
+          "compression_link_stereo": true,
+          "compression_low_attack_ms": 10.0,
+          "compression_low_ratio": 2.0,
+          "compression_low_release_ms": 120.0,
+          "compression_low_threshold_db": -24.0,
+          "compression_mid_attack_ms": 8.0,
+          "compression_mid_ratio": 2.0,
+          "compression_mid_release_ms": 110.0,
+          "compression_mid_threshold_db": -22.0,
+          "compression_mode": "manual",
+          "lufs_offset_db": -12.5,
+          "presence_air": 0.25,
+          "source_profile": {
+            "dynamic_range_lu": 8.5,
+            "dynamic_range_p95_p10_db": 9.5,
+            "spectral_6": {
+              "air": 0.125,
+              "low": 0.25,
+              "low_mid": 0.1875,
+              "mid": 0.1875,
+              "presence": 0.125,
+              "sub": 0.125
+            },
+            "stereo_correlation": 0.5,
+            "stereo_width": 0.5
+          },
+          "target_sample_rate": 48000,
+          "warmth": 0.25,
+          "width": 1.25
+        },
+        "album": {
+          "arc": {
+            "kind": "preset",
+            "preset": "cinematic"
+          },
+          "delivery_bit_depth": 24,
+          "delivery_sample_rate": 48000,
+          "intensity": 1.0,
+          "title": "Wire Sample",
+          "tracks": [
+            {
+              "album_character": "heavy-djent",
+              "arc_lufs_offset_db": -1.5,
+              "intensity_scale": 1.0,
+              "position": 1,
+              "role": "opener",
+              "role_locked": true,
+              "track_id": "wire-sample"
+            }
+          ],
+          "transitions": [
+            {
+              "duration_seconds": 1.5,
+              "kind": "gap"
+            }
+          ]
+        },
+        "delivery_profile": "custom",
+        "eq_high_db": 0.0,
+        "eq_high_mid_db": 0.0,
+        "eq_low_db": 0.0,
+        "eq_low_mid_db": 0.0,
+        "eq_mid_db": 0.0,
+        "eq_sparkle_db": 0.0,
+        "eq_sub_db": 0.0,
+        "input_gain_db": 0.0,
+        "intensity": 0.5,
+        "output_gain_db": 0.0,
+        "preset": {
+          "kind": "universal"
+        },
+        "source_lufs_integrated": -12.5,
+        "volume_match": false
+      }
+    },
+    "tracks": [
+      {
+        "channels": 2,
+        "display_name": "wire-sample",
+        "duration_seconds": 1.0,
+        "id": "wire-sample",
+        "path": "C:/music/wire-sample.wav",
+        "sample_rate": 44100,
+        "source_format": "wav"
+      }
+    ]
+  },
   "render_job": {
     "id": "wire-job",
     "kind": "master",
@@ -350,5 +713,111 @@
     "sample_rate": 48000,
     "source_profile_digest": "bass +1.2 | air -0.4",
     "true_peak_dbtp": -1.25
+  },
+  "user_preset": {
+    "created_at_iso": "2026-06-09T00:00:00+00:00",
+    "id": "wire-preset",
+    "kind": "track",
+    "name": "Wire Preset",
+    "settings": {
+      "advanced": {
+        "adaptive_strength": 0.5,
+        "bit_depth": 24,
+        "ceiling_dbtp": -1.0,
+        "compression_density": 0.5,
+        "compression_high_attack_ms": 5.0,
+        "compression_high_ratio": 2.5,
+        "compression_high_release_ms": 90.0,
+        "compression_high_threshold_db": -20.0,
+        "compression_link_stereo": true,
+        "compression_low_attack_ms": 10.0,
+        "compression_low_ratio": 2.0,
+        "compression_low_release_ms": 120.0,
+        "compression_low_threshold_db": -24.0,
+        "compression_mid_attack_ms": 8.0,
+        "compression_mid_ratio": 2.0,
+        "compression_mid_release_ms": 110.0,
+        "compression_mid_threshold_db": -22.0,
+        "compression_mode": "manual",
+        "lufs_offset_db": -12.5,
+        "presence_air": 0.25,
+        "source_profile": {
+          "dynamic_range_lu": 8.5,
+          "dynamic_range_p95_p10_db": 9.5,
+          "spectral_6": {
+            "air": 0.125,
+            "low": 0.25,
+            "low_mid": 0.1875,
+            "mid": 0.1875,
+            "presence": 0.125,
+            "sub": 0.125
+          },
+          "stereo_correlation": 0.5,
+          "stereo_width": 0.5
+        },
+        "target_sample_rate": 48000,
+        "warmth": 0.25,
+        "width": 1.25
+      },
+      "album": {
+        "arc": {
+          "kind": "preset",
+          "preset": "cinematic"
+        },
+        "delivery_bit_depth": 24,
+        "delivery_sample_rate": 48000,
+        "intensity": 1.0,
+        "title": "Wire Sample",
+        "tracks": [
+          {
+            "album_character": "heavy-djent",
+            "arc_lufs_offset_db": -1.5,
+            "intensity_scale": 1.0,
+            "position": 1,
+            "role": "opener",
+            "role_locked": true,
+            "track_id": "wire-sample"
+          }
+        ],
+        "transitions": [
+          {
+            "duration_seconds": 1.5,
+            "kind": "gap"
+          }
+        ]
+      },
+      "delivery_profile": "custom",
+      "eq_high_db": 0.0,
+      "eq_high_mid_db": 0.0,
+      "eq_low_db": 0.0,
+      "eq_low_mid_db": 0.0,
+      "eq_mid_db": 0.0,
+      "eq_sparkle_db": 0.0,
+      "eq_sub_db": 0.0,
+      "input_gain_db": 0.0,
+      "intensity": 0.5,
+      "output_gain_db": 0.0,
+      "preset": {
+        "kind": "universal"
+      },
+      "source_lufs_integrated": -12.5,
+      "volume_match": false
+    }
+  },
+  "waveform_peaks": {
+    "channels": [
+      [
+        -0.5,
+        0.5
+      ],
+      [
+        -0.25,
+        0.25
+      ]
+    ],
+    "sample_rate": 44100,
+    "samples_per_pixel": 512,
+    "total_samples": 44100,
+    "track_id": "wire-sample"
   }
 }

@@ -17,15 +17,19 @@
 
 use std::path::Path;
 
+use yes_master_lib::audio::AudioOutputDevice;
+use yes_master_lib::confidence::Confidence;
+use yes_master_lib::engine::{AlbumRenderReport, AlbumTrackRenderInput, AlbumTrackRenderRecord};
 use yes_master_lib::guardrails::{
     CompressionBandPlan, CompressionPlan, CompressionPlanReason, GuardReason, GuardrailReadout,
 };
 use yes_master_lib::types::{
     AdvancedSettings, AlbumArc, AlbumArcKind, AlbumCharacter, AlbumPlan, AlbumTrackEntry,
-    AnalysisProgress, AnalysisResult, CompressionMode, InferenceConfidence, JobStatus,
-    LandingStatus, PlaybackTick, Preset, RenderJob, RenderKind, RenderedMeasurements,
+    AnalysisProgress, AnalysisResult, CompressionMode, ExportReport, ImportedTrack,
+    InferenceConfidence, JobStatus, LandingStatus, PlaybackTick, Preset, PresetKind, ProjectMode,
+    ProjectState, QualityCheck, QualityLevel, RenderJob, RenderKind, RenderedMeasurements,
     SourceProfile, SpectralBalance, SpectralBalance6, TrackCharacter, TrackId, TrackRole,
-    TransitionSpec,
+    TransitionSpec, UserPreset, WaveformPeaks,
 };
 
 mod common;
@@ -148,9 +152,9 @@ fn analysis_result_sample() -> AnalysisResult {
         dynamic_range_p95_p10_db: Some(9.5),
         lufs_short_term_max_3s: Some(-9.5),
         energy_density_score: Some(0.5),
-        // Backend-internal (bridge/profile-store only); bindings.ts omits it
-        // on purpose and the TS gate allowlists it. The key still serializes
-        // as null because nothing uses skip_serializing_if.
+        // Backend-internal (bridge/profile-store only); `#[serde(skip)]` keeps
+        // it off the wire entirely, so the key never appears in the JSON and
+        // bindings.ts omits it on purpose. The TS gate allowlists it defensively.
         deep_analysis: None,
     }
 }
@@ -254,7 +258,10 @@ fn guardrail_readout_sample() -> GuardrailReadout {
         low_deadband: 0.0625,
         width_corr_deadband: 0.25,
         stereo_correlation: Some(0.5),
-        confidence: None,
+        // Materialized (Some) so the nested Confidence / AxisConfidence objects
+        // appear in the JSON and the TS drift gate can recurse into them. The
+        // key set is unchanged vs None (the field is always serialized).
+        confidence: Some(Confidence::full()),
     }
 }
 
@@ -276,6 +283,127 @@ fn playback_tick_sample() -> PlaybackTick {
     }
 }
 
+fn project_state_sample() -> ProjectState {
+    let track_id = TrackId("wire-sample".to_string());
+    let mut track_settings = std::collections::HashMap::new();
+    track_settings.insert(track_id.0.clone(), mastering_settings_sample());
+    ProjectState {
+        schema_version: 1,
+        mode: ProjectMode::Track,
+        tracks: vec![ImportedTrack {
+            id: track_id.clone(),
+            path: "C:/music/wire-sample.wav".to_string(),
+            display_name: "wire-sample".to_string(),
+            source_format: "wav".to_string(),
+            duration_seconds: Some(1.0),
+            sample_rate: Some(44_100),
+            channels: Some(2),
+        }],
+        track_order: vec![track_id.clone()],
+        track_settings,
+        album_intent: Some(mastering_settings_sample()),
+        album_arc_kind: AlbumArcKind::Cinematic,
+        album_intensity: 1.0,
+        album_title: "Wire Sample".to_string(),
+        album_sample_rate: Some(48_000),
+        album_bit_depth: Some(24),
+        track_override_album: vec![track_id],
+        last_saved_iso: Some("2026-06-09T00:00:00+00:00".to_string()),
+    }
+}
+
+fn audio_output_device_sample() -> AudioOutputDevice {
+    AudioOutputDevice {
+        id: "wire-device".to_string(),
+        name: "Wire Output".to_string(),
+        is_default: true,
+        is_selected: true,
+    }
+}
+
+fn waveform_peaks_sample() -> WaveformPeaks {
+    WaveformPeaks {
+        track_id: TrackId("wire-sample".to_string()),
+        channels: vec![vec![-0.5, 0.5], vec![-0.25, 0.25]],
+        samples_per_pixel: 512,
+        total_samples: 44_100,
+        sample_rate: 44_100,
+    }
+}
+
+fn quality_check_sample() -> QualityCheck {
+    QualityCheck {
+        level: QualityLevel::Warning,
+        code: "true_peak_near_ceiling".to_string(),
+        message: "True peak is close to the ceiling.".to_string(),
+    }
+}
+
+fn export_report_sample() -> ExportReport {
+    ExportReport {
+        track_id: TrackId("wire-sample".to_string()),
+        output_path: "out/wire-sample.master.wav".to_string(),
+        measured_lufs: -13.5,
+        measured_true_peak_dbtp: -1.25,
+        measured_dynamic_range_lu: 8.5,
+        source_format: "wav".to_string(),
+        destination_format: "wav 24-bit 48 kHz".to_string(),
+        sample_rate: 48_000,
+        bit_depth: 24,
+        effective_adaptive_strength: 0.5,
+        source_profile_digest: Some("bass +1.2 | air -0.4".to_string()),
+        confidence_digest: Some("bass 0.9 | tilt 0.6".to_string()),
+        compression_digest: Some("compression eased low 20%".to_string()),
+        measurements_are_rendered: true,
+        checks: vec![quality_check_sample()],
+    }
+}
+
+fn user_preset_sample() -> UserPreset {
+    UserPreset {
+        id: "wire-preset".to_string(),
+        name: "Wire Preset".to_string(),
+        kind: PresetKind::Track,
+        settings: mastering_settings_sample(),
+        created_at_iso: "2026-06-09T00:00:00+00:00".to_string(),
+    }
+}
+
+fn album_track_render_record_sample() -> AlbumTrackRenderRecord {
+    AlbumTrackRenderRecord {
+        track_id: TrackId("wire-sample".to_string()),
+        position: 1,
+        output_path: "out/wire-sample.master.wav".to_string(),
+        measured_lufs: -13.5,
+        source_sample_rate: 44_100,
+        rendered_sample_rate: 48_000,
+        source_channels: 2,
+        rendered_channels: 2,
+    }
+}
+
+fn album_render_report_sample() -> AlbumRenderReport {
+    AlbumRenderReport {
+        album_wav_path: "out/album.wav".to_string(),
+        manifest_path: "out/album.manifest.json".to_string(),
+        requested_sample_rate: Some(48_000),
+        rendered_sample_rate: 48_000,
+        source_sample_rates: vec![44_100, 48_000],
+        bit_depth: 24,
+        rendered_channels: 2,
+        source_channels: vec![2, 2],
+        tracks: vec![album_track_render_record_sample()],
+    }
+}
+
+fn album_track_render_input_sample() -> AlbumTrackRenderInput {
+    AlbumTrackRenderInput {
+        track_id: TrackId("wire-sample".to_string()),
+        source_path: "C:/music/wire-sample.wav".to_string(),
+        settings: mastering_settings_sample(),
+    }
+}
+
 fn wire_samples() -> serde_json::Value {
     serde_json::json!({
         "_readme": "Generated by src-tauri/tests/wire_shape.rs — do not edit. \
@@ -284,16 +412,23 @@ fn wire_samples() -> serde_json::Value {
                     then make `npm run build` green against bindings.ts.",
         "advanced": advanced_sample(),
         "album_plan": album_plan_sample(),
+        "album_render_report": album_render_report_sample(),
         "album_track_entry": album_track_entry_sample(),
+        "album_track_render_input": album_track_render_input_sample(),
         "analysis_progress": analysis_progress_sample(),
         "analysis_result": analysis_result_sample(),
+        "audio_output_device": audio_output_device_sample(),
         "compression_plan": compression_plan_sample(),
+        "export_report": export_report_sample(),
         "guardrail_readout": guardrail_readout_sample(),
         "landing_status": landing_status_sample(),
         "mastering_settings": mastering_settings_sample(),
         "playback_tick": playback_tick_sample(),
+        "project_state": project_state_sample(),
         "render_job": render_job_sample(),
         "rendered_measurements": rendered_measurements_sample(),
+        "user_preset": user_preset_sample(),
+        "waveform_peaks": waveform_peaks_sample(),
     })
 }
 

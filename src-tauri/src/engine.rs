@@ -639,7 +639,10 @@ pub async fn render_track_master(
 // converted or folded into that album delivery shape.
 // ============================================================================
 
-#[derive(Debug, Deserialize)]
+// `Serialize` is added so the Rust↔TS wire-drift gate (tests/wire_shape.rs)
+// can emit a canonical sample of this album-render input; production only ever
+// deserializes it.
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AlbumTrackRenderInput {
     pub track_id: TrackId,
     pub source_path: String,

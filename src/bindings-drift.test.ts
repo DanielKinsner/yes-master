@@ -26,14 +26,34 @@ import type {
   AlbumTrackEntry,
   AnalysisProgress,
   AnalysisResult,
+  AudioOutputDevice,
+  AxisConfidence,
+  ImportedTrack,
+  CompressionBandPlan,
   CompressionPlan,
+  CompressionPlanReason,
+  Confidence,
+  ExportReport,
   GuardrailReadout,
   LandingStatus,
   MasteringSettings,
   PlaybackTick,
+  ProjectState,
+  QualityCheck,
   RenderJob,
   RenderedMeasurements,
+  SourceProfile,
+  SpectralBalance,
+  SpectralBalance6,
+  TransitionSpec,
+  UserPreset,
+  WaveformPeaks,
 } from "./bindings";
+import type {
+  AlbumRenderReport,
+  AlbumTrackRenderInput,
+  AlbumTrackRenderRecord,
+} from "./lib/api";
 
 type AssertNever<T extends never> = T;
 type RustOnly<Sample, Binding> = Exclude<keyof Sample, keyof Binding>;
@@ -69,7 +89,9 @@ export type Drift_AnalysisProgress_TsOnly = AssertNever<
 
 // Allowlist: `deep_analysis` is backend-internal (profile store + iPhone
 // bridge consume it in Rust); bindings.ts mirrors only the FE-relevant
-// subset of AnalysisResult on purpose.
+// subset of AnalysisResult on purpose. It is `#[serde(skip)]` so Rust never
+// emits it — this Exclude is therefore an inert guard today; the runtime smoke
+// test below fails if the skip is ever removed (which would un-mask drift here).
 export type Drift_AnalysisResult_RustOnly = AssertNever<
   Exclude<RustOnly<typeof samples.analysis_result, AnalysisResult>, "deep_analysis">
 >;
@@ -126,6 +148,145 @@ export type Drift_RenderedMeasurements_TsOnly = AssertNever<
   TsOnly<typeof samples.rendered_measurements, RenderedMeasurements>
 >;
 
+// §11 — recurse into NESTED struct types. The aliases above only compare
+// top-level key sets; a renamed/added/removed field inside one of these nested
+// objects would otherwise ship undetected. Each alias reaches into the
+// already-serialized sample (`typeof samples.X.Y`) so the nested key set is
+// gated too. Array element types are reached via `[number]`.
+
+export type Drift_SourceProfile_RustOnly = AssertNever<
+  RustOnly<typeof samples.advanced.source_profile, SourceProfile>
+>;
+export type Drift_SourceProfile_TsOnly = AssertNever<
+  TsOnly<typeof samples.advanced.source_profile, SourceProfile>
+>;
+
+export type Drift_SpectralBalance6_RustOnly = AssertNever<
+  RustOnly<typeof samples.advanced.source_profile.spectral_6, SpectralBalance6>
+>;
+export type Drift_SpectralBalance6_TsOnly = AssertNever<
+  TsOnly<typeof samples.advanced.source_profile.spectral_6, SpectralBalance6>
+>;
+
+export type Drift_SpectralBalance_RustOnly = AssertNever<
+  RustOnly<typeof samples.analysis_result.spectral_balance, SpectralBalance>
+>;
+export type Drift_SpectralBalance_TsOnly = AssertNever<
+  TsOnly<typeof samples.analysis_result.spectral_balance, SpectralBalance>
+>;
+
+export type Drift_Confidence_RustOnly = AssertNever<
+  RustOnly<typeof samples.guardrail_readout.confidence, Confidence>
+>;
+export type Drift_Confidence_TsOnly = AssertNever<
+  TsOnly<typeof samples.guardrail_readout.confidence, Confidence>
+>;
+
+export type Drift_AxisConfidence_RustOnly = AssertNever<
+  RustOnly<typeof samples.guardrail_readout.confidence.bright, AxisConfidence>
+>;
+export type Drift_AxisConfidence_TsOnly = AssertNever<
+  TsOnly<typeof samples.guardrail_readout.confidence.bright, AxisConfidence>
+>;
+
+export type Drift_CompressionBandPlan_RustOnly = AssertNever<
+  RustOnly<typeof samples.compression_plan.low, CompressionBandPlan>
+>;
+export type Drift_CompressionBandPlan_TsOnly = AssertNever<
+  TsOnly<typeof samples.compression_plan.low, CompressionBandPlan>
+>;
+
+export type Drift_CompressionPlanReason_RustOnly = AssertNever<
+  RustOnly<typeof samples.compression_plan.reasons[number], CompressionPlanReason>
+>;
+export type Drift_CompressionPlanReason_TsOnly = AssertNever<
+  TsOnly<typeof samples.compression_plan.reasons[number], CompressionPlanReason>
+>;
+
+export type Drift_TransitionSpec_RustOnly = AssertNever<
+  RustOnly<typeof samples.album_plan.transitions[number], TransitionSpec>
+>;
+export type Drift_TransitionSpec_TsOnly = AssertNever<
+  TsOnly<typeof samples.album_plan.transitions[number], TransitionSpec>
+>;
+
+// §12 / §13 — previously-ungated top-level wire types. ProjectState corrupts
+// project files if it drifts; the album render payloads, export receipt,
+// device list, waveform, and user-preset types all cross the Rust↔TS boundary
+// hand-mirrored. Nested element types are reached via `[number]`.
+
+export type Drift_ProjectState_RustOnly = AssertNever<
+  RustOnly<typeof samples.project_state, ProjectState>
+>;
+export type Drift_ProjectState_TsOnly = AssertNever<
+  TsOnly<typeof samples.project_state, ProjectState>
+>;
+
+// ProjectState.tracks holds ImportedTrack elements — recurse so a field
+// rename there is caught too (same project-file-corruption risk as §12).
+export type Drift_ImportedTrack_RustOnly = AssertNever<
+  RustOnly<typeof samples.project_state.tracks[number], ImportedTrack>
+>;
+export type Drift_ImportedTrack_TsOnly = AssertNever<
+  TsOnly<typeof samples.project_state.tracks[number], ImportedTrack>
+>;
+
+export type Drift_AudioOutputDevice_RustOnly = AssertNever<
+  RustOnly<typeof samples.audio_output_device, AudioOutputDevice>
+>;
+export type Drift_AudioOutputDevice_TsOnly = AssertNever<
+  TsOnly<typeof samples.audio_output_device, AudioOutputDevice>
+>;
+
+export type Drift_WaveformPeaks_RustOnly = AssertNever<
+  RustOnly<typeof samples.waveform_peaks, WaveformPeaks>
+>;
+export type Drift_WaveformPeaks_TsOnly = AssertNever<
+  TsOnly<typeof samples.waveform_peaks, WaveformPeaks>
+>;
+
+export type Drift_ExportReport_RustOnly = AssertNever<
+  RustOnly<typeof samples.export_report, ExportReport>
+>;
+export type Drift_ExportReport_TsOnly = AssertNever<
+  TsOnly<typeof samples.export_report, ExportReport>
+>;
+
+export type Drift_QualityCheck_RustOnly = AssertNever<
+  RustOnly<typeof samples.export_report.checks[number], QualityCheck>
+>;
+export type Drift_QualityCheck_TsOnly = AssertNever<
+  TsOnly<typeof samples.export_report.checks[number], QualityCheck>
+>;
+
+export type Drift_UserPreset_RustOnly = AssertNever<
+  RustOnly<typeof samples.user_preset, UserPreset>
+>;
+export type Drift_UserPreset_TsOnly = AssertNever<
+  TsOnly<typeof samples.user_preset, UserPreset>
+>;
+
+export type Drift_AlbumRenderReport_RustOnly = AssertNever<
+  RustOnly<typeof samples.album_render_report, AlbumRenderReport>
+>;
+export type Drift_AlbumRenderReport_TsOnly = AssertNever<
+  TsOnly<typeof samples.album_render_report, AlbumRenderReport>
+>;
+
+export type Drift_AlbumTrackRenderRecord_RustOnly = AssertNever<
+  RustOnly<typeof samples.album_render_report.tracks[number], AlbumTrackRenderRecord>
+>;
+export type Drift_AlbumTrackRenderRecord_TsOnly = AssertNever<
+  TsOnly<typeof samples.album_render_report.tracks[number], AlbumTrackRenderRecord>
+>;
+
+export type Drift_AlbumTrackRenderInput_RustOnly = AssertNever<
+  RustOnly<typeof samples.album_track_render_input, AlbumTrackRenderInput>
+>;
+export type Drift_AlbumTrackRenderInput_TsOnly = AssertNever<
+  TsOnly<typeof samples.album_track_render_input, AlbumTrackRenderInput>
+>;
+
 // Runtime smoke so the gate is also visible in `npm test` output (the real
 // enforcement is the compile-time block above).
 describe("wire-samples drift gate", () => {
@@ -133,24 +294,45 @@ describe("wire-samples drift gate", () => {
     for (const key of [
       "advanced",
       "album_plan",
+      "album_render_report",
       "album_track_entry",
+      "album_track_render_input",
       "analysis_progress",
       "analysis_result",
+      "audio_output_device",
       "compression_plan",
+      "export_report",
       "guardrail_readout",
       "landing_status",
       "mastering_settings",
       "playback_tick",
+      "project_state",
       "render_job",
       "rendered_measurements",
+      "user_preset",
+      "waveform_peaks",
     ]) {
       expect(samples, `missing sample: ${key}`).toHaveProperty(key);
     }
+  });
+
+  it("keeps deep_analysis out of the wire so its AnalysisResult allowlist stays inert", () => {
+    // `AnalysisResult.deep_analysis` is `#[serde(skip)]` — never serialized — so
+    // the `Exclude<…, "deep_analysis">` allowlist on the AnalysisResult gate is a
+    // harmless no-op (Rust never emits the key). If someone removes the skip to
+    // expose deep_analysis, this guard fails, flagging that the field must then
+    // be mirrored in bindings.ts and the allowlist removed.
+    expect(samples.analysis_result).not.toHaveProperty("deep_analysis");
   });
 
   it("nested samples materialize their optional objects", () => {
     expect(samples.advanced.source_profile).not.toBeNull();
     expect(samples.mastering_settings.album).not.toBeNull();
     expect(samples.render_job.measurements).not.toBeNull();
+    // §11 — these must stay materialized so the nested drift aliases above have
+    // real key sets to compare; a null here silently disarms that recursion.
+    expect(samples.guardrail_readout.confidence).not.toBeNull();
+    expect(samples.compression_plan.reasons.length).toBeGreaterThan(0);
+    expect(samples.album_plan.transitions.length).toBeGreaterThan(0);
   });
 });
