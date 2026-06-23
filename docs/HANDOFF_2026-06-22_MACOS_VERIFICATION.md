@@ -415,12 +415,26 @@ A/B / styles / export checklist in §3 still wants a human pass with a real trac
   Node 26; a local node-version artifact, not a repo issue.
 - **Android host JVM lane** — separate pre-existing failure, out of this task's scope.
 
-### Open question for the owner
-Are the `preset_distinctness` thresholds (Tape −0.5 dB crest, Clarity −0.4 dB presence)
-the right bar? Either (a) relax them to the presets' actual behavior (never met at 100%
-or 85%), or (b) treat it as a real "presets not audibly distinct enough" gap and retune
-— which is listening-gated per `CLAUDE.md`. **Do not** change calibration to chase the
-test without a listening note.
+### Open question for the owner — diagnosed by `git bisect` (2026-06-22)
+These 2 failures are **not** pre-existing-forever. Bisect pins the regression to
+**`4d7e5e0` (2026-06-18) "presets: 70% distinctiveness lean across the lineup
+(CANDIDATE, listening session)"**. At its parent (`7cd76e3`, full-strength presets)
+**both tests PASS** (5/0). `4d7e5e0` cut distinctiveness — e.g. Clarity
+`presence_db −0.8 → +0.1` (a presence *cut* became a slight *boost*), Tape crest
+compression reduced, stereo widths narrowed — and broke them. The later 85% lean
+(`659bea5`) backed off slightly (margins: tape 0.15→0.21, clarity −0.12→−0.17 dB)
+but stayed below the thresholds.
+
+So the presets are **deliberately** less distinct now than the full-strength voicing
+these tests were written for — the outcome of owner listening-session leans
+(70% candidate → 85% final). The tests were simply never updated to match. Owner's call:
+- **(a)** if 85% is the intended final voicing → update/relax these thresholds to the
+  presets' real margins (the tests are stale vs. the owner's listening choice); or
+- **(b)** if presets should stay audibly distinct → the lean went too far → retune
+  (listening-gated per `CLAUDE.md`).
+
+**Do not** change calibration *or* thresholds without a listening note. None of this
+affects the macOS port, the byte-identity SHAs, or the installed app.
 
 ### Pull
 `git fetch && git checkout main && git pull --ff-only`   → `88853dc`
