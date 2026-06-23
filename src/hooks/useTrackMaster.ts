@@ -1494,12 +1494,14 @@ export function useTrackMaster() {
         });
         // The loaded chain is gone — clear the predicate and reset the live
         // transport/meter state so the auto-selected sibling does not inherit a
-        // stale "playing" indicator or frozen meter values (§3).
+        // stale "playing" indicator, frozen meter values, or a still-armed loop
+        // (§3). Mirrors selectTrack's reset, including disarming the backend loop.
         setLoadedTrackId(null);
         setTransport((t) => ({
           ...t,
           isPlaying: false,
           currentTimeSec: 0,
+          loop: false,
           peakDbfs: -120,
           peakLeftDbfs: -120,
           peakRightDbfs: -120,
@@ -1508,6 +1510,9 @@ export function useTrackMaster() {
           lufsIntegrated: -120,
           spectrumDb: [],
         }));
+        api.setLoopRegion(null).catch(() => {
+          /* swallow — best-effort */
+        });
       }
       if (selectedTrackId === id) {
         const remaining = tracks.filter((t) => t.id !== id);

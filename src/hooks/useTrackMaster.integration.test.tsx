@@ -1043,18 +1043,27 @@ describe("useTrackMaster integration dispatches", () => {
       expect(harness.current().transport.peakDbfs).toBe(-6);
     });
 
+    // Arm loop on the playing track so we can prove it is disarmed for the sibling.
+    await act(async () => {
+      await harness.current().toggleLoop();
+    });
+    expect(harness.current().transport.loop).toBe(true);
+    mocks.api.setLoopRegion.mockClear();
+
     await act(async () => {
       harness.current().removeTrack(playing.id);
     });
 
     // The sibling is auto-selected and must NOT inherit a stale "playing"
-    // indicator or frozen meter values.
+    // indicator, frozen meter values, or an armed loop.
     const after = harness.current();
     expect(after.selectedTrackId).toBe(sibling.id);
     expect(after.transport.isPlaying).toBe(false);
     expect(after.transport.peakDbfs).toBe(-120);
     expect(after.transport.lufsIntegrated).toBe(-120);
     expect(after.transport.compressionGr).toEqual({ low: -120, mid: -120, high: -120 });
+    expect(after.transport.loop).toBe(false);
+    expect(mocks.api.setLoopRegion).toHaveBeenCalledWith(null);
 
     await act(async () => {
       harness.root.unmount();
