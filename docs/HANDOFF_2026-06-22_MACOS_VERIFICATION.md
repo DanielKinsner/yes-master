@@ -368,3 +368,59 @@ Include:
   report before editing any SHA. Expected set is exactly the 7 in §4; spatial + custom must pass.
 - **Don't touch the Windows (1st) argument** of `expected_platform_sha` — it's verified and must
   stay pinned for the Windows lane.
+
+---
+
+## RESOLUTION — 2026-06-22 (completed on Apple Silicon, arm64, macOS 26.5, Xcode 26.5)
+
+Picked up on a real MacBook. `main` advanced `abbff0b → 88853dc` (3 small commits,
+direct to main). All claims below are verified on real CI hardware (run 27997634611).
+
+### What shipped
+1. **`102853a` build: sync package-lock with tailwind v4 deps** — the landing rebuild
+   (`773a020`) added `@tailwindcss/vite` + `tailwindcss` to `package.json` but never
+   locked them, so **`npm ci` failed on every CI lane before any test ran**, and the
+   local frontend build was broken too (vite imports `@tailwindcss/vite`). This was the
+   true #1 blocker — the original handoff predates it. `npm install` locked 15 packages;
+   `package.json` unchanged.
+2. **`cc03d56` test: record real macOS byte-identity SHAs** — the headline task. All 7
+   macOS preset SHAs recorded from real arm64 hardware → macOS desktop **lib tests now
+   364 passed / 0 failed on CI**. Measured twice: rustc 1.96.0 (rustup = CI) and 1.95.0
+   (Homebrew) produce *identical* hashes, and `spatial`'s CI-recorded arm64 hash
+   reproduces bit-for-bit locally → this machine is CI-faithful. Windows args + spatial +
+   custom untouched. Recorded macOS SHAs: universal `6751134f…` clarity `d6c783d1…`
+   tape `59d5f3d0…` oomph `09888d94…` warmth `158aee07…` punch `6c459971…` loud `19789afb…`.
+3. **`88853dc` test: pin per-OS bits for deep-analysis window fixture** — a *second*
+   cross-platform float divergence the original handoff didn't know about.
+   `scan_windows_matches_fixed_full_metric_fixture` pinned Windows-only `[u32;16]` bits;
+   a few near-zero 31-band metrics (`comp_low_31`/`comp_mid_31`/`low_31`/`sibilant_31`)
+   round 1+ ULP differently on macOS (largest = 1 ULP ≈ 3e-8). Added macOS bits mirroring
+   `expected_platform_sha`. Green on CI's macOS runner.
+
+### App
+`npm run build:mac` succeeds → `YES Master.app` (v0.1.0, arm64, adhoc-signed) built,
+installed to `/Applications`, launches clean (no crash). The full interactive
+A/B / styles / export checklist in §3 still wants a human pass with a real track.
+
+### Still red on CI — PRE-EXISTING, none caused by this work *or* the 85% lean
+- **`preset_distinctness::{tape_compresses_crest_relative_to_universal,
+  clarity_drops_presence_and_lifts_air_relative_to_universal}`** — fails *identically*
+  on macOS **and** Windows CI (Tape crest drop 0.21 dB < 0.5 dB required; Clarity 1.5–4 kHz
+  dip 0.17 dB < 0.4 dB). **Proven not caused by the 85% lean:** at the pre-lean 100%
+  calibration (`7ec86a6`, run in a throwaway worktree) they fail too (0.15 / 0.12 dB) —
+  the lean if anything slightly *widened* these margins. Thresholds date to early-dev
+  commits (`88b3796`, `243ca18`) and appear aspirational. This is the **sole** remaining
+  blocker on both desktop Rust lanes. Left untouched — owner/taste decision (see below).
+- **Frontend tests (vitest)** — PASS on CI (Node 22). They fail only locally under
+  Node 26; a local node-version artifact, not a repo issue.
+- **Android host JVM lane** — separate pre-existing failure, out of this task's scope.
+
+### Open question for the owner
+Are the `preset_distinctness` thresholds (Tape −0.5 dB crest, Clarity −0.4 dB presence)
+the right bar? Either (a) relax them to the presets' actual behavior (never met at 100%
+or 85%), or (b) treat it as a real "presets not audibly distinct enough" gap and retune
+— which is listening-gated per `CLAUDE.md`. **Do not** change calibration to chase the
+test without a listening note.
+
+### Pull
+`git fetch && git checkout main && git pull --ff-only`   → `88853dc`
