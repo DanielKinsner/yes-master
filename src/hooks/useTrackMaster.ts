@@ -1030,6 +1030,46 @@ export function useTrackMaster() {
     ],
   );
 
+  // §5 — re-push the live chain when the Album<->Track mode flips while a
+  // Mastered preview is loaded, so the album-ness flag / album-intent-vs-track
+  // settings take effect immediately instead of waiting for an unrelated edit.
+  // This runs as an effect (not a setMode wrapper) because sendUpdateChain reads
+  // the album flag from the `mode` closure; a synchronous re-push would carry
+  // the stale pre-switch flag.
+  const prevModeRef = useRef(mode);
+  useEffect(() => {
+    const prev = prevModeRef.current;
+    if (prev === mode) return;
+    prevModeRef.current = mode;
+    const id = selectedTrackIdRef.current;
+    if (!id) return;
+    const followingAlbum = mode === "album" && !overrideAlbum.has(id);
+    if (
+      shouldPushLiveChainForSettingsEdit({
+        trackId: id,
+        editingAlbumIntent: followingAlbum,
+        loadedTrackId,
+        loadedKindByTrack,
+        overrideAlbum,
+      })
+    ) {
+      const effective = followingAlbum
+        ? albumIntent
+        : settingsMap[id] ?? DEFAULT_SETTINGS;
+      sendUpdateChain(withSourceLufs(id, effective), effectivePreviewLanding());
+    }
+  }, [
+    mode,
+    overrideAlbum,
+    loadedTrackId,
+    loadedKindByTrack,
+    albumIntent,
+    settingsMap,
+    withSourceLufs,
+    sendUpdateChain,
+    effectivePreviewLanding,
+  ]);
+
   const undo = useCallback(() => {
     const current: HistorySnapshot = {
       settingsMap: { ...settingsMap },

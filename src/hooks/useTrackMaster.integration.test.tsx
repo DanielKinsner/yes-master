@@ -1666,6 +1666,64 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("re-pushes the live chain when switching Album<->Track during Mastered playback (§5)", async () => {
+    const track = makeTrack("mode-switch-1", "C:/audio/modeswitch.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      await harness.current().setPlaybackKind("master");
+    });
+    await waitFor(() => {
+      expect(harness.current().transport.playbackKind).toBe("master");
+    });
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+    await waitFor(() => {
+      expect(mocks.api.playMaster).toHaveBeenCalled();
+    });
+
+    // Switch to Album mode mid-audition — the live chain must re-push with the
+    // album flag so the stale Track-mode chain does not keep playing until an
+    // unrelated edit.
+    mocks.api.updateChain.mockClear();
+    await act(async () => {
+      harness.current().setMode("album");
+    });
+    await waitFor(() => {
+      expect(mocks.api.updateChain).toHaveBeenLastCalledWith(
+        expect.any(Object),
+        expect.any(Boolean),
+        true, // album flag — now Album mode
+      );
+    });
+
+    // And switching back to Track mode re-pushes with album:false.
+    mocks.api.updateChain.mockClear();
+    await act(async () => {
+      harness.current().setMode("track");
+    });
+    await waitFor(() => {
+      expect(mocks.api.updateChain).toHaveBeenLastCalledWith(
+        expect.any(Object),
+        expect.any(Boolean),
+        false,
+      );
+    });
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("requires analysis before Mastered audition or audit render, but still allows Original playback", async () => {
     const track = makeTrack("unanalyzed-1", "C:/audio/unanalyzed.wav");
     mocks.api.importTracks.mockResolvedValue([track]);
