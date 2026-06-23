@@ -26,18 +26,18 @@ A source runs through these stages, in order:
 
 ## 2. Presets — the "shape"
 
-A preset is a fixed table of baseline moves (`PresetCalibration` in `dsp.rs`). Cheat-sheet of the EQ bands that differ (dB):
+A preset is a fixed table of baseline moves (`PresetCalibration` in `dsp.rs`). Cheat-sheet of the EQ bands that differ (dB), regenerated from the shipped **85% lean** constants (commit `659bea5`, 2026-06-22). "Mid 1.5k" = `presence_db`; "Target LUFS" = the preset's `target_lufs` intent field (the actual render landing is owned by the Delivery Profile):
 
 | Preset | Low 200 | Low-Mid 400 | Mid 1.5k | Air 6k | Width | Ratio | Target LUFS |
 |---|---|---|---|---|---|---|---|
-| Universal | +0.3 | −0.1 | 0 | +1.1 | 1.04 | 1.45 | −14.0 |
-| Clarity | +0.6 | −1.0 | −0.8 | +1.7 | 1.02 | 1.45 | −13.4 |
-| Tape | 0 | +0.3 | −1.4 | +1.9 | 0.99 | 1.65 | −13.8 |
-| Spatial | +0.1 | −0.8 | −0.3 | +1.3 | **1.16** | 1.8 | −13.1 |
-| Oomph | **+4.2** | **−3.0** | −2.6 | −1.2 | 0.95 | 1.7 | −12.0 |
-| Warmth | +0.8 | +0.7 | −1.8 | −0.8 | 0.98 | 2.0 | −14.7 |
-| Punch | +0.8 | −1.8 | +1.6 | +0.8 | 1.04 | 2.8 | −10.9 |
-| Loud | +0.4 | −1.6 | +1.8 | +1.2 | 1.03 | 3.5 | −10.4 |
+| Universal | +0.72 | −0.1 | +0.34 | +1.53 | 1.11 | 1.45 | −12.72 |
+| Clarity | +0.6 | −1.0 | +0.3 | +2.29 | 1.09 | 1.45 | −12.89 |
+| Tape | 0 | +0.72 | −1.4 | +0.71 | 0.93 | 1.65 | −13.8 |
+| Spatial | +0.1 | −0.8 | −0.3 | +1.3 | **1.45** | 1.8 | −13.1 |
+| Oomph | **+5.3** | **−3.0** | −2.6 | −2.05 | 0.84 | 1.7 | −12.0 |
+| Warmth | +1.52 | +1.21 | −1.8 | −1.78 | 0.98 | 2.0 | −14.7 |
+| Punch | +0.8 | −1.8 | +2.32 | +0.8 | 1.04 | 2.8 | −11.62 |
+| Loud | +0.4 | −1.6 | +1.8 | +1.2 | 1.03 | 4.09 | −9.04 |
 | Custom | 0 | 0 | 0 | 0 | 1.0 | 1.8* | −14.0 |
 
 *Custom's compressor is present but density defaults to 0 (off) until you dial it. Full values + sub/high-mid/sparkle (all 0 on every preset) are in `preset-reference.html`.*
@@ -127,7 +127,7 @@ width_mult = 1 − min( width_raw × strength , 0.70 )      // WIDTH_CAP = 0.70
 2. **Caps.** Each axis can remove at most: EQ **50%**, density **60%**, width **70%** of the preset's move — at *any* strength. So even on the worst-case source, a preset keeps at least half its tonal character.
 3. **Character floor (EQ only).** A positive EQ boost is never trimmed below **+0.5 dB**. A preset boost that's already ≤ 0.5 dB is left untouched entirely.
 
-> **Worked example — why Universal reads "−0%" on a boomy track.** Universal's low boost is +0.3 dB. That's below the +0.5 dB floor, so it's *untrimmable* — even on a clearly bass-heavy source the guardrail leaves it alone, and the readout shows Lows −0%. Oomph's +4.2 dB low, by contrast, has lots of headroom: on the boomiest source it can be pulled to at most +2.1 dB (the 50% cap), never lower. That's why Oomph is the one preset where the low guardrail visibly works.
+> **Worked example — the character floor in action.** Loud's low boost is +0.4 dB. That's below the +0.5 dB floor, so it's *untrimmable* — even on a clearly bass-heavy source the guardrail leaves it alone, and the readout shows Lows −0%. Oomph's +5.3 dB low, by contrast, has lots of headroom: on the boomiest source it can be pulled to at most +2.65 dB (the 50% cap), never lower. That's why Oomph is the one preset where the low guardrail visibly works. (Note: under the 85% lean Universal's low boost is +0.72 dB — now *above* the floor, so Universal's lows are trimmable too; Loud is the clearer below-floor illustration.)
 
 ### Two things it deliberately does *not* do
 - It does **not** react to the live, post-EQ signal — it decided from the source analysis at import. Cranking your manual EQ doesn't change what it "sees."

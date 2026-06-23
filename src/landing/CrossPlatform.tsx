@@ -3,7 +3,7 @@ import iphoneImg from "../assets/landing/iphone-standard-ui.jpg";
 // Compact feature list shown beside the phone.
 const features = [
   { title: "A/B in sync", body: "Original vs Mastered with volume match." },
-  { title: "Four styles", body: "Balanced, Warm, Open, Punch." },
+  { title: "Four styles", body: "Universal, Clarity, Tape, Oomph." },
   { title: "Intensity control", body: "Subtle to pushed." },
   { title: "Real-time meters", body: "LUFS, true peak, and gain reduction." },
   { title: "Quality checks", body: "Instant feedback." },

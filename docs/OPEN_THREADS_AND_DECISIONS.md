@@ -11,8 +11,10 @@ close rather than letting them rot in scattered docs.
 > queues (the final repo-wide review A1–E3, and the shippability roadmap S0–S7 +
 > AC-1…AC-4) are **fully shipped on main**. What remains is almost entirely
 > **owner-gated taste/listening work** plus a handful of explicit decisions. The
-> single most actionable open thread is the **macOS snapshot verification (CI red)**.
-> One owner listening sitting could close most of the listening gates at once.
+> macOS cross-platform golden verification is **resolved** (closed below; the
+> 2026-06-23 audit replaced the per-OS exact-byte SHAs with an arch/OS-independent
+> tolerance golden, so it can never spuriously fail again). One owner listening
+> sitting could close most of the remaining listening gates at once.
 
 ---
 
@@ -20,9 +22,8 @@ close rather than letting them rot in scattered docs.
 
 ### OPEN — actionable now
 
-| # | Thread | Source | Action |
-|---|---|---|---|
-| 1 | **macOS byte-identity snapshot SHAs** for the 85% lean (regen 7 hashes + smoke test) | HANDOFF_2026-06-22_MACOS_VERIFICATION.md | On Apple Silicon: `cd src-tauri && cargo test --lib preset_byte_identity`, record the 7 `left` hashes into the 2nd arg of each `expected_platform_sha(...)`, run the smoke checklist, commit only dsp.rs, push, confirm CI green. **Most actionable open thread (CI is red).** |
+_None purely-mechanical — the macOS byte-identity SHA thread (former #1) is
+resolved; see "Confirmed SHIPPED" below. Remaining threads are owner-gated._
 
 ### OPEN — owner-gated (listening / taste)
 
@@ -53,6 +54,12 @@ close rather than letting them rot in scattered docs.
 
 ### Confirmed SHIPPED (closed — listed so they aren't re-opened)
 
+- **macOS byte-identity / cross-platform goldens (former thread #1).** The per-OS
+  exact-byte SHAs (and the `deep_analysis` `[u32;16]` + `analysis` 6-band
+  exact-equality goldens) were replaced by an architecture/OS-independent
+  tolerance golden in the 2026-06-23 audit (Batch F), so an Intel Mac can no
+  longer spuriously fail and no per-OS SHA regen is ever needed again. The
+  earlier Apple-Silicon SHA recording (`cc03d56`/`88853dc`) is superseded.
 - AdaptiveReadout debug-flag gating (`src/lib/debug-flags.ts`, default OFF).
 - 2026-06-16 final repo-wide review queue (A1–E3, slices #1–#20).
 - Shippability roadmap mechanical waves S0–S7 + AC-1…AC-4.
