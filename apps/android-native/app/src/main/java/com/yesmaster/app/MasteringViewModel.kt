@@ -303,7 +303,13 @@ object ReadyStatePersistence {
         if (sourcePath.isNullOrBlank() || displayName.isNullOrBlank() || analysisJson.isNullOrBlank()) {
             return null
         }
-        val analysis = runCatching { Wire.analysis(analysisJson) }.getOrNull() ?: return null
+        // Wire.analysis no longer THROWS on malformed JSON — it returns an
+        // error-bearing default (§6) — so skip the restore when the parse failed
+        // or flagged an error, rather than resurrecting a default-zero analysis.
+        val analysis = runCatching { Wire.analysis(analysisJson) }.getOrNull()
+        if (analysis == null || analysis.error != null) {
+            return null
+        }
         return UiState.Ready(
             displayName = displayName,
             sourcePath = sourcePath,
