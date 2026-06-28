@@ -8,6 +8,7 @@
 // canonical 3D character image for them.
 
 import type { Preset } from "../bindings";
+import type { KnobTone } from "./Knob";
 import universalSrc from "../assets/presets/universal.png";
 import claritySrc from "../assets/presets/clarity.png";
 import tapeSrc from "../assets/presets/tape.png";
@@ -33,6 +34,23 @@ export const PRESET_ACCENT: Record<IconKind, string> = {
   punch: "#ef4444",
   loud: "#60a5fa",
   custom: "#9ca3af",
+};
+
+/// Knob accent tone per preset — the named Knob `tone` whose color tracks
+/// each preset's identity. The four standard styles match Standard's
+/// STANDARD_STYLES tones exactly (universal=blue, clarity=cyan, tape=gold,
+/// oomph=red); extended to every preset kind so the Intensity knob can
+/// inherit the selected preset's color in both Standard and Advanced.
+export const PRESET_TONE: Record<IconKind, KnobTone> = {
+  universal: "blue",
+  clarity: "cyan",
+  tape: "gold",
+  spatial: "purple",
+  oomph: "red",
+  warmth: "orange",
+  punch: "red",
+  loud: "blue",
+  custom: "blue",
 };
 
 type IconProps = {
