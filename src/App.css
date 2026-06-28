@@ -5458,12 +5458,12 @@ button.primary:disabled {
    (name left, LUFS right) so the card fills the pair's height. Markup is
    unchanged — this is a CSS-only reflow of the existing segmented control. */
 .std-pair .std-step-loudness .std-seg {
-  /* Flex column that fills the card so Low/Medium/High spread evenly down
-     the height (tracks the taller Intensity card) instead of bunching at
-     the top. */
+  /* Flex column that fills the card so Low/Medium/High sit as a group
+     centered on the card's height (tracks the taller Intensity card),
+     keeping their natural row spacing rather than bunching at the top. */
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
   flex: 1;
   gap: 0.5rem;
 }
