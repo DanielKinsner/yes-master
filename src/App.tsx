@@ -10,7 +10,7 @@ import { useFirstRunGuide } from "./hooks/useFirstRunGuide";
 import { StandardView } from "./components/StandardView";
 import { FirstRunOverlay } from "./components/FirstRunOverlay";
 import { hasNonManagedEdits } from "./lib/standard-managed";
-import { PresetIcon, PRESET_ACCENT } from "./components/PresetIcon";
+import { PresetIcon, PRESET_ACCENT, PRESET_TONE } from "./components/PresetIcon";
 import { RightRail, MasterOutPanel } from "./components/RightRail";
 import { VisualEqPanel } from "./components/VisualEqPanel";
 import { AlbumPanel } from "./components/AlbumPanel";
@@ -1740,6 +1740,7 @@ export function Macros({
         <Knob
           label=""
           size="lg"
+          tone={PRESET_TONE[settings.preset.kind]}
           value={settings.intensity}
           min={0}
           max={1}
