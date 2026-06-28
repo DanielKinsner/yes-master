@@ -606,6 +606,9 @@ export function StandardView({
             <StyleTiles preset={s.preset} onSelect={tm.setPreset} />
           </div>
 
+          {/* Steps 2 & 3 share a 2-up row — Intensity beside Loudness (two
+              equal-height cards), per the Standard intensity+loudness layout. */}
+          <div className="std-pair">
           <div
             className="std-step std-step-intensity"
             ref={seamRefs.intensity}
@@ -654,6 +657,7 @@ export function StandardView({
               targetLufs={effectiveLoudnessTarget(s)}
               onSelect={tm.setLoudnessTarget}
             />
+          </div>
           </div>
         </div>
       </section>
