@@ -5408,6 +5408,59 @@ button.primary:disabled {
 .std-seg-lufs { font-size: 0.72rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .std-seg-option.is-active .std-seg-lufs { color: var(--accent-bright); }
 
+/* ---- Intensity + Loudness 2-up row (steps 2 & 3 side by side) ----
+   Style stays full-width above; Intensity and Loudness sit as a pair of
+   equal-height cards. Each card's internals reflow for the narrower
+   half-width column: Intensity centers its knob with the zone chips beneath
+   the label/hint, and Loudness stacks Low/Medium/High vertically so its
+   height tracks the knob card. The seam-alignment refs still bind to each
+   .std-step, so the rail measurement glue is unaffected (the rail mirrors
+   the pair's seams rather than two stacked steps). */
+.std-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--std-col-gap);
+  align-items: stretch;
+}
+.std-steps .std-pair > .std-step { animation-delay: 180ms; }
+
+/* Intensity card, half-width: vertical — label/hint, then the centered knob,
+   then the zone chips. Overrides the full-width "label | knob" area grid. */
+.std-steps .std-pair .std-step-intensity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.std-steps .std-pair .std-step-intensity .std-step-label,
+.std-steps .std-pair .std-step-intensity .std-step-hint {
+  align-self: flex-start;
+}
+.std-steps .std-pair .std-step-intensity .knob {
+  order: 2;
+  margin-top: 0.35rem;
+}
+.std-steps .std-pair .std-step-intensity .std-zone-chips {
+  order: 3;
+  justify-content: center;
+  margin-top: 0.55rem;
+}
+
+/* Loudness card, half-width: stack Low / Medium / High vertically as rows
+   (name left, LUFS right) so the card fills the pair's height. Markup is
+   unchanged — this is a CSS-only reflow of the existing segmented control. */
+.std-pair .std-step-loudness .std-seg {
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+.std-pair .std-step-loudness .std-seg-option {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  padding: clamp(0.55rem, 1.25vh, 0.92rem) 1rem;
+}
+
 /* ---- right rail (preview / delivery / export) ---- */
 .std-rail {
   /* gap MUST be the shared --std-col-gap: seam alignment derives Delivery's
