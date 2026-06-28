@@ -5438,19 +5438,33 @@ button.primary:disabled {
 }
 .std-steps .std-pair .std-step-intensity .knob {
   order: 2;
-  margin-top: 0.35rem;
+  /* A touch larger in the roomy half-width card. Scale keeps the shared lg
+     Knob geometry untouched (used elsewhere); margins reserve the grown size
+     so it never crowds the caption/chips. */
+  transform: scale(1.12);
+  transform-origin: center;
+  margin: 0.55rem 0 1rem;
 }
 .std-steps .std-pair .std-step-intensity .std-zone-chips {
   order: 3;
+  /* Override the full-width layout's `align-self: end` (which read as
+     right-aligned in this column) so the chips center under the knob. */
+  align-self: center;
   justify-content: center;
-  margin-top: 0.55rem;
+  margin-top: 0.3rem;
 }
 
 /* Loudness card, half-width: stack Low / Medium / High vertically as rows
    (name left, LUFS right) so the card fills the pair's height. Markup is
    unchanged — this is a CSS-only reflow of the existing segmented control. */
 .std-pair .std-step-loudness .std-seg {
-  grid-template-columns: 1fr;
+  /* Flex column that fills the card so Low/Medium/High spread evenly down
+     the height (tracks the taller Intensity card) instead of bunching at
+     the top. */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
   gap: 0.5rem;
 }
 .std-pair .std-step-loudness .std-seg-option {
