@@ -109,10 +109,10 @@ for (const [width, height] of matrix) {
         .map((image) => image.currentSrc || image.src),
       sections: required.map((id) => ({ id, present: Boolean(document.getElementById(id)) })),
       bodyHasExpectedCopy: [
-        "Your Endgame",
-        "Master anywhere",
+        "see exactly what it did",
         "One engine",
         "Stop chasing the master",
+        "Same engine",
       ].every((text) => body.textContent?.includes(text)),
     };
   }, requiredSections);
