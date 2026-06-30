@@ -1,10 +1,9 @@
 // Phase B Step 4: Album Master panel.
 //
 // Top-strip control surface for album-mode mastering. Shows:
-//   * Arc dropdown (4 named curves)
-//   * Album intensity slider
+//   * Album flow dropdown (4 named curves)
+//   * Flow amount slider
 //   * Album title input
-//   * Export Album CTA (calls plan_album → render_album_plan via the hook)
 //   * Last export report when present
 //
 // Per-track DSP is still edited via the regular Tone Shape / Macros / Advanced
@@ -28,16 +27,10 @@ type AlbumPanelProps = {
   albumArcKind: AlbumArcKind;
   albumIntensity: number;
   albumTitle: string;
-  albumRendering: boolean;
   albumExportReport: AlbumRenderReport | null;
-  albumSampleRate: number | null;
-  albumBitDepth: number | null;
   onAlbumArc: (kind: AlbumArcKind) => void;
   onAlbumIntensity: (v: number) => void;
   onAlbumTitle: (v: string) => void;
-  onExportAlbum: () => void;
-  onAlbumSampleRate: (v: number | null) => void;
-  onAlbumBitDepth: (v: number | null) => void;
 };
 
 export function AlbumPanel({
@@ -45,16 +38,10 @@ export function AlbumPanel({
   albumArcKind,
   albumIntensity,
   albumTitle,
-  albumRendering,
   albumExportReport,
-  albumSampleRate,
-  albumBitDepth,
   onAlbumArc,
   onAlbumIntensity,
   onAlbumTitle,
-  onExportAlbum,
-  onAlbumSampleRate,
-  onAlbumBitDepth,
 }: AlbumPanelProps) {
   const arcKinds: AlbumArcKind[] = [
     "cinematic",
@@ -112,7 +99,6 @@ export function AlbumPanel({
             )}
           </span>
         </div>
-        <span className="section-label album-panel-mode">Album Master</span>
         <input
           type="text"
           className="album-title-input"
@@ -121,18 +107,10 @@ export function AlbumPanel({
           onChange={(e) => onAlbumTitle(e.target.value)}
           maxLength={120}
         />
-        <button
-          type="button"
-          className="primary album-export-btn"
-          onClick={onExportAlbum}
-          disabled={albumRendering || tracks.length === 0}
-        >
-          {albumRendering ? "Rendering album…" : "Export Album"}
-        </button>
       </header>
       <div className="album-panel-controls">
         <label className="adv-label" htmlFor="album-arc-select">
-          Arc
+          Album flow
         </label>
         <select
           id="album-arc-select"
@@ -147,7 +125,7 @@ export function AlbumPanel({
           ))}
         </select>
         <label className="adv-label" htmlFor="album-intensity-range">
-          Intensity
+          Flow amount
         </label>
         <input
           id="album-intensity-range"
@@ -162,42 +140,6 @@ export function AlbumPanel({
         <span className="album-intensity-value">
           ×{albumIntensity.toFixed(2)}
         </span>
-        <label className="adv-label" htmlFor="album-rate-select">
-          Sample rate
-        </label>
-        <select
-          id="album-rate-select"
-          className="loudness-profile-select"
-          value={albumSampleRate === null ? "auto" : String(albumSampleRate)}
-          onChange={(e) =>
-            onAlbumSampleRate(
-              e.target.value === "auto" ? null : parseInt(e.target.value, 10),
-            )
-          }
-        >
-          <option value="auto">Auto</option>
-          <option value="44100">44.1 kHz</option>
-          <option value="48000">48 kHz</option>
-          <option value="96000">96 kHz</option>
-        </select>
-        <label className="adv-label" htmlFor="album-depth-select">
-          Bit depth
-        </label>
-        <select
-          id="album-depth-select"
-          className="loudness-profile-select"
-          value={albumBitDepth === null ? "auto" : String(albumBitDepth)}
-          onChange={(e) =>
-            onAlbumBitDepth(
-              e.target.value === "auto" ? null : parseInt(e.target.value, 10),
-            )
-          }
-        >
-          <option value="auto">Auto</option>
-          <option value="16">16-bit</option>
-          <option value="24">24-bit</option>
-          <option value="32">32-bit</option>
-        </select>
       </div>
       {albumExportReport && (
         <div className="album-export-receipt">

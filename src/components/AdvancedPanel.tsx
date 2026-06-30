@@ -40,6 +40,7 @@ export function AdvancedPanel({
   onDeliveryBitDepth,
   onDeliverySampleRate,
   showDeliveryFormat = true,
+  albumDeliveryFormat,
   adaptiveReadout,
   compressionPlan,
   albumMode = false,
@@ -53,10 +54,16 @@ export function AdvancedPanel({
   onDeliveryProfile: (profile: DeliveryProfile) => void;
   onDeliveryBitDepth: (bitDepth: number | null) => void;
   onDeliverySampleRate: (sampleRate: number | null) => void;
-  /// Album Master owns delivery format via its own album-wide control,
-  /// so the per-track Delivery Format card is hidden there to avoid a
-  /// confusing duplicate. Defaults true → Track Master is unchanged.
+  /// Track Master uses settings-derived delivery format; Album Master passes
+  /// album-wide format values into the same rail card so the control stays in
+  /// the same place across Advanced surfaces.
   showDeliveryFormat?: boolean;
+  albumDeliveryFormat?: {
+    bitDepth: number | null;
+    sampleRate: number | null;
+    onBitDepth: (bitDepth: number | null) => void;
+    onSampleRate: (sampleRate: number | null) => void;
+  };
   adaptiveReadout?: GuardrailReadout | null;
   compressionPlan?: CompressionPlan | null;
   albumMode?: boolean;
@@ -95,8 +102,18 @@ export function AdvancedPanel({
       {showDeliveryFormat && (
         <DeliveryFormatCard
           settings={settings}
-          onBitDepth={onDeliveryBitDepth}
-          onSampleRate={onDeliverySampleRate}
+          bitDepth={albumDeliveryFormat?.bitDepth}
+          sampleRate={albumDeliveryFormat?.sampleRate}
+          onBitDepth={albumDeliveryFormat?.onBitDepth ?? onDeliveryBitDepth}
+          onSampleRate={
+            albumDeliveryFormat?.onSampleRate ?? onDeliverySampleRate
+          }
+          autoSampleRateLabel={albumDeliveryFormat ? "Auto" : "Source"}
+          note={
+            albumDeliveryFormat
+              ? "Album Master exports WAV files."
+              : "Track Master exports WAV files."
+          }
         />
       )}
     </>
@@ -822,15 +839,25 @@ function resetCompressorSettingsToCurrentMode(
 
 function DeliveryFormatCard({
   settings,
+  bitDepth,
+  sampleRate,
   onBitDepth,
   onSampleRate,
+  autoSampleRateLabel = "Source",
+  note = "Track Master exports WAV files.",
 }: {
   settings: MasteringSettings;
+  bitDepth?: number | null;
+  sampleRate?: number | null;
   onBitDepth: (bitDepth: number | null) => void;
   onSampleRate: (sampleRate: number | null) => void;
+  autoSampleRateLabel?: string;
+  note?: string;
 }) {
-  const effectiveBitDepthValue = effectiveBitDepth(settings);
-  const effectiveSampleRateValue = effectiveSampleRate(settings);
+  const effectiveBitDepthValue =
+    bitDepth === undefined ? effectiveBitDepth(settings) : bitDepth;
+  const effectiveSampleRateValue =
+    sampleRate === undefined ? effectiveSampleRate(settings) : sampleRate;
   return (
     <section className="panel rail-card rail-card-format">
       <header className="panel-head">
@@ -852,14 +879,14 @@ function DeliveryFormatCard({
           label="Sample rate"
           value={effectiveSampleRateValue}
           options={[
-            { value: null, label: "Source" },
+            { value: null, label: autoSampleRateLabel },
             { value: 44_100, label: "44.1 kHz" },
             { value: 48_000, label: "48 kHz" },
             { value: 96_000, label: "96 kHz" },
           ]}
           onChange={onSampleRate}
         />
-        <p className="format-note">Track Master exports WAV files.</p>
+        <p className="format-note">{note}</p>
       </div>
     </section>
   );

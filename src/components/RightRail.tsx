@@ -17,6 +17,7 @@ type RightRailProps = {
   // Export action — promoted from the workspace into the right rail to
   // match the reference layout. Disabled until analysis exists and while
   // any render/export is in flight.
+  exportMode?: "track" | "album";
   canExport: boolean;
   isExporting: boolean;
   isRendering: boolean;
@@ -49,6 +50,7 @@ export function RightRail({
   analysis,
   lastChecks,
   advancedSlot,
+  exportMode = "track",
   canExport,
   isExporting,
   isRendering,
@@ -58,18 +60,24 @@ export function RightRail({
   onUpdatePreview,
 }: RightRailProps) {
   const qualityRows = qualityRowsFor(lastChecks, analysis);
-  const needsReview = canExport && hasReviewRows(qualityRows);
+  const needsReview =
+    exportMode === "track" && canExport && hasReviewRows(qualityRows);
   const [reviewOpen, setReviewOpen] = useState(false);
 
   useEffect(() => {
     setReviewOpen(false);
   }, [analysis?.track_id, lastChecks]);
 
-  const exportLabel = isExporting
-    ? "Exporting..."
-    : needsReview
-      ? "Export With Review"
-      : "Export Master";
+  const exportLabel =
+    exportMode === "album"
+      ? isExporting
+        ? "Rendering Album..."
+        : "Export Album"
+      : isExporting
+        ? "Exporting..."
+        : needsReview
+          ? "Export With Review"
+          : "Export Master";
 
   const handlePrimaryExport = () => {
     if (!canExport || isExporting || isRendering) return;
@@ -125,7 +133,9 @@ export function RightRail({
             isRendering && !isExporting
               ? "Disabled while a render-audit WAV is in progress — they share render state."
               : !canExport
-              ? "Analyze a track first."
+              ? exportMode === "album"
+                ? "Import album tracks first."
+                : "Analyze a track first."
               : undefined
           }
         >

@@ -163,9 +163,13 @@ function baseTrackMasterState(): Record<string, unknown> {
     albumTitle: "",
     albumRendering: false,
     albumExportReport: null,
+    albumSampleRate: null,
+    albumBitDepth: null,
     setAlbumArc: vi.fn(),
     setAlbumIntensity: vi.fn(),
     setAlbumTitle: vi.fn(),
+    setAlbumSampleRate: vi.fn(),
+    setAlbumBitDepth: vi.fn(),
     exportAlbumPlan: vi.fn(),
     transport: {
       isPlaying: false,
@@ -192,6 +196,9 @@ function baseTrackMasterState(): Record<string, unknown> {
     setInputGain: vi.fn(),
     setOutputGain: vi.fn(),
     setDeliveryProfile: vi.fn(),
+    setLoudnessTarget: vi.fn(),
+    setDeliveryBitDepth: vi.fn(),
+    setDeliverySampleRate: vi.fn(),
     togglePlay: vi.fn(),
     seek: vi.fn(),
     setPlaybackKind: vi.fn(),
@@ -244,6 +251,50 @@ describe("album export actions", () => {
       (button) => button.textContent?.trim() === "Export Album",
     );
     expect(exportButtons).toHaveLength(1);
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("puts Album delivery format in the Advanced right rail", async () => {
+    const setAlbumSampleRate = vi.fn();
+    const setAlbumBitDepth = vi.fn();
+    const setDeliverySampleRate = vi.fn();
+    mocks.tm = {
+      ...baseTrackMasterState(),
+      selectedTrackId: track.id,
+      selectedTrack: track,
+      selectedAnalysis: hotAnalysis,
+      selectedSettings: settings,
+      albumSampleRate: 44_100,
+      albumBitDepth: 16,
+      setAlbumSampleRate,
+      setAlbumBitDepth,
+      setDeliverySampleRate,
+    };
+
+    const { container, root } = await renderApp();
+
+    expect(container.textContent).toContain("DELIVERY FORMAT");
+    expect(container.querySelector("#album-rate-select")).toBeNull();
+    const rate = container.querySelector<HTMLSelectElement>(
+      'select[aria-label="Sample rate"]',
+    );
+    const depth = container.querySelector<HTMLSelectElement>(
+      'select[aria-label="Bit depth"]',
+    );
+    expect(rate?.value).toBe("44100");
+    expect(depth?.value).toBe("16");
+
+    await act(async () => {
+      if (!rate) throw new Error("sample-rate select missing");
+      rate.value = "48000";
+      rate.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(setAlbumSampleRate).toHaveBeenCalledWith(48_000);
+    expect(setDeliverySampleRate).not.toHaveBeenCalled();
+
     await act(async () => {
       root.unmount();
     });

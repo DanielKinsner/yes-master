@@ -193,7 +193,7 @@ describe("App user-facing errors", () => {
     });
   });
 
-  it("explains that Album Master opens in the Advanced view", async () => {
+  it("explains that Album Master opens Advanced", async () => {
     const { root, container } = await mountApp();
 
     await waitFor(() => {
@@ -206,7 +206,7 @@ describe("App user-facing errors", () => {
 
     await waitFor(() => {
       expect(container.textContent).toContain(
-        "Album Master lives in the Advanced view.",
+        "Opening Album Master in Advanced.",
       );
     });
 

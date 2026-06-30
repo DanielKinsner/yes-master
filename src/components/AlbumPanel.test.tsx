@@ -14,16 +14,10 @@ function baseProps() {
     albumArcKind: "cinematic" as const,
     albumIntensity: 1.0,
     albumTitle: "",
-    albumRendering: false,
     albumExportReport: null,
-    albumSampleRate: null,
-    albumBitDepth: null,
     onAlbumArc: vi.fn(),
     onAlbumIntensity: vi.fn(),
     onAlbumTitle: vi.fn(),
-    onExportAlbum: vi.fn(),
-    onAlbumSampleRate: vi.fn(),
-    onAlbumBitDepth: vi.fn(),
   };
 }
 
@@ -44,43 +38,14 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("AlbumPanel delivery format", () => {
-  it("renders sample-rate and bit-depth selects defaulting to Auto", async () => {
+describe("AlbumPanel", () => {
+  it("renders compact album flow controls without export format fields", async () => {
     const { container } = await renderNode(<AlbumPanel {...baseProps()} />);
-    const rate = container.querySelector(
-      "#album-rate-select",
-    ) as HTMLSelectElement | null;
-    const depth = container.querySelector(
-      "#album-depth-select",
-    ) as HTMLSelectElement | null;
-    expect(rate?.value).toBe("auto");
-    expect(depth?.value).toBe("auto");
-  });
-
-  it("calls onAlbumSampleRate with a number when a rate is picked", async () => {
-    const props = baseProps();
-    const { container } = await renderNode(<AlbumPanel {...props} />);
-    const rate = container.querySelector(
-      "#album-rate-select",
-    ) as HTMLSelectElement;
-    await act(async () => {
-      rate.value = "44100";
-      rate.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    expect(props.onAlbumSampleRate).toHaveBeenCalledWith(44100);
-  });
-
-  it("calls onAlbumBitDepth with null when Auto is reselected", async () => {
-    const props = { ...baseProps(), albumBitDepth: 24 };
-    const { container } = await renderNode(<AlbumPanel {...props} />);
-    const depth = container.querySelector(
-      "#album-depth-select",
-    ) as HTMLSelectElement;
-    await act(async () => {
-      depth.value = "auto";
-      depth.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    expect(props.onAlbumBitDepth).toHaveBeenCalledWith(null);
+    expect(container.textContent).toContain("Album flow");
+    expect(container.textContent).toContain("Flow amount");
+    expect(container.querySelector("#album-rate-select")).toBeNull();
+    expect(container.querySelector("#album-depth-select")).toBeNull();
+    expect(container.textContent).not.toContain("Export Album");
   });
 
   it("shows the rendered delivery format and upsample advisory", async () => {

@@ -411,6 +411,41 @@ describe("RightRail source checks", () => {
     });
   });
 
+  it("uses the Album export action directly in album mode", async () => {
+    const onExport = vi.fn();
+    const { container, root } = await renderNode(
+      <RightRail
+        exportMode="album"
+        analysis={HOT_SOURCE_ANALYSIS}
+        lastChecks={undefined}
+        canExport
+        isExporting={false}
+        isRendering={false}
+        onExport={onExport}
+        previewStale={false}
+        canRenderPreview
+        onUpdatePreview={vi.fn()}
+      />,
+    );
+
+    const exportButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Export Album",
+    ) as HTMLButtonElement | undefined;
+
+    expect(exportButton).toBeTruthy();
+
+    await act(async () => {
+      exportButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onExport).toHaveBeenCalledTimes(1);
+    expect(container.textContent).not.toContain("Review before export");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("labels pre-export analysis as source measurements", async () => {
     const { container, root } = await renderNode(
       <RightRail

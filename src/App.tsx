@@ -266,7 +266,7 @@ function App() {
 
   const handleModeChange = (nextMode: "track" | "album") => {
     if (nextMode === "album" && view === "standard") {
-      setModeNotice("Album Master lives in the Advanced view.");
+      setModeNotice("Opening Album Master in Advanced.");
     } else {
       setModeNotice(null);
     }
@@ -318,16 +318,10 @@ function App() {
             albumArcKind={tm.albumArcKind}
             albumIntensity={tm.albumIntensity}
             albumTitle={tm.albumTitle}
-            albumRendering={tm.albumRendering}
             albumExportReport={tm.albumExportReport}
-            albumSampleRate={tm.albumSampleRate}
-            albumBitDepth={tm.albumBitDepth}
             onAlbumArc={tm.setAlbumArc}
             onAlbumIntensity={tm.setAlbumIntensity}
             onAlbumTitle={tm.setAlbumTitle}
-            onExportAlbum={tm.exportAlbumPlan}
-            onAlbumSampleRate={tm.setAlbumSampleRate}
-            onAlbumBitDepth={tm.setAlbumBitDepth}
           />
         )}
         {tm.selectedTrack ? (
@@ -362,20 +356,31 @@ function App() {
               onDeliveryProfile={tm.setDeliveryProfile}
               onDeliveryBitDepth={tm.setDeliveryBitDepth}
               onDeliverySampleRate={tm.setDeliverySampleRate}
-              showDeliveryFormat={tm.mode !== "album"}
+              showDeliveryFormat
+              albumDeliveryFormat={
+                tm.mode === "album"
+                  ? {
+                      bitDepth: tm.albumBitDepth,
+                      sampleRate: tm.albumSampleRate,
+                      onBitDepth: tm.setAlbumBitDepth,
+                      onSampleRate: tm.setAlbumSampleRate,
+                    }
+                  : undefined
+              }
               adaptiveReadout={tm.guardrailReadout}
               compressionPlan={tm.compressionPlan}
               albumMode={tm.mode === "album"}
             />
           ) : undefined
         }
-        canExport={!!tm.selectedAnalysis}
-        isExporting={tm.isExporting}
+        exportMode={tm.mode === "album" ? "album" : "track"}
+        canExport={tm.mode === "album" ? tm.tracks.length > 0 : !!tm.selectedAnalysis}
+        isExporting={tm.mode === "album" ? tm.albumRendering : tm.isExporting}
         isRendering={tm.isRendering}
         previewStale={tm.previewStale}
         canRenderPreview={!!tm.selectedAnalysis}
         onUpdatePreview={tm.updatePreview}
-        onExport={tm.exportMaster}
+        onExport={tm.mode === "album" ? tm.exportAlbumPlan : tm.exportMaster}
       />
         </>
       )}
@@ -985,6 +990,30 @@ function Sidebar({
                   {t.duration_seconds ? formatDuration(t.duration_seconds) : `.${t.source_format}`}
                 </span>
               </button>
+              {albumReorderable && (
+                <div className="track-reorder-controls" aria-label="Album order controls">
+                  <button
+                    type="button"
+                    className="track-reorder-btn"
+                    onClick={() => onReorder(index, index - 1)}
+                    disabled={index === 0}
+                    aria-label={`Move ${t.display_name} up`}
+                    title="Move up"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    className="track-reorder-btn"
+                    onClick={() => onReorder(index, index + 1)}
+                    disabled={index === tracks.length - 1}
+                    aria-label={`Move ${t.display_name} down`}
+                    title="Move down"
+                  >
+                    ↓
+                  </button>
+                </div>
+              )}
               <button
                 type="button"
                 className="track-remove"
