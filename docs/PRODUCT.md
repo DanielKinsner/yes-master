@@ -19,6 +19,15 @@ choices. If a user wants to push a track too hard, YES Master can allow that.
 The product responsibility is to make the consequences legible through meters,
 quality checks, and export review.
 
+## Positioning & Voice
+
+Lead with **real-time performance, simplicity, and honesty** — "master your track
+in real time and see exactly what it did." The app runs locally for **speed and
+simplicity** (instant response, no upload round-trip, no account, works offline),
+**not** as a privacy stance; audio staying on your machine is a welcome side
+effect, not the headline. Decided with the owner 2026-06-30 — do not headline
+privacy in marketing or store copy. See `docs/plans/2026-06-30-launch-plan.md` §2.
+
 ## Audience
 
 - Musicians and producers finishing tracks.

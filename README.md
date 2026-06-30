@@ -1,13 +1,13 @@
 # YES Master
 
-**Local-first mastering you can actually trust.** Drop in a finished track or
-album, hear exactly what the chain is doing in real time, shape it to taste, and
-export a technically-checked master — all on your machine, your audio never
-uploaded.
+**Master your track in real time — and see exactly what it did.** Drop in a
+finished track or album, hear the full mastering chain as you listen, shape it to
+taste, and export a technically-checked master. It runs entirely on your machine,
+so every change is instant — no upload, no waiting, no account.
 
-No cloud. No black box. YES Master *measures what it did and shows you* — live
-meters, quality checks, and a post-render receipt — so you can push as hard as
-you want and still know the truth about the file you're shipping.
+No black box. YES Master *measures what it did and shows you* — live meters,
+quality checks, and a post-render receipt — so you can push as hard as you want
+and still know the truth about the file you're shipping.
 
 Desktop (Windows + macOS) is the product: a Tauri 2 + React/TypeScript frontend
 over a Rust DSP engine. iPhone and Android companions in `apps/` reuse that same

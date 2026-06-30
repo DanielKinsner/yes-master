@@ -13,23 +13,23 @@ album — and shows you exactly what it did.
 
 ## Hero copy (pick or mix)
 
-**Primary:** Not just louder. More legible.
+**Primary:** Master your track in real time — and see exactly what it did.
 
 **Supporting subheads:**
+- Not just louder. More legible.
 - Three decisions. One finished master.
 - The four Standard sounds. When you need more, the studio opens.
-- Master on your machine. Your audio never leaves it.
-- Local, private, fast — and honest about what it changed.
+- Real-time on your machine — instant, no upload, no account.
 
 ## The promise (what the page sells)
 
 Drop in audio. Hear what the mastering chain is doing in real time. Pick a sound,
 set a loudness, shape the intensity. Create a finished, technically-checked
-master — without your audio ever leaving your computer.
+master — all running locally, so it responds the instant you touch it.
 
 Push it as hard as you want: YES Master measures what actually happened and shows
 you — live meters, quality checks, a post-render receipt — so you always know the
-truth about the file you're shipping. **No cloud. No black box.**
+truth about the file you're shipping. **No waiting. No black box.**
 
 ## Two views, one engine (the core visual story)
 
@@ -60,8 +60,9 @@ A focused, studio-grade desktop interface:
 
 - **Real-time.** The whole mastering chain runs live while audio plays; every
   control responds instantly.
-- **Local & private.** Everything runs on your machine. Your audio is never
-  uploaded and never embedded — always referenced from disk.
+- **Local & instant.** Everything runs on your machine — no upload, no round-trip,
+  no account, works offline. (Your audio staying private is a welcome side effect,
+  not the pitch.)
 - **Honest.** It measures the rendered file and surfaces real problems; it never
   hides what it did.
 - **Safe by design.** Exports never overwrite your source. Volume-matched
@@ -90,4 +91,5 @@ match: **trust-first** (simple, reassuring) · **control-room** (serious console
 - **Present tense only** — describe what it *is*, never what it *will be*.
 - **No roadmap, no "coming soon," no version numbers, no build/dev detail.**
 - Standard is the hero; Advanced is the proof.
-- Load-bearing words: **local, private, real-time, honest, legible**.
+- Load-bearing words: **real-time, simple, honest, legible** (and **local** framed
+  as *instant*, not *private*).
