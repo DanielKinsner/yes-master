@@ -108,7 +108,10 @@ jobs:
       - name: Enable Windows signing config overlay
         if: ${{ matrix.platform == 'windows-latest' && env.AZURE_CLIENT_ID != '' }}
         shell: bash
-        run: echo "EXTRA_ARGS=--config src-tauri/tauri.windows.conf.json" >> "$GITHUB_ENV"
+        # The overlay is named so it does NOT match Tauri's `tauri.<platform>.conf.json`
+        # auto-merge pattern; it is applied only here via --config, keeping local
+        # Windows builds buildable without Azure signing credentials.
+        run: echo "EXTRA_ARGS=--config src-tauri/tauri.windows-signing.conf.json" >> "$GITHUB_ENV"
 
       - name: Build, sign & draft release
         uses: tauri-apps/tauri-action@v0

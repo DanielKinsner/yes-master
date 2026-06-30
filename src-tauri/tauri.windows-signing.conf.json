@@ -1,0 +1,8 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "windows": {
+      "signCommand": "trusted-signing-cli -e https://wus2.codesigning.azure.net -a YOUR_AZURE_ACCOUNT -c YOUR_CERT_PROFILE -d \"YES Master\" %1"
+    }
+  }
+}

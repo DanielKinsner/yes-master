@@ -76,7 +76,7 @@ up-front cert purchase.
    | `AZURE_CLIENT_ID` | the App Registration's client ID |
    | `AZURE_CLIENT_SECRET` | the App Registration's client secret |
 
-4. Edit `src-tauri/tauri.windows.conf.json` and replace `YOUR_AZURE_ACCOUNT`,
+4. Edit `src-tauri/tauri.windows-signing.conf.json` and replace `YOUR_AZURE_ACCOUNT`,
    `YOUR_CERT_PROFILE`, and the endpoint URL (e.g. `https://wus2.codesigning.azure.net`)
    with your real values.
 
