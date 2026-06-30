@@ -2495,6 +2495,71 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("pushes undo and redo restorations to the live chain during Mastered playback", async () => {
+    const track = makeTrack("undo-redo-live-1", "C:/audio/undo-redo-live.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      await harness.current().setPlaybackKind("master");
+    });
+    await act(async () => {
+      await harness.current().togglePlay();
+    });
+    await waitFor(() => {
+      expect(mocks.api.playMaster).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      harness.current().setIntensity(0.82);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedSettings.intensity).toBe(0.82);
+      expect(mocks.api.updateChain).toHaveBeenCalledWith(
+        expect.objectContaining({ intensity: 0.82 }),
+        expect.any(Boolean),
+        false,
+      );
+    });
+
+    mocks.api.updateChain.mockClear();
+    await act(async () => {
+      harness.current().undo();
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedSettings.intensity).toBe(0.5);
+      expect(mocks.api.updateChain).toHaveBeenCalledWith(
+        expect.objectContaining({ intensity: 0.5 }),
+        expect.any(Boolean),
+        false,
+      );
+    });
+
+    mocks.api.updateChain.mockClear();
+    await act(async () => {
+      harness.current().redo();
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedSettings.intensity).toBe(0.82);
+      expect(mocks.api.updateChain).toHaveBeenCalledWith(
+        expect.objectContaining({ intensity: 0.82 }),
+        expect.any(Boolean),
+        false,
+      );
+    });
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("asks where to save a track master and passes that path to render", async () => {
     const track = makeTrack("export-1", "C:/audio/export source.wav");
     mocks.api.importTracks.mockResolvedValue([track]);

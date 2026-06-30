@@ -243,7 +243,13 @@ afterEach(() => {
 
 describe("album export actions", () => {
   it("shows a single Album Export button in album mode", async () => {
-    mocks.tm = baseTrackMasterState();
+    const exportAlbumPlan = vi.fn();
+    const exportMaster = vi.fn();
+    mocks.tm = {
+      ...baseTrackMasterState(),
+      exportAlbumPlan,
+      exportMaster,
+    };
 
     const { container, root } = await renderApp();
 
@@ -251,6 +257,11 @@ describe("album export actions", () => {
       (button) => button.textContent?.trim() === "Export Album",
     );
     expect(exportButtons).toHaveLength(1);
+    await act(async () => {
+      exportButtons[0].click();
+    });
+    expect(exportAlbumPlan).toHaveBeenCalledTimes(1);
+    expect(exportMaster).not.toHaveBeenCalled();
     await act(async () => {
       root.unmount();
     });
