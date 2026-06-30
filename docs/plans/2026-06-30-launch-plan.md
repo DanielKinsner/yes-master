@@ -137,7 +137,15 @@ substitutes for the celebrity social proof we don't have.
 ## 6. Engineering backlog (to be launch-ready)
 
 Derived from the launch-readiness scan + the strategy above. Ordered by leverage.
-Most of these become the detailed implementation plan (next step).
+
+> **Progress (2026-06-30):** ✅ Landing rewrite shipped (brand + positioning +
+> free-beta email capture; email provider endpoint pending). ✅ Release pipeline
+> drafted (`.github/workflows/release.yml` + `docs/RELEASE_SIGNING_SETUP.md`) —
+> macOS + Windows signing auto-activate once the owner adds account secrets.
+> ✅ Legal drafts written (`docs/legal/` EULA, privacy, refund) — pending owner
+> fill-in + lawyer pass. Remaining P0/P1 (export gate, license activation,
+> download-button wiring, version bump) are gated on the Lemon Squeezy account
+> and the first signed release.
 
 **P0 — without these there is nothing to launch**
 - [ ] **Release pipeline:** GitHub Actions workflow that builds, **signs**,
