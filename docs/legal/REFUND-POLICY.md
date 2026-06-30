@@ -4,6 +4,12 @@
 > jurisdictions (e.g. the EU/UK) grant statutory refund rights that override a
 > stricter policy, and your merchant of record (Lemon Squeezy) has its own buyer
 > terms. Fill in the bracketed items (`[…]`).
+>
+> **Current beta caveat:** The export-lock language below describes the intended
+> paid 1.0 demo behavior. As of 2026-06-30, export locking is not yet
+> implemented; do not publish or bundle this as operative customer-facing terms
+> until that gate ships or the owner/legal review explicitly approves publishing
+> ahead of code.
 
 **Last updated:** [DATE] · **Contact:** hello@yesmaster.app
 

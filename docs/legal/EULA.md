@@ -3,6 +3,12 @@
 > **DRAFT — not legal advice.** This is a working template tailored to how YES
 > Master actually operates. Have a lawyer review it before you charge money or
 > submit to any app store, and fill in the bracketed items (`[…]`).
+>
+> **Current beta caveat:** Sections 2 and 3 describe the intended paid 1.0
+> export-lock and license-activation behavior. As of 2026-06-30, the app does
+> not yet enforce export locking or online license activation; do not publish or
+> bundle this as operative customer-facing terms until those engineering items
+> ship or the owner/legal review explicitly approves publishing ahead of code.
 
 **Last updated:** [DATE] · **Licensor:** Daniel Kinsner ("we", "us") ·
 **Contact:** hello@yesmaster.app
