@@ -1,0 +1,124 @@
+name: Release
+
+# Cuts a signed, downloadable release. Push a version tag (e.g. v0.1.0-beta.1)
+# and this builds macOS (Apple Silicon + Intel) and Windows installers, then
+# creates a DRAFT GitHub Release with them attached for you to review + publish.
+#
+# Signing auto-activates when the relevant secrets exist (see
+# docs/RELEASE_SIGNING_SETUP.md). Until then, builds still succeed — just
+# UNSIGNED (users get an "unknown developer" warning on download).
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: "Mark the GitHub release as a pre-release (beta)"
+        type: boolean
+        default: true
+
+# tauri-action creates a GitHub Release, which needs write access to contents.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & release (${{ matrix.label }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            label: macOS (Apple Silicon)
+            args: "--target aarch64-apple-darwin"
+          - platform: macos-latest
+            label: macOS (Intel)
+            args: "--target x86_64-apple-darwin"
+          - platform: windows-latest
+            label: Windows
+            args: ""
+    runs-on: ${{ matrix.platform }}
+
+    # Secrets are mapped to env so we can BOTH gate steps on their presence with
+    # `if:` AND hand them to tauri-action. Empty until you add them in
+    # repo Settings -> Secrets and variables -> Actions.
+    env:
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ startsWith(matrix.platform, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # ---- macOS code signing + notarization ----
+      # Auto-enabled once the APPLE_CERTIFICATE secret exists. Imports the
+      # Developer ID Application cert into a temp keychain and exposes its
+      # identity as APPLE_SIGNING_IDENTITY for tauri-action. Notarization runs
+      # automatically when APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID are set.
+      - name: Import Apple Developer ID certificate
+        if: ${{ startsWith(matrix.platform, 'macos') && env.APPLE_CERTIFICATE != '' }}
+        run: |
+          echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          CERT_ID=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
+          echo "APPLE_SIGNING_IDENTITY=$CERT_ID" >> "$GITHUB_ENV"
+          echo "Imported signing identity: $CERT_ID"
+
+      # ---- Windows code signing (Azure Trusted Signing) ----
+      # Auto-enabled once the AZURE_* secrets exist. NOTE: the signing CLI crate
+      # name is in flux upstream — verify the current binary/crate name against
+      # https://v2.tauri.app/distribute/sign/windows/ before your first signed
+      # release (this is the one line we agreed to confirm together).
+      - name: Install Windows signing CLI
+        if: ${{ matrix.platform == 'windows-latest' && env.AZURE_CLIENT_ID != '' }}
+        run: cargo install trusted-signing-cli
+
+      - name: Enable Windows signing config overlay
+        if: ${{ matrix.platform == 'windows-latest' && env.AZURE_CLIENT_ID != '' }}
+        shell: bash
+        run: echo "EXTRA_ARGS=--config src-tauri/tauri.windows.conf.json" >> "$GITHUB_ENV"
+
+      - name: Build, sign & draft release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+        with:
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || 'yes-master-v__VERSION__' }}
+          releaseName: "YES Master __VERSION__"
+          releaseBody: "Download the installer for your platform from the assets below."
+          releaseDraft: true
+          prerelease: ${{ github.event.inputs.prerelease != 'false' }}
+          args: ${{ matrix.args }} ${{ env.EXTRA_ARGS }}

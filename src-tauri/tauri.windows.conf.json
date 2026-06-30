@@ -1,0 +1,9 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "//": "Windows-signing overlay, applied ONLY by the release workflow via --config. Keeps the base tauri.conf.json buildable locally without Azure. Replace YOUR_AZURE_ACCOUNT / YOUR_CERT_PROFILE / the endpoint with your Azure Trusted Signing values — see docs/RELEASE_SIGNING_SETUP.md.",
+  "bundle": {
+    "windows": {
+      "signCommand": "trusted-signing-cli -e https://wus2.codesigning.azure.net -a YOUR_AZURE_ACCOUNT -c YOUR_CERT_PROFILE -d \"YES Master\" %1"
+    }
+  }
+}
