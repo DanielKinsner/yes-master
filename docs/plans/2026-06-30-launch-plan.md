@@ -10,7 +10,7 @@
 
 Launch **desktop-first (Mac + Windows)** as a **free, time-boxed public beta**
 given away from the existing landing page, then flip to a **single paid product
-at $39 founder → $49**, sold direct via **Lemon Squeezy** (merchant-of-record),
+at $29 founder → $49**, sold direct via **Lemon Squeezy** (merchant-of-record),
 with a **permanent free export-locked demo** as the conversion engine. Lead
 marketing with **performance + simplicity + honesty**, not privacy. Mobile and a
 later Standard/Advanced tier split are deferred. The scarce resource is not money
@@ -24,7 +24,7 @@ that with reviews, testimonials, and a warm email list.
 | Area | Decision |
 |---|---|
 | **Model** | Free public beta → paid 1.0. Single SKU. Open to discounted paid v2 upgrades later. |
-| **Price** | $39 founder intro → $49 standard. One-time perpetual license. Beta users get a founder discount (~$29–39). |
+| **Price** | **$29 founder intro → $49 standard.** One-time perpetual license. Beta users lock in the $29 founder price. |
 | **Free tier** | Permanent **export-locked demo** (play + full real-time chain + full receipt visible; cannot render/export until purchase). NOT a free "Standard" tier. |
 | **Tier split** | Standard-vs-Advanced split **deferred to v2**, gated on album + proof/export depth once buyer data exists. Never gate receipt *visibility*. |
 | **Distribution** | Sell **direct** from the landing page via **Lemon Squeezy** (MoR, handles global tax). Installers hosted on **GitHub Releases**. Microsoft Store later; **skip Mac App Store**. |
@@ -34,9 +34,9 @@ that with reviews, testimonials, and a warm email list.
 | **Platform** | Desktop Mac + Win first. iPhone/Android parked to an audience-gated later phase (shared engine = no cost to defer). |
 | **Positioning** | Lead with performance / simplicity / honesty. Demote "local/private" to a speed-and-convenience footnote. |
 
-**Still open (owner):** final brand name — `YES Master` (docs/app) vs
-`Y.E.S. Master / Your Endgame Sound` (current landing). Cascades across PRODUCT.md,
-README, app UI, and landing copy. Decide before the landing rewrite ships.
+**Brand — RESOLVED (2026-06-30):** the name is **YES Master**. The landing page
+currently uses `Y.E.S. Master / Your Endgame Sound` and **must be changed** to
+match. This also closes the long-parked branding decision (OPEN_THREADS B22).
 
 ---
 
@@ -76,7 +76,7 @@ substitutes for the celebrity social proof we don't have.
 | Tier | Price | Includes | Withholds |
 |---|---|---|---|
 | **Free Demo** (permanent) | $0 | Full real-time master, A/B, **full receipt visible** | **Export/render only** — hard gate |
-| **YES Master** (the SKU) | $39 founder → $49 | Everything built: Standard + Advanced, metering, compressor, album, all formats, unlimited export | Nothing |
+| **YES Master** (the SKU) | $29 founder → $49 | Everything built: Standard + Advanced, metering, compressor, album, all formats, unlimited export | Nothing |
 | **Advanced/Studio** (v2, deferred) | +$20–30 "pay the difference" | Album/batch + deep proof/export depth | Held back from base only after telemetry confirms demand |
 
 - **Beta → paid transition:** time-box the beta with a publicly stated flip date;
@@ -178,8 +178,8 @@ Most of these become the detailed implementation plan (next step).
 1. **Phase 1 — Free beta** (~8–12 wks): signed desktop build (Win+Mac), GitHub
    Releases, email-gated from the landing page. Full app, no watermark. GTM = KVR +
    BPB + micro-creators + list. Goal: reviews, testimonials, warm list, hardened claims — not revenue.
-2. **Phase 2 — Paid 1.0** (at the announced flip date): $39 founder → $49 via
-   Lemon Squeezy. Founder discount for beta users. Free build becomes the
+2. **Phase 2 — Paid 1.0** (at the announced flip date): $29 founder → $49 via
+   Lemon Squeezy. Beta users keep the $29 founder price. Free build becomes the
    export-locked demo. Launch to the warm list; consider a one-shot Product Hunt spike.
 3. **Phase 3 — Expand:** Microsoft Store; introduce the Advanced/Studio tier (~$69–79
    all-in, pay-the-difference) if beta data supports it; re-price against real conversion.
