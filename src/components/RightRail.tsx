@@ -21,7 +21,9 @@ type RightRailProps = {
   canExport: boolean;
   isExporting: boolean;
   isRendering: boolean;
+  isAnalyzing?: boolean;
   onExport: () => void;
+  onReanalyze?: () => void;
   // UI restyle 2026-05-14: the secondary "Render audit WAV" action used
   // to live in the main StaleBar. Moved here so the playback strip can
   // become a quiet status indicator, while audit-WAV stays one click
@@ -54,7 +56,9 @@ export function RightRail({
   canExport,
   isExporting,
   isRendering,
+  isAnalyzing = false,
   onExport,
+  onReanalyze,
   previewStale,
   canRenderPreview,
   onUpdatePreview,
@@ -103,7 +107,12 @@ export function RightRail({
           Bit+SR cards, App.tsx composes) → sticky Export Master at
           bottom. Levels moved to the waveform deck's meters column;
           MasterOutPanel moved in L2. */}
-      <QualityCheckPanel checks={lastChecks} analysis={analysis} />
+      <QualityCheckPanel
+        checks={lastChecks}
+        analysis={analysis}
+        isAnalyzing={isAnalyzing}
+        onReanalyze={onReanalyze}
+      />
       {advancedSlot}
       <div className="right-rail-export-group">
         <details className="right-rail-tools">
@@ -401,21 +410,43 @@ function hasReviewRows(rows: QualityRow[]): boolean {
 function QualityCheckPanel({
   checks,
   analysis,
+  isAnalyzing,
+  onReanalyze,
 }: {
   checks: QualityCheck[] | undefined;
   analysis: AnalysisResult | undefined;
+  isAnalyzing: boolean;
+  onReanalyze?: () => void;
 }) {
   const hasExportChecks = !!checks && checks.length > 0;
   const rows = qualityRowsFor(checks, analysis);
+  const showReanalyze = !hasExportChecks && !!onReanalyze;
 
   const overallSafe = rows.every((r) => r.ok);
   return (
     <section className={`panel quality-check ${overallSafe ? "is-safe" : "has-issues"}`}>
-      <header className="panel-head">
+      <header className="panel-head quality-check-head">
         <span className="panel-title">{hasExportChecks ? "EXPORT CHECK" : "SOURCE CHECK"}</span>
-        <span className={`quality-badge ${overallSafe ? "badge-safe" : "badge-warn"}`}>
-          {overallSafe ? "SAFE" : "REVIEW"}
-        </span>
+        <div className="quality-check-head-actions">
+          {showReanalyze && (
+            <button
+              type="button"
+              className="ghost-btn quality-reanalyze"
+              disabled={isAnalyzing}
+              onClick={onReanalyze}
+              title={
+                isAnalyzing
+                  ? "Analysis is already running."
+                  : "Refresh this track's source analysis and waveform."
+              }
+            >
+              Re-analyze
+            </button>
+          )}
+          <span className={`quality-badge ${overallSafe ? "badge-safe" : "badge-warn"}`}>
+            {overallSafe ? "SAFE" : "REVIEW"}
+          </span>
+        </div>
       </header>
       <ul className="quality-check-list">
         {rows.map((r) => (

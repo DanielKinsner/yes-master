@@ -244,8 +244,7 @@ describe("top chrome", () => {
 });
 
 describe("advanced track header", () => {
-  it("wires the manual re-analyze action", async () => {
-    const onReanalyze = vi.fn();
+  it("keeps analysis retry out of the waveform header", async () => {
     const track: ImportedTrack = {
       id: "track-1",
       path: "C:/audio/track-1.wav",
@@ -270,40 +269,10 @@ describe("advanced track header", () => {
         onPlaybackKindChange={vi.fn()}
         onVolumeMatchChange={vi.fn()}
         onExportLufsPreviewChange={vi.fn()}
-        onReanalyze={onReanalyze}
       />,
     );
 
-    const reanalyze = container.querySelector<HTMLButtonElement>(".track-reanalyze")!;
-    expect(reanalyze.textContent).toContain("Re-analyze");
-    expect(reanalyze.disabled).toBe(false);
-
-    await act(async () => {
-      reanalyze.click();
-    });
-    expect(onReanalyze).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      root.render(
-        <TrackHeader
-          track={track}
-          analysis={undefined}
-          playbackKind="master"
-          volumeMatch={false}
-          exportLufsPreview={false}
-          isAnalyzing={true}
-          analysisProgress={{ label: "Analyzing audio", progress: 0.14 }}
-          isRendering={false}
-          isPlaying={false}
-          renderProgress={null}
-          onPlaybackKindChange={vi.fn()}
-          onVolumeMatchChange={vi.fn()}
-          onExportLufsPreviewChange={vi.fn()}
-          onReanalyze={onReanalyze}
-        />,
-      );
-    });
-    expect(container.querySelector<HTMLButtonElement>(".track-reanalyze")?.disabled).toBe(true);
+    expect(container.querySelector<HTMLButtonElement>(".track-reanalyze")).toBeNull();
 
     await act(async () => {
       root.unmount();

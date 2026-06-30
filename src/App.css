@@ -891,18 +891,11 @@ button.primary:disabled {
 }
 
 .track-header-actions {
-  display: grid;
-  grid-template-rows: auto auto;
+  display: flex;
   justify-items: end;
+  justify-content: flex-end;
   align-items: center;
-  gap: 0.4rem;
   min-width: max-content;
-}
-
-.track-reanalyze {
-  min-height: 30px;
-  padding: 0.28rem 0.7rem;
-  font-size: 0.74rem;
 }
 
 .session-status {
@@ -3137,6 +3130,28 @@ button.primary:disabled {
   color: #f5c842;
   background: rgba(245, 200, 66, 0.18);
   border: 1px solid rgba(245, 200, 66, 0.35);
+}
+
+.quality-check-head {
+  gap: 0.65rem;
+}
+
+.quality-check-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.quality-reanalyze {
+  min-height: 24px;
+  padding: 0.18rem 0.52rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .quality-check-list {
