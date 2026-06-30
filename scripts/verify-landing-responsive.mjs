@@ -18,8 +18,14 @@ const matrix = [
   [360, 800],
 ];
 
-const requiredSections = ["top", "mobile", "standard", "advanced", "get-started"];
-const requiredAnchors = ["#standard", "#advanced", "#mobile", "#get-started"];
+const requiredSections = [
+  { id: "top", requiresMobileNavAnchor: true, requiresMobilePageAnchor: true },
+  { id: "mobile", requiresMobileNavAnchor: false, requiresMobilePageAnchor: false },
+  { id: "standard", requiresMobileNavAnchor: false, requiresMobilePageAnchor: false },
+  { id: "advanced", requiresMobileNavAnchor: false, requiresMobilePageAnchor: true },
+  { id: "get-started", requiresMobileNavAnchor: true, requiresMobilePageAnchor: true },
+];
+const requiredSectionIds = requiredSections.map((section) => section.id);
 
 function option(name) {
   const index = process.argv.indexOf(name);
@@ -28,12 +34,6 @@ function option(name) {
 
 function stamp() {
   return new Date().toISOString().replace(/[:.]/g, "-");
-}
-
-function expectedComposition(width, height) {
-  if (width <= 680) return "overlay";
-  if (width <= 1080) return "overlay";
-  return "image-map";
 }
 
 const url = option("--url") ?? process.env.LANDING_URL ?? "http://127.0.0.1:5177/";
@@ -70,17 +70,29 @@ for (const [width, height] of matrix) {
   const metrics = await page.evaluate((required) => {
     const doc = document.documentElement;
     const body = document.body;
-    const hero = document.querySelector(".landing-hero");
-    const heroImage = document.querySelector(".landing-hero-scene");
-    const heroCopy = document.querySelector(".landing-hero-copy");
-    const hotspots = document.querySelector(".landing-hero-hotspots");
-    const nav = document.querySelector(".landing-nav");
+    const hero = document.getElementById("top");
+    const heroImage = hero?.querySelector('img[aria-hidden="true"]');
+    const heroHeadline = hero?.querySelector("h1");
+    const heroCopy = heroHeadline?.closest("div");
+    const nav = document.querySelector("nav");
     const heroRect = hero?.getBoundingClientRect();
     const copyRect = heroCopy?.getBoundingClientRect();
     const imageStyle = heroImage ? getComputedStyle(heroImage) : null;
     const copyStyle = heroCopy ? getComputedStyle(heroCopy) : null;
-    const hotspotStyle = hotspots ? getComputedStyle(hotspots) : null;
     const navStyle = nav ? getComputedStyle(nav) : null;
+    const sectionLinks = Array.from(nav?.querySelectorAll('a[href^="#"]') ?? []).map((link) => {
+      const rect = link.getBoundingClientRect();
+      const style = getComputedStyle(link);
+      return {
+        href: link.getAttribute("href"),
+        label: link.textContent?.trim() ?? "",
+        visible:
+          rect.width > 1 &&
+          rect.height > 1 &&
+          style.display !== "none" &&
+          style.visibility !== "hidden",
+      };
+    });
 
     return {
       title: document.title,
@@ -90,6 +102,8 @@ for (const [width, height] of matrix) {
       horizontalOverflow: Math.max(doc.scrollWidth, body.scrollWidth) > doc.clientWidth + 1,
       heroHeight: heroRect?.height ?? null,
       heroWidth: heroRect?.width ?? null,
+      heroPresent: Boolean(hero),
+      heroHeadline: heroHeadline?.textContent ?? null,
       imageFit: imageStyle?.objectFit ?? null,
       imagePosition: imageStyle?.objectPosition ?? null,
       copyDisplay: copyStyle?.display ?? null,
@@ -102,8 +116,9 @@ for (const [width, height] of matrix) {
             bottom: copyRect.bottom,
           }
         : null,
-      hotspotsDisplay: hotspotStyle?.display ?? null,
       navDisplay: navStyle?.display ?? null,
+      navPosition: navStyle?.position ?? null,
+      navLinks: sectionLinks,
       brokenImages: Array.from(document.images)
         .filter((image) => !image.complete || image.naturalWidth === 0)
         .map((image) => image.currentSrc || image.src),
@@ -115,9 +130,8 @@ for (const [width, height] of matrix) {
         "Same engine",
       ].every((text) => body.textContent?.includes(text)),
     };
-  }, requiredSections);
+  }, requiredSectionIds);
 
-  const expected = expectedComposition(width, height);
   const missingSections = metrics.sections
     .filter((section) => !section.present)
     .map((section) => section.id);
@@ -128,9 +142,17 @@ for (const [width, height] of matrix) {
   if (metrics.horizontalOverflow) {
     failures.push(`${width}x${height}: horizontal overflow (${metrics.scrollWidth} > ${metrics.clientWidth})`);
   }
-  const expectedFit = expected === "image-map" ? "fill" : "cover";
-  if (metrics.imageFit !== expectedFit) {
-    failures.push(`${width}x${height}: hero image fit is ${metrics.imageFit}, expected ${expectedFit}`);
+  if (!metrics.heroPresent) {
+    failures.push(`${width}x${height}: missing #top hero section`);
+  }
+  if (typeof metrics.heroHeight !== "number" || metrics.heroHeight < height * 0.9) {
+    failures.push(`${width}x${height}: hero height is ${metrics.heroHeight}, expected at least ${Math.round(height * 0.9)}`);
+  }
+  if (metrics.imageFit !== "cover") {
+    failures.push(`${width}x${height}: hero image fit is ${metrics.imageFit}, expected cover`);
+  }
+  if (!metrics.heroHeadline?.includes("Master your track in real time")) {
+    failures.push(`${width}x${height}: hero headline missing expected copy`);
   }
   if (metrics.brokenImages.length > 0) {
     failures.push(`${width}x${height}: broken images ${metrics.brokenImages.join(", ")}`);
@@ -141,23 +163,40 @@ for (const [width, height] of matrix) {
   if (!metrics.bodyHasExpectedCopy) {
     failures.push(`${width}x${height}: expected landing copy missing from document`);
   }
-  if (expected === "overlay") {
-    if (metrics.copyDisplay === "none") {
-      failures.push(`${width}x${height}: overlay breakpoint is hiding live hero copy`);
+  if (metrics.copyDisplay === "none" || !metrics.copyRect || metrics.copyRect.width < 240) {
+    failures.push(`${width}x${height}: live hero copy is not visible`);
+  }
+  if (metrics.navDisplay !== "flex" || metrics.navPosition !== "fixed") {
+    failures.push(`${width}x${height}: landing nav is ${metrics.navPosition}/${metrics.navDisplay}, expected fixed/flex`);
+  }
+  const visibleNavTargets = metrics.navLinks.filter((link) => link.visible).map((link) => link.href);
+  for (const section of requiredSections) {
+    const href = `#${section.id}`;
+    if (width >= 640) {
+      if (!visibleNavTargets.includes(href)) {
+        failures.push(`${width}x${height}: desktop nav missing visible ${href} link`);
+      }
+    } else if (section.requiresMobileNavAnchor && !visibleNavTargets.includes(href)) {
+      failures.push(`${width}x${height}: mobile nav missing visible ${href} link`);
     }
-    if (metrics.hotspotsDisplay !== "none") {
-      failures.push(`${width}x${height}: overlay breakpoint still exposes image-map hotspots`);
-    }
-  } else {
-    if (metrics.copyDisplay !== "none") {
-      failures.push(`${width}x${height}: wide image-map breakpoint shows duplicate live copy`);
-    }
-    if (metrics.hotspotsDisplay !== "block") {
-      failures.push(`${width}x${height}: wide image-map breakpoint hides hotspots`);
+  }
+  if (width < 640) {
+    const phoneHiddenTargets = requiredSections
+      .filter((section) => !section.requiresMobileNavAnchor)
+      .map((section) => `#${section.id}`);
+    const visibleHiddenTargets = phoneHiddenTargets.filter((href) => visibleNavTargets.includes(href));
+    if (visibleHiddenTargets.length > 0) {
+      failures.push(`${width}x${height}: phone nav exposes desktop-only links ${visibleHiddenTargets.join(", ")}`);
     }
   }
 
-  records.push({ width, height, expected, screenshot, metrics });
+  records.push({ width, height, screenshot, metrics });
+}
+
+function anchorsForWidth(width) {
+  return requiredSections
+    .filter((section) => width >= 640 || section.requiresMobilePageAnchor)
+    .map((section) => `#${section.id}`);
 }
 
 for (const [width, height] of [
@@ -165,7 +204,7 @@ for (const [width, height] of [
   [390, 844],
 ]) {
   await page.setViewportSize({ width, height });
-  for (const href of requiredAnchors) {
+  for (const href of anchorsForWidth(width)) {
     await page.goto(url, { waitUntil: "networkidle" });
     const clicked = await page.evaluate((targetHref) => {
       const links = Array.from(document.querySelectorAll(`a[href="${targetHref}"]`));
