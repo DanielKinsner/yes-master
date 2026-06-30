@@ -17,22 +17,25 @@ type Stage = {
   icon: () => ReactElement;
 };
 
-function presetSaturation(preset: Preset): number {
-  // Mirror of the saturation_amount table in dsp.rs::ChainCoeffs::from_settings.
-  // Kept in sync by hand — if those numbers change, update here too.
+// Mirrors the per-preset `warmth` saturation baselines in
+// src-tauri/src/dsp.rs (PRESET_* calibration). Display-only; the mirror is
+// tripwired against src/preset-mirrors.json (generated from dsp.rs) in
+// src/lib/preset-mirrors.test.ts, so a retune that forgets this table
+// fails npm test. Exported for that test only.
+export function presetSaturation(preset: Preset): number {
   switch (preset.kind) {
     case "universal":
-      return 0.03;
+      return 0.055;
     case "clarity":
       return 0.025;
     case "tape":
-      return 0.1;
+      return 0.15;
     case "spatial":
       return 0.04;
     case "oomph":
       return 0.045;
     case "warmth":
-      return 0.08;
+      return 0.13;
     case "punch":
       return 0.035;
     case "loud":

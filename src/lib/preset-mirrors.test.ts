@@ -5,7 +5,7 @@
 //   1. the compressor table in compressor-auto.ts (via the public readouts
 //      at density 0.5, where engagement = 1 and overdrive = 0, so the raw
 //      table values pass straight through);
-//   2. the per-preset stereo-width baselines in SignalChain.tsx.
+//   2. the per-preset stereo-width and saturation baselines in SignalChain.tsx.
 //
 // Both mirrors have drifted before (2026-05-29 reviews). The engine stays
 // authoritative; this only makes the next retune loud instead of silent.
@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
 import mirrors from "../preset-mirrors.json";
 import type { AdvancedSettings, MasteringSettings, Preset } from "../bindings";
 import { compressorAutoReadouts } from "./compressor-auto";
-import { presetDefaultWidth } from "../components/SignalChain";
+import { presetDefaultWidth, presetSaturation } from "../components/SignalChain";
 
 const KINDS: Array<Preset["kind"]> = [
   "universal",
@@ -100,6 +100,17 @@ describe("SignalChain width baselines mirror dsp.rs (preset-mirrors.json)", () =
     it(`${kind} width baseline matches the engine calibration`, () => {
       expect(presetDefaultWidth(presetOf(kind))).toBeCloseTo(
         mirrors.stereo_width[kind],
+        6,
+      );
+    });
+  }
+});
+
+describe("SignalChain saturation baselines mirror dsp.rs (preset-mirrors.json)", () => {
+  for (const kind of KINDS) {
+    it(`${kind} saturation baseline matches the engine calibration`, () => {
+      expect(presetSaturation(presetOf(kind))).toBeCloseTo(
+        mirrors.saturation[kind],
         6,
       );
     });

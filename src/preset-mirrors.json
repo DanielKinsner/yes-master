@@ -56,6 +56,17 @@
       "threshold_db": -19.0
     }
   },
+  "saturation": {
+    "clarity": 0.025,
+    "custom": 0.0,
+    "loud": 0.055,
+    "oomph": 0.045,
+    "punch": 0.035,
+    "spatial": 0.04,
+    "tape": 0.15,
+    "universal": 0.055,
+    "warmth": 0.13
+  },
   "stereo_width": {
     "clarity": 1.09,
     "custom": 1.0,
