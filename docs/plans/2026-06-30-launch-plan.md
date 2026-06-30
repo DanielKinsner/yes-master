@@ -145,9 +145,14 @@ Most of these become the detailed implementation plan (next step).
 - [ ] **macOS signing + notarization** wired into the release build.
 - [ ] **Windows Authenticode signing** (Azure Trusted Signing) wired in.
 - [ ] **Landing "Download" button** wired to real release artifacts (currently a `mailto:`).
-- [ ] **Export-locked demo build:** a build/entitlement flag that disables
-  render/export while leaving audition + full metering open. **Verify this is a
-  clean engineering gate, not a UI hide** (conversion depends on it).
+- [ ] **Export gate (free/paid boundary):** *Feasibility confirmed CLEAN
+  (2026-06-30).* All exports funnel through a single chokepoint — the
+  `render_track_master` and `render_album_plan` commands in
+  `src-tauri/src/engine.rs`. Gate there via a **runtime license check** (single
+  binary, unlock-in-place to match online activation — NOT a separate demo
+  binary). Audition + metering are unaffected; DSP snapshot tests are untouched.
+  This is the SAME seam as the license check below — build them together at the
+  1.0 flip (needs the Lemon Squeezy account).
 
 **P1 — needed for the paid flip**
 - [ ] **License activation** in the Tauri core: Lemon Squeezy key, one-time online
