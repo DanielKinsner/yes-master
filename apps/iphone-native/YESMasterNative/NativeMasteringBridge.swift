@@ -18,6 +18,32 @@ struct NativeRenderedMeasurements: Decodable, Equatable {
     let dynamicRangeLu: Double
     let sampleRate: Int
     let bitDepth: Int
+    let effectiveAdaptiveStrength: Double?
+    let sourceProfileDigest: String?
+    let confidenceDigest: String?
+    let compressionDigest: String?
+
+    init(
+        lufsIntegrated: Double,
+        truePeakDbtp: Double,
+        dynamicRangeLu: Double,
+        sampleRate: Int,
+        bitDepth: Int,
+        effectiveAdaptiveStrength: Double? = nil,
+        sourceProfileDigest: String? = nil,
+        confidenceDigest: String? = nil,
+        compressionDigest: String? = nil
+    ) {
+        self.lufsIntegrated = lufsIntegrated
+        self.truePeakDbtp = truePeakDbtp
+        self.dynamicRangeLu = dynamicRangeLu
+        self.sampleRate = sampleRate
+        self.bitDepth = bitDepth
+        self.effectiveAdaptiveStrength = effectiveAdaptiveStrength
+        self.sourceProfileDigest = sourceProfileDigest
+        self.confidenceDigest = confidenceDigest
+        self.compressionDigest = compressionDigest
+    }
 }
 
 struct NativeRenderOptions: Equatable {

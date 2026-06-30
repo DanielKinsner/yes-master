@@ -886,6 +886,19 @@ mod tests {
             payload["measurements"]["source_profile_digest"].is_string(),
             "native render should be traceable to its source profile: {json}"
         );
+        for key in ["confidence_digest", "compression_digest"] {
+            assert!(
+                payload["measurements"]
+                    .as_object()
+                    .unwrap()
+                    .contains_key(key),
+                "native render should carry adaptive digest key `{key}`: {json}"
+            );
+            assert!(
+                payload["measurements"][key].is_string() || payload["measurements"][key].is_null(),
+                "adaptive digest key `{key}` should be nullable string: {json}"
+            );
+        }
     }
 
     #[test]
@@ -982,6 +995,24 @@ mod tests {
             assert!(
                 measurements[key].as_u64().is_some(),
                 "measurements lost Swift-decoded integer key `{key}`: {json}"
+            );
+        }
+        assert!(
+            measurements["effective_adaptive_strength"].is_number(),
+            "measurements lost Swift-decoded adaptive strength key: {json}"
+        );
+        for key in [
+            "source_profile_digest",
+            "confidence_digest",
+            "compression_digest",
+        ] {
+            assert!(
+                measurements.as_object().unwrap().contains_key(key),
+                "measurements lost Swift-decoded adaptive digest key `{key}`: {json}"
+            );
+            assert!(
+                measurements[key].is_string() || measurements[key].is_null(),
+                "measurements adaptive digest key `{key}` should be nullable string: {json}"
             );
         }
     }

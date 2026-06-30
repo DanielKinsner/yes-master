@@ -58,8 +58,40 @@ final class NativeMasteringBridgeTests: XCTestCase {
         let outputPath = try XCTUnwrap(renderJob.outputPaths.first)
         XCTAssertTrue(FileManager.default.fileExists(atPath: outputPath))
         XCTAssertEqual(URL(fileURLWithPath: outputPath).pathExtension.lowercased(), "wav")
-        XCTAssertEqual(renderJob.measurements?.sampleRate, 44_100)
-        XCTAssertEqual(renderJob.measurements?.bitDepth, 24)
+        let measurements = try XCTUnwrap(renderJob.measurements)
+        XCTAssertEqual(measurements.sampleRate, 44_100)
+        XCTAssertEqual(measurements.bitDepth, 24)
+        XCTAssertEqual(try XCTUnwrap(measurements.effectiveAdaptiveStrength), 0.5, accuracy: 1e-6)
+        XCTAssertFalse(try XCTUnwrap(measurements.sourceProfileDigest).isEmpty)
+    }
+
+    func testRenderJobDecodesAdaptiveMeasurementDigests() throws {
+        let json = """
+        {
+          "output_paths": ["/tmp/master.wav"],
+          "measurements": {
+            "lufs_integrated": -13.5,
+            "true_peak_dbtp": -1.25,
+            "dynamic_range_lu": 8.5,
+            "sample_rate": 48000,
+            "bit_depth": 24,
+            "effective_adaptive_strength": 0.75,
+            "source_profile_digest": "bass +1.2 | air -0.4",
+            "confidence_digest": "bass 0.9 | tilt 0.6",
+            "compression_digest": "compression eased low 20%"
+          }
+        }
+        """
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let job = try decoder.decode(NativeRenderJob.self, from: Data(json.utf8))
+        let measurements = try XCTUnwrap(job.measurements)
+
+        XCTAssertEqual(try XCTUnwrap(measurements.effectiveAdaptiveStrength), 0.75, accuracy: 1e-6)
+        XCTAssertEqual(try XCTUnwrap(measurements.sourceProfileDigest), "bass +1.2 | air -0.4")
+        XCTAssertEqual(try XCTUnwrap(measurements.confidenceDigest), "bass 0.9 | tilt 0.6")
+        XCTAssertEqual(try XCTUnwrap(measurements.compressionDigest), "compression eased low 20%")
     }
 
     private func writeSineWave(to url: URL) throws {

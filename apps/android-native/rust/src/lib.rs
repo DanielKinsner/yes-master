@@ -375,6 +375,24 @@ mod tests {
                 "missing {key}: {payload}"
             );
         }
+        assert!(
+            measurements["effective_adaptive_strength"].is_number(),
+            "missing effective_adaptive_strength: {payload}"
+        );
+        for key in [
+            "source_profile_digest",
+            "confidence_digest",
+            "compression_digest",
+        ] {
+            assert!(
+                measurements.as_object().unwrap().contains_key(key),
+                "missing adaptive digest key {key}: {payload}"
+            );
+            assert!(
+                measurements[key].is_string() || measurements[key].is_null(),
+                "adaptive digest key {key} should be nullable string: {payload}"
+            );
+        }
     }
 
     #[test]
