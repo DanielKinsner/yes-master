@@ -367,7 +367,8 @@ pub(crate) struct MasteringSource {
     channels: u16,
     sample_rate: u32,
     chain: crate::dsp::MasteringChain,
-    pending_chain: Option<crate::dsp::MasteringChain>,
+    pending_chain: crate::dsp::MasteringChain,
+    pending_chain_active: bool,
     crossfade_remaining: usize,
     crossfade_total: usize,
     coeffs_rx: mpsc::Receiver<LiveCoeffUpdate>,
@@ -422,13 +423,16 @@ impl MasteringSource {
         spectrum_ring: Arc<SpectrumRing>,
     ) -> Self {
         let channels_usize = channels.max(1) as usize;
+        let pending_chain =
+            crate::dsp::MasteringChain::with_coeffs_inheriting_state(chain.coeffs, &chain);
         Self {
             samples,
             position: 0,
             channels,
             sample_rate,
             chain,
-            pending_chain: None,
+            pending_chain,
+            pending_chain_active: false,
             crossfade_remaining: 0,
             crossfade_total: 0,
             coeffs_rx,
@@ -513,14 +517,21 @@ impl Iterator for MasteringSource {
                     // chain. Promoting first bounds the 2x window to a single
                     // COEFFS_CROSSFADE_FRAMES interval per update and keeps
                     // the audible chain tracking the latest settings.
-                    if let Some(prev_pending) = self.pending_chain.take() {
-                        self.chain = prev_pending;
+                    if self.pending_chain_active {
+                        std::mem::swap(&mut self.chain, &mut self.pending_chain);
+                        self.pending_chain_active = false;
                     }
-                    self.pending_chain =
-                        Some(crate::dsp::MasteringChain::with_coeffs_inheriting_state(
-                            update.coeffs,
-                            &self.chain,
-                        ));
+                    if !self
+                        .pending_chain
+                        .overwrite_with_coeffs_inheriting_state(update.coeffs, &self.chain)
+                    {
+                        self.pending_chain =
+                            crate::dsp::MasteringChain::with_coeffs_inheriting_state(
+                                update.coeffs,
+                                &self.chain,
+                            );
+                    }
+                    self.pending_chain_active = true;
                     self.crossfade_remaining = COEFFS_CROSSFADE_FRAMES;
                     self.crossfade_total = COEFFS_CROSSFADE_FRAMES;
                 }
@@ -534,15 +545,12 @@ impl Iterator for MasteringSource {
                 .process_frame_inplace(&mut self.frame_main[..channels]);
 
             // Process pending chain into frame_pending and mix.
-            if self.pending_chain.is_some() && self.crossfade_total > 0 {
+            if self.pending_chain_active && self.crossfade_total > 0 {
                 for i in 0..channels {
                     self.frame_pending[i] = self.frame_in[i];
                 }
-                let pending = self
-                    .pending_chain
-                    .as_mut()
-                    .expect("pending_chain just checked");
-                pending.process_frame_inplace(&mut self.frame_pending[..channels]);
+                self.pending_chain
+                    .process_frame_inplace(&mut self.frame_pending[..channels]);
                 let t = 1.0 - (self.crossfade_remaining as f32 / self.crossfade_total as f32);
                 let inv_t = 1.0 - t;
                 for i in 0..channels {
@@ -550,10 +558,8 @@ impl Iterator for MasteringSource {
                 }
                 self.crossfade_remaining = self.crossfade_remaining.saturating_sub(1);
                 if self.crossfade_remaining == 0 {
-                    self.chain = self
-                        .pending_chain
-                        .take()
-                        .expect("pending_chain just checked");
+                    std::mem::swap(&mut self.chain, &mut self.pending_chain);
+                    self.pending_chain_active = false;
                     self.crossfade_total = 0;
                 }
             }
@@ -657,7 +663,7 @@ impl rodio::Source for MasteringSource {
         // Drop accumulated biquad/limiter state to avoid clicks across
         // discontinuities. Also force a frame re-fetch on the next yield.
         self.chain.reset_states();
-        self.pending_chain = None;
+        self.pending_chain_active = false;
         self.crossfade_remaining = 0;
         self.crossfade_total = 0;
         self.frame_out_pos = channels;
@@ -697,6 +703,118 @@ mod meter_input_tests {
         assert!(
             (delta - 3.0103).abs() < 0.1,
             "duplicated-mono should read ~3.01 LU hotter than single-channel; got {delta}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod live_update_allocation_tests {
+    use super::*;
+    use crate::dsp::{ChainCoeffs, MasteringChain};
+    use crate::types::{AdvancedSettings, DeliveryProfile, MasteringSettings, Preset};
+    use std::sync::atomic::{AtomicI32, AtomicU32};
+    use std::sync::{mpsc, Arc};
+
+    fn settings_with_intensity(intensity: f32) -> MasteringSettings {
+        let advanced = AdvancedSettings {
+            compression_density: Some(0.0),
+            ..Default::default()
+        };
+        MasteringSettings {
+            preset: Preset::Universal,
+            intensity,
+            eq_sub_db: 0.0,
+            eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
+            eq_mid_db: 0.0,
+            eq_high_mid_db: 0.0,
+            eq_high_db: 0.0,
+            eq_sparkle_db: 0.0,
+            volume_match: false,
+            source_lufs_integrated: None,
+            input_gain_db: 0.0,
+            output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
+            album: None,
+            advanced,
+        }
+    }
+
+    fn source_with_updates(
+        frames: usize,
+    ) -> (MasteringSource, mpsc::Sender<LiveCoeffUpdate>, u32, u16) {
+        let sample_rate = 44_100;
+        let channels = 2u16;
+        let samples = vec![0.05; frames * channels as usize];
+        let settings = settings_with_intensity(0.0);
+        let chain = MasteringChain::new(sample_rate, channels as usize, &settings);
+        let (tx, rx) = mpsc::channel::<LiveCoeffUpdate>();
+        let source = MasteringSource::new(
+            samples,
+            channels,
+            sample_rate,
+            chain,
+            rx,
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicI32::new(i32::MIN)),
+            Arc::new(AtomicI32::new(i32::MIN)),
+            Arc::new(SpectrumRing::new()),
+        );
+        (source, tx, sample_rate, channels)
+    }
+
+    fn drain_frames(source: &mut MasteringSource, frames: usize) {
+        let samples = frames * source.channels.max(1) as usize;
+        for _ in 0..samples {
+            assert!(source.next().is_some(), "source ended before update check");
+        }
+    }
+
+    #[test]
+    fn mastering_source_live_updates_reuse_preallocated_chains() {
+        let (mut source, tx, sample_rate, _channels) =
+            source_with_updates(COEFFS_CHECK_INTERVAL_FRAMES * 3);
+        let initial_main_allocs = source.chain.allocation_fingerprint();
+        let initial_pending_allocs = source.pending_chain.allocation_fingerprint();
+
+        let first_settings = settings_with_intensity(0.5);
+        tx.send(LiveCoeffUpdate {
+            generation: 1,
+            coeffs: ChainCoeffs::from_settings(sample_rate, &first_settings),
+        })
+        .expect("send first update");
+
+        drain_frames(&mut source, COEFFS_CHECK_INTERVAL_FRAMES);
+
+        assert!(source.pending_chain_active);
+        assert_eq!(
+            source.pending_chain.allocation_fingerprint(),
+            initial_pending_allocs,
+            "first live update must overwrite the preallocated pending chain"
+        );
+        assert!(source.crossfade_remaining > 0);
+
+        let second_settings = settings_with_intensity(1.0);
+        tx.send(LiveCoeffUpdate {
+            generation: 2,
+            coeffs: ChainCoeffs::from_settings(sample_rate, &second_settings),
+        })
+        .expect("send second update");
+
+        drain_frames(&mut source, COEFFS_CHECK_INTERVAL_FRAMES);
+
+        assert!(source.pending_chain_active);
+        assert_eq!(
+            source.chain.allocation_fingerprint(),
+            initial_pending_allocs,
+            "active pending chain should be promoted by swapping, not rebuilt"
+        );
+        assert_eq!(
+            source.pending_chain.allocation_fingerprint(),
+            initial_main_allocs,
+            "follow-up live update should reuse the alternate preallocated chain"
         );
     }
 }

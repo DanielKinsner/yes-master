@@ -2410,6 +2410,17 @@ impl MasteringChain {
     }
 }
 
+#[cfg(test)]
+impl MasteringChain {
+    pub(crate) fn allocation_fingerprint(&self) -> (usize, usize, usize) {
+        (
+            self.states.as_ptr() as usize,
+            self.limiter.buffer.as_ptr() as usize,
+            self.limiter.oldest_frame_buf.as_ptr() as usize,
+        )
+    }
+}
+
 // ============================================================================
 // Tests — Phase 12.2 stereo width / M-S processing.
 // `apply_width_stereo` is tested directly so the M/S math is pinned without
