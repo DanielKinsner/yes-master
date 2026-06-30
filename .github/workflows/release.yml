@@ -24,8 +24,66 @@ permissions:
   contents: write
 
 jobs:
+  preflight:
+    name: Preflight
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Frontend tests
+        run: npm test
+
+      - name: Frontend build
+        run: npm run build
+
+      - name: Validate release tag version
+        shell: pwsh
+        run: |
+          $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $packageCoreVersion = $packageVersion -replace '[-+].*$', ''
+
+          if ("${{ github.ref_type }}" -ne "tag") {
+            Write-Host "Manual release run; no pushed tag to validate. package.json version is $packageVersion."
+            exit 0
+          }
+
+          $tagName = "${{ github.ref_name }}"
+          if ($tagName -notmatch '^v(?<version>\d+\.\d+\.\d+)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$') {
+            Write-Error "Release tag '$tagName' must look like v<semver>."
+            exit 1
+          }
+
+          $tagCoreVersion = $Matches.version
+          if ($tagCoreVersion -ne $packageCoreVersion) {
+            Write-Error "Release tag '$tagName' resolves to $tagCoreVersion, but package.json is $packageVersion."
+            exit 1
+          }
+
+      - name: Rust lib tests
+        working-directory: src-tauri
+        run: cargo test --lib
+
   release:
     name: Build & release (${{ matrix.label }})
+    needs: preflight
     strategy:
       fail-fast: false
       matrix:
@@ -119,7 +177,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
         with:
-          tagName: ${{ github.ref_type == 'tag' && github.ref_name || 'yes-master-v__VERSION__' }}
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('yes-master-v__VERSION__-manual-{0}', github.run_number) }}
           releaseName: "YES Master __VERSION__"
           releaseBody: "Download the installer for your platform from the assets below."
           releaseDraft: true
