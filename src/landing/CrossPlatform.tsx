@@ -7,7 +7,7 @@ const features = [
   { title: "Intensity control", body: "Subtle to pushed." },
   { title: "Real-time meters", body: "LUFS, true peak, and gain reduction." },
   { title: "Quality checks", body: "Instant feedback." },
-  { title: "No cloud", body: "All on your device. All private." },
+  { title: "No upload, no wait", body: "Runs on your device, so every change is instant." },
 ];
 
 export default function CrossPlatform() {
@@ -19,13 +19,14 @@ export default function CrossPlatform() {
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-black uppercase tracking-wide text-brand-soft">
-            The same endgame sound
+            Coming to your pocket
           </p>
           <h2 className="mt-4 font-display text-3xl font-black leading-tight sm:text-5xl">
-            Master anywhere. Same engine. Same truth.
+            Same engine, headed to iPhone &amp; Android.
           </h2>
           <p className="mt-4 text-muted sm:text-lg">
-            The power of the studio in your pocket.
+            Desktop first. The mobile companions share the exact same engine —
+            coming after launch.
           </p>
         </div>
 

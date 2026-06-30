@@ -1,3 +1,5 @@
+import BetaSignup from "./BetaSignup";
+
 export default function FinalCTA() {
   return (
     <section
@@ -12,15 +14,11 @@ export default function FinalCTA() {
           This is the one you stop on.
         </p>
 
-        <a
-          href="mailto:hello@yesmaster.app"
-          className="mt-8 inline-flex flex-col items-center rounded-xl bg-gradient-to-b from-cta-light to-cta-deep px-8 py-4 font-extrabold text-[#1c0d00] shadow-xl shadow-cta-deep/30"
-        >
-          <span className="font-display text-lg">Download YES Master</span>
-          <span className="text-xs font-semibold text-[#1c0d00]/70">
-            Works offline. No signup.
-          </span>
-        </a>
+        <BetaSignup />
+        <p className="mt-4 text-xs font-semibold text-muted">
+          Free during the beta. When it launches it's a one-time $29 (then $49)
+          — beta testers keep $29 forever. Mac &amp; Windows.
+        </p>
       </div>
     </section>
   );

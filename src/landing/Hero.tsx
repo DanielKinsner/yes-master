@@ -6,19 +6,19 @@ import iconRelease from "../assets/landing/icon-release-ready.png";
 // The three proof points. Edit the words here; the layout stays the same.
 const points = [
   {
-    icon: iconLocal,
-    title: "Local-first",
-    body: "Your tracks never leave your machine. No uploads, no cloud, no waiting.",
+    icon: iconRealtime,
+    title: "Real-time, every tweak",
+    body: "The full chain runs as you listen — no upload, no reprocessing wait.",
   },
   {
-    icon: iconRealtime,
-    title: "Real-time control",
-    body: "Hear every change as you make it. Shape tone, loudness, and width by ear.",
+    icon: iconLocal,
+    title: "Simple by default, deep when you want it",
+    body: "Master in one move, or open the full metering and album tools when you're ready.",
   },
   {
     icon: iconRelease,
-    title: "Release-ready",
-    body: "Technically checked and true-peak safe. Ship a master you can trust.",
+    title: "No black box",
+    body: "A pass/fail receipt shows your LUFS, true-peak, and dynamic range — push it hard and still see the truth.",
   },
 ];
 
@@ -44,12 +44,18 @@ export default function Hero() {
           screen), full width on phones, ~half on desktop. */}
       <div className="relative flex min-h-svh w-full flex-col justify-start gap-6 px-5 pt-28 pb-20 sm:px-8 lg:w-[54%] lg:max-w-[600px] lg:pl-16">
         <span className="text-xs font-black uppercase tracking-wide text-brand-soft">
-          Y.E.S. Master / Instantly master your track
+          YES Master
         </span>
 
         <h1 className="font-display text-[2.6rem] font-black leading-[0.9] tracking-tight sm:text-6xl lg:text-7xl">
-          Your Endgame <span className="block text-brand">Sound.</span>
+          Master your track in real time
+          <span className="block text-brand">— and see exactly what it did.</span>
         </h1>
+
+        <p className="max-w-[440px] text-base leading-snug text-muted sm:text-lg">
+          Drop a track, pick a vibe, and hear the full mastering chain as you
+          listen. No upload, no waiting, no black box.
+        </p>
 
         <ul className="flex flex-col gap-5">
           {points.map((point) => (
@@ -75,7 +81,7 @@ export default function Hero() {
             href="#get-started"
             className="inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-b from-cta-light to-cta-deep px-5 py-3 font-extrabold text-[#1c0d00] shadow-lg shadow-cta-deep/30 sm:w-auto"
           >
-            Join desktop beta
+            Join the free beta
           </a>
           <a
             href="#advanced"

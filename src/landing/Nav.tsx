@@ -14,7 +14,7 @@ export default function Nav() {
         className="flex items-center gap-2 font-display text-lg font-extrabold"
       >
         <img src={brandIcon} alt="" className="h-7 w-7" />
-        <span>Y.E.S. Master</span>
+        <span>YES Master</span>
       </a>
 
       <div className="flex items-center gap-4 text-sm text-muted sm:gap-7">
@@ -32,7 +32,7 @@ export default function Nav() {
           href="#get-started"
           className="rounded-lg bg-gradient-to-b from-cta-light to-cta-deep px-4 py-2 font-extrabold text-[#1c0d00]"
         >
-          Join desktop beta
+          Join the free beta
         </a>
       </div>
     </nav>
