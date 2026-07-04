@@ -803,54 +803,79 @@ pub fn render_album_plan_impl(
     }
 
     // Pass 2 - assemble the continuous album.wav, inserting silence
-    // frames per TransitionSpec.
-    let album_path = unique_album_path(out_dir, &source_paths)?;
-    let spec = wav_spec(album_channels, album_sample_rate, bit_depth)?;
-    let album_tmp_path = unique_tmp_path(&album_path)?;
-    let album_write_result = (|| -> CommandResult<()> {
-        let mut album_writer = hound::WavWriter::create(&album_tmp_path, spec)
-            .map_err(|e| CommandError::Io(e.to_string()))?;
-        for (i, samples) in rendered_samples.iter().enumerate() {
-            write_samples_into_writer(&mut album_writer, samples, bit_depth)?;
-            if i + 1 < rendered_samples.len() {
-                // Transition slot between track i and track i+1.
-                if let Some(t) = request.plan.transitions.get(i) {
-                    if matches!(t.kind, TransitionKind::Gap) {
-                        let gap_seconds = t.duration_seconds.clamp(0.0, 5.0);
-                        let gap_frames = (gap_seconds * album_sample_rate as f32) as usize;
-                        let gap_samples = gap_frames * album_channels as usize;
-                        let zeros = vec![0.0_f32; gap_samples];
-                        write_samples_into_writer(&mut album_writer, &zeros, bit_depth)?;
+    // frames per TransitionSpec. Everything from here through the
+    // manifest write shares one error exit that sweeps `written_paths`
+    // — the no-partial-output promise (A5b) covers pass-2 and manifest
+    // failures too, not just pass-1 (D5 runtime-abuse review finding):
+    // a failed album export must not leave the per-track WAVs behind.
+    let pass2_result = (|| -> CommandResult<(PathBuf, PathBuf)> {
+        let album_path = unique_album_path(out_dir, &source_paths)?;
+        let spec = wav_spec(album_channels, album_sample_rate, bit_depth)?;
+        let album_tmp_path = unique_tmp_path(&album_path)?;
+        let album_write_result = (|| -> CommandResult<()> {
+            let mut album_writer = hound::WavWriter::create(&album_tmp_path, spec)
+                .map_err(|e| CommandError::Io(e.to_string()))?;
+            for (i, samples) in rendered_samples.iter().enumerate() {
+                write_samples_into_writer(&mut album_writer, samples, bit_depth)?;
+                if i + 1 < rendered_samples.len() {
+                    // Transition slot between track i and track i+1.
+                    if let Some(t) = request.plan.transitions.get(i) {
+                        if matches!(t.kind, TransitionKind::Gap) {
+                            let gap_seconds = t.duration_seconds.clamp(0.0, 5.0);
+                            let gap_frames = (gap_seconds * album_sample_rate as f32) as usize;
+                            let gap_samples = gap_frames * album_channels as usize;
+                            let zeros = vec![0.0_f32; gap_samples];
+                            write_samples_into_writer(&mut album_writer, &zeros, bit_depth)?;
+                        }
                     }
                 }
             }
+            album_writer
+                .finalize()
+                .map_err(|e| CommandError::Io(e.to_string()))?;
+            Ok(())
+        })();
+        if let Err(err) = album_write_result {
+            let _ = std::fs::remove_file(&album_tmp_path);
+            return Err(err);
         }
-        album_writer
-            .finalize()
-            .map_err(|e| CommandError::Io(e.to_string()))?;
-        Ok(())
-    })();
-    if let Err(err) = album_write_result {
-        let _ = std::fs::remove_file(&album_tmp_path);
-        return Err(err);
-    }
-    let album_path = finalize_never_overwrite(&album_tmp_path, &album_path)?;
+        let album_path = match finalize_never_overwrite(&album_tmp_path, &album_path) {
+            Ok(p) => p,
+            Err(err) => {
+                let _ = std::fs::remove_file(&album_tmp_path);
+                return Err(err);
+            }
+        };
+        // From here the continuous file exists on disk — track it so a
+        // manifest failure sweeps it along with the per-track WAVs.
+        written_paths.push(album_path.clone());
 
-    // Manifest.
-    let manifest_path =
-        unique_child_path_avoiding_sources(out_dir, "manifest.json", &source_paths)?;
-    let manifest = AlbumManifest {
-        plan: &request.plan,
-        rendered_at_iso: now_iso(),
-        sample_rate: album_sample_rate,
-        channels: album_channels,
-        bit_depth,
-        album_wav_path: &album_path.to_string_lossy(),
-        tracks: &track_records,
+        let manifest_path =
+            unique_child_path_avoiding_sources(out_dir, "manifest.json", &source_paths)?;
+        let manifest = AlbumManifest {
+            plan: &request.plan,
+            rendered_at_iso: now_iso(),
+            sample_rate: album_sample_rate,
+            channels: album_channels,
+            bit_depth,
+            album_wav_path: &album_path.to_string_lossy(),
+            tracks: &track_records,
+        };
+        let manifest_json = serde_json::to_string_pretty(&manifest)
+            .map_err(|e| CommandError::Other(format!("manifest serde: {e}")))?;
+        std::fs::write(&manifest_path, manifest_json)
+            .map_err(|e| CommandError::Io(e.to_string()))?;
+        Ok((album_path, manifest_path))
+    })();
+    let (album_path, manifest_path) = match pass2_result {
+        Ok(paths) => paths,
+        Err(err) => {
+            for p in &written_paths {
+                let _ = std::fs::remove_file(p);
+            }
+            return Err(err);
+        }
     };
-    let manifest_json = serde_json::to_string_pretty(&manifest)
-        .map_err(|e| CommandError::Other(format!("manifest serde: {e}")))?;
-    std::fs::write(&manifest_path, manifest_json).map_err(|e| CommandError::Io(e.to_string()))?;
 
     if let Some(cb) = on_progress {
         cb(1.0);
