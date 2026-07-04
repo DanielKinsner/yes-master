@@ -4621,10 +4621,13 @@ button.primary:disabled {
     min-height: 0;
   }
 
+  /* Inset the overview's right edge 30px so it aligns with the main
+     waveform above it (the .wf-db-scale column occupies that side).
+     The width reduction alone produces the inset — the block box stays
+     at the left edge of the stretch-aligned .wf-card column. */
   .wf-overview {
     height: 36px;
     width: calc(100% - 30px);
-    margin-right: 30px;
   }
 
   .wf-hint {

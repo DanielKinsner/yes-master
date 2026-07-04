@@ -354,17 +354,29 @@ Review verification (2026-07-04, both branches independently): frontend 494 +
 bridge lanes + Android arm64 check, and the slow real-fixture lane on the
 export branch.
 
-**Plausible (verify before acting):** backend `loop_region`
-(audio.rs:1955) may outlive track boundaries under hostile IPC ordering
-(fire-and-forget stop/setLoop/play from one microtask). Undecidable from
-code alone; revisit if loop weirdness is ever reported across track
-switches.
+**Plausible → CONFIRMED and fixed (2026-07-04, `6497a98`):** backend
+`loop_region` was never cleared by the audio thread itself — not by
+`Stop`, `handle_play`, or `handle_play_master` (they reset ~15 other
+fields but not this one) — so it definitionally outlived track
+boundaries; only the frontend's fire-and-forget `set_loop_region(null)`
+(swallowed errors, raced against play as a separate tokio task) kept
+track B from inheriting track A's region. Fixed by making the clear ride
+on the commands themselves: a play targeting a different track disarms
+the region, Stop disarms it, same-track plays (O/M swaps) and plays from
+an unloaded player keep it (arm-then-play). Policy extracted as
+`loop_region_survives_play` + three pins. Residual (accepted): a
+straggler `SetLoop(regionA)` from a toggle racing >100 ms behind a
+track-switch play could still re-arm stale — closing that needs a
+track-scoped `set_loop_region` IPC signature (mobile-lane cost),
+disproportionate until loop weirdness is ever actually reported.
 
 | G4 — CSS styling-debt batch (8 of 10) | `fdf1940` | done — recs re-derived from current CSS first (caught 2 that would have regressed visuals); verified live in browser preview; `.std-tile` consolidation + `.wf-overview` offset deferred with reasons (ledger 11a) |
+| G4 follow-up — `.wf-overview` offset (9 of 10) | `119ffea` | done 2026-07-04 — the margin half of the paired offset proved visually inert (no parent restructure needed); browser-preview A/B at the affected breakpoint measured an identical bounding box; only `.std-tile` stays parked (owner-eye) |
 
 **Queue complete — including both D5 follow-up chips (shipped 2026-07-04).**
 Every workstream (A–G), the audit follow-ups (D1–D5, B1–B3, F8), all riders,
 and both spawned feature chips are shipped or explicitly closed/parked with
 reasons. Remaining owner-gated items: Wave-10 listening sittings (Spot-Listen
-Queue above + thread agenda in the ledger), `.std-tile` consolidation
-(owner-eye), and `.wf-overview` (visual A/B).
+Queue above + thread agenda in the ledger) and `.std-tile` consolidation
+(owner-eye). (`.wf-overview` closed 2026-07-04, `119ffea`; the D5 plausible
+loop_region finding confirmed + fixed the same day, `6497a98`.)
