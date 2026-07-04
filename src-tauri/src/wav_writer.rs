@@ -156,13 +156,19 @@ pub(crate) fn write_samples_into_writer(
     Ok(())
 }
 
+/// Renders `samples` to `path` atomically (tmp + rename). Returns the
+/// path actually written: if `path` gained a file between the caller's
+/// pre-render uniqueness check and this finalize (overlapping exports),
+/// the write diverts to a `__{n}` sibling instead of clobbering — see
+/// `finalize_never_overwrite`. Callers must report the returned path,
+/// not the requested one.
 pub(crate) fn write_wav(
     path: &Path,
     samples: &[f32],
     sample_rate: u32,
     channels: u16,
     bit_depth: u16,
-) -> CommandResult<()> {
+) -> CommandResult<std::path::PathBuf> {
     if let Some(index) = samples.iter().position(|sample| !sample.is_finite()) {
         return Err(CommandError::Render(format!(
             "rendered samples contain non-finite value at index {index}"
@@ -170,7 +176,7 @@ pub(crate) fn write_wav(
     }
     let tmp_path = unique_tmp_path(path)?;
     let result = write_wav_direct(&tmp_path, samples, sample_rate, channels, bit_depth)
-        .and_then(|_| replace_with_tmp(&tmp_path, path));
+        .and_then(|_| finalize_never_overwrite(&tmp_path, path));
     if result.is_err() {
         let _ = std::fs::remove_file(&tmp_path);
     }
@@ -194,15 +200,63 @@ pub(crate) fn unique_tmp_path(path: &Path) -> CommandResult<std::path::PathBuf> 
     ))
 }
 
-pub(crate) fn replace_with_tmp(tmp_path: &Path, final_path: &Path) -> CommandResult<()> {
-    match std::fs::rename(tmp_path, final_path) {
-        Ok(()) => Ok(()),
-        Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists && final_path.is_file() => {
-            std::fs::remove_file(final_path).map_err(|e| CommandError::Io(e.to_string()))?;
-            std::fs::rename(tmp_path, final_path).map_err(|e| CommandError::Io(e.to_string()))
+/// `__{n}` sibling that does not exist yet — the same collision
+/// convention as the pre-render checks in engine.rs, applied again at
+/// finalize time.
+pub(crate) fn unique_sibling(path: &Path) -> CommandResult<std::path::PathBuf> {
+    let parent = path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    let stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("master");
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("wav");
+    for n in 1..1000 {
+        let alt = parent.join(format!("{stem}__{n}.{ext}"));
+        if !alt.exists() {
+            return Ok(alt);
         }
-        Err(err) => Err(CommandError::Io(err.to_string())),
     }
+    Err(CommandError::Io(
+        "could not generate unique output path".to_string(),
+    ))
+}
+
+/// Move a finished tmp render into place WITHOUT ever clobbering an
+/// existing file. Callers choose a non-existing final path before the
+/// render starts, but a render takes seconds to minutes — an overlapping
+/// export (or any other writer) can land the same name in that window.
+/// The old code renamed over it (and had an explicit remove+rename
+/// fallback), silently destroying a prior render and violating the
+/// "exports never overwrite by default" non-negotiable. Now the newcomer
+/// diverts to a `__{n}` sibling and the actual path is returned. The
+/// remaining exists→rename gap is microseconds (down from render
+/// duration); the retry loop absorbs even that.
+pub(crate) fn finalize_never_overwrite(
+    tmp_path: &Path,
+    final_path: &Path,
+) -> CommandResult<std::path::PathBuf> {
+    let mut target = final_path.to_path_buf();
+    for _ in 0..8 {
+        if target.exists() {
+            target = unique_sibling(&target)?;
+            continue;
+        }
+        return match std::fs::rename(tmp_path, &target) {
+            Ok(()) => Ok(target),
+            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
+                // Lost the microsecond race too — pick a fresh sibling.
+                target = unique_sibling(&target)?;
+                continue;
+            }
+            Err(err) => Err(CommandError::Io(err.to_string())),
+        };
+    }
+    Err(CommandError::Io(
+        "could not finalize render without overwriting an existing file".to_string(),
+    ))
 }
 
 fn write_wav_direct(
@@ -636,40 +690,47 @@ mod tests {
         }
     }
 
-    /// Characterization test (§10): the write primitive itself has NO
-    /// overwrite protection — `write_wav` -> `replace_with_tmp` atomically
-    /// replaces an existing final path. The "exports never overwrite by
-    /// default" guarantee is enforced entirely by the *callers*
-    /// (`unique_output_path` / `explicit_output_path` existence checks in
-    /// engine.rs / album_render.rs), NOT here. This test pins that contract so
-    /// a future caller does not mistakenly assume the primitive will refuse to
-    /// clobber an existing file.
+    /// D4 (supersedes the §10 characterization): the write primitive now
+    /// enforces never-overwrite itself. The callers' pre-render existence
+    /// checks remain the first line, but a render takes seconds to
+    /// minutes — if the chosen path gains a file in that window (an
+    /// overlapping export), finalize diverts to a `__{n}` sibling instead
+    /// of clobbering, and the returned path reports where the render
+    /// actually landed.
     #[test]
-    fn write_wav_replaces_an_existing_final_path_overwrite_guard_is_callers_job() {
+    fn write_wav_diverts_to_a_sibling_instead_of_clobbering_an_existing_file() {
         let tmp = tempfile::tempdir().expect("tempdir");
-        let out = tmp.path().join("overwrite-me.wav");
+        let out = tmp.path().join("first-render.wav");
 
-        write_wav(&out, &[-0.5, 0.0, 0.5], 48_000, 1, 16).expect("first write");
+        let first_actual = write_wav(&out, &[-0.5, 0.0, 0.5], 48_000, 1, 16).expect("first write");
+        assert_eq!(first_actual, out, "uncontested path is used as chosen");
         let first_bytes = fs::read(&out).expect("read first write");
 
-        // A second write of different content to the SAME path replaces it.
-        write_wav(&out, &[0.25, -0.25, 0.75, -0.75], 48_000, 1, 16).expect("second write");
-        let second_bytes = fs::read(&out).expect("read second write");
+        // Simulates the race: by finalize time the chosen path exists
+        // (here: the first render; in the field: any overlapping export).
+        let second_actual =
+            write_wav(&out, &[0.25, -0.25, 0.75, -0.75], 48_000, 1, 16).expect("second write");
 
-        assert_ne!(
-            first_bytes, second_bytes,
-            "the write primitive replaced the file in place; if this ever starts \
-             refusing to overwrite, the caller-side overwrite guards must be revisited"
+        assert_ne!(second_actual, out, "second write must divert, not clobber");
+        assert_eq!(
+            second_actual,
+            tmp.path().join("first-render__1.wav"),
+            "divert follows the __{{n}} sibling convention"
         );
-        let mut reader = hound::WavReader::open(&out).expect("open replaced wav");
+        assert_eq!(
+            fs::read(&out).expect("re-read first render"),
+            first_bytes,
+            "the prior render must survive byte-identical"
+        );
+        let mut reader = hound::WavReader::open(&second_actual).expect("open diverted wav");
         let decoded: Vec<i16> = reader
             .samples::<i16>()
             .collect::<Result<Vec<_>, _>>()
-            .expect("decode replaced samples");
+            .expect("decode diverted samples");
         assert_eq!(
             decoded.len(),
             4,
-            "final file holds the second write's samples"
+            "diverted file holds the second write's samples"
         );
     }
 }

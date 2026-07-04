@@ -10,7 +10,7 @@ use crate::engine::{
 use crate::sample_rate::convert_interleaved;
 use crate::types::*;
 use crate::wav_writer::{
-    replace_with_tmp, unique_tmp_path, wav_spec, write_samples_into_writer, write_wav,
+    finalize_never_overwrite, unique_tmp_path, wav_spec, write_samples_into_writer, write_wav,
 };
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -763,14 +763,17 @@ pub fn render_album_plan_impl(
             let per_track_name = format!("{:02}-{}.wav", entry.position, safe);
             let per_track_path =
                 unique_child_path_avoiding_sources(out_dir, &per_track_name, &source_paths)?;
-            written_paths.push(per_track_path.clone());
-            write_wav(
+            // write_wav diverts to a `__{n}` sibling if the chosen path
+            // gained a file mid-render; track the ACTUAL path for both
+            // the record and the on-error cleanup sweep.
+            let per_track_path = write_wav(
                 &per_track_path,
                 &samples,
                 album_sample_rate,
                 rendered_channel_count,
                 bit_depth,
             )?;
+            written_paths.push(per_track_path.clone());
 
             let measured_lufs = sanitize_lufs(measure_integrated_lufs(
                 &samples,
@@ -831,7 +834,7 @@ pub fn render_album_plan_impl(
         let _ = std::fs::remove_file(&album_tmp_path);
         return Err(err);
     }
-    replace_with_tmp(&album_tmp_path, &album_path)?;
+    let album_path = finalize_never_overwrite(&album_tmp_path, &album_path)?;
 
     // Manifest.
     let manifest_path =

@@ -998,7 +998,10 @@ pub fn mastering_render_with_progress(
         confidence_digest,
         compression_digest,
     };
-    write_wav(
+    // If the chosen path gained a file while we rendered (overlapping
+    // export), the write diverts to a `__{n}` sibling — report where the
+    // render actually landed.
+    let actual_out_path = write_wav(
         &out_path,
         &samples,
         rendered_sample_rate,
@@ -1016,7 +1019,7 @@ pub fn mastering_render_with_progress(
         status: JobStatus::Done,
         progress: 1.0,
         started_at_iso: now_iso(),
-        output_paths: vec![out_path.to_string_lossy().to_string()],
+        output_paths: vec![actual_out_path.to_string_lossy().to_string()],
         measurements: Some(measurements),
     })
 }
@@ -1071,34 +1074,11 @@ fn explicit_output_path(path: &Path, source_path: &Path) -> CommandResult<PathBu
     // unique sibling instead. Same `__{n}` collision suffix as
     // `unique_output_path` so the two render paths stay consistent.
     if path.exists() {
-        return uniquify_existing_path(path);
+        // Same `__{n}` sibling convention the finalize step uses — the
+        // user's chosen stem/extension stay recognizable.
+        return crate::wav_writer::unique_sibling(path);
     }
     Ok(path.to_path_buf())
-}
-
-/// Appends a `__{n}` suffix before the extension until the path no longer
-/// collides, mirroring the collision convention in `unique_output_path`.
-/// Preserves the user's chosen stem and extension so the saved file is
-/// still recognizably the master they named.
-fn uniquify_existing_path(path: &Path) -> CommandResult<PathBuf> {
-    let parent = path
-        .parent()
-        .filter(|p| !p.as_os_str().is_empty())
-        .unwrap_or_else(|| Path::new("."));
-    let stem = path
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("master");
-    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("wav");
-    for n in 1..1000 {
-        let alt = parent.join(format!("{stem}__{n}.{ext}"));
-        if !alt.exists() {
-            return Ok(alt);
-        }
-    }
-    Err(CommandError::Io(
-        "could not generate unique output path".to_string(),
-    ))
 }
 
 fn explicit_output_dir(path: &Path) -> CommandResult<PathBuf> {
