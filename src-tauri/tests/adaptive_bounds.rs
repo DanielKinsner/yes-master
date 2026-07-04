@@ -130,7 +130,10 @@ fn adaptation_is_reduce_only_capped_and_floored() {
                 trimmed >= 1.0 + (w - 1.0) * (1.0 - WIDTH_CAP) - 1.0e-6,
                 "width cap violated: {w} trimmed to {trimmed}",
             );
-            assert!(trimmed >= 1.0, "widening trim must never narrow below neutral");
+            assert!(
+                trimmed >= 1.0,
+                "widening trim must never narrow below neutral"
+            );
         }
     }
 }
@@ -184,7 +187,11 @@ fn zero_confidence_is_identity_and_confidence_never_deepens_a_trim() {
 
         // Zero confidence on every axis => no trims at all.
         let g0 = SourceGuardrails::compute_with_confidence(&p, strength, &zero);
-        assert_eq!(g0, SourceGuardrails::identity(), "zero confidence must be inert");
+        assert_eq!(
+            g0,
+            SourceGuardrails::identity(),
+            "zero confidence must be inert"
+        );
 
         // Full confidence reproduces Tier-1 compute exactly (documented).
         let gf = SourceGuardrails::compute_with_confidence(&p, strength, &Confidence::full());
