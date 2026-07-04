@@ -54,12 +54,13 @@ resolve entries in `docs/OPEN_THREADS_AND_DECISIONS.md` (noted inline).
   final ~3 ms (limiter lookahead ring never flushed) and carried a ~3 ms
   silent lead-in. Fixed via `MasteringChain::flush_render_tail` on both
   export paths; ledger Part B Q17 closed as a fix.
-- **F7 — `.aac` UI/backend mismatch (open, small).** The import dialog and
-  drag-drop allow-list offer `.aac` (`src/lib/supported-formats.ts`) but
-  `src-tauri/Cargo.toml` enables no `adts` symphonia feature, so raw ADTS
-  files fail with a generic decode error. Fix: enable `adts` or drop `.aac`
-  from the UI list; document the true supported-format list in
-  APP_BEHAVIOR.md. (AAC inside `.m4a`/`.mp4` works today via `isomp4`.)
+- **F7 — `.aac` UI/backend mismatch — REFUTED by mechanical test.** The
+  recon claimed raw ADTS `.aac` couldn't decode without an `adts` cargo
+  feature; `tests/decode_surface.rs` generates a real ADTS file with ffmpeg
+  and proves it decodes with stock features (symphonia 0.5's `aac` feature
+  ships the AdtsReader — there is no separate `adts` feature in 0.5). The
+  test stays as the permanent pin that every UI-advertised extension
+  (wav/mp3/m4a/aac/flac/ogg) decodes end-to-end.
 - **F8 — Analysis "air" band reads zero at 8 kHz / 11.025 kHz sources
   (uncertain, investigate).** `analysis.rs` 6-band edges put the air band
   above Nyquist for those rates. Reduce-only adaptation makes this SAFE
