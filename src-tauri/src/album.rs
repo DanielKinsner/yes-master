@@ -18,6 +18,41 @@
 //! disk or audio buffers.
 
 use crate::types::*;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// Owner-calibration gate for the album character system (per-track
+/// genre-label inference → loudness pulls + mastering-bias EQ moves). Off
+/// by default (owner decision 2026-07-03, hardening plan D7): the system
+/// was ported from the Codex prototype tuned on a single record and has
+/// never had an owner listening session, and default-ON silent per-track
+/// alteration contradicts the album promise ("nothing silently altered").
+/// While the gate is off, `build_album_plan*` assigns no character labels,
+/// so character loudness offsets and mastering biases are zero by
+/// construction — the user-chosen arc and source compensation remain the
+/// only album-level shaping. A future flip commit re-enables it as a
+/// visible opt-in after listening signoff.
+static ALBUM_CHARACTER: AtomicBool = AtomicBool::new(false);
+
+#[cfg(test)]
+pub(crate) static ALBUM_CHARACTER_GATE_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+pub fn is_album_character_enabled() -> bool {
+    ALBUM_CHARACTER.load(Ordering::Relaxed)
+}
+
+pub fn set_album_character_enabled(enabled: bool) -> bool {
+    ALBUM_CHARACTER.swap(enabled, Ordering::Relaxed)
+}
+
+pub fn init_album_character_from_env() {
+    if let Ok(v) = std::env::var("YES_MASTER_ALBUM_CHARACTER") {
+        let on = matches!(
+            v.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "on" | "yes"
+        );
+        set_album_character_enabled(on);
+    }
+}
 
 /// Cosine-eased resample of a 6-point curve to `n` output samples.
 /// Ported verbatim from Codex's `arc.py::_resample_curve` (lines 202–218).
@@ -471,8 +506,14 @@ pub fn build_album_plan_with_names(
     // Phase B+ — replace the lossy intrinsic-character mapping with the
     // position-aware Codex labels. `infer_album_characters` runs the
     // per-track scoring + the album-position promotion (HeavyDjent →
-    // ReturnAcoustic for back-half AcousticFolk).
-    let characters = infer_album_characters(analyses, durations, names);
+    // ReturnAcoustic for back-half AcousticFolk). Gated OFF by default —
+    // see `ALBUM_CHARACTER` above; with the gate off every track stays
+    // unlabeled, which zeroes the character loudness offsets and biases.
+    let characters = if is_album_character_enabled() {
+        infer_album_characters(analyses, durations, names)
+    } else {
+        vec![None; n]
+    };
     let offsets = resolve_arc_offsets(&arc, analyses, intensity, &characters);
 
     let mut tracks: Vec<AlbumTrackEntry> = Vec::with_capacity(n);
@@ -748,6 +789,103 @@ mod tests {
             plan.tracks[1].arc_lufs_offset_db > 0.0,
             "Cinematic peak track expected positive arc offset, got {}",
             plan.tracks[1].arc_lufs_offset_db
+        );
+    }
+
+    /// RAII guard restoring the album-character gate on drop, so a test
+    /// that flips it can't leak state into the rest of the suite.
+    struct CharacterGateGuard(bool);
+    impl CharacterGateGuard {
+        fn set(enabled: bool) -> Self {
+            Self(set_album_character_enabled(enabled))
+        }
+    }
+    impl Drop for CharacterGateGuard {
+        fn drop(&mut self) {
+            set_album_character_enabled(self.0);
+        }
+    }
+
+    /// 2026-07-03 owner decision D7: with the gate at its default (OFF),
+    /// a plan must carry no character labels — no hidden loudness pulls or
+    /// bias EQ — even when filename hints and analyses would trigger
+    /// inference. Offsets must equal the pure arc + source-compensation
+    /// math (character term zero).
+    #[test]
+    fn album_character_gate_off_by_default_yields_no_labels() {
+        let _lock = ALBUM_CHARACTER_GATE_TEST_LOCK.lock().unwrap();
+        let _gate = CharacterGateGuard::set(false);
+        let analyses = [
+            fake_analysis("t1", None, None, Some(0.30), Some(0.25)),
+            fake_analysis("t2", None, None, Some(0.85), Some(0.85)),
+            fake_analysis("t3", None, None, Some(0.25), Some(0.20)),
+        ];
+        let refs: Vec<&AnalysisResult> = analyses.iter().collect();
+        let durations = [180.0, 200.0, 190.0];
+        // Names that would short-circuit inference via the hint pass if
+        // the gate were on.
+        let names = ["acoustic-intro.wav", "djent-banger.wav", "return-quiet.wav"];
+        let intensity = 1.0;
+        let plan = build_album_plan_with_names(
+            "Gate Off".to_string(),
+            &refs,
+            &durations,
+            &names,
+            AlbumArc::Preset {
+                preset: AlbumArcKind::Cinematic,
+            },
+            intensity,
+        );
+        let curve = resample_arc_curve(AlbumArcKind::Cinematic.curve(), refs.len());
+        for (i, entry) in plan.tracks.iter().enumerate() {
+            assert_eq!(
+                entry.album_character, None,
+                "track {i}: gate-off plan must not label characters",
+            );
+            let expected = track_loudness_offset(
+                curve[i],
+                analyses[i].energy_density_score,
+                None,
+                intensity,
+                i,
+                refs.len(),
+            );
+            assert!(
+                (entry.arc_lufs_offset_db - expected).abs() < 1e-6,
+                "track {i}: gate-off offset must be arc+source only (got {}, expected {expected})",
+                entry.arc_lufs_offset_db,
+            );
+        }
+    }
+
+    /// Flipping the gate ON restores the inference path (here via the
+    /// filename-hint short-circuit), proving the system is preserved for
+    /// the future owner-listening flip rather than deleted.
+    #[test]
+    fn album_character_gate_on_restores_inference() {
+        let _lock = ALBUM_CHARACTER_GATE_TEST_LOCK.lock().unwrap();
+        let _gate = CharacterGateGuard::set(true);
+        let analyses = [
+            fake_analysis("t1", None, None, Some(0.30), Some(0.25)),
+            fake_analysis("t2", None, None, Some(0.85), Some(0.85)),
+        ];
+        let refs: Vec<&AnalysisResult> = analyses.iter().collect();
+        let durations = [180.0, 200.0];
+        let names = ["acoustic-intro.wav", "djent-banger.wav"];
+        let plan = build_album_plan_with_names(
+            "Gate On".to_string(),
+            &refs,
+            &durations,
+            &names,
+            AlbumArc::Preset {
+                preset: AlbumArcKind::Cinematic,
+            },
+            1.0,
+        );
+        assert_eq!(
+            plan.tracks[1].album_character,
+            Some(AlbumCharacter::HeavyDjent),
+            "gate-on plan should infer characters again",
         );
     }
 

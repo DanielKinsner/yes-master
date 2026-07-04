@@ -55,7 +55,7 @@ this queue at the next listening sitting. (Two-tier policy, D2.)
 
 | Date | Commit | What changed | What to listen for |
 |---|---|---|---|
-| — | — | *(none yet)* | — |
+| 2026-07-03 | A2 gate | Album renders no longer receive character-label loudness pulls (−1.25..+0.82 dB) or bias EQ/width/warmth/intensity moves — arc + source compensation only. Track Master unaffected. | Render a familiar album with tracks that used to trigger labels (heavy + acoustic mix); confirm the arc-only album still feels coherent and no track feels wrongly loud/quiet vs before. |
 
 ---
 
@@ -229,4 +229,5 @@ fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`).
 
 | Slice | Commit | Status |
 |---|---|---|
-| Plan + ledger/canon updates | — | in progress |
+| Plan + ledger updates | `06c9ab3` | done |
+| A2 — album character gate OFF | (this commit) | done — all lanes green; slow fixture lane still owed before merge to main |

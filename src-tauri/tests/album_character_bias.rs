@@ -1,5 +1,12 @@
 //! Phase B+ Step 8.5 — Album character promotion + bias landing.
 //!
+//! The character system is gated OFF by default (owner decision
+//! 2026-07-03, hardening plan D7) pending an owner listening session;
+//! this test flips the gate ON explicitly to keep the full inference →
+//! bias → render pipeline proven while it waits. Gate-OFF identity is
+//! covered by `album.rs` unit tests
+//! (`album_character_gate_off_by_default_yields_no_labels`).
+//!
 //! Verifies the position-aware character system:
 //!
 //!   * The filename-hint pass picks the right label for Track 1 (acoustic)
@@ -192,6 +199,10 @@ fn read_left_channel(path: &Path) -> Vec<f32> {
 
 #[test]
 fn character_promotion_and_bias_lands_on_rendered_audio() {
+    // Gate ON for this binary: the character system defaults OFF, and this
+    // test exists precisely to keep the gated path proven end-to-end.
+    // (Each tests/*.rs file is its own process, so no cross-test leak.)
+    album::set_album_character_enabled(true);
     let tmp = tempfile::tempdir().expect("tempdir");
     let samples = (SR_HZ as f32 * TRACK_DURATION_SEC) as usize;
 

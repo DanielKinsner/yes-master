@@ -39,6 +39,9 @@ pub fn run() {
     // YES_MASTER_CONFIDENCE_GATING is set) before any chain resolves confidence.
     crate::confidence::init_confidence_gating_from_env();
     crate::guardrails::init_adaptive_compression_from_env();
+    // Album character system (owner decision 2026-07-03): off unless
+    // YES_MASTER_ALBUM_CHARACTER is set — pending owner listening signoff.
+    crate::album::init_album_character_from_env();
     let player = Arc::new(audio::AudioPlayer::new());
     // B2: the backend owns deriving the adaptive source profile. The same store
     // instance is shared with the audio thread (owned by `player`) and managed

@@ -8,7 +8,10 @@
 //
 // Per-track DSP is still edited via the regular Tone Shape / Macros / Advanced
 // controls on whichever track the user has selected from the sidebar. The
-// album layer only modulates the per-track LUFS target via arc + character.
+// album layer modulates the per-track LUFS target via the user-chosen arc
+// (+ source compensation). The character system (inferred labels → extra
+// LUFS pulls + EQ/width/warmth/intensity biases) is gated OFF by default
+// pending owner listening signoff — see `album.rs::ALBUM_CHARACTER`.
 
 import type { AlbumArcKind, ImportedTrack } from "../bindings";
 import { ALBUM_ARC_DISPLAY } from "../bindings";
