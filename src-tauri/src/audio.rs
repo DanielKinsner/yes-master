@@ -1973,6 +1973,12 @@ fn process_audio_command(
                 // Without this, a stop mid-measurement leaks a stale
                 // "landing loudness…" note onto the next/idle state.
                 s.landing_pending = false;
+                // Nothing is loaded — there is no timeline the region can
+                // refer to. The frontend pairs every stop with a
+                // set_loop_region(null), but that clear is a separate IPC
+                // message that can race (or be lost); disarming here keeps
+                // a stale region from outliving the track it was set on.
+                s.loop_region = None;
             }
         }
         AudioCommand::Seek {
@@ -2219,6 +2225,23 @@ fn rebuild_spectrum_analyzer_for_playback(analyzer: &mut SpectrumAnalyzer, sampl
     *analyzer = SpectrumAnalyzer::new(sample_rate);
 }
 
+/// D5 hostile-IPC hardening: whether an armed loop region survives an
+/// incoming play request. The frontend does send `set_loop_region(null)`
+/// on every track switch, but that clear is a separate fire-and-forget
+/// IPC message racing the play on the async runtime — so the audio
+/// thread disarms a stale region itself whenever the play targets a
+/// DIFFERENT track than the loaded one (the region was authored against
+/// the outgoing track's timeline). Same-track requests keep the region
+/// (loop must survive an Original<->Mastered swap), and an unloaded
+/// player keeps it too ("arm the loop, then press Play" arrives as
+/// SetLoop before Play with nothing loaded).
+fn loop_region_survives_play(current_track: Option<&TrackId>, incoming: &TrackId) -> bool {
+    match current_track {
+        Some(current) => current == incoming,
+        None => true,
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn handle_play(
     state: &mut Option<AudioThreadState>,
@@ -2271,6 +2294,9 @@ fn handle_play(
         s.live_fade_out.store(true, Ordering::Relaxed);
     } else {
         s.sink.stop();
+    }
+    if !loop_region_survives_play(s.current_track.as_ref(), &track_id) {
+        s.loop_region = None;
     }
     s.decoded_cache = Some(DecodedCacheEntry {
         canonical_path: canonical,
@@ -2424,6 +2450,9 @@ fn handle_play_master(
     } else {
         s.sink.stop();
     }
+    if !loop_region_survives_play(s.current_track.as_ref(), &track_id) {
+        s.loop_region = None;
+    }
     rebuild_spectrum_analyzer_for_playback(&mut s.spectrum_analyzer, pcm.sample_rate);
 
     // Update the cache (replace any prior entry — single-slot LRU is fine
@@ -2560,6 +2589,42 @@ mod tests {
             is_loaded: true,
             ..PlaybackSnapshot::default()
         }
+    }
+
+    #[test]
+    fn loop_region_is_disarmed_by_a_track_switch() {
+        // D5 hostile-IPC pin: the frontend's set_loop_region(null) races the
+        // play command as a separate IPC message, so the audio thread must
+        // disarm a stale region on the play itself when the track changes.
+        let a = TrackId("track-a".to_string());
+        let b = TrackId("track-b".to_string());
+        assert!(
+            !loop_region_survives_play(Some(&a), &b),
+            "a play targeting a different track must disarm the loop region"
+        );
+    }
+
+    #[test]
+    fn loop_region_survives_same_track_replays_and_om_swaps() {
+        // Loop must survive an Original<->Mastered swap (same track id) —
+        // the region still refers to the same timeline.
+        let a = TrackId("track-a".to_string());
+        assert!(
+            loop_region_survives_play(Some(&a), &a),
+            "same-track play (O/M swap, replay) must keep the armed region"
+        );
+    }
+
+    #[test]
+    fn loop_region_survives_play_from_unloaded_state() {
+        // "Arm the loop, then press Play": SetLoop arrives while nothing is
+        // loaded, so the subsequent play must not clear it. (A stale region
+        // can't hide here — Stop disarms the region when it unloads.)
+        let b = TrackId("track-b".to_string());
+        assert!(
+            loop_region_survives_play(None, &b),
+            "play from an unloaded player must keep a pre-armed region"
+        );
     }
 
     #[test]
