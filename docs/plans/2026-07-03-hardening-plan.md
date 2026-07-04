@@ -48,6 +48,34 @@ resolve entries in `docs/OPEN_THREADS_AND_DECISIONS.md` (noted inline).
   Enumerate features and cover each entry point (three separate probe sites
   in `decode.rs`).
 
+### Findings from the 2026-07-03 DSP math audit (5 dimensions, adversarially verified)
+
+- **F6 — RS-09 CONFIRMED objective bug → FIXED.** Every export dropped its
+  final ~3 ms (limiter lookahead ring never flushed) and carried a ~3 ms
+  silent lead-in. Fixed via `MasteringChain::flush_render_tail` on both
+  export paths; ledger Part B Q17 closed as a fix.
+- **F7 — `.aac` UI/backend mismatch (open, small).** The import dialog and
+  drag-drop allow-list offer `.aac` (`src/lib/supported-formats.ts`) but
+  `src-tauri/Cargo.toml` enables no `adts` symphonia feature, so raw ADTS
+  files fail with a generic decode error. Fix: enable `adts` or drop `.aac`
+  from the UI list; document the true supported-format list in
+  APP_BEHAVIOR.md. (AAC inside `.m4a`/`.mp4` works today via `isomp4`.)
+- **F8 — Analysis "air" band reads zero at 8 kHz / 11.025 kHz sources
+  (uncertain, investigate).** `analysis.rs` 6-band edges put the air band
+  above Nyquist for those rates. Reduce-only adaptation makes this SAFE
+  (brightness underestimated → less trim), but analysis displays/fingerprints
+  for such sources are skewed. Verify + decide whether to renormalize.
+- **Everything else verified OK** (owner's "the math is there" confirmed):
+  RBJ biquads exact; Nyquist clamp at 0.45·fs; K-weighting re-derived per
+  sample rate (pinned vs published 48 kHz coefficients); BS.1770 two-pass
+  gating correct; ebur128 crate for file-level LUFS; landing math correct in
+  dB domain; Volume Match forced off on all export paths; rubato FFT
+  resampler (anti-aliased both directions); BS.775-style downmix (LFE
+  excluded); ceiling checks run post-resample on both paths; M/S width
+  textbook + mono-safe; saturation odd (no DC); LR4 crossover sums flat;
+  Compressor Off bypasses exactly the creative block. Minor taste-notes
+  (ISP skip margin tightness, comment nits) recorded by the audit, no action.
+
 ## Spot-Listen Queue
 
 Every commit that changes rendered bytes adds a line here. The owner runs
@@ -56,6 +84,7 @@ this queue at the next listening sitting. (Two-tier policy, D2.)
 | Date | Commit | What changed | What to listen for |
 |---|---|---|---|
 | 2026-07-03 | A2 gate | Album renders no longer receive character-label loudness pulls (−1.25..+0.82 dB) or bias EQ/width/warmth/intensity moves — arc + source compensation only. Track Master unaffected. | Render a familiar album with tracks that used to trigger labels (heavy + acoustic mix); confirm the arc-only album still feels coherent and no track feels wrongly loud/quiet vs before. |
+| 2026-07-03 | RS-09 flush | Every export (track + album) now contains its true final ~3 ms (previously silently dropped) and no longer has a ~3 ms silent lead-in — output is sample-aligned with the source. | Render a track with a hard-cut ending or a long reverb/fade tail; listen to the very end and confirm the tail completes naturally. Nothing else should sound different. |
 
 ---
 
@@ -231,4 +260,13 @@ fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`).
 |---|---|---|
 | Plan + ledger updates | `06c9ab3` | done |
 | A2 — album character gate OFF | `0d4df90` | done — all lanes green |
-| A1 — override full sound exemption | (this commit) | done — F1 fixed end-to-end: flag plumbed FE→Rust, arc/bias skipped, own target honored (proof: `tests/album_override.rs`), report/manifest + AlbumPanel receipt disclose it; wire golden regen; iPhone + Android lanes green. Slow fixture lane owed before merge to main. |
+| A1 — override full sound exemption | `f5c2ee2` | done — F1 fixed end-to-end (proof: `tests/album_override.rs`); mobile lanes green |
+| A4 — canon doc truth | `4d854df` | done |
+| A3a — loudness consistency proof | `31c2b5c` | done |
+| A3b — manifest truthfulness proof | `9fad14e` | done |
+| A5a — hostile error paths (fix + pins) | `11338c0`, `f222d0f` | done — missing-source error now names the file |
+| A5b — no partial output on failure (fix + pin) | `c60fc64`, `4766edf` | done |
+| B1/B3 — adaptive-ruin property proofs | `99592a5` | done — 6 proofs incl. the HF-burial nightmare |
+| C — DSP math audit (workflow, 5 dims + refuters) | n/a (read-only) | done — findings F6–F8 above; 1 confirmed bug |
+| RS-09 — limiter flush (F6) | `081e508`, `50e16ee` | done — all lanes + slow fixture lane green |
+| Ledger/plan paperwork | (this commit) | done — Q17 + thread #13 closed |

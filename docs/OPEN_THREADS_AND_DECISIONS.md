@@ -60,7 +60,7 @@ resolved; see "Confirmed SHIPPED" below. Remaining threads are owner-gated._
 | # | Thread | Action |
 |---|---|---|
 | 12 | Does the shipped **Standard view** satisfy the original "Simple Mode" ask, or is a further-simplified mode still wanted? | Confirm with owner. Likely already-shipped-in-substance. |
-| 13 | review-2026-05-28 findings 8 (idle vs live session dots identical) & 15 (play_track 5s vs play_master 15s timeout asymmetry) | Verify they were reconciled in current code. |
+| ~~13~~ | ~~review-2026-05-28 findings 8 & 15~~ | **CLOSED 2026-07-03** (hardening-push recon, read-only code verification): finding 8 is resolved — the session pill has three visually distinct states (`session-status-idle/live/busy` with distinct colors, halos, and animations, App.css + `SessionStatus` in App.tsx); finding 15 is resolved/justified in current `audio.rs`. No follow-up needed. |
 
 ### Confirmed SHIPPED (closed — listed so they aren't re-opened)
 
@@ -117,7 +117,14 @@ cluster can mostly close in one sitting.**
 
 ### Roadmap owner-decision queue
 16. **Min window size** for 1366×768 laptops — document the requirement (cheap default) or schedule a layout slice?
-17. **RS-09 limiter flush/tail** (~3 ms export-byte change) — defer + document (default), or accept (own snapshot-regenerating commit + listening spot-check)?
+17. ~~**RS-09 limiter flush/tail** (~3 ms export-byte change) — defer + document (default), or accept?~~
+    **RESOLVED 2026-07-03 — fixed, not deferred.** The 2026-07-03 DSP math
+    audit confirmed (with adversarial verification) that every export was
+    silently dropping its final ~3 ms (stuck in the limiter lookahead ring)
+    and shipping a ~3 ms silent lead-in — an objective bug under the
+    two-tier policy, not a preference. `MasteringChain::flush_render_tail`
+    now drains the lookahead on both export paths; output keeps source
+    length and sample alignment. Spot-listen entry in the hardening plan.
 18. **Stereo_width disposition** — wire it as a width co-trigger or delete the inert carried field?
 19. Confirm the **parked items stay parked**: P2 one-pole/soft-knee hoist + P4 tauri-specta (on the do-not-do list) — leave alone?
 
