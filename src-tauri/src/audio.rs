@@ -335,6 +335,8 @@ enum AudioCommand {
         device_name: Option<String>,
         reply: Sender<Result<(), String>>,
     },
+    #[cfg(any(feature = "app-runner", test))]
+    MarkDeviceLost,
     Pause,
     Resume,
     Stop,
@@ -390,6 +392,13 @@ pub struct PlaybackSnapshot {
     /// crossfades in. Drives the UI's "landing loudness…" note so the
     /// catch-up window is legible instead of mysterious.
     pub landing_pending: bool,
+    /// True after the app-level stall detector decides a playing sink stopped
+    /// advancing while still reporting "playing". The audio thread pauses the
+    /// loaded sink but keeps the track/playhead loaded for a retry.
+    pub device_lost: bool,
+    /// True while a loop region is active. The device-loss detector treats loop
+    /// mode as intentionally discontinuous and will not infer a frozen device.
+    pub loop_active: bool,
 }
 
 impl Default for PlaybackSnapshot {
@@ -409,7 +418,100 @@ impl Default for PlaybackSnapshot {
             lufs_integrated: SILENCE_DBFS,
             spectrum_db: SpectrumAnalyzer::silent(),
             landing_pending: false,
+            device_lost: false,
+            loop_active: false,
         }
+    }
+}
+
+#[cfg(any(feature = "app-runner", test))]
+const DEVICE_LOSS_POSITION_EPSILON_SEC: f64 = 0.001;
+#[cfg(any(feature = "app-runner", test))]
+pub(crate) const DEVICE_LOSS_STALL_TICKS: u8 = 20;
+#[cfg(any(feature = "app-runner", test))]
+pub(crate) const PLAYBACK_DEVICE_LOST_EVENT: &str = "playback:device-lost";
+
+#[cfg(any(feature = "app-runner", test))]
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum PlaybackDeviceLossDecision {
+    Healthy,
+    DeviceLost(crate::types::PlaybackDeviceLost),
+    SuppressStalledTick,
+}
+
+#[cfg(any(feature = "app-runner", test))]
+#[derive(Debug, Clone)]
+pub(crate) struct PlaybackDeviceLossDetector {
+    last_track_id: Option<TrackId>,
+    last_position_sec: Option<f64>,
+    frozen_ticks: u8,
+    emitted_for_stall: bool,
+}
+
+#[cfg(any(feature = "app-runner", test))]
+impl PlaybackDeviceLossDetector {
+    pub(crate) fn new() -> Self {
+        Self {
+            last_track_id: None,
+            last_position_sec: None,
+            frozen_ticks: 0,
+            emitted_for_stall: false,
+        }
+    }
+
+    pub(crate) fn observe(&mut self, snap: &PlaybackSnapshot) -> PlaybackDeviceLossDecision {
+        if !snap.is_loaded
+            || !snap.is_playing
+            || snap.device_lost
+            || snap.loop_active
+            || snap.track_id.is_none()
+            || !snap.position_sec.is_finite()
+        {
+            self.reset();
+            return PlaybackDeviceLossDecision::Healthy;
+        }
+
+        if self.last_track_id.as_ref() != snap.track_id.as_ref() {
+            self.last_track_id = snap.track_id.clone();
+            self.last_position_sec = Some(snap.position_sec);
+            self.frozen_ticks = 0;
+            self.emitted_for_stall = false;
+            return PlaybackDeviceLossDecision::Healthy;
+        }
+
+        let Some(last_position_sec) = self.last_position_sec else {
+            self.last_position_sec = Some(snap.position_sec);
+            return PlaybackDeviceLossDecision::Healthy;
+        };
+
+        if (snap.position_sec - last_position_sec).abs() > DEVICE_LOSS_POSITION_EPSILON_SEC {
+            self.last_position_sec = Some(snap.position_sec);
+            self.frozen_ticks = 0;
+            self.emitted_for_stall = false;
+            return PlaybackDeviceLossDecision::Healthy;
+        }
+
+        self.frozen_ticks = self.frozen_ticks.saturating_add(1);
+        if self.frozen_ticks < DEVICE_LOSS_STALL_TICKS {
+            return PlaybackDeviceLossDecision::Healthy;
+        }
+
+        if self.emitted_for_stall {
+            return PlaybackDeviceLossDecision::SuppressStalledTick;
+        }
+
+        self.emitted_for_stall = true;
+        PlaybackDeviceLossDecision::DeviceLost(crate::types::PlaybackDeviceLost {
+            track_id: snap.track_id.clone(),
+            position_sec: snap.position_sec,
+        })
+    }
+
+    fn reset(&mut self) {
+        self.last_track_id = None;
+        self.last_position_sec = None;
+        self.frozen_ticks = 0;
+        self.emitted_for_stall = false;
     }
 }
 
@@ -790,6 +892,11 @@ impl AudioPlayer {
         let _ = self.send(AudioCommand::Resume);
     }
 
+    #[cfg(any(feature = "app-runner", test))]
+    pub(crate) fn mark_device_lost(&self) {
+        let _ = self.send(AudioCommand::MarkDeviceLost);
+    }
+
     pub fn stop(&self) {
         cancel_any_play_request_epoch(&self.play_request_epoch);
         let _ = self.send(AudioCommand::Stop);
@@ -939,6 +1046,7 @@ struct AudioThreadState {
     /// gain for the CURRENT generation lands (or landing stops applying —
     /// cache hit, landing off, Original playback).
     landing_pending: bool,
+    device_lost: bool,
 }
 
 impl AudioThreadState {
@@ -973,6 +1081,7 @@ impl AudioThreadState {
             spectrum_ring: Arc::new(SpectrumRing::new()),
             spectrum_analyzer: SpectrumAnalyzer::new(initial_sample_rate),
             landing_pending: false,
+            device_lost: false,
         })
     }
 }
@@ -1834,13 +1943,24 @@ fn process_audio_command(
             );
             let _ = reply.send(outcome);
         }
+        #[cfg(any(feature = "app-runner", test))]
+        AudioCommand::MarkDeviceLost => {
+            if let Some(s) = state.as_mut() {
+                if s.current_track.is_some() {
+                    s.sink.pause();
+                    s.device_lost = true;
+                    s.landing_pending = false;
+                }
+            }
+        }
         AudioCommand::Pause => {
             if let Some(s) = state.as_ref() {
                 s.sink.pause();
             }
         }
         AudioCommand::Resume => {
-            if let Some(s) = state.as_ref() {
+            if let Some(s) = state.as_mut() {
+                s.device_lost = false;
                 s.sink.play();
             }
         }
@@ -1848,6 +1968,7 @@ fn process_audio_command(
             if let Some(s) = state.as_mut() {
                 s.sink.stop();
                 s.current_track = None;
+                s.device_lost = false;
                 // Nothing is audible — there is no landing window to report.
                 // Without this, a stop mid-measurement leaks a stale
                 // "landing loudness…" note onto the next/idle state.
@@ -2002,7 +2123,7 @@ fn audio_thread(
                 };
                 let lufs_momentary = to_lufs(s.lufs_x100.load(Ordering::Relaxed));
                 let lufs_integrated = to_lufs(s.integrated_lufs_x100.load(Ordering::Relaxed));
-                let is_playing = !s.sink.is_paused() && !s.sink.empty();
+                let is_playing = !s.device_lost && !s.sink.is_paused() && !s.sink.empty();
                 // L4b — run the FFT analyzer over the ring's current
                 // contents. When idle / paused / playing Original (no
                 // MasteringSource pushing), the ring still holds the
@@ -2029,6 +2150,8 @@ fn audio_thread(
                     lufs_integrated,
                     spectrum_db,
                     landing_pending: s.landing_pending,
+                    device_lost: s.device_lost,
+                    loop_active: s.loop_region.is_some(),
                 }
             }
             _ => PlaybackSnapshot::default(),
@@ -2195,6 +2318,7 @@ fn handle_play(
     }
     s.live_fade_out = new_fade_out;
     s.current_track = Some(track_id);
+    s.device_lost = false;
     s.live_coeffs_tx = None;
     s.live_coeff_generation = s.live_coeff_generation.wrapping_add(1);
     s.live_landing_gain_lin = 1.0;
@@ -2404,6 +2528,7 @@ fn handle_play_master(
     }
     s.live_fade_out = new_fade_out;
     s.current_track = Some(track_id);
+    s.device_lost = false;
     // B2: remember album-ness so the settings-only update_chain path stays flat
     // for album audition without re-sending the flag on every live edit.
     s.live_album = album;
@@ -2427,6 +2552,16 @@ mod tests {
     use super::*;
     use crate::dsp::{ChainCoeffs, MasteringChain};
 
+    fn playing_device_loss_snapshot(track_id: &str, position_sec: f64) -> PlaybackSnapshot {
+        PlaybackSnapshot {
+            track_id: Some(TrackId(track_id.to_string())),
+            position_sec,
+            is_playing: true,
+            is_loaded: true,
+            ..PlaybackSnapshot::default()
+        }
+    }
+
     #[test]
     fn seek_target_honors_positive_offsets_and_gates_the_rest() {
         // Playhead preservation on an Original<->Mastered switch sends the prior
@@ -2441,6 +2576,95 @@ mod tests {
         assert_eq!(seek_target(-3.0), None);
         assert_eq!(seek_target(f64::NAN), None);
         assert_eq!(seek_target(f64::INFINITY), None);
+    }
+
+    #[test]
+    fn device_loss_detector_ignores_advancing_playback() {
+        let mut detector = PlaybackDeviceLossDetector::new();
+        for i in 0..(DEVICE_LOSS_STALL_TICKS as usize * 2) {
+            let snap = playing_device_loss_snapshot("advancing", i as f64 * 0.05);
+            assert_eq!(detector.observe(&snap), PlaybackDeviceLossDecision::Healthy);
+        }
+    }
+
+    #[test]
+    fn device_loss_detector_ignores_paused_playback() {
+        let mut detector = PlaybackDeviceLossDetector::new();
+        let mut snap = playing_device_loss_snapshot("paused", 8.0);
+        snap.is_playing = false;
+        for _ in 0..(DEVICE_LOSS_STALL_TICKS as usize * 2) {
+            assert_eq!(detector.observe(&snap), PlaybackDeviceLossDecision::Healthy);
+        }
+    }
+
+    #[test]
+    fn device_loss_detector_ignores_seek_discontinuities() {
+        let mut detector = PlaybackDeviceLossDetector::new();
+        let positions = [1.0, 12.0, 3.5, 48.0, 6.0, 71.0, 8.5];
+        for position_sec in positions {
+            let snap = playing_device_loss_snapshot("seeking", position_sec);
+            assert_eq!(detector.observe(&snap), PlaybackDeviceLossDecision::Healthy);
+        }
+    }
+
+    #[test]
+    fn device_loss_detector_ignores_looping_playback() {
+        let mut detector = PlaybackDeviceLossDetector::new();
+        let mut snap = playing_device_loss_snapshot("looping", 4.0);
+        snap.loop_active = true;
+        for _ in 0..(DEVICE_LOSS_STALL_TICKS as usize * 2) {
+            assert_eq!(detector.observe(&snap), PlaybackDeviceLossDecision::Healthy);
+        }
+    }
+
+    #[test]
+    fn device_loss_detector_fires_once_for_frozen_playing_snapshot() {
+        let mut detector = PlaybackDeviceLossDetector::new();
+        let snap = playing_device_loss_snapshot("frozen", 11.25);
+        assert_eq!(detector.observe(&snap), PlaybackDeviceLossDecision::Healthy);
+        for _ in 0..(DEVICE_LOSS_STALL_TICKS - 1) {
+            assert_eq!(detector.observe(&snap), PlaybackDeviceLossDecision::Healthy);
+        }
+        assert_eq!(
+            detector.observe(&snap),
+            PlaybackDeviceLossDecision::DeviceLost(crate::types::PlaybackDeviceLost {
+                track_id: Some(TrackId("frozen".to_string())),
+                position_sec: 11.25,
+            })
+        );
+        for _ in 0..3 {
+            assert_eq!(
+                detector.observe(&snap),
+                PlaybackDeviceLossDecision::SuppressStalledTick
+            );
+        }
+    }
+
+    #[test]
+    fn device_loss_detector_resets_after_output_device_recovery() {
+        let mut detector = PlaybackDeviceLossDetector::new();
+        let frozen = playing_device_loss_snapshot("recovered", 2.0);
+        assert_eq!(
+            detector.observe(&frozen),
+            PlaybackDeviceLossDecision::Healthy
+        );
+        for _ in 0..DEVICE_LOSS_STALL_TICKS {
+            let _ = detector.observe(&frozen);
+        }
+        assert_eq!(
+            detector.observe(&PlaybackSnapshot::default()),
+            PlaybackDeviceLossDecision::Healthy,
+            "set_output_device reopens the stream to an unloaded snapshot"
+        );
+        for i in 0..(DEVICE_LOSS_STALL_TICKS as usize * 2) {
+            let snap = playing_device_loss_snapshot("recovered", 2.0 + i as f64 * 0.05);
+            assert_eq!(detector.observe(&snap), PlaybackDeviceLossDecision::Healthy);
+        }
+    }
+
+    #[test]
+    fn device_loss_event_channel_is_stable() {
+        assert_eq!(PLAYBACK_DEVICE_LOST_EVENT, "playback:device-lost");
     }
 
     #[test]

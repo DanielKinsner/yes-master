@@ -376,6 +376,7 @@ export async function mockListen<T>(
         position_sec: mockPosition,
         is_playing: mockPlaying,
         is_loaded: mockLoadedTrackId !== null,
+        device_lost: false,
         peak_dbfs: peakDb,
         peak_left_dbfs: peakLeft,
         peak_right_dbfs: peakRight,
@@ -393,6 +394,9 @@ export async function mockListen<T>(
     const wrapped = (pending: boolean) => handler({ payload: pending as unknown as T });
     landingStatusHandlers.add(wrapped as (pending: boolean) => void);
     return () => landingStatusHandlers.delete(wrapped as (pending: boolean) => void);
+  }
+  if (channel === "playback:device-lost") {
+    return () => {};
   }
   if (channel === "analysis:progress") {
     const wrapped = (fraction: number, label: string) =>

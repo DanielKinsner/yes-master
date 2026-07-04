@@ -271,6 +271,7 @@ fn playback_tick_sample() -> PlaybackTick {
         position_sec: 1.5,
         is_playing: true,
         is_loaded: true,
+        device_lost: false,
         peak_dbfs: -6.0,
         peak_left_dbfs: -6.5,
         peak_right_dbfs: -6.25,

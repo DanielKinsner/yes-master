@@ -5,6 +5,7 @@ import {
   api,
   onAnalysisProgress,
   onLandingStatus,
+  onPlaybackDeviceLost,
   onPlaybackTick,
   onRenderProgress,
 } from "../lib/api";
@@ -46,6 +47,7 @@ import type {
   ImportedTrack,
   LoopRegion,
   MasteringSettings,
+  PlaybackDeviceLost,
   Preset,
   PresetKind,
   ProjectMode,
@@ -304,6 +306,7 @@ export function useTrackMaster() {
     currentTimeSec: 0,
     playbackKind: "source" as PlaybackKindUI,
     loop: false,
+    deviceLost: false,
     volumeMatch: false,
     exportLufsPreview: false,
     // Phase 12.2 live clipping meter — post-output-gain peak since the last
@@ -365,6 +368,7 @@ export function useTrackMaster() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [loadedTrackId, setLoadedTrackId] = useState<TrackId | null>(null);
   const [loadedKindByTrack, setLoadedKindByTrack] = useState<Record<TrackId, PlaybackKindUI>>({});
+  const [playbackDeviceLost, setPlaybackDeviceLost] = useState<PlaybackDeviceLost | null>(null);
   const [regionByTrack, setRegionByTrack] = useState<Record<TrackId, LoopRegion | null>>({});
   // Phase 12.1 render progress: backend emits "render:progress" with a 0-1
   // fraction during render_track_preview / render_track_master. Used to
@@ -587,6 +591,7 @@ export function useTrackMaster() {
 
   useEffect(() => {
     let unlistenTick: (() => void) | undefined;
+    let unlistenDeviceLost: (() => void) | undefined;
     let unlistenProgress: (() => void) | undefined;
     let unlistenLanding: (() => void) | undefined;
     let unlistenAnalysis: (() => void) | undefined;
@@ -612,16 +617,26 @@ export function useTrackMaster() {
       if (tick.is_loaded && selectedId && tick.track_id !== selectedId) {
         return;
       }
+      const deviceLost = tick.device_lost ?? false;
+      if (deviceLost) {
+        setPlaybackDeviceLost({
+          track_id: tick.track_id,
+          position_sec: tick.position_sec,
+        });
+      } else if (tick.is_playing) {
+        setPlaybackDeviceLost(null);
+      }
       lastPlaybackTickRef.current = {
         trackId: tick.track_id,
         positionSec: tick.position_sec,
-        isPlaying: tick.is_playing,
+        isPlaying: tick.is_playing && !deviceLost,
         receivedAtMs: Date.now(),
       };
       setTransport((t) => ({
         ...t,
         currentTimeSec: tick.position_sec,
-        isPlaying: tick.is_playing,
+        isPlaying: tick.is_playing && !deviceLost,
+        deviceLost,
         peakDbfs: tick.peak_dbfs,
         peakLeftDbfs: tick.peak_left_dbfs ?? tick.peak_dbfs,
         peakRightDbfs: tick.peak_right_dbfs ?? tick.peak_dbfs,
@@ -636,6 +651,35 @@ export function useTrackMaster() {
       }));
     }).then((fn) => {
       unlistenTick = fn;
+    });
+    onPlaybackDeviceLost((event) => {
+      const selectedId = selectedTrackIdRef.current;
+      if (event.track_id && selectedId && event.track_id !== selectedId) {
+        return;
+      }
+      setPlaybackDeviceLost(event);
+      setLandingPending(false);
+      lastPlaybackTickRef.current = {
+        trackId: event.track_id,
+        positionSec: event.position_sec,
+        isPlaying: false,
+        receivedAtMs: Date.now(),
+      };
+      setTransport((t) => ({
+        ...t,
+        currentTimeSec: event.position_sec,
+        isPlaying: false,
+        deviceLost: true,
+        peakDbfs: -120,
+        peakLeftDbfs: -120,
+        peakRightDbfs: -120,
+        compressionGr: { low: -120, mid: -120, high: -120 },
+        lufsMomentary: -120,
+        lufsIntegrated: -120,
+        spectrumDb: [],
+      }));
+    }).then((fn) => {
+      unlistenDeviceLost = fn;
     });
     onRenderProgress((evt) => {
       // Any fresh progress supersedes a still-pending "clear the bar" timer
@@ -657,6 +701,7 @@ export function useTrackMaster() {
     });
     return () => {
       unlistenTick?.();
+      unlistenDeviceLost?.();
       unlistenProgress?.();
       unlistenLanding?.();
       unlistenAnalysis?.();
@@ -1881,6 +1926,8 @@ export function useTrackMaster() {
         }
       }
       setLoadedKindByTrack((prev) => ({ ...prev, [selectedTrackId]: kind }));
+      setPlaybackDeviceLost(null);
+      setTransport((t) => ({ ...t, deviceLost: false }));
     },
     [
       selectedTrack,
@@ -1918,6 +1965,8 @@ export function useTrackMaster() {
         await api.pausePlayback();
       } else {
         await api.resumePlayback();
+        setPlaybackDeviceLost(null);
+        setTransport((t) => ({ ...t, deviceLost: false }));
       }
     } catch (err) {
       setError(messageOf(err));
@@ -2213,6 +2262,10 @@ export function useTrackMaster() {
 
   const clearError = useCallback(() => setError(null), []);
   const clearProjectFeedback = useCallback(() => setProjectFeedback(null), []);
+  const clearPlaybackDeviceLost = useCallback(() => {
+    setPlaybackDeviceLost(null);
+    setTransport((t) => ({ ...t, deviceLost: false }));
+  }, []);
   const clearExportReceipt = useCallback(() => setLastExportReceipt(null), []);
 
   const saveUserPreset = useCallback(
@@ -2514,6 +2567,7 @@ export function useTrackMaster() {
     isExporting,
     error,
     projectFeedback,
+    playbackDeviceLost,
     transport,
     lastExportReceipt,
     renderProgress,
@@ -2574,6 +2628,7 @@ export function useTrackMaster() {
     clearRegion,
     clearError,
     clearProjectFeedback,
+    clearPlaybackDeviceLost,
     clearExportReceipt,
     mode,
     setMode,

@@ -14,6 +14,8 @@ const mocks = vi.hoisted(() => {
     renderTrackPreview: vi.fn(),
     renderTrackMaster: vi.fn(),
     prepareWaveform: vi.fn(),
+    listAudioOutputDevices: vi.fn(),
+    setAudioOutputDevice: vi.fn(),
     runExportChecks: vi.fn(),
     openOutput: vi.fn(),
     saveProject: vi.fn(),
@@ -39,6 +41,7 @@ const mocks = vi.hoisted(() => {
   return {
     api,
     onPlaybackTick: vi.fn(),
+    onPlaybackDeviceLost: vi.fn(),
     onRenderProgress: vi.fn(),
     onLandingStatus: vi.fn(),
     onAnalysisProgress: vi.fn(),
@@ -52,6 +55,7 @@ vi.mock("./lib/api", () => ({
   ADAPTIVE_COMPRESSION_GATE_EVENT: "yes-master:adaptive-compression-gate",
   api: mocks.api,
   onPlaybackTick: mocks.onPlaybackTick,
+  onPlaybackDeviceLost: mocks.onPlaybackDeviceLost,
   onRenderProgress: mocks.onRenderProgress,
   onLandingStatus: mocks.onLandingStatus,
   onAnalysisProgress: mocks.onAnalysisProgress,
@@ -120,6 +124,7 @@ function resetApiMocks() {
   mocks.save.mockReset();
   mocks.onDragDropEvent.mockReset();
   mocks.onPlaybackTick.mockReset();
+  mocks.onPlaybackDeviceLost.mockReset();
   mocks.onRenderProgress.mockReset();
   mocks.onLandingStatus.mockReset();
   mocks.onAnalysisProgress.mockReset();
@@ -127,8 +132,11 @@ function resetApiMocks() {
   mocks.api.listUserPresets.mockResolvedValue([]);
   mocks.api.loadRecentSession.mockResolvedValue(null);
   mocks.api.importTracks.mockResolvedValue([]);
+  mocks.api.listAudioOutputDevices.mockResolvedValue([]);
+  mocks.api.setAudioOutputDevice.mockResolvedValue(null);
   mocks.api.autosaveSession.mockResolvedValue(null);
   mocks.onPlaybackTick.mockResolvedValue(() => {});
+  mocks.onPlaybackDeviceLost.mockResolvedValue(() => {});
   mocks.onRenderProgress.mockResolvedValue(() => {});
   mocks.onLandingStatus.mockResolvedValue(() => {});
   mocks.onAnalysisProgress.mockResolvedValue(() => {});
@@ -209,6 +217,38 @@ describe("App user-facing errors", () => {
         "Opening Album Master in Advanced.",
       );
     });
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("shows a recovery banner when playback device loss is emitted", async () => {
+    let deviceLostHandler:
+      | ((event: { track_id: string | null; position_sec: number }) => void)
+      | undefined;
+    mocks.onPlaybackDeviceLost.mockImplementation((handler) => {
+      deviceLostHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(deviceLostHandler).toBeDefined();
+    });
+
+    await act(async () => {
+      deviceLostHandler?.({ track_id: "lost-track", position_sec: 5.5 });
+    });
+
+    expect(container.textContent).toContain("Playback device disconnected.");
+    expect(container.textContent).toContain("Choose an output in Settings");
+
+    await act(async () => {
+      buttonByText(container, "Choose device").click();
+    });
+    expect(container.textContent).toContain("Audio Output");
+    expect(container.textContent).toContain("Playback device");
 
     await act(async () => {
       root.unmount();

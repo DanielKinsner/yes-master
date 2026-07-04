@@ -941,12 +941,23 @@ pub struct LandingStatus {
     pub pending: bool,
 }
 
+/// Edge-triggered when a loaded, playing sink stops advancing while still
+/// reporting playback. The position is the frozen playhead so the UI can keep
+/// A/B switches and a retry anchored at the same spot.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct PlaybackDeviceLost {
+    pub track_id: Option<TrackId>,
+    pub position_sec: f64,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PlaybackTick {
     pub track_id: Option<TrackId>,
     pub position_sec: f64,
     pub is_playing: bool,
     pub is_loaded: bool,
+    #[serde(default)]
+    pub device_lost: bool,
     /// Post-output-gain peak across all channels since the last tick, in dBFS.
     /// `-120.0` is the silence sentinel (no signal in the window). Values
     /// above `-0.1` indicate clipping risk; values above `0.0` are clipping.

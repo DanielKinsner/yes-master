@@ -500,11 +500,17 @@ export interface LandingStatus {
   pending: boolean;
 }
 
+export interface PlaybackDeviceLost {
+  track_id: TrackId | null;
+  position_sec: number;
+}
+
 export interface PlaybackTick {
   track_id: TrackId | null;
   position_sec: number;
   is_playing: boolean;
   is_loaded: boolean;
+  device_lost?: boolean;
   /// Post-output-gain peak across all channels since the last tick, in dBFS.
   /// `-120` is the silence sentinel (no signal seen in the window). Values
   /// above `-0.1` indicate clipping risk; values above `0` are clipping.
