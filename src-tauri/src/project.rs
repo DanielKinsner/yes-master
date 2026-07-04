@@ -76,6 +76,15 @@ fn autosave_path(app: &tauri::AppHandle) -> CommandResult<PathBuf> {
 pub fn write_session_atomic(path: &Path, state: &ProjectState) -> CommandResult<()> {
     let json = serde_json::to_vec_pretty(state)
         .map_err(|e| CommandError::Other(format!("serialize session: {e}")))?;
+    // serde_json writes non-finite floats as `null`, and `null` does not
+    // parse back into an `f32` field — so a state carrying NaN/inf would
+    // save as a file that can never be reloaded. A refused save is
+    // recoverable; a session that silently stops reopening is data loss.
+    serde_json::from_slice::<ProjectState>(&json).map_err(|e| {
+        CommandError::Other(format!(
+            "refusing to save a session that could not be reloaded: {e}"
+        ))
+    })?;
     let tmp_path = session_tmp_path(path);
     std::fs::write(&tmp_path, &json).map_err(|e| CommandError::Io(e.to_string()))?;
     std::fs::rename(&tmp_path, path).map_err(|e| CommandError::Io(e.to_string()))?;
@@ -95,7 +104,40 @@ fn session_tmp_path(path: &Path) -> PathBuf {
 
 pub fn read_session(path: &Path) -> CommandResult<ProjectState> {
     let json = std::fs::read(path).map_err(|e| CommandError::Io(e.to_string()))?;
-    serde_json::from_slice(&json).map_err(|e| CommandError::Other(format!("session parse: {e}")))
+    let mut value: serde_json::Value = serde_json::from_slice(&json)
+        .map_err(|e| CommandError::Other(format!("session parse: {e}")))?;
+    clamp_floats_to_f32_range(&mut value);
+    serde_json::from_value(value).map_err(|e| CommandError::Other(format!("session parse: {e}")))
+}
+
+/// A `.ams.json` number like `1e39` is valid JSON (finite as f64) but
+/// overflows to `+inf` when serde converts it into an `f32` field — and a
+/// non-finite float in `ProjectState` re-serializes as `null`, producing a
+/// session file that can never be reloaded (hardening plan D3). Clamping
+/// every float in the raw tree into f32-finite range before the typed
+/// parse keeps loaded state finite for ALL current and future f32 fields;
+/// semantic range clamps stay where they belong (`clamp_finite_or` and
+/// friends at chain build). Integers and in-range floats are untouched.
+fn clamp_floats_to_f32_range(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Number(n) if n.is_f64() => {
+            if let Some(f) = n.as_f64() {
+                if f.abs() > f64::from(f32::MAX) {
+                    let clamped = f.clamp(-f64::from(f32::MAX), f64::from(f32::MAX));
+                    if let Some(num) = serde_json::Number::from_f64(clamped) {
+                        *value = serde_json::Value::Number(num);
+                    }
+                }
+            }
+        }
+        serde_json::Value::Array(items) => {
+            items.iter_mut().for_each(clamp_floats_to_f32_range);
+        }
+        serde_json::Value::Object(map) => {
+            map.values_mut().for_each(clamp_floats_to_f32_range);
+        }
+        _ => {}
+    }
 }
 
 #[cfg(test)]
@@ -128,6 +170,48 @@ mod tests {
             track_override_album: Vec::new(),
             last_saved_iso: Some(format!("2026-06-12T12:00:00Z-{id}")),
         }
+    }
+
+    #[test]
+    fn non_finite_state_is_refused_at_save_instead_of_writing_unloadable_json() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join("poisoned.ams.json");
+        let mut state = project_state("poisoned");
+        state.album_intensity = f32::INFINITY;
+
+        let err = write_session_atomic(&path, &state).expect_err("must refuse");
+        assert!(
+            format!("{err:?}").contains("could not be reloaded"),
+            "refusal should say why: {err:?}",
+        );
+        assert!(!path.exists(), "no file may be written on refusal");
+    }
+
+    #[test]
+    fn out_of_f32_range_floats_in_the_file_load_clamped_and_finite() {
+        // 1e39 is valid JSON but +inf as f32; the loader must clamp it so
+        // the loaded state round-trips through save again.
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join("overflow.ams.json");
+        let mut state = project_state("overflow");
+        state.album_intensity = 1.0;
+        write_session_atomic(&path, &state).expect("write seed");
+        let raw = std::fs::read_to_string(&path).expect("read seed");
+        let poisoned = raw.replace("\"album_intensity\": 1.0", "\"album_intensity\": 1e39");
+        assert_ne!(raw, poisoned, "fixture must actually poison the field");
+        std::fs::write(&path, poisoned).expect("write poisoned");
+
+        let loaded = read_session(&path).expect("hostile-but-valid JSON loads");
+        assert!(
+            loaded.album_intensity.is_finite(),
+            "overflowing float must be clamped finite, got {}",
+            loaded.album_intensity,
+        );
+        // And the loaded state must save again — the full round trip the
+        // old code broke.
+        let path2 = tmp.path().join("resaved.ams.json");
+        write_session_atomic(&path2, &loaded).expect("resave succeeds");
+        read_session(&path2).expect("resaved session reloads");
     }
 
     #[test]
