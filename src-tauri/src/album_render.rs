@@ -557,7 +557,17 @@ pub fn render_album_plan_impl(
     let mut source_channels: Vec<u16> = Vec::with_capacity(request.plan.tracks.len());
     for t in &request.plan.tracks {
         if let Some(input) = settings_by_id.get(t.track_id.as_str()) {
-            let probed = crate::decode::probe_audio_format(Path::new(&input.source_path))?;
+            let path = Path::new(&input.source_path);
+            // Check existence here, BEFORE the format probe: the probe
+            // otherwise surfaces a raw OS error ("os error 2") that never
+            // names which of the album's sources is missing.
+            if !path.exists() {
+                return Err(CommandError::Io(format!(
+                    "source not found: {}",
+                    input.source_path
+                )));
+            }
+            let probed = crate::decode::probe_audio_format(path)?;
             source_rates.push(probed.sample_rate);
             source_channels.push(probed.channels);
         }
