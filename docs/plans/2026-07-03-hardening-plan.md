@@ -335,5 +335,11 @@ leaves `is_playing = true` with a frozen playhead and no event — chip
 code alone; revisit if loop weirdness is ever reported across track
 switches.
 
-**Next up:** G4 — CSS styling-debt batch (11a, needs browser preview) is
-the last open queue item.
+| G4 — CSS styling-debt batch (8 of 10) | `fdf1940` | done — recs re-derived from current CSS first (caught 2 that would have regressed visuals); verified live in browser preview; `.std-tile` consolidation + `.wf-overview` offset deferred with reasons (ledger 11a) |
+
+**Queue complete.** Every workstream (A–G), the audit follow-ups (D1–D5,
+B1–B3, F8), and all riders are shipped or explicitly closed/parked with
+reasons. Remaining owner-gated items: Wave-10 listening sittings (Spot-
+Listen Queue above + thread agenda in the ledger), the two spawned
+feature chips (export cancellation, device-loss surfacing), `.std-tile`
+consolidation (owner-eye), and `.wf-overview` (visual A/B).
