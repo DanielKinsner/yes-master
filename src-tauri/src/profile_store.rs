@@ -40,15 +40,6 @@ pub struct SourceProfileStore {
 }
 
 impl SourceProfileStore {
-    /// Insert (or replace) the derived profile for a track. Called by
-    /// `analyze_tracks` after `SourceProfile::from_analysis` succeeds.
-    pub fn insert(&self, track_id: TrackId, profile: SourceProfile) {
-        self.by_track
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .insert(track_id, profile);
-    }
-
     /// Insert when `profile` is `Some`, otherwise clear any prior entry. Used so
     /// a re-analysis that can no longer derive a profile (e.g. a now-too-short
     /// source) doesn't leave a stale one behind.
@@ -293,7 +284,7 @@ mod tests {
         let store = SourceProfileStore::default();
         let id = TrackId("t1".to_string());
         assert_eq!(store.get(&id), None);
-        store.insert(id.clone(), profile(7.0));
+        store.set(id.clone(), Some(profile(7.0)));
         assert_eq!(
             store.get(&id).map(|p| p.dynamic_range_p95_p10_db),
             Some(7.0)
@@ -331,8 +322,8 @@ mod tests {
     fn store_insert_replaces_prior() {
         let store = SourceProfileStore::default();
         let id = TrackId("t1".to_string());
-        store.insert(id.clone(), profile(3.0));
-        store.insert(id.clone(), profile(9.0));
+        store.set(id.clone(), Some(profile(3.0)));
+        store.set(id.clone(), Some(profile(9.0)));
         assert_eq!(
             store.get(&id).map(|p| p.dynamic_range_p95_p10_db),
             Some(9.0)
@@ -345,8 +336,8 @@ mod tests {
         let kept = TrackId("kept".to_string());
         let failed = TrackId("failed".to_string());
         // Both carry a profile from an earlier successful analysis.
-        store.insert(kept.clone(), profile(7.0));
-        store.insert(failed.clone(), profile(7.0));
+        store.set(kept.clone(), Some(profile(7.0)));
+        store.set(failed.clone(), Some(profile(7.0)));
         // Re-analysis pass: only `kept` produced a result; `failed` hard-errored
         // (missing / unreadable source) and was skipped from the results.
         prune_failed_profiles(
@@ -370,8 +361,8 @@ mod tests {
         let store = SourceProfileStore::default();
         let a = TrackId("a".to_string());
         let b = TrackId("b".to_string());
-        store.insert(a.clone(), profile(1.0));
-        store.insert(b.clone(), profile(2.0));
+        store.set(a.clone(), Some(profile(1.0)));
+        store.set(b.clone(), Some(profile(2.0)));
         // Total failure (the analyze_tracks Err path) -> succeeded is empty.
         prune_failed_profiles(&store, &[a.clone(), b.clone()], &[]);
         assert_eq!(store.get(&a), None);

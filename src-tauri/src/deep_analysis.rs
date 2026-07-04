@@ -185,10 +185,12 @@ pub(crate) fn fisher_z_iqr(corr: &[f32]) -> f32 {
 #[derive(Debug, Clone)]
 pub struct DeepAnalysis {
     /// 31-band one-third-octave whole-track shares (sum ~1.0), long pass (§4.1).
+    /// (Whole-track `harsh_share`/`sibilant_share` were computed here but never
+    /// read — deleted 2026-07-03, audit Batch H tail. The LIVE per-window
+    /// `harsh_31`/`sibilant_31` on `WindowMetrics` are what Phase-B confidence
+    /// consumes; re-derive whole-track shares from `bands_31` if Tier-2 ever
+    /// wants them.)
     pub bands_31: [f32; 31],
-    /// Harsh / sibilant shares derived from `bands_31` (tunable edges).
-    pub harsh_share: f32,
-    pub sibilant_share: f32,
     /// Retained ordered per-window series (§4.3).
     pub windows: Vec<WindowMetrics>,
     /// Per-axis strata + dispersion derived from `windows`.
@@ -220,11 +222,8 @@ impl DeepAnalysis {
         let corr_vals: Vec<f32> = windows.iter().map(|w| w.stereo_correlation).collect();
         let mut stereo_correlation = axis_strata(&corr_vals, &keys);
         stereo_correlation.dispersion = fisher_z_iqr(&corr_vals);
-        let (harsh_share, sibilant_share) = harsh_sibilant_from_bands(&bands_31);
         Self {
             bands_31,
-            harsh_share,
-            sibilant_share,
             windows,
             loudness,
             crest,
@@ -308,24 +307,6 @@ fn percentile_finite_unsorted(values: &mut Vec<f32>, p: f32) -> Option<f32> {
     }
     values.sort_by(|a, b| a.total_cmp(b));
     Some(percentile_sorted(values, p))
-}
-
-/// Sum band shares whose center frequency falls in the harsh / sibilant ranges.
-/// `bands_31` are one-third-octave shares; `band_center_hz(i)` gives each band's
-/// nominal center. Ranges are half-open [lo, hi) per the tuning constants.
-fn harsh_sibilant_from_bands(bands: &[f32; 31]) -> (f32, f32) {
-    let mut harsh = 0.0;
-    let mut sib = 0.0;
-    for (i, &share) in bands.iter().enumerate() {
-        let c = band_center_hz(i);
-        if (HARSH_LO_HZ..HARSH_HI_HZ).contains(&c) {
-            harsh += share;
-        }
-        if (SIBILANT_LO_HZ..SIBILANT_HI_HZ).contains(&c) {
-            sib += share;
-        }
-    }
-    (harsh, sib)
 }
 
 /// Short-window time pass. Returns the ordered per-window series. `channels`

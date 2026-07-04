@@ -1037,23 +1037,22 @@ impl PreviewLandingCache {
         self.by_hash.len()
     }
 
-    /// Lookup the cached landing gain for `settings`. On miss, invoke
-    /// `compute` with the settings, store its result, and return it.
-    /// `compute` is `FnOnce` so callers can borrow other state from
-    /// the audio thread inside the closure without lifetime trouble.
+    /// Test convenience mirroring the production call pattern (see the
+    /// `update_chain` path): try `get`, compute on miss, `insert`.
+    /// Deliberately a thin composition of the REAL `get`/`insert` — an
+    /// earlier version re-implemented the hash dispatch and therefore
+    /// tested a copy of the logic instead of the shipped one (audit
+    /// 2026-06-23, Batch H tail).
     #[cfg(test)]
     fn get_or_compute<F>(&mut self, settings: &MasteringSettings, compute: F) -> f32
     where
         F: FnOnce(&MasteringSettings) -> f32,
     {
-        let LandingSettingsHash::Stable(hash) = settings_landing_hash(settings) else {
-            return compute(settings);
-        };
-        if let Some(&cached) = self.by_hash.get(&hash) {
+        if let Some(cached) = self.get(settings) {
             return cached;
         }
         let result = compute(settings);
-        self.by_hash.insert(hash, result);
+        self.insert(settings, result);
         result
     }
 
