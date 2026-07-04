@@ -169,9 +169,11 @@ describe("console layout CSS", () => {
   it("keeps first-run hints out of the Standard Preview rail", () => {
     expect(block(".first-run-overlay")).toContain("pointer-events: none");
     expect(block(".first-run-overlay .hint-chip")).toContain("pointer-events: auto");
-    expect(block(".first-run-overlay-flip")).toContain("right: calc(300px + 24px)");
+    expect(block(".first-run-overlay-flip")).toContain(
+      "right: calc(var(--rail-width-right) + 24px)",
+    );
     expect(block(".first-run-overlay-advanced")).toContain(
-      "right: calc(300px + 24px)",
+      "right: calc(var(--rail-width-right) + 24px)",
     );
   });
 });

@@ -51,10 +51,12 @@ export function FirstRunOverlay({
   return (
     // position/z-index inline so the float holds regardless of stylesheet
     // load order; per-step top/right/bottom offsets live in App.css against
-    // the first-run-overlay-<step> class.
+    // the first-run-overlay-<step> class. The z value reads the shared
+    // --z-overlay token (with the literal as fallback) so this tier can't
+    // drift from .chrome-dialog-backdrop's.
     <div
       className={`first-run-overlay first-run-overlay-${step}`}
-      style={{ position: "fixed", zIndex: 120 }}
+      style={{ position: "fixed", zIndex: "var(--z-overlay, 120)" }}
     >
       <HintChip className={className} onDismiss={onDismiss}>
         {body}

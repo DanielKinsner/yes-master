@@ -18,6 +18,22 @@
   --accent-glow-soft: 0 0 10px rgba(77, 139, 255, 0.3);
   --center-switch-width: 260px;
   --center-switch-height: 38px;
+  /* Rail widths (audit 11a item 7): the workbench grids share one left
+     rail (260px) and one right rail (300px); the first-run overlay
+     offsets are anchored to the right rail. Per-breakpoint overrides
+     that deliberately use other sizes stay literal. */
+  --rail-width-left: 260px;
+  --rail-width-right: 300px;
+  /* Overlay z-index scale (audit 11a item 8). Local stacking-context
+     bumps (1/2/5) inside components stay literal — this scale is for
+     the app-level overlay tiers only. FirstRunOverlay.tsx reads
+     --z-overlay from an inline style for load-order safety. */
+  --z-dropdown: 20;
+  --z-scrim: 50;
+  --z-toast: 100;
+  --z-overlay: 120;
+  --z-receipt: 200;
+  --z-dnd: 300;
   --radius: 8px;
   --radius-sm: 5px;
   --radius-card: 7px;
@@ -331,7 +347,7 @@ select {
 .chrome-dialog-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 120;
+  z-index: var(--z-overlay);
   display: grid;
   place-items: center;
   padding: 1.5rem;
@@ -487,7 +503,7 @@ select {
 
 .app {
   display: grid;
-  grid-template-columns: 260px 1fr 300px;
+  grid-template-columns: var(--rail-width-left) 1fr var(--rail-width-right);
   flex: 1;
   min-height: 0;
   background: var(--bg-0);
@@ -758,10 +774,12 @@ select {
   margin: 0.5rem 0 1.5rem;
 }
 
-.empty-foot {
-  margin-top: 2rem !important;
+/* Higher specificity than `.empty-state p` so no !important is needed
+   to win the margin/color cascade (audit 11a item 1). */
+.empty-state .empty-foot {
+  margin-top: 2rem;
   font-size: 0.85rem;
-  color: var(--text-2) !important;
+  color: var(--text-2);
 }
 
 .empty-foot code {
@@ -1138,7 +1156,7 @@ button.primary:disabled {
   top: calc(100% + 0.35rem);
   left: 0;
   width: min(560px, calc(100vw - 2rem));
-  z-index: 20;
+  z-index: var(--z-dropdown);
   padding: 0.55rem 0.65rem 0.6rem;
   margin: 0;
   border: 1px solid var(--border);
@@ -1787,9 +1805,20 @@ button.primary:disabled {
   line-height: 1.12;
 }
 
+/* Hover: lift + border, plus the deeper accent wash so the imagery
+   feels lit FROM the tile, not floating ABOVE it (background matches
+   the deeper deck gradient from slice 3). Previously split across two
+   non-adjacent blocks — merged, audit 11a item 4. */
 .tile:hover {
   border-color: var(--border-strong);
   transform: translateY(-1px);
+  background:
+    radial-gradient(
+      ellipse 80% 70% at 50% 32%,
+      color-mix(in srgb, var(--tile-accent, #4d8bff) 32%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(180deg, rgba(31, 37, 51, 0.9) 0%, rgba(13, 16, 24, 0.96) 100%);
 }
 
 /* Photoreal preset imagery — screen-blended so the highlights add
@@ -1820,19 +1849,6 @@ button.primary:disabled {
   filter: brightness(1.18) saturate(1.15)
     drop-shadow(0 0 18px color-mix(in srgb, var(--tile-accent, #4d8bff) 60%, transparent));
   transform: scale(1.05);
-}
-
-/* Deeper accent wash when the tile is hovered or active so the imagery
-   feels lit FROM the tile, not floating ABOVE it. Background matches
-   the new deeper deck gradient introduced in slice 3. */
-.tile:hover {
-  background:
-    radial-gradient(
-      ellipse 80% 70% at 50% 32%,
-      color-mix(in srgb, var(--tile-accent, #4d8bff) 32%, transparent),
-      transparent 60%
-    ),
-    linear-gradient(180deg, rgba(31, 37, 51, 0.9) 0%, rgba(13, 16, 24, 0.96) 100%);
 }
 
 .tile.active {
@@ -2324,7 +2340,7 @@ button.primary:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 300;
+  z-index: var(--z-dnd);
   pointer-events: none;
 }
 
@@ -2373,13 +2389,13 @@ button.primary:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  z-index: 100;
+  z-index: var(--z-toast);
 }
 
+/* Every toast renders inside .toast-stack (App.tsx), which owns the
+   fixed positioning — the old base position/right/bottom here were dead
+   and re-undone by a `.toast-stack .toast` override (audit 11a item 2). */
 .toast {
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
   background: var(--bg-2);
   border: 1px solid var(--accent-danger);
   border-radius: var(--radius);
@@ -2391,13 +2407,7 @@ button.primary:disabled {
   box-shadow: var(--shadow-1);
   color: var(--text-0);
   font-size: 0.85rem;
-  z-index: 100;
-}
-
-.toast-stack .toast {
-  position: static;
-  right: auto;
-  bottom: auto;
+  z-index: var(--z-toast);
 }
 
 .toast-ok {
@@ -2436,7 +2446,7 @@ button.primary:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 200;
+  z-index: var(--z-receipt);
   padding: 2rem;
 }
 
@@ -3378,6 +3388,33 @@ button.primary:disabled {
   margin-top: 0.45rem;
 }
 
+/* "Adaptive trims (chain, pre-landing)" readout in the Advanced panel —
+   layout moved here from a static inline style block (audit 11a item 9). */
+.adaptive-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.72rem;
+  opacity: 0.85;
+  padding: 0.25rem 0.1rem 0.1rem;
+}
+
+.adaptive-readout-title {
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.adaptive-readout-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.adaptive-readout-context {
+  opacity: 0.6;
+  text-align: right;
+}
+
 .compressor-adaptive-bands {
   display: grid;
   gap: 0.28rem;
@@ -4065,31 +4102,12 @@ button.primary:disabled {
   white-space: nowrap;
 }
 
+/* SignalChain still emits the .chain-link spans between stage nodes,
+   but the connector visual is retired: display: none is the whole rule.
+   (The old paint/animation declarations behind it were inert — deleted,
+   audit 11a item 5. Restore from git if the connector ever returns.) */
 .chain-link {
   display: none;
-  flex: 1 1 12px;
-  height: 2px;
-  background: var(--border);
-  border-radius: 999px;
-  margin: 0 0.35rem;
-  /* Offset to align with the disc center — the column has the disc on top
-     and label/detail below; total column height ~ disc(38) + label + detail.
-     The link should sit at the vertical center of the DISC, not the column. */
-  margin-bottom: 28px;
-  position: relative;
-  overflow: hidden;
-}
-
-.chain-link.is-hot {
-  background: linear-gradient(90deg, transparent, rgba(111, 163, 255, 0.6), transparent);
-  background-size: 200% 100%;
-  animation: chain-flow 2.6s linear infinite;
-  box-shadow: 0 0 6px rgba(77, 139, 255, 0.3);
-}
-
-@keyframes chain-flow {
-  0% { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
 }
 
 /* Phase 12.2 P2 — Intensity + Tone Shape as knobs. */
@@ -4343,7 +4361,7 @@ button.primary:disabled {
 
 @media (min-width: 1280px) and (min-height: 820px) {
   .app {
-    grid-template-columns: 260px minmax(0, 1fr) 300px;
+    grid-template-columns: var(--rail-width-left) minmax(0, 1fr) var(--rail-width-right);
     min-height: 0;
   }
 
@@ -4408,8 +4426,8 @@ button.primary:disabled {
   }
 
   .console-hero .track-header {
+    /* display: block comes from the base .track-header rule. */
     min-height: 0;
-    display: block;
   }
 
   .console-hero .track-header-main {
@@ -4625,7 +4643,7 @@ button.primary:disabled {
     top: calc(100% + 0.35rem);
     left: 0;
     right: 0;
-    z-index: 20;
+    z-index: var(--z-dropdown);
     padding: 0.55rem 0.65rem 0.6rem;
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -4683,10 +4701,6 @@ button.primary:disabled {
 
   .chain-stage-label {
     font-size: 0.58rem;
-  }
-
-  .chain-link {
-    margin-bottom: 25px;
   }
 
   .console-controls {
@@ -5071,7 +5085,7 @@ button.primary:disabled {
      gaps must be THE SAME value or the second seam drifts. */
   --std-col-gap: clamp(0.45rem, 1vh, 0.8rem);
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 300px;
+  grid-template-columns: var(--rail-width-left) minmax(0, 1fr) var(--rail-width-right);
   /* Constrain the implicit row to the shell height so the rails can shrink
      and scroll internally instead of growing past #root's overflow: hidden
      (album-sized track lists would otherwise clip with no scrollbar). */
@@ -5690,7 +5704,7 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
 @keyframes std-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 /* Back-to-Standard confirm modal */
-.modal-scrim { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(4,6,12,0.6); z-index: 50; }
+.modal-scrim { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(4,6,12,0.6); z-index: var(--z-scrim); }
 .modal-card { width: min(420px, 92vw); background: var(--bg-1); border: 1px solid var(--border-strong); border-radius: 14px; padding: 1.3rem; display: flex; flex-direction: column; gap: 0.9rem; }
 .modal-title { margin: 0; font-size: 1.05rem; color: var(--text-0); }
 .modal-body { margin: 0; color: var(--text-1); font-size: 0.9rem; }
@@ -5762,11 +5776,11 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
 }
 .first-run-overlay-flip {
   top: 72px;
-  right: calc(300px + 24px);
+  right: calc(var(--rail-width-right) + 24px);
 }
 .first-run-overlay-advanced {
   top: 72px;
-  right: calc(300px + 24px);
+  right: calc(var(--rail-width-right) + 24px);
 }
 .first-run-overlay-sendoff {
   left: 50%;

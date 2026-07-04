@@ -227,34 +227,17 @@ function AdaptiveReadout({ readout }: { readout: GuardrailReadout }) {
     },
   ];
   return (
-    <div
-      className="adaptive-readout"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.15rem",
-        fontSize: "0.72rem",
-        opacity: 0.85,
-        padding: "0.25rem 0.1rem 0.1rem",
-      }}
-    >
-      <div style={{ fontWeight: 600, opacity: 0.9 }}>
+    <div className="adaptive-readout">
+      <div className="adaptive-readout-title">
         Adaptive trims (chain, pre-landing)
       </div>
       {axes.map((ax) => (
-        <div
-          key={ax.key}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: "0.5rem",
-          }}
-        >
+        <div key={ax.key} className="adaptive-readout-row">
           <span>
             {ax.label} -{pct(ax.trim)}%
           </span>
           {ax.context && (
-            <span style={{ opacity: 0.6, textAlign: "right" }}>
+            <span className="adaptive-readout-context">
               {ax.context}
               {ax.trim <= 0.0001 && ax.inRange ? " · in range" : ""}
             </span>

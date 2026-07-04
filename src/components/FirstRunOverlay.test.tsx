@@ -55,7 +55,9 @@ describe("FirstRunOverlay", () => {
     // per-step offsets (top/right/bottom) live in App.css keyed off the
     // first-run-overlay-<step> class below.
     expect(overlay.style.position).toBe("fixed");
-    expect(overlay.style.zIndex).toBe("120");
+    // Shared overlay tier (--z-overlay) with the literal as fallback, so
+    // this layer can't drift from .chrome-dialog-backdrop's.
+    expect(overlay.style.zIndex).toBe("var(--z-overlay, 120)");
     expect(overlay.classList.contains("first-run-overlay-flip")).toBe(true);
     await act(async () => root.unmount());
   });
