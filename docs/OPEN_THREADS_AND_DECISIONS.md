@@ -7,6 +7,13 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **2026-07-03:** a hardening push is in flight on
+> `harden/2026-07-03-hostile-input` — see
+> `docs/plans/2026-07-03-hardening-plan.md`. It carries threads 11a, 11b, #13,
+> the doc-accuracy checks (Part B 20/21), the preset-fingerprint harness idea
+> (pairs thread #5), and RS-09 classification (Part B Q17) as riders, and it
+> resolved Part B Q8 and (partially) Q11.
+
 > **State of the project (2026-06-22):** late stabilization. The two big mechanical
 > queues (the final repo-wide review A1–E3, and the shippability roadmap S0–S7 +
 > AC-1…AC-4) are **fully shipped on main**. What remains is almost entirely
@@ -35,6 +42,7 @@ resolved; see "Confirmed SHIPPED" below. Remaining threads are owner-gated._
 | 5 | **Reference Retune listening notes** (Oomph least-matched) | Jump-Fix #2; deferred to Wave 10 | Re-run the private reference-tuning runner **after the 85% lean**, capture per-preset notes (Oomph: bolder without mud/pumping). Don't change export LUFS landing or compressor semantics. Pairs with idea: build the preset-fingerprint harness so future retunes are mechanically gated. |
 | 6 | **Already-mastered matrix listening signoff** | Jump-Fix #3; deferred to Wave 10 | Owner by-ear signoff against existing aggregate evidence; pairs with AC-5 stand-down listening. Re-run since the 85% lean is a DSP change. |
 | 7 | **Confirm the 85% lean resolved the "characterless presets" regression** | 2026-06-15 stabilization plan | Part of the Manual Listening Gate: confirm Universal/Clarity/Tape/Oomph are audibly distinct at matched loudness post-85%-lean. If still too similar, capture a listening note before further retune. |
+| 7a | **Album character system listening + flip decision** | 2026-07-03 hardening plan D7 | The album genre-inference system (per-track character labels → loudness pulls + EQ/width/warmth/intensity biases, `album.rs`) was gated OFF by default on 2026-07-03 (owner decision; it had never had a listening gate and silently altered tracks, contradicting the album promise). Owner A/B listening session decides whether it returns as a visible opt-in. Any flip commit removes or demotes the filename-keyword label override. |
 
 ### OPEN — roadmap / scope (no listening required)
 
@@ -85,12 +93,20 @@ cluster can mostly close in one sitting.**
 
 ### Product canon (S5.4 — needs an interrogation)
 7. What is the **mobile** product promise (audience, scope, deliberate absences)?
-8. What does **Album Master** promise beyond consistent loudness?
+8. ~~What does **Album Master** promise beyond consistent loudness?~~
+   **ANSWERED 2026-07-03:** *"One coherent record — consistent loudness, one
+   delivery format, honest per-track receipts, nothing silently altered."*
+   Arc = user-chosen expressive bonus. DDP/cue/ISRC/gapless out of v1.
+   Override = full sound exemption (own settings + own target, album delivery
+   format kept, manifest marks it). See `docs/plans/2026-07-03-hardening-plan.md` D4/D9.
 9. How should the **adaptive engine** be described honestly in PRODUCT.md / APP_BEHAVIOR.md?
 10. What is the **marketing landing page's** product role (marketing-only vs download/onboarding), and should PRODUCT.md name it as a public surface?
 
 ### Agent-file scope
 11. Is the **landing page / web build in-scope for agent work** (add `verify:landing` + `docs/landing-brief.md` to Required Reading), or hands-off like the Next.js storefront?
+    **PARTIALLY ANSWERED 2026-07-03:** in scope for **security & verification**
+    purposes (the beta-capture backend gets a security pass — hardening plan D3).
+    Whether it enters Required Reading for general feature work is still open.
 12. Broaden the "Local desktop app for Mac and Windows" non-negotiable to acknowledge iPhone + Android (and web)? *(Recommended yes — the CI already runs the mobile lanes.)*
 
 ### Packaging / platform
