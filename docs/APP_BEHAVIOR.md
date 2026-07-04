@@ -81,6 +81,20 @@ channel count. Mixed mono/stereo albums render stereo, with mono tracks upmixed,
 and sources above stereo fold down to stereo delivery. Mixed-rate and mixed
 channel-count albums therefore render one continuous file instead of failing.
 
+Album-layer sound shaping (owner decisions 2026-07-03 D7/D9):
+
+- The album layer modulates per-track loudness via the user-chosen arc plus
+  source compensation only. The character-inference system (per-track genre
+  labels → extra loudness pulls and EQ/width/warmth/intensity biases) is
+  built but **gated OFF by default** pending an owner listening session
+  (`YES_MASTER_ALBUM_CHARACTER` env opt-in; `album.rs::ALBUM_CHARACTER`).
+- A track marked **Override** gets full sound exemption: its own settings
+  and its own loudness target render unmodified — no arc offset, no album
+  bias — while the album delivery format (rate / depth / channels) still
+  applies. The album manifest, render report, and Album panel receipt all
+  mark overridden tracks ("Override: track N rendered with its own
+  settings").
+
 Mastered preview readiness timeouts surface recoverable user-facing guidance
 instead of silent non-playback.
 

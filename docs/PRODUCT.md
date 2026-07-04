@@ -231,16 +231,31 @@ and `docs/plans/2026-06-12-android-shippability-plan.md`.
 promise, and what is deliberately absent on phones. Captured via the
 canon-refresh interrogation (roadmap S5.4).
 
-## Album Master (product definition pending)
+## Album Master
+
+**Promise (owner-defined 2026-07-03):** *one coherent record* — your tracks
+come out sounding like one deliberate album: consistent loudness, one
+delivery format, honest per-track receipts, and nothing silently altered.
+The user-chosen album flow (arc) is expressive bonus on top of that promise,
+not part of it. DDP/cue sheets/ISRC metadata and gapless-playback guarantees
+are explicitly out of scope for v1.
 
 Album Master exists in Advanced: album intent, per-track override, arc
 kinds, album-wide delivery format with mixed-rate resampling, continuous +
 per-track renders with a manifest, mixed mono/stereo channel-count resolution,
 and above-stereo source fold-down to stereo delivery.
 
-**Pending owner definition (do not invent):** the album product promise —
-what album mastering means here beyond consistent loudness and flow.
-Captured via the same S5.4 interrogation.
+Two consequences of the promise (both shipped 2026-07-03):
+
+- **Per-track Override = full sound exemption.** An overridden track renders
+  with its own settings and its own loudness target — no arc offset, no
+  album-layer bias — while still delivering in the album format. The
+  manifest and export receipt mark it.
+- **The album character system is gated OFF by default.** The per-track
+  genre-inference system (labels → loudness pulls + EQ/width/warmth/
+  intensity biases) is built and preserved but never runs until an owner
+  listening session approves it as a visible opt-in
+  (`YES_MASTER_ALBUM_CHARACTER`, see `album.rs::ALBUM_CHARACTER`).
 
 ## Public Surface (role pending)
 
