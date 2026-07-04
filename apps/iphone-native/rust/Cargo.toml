@@ -5,8 +5,12 @@ edition = "2021"
 rust-version = "1.77"
 
 [lib]
+# staticlib: linked into the iOS app by scripts/build-rust-bridge.sh.
+# rlib: consumed by the Android bridge crate (and the crate's own tests).
+# (A `cdylib` entry sat here unused by any link step — removed 2026-07-03,
+# audit Batch H tail.)
+crate-type = ["staticlib", "rlib"]
 name = "yes_master_iphone_native_bridge"
-crate-type = ["staticlib", "cdylib", "rlib"]
 
 [dependencies]
 futures-executor = "0.3"
