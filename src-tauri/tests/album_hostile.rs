@@ -170,6 +170,61 @@ fn empty_source_path_is_a_typed_error() {
 }
 
 #[test]
+fn mid_album_failure_leaves_no_partial_per_track_files() {
+    // Track 1 renders fine; track 2 is a structurally valid WAV containing
+    // zero samples, which passes the header probe but fails in-loop with
+    // "no samples decoded" — AFTER track 1's per-track WAV was written.
+    // A failed album export must not leave that orphan behind.
+    let tmp = TempDir::new().expect("tempdir");
+    let good = tmp.path().join("good.wav");
+    write_stereo_sine_wav(&good, 44_100, 1.0, 0.1);
+    let empty = tmp.path().join("empty.wav");
+    {
+        let spec = WavSpec {
+            channels: 2,
+            sample_rate: 44_100,
+            bits_per_sample: 16,
+            sample_format: SampleFormat::Int,
+        };
+        WavWriter::create(&empty, spec)
+            .expect("create empty wav")
+            .finalize()
+            .expect("finalize empty wav");
+    }
+
+    let out_dir = tmp.path().join("out");
+    let err = render_album_plan_impl(
+        &AlbumPlanRenderRequest {
+            plan: plan(vec![entry("good", 1), entry("empty", 2)]),
+            tracks: vec![
+                input("good", &good.to_string_lossy()),
+                input("empty", &empty.to_string_lossy()),
+            ],
+        },
+        &out_dir,
+        None,
+    )
+    .expect_err("zero-sample track must fail the album render");
+    assert!(
+        matches!(err, CommandError::Decode(ref m) if m.contains("no samples decoded")),
+        "unexpected error: {err:?}"
+    );
+
+    // No orphaned per-track WAVs (or any files) left in the export folder.
+    let leftovers: Vec<String> = std::fs::read_dir(&out_dir)
+        .map(|rd| {
+            rd.filter_map(|e| e.ok())
+                .map(|e| e.file_name().to_string_lossy().to_string())
+                .collect()
+        })
+        .unwrap_or_default();
+    assert!(
+        leftovers.is_empty(),
+        "failed export must not leave partial output behind, found: {leftovers:?}"
+    );
+}
+
+#[test]
 fn duplicate_plan_entries_render_the_same_source_twice_coherently() {
     // Two plan entries sharing one track_id (a "reprise") is tolerated:
     // the same source renders at both positions with distinct filenames.
