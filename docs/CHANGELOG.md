@@ -12,6 +12,52 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-07-03/04 — Hostile-input hardening push + D5 follow-ups
+
+A grill-driven hardening sweep (plan + owner decisions:
+`docs/plans/2026-07-03-hardening-plan.md`) executed in ~50 small commits,
+followed by two Codex-built feature slices reviewed/merged 2026-07-04.
+**Five real bugs found and fixed**, each with a proving test:
+
+- **RS-09 — limiter tail truncation.** Every export silently dropped its final
+  ~3 ms and carried a ~3 ms silent lead-in; a chain flush now keeps output
+  sample-aligned with the source.
+- **Unloadable-session save.** A `1e39` in a `.ams.json` became `+inf` in an
+  f32, re-serialized as `null`, and made every later save/autosave a file the
+  app could never reopen (silent session loss). Loads clamp raw floats to
+  f32-finite; saves verify read-back before renaming into place.
+- **Never-overwrite finalize race.** Overlapping exports to the same name
+  clobbered the earlier render at finalize; the writer now diverts to a
+  `__{n}` sibling and reports the actual path.
+- **True-peak ceiling breach.** High-crest material at hot delivery targets
+  shipped up to +1.68 dBTP over the profile's −1 dBTP promise (limiter caps
+  sample peaks; inter-sample peaks sailed through, and the landing only
+  ceiling-bounded boosts). The landing now applies a level-only safety trim in
+  both directions; 27-cell landing matrix pins the contract.
+- **Hostile-decode panic.** A crafted 0 Hz WAV crashed symphonia itself; a
+  panic boundary + rate validation + NaN/Inf sample sanitization now guard all
+  decode entry points.
+
+Also shipped: album promise proofs (loudness consistency, manifest
+truthfulness, no-partial-output incl. pass-2/manifest failures, named hostile
+errors); Override = full sound exemption end-to-end with honest receipts; the
+album character system gated OFF pending owner listening; adaptive-ruin
+property proofs (reduce-only/capped/floored, incl.
+`intentional_brightness_is_never_buried`); the **preset fingerprint harness**
+(safety bounds at intensity 0.5 AND 1.0, pairwise distinctness floor across
+all 28 pairs, OS-independent tolerance golden, owner MD/CSV report); hostile
+project-JSON + export-I/O batteries; orphaned render-tmp startup sweep; a
+capture-endpoint security pass (finding: no backend exists yet — form pinned
+safe-disabled, go-live checklist parked); dead-code tail (11b) and CSS
+styling-debt batch (11a, 8/10, browser-verified); D5 runtime-abuse review
+(33 abuse patterns verified clean). **Codex follow-ups:** export cancellation
+(job registry, `cancel_render`, job-scoped progress, cancelled = no output)
+and playback device-loss surfacing (ticker stall detector,
+`playback:device-lost`, recovery banner). Owner-gated remainder: Wave-10
+listening sittings (3-entry Spot-Listen Queue in the plan doc).
+
+---
+
 ## 2026-06-23 — Repo-wide audit remediation (macOS-weighted)
 
 Executed the 2026-06-23 audit plan
