@@ -227,11 +227,14 @@ fn native_adaptive_context_from_analysis(analysis: &AnalysisResult) -> NativeAda
     }
 }
 
-pub(crate) fn native_adaptive_context_for_path(path: &Path) -> Option<NativeAdaptiveContext> {
-    resolve_native_adaptive_context_for_path(path).ok()
-}
-
-fn resolve_native_adaptive_context_for_path(path: &Path) -> Result<NativeAdaptiveContext, String> {
+/// IP-05: there is deliberately NO `.ok()` convenience wrapper around this —
+/// every production caller must handle the failure loudly. Render returns an
+/// error payload; live attach fails (`LiveStream::create` → `None`). A silent
+/// `None` fallback here previously let audition proceed non-adaptively on a
+/// source whose render would fail, quietly breaking WYSIWYG.
+pub(crate) fn resolve_native_adaptive_context_for_path(
+    path: &Path,
+) -> Result<NativeAdaptiveContext, String> {
     let request = AnalyzeRequest {
         id: TrackId::new(),
         path: path.to_string_lossy().into_owned(),
@@ -749,7 +752,7 @@ mod tests {
         let input = tmp.path().join("source.wav");
         write_sine_wav(&input);
 
-        let context = native_adaptive_context_for_path(&input).expect("adaptive context");
+        let context = resolve_native_adaptive_context_for_path(&input).expect("adaptive context");
         let settings =
             export_settings_for_options_with_context(Some("balanced"), 0.5, -11.0, Some(&context));
 
@@ -1303,7 +1306,7 @@ mod tests {
         write_sine_wav(&input);
 
         // Source-profile-present adaptive context (the interesting case).
-        let context = native_adaptive_context_for_path(&input);
+        let context = resolve_native_adaptive_context_for_path(&input).ok();
         assert!(context.is_some(), "expected a resolved adaptive context");
         let settings =
             export_settings_for_options_with_context(Some("warm"), 0.5, -11.0, context.as_ref());
@@ -1367,7 +1370,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let input = tmp.path().join("source.wav");
         write_sine_wav(&input);
-        let context = native_adaptive_context_for_path(&input);
+        let context = resolve_native_adaptive_context_for_path(&input).ok();
 
         let off = export_settings_for_options_with_context(
             Some("balanced"),
@@ -1411,7 +1414,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let input = tmp.path().join("source.wav");
         write_sine_wav(&input);
-        let context = native_adaptive_context_for_path(&input).expect("adaptive context");
+        let context = resolve_native_adaptive_context_for_path(&input).expect("adaptive context");
         let deep = context.deep_analysis.as_deref();
 
         // Gate off => no confidence, even with a real source DeepAnalysis present.
@@ -1435,7 +1438,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let input = tmp.path().join("source.wav");
         write_sine_wav(&input);
-        let context = native_adaptive_context_for_path(&input).expect("adaptive context");
+        let context = resolve_native_adaptive_context_for_path(&input).expect("adaptive context");
 
         let settings =
             export_settings_for_options_with_context(Some("warm"), 0.8, -9.0, Some(&context));

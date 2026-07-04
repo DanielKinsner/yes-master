@@ -43,7 +43,9 @@ final class LiveAuditionBridge: LiveAuditionStreaming {
     private let handle: OpaquePointer
 
     /// Decode `sourceURL` and build a live handle initialized with the Simple
-    /// controls. Returns `nil` if the file is missing or cannot be decoded.
+    /// controls. Returns `nil` if the file is missing, cannot be decoded, or
+    /// cannot be analyzed (the same adaptive analysis Create Master requires —
+    /// audition never silently proceeds where the render would fail).
     init?(sourceURL: URL, preset: String, intensity: Float, loudnessTarget: Float) {
         let created = sourceURL.path.withCString { pathPointer in
             preset.withCString { presetPointer in

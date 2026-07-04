@@ -41,7 +41,7 @@ use yes_master_lib::dsp::{ChainCoeffs, MasteringChain};
 
 use crate::{
     catch_ffi_panic, export_settings_for_options_with_context, ffi_string,
-    native_adaptive_context_for_path, NativeAdaptiveContext,
+    resolve_native_adaptive_context_for_path, NativeAdaptiveContext,
 };
 
 /// Crossfade length between the old and new chain when coefficients change.
@@ -362,7 +362,11 @@ impl LiveStream {
         // the export path uses, so preview and Create Master share one source of
         // truth. The chain runs at the decoded source rate; its coefficients are
         // computed for that rate inside `MasteringChain::new`.
-        let adaptive_context = native_adaptive_context_for_path(path);
+        //
+        // IP-05: a source whose adaptive context cannot resolve would render
+        // with an error but previously auditioned non-adaptively in silence —
+        // fail the attach instead, matching Create Master's contract.
+        let adaptive_context = Some(resolve_native_adaptive_context_for_path(path).ok()?);
         let settings = export_settings_for_options_with_context(
             preset,
             intensity,
@@ -1164,7 +1168,7 @@ mod tests {
         let pcm = yes_master_lib::decode::decode_full(&path).unwrap();
         let channels = pcm.channels as usize;
         let total = pcm.samples.len() / channels;
-        let context = crate::native_adaptive_context_for_path(&path).expect("adaptive context");
+        let context = crate::resolve_native_adaptive_context_for_path(&path).expect("adaptive context");
         let settings = crate::export_settings_for_options_with_context(
             Some("heavy"),
             1.0,
@@ -1215,7 +1219,7 @@ mod tests {
         let pcm = yes_master_lib::decode::decode_full(&path).unwrap();
         let channels = pcm.channels as usize;
         let total = pcm.samples.len() / channels;
-        let context = crate::native_adaptive_context_for_path(&path).expect("adaptive context");
+        let context = crate::resolve_native_adaptive_context_for_path(&path).expect("adaptive context");
         let settings = crate::export_settings_for_options_with_context(
             Some("heavy"),
             1.0,
