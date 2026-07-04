@@ -523,12 +523,13 @@ final class AuditionController: ObservableObject {
         _ error: Error,
         fallback: (String) -> AuditionErrorState
     ) -> AuditionErrorState {
-        let message = error.localizedDescription
-        if message.localizedCaseInsensitiveContains("no suitable format reader")
-            || message.localizedCaseInsensitiveContains("decode error") {
+        // S8.3a: branch on the bridge's machine-readable error class, not on
+        // message text — the wire code is pinned on both sides of the FFI.
+        if let bridgeError = error as? NativeMasteringBridgeError,
+           case .rust(_, .some(.decode)) = bridgeError {
             return .decodeFailed
         }
-        return fallback(message)
+        return fallback(error.localizedDescription)
     }
 
 }

@@ -156,7 +156,7 @@ pub fn analyze_tracks_core_with_progress_sync(
 ) -> CommandResult<Vec<AnalysisResult>> {
     let total = tracks.len();
     let mut out = Vec::with_capacity(total);
-    let mut failures: Vec<(TrackId, String)> = Vec::new();
+    let mut failures: Vec<(TrackId, CommandError)> = Vec::new();
     for (index, req) in tracks.into_iter().enumerate() {
         let track_progress = |frac: f32, label: &'static str| {
             if total > 0 {
@@ -170,7 +170,7 @@ pub fn analyze_tracks_core_with_progress_sync(
                 out.push(result);
             }
             Err(e) => {
-                failures.push((req.id, e.to_string()));
+                failures.push((req.id, e));
             }
         }
     }
@@ -178,14 +178,15 @@ pub fn analyze_tracks_core_with_progress_sync(
     // (otherwise the frontend has no signal at all). If at least one succeeded,
     // return the successes and log the failures — session restore and bulk
     // imports can keep working when one source file has moved.
+    // `with_context` keeps the first error's VARIANT so the mobile bridges'
+    // machine-readable error code reflects the real class (decode/io/...),
+    // not a blanket `Other`.
     if out.is_empty() && !failures.is_empty() {
-        let (_, msg) = &failures[0];
-        return Err(CommandError::Other(format!(
-            "analyze failed for all tracks: {msg}"
-        )));
+        let (_, first) = failures.swap_remove(0);
+        return Err(first.with_context("analyze failed for all tracks"));
     }
-    for (id, msg) in failures {
-        eprintln!("analyze_tracks: skipping {} — {}", id.as_str(), msg);
+    for (id, error) in failures {
+        eprintln!("analyze_tracks: skipping {} — {}", id.as_str(), error);
     }
     Ok(out)
 }

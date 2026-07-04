@@ -899,6 +899,22 @@ pub enum CommandError {
     Other(String),
 }
 
+impl CommandError {
+    /// Prefix `context` onto the message while KEEPING the variant. Wrapping
+    /// errors into `Other` at aggregation points erases the error class the
+    /// mobile bridges expose as a machine-readable `code` (S8.3a) — use this
+    /// instead of `Other(format!(...))` when re-wrapping a typed error.
+    pub fn with_context(self, context: &str) -> Self {
+        match self {
+            CommandError::InvalidPath(m) => CommandError::InvalidPath(format!("{context}: {m}")),
+            CommandError::Decode(m) => CommandError::Decode(format!("{context}: {m}")),
+            CommandError::Render(m) => CommandError::Render(format!("{context}: {m}")),
+            CommandError::Io(m) => CommandError::Io(format!("{context}: {m}")),
+            CommandError::Other(m) => CommandError::Other(format!("{context}: {m}")),
+        }
+    }
+}
+
 impl Serialize for CommandError {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(&self.to_string())

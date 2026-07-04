@@ -54,13 +54,28 @@ struct NativeRenderOptions: Equatable {
     static let `default` = NativeRenderOptions(preset: "balanced", intensity: 0.5, lufsTarget: -11)
 }
 
+/// Machine-readable class of a Rust bridge error. Decoded from the `code`
+/// field every FFI error payload carries (S8.3a). The raw values are the wire
+/// contract, pinned on the Rust side by
+/// `tests::ffi_error_payloads_carry_stable_codes` (rust/src/lib.rs) and here by
+/// `AuditionControllerTests.bridgeErrorCodesMatchTheRustWireContract` — change
+/// them together.
+enum NativeBridgeErrorCode: String, Decodable, Equatable, CaseIterable {
+    case invalidPath = "invalid_path"
+    case decode
+    case render
+    case io
+    case `internal`
+    case other
+}
+
 enum NativeMasteringBridgeError: LocalizedError, Equatable {
-    case rust(String)
+    case rust(String, NativeBridgeErrorCode?)
     case invalidResponse
 
     var errorDescription: String? {
         switch self {
-        case .rust(let message):
+        case .rust(let message, _):
             message
         case .invalidResponse:
             "Rust bridge returned an invalid response."
@@ -103,7 +118,7 @@ struct NativeMasteringBridge {
 
         if let errorPayload = try? decoder.decode(BridgeErrorPayload.self, from: data),
            !errorPayload.error.isEmpty {
-            throw NativeMasteringBridgeError.rust(errorPayload.error)
+            throw NativeMasteringBridgeError.rust(errorPayload.error, errorPayload.errorCode)
         }
 
         do {
@@ -144,7 +159,7 @@ struct NativeMasteringBridge {
 
         if let errorPayload = try? decoder.decode(BridgeErrorPayload.self, from: data),
            !errorPayload.error.isEmpty {
-            throw NativeMasteringBridgeError.rust(errorPayload.error)
+            throw NativeMasteringBridgeError.rust(errorPayload.error, errorPayload.errorCode)
         }
 
         do {
@@ -157,4 +172,11 @@ struct NativeMasteringBridge {
 
 private struct BridgeErrorPayload: Decodable {
     let error: String
+    /// Stable class string (see `NativeBridgeErrorCode`). Optional so an older
+    /// or hand-rolled payload without a code still surfaces its message.
+    let code: String?
+
+    var errorCode: NativeBridgeErrorCode? {
+        code.flatMap(NativeBridgeErrorCode.init(rawValue:))
+    }
 }

@@ -239,6 +239,53 @@ final class AuditionControllerTests: XCTestCase {
         XCTAssertFalse(ctx.controller.isPlaying, "losing the output route should pause")
     }
 
+    /// S8.3a cross-language pin: these raw values are the FFI wire contract,
+    /// asserted on the Rust side by `tests::ffi_error_payloads_carry_stable_codes`
+    /// (rust/src/lib.rs). Change the two pins together.
+    func testBridgeErrorCodesMatchTheRustWireContract() {
+        XCTAssertEqual(
+            NativeBridgeErrorCode.allCases.map(\.rawValue),
+            ["invalid_path", "decode", "render", "io", "internal", "other"]
+        )
+    }
+
+    func testDecodeCodedAnalysisErrorMapsToDecodeFailedState() async throws {
+        let renderer = FakeRenderer()
+        renderer.analysisError = NativeMasteringBridgeError.rust(
+            "adaptive context failed: decode error: no suitable format reader", .decode
+        )
+        let ctx = try makeLoadedController(renderer: renderer)
+        await ctx.controller.analysisTask?.value
+
+        XCTAssertEqual(
+            ctx.controller.errorState, .decodeFailed,
+            "a decode-coded bridge error must map to the typed decode state, not message sniffing"
+        )
+        XCTAssertFalse(ctx.controller.canPlay)
+    }
+
+    func testOtherCodedAnalysisErrorFallsBackToItsMessage() async throws {
+        let renderer = FakeRenderer()
+        renderer.analysisError = NativeMasteringBridgeError.rust("analysis exploded", .other)
+        let ctx = try makeLoadedController(renderer: renderer)
+        await ctx.controller.analysisTask?.value
+
+        XCTAssertEqual(ctx.controller.errorState, .analysisFailed("analysis exploded"))
+    }
+
+    func testDecodeCodedRenderErrorMapsToDecodeFailedState() async throws {
+        let renderer = FakeRenderer()
+        let ctx = try makeLoadedController(renderer: renderer)
+        await ctx.controller.analysisTask?.value
+
+        renderer.renderError = NativeMasteringBridgeError.rust("decode error: bad frames", .decode)
+        ctx.controller.createMaster()
+        await ctx.controller.renderTask?.value
+
+        XCTAssertEqual(ctx.controller.errorState, .decodeFailed)
+        XCTAssertNil(ctx.controller.shareMasterURL)
+    }
+
     // MARK: - Fixture
 
     private struct Context {
@@ -338,6 +385,8 @@ private final class FakeRenderer: MasteringRenderer {
     private(set) var lastRenderOptions: NativeRenderOptions?
     var analysisDelay: TimeInterval = 0
     var renderDelay: TimeInterval = 0
+    var analysisError: Error?
+    var renderError: Error?
 
     let supportedImportExtensions = ["wav", "mp3"]
     let supportedImportContentTypes: [UTType] = [.wav]
@@ -347,6 +396,9 @@ private final class FakeRenderer: MasteringRenderer {
             Thread.sleep(forTimeInterval: analysisDelay)
         }
         analyzeCount += 1
+        if let analysisError {
+            throw analysisError
+        }
         return NativeAnalysisResult(lufsIntegrated: -12, truePeakDbtp: -1, dynamicRangeLu: 8)
     }
 
@@ -356,6 +408,9 @@ private final class FakeRenderer: MasteringRenderer {
         }
         renderCount += 1
         lastRenderOptions = options
+        if let renderError {
+            throw renderError
+        }
         return NativeRenderJob(
             outputPaths: [toDirectory.appendingPathComponent("master.wav").path],
             measurements: NativeRenderedMeasurements(
