@@ -606,172 +606,191 @@ pub fn render_album_plan_impl(
     let mut rendered_samples: Vec<Vec<f32>> = Vec::with_capacity(total_tracks);
     let mut track_records: Vec<AlbumTrackRenderRecord> = Vec::with_capacity(total_tracks);
 
-    for (i, entry) in request.plan.tracks.iter().enumerate() {
-        let input = settings_by_id
-            .get(entry.track_id.as_str())
-            .copied()
-            .ok_or_else(|| {
-                CommandError::Other(format!(
-                    "AlbumPlan references track_id {} but no settings/path was provided",
-                    entry.track_id.as_str()
-                ))
-            })?;
-        let path = Path::new(&input.source_path);
-        if !path.exists() {
-            return Err(CommandError::Io(format!(
-                "source not found: {}",
-                input.source_path
-            )));
-        }
-        let pcm = crate::decode::decode_full(path)?;
-        if pcm.samples.is_empty() {
-            return Err(CommandError::Decode(format!(
-                "no samples decoded from {}",
-                input.source_path
-            )));
-        }
-        let source_channel_count = pcm.channels.max(1);
-
-        let shadowed = if input.override_album {
-            // D9 full sound exemption: skip the arc/bias shadowing (and the
-            // energy measurement that only feeds the bias) entirely.
-            override_exempt_settings(&input.settings)
-        } else {
-            // Per-track curve value for the per-character mastering bias.
-            // For Preset arcs we resample the 6-point curve to actual track
-            // count; for Custom arcs we use a neutral 0.5 (no curve-driven
-            // air-band swing in the bias).
-            let curve_value = match &request.plan.arc {
-                AlbumArc::Preset { preset } => {
-                    let curve = crate::album::resample_arc_curve(preset.curve(), total_tracks);
-                    curve.get(i).copied().unwrap_or(0.5)
-                }
-                AlbumArc::Custom { .. } => 0.5,
-            };
-            // B1: compute per-track energy density from the decoded PCM so the
-            // album-arc character-bias presence-band energy-gate uses the same
-            // signal as the analysis path. Pre-B1 this was hardcoded to 0.5,
-            // dead-coding the gate in the album EXPORT path while
-            // `analyze_tracks` computed real values.
-            //
-            // Four measurements: integrated LUFS, 6-band spectral balance,
-            // dynamic range (p95-p10), transient flux. Falls back to 0.5
-            // (the prior literal, treated as "neutral") if any input is
-            // unavailable - matches `compute_energy_density_score`'s contract.
-            let energy_density_score = {
-                let lufs =
-                    measure_integrated_lufs(&pcm.samples, pcm.sample_rate, source_channel_count)
-                        .unwrap_or(-30.0);
-                let spec6 = compute_spectral_balance_6band(
-                    &pcm.samples,
-                    pcm.sample_rate,
-                    source_channel_count as usize,
-                );
-                let dr = compute_dynamic_range_p95_p10(
-                    &pcm.samples,
-                    pcm.sample_rate,
-                    source_channel_count as usize,
-                );
-                let tflux = compute_transient_flux(
-                    &pcm.samples,
-                    pcm.sample_rate,
-                    source_channel_count as usize,
-                );
-                compute_energy_density_score(lufs, spec6.as_ref(), dr, tflux)
-            };
-            let energy_density = energy_density_score.unwrap_or(0.5);
-            apply_album_shadow(
-                &input.settings,
-                entry,
-                request.plan.intensity,
-                curve_value,
-                energy_density,
-            )
-        };
-        let mut shadowed = shadowed;
-        shadowed.volume_match = false;
-        let mut samples = pcm.samples;
-        let channels_usize = source_channel_count as usize;
-        let mut chain = crate::dsp::MasteringChain::new(pcm.sample_rate, channels_usize, &shadowed);
-        const CHUNK_FRAMES: usize = 4096;
-        let chunk_samples = CHUNK_FRAMES * channels_usize;
-        let track_total = samples.len();
-        let mut processed = 0;
-        while processed < track_total {
-            let end = (processed + chunk_samples).min(track_total);
-            chain.process_interleaved(&mut samples[processed..end], channels_usize);
-            processed = end;
-            if let Some(cb) = on_progress {
-                let within_track = processed as f32 / track_total.max(1) as f32;
-                let overall = (i as f32 + within_track) / total_tracks.max(1) as f32;
-                cb(overall.min(1.0));
+    // Pass-1 hostile-input hygiene (2026-07-03 A5b): if any track fails
+    // mid-album, best-effort remove the per-track WAVs already written so a
+    // failed export can't leave misleading partial output behind. (Pass 2
+    // already cleans its own tmp file on failure.)
+    let mut written_paths: Vec<PathBuf> = Vec::with_capacity(total_tracks);
+    let pass1_result = (|| -> CommandResult<()> {
+        for (i, entry) in request.plan.tracks.iter().enumerate() {
+            let input = settings_by_id
+                .get(entry.track_id.as_str())
+                .copied()
+                .ok_or_else(|| {
+                    CommandError::Other(format!(
+                        "AlbumPlan references track_id {} but no settings/path was provided",
+                        entry.track_id.as_str()
+                    ))
+                })?;
+            let path = Path::new(&input.source_path);
+            if !path.exists() {
+                return Err(CommandError::Io(format!(
+                    "source not found: {}",
+                    input.source_path
+                )));
             }
-        }
+            let pcm = crate::decode::decode_full(path)?;
+            if pcm.samples.is_empty() {
+                return Err(CommandError::Decode(format!(
+                    "no samples decoded from {}",
+                    input.source_path
+                )));
+            }
+            let source_channel_count = pcm.channels.max(1);
 
-        // Resample this track from its source rate to the album delivery
-        // rate. Ordering mirrors Track Master: chain -> SRC -> measure ->
-        // land. `convert_interleaved` would copy even on a match, so guard
-        // it to avoid a needless full-buffer clone on already-matching tracks.
-        if pcm.sample_rate != album_sample_rate {
-            samples = convert_interleaved(
-                &samples,
-                pcm.sample_rate,
+            let shadowed = if input.override_album {
+                // D9 full sound exemption: skip the arc/bias shadowing (and the
+                // energy measurement that only feeds the bias) entirely.
+                override_exempt_settings(&input.settings)
+            } else {
+                // Per-track curve value for the per-character mastering bias.
+                // For Preset arcs we resample the 6-point curve to actual track
+                // count; for Custom arcs we use a neutral 0.5 (no curve-driven
+                // air-band swing in the bias).
+                let curve_value = match &request.plan.arc {
+                    AlbumArc::Preset { preset } => {
+                        let curve = crate::album::resample_arc_curve(preset.curve(), total_tracks);
+                        curve.get(i).copied().unwrap_or(0.5)
+                    }
+                    AlbumArc::Custom { .. } => 0.5,
+                };
+                // B1: compute per-track energy density from the decoded PCM so the
+                // album-arc character-bias presence-band energy-gate uses the same
+                // signal as the analysis path. Pre-B1 this was hardcoded to 0.5,
+                // dead-coding the gate in the album EXPORT path while
+                // `analyze_tracks` computed real values.
+                //
+                // Four measurements: integrated LUFS, 6-band spectral balance,
+                // dynamic range (p95-p10), transient flux. Falls back to 0.5
+                // (the prior literal, treated as "neutral") if any input is
+                // unavailable - matches `compute_energy_density_score`'s contract.
+                let energy_density_score = {
+                    let lufs = measure_integrated_lufs(
+                        &pcm.samples,
+                        pcm.sample_rate,
+                        source_channel_count,
+                    )
+                    .unwrap_or(-30.0);
+                    let spec6 = compute_spectral_balance_6band(
+                        &pcm.samples,
+                        pcm.sample_rate,
+                        source_channel_count as usize,
+                    );
+                    let dr = compute_dynamic_range_p95_p10(
+                        &pcm.samples,
+                        pcm.sample_rate,
+                        source_channel_count as usize,
+                    );
+                    let tflux = compute_transient_flux(
+                        &pcm.samples,
+                        pcm.sample_rate,
+                        source_channel_count as usize,
+                    );
+                    compute_energy_density_score(lufs, spec6.as_ref(), dr, tflux)
+                };
+                let energy_density = energy_density_score.unwrap_or(0.5);
+                apply_album_shadow(
+                    &input.settings,
+                    entry,
+                    request.plan.intensity,
+                    curve_value,
+                    energy_density,
+                )
+            };
+            let mut shadowed = shadowed;
+            shadowed.volume_match = false;
+            let mut samples = pcm.samples;
+            let channels_usize = source_channel_count as usize;
+            let mut chain =
+                crate::dsp::MasteringChain::new(pcm.sample_rate, channels_usize, &shadowed);
+            const CHUNK_FRAMES: usize = 4096;
+            let chunk_samples = CHUNK_FRAMES * channels_usize;
+            let track_total = samples.len();
+            let mut processed = 0;
+            while processed < track_total {
+                let end = (processed + chunk_samples).min(track_total);
+                chain.process_interleaved(&mut samples[processed..end], channels_usize);
+                processed = end;
+                if let Some(cb) = on_progress {
+                    let within_track = processed as f32 / track_total.max(1) as f32;
+                    let overall = (i as f32 + within_track) / total_tracks.max(1) as f32;
+                    cb(overall.min(1.0));
+                }
+            }
+
+            // Resample this track from its source rate to the album delivery
+            // rate. Ordering mirrors Track Master: chain -> SRC -> measure ->
+            // land. `convert_interleaved` would copy even on a match, so guard
+            // it to avoid a needless full-buffer clone on already-matching tracks.
+            if pcm.sample_rate != album_sample_rate {
+                samples = convert_interleaved(
+                    &samples,
+                    pcm.sample_rate,
+                    album_sample_rate,
+                    source_channel_count,
+                )?;
+            }
+
+            let mut rendered_channel_count = source_channel_count;
+            if rendered_channel_count != album_channels {
+                samples = convert_channel_count(samples, rendered_channel_count, album_channels)?;
+                rendered_channel_count = album_channels;
+            }
+
+            // Per-track ceiling-bounded LUFS landing on the album-plan
+            // path. `shadowed.effective_target_lufs()` is the arc-modulated
+            // target (per-track LUFS offset baked into the shadow), so each
+            // track lands at its arc-curve-determined target rather than
+            // the raw album-intent target - preserving the album-arc story.
+            // The B6 ceiling-bounded math is shared with the track-export
+            // and album-simple paths via the helper.
+            measure_and_apply_ceiling_bounded_landing(
+                &mut samples,
                 album_sample_rate,
-                source_channel_count,
+                rendered_channel_count,
+                &shadowed,
             )?;
+
+            // Per-track WAV named NN-<sanitized_title>.wav.
+            let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("track");
+            let safe = sanitize_for_filename(stem);
+            let per_track_name = format!("{:02}-{}.wav", entry.position, safe);
+            let per_track_path =
+                unique_child_path_avoiding_sources(out_dir, &per_track_name, &source_paths)?;
+            written_paths.push(per_track_path.clone());
+            write_wav(
+                &per_track_path,
+                &samples,
+                album_sample_rate,
+                rendered_channel_count,
+                bit_depth,
+            )?;
+
+            let measured_lufs = sanitize_lufs(measure_integrated_lufs(
+                &samples,
+                album_sample_rate,
+                rendered_channel_count,
+            )?);
+            track_records.push(AlbumTrackRenderRecord {
+                track_id: entry.track_id.clone(),
+                position: entry.position,
+                output_path: per_track_path.to_string_lossy().to_string(),
+                measured_lufs,
+                source_sample_rate: pcm.sample_rate,
+                rendered_sample_rate: album_sample_rate,
+                source_channels: source_channel_count,
+                rendered_channels: rendered_channel_count,
+                override_album: input.override_album,
+            });
+            rendered_samples.push(samples);
         }
-
-        let mut rendered_channel_count = source_channel_count;
-        if rendered_channel_count != album_channels {
-            samples = convert_channel_count(samples, rendered_channel_count, album_channels)?;
-            rendered_channel_count = album_channels;
+        Ok(())
+    })();
+    if let Err(err) = pass1_result {
+        for p in &written_paths {
+            let _ = std::fs::remove_file(p);
         }
-
-        // Per-track ceiling-bounded LUFS landing on the album-plan
-        // path. `shadowed.effective_target_lufs()` is the arc-modulated
-        // target (per-track LUFS offset baked into the shadow), so each
-        // track lands at its arc-curve-determined target rather than
-        // the raw album-intent target - preserving the album-arc story.
-        // The B6 ceiling-bounded math is shared with the track-export
-        // and album-simple paths via the helper.
-        measure_and_apply_ceiling_bounded_landing(
-            &mut samples,
-            album_sample_rate,
-            rendered_channel_count,
-            &shadowed,
-        )?;
-
-        // Per-track WAV named NN-<sanitized_title>.wav.
-        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("track");
-        let safe = sanitize_for_filename(stem);
-        let per_track_name = format!("{:02}-{}.wav", entry.position, safe);
-        let per_track_path =
-            unique_child_path_avoiding_sources(out_dir, &per_track_name, &source_paths)?;
-        write_wav(
-            &per_track_path,
-            &samples,
-            album_sample_rate,
-            rendered_channel_count,
-            bit_depth,
-        )?;
-
-        let measured_lufs = sanitize_lufs(measure_integrated_lufs(
-            &samples,
-            album_sample_rate,
-            rendered_channel_count,
-        )?);
-        track_records.push(AlbumTrackRenderRecord {
-            track_id: entry.track_id.clone(),
-            position: entry.position,
-            output_path: per_track_path.to_string_lossy().to_string(),
-            measured_lufs,
-            source_sample_rate: pcm.sample_rate,
-            rendered_sample_rate: album_sample_rate,
-            source_channels: source_channel_count,
-            rendered_channels: rendered_channel_count,
-            override_album: input.override_album,
-        });
-        rendered_samples.push(samples);
+        return Err(err);
     }
 
     // Pass 2 - assemble the continuous album.wav, inserting silence
