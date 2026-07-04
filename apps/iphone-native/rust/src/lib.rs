@@ -39,11 +39,11 @@ pub unsafe extern "C" fn yes_master_native_supports_import_extension(
 #[no_mangle]
 pub extern "C" fn yes_master_native_fixed_export_settings_json() -> *mut c_char {
     catch_ffi_panic(
-        || error_to_ffi("internal error"),
+        || error_to_ffi("internal", "internal error"),
         || {
             string_to_ffi(
                 serde_json::to_string(&fixed_export_settings())
-                    .unwrap_or_else(|error| format!(r#"{{"error":"{error}"}}"#)),
+                    .unwrap_or_else(|error| format!(r#"{{"error":"{error}","code":"internal"}}"#)),
             )
         },
     )
@@ -61,14 +61,14 @@ pub unsafe extern "C" fn yes_master_native_analyze_file_json(path: *const c_char
     // its implicit unsafe context — so the guarded work below is fully safe.
     let path = ffi_string(path);
     catch_ffi_panic(
-        || error_to_ffi("internal error"),
+        || error_to_ffi("internal", "internal error"),
         move || {
             let Some(path) = path else {
-                return error_to_ffi("missing path");
+                return error_to_ffi("invalid_path", "missing path");
             };
 
             if path.trim().is_empty() {
-                return error_to_ffi("missing path");
+                return error_to_ffi("invalid_path", "missing path");
             }
 
             #[cfg(test)]
@@ -91,13 +91,13 @@ pub unsafe extern "C" fn yes_master_native_analyze_file_json(path: *const c_char
                 Ok(mut results) => {
                     if let Some(result) = results.pop() {
                         string_to_ffi(serde_json::to_string(&result).unwrap_or_else(|error| {
-                            format!(r#"{{"error":"analysis serialization failed: {error}"}}"#)
+                            format!(r#"{{"error":"analysis serialization failed: {error}","code":"internal"}}"#)
                         }))
                     } else {
-                        error_to_ffi("analysis returned no result")
+                        error_to_ffi("other", "analysis returned no result")
                     }
                 }
-                Err(error) => error_to_ffi(&error.to_string()),
+                Err(error) => command_error_to_ffi(&error),
             }
         },
     )
@@ -131,20 +131,20 @@ pub unsafe extern "C" fn yes_master_native_render_master_with_options_json(
     let output_dir = ffi_string(output_dir);
     let preset = ffi_string(preset);
     catch_ffi_panic(
-        || error_to_ffi("internal error"),
+        || error_to_ffi("internal", "internal error"),
         move || {
             let Some(source_path) = source_path else {
-                return error_to_ffi("missing source path");
+                return error_to_ffi("invalid_path", "missing source path");
             };
             let Some(output_dir) = output_dir else {
-                return error_to_ffi("missing output directory");
+                return error_to_ffi("invalid_path", "missing output directory");
             };
 
             if source_path.trim().is_empty() {
-                return error_to_ffi("missing source path");
+                return error_to_ffi("invalid_path", "missing source path");
             }
             if output_dir.trim().is_empty() {
-                return error_to_ffi("missing output directory");
+                return error_to_ffi("invalid_path", "missing output directory");
             }
 
             let source_path = Path::new(&source_path);
@@ -157,11 +157,18 @@ pub unsafe extern "C" fn yes_master_native_render_master_with_options_json(
             if yes_master_lib::files::has_parent_dir_component(output_dir)
                 || yes_master_lib::files::has_parent_dir_component(source_path)
             {
-                return error_to_ffi("path traversal not allowed");
+                return error_to_ffi("invalid_path", "path traversal not allowed");
             }
             let adaptive_context = match resolve_native_adaptive_context_for_path(source_path) {
                 Ok(context) => context,
-                Err(error) => return error_to_ffi(&format!("adaptive context failed: {error}")),
+                // Carry the underlying error's class (decode/io/...) so Swift
+                // can branch on it — the message keeps the adaptive prefix.
+                Err(error) => {
+                    return error_to_ffi(
+                        command_error_code(&error),
+                        &format!("adaptive context failed: {error}"),
+                    )
+                }
             };
             let settings = export_settings_for_options_with_context(
                 preset.as_deref(),
@@ -171,7 +178,7 @@ pub unsafe extern "C" fn yes_master_native_render_master_with_options_json(
             );
 
             if let Err(error) = std::fs::create_dir_all(output_dir) {
-                return error_to_ffi(&error.to_string());
+                return error_to_ffi("io", &error.to_string());
             }
 
             match mastering_render(
@@ -182,9 +189,9 @@ pub unsafe extern "C" fn yes_master_native_render_master_with_options_json(
                 RenderKind::Master,
             ) {
                 Ok(job) => string_to_ffi(serde_json::to_string(&job).unwrap_or_else(|error| {
-                    format!(r#"{{"error":"render serialization failed: {error}"}}"#)
+                    format!(r#"{{"error":"render serialization failed: {error}","code":"internal"}}"#)
                 })),
-                Err(error) => error_to_ffi(&error.to_string()),
+                Err(error) => command_error_to_ffi(&error),
             }
         },
     )
@@ -234,16 +241,15 @@ fn native_adaptive_context_from_analysis(analysis: &AnalysisResult) -> NativeAda
 /// source whose render would fail, quietly breaking WYSIWYG.
 pub(crate) fn resolve_native_adaptive_context_for_path(
     path: &Path,
-) -> Result<NativeAdaptiveContext, String> {
+) -> Result<NativeAdaptiveContext, yes_master_lib::CommandError> {
     let request = AnalyzeRequest {
         id: TrackId::new(),
         path: path.to_string_lossy().into_owned(),
     };
-    let mut results = futures_executor::block_on(analyze_tracks_core(vec![request]))
-        .map_err(|e| e.to_string())?;
-    let analysis = results
-        .pop()
-        .ok_or_else(|| "analysis returned no result".to_string())?;
+    let mut results = futures_executor::block_on(analyze_tracks_core(vec![request]))?;
+    let analysis = results.pop().ok_or_else(|| {
+        yes_master_lib::CommandError::Other("analysis returned no result".to_string())
+    })?;
     Ok(native_adaptive_context_from_analysis(&analysis))
 }
 
@@ -373,8 +379,27 @@ fn string_to_ffi(value: String) -> *mut c_char {
         .into_raw()
 }
 
-fn error_to_ffi(message: &str) -> *mut c_char {
-    string_to_ffi(serde_json::json!({ "error": message }).to_string())
+/// Stable machine-readable code for every FFI error payload. Swift's
+/// `NativeBridgeErrorCode` (NativeMasteringBridge.swift) decodes exactly these
+/// strings so the app can branch on error CLASS without sniffing message text
+/// (S8.3a); the raw values are pinned on both sides — change them together.
+fn command_error_code(error: &yes_master_lib::CommandError) -> &'static str {
+    use yes_master_lib::CommandError;
+    match error {
+        CommandError::InvalidPath(_) => "invalid_path",
+        CommandError::Decode(_) => "decode",
+        CommandError::Render(_) => "render",
+        CommandError::Io(_) => "io",
+        CommandError::Other(_) => "other",
+    }
+}
+
+fn command_error_to_ffi(error: &yes_master_lib::CommandError) -> *mut c_char {
+    error_to_ffi(command_error_code(error), &error.to_string())
+}
+
+fn error_to_ffi(code: &str, message: &str) -> *mut c_char {
+    string_to_ffi(serde_json::json!({ "error": message, "code": code }).to_string())
 }
 
 /// Run an FFI body, mapping any internal panic to `default()`. A panic must
@@ -1154,6 +1179,72 @@ mod tests {
         assert!(!tmp.path().join("sub").exists());
     }
 
+    /// S8.3a cross-language pin: every FFI error payload carries a stable
+    /// `code` from this exact set, and Swift's `NativeBridgeErrorCode`
+    /// (NativeMasteringBridge.swift, pinned by
+    /// `AuditionControllerTests.bridgeErrorCodesMatchTheRustWireContract`)
+    /// decodes the same raw strings. Change the two pins together.
+    #[test]
+    fn ffi_error_payloads_carry_stable_codes() {
+        // The full code vocabulary, pinned as strings.
+        for (error, expected) in [
+            (
+                yes_master_lib::CommandError::InvalidPath(String::new()),
+                "invalid_path",
+            ),
+            (yes_master_lib::CommandError::Decode(String::new()), "decode"),
+            (yes_master_lib::CommandError::Render(String::new()), "render"),
+            (yes_master_lib::CommandError::Io(String::new()), "io"),
+            (yes_master_lib::CommandError::Other(String::new()), "other"),
+        ] {
+            assert_eq!(command_error_code(&error), expected);
+        }
+
+        let payload_for = |pointer: *mut c_char| -> serde_json::Value {
+            assert!(!pointer.is_null());
+            let json = unsafe {
+                let value = CStr::from_ptr(pointer).to_string_lossy().into_owned();
+                yes_master_native_free_string(pointer);
+                value
+            };
+            serde_json::from_str(&json).expect("error payload is JSON")
+        };
+
+        // Missing file -> analysis Io error on the real analyze wire.
+        let missing = CString::new("/tmp/yes-master-native-missing.wav").unwrap();
+        let payload = payload_for(unsafe { yes_master_native_analyze_file_json(missing.as_ptr()) });
+        assert_eq!(payload["code"], "io", "got {payload}");
+
+        // Undecodable bytes -> decode error on the real analyze wire.
+        let tmp = tempfile::tempdir().unwrap();
+        let garbage = tmp.path().join("garbage.wav");
+        std::fs::write(&garbage, b"this is not audio at all").unwrap();
+        let garbage_c = CString::new(garbage.to_string_lossy().as_bytes()).unwrap();
+        let payload = payload_for(unsafe { yes_master_native_analyze_file_json(garbage_c.as_ptr()) });
+        assert_eq!(payload["code"], "decode", "got {payload}");
+
+        // Internal panic -> "internal" via the containment guard.
+        let sentinel = CString::new(PANIC_SENTINEL_PATH).unwrap();
+        let payload = payload_for(unsafe { yes_master_native_analyze_file_json(sentinel.as_ptr()) });
+        assert_eq!(payload["code"], "internal", "got {payload}");
+
+        // Traversal rejection -> invalid_path on the real render wire.
+        let escaping = tmp.path().join("..").join("escape");
+        let input_c = CString::new(garbage.to_string_lossy().as_bytes()).unwrap();
+        let escaping_c = CString::new(escaping.to_string_lossy().as_bytes()).unwrap();
+        let preset = CString::new("balanced").unwrap();
+        let payload = payload_for(unsafe {
+            yes_master_native_render_master_with_options_json(
+                input_c.as_ptr(),
+                escaping_c.as_ptr(),
+                preset.as_ptr(),
+                0.5,
+                -11.0,
+            )
+        });
+        assert_eq!(payload["code"], "invalid_path", "got {payload}");
+    }
+
     #[test]
     fn render_master_surfaces_adaptive_context_failure() {
         let tmp = tempfile::tempdir().unwrap();
@@ -1184,6 +1275,10 @@ mod tests {
         assert!(
             message.contains("adaptive context failed"),
             "render must surface context failure; got {message}"
+        );
+        assert_eq!(
+            payload["code"], "io",
+            "adaptive failure must carry the underlying error class; got {payload}"
         );
     }
 
