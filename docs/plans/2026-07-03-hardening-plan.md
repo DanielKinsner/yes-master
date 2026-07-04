@@ -221,12 +221,25 @@ so the Wave-10 listening sitting has instruments. Ledger thread #5 pairing.
 
 ## Workstream F — Capture endpoint security pass (D3)
 
-Read-only inventory via Supabase MCP: tables, RLS policies, edge functions,
-anon-role grants. Check: RLS on + insert-only anon policy for capture table,
-no select leak of collected emails, rate limiting / abuse posture, email
-validation, no service-role key or secrets in the client bundle (grep landing
-code + built assets), CORS. Fix repo-side issues; document Supabase-side
-changes and apply the minimal ones (with owner-visible migration note).
+**Executed 2026-07-03 — premise corrected.** The grill assumed a live Supabase
+beta-capture backend; mechanically verified reality: **there is no backend
+yet.** `src/landing/signup-config.ts` ships `SIGNUP_ENDPOINT = ""` (the form
+renders safe-disabled "opening soon"), the Supabase MCP shows no YES Master
+project on the account (only four unrelated inactive projects), and a grep of
+the built `dist/` bundle found no secrets or stale endpoints. What shipped:
+`src/landing/BetaSignup.test.tsx` pins the safety posture (unwired = zero
+network even on forced submit; wired = POSTs exactly the email field,
+urlencoded, nothing else; failures land in a visible error state).
+
+**Parked checklist — run when an endpoint is wired (before going live):**
+
+- Managed provider (Buttondown/MailerLite/Kit): confirm the form-action URL is
+  the public one (no API key in the client), double-opt-in enabled, and the
+  provider's abuse/rate limiting is on. Update `SIGNUP_FIELD` per provider.
+- Supabase route (if chosen instead): RLS ON, insert-only anon policy on the
+  capture table, no select grant to anon (email list must not be readable),
+  rate limiting / captcha posture, email validation server-side, publishable
+  key only in the client, CORS restricted to the landing origin, advisors run.
 
 ## Workstream G — Riders (last; droppable in order)
 
@@ -276,10 +289,11 @@ fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`).
 | E1 — fingerprint fixtures + safety bounds | `ac8b8c5` | done — bounds sized from measured accepted voicing |
 | E2 — pairwise distance floor + tolerance golden | `b44adf8`, `fecc7c1` | done — closest pair Universal↔Clarity 1.80, floor 1.0; golden regen documented in TESTING.md |
 | E3 — owner fingerprint report (MD/CSV) | `4add998`, `5bd7354` | done — `test-output/preset-fingerprints/`, sample generated for Wave-10 sitting |
-| E — docs (TESTING.md, ledger thread #5) | see this commit | done |
+| E — docs (TESTING.md, ledger thread #5) | `6d1255a` | done |
+| E — adversarial verify (workflow, 3 lenses) + max-intensity hole fix | `31ab65d` | done — safety sweep at intensity 1.0 + hot no-clip pin; K-weighting caveat documented |
+| F — capture security pass (premise corrected: no backend exists) | `7c99ffe` + docs | done — form safety posture pinned; provider checklist parked above |
 
-**Next up (not yet started):** F — Supabase capture security pass; D3
-session-JSON extension; D4 export-I/O failure battery; D5 runtime-abuse
-review (`audio.rs` chain swaps); B2 track-master landing matrix; G riders
-(dead-code 11b, doc-accuracy 20/21, CSS 11a with browser preview). F8
-(low-rate air-band) awaits investigation.
+**Next up (not yet started):** D3 session-JSON extension; D4 export-I/O
+failure battery; D5 runtime-abuse review (`audio.rs` chain swaps); B2
+track-master landing matrix; G riders (dead-code 11b, doc-accuracy 20/21,
+CSS 11a with browser preview). F8 (low-rate air-band) awaits investigation.

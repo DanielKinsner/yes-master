@@ -107,6 +107,14 @@ cluster can mostly close in one sitting.**
     **PARTIALLY ANSWERED 2026-07-03:** in scope for **security & verification**
     purposes (the beta-capture backend gets a security pass — hardening plan D3).
     Whether it enters Required Reading for general feature work is still open.
+    **Security pass executed 2026-07-03:** finding — there is **no capture
+    backend yet** (`src/landing/signup-config.ts` ships `SIGNUP_ENDPOINT = ""`;
+    the form is safe-disabled; MCP-verified no YES Master Supabase project
+    exists). Built-bundle grep: no secrets/stale endpoints. The form's safety
+    posture is now pinned (`src/landing/BetaSignup.test.tsx`). When you pick a
+    mailing provider (Buttondown/MailerLite/Kit per signup-config comments) or
+    build a Supabase backend, re-run the hardening plan's Workstream F
+    checklist against it before going live.
 12. Broaden the "Local desktop app for Mac and Windows" non-negotiable to acknowledge iPhone + Android (and web)? *(Recommended yes — the CI already runs the mobile lanes.)*
 
 ### Packaging / platform
