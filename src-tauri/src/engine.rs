@@ -205,10 +205,16 @@ pub fn populate_profile_store(
 // ============================================================================
 
 /// Compute the LUFS-landing delta in dB given pre-measured loudness +
-/// true peak. Downward delta applies in full (the limiter already
-/// capped peaks at ceiling, so attenuating only moves them further
-/// away). Upward delta is bounded by the residual true-peak headroom
-/// below the user's ceiling. Returns 0.0 when:
+/// true peak. The ceiling is a delivery spec, not advice: the applied
+/// delta is capped so the post-landing true peak never exceeds it —
+/// including a NEGATIVE delta (a uniform safety trim, level-only) when
+/// the chain output itself carries inter-sample peaks above the
+/// ceiling. The limiter caps SAMPLE peaks; hard-driven transient
+/// material can overshoot the ceiling by >1 dB of true peak (B2
+/// landing-matrix finding, 2026-07-03: synthetic drums × Loud ×
+/// LoudRock measured +1.68 dB over a −1 dBTP ceiling pre-fix), which
+/// would clip in every streaming platform's re-encode. Returns 0.0
+/// when:
 ///
 ///   * the target or measurement is non-finite, or the signal is
 ///     effectively silent (measured_lufs <= -70 LUFS),
@@ -230,12 +236,16 @@ pub(crate) fn ceiling_bounded_landing_delta_db(
         return 0.0;
     }
     let delta_db = target_lufs - measured_lufs;
-    let headroom_db = (ceiling_dbtp - measured_true_peak_dbtp).max(0.0);
-    let applied_delta_db = if delta_db < 0.0 {
-        delta_db
+    // Max delta that keeps post-landing true peak at or below the
+    // ceiling. Negative when the chain output is already over it —
+    // the trim case. With an unknown TP, allow attenuation but never
+    // boost (the pre-fix conservative behavior).
+    let tp_cap_db = if measured_true_peak_dbtp.is_finite() {
+        ceiling_dbtp - measured_true_peak_dbtp
     } else {
-        delta_db.min(headroom_db)
+        0.0
     };
+    let applied_delta_db = delta_db.min(tp_cap_db);
     if applied_delta_db.abs() > 1.0e-4 {
         applied_delta_db
     } else {
@@ -1414,6 +1424,38 @@ mod tests {
         assert_eq!(
             applied, 0.0,
             "delta below the ±1e-4 dB noise threshold should produce zero; got {applied}"
+        );
+    }
+
+    /// B2 landing-matrix fix (2026-07-03): when the chain output's true
+    /// peak already exceeds the ceiling (inter-sample overshoot on
+    /// transient material — the limiter caps sample peaks only), the
+    /// landing must apply a NEGATIVE safety trim down to the ceiling,
+    /// even when the loudness target is asking for a boost.
+    #[test]
+    fn ceiling_bounded_landing_trims_down_when_true_peak_exceeds_ceiling() {
+        // Boost wanted (+3.5 dB toward target) but TP is 1.68 dB OVER
+        // the ceiling: the applied delta must be −1.68 (trim), not 0.
+        let applied = ceiling_bounded_landing_delta_db(-14.0, 0.68, -10.5, -1.0);
+        assert!(
+            (applied - -1.68).abs() < 1.0e-4,
+            "expected a −1.68 dB safety trim; got {applied}"
+        );
+
+        // Pull-down case that STILL leaves TP over the ceiling: the trim
+        // must go past the target delta to honor the ceiling.
+        let applied = ceiling_bounded_landing_delta_db(-13.5, 0.5, -14.0, -1.0);
+        assert!(
+            (applied - -1.5).abs() < 1.0e-4,
+            "ceiling outranks target: expected −1.5 dB, got {applied}"
+        );
+
+        // TP safely under the ceiling: boosts remain headroom-bounded
+        // exactly as before.
+        let applied = ceiling_bounded_landing_delta_db(-20.0, -4.0, -14.0, -1.0);
+        assert!(
+            (applied - 3.0).abs() < 1.0e-4,
+            "boost must cap at TP headroom (3 dB); got {applied}"
         );
     }
 
