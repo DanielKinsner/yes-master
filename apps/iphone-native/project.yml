@@ -33,8 +33,11 @@ targets:
           UIColorName: LaunchBackground
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        UIFileSharingEnabled: true
-        LSSupportsOpeningDocumentsInPlace: true
+        # No UIFileSharingEnabled / LSSupportsOpeningDocumentsInPlace: masters
+        # are written to Application Support and leave via the share sheet, so
+        # advertising a Files-visible Documents folder would show users an
+        # empty directory (IP-05). If masters ever move to Documents (owner
+        # call), restore both flags in the same commit.
         NSDocumentsFolderUsageDescription: YES Master imports audio files you choose and exports finished masters.
     settings:
       base:
