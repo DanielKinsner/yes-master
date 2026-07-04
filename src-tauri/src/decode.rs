@@ -63,6 +63,20 @@ fn estimated_decode_capacity(
     claimed.min(file_bound).min(usize::MAX as u64) as usize
 }
 
+/// Validated sample rate from codec params. `Some(0)` is crafted-file
+/// garbage — reject it here rather than let a zero rate reach filter
+/// coefficient math or duration division downstream (D1, 2026-07-03);
+/// `None` falls back to 44.1 kHz (some containers omit the field).
+fn validated_sample_rate(rate: Option<u32>) -> CommandResult<u32> {
+    match rate {
+        Some(0) => Err(CommandError::Decode(
+            "invalid sample rate 0 in source header".to_string(),
+        )),
+        Some(r) => Ok(r),
+        None => Ok(44_100),
+    }
+}
+
 fn decoded_channel_count(decoded: &AudioBufferRef<'_>) -> CommandResult<u16> {
     let channels = decoded.spec().channels.count().max(1);
     u16::try_from(channels)
@@ -82,7 +96,30 @@ fn reconcile_decoded_channel_count(observed: &mut Option<u16>, actual: u16) -> C
     }
 }
 
+/// Panic boundary for the untrusted-parser layer (D1, 2026-07-03). A
+/// crafted file can panic INSIDE symphonia before any of our validation
+/// runs (proven: a 0 Hz fmt chunk asserts in symphonia-core units.rs) —
+/// and a panic in a command thread is a crash a hostile file can trigger
+/// at will. Convert it into the same typed `CommandError::Decode` any
+/// other malformed file gets. (Cargo profiles keep the default unwind
+/// strategy, so `catch_unwind` is effective in dev and release.)
+fn decode_panic_boundary<T>(
+    path: &Path,
+    body: impl FnOnce() -> CommandResult<T>,
+) -> CommandResult<T> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(body)).unwrap_or_else(|_| {
+        Err(CommandError::Decode(format!(
+            "malformed audio file: {}",
+            path.display()
+        )))
+    })
+}
+
 pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
+    decode_panic_boundary(path, || decode_full_inner(path))
+}
+
+fn decode_full_inner(path: &Path) -> CommandResult<DecodedPcm> {
     let file_size_bytes = std::fs::metadata(path)
         .map_err(|e| CommandError::Io(e.to_string()))?
         .len();
@@ -108,7 +145,7 @@ pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
         .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
         .ok_or_else(|| CommandError::Decode("no decodable track".to_string()))?;
     let stream_track_id = track.id;
-    let sample_rate = track.codec_params.sample_rate.unwrap_or(44_100);
+    let sample_rate = validated_sample_rate(track.codec_params.sample_rate)?;
     let channel_count = track
         .codec_params
         .channels
@@ -153,7 +190,19 @@ pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
         }
         let sbuf = sample_buf.as_mut().unwrap();
         sbuf.copy_interleaved_ref(decoded);
-        samples.extend_from_slice(sbuf.samples());
+        // Hostile-input boundary (D1, 2026-07-03): a float WAV can carry
+        // any bit pattern — NaN/±Inf here would poison analysis, the live
+        // chain, and the rendered file (NaN × gain stays NaN all the way
+        // to the WAV writer). Zero non-finite samples and clamp to ±64
+        // (+36 dBFS, far beyond any real program material) so a crafted
+        // file can't blow out the engine's f32 headroom either.
+        samples.extend(sbuf.samples().iter().map(|s| {
+            if s.is_finite() {
+                s.clamp(-64.0, 64.0)
+            } else {
+                0.0
+            }
+        }));
     }
 
     Ok(DecodedPcm {
@@ -164,6 +213,10 @@ pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
 }
 
 pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<DecodedPeaks> {
+    decode_panic_boundary(path, || decode_to_peaks_inner(path, target_pixels))
+}
+
+fn decode_to_peaks_inner(path: &Path, target_pixels: u32) -> CommandResult<DecodedPeaks> {
     let target_pixels = clamp_waveform_target_pixels(target_pixels);
     let file = std::fs::File::open(path).map_err(|e| CommandError::Io(e.to_string()))?;
     let mss = MediaSourceStream::new(Box::new(file), Default::default());
@@ -187,7 +240,7 @@ pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<Decoded
         .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
         .ok_or_else(|| CommandError::Decode("no decodable track".to_string()))?;
     let stream_track_id = track.id;
-    let sample_rate = track.codec_params.sample_rate.unwrap_or(44_100);
+    let sample_rate = validated_sample_rate(track.codec_params.sample_rate)?;
     let channel_count = track
         .codec_params
         .channels
@@ -290,6 +343,10 @@ pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<Decoded
 /// decoding any audio. Used by the album render path to resolve album-wide
 /// delivery format before any track is processed.
 pub fn probe_audio_format(path: &Path) -> CommandResult<ProbedAudioFormat> {
+    decode_panic_boundary(path, || probe_audio_format_inner(path))
+}
+
+fn probe_audio_format_inner(path: &Path) -> CommandResult<ProbedAudioFormat> {
     let file = std::fs::File::open(path).map_err(|e| CommandError::Io(e.to_string()))?;
     let mss = MediaSourceStream::new(Box::new(file), Default::default());
     let mut hint = Hint::new();
@@ -311,7 +368,7 @@ pub fn probe_audio_format(path: &Path) -> CommandResult<ProbedAudioFormat> {
         .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
         .ok_or_else(|| CommandError::Decode("no decodable track".to_string()))?;
     Ok(ProbedAudioFormat {
-        sample_rate: track.codec_params.sample_rate.unwrap_or(44_100),
+        sample_rate: validated_sample_rate(track.codec_params.sample_rate)?,
         channels: track
             .codec_params
             .channels
