@@ -490,6 +490,45 @@ fn fingerprint_table() -> &'static Vec<(&'static str, Fingerprint)> {
 }
 
 // ---------------------------------------------------------------------------
+// Character distance
+// ---------------------------------------------------------------------------
+
+/// Perceptual-dB-space L2 distance between two fingerprints. Components:
+/// the six band tilts, drum crest, and width contribution enter at full
+/// weight (1 dB of difference ≈ 1 unit); the inherent loudness push is
+/// half-weighted so Loud/Punch's gain character counts without drowning
+/// the tonal dimensions; the THD proxy is quarter-weighted because dB
+/// swings on low-level harmonics are large relative to their audibility.
+fn character_distance(a: &Fingerprint, b: &Fingerprint) -> f32 {
+    let mut sum = 0.0_f32;
+    for i in 0..BANDS.len() {
+        sum += (a.band_tilt_db[i] - b.band_tilt_db[i]).powi(2);
+    }
+    sum += (a.crest_db_drums - b.crest_db_drums).powi(2);
+    sum += (a.width_delta_db - b.width_delta_db).powi(2);
+    sum += (0.5 * (a.landed_lufs_pink - b.landed_lufs_pink)).powi(2);
+    sum += (0.25 * (a.thd_proxy_db - b.thd_proxy_db)).powi(2);
+    sum.sqrt()
+}
+
+/// Every ordered pair (i < j) with its distance, for the floor assertion
+/// and the owner report.
+fn distance_pairs() -> Vec<(&'static str, &'static str, f32)> {
+    let table = fingerprint_table();
+    let mut pairs = Vec::new();
+    for i in 0..table.len() {
+        for j in (i + 1)..table.len() {
+            pairs.push((
+                table[i].0,
+                table[j].0,
+                character_distance(&table[i].1, &table[j].1),
+            ));
+        }
+    }
+    pairs
+}
+
+// ---------------------------------------------------------------------------
 // Diagnostics
 // ---------------------------------------------------------------------------
 
@@ -509,6 +548,13 @@ fn dump_fingerprint_table() {
             fp.crest_db_drums, fp.psr_db_drums,
             fp.width_delta_db, fp.thd_proxy_db,
         );
+    }
+
+    let mut pairs = distance_pairs();
+    pairs.sort_by(|a, b| a.2.total_cmp(&b.2));
+    println!("\npairwise character distances (closest first):");
+    for (a, b, d) in &pairs {
+        println!("  {a:>9} <-> {b:<9}  {d:6.2}");
     }
 }
 
@@ -575,6 +621,30 @@ fn every_preset_stays_within_safety_bounds() {
             fp.thd_proxy_db <= MAX_THD_PROXY_DB,
             "{name}: THD proxy {:+.1} dB above {MAX_THD_PROXY_DB} dB — saturation crossed from flavor into distortion",
             fp.thd_proxy_db,
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Distinctness — presets must be creative directions, not tonal cousins
+// ---------------------------------------------------------------------------
+
+/// Minimum character distance between ANY two factory presets. Observed
+/// closest pairs at the accepted 85%-lean voicing: Universal↔Clarity
+/// 1.80, Punch↔Loud 2.06, Universal↔Tape 2.25 (all other pairs ≥ 2.5).
+/// The floor sits at ~55% of the closest pair — it fires when a retune
+/// collapses two presets toward each other, not on small drift.
+const MIN_PAIRWISE_CHARACTER_DISTANCE: f32 = 1.0;
+
+#[test]
+fn all_preset_pairs_stay_mutually_distinct() {
+    for (a, b, d) in distance_pairs() {
+        assert!(
+            d >= MIN_PAIRWISE_CHARACTER_DISTANCE,
+            "{a} and {b} have character distance {d:.2} — below the \
+             {MIN_PAIRWISE_CHARACTER_DISTANCE} floor. Two presets have collapsed \
+             into tonal cousins; run dump_fingerprint_table to see which \
+             dimensions merged.",
         );
     }
 }
