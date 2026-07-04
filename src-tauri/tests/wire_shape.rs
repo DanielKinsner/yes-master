@@ -379,6 +379,7 @@ fn album_track_render_record_sample() -> AlbumTrackRenderRecord {
         rendered_sample_rate: 48_000,
         source_channels: 2,
         rendered_channels: 2,
+        override_album: true,
     }
 }
 
@@ -401,6 +402,7 @@ fn album_track_render_input_sample() -> AlbumTrackRenderInput {
         track_id: TrackId("wire-sample".to_string()),
         source_path: "C:/music/wire-sample.wav".to_string(),
         settings: mastering_settings_sample(),
+        override_album: true,
     }
 }
 

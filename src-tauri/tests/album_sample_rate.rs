@@ -118,11 +118,13 @@ fn render_two_track_album_with_channels(
                 track_id: TrackId("a".into()),
                 source_path: a.to_string_lossy().into(),
                 settings: default_master_settings(),
+                override_album: false,
             },
             AlbumTrackRenderInput {
                 track_id: TrackId("b".into()),
                 source_path: b.to_string_lossy().into(),
                 settings: default_master_settings(),
+                override_album: false,
             },
         ],
     };

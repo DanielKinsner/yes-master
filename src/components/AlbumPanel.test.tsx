@@ -70,6 +70,7 @@ describe("AlbumPanel", () => {
             rendered_sample_rate: 48_000,
             source_channels: 1,
             rendered_channels: 2,
+            override_album: true,
           },
         ],
       },
@@ -82,6 +83,9 @@ describe("AlbumPanel", () => {
     expect(receipt?.textContent).toContain("requested Auto");
     expect(receipt?.textContent).toContain("Upsampled source 44.1 kHz");
     expect(receipt?.textContent).toContain("Upmixed source mono");
+    expect(receipt?.textContent).toContain(
+      "Override: track 1 rendered with its own settings",
+    );
   });
 
   it("shows fold-down advisory for above-stereo album sources", async () => {
@@ -106,6 +110,7 @@ describe("AlbumPanel", () => {
             rendered_sample_rate: 48_000,
             source_channels: 4,
             rendered_channels: 2,
+            override_album: false,
           },
         ],
       },
@@ -115,5 +120,6 @@ describe("AlbumPanel", () => {
 
     const receipt = container.querySelector(".album-export-receipt");
     expect(receipt?.textContent).toContain("Folded source 4 ch to stereo");
+    expect(receipt?.textContent).not.toContain("Override:");
   });
 });

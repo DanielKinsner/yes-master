@@ -112,6 +112,7 @@ fn album_render_single_track_edge() {
             track_id: TrackId("solo".to_string()),
             source_path: path.to_string_lossy().to_string(),
             settings: default_master_settings(),
+            override_album: false,
         }],
     };
     let out_dir = tmp.path().join("solo_out");
@@ -158,6 +159,7 @@ fn album_render_repeated_plan_keeps_prior_per_track_files_and_manifest() {
             track_id: TrackId("solo".to_string()),
             source_path: path.to_string_lossy().to_string(),
             settings: default_master_settings(),
+            override_album: false,
         }],
     };
     let out_dir = tmp.path().join("repeat_out");
@@ -264,11 +266,13 @@ fn album_render_output_is_byte_identical_with_volume_match_on_or_off() {
                 track_id: TrackId("vm-first".to_string()),
                 source_path: first_path.to_string_lossy().to_string(),
                 settings: off_settings.clone(),
+                override_album: false,
             },
             AlbumTrackRenderInput {
                 track_id: TrackId("vm-second".to_string()),
                 source_path: second_path.to_string_lossy().to_string(),
                 settings: off_settings,
+                override_album: false,
             },
         ],
     };
@@ -279,11 +283,13 @@ fn album_render_output_is_byte_identical_with_volume_match_on_or_off() {
                 track_id: TrackId("vm-first".to_string()),
                 source_path: first_path.to_string_lossy().to_string(),
                 settings: on_settings.clone(),
+                override_album: false,
             },
             AlbumTrackRenderInput {
                 track_id: TrackId("vm-second".to_string()),
                 source_path: second_path.to_string_lossy().to_string(),
                 settings: on_settings,
+                override_album: false,
             },
         ],
     };
@@ -340,6 +346,7 @@ fn album_render_sanitizes_silent_track_measured_lufs_in_manifest() {
             track_id: TrackId("silent".to_string()),
             source_path: path.to_string_lossy().to_string(),
             settings: default_master_settings(),
+            override_album: false,
         }],
     };
 
@@ -451,16 +458,19 @@ fn album_render_three_tracks_smoke() {
             track_id: TrackId("t1".to_string()),
             source_path: t1_path.to_string_lossy().to_string(),
             settings: default_master_settings(),
+            override_album: false,
         },
         AlbumTrackRenderInput {
             track_id: TrackId("t2".to_string()),
             source_path: t2_path.to_string_lossy().to_string(),
             settings: default_master_settings(),
+            override_album: false,
         },
         AlbumTrackRenderInput {
             track_id: TrackId("t3".to_string()),
             source_path: t3_path.to_string_lossy().to_string(),
             settings: default_master_settings(),
+            override_album: false,
         },
     ];
     let request = AlbumPlanRenderRequest {

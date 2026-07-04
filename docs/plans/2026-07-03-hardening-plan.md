@@ -230,4 +230,5 @@ fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`).
 | Slice | Commit | Status |
 |---|---|---|
 | Plan + ledger updates | `06c9ab3` | done |
-| A2 — album character gate OFF | (this commit) | done — all lanes green; slow fixture lane still owed before merge to main |
+| A2 — album character gate OFF | `0d4df90` | done — all lanes green |
+| A1 — override full sound exemption | (this commit) | done — F1 fixed end-to-end: flag plumbed FE→Rust, arc/bias skipped, own target honored (proof: `tests/album_override.rs`), report/manifest + AlbumPanel receipt disclose it; wire golden regen; iPhone + Android lanes green. Slow fixture lane owed before merge to main. |

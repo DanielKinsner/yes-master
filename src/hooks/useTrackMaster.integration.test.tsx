@@ -3042,6 +3042,68 @@ describe("useTrackMaster integration dispatches", () => {
     );
     expect(secondRenderInput?.settings).toEqual(albumIntent);
     expect(secondRenderInput?.settings).not.toEqual(divergentSettings);
+    expect(secondRenderInput?.override_album).toBe(false);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("marks overridden tracks for full sound exemption in the render payload", async () => {
+    // D9 (2026-07-03): the Override toggle promises "its own settings will
+    // be applied at export" — the backend needs the flag to skip arc offset
+    // + character bias, so the payload must carry it per track.
+    const first = makeTrack("album-ovr-1", "C:/audio/album ovr one.wav");
+    const second = makeTrack("album-ovr-2", "C:/audio/album ovr two.wav");
+    const plan = makeAlbumPlan([first.id, second.id]);
+    const outputDir = "/Users/daniel/Desktop/Album Masters";
+    mocks.api.importTracks.mockResolvedValue([first, second]);
+    mocks.api.analyzeTracks.mockResolvedValue([
+      makeAnalysis(first.id),
+      makeAnalysis(second.id),
+    ]);
+    mocks.open.mockResolvedValue(outputDir);
+    mocks.api.planAlbum.mockResolvedValue(plan);
+    mocks.api.renderAlbumPlan.mockResolvedValue({
+      album_wav_path: `${outputDir}/album_continuous_1.wav`,
+      manifest_path: `${outputDir}/manifest.json`,
+      tracks: [],
+    });
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([first.path, second.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().tracks).toHaveLength(2);
+    });
+
+    await act(async () => {
+      harness.current().setMode("album");
+    });
+    await act(async () => {
+      harness.current().selectTrack(second.id);
+    });
+    await act(async () => {
+      harness.current().toggleOverrideAlbum(second.id);
+    });
+    expect(harness.current().selectedIsOverriding).toBe(true);
+
+    await act(async () => {
+      await harness.current().exportAlbumPlan();
+    });
+
+    const renderTracks =
+      (mocks.api.renderAlbumPlan.mock.calls.at(-1)?.[1] as
+        | import("../lib/api").AlbumTrackRenderInput[]
+        | undefined) ?? [];
+    expect(
+      renderTracks.find((track) => track.track_id === first.id)?.override_album,
+    ).toBe(false);
+    expect(
+      renderTracks.find((track) => track.track_id === second.id)
+        ?.override_album,
+    ).toBe(true);
 
     await act(async () => {
       harness.root.unmount();

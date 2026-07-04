@@ -88,6 +88,7 @@ fn cinematic_arc_shapes_per_track_lufs_through_render_pipeline() {
             track_id: TrackId(id.clone()),
             source_path: path.to_string_lossy().to_string(),
             settings: default_master_settings(),
+            override_album: false,
         });
         analyses.push(neutral_analysis(&id));
         durations.push(TRACK_DURATION_SEC as f64);

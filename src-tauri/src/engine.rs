@@ -647,6 +647,14 @@ pub struct AlbumTrackRenderInput {
     pub track_id: TrackId,
     pub source_path: String,
     pub settings: MasteringSettings,
+    /// Owner decision 2026-07-03 D9 — "full sound exemption": when true this
+    /// track renders with its own settings and its own loudness target (no
+    /// arc offset, no character bias, no album intensity scale). The album
+    /// delivery format (sample rate / bit depth / channel count) still
+    /// applies so the record stays one coherent deliverable. Serde-default
+    /// so older payloads deserialize as "follows album intent."
+    #[serde(default)]
+    pub override_album: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -684,6 +692,10 @@ pub struct AlbumTrackRenderRecord {
     pub rendered_sample_rate: u32,
     pub source_channels: u16,
     pub rendered_channels: u16,
+    /// True when the track rendered with its own settings/target instead of
+    /// the album intent (D9 full sound exemption) — surfaced in the manifest
+    /// and export report so the receipt never hides it.
+    pub override_album: bool,
 }
 
 #[derive(Debug, Serialize, Clone)]

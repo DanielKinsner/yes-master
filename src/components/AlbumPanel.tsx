@@ -87,6 +87,10 @@ export function AlbumPanel({
   const requestedMismatch =
     albumExportReport?.requested_sample_rate != null &&
     albumExportReport.requested_sample_rate !== albumExportReport.rendered_sample_rate;
+  const overriddenPositions = (albumExportReport?.tracks ?? [])
+    .filter((track) => track.override_album)
+    .map((track) => track.position)
+    .sort((a, b) => a - b);
   return (
     <section className="album-panel">
       <header className="album-panel-head">
@@ -172,6 +176,12 @@ export function AlbumPanel({
             <span className="album-export-receipt-advisory">
               Folded source {foldedChannels.map(formatChannelCount).join(", ")} to{" "}
               {formatChannelCount(albumExportReport.rendered_channels)}
+            </span>
+          )}
+          {overriddenPositions.length > 0 && (
+            <span className="album-export-receipt-advisory">
+              Override: track {overriddenPositions.join(", ")} rendered with its
+              own settings
             </span>
           )}
         </div>

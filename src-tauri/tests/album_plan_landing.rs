@@ -130,6 +130,7 @@ fn album_plan_pushes_quiet_track_upward_to_target_bounded_by_ceiling() {
             track_id: TrackId("quiet".to_string()),
             source_path: path.to_string_lossy().to_string(),
             settings: streaming_settings(),
+            override_album: false,
         }],
     };
 

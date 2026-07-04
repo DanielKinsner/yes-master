@@ -85,6 +85,7 @@
       {
         "measured_lufs": -13.5,
         "output_path": "out/wire-sample.master.wav",
+        "override_album": true,
         "position": 1,
         "rendered_channels": 2,
         "rendered_sample_rate": 48000,
@@ -104,6 +105,7 @@
     "track_id": "wire-sample"
   },
   "album_track_render_input": {
+    "override_album": true,
     "settings": {
       "advanced": {
         "adaptive_strength": 0.5,

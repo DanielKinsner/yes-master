@@ -1653,7 +1653,8 @@ export function useTrackMaster() {
       );
       const renderTracks: import("../lib/api").AlbumTrackRenderInput[] =
         plan.tracks.map((entry) => {
-          const settings = overrideAlbum.has(entry.track_id)
+          const isOverride = overrideAlbum.has(entry.track_id);
+          const settings = isOverride
             ? settingsMap[entry.track_id] ?? albumIntent
             : albumIntent;
           const sourceTrack = tracks.find((t) => t.id === entry.track_id);
@@ -1661,6 +1662,10 @@ export function useTrackMaster() {
             track_id: entry.track_id,
             source_path: sourceTrack?.path ?? "",
             settings,
+            // D9 full sound exemption: the backend skips arc offset +
+            // character bias for overridden tracks so the on-screen promise
+            // ("its own settings will be applied at export") is kept.
+            override_album: isOverride,
           };
         });
       const report = await api.renderAlbumPlan(plan, renderTracks, outputDir);

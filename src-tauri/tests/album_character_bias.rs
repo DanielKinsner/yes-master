@@ -282,21 +282,25 @@ fn character_promotion_and_bias_lands_on_rendered_audio() {
             track_id: TrackId("t1".to_string()),
             source_path: t1_path.to_string_lossy().to_string(),
             settings: default_master_settings(),
+            override_album: false,
         },
         AlbumTrackRenderInput {
             track_id: TrackId("t2".to_string()),
             source_path: t2_path.to_string_lossy().to_string(),
             settings: default_master_settings(),
+            override_album: false,
         },
         AlbumTrackRenderInput {
             track_id: TrackId("t3".to_string()),
             source_path: t3_path.to_string_lossy().to_string(),
             settings: default_master_settings(),
+            override_album: false,
         },
         AlbumTrackRenderInput {
             track_id: TrackId("t4".to_string()),
             source_path: t4_path.to_string_lossy().to_string(),
             settings: default_master_settings(),
+            override_album: false,
         },
     ];
 

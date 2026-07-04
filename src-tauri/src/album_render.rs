@@ -331,6 +331,21 @@ fn apply_album_shadow(
     shadowed
 }
 
+/// Owner decision 2026-07-03 D9 — "full sound exemption" for an overridden
+/// track: its own settings and loudness target render unmodified. No arc
+/// offset, no character bias, no album intensity scale. Album Master's
+/// non-adaptive rule still applies (adaptive internals stripped, mirroring
+/// `apply_album_shadow`), and the album delivery format is enforced outside
+/// the settings (resample / channel fold / bit depth), so the record stays
+/// one coherent deliverable.
+fn override_exempt_settings(settings: &MasteringSettings) -> MasteringSettings {
+    let mut own = settings.clone();
+    own.advanced.source_profile = None;
+    own.advanced.source_confidence = None;
+    own.advanced.compression_guards = None;
+    own
+}
+
 #[cfg(test)]
 mod adaptive_scope_tests {
     use super::*;
@@ -456,11 +471,53 @@ mod adaptive_scope_tests {
     }
 
     #[test]
+    fn override_exempt_settings_preserves_user_intent_and_strips_adaptive() {
+        let bright = crate::types::SourceProfile {
+            spectral_6: crate::types::SpectralBalance6 {
+                sub: 0.1,
+                low: 0.2,
+                low_mid: 0.2,
+                mid: 0.2,
+                presence: 0.15,
+                air: 0.15,
+            },
+            dynamic_range_p95_p10_db: 8.0,
+            dynamic_range_lu: 8.0,
+            stereo_correlation: Some(0.5),
+            stereo_width: 1.0,
+        };
+        let mut settings = settings_with_profile(Some(bright));
+        settings.delivery_profile = crate::types::DeliveryProfile::StreamingUniversal;
+        settings.eq_high_db = 2.5;
+        settings.intensity = 0.9;
+        settings.advanced.source_confidence = Some(crate::confidence::Confidence::full());
+        settings.advanced.compression_guards =
+            Some(crate::guardrails::CompressionGuards::identity());
+
+        let own = override_exempt_settings(&settings);
+
+        // D9: the user's sound intent is untouched — own delivery target,
+        // own EQ, own intensity; no arc replacement, no bias, no scale.
+        assert!(matches!(
+            own.delivery_profile,
+            crate::types::DeliveryProfile::StreamingUniversal
+        ));
+        assert_eq!(own.effective_target_lufs(), Some(-14.0));
+        assert!((own.eq_high_db - 2.5).abs() < 1.0e-6);
+        assert!((own.intensity - 0.9).abs() < 1.0e-6);
+        // Album Master stays non-adaptive even for overridden tracks.
+        assert!(own.advanced.source_profile.is_none());
+        assert!(own.advanced.source_confidence.is_none());
+        assert!(own.advanced.compression_guards.is_none());
+    }
+
+    #[test]
     fn album_source_path_validation_rejects_traversal() {
         let inputs = vec![crate::engine::AlbumTrackRenderInput {
             track_id: crate::types::TrackId("t".to_string()),
             source_path: "../escape/track.wav".to_string(),
             settings: settings_with_profile(None),
+            override_album: false,
         }];
         let err = crate::engine::validate_album_source_paths(&inputs)
             .expect_err("traversal source path must be rejected");
@@ -565,55 +622,62 @@ pub fn render_album_plan_impl(
         }
         let source_channel_count = pcm.channels.max(1);
 
-        // Per-track curve value for the per-character mastering bias.
-        // For Preset arcs we resample the 6-point curve to actual track
-        // count; for Custom arcs we use a neutral 0.5 (no curve-driven
-        // air-band swing in the bias).
-        let curve_value = match &request.plan.arc {
-            AlbumArc::Preset { preset } => {
-                let curve = crate::album::resample_arc_curve(preset.curve(), total_tracks);
-                curve.get(i).copied().unwrap_or(0.5)
-            }
-            AlbumArc::Custom { .. } => 0.5,
+        let shadowed = if input.override_album {
+            // D9 full sound exemption: skip the arc/bias shadowing (and the
+            // energy measurement that only feeds the bias) entirely.
+            override_exempt_settings(&input.settings)
+        } else {
+            // Per-track curve value for the per-character mastering bias.
+            // For Preset arcs we resample the 6-point curve to actual track
+            // count; for Custom arcs we use a neutral 0.5 (no curve-driven
+            // air-band swing in the bias).
+            let curve_value = match &request.plan.arc {
+                AlbumArc::Preset { preset } => {
+                    let curve = crate::album::resample_arc_curve(preset.curve(), total_tracks);
+                    curve.get(i).copied().unwrap_or(0.5)
+                }
+                AlbumArc::Custom { .. } => 0.5,
+            };
+            // B1: compute per-track energy density from the decoded PCM so the
+            // album-arc character-bias presence-band energy-gate uses the same
+            // signal as the analysis path. Pre-B1 this was hardcoded to 0.5,
+            // dead-coding the gate in the album EXPORT path while
+            // `analyze_tracks` computed real values.
+            //
+            // Four measurements: integrated LUFS, 6-band spectral balance,
+            // dynamic range (p95-p10), transient flux. Falls back to 0.5
+            // (the prior literal, treated as "neutral") if any input is
+            // unavailable - matches `compute_energy_density_score`'s contract.
+            let energy_density_score = {
+                let lufs =
+                    measure_integrated_lufs(&pcm.samples, pcm.sample_rate, source_channel_count)
+                        .unwrap_or(-30.0);
+                let spec6 = compute_spectral_balance_6band(
+                    &pcm.samples,
+                    pcm.sample_rate,
+                    source_channel_count as usize,
+                );
+                let dr = compute_dynamic_range_p95_p10(
+                    &pcm.samples,
+                    pcm.sample_rate,
+                    source_channel_count as usize,
+                );
+                let tflux = compute_transient_flux(
+                    &pcm.samples,
+                    pcm.sample_rate,
+                    source_channel_count as usize,
+                );
+                compute_energy_density_score(lufs, spec6.as_ref(), dr, tflux)
+            };
+            let energy_density = energy_density_score.unwrap_or(0.5);
+            apply_album_shadow(
+                &input.settings,
+                entry,
+                request.plan.intensity,
+                curve_value,
+                energy_density,
+            )
         };
-        // B1: compute per-track energy density from the decoded PCM so the
-        // album-arc character-bias presence-band energy-gate uses the same
-        // signal as the analysis path. Pre-B1 this was hardcoded to 0.5,
-        // dead-coding the gate in the album EXPORT path while
-        // `analyze_tracks` computed real values.
-        //
-        // Four measurements: integrated LUFS, 6-band spectral balance,
-        // dynamic range (p95-p10), transient flux. Falls back to 0.5
-        // (the prior literal, treated as "neutral") if any input is
-        // unavailable - matches `compute_energy_density_score`'s contract.
-        let energy_density_score = {
-            let lufs = measure_integrated_lufs(&pcm.samples, pcm.sample_rate, source_channel_count)
-                .unwrap_or(-30.0);
-            let spec6 = compute_spectral_balance_6band(
-                &pcm.samples,
-                pcm.sample_rate,
-                source_channel_count as usize,
-            );
-            let dr = compute_dynamic_range_p95_p10(
-                &pcm.samples,
-                pcm.sample_rate,
-                source_channel_count as usize,
-            );
-            let tflux = compute_transient_flux(
-                &pcm.samples,
-                pcm.sample_rate,
-                source_channel_count as usize,
-            );
-            compute_energy_density_score(lufs, spec6.as_ref(), dr, tflux)
-        };
-        let energy_density = energy_density_score.unwrap_or(0.5);
-        let shadowed = apply_album_shadow(
-            &input.settings,
-            entry,
-            request.plan.intensity,
-            curve_value,
-            energy_density,
-        );
         let mut shadowed = shadowed;
         shadowed.volume_match = false;
         let mut samples = pcm.samples;
@@ -695,6 +759,7 @@ pub fn render_album_plan_impl(
             rendered_sample_rate: album_sample_rate,
             source_channels: source_channel_count,
             rendered_channels: rendered_channel_count,
+            override_album: input.override_album,
         });
         rendered_samples.push(samples);
     }

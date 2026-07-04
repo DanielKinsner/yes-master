@@ -42,6 +42,9 @@ export interface AlbumTrackRenderRecord {
   rendered_sample_rate: number;
   source_channels: number;
   rendered_channels: number;
+  /** True when the track rendered with its own settings/target instead of
+   * the album intent (Override toggle) — mirrored into the manifest. */
+  override_album: boolean;
 }
 
 export interface AlbumRenderReport {
@@ -60,6 +63,9 @@ export interface AlbumTrackRenderInput {
   track_id: TrackId;
   source_path: string;
   settings: MasteringSettings;
+  /** D9 full sound exemption: render with the track's own settings/target —
+   * no arc offset, no character bias — while keeping album delivery format. */
+  override_album: boolean;
 }
 
 // Tauri 2 auto-converts camelCase invoke arg keys to snake_case Rust parameter
