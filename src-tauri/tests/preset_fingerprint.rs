@@ -271,10 +271,10 @@ fn fixtures() -> &'static Fixtures {
 // Chain plumbing (mirrors the export path: process + flush)
 // ---------------------------------------------------------------------------
 
-fn default_settings_for(preset: Preset) -> MasteringSettings {
+fn default_settings_for(preset: Preset, intensity: f32) -> MasteringSettings {
     MasteringSettings {
         preset,
-        intensity: TEST_INTENSITY,
+        intensity,
         eq_sub_db: 0.0,
         eq_low_db: 0.0,
         eq_low_mid_db: 0.0,
@@ -292,8 +292,8 @@ fn default_settings_for(preset: Preset) -> MasteringSettings {
     }
 }
 
-fn master(input: &[f32], preset: Preset) -> Vec<f32> {
-    let settings = default_settings_for(preset);
+fn master(input: &[f32], preset: Preset, intensity: f32) -> Vec<f32> {
+    let settings = default_settings_for(preset, intensity);
     let mut chain = MasteringChain::new(SR_HZ, STEREO, &settings);
     let mut buf = input.to_vec();
     chain.process_interleaved(&mut buf, STEREO);
@@ -418,7 +418,14 @@ fn thd_proxy_db(output_mono: &[f32]) -> f32 {
 struct Fingerprint {
     /// Volume-matched chain tilt per app band on the pink bed, in dB:
     /// (out − in band energy) − (out − in broadband LUFS). Zero means
-    /// "the chain left this band's balance alone".
+    /// "the chain left this band's balance alone". Caveat (adversarial
+    /// review, 2026-07-03): the broadband term is K-weighted, so a boost
+    /// in a K-suppressed band (sub) reads at nearly full magnitude while
+    /// the same boost in a K-heavy band (mid/air) reads partially
+    /// absorbed into the LUFS term — the safety cap is effectively
+    /// stricter for sub-heavy voicings than air-heavy ones. Fine for
+    /// pinning/distance (both terms move deterministically), just don't
+    /// read tilts as exact EQ curves across bands.
     band_tilt_db: [f32; 6],
     /// Where the chain lands the pink bed / drum loop with no delivery
     /// target (Custom profile): the preset's inherent loudness push.
@@ -436,11 +443,11 @@ struct Fingerprint {
     thd_proxy_db: f32,
 }
 
-fn compute_fingerprint(preset: Preset, fx: &Fixtures) -> Fingerprint {
-    let pink_out = master(&fx.pink, preset.clone());
-    let drums_out = master(&fx.drums, preset.clone());
-    let pad_out = master(&fx.pad, preset.clone());
-    let sine_out = master(&fx.sine, preset);
+fn compute_fingerprint(preset: Preset, fx: &Fixtures, intensity: f32) -> Fingerprint {
+    let pink_out = master(&fx.pink, preset.clone(), intensity);
+    let drums_out = master(&fx.drums, preset.clone(), intensity);
+    let pad_out = master(&fx.pad, preset.clone(), intensity);
+    let sine_out = master(&fx.sine, preset, intensity);
 
     let pink_in_mono = left_channel(&fx.pink);
     let pink_out_mono = left_channel(&pink_out);
@@ -476,15 +483,35 @@ const FACTORY_PRESETS: [(&str, Preset); 8] = [
     ("Loud", Preset::Loud),
 ];
 
-/// Full fingerprint table, computed once per test process (the renders
-/// are the expensive part; every test shares this).
+/// Full fingerprint table at default intensity 0.5, computed once per
+/// test process (the renders are the expensive part; every test shares
+/// this). The golden, distance floor, and report all read this table.
 fn fingerprint_table() -> &'static Vec<(&'static str, Fingerprint)> {
     static TABLE: OnceLock<Vec<(&'static str, Fingerprint)>> = OnceLock::new();
     TABLE.get_or_init(|| {
         let fx = fixtures();
         FACTORY_PRESETS
             .iter()
-            .map(|(name, preset)| (*name, compute_fingerprint(preset.clone(), fx)))
+            .map(|(name, preset)| {
+                (
+                    *name,
+                    compute_fingerprint(preset.clone(), fx, TEST_INTENSITY),
+                )
+            })
+            .collect()
+    })
+}
+
+/// Fingerprints at the intensity slider's maximum (1.0), where
+/// `preset_scale` multiplies every preset move by 1.6× relative to the
+/// 0.5 default. Only the max-intensity safety test pays for this table.
+fn fingerprint_table_max_intensity() -> &'static Vec<(&'static str, Fingerprint)> {
+    static TABLE: OnceLock<Vec<(&'static str, Fingerprint)>> = OnceLock::new();
+    TABLE.get_or_init(|| {
+        let fx = fixtures();
+        FACTORY_PRESETS
+            .iter()
+            .map(|(name, preset)| (*name, compute_fingerprint(preset.clone(), fx, 1.0)))
             .collect()
     })
 }
@@ -681,6 +708,22 @@ fn dump_fingerprint_table() {
     println!("\npairwise character distances (closest first):");
     for (a, b, d) in &pairs {
         println!("  {a:>9} <-> {b:<9}  {d:6.2}");
+    }
+
+    println!("\nat intensity 1.0 (slider max, preset_scale 1.6x):");
+    println!(
+        "{:>9} |   sub    low  lowmid    mid  himid    air | LUFSp LUFSd  crest    psr | width    thd",
+        "preset"
+    );
+    for (name, fp) in fingerprint_table_max_intensity() {
+        let b = fp.band_tilt_db;
+        println!(
+            "{name:>9} | {:+5.2} {:+5.2} {:+6.2} {:+5.2} {:+5.2} {:+6.2} | {:+5.1} {:+5.1} {:+6.2} {:+6.2} | {:+5.2} {:+6.1}",
+            b[0], b[1], b[2], b[3], b[4], b[5],
+            fp.landed_lufs_pink, fp.landed_lufs_drums,
+            fp.crest_db_drums, fp.psr_db_drums,
+            fp.width_delta_db, fp.thd_proxy_db,
+        );
     }
 }
 
@@ -891,14 +934,92 @@ fn every_preset_stays_within_safety_bounds() {
 }
 
 // ---------------------------------------------------------------------------
+// Safety at the intensity slider's MAX (adversarial-review finding: the
+// 0.5-intensity bounds alone leave a hole — `preset_scale` in dsp.rs is
+// 0.4 + 1.2·intensity, so every preset move is 1.6× stronger at 1.0.
+// A user pushing the slider to max chose a bold master, so these caps
+// are looser than the defaults — but "bold" must still never cross
+// into "ruined". Observed extremes at accepted voicing: Oomph sub
+// +7.45 dB, Loud pink −5.3 LUFS, crest floor 10.27 dB, THD −33.9 dB.)
+// ---------------------------------------------------------------------------
+
+const MAX_ABS_BAND_TILT_DB_AT_MAX: f32 = 9.0;
+const MIN_DRUM_CREST_DB_AT_MAX: f32 = 4.0;
+const MIN_DRUM_PSR_DB_AT_MAX: f32 = 3.0;
+const LANDED_LUFS_RANGE_AT_MAX: (f32, f32) = (-20.0, -3.5);
+const WIDTH_DELTA_RANGE_DB_AT_MAX: (f32, f32) = (-3.0, 4.5);
+const MAX_THD_PROXY_DB_AT_MAX: f32 = -15.0;
+
+#[test]
+fn every_preset_stays_sane_at_max_intensity() {
+    for (name, fp) in fingerprint_table_max_intensity() {
+        for (i, (band, _)) in BANDS.iter().enumerate() {
+            assert!(
+                fp.band_tilt_db[i].abs() <= MAX_ABS_BAND_TILT_DB_AT_MAX,
+                "{name} @ intensity 1.0: {band} tilt {:+.2} dB exceeds ±{MAX_ABS_BAND_TILT_DB_AT_MAX} dB",
+                fp.band_tilt_db[i],
+            );
+        }
+        assert!(
+            fp.crest_db_drums >= MIN_DRUM_CREST_DB_AT_MAX,
+            "{name} @ intensity 1.0: drum crest {:.2} dB below {MIN_DRUM_CREST_DB_AT_MAX} dB — max intensity is crushing transients into a brick",
+            fp.crest_db_drums,
+        );
+        assert!(
+            fp.psr_db_drums >= MIN_DRUM_PSR_DB_AT_MAX,
+            "{name} @ intensity 1.0: drum PSR {:.2} dB below {MIN_DRUM_PSR_DB_AT_MAX} dB",
+            fp.psr_db_drums,
+        );
+        for (label, lufs) in [
+            ("pink", fp.landed_lufs_pink),
+            ("drums", fp.landed_lufs_drums),
+        ] {
+            assert!(
+                (LANDED_LUFS_RANGE_AT_MAX.0..=LANDED_LUFS_RANGE_AT_MAX.1).contains(&lufs),
+                "{name} @ intensity 1.0: landed LUFS ({label}) {lufs:+.1} outside {LANDED_LUFS_RANGE_AT_MAX:?}",
+            );
+        }
+        assert!(
+            (WIDTH_DELTA_RANGE_DB_AT_MAX.0..=WIDTH_DELTA_RANGE_DB_AT_MAX.1)
+                .contains(&fp.width_delta_db),
+            "{name} @ intensity 1.0: width delta {:+.2} dB outside {WIDTH_DELTA_RANGE_DB_AT_MAX:?}",
+            fp.width_delta_db,
+        );
+        assert!(
+            fp.thd_proxy_db <= MAX_THD_PROXY_DB_AT_MAX,
+            "{name} @ intensity 1.0: THD proxy {:+.1} dB above {MAX_THD_PROXY_DB_AT_MAX} dB — distortion, not flavor",
+            fp.thd_proxy_db,
+        );
+    }
+}
+
+#[test]
+fn no_preset_clips_a_hot_source_at_max_intensity() {
+    // preset_distinctness pins the −0.1 dBFS ceiling at intensity 0.5;
+    // this closes the same promise at the slider's max, where the 1.6×
+    // gain push drives the limiter hardest.
+    let hot = synth_pink_stereo((SR_HZ as f32 * PINK_SECONDS) as usize, 0.794); // −2 dBFS
+    for (name, preset) in FACTORY_PRESETS.iter() {
+        let output = master(&hot, preset.clone(), 1.0);
+        let peak_db = sample_peak_dbfs(&output);
+        assert!(
+            peak_db <= -0.1,
+            "{name} @ intensity 1.0: post-chain peak {peak_db:.3} dBFS exceeds the −0.1 dBFS ceiling",
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Distinctness — presets must be creative directions, not tonal cousins
 // ---------------------------------------------------------------------------
 
 /// Minimum character distance between ANY two factory presets. Observed
 /// closest pairs at the accepted 85%-lean voicing: Universal↔Clarity
 /// 1.80, Punch↔Loud 2.06, Universal↔Tape 2.25 (all other pairs ≥ 2.5).
-/// The floor sits at ~55% of the closest pair — it fires when a retune
-/// collapses two presets toward each other, not on small drift.
+/// While the tolerance golden is pinned, drift can't get near this floor
+/// without tripping the golden first — the floor's real job is gating
+/// each NEW accepted voicing at golden-regen time: a retune may move
+/// presets freely, but never so two of them collapse into cousins.
 const MIN_PAIRWISE_CHARACTER_DISTANCE: f32 = 1.0;
 
 #[test]
