@@ -2402,6 +2402,47 @@ impl MasteringChain {
         }
     }
 
+    /// Bulk delay the chain introduces: the limiter's lookahead ring buffer.
+    /// Every other stage (EQ biquads, multiband compressor, transient shaper,
+    /// width, saturation) is minimum-phase with no delay line, so this is the
+    /// whole chain latency.
+    pub fn latency_frames(&self) -> usize {
+        self.limiter.lookahead_frames
+    }
+
+    /// End-of-render flush (RS-09 fix, 2026-07-03). The limiter is a
+    /// `lookahead_frames` delay line: after the final input frame, the last
+    /// `lookahead_frames` frames of real audio are still inside its ring
+    /// buffer, and the first `lookahead_frames` output frames were silence
+    /// (the ring warming up). Pre-fix, every offline render silently dropped
+    /// that ~3 ms tail and shipped the ~3 ms silent lead-in.
+    ///
+    /// This pumps `latency_frames()` frames of silence through the FULL
+    /// chain (so EQ/compressor ring-out lands in the tail too), appends the
+    /// drained audio, then removes the same number of frames from the front
+    /// — the output keeps the source's length and is sample-aligned with it.
+    ///
+    /// Offline render paths only: the live audition path keeps its
+    /// (inaudible) 3 ms lookahead latency, as any realtime processor must.
+    pub fn flush_render_tail(&mut self, samples: &mut Vec<f32>, channels: usize) {
+        if channels == 0 || self.states.is_empty() {
+            return;
+        }
+        let tail_len = self.latency_frames() * channels;
+        if tail_len == 0 {
+            return;
+        }
+        let mut tail = vec![0.0_f32; tail_len];
+        self.process_interleaved(&mut tail, channels);
+        samples.extend_from_slice(&tail);
+        // Post-extend the buffer holds `orig + tail_len` samples with the
+        // real audio at [tail_len, tail_len + orig): dropping exactly
+        // `tail_len` from the front restores the original length and
+        // sample-aligns the output with the source — including sources
+        // shorter than the lookahead window.
+        samples.drain(..tail_len);
+    }
+
     pub fn reset_states(&mut self) {
         for state in self.states.iter_mut() {
             *state = ChannelState::default();
@@ -2927,6 +2968,103 @@ mod tests {
             approx_eq(c_neg.width_side_scale, 0.0, 1e-6),
             "user width=-1.0 should clamp to 0.0, got {}",
             c_neg.width_side_scale
+        );
+    }
+
+    /// Neutral-ish mono settings for the flush tests: Custom preset, zero
+    /// EQ, zero intensity — the chain is near-transparent apart from the
+    /// limiter's lookahead delay.
+    fn flush_test_settings() -> MasteringSettings {
+        MasteringSettings {
+            preset: Preset::Custom {
+                id: "flush".to_string(),
+            },
+            intensity: 0.0,
+            eq_sub_db: 0.0,
+            eq_low_db: 0.0,
+            eq_low_mid_db: 0.0,
+            eq_mid_db: 0.0,
+            eq_high_mid_db: 0.0,
+            eq_high_db: 0.0,
+            eq_sparkle_db: 0.0,
+            volume_match: false,
+            source_lufs_integrated: None,
+            input_gain_db: 0.0,
+            output_gain_db: 0.0,
+            delivery_profile: DeliveryProfile::Custom,
+            album: None,
+            advanced: AdvancedSettings::default(),
+        }
+    }
+
+    /// RS-09 proof: an impulse on the FINAL frame of a render must survive.
+    /// Pre-fix, the last `lookahead_frames` (~3 ms) of every render stayed
+    /// inside the limiter's ring buffer and were silently dropped — this
+    /// impulse never appeared in the output at all.
+    #[test]
+    fn render_flush_recovers_the_final_three_milliseconds() {
+        let settings = flush_test_settings();
+        let mut chain = MasteringChain::new(48_000, 1, &settings);
+        let n = 4_800;
+        let mut samples = vec![0.0_f32; n];
+        samples[n - 1] = 0.5;
+        chain.process_interleaved(&mut samples, 1);
+        let peak_before_flush = samples.iter().fold(0.0_f32, |m, s| m.max(s.abs()));
+        assert!(
+            peak_before_flush < 0.05,
+            "precondition: without the flush the tail impulse is stuck in \
+             the lookahead ring (found peak {peak_before_flush})",
+        );
+        chain.flush_render_tail(&mut samples, 1);
+        assert_eq!(samples.len(), n, "flush must preserve render length");
+        let peak = samples.iter().fold(0.0_f32, |m, s| m.max(s.abs()));
+        assert!(
+            peak > 0.25,
+            "final-frame impulse must survive the render, got peak {peak}",
+        );
+    }
+
+    /// RS-09 alignment proof: after the flush, output is sample-aligned
+    /// with the source (no ~3 ms silent lead-in shifting everything late).
+    #[test]
+    fn render_flush_keeps_output_sample_aligned() {
+        let settings = flush_test_settings();
+        let mut chain = MasteringChain::new(48_000, 1, &settings);
+        let n = 4_800;
+        let k = 1_000;
+        let mut samples = vec![0.0_f32; n];
+        samples[k] = 0.5;
+        chain.process_interleaved(&mut samples, 1);
+        chain.flush_render_tail(&mut samples, 1);
+        let argmax = samples
+            .iter()
+            .enumerate()
+            .max_by(|a, b| a.1.abs().total_cmp(&b.1.abs()))
+            .map(|(i, _)| i)
+            .unwrap();
+        assert!(
+            (argmax as i64 - k as i64).abs() <= 4,
+            "impulse should stay at frame {k} after the flush, found peak at {argmax}",
+        );
+    }
+
+    /// A source SHORTER than the lookahead window must still come out with
+    /// its own length and its real content (pre-fix it rendered as pure
+    /// silence — every sample was still in the ring when the render ended).
+    #[test]
+    fn render_flush_handles_sources_shorter_than_the_lookahead() {
+        let settings = flush_test_settings();
+        let mut chain = MasteringChain::new(48_000, 1, &settings);
+        // 50 frames ≪ 144-frame lookahead at 48 kHz.
+        let n = 50;
+        let mut samples = vec![0.3_f32; n];
+        chain.process_interleaved(&mut samples, 1);
+        chain.flush_render_tail(&mut samples, 1);
+        assert_eq!(samples.len(), n);
+        let peak = samples.iter().fold(0.0_f32, |m, s| m.max(s.abs()));
+        assert!(
+            peak > 0.1,
+            "sub-lookahead source must not render as silence, got peak {peak}",
         );
     }
 
