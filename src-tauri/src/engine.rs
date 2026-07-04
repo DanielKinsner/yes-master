@@ -795,6 +795,35 @@ pub fn render_output_dir(app: &tauri::AppHandle, kind: RenderKind) -> CommandRes
     Ok(dir)
 }
 
+/// Startup sweep for orphaned render temp files (D5 runtime-abuse review).
+/// Every render writes through a `{name}.{uuid}.tmp` sibling and renames on
+/// success; the in-process error paths remove their own tmp, but a process
+/// kill / OS shutdown mid-render bypasses destructors and strands the file
+/// forever — nothing else ever touches it. At launch no render is running,
+/// so any `.tmp` under the app's own `renders/` tree is guaranteed orphaned.
+/// Only files whose name ends in `.tmp` inside the three render leaf dirs
+/// are considered; user-chosen export locations are never swept.
+pub fn sweep_orphaned_render_tmp(app_data: &Path) -> usize {
+    let mut removed = 0;
+    for leaf in ["previews", "masters", "albums"] {
+        let dir = app_data.join("renders").join(leaf);
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let is_tmp = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n.ends_with(".tmp"));
+            if is_tmp && path.is_file() && std::fs::remove_file(&path).is_ok() {
+                removed += 1;
+            }
+        }
+    }
+    removed
+}
+
 pub fn mastering_render(
     track_id: TrackId,
     source_path: &Path,
@@ -1417,6 +1446,34 @@ mod tests {
     /// produces zero so the gain multiply is skipped entirely.
     /// Prevents tiny floating-point noise from triggering a
     /// near-identity gain pass over every sample.
+    #[test]
+    fn sweep_orphaned_render_tmp_removes_only_tmp_files_in_render_dirs() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let app_data = tmp.path();
+        let masters = app_data.join("renders").join("masters");
+        let albums = app_data.join("renders").join("albums");
+        std::fs::create_dir_all(&masters).expect("masters dir");
+        std::fs::create_dir_all(&albums).expect("albums dir");
+
+        let orphan1 = masters.join("song.wav.5a3e.tmp");
+        let orphan2 = albums.join("album.wav.9f01.tmp");
+        let keeper_wav = masters.join("song.wav");
+        let keeper_elsewhere = app_data.join("not-renders.tmp");
+        for p in [&orphan1, &orphan2, &keeper_wav, &keeper_elsewhere] {
+            std::fs::write(p, b"x").expect("write fixture");
+        }
+
+        let removed = sweep_orphaned_render_tmp(app_data);
+
+        assert_eq!(removed, 2, "exactly the two orphans are swept");
+        assert!(!orphan1.exists() && !orphan2.exists());
+        assert!(keeper_wav.exists(), "finished renders must survive");
+        assert!(
+            keeper_elsewhere.exists(),
+            "files outside the render dirs are never touched",
+        );
+    }
+
     #[test]
     fn ceiling_bounded_landing_skips_negligible_delta() {
         // measured -14.00005, target -14. Delta = -5e-5, abs < 1e-4.

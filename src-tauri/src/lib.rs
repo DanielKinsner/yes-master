@@ -53,6 +53,14 @@ pub fn run() {
         .manage(profile_store)
         .manage(player)
         .setup(|app| {
+            // D5: reclaim render tmp files stranded by a process kill /
+            // OS shutdown mid-render (no render can be running yet).
+            if let Ok(app_data) = app.path().app_data_dir() {
+                let removed = crate::engine::sweep_orphaned_render_tmp(&app_data);
+                if removed > 0 {
+                    eprintln!("swept {removed} orphaned render tmp file(s)");
+                }
+            }
             let app_handle = app.handle().clone();
             let player_state = app.state::<Arc<audio::AudioPlayer>>().inner().clone();
             std::thread::spawn(move || {
