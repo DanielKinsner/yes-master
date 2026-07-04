@@ -69,6 +69,7 @@ const mocks = vi.hoisted(() => {
   return {
     api,
     onPlaybackTick: vi.fn(),
+    onPlaybackDeviceLost: vi.fn(),
     onRenderProgress: vi.fn(),
     onLandingStatus: vi.fn(),
     onAnalysisProgress: vi.fn(),
@@ -82,6 +83,7 @@ vi.mock("../lib/api", () => ({
   ADAPTIVE_COMPRESSION_GATE_EVENT: "yes-master:adaptive-compression-gate",
   api: mocks.api,
   onPlaybackTick: mocks.onPlaybackTick,
+  onPlaybackDeviceLost: mocks.onPlaybackDeviceLost,
   onRenderProgress: mocks.onRenderProgress,
   onLandingStatus: mocks.onLandingStatus,
   onAnalysisProgress: mocks.onAnalysisProgress,
@@ -347,6 +349,7 @@ function resetApiMocks() {
   mocks.save.mockReset();
   mocks.onDragDropEvent.mockReset();
   mocks.onPlaybackTick.mockReset();
+  mocks.onPlaybackDeviceLost.mockReset();
   mocks.onRenderProgress.mockReset();
   mocks.onLandingStatus.mockReset();
   mocks.onAnalysisProgress.mockReset();
@@ -370,6 +373,7 @@ function resetApiMocks() {
   mocks.api.resolveCompressionPlan.mockResolvedValue(null);
   mocks.api.adaptiveCompressionEnabled.mockResolvedValue(false);
   mocks.onPlaybackTick.mockResolvedValue(() => {});
+  mocks.onPlaybackDeviceLost.mockResolvedValue(() => {});
   mocks.onRenderProgress.mockResolvedValue(() => {});
   mocks.onLandingStatus.mockResolvedValue(() => {});
   mocks.onAnalysisProgress.mockResolvedValue(() => {});
@@ -665,6 +669,90 @@ describe("useTrackMaster integration dispatches", () => {
     expect(afterStaleTick.isPlaying).toBe(false);
     expect(afterStaleTick.peakDbfs).toBe(-120);
     expect(afterStaleTick.lufsIntegrated).toBe(-120);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("surfaces playback device loss and clears stale playing meters", async () => {
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          device_lost?: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    let deviceLostHandler:
+      | ((event: { track_id: string | null; position_sec: number }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    mocks.onPlaybackDeviceLost.mockImplementation((handler) => {
+      deviceLostHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const track = makeTrack("device-loss-track", "C:/audio/device-loss.wav");
+    mocks.api.importTracks.mockResolvedValueOnce([track]);
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(playbackHandler).toBeDefined();
+      expect(deviceLostHandler).toBeDefined();
+    });
+
+    await act(async () => {
+      playbackHandler?.({
+        track_id: track.id,
+        position_sec: 14,
+        is_playing: true,
+        is_loaded: true,
+        peak_dbfs: -5,
+        gr_low_db: -3,
+        gr_mid_db: -4,
+        gr_high_db: -2,
+        lufs_momentary: -10,
+        lufs_integrated: -11,
+        spectrum_db: [-18, -16, -14],
+      });
+    });
+    expect(harness.current().transport.isPlaying).toBe(true);
+    expect(harness.current().transport.peakDbfs).toBe(-5);
+
+    await act(async () => {
+      deviceLostHandler?.({ track_id: track.id, position_sec: 14.25 });
+    });
+
+    expect(harness.current().playbackDeviceLost).toEqual({
+      track_id: track.id,
+      position_sec: 14.25,
+    });
+    expect(harness.current().transport.isPlaying).toBe(false);
+    expect(harness.current().transport.deviceLost).toBe(true);
+    expect(harness.current().transport.currentTimeSec).toBe(14.25);
+    expect(harness.current().transport.peakDbfs).toBe(-120);
+    expect(harness.current().transport.lufsIntegrated).toBe(-120);
+    expect(harness.current().transport.spectrumDb).toEqual([]);
+
+    await act(async () => {
+      harness.current().clearPlaybackDeviceLost();
+    });
+    expect(harness.current().playbackDeviceLost).toBeNull();
+    expect(harness.current().transport.deviceLost).toBe(false);
 
     await act(async () => {
       harness.root.unmount();

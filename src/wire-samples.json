@@ -469,6 +469,7 @@
     "volume_match": false
   },
   "playback_tick": {
+    "device_lost": false,
     "gr_high_db": -1.0,
     "gr_low_db": -1.5,
     "gr_mid_db": -1.25,

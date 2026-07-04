@@ -306,7 +306,8 @@ fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`).
 | G3 — doc-accuracy 20/21 | `(ledger commit)` | done — both verified accurate (iPhone doc matches shipped 4-preset picker; ENGINE_REFERENCE already regenerated post-lean), closed with evidence |
 | G2 — dead-code tail 11b (all six) | `77b88c9`, `0e108e6`, `ba06e93` | done — full lanes incl. both mobile bridges |
 | D5 — runtime-abuse review (workflow: 3 lenses + refuters) + 2 fixes | `f4e5520`, `cc413eb` | done — see below |
-| D5 follow-up — export cancellation + render job registry | `e13983e` | done — job-scoped progress, `cancel_render`, no-output cancellation pins; full frontend/Rust/mobile/slow lanes green |
+| D5 follow-up — export cancellation + render job registry (Codex) | `e13983e` | done — job-scoped progress, `cancel_render`, no-output cancellation pins; re-verified on review 2026-07-04: all lanes incl. mobile + slow fixture green |
+| D5 follow-up — playback device-loss surfacing (Codex) | `0883dee` | done — app-ticker stall detector, `playback:device-lost`, device-lost transport/banner recovery; re-verified on review 2026-07-04: all lanes incl. mobile green |
 
 ### D5 outcome (2026-07-03)
 
@@ -330,13 +331,28 @@ cancellation + render job registry"; (4) device loss (headphones unplug)
 leaves `is_playing = true` with a frozen playhead and no event — chip
 "Surface audio device loss to the UI".
 
-**Follow-up shipped (2026-07-04, `feat/export-cancellation`):** export
-cancellation + render job registry landed in `e13983e`. Track and album
-progress events now carry `job_id`, `cancel_render` is safe for missing,
-finished, and overlapping jobs, cancelled jobs return `JobStatus::Cancelled`
-without receipts/output paths, and partial render artifacts are swept. Verified
-with `npm test`, `npm run build`, `npm run build:windows`, the Rust fast lane,
-both mobile bridge lanes, Android arm64 check, and the slow real-fixture lane.
+**Both follow-ups shipped (2026-07-04, by Codex; adversarially reviewed and
+re-verified by Fable before merge):**
+
+*Export cancellation (`e13983e`):* track and album progress events now carry
+`job_id`, `cancel_render` is safe for missing, finished, and overlapping
+jobs, cancelled jobs return `JobStatus::Cancelled` without receipts/output
+paths, and partial render artifacts are swept (post-write cancel removes the
+written file; album cancel sweeps `written_paths`). Registry lifecycle is
+leak-free (register → spawn → await → remove on both exits).
+
+*Device-loss surfacing (`0883dee`):* the app ticker (not the audio callback —
+no new locks on the RT path) detects a loaded/playing snapshot whose playhead
+stalls for 20 ticks (~1 s), emits `playback:device-lost`, pauses and tags the
+sink while keeping the playhead anchored for retry or Original/Mastered
+switching, and the UI shows a recovery banner that clears after a successful
+output-device pick. Detector is one-shot and resets on track change / pause /
+seek / loop (loop mode never infers loss).
+
+Review verification (2026-07-04, both branches independently): frontend 494 +
+496, `npm run build`, Rust fast lane (fmt/clippy/full test), both mobile
+bridge lanes + Android arm64 check, and the slow real-fixture lane on the
+export branch.
 
 **Plausible (verify before acting):** backend `loop_region`
 (audio.rs:1955) may outlive track boundaries under hostile IPC ordering
@@ -346,9 +362,9 @@ switches.
 
 | G4 — CSS styling-debt batch (8 of 10) | `fdf1940` | done — recs re-derived from current CSS first (caught 2 that would have regressed visuals); verified live in browser preview; `.std-tile` consolidation + `.wf-overview` offset deferred with reasons (ledger 11a) |
 
-**Queue complete.** Every workstream (A–G), the audit follow-ups (D1–D5,
-B1–B3, F8), and all riders are shipped or explicitly closed/parked with
-reasons. Remaining owner-gated items: Wave-10 listening sittings (Spot-
-Listen Queue above + thread agenda in the ledger), the device-loss surfacing
-feature chip, `.std-tile` consolidation (owner-eye), and `.wf-overview`
-(visual A/B).
+**Queue complete — including both D5 follow-up chips (shipped 2026-07-04).**
+Every workstream (A–G), the audit follow-ups (D1–D5, B1–B3, F8), all riders,
+and both spawned feature chips are shipped or explicitly closed/parked with
+reasons. Remaining owner-gated items: Wave-10 listening sittings (Spot-Listen
+Queue above + thread agenda in the ledger), `.std-tile` consolidation
+(owner-eye), and `.wf-overview` (visual A/B).

@@ -92,7 +92,7 @@ function audioOutputErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-function useAudioOutputSettings(): AudioOutputSettingsState {
+function useAudioOutputSettings(onDeviceRecovered?: () => void): AudioOutputSettingsState {
   const [devices, setDevices] = useState<AudioOutputDevice[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState(() =>
     storedAudioOutputDevice(globalThis.localStorage),
@@ -183,6 +183,7 @@ function useAudioOutputSettings(): AudioOutputSettingsState {
             ? "Using system default."
             : "Audio output saved. Press Play to audition through that device.",
         );
+        onDeviceRecovered?.();
       } catch (err) {
         setSelectedDeviceId(previousDeviceId);
         persistAudioOutputDevice(globalThis.localStorage, previousDeviceId);
@@ -191,7 +192,7 @@ function useAudioOutputSettings(): AudioOutputSettingsState {
         setIsLoading(false);
       }
     },
-    [selectedDeviceId],
+    [selectedDeviceId, onDeviceRecovered],
   );
 
   return {
@@ -217,7 +218,7 @@ const EMPTY_AUDIO_OUTPUT_SETTINGS: AudioOutputSettingsState = {
 
 function App() {
   const tm = useTrackMaster();
-  const audioOutput = useAudioOutputSettings();
+  const audioOutput = useAudioOutputSettings(tm.clearPlaybackDeviceLost);
   const [chromePanel, setChromePanel] = useState<"settings" | "help" | null>(null);
   const [modeNotice, setModeNotice] = useState<string | null>(null);
   useWebviewZoomShortcuts();
@@ -421,8 +422,30 @@ function App() {
           </div>
         </div>
       )}
-      {(tm.error || tm.projectFeedback || modeNotice) && (
+      {(tm.playbackDeviceLost || tm.error || tm.projectFeedback || modeNotice) && (
         <div className="toast-stack" aria-live="polite">
+          {tm.playbackDeviceLost && (
+            <div className="device-loss-banner" role="alert">
+              <div className="device-loss-banner-copy">
+                <strong>Playback device disconnected.</strong>
+                <span>Choose an output in Settings, then press Play.</span>
+              </div>
+              <button
+                type="button"
+                className="ghost-btn device-loss-primary"
+                onClick={() => setChromePanel("settings")}
+              >
+                Choose device
+              </button>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={tm.clearPlaybackDeviceLost}
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
           {tm.error && (
             <Toast message={tm.error} tone="danger" onClose={tm.clearError} />
           )}

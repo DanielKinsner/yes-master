@@ -46,6 +46,8 @@ const mocks = vi.hoisted(() => {
     renderTrackPreview: vi.fn(),
     renderTrackMaster: vi.fn(),
     prepareWaveform: vi.fn(),
+    listAudioOutputDevices: vi.fn(),
+    setAudioOutputDevice: vi.fn(),
     runExportChecks: vi.fn(),
     openOutput: vi.fn(),
     saveProject: vi.fn(),
@@ -71,6 +73,7 @@ const mocks = vi.hoisted(() => {
   return {
     api,
     onPlaybackTick: vi.fn(),
+    onPlaybackDeviceLost: vi.fn(),
     onRenderProgress: vi.fn(),
     onLandingStatus: vi.fn(),
     onAnalysisProgress: vi.fn(),
@@ -84,6 +87,7 @@ vi.mock("./lib/api", () => ({
   ADAPTIVE_COMPRESSION_GATE_EVENT: "yes-master:adaptive-compression-gate",
   api: mocks.api,
   onPlaybackTick: mocks.onPlaybackTick,
+  onPlaybackDeviceLost: mocks.onPlaybackDeviceLost,
   onRenderProgress: mocks.onRenderProgress,
   onLandingStatus: mocks.onLandingStatus,
   onAnalysisProgress: mocks.onAnalysisProgress,
@@ -218,6 +222,7 @@ function resetApiMocks() {
   mocks.save.mockReset();
   mocks.onDragDropEvent.mockReset();
   mocks.onPlaybackTick.mockReset();
+  mocks.onPlaybackDeviceLost.mockReset();
   mocks.onRenderProgress.mockReset();
   mocks.onLandingStatus.mockReset();
   mocks.onAnalysisProgress.mockReset();
@@ -229,10 +234,13 @@ function resetApiMocks() {
   mocks.api.prepareWaveform.mockImplementation((trackId: string) =>
     Promise.resolve(makeWaveform(trackId)),
   );
+  mocks.api.listAudioOutputDevices.mockResolvedValue([]);
+  mocks.api.setAudioOutputDevice.mockResolvedValue(null);
   mocks.api.prewarmDecode.mockResolvedValue(null);
   mocks.api.autosaveSession.mockResolvedValue(null);
   mocks.api.stopPlayback.mockResolvedValue(null);
   mocks.onPlaybackTick.mockResolvedValue(() => {});
+  mocks.onPlaybackDeviceLost.mockResolvedValue(() => {});
   mocks.onRenderProgress.mockResolvedValue(() => {});
   mocks.onLandingStatus.mockResolvedValue(() => {});
   mocks.onAnalysisProgress.mockResolvedValue(() => {});

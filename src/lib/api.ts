@@ -14,6 +14,7 @@ import type {
   LandingStatus,
   LoopRegion,
   MasteringSettings,
+  PlaybackDeviceLost,
   PlaybackTick,
   PresetKind,
   ProjectState,
@@ -307,6 +308,14 @@ export function onPlaybackTick(
   handler: (tick: PlaybackTick) => void,
 ): Promise<UnlistenFn> {
   return listen<PlaybackTick>("playback:tick", (event) => handler(event.payload));
+}
+
+export function onPlaybackDeviceLost(
+  handler: (event: PlaybackDeviceLost) => void,
+): Promise<UnlistenFn> {
+  return listen<PlaybackDeviceLost>("playback:device-lost", (event) =>
+    handler(event.payload),
+  );
 }
 
 export interface RenderProgressEvent {

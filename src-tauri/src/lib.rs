@@ -70,6 +70,7 @@ pub fn run() {
                 // still-measuring landing gain, false when the corrective
                 // gain crossfades in. Emitted only on change.
                 let mut last_landing_status: Option<LandingStatus> = None;
+                let mut device_loss_detector = audio::PlaybackDeviceLossDetector::new();
                 loop {
                     std::thread::sleep(Duration::from_millis(50));
                     let Ok(snap) = player_state.snapshot() else {
@@ -86,6 +87,15 @@ pub fn run() {
                         last_landing_status = Some(landing_status.clone());
                         let _ = app_handle.emit("landing:status", landing_status);
                     }
+                    match device_loss_detector.observe(&snap) {
+                        audio::PlaybackDeviceLossDecision::Healthy => {}
+                        audio::PlaybackDeviceLossDecision::DeviceLost(event) => {
+                            player_state.mark_device_lost();
+                            let _ = app_handle.emit(audio::PLAYBACK_DEVICE_LOST_EVENT, event);
+                            continue;
+                        }
+                        audio::PlaybackDeviceLossDecision::SuppressStalledTick => continue,
+                    }
                     if !snap.is_loaded {
                         continue;
                     }
@@ -95,6 +105,7 @@ pub fn run() {
                         is_playing: snap.is_playing,
                         is_loaded: snap.is_loaded,
                         peak_dbfs: snap.peak_dbfs,
+                        device_lost: snap.device_lost,
                         peak_left_dbfs: snap.peak_left_dbfs,
                         peak_right_dbfs: snap.peak_right_dbfs,
                         gr_low_db: snap.gr_low_db,
