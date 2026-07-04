@@ -23,6 +23,10 @@ targets:
       path: YESMasterNative/Info.plist
       properties:
         CFBundleDisplayName: YES Master
+        # Store-readiness (S8.1): the app uses only exempt encryption (HTTPS /
+        # OS-provided), so App Store Connect must not ask for export-compliance
+        # docs on every build.
+        ITSAppUsesNonExemptEncryption: false
         LSRequiresIPhoneOS: true
         UIRequiresFullScreen: true
         UILaunchScreen:
