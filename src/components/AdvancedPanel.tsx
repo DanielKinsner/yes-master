@@ -447,15 +447,14 @@ function PerBandCompressorCard({
   const resetPerBandCompressor = () => {
     onAdvanced(resetCompressorSettingsToCurrentMode(settings, a));
   };
+  // (The per-band auto-label strings that used to live here were computed
+  // but never rendered — the JSX below reads the numeric
+  // `autoReadouts[active]` values directly. Audit Batch H tail.)
   const bandFields: Record<Band, {
     threshold: number | null;
     ratio: number | null;
     attack: number | null;
     release: number | null;
-    autoThreshold: string;
-    autoRatio: string;
-    autoAttack: string;
-    autoRelease: string;
     onThreshold: (v: number | null) => void;
     onRatio: (v: number | null) => void;
     onAttack: (v: number | null) => void;
@@ -466,10 +465,6 @@ function PerBandCompressorCard({
       ratio: a.compression_low_ratio,
       attack: a.compression_low_attack_ms,
       release: a.compression_low_release_ms,
-      autoThreshold: autoReadouts.low.thresholdLabel,
-      autoRatio: autoReadouts.low.ratioLabel,
-      autoAttack: autoReadouts.low.attackLabel,
-      autoRelease: autoReadouts.low.releaseLabel,
       onThreshold: (v) => onUpdate("compression_low_threshold_db", v),
       onRatio: (v) => onUpdate("compression_low_ratio", v),
       onAttack: (v) => onUpdate("compression_low_attack_ms", v),
@@ -480,10 +475,6 @@ function PerBandCompressorCard({
       ratio: a.compression_mid_ratio,
       attack: a.compression_mid_attack_ms,
       release: a.compression_mid_release_ms,
-      autoThreshold: autoReadouts.mid.thresholdLabel,
-      autoRatio: autoReadouts.mid.ratioLabel,
-      autoAttack: autoReadouts.mid.attackLabel,
-      autoRelease: autoReadouts.mid.releaseLabel,
       onThreshold: (v) => onUpdate("compression_mid_threshold_db", v),
       onRatio: (v) => onUpdate("compression_mid_ratio", v),
       onAttack: (v) => onUpdate("compression_mid_attack_ms", v),
@@ -494,10 +485,6 @@ function PerBandCompressorCard({
       ratio: a.compression_high_ratio,
       attack: a.compression_high_attack_ms,
       release: a.compression_high_release_ms,
-      autoThreshold: autoReadouts.high.thresholdLabel,
-      autoRatio: autoReadouts.high.ratioLabel,
-      autoAttack: autoReadouts.high.attackLabel,
-      autoRelease: autoReadouts.high.releaseLabel,
       onThreshold: (v) => onUpdate("compression_high_threshold_db", v),
       onRatio: (v) => onUpdate("compression_high_ratio", v),
       onAttack: (v) => onUpdate("compression_high_attack_ms", v),

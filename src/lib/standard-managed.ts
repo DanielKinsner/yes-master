@@ -105,17 +105,8 @@ export function forceAdvancedOnStandardEntry(args: {
   return args.isAlbum || (args.hasTrack && args.hasNonManagedEdits);
 }
 
-/// Settings-typed convenience over `forceAdvancedOnStandardEntry` — the
-/// original public form, kept so existing callers/tests stay pinned to one
-/// predicate.
-export function shouldForceAdvancedOnStandardEntry(args: {
-  isAlbum: boolean;
-  hasTrack: boolean;
-  settings: MasteringSettings;
-}): boolean {
-  return forceAdvancedOnStandardEntry({
-    isAlbum: args.isAlbum,
-    hasTrack: args.hasTrack,
-    hasNonManagedEdits: hasNonManagedEdits(args.settings),
-  });
-}
+// (The settings-typed `shouldForceAdvancedOnStandardEntry` convenience
+// wrapper was deleted 2026-07-03 (audit Batch H tail): its only caller was
+// its own test. The invariant tests now compose the production pieces —
+// `forceAdvancedOnStandardEntry` + `hasNonManagedEdits` — exactly the way
+// the navigation machine does.)

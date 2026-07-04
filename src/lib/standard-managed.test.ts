@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { MasteringSettings } from "../bindings";
 import { ADAPTIVE_STRENGTH_DEFAULT } from "../bindings";
-import { hasNonManagedEdits, resetToStandardManaged, shouldForceAdvancedOnStandardEntry } from "./standard-managed";
+import { forceAdvancedOnStandardEntry, hasNonManagedEdits, resetToStandardManaged } from "./standard-managed";
 
 function base(overrides: Partial<MasteringSettings> = {}): MasteringSettings {
   return {
@@ -198,20 +198,29 @@ describe("resetToStandardManaged", () => {
   });
 });
 
-describe("shouldForceAdvancedOnStandardEntry (always-clean invariant guard)", () => {
+describe("forceAdvancedOnStandardEntry (always-clean invariant guard)", () => {
+  // Composed exactly the way the navigation machine consumes it:
+  // hasNonManagedEdits(settings) feeds the boolean-typed predicate.
+  const guard = (args: { isAlbum: boolean; hasTrack: boolean; settings: ReturnType<typeof base> }) =>
+    forceAdvancedOnStandardEntry({
+      isAlbum: args.isAlbum,
+      hasTrack: args.hasTrack,
+      hasNonManagedEdits: hasNonManagedEdits(args.settings),
+    });
+
   it("is false for a clean track", () => {
-    expect(shouldForceAdvancedOnStandardEntry({ isAlbum: false, hasTrack: true, settings: base() })).toBe(false);
+    expect(guard({ isAlbum: false, hasTrack: true, settings: base() })).toBe(false);
   });
 
   it("is true when the selected track carries hidden non-managed edits", () => {
-    expect(shouldForceAdvancedOnStandardEntry({ isAlbum: false, hasTrack: true, settings: base({ eq_low_db: 2 }) })).toBe(true);
+    expect(guard({ isAlbum: false, hasTrack: true, settings: base({ eq_low_db: 2 }) })).toBe(true);
   });
 
   it("is true in album mode (Album Master is Advanced-only in v1)", () => {
-    expect(shouldForceAdvancedOnStandardEntry({ isAlbum: true, hasTrack: true, settings: base() })).toBe(true);
+    expect(guard({ isAlbum: true, hasTrack: true, settings: base() })).toBe(true);
   });
 
   it("is false when there is no selected track (nothing to leak)", () => {
-    expect(shouldForceAdvancedOnStandardEntry({ isAlbum: false, hasTrack: false, settings: base({ eq_low_db: 9 }) })).toBe(false);
+    expect(guard({ isAlbum: false, hasTrack: false, settings: base({ eq_low_db: 9 }) })).toBe(false);
   });
 });
