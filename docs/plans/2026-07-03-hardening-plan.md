@@ -91,6 +91,7 @@ this queue at the next listening sitting. (Two-tier policy, D2.)
 |---|---|---|---|
 | 2026-07-03 | A2 gate | Album renders no longer receive character-label loudness pulls (−1.25..+0.82 dB) or bias EQ/width/warmth/intensity moves — arc + source compensation only. Track Master unaffected. | Render a familiar album with tracks that used to trigger labels (heavy + acoustic mix); confirm the arc-only album still feels coherent and no track feels wrongly loud/quiet vs before. |
 | 2026-07-03 | RS-09 flush | Every export (track + album) now contains its true final ~3 ms (previously silently dropped) and no longer has a ~3 ms silent lead-in — output is sample-aligned with the source. | Render a track with a hard-cut ending or a long reverb/fade tail; listen to the very end and confirm the tail completes naturally. Nothing else should sound different. |
+| 2026-07-03 | B2 TP trim (`1407ba2`) | Delivery-profile exports whose chain output carried inter-sample peaks above the profile ceiling now get a uniform level-only safety trim down to the ceiling (worst synthetic case: drums × Loud × LoudRock, −1.68 dB). Tone/dynamics untouched — only overall level, and only on high-crest material at hot targets. Custom profile (no target) unaffected. | Render a punchy, transient-heavy track on LoudRock or Streaming; confirm it sounds identical apart from sitting slightly lower, and that the receipt's true peak now respects the ceiling. |
 
 ---
 
@@ -301,7 +302,8 @@ fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`).
 
 | F8 — low-rate air-band investigation | `d4810ed` | done — verified safe, no renormalization; invariant pinned in analysis.rs |
 | D4 — export I/O pass (fix + battery) | `057f07c`, `a5fdc25` | done — **real bug fixed**: never-overwrite finalize race (overlapping exports clobbered the earlier render; finalize now diverts to `__{n}` and reports the actual path); 6-case hostile-filesystem battery; slow fixture lane green |
+| B2 — landing accuracy matrix (fix + matrix) | `1407ba2`, `a42a476` | done — **real bug fixed**: true-peak ceiling breach on high-crest × hot-target exports (up to +1.68 dBTP over the profile promise); landing now trims level-only down to the ceiling; 27-cell matrix pins target/ceiling/honesty/receipt-truth; slow lane green; Spot-Listen entry added |
 
-**Next up (not yet started):** D5 runtime-abuse review (`audio.rs` chain
-swaps); B2 track-master landing matrix; G riders (dead-code 11b,
-doc-accuracy 20/21, CSS 11a with browser preview).
+**Next up:** D5 runtime-abuse review (workflow running — findings to
+triage); G riders (dead-code 11b, doc-accuracy 20/21, CSS 11a with
+browser preview).
