@@ -160,6 +160,36 @@ Remove-Item Env:\YES_MASTER_CONFIDENCE_GATING
 Use the ledger as evidence, but do not treat it as a listening substitute. The
 runner output and rendered WAVs are private/ignored and must not be committed.
 
+## Preset Fingerprint Harness
+
+The committable, synthetic-fixture counterpart to the private runners:
+`src-tauri/tests/preset_fingerprint.rs` renders every factory preset against
+deterministic in-test fixtures (pink bed, drum loop, tonal pad, 1 kHz probe)
+and gates three properties in CI:
+
+- **safety bounds** — band-tilt/crest/LUFS/width/THD caps at default intensity;
+- **distinctness** — a minimum character distance across every preset pair;
+- **tolerance golden** — the full fingerprint table pinned OS-independently
+  (`tests/golden/preset_fingerprint.json`).
+
+After a deliberate, owner-approved retune:
+
+```powershell
+cd src-tauri
+$env:YES_MASTER_UPDATE_GOLDEN = "1"
+cargo test --test preset_fingerprint
+Remove-Item Env:\YES_MASTER_UPDATE_GOLDEN
+# then commit the JSON diff and queue the listening note
+```
+
+To arm a listening sitting with the owner-readable report
+(`test-output/preset-fingerprints/`, git-ignored):
+
+```powershell
+cd src-tauri
+cargo test --test preset_fingerprint write_owner_fingerprint_report -- --ignored
+```
+
 ## Tooling Notes
 
 - Clippy is part of the hard local gate. If it is missing on a fresh toolchain,
