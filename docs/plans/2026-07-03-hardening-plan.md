@@ -303,7 +303,37 @@ fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`).
 | F8 — low-rate air-band investigation | `d4810ed` | done — verified safe, no renormalization; invariant pinned in analysis.rs |
 | D4 — export I/O pass (fix + battery) | `057f07c`, `a5fdc25` | done — **real bug fixed**: never-overwrite finalize race (overlapping exports clobbered the earlier render; finalize now diverts to `__{n}` and reports the actual path); 6-case hostile-filesystem battery; slow fixture lane green |
 | B2 — landing accuracy matrix (fix + matrix) | `1407ba2`, `a42a476` | done — **real bug fixed**: true-peak ceiling breach on high-crest × hot-target exports (up to +1.68 dBTP over the profile promise); landing now trims level-only down to the ceiling; 27-cell matrix pins target/ceiling/honesty/receipt-truth; slow lane green; Spot-Listen entry added |
+| G3 — doc-accuracy 20/21 | `(ledger commit)` | done — both verified accurate (iPhone doc matches shipped 4-preset picker; ENGINE_REFERENCE already regenerated post-lean), closed with evidence |
+| G2 — dead-code tail 11b (all six) | `77b88c9`, `0e108e6`, `ba06e93` | done — full lanes incl. both mobile bridges |
+| D5 — runtime-abuse review (workflow: 3 lenses + refuters) + 2 fixes | `f4e5520`, `cc413eb` | done — see below |
 
-**Next up:** D5 runtime-abuse review (workflow running — findings to
-triage); G riders (dead-code 11b, doc-accuracy 20/21, CSS 11a with
-browser preview).
+### D5 outcome (2026-07-03)
+
+**33 abuse patterns verified clean** — the `800e6ad` chain-reuse machinery
+(generation ordering, state inheritance across swaps, allocation
+backpressure, lock discipline), play-epoch guards, seek clamping, fade
+latching, prewarm stale-result guards, and shutdown drop order all held
+under adversarial review. Bonus: the thread-#4 5s/15s timeout-asymmetry
+hint is stale — both Play and PlayMaster reply timeouts are 15 s
+(`PLAYBACK_REPLY_TIMEOUT`, audio.rs:654).
+
+**Confirmed + fixed here:** (1) album pass-2/manifest failures left
+pass-1 per-track WAVs behind — the no-partial-output sweep now covers
+the whole tail (`f4e5520`); (2) process kill mid-render stranded
+`.uuid.tmp` files in app-data forever — startup sweep added (`cc413eb`).
+
+**Confirmed, feature-sized → spawned as follow-up chips:** (3) no export
+cancellation exists (`JobStatus::Cancelled` never constructed; overlapping
+exports emit indistinguishable progress events) — chip "Add export
+cancellation + render job registry"; (4) device loss (headphones unplug)
+leaves `is_playing = true` with a frozen playhead and no event — chip
+"Surface audio device loss to the UI".
+
+**Plausible (verify before acting):** backend `loop_region`
+(audio.rs:1955) may outlive track boundaries under hostile IPC ordering
+(fire-and-forget stop/setLoop/play from one microtask). Undecidable from
+code alone; revisit if loop weirdness is ever reported across track
+switches.
+
+**Next up:** G4 — CSS styling-debt batch (11a, needs browser preview) is
+the last open queue item.
