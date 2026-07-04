@@ -292,8 +292,9 @@ fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`).
 | E — docs (TESTING.md, ledger thread #5) | `6d1255a` | done |
 | E — adversarial verify (workflow, 3 lenses) + max-intensity hole fix | `31ab65d` | done — safety sweep at intensity 1.0 + hot no-clip pin; K-weighting caveat documented |
 | F — capture security pass (premise corrected: no backend exists) | `7c99ffe` + docs | done — form safety posture pinned; provider checklist parked above |
+| D3 — session/project JSON hostile pass (fix + corpus) | `e1d0bbf`, `41bc0ab` | done — **real bug fixed**: a 1e39 in a .ams.json made every subsequent save unloadable (non-finite → `null` → parse failure = silent session loss); loads now clamp raw floats to f32-finite, saves verify read-back before rename |
 
-**Next up (not yet started):** D3 session-JSON extension; D4 export-I/O
-failure battery; D5 runtime-abuse review (`audio.rs` chain swaps); B2
-track-master landing matrix; G riders (dead-code 11b, doc-accuracy 20/21,
-CSS 11a with browser preview). F8 (low-rate air-band) awaits investigation.
+**Next up (not yet started):** D4 export-I/O failure battery; D5
+runtime-abuse review (`audio.rs` chain swaps); B2 track-master landing
+matrix; G riders (dead-code 11b, doc-accuracy 20/21, CSS 11a with browser
+preview). F8 (low-rate air-band) awaits investigation.
