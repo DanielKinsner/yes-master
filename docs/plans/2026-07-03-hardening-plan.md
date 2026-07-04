@@ -306,6 +306,7 @@ fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`).
 | G3 — doc-accuracy 20/21 | `(ledger commit)` | done — both verified accurate (iPhone doc matches shipped 4-preset picker; ENGINE_REFERENCE already regenerated post-lean), closed with evidence |
 | G2 — dead-code tail 11b (all six) | `77b88c9`, `0e108e6`, `ba06e93` | done — full lanes incl. both mobile bridges |
 | D5 — runtime-abuse review (workflow: 3 lenses + refuters) + 2 fixes | `f4e5520`, `cc413eb` | done — see below |
+| D5 follow-up — playback device-loss surfacing | `0883dee` | done — app-ticker stall detector, `playback:device-lost`, device-lost transport/banner recovery; full frontend/Rust/mobile/Windows lanes green |
 
 ### D5 outcome (2026-07-03)
 
@@ -329,6 +330,16 @@ cancellation + render job registry"; (4) device loss (headphones unplug)
 leaves `is_playing = true` with a frozen playhead and no event — chip
 "Surface audio device loss to the UI".
 
+**Follow-up shipped (2026-07-04, `feat/device-loss-surfacing`):** device-loss
+surfacing landed in `0883dee`. The app ticker now detects a loaded/playing
+snapshot whose playhead stalls, emits `playback:device-lost`, asks the audio
+thread to pause/tag the loaded sink, suppresses stale playing ticks for that
+frozen segment, and keeps the playhead anchored for retry or Original/Mastered
+switching. The UI shows a recovery banner that opens Settings and clears after
+a successful output-device selection. Verified with `npm test`,
+`npm run build`, `npm run build:windows`, the Rust fast lane, both mobile bridge
+test lanes, and Android arm64 check.
+
 **Plausible (verify before acting):** backend `loop_region`
 (audio.rs:1955) may outlive track boundaries under hostile IPC ordering
 (fire-and-forget stop/setLoop/play from one microtask). Undecidable from
@@ -340,6 +351,6 @@ switches.
 **Queue complete.** Every workstream (A–G), the audit follow-ups (D1–D5,
 B1–B3, F8), and all riders are shipped or explicitly closed/parked with
 reasons. Remaining owner-gated items: Wave-10 listening sittings (Spot-
-Listen Queue above + thread agenda in the ledger), the two spawned
-feature chips (export cancellation, device-loss surfacing), `.std-tile`
-consolidation (owner-eye), and `.wf-overview` (visual A/B).
+Listen Queue above + thread agenda in the ledger), the export-cancellation
+feature chip, `.std-tile` consolidation (owner-eye), and `.wf-overview`
+(visual A/B).
