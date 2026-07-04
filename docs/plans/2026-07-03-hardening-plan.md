@@ -306,6 +306,7 @@ fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`).
 | G3 — doc-accuracy 20/21 | `(ledger commit)` | done — both verified accurate (iPhone doc matches shipped 4-preset picker; ENGINE_REFERENCE already regenerated post-lean), closed with evidence |
 | G2 — dead-code tail 11b (all six) | `77b88c9`, `0e108e6`, `ba06e93` | done — full lanes incl. both mobile bridges |
 | D5 — runtime-abuse review (workflow: 3 lenses + refuters) + 2 fixes | `f4e5520`, `cc413eb` | done — see below |
+| D5 follow-up — export cancellation + render job registry | `e13983e` | done — job-scoped progress, `cancel_render`, no-output cancellation pins; full frontend/Rust/mobile/slow lanes green |
 
 ### D5 outcome (2026-07-03)
 
@@ -329,6 +330,14 @@ cancellation + render job registry"; (4) device loss (headphones unplug)
 leaves `is_playing = true` with a frozen playhead and no event — chip
 "Surface audio device loss to the UI".
 
+**Follow-up shipped (2026-07-04, `feat/export-cancellation`):** export
+cancellation + render job registry landed in `e13983e`. Track and album
+progress events now carry `job_id`, `cancel_render` is safe for missing,
+finished, and overlapping jobs, cancelled jobs return `JobStatus::Cancelled`
+without receipts/output paths, and partial render artifacts are swept. Verified
+with `npm test`, `npm run build`, `npm run build:windows`, the Rust fast lane,
+both mobile bridge lanes, Android arm64 check, and the slow real-fixture lane.
+
 **Plausible (verify before acting):** backend `loop_region`
 (audio.rs:1955) may outlive track boundaries under hostile IPC ordering
 (fire-and-forget stop/setLoop/play from one microtask). Undecidable from
@@ -340,6 +349,6 @@ switches.
 **Queue complete.** Every workstream (A–G), the audit follow-ups (D1–D5,
 B1–B3, F8), and all riders are shipped or explicitly closed/parked with
 reasons. Remaining owner-gated items: Wave-10 listening sittings (Spot-
-Listen Queue above + thread agenda in the ledger), the two spawned
-feature chips (export cancellation, device-loss surfacing), `.std-tile`
-consolidation (owner-eye), and `.wf-overview` (visual A/B).
+Listen Queue above + thread agenda in the ledger), the device-loss surfacing
+feature chip, `.std-tile` consolidation (owner-eye), and `.wf-overview`
+(visual A/B).
