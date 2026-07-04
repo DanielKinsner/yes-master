@@ -4,6 +4,13 @@ Drafted 2026-07-04 by Fable for the owner to paste into Codex. Every file:line
 pointer below was re-verified against `main` on 2026-07-04. Nothing in this
 batch is listening-gated and nothing needs the owner's keystore.
 
+> **EXECUTED 2026-07-04 by Fable directly** (owner asked to continue until
+> only listening gates remain) — do NOT run this prompt again. Outcome ledger:
+> thread #11 in `docs/OPEN_THREADS_AND_DECISIONS.md`. S8.2 and S8.3b closed
+> as already-shipped with evidence; S8.1(a), S8.3a, and both IP-05 leftovers
+> landed on `feat/iphone-store-readiness`; Swift halves compile/run on the
+> mac CI lane once billing is fixed.
+
 ---
 
 You are working in the YES Master repo. **Read `AGENTS.md` first** and follow

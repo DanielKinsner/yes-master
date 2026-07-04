@@ -12,6 +12,34 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-07-04 — Hardening follow-ups + iPhone store-readiness batch
+
+Same-day continuation of the hardening push (branches
+`harden/2026-07-04-loop-region-followup`, `feat/iphone-store-readiness`):
+
+- **loop_region hostile-IPC fix.** The D5 "plausible" finding confirmed real:
+  the audio thread never cleared an armed loop region on track switch — only a
+  racing fire-and-forget frontend IPC message did. The clear now rides on the
+  Play/Stop commands themselves (same-track O/M swaps and arm-then-play keep
+  the region); policy pinned by three tests.
+- **`.wf-overview` offset closed (ledger 11a → 9/10).** The margin half of the
+  paired 30px offset proved visually inert; browser-preview A/B measured a
+  bounding box identical to the fraction of a pixel. Only `.std-tile` stays
+  parked (owner-eye).
+- **iPhone store-readiness (Wave 8, keystore-free).**
+  `ITSAppUsesNonExemptEncryption:false` declared; required-reason API audit
+  clean against the existing privacy manifest; progress honesty (S8.2) and the
+  stale-landing guard (S8.3b) closed as already-shipped with evidence; typed
+  FFI error codes replace message sniffing (S8.3a — pinned on both sides of
+  the wire, with `CommandError::with_context` preserving the error class
+  through analyze aggregation); the silent adaptive-context fallback is
+  structurally removed (live attach now fails like render); the untruthful
+  Documents-folder flags dropped. Swift halves compile/run on the mac CI lane.
+  Remaining owner-gated: Android signing (keystore), background-audio
+  (decision), archive validation (Mac). **Note: CI has been billing-blocked
+  since 2026-07-04 — every lane, including the first macOS run of the
+  fingerprint tolerance goldens, needs a re-run once GitHub billing is fixed.**
+
 ## 2026-07-03/04 — Hostile-input hardening push + D5 follow-ups
 
 A grill-driven hardening sweep (plan + owner decisions:
