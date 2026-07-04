@@ -435,13 +435,13 @@ describe("StandardRightRail", () => {
       <StandardView
         tm={fakeTm({
           isRendering: true,
-          renderProgress: { kind: "master", fraction: 0.4 },
+          renderProgress: { job_id: "render-job-1", kind: "master", fraction: 0.4 },
         })}
         onEnterAdvanced={() => {}}
       />,
     );
     const label = busy.container.querySelector(".std-render-progress-label");
-    expect(label?.textContent).toBe("Master render 40%");
+    expect(label?.textContent).toContain("Master render 40%");
     const bar = busy.container.querySelector<HTMLElement>(".std-render-progress [role='progressbar']");
     expect(bar?.getAttribute("aria-valuenow")).toBe("40");
     expect(bar?.querySelector<HTMLElement>(".std-render-progress-fill")?.style.width).toBe("40%");
@@ -462,13 +462,13 @@ describe("StandardRightRail", () => {
       <StandardView
         tm={fakeTm({
           isExporting: true,
-          renderProgress: { kind: "master", fraction: 0.6 },
+          renderProgress: { job_id: "render-job-1", kind: "master", fraction: 0.6 },
         })}
         onEnterAdvanced={() => {}}
       />,
     );
     const label = exporting.container.querySelector(".std-render-progress-label");
-    expect(label?.textContent).toBe("Master render 60%");
+    expect(label?.textContent).toContain("Master render 60%");
     const bar = exporting.container.querySelector<HTMLElement>(
       ".std-render-progress [role='progressbar']",
     );

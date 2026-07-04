@@ -52,6 +52,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(profile_store)
         .manage(player)
+        .manage(engine::RenderJobRegistry::default())
         .setup(|app| {
             // D5: reclaim render tmp files stranded by a process kill /
             // OS shutdown mid-render (no render can be running yet).
@@ -113,6 +114,7 @@ pub fn run() {
             engine::analyze_tracks,
             engine::render_track_preview,
             engine::render_track_master,
+            engine::cancel_render,
             engine::plan_album,
             engine::render_album_plan,
             audio::prepare_waveform,

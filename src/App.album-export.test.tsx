@@ -119,6 +119,7 @@ const warningCheck: QualityCheck = {
 function renderJob(outputPaths: string[]): RenderJob {
   return {
     id: "render-job-1",
+    job_id: "render-job-1",
     kind: "master",
     target_tracks: [track.id],
     status: { status: "done" },

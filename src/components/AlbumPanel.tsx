@@ -58,6 +58,7 @@ export function AlbumPanel({
   );
   const renderedRate =
     albumExportReport && formatSampleRate(albumExportReport.rendered_sample_rate);
+  const exportCancelled = albumExportReport?.status.status === "cancelled";
   const requestedRate =
     albumExportReport?.requested_sample_rate == null
       ? "Auto"
@@ -148,7 +149,15 @@ export function AlbumPanel({
           ×{albumIntensity.toFixed(2)}
         </span>
       </div>
-      {albumExportReport && (
+      {albumExportReport && exportCancelled && (
+        <div className="album-export-receipt is-cancelled" role="status">
+          <span className="album-export-receipt-label">Export cancelled:</span>
+          <span className="album-export-receipt-meta">
+            No album files were written.
+          </span>
+        </div>
+      )}
+      {albumExportReport && !exportCancelled && (
         <div className="album-export-receipt">
           <span className="album-export-receipt-label">Last export:</span>
           <code className="album-export-receipt-path">

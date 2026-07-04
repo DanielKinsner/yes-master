@@ -69,6 +69,7 @@
   "album_render_report": {
     "album_wav_path": "out/album.wav",
     "bit_depth": 24,
+    "job_id": "wire-album-job",
     "manifest_path": "out/album.manifest.json",
     "rendered_channels": 2,
     "rendered_sample_rate": 48000,
@@ -81,6 +82,9 @@
       44100,
       48000
     ],
+    "status": {
+      "status": "done"
+    },
     "tracks": [
       {
         "measured_lufs": -13.5,
@@ -681,6 +685,7 @@
   },
   "render_job": {
     "id": "wire-job",
+    "job_id": "wire-job",
     "kind": "master",
     "measurements": {
       "bit_depth": 24,

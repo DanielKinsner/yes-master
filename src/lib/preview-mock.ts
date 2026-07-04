@@ -321,8 +321,16 @@ export async function mockInvoke<T>(
 
     case "render_album_plan":
       return {
+        job_id: `mock-album-render-${Date.now()}`,
+        status: { status: "done" },
         album_wav_path: "/preview/album.wav",
         manifest_path: "/preview/manifest.json",
+        requested_sample_rate: null,
+        rendered_sample_rate: 44_100,
+        source_sample_rates: [44_100],
+        bit_depth: 24,
+        rendered_channels: 2,
+        source_channels: [2],
         tracks: [],
       } as unknown as T;
 
@@ -330,8 +338,10 @@ export async function mockInvoke<T>(
     case "render_track_master": {
       const trackId = (args?.trackId as TrackId | undefined) ?? mockLoadedTrackId ?? PREVIEW_TRACK_ID;
       const outputPath = (args?.outputPath as string | null | undefined) ?? "/preview/output.wav";
+      const jobId = `mock-render-${Date.now()}`;
       return {
-        id: `mock-render-${Date.now()}`,
+        id: jobId,
+        job_id: jobId,
         kind: cmd === "render_track_master" ? "master" : "preview",
         target_tracks: [trackId],
         status: { status: "done" },
@@ -340,6 +350,9 @@ export async function mockInvoke<T>(
         output_paths: [outputPath],
       } as unknown as T;
     }
+
+    case "cancel_render":
+      return null as unknown as T;
 
     case "run_export_checks":
       return [] as unknown as T;

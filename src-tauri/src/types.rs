@@ -738,6 +738,7 @@ pub enum JobStatus {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RenderJob {
     pub id: String,
+    pub job_id: String,
     pub kind: RenderKind,
     pub target_tracks: Vec<TrackId>,
     pub status: JobStatus,

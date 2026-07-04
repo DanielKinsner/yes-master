@@ -52,6 +52,8 @@ describe("AlbumPanel", () => {
     const props = {
       ...baseProps(),
       albumExportReport: {
+        job_id: "album-render-job",
+        status: { status: "done" as const },
         album_wav_path: "C:/Masters/album_continuous.wav",
         manifest_path: "C:/Masters/manifest.json",
         requested_sample_rate: null,
@@ -92,6 +94,8 @@ describe("AlbumPanel", () => {
     const props = {
       ...baseProps(),
       albumExportReport: {
+        job_id: "album-render-job",
+        status: { status: "done" as const },
         album_wav_path: "C:/Masters/album_continuous.wav",
         manifest_path: "C:/Masters/manifest.json",
         requested_sample_rate: null,
@@ -121,5 +125,31 @@ describe("AlbumPanel", () => {
     const receipt = container.querySelector(".album-export-receipt");
     expect(receipt?.textContent).toContain("Folded source 4 ch to stereo");
     expect(receipt?.textContent).not.toContain("Override:");
+  });
+
+  it("renders cancelled album exports without a blank path", async () => {
+    const props = {
+      ...baseProps(),
+      albumExportReport: {
+        job_id: "album-render-job",
+        status: { status: "cancelled" as const },
+        album_wav_path: "",
+        manifest_path: "",
+        requested_sample_rate: null,
+        rendered_sample_rate: 48_000,
+        source_sample_rates: [48_000],
+        bit_depth: 24,
+        rendered_channels: 2,
+        source_channels: [2],
+        tracks: [],
+      },
+    };
+
+    const { container } = await renderNode(<AlbumPanel {...props} />);
+
+    const receipt = container.querySelector(".album-export-receipt");
+    expect(receipt?.textContent).toContain("Export cancelled");
+    expect(receipt?.textContent).toContain("No album files were written.");
+    expect(container.querySelector(".album-export-receipt-path")).toBeNull();
   });
 });

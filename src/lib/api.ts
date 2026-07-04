@@ -10,6 +10,7 @@ import type {
   ExportReport,
   GuardrailReadout,
   ImportedTrack,
+  JobStatus,
   LandingStatus,
   LoopRegion,
   MasteringSettings,
@@ -48,6 +49,8 @@ export interface AlbumTrackRenderRecord {
 }
 
 export interface AlbumRenderReport {
+  job_id: string;
+  status: JobStatus;
   album_wav_path: string;
   manifest_path: string;
   requested_sample_rate: number | null;
@@ -293,6 +296,11 @@ export const api = {
       request: { plan, tracks },
       outputDir: outputDir ?? null,
     }),
+
+  cancelRender: (jobId: string) =>
+    invoke<null>("cancel_render", {
+      jobId,
+    }),
 };
 
 export function onPlaybackTick(
@@ -302,6 +310,7 @@ export function onPlaybackTick(
 }
 
 export interface RenderProgressEvent {
+  job_id: string;
   track_id: TrackId;
   kind: "preview" | "master" | "album";
   fraction: number;

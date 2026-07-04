@@ -33,7 +33,7 @@ import type {
   Preset,
   UserPreset,
 } from "./bindings";
-import type { PlaybackKindUI } from "./hooks/useTrackMaster";
+import type { PlaybackKindUI, RenderProgressState } from "./hooks/useTrackMaster";
 import { LOUDNESS_PROFILES, loudnessTargetDisplay } from "./lib/effective-settings";
 import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
 import { api } from "./lib/api";
@@ -377,6 +377,11 @@ function App() {
         canExport={tm.mode === "album" ? tm.tracks.length > 0 : !!tm.selectedAnalysis}
         isExporting={tm.mode === "album" ? tm.albumRendering : tm.isExporting}
         isRendering={tm.isRendering}
+        renderProgress={tm.renderProgress}
+        renderFeedback={tm.renderFeedback}
+        cancelRenderPending={
+          !!tm.renderProgress && tm.cancelRequestedJobId === tm.renderProgress.job_id
+        }
         isAnalyzing={tm.isAnalyzing}
         onReanalyze={
           tm.selectedTrack
@@ -389,6 +394,7 @@ function App() {
         canRenderPreview={!!tm.selectedAnalysis}
         onUpdatePreview={tm.updatePreview}
         onExport={tm.mode === "album" ? tm.exportAlbumPlan : tm.exportMaster}
+        onCancelRender={tm.cancelActiveRender}
       />
         </>
       )}
@@ -1225,7 +1231,7 @@ export function TrackHeader({
   analysisProgress: { label: string; progress: number } | null;
   isRendering: boolean;
   isPlaying: boolean;
-  renderProgress: { fraction: number; kind: "preview" | "master" | "album" } | null;
+  renderProgress: RenderProgressState | null;
   onPlaybackKindChange: (kind: PlaybackKindUI) => void;
   onVolumeMatchChange: (on: boolean) => void;
   onExportLufsPreviewChange: (on: boolean) => void;
@@ -1297,7 +1303,7 @@ function SessionStatus({
 }: {
   isRendering: boolean;
   isAnalyzing: boolean;
-  renderProgress: { fraction: number; kind: "preview" | "master" | "album" } | null;
+  renderProgress: RenderProgressState | null;
   analysisProgress: { label: string; progress: number } | null;
   isPlaying: boolean;
 }) {

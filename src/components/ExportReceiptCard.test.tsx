@@ -16,6 +16,7 @@ vi.mock("../lib/api", () => ({
 function job(): RenderJob {
   return {
     id: "job-1",
+    job_id: "job-1",
     kind: "master",
     target_tracks: ["t1"],
     status: { status: "done" },

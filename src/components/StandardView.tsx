@@ -442,7 +442,25 @@ function StandardRightRail({
         {activeRenderProgress && (
           <div className="std-render-progress" role="status" aria-live="polite">
             <div className="std-render-progress-label">
-              {activeRenderProgress.label} {activeRenderProgress.percent}%
+              <span>
+                {activeRenderProgress.label} {activeRenderProgress.percent}%
+              </span>
+              <button
+                type="button"
+                className="ghost-btn std-render-cancel"
+                disabled={
+                  !tm.renderProgress ||
+                  tm.cancelRequestedJobId === tm.renderProgress.job_id
+                }
+                onClick={() => {
+                  void tm.cancelActiveRender();
+                }}
+              >
+                {tm.renderProgress &&
+                tm.cancelRequestedJobId === tm.renderProgress.job_id
+                  ? "Cancelling..."
+                  : "Cancel"}
+              </button>
             </div>
             <div
               className="std-render-progress-track"
@@ -458,6 +476,11 @@ function StandardRightRail({
               />
             </div>
           </div>
+        )}
+        {tm.renderFeedback && (
+          <p className="std-export-note" role="status">
+            {tm.renderFeedback.message}
+          </p>
         )}
         {notes?.invalid && (
           <p className="std-export-block" role="alert">

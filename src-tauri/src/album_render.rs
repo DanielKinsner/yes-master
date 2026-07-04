@@ -4,8 +4,8 @@ use crate::analysis::{
 };
 use crate::engine::{
     comparable_existing_or_parent_path, measure_and_apply_ceiling_bounded_landing,
-    measure_integrated_lufs, AlbumPlanRenderRequest, AlbumRenderReport, AlbumTrackRenderInput,
-    AlbumTrackRenderRecord,
+    measure_integrated_lufs, render_cancelled, AlbumPlanRenderRequest, AlbumRenderReport,
+    AlbumTrackRenderInput, AlbumTrackRenderRecord,
 };
 use crate::sample_rate::convert_interleaved;
 use crate::types::*;
@@ -14,6 +14,7 @@ use crate::wav_writer::{
 };
 use serde::Serialize;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicBool;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Resolve the album-wide delivery sample rate. An explicit request wins;
@@ -533,6 +534,19 @@ pub fn render_album_plan_impl(
     out_dir: &Path,
     on_progress: Option<&dyn Fn(f32)>,
 ) -> CommandResult<AlbumRenderReport> {
+    render_album_plan_impl_with_cancel(request, out_dir, on_progress, None, None)
+}
+
+pub fn render_album_plan_impl_with_cancel(
+    request: &AlbumPlanRenderRequest,
+    out_dir: &Path,
+    on_progress: Option<&dyn Fn(f32)>,
+    cancel_flag: Option<&AtomicBool>,
+    job_id: Option<&str>,
+) -> CommandResult<AlbumRenderReport> {
+    let job_id = job_id
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     if request.plan.tracks.is_empty() {
         return Err(CommandError::Other("AlbumPlan has no tracks".to_string()));
     }
@@ -591,6 +605,17 @@ pub fn render_album_plan_impl(
     if let Some(cb) = on_progress {
         cb(0.0);
     }
+    if render_cancelled(cancel_flag) {
+        return Ok(cancelled_album_report(
+            job_id,
+            request,
+            album_sample_rate,
+            source_rates,
+            bit_depth,
+            album_channels,
+            source_channels,
+        ));
+    }
 
     // Two passes:
     //   Pass 1 - decode + render each track into samples in memory, write
@@ -613,6 +638,9 @@ pub fn render_album_plan_impl(
     let mut written_paths: Vec<PathBuf> = Vec::with_capacity(total_tracks);
     let pass1_result = (|| -> CommandResult<()> {
         for (i, entry) in request.plan.tracks.iter().enumerate() {
+            if render_cancelled(cancel_flag) {
+                return Err(CommandError::Other("album render cancelled".to_string()));
+            }
             let input = settings_by_id
                 .get(entry.track_id.as_str())
                 .copied()
@@ -708,6 +736,9 @@ pub fn render_album_plan_impl(
             let track_total = samples.len();
             let mut processed = 0;
             while processed < track_total {
+                if render_cancelled(cancel_flag) {
+                    return Err(CommandError::Other("album render cancelled".to_string()));
+                }
                 let end = (processed + chunk_samples).min(track_total);
                 chain.process_interleaved(&mut samples[processed..end], channels_usize);
                 processed = end;
@@ -774,6 +805,9 @@ pub fn render_album_plan_impl(
                 bit_depth,
             )?;
             written_paths.push(per_track_path.clone());
+            if render_cancelled(cancel_flag) {
+                return Err(CommandError::Other("album render cancelled".to_string()));
+            }
 
             let measured_lufs = sanitize_lufs(measure_integrated_lufs(
                 &samples,
@@ -799,6 +833,17 @@ pub fn render_album_plan_impl(
         for p in &written_paths {
             let _ = std::fs::remove_file(p);
         }
+        if render_cancelled(cancel_flag) {
+            return Ok(cancelled_album_report(
+                job_id,
+                request,
+                album_sample_rate,
+                source_rates,
+                bit_depth,
+                album_channels,
+                source_channels,
+            ));
+        }
         return Err(err);
     }
 
@@ -808,6 +853,20 @@ pub fn render_album_plan_impl(
     // — the no-partial-output promise (A5b) covers pass-2 and manifest
     // failures too, not just pass-1 (D5 runtime-abuse review finding):
     // a failed album export must not leave the per-track WAVs behind.
+    if render_cancelled(cancel_flag) {
+        for p in &written_paths {
+            let _ = std::fs::remove_file(p);
+        }
+        return Ok(cancelled_album_report(
+            job_id,
+            request,
+            album_sample_rate,
+            source_rates,
+            bit_depth,
+            album_channels,
+            source_channels,
+        ));
+    }
     let pass2_result = (|| -> CommandResult<(PathBuf, PathBuf)> {
         let album_path = unique_album_path(out_dir, &source_paths)?;
         let spec = wav_spec(album_channels, album_sample_rate, bit_depth)?;
@@ -816,6 +875,9 @@ pub fn render_album_plan_impl(
             let mut album_writer = hound::WavWriter::create(&album_tmp_path, spec)
                 .map_err(|e| CommandError::Io(e.to_string()))?;
             for (i, samples) in rendered_samples.iter().enumerate() {
+                if render_cancelled(cancel_flag) {
+                    return Err(CommandError::Other("album render cancelled".to_string()));
+                }
                 write_samples_into_writer(&mut album_writer, samples, bit_depth)?;
                 if i + 1 < rendered_samples.len() {
                     // Transition slot between track i and track i+1.
@@ -838,6 +900,10 @@ pub fn render_album_plan_impl(
         if let Err(err) = album_write_result {
             let _ = std::fs::remove_file(&album_tmp_path);
             return Err(err);
+        }
+        if render_cancelled(cancel_flag) {
+            let _ = std::fs::remove_file(&album_tmp_path);
+            return Err(CommandError::Other("album render cancelled".to_string()));
         }
         let album_path = match finalize_never_overwrite(&album_tmp_path, &album_path) {
             Ok(p) => p,
@@ -863,8 +929,12 @@ pub fn render_album_plan_impl(
         };
         let manifest_json = serde_json::to_string_pretty(&manifest)
             .map_err(|e| CommandError::Other(format!("manifest serde: {e}")))?;
+        written_paths.push(manifest_path.clone());
         std::fs::write(&manifest_path, manifest_json)
             .map_err(|e| CommandError::Io(e.to_string()))?;
+        if render_cancelled(cancel_flag) {
+            return Err(CommandError::Other("album render cancelled".to_string()));
+        }
         Ok((album_path, manifest_path))
     })();
     let (album_path, manifest_path) = match pass2_result {
@@ -872,6 +942,17 @@ pub fn render_album_plan_impl(
         Err(err) => {
             for p in &written_paths {
                 let _ = std::fs::remove_file(p);
+            }
+            if render_cancelled(cancel_flag) {
+                return Ok(cancelled_album_report(
+                    job_id,
+                    request,
+                    album_sample_rate,
+                    source_rates,
+                    bit_depth,
+                    album_channels,
+                    source_channels,
+                ));
             }
             return Err(err);
         }
@@ -882,6 +963,8 @@ pub fn render_album_plan_impl(
     }
 
     Ok(AlbumRenderReport {
+        job_id,
+        status: JobStatus::Done,
         album_wav_path: album_path.to_string_lossy().to_string(),
         manifest_path: manifest_path.to_string_lossy().to_string(),
         requested_sample_rate: request.plan.delivery_sample_rate,
@@ -892,6 +975,30 @@ pub fn render_album_plan_impl(
         source_channels,
         tracks: track_records,
     })
+}
+
+fn cancelled_album_report(
+    job_id: String,
+    request: &AlbumPlanRenderRequest,
+    album_sample_rate: u32,
+    source_rates: Vec<u32>,
+    bit_depth: u16,
+    album_channels: u16,
+    source_channels: Vec<u16>,
+) -> AlbumRenderReport {
+    AlbumRenderReport {
+        job_id,
+        status: JobStatus::Cancelled,
+        album_wav_path: String::new(),
+        manifest_path: String::new(),
+        requested_sample_rate: request.plan.delivery_sample_rate,
+        rendered_sample_rate: album_sample_rate,
+        source_sample_rates: source_rates,
+        bit_depth,
+        rendered_channels: album_channels,
+        source_channels,
+        tracks: Vec::new(),
+    }
 }
 
 fn unique_album_path(out_dir: &Path, source_paths: &[PathBuf]) -> CommandResult<PathBuf> {

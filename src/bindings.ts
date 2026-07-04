@@ -420,6 +420,7 @@ export interface RenderedMeasurements {
 
 export interface RenderJob {
   id: string;
+  job_id: string;
   kind: RenderKind;
   target_tracks: TrackId[];
   status: JobStatus;

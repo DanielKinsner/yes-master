@@ -3,6 +3,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import type { AnalysisResult, QualityCheck } from "../bindings";
+import type { RenderFeedback, RenderProgressState } from "../hooks/useTrackMaster";
 
 type RightRailProps = {
   /// QualityCheckPanel uses this for the preflight checks when no
@@ -21,8 +22,12 @@ type RightRailProps = {
   canExport: boolean;
   isExporting: boolean;
   isRendering: boolean;
+  renderProgress?: RenderProgressState | null;
+  renderFeedback?: RenderFeedback | null;
+  cancelRenderPending?: boolean;
   isAnalyzing?: boolean;
   onExport: () => void;
+  onCancelRender?: () => void;
   onReanalyze?: () => void;
   // UI restyle 2026-05-14: the secondary "Render audit WAV" action used
   // to live in the main StaleBar. Moved here so the playback strip can
@@ -56,8 +61,12 @@ export function RightRail({
   canExport,
   isExporting,
   isRendering,
+  renderProgress,
+  renderFeedback,
+  cancelRenderPending = false,
   isAnalyzing = false,
   onExport,
+  onCancelRender,
   onReanalyze,
   previewStale,
   canRenderPreview,
@@ -67,6 +76,22 @@ export function RightRail({
   const needsReview =
     exportMode === "track" && canExport && hasReviewRows(qualityRows);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const activeRenderProgress =
+    (isExporting || isRendering) && renderProgress
+      ? {
+          percent: Math.round(Math.max(0, Math.min(1, renderProgress.fraction)) * 100),
+          label: `${renderProgress.kind[0].toUpperCase()}${renderProgress.kind.slice(
+            1,
+          )} render`,
+        }
+      : null;
+  const visibleRenderFeedback =
+    renderFeedback &&
+    (exportMode === "album"
+      ? renderFeedback.kind === "album"
+      : renderFeedback.kind !== "album")
+      ? renderFeedback
+      : null;
 
   useEffect(() => {
     setReviewOpen(false);
@@ -150,6 +175,41 @@ export function RightRail({
         >
           {exportLabel}
         </button>
+        {activeRenderProgress && (
+          <div className="right-rail-render-progress" role="status" aria-live="polite">
+            <div className="right-rail-render-progress-head">
+              <span>
+                {activeRenderProgress.label} {activeRenderProgress.percent}%
+              </span>
+              <button
+                type="button"
+                className="ghost-btn right-rail-cancel-render"
+                onClick={onCancelRender}
+                disabled={cancelRenderPending || !onCancelRender}
+              >
+                {cancelRenderPending ? "Cancelling..." : "Cancel"}
+              </button>
+            </div>
+            <div
+              className="right-rail-render-progress-track"
+              role="progressbar"
+              aria-label={activeRenderProgress.label}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={activeRenderProgress.percent}
+            >
+              <span
+                className="right-rail-render-progress-fill"
+                style={{ width: `${activeRenderProgress.percent}%` }}
+              />
+            </div>
+          </div>
+        )}
+        {visibleRenderFeedback && (
+          <p className="right-rail-render-feedback" role="status">
+            {visibleRenderFeedback.message}
+          </p>
+        )}
         {reviewOpen && needsReview && (
           <section className="export-review-panel" aria-label="Export review">
             <header className="export-review-head">

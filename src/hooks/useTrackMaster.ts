@@ -205,6 +205,29 @@ export interface ProjectFeedback {
   message: string;
 }
 
+type RenderProgressKind = "preview" | "master" | "album";
+
+export interface RenderProgressState {
+  job_id: string;
+  fraction: number;
+  kind: RenderProgressKind;
+}
+
+export interface RenderFeedback {
+  kind: RenderProgressKind;
+  message: string;
+}
+
+function isCancelledStatus(status: { status: string }): boolean {
+  return status.status === "cancelled";
+}
+
+function cancelledRenderMessage(kind: RenderProgressKind): string {
+  if (kind === "album") return "Album export cancelled. No files were written.";
+  if (kind === "preview") return "Audit render cancelled. No file was written.";
+  return "Export cancelled. No file was written.";
+}
+
 export function shouldPushLiveChainForSettingsEdit({
   trackId,
   editingAlbumIntent,
@@ -369,12 +392,11 @@ export function useTrackMaster() {
   // Phase 12.1 render progress: backend emits "render:progress" with a 0-1
   // fraction during render_track_preview / render_track_master. Used to
   // render a real progress bar instead of an indeterminate "Rendering…".
-  const [renderProgress, setRenderProgress] = useState<{
-    fraction: number;
-    kind: "preview" | "master" | "album";
-  } | null>(null);
+  const [renderProgress, setRenderProgress] = useState<RenderProgressState | null>(null);
+  const [renderFeedback, setRenderFeedback] = useState<RenderFeedback | null>(null);
+  const [cancelRequestedJobId, setCancelRequestedJobId] = useState<string | null>(null);
   const clearIncompleteRenderProgress = useCallback(
-    (kind: "preview" | "master" | "album") => {
+    (kind: RenderProgressKind) => {
       setRenderProgress((prev) =>
         prev?.kind === kind && prev.fraction < 1.0 ? null : prev,
       );
@@ -647,10 +669,14 @@ export function useTrackMaster() {
         clearTimeout(renderProgressClearTimer);
         renderProgressClearTimer = undefined;
       }
-      setRenderProgress({ fraction: evt.fraction, kind: evt.kind });
+      setCancelRequestedJobId((prev) => (prev === evt.job_id ? prev : null));
+      setRenderProgress({ job_id: evt.job_id, fraction: evt.fraction, kind: evt.kind });
       // Clear the bar shortly after reaching 1.0 so it doesn't linger.
       if (evt.fraction >= 1.0) {
-        renderProgressClearTimer = setTimeout(() => setRenderProgress(null), 600);
+        renderProgressClearTimer = setTimeout(() => {
+          setRenderProgress(null);
+          setCancelRequestedJobId(null);
+        }, 600);
       }
     }).then((fn) => {
       unlistenProgress = fn;
@@ -1625,6 +1651,8 @@ export function useTrackMaster() {
     if (tracks.length === 0) return;
     setAlbumRendering(true);
     setError(null);
+    setRenderFeedback(null);
+    setCancelRequestedJobId(null);
     try {
       const analyses = tracks
         .map((t) => analysisMap[t.id])
@@ -1670,10 +1698,17 @@ export function useTrackMaster() {
         });
       const report = await api.renderAlbumPlan(plan, renderTracks, outputDir);
       setAlbumExportReport(report);
+      if (isCancelledStatus(report.status)) {
+        setRenderFeedback({
+          kind: "album",
+          message: cancelledRenderMessage("album"),
+        });
+      }
     } catch (err) {
       setError(messageOf(err));
     } finally {
       clearIncompleteRenderProgress("album");
+      setCancelRequestedJobId(null);
       setAlbumRendering(false);
     }
   }, [
@@ -1755,6 +1790,8 @@ export function useTrackMaster() {
     }
     setIsRendering(true);
     setError(null);
+    setRenderFeedback(null);
+    setCancelRequestedJobId(null);
     try {
       // Phase 5: Mastered playback runs through the live chain, so a "preview
       // render" no longer needs to swap the audio source. The button still
@@ -1764,16 +1801,24 @@ export function useTrackMaster() {
       // and live audition. B2: the backend derives + injects the source profile
       // (keyed by track id) inside render_track_preview, so the FE just sends the
       // raw settings — no FE-side profile injection.
-      await api.renderTrackPreview(
+      const job = await api.renderTrackPreview(
         selectedTrackId,
         selectedTrack.path,
         selectedSettings,
       );
+      if (isCancelledStatus(job.status)) {
+        setRenderFeedback({
+          kind: "preview",
+          message: cancelledRenderMessage("preview"),
+        });
+        return;
+      }
       markFresh(selectedTrackId);
     } catch (err) {
       setError(messageOf(err));
     } finally {
       clearIncompleteRenderProgress("preview");
+      setCancelRequestedJobId(null);
       setIsRendering(false);
     }
   }, [
@@ -1804,6 +1849,8 @@ export function useTrackMaster() {
         const chosenOutputPath = ensureWavExtension(chosenPath);
         rememberExportDirectory(store, "track", chosenOutputPath);
         setIsExporting(true);
+        setRenderFeedback(null);
+        setCancelRequestedJobId(null);
         // B2: the backend derives + injects the source profile inside
         // render_track_master (keyed by track id); the FE sends raw settings.
         const job = await api.renderTrackMaster(
@@ -1812,6 +1859,13 @@ export function useTrackMaster() {
           exportSettings,
           chosenOutputPath,
         );
+        if (isCancelledStatus(job.status)) {
+          setRenderFeedback({
+            kind: "master",
+            message: cancelledRenderMessage("master"),
+          });
+          return;
+        }
         const outputPath = job.output_paths[0] ?? "";
         const report = buildExportReport({
           trackId: selectedTrackId,
@@ -1833,6 +1887,7 @@ export function useTrackMaster() {
         setError(messageOf(err));
       } finally {
         clearIncompleteRenderProgress("master");
+        setCancelRequestedJobId(null);
         setIsExporting(false);
       }
     },
@@ -1848,6 +1903,18 @@ export function useTrackMaster() {
     () => runExport(standardExportSettings(selectedSettings)),
     [runExport, selectedSettings],
   );
+
+  const cancelActiveRender = useCallback(async () => {
+    const jobId = renderProgress?.job_id;
+    if (!jobId || cancelRequestedJobId === jobId) return;
+    setCancelRequestedJobId(jobId);
+    try {
+      await api.cancelRender(jobId);
+    } catch (err) {
+      setCancelRequestedJobId(null);
+      setError(messageOf(err));
+    }
+  }, [renderProgress?.job_id, cancelRequestedJobId]);
 
   const playWithKind = useCallback(
     async (kind: PlaybackKindUI, positionSec: number) => {
@@ -2517,6 +2584,8 @@ export function useTrackMaster() {
     transport,
     lastExportReceipt,
     renderProgress,
+    renderFeedback,
+    cancelRequestedJobId,
     landingPending,
     hadPriorSession,
     undo,
@@ -2562,6 +2631,7 @@ export function useTrackMaster() {
     compressionPlan,
     exportMaster,
     exportStandardMaster,
+    cancelActiveRender,
     togglePlay,
     seek,
     setPlaybackKind,

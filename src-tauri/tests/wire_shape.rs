@@ -233,6 +233,7 @@ fn landing_status_sample() -> LandingStatus {
 fn render_job_sample() -> RenderJob {
     RenderJob {
         id: "wire-job".to_string(),
+        job_id: "wire-job".to_string(),
         kind: RenderKind::Master,
         target_tracks: vec![TrackId("wire-sample".to_string())],
         status: JobStatus::Done,
@@ -385,6 +386,8 @@ fn album_track_render_record_sample() -> AlbumTrackRenderRecord {
 
 fn album_render_report_sample() -> AlbumRenderReport {
     AlbumRenderReport {
+        job_id: "wire-album-job".to_string(),
+        status: JobStatus::Done,
         album_wav_path: "out/album.wav".to_string(),
         manifest_path: "out/album.manifest.json".to_string(),
         requested_sample_rate: Some(48_000),

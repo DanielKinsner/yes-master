@@ -11,8 +11,12 @@
 //! battery drives the public render surface end-to-end.)
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use tempfile::TempDir;
-use yes_master_lib::engine::{mastering_render, mastering_render_to_path};
+use yes_master_lib::engine::{
+    mastering_render, mastering_render_to_path, mastering_render_with_cancel, RenderJobOptions,
+    RenderJobRegistry,
+};
 use yes_master_lib::types::{
     AdvancedSettings, DeliveryProfile, JobStatus, MasteringSettings, Preset, RenderKind, TrackId,
 };
@@ -255,6 +259,77 @@ fn default_output_dir_renders_also_avoid_prior_renders() {
     );
     assert!(first_path.exists() && second_path.exists());
     no_tmp_litter(tmp.path());
+}
+
+#[test]
+fn cancelling_mid_render_returns_cancelled_and_writes_no_output() {
+    let tmp = TempDir::new().expect("tempdir");
+    let src = tmp.path().join("cancel-source.wav");
+    let chosen = tmp.path().join("cancelled-output.wav");
+    write_sine_wav(&src, 44_100, 0.8, 440.0, 2);
+
+    let cancel_flag = AtomicBool::new(false);
+    let on_progress = |fraction: f32| {
+        if fraction > 0.0 {
+            cancel_flag.store(true, Ordering::SeqCst);
+        }
+    };
+    let job = mastering_render_with_cancel(
+        TrackId("cancel-mid-render".to_string()),
+        &src,
+        &settings(),
+        tmp.path(),
+        RenderKind::Master,
+        RenderJobOptions {
+            on_progress: Some(&on_progress),
+            output_path: Some(&chosen),
+            job_id: Some("cancel-job"),
+            cancel_flag: Some(&cancel_flag),
+        },
+    )
+    .expect("cancelled render should return a job");
+
+    assert!(matches!(job.status, JobStatus::Cancelled));
+    assert_eq!(job.job_id, "cancel-job");
+    assert!(job.output_paths.is_empty());
+    assert!(
+        !chosen.exists(),
+        "cancelled render must not leave a final output"
+    );
+    no_tmp_litter(tmp.path());
+}
+
+#[test]
+fn render_job_registry_cancel_is_safe_for_unknown_and_finished_jobs() {
+    let registry = RenderJobRegistry::default();
+
+    registry.cancel("missing-job");
+    let flag = registry.register("known-job".to_string());
+    assert!(!flag.load(Ordering::SeqCst));
+
+    registry.cancel("known-job");
+    assert!(flag.load(Ordering::SeqCst));
+
+    registry.remove("known-job");
+    registry.cancel("known-job");
+    registry.cancel("missing-job");
+}
+
+#[test]
+fn render_job_registry_keeps_overlapping_job_ids_independent() {
+    let registry = RenderJobRegistry::default();
+    let first = registry.register("render-a".to_string());
+    let second = registry.register("render-b".to_string());
+
+    registry.cancel("render-a");
+
+    assert!(first.load(Ordering::SeqCst));
+    assert!(
+        !second.load(Ordering::SeqCst),
+        "cancelling one overlapping render must not cancel another"
+    );
+    registry.remove("render-a");
+    registry.remove("render-b");
 }
 
 #[cfg(windows)]

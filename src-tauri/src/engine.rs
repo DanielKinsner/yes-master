@@ -1,9 +1,11 @@
-use crate::album_render::render_album_plan_impl;
 use crate::analysis::{analyze_one_with_progress, nudge_role_by_position, sanitize_lufs};
 use crate::sample_rate::convert_interleaved;
 use crate::types::*;
 use crate::wav_writer::write_wav;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use ebur128::{EbuR128, Mode};
@@ -21,9 +23,54 @@ pub struct AnalyzeRequest {
 /// frontend can render a real progress bar.
 #[derive(Debug, Serialize, Clone)]
 pub struct RenderProgress {
+    pub job_id: String,
     pub track_id: TrackId,
     pub kind: RenderKind,
     pub fraction: f32,
+}
+
+#[derive(Default)]
+pub struct RenderJobRegistry {
+    jobs: Mutex<HashMap<String, Arc<AtomicBool>>>,
+}
+
+impl RenderJobRegistry {
+    pub fn register(&self, job_id: String) -> Arc<AtomicBool> {
+        let flag = Arc::new(AtomicBool::new(false));
+        let mut jobs = self
+            .jobs
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        jobs.insert(job_id, flag.clone());
+        flag
+    }
+
+    pub fn cancel(&self, job_id: &str) {
+        let jobs = self
+            .jobs
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some(flag) = jobs.get(job_id) {
+            flag.store(true, Ordering::SeqCst);
+        }
+    }
+
+    pub fn remove(&self, job_id: &str) {
+        let mut jobs = self
+            .jobs
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        jobs.remove(job_id);
+    }
+}
+
+#[tauri::command]
+pub async fn cancel_render(
+    job_id: String,
+    render_jobs: tauri::State<'_, RenderJobRegistry>,
+) -> CommandResult<()> {
+    render_jobs.cancel(&job_id);
+    Ok(())
 }
 
 pub fn analysis_progress_event(batch_id: &str, fraction: f32, label: &str) -> AnalysisProgress {
@@ -532,6 +579,7 @@ pub async fn render_track_preview(
     mut settings: MasteringSettings,
     app: tauri::AppHandle,
     profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
+    render_jobs: tauri::State<'_, RenderJobRegistry>,
 ) -> CommandResult<RenderJob> {
     // B2: the backend owns the adaptive profile. Track Master is the adaptive
     // surface (album renders via render_album_plan), so album = false; any
@@ -550,31 +598,41 @@ pub async fn render_track_preview(
         false,
     );
     let out_dir = render_output_dir(&app, RenderKind::Preview)?;
+    let job_id = uuid::Uuid::new_v4().to_string();
+    let cancel_flag = render_jobs.register(job_id.clone());
     let track_id_for_progress = track_id.clone();
+    let job_id_for_progress = job_id.clone();
     let app_for_progress = app.clone();
     let on_progress = move |fraction: f32| {
         let _ = app_for_progress.emit(
             "render:progress",
             RenderProgress {
+                job_id: job_id_for_progress.clone(),
                 track_id: track_id_for_progress.clone(),
                 kind: RenderKind::Preview,
                 fraction,
             },
         );
     };
-    tauri::async_runtime::spawn_blocking(move || {
-        mastering_render_with_progress(
+    let job_id_for_render = job_id.clone();
+    let join_result = tauri::async_runtime::spawn_blocking(move || {
+        mastering_render_with_cancel(
             track_id,
             Path::new(&track_path),
             &settings,
             &out_dir,
             RenderKind::Preview,
-            Some(&on_progress),
-            None,
+            RenderJobOptions {
+                on_progress: Some(&on_progress),
+                output_path: None,
+                job_id: Some(&job_id_for_render),
+                cancel_flag: Some(cancel_flag.as_ref()),
+            },
         )
     })
-    .await
-    .map_err(|e| CommandError::Other(format!("preview render task: {e}")))?
+    .await;
+    render_jobs.remove(&job_id);
+    join_result.map_err(|e| CommandError::Other(format!("preview render task: {e}")))?
 }
 
 #[tauri::command]
@@ -585,6 +643,7 @@ pub async fn render_track_master(
     output_path: Option<String>,
     app: tauri::AppHandle,
     profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
+    render_jobs: tauri::State<'_, RenderJobRegistry>,
 ) -> CommandResult<RenderJob> {
     // B2: backend-owned profile (override > backend-derived cache; album = false
     // because album exports go through render_album_plan, which strips it).
@@ -602,32 +661,42 @@ pub async fn render_track_master(
         false,
     );
     let out_dir = render_output_dir(&app, RenderKind::Master)?;
+    let job_id = uuid::Uuid::new_v4().to_string();
+    let cancel_flag = render_jobs.register(job_id.clone());
     let explicit_output_path = output_path.map(PathBuf::from);
     let track_id_for_progress = track_id.clone();
+    let job_id_for_progress = job_id.clone();
     let app_for_progress = app.clone();
     let on_progress = move |fraction: f32| {
         let _ = app_for_progress.emit(
             "render:progress",
             RenderProgress {
+                job_id: job_id_for_progress.clone(),
                 track_id: track_id_for_progress.clone(),
                 kind: RenderKind::Master,
                 fraction,
             },
         );
     };
-    tauri::async_runtime::spawn_blocking(move || {
-        mastering_render_with_progress(
+    let job_id_for_render = job_id.clone();
+    let join_result = tauri::async_runtime::spawn_blocking(move || {
+        mastering_render_with_cancel(
             track_id,
             Path::new(&track_path),
             &settings,
             &out_dir,
             RenderKind::Master,
-            Some(&on_progress),
-            explicit_output_path.as_deref(),
+            RenderJobOptions {
+                on_progress: Some(&on_progress),
+                output_path: explicit_output_path.as_deref(),
+                job_id: Some(&job_id_for_render),
+                cancel_flag: Some(cancel_flag.as_ref()),
+            },
         )
     })
-    .await
-    .map_err(|e| CommandError::Other(format!("master render task: {e}")))?
+    .await;
+    render_jobs.remove(&job_id);
+    join_result.map_err(|e| CommandError::Other(format!("master render task: {e}")))?
 }
 
 // ============================================================================
@@ -710,6 +779,8 @@ pub struct AlbumTrackRenderRecord {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct AlbumRenderReport {
+    pub job_id: String,
+    pub status: JobStatus,
     pub album_wav_path: String,
     pub manifest_path: String,
     pub requested_sample_rate: Option<u32>,
@@ -757,27 +828,40 @@ pub async fn render_album_plan(
     request: AlbumPlanRenderRequest,
     output_dir: Option<String>,
     app: tauri::AppHandle,
+    render_jobs: tauri::State<'_, RenderJobRegistry>,
 ) -> CommandResult<AlbumRenderReport> {
     let out_dir = match output_dir {
         Some(path) => explicit_output_dir(Path::new(&path))?,
         None => render_output_dir(&app, RenderKind::Album)?,
     };
+    let job_id = uuid::Uuid::new_v4().to_string();
+    let cancel_flag = render_jobs.register(job_id.clone());
+    let job_id_for_progress = job_id.clone();
     let app_for_progress = app.clone();
     let on_progress = move |fraction: f32| {
         let _ = app_for_progress.emit(
             "render:progress",
             RenderProgress {
+                job_id: job_id_for_progress.clone(),
                 track_id: TrackId(String::new()),
                 kind: RenderKind::Album,
                 fraction,
             },
         );
     };
-    tauri::async_runtime::spawn_blocking(move || {
-        render_album_plan_impl(&request, &out_dir, Some(&on_progress))
+    let job_id_for_render = job_id.clone();
+    let join_result = tauri::async_runtime::spawn_blocking(move || {
+        crate::album_render::render_album_plan_impl_with_cancel(
+            &request,
+            &out_dir,
+            Some(&on_progress),
+            Some(cancel_flag.as_ref()),
+            Some(&job_id_for_render),
+        )
     })
-    .await
-    .map_err(|e| CommandError::Other(format!("album render task: {e}")))?
+    .await;
+    render_jobs.remove(&job_id);
+    join_result.map_err(|e| CommandError::Other(format!("album render task: {e}")))?
 }
 
 pub fn render_output_dir(app: &tauri::AppHandle, kind: RenderKind) -> CommandResult<PathBuf> {
@@ -868,6 +952,42 @@ pub fn mastering_render_with_progress(
     on_progress: Option<&dyn Fn(f32)>,
     output_path: Option<&Path>,
 ) -> CommandResult<RenderJob> {
+    mastering_render_with_cancel(
+        track_id,
+        source_path,
+        settings,
+        out_dir,
+        kind,
+        RenderJobOptions {
+            on_progress,
+            output_path,
+            job_id: None,
+            cancel_flag: None,
+        },
+    )
+}
+
+#[derive(Default)]
+pub struct RenderJobOptions<'a> {
+    pub on_progress: Option<&'a dyn Fn(f32)>,
+    pub output_path: Option<&'a Path>,
+    pub job_id: Option<&'a str>,
+    pub cancel_flag: Option<&'a AtomicBool>,
+}
+
+pub fn mastering_render_with_cancel(
+    track_id: TrackId,
+    source_path: &Path,
+    settings: &MasteringSettings,
+    out_dir: &Path,
+    kind: RenderKind,
+    options: RenderJobOptions<'_>,
+) -> CommandResult<RenderJob> {
+    let job_id = options
+        .job_id
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let started_at_iso = now_iso();
     let source_path_str = source_path.to_string_lossy().to_string();
     if source_path_str.is_empty() {
         return Err(CommandError::InvalidPath("empty path".to_string()));
@@ -882,7 +1002,7 @@ pub fn mastering_render_with_progress(
             "source file not found: {source_path_str}"
         )));
     }
-    let out_path = match output_path {
+    let out_path = match options.output_path {
         Some(path) => explicit_output_path(path, source_path)?,
         None => unique_output_path(out_dir, source_path, &track_id, kind)?,
     };
@@ -909,17 +1029,44 @@ pub fn mastering_render_with_progress(
     let chunk_samples = CHUNK_FRAMES * channels_max;
     let total_samples = samples.len();
     let mut processed = 0;
-    if let Some(cb) = on_progress {
+    if let Some(cb) = options.on_progress {
         cb(0.0);
     }
+    if render_cancelled(options.cancel_flag) {
+        return Ok(cancelled_render_job(
+            job_id,
+            kind,
+            vec![track_id],
+            0.0,
+            started_at_iso,
+        ));
+    }
     while processed < total_samples {
+        if render_cancelled(options.cancel_flag) {
+            return Ok(cancelled_render_job(
+                job_id,
+                kind,
+                vec![track_id],
+                processed as f32 / total_samples.max(1) as f32,
+                started_at_iso,
+            ));
+        }
         let end = (processed + chunk_samples).min(total_samples);
         chain.process_interleaved(&mut samples[processed..end], channels_max);
         processed = end;
-        if let Some(cb) = on_progress {
+        if let Some(cb) = options.on_progress {
             let fraction = processed as f32 / total_samples.max(1) as f32;
             cb(fraction.min(1.0));
         }
+    }
+    if render_cancelled(options.cancel_flag) {
+        return Ok(cancelled_render_job(
+            job_id,
+            kind,
+            vec![track_id],
+            1.0,
+            started_at_iso,
+        ));
     }
     // RS-09 fix (2026-07-03): drain the limiter's lookahead so the final
     // ~3 ms of the master isn't dropped and the output stays sample-aligned
@@ -1037,6 +1184,15 @@ pub fn mastering_render_with_progress(
         confidence_digest,
         compression_digest,
     };
+    if render_cancelled(options.cancel_flag) {
+        return Ok(cancelled_render_job(
+            job_id,
+            kind,
+            vec![track_id],
+            1.0,
+            started_at_iso,
+        ));
+    }
     // If the chosen path gained a file while we rendered (overlapping
     // export), the write diverts to a `__{n}` sibling — report where the
     // render actually landed.
@@ -1047,20 +1203,55 @@ pub fn mastering_render_with_progress(
         pcm.channels,
         bit_depth,
     )?;
-    if let Some(cb) = on_progress {
+    if render_cancelled(options.cancel_flag) {
+        let _ = std::fs::remove_file(&actual_out_path);
+        return Ok(cancelled_render_job(
+            job_id,
+            kind,
+            vec![track_id],
+            1.0,
+            started_at_iso,
+        ));
+    }
+    if let Some(cb) = options.on_progress {
         cb(1.0);
     }
 
     Ok(RenderJob {
-        id: uuid::Uuid::new_v4().to_string(),
+        id: job_id.clone(),
+        job_id,
         kind,
         target_tracks: vec![track_id],
         status: JobStatus::Done,
         progress: 1.0,
-        started_at_iso: now_iso(),
+        started_at_iso,
         output_paths: vec![actual_out_path.to_string_lossy().to_string()],
         measurements: Some(measurements),
     })
+}
+
+pub fn render_cancelled(cancel_flag: Option<&AtomicBool>) -> bool {
+    cancel_flag.is_some_and(|flag| flag.load(Ordering::SeqCst))
+}
+
+pub fn cancelled_render_job(
+    job_id: String,
+    kind: RenderKind,
+    target_tracks: Vec<TrackId>,
+    progress: f32,
+    started_at_iso: String,
+) -> RenderJob {
+    RenderJob {
+        id: job_id.clone(),
+        job_id,
+        kind,
+        target_tracks,
+        status: JobStatus::Cancelled,
+        progress: progress.clamp(0.0, 1.0),
+        started_at_iso,
+        output_paths: Vec::new(),
+        measurements: None,
+    }
 }
 
 pub(crate) fn comparable_existing_or_parent_path(path: &Path) -> PathBuf {

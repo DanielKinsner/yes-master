@@ -64,6 +64,7 @@ const mocks = vi.hoisted(() => {
     adaptiveCompressionEnabled: vi.fn(),
     planAlbum: vi.fn(),
     renderAlbumPlan: vi.fn(),
+    cancelRender: vi.fn(),
   };
   return {
     api,
@@ -199,6 +200,7 @@ function makeRenderJob(
 ): RenderJob {
   return {
     id: "render-1",
+    job_id: "render-1",
     kind: "master",
     target_tracks: ["export-1"],
     status: { status: "done" },
@@ -2838,6 +2840,8 @@ describe("useTrackMaster integration dispatches", () => {
     mocks.open.mockResolvedValue(outputDir);
     mocks.api.planAlbum.mockResolvedValue(plan);
     mocks.api.renderAlbumPlan.mockResolvedValue({
+      job_id: "album-render-job",
+      status: { status: "done" },
       album_wav_path: `${outputDir}/album_continuous_1.wav`,
       manifest_path: `${outputDir}/manifest.json`,
       tracks: [
@@ -2910,6 +2914,8 @@ describe("useTrackMaster integration dispatches", () => {
     mocks.open.mockResolvedValue(outputDir);
     mocks.api.planAlbum.mockResolvedValue(plan);
     mocks.api.renderAlbumPlan.mockResolvedValue({
+      job_id: "album-render-job",
+      status: { status: "done" },
       album_wav_path: `${outputDir}/album_continuous_1.wav`,
       manifest_path: `${outputDir}/manifest.json`,
       tracks: [],
@@ -2984,6 +2990,8 @@ describe("useTrackMaster integration dispatches", () => {
     mocks.open.mockResolvedValue(outputDir);
     mocks.api.planAlbum.mockResolvedValue(plan);
     mocks.api.renderAlbumPlan.mockResolvedValue({
+      job_id: "album-render-job",
+      status: { status: "done" },
       album_wav_path: `${outputDir}/album_continuous_1.wav`,
       manifest_path: `${outputDir}/manifest.json`,
       tracks: [],
@@ -3065,6 +3073,8 @@ describe("useTrackMaster integration dispatches", () => {
     mocks.open.mockResolvedValue(outputDir);
     mocks.api.planAlbum.mockResolvedValue(plan);
     mocks.api.renderAlbumPlan.mockResolvedValue({
+      job_id: "album-render-job",
+      status: { status: "done" },
       album_wav_path: `${outputDir}/album_continuous_1.wav`,
       manifest_path: `${outputDir}/manifest.json`,
       tracks: [],
@@ -3124,6 +3134,8 @@ describe("useTrackMaster integration dispatches", () => {
     mocks.open.mockResolvedValue(outputDir);
     mocks.api.planAlbum.mockResolvedValue(plan);
     mocks.api.renderAlbumPlan.mockResolvedValue({
+      job_id: "album-render-job",
+      status: { status: "done" },
       album_wav_path: `${outputDir}/album_continuous_1.wav`,
       manifest_path: `${outputDir}/manifest.json`,
       tracks: [],
@@ -3170,6 +3182,8 @@ describe("useTrackMaster integration dispatches", () => {
     mocks.open.mockResolvedValue(outputDir);
     mocks.api.planAlbum.mockResolvedValue(plan);
     mocks.api.renderAlbumPlan.mockResolvedValue({
+      job_id: "album-render-job",
+      status: { status: "done" },
       album_wav_path: `${outputDir}\\album_continuous_1.wav`,
       manifest_path: `${outputDir}\\manifest.json`,
       tracks: [],
@@ -3283,6 +3297,13 @@ describe("useTrackMaster integration dispatches", () => {
     mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
     mocks.save.mockResolvedValue("C:/out/e.wav");
     mocks.api.renderTrackMaster.mockResolvedValue({
+      id: "std-export-job",
+      job_id: "std-export-job",
+      kind: "master",
+      target_tracks: [track.id],
+      status: { status: "done" },
+      progress: 1,
+      started_at_iso: "2026-05-17T00:00:00.000Z",
       output_paths: ["C:/out/e.wav"],
       measurements: null,
     });
@@ -3807,11 +3828,13 @@ describe("staged analysis progress", () => {
 describe("render progress timer", () => {
   function captureRenderProgress() {
     let emitRenderProgress!: (evt: {
+      job_id?: string;
       fraction: number;
       kind: "preview" | "master" | "album";
     }) => void;
     mocks.onRenderProgress.mockImplementation((cb) => {
-      emitRenderProgress = cb;
+      emitRenderProgress = (evt) =>
+        cb({ job_id: evt.job_id ?? "test-render-job", ...evt });
       return Promise.resolve(() => {});
     });
     return () => emitRenderProgress;
@@ -3837,6 +3860,7 @@ describe("render progress timer", () => {
         vi.advanceTimersByTime(600);
       });
       expect(harness.current().renderProgress).toEqual({
+        job_id: "test-render-job",
         fraction: 0.1,
         kind: "master",
       });
@@ -3916,6 +3940,82 @@ describe("render progress timer", () => {
     }
   });
 
+  it("cancels the active render by job id", async () => {
+    const getEmitRenderProgress = captureRenderProgress();
+    const harness = await renderHookHarness();
+
+    try {
+      await act(async () => {
+        getEmitRenderProgress()({
+          job_id: "render-job-cancel-me",
+          fraction: 0.24,
+          kind: "master",
+        });
+      });
+
+      await act(async () => {
+        await harness.current().cancelActiveRender();
+      });
+
+      expect(mocks.api.cancelRender).toHaveBeenCalledWith("render-job-cancel-me");
+      expect(harness.current().cancelRequestedJobId).toBe("render-job-cancel-me");
+    } finally {
+      await act(async () => {
+        harness.root.unmount();
+      });
+    }
+  });
+
+  it("treats a cancelled master export as user-visible state, not an error", async () => {
+    const getEmitRenderProgress = captureRenderProgress();
+    const track = makeTrack("master-cancelled", "C:/audio/master-cancelled.wav");
+    const outputPath = "/Users/daniel/Desktop/master-cancelled.wav";
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.save.mockResolvedValue(outputPath);
+    mocks.api.renderTrackMaster.mockImplementation(async () => {
+      getEmitRenderProgress()({
+        job_id: "cancelled-master-job",
+        fraction: 0.53,
+        kind: "master",
+      });
+      return {
+        ...makeRenderJob(outputPath),
+        id: "cancelled-master-job",
+        job_id: "cancelled-master-job",
+        status: { status: "cancelled" },
+        progress: 0.53,
+        output_paths: [],
+        measurements: null,
+      } satisfies RenderJob;
+    });
+    const harness = await renderHookHarness();
+
+    try {
+      await act(async () => {
+        await harness.current().importFiles([track.path]);
+      });
+      await waitFor(() => {
+        expect(harness.current().selectedTrackId).toBe(track.id);
+      });
+
+      await act(async () => {
+        await harness.current().exportMaster();
+      });
+
+      expect(mocks.api.runExportChecks).not.toHaveBeenCalled();
+      expect(harness.current().lastExportReceipt).toBeNull();
+      expect(harness.current().error).toBeNull();
+      expect(harness.current().renderFeedback?.message).toBe(
+        "Export cancelled. No file was written.",
+      );
+    } finally {
+      await act(async () => {
+        harness.root.unmount();
+      });
+    }
+  });
+
   it("clears stale master progress when export is cancelled before rendering", async () => {
     const getEmitRenderProgress = captureRenderProgress();
     const track = makeTrack("master-cancel", "C:/audio/master-cancel.wav");
@@ -3935,6 +4035,7 @@ describe("render progress timer", () => {
         getEmitRenderProgress()({ fraction: 0.31, kind: "master" });
       });
       expect(harness.current().renderProgress).toEqual({
+        job_id: "test-render-job",
         fraction: 0.31,
         kind: "master",
       });

@@ -446,6 +446,41 @@ describe("RightRail source checks", () => {
     });
   });
 
+  it("shows render progress with a cancel action while exporting", async () => {
+    const onCancelRender = vi.fn();
+    const { container, root } = await renderNode(
+      <RightRail
+        analysis={CLEAN_SOURCE_ANALYSIS}
+        lastChecks={undefined}
+        canExport
+        isExporting
+        isRendering={false}
+        renderProgress={{ job_id: "render-job-1", kind: "master", fraction: 0.42 }}
+        onExport={vi.fn()}
+        onCancelRender={onCancelRender}
+        previewStale={false}
+        canRenderPreview
+        onUpdatePreview={vi.fn()}
+      />,
+    );
+
+    expect(container.textContent).toContain("Master render 42%");
+    const cancel = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Cancel",
+    ) as HTMLButtonElement | undefined;
+    expect(cancel?.disabled).toBe(false);
+
+    await act(async () => {
+      cancel?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onCancelRender).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("labels pre-export analysis as source measurements", async () => {
     const { container, root } = await renderNode(
       <RightRail
