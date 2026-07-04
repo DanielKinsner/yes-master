@@ -299,9 +299,9 @@ fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`).
 | F — capture security pass (premise corrected: no backend exists) | `7c99ffe` + docs | done — form safety posture pinned; provider checklist parked above |
 | D3 — session/project JSON hostile pass (fix + corpus) | `e1d0bbf`, `41bc0ab` | done — **real bug fixed**: a 1e39 in a .ams.json made every subsequent save unloadable (non-finite → `null` → parse failure = silent session loss); loads now clamp raw floats to f32-finite, saves verify read-back before rename |
 
-| F8 — low-rate air-band investigation | `(this commit)` | done — verified safe, no renormalization; invariant pinned in analysis.rs |
+| F8 — low-rate air-band investigation | `d4810ed` | done — verified safe, no renormalization; invariant pinned in analysis.rs |
+| D4 — export I/O pass (fix + battery) | `057f07c`, `a5fdc25` | done — **real bug fixed**: never-overwrite finalize race (overlapping exports clobbered the earlier render; finalize now diverts to `__{n}` and reports the actual path); 6-case hostile-filesystem battery; slow fixture lane green |
 
-**Next up (not yet started):** D4 export-I/O failure battery; D5
-runtime-abuse review (`audio.rs` chain swaps); B2 track-master landing
-matrix; G riders (dead-code 11b, doc-accuracy 20/21, CSS 11a with browser
-preview).
+**Next up (not yet started):** D5 runtime-abuse review (`audio.rs` chain
+swaps); B2 track-master landing matrix; G riders (dead-code 11b,
+doc-accuracy 20/21, CSS 11a with browser preview).
