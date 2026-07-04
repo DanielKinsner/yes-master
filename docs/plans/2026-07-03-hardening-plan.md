@@ -270,4 +270,12 @@ fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`).
 | B1/B3 — adaptive-ruin property proofs | `99592a5` | done — 6 proofs incl. the HF-burial nightmare |
 | C — DSP math audit (workflow, 5 dims + refuters) | n/a (read-only) | done — findings F6–F8 above; 1 confirmed bug |
 | RS-09 — limiter flush (F6) | `081e508`, `50e16ee` | done — all lanes + slow fixture lane green |
-| Ledger/plan paperwork | (this commit) | done — Q17 + thread #13 closed |
+| Ledger/plan paperwork | `3501977` | done — Q17 + thread #13 closed |
+| D2 — decode-surface pin (F7 refuted) | `1761d20` | done — every advertised format proven to decode (ffmpeg-generated, graceful skip) |
+| D1 — decode boundary hardening (fix + corpus) | `1477766`, `8ef0692` | done — symphonia panic caught (0 Hz fmt crashed the parser!), 0-rate rejected, NaN/Inf sanitized |
+
+**Next up (not yet started):** E — preset fingerprint harness (owner fear #1);
+F — Supabase capture security pass; D3 session-JSON extension; D4 export-I/O
+failure battery; D5 runtime-abuse review (`audio.rs` chain swaps); B2
+track-master landing matrix; G riders (dead-code 11b, doc-accuracy 20/21,
+CSS 11a with browser preview). F8 (low-rate air-band) awaits investigation.
