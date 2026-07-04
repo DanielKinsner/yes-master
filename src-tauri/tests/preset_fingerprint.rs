@@ -529,6 +529,132 @@ fn distance_pairs() -> Vec<(&'static str, &'static str, f32)> {
 }
 
 // ---------------------------------------------------------------------------
+// Tolerance golden (Batch-F pattern — OS/arch independent)
+// ---------------------------------------------------------------------------
+
+/// dB tolerance for every loudness/tilt/width metric. Cross-platform
+/// libm rounding on these multi-second aggregates measures far below
+/// 0.01 dB; real voicing changes move tenths. 0.25 dB catches any
+/// deliberate retune while never firing on platform noise.
+const GOLDEN_DB_TOLERANCE: f32 = 0.25;
+/// The THD proxy rides low-level harmonics whose dB values swing more
+/// per unit of actual change (and sit near the −80 clamp for clean
+/// presets); a real drive change moves it 5+ dB.
+const GOLDEN_THD_TOLERANCE: f32 = 2.0;
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct GoldenRow {
+    preset: String,
+    #[serde(flatten)]
+    fingerprint: Fingerprint,
+}
+
+fn golden_path() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/golden/preset_fingerprint.json")
+}
+
+#[test]
+fn fingerprints_match_tolerance_golden() {
+    let table = fingerprint_table();
+    let path = golden_path();
+
+    if std::env::var("YES_MASTER_UPDATE_GOLDEN").as_deref() == Ok("1") {
+        let rows: Vec<GoldenRow> = table
+            .iter()
+            .map(|(name, fp)| GoldenRow {
+                preset: (*name).to_string(),
+                fingerprint: fp.clone(),
+            })
+            .collect();
+        let json = serde_json::to_string_pretty(&rows).expect("serialize golden");
+        std::fs::write(&path, json + "\n").expect("write golden");
+        return;
+    }
+
+    let json = std::fs::read_to_string(&path).unwrap_or_else(|e| {
+        panic!(
+            "missing fingerprint golden {} ({e}); regenerate with \
+             YES_MASTER_UPDATE_GOLDEN=1 cargo test --test preset_fingerprint and commit it",
+            path.display(),
+        )
+    });
+    let golden: Vec<GoldenRow> = serde_json::from_str(&json).expect("parse fingerprint golden");
+    assert_eq!(
+        golden.len(),
+        table.len(),
+        "preset count changed; regenerate the golden deliberately",
+    );
+
+    let mut drifts = Vec::new();
+    for (row, (name, fp)) in golden.iter().zip(table.iter()) {
+        assert_eq!(
+            row.preset, *name,
+            "preset order changed; regenerate the golden deliberately",
+        );
+        let g = &row.fingerprint;
+        let mut check = |metric: &str, got: f32, want: f32, tol: f32| {
+            if (got - want).abs() > tol || !(got - want).is_finite() {
+                drifts.push(format!(
+                    "  {name}: {metric} drifted {want:+.3} -> {got:+.3} (tolerance {tol})"
+                ));
+            }
+        };
+        for (i, (band, _)) in BANDS.iter().enumerate() {
+            check(
+                &format!("band_tilt[{band}]"),
+                fp.band_tilt_db[i],
+                g.band_tilt_db[i],
+                GOLDEN_DB_TOLERANCE,
+            );
+        }
+        check(
+            "landed_lufs_pink",
+            fp.landed_lufs_pink,
+            g.landed_lufs_pink,
+            GOLDEN_DB_TOLERANCE,
+        );
+        check(
+            "landed_lufs_drums",
+            fp.landed_lufs_drums,
+            g.landed_lufs_drums,
+            GOLDEN_DB_TOLERANCE,
+        );
+        check(
+            "crest_db_drums",
+            fp.crest_db_drums,
+            g.crest_db_drums,
+            GOLDEN_DB_TOLERANCE,
+        );
+        check(
+            "psr_db_drums",
+            fp.psr_db_drums,
+            g.psr_db_drums,
+            GOLDEN_DB_TOLERANCE,
+        );
+        check(
+            "width_delta_db",
+            fp.width_delta_db,
+            g.width_delta_db,
+            GOLDEN_DB_TOLERANCE,
+        );
+        check(
+            "thd_proxy_db",
+            fp.thd_proxy_db,
+            g.thd_proxy_db,
+            GOLDEN_THD_TOLERANCE,
+        );
+    }
+    assert!(
+        drifts.is_empty(),
+        "preset voicing drifted from the pinned fingerprint golden:\n{}\n\
+         If this retune is deliberate (owner-approved), regenerate with \
+         YES_MASTER_UPDATE_GOLDEN=1 cargo test --test preset_fingerprint, \
+         commit the JSON diff, and add a Spot-Listen Queue entry.",
+        drifts.join("\n"),
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Diagnostics
 // ---------------------------------------------------------------------------
 
