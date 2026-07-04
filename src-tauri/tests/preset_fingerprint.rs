@@ -5,12 +5,12 @@
 //! through the same `process_interleaved` + `flush_render_tail` path the
 //! export uses) against a deterministic synthetic fixture set:
 //!
-//!   * `pink bed`   — Kellet pink noise, dual mono, −12 dBFS peak.
-//!                    Probes the 6-band tonal tilt (volume-matched).
-//!   * `drum loop`  — synthesized kick/snare/hat pattern, −6 dBFS peak.
-//!                    Probes density: crest (DR proxy) and PSR.
-//!   * `tonal pad`  — detuned sustained chord with real side content.
-//!                    Probes the chain's stereo-width contribution.
+//!   * `pink bed` — Kellet pink noise, dual mono, −12 dBFS peak.
+//!     Probes the 6-band tonal tilt (volume-matched).
+//!   * `drum loop` — synthesized kick/snare/hat pattern, −6 dBFS peak.
+//!     Probes density: crest (DR proxy) and PSR.
+//!   * `tonal pad` — detuned sustained chord with real side content.
+//!     Probes the chain's stereo-width contribution.
 //!   * `sine probe` — pure 1 kHz tone. Probes the saturation THD proxy.
 //!
 //! The 6 bands reuse the app's own analysis band edges
