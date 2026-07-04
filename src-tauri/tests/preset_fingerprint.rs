@@ -684,6 +684,145 @@ fn dump_fingerprint_table() {
     }
 }
 
+/// E3 — owner-readable report for Wave-10 listening sittings. Writes
+/// Markdown + CSV to `test-output/preset-fingerprints/` (git-ignored).
+/// Re-run after any retune:
+///   cargo test --test preset_fingerprint write_owner_fingerprint_report -- --ignored
+#[test]
+#[ignore = "report writer — run explicitly with --ignored"]
+fn write_owner_fingerprint_report() {
+    let out_dir =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../test-output/preset-fingerprints");
+    std::fs::create_dir_all(&out_dir).expect("create report dir");
+
+    let table = fingerprint_table();
+    let universal = &table[0].1;
+    let generated = chrono::Local::now().format("%Y-%m-%d %H:%M");
+
+    // ---- CSV ------------------------------------------------------------
+    let mut csv = String::from(
+        "preset,tilt_sub_db,tilt_low_db,tilt_low_mid_db,tilt_mid_db,tilt_high_mid_db,\
+         tilt_air_db,landed_lufs_pink,landed_lufs_drums,crest_db_drums,psr_db_drums,\
+         width_delta_db,thd_proxy_db\n",
+    );
+    for (name, fp) in table {
+        let b = fp.band_tilt_db;
+        csv.push_str(&format!(
+            "{name},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.2},{:.1}\n",
+            b[0],
+            b[1],
+            b[2],
+            b[3],
+            b[4],
+            b[5],
+            fp.landed_lufs_pink,
+            fp.landed_lufs_drums,
+            fp.crest_db_drums,
+            fp.psr_db_drums,
+            fp.width_delta_db,
+            fp.thd_proxy_db,
+        ));
+    }
+    std::fs::write(out_dir.join("preset-fingerprints.csv"), csv).expect("write csv");
+
+    // ---- Markdown --------------------------------------------------------
+    let mut md = String::new();
+    md.push_str(&format!(
+        "# Preset fingerprints — {generated}\n\n\
+         Mechanical character measurements at default intensity 0.5, synthetic\n\
+         fixtures (pink bed / drum loop / tonal pad / 1 kHz probe), rendered\n\
+         through the export path. Numbers are instruments for the listening\n\
+         sitting, not verdicts — ears decide, this shows *where to listen*.\n\n\
+         Regenerate: `cargo test --test preset_fingerprint \
+         write_owner_fingerprint_report -- --ignored`\n\n"
+    ));
+
+    md.push_str(
+        "## How each preset differs from Universal\n\n\
+         Volume-matched band tilts (dB, + is more of that band than Universal\n\
+         gives you), plus density and width relative to Universal.\n\n\
+         | Preset | Sub | Low | Low-mid | Mid | High-mid | Air | Density (crest vs U) | Width vs U |\n\
+         |---|---|---|---|---|---|---|---|---|\n",
+    );
+    for (name, fp) in table.iter().skip(1) {
+        let d: Vec<f32> = (0..6)
+            .map(|i| fp.band_tilt_db[i] - universal.band_tilt_db[i])
+            .collect();
+        let crest_delta = fp.crest_db_drums - universal.crest_db_drums;
+        let density = if crest_delta < -0.3 {
+            format!("{:+.1} dB (denser)", crest_delta)
+        } else if crest_delta > 0.3 {
+            format!("{:+.1} dB (more open)", crest_delta)
+        } else {
+            "~same".to_string()
+        };
+        md.push_str(&format!(
+            "| **{name}** | {:+.1} | {:+.1} | {:+.1} | {:+.1} | {:+.1} | {:+.1} | {density} | {:+.1} dB |\n",
+            d[0], d[1], d[2], d[3], d[4], d[5],
+            fp.width_delta_db - universal.width_delta_db,
+        ));
+    }
+
+    md.push_str(
+        "\n## Raw fingerprint table\n\n\
+         | Preset | Sub | Low | Low-mid | Mid | High-mid | Air | LUFS (pink) | LUFS (drums) | Crest | PSR | Width Δ | THD proxy |\n\
+         |---|---|---|---|---|---|---|---|---|---|---|---|---|\n",
+    );
+    for (name, fp) in table {
+        let b = fp.band_tilt_db;
+        md.push_str(&format!(
+            "| {name} | {:+.2} | {:+.2} | {:+.2} | {:+.2} | {:+.2} | {:+.2} | {:+.1} | {:+.1} | {:.2} | {:.2} | {:+.2} | {:.1} |\n",
+            b[0], b[1], b[2], b[3], b[4], b[5],
+            fp.landed_lufs_pink, fp.landed_lufs_drums,
+            fp.crest_db_drums, fp.psr_db_drums,
+            fp.width_delta_db, fp.thd_proxy_db,
+        ));
+    }
+
+    let mut pairs = distance_pairs();
+    pairs.sort_by(|a, b| a.2.total_cmp(&b.2));
+    md.push_str(&format!(
+        "\n## Character distances (closest pairs first)\n\n\
+         Distinctness floor: {MIN_PAIRWISE_CHARACTER_DISTANCE} (test-enforced). \
+         Pairs near the floor are the ones worth A/B-ing by ear.\n\n\
+         | Pair | Distance |\n|---|---|\n"
+    ));
+    for (a, b, d) in &pairs {
+        md.push_str(&format!("| {a} ↔ {b} | {d:.2} |\n"));
+    }
+
+    md.push_str(&format!(
+        "\n## Safety margins (test-enforced caps)\n\n\
+         * Band tilt cap ±{MAX_ABS_BAND_TILT_DB} dB — largest observed: "
+    ));
+    let (max_name, max_band, max_tilt) = table
+        .iter()
+        .flat_map(|(name, fp)| {
+            BANDS
+                .iter()
+                .zip(fp.band_tilt_db.iter())
+                .map(move |((band, _), t)| (*name, *band, *t))
+        })
+        .max_by(|a, b| a.2.abs().total_cmp(&b.2.abs()))
+        .expect("non-empty table");
+    let (min_crest_name, min_crest) = table
+        .iter()
+        .map(|(name, fp)| (*name, fp.crest_db_drums))
+        .min_by(|a, b| a.1.total_cmp(&b.1))
+        .expect("non-empty table");
+    md.push_str(&format!(
+        "{max_name} {max_band} {max_tilt:+.2} dB.\n\
+         * Drum crest floor {MIN_DRUM_CREST_DB} dB — densest preset: \
+         {min_crest_name} at {min_crest:.2} dB.\n\
+         * THD proxy cap {MAX_THD_PROXY_DB} dB, width window \
+         {WIDTH_DELTA_RANGE_DB:?} dB, landed-LUFS window {LANDED_LUFS_RANGE:?}.\n",
+    ));
+
+    let md_path = out_dir.join("preset-fingerprints.md");
+    std::fs::write(&md_path, md).expect("write markdown report");
+    println!("report written to {}", md_path.display());
+}
+
 // ---------------------------------------------------------------------------
 // Safety bounds — "users may overcook their own track, but a factory
 // preset at default intensity must never do it for them."
