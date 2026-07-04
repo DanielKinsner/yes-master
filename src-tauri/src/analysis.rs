@@ -905,6 +905,44 @@ mod tests {
         );
     }
 
+    /// F8 resolution (2026-07-03 hardening audit): at sample rates below
+    /// 13 kHz the air band's lower edge (6500 Hz) sits above Nyquist, so
+    /// `air` is structurally zero — and that is CORRECT: such content
+    /// cannot contain those frequencies, every consumer sums
+    /// `presence + air` additively (no division/log), and reduce-only
+    /// adaptation means the low brightness read can only make the engine
+    /// gentler. This pin documents the invariant so any future
+    /// renormalization is a deliberate, listened decision (thread #4
+    /// includes 8 kHz / 11.025 kHz sources in the manual listening gate).
+    #[test]
+    fn spectral_balance_6band_air_is_structurally_zero_below_13khz_rates() {
+        for sr in [8_000_u32, 11_025] {
+            // Broadband-ish content: white noise from the shared LCG.
+            let mut state: u32 = 0xCAFE_BABE;
+            let n = sr as usize * 2;
+            let samples: Vec<f32> = (0..n)
+                .map(|_| {
+                    state = state.wrapping_mul(1_103_515_245).wrapping_add(12345);
+                    ((((state >> 16) & 0x7FFF) as f32 / 32_768.0) - 0.5) * 0.5
+                })
+                .collect();
+            let bal = compute_spectral_balance_6band(&samples, sr, 1).expect("balance");
+            assert_eq!(
+                bal.air, 0.0,
+                "fs={sr}: air band lies fully above Nyquist and must read 0",
+            );
+            assert!(
+                bal.presence > 0.0,
+                "fs={sr}: presence still covers 2500..Nyquist and must be non-zero",
+            );
+            let total = bal.sub + bal.low + bal.low_mid + bal.mid + bal.presence + bal.air;
+            assert!(
+                (total - 1.0).abs() < 1.0e-3,
+                "fs={sr}: shares must still normalize to 1.0, got {total}",
+            );
+        }
+    }
+
     /// Regression (adversarial review F1, 2026-06-03): the 6-band tonal read must
     /// reflect the WHOLE track, not just the first window. A bright intro
     /// followed by a longer dark body must read as dark (the body dominates by

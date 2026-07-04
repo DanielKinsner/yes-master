@@ -61,11 +61,16 @@ resolve entries in `docs/OPEN_THREADS_AND_DECISIONS.md` (noted inline).
   ships the AdtsReader — there is no separate `adts` feature in 0.5). The
   test stays as the permanent pin that every UI-advertised extension
   (wav/mp3/m4a/aac/flac/ogg) decodes end-to-end.
-- **F8 — Analysis "air" band reads zero at 8 kHz / 11.025 kHz sources
-  (uncertain, investigate).** `analysis.rs` 6-band edges put the air band
-  above Nyquist for those rates. Reduce-only adaptation makes this SAFE
-  (brightness underestimated → less trim), but analysis displays/fingerprints
-  for such sources are skewed. Verify + decide whether to renormalize.
+- **F8 — Analysis "air" band at 8 kHz / 11.025 kHz sources: RESOLVED
+  2026-07-03, no renormalization.** Verified: below ~13 kHz rates the air
+  band (≥6500 Hz) lies fully above Nyquist and reads exactly 0 — which is
+  *honest* (such content cannot contain those frequencies). Every consumer
+  sums `presence + air` additively (no division/log anywhere), and
+  reduce-only adaptation means the low brightness read only makes the
+  engine gentler. Renormalizing would change adaptive behavior on
+  low-rate sources — a listened decision, not a bug fix. Invariant pinned
+  (`spectral_balance_6band_air_is_structurally_zero_below_13khz_rates`);
+  thread #4's listening gate already includes 8/11.025 kHz sources.
 - **Everything else verified OK** (owner's "the math is there" confirmed):
   RBJ biquads exact; Nyquist clamp at 0.45·fs; K-weighting re-derived per
   sample rate (pinned vs published 48 kHz coefficients); BS.1770 two-pass
@@ -294,7 +299,9 @@ fixture lane (`AMS_RUN_REAL_FIXTURE=1 cargo test`).
 | F — capture security pass (premise corrected: no backend exists) | `7c99ffe` + docs | done — form safety posture pinned; provider checklist parked above |
 | D3 — session/project JSON hostile pass (fix + corpus) | `e1d0bbf`, `41bc0ab` | done — **real bug fixed**: a 1e39 in a .ams.json made every subsequent save unloadable (non-finite → `null` → parse failure = silent session loss); loads now clamp raw floats to f32-finite, saves verify read-back before rename |
 
+| F8 — low-rate air-band investigation | `(this commit)` | done — verified safe, no renormalization; invariant pinned in analysis.rs |
+
 **Next up (not yet started):** D4 export-I/O failure battery; D5
 runtime-abuse review (`audio.rs` chain swaps); B2 track-master landing
 matrix; G riders (dead-code 11b, doc-accuracy 20/21, CSS 11a with browser
-preview). F8 (low-rate air-band) awaits investigation.
+preview).
