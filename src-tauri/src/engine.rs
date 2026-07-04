@@ -882,6 +882,10 @@ pub fn mastering_render_with_progress(
             cb(fraction.min(1.0));
         }
     }
+    // RS-09 fix (2026-07-03): drain the limiter's lookahead so the final
+    // ~3 ms of the master isn't dropped and the output stays sample-aligned
+    // with the source. Must run BEFORE sample-rate conversion/measurement.
+    chain.flush_render_tail(&mut samples, channels_max);
 
     let rendered_sample_rate = render_settings.effective_sample_rate(pcm.sample_rate);
     if rendered_sample_rate != pcm.sample_rate {

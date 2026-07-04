@@ -717,6 +717,12 @@ pub fn render_album_plan_impl(
                     cb(overall.min(1.0));
                 }
             }
+            // RS-09 fix (2026-07-03): drain the limiter's lookahead so each
+            // album track keeps its final ~3 ms and stays sample-aligned —
+            // and gap/butt-splice transitions in the continuous album.wav
+            // sit exactly where the plan says. Before SRC/measure, like the
+            // track-master path.
+            chain.flush_render_tail(&mut samples, channels_usize);
 
             // Resample this track from its source rate to the album delivery
             // rate. Ordering mirrors Track Master: chain -> SRC -> measure ->
