@@ -2287,6 +2287,24 @@ fn seek_target(start_position_sec: f64) -> Option<Duration> {
         .then(|| Duration::from_secs_f64(start_position_sec))
 }
 
+/// F4 (owner smoke): the seek target for the incoming sink of a mid-play
+/// Original<->Mastered swap. The frontend estimates the playhead BEFORE the
+/// IPC hop, and the outgoing sink keeps advancing while the swap command
+/// runs — seeking the incoming sink to the raw estimate lands BEHIND the
+/// audible position, so the timeline visibly/audibly runs backwards ("jumps
+/// backward in time / stutters"). Floor the request at the outgoing sink's
+/// current position. Fresh (non-swap) plays must NOT use this: an explicit
+/// play-from-position request has to be honored exactly.
+fn effective_swap_start_position(requested_sec: f64, outgoing_sink_pos_sec: f64) -> f64 {
+    if !outgoing_sink_pos_sec.is_finite() {
+        return requested_sec;
+    }
+    if !requested_sec.is_finite() {
+        return outgoing_sink_pos_sec;
+    }
+    requested_sec.max(outgoing_sink_pos_sec)
+}
+
 trait PlaybackSink {
     fn try_seek_position(&self, offset: Duration);
     fn play_from_current_position(&self);
@@ -2437,6 +2455,14 @@ fn handle_play(
     )
     .with_swap_fade(fade);
 
+    // F4 — the outgoing sink kept advancing while this command ran; floor
+    // the preserved-playhead request at its current position so the swap
+    // never seeks the timeline backwards.
+    let start_position_sec = if is_swap {
+        effective_swap_start_position(start_position_sec, s.sink.get_pos().as_secs_f64())
+    } else {
+        start_position_sec
+    };
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(source);
     play_sink_from_start_position(&new_sink, start_position_sec);
@@ -2655,6 +2681,13 @@ fn handle_play_master(
     )
     .with_swap_fade(fade);
 
+    // F4 — same backwards-seek floor as handle_play: the outgoing sink kept
+    // advancing during this command (which can run long on a cold decode).
+    let start_position_sec = if is_swap {
+        effective_swap_start_position(start_position_sec, s.sink.get_pos().as_secs_f64())
+    } else {
+        start_position_sec
+    };
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(mastering_source);
     play_sink_from_start_position(&new_sink, start_position_sec);
@@ -2740,6 +2773,22 @@ mod tests {
             loop_region_survives_play(None, &b),
             "play from an unloaded player must keep a pre-armed region"
         );
+    }
+
+    #[test]
+    fn swap_start_position_never_seeks_behind_the_outgoing_sink() {
+        // Owner smoke F4: the FE captures its playhead estimate before the
+        // IPC hop; the outgoing sink keeps advancing while the swap command
+        // runs. The incoming sink must start at whichever is further along.
+        assert_eq!(effective_swap_start_position(10.0, 10.6), 10.6);
+        // An estimate slightly ahead of the sink (extrapolation overshoot)
+        // is kept — continuity forward is fine, backwards is the bug.
+        assert_eq!(effective_swap_start_position(11.2, 10.6), 11.2);
+        // Non-finite inputs fall back to the other side rather than panic.
+        assert_eq!(effective_swap_start_position(f64::NAN, 10.6), 10.6);
+        assert_eq!(effective_swap_start_position(10.0, f64::NAN), 10.0);
+        // A fresh sink at 0 never drags a valid request back to 0.
+        assert_eq!(effective_swap_start_position(42.0, 0.0), 42.0);
     }
 
     #[test]
