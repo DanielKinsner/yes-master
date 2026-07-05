@@ -59,6 +59,7 @@ const mocks = vi.hoisted(() => {
     stopPlayback: vi.fn(),
     seekPlayback: vi.fn(),
     setLoopRegion: vi.fn(),
+    clearDeviceLost: vi.fn(),
     guardrailReadout: vi.fn(),
     resolveCompressionPlan: vi.fn(),
     adaptiveCompressionEnabled: vi.fn(),
@@ -750,6 +751,30 @@ describe("useTrackMaster integration dispatches", () => {
 
     await act(async () => {
       harness.current().clearPlaybackDeviceLost();
+    });
+    expect(harness.current().playbackDeviceLost).toBeNull();
+    expect(harness.current().transport.deviceLost).toBe(false);
+    // Owner smoke F7: Dismiss must clear the BACKEND latch too. Without the
+    // clear_device_lost invoke, the audio thread keeps device_lost=true and
+    // the next 50 ms tick revives the banner — dismiss was a no-op.
+    expect(mocks.api.clearDeviceLost).toHaveBeenCalledTimes(1);
+
+    // A post-dismiss tick mirrors the now-cleared backend latch; it must
+    // NOT re-arm the banner (this is the tick that used to revive it).
+    await act(async () => {
+      playbackHandler?.({
+        track_id: track.id,
+        position_sec: 14.25,
+        is_playing: false,
+        is_loaded: true,
+        peak_dbfs: -120,
+        gr_low_db: -120,
+        gr_mid_db: -120,
+        gr_high_db: -120,
+        lufs_momentary: -120,
+        lufs_integrated: -120,
+        spectrum_db: [],
+      });
     });
     expect(harness.current().playbackDeviceLost).toBeNull();
     expect(harness.current().transport.deviceLost).toBe(false);

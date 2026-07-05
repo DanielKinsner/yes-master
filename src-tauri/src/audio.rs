@@ -241,6 +241,14 @@ pub async fn resume_playback(player: tauri::State<'_, Arc<AudioPlayer>>) -> Comm
     Ok(())
 }
 
+/// Dismiss the device-loss banner: clear the backend latch so playback
+/// ticks stop re-arming it. The sink stays paused; Play/space resumes.
+#[tauri::command]
+pub async fn clear_device_lost(player: tauri::State<'_, Arc<AudioPlayer>>) -> CommandResult<()> {
+    player.clear_device_lost();
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn stop_playback(player: tauri::State<'_, Arc<AudioPlayer>>) -> CommandResult<()> {
     player.stop();
@@ -339,6 +347,12 @@ enum AudioCommand {
     },
     #[cfg(any(feature = "app-runner", test))]
     MarkDeviceLost,
+    /// Frontend "Dismiss" on the device-loss banner. Clears the latched
+    /// `device_lost` bit WITHOUT resuming the paused sink — the user decides
+    /// when to press Play. Without this, the FE-only dismiss was a no-op:
+    /// the next 50 ms tick re-carried `device_lost: true` and revived the
+    /// banner (owner smoke F7, "the dialogue didn't go away").
+    ClearDeviceLost,
     Pause,
     Resume,
     Stop,
@@ -944,6 +958,10 @@ impl AudioPlayer {
     #[cfg(any(feature = "app-runner", test))]
     pub(crate) fn mark_device_lost(&self) {
         let _ = self.send(AudioCommand::MarkDeviceLost);
+    }
+
+    pub fn clear_device_lost(&self) {
+        let _ = self.send(AudioCommand::ClearDeviceLost);
     }
 
     pub fn stop(&self) {
@@ -2032,6 +2050,11 @@ fn process_audio_command(
                         );
                     }
                 }
+            }
+        }
+        AudioCommand::ClearDeviceLost => {
+            if let Some(s) = state.as_mut() {
+                s.device_lost = false;
             }
         }
         AudioCommand::Pause => {

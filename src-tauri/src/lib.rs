@@ -156,6 +156,7 @@ pub fn run() {
             audio::prewarm_decode,
             audio::pause_playback,
             audio::resume_playback,
+            audio::clear_device_lost,
             audio::stop_playback,
             audio::seek_playback,
             audio::set_loop_region,

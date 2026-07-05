@@ -2330,6 +2330,12 @@ export function useTrackMaster() {
   const clearError = useCallback(() => setError(null), []);
   const clearProjectFeedback = useCallback(() => setProjectFeedback(null), []);
   const clearPlaybackDeviceLost = useCallback(() => {
+    // Clear the backend latch FIRST: MarkDeviceLost paused the sink and set
+    // a persistent device_lost bit that every 50 ms tick mirrors, so a
+    // local-only clear was revived by the next tick (owner smoke F7 —
+    // "could not click dismiss, the dialogue didn't go away"). Fire and
+    // forget; a failed IPC just means the banner legitimately returns.
+    void api.clearDeviceLost().catch(() => {});
     setPlaybackDeviceLost(null);
     setTransport((t) => ({ ...t, deviceLost: false }));
   }, []);
