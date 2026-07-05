@@ -1,0 +1,31 @@
+# Supply-chain watch (blind-spot review 2026-07-04). Dependabot alerts and
+# PRs run on GitHub's side — they are free and NOT gated on the Actions
+# billing that currently blocks CI. Weekly cadence keeps PR noise low; the
+# CI lanes still gate every merge once billing is restored.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "cargo"
+    directory: "/src-tauri"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "cargo"
+    directory: "/apps/iphone-native/rust"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+  - package-ecosystem: "cargo"
+    directory: "/apps/android-native/rust"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
