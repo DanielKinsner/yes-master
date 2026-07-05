@@ -2041,8 +2041,7 @@ fn process_audio_command(
                         // later and the mark then applies.
                         s.play_generation = s.play_generation.wrapping_add(1);
                         crate::diagnostics::info(
-                            "skipped stale device-loss mark (play completed within the stall window)"
-                                .to_string(),
+                            "skipped stale device-loss mark (play completed within the stall window)",
                         );
                     }
                 }
