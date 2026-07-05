@@ -664,13 +664,18 @@ select {
   overflow: hidden;
 }
 
+/* F12 (owner smoke): hidden at rest — drag-to-reorder is the primary path
+   (the empty-state hint already says so) and the always-visible arrow column
+   read as noise. Hover, active row, or keyboard focus reveals the buttons,
+   so keyboard-only reorder (which HTML5 drag cannot do) keeps working. */
 .track-reorder-controls {
   display: grid;
   grid-template-rows: 1fr 1fr;
   width: 1.55rem;
   align-self: stretch;
   border-left: 1px solid rgba(111, 163, 255, 0.08);
-  opacity: 0.78;
+  opacity: 0;
+  transition: opacity 0.12s ease;
 }
 
 .track-reorder-btn {
@@ -690,7 +695,8 @@ select {
 }
 
 .track-row:hover .track-reorder-controls,
-.track-row.active .track-reorder-controls {
+.track-row.active .track-reorder-controls,
+.track-row:focus-within .track-reorder-controls {
   opacity: 1;
 }
 
