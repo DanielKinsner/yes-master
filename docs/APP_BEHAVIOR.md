@@ -216,3 +216,14 @@ further subjective retune.
 3. Oomph needs listening notes before another targeted tuning pass.
 4. Public signing, notarization, autoupdate, and store-style distribution remain
    deferred.
+5. Cloud-placeholder sources (OneDrive Files-On-Demand, Dropbox online-only)
+   are untested territory: a dehydrated file can stall decode/analysis for
+   the duration of a network hydration, and no unit test can construct one
+   without a cloud provider. Path SHAPES are pinned (UNC shares, verbatim
+   `\\?\` paths, >260-char nesting — `src-tauri/tests/portability_paths.rs`);
+   hydration BEHAVIOR awaits the owner's exploratory pass
+   (docs/OWNER_SMOKE_TEST.html #13) and its notes.
+6. Sessions store absolute source paths, so a `.ams.json` moved to another
+   machine restores tracks whose sources are missing (honest per-track
+   recovery errors, no crash). A "relink missing sources" affordance is
+   backlog (IDEAS_BACKLOG), not built.
