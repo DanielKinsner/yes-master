@@ -148,6 +148,19 @@ Generated 2026-06-22 from the docs-hygiene recon.
 - Extract shared `src/lib/time-format.ts` with explicit null/non-finite policy.
 - Replace substring-sniffing iPhone error display with an explicit error enum + view test.
 
+## Portability / distribution (blind-spot review 2026-07-04)
+
+- **Relink missing sources**: sessions store absolute paths, so machine hops /
+  moved folders orphan every track. A per-track "locate file..." affordance
+  (plus optional relative-to-session-file path storage) would make `.ams.json`
+  genuinely portable.
+- **Cloud-placeholder awareness**: detect `FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS`
+  on import and warn ("this file will download from OneDrive before analysis")
+  instead of stalling silently; pair with a decode/analysis watchdog timeout.
+- **Auto-updater** (Tauri updater plugin + signed release feed): every beta
+  install is currently stranded on its version forever. Blocked on CI/release
+  budget, not on code.
+
 ## Refactor / architecture
 
 - Explicit **Standard/Advanced/Album navigation state machine** making illegal UI

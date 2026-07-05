@@ -22,8 +22,24 @@ pub async fn import_tracks(paths: Vec<String>) -> CommandResult<Vec<ImportedTrac
 /// native dialogs, so confining to a base dir would break import/export. A
 /// sandboxed/base-confined mode is an owner product decision (see
 /// docs/OPEN_THREADS_AND_DECISIONS.md), not a guard bug.
+///
+/// The `Normal("..")` arm covers VERBATIM paths (`\\?\C:\...`) on Windows,
+/// where `std` parses `..` as a Normal component — never `ParentDir` — so
+/// the original guard was blind to `\\?\C:\x\..\y` arriving as a raw IPC
+/// string. Empirics (tests/portability_paths.rs, 2026-07-04): the OS
+/// refuses to OPEN such a path (error 123), so this arm is defense-in-depth
+/// — it turns a confusing OS error into the typed traversal rejection, and
+/// holds if OS normalization behavior ever changes. No legitimate file can
+/// be literally named `..` on any supported OS, so it cannot reject a real
+/// path. (Note: `PathBuf::join("..")` onto a verbatim base lexically POPS
+/// the component inside std itself — such paths never contain `..` by the
+/// time any guard sees them; only raw strings do.)
 pub fn has_parent_dir_component(path: &Path) -> bool {
-    path.components().any(|c| matches!(c, Component::ParentDir))
+    path.components().any(|c| match c {
+        Component::ParentDir => true,
+        Component::Normal(name) => name == "..",
+        _ => false,
+    })
 }
 
 fn import_one(path_str: &str) -> CommandResult<ImportedTrack> {
@@ -147,6 +163,19 @@ mod tests {
             )));
             assert!(has_parent_dir_component(Path::new(
                 r"C:\Users\me\..\..\Windows"
+            )));
+            // VERBATIM spelling: std parses `..` here as Normal("..") — not
+            // ParentDir — while NTFS still resolves it, so the guard must
+            // flag it too (found by tests/portability_paths.rs, 2026-07-04).
+            assert!(has_parent_dir_component(Path::new(
+                r"\\?\C:\Users\me\..\..\Windows\evil.wav"
+            )));
+            // Plain UNC shares stay allowed (NAS libraries are legitimate).
+            assert!(!has_parent_dir_component(Path::new(
+                r"\\server\share\song.wav"
+            )));
+            assert!(has_parent_dir_component(Path::new(
+                r"\\server\share\..\other\song.wav"
             )));
         }
     }
