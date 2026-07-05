@@ -5,6 +5,7 @@ pub mod audio;
 pub mod confidence;
 pub mod decode;
 pub mod deep_analysis;
+pub mod diagnostics;
 pub mod dsp;
 pub mod engine;
 pub(crate) mod evidence_lanes;
