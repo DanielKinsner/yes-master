@@ -1028,7 +1028,16 @@ pub fn mastering_render_with_cancel(
         None => unique_output_path(out_dir, source_path, &track_id, kind)?,
     };
 
+    // Per-stage wall-clock markers, logged at the end of the render. F9/F11
+    // (owner smoke): a "15-minute export" report is undiagnosable without
+    // knowing WHICH stage ate the time — decode vs chain vs SRC vs measure
+    // vs the write to the chosen destination.
+    let t_render_start = std::time::Instant::now();
+    let stage_ms = |t: std::time::Instant| t.elapsed().as_millis();
+
+    let t_stage = std::time::Instant::now();
     let pcm = crate::decode::decode_full(source_path)?;
+    let decode_ms = stage_ms(t_stage);
     if pcm.samples.is_empty() {
         return Err(CommandError::Decode(
             "no samples decoded from source".to_string(),
@@ -1062,6 +1071,12 @@ pub fn mastering_render_with_cancel(
             started_at_iso,
         ));
     }
+    let t_stage = std::time::Instant::now();
+    // Progress emits are throttled to ≥1% fraction steps (or the final 1.0):
+    // the chain runs many times faster than realtime, so an unthrottled emit
+    // per 4096-frame chunk produced hundreds of IPC events per second — pure
+    // overhead for a progress bar nobody can read that fast (F9).
+    let mut last_emitted_fraction = 0.0_f32;
     while processed < total_samples {
         if render_cancelled(options.cancel_flag) {
             return Ok(cancelled_render_job(
@@ -1076,10 +1091,14 @@ pub fn mastering_render_with_cancel(
         chain.process_interleaved(&mut samples[processed..end], channels_max);
         processed = end;
         if let Some(cb) = options.on_progress {
-            let fraction = processed as f32 / total_samples.max(1) as f32;
-            cb(fraction.min(1.0));
+            let fraction = (processed as f32 / total_samples.max(1) as f32).min(1.0);
+            if fraction >= 1.0 || fraction - last_emitted_fraction >= 0.01 {
+                last_emitted_fraction = fraction;
+                cb(fraction);
+            }
         }
     }
+    let chain_ms = stage_ms(t_stage);
     if render_cancelled(options.cancel_flag) {
         return Ok(cancelled_render_job(
             job_id,
@@ -1092,6 +1111,7 @@ pub fn mastering_render_with_cancel(
     // RS-09 fix (2026-07-03): drain the limiter's lookahead so the final
     // ~3 ms of the master isn't dropped and the output stays sample-aligned
     // with the source. Must run BEFORE sample-rate conversion/measurement.
+    let t_stage = std::time::Instant::now();
     chain.flush_render_tail(&mut samples, channels_max);
 
     let rendered_sample_rate = render_settings.effective_sample_rate(pcm.sample_rate);
@@ -1103,6 +1123,8 @@ pub fn mastering_render_with_cancel(
             pcm.channels,
         )?;
     }
+    let tail_and_src_ms = stage_ms(t_stage);
+    let t_stage = std::time::Instant::now();
 
     // Single full BS.1770 pass over the post-chain, post-SRC samples — used both to
     // decide LUFS landing and to populate the rendered-output measurements
@@ -1144,6 +1166,7 @@ pub fn mastering_render_with_cancel(
     } else {
         -60.0
     };
+    let measure_ms = stage_ms(t_stage);
 
     // Ceiling-bounded LUFS landing. Routes through the shared helper
     // with the LUFS+TP we already measured for the receipt. The
@@ -1217,6 +1240,7 @@ pub fn mastering_render_with_cancel(
     // If the chosen path gained a file while we rendered (overlapping
     // export), the write diverts to a `__{n}` sibling — report where the
     // render actually landed.
+    let t_stage = std::time::Instant::now();
     let actual_out_path = write_wav(
         &out_path,
         &samples,
@@ -1224,6 +1248,7 @@ pub fn mastering_render_with_cancel(
         pcm.channels,
         bit_depth,
     )?;
+    let write_ms = stage_ms(t_stage);
     if render_cancelled(options.cancel_flag) {
         let _ = std::fs::remove_file(&actual_out_path);
         return Ok(cancelled_render_job(
@@ -1237,6 +1262,19 @@ pub fn mastering_render_with_cancel(
     if let Some(cb) = options.on_progress {
         cb(1.0);
     }
+    // One line per render; names the slow stage AND the destination so a
+    // diagnostics report alone can answer "why did this export take 15
+    // minutes" (write time is where OneDrive/USB destinations show up).
+    crate::diagnostics::info(format!(
+        "render {kind:?} job {job_id}: decode {decode_ms}ms, chain {chain_ms}ms, \
+         tail+src {tail_and_src_ms}ms, measure {measure_ms}ms, write {write_ms}ms, \
+         total {}ms -> {}",
+        t_render_start.elapsed().as_millis(),
+        actual_out_path
+            .parent()
+            .unwrap_or(&actual_out_path)
+            .display()
+    ));
 
     Ok(RenderJob {
         id: job_id.clone(),

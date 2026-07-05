@@ -571,9 +571,7 @@ fn mark_device_lost_applies(
     now: std::time::Instant,
 ) -> bool {
     match last_play_completed_at {
-        Some(completed_at) => {
-            now.saturating_duration_since(completed_at) >= DEVICE_LOSS_MARK_GRACE
-        }
+        Some(completed_at) => now.saturating_duration_since(completed_at) >= DEVICE_LOSS_MARK_GRACE,
         None => true,
     }
 }
@@ -2027,10 +2025,8 @@ fn process_audio_command(
         AudioCommand::MarkDeviceLost => {
             if let Some(s) = state.as_mut() {
                 if s.current_track.is_some() {
-                    if mark_device_lost_applies(
-                        s.last_play_completed_at,
-                        std::time::Instant::now(),
-                    ) {
+                    if mark_device_lost_applies(s.last_play_completed_at, std::time::Instant::now())
+                    {
                         s.sink.pause();
                         s.device_lost = true;
                         s.landing_pending = false;

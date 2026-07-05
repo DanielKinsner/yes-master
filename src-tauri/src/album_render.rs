@@ -872,7 +872,15 @@ pub fn render_album_plan_impl_with_cancel(
         let spec = wav_spec(album_channels, album_sample_rate, bit_depth)?;
         let album_tmp_path = unique_tmp_path(&album_path)?;
         let album_write_result = (|| -> CommandResult<()> {
-            let mut album_writer = hound::WavWriter::create(&album_tmp_path, spec)
+            // 1 MiB BufWriter (hound defaults to 8 KiB): the continuous album
+            // file is the longest write in the app — at 8 KiB it flushes once
+            // per ~11 ms of audio, which is exactly where a sync-monitored or
+            // slow destination bleeds time (owner smoke F9/F11). Byte output
+            // is unchanged; only flush cadence differs.
+            let album_file = std::fs::File::create(&album_tmp_path)
+                .map_err(|e| CommandError::Io(e.to_string()))?;
+            let album_buf = std::io::BufWriter::with_capacity(1 << 20, album_file);
+            let mut album_writer = hound::WavWriter::new(album_buf, spec)
                 .map_err(|e| CommandError::Io(e.to_string()))?;
             for (i, samples) in rendered_samples.iter().enumerate() {
                 if render_cancelled(cancel_flag) {

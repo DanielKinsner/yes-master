@@ -1361,7 +1361,10 @@ mod tests {
         );
         // trim_width(w) = 1 + (w-1) * width_mult and width_trim = 1 - width_mult.
         let expected = 1.0 + (1.11 - 1.0) * (1.0 - r.width_trim);
-        assert!((auto - expected).abs() < 1e-4, "auto={auto} expected={expected}");
+        assert!(
+            (auto - expected).abs() < 1e-4,
+            "auto={auto} expected={expected}"
+        );
 
         // Guard inactive (no profile): Auto is the raw preset baseline.
         let r = readout_for(&settings_with(None, Some(1.0)));

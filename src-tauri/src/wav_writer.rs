@@ -282,8 +282,15 @@ fn write_wav_direct(
         bits_per_sample: bits,
         sample_format: fmt,
     };
+    // 1 MiB BufWriter instead of hound's default 8 KiB: a 24-min 96 kHz
+    // stereo render flushes ~135k times at 8 KiB — on sync-monitored or
+    // slow destinations each flush pays real latency (owner smoke F9/F11).
+    // Byte-identical output (the snapshot tests below pin the file hash);
+    // only the flush cadence changes.
+    let file = std::fs::File::create(path).map_err(|e| CommandError::Io(e.to_string()))?;
+    let buf = std::io::BufWriter::with_capacity(1 << 20, file);
     let mut writer =
-        hound::WavWriter::create(path, spec).map_err(|e| CommandError::Io(e.to_string()))?;
+        hound::WavWriter::new(buf, spec).map_err(|e| CommandError::Io(e.to_string()))?;
     // Phase A4: TPDF dither for int paths. f32 output stays as-is.
     let mut rng = DitherRng::new(0x000A_11CE);
     match bit_depth {
