@@ -505,6 +505,18 @@ select {
   line-height: 1.45;
 }
 
+.help-section .ghost-btn {
+  margin-top: 0.55rem;
+}
+
+/* Beats `.help-section p`'s margin/color reset (higher specificity). */
+.help-section .help-diagnostics-note {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--text-2);
+  word-break: break-all;
+}
+
 .app {
   display: grid;
   grid-template-columns: var(--rail-width-left) 1fr var(--rail-width-right);

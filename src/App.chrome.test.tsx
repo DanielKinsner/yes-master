@@ -12,6 +12,15 @@ import {
 } from "./App";
 import type { ImportedTrack } from "./bindings";
 import { STANDARD_EXPORT_DELIVERY } from "./lib/standard-export";
+import { api } from "./lib/api";
+import { save } from "./lib/tauri-runtime";
+
+// HelpPanel's diagnostics flow talks to the save dialog; stub only `save`
+// and keep the rest of the runtime module real.
+vi.mock("./lib/tauri-runtime", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./lib/tauri-runtime")>();
+  return { ...actual, save: vi.fn() };
+});
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true;
@@ -237,6 +246,54 @@ describe("top chrome", () => {
     });
 
     expect(onClose).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("saves a diagnostics report from Help and confirms the location", async () => {
+    vi.mocked(save).mockResolvedValue("C:/reports/diag.txt");
+    const report = vi
+      .spyOn(api, "saveDiagnosticsReport")
+      .mockResolvedValue("C:/reports/diag.txt");
+    const { container, root } = await renderNode(<HelpPanel onClose={vi.fn()} />);
+
+    // The privacy promise is part of the panel copy.
+    expect(container.textContent).toContain("Nothing is sent anywhere");
+
+    const button = [...container.querySelectorAll("button")].find((b) =>
+      b.textContent?.includes("Save diagnostics report"),
+    );
+    expect(button).toBeInstanceOf(HTMLButtonElement);
+    await act(async () => {
+      (button as HTMLButtonElement).click();
+    });
+
+    expect(report).toHaveBeenCalledWith("C:/reports/diag.txt");
+    expect(container.textContent).toContain("Saved to C:/reports/diag.txt");
+
+    report.mockRestore();
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("does nothing when the diagnostics save dialog is cancelled", async () => {
+    vi.mocked(save).mockResolvedValue(null);
+    const report = vi.spyOn(api, "saveDiagnosticsReport").mockResolvedValue("");
+    const { container, root } = await renderNode(<HelpPanel onClose={vi.fn()} />);
+
+    const button = [...container.querySelectorAll("button")].find((b) =>
+      b.textContent?.includes("Save diagnostics report"),
+    );
+    await act(async () => {
+      (button as HTMLButtonElement).click();
+    });
+
+    expect(report).not.toHaveBeenCalled();
+    expect(container.textContent).not.toContain("Saved to");
+
+    report.mockRestore();
     await act(async () => {
       root.unmount();
     });
