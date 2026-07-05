@@ -619,7 +619,10 @@ pub fn render_album_plan_impl_with_cancel(
 
     // Two passes:
     //   Pass 1 - decode + render each track into samples in memory, write
-    //   the per-track WAV with NN-<title>.wav name, measure post-render
+    //   the per-track WAV named NN-<source-file-stem>.wav (the album title
+    //   is NOT used in filenames today — owner smoke F13; naming scheme is
+    //   an open owner decision in docs/OPEN_THREADS_AND_DECISIONS.md),
+    //   measure post-render
     //   LUFS, and remember the rendered samples + transition spec for the
     //   continuous writer in pass 2. Memory cost is the full album in f32;
     //   for a typical 60-min album at 48k stereo that's ~1.3 GB which is
@@ -788,7 +791,11 @@ pub fn render_album_plan_impl_with_cancel(
                 &shadowed,
             )?;
 
-            // Per-track WAV named NN-<sanitized_title>.wav.
+            // Per-track WAV named NN-<sanitized SOURCE-FILE stem>.wav. There
+            // is no per-track title field anywhere in the album model, and
+            // `plan.title` (the album title) reaches only manifest.json —
+            // owner smoke F13; scheme decision tracked in
+            // docs/OPEN_THREADS_AND_DECISIONS.md.
             let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("track");
             let safe = sanitize_for_filename(stem);
             let per_track_name = format!("{:02}-{}.wav", entry.position, safe);

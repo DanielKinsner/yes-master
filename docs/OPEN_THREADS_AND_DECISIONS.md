@@ -14,6 +14,12 @@ close rather than letting them rot in scattered docs.
 > (pairs thread #5), and RS-09 classification (Part B Q17) as riders, and it
 > resolved Part B Q8 and (partially) Q11.
 
+> **2026-07-05:** the owner's first hands-on smoke test (13 findings) was
+> independently validated and the objective fixes shipped — see
+> `docs/plans/2026-07-05-owner-smoke-fixes.md` for verdicts, refuted
+> hypotheses, and the fix ledger. The design decisions it surfaced are Part B
+> Q23–Q30 below.
+
 > **State of the project (2026-06-22):** late stabilization. The two big mechanical
 > queues (the final repo-wide review A1–E3, and the shippability roadmap S0–S7 +
 > AC-1…AC-4) are **fully shipped on main**. What remains is almost entirely
@@ -139,6 +145,39 @@ cluster can mostly close in one sitting.**
 ### Low-risk doc-accuracy checks (I can do these on request)
 20. ~~`IPHONE_APP_OVERVIEW.md` preset vocabulary vs the shipped Standard 8-preset set~~ **CLOSED 2026-07-03 (verified, no drift):** the iPhone app deliberately ships a curated four-preset picker — `ContentView.swift:4-7` maps exactly Universal/Clarity/Tape/Oomph — and the doc describes that accurately. Not a drift from desktop's 8; a deliberate mobile subset.
 21. ~~`ENGINE_REFERENCE.md` preset-calibration table predates the 85% lean~~ **CLOSED 2026-07-03 (verified, already fixed):** the table was regenerated from the shipped 85%-lean constants (noted in the doc itself, commit `659bea5`); spot-checked Oomph row (+5.30/−3.0/−2.6/−2.05, width 0.84, target −12.0) against `dsp.rs` `PresetCalibration` — exact match.
+
+### 2026-07-05 owner smoke test (see `docs/plans/2026-07-05-owner-smoke-fixes.md` for full context)
+23. **Width/advanced slider re-model (F10).** Your bipolar proposal (center =
+    Auto, left = subtract, right = add) is sound but changes the wire meaning
+    of `advanced.width` (old files with `0.0` legitimately mean mono) — needs
+    an `advanced_schema_version` gate first. **Shipped meanwhile:** honest Auto
+    thumb + `Auto · 1.11` readout + visible reset-to-Auto chip.
+    *Recommendation: live with the honest slider first; re-model only if it
+    still confuses.*
+24. **Per-track view memory (F6).** Spec: `view_by_track_id` in ProjectState;
+    force-bounce to Advanced still happens for dirty tracks but stops
+    overwriting the remembered view; only explicit choices persist.
+    *Recommendation: implement as specced — say the word.*
+25. **Album filename scheme (F13).** Title already reaches the backend;
+    options: (i) `<Title>-NN-<stem>.wav` prefix, (ii) album-titled subfolder,
+    (iii) both; also the continuous file + empty-title fallback.
+    *Recommendation: (ii) subfolder.*
+26. **Album-character width bias latent bug.** With the (gated-OFF) character
+    system active and Width on Auto, `album_render.rs` reinterprets Auto as
+    1.0 before adding the offset — silently discarding the preset baseline.
+    *Recommendation: "Auto stays Auto" (skip the offset when width is None) +
+    regression test, landed before 7a ever flips.*
+27. **Export-during-export UX (F8).** Current hard-block is intentional.
+    *Recommendation: keep, add a tooltip; a queue means overlapping ~GB
+    render jobs.*
+28. **Reorder arrows (F12).** Shipped hidden-until-hover/focus (keyboard
+    reorder preserved). *Alternative: remove entirely (loses keyboard path).*
+29. **Autosave immediacy (F5 tail).** The 7–10 s you measured is analysis
+    latency + a 1.5 s debounce, not a slow save. *Recommendation: fire an
+    explicit autosave at analysis-complete; small and harmless.*
+30. **Device-loss threshold.** Shipped at 2 s (40 ticks) because the code
+    documents legitimate 1–2 s cold-decode stalls. If you want faster true
+    loss detection on the flaky Focusrite, 1.5 s is the defensible floor.
 
 ### Branding (parked)
 22. **"Y.E.S. Master" / "Your Endgame Sound"** vs the current **"YES Master"** — a brand decision you parked. It cascades across PRODUCT.md, AGENTS.md/CLAUDE.md, README, and the landing copy. Until you call it, docs keep the current "YES Master" naming.
