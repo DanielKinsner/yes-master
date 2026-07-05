@@ -183,8 +183,42 @@ mod tests {
             album_sample_rate: None,
             album_bit_depth: None,
             track_override_album: Vec::new(),
+            selected_track_id: Some(track_id_of(id)),
             last_saved_iso: Some(format!("2026-06-12T12:00:00Z-{id}")),
         }
+    }
+
+    fn track_id_of(id: &str) -> TrackId {
+        TrackId(id.to_string())
+    }
+
+    #[test]
+    fn selected_track_id_round_trips_and_defaults_for_older_sessions() {
+        // F5 (owner smoke): the saved selection must survive a save/load
+        // round trip, and session files written before the field existed
+        // must still load (defaulting to None → restore picks track 0).
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join("selection.ams.json");
+        let state = project_state("selection");
+        write_session_atomic(&path, &state).expect("write");
+        let loaded = read_session(&path).expect("read");
+        assert_eq!(
+            loaded.selected_track_id,
+            Some(TrackId("selection".to_string()))
+        );
+
+        // Strip the field to simulate a pre-F5 session file.
+        let raw = std::fs::read_to_string(&path).expect("read raw");
+        let mut value: serde_json::Value = serde_json::from_str(&raw).expect("parse");
+        value
+            .as_object_mut()
+            .expect("object")
+            .remove("selected_track_id")
+            .expect("field present in new saves");
+        let legacy_path = tmp.path().join("legacy.ams.json");
+        std::fs::write(&legacy_path, value.to_string()).expect("write legacy");
+        let legacy = read_session(&legacy_path).expect("legacy session loads");
+        assert_eq!(legacy.selected_track_id, None);
     }
 
     #[test]

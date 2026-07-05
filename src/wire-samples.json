@@ -580,6 +580,7 @@
     "last_saved_iso": "2026-06-09T00:00:00+00:00",
     "mode": "track",
     "schema_version": 1,
+    "selected_track_id": "wire-sample",
     "track_order": [
       "wire-sample"
     ],

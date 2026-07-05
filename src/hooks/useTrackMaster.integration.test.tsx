@@ -554,6 +554,46 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("restores the persisted selected track instead of defaulting to the first (owner smoke F5)", async () => {
+    const first = makeTrack("restored-first", "C:/audio/first.wav");
+    const second = makeTrack("restored-second", "C:/audio/second.wav");
+    mocks.api.loadRecentSession.mockResolvedValue({
+      ...makeProjectState(first),
+      tracks: [first, second],
+      track_order: [first.id, second.id],
+      selected_track_id: second.id,
+    });
+
+    const harness = await renderHookHarness();
+
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(second.id);
+    });
+    // The prewarm follows the restored selection, not track 0.
+    expect(mocks.api.prewarmDecode).toHaveBeenCalledWith(second.path);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("falls back to the first track when the persisted selection is stale", async () => {
+    const track = makeTrack("restored-only", "C:/audio/only.wav");
+    mocks.api.loadRecentSession.mockResolvedValue({
+      ...makeProjectState(track),
+      selected_track_id: "gone-track-id",
+    });
+
+    const harness = await renderHookHarness();
+
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("prewarms the first imported track when import auto-selects it", async () => {
     const track = makeTrack("imported-1", "C:/audio/imported.wav");
     mocks.api.importTracks.mockResolvedValue([track]);

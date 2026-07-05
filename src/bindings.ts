@@ -474,6 +474,9 @@ export interface ProjectState {
   album_sample_rate?: number | null;
   album_bit_depth?: number | null;
   track_override_album?: TrackId[];
+  // F5: the track selected at save time; restore falls back to the first
+  // track when absent (older sessions) or stale (track since removed).
+  selected_track_id?: TrackId | null;
   last_saved_iso: string | null;
 }
 

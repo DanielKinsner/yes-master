@@ -73,6 +73,7 @@ function buildProjectState(args: {
   albumSampleRate: number | null;
   albumBitDepth: number | null;
   overrideAlbum: Iterable<TrackId>;
+  selectedTrackId: TrackId | null;
 }): ProjectState {
   return {
     schema_version: 1,
@@ -87,6 +88,7 @@ function buildProjectState(args: {
     album_sample_rate: args.albumSampleRate,
     album_bit_depth: args.albumBitDepth,
     track_override_album: Array.from(args.overrideAlbum),
+    selected_track_id: args.selectedTrackId,
     last_saved_iso: new Date().toISOString(),
   };
 }
@@ -788,12 +790,18 @@ export function useTrackMaster() {
         setHadPriorSession(restoredTracks.length > 0);
         if (restoredTracks.length > 0) {
           setTracks(restoredTracks);
-          setSelectedTrackId(restoredTracks[0].id);
+          // F5 (owner smoke): land on the track the user was on, not always
+          // the first. Fall back to the first track when the persisted id is
+          // absent (older session) or stale (track since removed).
+          const restoredSelection =
+            restoredTracks.find((t) => t.id === session.selected_track_id) ??
+            restoredTracks[0];
+          setSelectedTrackId(restoredSelection.id);
           // Prewarm the auto-selected track's decode cache so the
           // user clicking Mastered immediately after a session
           // restore doesn't pay the 1-2 s cold-decode freeze.
           // Fire-and-forget; the cold path still works if it fails.
-          api.prewarmDecode(restoredTracks[0].path).catch(() => {
+          api.prewarmDecode(restoredSelection.path).catch(() => {
             /* opportunistic; cold decode path still works */
           });
         }
@@ -864,6 +872,7 @@ export function useTrackMaster() {
         albumSampleRate,
         albumBitDepth,
         overrideAlbum,
+        selectedTrackId,
       });
       api.autosaveSession(state).catch((err) => {
         console.warn("Autosave failed", err);
@@ -882,6 +891,7 @@ export function useTrackMaster() {
     albumSampleRate,
     albumBitDepth,
     overrideAlbum,
+    selectedTrackId,
   ]);
 
   const selectedTrack = useMemo(
@@ -2487,6 +2497,7 @@ export function useTrackMaster() {
         albumSampleRate,
         albumBitDepth,
         overrideAlbum,
+        selectedTrackId,
       });
       await api.saveProject(path, state);
       setError(null);
@@ -2510,6 +2521,7 @@ export function useTrackMaster() {
     albumSampleRate,
     albumBitDepth,
     overrideAlbum,
+    selectedTrackId,
   ]);
 
   const openProjectFromDisk = useCallback(async () => {
@@ -2552,11 +2564,16 @@ export function useTrackMaster() {
       setAlbumBitDepthState(state.album_bit_depth ?? null);
       setOverrideAlbum(new Set(state.track_override_album ?? []));
       if (state.tracks && state.tracks.length > 0) {
-        setSelectedTrackId(state.tracks[0].id);
+        // F5 (owner smoke): same selection restore as the session path —
+        // land on the saved selection, fall back to the first track.
+        const restoredSelection =
+          state.tracks.find((t) => t.id === state.selected_track_id) ??
+          state.tracks[0];
+        setSelectedTrackId(restoredSelection.id);
         // Prewarm the auto-selected track from the opened project
         // so first-Mastered-click is snappy. Same opportunistic
         // pattern as session restore + import auto-select.
-        api.prewarmDecode(state.tracks[0].path).catch(() => {
+        api.prewarmDecode(restoredSelection.path).catch(() => {
           /* opportunistic; cold decode path still works */
         });
       } else {

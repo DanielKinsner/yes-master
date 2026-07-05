@@ -70,6 +70,7 @@ fn main() {
         album_sample_rate: None,
         album_bit_depth: None,
         track_override_album: Vec::new(),
+        selected_track_id: Some(track_id.clone()),
         last_saved_iso: Some("2026-05-13T00:00:00Z".to_string()),
     };
 
