@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YES Master — User Guide</title>
+<style>
+  :root {
+    --bg: #0b1120; --card: #131c31; --ink: #e8eefc; --dim: #9fb0d0;
+    --accent: #6fa3ff; --good: #3ddc84; --edge: #26334f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 18px; line-height: 1.55;
+    max-width: 820px; margin: 0 auto; padding: 28px 20px 80px;
+  }
+  h1 { font-size: 32px; margin: 0 0 4px; }
+  h2 { font-size: 23px; margin: 34px 0 10px; color: var(--accent); }
+  h3 { font-size: 18px; margin: 18px 0 6px; }
+  .sub { color: var(--dim); font-size: 16px; margin-bottom: 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--edge);
+    border-radius: 12px; padding: 16px 18px; margin: 12px 0;
+  }
+  .card p { margin: 6px 0; }
+  ol.steps { padding-left: 22px; }
+  ol.steps li { margin-bottom: 8px; }
+  b.term { color: var(--good); }
+  kbd {
+    background: var(--card); border: 1px solid var(--edge); border-bottom-width: 2px;
+    border-radius: 6px; padding: 1px 7px; font-family: inherit; font-size: 15px;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+  td, th { border: 1px solid var(--edge); padding: 7px 10px; text-align: left; font-size: 16px; }
+  th { color: var(--dim); font-weight: 600; }
+  .note { color: var(--dim); font-size: 15.5px; }
+</style>
+</head>
+<body>
+
+<h1>YES Master — User Guide</h1>
+<p class="sub">Master your track in real time — and see exactly what it did.
+Everything runs on your computer: no upload, no waiting, no black box.</p>
+
+<h2>Quick start (three moves)</h2>
+<div class="card">
+  <ol class="steps">
+    <li><b>Import</b> a track (drag it in, or click Import Audio). Analysis runs
+        automatically — loudness, peaks, dynamics, waveform.</li>
+    <li>Pick a <b>Style</b> and a <b>Loudness</b> (Low / Medium / High). Press play
+        and flip between <b>Original</b> and <b>Mastered</b> — the playhead stays put.</li>
+    <li>Click <b>Create Master</b>. You get a clean 44.1&nbsp;kHz / 24-bit WAV with a
+        −1&nbsp;dBTP ceiling, written next to your source file.
+        <b>Your original is never touched, and nothing is ever overwritten.</b></li>
+  </ol>
+</div>
+
+<h2>The two views</h2>
+<p><b class="term">Standard</b> is the whole flow in one screen: style, loudness,
+Create Master. <b class="term">Advanced</b> opens the full room: eight presets, a
+7-band EQ, compressor modes, width and warmth, live metering, loop regions, and
+delivery profiles. Same engine in both — Standard is not a lesser master.</p>
+
+<h2>Listening tools</h2>
+<div class="card">
+  <p><b class="term">Original vs Mastered</b> — switch anytime while playing; the
+  playhead is preserved so you compare the same moment, not two different bars.</p>
+  <p><b class="term">Volume Match</b> — evens out the loudness difference while you
+  compare, so the louder one doesn't automatically "win." It is audition-only:
+  it <b>never</b> changes your export. Off by default.</p>
+  <p><b class="term">Preview LUFS</b> — while playing Mastered, estimates where the
+  export loudness will land, so what you hear tracks what you'll ship.</p>
+  <p><b class="term">Loop region</b> (Advanced) — <kbd>Shift</kbd>+drag on the waveform
+  to mark a section, toggle Loop to hear just the chorus while you tweak.</p>
+</div>
+
+<h2>Reading your receipt</h2>
+<p>Every master ships with measured numbers from the rendered file — not
+estimates:</p>
+<table>
+  <tr><th>Number</th><th>What it means</th></tr>
+  <tr><td><b>LUFS</b></td><td>Overall loudness. Streaming services normalize around
+      −14 LUFS; louder targets trade dynamics for punch. Your call.</td></tr>
+  <tr><td><b>True peak (dBTP)</b></td><td>The real inter-sample peak. Kept at or
+      below the ceiling your profile promises (Standard: −1 dBTP).</td></tr>
+  <tr><td><b>Dynamic range (LU)</b></td><td>How much the track breathes between its
+      quiet and loud moments. Lower = denser.</td></tr>
+</table>
+<p class="note">Warnings are advisory — you can overcook your own track on purpose
+and the app will still render it; it just tells you the truth about the result.
+Only technical impossibilities (like a delivery format mismatch) are marked
+critical.</p>
+
+<h2>Album Master</h2>
+<p>One coherent record: consistent loudness across tracks, one delivery format,
+and an honest per-track manifest. An optional <b>arc</b> shapes loudness across the
+running order. <b class="term">Override</b> exempts a single track completely — it
+renders with its own settings and its own loudness target (still in the album's
+format), and the manifest says so.</p>
+
+<h2>Your files &amp; your privacy</h2>
+<div class="card">
+  <p>Masters are written as new files — <b>never over your source, never over an
+  earlier render</b>. Exporting twice gives you two files.</p>
+  <p>Your session autosaves locally; Save Project writes a portable
+  <code>.ams.json</code> snapshot (it references your audio from disk — audio is
+  not embedded, so keep the source files around).</p>
+  <p>Nothing you play, analyze, or render leaves this machine. There is no
+  telemetry.</p>
+</div>
+
+<h2>When something breaks</h2>
+<div class="card">
+  <p><b>Headphones died / device vanished?</b> Playback pauses with a banner;
+  pick an output device and resume from the same spot.</p>
+  <p><b>Anything else weird?</b> Open <b>Help → Save diagnostics report</b>. It
+  writes one text file (recent app logs + session summary, assembled locally —
+  nothing is sent anywhere). Send it with your bug report and the developer can
+  usually see exactly what happened.</p>
+</div>
+
+<h2>Shortcuts</h2>
+<p><kbd>Space</kbd> play / pause &nbsp;·&nbsp; <kbd>Ctrl</kbd>+<kbd>Z</kbd> /
+<kbd>Ctrl</kbd>+<kbd>Y</kbd> undo / redo &nbsp;·&nbsp; <kbd>Shift</kbd>+drag
+loop region (Advanced) &nbsp;·&nbsp; <kbd>Shift</kbd>+click clears it.</p>
+
+</body>
+</html>
