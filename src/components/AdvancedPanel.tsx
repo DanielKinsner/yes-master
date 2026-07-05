@@ -273,6 +273,12 @@ function AdvancedControlsCard({
   const a = settings.advanced;
   const effectiveLufsTarget = loudnessTargetDisplay(settings).current;
   const effectiveCeiling = effectiveCeilingDbtp(settings);
+  // F10 (owner smoke): what Width's Auto actually resolves to — the preset's
+  // stereo-width baseline after the adaptive guard, computed backend-side so
+  // it matches the chain exactly. Drives the honest thumb position and the
+  // "Auto · 1.11" readout; without it the Auto thumb sat at 0 and dragging
+  // to 0.05 read as a tiny increase instead of near-mono.
+  const effectiveAutoWidth = adaptiveReadout?.effective_auto_width ?? null;
   const resetAdvancedControls = () => {
     onInputGain(0);
     onOutputGain(0);
@@ -338,6 +344,9 @@ function AdvancedControlsCard({
           min={0}
           max={2}
           format={(v) => v.toFixed(2)}
+          autoReadout={effectiveAutoWidth?.toFixed(2)}
+          sliderAutoValue={effectiveAutoWidth ?? undefined}
+          showAutoReset
           onChange={(v) => update("width", v)}
         />
         <NumberField
@@ -347,6 +356,7 @@ function AdvancedControlsCard({
           min={0}
           max={1}
           format={(v) => v.toFixed(2)}
+          showAutoReset
           onChange={(v) => update("warmth", v)}
         />
         <NumberField
@@ -356,6 +366,7 @@ function AdvancedControlsCard({
           min={0}
           max={1}
           format={(v) => v.toFixed(2)}
+          showAutoReset
           onChange={(v) => update("presence_air", v)}
         />
       </div>

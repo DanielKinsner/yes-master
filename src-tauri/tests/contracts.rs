@@ -1707,6 +1707,7 @@ fn session_write_and_read_roundtrips() {
         album_sample_rate: Some(96_000),
         album_bit_depth: Some(16),
         track_override_album: vec![TrackId("alpha".to_string())],
+        selected_track_id: Some(TrackId("alpha".to_string())),
         last_saved_iso: Some("2026-05-11T12:00:00Z".to_string()),
     };
 
@@ -1731,6 +1732,10 @@ fn session_write_and_read_roundtrips() {
     assert_eq!(restored.album_title, "Saved Album Choices");
     assert_eq!(restored.album_sample_rate, Some(96_000));
     assert_eq!(restored.album_bit_depth, Some(16));
+    assert_eq!(
+        restored.selected_track_id,
+        Some(TrackId("alpha".to_string()))
+    );
 }
 
 #[test]
@@ -1759,6 +1764,7 @@ fn session_read_defaults_album_panel_choices_for_legacy_project() {
     assert_eq!(restored.album_title, "");
     assert_eq!(restored.album_sample_rate, None);
     assert_eq!(restored.album_bit_depth, None);
+    assert_eq!(restored.selected_track_id, None);
 }
 
 #[test]
@@ -1780,6 +1786,7 @@ fn session_write_is_atomic_against_existing_file() {
         album_sample_rate: None,
         album_bit_depth: None,
         track_override_album: Vec::new(),
+        selected_track_id: None,
         last_saved_iso: None,
     };
 

@@ -48,6 +48,7 @@ const mocks = vi.hoisted(() => {
     prepareWaveform: vi.fn(),
     listAudioOutputDevices: vi.fn(),
     setAudioOutputDevice: vi.fn(),
+    clearDeviceLost: vi.fn(),
     runExportChecks: vi.fn(),
     openOutput: vi.fn(),
     saveProject: vi.fn(),

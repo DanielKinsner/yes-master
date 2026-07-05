@@ -73,7 +73,26 @@ delivery profiles. Same engine in both — Standard is not a lesser master.</p>
   <p><b class="term">Preview LUFS</b> — while playing Mastered, estimates where the
   export loudness will land, so what you hear tracks what you'll ship.</p>
   <p><b class="term">Loop region</b> (Advanced) — <kbd>Shift</kbd>+drag on the waveform
-  to mark a section, toggle Loop to hear just the chorus while you tweak.</p>
+  to mark a section, toggle Loop to hear just the chorus while you tweak. With
+  Loop on, playback stays inside the region — clicking outside it snaps back in.</p>
+</div>
+
+<h2>What "Width" actually does</h2>
+<div class="card">
+  <p>Width scales the <b>side signal</b> of your track (the part that differs
+  between left and right). <b>1.00</b> leaves the stereo image exactly as mixed;
+  below 1.00 narrows toward mono; above 1.00 widens. Presets carry their own
+  width as part of their character — some widen (Spatial), some deliberately
+  narrow a little for focus (Tape, Oomph, Warmth).</p>
+  <p>While the slider shows <b>AUTO</b>, the preset's width is in charge (shown
+  as "Auto · 1.11"-style next to the slider). The moment you drag it, your
+  value <b>replaces</b> the preset's — so 0.05 doesn't mean "a little wider,"
+  it means "almost mono." <b>0.00 is full mono, not Auto.</b> Use the ↺ AUTO
+  chip (or double-click the slider) to hand width back to the preset.</p>
+  <p class="note">If a rough mix suddenly sounds hollow or "mono-ish" under a
+  narrowing preset, that's usually out-of-phase content in the mix being
+  exposed as the sides come down — the math is honest; the mix is fragile.
+  Try Universal or Spatial, or set Width above 1.00 yourself.</p>
 </div>
 
 <h2>Reading your receipt</h2>

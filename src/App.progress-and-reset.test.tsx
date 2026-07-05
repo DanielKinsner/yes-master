@@ -175,6 +175,98 @@ describe("WaveformView busy gating", () => {
   });
 });
 
+describe("WaveformView region gesture gating (owner smoke F3)", () => {
+  const peaks: WaveformPeaks = {
+    track_id: "wf-gate",
+    channels: [[0.1, 0.3, 0.2, 0.4, 0.25]],
+    samples_per_pixel: 512,
+    total_samples: 2560,
+    sample_rate: 44_100,
+  };
+
+  function renderGated(regionsEnabled: boolean) {
+    const onSeek = vi.fn();
+    const onSetRegion = vi.fn();
+    const onClearRegion = vi.fn();
+    const rendered = render(
+      <WaveformView
+        peaks={peaks}
+        isLoading={false}
+        isAnalyzing={false}
+        analysisProgress={null}
+        currentTimeSec={0}
+        durationSec={180}
+        region={null}
+        regionsEnabled={regionsEnabled}
+        onSeek={onSeek}
+        onSetRegion={onSetRegion}
+        onClearRegion={onClearRegion}
+      />,
+    );
+    return { rendered, onSeek, onSetRegion, onClearRegion };
+  }
+
+  async function shiftDrag(
+    container: HTMLElement,
+    fromX: number,
+    toX: number,
+  ) {
+    const svg = container.querySelector("svg.wf") as SVGSVGElement;
+    expect(svg).not.toBeNull();
+    // jsdom reports a zero-size rect; the gesture math needs a real width.
+    svg.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        width: 1000,
+        height: 240,
+        right: 1000,
+        bottom: 240,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    const opts = { bubbles: true, shiftKey: true };
+    await act(async () => {
+      svg.dispatchEvent(
+        new MouseEvent("pointerdown", { ...opts, clientX: fromX }),
+      );
+    });
+    await act(async () => {
+      svg.dispatchEvent(
+        new MouseEvent("pointermove", { ...opts, clientX: toX }),
+      );
+    });
+    await act(async () => {
+      svg.dispatchEvent(new MouseEvent("pointerup", { ...opts, clientX: toX }));
+    });
+  }
+
+  it("shift+drag defines a loop region when regions are enabled (Advanced)", async () => {
+    const { rendered, onSeek, onSetRegion } = renderGated(true);
+    const { container, root } = await rendered;
+    await shiftDrag(container, 100, 300);
+    expect(onSetRegion).toHaveBeenCalledTimes(1);
+    const region = onSetRegion.mock.calls[0][0];
+    expect(region.start_sec).toBeCloseTo(18, 5);
+    expect(region.end_sec).toBeCloseTo(54, 5);
+    expect(onSeek).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("shift+drag is a plain seek when regions are disabled (Standard)", async () => {
+    // The lasso used to work in Standard, which has no loop button or chip —
+    // an invisible loop could be armed with no UI to see or disarm it.
+    const { rendered, onSeek, onSetRegion, onClearRegion } = renderGated(false);
+    const { container, root } = await rendered;
+    await shiftDrag(container, 100, 300);
+    expect(onSetRegion).not.toHaveBeenCalled();
+    expect(onClearRegion).not.toHaveBeenCalled();
+    expect(onSeek).toHaveBeenCalledWith(18);
+    await act(async () => root.unmount());
+  });
+});
+
 describe("Macros tone reset", () => {
   function renderMacros(s: MasteringSettings, onResetTone = vi.fn()) {
     return render(

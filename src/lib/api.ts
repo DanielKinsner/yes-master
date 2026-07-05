@@ -125,6 +125,10 @@ export const api = {
   setAudioOutputDevice: (deviceId: string | null) =>
     invoke<null>("set_audio_output_device", { deviceId }),
 
+  // Dismisses the device-loss banner on the backend too — without this the
+  // next playback tick re-carries device_lost and revives the banner.
+  clearDeviceLost: () => invoke<null>("clear_device_lost"),
+
   runExportChecks: (
     report: ExportReport,
     sourceAnalysis?: AnalysisResult | null,

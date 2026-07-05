@@ -318,6 +318,10 @@ export interface GuardrailReadout {
   /// Per-axis Phase B confidence that gated the trims; null/absent => Tier-1 full
   /// confidence. Surfaced so a calibration session can read the numbers by eye.
   confidence?: Confidence | null;
+  // F10: the width the chain uses while advanced.width is on Auto — the
+  // preset baseline after the Tier-1 trim (raw baseline when inactive).
+  // Drives the Width slider's Auto thumb position + "Auto · 1.11" readout.
+  effective_auto_width?: number | null;
 }
 
 export type GuardReason =
@@ -474,6 +478,9 @@ export interface ProjectState {
   album_sample_rate?: number | null;
   album_bit_depth?: number | null;
   track_override_album?: TrackId[];
+  // F5: the track selected at save time; restore falls back to the first
+  // track when absent (older sessions) or stale (track since removed).
+  selected_track_id?: TrackId | null;
   last_saved_iso: string | null;
 }
 

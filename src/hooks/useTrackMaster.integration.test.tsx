@@ -59,6 +59,7 @@ const mocks = vi.hoisted(() => {
     stopPlayback: vi.fn(),
     seekPlayback: vi.fn(),
     setLoopRegion: vi.fn(),
+    clearDeviceLost: vi.fn(),
     guardrailReadout: vi.fn(),
     resolveCompressionPlan: vi.fn(),
     adaptiveCompressionEnabled: vi.fn(),
@@ -553,6 +554,46 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("restores the persisted selected track instead of defaulting to the first (owner smoke F5)", async () => {
+    const first = makeTrack("restored-first", "C:/audio/first.wav");
+    const second = makeTrack("restored-second", "C:/audio/second.wav");
+    mocks.api.loadRecentSession.mockResolvedValue({
+      ...makeProjectState(first),
+      tracks: [first, second],
+      track_order: [first.id, second.id],
+      selected_track_id: second.id,
+    });
+
+    const harness = await renderHookHarness();
+
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(second.id);
+    });
+    // The prewarm follows the restored selection, not track 0.
+    expect(mocks.api.prewarmDecode).toHaveBeenCalledWith(second.path);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("falls back to the first track when the persisted selection is stale", async () => {
+    const track = makeTrack("restored-only", "C:/audio/only.wav");
+    mocks.api.loadRecentSession.mockResolvedValue({
+      ...makeProjectState(track),
+      selected_track_id: "gone-track-id",
+    });
+
+    const harness = await renderHookHarness();
+
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("prewarms the first imported track when import auto-selects it", async () => {
     const track = makeTrack("imported-1", "C:/audio/imported.wav");
     mocks.api.importTracks.mockResolvedValue([track]);
@@ -750,6 +791,30 @@ describe("useTrackMaster integration dispatches", () => {
 
     await act(async () => {
       harness.current().clearPlaybackDeviceLost();
+    });
+    expect(harness.current().playbackDeviceLost).toBeNull();
+    expect(harness.current().transport.deviceLost).toBe(false);
+    // Owner smoke F7: Dismiss must clear the BACKEND latch too. Without the
+    // clear_device_lost invoke, the audio thread keeps device_lost=true and
+    // the next 50 ms tick revives the banner — dismiss was a no-op.
+    expect(mocks.api.clearDeviceLost).toHaveBeenCalledTimes(1);
+
+    // A post-dismiss tick mirrors the now-cleared backend latch; it must
+    // NOT re-arm the banner (this is the tick that used to revive it).
+    await act(async () => {
+      playbackHandler?.({
+        track_id: track.id,
+        position_sec: 14.25,
+        is_playing: false,
+        is_loaded: true,
+        peak_dbfs: -120,
+        gr_low_db: -120,
+        gr_mid_db: -120,
+        gr_high_db: -120,
+        lufs_momentary: -120,
+        lufs_integrated: -120,
+        spectrum_db: [],
+      });
     });
     expect(harness.current().playbackDeviceLost).toBeNull();
     expect(harness.current().transport.deviceLost).toBe(false);
@@ -1154,6 +1219,44 @@ describe("useTrackMaster integration dispatches", () => {
     expect(after.transport.compressionGr).toEqual({ low: -120, mid: -120, high: -120 });
     expect(after.transport.loop).toBe(false);
     expect(mocks.api.setLoopRegion).toHaveBeenCalledWith(null);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("disarmLoop turns the armed loop off but keeps the region memory (owner smoke F3)", async () => {
+    // Standard entry disarms the loop (Standard has no loop UI, so an armed
+    // loop there wraps playback invisibly); the region itself is remembered
+    // so re-entering Advanced shows it and re-arming stays explicit.
+    const track = makeTrack("loop-standard", "C:/audio/loop-standard.wav");
+    mocks.api.importTracks.mockResolvedValueOnce([track]);
+    const harness = await renderHookHarness();
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await act(async () => {
+      await harness.current().setRegion({ start_sec: 10, end_sec: 20 });
+    });
+    await act(async () => {
+      await harness.current().toggleLoop();
+    });
+    expect(harness.current().transport.loop).toBe(true);
+    expect(mocks.api.setLoopRegion).toHaveBeenCalledWith({
+      start_sec: 10,
+      end_sec: 20,
+    });
+    mocks.api.setLoopRegion.mockClear();
+
+    await act(async () => {
+      await harness.current().disarmLoop();
+    });
+    expect(harness.current().transport.loop).toBe(false);
+    expect(mocks.api.setLoopRegion).toHaveBeenCalledWith(null);
+    expect(harness.current().selectedRegion).toEqual({
+      start_sec: 10,
+      end_sec: 20,
+    });
 
     await act(async () => {
       harness.root.unmount();

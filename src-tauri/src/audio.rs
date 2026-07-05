@@ -241,6 +241,14 @@ pub async fn resume_playback(player: tauri::State<'_, Arc<AudioPlayer>>) -> Comm
     Ok(())
 }
 
+/// Dismiss the device-loss banner: clear the backend latch so playback
+/// ticks stop re-arming it. The sink stays paused; Play/space resumes.
+#[tauri::command]
+pub async fn clear_device_lost(player: tauri::State<'_, Arc<AudioPlayer>>) -> CommandResult<()> {
+    player.clear_device_lost();
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn stop_playback(player: tauri::State<'_, Arc<AudioPlayer>>) -> CommandResult<()> {
     player.stop();
@@ -339,6 +347,12 @@ enum AudioCommand {
     },
     #[cfg(any(feature = "app-runner", test))]
     MarkDeviceLost,
+    /// Frontend "Dismiss" on the device-loss banner. Clears the latched
+    /// `device_lost` bit WITHOUT resuming the paused sink — the user decides
+    /// when to press Play. Without this, the FE-only dismiss was a no-op:
+    /// the next 50 ms tick re-carried `device_lost: true` and revived the
+    /// banner (owner smoke F7, "the dialogue didn't go away").
+    ClearDeviceLost,
     Pause,
     Resume,
     Stop,
@@ -401,6 +415,12 @@ pub struct PlaybackSnapshot {
     /// True while a loop region is active. The device-loss detector treats loop
     /// mode as intentionally discontinuous and will not infer a frozen device.
     pub loop_active: bool,
+    /// Bumped by the audio thread at the end of every `play` / `play_master`.
+    /// The device-loss detector treats a generation change like a track
+    /// change (full reset): the position discontinuity of a sink swap — and
+    /// any frozen ticks observed while the play command occupied the audio
+    /// thread — must not count as evidence of a dead device.
+    pub play_generation: u64,
 }
 
 impl Default for PlaybackSnapshot {
@@ -422,14 +442,26 @@ impl Default for PlaybackSnapshot {
             landing_pending: false,
             device_lost: false,
             loop_active: false,
+            play_generation: 0,
         }
     }
 }
 
 #[cfg(any(feature = "app-runner", test))]
 const DEVICE_LOSS_POSITION_EPSILON_SEC: f64 = 0.001;
+/// 40 ticks × 50 ms = 2 s of frozen-but-playing playhead before the loss
+/// fires. The tier-3 cold-decode path on the audio thread is documented at
+/// 1–2 s for long sources, and the snapshot writer starves for the whole
+/// command — a 1 s threshold fired *inside* that legitimate window (owner
+/// smoke finding F7, 2026-07-05 plan).
 #[cfg(any(feature = "app-runner", test))]
-pub(crate) const DEVICE_LOSS_STALL_TICKS: u8 = 20;
+pub(crate) const DEVICE_LOSS_STALL_TICKS: u8 = 40;
+/// How recently a play/play_master must have completed for a MarkDeviceLost
+/// to be treated as stale evidence and skipped: the detector's frozen-tick
+/// window is at most this old, so any freeze it saw is explained by the
+/// play command itself having occupied the audio thread.
+#[cfg(any(feature = "app-runner", test))]
+const DEVICE_LOSS_MARK_GRACE: Duration = Duration::from_millis(50 * DEVICE_LOSS_STALL_TICKS as u64);
 #[cfg(any(feature = "app-runner", test))]
 pub(crate) const PLAYBACK_DEVICE_LOST_EVENT: &str = "playback:device-lost";
 
@@ -446,6 +478,7 @@ pub(crate) enum PlaybackDeviceLossDecision {
 pub(crate) struct PlaybackDeviceLossDetector {
     last_track_id: Option<TrackId>,
     last_position_sec: Option<f64>,
+    last_play_generation: Option<u64>,
     frozen_ticks: u8,
     emitted_for_stall: bool,
 }
@@ -456,6 +489,7 @@ impl PlaybackDeviceLossDetector {
         Self {
             last_track_id: None,
             last_position_sec: None,
+            last_play_generation: None,
             frozen_ticks: 0,
             emitted_for_stall: false,
         }
@@ -473,7 +507,14 @@ impl PlaybackDeviceLossDetector {
             return PlaybackDeviceLossDecision::Healthy;
         }
 
-        if self.last_track_id.as_ref() != snap.track_id.as_ref() {
+        // A sink swap (Original<->Mastered toggle) or fresh play is the same
+        // kind of intentional discontinuity as a track change: any frozen
+        // ticks accumulated while the play command held the audio thread are
+        // explained, and the swapped sink's position restarts the baseline.
+        if self.last_play_generation != Some(snap.play_generation)
+            || self.last_track_id.as_ref() != snap.track_id.as_ref()
+        {
+            self.last_play_generation = Some(snap.play_generation);
             self.last_track_id = snap.track_id.clone();
             self.last_position_sec = Some(snap.position_sec);
             self.frozen_ticks = 0;
@@ -512,8 +553,26 @@ impl PlaybackDeviceLossDetector {
     fn reset(&mut self) {
         self.last_track_id = None;
         self.last_position_sec = None;
+        self.last_play_generation = None;
         self.frozen_ticks = 0;
         self.emitted_for_stall = false;
+    }
+}
+
+/// Whether a MarkDeviceLost should be honored, given when the last
+/// play/play_master finished. The detector's evidence is at most
+/// `DEVICE_LOSS_MARK_GRACE` old, so a play that completed inside that window
+/// explains the freeze the detector saw — the mark is stale and must be
+/// skipped, or it pauses the sink the play just started (owner smoke F7:
+/// "audio was playing fine but the dialog stayed").
+#[cfg(any(feature = "app-runner", test))]
+fn mark_device_lost_applies(
+    last_play_completed_at: Option<std::time::Instant>,
+    now: std::time::Instant,
+) -> bool {
+    match last_play_completed_at {
+        Some(completed_at) => now.saturating_duration_since(completed_at) >= DEVICE_LOSS_MARK_GRACE,
+        None => true,
     }
 }
 
@@ -899,6 +958,10 @@ impl AudioPlayer {
         let _ = self.send(AudioCommand::MarkDeviceLost);
     }
 
+    pub fn clear_device_lost(&self) {
+        let _ = self.send(AudioCommand::ClearDeviceLost);
+    }
+
     pub fn stop(&self) {
         cancel_any_play_request_epoch(&self.play_request_epoch);
         let _ = self.send(AudioCommand::Stop);
@@ -1049,6 +1112,16 @@ struct AudioThreadState {
     /// cache hit, landing off, Original playback).
     landing_pending: bool,
     device_lost: bool,
+    /// Mirrored into `PlaybackSnapshot::play_generation`; bumped at the end
+    /// of every `handle_play` / `handle_play_master` so the device-loss
+    /// detector resets across sink swaps.
+    play_generation: u64,
+    /// When the last `handle_play` / `handle_play_master` finished. A
+    /// `MarkDeviceLost` that arrives within `DEVICE_LOSS_MARK_GRACE` of this
+    /// is stale evidence (the freeze it saw was the play command itself
+    /// holding the audio thread) and is skipped.
+    #[cfg(any(feature = "app-runner", test))]
+    last_play_completed_at: Option<std::time::Instant>,
 }
 
 impl AudioThreadState {
@@ -1084,6 +1157,9 @@ impl AudioThreadState {
             spectrum_analyzer: SpectrumAnalyzer::new(initial_sample_rate),
             landing_pending: false,
             device_lost: false,
+            play_generation: 0,
+            #[cfg(any(feature = "app-runner", test))]
+            last_play_completed_at: None,
         })
     }
 }
@@ -1949,10 +2025,31 @@ fn process_audio_command(
         AudioCommand::MarkDeviceLost => {
             if let Some(s) = state.as_mut() {
                 if s.current_track.is_some() {
-                    s.sink.pause();
-                    s.device_lost = true;
-                    s.landing_pending = false;
+                    if mark_device_lost_applies(s.last_play_completed_at, std::time::Instant::now())
+                    {
+                        s.sink.pause();
+                        s.device_lost = true;
+                        s.landing_pending = false;
+                    } else {
+                        // The freeze the detector saw predates a play that
+                        // has since completed (e.g. a cold-decode
+                        // Original<->Mastered swap held the audio thread
+                        // past the stall window). Pausing now would stop the
+                        // sink that play just started. Skip, and bump the
+                        // generation so the detector re-arms fresh — a
+                        // genuinely dead device re-fires one stall window
+                        // later and the mark then applies.
+                        s.play_generation = s.play_generation.wrapping_add(1);
+                        crate::diagnostics::info(
+                            "skipped stale device-loss mark (play completed within the stall window)",
+                        );
+                    }
                 }
+            }
+        }
+        AudioCommand::ClearDeviceLost => {
+            if let Some(s) = state.as_mut() {
+                s.device_lost = false;
             }
         }
         AudioCommand::Pause => {
@@ -2077,16 +2174,17 @@ fn audio_thread(
             break;
         }
 
-        // Loop enforcement: if a region is set and the playhead has crossed the
-        // end point, jump back to start. ~50 ms loop poll latency is acceptable
-        // for region listening; tightening lands in Phase 11.
+        // Loop enforcement: an armed region confines the playhead. Crossing
+        // the end wraps to start, and a playhead BEFORE the region snaps
+        // forward into it (owner smoke F1 — clicking past the region already
+        // snapped back in, clicking before it played straight through; the
+        // asymmetry read as "loop won't happen"). ~50 ms poll latency is
+        // acceptable for region listening.
         if let Some(s) = state.as_ref() {
             if let Some(region) = s.loop_region {
                 let pos = s.sink.get_pos().as_secs_f64();
-                if pos >= region.end_sec {
-                    let _ = s
-                        .sink
-                        .try_seek(Duration::from_secs_f64(region.start_sec.max(0.0)));
+                if let Some(target_sec) = loop_seek_target(pos, &region) {
+                    let _ = s.sink.try_seek(Duration::from_secs_f64(target_sec));
                 }
             }
         }
@@ -2160,6 +2258,7 @@ fn audio_thread(
                     landing_pending: s.landing_pending,
                     device_lost: s.device_lost,
                     loop_active: s.loop_region.is_some(),
+                    play_generation: s.play_generation,
                 }
             }
             _ => PlaybackSnapshot::default(),
@@ -2182,6 +2281,24 @@ fn audio_thread(
 fn seek_target(start_position_sec: f64) -> Option<Duration> {
     (start_position_sec.is_finite() && start_position_sec > 0.0)
         .then(|| Duration::from_secs_f64(start_position_sec))
+}
+
+/// F4 (owner smoke): the seek target for the incoming sink of a mid-play
+/// Original<->Mastered swap. The frontend estimates the playhead BEFORE the
+/// IPC hop, and the outgoing sink keeps advancing while the swap command
+/// runs — seeking the incoming sink to the raw estimate lands BEHIND the
+/// audible position, so the timeline visibly/audibly runs backwards ("jumps
+/// backward in time / stutters"). Floor the request at the outgoing sink's
+/// current position. Fresh (non-swap) plays must NOT use this: an explicit
+/// play-from-position request has to be honored exactly.
+fn effective_swap_start_position(requested_sec: f64, outgoing_sink_pos_sec: f64) -> f64 {
+    if !outgoing_sink_pos_sec.is_finite() {
+        return requested_sec;
+    }
+    if !requested_sec.is_finite() {
+        return outgoing_sink_pos_sec;
+    }
+    requested_sec.max(outgoing_sink_pos_sec)
 }
 
 trait PlaybackSink {
@@ -2241,6 +2358,24 @@ fn loop_region_survives_play(current_track: Option<&TrackId>, incoming: &TrackId
     match current_track {
         Some(current) => current == incoming,
         None => true,
+    }
+}
+
+/// F1 (owner smoke): where the loop tick must seek, if anywhere. An armed
+/// region CONFINES the playhead: at/past the end wraps to start (existing
+/// behavior — this is also what snapped a click PAST the region back in),
+/// and before the start snaps forward into the region (new — previously a
+/// playhead before the region played straight through, an asymmetry the
+/// owner read as "loop won't happen until it reaches the region").
+fn loop_seek_target(pos_sec: f64, region: &LoopRegion) -> Option<f64> {
+    if !pos_sec.is_finite() {
+        return None;
+    }
+    let start = region.start_sec.max(0.0);
+    if pos_sec >= region.end_sec || pos_sec < start {
+        Some(start)
+    } else {
+        None
     }
 }
 
@@ -2334,6 +2469,14 @@ fn handle_play(
     )
     .with_swap_fade(fade);
 
+    // F4 — the outgoing sink kept advancing while this command ran; floor
+    // the preserved-playhead request at its current position so the swap
+    // never seeks the timeline backwards.
+    let start_position_sec = if is_swap {
+        effective_swap_start_position(start_position_sec, s.sink.get_pos().as_secs_f64())
+    } else {
+        start_position_sec
+    };
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(source);
     play_sink_from_start_position(&new_sink, start_position_sec);
@@ -2362,6 +2505,11 @@ fn handle_play(
     s.track_epoch = s.track_epoch.wrapping_add(1);
     s.lufs_worker_in_flight = false;
     s.lufs_worker_pending = None;
+    s.play_generation = s.play_generation.wrapping_add(1);
+    #[cfg(any(feature = "app-runner", test))]
+    {
+        s.last_play_completed_at = Some(std::time::Instant::now());
+    }
     Ok(())
 }
 
@@ -2547,6 +2695,13 @@ fn handle_play_master(
     )
     .with_swap_fade(fade);
 
+    // F4 — same backwards-seek floor as handle_play: the outgoing sink kept
+    // advancing during this command (which can run long on a cold decode).
+    let start_position_sec = if is_swap {
+        effective_swap_start_position(start_position_sec, s.sink.get_pos().as_secs_f64())
+    } else {
+        start_position_sec
+    };
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(mastering_source);
     play_sink_from_start_position(&new_sink, start_position_sec);
@@ -2565,6 +2720,11 @@ fn handle_play_master(
     s.live_album = album;
     s.live_coeffs_tx = Some(coeffs_tx);
     s.live_sample_rate = pcm.sample_rate;
+    s.play_generation = s.play_generation.wrapping_add(1);
+    #[cfg(any(feature = "app-runner", test))]
+    {
+        s.last_play_completed_at = Some(std::time::Instant::now());
+    }
     Ok(())
 }
 
@@ -2627,6 +2787,47 @@ mod tests {
             loop_region_survives_play(None, &b),
             "play from an unloaded player must keep a pre-armed region"
         );
+    }
+
+    #[test]
+    fn loop_seek_target_confines_the_playhead_to_the_region() {
+        let region = LoopRegion {
+            start_sec: 10.0,
+            end_sec: 20.0,
+        };
+        // Inside the region: no seek.
+        assert_eq!(loop_seek_target(10.0, &region), None);
+        assert_eq!(loop_seek_target(15.0, &region), None);
+        assert_eq!(loop_seek_target(19.99, &region), None);
+        // At/past the end: wrap to start (pre-existing behavior).
+        assert_eq!(loop_seek_target(20.0, &region), Some(10.0));
+        assert_eq!(loop_seek_target(25.0, &region), Some(10.0));
+        // Before the region: snap forward into it (owner smoke F1).
+        assert_eq!(loop_seek_target(0.0, &region), Some(10.0));
+        assert_eq!(loop_seek_target(9.99, &region), Some(10.0));
+        // Junk positions never seek; negative region starts clamp to 0.
+        assert_eq!(loop_seek_target(f64::NAN, &region), None);
+        let negative_start = LoopRegion {
+            start_sec: -2.0,
+            end_sec: 5.0,
+        };
+        assert_eq!(loop_seek_target(6.0, &negative_start), Some(0.0));
+    }
+
+    #[test]
+    fn swap_start_position_never_seeks_behind_the_outgoing_sink() {
+        // Owner smoke F4: the FE captures its playhead estimate before the
+        // IPC hop; the outgoing sink keeps advancing while the swap command
+        // runs. The incoming sink must start at whichever is further along.
+        assert_eq!(effective_swap_start_position(10.0, 10.6), 10.6);
+        // An estimate slightly ahead of the sink (extrapolation overshoot)
+        // is kept — continuity forward is fine, backwards is the bug.
+        assert_eq!(effective_swap_start_position(11.2, 10.6), 11.2);
+        // Non-finite inputs fall back to the other side rather than panic.
+        assert_eq!(effective_swap_start_position(f64::NAN, 10.6), 10.6);
+        assert_eq!(effective_swap_start_position(10.0, f64::NAN), 10.0);
+        // A fresh sink at 0 never drags a valid request back to 0.
+        assert_eq!(effective_swap_start_position(42.0, 0.0), 42.0);
     }
 
     #[test]
@@ -2727,6 +2928,63 @@ mod tests {
             let snap = playing_device_loss_snapshot("recovered", 2.0 + i as f64 * 0.05);
             assert_eq!(detector.observe(&snap), PlaybackDeviceLossDecision::Healthy);
         }
+    }
+
+    #[test]
+    fn device_loss_detector_resets_on_play_generation_bump() {
+        // Owner smoke F7: an Original<->Mastered swap freezes the snapshot
+        // for the length of the play command (cold decode: 1-2 s). The
+        // completed play bumps play_generation; the detector must treat that
+        // like a track change and forget the frozen ticks it accumulated.
+        let mut detector = PlaybackDeviceLossDetector::new();
+        let frozen = playing_device_loss_snapshot("swap", 11.25);
+        for _ in 0..(DEVICE_LOSS_STALL_TICKS - 1) {
+            assert_eq!(
+                detector.observe(&frozen),
+                PlaybackDeviceLossDecision::Healthy
+            );
+        }
+        // One tick before firing, the swap completes: same track, same
+        // (clamped) position, but a new play generation.
+        let mut swapped = playing_device_loss_snapshot("swap", 11.25);
+        swapped.play_generation = frozen.play_generation + 1;
+        assert_eq!(
+            detector.observe(&swapped),
+            PlaybackDeviceLossDecision::Healthy,
+            "a play-generation bump must reset the frozen-tick count"
+        );
+        // The stall evidence must restart from zero: another full window of
+        // frozen ticks is required before the detector may fire again.
+        for _ in 0..(DEVICE_LOSS_STALL_TICKS - 1) {
+            assert_eq!(
+                detector.observe(&swapped),
+                PlaybackDeviceLossDecision::Healthy
+            );
+        }
+        assert!(matches!(
+            detector.observe(&swapped),
+            PlaybackDeviceLossDecision::DeviceLost(_)
+        ));
+    }
+
+    #[test]
+    fn mark_device_lost_is_skipped_inside_the_play_grace_window() {
+        let now = std::time::Instant::now();
+        // Drain-order race: PlayMaster ran in the same drain, finishing just
+        // before the MarkDeviceLost queued by the tick thread — the mark
+        // must not pause the sink that play just started.
+        assert!(!mark_device_lost_applies(Some(now), now));
+        assert!(!mark_device_lost_applies(
+            Some(now - DEVICE_LOSS_MARK_GRACE / 2),
+            now
+        ));
+        // Stale timestamp (no recent play): a real device loss applies.
+        assert!(mark_device_lost_applies(
+            Some(now - DEVICE_LOSS_MARK_GRACE * 2),
+            now
+        ));
+        // No play ever completed: nothing explains the freeze — applies.
+        assert!(mark_device_lost_applies(None, now));
     }
 
     #[test]

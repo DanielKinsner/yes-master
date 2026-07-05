@@ -263,6 +263,7 @@ fn guardrail_readout_sample() -> GuardrailReadout {
         // appear in the JSON and the TS drift gate can recurse into them. The
         // key set is unchanged vs None (the field is always serialized).
         confidence: Some(Confidence::full()),
+        effective_auto_width: Some(1.11),
     }
 }
 
@@ -309,7 +310,8 @@ fn project_state_sample() -> ProjectState {
         album_title: "Wire Sample".to_string(),
         album_sample_rate: Some(48_000),
         album_bit_depth: Some(24),
-        track_override_album: vec![track_id],
+        track_override_album: vec![track_id.clone()],
+        selected_track_id: Some(track_id),
         last_saved_iso: Some("2026-06-09T00:00:00+00:00".to_string()),
     }
 }

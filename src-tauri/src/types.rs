@@ -861,6 +861,12 @@ pub struct ProjectState {
     /// sessions (without this field) deserialize cleanly as "no overrides."
     #[serde(default)]
     pub track_override_album: Vec<TrackId>,
+    /// F5 (owner smoke): the track selected when the session was saved, so a
+    /// restore lands the user where they left off instead of on the first
+    /// track. Defaulted so older session files reopen unchanged (restore
+    /// falls back to the first track when absent or stale).
+    #[serde(default)]
+    pub selected_track_id: Option<TrackId>,
     pub last_saved_iso: Option<String>,
 }
 
