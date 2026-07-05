@@ -21,6 +21,7 @@ pub async fn save_project(path: String, state: ProjectState) -> CommandResult<()
         std::fs::create_dir_all(parent).map_err(|e| CommandError::Io(e.to_string()))?;
     }
     write_session_atomic(p, &state)
+        .inspect_err(|e| crate::diagnostics::error(format!("save_project failed for {path}: {e}")))
 }
 
 /// Load a project from an arbitrary `.ams.json` path picked via native
@@ -43,12 +44,14 @@ pub async fn load_project(path: String) -> CommandResult<ProjectState> {
         )));
     }
     read_session(p)
+        .inspect_err(|e| crate::diagnostics::error(format!("load_project failed for {path}: {e}")))
 }
 
 #[tauri::command]
 pub async fn autosave_session(state: ProjectState, app: tauri::AppHandle) -> CommandResult<()> {
     let path = autosave_path(&app)?;
     write_session_atomic(&path, &state)
+        .inspect_err(|e| crate::diagnostics::error(format!("autosave failed: {e}")))
 }
 
 #[tauri::command]
@@ -59,8 +62,20 @@ pub async fn load_recent_session(app: tauri::AppHandle) -> CommandResult<Option<
     }
     match read_session(&path) {
         Ok(state) if state.schema_version == SUPPORTED_SCHEMA_VERSION => Ok(Some(state)),
-        Ok(_) => Ok(None),
-        Err(_) => Ok(None),
+        // Starting with an empty app instead of crashing is right, but the
+        // discarded session is the #1 "my tracks disappeared" support case —
+        // record WHY it was skipped so a diagnostics report explains it.
+        Ok(state) => {
+            crate::diagnostics::warn(format!(
+                "autosaved session skipped: unsupported schema_version {} (expected {})",
+                state.schema_version, SUPPORTED_SCHEMA_VERSION
+            ));
+            Ok(None)
+        }
+        Err(e) => {
+            crate::diagnostics::error(format!("autosaved session unreadable, starting empty: {e}"));
+            Ok(None)
+        }
     }
 }
 

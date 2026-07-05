@@ -69,6 +69,7 @@ pub async fn cancel_render(
     job_id: String,
     render_jobs: tauri::State<'_, RenderJobRegistry>,
 ) -> CommandResult<()> {
+    crate::diagnostics::info(format!("render cancel requested: job {job_id}"));
     render_jobs.cancel(&job_id);
     Ok(())
 }
@@ -697,7 +698,16 @@ pub async fn render_track_master(
     })
     .await;
     render_jobs.remove(&job_id);
-    join_result.map_err(|e| CommandError::Other(format!("master render task: {e}")))?
+    let outcome =
+        join_result.map_err(|e| CommandError::Other(format!("master render task: {e}")))?;
+    match &outcome {
+        Ok(job) => crate::diagnostics::info(format!(
+            "render master finished: job {job_id} status {:?} -> {:?}",
+            job.status, job.output_paths
+        )),
+        Err(e) => crate::diagnostics::error(format!("render master failed: job {job_id}: {e}")),
+    }
+    outcome
 }
 
 // ============================================================================
@@ -862,7 +872,17 @@ pub async fn render_album_plan(
     })
     .await;
     render_jobs.remove(&job_id);
-    join_result.map_err(|e| CommandError::Other(format!("album render task: {e}")))?
+    let outcome =
+        join_result.map_err(|e| CommandError::Other(format!("album render task: {e}")))?;
+    match &outcome {
+        Ok(report) => crate::diagnostics::info(format!(
+            "render album finished: job {job_id} status {:?}, {} track(s)",
+            report.status,
+            report.tracks.len()
+        )),
+        Err(e) => crate::diagnostics::error(format!("render album failed: job {job_id}: {e}")),
+    }
+    outcome
 }
 
 pub fn render_output_dir(app: &tauri::AppHandle, kind: RenderKind) -> CommandResult<PathBuf> {

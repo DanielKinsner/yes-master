@@ -96,7 +96,9 @@ pub async fn set_audio_output_device(
     device_id: Option<String>,
     player: tauri::State<'_, Arc<AudioPlayer>>,
 ) -> CommandResult<()> {
-    player.set_output_device(device_id)
+    player
+        .set_output_device(device_id)
+        .inspect_err(|e| crate::diagnostics::error(format!("output device selection failed: {e}")))
 }
 
 #[tauri::command]
