@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YES Master — Owner Smoke Test</title>
+<style>
+  :root {
+    --bg: #0b1120; --card: #131c31; --ink: #e8eefc; --dim: #9fb0d0;
+    --accent: #6fa3ff; --pass: #3ddc84; --edge: #26334f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", system-ui, sans-serif;
+    font-size: 20px; line-height: 1.5;
+    max-width: 880px; margin: 0 auto; padding: 28px 20px 80px;
+  }
+  h1 { font-size: 34px; margin: 0 0 4px; }
+  .sub { color: var(--dim); font-size: 17px; margin-bottom: 28px; }
+  .sub code { color: var(--accent); font-size: 15px; }
+  .test {
+    background: var(--card); border: 1px solid var(--edge);
+    border-radius: 12px; padding: 18px 20px; margin-bottom: 18px;
+  }
+  .test.done { opacity: 0.55; }
+  .head { display: flex; align-items: center; gap: 14px; cursor: pointer; }
+  .head input[type=checkbox] { width: 26px; height: 26px; accent-color: var(--pass); flex-shrink: 0; cursor: pointer; }
+  .head h2 { font-size: 23px; margin: 0; }
+  .steps { margin: 10px 0 0 40px; padding: 0; }
+  .steps li { margin-bottom: 4px; }
+  .pass { margin: 10px 0 0 40px; font-weight: 700; color: var(--pass); }
+  .pass::before { content: "PASS = "; color: var(--pass); }
+  .why { margin: 6px 0 0 40px; font-size: 16px; color: var(--dim); }
+  .section { font-size: 18px; letter-spacing: 0.12em; color: var(--accent);
+             margin: 34px 0 10px; text-transform: uppercase; font-weight: 700; }
+  textarea {
+    width: 100%; min-height: 160px; background: var(--card); color: var(--ink);
+    border: 1px solid var(--edge); border-radius: 12px; padding: 14px;
+    font-size: 18px; font-family: inherit;
+  }
+  .progress { position: sticky; top: 0; background: var(--bg); padding: 10px 0;
+              font-size: 18px; color: var(--dim); z-index: 2; }
+  .progress b { color: var(--pass); font-size: 22px; }
+</style>
+</head>
+<body>
+
+<h1>YES Master — Smoke Test</h1>
+<p class="sub">Build installed <b>2026-07-04</b>. Everything here is mechanical — no taste calls, that's Wave 10.
+Checks and notes save themselves in this page (just reopen it later).<br>
+File lives at <code>docs\OWNER_SMOKE_TEST.html</code>.</p>
+
+<div class="progress">Done: <b id="count">0</b> / <span id="total"></span></div>
+
+<div class="section">Basics</div>
+
+<div class="test" data-id="restore">
+  <label class="head"><input type="checkbox"><h2>1. Open + session restore</h2></label>
+  <ul class="steps">
+    <li>Open the app. Your last session's tracks and settings should be back exactly.</li>
+    <li>Press play on anything.</li>
+  </ul>
+  <p class="pass">Everything restored, playback starts, no error on launch.</p>
+</div>
+
+<div class="test" data-id="imports">
+  <label class="head"><input type="checkbox"><h2>2. Garbage imports</h2></label>
+  <ul class="steps">
+    <li>Rename a <b>.txt file to .wav</b> and import it.</li>
+    <li>Import a <b>0-byte file</b> (New &gt; Text Document, rename to empty.wav).</li>
+    <li>Import a real track with <b>emoji in the filename</b> 🎵.</li>
+  </ul>
+  <p class="pass">Each failure shows a clear human message naming the file. App keeps working. Emoji track imports fine.</p>
+</div>
+
+<div class="section">Playback — new fixes live here</div>
+
+<div class="test" data-id="omswitch">
+  <label class="head"><input type="checkbox"><h2>3. Original / Mastered switching</h2></label>
+  <ul class="steps">
+    <li>While playing, flip Original ↔ Mastered several times, fast.</li>
+  </ul>
+  <p class="pass">Playhead never jumps. No clicks/gaps beyond the crossfade.</p>
+</div>
+
+<div class="test" data-id="loop">
+  <label class="head"><input type="checkbox"><h2>4. Loop region vs track switching &nbsp;⭐ new fix</h2></label>
+  <ul class="steps">
+    <li>On track A: shift-drag a loop region, turn Loop ON, play — it loops.</li>
+    <li><b>Quickly</b> switch to track B and play it.</li>
+    <li>Then: on B, set a region and turn Loop ON <b>before</b> pressing play, then play.</li>
+    <li>Also: while looping, flip Original/Mastered.</li>
+  </ul>
+  <p class="pass">B never inherits A's loop. Arm-then-play still loops. Loop survives the O/M flip.</p>
+</div>
+
+<div class="test" data-id="device">
+  <label class="head"><input type="checkbox"><h2>5. Headphone yank &nbsp;⭐ new fix</h2></label>
+  <ul class="steps">
+    <li>Play a track through Bluetooth headphones (or any unpluggable output).</li>
+    <li>Turn them off mid-playback.</li>
+    <li>Pick a working output device in the app.</li>
+  </ul>
+  <p class="pass">Within ~1 second: playback pauses + a device-lost banner. After re-picking: banner clears, resume continues from the same spot.</p>
+</div>
+
+<div class="test" data-id="seek">
+  <label class="head"><input type="checkbox"><h2>6. Abuse the transport</h2></label>
+  <ul class="steps">
+    <li>While playing, drag the playhead around violently for ~10 seconds.</li>
+    <li>Spam spacebar. Switch tracks mid-play a few times.</li>
+  </ul>
+  <p class="pass">No crash, no frozen meters, no stuck "playing" state, audio follows the last thing you did.</p>
+</div>
+
+<div class="section">Export safety</div>
+
+<div class="test" data-id="cancel">
+  <label class="head"><input type="checkbox"><h2>7. Cancel mid-export &nbsp;⭐ new fix</h2></label>
+  <ul class="steps">
+    <li>Export your longest track. Hit <b>Cancel</b> while the bar is moving.</li>
+    <li>Check the output folder. Then export again and let it finish.</li>
+  </ul>
+  <p class="pass">Cancel leaves NO file (not even a partial). The follow-up export works normally.</p>
+</div>
+
+<div class="test" data-id="overwrite">
+  <label class="head"><input type="checkbox"><h2>8. Never-overwrite</h2></label>
+  <ul class="steps">
+    <li>Export the same track to the same folder twice — start the second before the first finishes if you can.</li>
+  </ul>
+  <p class="pass">Two separate files, unique names, both play fine. Nothing clobbered.</p>
+</div>
+
+<div class="test" data-id="overcook">
+  <label class="head"><input type="checkbox"><h2>9. Overcook honesty</h2></label>
+  <ul class="steps">
+    <li>Max intensity + hottest loudness target on a punchy track. Export.</li>
+    <li>Read the receipt.</li>
+  </ul>
+  <p class="pass">Export completes (warnings allowed, never blocked). Receipt's true peak respects the ceiling promise.</p>
+</div>
+
+<div class="test" data-id="vm">
+  <label class="head"><input type="checkbox"><h2>10. Volume Match never touches exports</h2></label>
+  <ul class="steps">
+    <li>Export a track with Volume Match ON, then again with it OFF. Same settings otherwise.</li>
+    <li>Compare the two receipts.</li>
+  </ul>
+  <p class="pass">Identical LUFS and true peak on both receipts — VM is audition-only.</p>
+</div>
+
+<div class="section">Album + violence</div>
+
+<div class="test" data-id="album">
+  <label class="head"><input type="checkbox"><h2>11. Album parity + override</h2></label>
+  <ul class="steps">
+    <li>Album mode with 2–3 tracks (include a mono one if you have it).</li>
+    <li>Override ONE track with its own settings. Export the album.</li>
+  </ul>
+  <p class="pass">Every rendered track has the same format (rate/depth/channels). The overridden track is marked in the manifest and used its own settings.</p>
+</div>
+
+<div class="test" data-id="kill">
+  <label class="head"><input type="checkbox"><h2>12. Kill it mid-render</h2></label>
+  <ul class="steps">
+    <li>Start an export, then kill the app from Task Manager mid-render.</li>
+    <li>Reopen the app.</li>
+  </ul>
+  <p class="pass">Opens clean, session intact, no half-written junk in the output folder.</p>
+</div>
+
+<div class="test" data-id="onedrive">
+  <label class="head"><input type="checkbox"><h2>13. Cloud-only file (exploratory)</h2></label>
+  <ul class="steps">
+    <li>In OneDrive, mark an audio file "Free up space" (cloud icon, not on disk).</li>
+    <li>Import it into the app. Watch what happens.</li>
+  </ul>
+  <p class="pass">Anything that is not a crash or a permanent hang. Write down exactly what it did — this feeds the next work.</p>
+  <p class="why">This is the one area we have never tested. Slow hydration, timeouts, weird errors — all useful intel.</p>
+</div>
+
+<div class="section">Notes</div>
+<textarea id="notes" placeholder="Anything weird, exact wording of errors, which test, what you expected..."></textarea>
+
+<script>
+  const tests = document.querySelectorAll('.test');
+  document.getElementById('total').textContent = tests.length;
+  const update = () => {
+    let done = 0;
+    tests.forEach(t => {
+      const on = t.querySelector('input').checked;
+      t.classList.toggle('done', on);
+      if (on) done++;
+      localStorage.setItem('smoke-' + t.dataset.id, on ? '1' : '');
+    });
+    document.getElementById('count').textContent = done;
+  };
+  tests.forEach(t => {
+    t.querySelector('input').checked = !!localStorage.getItem('smoke-' + t.dataset.id);
+    t.querySelector('input').addEventListener('change', update);
+  });
+  const notes = document.getElementById('notes');
+  notes.value = localStorage.getItem('smoke-notes') || '';
+  notes.addEventListener('input', () => localStorage.setItem('smoke-notes', notes.value));
+  update();
+</script>
+</body>
+</html>
