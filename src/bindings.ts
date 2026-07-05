@@ -318,6 +318,10 @@ export interface GuardrailReadout {
   /// Per-axis Phase B confidence that gated the trims; null/absent => Tier-1 full
   /// confidence. Surfaced so a calibration session can read the numbers by eye.
   confidence?: Confidence | null;
+  // F10: the width the chain uses while advanced.width is on Auto — the
+  // preset baseline after the Tier-1 trim (raw baseline when inactive).
+  // Drives the Width slider's Auto thumb position + "Auto · 1.11" readout.
+  effective_auto_width?: number | null;
 }
 
 export type GuardReason =

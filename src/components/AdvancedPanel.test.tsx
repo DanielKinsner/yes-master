@@ -2,7 +2,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 
-import type { MasteringSettings } from "../bindings";
+import type { GuardrailReadout, MasteringSettings } from "../bindings";
 import { AdvancedPanel } from "./AdvancedPanel";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean })
@@ -49,25 +49,45 @@ const DEFAULT_SETTINGS: MasteringSettings = {
   },
 };
 
-async function renderPanel(): Promise<{ container: HTMLDivElement; root: Root }> {
+async function renderPanel(opts?: {
+  settings?: MasteringSettings;
+  adaptiveReadout?: GuardrailReadout | null;
+  onAdvanced?: (adv: MasteringSettings["advanced"]) => void;
+}): Promise<{ container: HTMLDivElement; root: Root }> {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
   await act(async () => {
     root.render(
       <AdvancedPanel
-        settings={DEFAULT_SETTINGS}
-        onAdvanced={vi.fn()}
+        settings={opts?.settings ?? DEFAULT_SETTINGS}
+        onAdvanced={opts?.onAdvanced ?? vi.fn()}
         onInputGain={vi.fn()}
         onOutputGain={vi.fn()}
         onLoudnessTarget={vi.fn()}
         onDeliveryProfile={vi.fn()}
         onDeliveryBitDepth={vi.fn()}
         onDeliverySampleRate={vi.fn()}
+        adaptiveReadout={opts?.adaptiveReadout}
       />,
     );
   });
   return { container, root };
+}
+
+function readoutWithAutoWidth(effectiveAutoWidth: number): GuardrailReadout {
+  return {
+    active: true,
+    strength: 0.5,
+    bright_trim: 0,
+    low_trim: 0,
+    density_trim: 0,
+    width_trim: 0,
+    brightness_share: 0,
+    low_share: 0,
+    dynamic_range_db: 9,
+    effective_auto_width: effectiveAutoWidth,
+  };
 }
 
 describe("AdvancedPanel", () => {
@@ -75,6 +95,53 @@ describe("AdvancedPanel", () => {
     const { container, root } = await renderPanel();
 
     expect(container.textContent).toContain("Track Master exports WAV files.");
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("parks the Width slider at the resolved Auto value and prints it (owner smoke F10)", async () => {
+    // With the thumb previously at min (0) on Auto, dragging to 0.05 looked
+    // like a tiny increase when it replaced the ~1.11 preset baseline with
+    // near-mono. The thumb and readout must tell the truth.
+    const { container, root } = await renderPanel({
+      adaptiveReadout: readoutWithAutoWidth(1.11),
+    });
+
+    const width = container.querySelector<HTMLInputElement>(
+      'input[type="range"][aria-label="Width"]',
+    );
+    expect(width).not.toBeNull();
+    expect(width?.value).toBe("1.11");
+    expect(container.textContent).toContain("Auto · 1.11");
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("offers a visible reset-to-Auto on an engaged Width and writes null (owner smoke F10)", async () => {
+    // Sliding back to 0 is NOT Auto (0 = full mono); the only ways back were
+    // an invisible double-click, clearing the number input, or undo.
+    const onAdvanced = vi.fn();
+    const engaged: MasteringSettings = {
+      ...DEFAULT_SETTINGS,
+      advanced: { ...DEFAULT_SETTINGS.advanced, width: 0.05 },
+    };
+    const { container, root } = await renderPanel({
+      settings: engaged,
+      adaptiveReadout: readoutWithAutoWidth(1.11),
+      onAdvanced,
+    });
+
+    const reset = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Reset Width to Auto"]',
+    );
+    expect(reset).not.toBeNull();
+    await act(async () => {
+      reset?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onAdvanced).toHaveBeenCalledTimes(1);
+    expect(onAdvanced.mock.calls[0][0].width).toBeNull();
     await act(async () => {
       root.unmount();
     });

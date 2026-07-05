@@ -118,6 +118,8 @@ export function NumberField({
   format,
   autoLabel = "Auto",
   autoReadout,
+  sliderAutoValue,
+  showAutoReset = false,
   disabled = false,
   onChange,
 }: {
@@ -129,10 +131,21 @@ export function NumberField({
   format: (v: number) => string;
   autoLabel?: string;
   autoReadout?: string;
+  // F10 (owner smoke): where the slider THUMB parks while value is null.
+  // Without it the thumb sat at `min` on Auto — for Width that rendered as
+  // "current width is 0", so dragging to 0.05 looked like a tiny increase
+  // when it actually replaced the preset's ~1.11 baseline with near-mono.
+  // Pass the backend-resolved effective auto value (preset baseline after
+  // the adaptive guard) so the thumb tells the truth.
+  sliderAutoValue?: number;
+  // F10: opt-in visible "↺ AUTO" chip while a value is engaged — the
+  // double-click-to-Auto gesture is invisible to first-time users, which is
+  // why "sliding back to 0" felt like the only way back (it isn't Auto).
+  showAutoReset?: boolean;
   disabled?: boolean;
   onChange: (v: number | null) => void;
 }) {
-  const effective = value ?? min;
+  const effective = value ?? sliderAutoValue ?? min;
   // Same draft-while-editing pattern as Slider so the user can type "1." or
   // "-" mid-value without the parent re-formatting on every keystroke.
   const [draft, setDraft] = useState<string | null>(null);
@@ -168,6 +181,17 @@ export function NumberField({
         {label}
         {value === null && (
           <span className="adv-auto-pill">{autoLabel.toUpperCase()}</span>
+        )}
+        {showAutoReset && value !== null && !disabled && (
+          <button
+            type="button"
+            className="adv-auto-reset"
+            title={`Reset to ${autoLabel}`}
+            aria-label={`Reset ${label} to ${autoLabel}`}
+            onClick={() => onChange(null)}
+          >
+            ↺ {autoLabel.toUpperCase()}
+          </button>
         )}
       </span>
       <div className="adv-control">

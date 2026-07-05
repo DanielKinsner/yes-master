@@ -648,6 +648,15 @@ pub struct GuardrailReadout {
     /// back-compat with older readouts.
     #[serde(default)]
     pub confidence: Option<crate::confidence::Confidence>,
+    /// F10 (owner smoke): the M/S side-scale the chain actually uses while
+    /// `advanced.width` is on Auto — the preset's stereo-width baseline
+    /// after the Tier-1 `trim_width` guard (raw baseline when the guard is
+    /// inactive). Lets the UI park the Width slider thumb at the real Auto
+    /// value and print "Auto · 1.11" instead of rendering the thumb at 0,
+    /// which read as "width is 0" and made dragging to 0.05 look like a
+    /// tiny increase. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub effective_auto_width: Option<f32>,
 }
 
 /// Realized trim fraction (AFTER the +0.5 dB character floor) for a set of preset
@@ -682,6 +691,7 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
         .adaptive_strength
         .unwrap_or(ADAPTIVE_STRENGTH_DEFAULT)
         .clamp(0.0, 1.0);
+    let preset = crate::dsp::preset_calibration(&settings.preset);
     match settings
         .advanced
         .source_profile
@@ -694,7 +704,6 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
                 strength,
                 &settings.advanced.source_confidence.unwrap_or_default(),
             );
-            let preset = crate::dsp::preset_calibration(&settings.preset);
             let preset_scale = 0.4 + 1.2 * settings.intensity.clamp(0.0, 1.0);
             GuardrailReadout {
                 active: true,
@@ -719,6 +728,9 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
                 width_corr_deadband: WIDTH_CORR_DEADBAND,
                 stereo_correlation: p.stereo_correlation,
                 confidence: settings.advanced.source_confidence,
+                // Mirrors the chain's guarded fallback at dsp.rs
+                // (`trim_width(preset.stereo_width)`) exactly.
+                effective_auto_width: Some(g.trim_width(preset.stereo_width)),
             }
         }
         None => GuardrailReadout {
@@ -736,6 +748,8 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
             width_corr_deadband: WIDTH_CORR_DEADBAND,
             stereo_correlation: None,
             confidence: None,
+            // No guard active: Auto resolves to the raw preset baseline.
+            effective_auto_width: Some(preset.stereo_width),
         },
     }
 }
@@ -1329,6 +1343,30 @@ mod tests {
         assert_eq!(r.bright_deadband, BRIGHT_DEADBAND);
         assert_eq!(r.low_deadband, LOW_DEADBAND);
         assert_eq!(r.width_corr_deadband, WIDTH_CORR_DEADBAND);
+    }
+
+    #[test]
+    fn readout_effective_auto_width_matches_the_chain_fallback() {
+        // F10 (owner smoke): the readout's Auto width must be exactly the
+        // guarded preset baseline the chain falls back to when
+        // advanced.width is None (dsp.rs trim_width(preset.stereo_width)).
+        // Wide source (corr 0.1): Universal's 1.11 is trimmed toward 1.0.
+        let p = profile(0.25, 0.20, 0.08, 0.22, 2.0, 2.0, Some(0.1));
+        let r = readout_for(&settings_with(Some(p), Some(1.0)));
+        assert!(r.active);
+        let auto = r.effective_auto_width.expect("computed when active");
+        assert!(
+            (1.0..1.11).contains(&auto),
+            "guard must trim 1.11 toward neutral, got {auto}"
+        );
+        // trim_width(w) = 1 + (w-1) * width_mult and width_trim = 1 - width_mult.
+        let expected = 1.0 + (1.11 - 1.0) * (1.0 - r.width_trim);
+        assert!((auto - expected).abs() < 1e-4, "auto={auto} expected={expected}");
+
+        // Guard inactive (no profile): Auto is the raw preset baseline.
+        let r = readout_for(&settings_with(None, Some(1.0)));
+        assert!(!r.active);
+        assert_eq!(r.effective_auto_width, Some(1.11));
     }
 
     #[test]

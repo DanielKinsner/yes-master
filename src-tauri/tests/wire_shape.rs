@@ -263,6 +263,7 @@ fn guardrail_readout_sample() -> GuardrailReadout {
         // appear in the JSON and the TS drift gate can recurse into them. The
         // key set is unchanged vs None (the field is always serialized).
         confidence: Some(Confidence::full()),
+        effective_auto_width: Some(1.11),
     }
 }
 

@@ -372,6 +372,7 @@
     },
     "density_trim": 0.25,
     "dynamic_range_db": 9.5,
+    "effective_auto_width": 1.1100000143051147,
     "low_deadband": 0.0625,
     "low_share": 0.25,
     "low_trim": 0.25,
