@@ -2189,6 +2189,20 @@ export function useTrackMaster() {
     }
   }, [transport.loop, selectedRegion]);
 
+  // F3 (owner smoke): looping is Advanced-only, but the armed state used to
+  // survive a switch to Standard — which has no loop UI at all, leaving a
+  // hidden backend loop silently wrapping playback. Standard entry disarms
+  // loop + the backend region; the per-track region memory is kept so
+  // re-entering Advanced shows the region again (re-arm is explicit).
+  const disarmLoop = useCallback(async () => {
+    setTransport((t) => (t.loop ? { ...t, loop: false } : t));
+    try {
+      await api.setLoopRegion(null);
+    } catch (err) {
+      setError(messageOf(err));
+    }
+  }, []);
+
   const setRegion = useCallback(
     async (region: LoopRegion) => {
       if (!selectedTrackId) return;
@@ -2702,6 +2716,7 @@ export function useTrackMaster() {
     selectedRegion,
     setRegion,
     clearRegion,
+    disarmLoop,
     clearError,
     clearProjectFeedback,
     clearPlaybackDeviceLost,

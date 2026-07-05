@@ -100,7 +100,7 @@ export function WaveformView({
   currentTimeSec,
   durationSec,
   region,
-  showRegionHint = true,
+  regionsEnabled = true,
   onSeek,
   onSetRegion,
   onClearRegion,
@@ -112,7 +112,10 @@ export function WaveformView({
   currentTimeSec: number;
   durationSec: number;
   region: LoopRegion | null;
-  showRegionHint?: boolean;
+  /// Gates the loop-region GESTURE, not just the hint text: looping is
+  /// Advanced-only (owner smoke F3 — the lasso used to work in Standard,
+  /// which has no loop UI at all). False turns shift+drag into a plain seek.
+  regionsEnabled?: boolean;
   onSeek: (positionSec: number) => void;
   onSetRegion: (region: LoopRegion) => void;
   onClearRegion: () => void;
@@ -190,7 +193,7 @@ export function WaveformView({
   const handlePointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
     if (durationSec <= 0) return;
     const t = timeAtPointer(e);
-    if (e.shiftKey) {
+    if (e.shiftKey && regionsEnabled) {
       e.preventDefault();
       try {
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -252,7 +255,7 @@ export function WaveformView({
         onPointerCancel={handlePointerUp}
         role="slider"
         aria-label={
-          showRegionHint
+          regionsEnabled
             ? "Waveform — click to seek, shift+drag to set a loop region"
             : "Waveform — click to seek"
         }
@@ -293,7 +296,7 @@ export function WaveformView({
         region={displayRegion}
         onSeek={onSeek}
       />
-      {showRegionHint && (
+      {regionsEnabled && (
         <p className="wf-hint">
           Click to seek. Shift+drag to define a loop region. Shift+click clears it.
         </p>

@@ -266,6 +266,15 @@ function App() {
     tm.setForceWysiwyg(view === "standard");
   }, [view, tm.setForceWysiwyg]);
 
+  // F3: looping is Advanced-only. Standard has no loop toggle or chip, so an
+  // armed loop must not survive into it (it kept wrapping playback with no
+  // UI explaining why). Region memory survives; re-arming is explicit.
+  useEffect(() => {
+    if (view === "standard") {
+      void tm.disarmLoop();
+    }
+  }, [view, tm.disarmLoop]);
+
   const handleModeChange = (nextMode: "track" | "album") => {
     if (nextMode === "album" && view === "standard") {
       setModeNotice("Opening Album Master in Advanced.");

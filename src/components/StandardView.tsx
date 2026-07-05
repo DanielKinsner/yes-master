@@ -614,7 +614,7 @@ export function StandardView({
               currentTimeSec={tm.transport.currentTimeSec}
               durationSec={tm.selectedTrack?.duration_seconds ?? 0}
               region={tm.selectedRegion}
-              showRegionHint={false}
+              regionsEnabled={false}
               onSeek={tm.seek}
               onSetRegion={tm.setRegion}
               onClearRegion={tm.clearRegion}

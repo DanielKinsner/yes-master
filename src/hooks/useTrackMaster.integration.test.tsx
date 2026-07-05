@@ -1185,6 +1185,44 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("disarmLoop turns the armed loop off but keeps the region memory (owner smoke F3)", async () => {
+    // Standard entry disarms the loop (Standard has no loop UI, so an armed
+    // loop there wraps playback invisibly); the region itself is remembered
+    // so re-entering Advanced shows it and re-arming stays explicit.
+    const track = makeTrack("loop-standard", "C:/audio/loop-standard.wav");
+    mocks.api.importTracks.mockResolvedValueOnce([track]);
+    const harness = await renderHookHarness();
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await act(async () => {
+      await harness.current().setRegion({ start_sec: 10, end_sec: 20 });
+    });
+    await act(async () => {
+      await harness.current().toggleLoop();
+    });
+    expect(harness.current().transport.loop).toBe(true);
+    expect(mocks.api.setLoopRegion).toHaveBeenCalledWith({
+      start_sec: 10,
+      end_sec: 20,
+    });
+    mocks.api.setLoopRegion.mockClear();
+
+    await act(async () => {
+      await harness.current().disarmLoop();
+    });
+    expect(harness.current().transport.loop).toBe(false);
+    expect(mocks.api.setLoopRegion).toHaveBeenCalledWith(null);
+    expect(harness.current().selectedRegion).toEqual({
+      start_sec: 10,
+      end_sec: 20,
+    });
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("bakes delivery profile defaults into editable Advanced fields and lets Custom inherit them", async () => {
     const track = makeTrack("profile-1", "C:/audio/profile.wav");
     mocks.api.importTracks.mockResolvedValue([track]);
