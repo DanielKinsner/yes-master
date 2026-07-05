@@ -12,6 +12,18 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-07-04 — Local diagnostics (log + save-a-report)
+
+The first "product meets the world" slice from the blind-spot review: the
+backend previously had no logging at all (two eprintln sites), so field
+failures were invisible. Now: a rotating local log (~2 MiB cap; startup,
+panics, decode/render/session failures, device loss — never hot paths), a
+"Save diagnostics report" button in Help (one plain-text file: version/OS,
+log tails, session summary), and the #1 support case made explainable —
+a discarded autosaved session now logs WHY it was skipped. Privacy stance
+unchanged and stated in the report itself: no telemetry, nothing leaves
+the machine unless the user saves and shares the file.
+
 ## 2026-07-04 — Hardening follow-ups + iPhone store-readiness batch
 
 Same-day continuation of the hardening push (branches

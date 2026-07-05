@@ -110,6 +110,12 @@ instead of silent non-playback.
   playback stream so the next Original/Mastered audition uses that device.
 - Help explains current Import/Analyze, Original vs Mastered, Volume Match vs
   Preview LUFS, Delivery Profile/Format, Export Review, and Save/Open behavior.
+- Help also offers "Save diagnostics report": a plain-text file (app version,
+  recent log tail, session summary) assembled locally and written to a
+  user-chosen path. The app keeps a small rotating log (~2 MiB cap, error
+  paths and lifecycle only) under app-data `logs/`; panics are captured
+  there too. There is no telemetry — nothing leaves the machine unless the
+  user saves the report and shares it themselves.
 
 ## Export Checks And Review
 
