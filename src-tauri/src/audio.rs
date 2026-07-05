@@ -2179,16 +2179,17 @@ fn audio_thread(
             break;
         }
 
-        // Loop enforcement: if a region is set and the playhead has crossed the
-        // end point, jump back to start. ~50 ms loop poll latency is acceptable
-        // for region listening; tightening lands in Phase 11.
+        // Loop enforcement: an armed region confines the playhead. Crossing
+        // the end wraps to start, and a playhead BEFORE the region snaps
+        // forward into it (owner smoke F1 — clicking past the region already
+        // snapped back in, clicking before it played straight through; the
+        // asymmetry read as "loop won't happen"). ~50 ms poll latency is
+        // acceptable for region listening.
         if let Some(s) = state.as_ref() {
             if let Some(region) = s.loop_region {
                 let pos = s.sink.get_pos().as_secs_f64();
-                if pos >= region.end_sec {
-                    let _ = s
-                        .sink
-                        .try_seek(Duration::from_secs_f64(region.start_sec.max(0.0)));
+                if let Some(target_sec) = loop_seek_target(pos, &region) {
+                    let _ = s.sink.try_seek(Duration::from_secs_f64(target_sec));
                 }
             }
         }
@@ -2362,6 +2363,24 @@ fn loop_region_survives_play(current_track: Option<&TrackId>, incoming: &TrackId
     match current_track {
         Some(current) => current == incoming,
         None => true,
+    }
+}
+
+/// F1 (owner smoke): where the loop tick must seek, if anywhere. An armed
+/// region CONFINES the playhead: at/past the end wraps to start (existing
+/// behavior — this is also what snapped a click PAST the region back in),
+/// and before the start snaps forward into the region (new — previously a
+/// playhead before the region played straight through, an asymmetry the
+/// owner read as "loop won't happen until it reaches the region").
+fn loop_seek_target(pos_sec: f64, region: &LoopRegion) -> Option<f64> {
+    if !pos_sec.is_finite() {
+        return None;
+    }
+    let start = region.start_sec.max(0.0);
+    if pos_sec >= region.end_sec || pos_sec < start {
+        Some(start)
+    } else {
+        None
     }
 }
 
@@ -2773,6 +2792,31 @@ mod tests {
             loop_region_survives_play(None, &b),
             "play from an unloaded player must keep a pre-armed region"
         );
+    }
+
+    #[test]
+    fn loop_seek_target_confines_the_playhead_to_the_region() {
+        let region = LoopRegion {
+            start_sec: 10.0,
+            end_sec: 20.0,
+        };
+        // Inside the region: no seek.
+        assert_eq!(loop_seek_target(10.0, &region), None);
+        assert_eq!(loop_seek_target(15.0, &region), None);
+        assert_eq!(loop_seek_target(19.99, &region), None);
+        // At/past the end: wrap to start (pre-existing behavior).
+        assert_eq!(loop_seek_target(20.0, &region), Some(10.0));
+        assert_eq!(loop_seek_target(25.0, &region), Some(10.0));
+        // Before the region: snap forward into it (owner smoke F1).
+        assert_eq!(loop_seek_target(0.0, &region), Some(10.0));
+        assert_eq!(loop_seek_target(9.99, &region), Some(10.0));
+        // Junk positions never seek; negative region starts clamp to 0.
+        assert_eq!(loop_seek_target(f64::NAN, &region), None);
+        let negative_start = LoopRegion {
+            start_sec: -2.0,
+            end_sec: 5.0,
+        };
+        assert_eq!(loop_seek_target(6.0, &negative_start), Some(0.0));
     }
 
     #[test]
