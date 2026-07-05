@@ -37,6 +37,7 @@ import type { PlaybackKindUI, RenderProgressState } from "./hooks/useTrackMaster
 import { LOUDNESS_PROFILES, loudnessTargetDisplay } from "./lib/effective-settings";
 import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
 import { api } from "./lib/api";
+import { save } from "./lib/tauri-runtime";
 import { requestGuideReset } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
 import { SUPPORTED_FORMATS_COPY } from "./lib/supported-formats";
@@ -828,6 +829,20 @@ function AudioOutputSelector({
 }
 
 export function HelpPanel({ onClose }: { onClose: () => void }) {
+  const [diagnosticsNote, setDiagnosticsNote] = useState<string | null>(null);
+  const saveDiagnostics = async () => {
+    try {
+      const chosen = await save({
+        defaultPath: `YESMaster-diagnostics-${new Date().toISOString().slice(0, 10)}.txt`,
+        filters: [{ name: "Text report", extensions: ["txt"] }],
+      });
+      if (!chosen) return;
+      const written = await api.saveDiagnosticsReport(chosen);
+      setDiagnosticsNote(`Saved to ${written}`);
+    } catch (err) {
+      setDiagnosticsNote(err instanceof Error ? err.message : String(err));
+    }
+  };
   return (
     <ChromeDialog title="Help" eyebrow="Track Master guide" onClose={onClose}>
       <div className="help-sections">
@@ -837,6 +852,18 @@ export function HelpPanel({ onClose }: { onClose: () => void }) {
             <p>{body}</p>
           </section>
         ))}
+        <section className="help-section">
+          <h3>Something broke?</h3>
+          <p>
+            Save a diagnostics report — recent app logs and your session
+            summary, assembled on this machine. Nothing is sent anywhere;
+            share the file only if you choose to.
+          </p>
+          <button type="button" className="ghost-btn" onClick={saveDiagnostics}>
+            Save diagnostics report…
+          </button>
+          {diagnosticsNote && <p className="help-diagnostics-note">{diagnosticsNote}</p>}
+        </section>
       </div>
     </ChromeDialog>
   );

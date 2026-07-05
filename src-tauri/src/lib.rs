@@ -5,6 +5,7 @@ pub mod audio;
 pub mod confidence;
 pub mod decode;
 pub mod deep_analysis;
+pub mod diagnostics;
 pub mod dsp;
 pub mod engine;
 pub(crate) mod evidence_lanes;
@@ -54,12 +55,26 @@ pub fn run() {
         .manage(player)
         .manage(engine::RenderJobRegistry::default())
         .setup(|app| {
+            // Local-first diagnostics: rotating log + panic capture. Init
+            // first so everything below (sweep included) can log.
+            if let Ok(app_data) = app.path().app_data_dir() {
+                crate::diagnostics::init(app_data.join("logs"));
+            }
+            crate::diagnostics::install_panic_hook();
+            crate::diagnostics::info(format!(
+                "YES Master {} starting ({} {})",
+                env!("CARGO_PKG_VERSION"),
+                std::env::consts::OS,
+                std::env::consts::ARCH
+            ));
             // D5: reclaim render tmp files stranded by a process kill /
             // OS shutdown mid-render (no render can be running yet).
             if let Ok(app_data) = app.path().app_data_dir() {
                 let removed = crate::engine::sweep_orphaned_render_tmp(&app_data);
                 if removed > 0 {
-                    eprintln!("swept {removed} orphaned render tmp file(s)");
+                    crate::diagnostics::info(format!(
+                        "swept {removed} orphaned render tmp file(s)"
+                    ));
                 }
             }
             let app_handle = app.handle().clone();
@@ -90,6 +105,10 @@ pub fn run() {
                     match device_loss_detector.observe(&snap) {
                         audio::PlaybackDeviceLossDecision::Healthy => {}
                         audio::PlaybackDeviceLossDecision::DeviceLost(event) => {
+                            crate::diagnostics::warn(format!(
+                                "playback device lost (track {:?} at {:.2}s)",
+                                event.track_id, event.position_sec
+                            ));
                             player_state.mark_device_lost();
                             let _ = app_handle.emit(audio::PLAYBACK_DEVICE_LOST_EVENT, event);
                             continue;
@@ -156,6 +175,7 @@ pub fn run() {
             settings::save_user_preset,
             settings::list_user_presets,
             settings::delete_user_preset,
+            diagnostics::save_diagnostics_report,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -266,6 +266,12 @@ export const api = {
   setLoopRegion: (region: LoopRegion | null) =>
     invoke<null>("set_loop_region", { region }),
 
+  /// Write a plain-text diagnostics report (recent logs + session summary,
+  /// assembled locally — nothing is transmitted) to a user-chosen path.
+  /// Returns the written path.
+  saveDiagnosticsReport: (targetPath: string) =>
+    invoke<string>("save_diagnostics_report", { targetPath }),
+
   // Phase B — album-mode planning + render.
   planAlbum: (
     title: string,

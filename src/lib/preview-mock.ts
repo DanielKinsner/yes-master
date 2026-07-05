@@ -277,6 +277,11 @@ export async function mockInvoke<T>(
     case "delete_user_preset":
       return null as unknown as T;
 
+    case "save_diagnostics_report":
+      // Browser preview has no filesystem — echo the chosen path back so
+      // the Help panel's saved-confirmation flow can be exercised.
+      return ((args?.targetPath as string) ?? "") as unknown as T;
+
     case "list_user_presets":
       return [] as unknown as T;
 

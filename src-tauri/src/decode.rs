@@ -116,7 +116,9 @@ fn decode_panic_boundary<T>(
 }
 
 pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
-    decode_panic_boundary(path, || decode_full_inner(path))
+    decode_panic_boundary(path, || decode_full_inner(path)).inspect_err(|e| {
+        crate::diagnostics::warn(format!("decode failed for {}: {e}", path.display()))
+    })
 }
 
 fn decode_full_inner(path: &Path) -> CommandResult<DecodedPcm> {
