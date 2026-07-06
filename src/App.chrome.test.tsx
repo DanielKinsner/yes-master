@@ -227,7 +227,11 @@ describe("top chrome", () => {
     expect(text).toContain("Styles");
     expect(text).toContain("Low / Medium / High");
     expect(text).toContain("Create Master");
-    expect(text).toContain("next to the source");
+    // 2026-07-06 audit: the old copy claimed the WAV lands "next to the
+    // source", but Create Master opens a save dialog defaulting to the last
+    // export folder — the copy now tells the truth (asks where to save).
+    expect(text).toContain("asks where to save");
+    expect(text).toContain("never overwrites your source");
     expect(text).toContain("Keyboard shortcuts");
     expect(text).toContain("Space");
     expect(text).toContain("Ctrl/Cmd+Z/Y");

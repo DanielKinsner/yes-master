@@ -57,7 +57,7 @@ export const SETTINGS_GROUPS: Array<{
 export const HELP_SECTIONS: Array<[string, string]> = [
   [
     "Standard view",
-    "Styles choose the character, Low / Medium / High sets loudness, and Create Master writes a finished WAV next to the source without overwriting it.",
+    "Styles choose the character, Low / Medium / High sets loudness, and Create Master asks where to save a finished WAV — it never overwrites your source.",
   ],
   [
     "Import / Analyze",

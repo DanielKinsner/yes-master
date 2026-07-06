@@ -421,6 +421,10 @@ pub struct PlaybackSnapshot {
     /// any frozen ticks observed while the play command occupied the audio
     /// thread — must not count as evidence of a dead device.
     pub play_generation: u64,
+    /// Bumped when the audio thread skips a stale device-loss mark (a play
+    /// completed within the stall window). The tick thread logs the skip on
+    /// change — keeping diagnostics file I/O off the audio thread.
+    pub device_loss_skips: u64,
 }
 
 impl Default for PlaybackSnapshot {
@@ -443,6 +447,7 @@ impl Default for PlaybackSnapshot {
             device_lost: false,
             loop_active: false,
             play_generation: 0,
+            device_loss_skips: 0,
         }
     }
 }
@@ -1116,6 +1121,12 @@ struct AudioThreadState {
     /// of every `handle_play` / `handle_play_master` so the device-loss
     /// detector resets across sink swaps.
     play_generation: u64,
+    /// Count of stale device-loss marks skipped (a play completed within the
+    /// stall window, so the frozen-playhead evidence predated it). Mirrored
+    /// into `PlaybackSnapshot::device_loss_skips` so the TICK thread emits
+    /// the diagnostics line — the audio thread must not do log file I/O
+    /// itself (diagnostics.rs discipline).
+    device_loss_skips: u64,
     /// When the last `handle_play` / `handle_play_master` finished. A
     /// `MarkDeviceLost` that arrives within `DEVICE_LOSS_MARK_GRACE` of this
     /// is stale evidence (the freeze it saw was the play command itself
@@ -1158,6 +1169,7 @@ impl AudioThreadState {
             landing_pending: false,
             device_lost: false,
             play_generation: 0,
+            device_loss_skips: 0,
             #[cfg(any(feature = "app-runner", test))]
             last_play_completed_at: None,
         })
@@ -2043,14 +2055,20 @@ fn process_audio_command(
                         // genuinely dead device re-fires one stall window
                         // later and the mark then applies.
                         s.play_generation = s.play_generation.wrapping_add(1);
-                        crate::diagnostics::info(
-                            "skipped stale device-loss mark (play completed within the stall window)",
-                        );
+                        // Logged by the TICK thread via the snapshot mirror —
+                        // no diagnostics file I/O on the audio thread.
+                        s.device_loss_skips = s.device_loss_skips.wrapping_add(1);
                     }
                 }
             }
         }
         AudioCommand::ClearDeviceLost => {
+            // Dismiss on the FE banner: clear ONLY the latch — the sink stays
+            // paused and Play/space resumes it. Adding a sink.play() here
+            // would regress the owner-observed F7b behavior. The invariant
+            // ("tick after dismiss doesn't revive the banner") is pinned by
+            // useTrackMaster.integration.test.tsx; there is no Rust-side pin
+            // because the handler needs a live output device to construct.
             if let Some(s) = state.as_mut() {
                 s.device_lost = false;
             }
@@ -2272,6 +2290,7 @@ fn audio_thread(
                     device_lost: s.device_lost,
                     loop_active: s.loop_region.is_some(),
                     play_generation: s.play_generation,
+                    device_loss_skips: s.device_loss_skips,
                 }
             }
             _ => PlaybackSnapshot::default(),

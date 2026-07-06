@@ -86,11 +86,22 @@ pub fn run() {
                 // gain crossfades in. Emitted only on change.
                 let mut last_landing_status: Option<LandingStatus> = None;
                 let mut device_loss_detector = audio::PlaybackDeviceLossDetector::new();
+                // Mirrors AudioThreadState::device_loss_skips: the audio
+                // thread only bumps the counter; THIS thread does the log
+                // file I/O (diagnostics.rs discipline — the audio thread
+                // stays untouched).
+                let mut last_device_loss_skips: u64 = 0;
                 loop {
                     std::thread::sleep(Duration::from_millis(50));
                     let Ok(snap) = player_state.snapshot() else {
                         continue;
                     };
+                    if snap.device_loss_skips != last_device_loss_skips {
+                        last_device_loss_skips = snap.device_loss_skips;
+                        crate::diagnostics::info(
+                            "skipped stale device-loss mark (play completed within the stall window)",
+                        );
+                    }
                     // Landing status is evaluated BEFORE the is_loaded gate:
                     // an unload (stop / track removal) must still flip the
                     // frontend back to false or the note leaks onto idle.
