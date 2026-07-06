@@ -32,8 +32,9 @@ fn resolve_album_sample_rate(requested: Option<u32>, source_rates: &[u32]) -> u3
 /// mono, but mixed mono/stereo albums render stereo so stereo sources are not
 /// downmixed and mono sources can be safely duplicated. The product is
 /// stereo-only (BS.1770 loudness uses stereo channel weights), so the result is
-/// capped at 2: a source with more than two channels is folded to stereo by
-/// `convert_channel_count` rather than producing a pseudo-surround album whose
+/// capped at 2: a source with more than two channels is folded to stereo (at
+/// decode since 2026-07-06; `convert_channel_count` keeps the same fold for
+/// direct-PCM callers) rather than producing a pseudo-surround album whose
 /// loudness would land under multichannel weights and not compare to other
 /// masters.
 fn resolve_album_channels(source_channels: &[u16]) -> u16 {
@@ -45,101 +46,12 @@ fn resolve_album_channels(source_channels: &[u16]) -> u16 {
         .clamp(1, 2)
 }
 
-const SURROUND_DOWNMIX_GAIN: f32 = 0.707_106_77;
-
-fn add_downmix_sample(acc: &mut f32, weight_sum: &mut f32, sample: f32, weight: f32) {
-    *acc += sample * weight;
-    *weight_sum += weight;
-}
-
-fn downmix_frame_to_stereo(frame: &[f32]) -> [f32; 2] {
-    if frame.is_empty() {
-        return [0.0, 0.0];
-    }
-    if frame.len() == 1 {
-        return [frame[0], frame[0]];
-    }
-    if frame.len() == 2 {
-        return [frame[0], frame[1]];
-    }
-
-    let mut left = 0.0;
-    let mut right = 0.0;
-    let mut left_weight = 0.0;
-    let mut right_weight = 0.0;
-
-    add_downmix_sample(&mut left, &mut left_weight, frame[0], 1.0);
-    add_downmix_sample(&mut right, &mut right_weight, frame[1], 1.0);
-
-    match frame.len() {
-        3 => {
-            add_downmix_sample(&mut left, &mut left_weight, frame[2], SURROUND_DOWNMIX_GAIN);
-            add_downmix_sample(
-                &mut right,
-                &mut right_weight,
-                frame[2],
-                SURROUND_DOWNMIX_GAIN,
-            );
-        }
-        4 => {
-            add_downmix_sample(&mut left, &mut left_weight, frame[2], SURROUND_DOWNMIX_GAIN);
-            add_downmix_sample(
-                &mut right,
-                &mut right_weight,
-                frame[3],
-                SURROUND_DOWNMIX_GAIN,
-            );
-        }
-        5 => {
-            add_downmix_sample(&mut left, &mut left_weight, frame[2], SURROUND_DOWNMIX_GAIN);
-            add_downmix_sample(
-                &mut right,
-                &mut right_weight,
-                frame[2],
-                SURROUND_DOWNMIX_GAIN,
-            );
-            add_downmix_sample(&mut left, &mut left_weight, frame[3], SURROUND_DOWNMIX_GAIN);
-            add_downmix_sample(
-                &mut right,
-                &mut right_weight,
-                frame[4],
-                SURROUND_DOWNMIX_GAIN,
-            );
-        }
-        _ => {
-            add_downmix_sample(&mut left, &mut left_weight, frame[2], SURROUND_DOWNMIX_GAIN);
-            add_downmix_sample(
-                &mut right,
-                &mut right_weight,
-                frame[2],
-                SURROUND_DOWNMIX_GAIN,
-            );
-            // Common 5.1 order is L, R, C, LFE, Ls, Rs. LFE is intentionally
-            // not folded into stereo delivery.
-            add_downmix_sample(&mut left, &mut left_weight, frame[4], SURROUND_DOWNMIX_GAIN);
-            add_downmix_sample(
-                &mut right,
-                &mut right_weight,
-                frame[5],
-                SURROUND_DOWNMIX_GAIN,
-            );
-            for (offset, sample) in frame.iter().copied().enumerate().skip(6) {
-                if offset % 2 == 0 {
-                    add_downmix_sample(&mut left, &mut left_weight, sample, SURROUND_DOWNMIX_GAIN);
-                } else {
-                    add_downmix_sample(
-                        &mut right,
-                        &mut right_weight,
-                        sample,
-                        SURROUND_DOWNMIX_GAIN,
-                    );
-                }
-            }
-        }
-    }
-
-    [left / left_weight.max(1.0), right / right_weight.max(1.0)]
-}
+// The canonical stereo fold (`downmix_frame_to_stereo`) lives in
+// `crate::decode` since 2026-07-06: it runs at decode for every imported
+// source, so above-stereo PCM normally never reaches this module.
+// `convert_channel_count` keeps its above-stereo branch (same helper) for
+// direct-PCM callers.
+use crate::decode::downmix_frame_to_stereo;
 
 fn convert_channel_count(
     samples: Vec<f32>,
@@ -683,6 +595,15 @@ pub fn render_album_plan_impl_with_cancel(
                 )));
             }
             let source_channel_count = pcm.channels.max(1);
+            // Decode folds above-stereo sources to stereo, so pcm.channels is
+            // the PROCESSING layout; the render record reports the file's
+            // real channel count from the header probe (source_channels vec
+            // above) so per-track receipts stay honest about fold-downs.
+            let file_channel_count = source_channels
+                .get(i)
+                .copied()
+                .unwrap_or(source_channel_count)
+                .max(1);
 
             let shadowed = if input.override_album {
                 // D9 full sound exemption: skip the arc/bias shadowing (and the
@@ -855,7 +776,7 @@ pub fn render_album_plan_impl_with_cancel(
                 measured_lufs,
                 source_sample_rate: pcm.sample_rate,
                 rendered_sample_rate: album_sample_rate,
-                source_channels: source_channel_count,
+                source_channels: file_channel_count,
                 rendered_channels: rendered_channel_count,
                 override_album: input.override_album,
             });
@@ -1068,6 +989,7 @@ fn unique_album_path(out_dir: &Path, source_paths: &[PathBuf]) -> CommandResult<
 #[cfg(test)]
 mod resolve_tests {
     use super::*;
+    use crate::decode::SURROUND_DOWNMIX_GAIN;
 
     #[test]
     fn explicit_request_overrides_sources() {

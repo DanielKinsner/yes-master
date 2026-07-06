@@ -207,11 +207,139 @@ fn decode_full_inner(path: &Path) -> CommandResult<DecodedPcm> {
         }));
     }
 
+    let channels = observed_channel_count.unwrap_or(channel_count);
+    // Above-stereo sources fold to stereo AT DECODE (owner decision,
+    // 2026-07-06 audit): the mastering chain is stereo-native — the multiband
+    // compressor and width stage process channels 0-1 only — so decoding a
+    // 5.1 file as-is mastered the front pair (compression + makeup gain) and
+    // passed center/surrounds through untouched. Folding here keeps
+    // analysis, audition, track render, and album render all processing the
+    // SAME signal, using the same tested downmix as album stereo delivery
+    // (LFE excluded). Header probes (probe_audio_format) still report the
+    // file's real channel count, so import UI and album records stay honest.
+    let (samples, channels) = fold_interleaved_above_stereo_to_stereo(samples, channels);
     Ok(DecodedPcm {
         samples,
         sample_rate,
-        channels: observed_channel_count.unwrap_or(channel_count),
+        channels,
     })
+}
+
+pub(crate) const SURROUND_DOWNMIX_GAIN: f32 = 0.707_106_77;
+
+fn add_downmix_sample(acc: &mut f32, weight_sum: &mut f32, sample: f32, weight: f32) {
+    *acc += sample * weight;
+    *weight_sum += weight;
+}
+
+/// Fold one interleaved frame of any channel count down to stereo. Canonical
+/// fold for the whole engine: applied at decode for every imported source,
+/// and reused by the album path's `convert_channel_count` for direct-PCM
+/// callers. Common 5.1 order (L, R, C, LFE, Ls, Rs) is assumed for 6+
+/// channels; LFE is intentionally not folded into stereo delivery.
+pub(crate) fn downmix_frame_to_stereo(frame: &[f32]) -> [f32; 2] {
+    if frame.is_empty() {
+        return [0.0, 0.0];
+    }
+    if frame.len() == 1 {
+        return [frame[0], frame[0]];
+    }
+    if frame.len() == 2 {
+        return [frame[0], frame[1]];
+    }
+
+    let mut left = 0.0;
+    let mut right = 0.0;
+    let mut left_weight = 0.0;
+    let mut right_weight = 0.0;
+
+    add_downmix_sample(&mut left, &mut left_weight, frame[0], 1.0);
+    add_downmix_sample(&mut right, &mut right_weight, frame[1], 1.0);
+
+    match frame.len() {
+        3 => {
+            add_downmix_sample(&mut left, &mut left_weight, frame[2], SURROUND_DOWNMIX_GAIN);
+            add_downmix_sample(
+                &mut right,
+                &mut right_weight,
+                frame[2],
+                SURROUND_DOWNMIX_GAIN,
+            );
+        }
+        4 => {
+            add_downmix_sample(&mut left, &mut left_weight, frame[2], SURROUND_DOWNMIX_GAIN);
+            add_downmix_sample(
+                &mut right,
+                &mut right_weight,
+                frame[3],
+                SURROUND_DOWNMIX_GAIN,
+            );
+        }
+        5 => {
+            add_downmix_sample(&mut left, &mut left_weight, frame[2], SURROUND_DOWNMIX_GAIN);
+            add_downmix_sample(
+                &mut right,
+                &mut right_weight,
+                frame[2],
+                SURROUND_DOWNMIX_GAIN,
+            );
+            add_downmix_sample(&mut left, &mut left_weight, frame[3], SURROUND_DOWNMIX_GAIN);
+            add_downmix_sample(
+                &mut right,
+                &mut right_weight,
+                frame[4],
+                SURROUND_DOWNMIX_GAIN,
+            );
+        }
+        _ => {
+            add_downmix_sample(&mut left, &mut left_weight, frame[2], SURROUND_DOWNMIX_GAIN);
+            add_downmix_sample(
+                &mut right,
+                &mut right_weight,
+                frame[2],
+                SURROUND_DOWNMIX_GAIN,
+            );
+            // Common 5.1 order is L, R, C, LFE, Ls, Rs. LFE is intentionally
+            // not folded into stereo delivery.
+            add_downmix_sample(&mut left, &mut left_weight, frame[4], SURROUND_DOWNMIX_GAIN);
+            add_downmix_sample(
+                &mut right,
+                &mut right_weight,
+                frame[5],
+                SURROUND_DOWNMIX_GAIN,
+            );
+            for (offset, sample) in frame.iter().copied().enumerate().skip(6) {
+                if offset % 2 == 0 {
+                    add_downmix_sample(&mut left, &mut left_weight, sample, SURROUND_DOWNMIX_GAIN);
+                } else {
+                    add_downmix_sample(
+                        &mut right,
+                        &mut right_weight,
+                        sample,
+                        SURROUND_DOWNMIX_GAIN,
+                    );
+                }
+            }
+        }
+    }
+
+    [left / left_weight.max(1.0), right / right_weight.max(1.0)]
+}
+
+/// Fold an interleaved above-stereo buffer down to interleaved stereo; mono
+/// and stereo buffers pass through untouched. Returns the (possibly new)
+/// buffer and its channel count.
+fn fold_interleaved_above_stereo_to_stereo(samples: Vec<f32>, channels: u16) -> (Vec<f32>, u16) {
+    if channels <= 2 {
+        return (samples, channels);
+    }
+    let ch = channels as usize;
+    let frames = samples.len() / ch;
+    let mut folded = Vec::with_capacity(frames * 2);
+    for frame in samples.chunks_exact(ch) {
+        folded.extend_from_slice(&downmix_frame_to_stereo(frame));
+    }
+    (folded, 2)
 }
 
 pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<DecodedPeaks> {
@@ -507,5 +635,56 @@ mod tests {
         assert_eq!(pcm.channels, 1);
         assert_eq!(pcm.sample_rate, 44_100);
         assert_eq!(pcm.samples.len(), 1024);
+    }
+
+    /// 2026-07-06 audit: the mastering chain is stereo-native (multiband
+    /// compressor and width process channels 0-1 only), so a 5.1 source
+    /// decoded as-is got its front pair mastered while center/surrounds
+    /// passed through untouched. Decode now folds above-stereo sources to
+    /// stereo with the same downmix the album delivery path uses.
+    #[test]
+    fn decode_full_folds_above_stereo_sources_to_stereo() {
+        // One constant 5.1 frame (L, R, C, LFE, Ls, Rs), repeated.
+        const FRAME_I16: [i16; 6] = [8_192, -4_096, 6_144, 16_384, 2_048, -2_048];
+        const FRAMES: usize = 256;
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let p = tmp.path().join("surround.wav");
+        let spec = hound::WavSpec {
+            channels: 6,
+            sample_rate: 44_100,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut w = hound::WavWriter::create(&p, spec).expect("create");
+        for _ in 0..FRAMES {
+            for s in FRAME_I16 {
+                w.write_sample(s).expect("write");
+            }
+        }
+        w.finalize().expect("finalize");
+
+        let pcm = decode_full(&p).expect("decode");
+        assert_eq!(pcm.channels, 2, "above-stereo must fold to stereo at decode");
+        assert_eq!(pcm.samples.len(), FRAMES * 2);
+
+        // The fold must be the shared album downmix applied to the decoded
+        // (i16-quantized) frame — LFE excluded, surrounds at -3 dB.
+        let frame_f32: Vec<f32> = FRAME_I16.iter().map(|&s| s as f32 / 32_768.0).collect();
+        let expected = downmix_frame_to_stereo(&frame_f32);
+        let mid = FRAMES; // an even sample index = a left sample mid-buffer
+        assert!(
+            (pcm.samples[mid] - expected[0]).abs() < 1.0e-3
+                && (pcm.samples[mid + 1] - expected[1]).abs() < 1.0e-3,
+            "fold must match downmix_frame_to_stereo: got ({}, {}), want ({}, {})",
+            pcm.samples[mid],
+            pcm.samples[mid + 1],
+            expected[0],
+            expected[1]
+        );
+
+        // Header probes keep reporting the file's real channel count — the
+        // import UI and album records rely on that for honesty.
+        let probed = probe_audio_format(&p).expect("probe");
+        assert_eq!(probed.channels, 6);
     }
 }
