@@ -664,7 +664,10 @@ mod tests {
         w.finalize().expect("finalize");
 
         let pcm = decode_full(&p).expect("decode");
-        assert_eq!(pcm.channels, 2, "above-stereo must fold to stereo at decode");
+        assert_eq!(
+            pcm.channels, 2,
+            "above-stereo must fold to stereo at decode"
+        );
         assert_eq!(pcm.samples.len(), FRAMES * 2);
 
         // The fold must be the shared album downmix applied to the decoded

@@ -879,8 +879,8 @@ mod live_update_allocation_tests {
         // harness samples are DC, which K-weighting gates to silence): one
         // second of 1 kHz sine fills the 400 ms gating blocks.
         for i in 0..sample_rate as usize {
-            let x = 0.5
-                * (2.0 * std::f32::consts::PI * 1000.0 * i as f32 / sample_rate as f32).sin();
+            let x =
+                0.5 * (2.0 * std::f32::consts::PI * 1000.0 * i as f32 / sample_rate as f32).sin();
             source.integrated_lufs_meter.process_frame(x, x);
         }
         let accumulated = source.integrated_lufs_meter.lufs();

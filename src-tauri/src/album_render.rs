@@ -684,8 +684,7 @@ pub fn render_album_plan_impl_with_cancel(
                 processed = end;
                 if let Some(cb) = on_progress {
                     let within_track = processed as f32 / track_total.max(1) as f32;
-                    let overall =
-                        ((i as f32 + within_track) / total_tracks.max(1) as f32).min(1.0);
+                    let overall = ((i as f32 + within_track) / total_tracks.max(1) as f32).min(1.0);
                     // ≥1% throttle (F9) — the final 1.0 is emitted once after
                     // pass 2, so no terminal event is lost to the threshold.
                     if overall - last_emitted_overall >= 0.01 {

@@ -1748,6 +1748,7 @@ fn should_invalidate_landing_cache(
 /// original inline match so the command loop can buffer + coalesce
 /// queued commands before dispatching (see `audio_thread` for the
 /// drain pattern).
+#[allow(clippy::too_many_arguments)]
 fn process_audio_command(
     cmd: AudioCommand,
     state: &mut Option<AudioThreadState>,
@@ -2937,7 +2938,10 @@ mod tests {
         // test exists to catch (2026-07-06 audit).
         assert_eq!(start_position_for_play(false, 3.0, 10.6, None), 3.0);
         assert_eq!(start_position_for_play(false, 0.0, 42.0, None), 0.0);
-        assert_eq!(start_position_for_play(false, 3.0, 10.6, Some(&region)), 3.0);
+        assert_eq!(
+            start_position_for_play(false, 3.0, 10.6, Some(&region)),
+            3.0
+        );
         // Swap, no loop: floored at the outgoing position (F4); requests
         // ahead of the sink are kept. Dropping this arm resurrects the
         // owner-smoke backwards-seek stutter.
@@ -4250,7 +4254,7 @@ mod tests {
             end_sec: 20.0,
         };
         let should_shutdown = process_audio_command(
-            AudioCommand::SetLoop(Some(region.clone())),
+            AudioCommand::SetLoop(Some(region)),
             &mut state,
             &mut pending_loop_region,
             &selected_output_device_name,
@@ -4262,7 +4266,9 @@ mod tests {
         assert!(!should_shutdown);
         assert!(state.is_none(), "SetLoop must not open a device");
         assert_eq!(
-            pending_loop_region.as_ref().map(|r| (r.start_sec, r.end_sec)),
+            pending_loop_region
+                .as_ref()
+                .map(|r| (r.start_sec, r.end_sec)),
             Some((10.0, 20.0)),
             "a cold-thread arm must be buffered, not dropped"
         );
@@ -4278,7 +4284,10 @@ mod tests {
             &command_tx,
             &profile_store,
         );
-        assert!(pending_loop_region.is_none(), "cold-thread disarm must clear the buffer");
+        assert!(
+            pending_loop_region.is_none(),
+            "cold-thread disarm must clear the buffer"
+        );
 
         // Degenerate regions are filtered exactly like the warm path.
         process_audio_command(
@@ -4294,7 +4303,10 @@ mod tests {
             &command_tx,
             &profile_store,
         );
-        assert!(pending_loop_region.is_none(), "degenerate regions are filtered");
+        assert!(
+            pending_loop_region.is_none(),
+            "degenerate regions are filtered"
+        );
     }
 
     /// The install half of the cold-arm flow: play consumes the buffer into
@@ -4308,7 +4320,7 @@ mod tests {
         // Fresh state (loop_region None): the buffered arm installs and the
         // buffer empties, so it can never resurface on a later play.
         let mut state_region = None;
-        let mut pending = Some(region.clone());
+        let mut pending = Some(region);
         install_pending_loop_region(&mut state_region, &mut pending);
         assert_eq!(
             state_region.as_ref().map(|r| (r.start_sec, r.end_sec)),
