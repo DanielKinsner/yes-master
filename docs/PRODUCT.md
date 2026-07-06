@@ -40,7 +40,11 @@ product identity.
 
 ## Primary Workflow
 
-**Standard is the default view.** The primary workflow is Standard's:
+**Standard is the default view** for new users, and the last-used view is
+remembered thereafter. (Migration rule, deliberate per the 2026-06-08 Simple
+Mode spec: users whose sessions predate Standard were landed in Advanced —
+their known surface — not bounced into a new default.) The primary workflow
+is Standard's:
 
 1. Import audio (drag-drop or the hero CTA).
 2. Analyze (automatic, with real progress).
@@ -186,7 +190,11 @@ Required compressor modes:
 - Export warnings.
 
 Do not hide extra compression behind Compressor Off. If the target cannot be
-reached cleanly, land as far as ceiling/headroom allows and warn.
+reached cleanly, land as far as ceiling/headroom allows and surface the
+shortfall — as an **informational receipt note** (delivered LUFS vs target),
+not a warning row, per the adjudicated 2026-06-09 decision: an undershoot
+under the chosen ceiling is honest physics, not a fault. Advanced shows the
+note on the receipt; Standard suppresses it with the other advisories.
 
 ## Loudness And Safety
 
@@ -244,6 +252,11 @@ Album Master exists in Advanced: album intent, per-track override, arc
 kinds, album-wide delivery format with mixed-rate resampling, continuous +
 per-track renders with a manifest, mixed mono/stereo channel-count resolution,
 and above-stereo source fold-down to stereo delivery.
+
+Album export deliberately has **no pre-export review ceremony**: the rail's
+review rows are per-selected-track, so albums rely on the always-visible
+source checks plus honest post-render per-track receipts instead. The
+warning-review flow described under Export Philosophy is Track Master's.
 
 Two consequences of the promise (both shipped 2026-07-03):
 

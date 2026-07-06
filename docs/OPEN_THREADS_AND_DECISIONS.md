@@ -20,6 +20,27 @@ close rather than letting them rot in scattered docs.
 > hypotheses, and the fix ledger. The design decisions it surfaced are Part B
 > Q23–Q30 below.
 
+> **2026-07-06:** a lean adversarial audit (July-push commits + audio/DSP hot
+> areas + PRODUCT conformance + stabilization-risk; every finding
+> skeptic-verified) confirmed 21 findings and the fix batch shipped same-day
+> on main: pristine-process gate-default tripwires (a skeptic flipped the
+> album-character gate ON and the whole suite stayed green — now impossible),
+> one pinned decision point for play start position (F4 floor + loop-wrap
+> confinement), cold-thread loop arm buffering, Mastered seek now keeps the
+> newest live coefficients and restarts its LUFS meters like Original, album
+> renders got the promised 1% progress throttle + per-stage timing line,
+> above-stereo sources fold to stereo at decode (the audit's one HIGH:
+> the stereo-native chain was mastering only a 5.1 file's front pair), and
+> Help/comment copy drift was corrected. **Held for one post-ship limiter
+> bundle (byte-affecting — regen snapshots + fixture lane once):** ISP skip
+> margin 1.2 < the estimator's 1.25 worst case (`dsp.rs` ISP_SKIP_MARGIN),
+> limiter ring warmup mis-index (ISP scan inert for the first lookahead
+> window), and denormal flushing on envelopes/biquads (silent-passage perf on
+> older x86). **Also held:** retracting the device-loss banner when a single
+> busy play exceeds the 2 s stall window (transient, self-clears on the next
+> healthy tick). Q26 stays parked behind the 7a flip, now tripwired by
+> `src-tauri/tests/owner_gates_default.rs`.
+
 > **State of the project (2026-06-22):** late stabilization. The two big mechanical
 > queues (the final repo-wide review A1–E3, and the shippability roadmap S0–S7 +
 > AC-1…AC-4) are **fully shipped on main**. What remains is almost entirely

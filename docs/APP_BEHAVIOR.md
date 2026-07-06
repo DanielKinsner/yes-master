@@ -16,7 +16,10 @@ handoffs planned.
 
 Track Master supports:
 
-- Importing local audio.
+- Importing local audio. Above-stereo sources (e.g. 5.1) fold down to stereo
+  at decode (common 5.1 order, LFE excluded) so analysis, audition, and
+  export all process the same stereo signal the chain masters; header probes
+  and album records still report the file's real channel count.
 - Source analysis.
 - Waveform display.
 - Original/Mastered audition at the same playhead.
