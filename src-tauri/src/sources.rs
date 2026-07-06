@@ -660,12 +660,27 @@ impl rodio::Source for MasteringSource {
         let target_frame = (pos.as_secs_f64() * self.sample_rate as f64) as usize;
         let target_sample = target_frame.saturating_mul(channels);
         self.position = target_sample.min(self.samples.len());
+        // A seek landing inside the 512-frame settings crossfade must not
+        // revert to the pre-update coefficients: the update was already
+        // consumed from coeffs_rx (generation bumped), so deactivating the
+        // pending chain here would discard the NEWEST settings with no
+        // re-send — the loop wrap's auto-seek made this reachable every
+        // region iteration (2026-07-06 audit). Promote first, like the
+        // update-arrival path above.
+        if self.pending_chain_active {
+            std::mem::swap(&mut self.chain, &mut self.pending_chain);
+            self.pending_chain_active = false;
+        }
         // Drop accumulated biquad/limiter state to avoid clicks across
         // discontinuities. Also force a frame re-fetch on the next yield.
         self.chain.reset_states();
-        self.pending_chain_active = false;
         self.crossfade_remaining = 0;
         self.crossfade_total = 0;
+        // Restart both meters exactly like MeteredPcmSource::try_seek —
+        // Original and Mastered must measure the same program span or the
+        // O/M integrated-LUFS comparison drifts after every loop wrap.
+        self.lufs_meter = crate::dsp::MomentaryLufs::new(self.sample_rate);
+        self.integrated_lufs_meter = crate::dsp::IntegratedLufs::new(self.sample_rate);
         self.frame_out_pos = channels;
         Ok(())
     }
@@ -816,6 +831,73 @@ mod live_update_allocation_tests {
             initial_main_allocs,
             "follow-up live update should reuse the alternate preallocated chain"
         );
+    }
+
+    /// 2026-07-06 audit: a seek landing inside the settings crossfade must
+    /// keep the NEWEST coefficients. The update was already consumed from
+    /// coeffs_rx (generation bumped), so discarding the pending chain
+    /// reverted audition to the pre-update settings until the next knob
+    /// touch — and the loop wrap's auto-seek opened that window on every
+    /// region iteration.
+    #[test]
+    fn seek_mid_crossfade_promotes_the_pending_chain() {
+        use rodio::Source as _;
+        let (mut source, tx, sample_rate, _channels) =
+            source_with_updates(COEFFS_CHECK_INTERVAL_FRAMES * 3);
+        let initial_pending_allocs = source.pending_chain.allocation_fingerprint();
+
+        tx.send(LiveCoeffUpdate {
+            generation: 1,
+            coeffs: ChainCoeffs::from_settings(sample_rate, &settings_with_intensity(0.9)),
+        })
+        .expect("send update");
+        drain_frames(&mut source, COEFFS_CHECK_INTERVAL_FRAMES);
+        assert!(source.pending_chain_active, "update must arm the crossfade");
+
+        source.try_seek(Duration::from_millis(0)).expect("seek");
+
+        assert!(!source.pending_chain_active);
+        assert_eq!(source.crossfade_remaining, 0);
+        assert_eq!(
+            source.chain.allocation_fingerprint(),
+            initial_pending_allocs,
+            "seek during the fade must promote the newest coefficients, not discard them"
+        );
+    }
+
+    /// O/M A-B honesty (2026-07-06 audit): both source types restart their
+    /// meters on seek so Original and Mastered integrated LUFS measure the
+    /// same program span — MeteredPcmSource already did; MasteringSource
+    /// kept accumulating across seeks/loop wraps.
+    #[test]
+    fn seek_restarts_the_mastered_meters_like_original() {
+        use rodio::Source as _;
+        let (mut source, _tx, sample_rate, _channels) =
+            source_with_updates(COEFFS_CHECK_INTERVAL_FRAMES * 3);
+        let fresh = crate::dsp::IntegratedLufs::new(sample_rate).lufs();
+        // Accumulate integrated state directly on the source's meter (the
+        // harness samples are DC, which K-weighting gates to silence): one
+        // second of 1 kHz sine fills the 400 ms gating blocks.
+        for i in 0..sample_rate as usize {
+            let x = 0.5
+                * (2.0 * std::f32::consts::PI * 1000.0 * i as f32 / sample_rate as f32).sin();
+            source.integrated_lufs_meter.process_frame(x, x);
+        }
+        let accumulated = source.integrated_lufs_meter.lufs();
+        assert_ne!(
+            accumulated, fresh,
+            "precondition: the meter must have accumulated integrated state"
+        );
+
+        source.try_seek(Duration::from_millis(0)).expect("seek");
+
+        assert_eq!(
+            source.integrated_lufs_meter.lufs(),
+            fresh,
+            "seek must restart the integrated meter exactly like MeteredPcmSource"
+        );
+        // (The momentary meter is replaced in the same statement; it exposes
+        // no state accessor to pin separately.)
     }
 }
 
