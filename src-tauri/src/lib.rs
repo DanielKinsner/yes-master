@@ -91,6 +91,7 @@ pub fn run() {
                 // file I/O (diagnostics.rs discipline — the audio thread
                 // stays untouched).
                 let mut last_device_loss_skips: u64 = 0;
+                let mut last_device_lost_latched = false;
                 loop {
                     std::thread::sleep(Duration::from_millis(50));
                     let Ok(snap) = player_state.snapshot() else {
@@ -102,6 +103,24 @@ pub fn run() {
                             "skipped stale device-loss mark (play completed within the stall window)",
                         );
                     }
+                    // The FE banner is driven by the LATCH edge, not the
+                    // detector's raw decision: the audio thread can skip a
+                    // stale mark (a play completed within the stall window),
+                    // and emitting at detection time popped a transient
+                    // banner for exactly that case (2026-07-06 audit). A
+                    // real loss latches within a tick or two of the mark, so
+                    // the banner still arrives promptly; a dismissed latch
+                    // re-arms the edge for the next genuine loss.
+                    if snap.device_lost && !last_device_lost_latched {
+                        let _ = app_handle.emit(
+                            audio::PLAYBACK_DEVICE_LOST_EVENT,
+                            crate::types::PlaybackDeviceLost {
+                                track_id: snap.track_id.clone(),
+                                position_sec: snap.position_sec,
+                            },
+                        );
+                    }
+                    last_device_lost_latched = snap.device_lost;
                     // Landing status is evaluated BEFORE the is_loaded gate:
                     // an unload (stop / track removal) must still flip the
                     // frontend back to false or the note leaks onto idle.
@@ -120,8 +139,10 @@ pub fn run() {
                                 "playback device lost (track {:?} at {:.2}s)",
                                 event.track_id, event.position_sec
                             ));
+                            // No FE emit here — the audio thread may still
+                            // SKIP this mark as stale. The latch-edge check
+                            // above emits once the mark actually applies.
                             player_state.mark_device_lost();
-                            let _ = app_handle.emit(audio::PLAYBACK_DEVICE_LOST_EVENT, event);
                             continue;
                         }
                         audio::PlaybackDeviceLossDecision::SuppressStalledTick => continue,
