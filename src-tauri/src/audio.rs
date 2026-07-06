@@ -2301,6 +2301,42 @@ fn effective_swap_start_position(requested_sec: f64, outgoing_sink_pos_sec: f64)
     requested_sec.max(outgoing_sink_pos_sec)
 }
 
+/// The single decision point for where a play command starts the incoming
+/// sink. Both `handle_play` and `handle_play_master` MUST resolve their start
+/// position through this function — the F4 floor applies only to swaps, and
+/// hand-inlining the branch is how the whole suite stays green while either
+/// arm regresses (2026-07-06 audit).
+///
+/// - Non-swap plays are honored exactly (an explicit play-from-position or
+///   play-from-zero request must not inherit the old sink's position).
+/// - Swaps floor at the outgoing sink's position (F4 — it kept advancing
+///   while the command ran; seeking behind it runs the timeline backwards).
+/// - Swaps with an armed loop trust the outgoing sink outright and confine
+///   through `loop_seek_target`: a wrap legitimately moves the sink BACKWARD,
+///   so the F4 `max()` would pick the stale pre-wrap FE estimate and replay
+///   the region tail on an Original<->Mastered flip near the wrap.
+fn start_position_for_play(
+    is_swap: bool,
+    requested_sec: f64,
+    outgoing_sink_pos_sec: f64,
+    loop_region: Option<&LoopRegion>,
+) -> f64 {
+    if !is_swap {
+        return requested_sec;
+    }
+    match loop_region {
+        Some(region) => {
+            let base = if outgoing_sink_pos_sec.is_finite() {
+                outgoing_sink_pos_sec
+            } else {
+                requested_sec
+            };
+            loop_seek_target(base, region).unwrap_or(base)
+        }
+        None => effective_swap_start_position(requested_sec, outgoing_sink_pos_sec),
+    }
+}
+
 trait PlaybackSink {
     fn try_seek_position(&self, offset: Duration);
     fn play_from_current_position(&self);
@@ -2469,14 +2505,15 @@ fn handle_play(
     )
     .with_swap_fade(fade);
 
-    // F4 — the outgoing sink kept advancing while this command ran; floor
-    // the preserved-playhead request at its current position so the swap
-    // never seeks the timeline backwards.
-    let start_position_sec = if is_swap {
-        effective_swap_start_position(start_position_sec, s.sink.get_pos().as_secs_f64())
-    } else {
-        start_position_sec
-    };
+    // F4 — the outgoing sink kept advancing while this command ran; resolve
+    // the start through the shared decision point (swap floor + loop-wrap
+    // confinement live there, pinned by unit tests).
+    let start_position_sec = start_position_for_play(
+        is_swap,
+        start_position_sec,
+        s.sink.get_pos().as_secs_f64(),
+        s.loop_region.as_ref(),
+    );
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(source);
     play_sink_from_start_position(&new_sink, start_position_sec);
@@ -2695,13 +2732,15 @@ fn handle_play_master(
     )
     .with_swap_fade(fade);
 
-    // F4 — same backwards-seek floor as handle_play: the outgoing sink kept
-    // advancing during this command (which can run long on a cold decode).
-    let start_position_sec = if is_swap {
-        effective_swap_start_position(start_position_sec, s.sink.get_pos().as_secs_f64())
-    } else {
-        start_position_sec
-    };
+    // F4 — same resolution as handle_play: the outgoing sink kept advancing
+    // during this command (which can run long on a cold decode); the shared
+    // decision point owns the swap floor + loop-wrap confinement.
+    let start_position_sec = start_position_for_play(
+        is_swap,
+        start_position_sec,
+        s.sink.get_pos().as_secs_f64(),
+        s.loop_region.as_ref(),
+    );
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
     new_sink.append(mastering_source);
     play_sink_from_start_position(&new_sink, start_position_sec);
@@ -2828,6 +2867,44 @@ mod tests {
         assert_eq!(effective_swap_start_position(10.0, f64::NAN), 10.0);
         // A fresh sink at 0 never drags a valid request back to 0.
         assert_eq!(effective_swap_start_position(42.0, 0.0), 42.0);
+    }
+
+    #[test]
+    fn start_position_for_play_pins_both_arms_and_the_loop_wrap_case() {
+        let region = LoopRegion {
+            start_sec: 10.0,
+            end_sec: 20.0,
+        };
+        // Non-swap plays are honored EXACTLY — including requests behind the
+        // outgoing sink (explicit play-from-earlier / play-from-zero) and
+        // with a loop armed. Applying the floor here is the regression this
+        // test exists to catch (2026-07-06 audit).
+        assert_eq!(start_position_for_play(false, 3.0, 10.6, None), 3.0);
+        assert_eq!(start_position_for_play(false, 0.0, 42.0, None), 0.0);
+        assert_eq!(start_position_for_play(false, 3.0, 10.6, Some(&region)), 3.0);
+        // Swap, no loop: floored at the outgoing position (F4); requests
+        // ahead of the sink are kept. Dropping this arm resurrects the
+        // owner-smoke backwards-seek stutter.
+        assert_eq!(start_position_for_play(true, 10.0, 10.6, None), 10.6);
+        assert_eq!(start_position_for_play(true, 11.2, 10.6, None), 11.2);
+        // Swap with an armed loop: the outgoing sink is ground truth — a
+        // wrap legitimately moved it BACKWARD past the stale FE estimate,
+        // so max() would replay the region tail (loop-wrap flip stutter).
+        assert_eq!(
+            start_position_for_play(true, 19.9, 10.02, Some(&region)),
+            10.02
+        );
+        // ...and a sink at/past the region end confines straight to start
+        // instead of double-playing the tail until the next 50 ms tick.
+        assert_eq!(
+            start_position_for_play(true, 19.0, 20.4, Some(&region)),
+            10.0
+        );
+        // Junk outgoing position falls back to the request, still confined.
+        assert_eq!(
+            start_position_for_play(true, 25.0, f64::NAN, Some(&region)),
+            10.0
+        );
     }
 
     #[test]
