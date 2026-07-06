@@ -269,6 +269,22 @@ impl BiquadCoeffs {
     }
 }
 
+/// Flush a decaying state value to exact zero once it falls below any level
+/// that can survive the f32 → 16/24-bit WAV path (2026-07-06 audit). On x86
+/// without FTZ/DAZ (Rust never sets them), subnormal multiplies take a
+/// microcoded assist tens of times slower than normal — and exponentially
+/// decaying filter/envelope states settle into subnormal territory during
+/// silence, spiking per-sample DSP cost exactly when the signal is quiet.
+/// 1e-20 ≈ -400 dBFS: audibly and byte-wise nothing.
+#[inline]
+fn flush_denormal(x: f32) -> f32 {
+    if x.abs() < 1.0e-20 {
+        0.0
+    } else {
+        x
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct BiquadState {
     z1: f32,
@@ -278,8 +294,8 @@ pub struct BiquadState {
 impl BiquadState {
     pub fn process(&mut self, c: &BiquadCoeffs, x: f32) -> f32 {
         let y = c.b0 * x + self.z1;
-        self.z1 = c.b1 * x - c.a1 * y + self.z2;
-        self.z2 = c.b2 * x - c.a2 * y;
+        self.z1 = flush_denormal(c.b1 * x - c.a1 * y + self.z2);
+        self.z2 = flush_denormal(c.b2 * x - c.a2 * y);
         y
     }
 }
@@ -1470,6 +1486,15 @@ const LAGRANGE_INTERSAMPLE_COEFFS: [[f32; 4]; 3] = [
     [-0.0390625, 0.2734375, 0.8203125, -0.0546875], // x = 0.75 (mirror of 0.25)
 ];
 
+/// Skip gate for the inter-sample-peak scan: if `raw_peak * ISP_SKIP_MARGIN`
+/// is below the ceiling, no interpolated estimate can cross it. Must be ≥ the
+/// largest ABSOLUTE-weight row sum of `LAGRANGE_INTERSAMPLE_COEFFS` (1.25 at
+/// x = 0.5) — an interpolated output is a weighted sum of four samples each
+/// ≤ peak, so that sum is its hard bound. Pinned by
+/// `isp_skip_margin_covers_the_estimator_bound` so a future coefficient edit
+/// can't silently invalidate the gate again (2026-07-06 audit: 1.2 < 1.25).
+const ISP_SKIP_MARGIN: f32 = 1.26;
+
 #[derive(Debug, Clone)]
 pub struct Limiter {
     channels: usize,
@@ -1558,15 +1583,19 @@ impl Limiter {
         }
         // Phase A4 perf: the Lagrange-4 inter-sample peak loop is the
         // dominant cost in the limiter (O(lookahead × channels × 3
-        // positions) per output frame). Inter-sample peaks can only
-        // exceed the raw sample peak by at most ~+1 dB on real signals
-        // (Lagrange-4 estimator bound; ITU-R BS.1770 says +0.5 dB for
-        // typical material). If raw peak * 1.2 (≈ +1.6 dB margin) is
-        // still below the ceiling, no possible inter-sample peak can
-        // cross it — skip the loop entirely. Saves the heavy work on
-        // any frame with ≥1.6 dB headroom, which on quiet material is
-        // basically every frame.
-        const ISP_SKIP_MARGIN: f32 = 1.2;
+        // positions) per output frame). The estimator itself bounds how far
+        // an interpolated value can exceed the raw sample peak: an output is
+        // a weighted sum of four samples each ≤ peak, so it is capped by the
+        // row's ABSOLUTE-weight sum — 1.25 for the x = 0.5 row (the largest;
+        // see `isp_skip_margin_covers_the_estimator_bound`). If raw peak ×
+        // 1.26 (bound + slack) is still below the ceiling, no possible
+        // inter-sample estimate can cross it — skip the loop entirely. Saves
+        // the heavy work on any frame with ~2 dB of headroom, which on quiet
+        // material is basically every frame. (2026-07-06 audit: the previous
+        // 1.2 margin sat BELOW the estimator's own 1.25 worst case, letting
+        // adversarial sign-alternating material skip a scan that would have
+        // caught up to ~0.35 dB of overshoot. `ISP_SKIP_MARGIN` lives at
+        // module scope, test-pinned against the coefficient rows.)
         let frames = self.filled_frames;
         if frames >= 4 && peak * ISP_SKIP_MARGIN > self.ceiling_lin {
             for f in 1..(frames - 2) {
@@ -1639,8 +1668,17 @@ impl Limiter {
 
     /// Read the channel sample at logical frame offset `f` (0 = oldest sample
     /// still in the buffer, `filled_frames - 1` = most recently written).
+    /// Anchored at the oldest WRITTEN frame: during warmup (`filled_frames <
+    /// lookahead_frames`) the oldest written frame is NOT `head_frame` —
+    /// writes start at slot 0 and `head_frame` points at the next unwritten
+    /// slot — so anchoring at `head_frame` read unwritten zeros and left the
+    /// inter-sample-peak scan inert for the first lookahead window of every
+    /// stream (2026-07-06 audit). `head - filled (mod len)` is the oldest
+    /// written slot in both warmup and steady state.
     fn frame_sample(&self, f: usize, c: usize) -> f32 {
-        let actual_frame = (self.head_frame + f) % self.lookahead_frames;
+        let oldest =
+            (self.head_frame + self.lookahead_frames - self.filled_frames) % self.lookahead_frames;
+        let actual_frame = (oldest + f) % self.lookahead_frames;
         self.buffer[actual_frame * self.channels + c]
     }
 }
@@ -1728,8 +1766,8 @@ fn process_transient_shaper_sample(
     } else {
         slow_release_alpha
     };
-    *fast_env = fast_alpha * *fast_env + (1.0 - fast_alpha) * detector;
-    *slow_env = slow_alpha * *slow_env + (1.0 - slow_alpha) * detector;
+    *fast_env = flush_denormal(fast_alpha * *fast_env + (1.0 - fast_alpha) * detector);
+    *slow_env = flush_denormal(slow_alpha * *slow_env + (1.0 - slow_alpha) * detector);
 
     let diff = (*fast_env - *slow_env) / ((*slow_env).max(1.0e-4));
     let gain = (1.0 + amount * diff.clamp(-1.0, 1.0)).clamp(0.75, 1.25);
@@ -2320,7 +2358,7 @@ impl MasteringChain {
                 } else {
                     alpha_r
                 };
-                *env_ref = alpha * (*env_ref) + (1.0 - alpha) * detector;
+                *env_ref = flush_denormal(alpha * (*env_ref) + (1.0 - alpha) * detector);
                 let env = *env_ref;
                 let env_db = if env <= 1.0e-7 {
                     -140.0
@@ -2475,6 +2513,74 @@ mod tests {
 
     fn approx_eq(a: f32, b: f32, tol: f32) -> bool {
         (a - b).abs() <= tol
+    }
+
+    /// The ISP skip gate is sound only if no interpolated estimate can exceed
+    /// `raw_peak * ISP_SKIP_MARGIN`. An interpolated output is a weighted sum
+    /// of four samples each ≤ peak in magnitude, so its hard bound is the
+    /// row's absolute-weight sum. 2026-07-06 audit: the old 1.2 margin sat
+    /// below the x = 0.5 row's 1.25 — this pin keeps a future coefficient
+    /// edit from silently reopening that gap.
+    #[test]
+    fn isp_skip_margin_covers_the_estimator_bound() {
+        let worst: f32 = LAGRANGE_INTERSAMPLE_COEFFS
+            .iter()
+            .map(|row| row.iter().map(|w| w.abs()).sum::<f32>())
+            .fold(0.0, f32::max);
+        assert!(
+            ISP_SKIP_MARGIN >= worst,
+            "ISP_SKIP_MARGIN ({ISP_SKIP_MARGIN}) must cover the estimator's \
+             worst-case gain ({worst})"
+        );
+    }
+
+    /// 2026-07-06 audit: during warmup the ring's oldest WRITTEN frame is
+    /// slot 0, not `head_frame` (which points at the next unwritten slot) —
+    /// the old anchoring read unwritten zeros and left the inter-sample-peak
+    /// scan inert for the first lookahead window of every stream.
+    #[test]
+    fn limiter_frame_sample_reads_written_frames_during_warmup() {
+        let mut lim = Limiter::new(48_000, 1, -1.0, 5.0, 50.0);
+        assert!(
+            lim.lookahead_frames > 8,
+            "test needs a warmup window larger than the pushed frames"
+        );
+        let values = [0.1_f32, -0.2, 0.3, -0.4, 0.5];
+        for &v in &values {
+            let mut frame = [v];
+            lim.process_frame_inplace(&mut frame);
+        }
+        assert_eq!(lim.filled_frames, values.len());
+        for (f, &v) in values.iter().enumerate() {
+            assert_eq!(
+                lim.frame_sample(f, 0),
+                v,
+                "logical offset {f} must read the {f}-th written sample during warmup"
+            );
+        }
+    }
+
+    /// 2026-07-06 audit: exponentially decaying states settled into f32
+    /// subnormals during silence (no FTZ in Rust), spiking per-sample cost on
+    /// older x86 exactly when the signal is quiet. States must flush to EXACT
+    /// zero once below any level that survives the WAV path.
+    #[test]
+    fn decaying_states_flush_to_exact_zero_instead_of_denormals() {
+        assert_eq!(flush_denormal(1.0e-21), 0.0);
+        assert_eq!(flush_denormal(-1.0e-21), 0.0);
+        assert_eq!(flush_denormal(1.0e-19), 1.0e-19);
+        assert_eq!(flush_denormal(-0.5), -0.5);
+
+        // Behavioral: an impulse followed by silence must settle the biquad
+        // state to exact zero, not an ever-decaying subnormal tail.
+        let coeffs = BiquadCoeffs::peaking(44_100.0, 1_000.0, 1.0, 6.0);
+        let mut st = BiquadState::default();
+        st.process(&coeffs, 1.0);
+        for _ in 0..200_000 {
+            st.process(&coeffs, 0.0);
+        }
+        assert_eq!(st.z1, 0.0, "z1 must flush to exact zero during silence");
+        assert_eq!(st.z2, 0.0, "z2 must flush to exact zero during silence");
     }
 
     fn push_biquad_bits(out: &mut Vec<u32>, c: &BiquadCoeffs) {
