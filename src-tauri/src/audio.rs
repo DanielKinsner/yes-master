@@ -1739,6 +1739,7 @@ fn should_invalidate_landing_cache(
 fn process_audio_command(
     cmd: AudioCommand,
     state: &mut Option<AudioThreadState>,
+    pending_loop_region: &mut Option<LoopRegion>,
     selected_output_device_name: &Arc<RwLock<Option<String>>>,
     prewarm_cache: &SharedDecodedCache,
     play_request_epoch: &Arc<AtomicU64>,
@@ -1757,6 +1758,7 @@ fn process_audio_command(
                 ensure_play_request_current(play_request_epoch, request_epoch).and_then(|_| {
                     handle_play(
                         state,
+                        pending_loop_region,
                         track_id,
                         &path,
                         start_position_sec,
@@ -1782,6 +1784,7 @@ fn process_audio_command(
                 ensure_play_request_current(play_request_epoch, request_epoch).and_then(|_| {
                     handle_play_master(
                         state,
+                        pending_loop_region,
                         track_id,
                         &path,
                         &settings,
@@ -2094,8 +2097,14 @@ fn process_audio_command(
             let _ = reply.send(outcome);
         }
         AudioCommand::SetLoop(region) => {
-            if let Some(s) = state.as_mut() {
-                s.loop_region = region.filter(|r| r.end_sec > r.start_sec);
+            let filtered = region.filter(|r| r.end_sec > r.start_sec);
+            match state.as_mut() {
+                Some(s) => s.loop_region = filtered,
+                // Cold thread — no play has ever created the state. Buffer
+                // the armed region so the first play installs it; dropping
+                // it here silently broke "arm loop, then press Play" on a
+                // fresh launch (2026-07-06 audit).
+                None => *pending_loop_region = filtered,
             }
         }
         AudioCommand::Shutdown => return true,
@@ -2113,6 +2122,9 @@ fn audio_thread(
     profile_store: Arc<crate::profile_store::SourceProfileStore>,
 ) {
     let mut state: Option<AudioThreadState> = None;
+    // A loop region armed before the first-ever play (state still None) is
+    // buffered here and installed by the play that creates the state.
+    let mut pending_loop_region: Option<LoopRegion> = None;
     loop {
         // Wait for at least one command (50 ms tick matches the prior
         // poll cadence so loop-region / snapshot housekeeping below
@@ -2159,6 +2171,7 @@ fn audio_thread(
                 if process_audio_command(
                     c,
                     &mut state,
+                    &mut pending_loop_region,
                     &selected_output_device_name,
                     &prewarm_cache,
                     &play_request_epoch,
@@ -2415,9 +2428,26 @@ fn loop_seek_target(pos_sec: f64, region: &LoopRegion) -> Option<f64> {
     }
 }
 
+/// A loop armed while the audio-thread state didn't exist yet (before the
+/// first-ever play of the process) is buffered by `SetLoop`; the next play
+/// installs it here. A region already on the state wins — the buffer is only
+/// meaningful before the first state creation, and it is consumed either way
+/// so a stale pre-first-play arm can never resurface later.
+fn install_pending_loop_region(
+    state_loop_region: &mut Option<LoopRegion>,
+    pending: &mut Option<LoopRegion>,
+) {
+    if let Some(region) = pending.take() {
+        if state_loop_region.is_none() {
+            *state_loop_region = Some(region);
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn handle_play(
     state: &mut Option<AudioThreadState>,
+    pending_loop_region: &mut Option<LoopRegion>,
     track_id: TrackId,
     path: &Path,
     start_position_sec: f64,
@@ -2458,6 +2488,9 @@ fn handle_play(
         )?);
     }
     let s = state.as_mut().expect("state just inserted");
+    // A loop armed before the first-ever play was buffered by SetLoop (the
+    // thread state didn't exist yet); install it so Play honors the armed UI.
+    install_pending_loop_region(&mut s.loop_region, pending_loop_region);
     // L10 — a mid-play Original<->Mastered toggle on the SAME track is a "swap":
     // fade the outgoing source out (it ends, and its detached sink drains) and
     // fade the incoming one in. A fresh play / track switch hard-stops as before.
@@ -2553,6 +2586,7 @@ fn handle_play(
 #[allow(clippy::too_many_arguments)]
 fn handle_play_master(
     state: &mut Option<AudioThreadState>,
+    pending_loop_region: &mut Option<LoopRegion>,
     track_id: TrackId,
     path: &Path,
     settings: &MasteringSettings,
@@ -2627,6 +2661,9 @@ fn handle_play_master(
         )?);
     }
     let s = state.as_mut().expect("state just inserted");
+    // A loop armed before the first-ever play was buffered by SetLoop (the
+    // thread state didn't exist yet); install it so Play honors the armed UI.
+    install_pending_loop_region(&mut s.loop_region, pending_loop_region);
     // L10 — a mid-play Original<->Mastered toggle on the SAME track is a "swap":
     // fade the outgoing source out (it ends, and its detached sink drains) and
     // fade the incoming one in. A fresh play / track switch hard-stops as before.
@@ -4155,12 +4192,14 @@ mod tests {
         let profile_store = Arc::new(crate::profile_store::SourceProfileStore::default());
         let (reply, reply_rx) = mpsc::channel();
 
+        let mut pending_loop_region = None;
         let should_shutdown = process_audio_command(
             AudioCommand::SetOutputDevice {
                 device_name: Some("Stale Output".to_string()),
                 reply,
             },
             &mut state,
+            &mut pending_loop_region,
             &selected_output_device_name,
             &prewarm_cache,
             &play_request_epoch,
@@ -4171,6 +4210,111 @@ mod tests {
         assert!(!should_shutdown);
         assert!(state.is_none());
         assert_eq!(reply_rx.recv().expect("reply"), Ok(()));
+    }
+
+    /// Owner smoke F3 follow-up (2026-07-06 audit): a loop armed BEFORE the
+    /// first-ever play of the process arrives as SetLoop while the thread
+    /// state is still None. It must be buffered — not silently dropped — so
+    /// the play that creates the state installs it.
+    #[test]
+    fn set_loop_on_a_cold_thread_buffers_until_first_play() {
+        let mut state = None;
+        let mut pending_loop_region = None;
+        let selected_output_device_name = Arc::new(RwLock::new(None));
+        let prewarm_cache = Arc::new(Mutex::new(None));
+        let play_request_epoch = Arc::new(AtomicU64::new(0));
+        let (command_tx, _command_rx) = mpsc::channel();
+        let profile_store = Arc::new(crate::profile_store::SourceProfileStore::default());
+
+        let region = LoopRegion {
+            start_sec: 10.0,
+            end_sec: 20.0,
+        };
+        let should_shutdown = process_audio_command(
+            AudioCommand::SetLoop(Some(region.clone())),
+            &mut state,
+            &mut pending_loop_region,
+            &selected_output_device_name,
+            &prewarm_cache,
+            &play_request_epoch,
+            &command_tx,
+            &profile_store,
+        );
+        assert!(!should_shutdown);
+        assert!(state.is_none(), "SetLoop must not open a device");
+        assert_eq!(
+            pending_loop_region.as_ref().map(|r| (r.start_sec, r.end_sec)),
+            Some((10.0, 20.0)),
+            "a cold-thread arm must be buffered, not dropped"
+        );
+
+        // Disarming on a cold thread clears the buffer the same way.
+        process_audio_command(
+            AudioCommand::SetLoop(None),
+            &mut state,
+            &mut pending_loop_region,
+            &selected_output_device_name,
+            &prewarm_cache,
+            &play_request_epoch,
+            &command_tx,
+            &profile_store,
+        );
+        assert!(pending_loop_region.is_none(), "cold-thread disarm must clear the buffer");
+
+        // Degenerate regions are filtered exactly like the warm path.
+        process_audio_command(
+            AudioCommand::SetLoop(Some(LoopRegion {
+                start_sec: 5.0,
+                end_sec: 5.0,
+            })),
+            &mut state,
+            &mut pending_loop_region,
+            &selected_output_device_name,
+            &prewarm_cache,
+            &play_request_epoch,
+            &command_tx,
+            &profile_store,
+        );
+        assert!(pending_loop_region.is_none(), "degenerate regions are filtered");
+    }
+
+    /// The install half of the cold-arm flow: play consumes the buffer into
+    /// the freshly created state; an armed state region wins over the buffer.
+    #[test]
+    fn install_pending_loop_region_consumes_the_buffer_once() {
+        let region = LoopRegion {
+            start_sec: 1.0,
+            end_sec: 2.0,
+        };
+        // Fresh state (loop_region None): the buffered arm installs and the
+        // buffer empties, so it can never resurface on a later play.
+        let mut state_region = None;
+        let mut pending = Some(region.clone());
+        install_pending_loop_region(&mut state_region, &mut pending);
+        assert_eq!(
+            state_region.as_ref().map(|r| (r.start_sec, r.end_sec)),
+            Some((1.0, 2.0))
+        );
+        assert!(pending.is_none());
+
+        // A region already on the state wins; the stale buffer is discarded.
+        let mut state_region = Some(LoopRegion {
+            start_sec: 30.0,
+            end_sec: 40.0,
+        });
+        let mut pending = Some(region);
+        install_pending_loop_region(&mut state_region, &mut pending);
+        assert_eq!(
+            state_region.as_ref().map(|r| (r.start_sec, r.end_sec)),
+            Some((30.0, 40.0))
+        );
+        assert!(pending.is_none());
+
+        // Empty buffer: no-op.
+        let mut state_region = None;
+        let mut pending = None;
+        install_pending_loop_region(&mut state_region, &mut pending);
+        assert!(state_region.is_none());
     }
 
     /// Stop is a barrier — clears current_track. UpdateChains after
