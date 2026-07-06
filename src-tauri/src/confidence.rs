@@ -328,8 +328,11 @@ mod tests {
         assert!(resolve_source_confidence(Some(&deep), true, true).is_none());
         // Gate on but no deep read -> None.
         assert!(resolve_source_confidence(None, false, true).is_none());
-        // The runtime gate defaults to off (no test mutates it, so this is stable).
-        assert!(!is_confidence_gating_enabled());
+        // NOTE: the default-OFF pin for the runtime gate lives in
+        // tests/owner_gates_default.rs (pristine process). Asserting it here
+        // would race: reference_tuning/fixture_matrix/profile_store tests flip
+        // this global under ADAPTIVE_COMPRESSION_GATE_TEST_LOCK, which this
+        // test does not hold.
     }
 
     #[test]
