@@ -634,6 +634,19 @@ pub fn render_album_plan_impl_with_cancel(
     let mut rendered_samples: Vec<Vec<f32>> = Vec::with_capacity(total_tracks);
     let mut track_records: Vec<AlbumTrackRenderRecord> = Vec::with_capacity(total_tracks);
 
+    // Per-stage wall-time aggregates across all tracks (F9/F11, mirrors the
+    // track-render path): one diagnostics line at the end names the slow
+    // stage so a report alone can answer "why did this album export take 15
+    // minutes". Progress emits are throttled to ≥1% overall steps below —
+    // the chain runs far faster than realtime, so an emit per 4096-frame
+    // chunk flooded IPC with events nobody can read.
+    let t_render_start = std::time::Instant::now();
+    let mut decode_ms: u128 = 0;
+    let mut chain_ms: u128 = 0;
+    let mut src_land_ms: u128 = 0;
+    let mut track_write_ms: u128 = 0;
+    let mut last_emitted_overall = 0.0_f32;
+
     // Pass-1 hostile-input hygiene (2026-07-03 A5b): if any track fails
     // mid-album, best-effort remove the per-track WAVs already written so a
     // failed export can't leave misleading partial output behind. (Pass 2
@@ -660,7 +673,9 @@ pub fn render_album_plan_impl_with_cancel(
                     input.source_path
                 )));
             }
+            let t_decode = std::time::Instant::now();
             let pcm = crate::decode::decode_full(path)?;
+            decode_ms += t_decode.elapsed().as_millis();
             if pcm.samples.is_empty() {
                 return Err(CommandError::Decode(format!(
                     "no samples decoded from {}",
@@ -738,6 +753,7 @@ pub fn render_album_plan_impl_with_cancel(
             let chunk_samples = CHUNK_FRAMES * channels_usize;
             let track_total = samples.len();
             let mut processed = 0;
+            let t_chain = std::time::Instant::now();
             while processed < track_total {
                 if render_cancelled(cancel_flag) {
                     return Err(CommandError::Other("album render cancelled".to_string()));
@@ -747,8 +763,14 @@ pub fn render_album_plan_impl_with_cancel(
                 processed = end;
                 if let Some(cb) = on_progress {
                     let within_track = processed as f32 / track_total.max(1) as f32;
-                    let overall = (i as f32 + within_track) / total_tracks.max(1) as f32;
-                    cb(overall.min(1.0));
+                    let overall =
+                        ((i as f32 + within_track) / total_tracks.max(1) as f32).min(1.0);
+                    // ≥1% throttle (F9) — the final 1.0 is emitted once after
+                    // pass 2, so no terminal event is lost to the threshold.
+                    if overall - last_emitted_overall >= 0.01 {
+                        last_emitted_overall = overall;
+                        cb(overall);
+                    }
                 }
             }
             // RS-09 fix (2026-07-03): drain the limiter's lookahead so each
@@ -757,6 +779,8 @@ pub fn render_album_plan_impl_with_cancel(
             // sit exactly where the plan says. Before SRC/measure, like the
             // track-master path.
             chain.flush_render_tail(&mut samples, channels_usize);
+            chain_ms += t_chain.elapsed().as_millis();
+            let t_src_land = std::time::Instant::now();
 
             // Resample this track from its source rate to the album delivery
             // rate. Ordering mirrors Track Master: chain -> SRC -> measure ->
@@ -790,6 +814,7 @@ pub fn render_album_plan_impl_with_cancel(
                 rendered_channel_count,
                 &shadowed,
             )?;
+            src_land_ms += t_src_land.elapsed().as_millis();
 
             // Per-track WAV named NN-<sanitized SOURCE-FILE stem>.wav. There
             // is no per-track title field anywhere in the album model, and
@@ -804,6 +829,7 @@ pub fn render_album_plan_impl_with_cancel(
             // write_wav diverts to a `__{n}` sibling if the chosen path
             // gained a file mid-render; track the ACTUAL path for both
             // the record and the on-error cleanup sweep.
+            let t_write = std::time::Instant::now();
             let per_track_path = write_wav(
                 &per_track_path,
                 &samples,
@@ -811,6 +837,7 @@ pub fn render_album_plan_impl_with_cancel(
                 rendered_channel_count,
                 bit_depth,
             )?;
+            track_write_ms += t_write.elapsed().as_millis();
             written_paths.push(per_track_path.clone());
             if render_cancelled(cancel_flag) {
                 return Err(CommandError::Other("album render cancelled".to_string()));
@@ -874,6 +901,7 @@ pub fn render_album_plan_impl_with_cancel(
             source_channels,
         ));
     }
+    let t_pass2 = std::time::Instant::now();
     let pass2_result = (|| -> CommandResult<(PathBuf, PathBuf)> {
         let album_path = unique_album_path(out_dir, &source_paths)?;
         let spec = wav_spec(album_channels, album_sample_rate, bit_depth)?;
@@ -976,6 +1004,19 @@ pub fn render_album_plan_impl_with_cancel(
     if let Some(cb) = on_progress {
         cb(1.0);
     }
+
+    // One line per album render, mirroring the track path (F9/F11): names
+    // the slow stage AND the destination so a diagnostics report alone can
+    // answer "why did this album export take 15 minutes". Stages not listed
+    // (post-write measurement, planning) are the total-minus-sum remainder.
+    crate::diagnostics::info(format!(
+        "render album job {job_id}: {total_tracks} tracks, decode {decode_ms}ms, \
+         chain {chain_ms}ms, src+land {src_land_ms}ms, track writes {track_write_ms}ms, \
+         continuous+manifest {}ms, total {}ms -> {}",
+        t_pass2.elapsed().as_millis(),
+        t_render_start.elapsed().as_millis(),
+        out_dir.display()
+    ));
 
     Ok(AlbumRenderReport {
         job_id,
