@@ -483,6 +483,43 @@ describe("App Standard<->Advanced view transitions", () => {
     });
   });
 
+  it("5a) Standard entry disarms the loop (F3): entering Standard sends setLoopRegion(null)", async () => {
+    // The F3 invariant — an Advanced-armed loop must not survive into
+    // Standard, which has no loop UI to see or disarm it — is enforced by a
+    // single App-level effect (view === "standard" → tm.disarmLoop()). Pin
+    // the WIRING here: reaching Standard must hit the backend with
+    // setLoopRegion(null). The disarm semantics (transport.loop cleared,
+    // per-track region memory kept) are pinned at the hook level in
+    // useTrackMaster.integration.test.tsx; the shift-drag gesture gate has
+    // its own pins. Without this test, deleting the effect passed the whole
+    // suite while resurrecting the owner-smoke hidden-loop bug (2026-07-06
+    // audit).
+    seedViewMode("standard");
+    mocks.api.loadRecentSession.mockResolvedValue(makeSession(CLEAN_SETTINGS));
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(container.querySelector(".std-tiles")).not.toBeNull();
+    });
+    await click(affordance(container)!);
+    await waitFor(() => {
+      expect(hasSidebar(container)).toBe(true);
+    });
+
+    // Re-enter Standard through the return door; only calls made by THIS
+    // transition count.
+    mocks.api.setLoopRegion.mockClear();
+    await click(affordance(container)!);
+    await waitFor(() => {
+      expect(container.querySelector(".std-tiles")).not.toBeNull();
+    });
+    expect(mocks.api.setLoopRegion).toHaveBeenCalledWith(null);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("6) dirty entry bounce: last-Standard but a dirty track forces Advanced", async () => {
     // localStorage seeds Standard, so useViewMode resolves "standard"
     // synchronously — but the entry guard sees the restored track's dirty
