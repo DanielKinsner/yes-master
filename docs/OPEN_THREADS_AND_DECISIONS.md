@@ -31,14 +31,15 @@ close rather than letting them rot in scattered docs.
 > renders got the promised 1% progress throttle + per-stage timing line,
 > above-stereo sources fold to stereo at decode (the audit's one HIGH:
 > the stereo-native chain was mastering only a 5.1 file's front pair), and
-> Help/comment copy drift was corrected. **Held for one post-ship limiter
-> bundle (byte-affecting — regen snapshots + fixture lane once):** ISP skip
-> margin 1.2 < the estimator's 1.25 worst case (`dsp.rs` ISP_SKIP_MARGIN),
-> limiter ring warmup mis-index (ISP scan inert for the first lookahead
-> window), and denormal flushing on envelopes/biquads (silent-passage perf on
-> older x86). **Also held:** retracting the device-loss banner when a single
-> busy play exceeds the 2 s stall window (transient, self-clears on the next
-> healthy tick). Q26 stays parked behind the 7a flip, now tripwired by
+> Help/comment copy drift was corrected. **The held items also shipped
+> same-day:** the limiter bundle (ISP skip margin 1.2 → 1.26 with a
+> coefficient-pinned test, warmup-aware ring indexing, denormal flush on
+> envelopes/biquads) landed byte-safe — all 33 test binaries incl. the preset
+> byte-identity snapshots and the fixture slow lane passed with NO snapshot
+> regen needed — and the device-loss banner now emits on the backend LATCH
+> edge, so a skipped stale mark shows no transient banner at all. Nothing
+> from the 2026-07-06 audit remains open except Q26, which stays parked
+> behind the 7a flip and is now tripwired by
 > `src-tauri/tests/owner_gates_default.rs`.
 
 > **State of the project (2026-06-22):** late stabilization. The two big mechanical
