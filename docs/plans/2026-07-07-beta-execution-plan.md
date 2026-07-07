@@ -288,7 +288,7 @@ the same Y as in Track Master (within a few px). Prove it via DOM geometry
 Deliverables: before/after evidence at 1920×1080 AND 1360×740; deviation log.
 Verify: full frontend lane + layout-css tests; no Rust surface.
 
-#### Slice 13c — Metadata diet (owner-approved 2026-07-08)
+#### Slice 13c — Metadata diet (owner-approved 2026-07-08) — SHIPPED (Fable, same day)
 Owner finding (both modes): the app repeats the same facts in multiple homes
 and gives every fact chip-weight. Principle: **each fact is said once, in its
 one home; the track header is a nameplate, not telemetry. Remove and

@@ -878,6 +878,10 @@ button.primary:disabled {
   align-items: center;
   gap: 0.35rem;
   font-size: 0.78rem;
+  /* 13c: in the narrow flow layout the status chip + toggle can exceed the
+     column (the toggle clipped 27px past it at 1360×740) — let them wrap.
+     At console sizes the row fits on one line, so 13b parity is unaffected. */
+  flex-wrap: wrap;
 }
 
 /* Sized to the badge line (≤ the 25px session-status pill) so the album
@@ -3852,10 +3856,15 @@ button.primary:disabled {
   min-width: 0;
 }
 
-.track-meta-chips {
-  display: flex;
-  gap: 0.35rem;
-  flex-wrap: wrap;
+/* Slice 13c metadata diet: identity facts read as one quiet dim line —
+   same values and casing as the old boxed chips, no box-weight. */
+.track-meta-line {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  text-transform: uppercase;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Sidebar head: count + total duration. */
@@ -4611,8 +4620,11 @@ button.primary:disabled {
      line — that would grow the header and shift the waveform card off Track
      Master's Y. Only applied here (not the sub-820px flow layout, where the
      chips are free to wrap). */
-  .console-hero .track-meta-chips {
+  .console-hero .track-meta-line {
+    /* 13b parity guard, retargeted for 13c's single-line form: at console
+       sizes the identity line must not wrap and grow the header. */
     flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .console-hero .track-title {

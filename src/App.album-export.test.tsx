@@ -501,7 +501,13 @@ describe("album export actions", () => {
     );
     expect(exportButton).toBeTruthy();
     expect(container.querySelector(".receipt-backdrop")).toBeNull();
-    expect(container.textContent).toContain("Quality —");
+    // Slice 13c: the footer no longer carries a quality summary at all —
+    // the original guard here was "stale export checks must not leak into
+    // the footer dot"; the stronger post-diet invariant is that the footer
+    // left region stays empty (quality verdicts live in Source Check only).
+    expect(
+      container.querySelector(".bottom-status-left")?.textContent ?? "",
+    ).toBe("");
     expect(container.textContent).not.toContain("Quality OK");
 
     await act(async () => {

@@ -20,7 +20,6 @@ import { AlbumExportReceipt } from "./components/AlbumExportReceipt";
 import { Knob, intensityLabel } from "./components/Knob";
 import { SignalChain } from "./components/SignalChain";
 import { EmptyState } from "./components/EmptyState";
-import { StatusDot } from "./components/StatusDot";
 import { Toast } from "./components/Toast";
 import { ChromeDialog } from "./components/ChromeDialog";
 import { SettingsGroup } from "./components/SettingsGroup";
@@ -605,10 +604,6 @@ function App() {
 }
 
 function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
-  const analysis = tm.selectedAnalysis;
-  const selectedExportReceipt =
-    tm.lastExportReceipt?.trackId === tm.selectedTrackId ? tm.lastExportReceipt : null;
-  const selectedExportChecks = selectedExportReceipt?.checks;
   const peak = tm.transport.peakDbfs;
   const liveLufs = tm.transport.lufsIntegrated;
   const isPlaying = tm.transport.isPlaying;
@@ -616,57 +611,24 @@ function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
   const peakDisplay = isPlaying && peak > -80 ? `${peak.toFixed(1)} dBFS` : "—";
   const lufsDisplay = isPlaying && liveLufs > -80 ? `${liveLufs.toFixed(1)} LUFS` : "—";
 
-  let processing: { tone: "idle" | "busy" | "ok"; text: string };
+  // Slice 13c metadata diet: the footer speaks only while something is
+  // happening. Coarse session state lives in the header SessionStatus pill;
+  // quality verdicts live in the right-rail Source Check. At rest this bar
+  // holds only the live meters — no permanent "Ready"/summary chatter.
+  let processing: string | null = null;
   if (tm.isExporting) {
-    processing = { tone: "busy", text: "Exporting…" };
+    processing = "Exporting…";
   } else if (tm.isRendering) {
-    processing = { tone: "busy", text: "Rendering audit…" };
+    processing = "Rendering audit…";
   } else if (tm.isAnalyzing) {
-    processing = { tone: "busy", text: tm.analysisProgress?.label ?? "Analyzing…" };
+    processing = tm.analysisProgress?.label ?? "Analyzing…";
   } else if (tm.isLoadingWaveform) {
-    processing = { tone: "busy", text: "Decoding…" };
-  } else if (tm.selectedTrack) {
-    processing = { tone: "ok", text: "Ready" };
-  } else {
-    processing = { tone: "idle", text: "Idle" };
+    processing = "Decoding…";
   }
 
   return (
     <footer className="bottom-status">
-      <div className="bottom-status-left">
-        {/* L5 polish — terser labels so the bottom bar reads quiet
-            rather than debug-flavored. Full text in tooltip if needed. */}
-        <StatusDot
-          tone={tm.selectedTrack ? (analysis ? "ok" : "warn") : "idle"}
-          label={
-            !tm.selectedTrack
-              ? "No track"
-              : analysis
-              ? "Analyzed"
-              : "Analyzing"
-          }
-        />
-        <StatusDot
-          tone={
-            selectedExportChecks
-              ? selectedExportChecks.some((c) => c.level === "critical")
-                ? "bad"
-                : selectedExportChecks.some((c) => c.level === "warning")
-                ? "warn"
-                : "ok"
-              : "idle"
-          }
-          label={
-            selectedExportChecks
-              ? selectedExportChecks.some((c) => c.level === "critical")
-                ? "Quality failed"
-                : selectedExportChecks.some((c) => c.level === "warning")
-                ? "Quality review"
-                : "Quality OK"
-              : "Quality —"
-          }
-        />
-      </div>
+      <div className="bottom-status-left" />
       <div className="bottom-status-center">
         <span className="status-readout">
           <span className="status-readout-label">Live peak</span>
@@ -678,10 +640,12 @@ function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         </span>
       </div>
       <div className="bottom-status-right">
-        <span className="status-processing-label">Processing</span>
-        <span className={`status-pill status-${processing.tone === "busy" ? "warn" : processing.tone === "ok" ? "ok" : "idle"}`}>
-          {processing.text}
-        </span>
+        {processing !== null && (
+          <>
+            <span className="status-processing-label">Processing</span>
+            <span className="status-pill status-warn">{processing}</span>
+          </>
+        )}
       </div>
     </footer>
   );
@@ -1427,18 +1391,19 @@ export function TrackHeader({
           <div className="track-header-title-block">
             <h1 className="track-title">{track.display_name}</h1>
             <div className="track-header-meta-row">
-              <div className="track-meta-chips">
-                {chips.map((c) => (
-                  <span key={c.key} className="meta-chip">{c.label}</span>
-                ))}
-              </div>
+              {/* Slice 13c: identity facts as one quiet line, not boxed chips.
+                  Analysis state is not repeated here — an unanalyzed track
+                  surfaces via Source Check's "Awaiting analysis" row and the
+                  busy pills while analysis runs. */}
+              <span className="track-meta-line">
+                {chips.map((c) => c.label).join(" · ")}
+              </span>
               {isAlbum && (
                 <OverrideBanner
                   isOverriding={isOverriding}
                   onToggle={onToggleOverride}
                 />
               )}
-              {analysis && <span className="status-pill status-ok">Analyzed</span>}
               <SessionStatus
                 isRendering={isRendering}
                 isAnalyzing={isAnalyzing}

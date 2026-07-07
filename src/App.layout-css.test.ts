@@ -58,6 +58,27 @@ describe("console layout CSS", () => {
     expect(appTsx).toContain('exportMode={tm.mode === "album" ? "album" : "track"}');
   });
 
+  it("keeps the metadata diet — each fact said once in its one home (Slice 13c)", () => {
+    // Identity facts are one quiet line, not boxed chips (sidebar album
+    // chips keep .meta-chip — that's a different scope, deliberately).
+    expect(appTsx).toContain('className="track-meta-line"');
+    expect(appTsx).not.toContain('className="track-meta-chips"');
+    expect(block(".track-meta-line")).toContain("var(--text-2)");
+    // The per-track "Analyzed" echo chip is gone — an unanalyzed track
+    // surfaces via Source Check's "Awaiting analysis" row + busy pills.
+    expect(appTsx).not.toContain('status-pill status-ok">Analyzed');
+    // The footer speaks only while busy: no permanent Ready/Idle pill, no
+    // Analyzed/Quality summary dots (quality lives in Source Check).
+    expect(appTsx).not.toContain("StatusDot");
+    expect(appTsx).not.toContain('"Quality —"');
+    // The footer pill renders only while busy — there is no resting-state
+    // assignment ("Ready"/"Idle" text) left in the processing chain.
+    // (The SessionStatus pill and the output-settings dialog legitimately
+    // keep their own "Ready" strings — different homes, different questions.)
+    expect(appTsx).toContain("let processing: string | null = null;");
+    expect(appTsx).toContain("{processing !== null && (");
+  });
+
   it("keeps Album Master chrome compact and avoids inferred story chips", () => {
     expect(appTsx).not.toContain("<AlbumHeader");
     expect(appTsx).not.toContain("showStoryTags");
