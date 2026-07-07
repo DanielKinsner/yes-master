@@ -84,6 +84,12 @@ channel count. Mixed mono/stereo albums render stereo, with mono tracks upmixed,
 and sources above stereo fold down to stereo delivery. Mixed-rate and mixed
 channel-count albums therefore render one continuous file instead of failing.
 
+Album exports land in an `<AlbumTitle>/` subfolder of the chosen directory
+(Q25 option ii): the per-track WAVs, the continuous album, and `manifest.json`
+stay together and never mix with a prior render. The title is sanitized for
+filesystem safety and an empty title falls back to `Album`; an existing
+subfolder is never overwritten (a fresh ` (2)` suffix is used instead).
+
 Album-layer sound shaping (owner decisions 2026-07-03 D7/D9):
 
 - The album layer modulates per-track loudness via the user-chosen arc plus

@@ -183,6 +183,72 @@ fn unique_child_path_avoiding_sources(
     )))
 }
 
+/// Q25 (option ii): the subfolder name for an album export. Sanitized like a
+/// filename component (any char outside `[A-Za-z0-9._-]` becomes `_`); a title
+/// with no alphanumeric content (empty, blank, or all-symbol) falls back to
+/// `Album` per the owner decision.
+fn album_subfolder_name(title: &str) -> String {
+    if !title.chars().any(|c| c.is_ascii_alphanumeric()) {
+        return "Album".to_string();
+    }
+    // Collapse the runs of `_` that spaces/illegal chars leave behind so the
+    // folder reads as the album title ("A/B: Best" -> "A_B_Best", not
+    // "A_B___Best"). `sanitize_for_filename` already trims the ends.
+    let sanitized = sanitize_for_filename(title);
+    let mut collapsed = String::with_capacity(sanitized.len());
+    let mut prev_underscore = false;
+    for c in sanitized.chars() {
+        if c == '_' {
+            if !prev_underscore {
+                collapsed.push('_');
+            }
+            prev_underscore = true;
+        } else {
+            collapsed.push(c);
+            prev_underscore = false;
+        }
+    }
+    collapsed
+}
+
+/// Create a fresh `<AlbumTitle>/` subfolder inside `out_dir` and return its
+/// path. Never overwrites an existing directory: a taken name gets a ` (2)`,
+/// ` (3)`, ... suffix. `out_dir` (the user-chosen directory) must already
+/// exist; `create_dir` is atomic, so two exports racing on the same name can't
+/// both land in one folder.
+fn unique_export_subdir(out_dir: &Path, title: &str) -> CommandResult<PathBuf> {
+    let base = album_subfolder_name(title);
+    for n in 1..1000 {
+        let name = if n == 1 {
+            base.clone()
+        } else {
+            format!("{base} ({n})")
+        };
+        let candidate = out_dir.join(&name);
+        match std::fs::create_dir(&candidate) {
+            Ok(()) => return Ok(candidate),
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(CommandError::Io(e.to_string())),
+        }
+    }
+    Err(CommandError::Io(format!(
+        "could not create a unique album subfolder under {}",
+        out_dir.display()
+    )))
+}
+
+/// Removes the album subfolder on scope exit *iff it is empty*. A failed or
+/// cancelled export sweeps its per-track WAVs / continuous / manifest, leaving
+/// the subfolder empty — so this drops it and the chosen directory is left
+/// exactly as it was (the no-partial-output promise). A successful export's
+/// subfolder always holds files, so `remove_dir` fails and it is kept.
+struct EmptySubdirCleanup(PathBuf);
+impl Drop for EmptySubdirCleanup {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir(&self.0);
+    }
+}
+
 /// Shadow a per-track `MasteringSettings` with the album plan's offsets:
 ///   * advanced.lufs_offset_db is REPLACED with
 ///     `effective_target_lufs() + arc_lufs_offset_db` so the per-track
@@ -513,6 +579,19 @@ pub fn render_album_plan_impl_with_cancel(
 
     std::fs::create_dir_all(out_dir).map_err(|e| CommandError::Io(e.to_string()))?;
 
+    // Q25 (option ii): each album export renders into its own `<AlbumTitle>/`
+    // subfolder of the chosen directory, so the per-track WAVs, the continuous
+    // album, and manifest.json stay together and never mix with a prior render.
+    // The title is sanitized, an empty/blank title falls back to `Album`, and
+    // an existing subfolder is never overwritten (a fresh ` (2)` suffix is used
+    // instead). Shadow `out_dir` so every path built below lands here.
+    let album_out_dir = unique_export_subdir(out_dir, &request.plan.title)?;
+    // Leaves out_dir exactly as it was if this export fails/cancels (its files
+    // are swept, then the empty subfolder is dropped); a successful export's
+    // non-empty subfolder is kept.
+    let _subdir_cleanup = EmptySubdirCleanup(album_out_dir.clone());
+    let out_dir: &Path = &album_out_dir;
+
     let total_tracks = request.plan.tracks.len();
     if let Some(cb) = on_progress {
         cb(0.0);
@@ -531,10 +610,10 @@ pub fn render_album_plan_impl_with_cancel(
 
     // Two passes:
     //   Pass 1 - decode + render each track into samples in memory, write
-    //   the per-track WAV named NN-<source-file-stem>.wav (the album title
-    //   is NOT used in filenames today — owner smoke F13; naming scheme is
-    //   an open owner decision in docs/OPEN_THREADS_AND_DECISIONS.md),
-    //   measure post-render
+    //   the per-track WAV named NN-<source-file-stem>.wav into the album's
+    //   <AlbumTitle>/ subfolder (Q25 option ii, decided 2026-07-07: the album
+    //   title names the FOLDER, not the per-track filenames), measure
+    //   post-render
     //   LUFS, and remember the rendered samples + transition spec for the
     //   continuous writer in pass 2. Memory cost is the full album in f32;
     //   for a typical 60-min album at 48k stereo that's ~1.3 GB which is
@@ -1122,5 +1201,52 @@ mod unique_path_tests {
             b"source",
             "source bytes must remain untouched"
         );
+    }
+
+    // Q25 (option ii): album exports land in an `<AlbumTitle>/` subfolder.
+    #[test]
+    fn album_subfolder_name_sanitizes_and_falls_back_to_album() {
+        // A normal title keeps its words (illegal chars, incl. spaces and path
+        // separators, collapse to `_`).
+        assert_eq!(album_subfolder_name("Midnight Drive"), "Midnight_Drive");
+        assert_eq!(album_subfolder_name("A/B: \"Best\" of?"), "A_B_Best_of");
+        // Empty, blank, or all-symbol titles fall back to Album (never empty,
+        // never a stray `_`-only name).
+        assert_eq!(album_subfolder_name(""), "Album");
+        assert_eq!(album_subfolder_name("   "), "Album");
+        assert_eq!(album_subfolder_name("***"), "Album");
+        assert_eq!(album_subfolder_name("/\\:*?"), "Album");
+    }
+
+    #[test]
+    fn unique_export_subdir_creates_and_never_overwrites_an_existing_dir() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let out = dir.path();
+
+        let first = unique_export_subdir(out, "My Album").expect("first subfolder");
+        assert_eq!(first, out.join("My_Album"));
+        assert!(first.is_dir());
+        // Drop a file in so a reuse would be observable.
+        fs::write(first.join("manifest.json"), b"first").expect("seed");
+
+        // A second export with the same title must NOT reuse the folder.
+        let second = unique_export_subdir(out, "My Album").expect("second subfolder");
+        assert_ne!(first, second, "second export must get its own subfolder");
+        assert_eq!(second, out.join("My_Album (2)"));
+        assert!(second.is_dir());
+        // The first export's contents are untouched.
+        assert_eq!(
+            fs::read(first.join("manifest.json")).expect("read"),
+            b"first"
+        );
+    }
+
+    #[test]
+    fn unique_export_subdir_empty_title_uses_album_folder() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let out = dir.path();
+        let created = unique_export_subdir(out, "").expect("subfolder");
+        assert_eq!(created, out.join("Album"));
+        assert!(created.is_dir());
     }
 }
