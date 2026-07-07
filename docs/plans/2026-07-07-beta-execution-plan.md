@@ -127,10 +127,21 @@ overwrite by default" rules apply.
   starts.").
 - Frontend tests for both.
 
-#### Slice 6 — Min-window documentation (Q16)
-Document the supported minimum window size (target: usable at 1366×768) in
-`docs/APP_BEHAVIOR.md`; set the Tauri min-size to the chosen floor if not
-already set. No layout rework.
+#### Slice 6 — Min-window resolution (Q16; decided 2026-07-08 after drift finding)
+Drift finding (Slice 0–2 checkpoint): the shipped min-window is 1440×860,
+which cannot fit a 1366×768 laptop — the original "just document it" call
+(D11) was made against a stale assumption. Owner-decided resolution:
+**experiment, verify, fallback**:
+1. Lower the Tauri min-size to ~1360×740 and verify at that size: layout-css
+   tests + screenshots of Standard, Advanced, and the export/review surfaces.
+2. If nothing visibly breaks → keep it; document "works on 1366×768" in
+   `docs/APP_BEHAVIOR.md`.
+3. If layout genuinely breaks → revert the min-size, document "requires
+   1440×900 or larger" as the honest beta requirement, and add a post-beta
+   small-screen layout item to the ledger.
+No speculative layout rework either way. Judgment call on "visibly breaks"
+(overlap/clipping/unusable controls = breaks; merely snug = fine) is the
+executor's.
 
 #### Slice 7 — Tauri updater integration
 - Integrate the Tauri updater (currently absent), manifest pulled from GitHub
