@@ -6,8 +6,9 @@ YES Master is a local desktop mastering app for real tracks and real albums,
 with iPhone/Android companion apps sharing the same engine (see "Mobile
 Companions" below; desktop ships first). It is not a certified mastering
 engineer replacement, and it is not a throwaway private toy. The bar is
-private-solid: good enough that the owner would trust it on personal releases
-before considering broader distribution.
+ship-solid: good enough to charge for. YES Master ships as a **free public beta**
+(Mac + Windows together) and then flips to a **paid 1.0** — see "Distribution &
+Business Model" below.
 
 ## Core Promise
 
@@ -221,11 +222,17 @@ YES Master is release-candidate only when:
   without clear warnings and review.
 - Warnings are visible before the user treats the export as done.
 - Private-fixture slow lane has been run for DSP/export changes.
-- Windows packaging works locally. (v0.1.0 MSI/NSIS built and installed
-  2026-06-22; a parallel macOS build/install criterion is still owner-pending.)
+- Windows packaging works locally. (0.9.0 MSI/NSIS built 2026-07-07; the v0.1.0
+  bundles were installed 2026-06-22.)
+- macOS packaging works: the universal-binary `.app` / `.dmg` builds, and the
+  owner has installed and run it on real hardware (M4) — owner confirmation
+  pending (D12 / D15 in `docs/plans/2026-07-07-beta-execution-plan.md`).
+- Installers are signed by the release pipeline (Apple Developer ID +
+  notarization on macOS, Azure Trusted Signing on Windows); see
+  `docs/plans/2026-07-07-beta-execution-plan.md`, Slice 10.
 - Known temporary instrumentation is removed or deliberately documented.
 
-## Mobile Companions (product definition pending)
+## Mobile Companions
 
 The repo ships an iPhone app and an Android app (`apps/`) that reuse the
 shared engine. Verified facts: both mirror Standard's fixed export recipe
@@ -235,9 +242,12 @@ against desktop. The v1 public push is desktop-first (decision 2026-06-12);
 mobile execution plans live in `docs/plans/2026-06-12-iphone-shippability-plan.md`
 and `docs/plans/2026-06-12-android-shippability-plan.md`.
 
-**Pending owner definition (do not invent):** mobile audience, scope
-promise, and what is deliberately absent on phones. Captured via the
-canon-refresh interrogation (roadmap S5.4).
+**Product promise (owner-defined 2026-07-07):** phones go live when the owner
+judges them ready; they are **Standard mode on phones by design and never fully
+mimic desktop.** This matches what is built — 4 presets (Universal / Clarity /
+Tape / Oomph), 3 loudness levels (−14 / −11 / −9 LUFS), and a fixed safe export
+(44.1 kHz / 24-bit / −1 dBTP). **Deliberate absences on phones:** no album
+mastering, no advanced controls, no custom delivery formats.
 
 ## Album Master
 
@@ -270,22 +280,42 @@ Two consequences of the promise (both shipped 2026-07-03):
   listening session approves it as a visible opt-in
   (`YES_MASTER_ALBUM_CHARACTER`, see `album.rs::ALBUM_CHARACTER`).
 
-## Public Surface (role pending)
+## Public Surface
 
 A public marketing landing page ships in-repo (`src/LandingPage.tsx` / `.css`,
 Vercel-deployed; the desktop binary routes a browser visit to it). Source-of-
 truth copy is `docs/landing-brief.md`, with an `npm run verify:landing` lane.
 
-**Pending owner definition (do not invent):** the landing page's product role
-(marketing-only vs download/onboarding) and whether it is a supported surface.
-Captured via the S5.4 canon refresh.
+**Product role (owner-defined 2026-07-07):** the landing page is a **supported
+product surface** — marketing, an **ungated download hub** (a download button
+with an optional email signup beside it, *not* email-gated), and later the paid
+checkout. It is in scope for launch/agent work. See "Distribution & Business
+Model" below.
+
+## Distribution & Business Model
+
+- **Free public beta first.** YES Master launches as a free, time-boxed public
+  beta on Mac + Windows together (~8 weeks; a concrete flip date is announced on
+  the landing page at beta launch). Beta users lock in the founder price.
+- **One paid SKU after the flip.** A single perpetual license, **$29 founder →
+  $49** standard, one-time purchase (no subscription). 1.0 is the paid flip.
+- **Permanent export-locked demo.** After the flip the free build keeps the full
+  real-time chain and the full receipt visible; only render/export is gated.
+- **Sold direct** via Lemon Squeezy (merchant-of-record; handles global tax).
+- **Signed installers on GitHub Releases**, with a Tauri updater pulling its
+  manifest from there.
+
+Strategy detail: `docs/plans/2026-06-30-launch-plan.md`; execution sequencing:
+`docs/plans/2026-07-07-beta-execution-plan.md`.
 
 ## Deferred
 
-- Public code signing/notarization.
-- Autoupdate.
-- Store-style distribution.
+- Store-style distribution (Microsoft Store; Mac App Store skipped).
 - New reference-track UX.
 - Major Album Master dashboard/report expansion.
 - Further subjective preset retuning beyond the 2026-06-22 "85% lean", without
   fresh listening notes.
+
+Public code signing / notarization and autoupdate are **no longer deferred** —
+they are beta launch-blocking (see `docs/plans/2026-07-07-beta-execution-plan.md`,
+Slices 7 & 10, and "Distribution & Business Model" above).
