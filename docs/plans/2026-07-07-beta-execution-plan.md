@@ -254,7 +254,7 @@ Deliverables: before/after evidence for the owner's eye (screenshots at
 log flags on any taste-adjacent judgment (exact type size, chip wording).
 Verify: full frontend lane + layout-css tests; no Rust surface is touched.
 
-#### Slice 13b — Album chrome moves to the sidebar (owner-approved 2026-07-08)
+#### Slice 13b — Album chrome moves to the sidebar (owner-approved 2026-07-08) (shipped)
 Owner feedback on shipped Slice 13: better language, but the album bands
 still push the whole center column down — waveform/meters/timeline feel
 squished vs Track Master. Owner picked the structural fix: **album context
