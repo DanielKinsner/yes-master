@@ -301,6 +301,13 @@ Track==Album must still hold).
 Canonical homes (the decision table — no judgment calls left):
 1. **Coarse session state** → the header `SessionStatus` pill. REMOVE the
    redundant `status-pill status-ok` "Analyzed" chip from the badge row.
+   **Guard (the one arguable removal):** that chip was per-TRACK state, not
+   session state. Before removing, verify with 2+ tracks loaded that a
+   selected NOT-yet-analyzed track still communicates its state without it
+   (empty/placeholder Source Check, busy indicator while analyzing, disabled
+   export affordance — any one suffices). If nothing communicates it, the
+   chip had a real job: keep ONE quiet per-track indicator (existing tokens)
+   and flag it in the deviation log instead of deleting blind.
 2. **Detailed process telemetry** → the footer Processing pill, but it
    becomes **busy-only**: visible with its detailed text while
    decoding/analyzing/rendering/exporting; hidden entirely (label included)
