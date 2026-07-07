@@ -151,6 +151,25 @@ executor's.
 - Updater must fail silent-and-graceful offline (matches local-first promise).
 - This slice needs NO paid accounts — it can land before payday.
 
+#### Slice 7b — Updater user-visible surface (owner-decided 2026-07-08)
+Slice 7 shipped check-and-emit only (`updater:available`) with no frontend
+listener — the updater is invisible to users. Owner decision: **toast +
+one-click install**.
+- Frontend listens for `updater:available`; shows a non-blocking toast
+  ("Update available — vX.Y") using the existing toast surface, dismissible.
+- Clicking the toast's action ("Restart to update") invokes download +
+  install + relaunch (Tauri updater's standard flow) via a Rust command.
+- **Never interrupts work in progress:** while an export/render is running,
+  the action is disabled with the same in-progress affordance as the export
+  controls; it re-enables when the export finishes. Audio playback does not
+  block install (the relaunch is user-initiated), but the app must not
+  auto-relaunch on its own — install only ever fires from the click.
+- Failed/offline download: log + toast dismisses gracefully; never a modal.
+- Tests: toast renders on the event; action disabled during export; command
+  wiring. Verify: frontend lane; Rust lanes if `lib.rs`/commands change
+  (bridge lanes only if shared types/signatures change — floor-not-ceiling
+  rule applies).
+
 #### Slice 8 — Listening runbook (docs only)
 Write `docs/plans/2026-07-08-beta-listening-runbook.md` (shipped): a scripted ~60–90 min
 single sitting covering ONLY beta-blocking listening — normal source,
@@ -201,6 +220,12 @@ real-machine installs confirmed; signed artifacts downloadable; landing copy
 live with flip date; signup capture verified end-to-end; legal drafts bundled
 as-is (D6); owner GTM checklist (KVR post etc.) is owner lane. Beta announce
 is an OWNER action — the agent never publishes/announces.
+Two updater gate items (added 2026-07-08): (i) **replace the bootstrap
+updater pubkey** with the owner's real keypair BEFORE the first signed
+release (per `docs/RELEASE_SIGNING_SETUP.md` — shipped apps can never accept
+updates signed by a different key); (ii) **prove the update path end-to-end**
+once: install a 0.9.0 build, publish a draft 0.9.1 release, confirm the
+toast → install → relaunch flow works on a real machine.
 
 ---
 
