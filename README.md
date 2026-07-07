@@ -78,9 +78,11 @@ only human gates:
    the already-validated preset sound, shipped behind a runtime gate, and
    enabled only after a by-ear A/B calibration session. Spec:
    `docs/plans/2026-06-12-adaptive-compressor-mvp-spec.md`.
-4. **Public desktop release** (desktop-first decision, 2026-06-12): version
-   0.1.0, CI-verified Windows MSI/NSIS and macOS builds. Code signing,
-   notarization, and autoupdate are deliberately deferred.
+4. **Public desktop release** (desktop-first): a free public beta (Mac +
+   Windows together, v0.9.0) with signed installers on GitHub Releases and a
+   Tauri updater, then a paid 1.0 ($29 founder → $49). Code signing,
+   notarization, and autoupdate are now launch-blocking, not deferred. See
+   `docs/plans/2026-07-07-beta-execution-plan.md`.
 5. **Mobile follow-on**: the iPhone and Android apps mirror Standard's fixed
    export and already share the engine; store-readiness (privacy manifest,
    signing, lifecycle hardening) is planned but sequenced after desktop. Plans:
