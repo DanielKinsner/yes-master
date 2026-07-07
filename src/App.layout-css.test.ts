@@ -35,18 +35,25 @@ describe("console layout CSS", () => {
     expect(block(".preset-save-plus")).toContain("font-size: 0.72rem");
   });
 
-  it("gives Album Master its own workspace and console grid rows", () => {
-    expect(appTsx).toContain('tm.mode === "album" ? " workspace-album" : ""');
-    expect(appTsx).toContain('tm.mode === "album" ? " is-album" : ""');
-    expect(block(".workspace-album")).toContain(
-      "grid-template-rows: auto minmax(0, 1fr)",
-    );
+  it("keeps Album Master's center column identical to Track Master's (Slice 13b)", () => {
+    // Album chrome moved to the sidebar, so the album layer no longer forks
+    // the workspace/console grid. That structural identity is what makes the
+    // waveform card sit at the same Y in both modes (the done-criterion; the
+    // pixel proof is the live-preview DOM measurement in the deviation log).
+    // No is-album / workspace-album divergence may creep back.
+    expect(appTsx).not.toContain("workspace-album");
+    expect(appTsx).not.toContain("is-album");
+    expect(css).not.toContain(".track-master-console.is-album");
+    expect(css).not.toContain(".workspace-album");
+    // One shared console grid still bounds the waveform deck in both modes.
     expect(block(".track-master-console")).toContain("overflow: hidden");
-    expect(block(".track-master-console.is-album")).toContain("42px");
-    expect(block(".track-master-console.is-album")).toContain(
-      "minmax(270px, 1.18fr)",
-    );
-    expect(block(".track-master-console.is-album")).toContain("145px");
+    expect(block(".track-master-console")).toContain("grid-template-rows");
+    // Album identity + export receipt now render inside the sidebar.
+    expect(appTsx).toContain("albumHeader={");
+    expect(appTsx).toContain("<AlbumPanel");
+    expect(appTsx).toContain("albumReceipt={");
+    expect(appTsx).toContain("<AlbumExportReceipt");
+    // The flow cluster survives as a stacked grid at rail width.
     expect(block(".album-panel-controls")).toContain("display: grid");
     expect(appTsx).toContain('exportMode={tm.mode === "album" ? "album" : "track"}');
   });

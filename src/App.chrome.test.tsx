@@ -319,6 +319,9 @@ describe("advanced track header", () => {
       <TrackHeader
         track={track}
         analysis={undefined}
+        isAlbum={false}
+        isOverriding={false}
+        onToggleOverride={vi.fn()}
         playbackKind="master"
         volumeMatch={false}
         exportLufsPreview={false}

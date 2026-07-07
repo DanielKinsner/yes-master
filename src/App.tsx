@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type DragEvent as ReactDragEvent,
+  type ReactNode,
 } from "react";
 import { useTrackMaster } from "./hooks/useTrackMaster";
 import { useNavigationMachine } from "./hooks/useNavigationMachine";
@@ -15,6 +16,7 @@ import { PresetIcon, PRESET_ACCENT, PRESET_TONE } from "./components/PresetIcon"
 import { RightRail, MasterOutPanel } from "./components/RightRail";
 import { VisualEqPanel } from "./components/VisualEqPanel";
 import { AlbumPanel } from "./components/AlbumPanel";
+import { AlbumExportReceipt } from "./components/AlbumExportReceipt";
 import { Knob, intensityLabel } from "./components/Knob";
 import { SignalChain } from "./components/SignalChain";
 import { EmptyState } from "./components/EmptyState";
@@ -383,20 +385,26 @@ function App() {
         mode={tm.mode}
         onReorder={tm.reorderTracks}
         overrideAlbum={tm.overrideAlbum}
+        albumHeader={
+          tm.mode === "album" && tm.tracks.length > 0 ? (
+            <AlbumPanel
+              tracks={tm.tracks}
+              albumArcKind={tm.albumArcKind}
+              albumIntensity={tm.albumIntensity}
+              albumTitle={tm.albumTitle}
+              onAlbumArc={tm.setAlbumArc}
+              onAlbumIntensity={tm.setAlbumIntensity}
+              onAlbumTitle={tm.setAlbumTitle}
+            />
+          ) : null
+        }
+        albumReceipt={
+          tm.mode === "album" && tm.albumExportReport ? (
+            <AlbumExportReceipt report={tm.albumExportReport} />
+          ) : null
+        }
       />
-      <main className={"workspace" + (tm.mode === "album" ? " workspace-album" : "")}>
-        {tm.mode === "album" && tm.tracks.length > 0 && (
-          <AlbumPanel
-            tracks={tm.tracks}
-            albumArcKind={tm.albumArcKind}
-            albumIntensity={tm.albumIntensity}
-            albumTitle={tm.albumTitle}
-            albumExportReport={tm.albumExportReport}
-            onAlbumArc={tm.setAlbumArc}
-            onAlbumIntensity={tm.setAlbumIntensity}
-            onAlbumTitle={tm.setAlbumTitle}
-          />
-        )}
+      <main className="workspace">
         {tm.selectedTrack ? (
           <TrackMaster tm={tm} />
         ) : (
@@ -1029,6 +1037,8 @@ function Sidebar({
   mode,
   onReorder,
   overrideAlbum,
+  albumHeader,
+  albumReceipt,
 }: {
   tracks: ImportedTrack[];
   selectedId: string | null;
@@ -1040,6 +1050,8 @@ function Sidebar({
   mode: "track" | "album";
   onReorder: (fromIndex: number, toIndex: number) => void;
   overrideAlbum: Set<string>;
+  albumHeader?: ReactNode;
+  albumReceipt?: ReactNode;
 }) {
   const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -1088,14 +1100,19 @@ function Sidebar({
   const totalLabel = totalSeconds > 0 ? `${tracks.length} tracks · ${formatDuration(totalSeconds)}` : `${tracks.length} tracks`;
   return (
     <aside className="sidebar">
-      <div className="sidebar-section sidebar-head-strip">
-        <div className="sidebar-head-titles">
-          <span className="section-label">
-            {mode === "album" ? "Album order" : "Tracks"}
-          </span>
-          <span className="sidebar-count">{totalLabel}</span>
+      {/* Album Master: the identity block (title + chips + flow) absorbs the
+          "Album order / N tracks" header — each fact shown once (Slice 13b).
+          Track Master keeps the plain count header. */}
+      {mode === "album" ? (
+        albumHeader
+      ) : (
+        <div className="sidebar-section sidebar-head-strip">
+          <div className="sidebar-head-titles">
+            <span className="section-label">Tracks</span>
+            <span className="sidebar-count">{totalLabel}</span>
+          </div>
         </div>
-      </div>
+      )}
 
       <ul className="track-list">
         {tracks.length === 0 && (
@@ -1181,6 +1198,10 @@ function Sidebar({
         })}
       </ul>
 
+      {/* Post-export receipt lives at the sidebar bottom, near the export
+          rail (Slice 13b placement call — flagged in the deviation log). */}
+      {albumReceipt}
+
       <div className="sidebar-footer">
         {isAnalyzing && (
           <div className="sidebar-status">
@@ -1208,19 +1229,18 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
   const track = tm.selectedTrack;
   if (!track) return null;
   return (
-    <div className={"track-master-console" + (tm.mode === "album" ? " is-album" : "")}>
-      {tm.mode === "album" && (
-        <OverrideBanner
-          isOverriding={tm.selectedIsOverriding}
-          onToggle={() => tm.toggleOverrideAlbum(track.id)}
-        />
-      )}
+    <div className="track-master-console">
       {/* Header owns comparison/preview controls; the waveform deck stays
-          focused on transport, waveform, and metering. */}
+          focused on transport, waveform, and metering. In Album Master the
+          per-track Follows/Override control lives inline in the header badge
+          row (Slice 13b) so the center column matches Track Master exactly. */}
       <section className="console-hero">
         <TrackHeader
           track={track}
           analysis={tm.selectedAnalysis}
+          isAlbum={tm.mode === "album"}
+          isOverriding={tm.selectedIsOverriding}
+          onToggleOverride={() => tm.toggleOverrideAlbum(track.id)}
           playbackKind={tm.transport.playbackKind}
           volumeMatch={tm.transport.volumeMatch}
           exportLufsPreview={tm.transport.exportLufsPreview}
@@ -1350,6 +1370,9 @@ export function OverrideBanner({
 export function TrackHeader({
   track,
   analysis,
+  isAlbum,
+  isOverriding,
+  onToggleOverride,
   playbackKind,
   volumeMatch,
   exportLufsPreview,
@@ -1364,6 +1387,9 @@ export function TrackHeader({
 }: {
   track: ImportedTrack;
   analysis: AnalysisResult | undefined;
+  isAlbum: boolean;
+  isOverriding: boolean;
+  onToggleOverride: () => void;
   playbackKind: PlaybackKindUI;
   volumeMatch: boolean;
   exportLufsPreview: boolean;
@@ -1406,6 +1432,12 @@ export function TrackHeader({
                   <span key={c.key} className="meta-chip">{c.label}</span>
                 ))}
               </div>
+              {isAlbum && (
+                <OverrideBanner
+                  isOverriding={isOverriding}
+                  onToggle={onToggleOverride}
+                />
+              )}
               {analysis && <span className="status-pill status-ok">Analyzed</span>}
               <SessionStatus
                 isRendering={isRendering}

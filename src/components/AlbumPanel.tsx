@@ -1,36 +1,27 @@
-// Phase B Step 4: Album Master panel.
+// Album identity block (Slice 13b): lives at the TOP of the left sidebar in
+// Album Master. It carries the album's identity + shaping controls:
+//   * in-place-editable album title (heading, scaled to sidebar width)
+//   * track/duration metadata chips
+//   * the compact flow cluster (Album flow curve + Flow amount), stacked
 //
-// Top-strip control surface for album-mode mastering. Shows:
-//   * Album flow dropdown (4 named curves)
-//   * Flow amount slider
-//   * Album title input
-//   * Last export report when present
+// Moving this out of the center column is what lets Album Master's waveform/
+// meters/timeline sit at the exact same height as Track Master's — the album
+// bands no longer push the center column down (Slice 13b done-criterion).
 //
-// Per-track DSP is still edited via the regular Tone Shape / Macros / Advanced
-// controls on whichever track the user has selected from the sidebar. The
-// album layer modulates the per-track LUFS target via the user-chosen arc
-// (+ source compensation). The character system (inferred labels → extra
-// LUFS pulls + EQ/width/warmth/intensity biases) is gated OFF by default
-// pending owner listening signoff — see `album.rs::ALBUM_CHARACTER`.
+// The post-export receipt now renders separately (AlbumExportReceipt) near the
+// sidebar bottom. Per-track adaptation (Follows/Override) moved inline into the
+// track header badge row. The character system (inferred labels → LUFS/EQ
+// biases) stays gated OFF by default — see `album.rs::ALBUM_CHARACTER`.
 
 import type { AlbumArcKind, ImportedTrack } from "../bindings";
 import { ALBUM_ARC_DISPLAY } from "../bindings";
-import { formatBitDepth, formatSampleRate } from "./ExportReceiptCard";
-import type { AlbumRenderReport } from "../lib/api";
 import { formatDuration } from "../lib/time-format";
-
-function formatChannelCount(channels: number): string {
-  if (channels === 1) return "mono";
-  if (channels === 2) return "stereo";
-  return `${channels} ch`;
-}
 
 type AlbumPanelProps = {
   tracks: ImportedTrack[];
   albumArcKind: AlbumArcKind;
   albumIntensity: number;
   albumTitle: string;
-  albumExportReport: AlbumRenderReport | null;
   onAlbumArc: (kind: AlbumArcKind) => void;
   onAlbumIntensity: (v: number) => void;
   onAlbumTitle: (v: string) => void;
@@ -41,7 +32,6 @@ export function AlbumPanel({
   albumArcKind,
   albumIntensity,
   albumTitle,
-  albumExportReport,
   onAlbumArc,
   onAlbumIntensity,
   onAlbumTitle,
@@ -56,42 +46,6 @@ export function AlbumPanel({
     (acc, t) => acc + (t.duration_seconds ?? 0),
     0,
   );
-  const renderedRate =
-    albumExportReport && formatSampleRate(albumExportReport.rendered_sample_rate);
-  const exportCancelled = albumExportReport?.status.status === "cancelled";
-  const requestedRate =
-    albumExportReport?.requested_sample_rate == null
-      ? "Auto"
-      : formatSampleRate(albumExportReport.requested_sample_rate);
-  const sourceRates = Array.from(
-    new Set(albumExportReport?.source_sample_rates ?? []),
-  ).sort((a, b) => a - b);
-  const upsampledRates =
-    albumExportReport == null
-      ? []
-      : sourceRates.filter((rate) => rate < albumExportReport.rendered_sample_rate);
-  const sourceChannels = Array.from(
-    new Set(albumExportReport?.source_channels ?? []),
-  ).sort((a, b) => a - b);
-  const upmixedChannels =
-    albumExportReport == null
-      ? []
-      : sourceChannels.filter(
-          (channels) => channels < albumExportReport.rendered_channels,
-        );
-  const foldedChannels =
-    albumExportReport == null
-      ? []
-      : sourceChannels.filter(
-          (channels) => channels > albumExportReport.rendered_channels,
-        );
-  const requestedMismatch =
-    albumExportReport?.requested_sample_rate != null &&
-    albumExportReport.requested_sample_rate !== albumExportReport.rendered_sample_rate;
-  const overriddenPositions = (albumExportReport?.tracks ?? [])
-    .filter((track) => track.override_album)
-    .map((track) => track.position)
-    .sort((a, b) => a - b);
   return (
     <section className="album-panel">
       <header className="album-panel-head">
@@ -117,84 +71,42 @@ export function AlbumPanel({
         </div>
       </header>
       <div className="album-panel-controls">
-        <label className="adv-label" htmlFor="album-arc-select">
-          Album flow
-        </label>
-        <select
-          id="album-arc-select"
-          className="loudness-profile-select"
-          value={albumArcKind}
-          onChange={(e) => onAlbumArc(e.target.value as AlbumArcKind)}
-        >
-          {arcKinds.map((k) => (
-            <option key={k} value={k}>
-              {ALBUM_ARC_DISPLAY[k]}
-            </option>
-          ))}
-        </select>
-        <label className="adv-label" htmlFor="album-intensity-range">
-          Flow amount
-        </label>
-        <input
-          id="album-intensity-range"
-          type="range"
-          min={0}
-          max={2}
-          step={0.05}
-          value={albumIntensity}
-          onChange={(e) => onAlbumIntensity(parseFloat(e.target.value))}
-          className="album-intensity-range"
-        />
-        <span className="album-intensity-value">
-          ×{albumIntensity.toFixed(2)}
-        </span>
+        <div className="album-control-row">
+          <label className="adv-label" htmlFor="album-arc-select">
+            Album flow
+          </label>
+          <select
+            id="album-arc-select"
+            className="loudness-profile-select"
+            value={albumArcKind}
+            onChange={(e) => onAlbumArc(e.target.value as AlbumArcKind)}
+          >
+            {arcKinds.map((k) => (
+              <option key={k} value={k}>
+                {ALBUM_ARC_DISPLAY[k]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="album-control-row">
+          <label className="adv-label" htmlFor="album-intensity-range">
+            Flow amount
+          </label>
+          <input
+            id="album-intensity-range"
+            type="range"
+            min={0}
+            max={2}
+            step={0.05}
+            value={albumIntensity}
+            onChange={(e) => onAlbumIntensity(parseFloat(e.target.value))}
+            className="album-intensity-range"
+          />
+          <span className="album-intensity-value">
+            ×{albumIntensity.toFixed(2)}
+          </span>
+        </div>
       </div>
-      {albumExportReport && exportCancelled && (
-        <div className="album-export-receipt is-cancelled" role="status">
-          <span className="album-export-receipt-label">Export cancelled:</span>
-          <span className="album-export-receipt-meta">
-            No album files were written.
-          </span>
-        </div>
-      )}
-      {albumExportReport && !exportCancelled && (
-        <div className="album-export-receipt">
-          <span className="album-export-receipt-label">Last export:</span>
-          <code className="album-export-receipt-path">
-            {albumExportReport.album_wav_path}
-          </code>
-          <span className="album-export-receipt-meta">
-            {albumExportReport.tracks.length} tracks · rendered {renderedRate} /{" "}
-            {formatBitDepth(albumExportReport.bit_depth)} /{" "}
-            {formatChannelCount(albumExportReport.rendered_channels)} ·
-            requested {requestedRate}
-            {requestedMismatch && `, got ${renderedRate}`} · manifest:{" "}
-            {albumExportReport.manifest_path}
-          </span>
-          {upsampledRates.length > 0 && (
-            <span className="album-export-receipt-advisory">
-              Upsampled source {upsampledRates.map(formatSampleRate).join(", ")}
-            </span>
-          )}
-          {upmixedChannels.length > 0 && (
-            <span className="album-export-receipt-advisory">
-              Upmixed source {upmixedChannels.map(formatChannelCount).join(", ")}
-            </span>
-          )}
-          {foldedChannels.length > 0 && (
-            <span className="album-export-receipt-advisory">
-              Folded source {foldedChannels.map(formatChannelCount).join(", ")} to{" "}
-              {formatChannelCount(albumExportReport.rendered_channels)}
-            </span>
-          )}
-          {overriddenPositions.length > 0 && (
-            <span className="album-export-receipt-advisory">
-              Override: track {overriddenPositions.join(", ")} rendered with its
-              own settings
-            </span>
-          )}
-        </div>
-      )}
     </section>
   );
 }

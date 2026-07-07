@@ -28,7 +28,6 @@ function baseProps() {
     albumArcKind: "cinematic" as const,
     albumIntensity: 1.0,
     albumTitle: "",
-    albumExportReport: null,
     onAlbumArc: vi.fn(),
     onAlbumIntensity: vi.fn(),
     onAlbumTitle: vi.fn(),
@@ -95,110 +94,5 @@ describe("AlbumPanel", () => {
       many.container.querySelectorAll(".album-panel-chips .meta-chip"),
     ).map((c) => c.textContent);
     expect(manyChips).toContain("3 tracks");
-  });
-
-  it("shows the rendered delivery format and upsample advisory", async () => {
-    const props = {
-      ...baseProps(),
-      albumExportReport: {
-        job_id: "album-render-job",
-        status: { status: "done" as const },
-        album_wav_path: "C:/Masters/album_continuous.wav",
-        manifest_path: "C:/Masters/manifest.json",
-        requested_sample_rate: null,
-        rendered_sample_rate: 48_000,
-        source_sample_rates: [44_100, 48_000],
-        bit_depth: 24,
-        rendered_channels: 2,
-        source_channels: [1, 2],
-        tracks: [
-          {
-            track_id: "track-1",
-            position: 1,
-            output_path: "C:/Masters/01-track.wav",
-            measured_lufs: -14,
-            source_sample_rate: 44_100,
-            rendered_sample_rate: 48_000,
-            source_channels: 1,
-            rendered_channels: 2,
-            override_album: true,
-          },
-        ],
-      },
-    };
-
-    const { container } = await renderNode(<AlbumPanel {...props} />);
-
-    const receipt = container.querySelector(".album-export-receipt");
-    expect(receipt?.textContent).toContain("rendered 48 kHz / 24-bit / stereo");
-    expect(receipt?.textContent).toContain("requested Auto");
-    expect(receipt?.textContent).toContain("Upsampled source 44.1 kHz");
-    expect(receipt?.textContent).toContain("Upmixed source mono");
-    expect(receipt?.textContent).toContain(
-      "Override: track 1 rendered with its own settings",
-    );
-  });
-
-  it("shows fold-down advisory for above-stereo album sources", async () => {
-    const props = {
-      ...baseProps(),
-      albumExportReport: {
-        job_id: "album-render-job",
-        status: { status: "done" as const },
-        album_wav_path: "C:/Masters/album_continuous.wav",
-        manifest_path: "C:/Masters/manifest.json",
-        requested_sample_rate: null,
-        rendered_sample_rate: 48_000,
-        source_sample_rates: [48_000],
-        bit_depth: 24,
-        rendered_channels: 2,
-        source_channels: [2, 4],
-        tracks: [
-          {
-            track_id: "track-1",
-            position: 1,
-            output_path: "C:/Masters/01-track.wav",
-            measured_lufs: -14,
-            source_sample_rate: 48_000,
-            rendered_sample_rate: 48_000,
-            source_channels: 4,
-            rendered_channels: 2,
-            override_album: false,
-          },
-        ],
-      },
-    };
-
-    const { container } = await renderNode(<AlbumPanel {...props} />);
-
-    const receipt = container.querySelector(".album-export-receipt");
-    expect(receipt?.textContent).toContain("Folded source 4 ch to stereo");
-    expect(receipt?.textContent).not.toContain("Override:");
-  });
-
-  it("renders cancelled album exports without a blank path", async () => {
-    const props = {
-      ...baseProps(),
-      albumExportReport: {
-        job_id: "album-render-job",
-        status: { status: "cancelled" as const },
-        album_wav_path: "",
-        manifest_path: "",
-        requested_sample_rate: null,
-        rendered_sample_rate: 48_000,
-        source_sample_rates: [48_000],
-        bit_depth: 24,
-        rendered_channels: 2,
-        source_channels: [2],
-        tracks: [],
-      },
-    };
-
-    const { container } = await renderNode(<AlbumPanel {...props} />);
-
-    const receipt = container.querySelector(".album-export-receipt");
-    expect(receipt?.textContent).toContain("Export cancelled");
-    expect(receipt?.textContent).toContain("No album files were written.");
-    expect(container.querySelector(".album-export-receipt-path")).toBeNull();
   });
 });
