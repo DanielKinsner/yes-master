@@ -254,6 +254,40 @@ Deliverables: before/after evidence for the owner's eye (screenshots at
 log flags on any taste-adjacent judgment (exact type size, chip wording).
 Verify: full frontend lane + layout-css tests; no Rust surface is touched.
 
+#### Slice 13b — Album chrome moves to the sidebar (owner-approved 2026-07-08)
+Owner feedback on shipped Slice 13: better language, but the album bands
+still push the whole center column down — waveform/meters/timeline feel
+squished vs Track Master. Owner picked the structural fix: **album context
+lives in the left sidebar; the center column becomes vertically identical to
+Track Master.** Presentation-only; no engine/state/settings changes.
+
+**The done-criterion (this is THE acceptance test):** with the same track
+loaded at 1920×1080, the waveform card's top edge in Album Master sits at
+the same Y as in Track Master (within a few px). Prove it via DOM geometry
+(test or measured evidence in the deviation log).
+
+1. **Sidebar gains the album identity block** at its top, absorbing the
+   current "ALBUM ORDER / N tracks · M:SS" header (show each fact once, not
+   twice): the Slice 13 in-place-editable album title (scaled to sidebar
+   width, same quiet "Name this album" empty state), the track/duration
+   chips, and the compact flow cluster (Album flow select + Flow amount
+   slider + ×N.NN) stacked to fit the sidebar. Keep the exact label texts
+   "Album flow" and "Flow amount" (tests assert them).
+2. **The center-column album band is removed entirely.** Whatever else
+   AlbumPanel renders (album export receipt / cancelled rows) must remain
+   visible somewhere sensible — sidebar bottom or near the export rail is
+   the executor's judgment call; flag placement in the deviation log.
+3. **Adaptation goes inline.** The Follows-album/Override control (per-track
+   state, so it stays with the track) becomes a status chip + compact toggle
+   in the track badge row (with MP3 / 44.1 KHZ …), tooltip carrying the
+   per-state explanation, `aria-pressed` + disabled semantics preserved. At
+   1360×740 it may wrap to its own line but must not collide or clip —
+   verify at that size.
+4. **No new design language**; existing tokens/chips only. Import Audio
+   button and track-reorder affordances unchanged.
+Deliverables: before/after evidence at 1920×1080 AND 1360×740; deviation log.
+Verify: full frontend lane + layout-css tests; no Rust surface.
+
 #### Slice 12 — Beta go/no-go checklist (docs only)
 Assemble `docs/plans/beta-go-no-go.md` (shipped): listening note exists; macOS + Windows
 real-machine installs confirmed; signed artifacts downloadable; landing copy
