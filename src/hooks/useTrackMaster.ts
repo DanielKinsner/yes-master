@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open, save, getCurrentWebview } from "../lib/tauri-runtime";
+import { rememberView, rememberedView } from "../lib/view-by-track";
 import {
   ADAPTIVE_COMPRESSION_GATE_EVENT,
   api,
@@ -56,6 +57,7 @@ import type {
   RenderJob,
   TrackId,
   UserPreset,
+  ViewMode,
   WaveformPeaks,
 } from "../bindings";
 
@@ -74,6 +76,7 @@ function buildProjectState(args: {
   albumBitDepth: number | null;
   overrideAlbum: Iterable<TrackId>;
   selectedTrackId: TrackId | null;
+  viewByTrackId: Record<TrackId, ViewMode>;
 }): ProjectState {
   return {
     schema_version: 1,
@@ -89,6 +92,7 @@ function buildProjectState(args: {
     album_bit_depth: args.albumBitDepth,
     track_override_album: Array.from(args.overrideAlbum),
     selected_track_id: args.selectedTrackId,
+    view_by_track_id: args.viewByTrackId,
     last_saved_iso: new Date().toISOString(),
   };
 }
@@ -315,6 +319,9 @@ const ANALYSIS_PROGRESS_STAGES = [
 export function useTrackMaster() {
   const [tracks, setTracks] = useState<ImportedTrack[]>([]);
   const [selectedTrackId, setSelectedTrackId] = useState<TrackId | null>(null);
+  // F6: per-track remembered view (Standard/Advanced). Only explicit user
+  // choices are written here (see rememberTrackView); persisted in ProjectState.
+  const [viewByTrackId, setViewByTrackId] = useState<Record<TrackId, ViewMode>>({});
   const [analysisMap, setAnalysisMap] = useState<Record<TrackId, AnalysisResult>>({});
   const [waveformMap, setWaveformMap] = useState<Record<TrackId, WaveformPeaks>>({});
   const [settingsMap, setSettingsMap] = useState<Record<TrackId, MasteringSettings>>({});
@@ -477,6 +484,19 @@ export function useTrackMaster() {
   const analysisInFlightRef = useRef(0);
   const selectedTrackIdRef = useRef<TrackId | null>(null);
   selectedTrackIdRef.current = selectedTrackId;
+
+  // F6 per-track view memory. A ref keeps the reader callback stable while
+  // always seeing the latest map. `rememberTrackView` is the ONLY writer, and
+  // the force-bounce path never calls it, so a bounce can't clobber a choice.
+  const viewByTrackIdRef = useRef<Record<TrackId, ViewMode>>({});
+  viewByTrackIdRef.current = viewByTrackId;
+  const rememberTrackView = useCallback((trackId: TrackId | null, view: ViewMode) => {
+    setViewByTrackId((prev) => rememberView(prev, trackId, view));
+  }, []);
+  const rememberedTrackView = useCallback(
+    (trackId: TrackId | null): ViewMode | null => rememberedView(viewByTrackIdRef.current, trackId),
+    [],
+  );
   const volumeMatchRef = useRef(false);
   const exportLufsPreviewRef = useRef(false);
   // Internal "force WYSIWYG" flag, distinct from the user-facing Advanced
@@ -816,6 +836,7 @@ export function useTrackMaster() {
         if (session.track_override_album) {
           setOverrideAlbum(new Set(session.track_override_album));
         }
+        setViewByTrackId(session.view_by_track_id ?? {});
 
         // Best-effort re-analyze + re-waveform for restored tracks.
         if (restoredTracks.length > 0) {
@@ -873,6 +894,7 @@ export function useTrackMaster() {
         albumBitDepth,
         overrideAlbum,
         selectedTrackId,
+        viewByTrackId,
       });
       api.autosaveSession(state).catch((err) => {
         console.warn("Autosave failed", err);
@@ -892,6 +914,7 @@ export function useTrackMaster() {
     albumBitDepth,
     overrideAlbum,
     selectedTrackId,
+    viewByTrackId,
   ]);
 
   const selectedTrack = useMemo(
@@ -2498,6 +2521,7 @@ export function useTrackMaster() {
         albumBitDepth,
         overrideAlbum,
         selectedTrackId,
+        viewByTrackId,
       });
       await api.saveProject(path, state);
       setError(null);
@@ -2522,6 +2546,7 @@ export function useTrackMaster() {
     albumBitDepth,
     overrideAlbum,
     selectedTrackId,
+    viewByTrackId,
   ]);
 
   const openProjectFromDisk = useCallback(async () => {
@@ -2563,6 +2588,7 @@ export function useTrackMaster() {
       setAlbumSampleRateState(state.album_sample_rate ?? null);
       setAlbumBitDepthState(state.album_bit_depth ?? null);
       setOverrideAlbum(new Set(state.track_override_album ?? []));
+      setViewByTrackId(state.view_by_track_id ?? {});
       if (state.tracks && state.tracks.length > 0) {
         // F5 (owner smoke): same selection restore as the session path —
         // land on the saved selection, fall back to the first track.
@@ -2690,6 +2716,10 @@ export function useTrackMaster() {
     reanalyzeAll,
     selectTrack,
     removeTrack,
+    // F6 per-track view memory (Standard/Advanced).
+    viewByTrackId,
+    rememberTrackView,
+    rememberedTrackView,
     setPreset,
     setIntensity,
     setEqBand,

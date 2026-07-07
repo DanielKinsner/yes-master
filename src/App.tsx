@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type DragEvent as ReactDragEvent,
 } from "react";
@@ -243,6 +244,28 @@ function App() {
     leaveAlbumMode: () => tm.setMode("track"),
   });
   const { view, setView } = nav;
+
+  // F6 per-track view memory: explicit view choices are recorded for the
+  // selected track, so switching tracks restores that track's choice. The
+  // force-bounce for a dirty track lives in the navigation machine and records
+  // nothing, so it can never clobber a remembered choice.
+  const enterAdvanced = () => {
+    tm.rememberTrackView(tm.selectedTrackId, "advanced");
+    setView("advanced");
+  };
+  const backToStandard = () => {
+    // A silent return (clean track, or nothing selected) reaches Standard now,
+    // so record it now; a dirty return opens the confirm dialog and is recorded
+    // on completeReturn instead (cancel keeps Advanced, deliberately unrecorded).
+    if (!tm.selectedTrack || !hasNonManagedEdits(tm.selectedSettings)) {
+      tm.rememberTrackView(tm.selectedTrackId, "standard");
+    }
+    nav.requestBackToStandard();
+  };
+  const completeReturnToStandard = () => {
+    tm.rememberTrackView(tm.selectedTrackId, "standard");
+    nav.completeReturn();
+  };
   // First-run guide lives at the root now (L9): the hint renders as a floating
   // FirstRunOverlay below, and StandardView only consumes the step for the
   // Mastered-button pulse. Lifting the hook out of StandardView also lets the
@@ -275,6 +298,18 @@ function App() {
     }
   }, [view, tm.disarmLoop]);
 
+  // F6: restore the remembered view when the selected track changes (sidebar
+  // select, import auto-select, session/project restore). A dirty track still
+  // force-bounces to Advanced in the machine; this only re-applies an explicit
+  // prior choice, and does nothing for a track with no remembered view.
+  const prevSelectedTrackRef = useRef(tm.selectedTrackId);
+  useEffect(() => {
+    if (tm.selectedTrackId === prevSelectedTrackRef.current) return;
+    prevSelectedTrackRef.current = tm.selectedTrackId;
+    const remembered = tm.rememberedTrackView(tm.selectedTrackId);
+    if (remembered) setView(remembered);
+  }, [tm.selectedTrackId, tm.rememberedTrackView, setView]);
+
   const handleModeChange = (nextMode: "track" | "album") => {
     if (nextMode === "album" && view === "standard") {
       setModeNotice("Opening Album Master in Advanced.");
@@ -303,9 +338,9 @@ function App() {
           // never re-appears. noteEnteredAdvanced persists "done" AND clears
           // the live step, so the floating overlay drops immediately.
           guide.noteEnteredAdvanced();
-          setView("advanced");
+          enterAdvanced();
         }}
-        onBackToStandard={nav.requestBackToStandard}
+        onBackToStandard={backToStandard}
       />
     <div className={"app" + (view === "standard" ? " app-standard" : "")}>
       {view === "advanced" && (
@@ -412,7 +447,7 @@ function App() {
       {view === "standard" && tm.selectedTrack && (
         // StandardView's own enterAdvanced wrapper finishes the guide before
         // switching, so this handler only owns the view change.
-        <StandardView tm={tm} guide={guide} onEnterAdvanced={() => setView("advanced")} />
+        <StandardView tm={tm} guide={guide} onEnterAdvanced={enterAdvanced} />
       )}
       {view === "standard" && !tm.selectedTrack && <EmptyState onAdd={tm.openImportDialog} />}
       {/* First-run coachmark (L9): a floating sibling of the drop/toast
@@ -496,7 +531,7 @@ function App() {
           onCancel={nav.cancelReturn}
           onReset={() => {
             tm.resetToStandardManaged();
-            nav.completeReturn();
+            completeReturnToStandard();
           }}
           onSaveAsPreset={async (name) => {
             // Only reset + switch if the save actually succeeded — the save
@@ -504,7 +539,7 @@ function App() {
             const ok = await tm.saveUserPreset(name);
             if (ok) {
               tm.resetToStandardManaged();
-              nav.completeReturn();
+              completeReturnToStandard();
             }
             return ok;
           }}

@@ -651,3 +651,122 @@ describe("welcome hero import funnel", () => {
     });
   });
 });
+
+describe("App F6 per-track view memory", () => {
+  function makeTwoTrackSession(args: {
+    aSettings: MasteringSettings;
+    bSettings: MasteringSettings;
+    viewByTrackId?: Record<string, "standard" | "advanced">;
+    selected?: string;
+  }): ProjectState {
+    const a = makeTrack("track-a", "C:/audio/a.wav");
+    const b = makeTrack("track-b", "C:/audio/b.wav");
+    return {
+      schema_version: 1,
+      mode: "track",
+      tracks: [a, b],
+      track_order: [a.id, b.id],
+      track_settings: { [a.id]: args.aSettings, [b.id]: args.bSettings },
+      album_intent: null,
+      track_override_album: [],
+      view_by_track_id: args.viewByTrackId,
+      selected_track_id: args.selected ?? a.id,
+      last_saved_iso: null,
+    };
+  }
+
+  function trackPick(container: HTMLElement, name: string): HTMLButtonElement {
+    const btn = Array.from(
+      container.querySelectorAll<HTMLButtonElement>("button.track-pick"),
+    ).find((b) => (b.querySelector(".track-name")?.textContent ?? "").includes(name));
+    if (!btn) throw new Error(`track "${name}" not found in the sidebar`);
+    return btn;
+  }
+
+  it("restores a track's remembered Standard view when switched to in the sidebar", async () => {
+    // Both tracks clean; only B remembers Standard. Land in Advanced (returning
+    // session), then switch to B — without per-track memory a sidebar switch
+    // between clean tracks keeps Advanced, so a flip to Standard proves restore.
+    mocks.api.loadRecentSession.mockResolvedValue(
+      makeTwoTrackSession({
+        aSettings: CLEAN_SETTINGS,
+        bSettings: CLEAN_SETTINGS,
+        viewByTrackId: { "track-b": "standard" },
+        selected: "track-a",
+      }),
+    );
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(hasSidebar(container)).toBe(true);
+    });
+
+    await click(trackPick(container, "track-b.wav"));
+    await waitFor(() => {
+      expect(affordanceText(container)).toBe("Advanced");
+    });
+    expect(hasSidebar(container)).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("applies a loaded session's remembered view, overriding the global default", async () => {
+    // Global default would be Advanced (seeded last-view + returning session),
+    // but the loaded session remembers Standard for the selected track, so the
+    // per-track memory must win — proving it round-trips through save/open.
+    seedViewMode("advanced");
+    mocks.api.loadRecentSession.mockResolvedValue(
+      makeTwoTrackSession({
+        aSettings: CLEAN_SETTINGS,
+        bSettings: CLEAN_SETTINGS,
+        viewByTrackId: { "track-a": "standard" },
+        selected: "track-a",
+      }),
+    );
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(container.querySelector(".std-tiles")).not.toBeNull();
+    });
+    expect(affordanceText(container)).toBe("Advanced");
+    expect(hasSidebar(container)).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("a dirty track's forced Advanced does not disturb a sibling's remembered Standard", async () => {
+    // B is dirty and selected, so it is force-bounced to Advanced on load. A is
+    // clean and remembers Standard. Switching to A restores Standard — proving
+    // the dirty bounce never wrote to (clobbered) the remembered-view map.
+    mocks.api.loadRecentSession.mockResolvedValue(
+      makeTwoTrackSession({
+        aSettings: CLEAN_SETTINGS,
+        bSettings: DIRTY_SETTINGS,
+        viewByTrackId: { "track-a": "standard" },
+        selected: "track-b",
+      }),
+    );
+    const { root, container } = await mountApp();
+
+    // Dirty B is force-bounced to Advanced on load (desk visible).
+    await waitFor(() => {
+      expect(hasSidebar(container)).toBe(true);
+    });
+    expect(affordanceText(container)).toBe("‹ Back to Standard");
+
+    // A's remembered Standard survived the bounce — switching restores it.
+    await click(trackPick(container, "track-a.wav"));
+    await waitFor(() => {
+      expect(affordanceText(container)).toBe("Advanced");
+    });
+    expect(hasSidebar(container)).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+});
