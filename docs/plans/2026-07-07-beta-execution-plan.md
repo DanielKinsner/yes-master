@@ -215,7 +215,7 @@ After owner adds secrets + fixes CI billing:
 - Run `npm run verify:landing`.
 
 #### Slice 12 — Beta go/no-go checklist (docs only)
-Assemble `docs/plans/beta-go-no-go.md`: listening note exists; macOS + Windows
+Assemble `docs/plans/beta-go-no-go.md` (shipped): listening note exists; macOS + Windows
 real-machine installs confirmed; signed artifacts downloadable; landing copy
 live with flip date; signup capture verified end-to-end; legal drafts bundled
 as-is (D6); owner GTM checklist (KVR post etc.) is owner lane. Beta announce
