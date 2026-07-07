@@ -11,6 +11,15 @@ handoffs planned.
   project/file operations.
 - Product name shown to users: YES Master.
 - Package/repo identity: `yes-master`.
+- Supported minimum window size: **1360×740** (Q16, verified 2026-07-08;
+  enforced by `tauri.conf.json` `minWidth`/`minHeight`). The app is usable on
+  **1366×768** laptops — the Advanced desk tiles cleanly (sidebar / main / rail)
+  with no horizontal scroll, and Standard keeps its preset tiles, intensity
+  knob, and Create Master action fully visible. Only cosmetic bottom padding
+  below the intensity knob compresses at the extreme floor (the clamp-sized
+  Standard blocks reach their minimum and `overflow: hidden` trims the excess,
+  no control is clipped). The dense Advanced view scrolls vertically on short
+  viewports, as it already did at any height below ~1230 px.
 
 ## Track Master
 

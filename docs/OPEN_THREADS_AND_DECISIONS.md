@@ -220,8 +220,16 @@ cluster can mostly close in one sitting.**
 16. **Min window size** for 1366×768 laptops — document the requirement (cheap default) or schedule a layout slice?
     **CLOSED 2026-07-07 (beta plan D11):** document it, no layout slice —
     beta-plan Slice 6 documents the supported minimum in APP_BEHAVIOR.md and
-    reconciles the Tauri min-size (currently `minWidth 1440 / minHeight 860`,
-    which exceeds a 1366-wide target — Slice 6 to resolve the floor).
+    reconciles the Tauri min-size (was `minWidth 1440 / minHeight 860`, which
+    exceeded a 1366-wide target).
+    **RESOLVED 2026-07-08 (Slice 6 — experiment/verify/keep):** min-size lowered
+    to **1360×740** and verified at 1366×768 in the browser preview — the desk
+    tiles cleanly (sidebar/main/rail, no horizontal scroll) and every Standard
+    control (preset tiles, intensity knob, Create Master) stays fully visible;
+    only cosmetic bottom padding trims via `overflow: hidden` at the floor, no
+    control is clipped. Kept and documented in APP_BEHAVIOR.md — no layout
+    rework. (Advanced scrolls vertically on short viewports as it already did
+    below ~1230 px.)
 17. ~~**RS-09 limiter flush/tail** (~3 ms export-byte change) — defer + document (default), or accept?~~
     **RESOLVED 2026-07-03 — fixed, not deferred.** The 2026-07-03 DSP math
     audit confirmed (with adversarial verification) that every export was
