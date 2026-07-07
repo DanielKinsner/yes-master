@@ -288,6 +288,47 @@ the same Y as in Track Master (within a few px). Prove it via DOM geometry
 Deliverables: before/after evidence at 1920×1080 AND 1360×740; deviation log.
 Verify: full frontend lane + layout-css tests; no Rust surface.
 
+#### Slice 13c — Metadata diet (owner-approved 2026-07-08)
+Owner finding (both modes): the app repeats the same facts in multiple homes
+and gives every fact chip-weight. Principle: **each fact is said once, in its
+one home; the track header is a nameplate, not telemetry. Remove and
+consolidate only — add nothing, restyle nothing beyond what's listed.**
+All changes hit the shared TrackHeader/footer, so they apply identically in
+both modes — 13b's geometry parity is preserved by construction, but
+re-verify the 0px waveform-top criterion after (both modes shift together;
+Track==Album must still hold).
+
+Canonical homes (the decision table — no judgment calls left):
+1. **Coarse session state** → the header `SessionStatus` pill. REMOVE the
+   redundant `status-pill status-ok` "Analyzed" chip from the badge row.
+2. **Detailed process telemetry** → the footer Processing pill, but it
+   becomes **busy-only**: visible with its detailed text while
+   decoding/analyzing/rendering/exporting; hidden entirely (label included)
+   when idle/ready. The permanent "PROCESSING READY" at rest is the noise.
+3. **Analysis/quality summary dots in the footer left** ("● Analyzed",
+   "● Quality —") → REMOVE both; analysis state is rule 1/2, quality verdicts
+   live in the right-rail Source Check.
+4. **Live meters** (Live peak / Live LUFS) → footer keeps them; unique.
+5. **Identity chips** (MP3 · 44.1 KHZ · STEREO · 0:31) → soften from boxed
+   chips to ONE quiet inline text line, dim foreground, "·" separators, same
+   values, same position. (The 13b override chip and SessionStatus keep chip
+   form — they're state/controls, not identity.) Scope exemptions — do NOT
+   touch: transport time (0:00/0:31, playback context), tracklist durations
+   (navigation context), sidebar album chips (album scope, 13b).
+6. **INSIGHT line** → stays only when it carries interpretation beyond
+   restating a rail number. Inventory the possible insight strings; hide
+   pure-restatement cases; if all are interpretive, leave all and say so.
+   Flag the kept/hidden list in the deviation log.
+
+Acceptance: screenshot evidence at 1920×1080 in BOTH modes; each fact from
+the table appears exactly once in the header/footer/rail scope; 13b geometry
+still 0px; frontend lane green with tests retargeted deliberately (behavioral
+assertions preserved).
+
+**Standing rule once this ships: UI polish is CLOSED until beta feedback.**
+Further taste findings go to the ledger's post-beta parking lot, not into
+new slices.
+
 #### Slice 12 — Beta go/no-go checklist (docs only)
 Assemble `docs/plans/beta-go-no-go.md` (shipped): listening note exists; macOS + Windows
 real-machine installs confirmed; signed artifacts downloadable; landing copy
