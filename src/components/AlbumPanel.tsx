@@ -97,24 +97,24 @@ export function AlbumPanel({
       <header className="album-panel-head">
         <div className="album-panel-summary">
           <span className="section-label">Album</span>
-          <span className="album-panel-stat">
-            <strong>{tracks.length}</strong> tracks
-            {totalSeconds > 0 && (
-              <>
-                <span className="dim"> · </span>
-                <strong>{formatDuration(totalSeconds)}</strong>
-              </>
-            )}
-          </span>
+          <input
+            type="text"
+            className="album-title-input"
+            value={albumTitle}
+            placeholder="Name this album"
+            onChange={(e) => onAlbumTitle(e.target.value)}
+            maxLength={120}
+            aria-label="Album title"
+          />
         </div>
-        <input
-          type="text"
-          className="album-title-input"
-          value={albumTitle}
-          placeholder="Album title…"
-          onChange={(e) => onAlbumTitle(e.target.value)}
-          maxLength={120}
-        />
+        <div className="album-panel-chips">
+          <span className="meta-chip">
+            {tracks.length === 1 ? "1 track" : `${tracks.length} tracks`}
+          </span>
+          {totalSeconds > 0 && (
+            <span className="meta-chip">{formatDuration(totalSeconds)}</span>
+          )}
+        </div>
       </header>
       <div className="album-panel-controls">
         <label className="adv-label" htmlFor="album-arc-select">

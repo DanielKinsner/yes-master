@@ -1305,23 +1305,24 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
   );
 }
 
-function OverrideBanner({
+export function OverrideBanner({
   isOverriding,
   onToggle,
 }: {
   isOverriding: boolean;
   onToggle: () => void;
 }) {
+  const explanation = isOverriding
+    ? "This track overrides album intent — its own settings will be applied at export."
+    : "This track follows album intent — edits below change the album for every following track.";
   return (
     <section className={"override-banner " + (isOverriding ? "is-overriding" : "follows")}>
-      <div className="override-info">
-        <span className="section-label">Album adaptation</span>
-        <span className="override-state">
-          {isOverriding
-            ? "This track overrides album intent · its own settings will be applied at export"
-            : "This track follows album intent · edits below change the album for every following track"}
-        </span>
-      </div>
+      <span
+        className={"status-pill override-status" + (isOverriding ? " is-overriding" : "")}
+        title={explanation}
+      >
+        {isOverriding ? "Overrides album" : "Follows album"}
+      </span>
       <div className="override-toggle">
         <button
           type="button"
