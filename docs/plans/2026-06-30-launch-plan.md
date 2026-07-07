@@ -189,7 +189,9 @@ Derived from the launch-readiness scan + the strategy above. Ordered by leverage
 ## 7. Phased roadmap
 
 1. **Phase 1 — Free beta** (~8–12 wks): signed desktop build (Win+Mac), GitHub
-   Releases, email-gated from the landing page. Full app, no watermark. GTM = KVR +
+   Releases, an **ungated** download from the landing page with optional email
+   capture beside it (corrected 2026-07-07 — beta plan **D5** overrides the
+   original "email-gated" wording here). Full app, no watermark. GTM = KVR +
    BPB + micro-creators + list. Goal: reviews, testimonials, warm list, hardened claims — not revenue.
 2. **Phase 2 — Paid 1.0** (at the announced flip date): $29 founder → $49 via
    Lemon Squeezy. Beta users keep the $29 founder price. Free build becomes the
