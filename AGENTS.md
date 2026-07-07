@@ -15,13 +15,17 @@ phase plans as active spec. Use the current code plus the docs listed below.
 3. `docs/ARCHITECTURE.md`
 4. `docs/TESTING.md`
 5. `docs/RELEASE_STABILIZATION.md`
+6. `docs/plans/2026-06-30-launch-plan.md` (GTM / pricing strategy)
+7. `docs/plans/2026-07-07-beta-execution-plan.md` (beta launch execution)
 
 ## Non-Negotiables
 
-- Local-first desktop app — Mac and Windows are the primary stabilization
-  target (Linux deferred). The same engine also powers CI-tested native
-  iPhone/Android bridges and a public web landing page; formal product-scope
-  phrasing is an open owner decision (see `docs/OPEN_THREADS_AND_DECISIONS.md`).
+- Local-first desktop app — Mac and Windows ship first and are the primary
+  stabilization target (Linux deferred). The same engine also powers CI-tested
+  native iPhone/Android bridges and a public web landing page. The landing page
+  is a **supported product surface, in scope for launch/agent work** (decided
+  2026-07-07). Mobile stays parked until the owner judges it ready; desktop
+  ships first. See `docs/PRODUCT.md` "Distribution & Business Model".
 - Track Master stabilization comes before new feature expansion.
 - Real-time or near-real-time audition must stay responsive.
 - Original/Mastered switching must preserve playhead.
