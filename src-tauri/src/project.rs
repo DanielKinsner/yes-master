@@ -184,6 +184,7 @@ mod tests {
             album_bit_depth: None,
             track_override_album: Vec::new(),
             selected_track_id: Some(track_id_of(id)),
+            view_by_track_id: std::collections::HashMap::new(),
             last_saved_iso: Some(format!("2026-06-12T12:00:00Z-{id}")),
         }
     }
@@ -219,6 +220,43 @@ mod tests {
         std::fs::write(&legacy_path, value.to_string()).expect("write legacy");
         let legacy = read_session(&legacy_path).expect("legacy session loads");
         assert_eq!(legacy.selected_track_id, None);
+    }
+
+    #[test]
+    fn view_by_track_id_round_trips_and_defaults_for_older_sessions() {
+        // F6 (owner smoke): the per-track remembered view must survive a
+        // save/load round trip, and session files written before the field
+        // existed must still load (defaulting to an empty map).
+        use crate::types::ViewMode;
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join("views.ams.json");
+        let mut state = project_state("views");
+        state
+            .view_by_track_id
+            .insert("views".to_string(), ViewMode::Advanced);
+        write_session_atomic(&path, &state).expect("write");
+        let loaded = read_session(&path).expect("read");
+        assert_eq!(
+            loaded.view_by_track_id.get("views"),
+            Some(&ViewMode::Advanced),
+            "remembered per-track view must survive save/load",
+        );
+
+        // Strip the field to simulate a pre-F6 session file.
+        let raw = std::fs::read_to_string(&path).expect("read raw");
+        let mut value: serde_json::Value = serde_json::from_str(&raw).expect("parse");
+        value
+            .as_object_mut()
+            .expect("object")
+            .remove("view_by_track_id")
+            .expect("field present in new saves");
+        let legacy_path = tmp.path().join("legacy-views.ams.json");
+        std::fs::write(&legacy_path, value.to_string()).expect("write legacy");
+        let legacy = read_session(&legacy_path).expect("legacy session loads");
+        assert!(
+            legacy.view_by_track_id.is_empty(),
+            "older sessions without the field default to an empty map",
+        );
     }
 
     #[test]

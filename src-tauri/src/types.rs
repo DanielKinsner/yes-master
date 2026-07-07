@@ -835,6 +835,17 @@ pub enum ProjectMode {
     Album,
 }
 
+/// Standard vs Advanced UI view. Persisted PER TRACK in
+/// `ProjectState::view_by_track_id` (F6 owner smoke) so switching tracks
+/// restores the view the user last explicitly chose for each, instead of a
+/// single global last-view that a force-bounce to Advanced could clobber.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ViewMode {
+    Standard,
+    Advanced,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProjectState {
     pub schema_version: u32,
@@ -867,6 +878,13 @@ pub struct ProjectState {
     /// falls back to the first track when absent or stale).
     #[serde(default)]
     pub selected_track_id: Option<TrackId>,
+    /// F6 (owner smoke): the view (Standard/Advanced) the user last explicitly
+    /// chose for each track, keyed by track id. Switching tracks restores that
+    /// choice; the force-bounce to Advanced for a dirty track still renders
+    /// Advanced but never writes here — only explicit user choices land in this
+    /// map. Defaulted (empty) so older sessions reopen unchanged.
+    #[serde(default)]
+    pub view_by_track_id: HashMap<String, ViewMode>,
     pub last_saved_iso: Option<String>,
 }
 

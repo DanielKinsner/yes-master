@@ -684,7 +684,8 @@
         "sample_rate": 44100,
         "source_format": "wav"
       }
-    ]
+    ],
+    "view_by_track_id": {}
   },
   "render_job": {
     "id": "wire-job",

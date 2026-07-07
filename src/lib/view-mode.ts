@@ -5,7 +5,10 @@
 // store-interface pattern in export-location.ts so it stays testable
 // without a real DOM.
 
-export type ViewMode = "standard" | "advanced";
+// ViewMode is the Rust↔TS wire type (persisted per track in ProjectState);
+// re-export from bindings so there is a single source of truth.
+import type { ViewMode } from "../bindings";
+export type { ViewMode };
 
 export interface PersistedViewState {
   migrated: boolean;

@@ -1708,6 +1708,7 @@ fn session_write_and_read_roundtrips() {
         album_bit_depth: Some(16),
         track_override_album: vec![TrackId("alpha".to_string())],
         selected_track_id: Some(TrackId("alpha".to_string())),
+        view_by_track_id: std::collections::HashMap::new(),
         last_saved_iso: Some("2026-05-11T12:00:00Z".to_string()),
     };
 
@@ -1787,6 +1788,7 @@ fn session_write_is_atomic_against_existing_file() {
         album_bit_depth: None,
         track_override_album: Vec::new(),
         selected_track_id: None,
+        view_by_track_id: std::collections::HashMap::new(),
         last_saved_iso: None,
     };
 

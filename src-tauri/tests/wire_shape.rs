@@ -312,6 +312,7 @@ fn project_state_sample() -> ProjectState {
         album_bit_depth: Some(24),
         track_override_album: vec![track_id.clone()],
         selected_track_id: Some(track_id),
+        view_by_track_id: std::collections::HashMap::new(),
         last_saved_iso: Some("2026-06-09T00:00:00+00:00".to_string()),
     }
 }

@@ -465,6 +465,8 @@ export interface ExportReport {
 
 export type ProjectMode = "track" | "album";
 
+export type ViewMode = "standard" | "advanced";
+
 export interface ProjectState {
   schema_version: number;
   mode: ProjectMode;
@@ -481,6 +483,9 @@ export interface ProjectState {
   // F5: the track selected at save time; restore falls back to the first
   // track when absent (older sessions) or stale (track since removed).
   selected_track_id?: TrackId | null;
+  // F6: the view (Standard/Advanced) the user last explicitly chose for each
+  // track. Defaulted empty in Rust, so older sessions omit it.
+  view_by_track_id?: Record<TrackId, ViewMode>;
   last_saved_iso: string | null;
 }
 
