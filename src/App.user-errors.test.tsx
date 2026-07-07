@@ -46,6 +46,7 @@ const mocks = vi.hoisted(() => {
     onRenderProgress: vi.fn(),
     onLandingStatus: vi.fn(),
     onAnalysisProgress: vi.fn(),
+    onUpdaterAvailable: vi.fn(),
     open: vi.fn(),
     save: vi.fn(),
     onDragDropEvent: vi.fn(),
@@ -60,6 +61,7 @@ vi.mock("./lib/api", () => ({
   onRenderProgress: mocks.onRenderProgress,
   onLandingStatus: mocks.onLandingStatus,
   onAnalysisProgress: mocks.onAnalysisProgress,
+  onUpdaterAvailable: mocks.onUpdaterAvailable,
 }));
 
 vi.mock("./lib/tauri-runtime", () => ({
@@ -129,6 +131,7 @@ function resetApiMocks() {
   mocks.onRenderProgress.mockReset();
   mocks.onLandingStatus.mockReset();
   mocks.onAnalysisProgress.mockReset();
+  mocks.onUpdaterAvailable.mockReset();
 
   mocks.api.listUserPresets.mockResolvedValue([]);
   mocks.api.loadRecentSession.mockResolvedValue(null);
@@ -141,6 +144,7 @@ function resetApiMocks() {
   mocks.onRenderProgress.mockResolvedValue(() => {});
   mocks.onLandingStatus.mockResolvedValue(() => {});
   mocks.onAnalysisProgress.mockResolvedValue(() => {});
+  mocks.onUpdaterAvailable.mockResolvedValue(() => {});
   mocks.onDragDropEvent.mockResolvedValue(() => {});
 }
 

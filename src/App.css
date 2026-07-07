@@ -2508,6 +2508,32 @@ button.primary:disabled {
   color: var(--text-0);
 }
 
+/* Slice 7b: the updater toast's inline action ("Restart to update"). */
+.toast-action {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--accent-bright);
+  border-radius: var(--radius-sm);
+  padding: 0.28rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.toast-action:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: var(--accent);
+}
+
+.toast-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: var(--text-2);
+  border-color: var(--border-strong);
+}
+
 /* Export receipt modal */
 .receipt-backdrop {
   position: fixed;

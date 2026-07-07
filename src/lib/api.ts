@@ -128,6 +128,9 @@ export const api = {
   // Dismisses the device-loss banner on the backend too — without this the
   // next playback tick re-carries device_lost and revives the banner.
   clearDeviceLost: () => invoke<null>("clear_device_lost"),
+  // Slice 7b: download + install the available update and relaunch. Fired ONLY
+  // by the user clicking the update toast's action (never automatically).
+  installUpdate: () => invoke<null>("install_update"),
 
   runExportChecks: (
     report: ExportReport,
@@ -369,4 +372,12 @@ export function onLandingStatus(
   return listen<LandingStatusEvent>("landing:status", (event) =>
     handler(event.payload.pending, event.payload),
   );
+}
+
+/// Slice 7b: fires when the backend's startup check finds a newer release.
+/// Payload is the new version string.
+export function onUpdaterAvailable(
+  handler: (version: string) => void,
+): Promise<UnlistenFn> {
+  return listen<string>("updater:available", (event) => handler(event.payload));
 }

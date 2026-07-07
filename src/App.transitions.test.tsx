@@ -49,6 +49,7 @@ const mocks = vi.hoisted(() => {
     listAudioOutputDevices: vi.fn(),
     setAudioOutputDevice: vi.fn(),
     clearDeviceLost: vi.fn(),
+    installUpdate: vi.fn(),
     runExportChecks: vi.fn(),
     openOutput: vi.fn(),
     saveProject: vi.fn(),
@@ -78,6 +79,7 @@ const mocks = vi.hoisted(() => {
     onRenderProgress: vi.fn(),
     onLandingStatus: vi.fn(),
     onAnalysisProgress: vi.fn(),
+    onUpdaterAvailable: vi.fn(),
     open: vi.fn(),
     save: vi.fn(),
     onDragDropEvent: vi.fn(),
@@ -92,6 +94,7 @@ vi.mock("./lib/api", () => ({
   onRenderProgress: mocks.onRenderProgress,
   onLandingStatus: mocks.onLandingStatus,
   onAnalysisProgress: mocks.onAnalysisProgress,
+  onUpdaterAvailable: mocks.onUpdaterAvailable,
 }));
 
 vi.mock("./lib/tauri-runtime", () => ({
@@ -245,6 +248,7 @@ function resetApiMocks() {
   mocks.onRenderProgress.mockResolvedValue(() => {});
   mocks.onLandingStatus.mockResolvedValue(() => {});
   mocks.onAnalysisProgress.mockResolvedValue(() => {});
+  mocks.onUpdaterAvailable.mockResolvedValue(() => {});
   mocks.onDragDropEvent.mockResolvedValue(() => {});
 }
 
@@ -764,6 +768,69 @@ describe("App F6 per-track view memory", () => {
       expect(affordanceText(container)).toBe("Advanced");
     });
     expect(hasSidebar(container)).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+});
+
+describe("App updater toast (Slice 7b)", () => {
+  function captureUpdaterFire(): { current: (v: string) => void } {
+    const ref: { current: (v: string) => void } = { current: () => {} };
+    mocks.onUpdaterAvailable.mockImplementation((handler: (v: string) => void) => {
+      ref.current = handler;
+      return Promise.resolve(() => {});
+    });
+    return ref;
+  }
+
+  it("shows a one-click install toast on updater:available and installs on click", async () => {
+    const fire = captureUpdaterFire();
+    const { root, container } = await mountApp();
+
+    // No update toast until the backend emits the event.
+    await waitFor(() => {
+      expect(affordanceText(container)).toBe("Advanced");
+    });
+    expect(container.querySelector(".toast-action")).toBeNull();
+
+    await act(async () => {
+      fire.current("1.2.3");
+    });
+    await waitFor(() => {
+      expect(container.querySelector(".toast-action")).not.toBeNull();
+    });
+    const toast = container.querySelector(".toast");
+    expect(toast?.textContent).toContain("Update available");
+    expect(toast?.textContent).toContain("v1.2.3");
+    const action = container.querySelector<HTMLButtonElement>(".toast-action");
+    expect(action?.textContent).toBe("Restart to update");
+    expect(action?.disabled).toBe(false); // idle -> enabled
+
+    await click(action!);
+    expect(mocks.api.installUpdate).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("dismisses the update toast on close", async () => {
+    const fire = captureUpdaterFire();
+    const { root, container } = await mountApp();
+    await act(async () => {
+      fire.current("2.0.0");
+    });
+    await waitFor(() => {
+      expect(container.querySelector(".toast-action")).not.toBeNull();
+    });
+
+    const close = container.querySelector<HTMLButtonElement>(".toast .toast-close");
+    await click(close!);
+    await waitFor(() => {
+      expect(container.querySelector(".toast-action")).toBeNull();
+    });
 
     await act(async () => {
       root.unmount();

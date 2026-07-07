@@ -37,7 +37,7 @@ import type {
 import type { PlaybackKindUI, RenderProgressState } from "./hooks/useTrackMaster";
 import { LOUDNESS_PROFILES, loudnessTargetDisplay } from "./lib/effective-settings";
 import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
-import { api } from "./lib/api";
+import { api, onUpdaterAvailable } from "./lib/api";
 import { save } from "./lib/tauri-runtime";
 import { requestGuideReset } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
@@ -223,6 +223,8 @@ function App() {
   const audioOutput = useAudioOutputSettings(tm.clearPlaybackDeviceLost);
   const [chromePanel, setChromePanel] = useState<"settings" | "help" | null>(null);
   const [modeNotice, setModeNotice] = useState<string | null>(null);
+  // Slice 7b: the version of an available update (null = none / dismissed).
+  const [updateAvailable, setUpdateAvailable] = useState<string | null>(null);
   useWebviewZoomShortcuts();
 
   // B5.1: Standard/Advanced/Album navigation is ONE legal-state machine
@@ -309,6 +311,31 @@ function App() {
     const remembered = tm.rememberedTrackView(tm.selectedTrackId);
     if (remembered) setView(remembered);
   }, [tm.selectedTrackId, tm.rememberedTrackView, setView]);
+
+  // Slice 7b: surface a newer release as a non-blocking toast. The backend's
+  // startup check (Slice 7) emits `updater:available`; the toast's action
+  // installs on click and is disabled while an export/render runs, so work is
+  // never interrupted.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    onUpdaterAvailable((version) => setUpdateAvailable(version))
+      .then((un) => {
+        unlisten = un;
+      })
+      .catch(() => {
+        /* no updater here (e.g. browser preview) — ignore */
+      });
+    return () => unlisten?.();
+  }, []);
+
+  const installUpdate = () => {
+    // Success relaunches the app (never returns); a failed/offline download
+    // just dismisses the toast — never a modal.
+    api.installUpdate().catch((err) => {
+      console.warn("Update install failed", err);
+      setUpdateAvailable(null);
+    });
+  };
 
   const handleModeChange = (nextMode: "track" | "album") => {
     if (nextMode === "album" && view === "standard") {
@@ -467,7 +494,11 @@ function App() {
           </div>
         </div>
       )}
-      {(tm.playbackDeviceLost || tm.error || tm.projectFeedback || modeNotice) && (
+      {(tm.playbackDeviceLost ||
+        tm.error ||
+        tm.projectFeedback ||
+        modeNotice ||
+        updateAvailable) && (
         <div className="toast-stack" aria-live="polite">
           {tm.playbackDeviceLost && (
             <div className="device-loss-banner" role="alert">
@@ -506,6 +537,20 @@ function App() {
               message={tm.projectFeedback.message}
               tone={tm.projectFeedback.tone}
               onClose={tm.clearProjectFeedback}
+            />
+          )}
+          {updateAvailable && (
+            <Toast
+              message={`Update available — v${updateAvailable}`}
+              tone="info"
+              onClose={() => setUpdateAvailable(null)}
+              action={{
+                label: "Restart to update",
+                onClick: installUpdate,
+                disabled: tm.isExporting || tm.isRendering,
+                disabledTitle:
+                  "Finishing your export first — this re-enables the moment it's done.",
+              }}
             />
           )}
         </div>

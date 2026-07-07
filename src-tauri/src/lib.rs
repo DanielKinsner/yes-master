@@ -221,6 +221,7 @@ pub fn run() {
             settings::list_user_presets,
             settings::delete_user_preset,
             diagnostics::save_diagnostics_report,
+            install_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -242,6 +243,34 @@ async fn run_update_check(app: tauri::AppHandle) -> tauri_plugin_updater::Result
             let _ = app.emit("updater:available", update.version);
         }
         None => crate::diagnostics::info("update check: up to date"),
+    }
+    Ok(())
+}
+
+/// Slice 7b: download + install the available update, then relaunch. Fired only
+/// from the user clicking the update toast's action — never automatically. The
+/// caller (frontend) keeps this disabled while an export/render runs, so an
+/// in-progress job is never interrupted. Re-checks so it has the concrete
+/// update to install; if nothing is available (already current) it is a no-op.
+/// On success `restart()` never returns; any failure is returned as a string so
+/// the toast can dismiss gracefully.
+#[cfg(feature = "app-runner")]
+#[tauri::command]
+async fn install_update(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_updater::UpdaterExt;
+    let update = app
+        .updater()
+        .map_err(|e| e.to_string())?
+        .check()
+        .await
+        .map_err(|e| e.to_string())?;
+    if let Some(update) = update {
+        crate::diagnostics::info(format!("installing update {}", update.version));
+        update
+            .download_and_install(|_chunk, _total| {}, || {})
+            .await
+            .map_err(|e| e.to_string())?;
+        app.restart();
     }
     Ok(())
 }
