@@ -256,8 +256,10 @@ Status: deferred to Wave 10 on 2026-06-16.
 
 ## Deferred
 
-- Public signing/notarization.
-- Autoupdate.
 - Reference-track UX.
 - Album dashboard/report expansion.
 - Subjective preset retuning / listening calibration (Wave 10).
+
+Public signing / notarization and autoupdate are **no longer deferred** — they
+are beta launch-blocking (see `docs/plans/2026-07-07-beta-execution-plan.md`,
+Slices 7 & 10).
