@@ -214,7 +214,7 @@ After owner adds secrets + fixes CI billing:
   (launch plan §5 item 1, D2).
 - Run `npm run verify:landing`.
 
-#### Slice 13 — Album header premium parity (owner-approved 2026-07-08)
+#### Slice 13 — Album header premium parity (owner-approved 2026-07-08) (shipped)
 Owner finding (screenshot comparison): Album Master's header speaks a
 different visual dialect than Track Master — form controls + a prose notice
 banner stacked above the track hero, vs Track's typography + chips. Bring the
