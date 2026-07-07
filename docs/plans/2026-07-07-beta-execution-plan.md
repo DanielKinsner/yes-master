@@ -152,7 +152,7 @@ executor's.
 - This slice needs NO paid accounts — it can land before payday.
 
 #### Slice 8 — Listening runbook (docs only)
-Write `docs/plans/2026-07-XX-beta-listening-runbook.md`: a scripted ~60–90 min
+Write `docs/plans/2026-07-08-beta-listening-runbook.md` (shipped): a scripted ~60–90 min
 single sitting covering ONLY beta-blocking listening — normal source,
 already-mastered source, long source (25-min seek/timeout case), preset
 distinctness post-85%-lean (Universal/Clarity/Tape/Oomph at matched loudness,
