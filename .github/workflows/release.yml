@@ -112,6 +112,13 @@ jobs:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      # Tauri updater signing (Slice 7). tauri-action reads these to sign the
+      # updater artifacts (latest.json + per-installer .sig). Empty until the
+      # owner generates the keypair and adds the secrets (see
+      # docs/RELEASE_SIGNING_SETUP.md); updater artifacts are only created when
+      # the private key is present.
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -163,13 +170,23 @@ jobs:
         if: ${{ matrix.platform == 'windows-latest' && env.AZURE_CLIENT_ID != '' }}
         run: cargo install trusted-signing-cli
 
-      - name: Enable Windows signing config overlay
-        if: ${{ matrix.platform == 'windows-latest' && env.AZURE_CLIENT_ID != '' }}
+      - name: Assemble tauri build config overlays
         shell: bash
-        # The overlay is named so it does NOT match Tauri's `tauri.<platform>.conf.json`
-        # auto-merge pattern; it is applied only here via --config, keeping local
-        # Windows builds buildable without Azure signing credentials.
-        run: echo "EXTRA_ARGS=--config src-tauri/tauri.windows-signing.conf.json" >> "$GITHUB_ENV"
+        # Both overlays are named so they do NOT match Tauri's
+        # `tauri.<platform>.conf.json` auto-merge pattern; each is applied only
+        # here via --config, so local builds stay buildable without CI secrets.
+        #   - Windows signing overlay: only when the Azure creds exist.
+        #   - Updater-artifacts overlay: only when the updater signing key
+        #     exists (createUpdaterArtifacts requires the key at build time).
+        run: |
+          ARGS=""
+          if [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$AZURE_CLIENT_ID" ]; then
+            ARGS="$ARGS --config src-tauri/tauri.windows-signing.conf.json"
+          fi
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            ARGS="$ARGS --config src-tauri/tauri.updater.conf.json"
+          fi
+          echo "EXTRA_ARGS=$ARGS" >> "$GITHUB_ENV"
 
       - name: Build, sign & draft release
         uses: tauri-apps/tauri-action@v0

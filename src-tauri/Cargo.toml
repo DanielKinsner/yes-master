@@ -24,6 +24,10 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+# Desktop-only auto-updater. Optional + gated under the `app-runner` feature so
+# the iPhone/Android bridges (which build this crate with default-features=false)
+# never compile it. Only the desktop `run()` entry point uses it.
+tauri-plugin-updater = { version = "2", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4", "serde"] }
@@ -59,7 +63,7 @@ tempfile = "3"
 
 [features]
 default = ["app-runner", "custom-protocol"]
-app-runner = []
+app-runner = ["dep:tauri-plugin-updater"]
 custom-protocol = ["tauri/custom-protocol"]
 
 # Dev builds must keep the realtime DSP chain comfortably above 1x even at

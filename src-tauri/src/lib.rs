@@ -51,6 +51,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(profile_store)
         .manage(player)
         .manage(engine::RenderJobRegistry::default())
@@ -169,6 +170,17 @@ pub fn run() {
                     let _ = app_handle.emit("playback:tick", tick);
                 }
             });
+
+            // Slice 7: check GitHub Releases for a newer version in the
+            // background. Any failure (offline, GitHub unreachable, no release
+            // published yet) is logged and swallowed — the updater never blocks
+            // or interrupts launch, matching the local-first promise.
+            let update_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = run_update_check(update_handle).await {
+                    crate::diagnostics::info(format!("update check skipped: {e}"));
+                }
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -212,4 +224,24 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// Background update check (Slice 7). Pulls the updater manifest from GitHub
+/// Releases (the endpoint + public key live in `tauri.conf.json`
+/// `plugins.updater`). If a newer signed release exists it emits
+/// `updater:available` with the version so the UI can surface it; the update is
+/// NOT auto-downloaded or applied (that stays a user choice). Any network or
+/// plugin error bubbles to the caller, which logs it silently — so the app is
+/// fully usable with no network.
+#[cfg(feature = "app-runner")]
+async fn run_update_check(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
+    use tauri_plugin_updater::UpdaterExt;
+    match app.updater()?.check().await? {
+        Some(update) => {
+            crate::diagnostics::info(format!("update available: {}", update.version));
+            let _ = app.emit("updater:available", update.version);
+        }
+        None => crate::diagnostics::info("update check: up to date"),
+    }
+    Ok(())
 }

@@ -95,9 +95,48 @@ the very first beta build — to start that clock as early as possible.
 
 ---
 
+## Auto-updater signing
+
+The Tauri auto-updater is wired in (Slice 7): on launch the app checks these
+same GitHub Releases for a newer signed version (`src-tauri/tauri.conf.json` →
+`plugins.updater`). It needs its **own** signing keypair — separate from the OS
+code-signing certs above — so the app can verify an update genuinely came from
+you before trusting it.
+
+> ⚠️ **The `pubkey` currently committed in `plugins.updater` is a throwaway
+> bootstrap; its private half was discarded. You MUST generate your own keypair
+> before the first release, or update artifacts can never be signed to match
+> the app's expected key.**
+
+1. Generate the keypair once (it must stay stable forever — every shipped app
+   trusts this exact key):
+
+   ```
+   npm run tauri -- signer generate -w yes-master-updater.key
+   ```
+
+   It prints the **public key** and writes the password-protected **private
+   key** to `yes-master-updater.key`.
+2. Paste the printed public key into `src-tauri/tauri.conf.json` →
+   `plugins.updater.pubkey`, replacing the bootstrap value, and commit it.
+3. Add two GitHub secrets (Settings → Secrets and variables → Actions):
+
+   | Secret | Value |
+   |---|---|
+   | `TAURI_SIGNING_PRIVATE_KEY` | the full contents of `yes-master-updater.key` |
+   | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | the password you set in step 1 |
+
+4. Keep `yes-master-updater.key` in a password manager. **If you lose it,
+   already-installed apps can no longer auto-update** — you'd have to ship a new
+   pubkey and every user would re-download once by hand. Never commit it.
+
+Once the private-key secret exists, the release pipeline automatically emits and
+signs the updater artifacts (per-installer `.sig` files + `latest.json`) via the
+`src-tauri/tauri.updater.conf.json` overlay and attaches them to the draft
+release; the app reads `latest.json` from the release's
+`latest/download/latest.json` URL. Offline or before any release exists, the
+check fails silently and the app is fully usable.
+
 ## What's intentionally not here yet
 
-- **Auto-updater.** No Tauri updater is wired in yet (a deliberate later step).
-  Each update is currently a manual re-download. When we add it, the updater
-  reads its manifest from these same GitHub Releases.
 - **Linux.** Out of scope for launch (desktop = Mac + Windows).
