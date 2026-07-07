@@ -214,6 +214,46 @@ After owner adds secrets + fixes CI billing:
   (launch plan §5 item 1, D2).
 - Run `npm run verify:landing`.
 
+#### Slice 13 — Album header premium parity (owner-approved 2026-07-08)
+Owner finding (screenshot comparison): Album Master's header speaks a
+different visual dialect than Track Master — form controls + a prose notice
+banner stacked above the track hero, vs Track's typography + chips. Bring the
+album layer into Track's language. **Presentation only**: same state, same
+handlers, no engine/ProjectState/settings-semantics changes.
+
+Files: `src/components/AlbumPanel.tsx` (+ its CSS in `App.css`), the
+`override-banner` section in `src/App.tsx` (~line 1316), matching tests.
+
+1. **Album title becomes hero typography, edited in place.** Keep the
+   `<input>` (a11y + tests) but restyle borderless/transparent so it reads as
+   a display heading, sized within the existing type scale (below the track
+   title's rank — album is context, track is the page hero). Empty state: a
+   quiet dim "Name this album" placeholder, not a boxed blank field. Subtle
+   focus affordance (underline/caret), existing tokens only. maxLength stays.
+2. **Album stats become chips.** "N tracks · M:SS" renders as metadata chips
+   using the SAME component/classes as the track header's badges (MP3 /
+   44.1 KHZ). Fix the pluralization bug while there: "1 track", not
+   "1 tracks".
+3. **Flow controls compress.** Keep the exact label texts "Album flow" and
+   "Flow amount" (AlbumPanel.test.tsx asserts them) and the ×N.NN readout,
+   but cap the slider to a compact width consistent with other range inputs
+   in the app and lay dropdown + slider + value out as one tight cluster —
+   never a full-width band.
+4. **Adaptation banner becomes a status chip + compact toggle.** Replace the
+   full-width prose banner with a small pill row adjacent to the track
+   header: a status chip ("Follows album" / "Overrides album") plus the
+   two-button toggle compacted. The per-state explanatory sentence moves to a
+   tooltip (`title`) on the chip — status is a chip, prose is on demand.
+   Preserve `aria-pressed` semantics and the disabled-state behavior; any
+   test asserting the banner copy is retargeted deliberately, keeping its
+   behavioral assertions (toggle flips state) intact.
+5. **No new design language.** Existing tokens/chips/elev tiers only; no new
+   colors or shadows; `.std-tile` untouched.
+Deliverables: before/after evidence for the owner's eye (screenshots at
+1920×1080 AND 1360×740, or the token-accurate artifact fallback), deviation
+log flags on any taste-adjacent judgment (exact type size, chip wording).
+Verify: full frontend lane + layout-css tests; no Rust surface is touched.
+
 #### Slice 12 — Beta go/no-go checklist (docs only)
 Assemble `docs/plans/beta-go-no-go.md` (shipped): listening note exists; macOS + Windows
 real-machine installs confirmed; signed artifacts downloadable; landing copy
