@@ -878,11 +878,12 @@ export function useTrackMaster() {
     };
   }, [beginAnalysis, finishAnalysis]);
 
-  // Phase 7.2: debounced autosave on relevant state changes.
-  useEffect(() => {
-    if (!sessionLoaded) return;
-    const handle = setTimeout(() => {
-      const state = buildProjectState({
+  // One snapshot builder shared by both autosave paths — the debounced save
+  // below and the explicit analysis-complete save (Q29) — so they can never
+  // serialize divergent state.
+  const snapshotProjectState = useCallback(
+    () =>
+      buildProjectState({
         mode,
         tracks,
         settingsMap,
@@ -895,27 +896,48 @@ export function useTrackMaster() {
         overrideAlbum,
         selectedTrackId,
         viewByTrackId,
-      });
-      api.autosaveSession(state).catch((err) => {
+      }),
+    [
+      mode,
+      tracks,
+      settingsMap,
+      albumIntent,
+      albumArcKind,
+      albumIntensity,
+      albumTitle,
+      albumSampleRate,
+      albumBitDepth,
+      overrideAlbum,
+      selectedTrackId,
+      viewByTrackId,
+    ],
+  );
+
+  // Phase 7.2: debounced autosave on relevant state changes.
+  useEffect(() => {
+    if (!sessionLoaded) return;
+    const handle = setTimeout(() => {
+      api.autosaveSession(snapshotProjectState()).catch((err) => {
         console.warn("Autosave failed", err);
       });
     }, 1500);
     return () => clearTimeout(handle);
-  }, [
-    sessionLoaded,
-    mode,
-    tracks,
-    settingsMap,
-    albumIntent,
-    albumArcKind,
-    albumIntensity,
-    albumTitle,
-    albumSampleRate,
-    albumBitDepth,
-    overrideAlbum,
-    selectedTrackId,
-    viewByTrackId,
-  ]);
+  }, [sessionLoaded, snapshotProjectState]);
+
+  // Q29: fire an explicit autosave the instant analysis completes, so the
+  // window the owner measured (analysis latency + the 1.5 s debounce) where
+  // fresh work is not yet on disk collapses to zero. Fires only on the
+  // analyzing true->false edge with tracks present, and is idempotent with
+  // the debounced save.
+  const wasAnalyzingRef = useRef(false);
+  useEffect(() => {
+    const justFinished = wasAnalyzingRef.current && !isAnalyzing;
+    wasAnalyzingRef.current = isAnalyzing;
+    if (!sessionLoaded || !justFinished || tracks.length === 0) return;
+    api.autosaveSession(snapshotProjectState()).catch((err) => {
+      console.warn("Analysis-complete autosave failed", err);
+    });
+  }, [isAnalyzing, sessionLoaded, tracks.length, snapshotProjectState]);
 
   const selectedTrack = useMemo(
     () => tracks.find((t) => t.id === selectedTrackId),

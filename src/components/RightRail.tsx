@@ -164,7 +164,9 @@ export function RightRail({
           onClick={handlePrimaryExport}
           disabled={!canExport || isExporting || isRendering}
           title={
-            isRendering && !isExporting
+            isExporting
+              ? "An export is already running — it finishes or fails before the next one starts."
+              : isRendering
               ? "Disabled while a render-audit WAV is in progress — they share render state."
               : !canExport
               ? exportMode === "album"

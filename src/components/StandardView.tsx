@@ -429,6 +429,11 @@ function StandardRightRail({
           type="button"
           className="primary std-create-master"
           disabled={!tm.selectedAnalysis || tm.isExporting || tm.isRendering}
+          title={
+            tm.isExporting
+              ? "An export is already running — it finishes or fails before the next one starts."
+              : undefined
+          }
           onClick={() => {
             void tm.exportStandardMaster();
           }}

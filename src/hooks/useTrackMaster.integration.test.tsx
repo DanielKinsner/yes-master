@@ -4244,3 +4244,50 @@ describe("render progress timer", () => {
     }
   });
 });
+
+describe("useTrackMaster analysis-complete autosave (Q29)", () => {
+  it("fires an explicit autosave on the analysis-complete edge, not just via the debounce", async () => {
+    const track = makeTrack("analyzed-1", "C:/audio/analyzed.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    // Gate analysis so the isAnalyzing true->false edge actually commits — an
+    // immediate resolve can collapse both state updates into one render.
+    let resolveAnalyze!: (v: ReturnType<typeof makeAnalysis>[]) => void;
+    const analyzeGate = new Promise<ReturnType<typeof makeAnalysis>[]>((resolve) => {
+      resolveAnalyze = resolve;
+    });
+    mocks.api.analyzeTracks.mockReturnValue(analyzeGate);
+
+    const harness = await renderHookHarness();
+    await act(async () => {
+      void harness.current().importFiles([track.path]);
+    });
+
+    // Analysis is in flight; the explicit save has not fired yet.
+    await waitFor(() => {
+      expect(harness.current().isAnalyzing).toBe(true);
+    });
+    const callsWhileAnalyzing = (mocks.api.autosaveSession as Mock).mock.calls.length;
+
+    // Completing analysis fires the explicit save synchronously on the edge —
+    // it appears immediately, long before the 1.5 s debounce could add one.
+    await act(async () => {
+      resolveAnalyze([makeAnalysis(track.id)]);
+      await analyzeGate;
+    });
+    await waitFor(() => {
+      expect(harness.current().isAnalyzing).toBe(false);
+      expect((mocks.api.autosaveSession as Mock).mock.calls.length).toBeGreaterThan(
+        callsWhileAnalyzing,
+      );
+    }, 500);
+
+    const savedState = (mocks.api.autosaveSession as Mock).mock.calls.at(-1)?.[0] as {
+      tracks: Array<{ id: string }>;
+    };
+    expect(savedState.tracks.map((t) => t.id)).toContain(track.id);
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+});

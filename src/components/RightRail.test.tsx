@@ -618,3 +618,32 @@ describe("MasterOutPanel landing note", () => {
     await act(async () => { root.unmount(); });
   });
 });
+
+describe("RightRail export-in-progress tooltip (Q27)", () => {
+  it("explains the disabled export button while an export is running", async () => {
+    const { container, root } = await renderNode(
+      <RightRail
+        analysis={CLEAN_SOURCE_ANALYSIS}
+        lastChecks={undefined}
+        canExport
+        isExporting={true}
+        isRendering={false}
+        onExport={vi.fn()}
+        previewStale={false}
+        canRenderPreview
+        onUpdatePreview={vi.fn()}
+      />,
+    );
+
+    const exportButton = container.querySelector<HTMLButtonElement>("button.right-rail-export");
+    expect(exportButton).toBeTruthy();
+    expect(exportButton?.disabled).toBe(true);
+    expect(exportButton?.getAttribute("title")).toBe(
+      "An export is already running — it finishes or fails before the next one starts.",
+    );
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+});
