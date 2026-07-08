@@ -2826,6 +2826,121 @@ button.primary:disabled {
   border-color: rgba(108, 208, 138, 0.5);
 }
 
+/* Mastering Style + Preset Intensity — one bordered premium panel. */
+.receipt-style {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg-2);
+}
+
+.receipt-style-main {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.receipt-style-orb {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 45%,
+    color-mix(in srgb, var(--preset-accent) 26%, transparent),
+    transparent 68%
+  );
+}
+
+.receipt-style-orb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.4));
+}
+
+.receipt-style-text {
+  min-width: 0;
+}
+
+.receipt-style-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-0);
+  line-height: 1.15;
+}
+
+.receipt-style-blurb {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--text-2);
+}
+
+.receipt-intensity {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  text-align: center;
+}
+
+.receipt-intensity .receipt-section-title {
+  margin: 0;
+}
+
+.receipt-dial {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+}
+
+.receipt-dial-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.receipt-dial-track {
+  fill: none;
+  stroke: var(--bg-4);
+  stroke-width: 7;
+}
+
+.receipt-dial-value {
+  fill: none;
+  stroke: var(--preset-accent);
+  stroke-width: 7;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.25s ease;
+}
+
+.receipt-dial-pct {
+  position: absolute;
+  font-size: 1rem;
+  font-weight: 750;
+  color: var(--text-0);
+  font-variant-numeric: tabular-nums;
+}
+
+.receipt-intensity-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--preset-accent, var(--text-2));
+}
+
 .receipt-checks {
   display: flex;
   flex-direction: column;

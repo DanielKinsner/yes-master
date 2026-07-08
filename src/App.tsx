@@ -44,22 +44,14 @@ import { requestGuideReset } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
 import { SUPPORTED_FORMATS_COPY } from "./lib/supported-formats";
 import { formatDuration } from "./lib/time-format";
+import { PRESET_OPTIONS } from "./lib/preset-copy";
 import "./App.css";
 
 // The first four mirror the Standard tiles (Universal/Clarity/Tape/Oomph) in
 // the same order, per the preset-name unification decision — so the four a
 // Standard user knows sit at the front when they flip to Advanced. Keep Oomph
-// ahead of Spatial; don't "tidy" this back.
-const PRESET_OPTIONS: { value: Preset; label: string; blurb: string }[] = [
-  { value: { kind: "universal" }, label: "Universal", blurb: "Safe, well-rounded default" },
-  { value: { kind: "clarity" }, label: "Clarity", blurb: "Vocal/upper-mid definition" },
-  { value: { kind: "tape" }, label: "Tape", blurb: "Saturation, glue, softer top" },
-  { value: { kind: "oomph" }, label: "Oomph", blurb: "Low-end weight, punch" },
-  { value: { kind: "spatial" }, label: "Spatial", blurb: "Width and depth" },
-  { value: { kind: "warmth" }, label: "Warmth", blurb: "Fuller, smoother body" },
-  { value: { kind: "punch" }, label: "Punch", blurb: "Transient impact" },
-  { value: { kind: "loud" }, label: "Loud", blurb: "Density + level, with safety" },
-];
+// ahead of Spatial; don't "tidy" this back. PRESET_OPTIONS moved to
+// lib/preset-copy.ts so the export receipt can reuse the same label + blurb.
 
 const AUDIO_OUTPUT_STORAGE_KEY = "yes-master:audio-output-device";
 const SYSTEM_DEFAULT_AUDIO_OUTPUT = "system-default";
@@ -566,6 +558,7 @@ function App() {
         <ExportReceiptCard
           receipt={selectedExportReceipt}
           track={tm.selectedTrack ?? null}
+          settings={tm.selectedSettings}
           onClose={tm.clearExportReceipt}
         />
       )}

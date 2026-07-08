@@ -1,12 +1,21 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { api } from "../lib/api";
 import { formatDuration } from "../lib/time-format";
-import type { ImportedTrack, QualityCheck, QualityLevel } from "../bindings";
+import { presetCopy } from "../lib/preset-copy";
+import { PresetIcon, PRESET_ACCENT } from "./PresetIcon";
+import { intensityLabel } from "./Knob";
+import type {
+  ImportedTrack,
+  MasteringSettings,
+  QualityCheck,
+  QualityLevel,
+} from "../bindings";
 import type { ExportReceipt } from "../hooks/useTrackMaster";
 
 export function ExportReceiptCard({
   receipt,
   track,
+  settings,
   onClose,
 }: {
   receipt: ExportReceipt;
@@ -14,6 +23,9 @@ export function ExportReceiptCard({
   // Supplies the Track section's identity line; the receipt payload itself
   // never carried it. `null` only in the degenerate no-selection case.
   track: ImportedTrack | null;
+  // The settings that produced this master (selectedSettings) — supplies the
+  // Mastering Style block (preset + intensity) and the delivery-profile target.
+  settings: MasteringSettings;
   onClose: () => void;
 }) {
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
@@ -125,6 +137,7 @@ export function ExportReceiptCard({
             </div>
           ))}
         </div>
+        <MasteringStyle settings={settings} />
         {measurements && (
           <div className="receipt-render-meta" aria-label="Rendered format">
             <span>{formatSampleRate(measurements.sample_rate)}</span>
@@ -257,6 +270,70 @@ function CheckGlyph() {
     >
       <path d="M20 6 9 17l-5-5" />
     </svg>
+  );
+}
+
+// Mastering Style block: the preset's own orb art (same PNGs as the Styles
+// tiles) + its real label and one-line blurb, beside the intensity dial. The
+// arc + orb glow inherit the preset's accent so it reads as the same identity
+// the user picked.
+function MasteringStyle({ settings }: { settings: MasteringSettings }) {
+  const { label, blurb } = presetCopy(settings.preset);
+  const accent = PRESET_ACCENT[settings.preset.kind];
+  return (
+    <section
+      className="receipt-style"
+      aria-label="Mastering style"
+      style={{ "--preset-accent": accent } as CSSProperties}
+    >
+      <div className="receipt-style-main">
+        <span className="receipt-style-orb">
+          <PresetIcon kind={settings.preset.kind} className="receipt-style-orb-img" />
+        </span>
+        <div className="receipt-style-text">
+          <div className="receipt-section-title">Mastering style</div>
+          <div className="receipt-style-name">{label}</div>
+          <p className="receipt-style-blurb">{blurb}</p>
+        </div>
+      </div>
+      <IntensityDial intensity={settings.intensity} />
+    </section>
+  );
+}
+
+// Radial intensity dial. Shows the REAL intensity percentage and the app's REAL
+// intensity label (Subtle/Restrained/Moderate/Driving/Aggressive) — the mock's
+// "Aggressive at 50%" is fiction; 50% is "Moderate" here.
+function IntensityDial({ intensity }: { intensity: number }) {
+  const value = Math.min(1, Math.max(0, intensity));
+  const pct = Math.round(value * 100);
+  const label = intensityLabel(intensity);
+  const radius = 30;
+  const circumference = 2 * Math.PI * radius;
+  const filled = value * circumference;
+  return (
+    <div className="receipt-intensity">
+      <div className="receipt-section-title">Preset intensity</div>
+      <div
+        className="receipt-dial"
+        role="img"
+        aria-label={`Intensity ${pct} percent, ${label}`}
+      >
+        <svg viewBox="0 0 72 72" className="receipt-dial-svg" aria-hidden>
+          <circle className="receipt-dial-track" cx="36" cy="36" r={radius} />
+          <circle
+            className="receipt-dial-value"
+            cx="36"
+            cy="36"
+            r={radius}
+            strokeDasharray={`${filled} ${circumference}`}
+            transform="rotate(-90 36 36)"
+          />
+        </svg>
+        <span className="receipt-dial-pct">{pct}%</span>
+      </div>
+      <div className="receipt-intensity-label">{label}</div>
+    </div>
   );
 }
 

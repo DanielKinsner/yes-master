@@ -4,7 +4,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExportReceiptCard, formatBitDepth, formatSampleRate } from "./ExportReceiptCard";
 import type { ExportReceipt } from "../hooks/useTrackMaster";
-import type { ImportedTrack, QualityCheck, RenderJob } from "../bindings";
+import type {
+  ImportedTrack,
+  MasteringSettings,
+  QualityCheck,
+  RenderJob,
+} from "../bindings";
 
 vi.mock("../lib/api", () => ({
   api: { openOutput: vi.fn(async () => undefined) },
@@ -60,6 +65,53 @@ function track(): ImportedTrack {
   };
 }
 
+// Matches the shape of DEFAULT_SETTINGS (useTrackMaster) — the receipt reads
+// preset, intensity, and delivery_profile off it. Warmth @ 0.5 mirrors the
+// mock so the "Moderate" label / 50% assertions are meaningful.
+function settings(overrides: Partial<MasteringSettings> = {}): MasteringSettings {
+  return {
+    preset: { kind: "warmth" },
+    intensity: 0.5,
+    eq_sub_db: 0,
+    eq_low_db: 0,
+    eq_low_mid_db: 0,
+    eq_mid_db: 0,
+    eq_high_mid_db: 0,
+    eq_high_db: 0,
+    eq_sparkle_db: 0,
+    volume_match: false,
+    input_gain_db: 0,
+    output_gain_db: 0,
+    delivery_profile: "streaming-universal",
+    advanced: {
+      lufs_offset_db: null,
+      ceiling_dbtp: null,
+      width: null,
+      warmth: null,
+      presence_air: null,
+      compression_mode: "preset",
+      compression_density: null,
+      compression_low_threshold_db: null,
+      compression_low_ratio: null,
+      compression_low_attack_ms: null,
+      compression_low_release_ms: null,
+      compression_mid_threshold_db: null,
+      compression_mid_ratio: null,
+      compression_mid_attack_ms: null,
+      compression_mid_release_ms: null,
+      compression_high_threshold_db: null,
+      compression_high_ratio: null,
+      compression_high_attack_ms: null,
+      compression_high_release_ms: null,
+      compression_link_stereo: null,
+      bit_depth: null,
+      target_sample_rate: null,
+      adaptive_strength: 0.5,
+    },
+    ...overrides,
+  };
+}
+
 let root: Root | null = null;
 
 function render(node: React.ReactElement): HTMLElement {
@@ -81,7 +133,12 @@ afterEach(() => {
 describe("ExportReceiptCard", () => {
   it("renders the clean medallion with delivered measurements", () => {
     const container = render(
-      <ExportReceiptCard receipt={receipt([])} track={track()} onClose={() => {}} />,
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings()}
+        onClose={() => {}}
+      />,
     );
     expect(container.querySelector(".receipt-medallion-clean")).not.toBeNull();
     expect(container.textContent).toContain("Export complete");
@@ -92,7 +149,12 @@ describe("ExportReceiptCard", () => {
 
   it("renders the Track section identity line from the source track", () => {
     const container = render(
-      <ExportReceiptCard receipt={receipt([])} track={track()} onClose={() => {}} />,
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings()}
+        onClose={() => {}}
+      />,
     );
     expect(container.querySelector(".receipt-track-name")?.textContent).toBe(
       "lumberjack-final",
@@ -110,7 +172,12 @@ describe("ExportReceiptCard", () => {
       configurable: true,
     });
     const container = render(
-      <ExportReceiptCard receipt={receipt([])} track={track()} onClose={() => {}} />,
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings()}
+        onClose={() => {}}
+      />,
     );
     const copyBtn = container.querySelector<HTMLButtonElement>(".receipt-file-copy");
     expect(copyBtn).not.toBeNull();
@@ -121,6 +188,28 @@ describe("ExportReceiptCard", () => {
     expect(container.querySelector(".receipt-file-copy.is-copied")).not.toBeNull();
   });
 
+  it("renders the preset's real name + blurb and the real intensity label", () => {
+    const container = render(
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings({ preset: { kind: "warmth" }, intensity: 0.5 })}
+        onClose={() => {}}
+      />,
+    );
+    expect(container.querySelector(".receipt-style-name")?.textContent).toBe("Warmth");
+    // Real blurb, not the mock's marketing paragraph.
+    expect(container.querySelector(".receipt-style-blurb")?.textContent).toBe(
+      "Fuller, smoother body",
+    );
+    expect(container.querySelector(".receipt-dial-pct")?.textContent).toBe("50%");
+    // 50% is "Moderate" here — the mock's "Aggressive" is wrong.
+    expect(container.querySelector(".receipt-intensity-label")?.textContent).toBe(
+      "Moderate",
+    );
+    expect(container.querySelector(".receipt-style-orb-img")).not.toBeNull();
+  });
+
   it("renders the review medallion for a single warning without double-pluralizing", () => {
     const container = render(
       <ExportReceiptCard
@@ -128,6 +217,7 @@ describe("ExportReceiptCard", () => {
           { level: "warning", code: "lufs_very_loud", message: "loud" },
         ])}
         track={track()}
+        settings={settings()}
         onClose={() => {}}
       />,
     );
@@ -144,6 +234,7 @@ describe("ExportReceiptCard", () => {
           { level: "warning", code: "true_peak_high", message: "peak" },
         ])}
         track={track()}
+        settings={settings()}
         onClose={() => {}}
       />,
     );
@@ -159,6 +250,7 @@ describe("ExportReceiptCard", () => {
           { level: "critical", code: "sample_rate_mismatch", message: "rate" },
         ])}
         track={track()}
+        settings={settings()}
         onClose={() => {}}
       />,
     );
