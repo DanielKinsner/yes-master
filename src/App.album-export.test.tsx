@@ -348,7 +348,7 @@ describe("album export actions", () => {
     });
   });
 
-  it("renders the delivered master's LUFS/TP/LRA from job.measurements", async () => {
+  it("renders the delivered master's loudness/true-peak/dynamic-range from job.measurements", async () => {
     mocks.tm = {
       ...baseTrackMasterState(),
       selectedTrackId: track.id,
@@ -377,12 +377,14 @@ describe("album export actions", () => {
 
     const { container, root } = await renderApp();
 
-    const delivered = container.querySelector(
-      '[aria-label="Delivered master measurements"]',
-    );
-    expect(delivered?.textContent).toContain("Master -10.3 LUFS");
-    expect(delivered?.textContent).toContain("TP -0.97 dBTP");
-    expect(delivered?.textContent).toContain("LRA 10.9 LU");
+    const results = container.querySelector('[aria-label="Results"]');
+    expect(results?.textContent).toContain("Integrated loudness");
+    expect(results?.textContent).toContain("-10.3 LUFS");
+    expect(results?.textContent).toContain("True peak");
+    expect(results?.textContent).toContain("-0.97 dBTP");
+    // Dynamic range, deliberately not labelled "LRA" (we don't measure LRA).
+    expect(results?.textContent).toContain("Dynamic range");
+    expect(results?.textContent).toContain("10.9 LU");
 
     // The adaptive digest is SOURCE data — it must carry a visible label so
     // it can't read as master measurements next to the delivered chips.

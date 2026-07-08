@@ -4,7 +4,12 @@ import { formatDuration } from "../lib/time-format";
 import { presetCopy } from "../lib/preset-copy";
 import { PresetIcon, PRESET_ACCENT } from "./PresetIcon";
 import { intensityLabel } from "./Knob";
+import {
+  DELIVERY_PROFILE_DISPLAY,
+  DELIVERY_PROFILE_TARGET_LUFS,
+} from "../bindings";
 import type {
+  DeliveryProfile,
   ImportedTrack,
   MasteringSettings,
   QualityCheck,
@@ -145,16 +150,35 @@ export function ExportReceiptCard({
           </div>
         )}
         {measurements && (
-          // 2026-06-09 export-metrics inquiry: these delivered-master numbers
-          // were measured and carried on the payload all along but never
-          // rendered — the only loudness on the receipt was the
-          // source-describing adaptive digest below. Values describe the
-          // written file (post-landing).
-          <div className="receipt-render-meta" aria-label="Delivered master measurements">
-            <span>Master {measurements.lufs_integrated.toFixed(1)} LUFS</span>
-            <span>TP {measurements.true_peak_dbtp.toFixed(2)} dBTP</span>
-            <span>LRA {measurements.dynamic_range_lu.toFixed(1)} LU</span>
-          </div>
+          // Delivered-master results. These numbers describe the written file
+          // (post-landing), measured and carried on the payload all along.
+          <section className="receipt-results" aria-label="Results">
+            <div className="receipt-section-title">Results</div>
+            <dl className="receipt-result-list">
+              <div className="receipt-result-row">
+                <dt>Integrated loudness</dt>
+                <dd>{measurements.lufs_integrated.toFixed(1)} LUFS</dd>
+              </div>
+              <div className="receipt-result-row">
+                <dt>True peak</dt>
+                <dd>{measurements.true_peak_dbtp.toFixed(2)} dBTP</dd>
+              </div>
+              <div className="receipt-result-row">
+                {/* Measured dynamic range — deliberately NOT labelled "LRA":
+                    the engine measures dynamic range, not EBU Loudness Range. */}
+                <dt>Dynamic range</dt>
+                <dd>{measurements.dynamic_range_lu.toFixed(1)} LU</dd>
+              </div>
+              <div className="receipt-result-row receipt-result-row-target">
+                <dt>Mastering target</dt>
+                <dd>
+                  <span className="receipt-target-chip">
+                    {masteringTargetLabel(settings.delivery_profile)}
+                  </span>
+                </dd>
+              </div>
+            </dl>
+          </section>
         )}
         {measurements && (
           // B5 — adaptive-DSP traceability: a delivered master records what
@@ -354,6 +378,15 @@ function trackMetaLine(track: ImportedTrack): string {
 // Matches the app's existing channel wording (App.tsx track chips).
 function channelLabel(channels: number): string {
   return channels === 1 ? "Mono" : channels === 2 ? "Stereo" : `${channels}ch`;
+}
+
+// The Mastering Target chip: the real delivery-profile name + its target LUFS.
+// `custom` (and any profile without a target) shows the name alone rather than
+// inventing a number.
+function masteringTargetLabel(profile: DeliveryProfile): string {
+  const name = DELIVERY_PROFILE_DISPLAY[profile];
+  const target = DELIVERY_PROFILE_TARGET_LUFS[profile];
+  return target != null ? `${name} · ${target.toFixed(1)} LUFS` : name;
 }
 
 // Exported for reuse: StandardView.tsx and AlbumPanel.tsx still hardcode

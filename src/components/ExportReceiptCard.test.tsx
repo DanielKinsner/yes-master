@@ -142,9 +142,44 @@ describe("ExportReceiptCard", () => {
     );
     expect(container.querySelector(".receipt-medallion-clean")).not.toBeNull();
     expect(container.textContent).toContain("Export complete");
-    expect(container.textContent).toContain("Master -13.5 LUFS");
+    expect(container.textContent).toContain("-13.5 LUFS");
     expect(container.textContent).toContain("Source · bass +1.2");
     expect(container.textContent).toContain("Compression · compression eased low 20%");
+  });
+
+  it("renders the Results panel from measured values, labelling dynamic range (not LRA)", () => {
+    const container = render(
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings({ delivery_profile: "streaming-universal" })}
+        onClose={() => {}}
+      />,
+    );
+    const rows = [...container.querySelectorAll(".receipt-result-row")].map(
+      (r) => r.textContent,
+    );
+    expect(rows).toContain("Integrated loudness-13.5 LUFS");
+    expect(rows).toContain("True peak-1.25 dBTP");
+    expect(rows).toContain("Dynamic range8.5 LU");
+    // We measure dynamic range, not EBU Loudness Range — "LRA" must not appear.
+    expect(container.textContent).not.toContain("LRA");
+    // Mastering Target chip = real profile name + real target LUFS.
+    expect(container.querySelector(".receipt-target-chip")?.textContent).toBe(
+      "Streaming (Spotify / YouTube / Tidal / Amazon) · -14.0 LUFS",
+    );
+  });
+
+  it("shows the Mastering Target name alone for a profile with no target (custom)", () => {
+    const container = render(
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings({ delivery_profile: "custom" })}
+        onClose={() => {}}
+      />,
+    );
+    expect(container.querySelector(".receipt-target-chip")?.textContent).toBe("Custom");
   });
 
   it("renders the Track section identity line from the source track", () => {
