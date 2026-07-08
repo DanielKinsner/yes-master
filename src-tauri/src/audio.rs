@@ -2395,17 +2395,26 @@ fn play_sink_from_start_position(sink: &impl PlaybackSink, start_position_sec: f
 /// L10 — build the swap fade envelope for an incoming source.
 ///
 /// `is_swap` is true only for a mid-play Original<->Mastered toggle (same track,
-/// already audible). A swap fades the new source in behind a silent lead-in so
-/// the outgoing fade-out never overlaps it; a fresh play gets no audible ramp
-/// (`0/0`) so the track's start is untouched. Either way the source carries
-/// `fade_out_trigger` so a *later* toggle can fade *it* out.
+/// already audible). A swap is a true crossfade: the incoming source fades in
+/// with NO silent lead while the outgoing one fades out over the same window
+/// (the old sink is detached and drains concurrently, so overlap is already
+/// how the machinery works). The original L10 design inserted a one-fade
+/// silent lead-in between the two, which the owner heard as a "whoosh /
+/// backing up" dip on every A/B toggle (2026-07-08) — the switch is the
+/// product's hero interaction, so the dip had to go. Overlapping is safe
+/// here precisely because both sources are the SAME track at the same
+/// position: linear crossfade of correlated signals sums to ~unity (an
+/// equal-power curve would bump correlated audio ~+3 dB mid-fade).
+/// A fresh play gets no audible ramp (`0/0`) so the track's start is
+/// untouched. Either way the source carries `fade_out_trigger` so a *later*
+/// toggle can fade *it* out.
 fn build_swap_fade(
     sample_rate: u32,
     is_swap: bool,
     fade_out_trigger: Arc<AtomicBool>,
 ) -> crate::sources::FadeEnvelope {
     let frames = crate::sources::swap_fade_frames(sample_rate);
-    let (lead_in, fade_in) = if is_swap { (frames, frames) } else { (0, 0) };
+    let (lead_in, fade_in) = if is_swap { (0, frames) } else { (0, 0) };
     crate::sources::FadeEnvelope::new(lead_in, fade_in, frames, fade_out_trigger)
 }
 
@@ -2924,6 +2933,53 @@ mod tests {
         assert_eq!(effective_swap_start_position(10.0, f64::NAN), 10.0);
         // A fresh sink at 0 never drags a valid request back to 0.
         assert_eq!(effective_swap_start_position(42.0, 0.0), 42.0);
+    }
+
+    #[test]
+    fn swap_is_a_true_crossfade_with_no_silent_lead() {
+        // Owner finding 2026-07-08: the original swap design put a one-fade
+        // silent lead on the incoming source, producing a ~45-65 ms dip to
+        // silence on every Original<->Mastered toggle — audible as a
+        // "whoosh / backing up" on the product's hero interaction. A swap
+        // must now crossfade: incoming gain starts ramping IMMEDIATELY, and
+        // the concurrent outgoing fade-out + incoming fade-in must sum to
+        // ~unity at every frame (correlated same-track signals, linear law).
+        use crate::sources::FrameFade;
+        let sr = 48_000u32;
+        let frames = crate::sources::swap_fade_frames(sr);
+
+        // Incoming swap envelope: no silent lead — first frame is audible.
+        let mut incoming = build_swap_fade(sr, true, Arc::new(AtomicBool::new(false)));
+        // Outgoing envelope: a fresh-play source (unity) whose fade-out we
+        // trigger, exactly like handle_play does on a swap.
+        let out_trigger = Arc::new(AtomicBool::new(true));
+        let mut outgoing = build_swap_fade(sr, false, out_trigger);
+
+        let mut first_incoming_gain = None;
+        for _ in 0..frames {
+            let inc = match incoming.advance_frame() {
+                FrameFade::Gain(g) => g,
+                FrameFade::End => panic!("incoming source must not end mid-crossfade"),
+            };
+            let out = match outgoing.advance_frame() {
+                FrameFade::Gain(g) => g,
+                FrameFade::End => break, // outgoing done — incoming carries on
+            };
+            first_incoming_gain.get_or_insert(inc);
+            let sum = inc + out;
+            assert!(
+                (0.9..=1.1).contains(&sum),
+                "crossfade must sum to ~unity, got {sum} (in {inc} + out {out})"
+            );
+        }
+        let first = first_incoming_gain.expect("crossfade produced frames");
+        assert!(
+            first > 0.0,
+            "incoming swap source must be audible on its FIRST frame (no silent lead), got {first}"
+        );
+        // A fresh (non-swap) play stays untouched: unity from frame one.
+        let mut fresh = build_swap_fade(sr, false, Arc::new(AtomicBool::new(false)));
+        assert_eq!(fresh.advance_frame(), FrameFade::Gain(1.0));
     }
 
     #[test]
