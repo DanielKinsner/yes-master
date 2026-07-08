@@ -336,6 +336,23 @@ assertions preserved).
 Further taste findings go to the ledger's post-beta parking lot, not into
 new slices.
 
+#### Slices 14 + 15 — Owner hand-test findings (2026-07-08) — SHIPPED (Fable, same day)
+From the fresh-install hand-test. Both functional (not polish — the polish
+freeze stands):
+- **14 — A/B crossfade** (`2740780`): the Original↔Mastered swap had a
+  one-fade silent lead (~45–65 ms dip the owner heard as "whoosh / backing
+  up" on the hero interaction). Swap is now a true crossfade (no lead;
+  linear law — correlated same-track signals sum to ~unity). Regression test
+  pins unity-sum + first-frame audibility. **Owner ear-check pending** on the
+  next installed build — this is a feel fix and the owner's ear is the
+  acceptance test.
+- **15 — Collision-free export names** (`72b6b3f`): Track Master suggested
+  the same `<stem>__master.wav` every export; the OS replace prompt was the
+  only overwrite guard, against the "never overwrite by default"
+  non-negotiable. New `suggest_export_filename` command picks the first free
+  `name.wav` / `name-2.wav` / … in the remembered export dir; frontend
+  degrades to the base name safely. Rust tempdir test + integration tests.
+
 #### Slice 12 — Beta go/no-go checklist (docs only)
 Assemble `docs/plans/beta-go-no-go.md` (shipped): listening note exists; macOS + Windows
 real-machine installs confirmed; signed artifacts downloadable; landing copy
