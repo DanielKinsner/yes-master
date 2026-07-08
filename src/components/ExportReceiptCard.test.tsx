@@ -103,6 +103,24 @@ describe("ExportReceiptCard", () => {
     );
   });
 
+  it("copies the saved file path to the clipboard and confirms", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    const container = render(
+      <ExportReceiptCard receipt={receipt([])} track={track()} onClose={() => {}} />,
+    );
+    const copyBtn = container.querySelector<HTMLButtonElement>(".receipt-file-copy");
+    expect(copyBtn).not.toBeNull();
+    await act(async () => {
+      copyBtn!.click();
+    });
+    expect(writeText).toHaveBeenCalledWith("out/track.master.wav");
+    expect(container.querySelector(".receipt-file-copy.is-copied")).not.toBeNull();
+  });
+
   it("renders the review medallion for a single warning without double-pluralizing", () => {
     const container = render(
       <ExportReceiptCard

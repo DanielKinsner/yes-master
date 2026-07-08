@@ -2757,7 +2757,13 @@ button.primary:disabled {
   padding: 0.25rem 0.45rem;
 }
 
-.receipt-path {
+.receipt-file {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.receipt-file-open {
   font-family: ui-monospace, "SF Mono", Consolas, monospace;
   font-size: 0.78rem;
   color: var(--text-1);
@@ -2766,7 +2772,8 @@ button.primary:disabled {
   border-radius: var(--radius-sm);
   word-break: break-all;
   display: block;
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   text-align: left;
   border: 1px solid var(--border);
   cursor: pointer;
@@ -2791,9 +2798,32 @@ button.primary:disabled {
   line-height: 1.35;
 }
 
-.receipt-path:hover {
+.receipt-file-open:hover {
   color: var(--text-0);
   border-color: var(--accent);
+}
+
+.receipt-file-copy {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  color: var(--text-2);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+}
+
+.receipt-file-copy:hover {
+  color: var(--text-0);
+  border-color: var(--accent);
+}
+
+.receipt-file-copy.is-copied {
+  color: #6cd08a;
+  border-color: rgba(108, 208, 138, 0.5);
 }
 
 .receipt-checks {

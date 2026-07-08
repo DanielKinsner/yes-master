@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { api } from "../lib/api";
 import { formatDuration } from "../lib/time-format";
 import type { ImportedTrack, QualityCheck, QualityLevel } from "../bindings";
@@ -15,12 +16,30 @@ export function ExportReceiptCard({
   track: ImportedTrack | null;
   onClose: () => void;
 }) {
+  const [copiedPath, setCopiedPath] = useState<string | null>(null);
   const reveal = async (path: string) => {
     if (!path) return;
     try {
       await api.openOutput(path);
     } catch (err) {
       console.error("openOutput failed", err);
+    }
+  };
+  // Copy the full path to the clipboard. Reveal (open in file manager) stays
+  // the row's primary action; copy is a distinct sibling button so the two
+  // affordances never nest. The check state self-clears after a beat.
+  const copy = async (path: string) => {
+    const clip = navigator.clipboard;
+    if (!path || !clip) return;
+    try {
+      await clip.writeText(path);
+      setCopiedPath(path);
+      window.setTimeout(
+        () => setCopiedPath((current) => (current === path ? null : current)),
+        1600,
+      );
+    } catch (err) {
+      console.error("copy path failed", err);
     }
   };
   const paths = receipt.job.output_paths;
@@ -71,24 +90,39 @@ export function ExportReceiptCard({
           </section>
         )}
         <div className="receipt-section-title">
-          {paths.length === 1 ? "Saved file" : "Saved files"}
+          {paths.length === 1 ? "File saved" : "Files saved"}
         </div>
         <div className="receipt-paths">
           {paths.map((path, i) => (
-            <button
-              key={path + i}
-              type="button"
-              className="receipt-path"
-              onClick={() => reveal(path)}
-              title="Reveal in file manager"
-            >
-              <span className="receipt-path-name">
-                {fileNameFromPath(path)}
-              </span>
-              <span className="receipt-path-full">
-                {path}
-              </span>
-            </button>
+            <div key={path + i} className="receipt-file">
+              <button
+                type="button"
+                className="receipt-file-open"
+                onClick={() => reveal(path)}
+                title="Reveal in file manager"
+              >
+                <span className="receipt-path-name">
+                  {fileNameFromPath(path)}
+                </span>
+                <span className="receipt-path-full">
+                  {path}
+                </span>
+              </button>
+              <button
+                type="button"
+                className={
+                  "receipt-file-copy" +
+                  (copiedPath === path ? " is-copied" : "")
+                }
+                onClick={() => copy(path)}
+                aria-label={
+                  copiedPath === path ? "Path copied" : "Copy file path"
+                }
+                title="Copy path"
+              >
+                {copiedPath === path ? <CheckGlyph /> : <CopyGlyph />}
+              </button>
+            </div>
           ))}
         </div>
         {measurements && (
@@ -185,6 +219,45 @@ function pluralize(count: number, singular: string): string {
 
 function fileNameFromPath(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
+}
+
+// Copy affordance glyphs — inline SVG so they inherit currentColor and need no
+// asset import. CheckGlyph is the transient confirmation after a copy.
+function CopyGlyph() {
+  return (
+    <svg
+      width={15}
+      height={15}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function CheckGlyph() {
+  return (
+    <svg
+      width={15}
+      height={15}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
 }
 
 // The Track section's quiet identity line — the 13c metadata-diet dialect
