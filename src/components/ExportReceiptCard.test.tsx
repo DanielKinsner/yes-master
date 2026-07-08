@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExportReceiptCard, formatBitDepth, formatSampleRate } from "./ExportReceiptCard";
 import type { ExportReceipt } from "../hooks/useTrackMaster";
-import type { QualityCheck, RenderJob } from "../bindings";
+import type { ImportedTrack, QualityCheck, RenderJob } from "../bindings";
 
 vi.mock("../lib/api", () => ({
   api: { openOutput: vi.fn(async () => undefined) },
@@ -48,6 +48,18 @@ function receipt(checks: QualityCheck[]): ExportReceipt {
   };
 }
 
+function track(): ImportedTrack {
+  return {
+    id: "t1",
+    path: "C:/music/lumberjack-final.mp3",
+    display_name: "lumberjack-final",
+    source_format: "mp3",
+    duration_seconds: 252, // 4:12
+    sample_rate: 48_000,
+    channels: 2,
+  };
+}
+
 let root: Root | null = null;
 
 function render(node: React.ReactElement): HTMLElement {
@@ -69,7 +81,7 @@ afterEach(() => {
 describe("ExportReceiptCard", () => {
   it("renders the clean medallion with delivered measurements", () => {
     const container = render(
-      <ExportReceiptCard receipt={receipt([])} onClose={() => {}} />,
+      <ExportReceiptCard receipt={receipt([])} track={track()} onClose={() => {}} />,
     );
     expect(container.querySelector(".receipt-medallion-clean")).not.toBeNull();
     expect(container.textContent).toContain("Export complete");
@@ -78,12 +90,26 @@ describe("ExportReceiptCard", () => {
     expect(container.textContent).toContain("Compression · compression eased low 20%");
   });
 
+  it("renders the Track section identity line from the source track", () => {
+    const container = render(
+      <ExportReceiptCard receipt={receipt([])} track={track()} onClose={() => {}} />,
+    );
+    expect(container.querySelector(".receipt-track-name")?.textContent).toBe(
+      "lumberjack-final",
+    );
+    // 13c dialect: one quiet line, spec order duration · format · sr · channels.
+    expect(container.querySelector(".track-meta-line")?.textContent).toBe(
+      "4:12 · MP3 · 48 kHz · Stereo",
+    );
+  });
+
   it("renders the review medallion for a single warning without double-pluralizing", () => {
     const container = render(
       <ExportReceiptCard
         receipt={receipt([
           { level: "warning", code: "lufs_very_loud", message: "loud" },
         ])}
+        track={track()}
         onClose={() => {}}
       />,
     );
@@ -99,6 +125,7 @@ describe("ExportReceiptCard", () => {
           { level: "warning", code: "lufs_very_loud", message: "loud" },
           { level: "warning", code: "true_peak_high", message: "peak" },
         ])}
+        track={track()}
         onClose={() => {}}
       />,
     );
@@ -113,6 +140,7 @@ describe("ExportReceiptCard", () => {
         receipt={receipt([
           { level: "critical", code: "sample_rate_mismatch", message: "rate" },
         ])}
+        track={track()}
         onClose={() => {}}
       />,
     );

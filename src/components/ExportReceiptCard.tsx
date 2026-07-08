@@ -1,12 +1,18 @@
 import { api } from "../lib/api";
-import type { QualityCheck, QualityLevel } from "../bindings";
+import { formatDuration } from "../lib/time-format";
+import type { ImportedTrack, QualityCheck, QualityLevel } from "../bindings";
 import type { ExportReceipt } from "../hooks/useTrackMaster";
 
 export function ExportReceiptCard({
   receipt,
+  track,
   onClose,
 }: {
   receipt: ExportReceipt;
+  // The source track behind this receipt (selectedTrack at the render site).
+  // Supplies the Track section's identity line; the receipt payload itself
+  // never carried it. `null` only in the degenerate no-selection case.
+  track: ImportedTrack | null;
   onClose: () => void;
 }) {
   const reveal = async (path: string) => {
@@ -57,6 +63,13 @@ export function ExportReceiptCard({
             </li>
           ))}
         </ol>
+        {track && (
+          <section className="receipt-track" aria-label="Track">
+            <div className="receipt-section-title">Track</div>
+            <h3 className="receipt-track-name">{track.display_name}</h3>
+            <span className="track-meta-line">{trackMetaLine(track)}</span>
+          </section>
+        )}
         <div className="receipt-section-title">
           {paths.length === 1 ? "Saved file" : "Saved files"}
         </div>
@@ -172,6 +185,25 @@ function pluralize(count: number, singular: string): string {
 
 function fileNameFromPath(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
+}
+
+// The Track section's quiet identity line — the 13c metadata-diet dialect
+// (`.track-meta-line`): each fact stated once, in spec order
+// duration · format · sample rate · channels. Every part is guarded so a
+// null field simply drops out rather than rendering an empty segment.
+function trackMetaLine(track: ImportedTrack): string {
+  const parts: string[] = [];
+  const duration = formatDuration(track.duration_seconds);
+  if (duration) parts.push(duration);
+  if (track.source_format) parts.push(track.source_format.toUpperCase());
+  if (track.sample_rate) parts.push(formatSampleRate(track.sample_rate));
+  if (track.channels) parts.push(channelLabel(track.channels));
+  return parts.join(" · ");
+}
+
+// Matches the app's existing channel wording (App.tsx track chips).
+function channelLabel(channels: number): string {
+  return channels === 1 ? "Mono" : channels === 2 ? "Stereo" : `${channels}ch`;
 }
 
 // Exported for reuse: StandardView.tsx and AlbumPanel.tsx still hardcode

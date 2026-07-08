@@ -2719,6 +2719,20 @@ button.primary:disabled {
   text-transform: uppercase;
 }
 
+.receipt-track {
+  margin-bottom: 1rem;
+}
+
+.receipt-track-name {
+  margin: 0 0 0.28rem;
+  font-size: 1.35rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--text-0);
+  word-break: break-word;
+}
+
 .receipt-paths {
   display: flex;
   flex-direction: column;

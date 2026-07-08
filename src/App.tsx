@@ -565,6 +565,7 @@ function App() {
       {selectedExportReceipt && view === "advanced" && (
         <ExportReceiptCard
           receipt={selectedExportReceipt}
+          track={tm.selectedTrack ?? null}
           onClose={tm.clearExportReceipt}
         />
       )}
