@@ -2615,119 +2615,100 @@ button.primary:disabled {
 }
 
 .receipt-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 0.9rem;
-  margin-bottom: 0.8rem;
+  position: relative;
+  margin-bottom: 1.6rem;
 }
 
-.receipt-title-group {
+.receipt-close {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.2rem;
+}
+
+.receipt-header-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-right: 2rem;
+}
+
+.receipt-headline {
   min-width: 0;
 }
 
-.receipt-eyebrow {
-  display: block;
-  margin-bottom: 0.22rem;
-  color: var(--text-2);
-  font-size: 0.68rem;
+.receipt-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+  color: var(--accent);
+  font-size: 0.95rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 
-.receipt h2 {
+.receipt-title {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-}
-
-.receipt-medallion {
-  display: grid;
-  place-items: center;
-  min-width: 96px;
-  min-height: 52px;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: rgba(22, 26, 36, 0.72);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  text-align: center;
-}
-
-.receipt-medallion-label {
+  font-size: 2.3rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
   color: var(--text-0);
-  font-size: 0.9rem;
-  font-weight: 700;
-  line-height: 1.1;
 }
 
-.receipt-medallion-detail {
-  margin-top: 0.16rem;
-  color: var(--text-2);
-  font-size: 0.68rem;
-  font-weight: 650;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
+.receipt-subtitle {
+  margin: 0.55rem 0 0;
+  color: var(--text-1);
+  font-size: 0.95rem;
+  line-height: 1.4;
 }
 
-.receipt-medallion-clean {
-  border-color: rgba(108, 208, 138, 0.44);
-  background: rgba(25, 48, 34, 0.5);
-}
-
-.receipt-medallion-review {
-  border-color: rgba(255, 184, 107, 0.44);
-  background: rgba(58, 43, 22, 0.5);
-}
-
-.receipt-medallion-attention {
-  border-color: rgba(255, 118, 118, 0.44);
-  background: rgba(64, 29, 32, 0.5);
-}
-
-.receipt-journey {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.35rem;
-  list-style: none;
-  padding: 0;
-  margin: 0 0 1rem;
-}
-
-.receipt-journey-step {
-  position: relative;
+/* Verified badge — the mock's calm reassurance cue; honest warning colours
+   when the export is flagged. */
+.receipt-verified {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 0.42rem;
-  min-width: 0;
-  color: var(--text-2);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  gap: 0.7rem;
+  max-width: 220px;
+  padding-top: 0.15rem;
 }
 
-.receipt-journey-step:not(:last-child)::after {
-  content: "";
-  position: absolute;
-  left: calc(0.5rem + 0.42rem);
-  right: -0.15rem;
-  top: 0.5rem;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(108, 208, 138, 0.45), rgba(108, 208, 138, 0.08));
-}
-
-.receipt-journey-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: #6cd08a;
-  box-shadow: 0 0 0 3px rgba(108, 208, 138, 0.12);
+.receipt-verified-icon {
   flex: 0 0 auto;
-  position: relative;
-  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+
+.receipt-verified-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.receipt-verified-title {
+  color: var(--text-0);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.28;
+}
+
+.receipt-verified-detail {
+  color: var(--text-2);
+  font-size: 0.88rem;
+  line-height: 1.28;
+}
+
+.receipt-verified-review .receipt-verified-icon,
+.receipt-verified-review .receipt-verified-title {
+  color: var(--accent-warm);
+}
+
+.receipt-verified-attention .receipt-verified-icon,
+.receipt-verified-attention .receipt-verified-title {
+  color: var(--accent-danger);
 }
 
 .receipt-section-title {

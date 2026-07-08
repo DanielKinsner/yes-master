@@ -312,7 +312,7 @@ describe("album export actions", () => {
     });
   });
 
-  it("shows a quiet export journey and clean result on completed exports", async () => {
+  it("shows the verified badge and clean result on completed exports", async () => {
     mocks.tm = {
       ...baseTrackMasterState(),
       selectedTrackId: track.id,
@@ -329,16 +329,9 @@ describe("album export actions", () => {
 
     const { container, root } = await renderApp();
 
-    expect(container.querySelector(".receipt-medallion-clean")?.textContent).toContain(
-      "Clean",
+    expect(container.querySelector(".receipt-verified-clean")?.textContent).toContain(
+      "File processed and verified",
     );
-    const steps = Array.from(container.querySelectorAll(".receipt-journey-step"));
-    expect(steps.map((step) => step.textContent?.trim())).toEqual([
-      "Analyze",
-      "Master",
-      "Quality",
-      "Saved",
-    ]);
     expect(container.querySelector(".receipt-path-name")?.textContent).toBe(
       "album-track-1__master.wav",
     );
@@ -442,7 +435,7 @@ describe("album export actions", () => {
 
     const { container, root } = await renderApp();
 
-    expect(container.querySelector(".receipt-medallion-review")?.textContent).toContain(
+    expect(container.querySelector(".receipt-verified-review")?.textContent).toContain(
       "Review",
     );
     expect(container.querySelector(".receipt-summary")?.textContent).toContain(

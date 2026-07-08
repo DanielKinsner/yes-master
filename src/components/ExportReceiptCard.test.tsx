@@ -155,8 +155,9 @@ describe("ExportReceiptCard", () => {
         onClose={() => {}}
       />,
     );
-    expect(container.querySelector(".receipt-medallion-clean")).not.toBeNull();
+    expect(container.querySelector(".receipt-verified-clean")).not.toBeNull();
     expect(container.textContent).toContain("Export complete");
+    expect(container.textContent).toContain("File processed and verified");
     expect(container.textContent).toContain("-13.5 LUFS");
     expect(container.textContent).toContain("Source · bass +1.2");
     expect(container.textContent).toContain("Compression · compression eased low 20%");
@@ -277,7 +278,7 @@ describe("ExportReceiptCard", () => {
         onClose={() => {}}
       />,
     );
-    expect(container.querySelector(".receipt-medallion-review")).not.toBeNull();
+    expect(container.querySelector(".receipt-verified-review")).not.toBeNull();
     expect(container.textContent).toContain("1 item to review");
     expect(container.textContent).not.toContain("reviews");
   });
@@ -295,7 +296,7 @@ describe("ExportReceiptCard", () => {
         onClose={() => {}}
       />,
     );
-    expect(container.querySelector(".receipt-medallion-review")).not.toBeNull();
+    expect(container.querySelector(".receipt-verified-review")).not.toBeNull();
     expect(container.textContent).toContain("2 items to review");
     expect(container.textContent).not.toContain("reviews");
   });
@@ -312,7 +313,7 @@ describe("ExportReceiptCard", () => {
         onClose={() => {}}
       />,
     );
-    expect(container.querySelector(".receipt-medallion-attention")).not.toBeNull();
+    expect(container.querySelector(".receipt-verified-attention")).not.toBeNull();
     expect(container.textContent).toContain("Export saved — needs attention");
   });
 

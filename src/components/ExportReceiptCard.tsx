@@ -97,35 +97,45 @@ export function ExportReceiptCard({
     quality.tone === "attention"
       ? "Export saved — needs attention"
       : "Export complete";
-  const journeySteps = ["Analyze", "Master", "Quality", "Saved"];
+  const headerSubtitle =
+    quality.tone === "clean"
+      ? "Your track has been mastered and is ready."
+      : `Your master is saved — ${quality.detail}.`;
+  // The mock's calm reassurance badge; for a flagged export it turns into the
+  // honest warning cue rather than an unconditional "verified".
+  const badge =
+    quality.tone === "clean"
+      ? { title: "File processed and verified", detail: "by the YES Master engine" }
+      : { title: quality.label, detail: quality.detail };
   return (
     <div className="receipt-backdrop" onClick={onClose}>
       <div className="receipt" onClick={(e) => e.stopPropagation()}>
         <header className="receipt-header">
-          <div className="receipt-title-group">
-            <span className="receipt-eyebrow">
-              Track master
-            </span>
-            <h2>{headerTitle}</h2>
-          </div>
-          <div className={`receipt-medallion receipt-medallion-${quality.tone}`}>
-            <span className="receipt-medallion-label">{quality.label}</span>
-            <span className="receipt-medallion-detail receipt-summary">
-              {quality.detail}
-            </span>
-          </div>
-          <button type="button" className="toast-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="toast-close receipt-close" onClick={onClose} aria-label="Close">
             ×
           </button>
+          <div className="receipt-header-main">
+            <div className="receipt-headline">
+              <span className="receipt-wordmark">
+                <WordmarkGlyph />
+                YES Master
+              </span>
+              <h2 className="receipt-title">{headerTitle}</h2>
+              <p className="receipt-subtitle">{headerSubtitle}</p>
+            </div>
+            <div className={`receipt-verified receipt-verified-${quality.tone}`}>
+              <span className="receipt-verified-icon" aria-hidden>
+                {quality.tone === "clean" ? <CircleCheckGlyph /> : <CircleAlertGlyph />}
+              </span>
+              <span className="receipt-verified-text">
+                <span className="receipt-verified-title">{badge.title}</span>
+                <span className="receipt-verified-detail receipt-summary">
+                  {badge.detail}
+                </span>
+              </span>
+            </div>
+          </div>
         </header>
-        <ol className="receipt-journey" aria-label="Export steps">
-          {journeySteps.map((step) => (
-            <li key={step} className="receipt-journey-step is-complete">
-              <span className="receipt-journey-dot" aria-hidden />
-              <span>{step}</span>
-            </li>
-          ))}
-        </ol>
         <div className="receipt-body">
           <div className="receipt-col">
         {track && (
@@ -389,6 +399,50 @@ function CheckGlyph() {
       aria-hidden
     >
       <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+// Small waveform wordmark glyph beside "YES Master" in the header.
+function WordmarkGlyph() {
+  return (
+    <svg
+      width={17}
+      height={17}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <path d="M3 12h1.5" />
+      <path d="M7 7v10" />
+      <path d="M11 4v16" />
+      <path d="M15 8v8" />
+      <path d="M19 10v4" />
+      <path d="M21.5 12H21" />
+    </svg>
+  );
+}
+
+// Verified-badge icons: a ringed check for a clean export, a ringed alert for a
+// flagged one. The ring + colour come from the badge's tone class.
+function CircleCheckGlyph() {
+  return (
+    <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 12.2l2.4 2.4 4.6-4.8" />
+    </svg>
+  );
+}
+
+function CircleAlertGlyph() {
+  return (
+    <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v4.5" />
+      <path d="M12 16h.01" />
     </svg>
   );
 }
