@@ -12,6 +12,44 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-07-08 — Export receipt rebuilt into the "Export Complete" card
+
+Owner-approved premium slice (an explicit exception to the UI-polish freeze).
+The Track Master export receipt (Advanced view) was rebuilt into the
+"Export Complete" card design, frontend only, in eight small commits — one per
+section. Everything is wired to data the app already has: nothing invented,
+nothing hardcoded.
+
+- **Track** — display name + the 13c metadata-diet identity line
+  (duration · format · sample rate · channels).
+- **File saved** — filename + full path with a copy-to-clipboard button
+  alongside the existing reveal-in-file-manager action.
+- **Mastering style** — the preset's own orb art (same PNGs as the Styles
+  tiles) + its real label/blurb, beside a radial intensity dial showing the
+  real percentage and the real intensity label (50% is "Moderate", not the
+  mock's fictional "Aggressive"). `PRESET_OPTIONS` moved to
+  `lib/preset-copy.ts` as the single source for that copy.
+- **Results** — Integrated loudness / True peak / **Dynamic range** from
+  measured render values; the old row was mislabelled "LRA" but the engine
+  measures dynamic range, not EBU Loudness Range. Mastering Target chip = real
+  delivery-profile name + target LUFS.
+- **Quality check** — the receipt's honesty surface: source measurements with
+  per-axis icons driven by the REAL export checks. A warned/critical export
+  can never render as an all-green card; format-only checks (bit depth, sample
+  rate) surface as their own honest rows. Logic in a pure, unit-tested helper
+  (`lib/receipt-quality.ts`).
+- **Audio format** — bit depth · sample rate · file type (channels omitted:
+  the delivered channel count isn't measured on the receipt).
+- **Footer** — export timestamp + real build stamp (version · git hash · build
+  time) from the `build_info` command; no external link, no fabricated engine
+  version.
+- **Layout** — the mock's two-column premium card, responsive (collapses to one
+  column on narrow windows), verified at 1920×1080 and 1360×740.
+
+No Rust changes: the card is fed by props from the render site
+(selectedTrack / selectedSettings / selectedAnalysis) rather than widening the
+export-receipt payload.
+
 ## 2026-07-04 — Local diagnostics (log + save-a-report)
 
 The first "product meets the world" slice from the blind-spot review: the
