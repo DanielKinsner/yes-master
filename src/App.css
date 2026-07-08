@@ -2588,8 +2588,8 @@ button.primary:disabled {
   background: var(--bg-1);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  padding: 1.4rem 1.6rem;
-  max-width: 940px;
+  padding: 1.9rem 2rem;
+  max-width: 960px;
   width: 100%;
   max-height: calc(100vh - 4rem);
   overflow-y: auto;
@@ -2604,7 +2604,7 @@ button.primary:disabled {
 .receipt-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1.5rem;
+  gap: 2.2rem;
 }
 
 @media (max-width: 780px) {
@@ -2739,15 +2739,15 @@ button.primary:disabled {
 }
 
 .receipt-track {
-  margin-bottom: 1rem;
+  margin-bottom: 1.4rem;
 }
 
 .receipt-track-name {
-  margin: 0 0 0.28rem;
-  font-size: 1.35rem;
+  margin: 0 0 0.34rem;
+  font-size: 1.75rem;
   font-weight: 750;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
   color: var(--text-0);
   word-break: break-word;
 }
@@ -2756,24 +2756,56 @@ button.primary:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.4rem;
 }
 
-.receipt-render-meta {
+/* Advanced details — adaptive/source traceability, collapsed by default so it
+   stays honest and available without cluttering the premium view. */
+.receipt-details {
+  margin-top: 1.3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.receipt-details-summary {
+  cursor: pointer;
+  color: var(--text-2);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  list-style: none;
+  user-select: none;
+}
+
+.receipt-details-summary::-webkit-details-marker {
+  display: none;
+}
+
+.receipt-details-summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 0.4rem;
+  transition: transform 0.12s ease;
+}
+
+.receipt-details[open] .receipt-details-summary::before {
+  transform: rotate(90deg);
+}
+
+.receipt-details-body {
   display: flex;
   gap: 0.45rem;
   flex-wrap: wrap;
-  margin: -0.35rem 0 1rem;
+  margin-top: 0.8rem;
   color: var(--text-2);
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0;
+  font-size: 0.74rem;
 }
 
-.receipt-render-meta span {
+.receipt-details-body span {
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 0.25rem 0.45rem;
+  padding: 0.25rem 0.5rem;
 }
 
 .receipt-file {

@@ -264,32 +264,33 @@ export function ExportReceiptCard({
           </div>
         </div>
         {measurements && (
-          // B5 — adaptive-DSP traceability: a delivered master records what
-          // adaptation produced it (digest present = guardrails were active).
-          // Full-width below the columns — advisory context, not a headline.
-          <div className="receipt-render-meta" aria-label="Adaptive DSP">
-            {measurements.source_profile_digest ? (
-              <>
-                <span>
-                  Adaptive{" "}
-                  {Math.round((measurements.effective_adaptive_strength ?? 0) * 100)}%
+          // B5 — adaptive-DSP traceability. Kept honest and available but tucked
+          // behind a collapsed disclosure so it doesn't clutter the receipt
+          // (owner decision 2026-07-08); the "Source ·" labelling from the
+          // 2026-06-09 inquiry is preserved inside.
+          <details className="receipt-details">
+            <summary className="receipt-details-summary">Advanced details</summary>
+            <div className="receipt-details-body" aria-label="Adaptive DSP">
+              {measurements.source_profile_digest ? (
+                <>
+                  <span>
+                    Adaptive{" "}
+                    {Math.round((measurements.effective_adaptive_strength ?? 0) * 100)}%
+                  </span>
+                  <span title="Source profile that drove adaptation — these describe the SOURCE, not the delivered master">
+                    Source · {measurements.source_profile_digest}
+                  </span>
+                </>
+              ) : (
+                <span>Adaptive: off</span>
+              )}
+              {measurements.compression_digest && (
+                <span title="Backend-resolved adaptive compressor guard summary">
+                  Compression · {measurements.compression_digest}
                 </span>
-                <span title="Source profile that drove adaptation — these describe the SOURCE, not the delivered master">
-                  {/* Visible "Source" prefix (export-metrics inquiry 2026-06-09):
-                      a hover-only tooltip let these source stats read as master
-                      measurements right under the output chips. */}
-                  Source · {measurements.source_profile_digest}
-                </span>
-              </>
-            ) : (
-              <span>Adaptive: off</span>
-            )}
-            {measurements.compression_digest && (
-              <span title="Backend-resolved adaptive compressor guard summary">
-                Compression · {measurements.compression_digest}
-              </span>
-            )}
-          </div>
+              )}
+            </div>
+          </details>
         )}
         <footer className="receipt-footer">
           <span className="receipt-footer-stamp" title="Version · git hash · build time">
