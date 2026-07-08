@@ -2,6 +2,10 @@ import { useState, type CSSProperties } from "react";
 import { api } from "../lib/api";
 import { formatDuration } from "../lib/time-format";
 import { presetCopy } from "../lib/preset-copy";
+import {
+  buildQualityRows,
+  type QualityRowState,
+} from "../lib/receipt-quality";
 import { PresetIcon, PRESET_ACCENT } from "./PresetIcon";
 import { intensityLabel } from "./Knob";
 import {
@@ -9,11 +13,11 @@ import {
   DELIVERY_PROFILE_TARGET_LUFS,
 } from "../bindings";
 import type {
+  AnalysisResult,
   DeliveryProfile,
   ImportedTrack,
   MasteringSettings,
   QualityCheck,
-  QualityLevel,
 } from "../bindings";
 import type { ExportReceipt } from "../hooks/useTrackMaster";
 
@@ -21,6 +25,7 @@ export function ExportReceiptCard({
   receipt,
   track,
   settings,
+  analysis,
   onClose,
 }: {
   receipt: ExportReceipt;
@@ -31,6 +36,9 @@ export function ExportReceiptCard({
   // The settings that produced this master (selectedSettings) — supplies the
   // Mastering Style block (preset + intensity) and the delivery-profile target.
   settings: MasteringSettings;
+  // The source analysis (selectedAnalysis) — supplies the Quality Check rows'
+  // source measurements. `null` if the analysis isn't available.
+  analysis: AnalysisResult | null;
   onClose: () => void;
 }) {
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
@@ -62,6 +70,7 @@ export function ExportReceiptCard({
   const paths = receipt.job.output_paths;
   const measurements = receipt.job.measurements ?? null;
   const quality = exportQualitySummary(receipt.checks);
+  const qualityRows = buildQualityRows(receipt.checks, analysis);
   // A Critical quality row means the saved file needs attention — don't present
   // it as an unqualified "complete". The file IS written and valid (criticals are
   // advisory format/loudness flags), so "saved" stays accurate while the header
@@ -207,18 +216,41 @@ export function ExportReceiptCard({
             )}
           </div>
         )}
-        {receipt.checks.length > 0 && (
-          <div className="receipt-checks">
-            <div className="receipt-section-title">Quality notes</div>
-            {receipt.checks.map((c, i) => (
-              <CheckRow key={i} check={c} />
+        <section className="receipt-quality" aria-label="Quality check">
+          <div className="receipt-section-title">Quality check</div>
+          <ul className="receipt-quality-list">
+            {qualityRows.map((row) => (
+              <li key={row.key} className={`receipt-quality-row is-${row.state}`}>
+                <span
+                  className="receipt-quality-icon"
+                  role="img"
+                  aria-label={QUALITY_STATE_LABEL[row.state]}
+                >
+                  {row.state === "ok" ? <CheckGlyph /> : <AlertGlyph />}
+                </span>
+                <span className="receipt-quality-text">
+                  <span className="receipt-quality-label">{row.label}</span>
+                  {row.note && (
+                    <span className="receipt-quality-note">{row.note}</span>
+                  )}
+                </span>
+                {row.value && (
+                  <span className="receipt-quality-value">{row.value}</span>
+                )}
+              </li>
             ))}
-          </div>
-        )}
+          </ul>
+        </section>
       </div>
     </div>
   );
 }
+
+const QUALITY_STATE_LABEL: Record<QualityRowState, string> = {
+  ok: "Clean",
+  warning: "Warning",
+  critical: "Critical",
+};
 
 function exportQualitySummary(checks: QualityCheck[]): {
   tone: "clean" | "review" | "attention";
@@ -293,6 +325,28 @@ function CheckGlyph() {
       aria-hidden
     >
       <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+// Warning/critical marker for a flagged Quality Check row. Colour is carried by
+// the row's is-warning / is-critical class, not the glyph.
+function AlertGlyph() {
+  return (
+    <svg
+      width={15}
+      height={15}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
     </svg>
   );
 }
@@ -399,17 +453,4 @@ export function formatSampleRate(sampleRate: number): string {
 
 export function formatBitDepth(bitDepth: number): string {
   return bitDepth === 32 ? "32-bit float" : `${bitDepth}-bit`;
-}
-
-function CheckRow({ check }: { check: QualityCheck }) {
-  return (
-    <div className={"check-row level-" + levelClass(check.level)}>
-      <span className="check-level">{check.level}</span>
-      <span className="check-msg">{check.message}</span>
-    </div>
-  );
-}
-
-function levelClass(level: QualityLevel): string {
-  return level;
 }

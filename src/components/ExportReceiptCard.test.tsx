@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ExportReceiptCard, formatBitDepth, formatSampleRate } from "./ExportReceiptCard";
 import type { ExportReceipt } from "../hooks/useTrackMaster";
 import type {
+  AnalysisResult,
   ImportedTrack,
   MasteringSettings,
   QualityCheck,
@@ -63,6 +64,16 @@ function track(): ImportedTrack {
     sample_rate: 48_000,
     channels: 2,
   };
+}
+
+// buildQualityRows reads only these three source measurements — a lean cast
+// keeps the fixture readable (values mirror the mock's source rows).
+function analysis(): AnalysisResult {
+  return {
+    true_peak_dbtp: 2.5,
+    lufs_integrated: -7.5,
+    dynamic_range_lu: 6.6,
+  } as unknown as AnalysisResult;
 }
 
 // Matches the shape of DEFAULT_SETTINGS (useTrackMaster) — the receipt reads
@@ -137,6 +148,7 @@ describe("ExportReceiptCard", () => {
         receipt={receipt([])}
         track={track()}
         settings={settings()}
+        analysis={analysis()}
         onClose={() => {}}
       />,
     );
@@ -153,6 +165,7 @@ describe("ExportReceiptCard", () => {
         receipt={receipt([])}
         track={track()}
         settings={settings({ delivery_profile: "streaming-universal" })}
+        analysis={analysis()}
         onClose={() => {}}
       />,
     );
@@ -176,6 +189,7 @@ describe("ExportReceiptCard", () => {
         receipt={receipt([])}
         track={track()}
         settings={settings({ delivery_profile: "custom" })}
+        analysis={analysis()}
         onClose={() => {}}
       />,
     );
@@ -188,6 +202,7 @@ describe("ExportReceiptCard", () => {
         receipt={receipt([])}
         track={track()}
         settings={settings()}
+        analysis={analysis()}
         onClose={() => {}}
       />,
     );
@@ -211,6 +226,7 @@ describe("ExportReceiptCard", () => {
         receipt={receipt([])}
         track={track()}
         settings={settings()}
+        analysis={analysis()}
         onClose={() => {}}
       />,
     );
@@ -229,6 +245,7 @@ describe("ExportReceiptCard", () => {
         receipt={receipt([])}
         track={track()}
         settings={settings({ preset: { kind: "warmth" }, intensity: 0.5 })}
+        analysis={analysis()}
         onClose={() => {}}
       />,
     );
@@ -253,6 +270,7 @@ describe("ExportReceiptCard", () => {
         ])}
         track={track()}
         settings={settings()}
+        analysis={analysis()}
         onClose={() => {}}
       />,
     );
@@ -270,6 +288,7 @@ describe("ExportReceiptCard", () => {
         ])}
         track={track()}
         settings={settings()}
+        analysis={analysis()}
         onClose={() => {}}
       />,
     );
@@ -286,11 +305,82 @@ describe("ExportReceiptCard", () => {
         ])}
         track={track()}
         settings={settings()}
+        analysis={analysis()}
         onClose={() => {}}
       />,
     );
     expect(container.querySelector(".receipt-medallion-attention")).not.toBeNull();
     expect(container.textContent).toContain("Export saved — needs attention");
+  });
+
+  it("renders three clean source rows when the export has no flags", () => {
+    const container = render(
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings()}
+        analysis={analysis()}
+        onClose={() => {}}
+      />,
+    );
+    const rows = container.querySelectorAll(".receipt-quality-row");
+    expect(rows).toHaveLength(3);
+    expect(container.querySelectorAll(".receipt-quality-row.is-ok")).toHaveLength(3);
+    expect(container.querySelector(".receipt-quality-row.is-warning")).toBeNull();
+    expect(container.querySelector(".receipt-quality-row.is-critical")).toBeNull();
+    // Source values from analysis.
+    expect(container.textContent).toContain("2.5 dBTP");
+    expect(container.textContent).toContain("-7.5 LUFS");
+    expect(container.textContent).toContain("6.6 LU");
+  });
+
+  it("renders the warning-state Quality Check variant — never all-green when flagged", () => {
+    const container = render(
+      <ExportReceiptCard
+        receipt={receipt([
+          {
+            level: "warning",
+            code: "lufs_very_loud",
+            message: "Integrated loudness is -6.0 LUFS.",
+          },
+        ])}
+        track={track()}
+        settings={settings()}
+        analysis={analysis()}
+        onClose={() => {}}
+      />,
+    );
+    // The honest state + colour reaches the loudness row and its message shows.
+    const warned = container.querySelector(".receipt-quality-row.is-warning");
+    expect(warned).not.toBeNull();
+    expect(warned?.textContent).toContain("Source loudness");
+    expect(warned?.textContent).toContain("Integrated loudness is -6.0 LUFS.");
+    // Not an all-green card: at least one row is non-ok.
+    const okRows = container.querySelectorAll(".receipt-quality-row.is-ok").length;
+    const total = container.querySelectorAll(".receipt-quality-row").length;
+    expect(okRows).toBeLessThan(total);
+  });
+
+  it("surfaces a format-only critical (sample-rate mismatch) as its own honest row", () => {
+    const container = render(
+      <ExportReceiptCard
+        receipt={receipt([
+          {
+            level: "critical",
+            code: "sample_rate_mismatch",
+            message: "Rendered 44100 Hz does not match 48000 Hz.",
+          },
+        ])}
+        track={track()}
+        settings={settings()}
+        analysis={analysis()}
+        onClose={() => {}}
+      />,
+    );
+    const critical = container.querySelector(".receipt-quality-row.is-critical");
+    expect(critical).not.toBeNull();
+    expect(critical?.textContent).toContain("Sample rate");
+    expect(critical?.textContent).toContain("Rendered 44100 Hz does not match 48000 Hz.");
   });
 });
 

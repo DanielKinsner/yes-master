@@ -2993,57 +2993,84 @@ button.primary:disabled {
   text-align: right;
 }
 
-.receipt-checks {
+/* Quality Check — the receipt's honesty surface. Each row shows a source
+   measurement with an icon reflecting the REAL delivered-master check level;
+   a warned/critical row keeps its honest colour so the card can never read as
+   all-green when the export was flagged. */
+.receipt-quality {
+  margin-bottom: 1rem;
+}
+
+.receipt-quality-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
 }
 
-.check-row {
+.receipt-quality-row {
   display: grid;
-  grid-template-columns: 80px 1fr;
-  gap: 0.85rem;
-  padding: 0.5rem 0.75rem;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-2);
-  border: 1px solid var(--border);
   font-size: 0.85rem;
 }
 
-.check-row.level-info {
-  border-color: rgba(108, 208, 138, 0.4);
+.receipt-quality-icon {
+  display: grid;
+  place-items: center;
 }
 
-.check-row.level-warning {
-  border-color: rgba(255, 184, 107, 0.4);
+.receipt-quality-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
-.check-row.level-critical {
-  border-color: rgba(255, 118, 118, 0.4);
+.receipt-quality-label {
+  color: var(--text-1);
 }
 
-.check-level {
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+.receipt-quality-note {
   color: var(--text-2);
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
-.check-row.level-info .check-level {
+.receipt-quality-value {
+  color: var(--text-0);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.receipt-quality-row.is-ok .receipt-quality-icon {
   color: #6cd08a;
 }
 
-.check-row.level-warning .check-level {
+.receipt-quality-row.is-warning {
+  border-color: rgba(255, 184, 107, 0.5);
+  background: rgba(58, 43, 22, 0.4);
+}
+
+.receipt-quality-row.is-warning .receipt-quality-icon {
   color: var(--accent-warm);
 }
 
-.check-row.level-critical .check-level {
-  color: var(--accent-danger);
+.receipt-quality-row.is-critical {
+  border-color: rgba(255, 118, 118, 0.55);
+  background: rgba(64, 29, 32, 0.45);
 }
 
-.check-msg {
-  color: var(--text-1);
-  line-height: 1.4;
+.receipt-quality-row.is-critical .receipt-quality-icon {
+  color: var(--accent-danger);
 }
 
 /* Phase 12.2 P2 — right-rail master-out / quality panels. */

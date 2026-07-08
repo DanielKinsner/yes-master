@@ -559,6 +559,7 @@ function App() {
           receipt={selectedExportReceipt}
           track={tm.selectedTrack ?? null}
           settings={tm.selectedSettings}
+          analysis={tm.selectedAnalysis ?? null}
           onClose={tm.clearExportReceipt}
         />
       )}
