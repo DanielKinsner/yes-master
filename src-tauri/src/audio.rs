@@ -1075,6 +1075,10 @@ struct AudioThreadState {
     /// currently-loaded decoded PCM. Cleared whenever
     /// `handle_play_master` swaps in a different canonical path.
     landing_gain_cache: PreviewLandingCache,
+    /// 14b — memoized Volume Match gains, same key discipline (and
+    /// therefore the same struct) as `landing_gain_cache`; same lifecycle
+    /// (cleared wherever the landing cache clears).
+    vm_gain_cache: PreviewLandingCache,
     /// Shared post-output-gain peak slot. `MasteringSource` writes via
     /// `fetch_max` per frame; the audio thread `swap`s to 0 each snapshot
     /// cycle to compute "peak since last tick." Bits are an f32 magnitude;
@@ -1156,6 +1160,7 @@ impl AudioThreadState {
             lufs_worker_pending: None,
             decoded_cache: None,
             landing_gain_cache: PreviewLandingCache::new(),
+            vm_gain_cache: PreviewLandingCache::new(),
             peak_linear: Arc::new(AtomicU32::new(0)),
             peak_left_linear: Arc::new(AtomicU32::new(0)),
             peak_right_linear: Arc::new(AtomicU32::new(0)),
@@ -1461,6 +1466,10 @@ fn export_landing_gain_lin_for_preview(
         .map_err(|e| e.to_string())
 }
 
+/// Raw (un-memoized) variant — production paths all route through
+/// `apply_preview_volume_match_gain_memoized` (14b); this survives only for
+/// the `live_preview_coeffs` test composition helper.
+#[cfg(test)]
 fn apply_preview_volume_match_gain(
     coeffs: &mut crate::dsp::ChainCoeffs,
     samples: &[f32],
@@ -1480,16 +1489,54 @@ fn apply_preview_volume_match_gain(
     }
 }
 
+/// 14b (owner ear-test 2026-07-08): `preview_volume_match_gain` renders ~8 s
+/// of audio through the full chain + two LUFS integrations, SYNCHRONOUSLY on
+/// the audio command thread — the owner heard it as a ~500 ms stall on every
+/// Original→Mastered flip with Volume Match on (Mastered→Original was clean:
+/// no VM compute on that side). The gain depends only on (track PCM,
+/// DSP-relevant settings), so it memoizes on the SAME key discipline as the
+/// landing cache — `settings_landing_hash` already strips `volume_match` and
+/// `source_lufs_integrated`, and the VM measurement itself runs VM-stripped,
+/// so the key fits VM exactly. First-ever flip still computes once
+/// (follow-up: move the cold compute onto the preview worker); every repeat
+/// toggle and settings-echo is now a hash lookup.
+fn apply_preview_volume_match_gain_memoized(
+    coeffs: &mut crate::dsp::ChainCoeffs,
+    vm_cache: &mut PreviewLandingCache,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+) {
+    if !settings.volume_match {
+        return;
+    }
+    if let Some(gain) = vm_cache.get(settings) {
+        coeffs.volume_match_gain_lin = gain;
+        return;
+    }
+    if let Ok(gain) =
+        crate::engine::preview_volume_match_gain(samples, sample_rate, channels, settings)
+    {
+        if gain.is_finite() && gain > 0.0 {
+            coeffs.volume_match_gain_lin = gain;
+            vm_cache.insert(settings, gain);
+        }
+    }
+}
+
 fn apply_preview_volume_match_gain_from_cache(
     coeffs: &mut crate::dsp::ChainCoeffs,
+    vm_cache: &mut PreviewLandingCache,
     decoded_cache: Option<&DecodedCacheEntry>,
     settings: &MasteringSettings,
 ) {
     let Some(cache_entry) = decoded_cache else {
         return;
     };
-    apply_preview_volume_match_gain(
+    apply_preview_volume_match_gain_memoized(
         coeffs,
+        vm_cache,
         cache_entry.pcm.samples.as_slice(),
         cache_entry.pcm.sample_rate,
         cache_entry.pcm.channels,
@@ -1857,6 +1904,7 @@ fn process_audio_command(
                     let mut coeffs = crate::dsp::ChainCoeffs::from_settings(sample_rate, &settings);
                     apply_preview_volume_match_gain_from_cache(
                         &mut coeffs,
+                        &mut s.vm_gain_cache,
                         s.decoded_cache.as_ref(),
                         &settings,
                     );
@@ -1958,6 +2006,7 @@ fn process_audio_command(
                             );
                             apply_preview_volume_match_gain_from_cache(
                                 &mut coeffs,
+                                &mut s.vm_gain_cache,
                                 s.decoded_cache.as_ref(),
                                 &settings,
                             );
@@ -1997,6 +2046,7 @@ fn process_audio_command(
                                     );
                                     apply_preview_volume_match_gain_from_cache(
                                         &mut coeffs,
+                                        &mut s.vm_gain_cache,
                                         s.decoded_cache.as_ref(),
                                         &pending_settings,
                                     );
@@ -2506,6 +2556,7 @@ fn handle_play(
     if cache_stale {
         if let Some(s) = state.as_mut() {
             s.landing_gain_cache.clear();
+            s.vm_gain_cache.clear();
         }
     }
 
@@ -2679,6 +2730,7 @@ fn handle_play_master(
     if cache_stale {
         if let Some(s) = state.as_mut() {
             s.landing_gain_cache.clear();
+            s.vm_gain_cache.clear();
         }
     }
 
@@ -2754,8 +2806,12 @@ fn handle_play_master(
     let landing_plan =
         play_master_preview_landing_plan(&s.landing_gain_cache, settings, preview_lufs_landing);
     chain.coeffs.export_landing_gain_lin = landing_plan.initial_gain;
-    apply_preview_volume_match_gain(
+    // 14b: memoized — the owner's O→M "meter stalls ~500 ms" was this call
+    // rendering 8 s through the chain on the command thread on EVERY flip.
+    // Now only the first flip per (track, settings) computes.
+    apply_preview_volume_match_gain_memoized(
         &mut chain.coeffs,
+        &mut s.vm_gain_cache,
         pcm.samples.as_slice(),
         pcm.sample_rate,
         pcm.channels,
@@ -3747,6 +3803,79 @@ mod tests {
             settings_landing_hash(&b),
             "source LUFS injection must not invalidate the cache"
         );
+    }
+
+    /// 14b (owner ear-test 2026-07-08): Volume Match gain was recomputed
+    /// synchronously (8 s chain render + two LUFS integrations) on EVERY
+    /// Original→Mastered flip — a ~500 ms stall on the audio command thread.
+    /// The memoized path must compute once per (track, settings) and serve
+    /// repeats from the cache. Proof of no-recompute: the second call gets
+    /// SILENCE as samples — a fresh compute on silence returns unity, so
+    /// only a genuine cache hit can reproduce the first (attenuating) gain.
+    #[test]
+    fn vm_gain_memoizes_and_repeat_flips_skip_the_recompute() {
+        let sr = 44_100u32;
+        let channels = 1u16;
+        // One second of a moderate sine plus an explicit +6 dB output gain:
+        // the mastered side is guaranteed louder than the source, forcing a
+        // real attenuation gain (< 1.0) rather than the unity early-out.
+        let samples: Vec<f32> = (0..sr as usize)
+            .map(|i| 0.1 * (i as f32 * 440.0 * std::f32::consts::TAU / sr as f32).sin())
+            .collect();
+        let mut settings = settings_with_intensity(0.8);
+        settings.volume_match = true;
+        settings.output_gain_db = 6.0;
+
+        let mut vm_cache = PreviewLandingCache::new();
+        let mut coeffs = crate::dsp::ChainCoeffs::from_settings(sr, &settings);
+        apply_preview_volume_match_gain_memoized(
+            &mut coeffs,
+            &mut vm_cache,
+            &samples,
+            sr,
+            channels,
+            &settings,
+        );
+        let first_gain = coeffs.volume_match_gain_lin;
+        assert!(
+            first_gain > 0.0 && first_gain < 1.0,
+            "hot source must yield a real attenuating VM gain, got {first_gain}"
+        );
+        assert_eq!(vm_cache.len(), 1, "compute must populate the cache");
+
+        // Second flip: same settings, SILENCE samples. A recompute would
+        // return unity (silence early-out); the cache hit returns first_gain.
+        let silence = vec![0.0f32; sr as usize];
+        let mut coeffs2 = crate::dsp::ChainCoeffs::from_settings(sr, &settings);
+        apply_preview_volume_match_gain_memoized(
+            &mut coeffs2,
+            &mut vm_cache,
+            &silence,
+            sr,
+            channels,
+            &settings,
+        );
+        assert_eq!(
+            coeffs2.volume_match_gain_lin, first_gain,
+            "repeat flip must be served from the cache, not recomputed"
+        );
+
+        // VM off: no compute, no cache traffic, coeffs untouched.
+        let mut off = settings.clone();
+        off.volume_match = false;
+        let mut cache_off = PreviewLandingCache::new();
+        let mut coeffs3 = crate::dsp::ChainCoeffs::from_settings(sr, &off);
+        let neutral = coeffs3.volume_match_gain_lin;
+        apply_preview_volume_match_gain_memoized(
+            &mut coeffs3,
+            &mut cache_off,
+            &samples,
+            sr,
+            channels,
+            &off,
+        );
+        assert_eq!(coeffs3.volume_match_gain_lin, neutral);
+        assert_eq!(cache_off.len(), 0);
     }
 
     #[test]
