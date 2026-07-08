@@ -343,9 +343,20 @@ freeze stands):
   one-fade silent lead (~45–65 ms dip the owner heard as "whoosh / backing
   up" on the hero interaction). Swap is now a true crossfade (no lead;
   linear law — correlated same-track signals sum to ~unity). Regression test
-  pins unity-sum + first-frame audibility. **Owner ear-check pending** on the
-  next installed build — this is a feel fix and the owner's ear is the
-  acceptance test.
+  pins unity-sum + first-frame audibility.
+  **Owner ear-check 2026-07-08 (stamped build 7e3fd23): improved but a
+  residual volume-drop remains, "not egregious but noticeable."** Refined
+  hypothesis (open, investigate before more fixes): (a) part of the "drop"
+  may be the honest loudness difference between Original and Mastered —
+  owner to A/B with Volume Match ON as the discriminating test; (b) the
+  engineering remainder is sink-start latency: the incoming rodio sink takes
+  real milliseconds to reach the DAC while the outgoing side is already
+  fading, producing both a genuine dip and a possible ~latency-sized
+  micro-rewind (incoming starts at the position captured at command time).
+  A proper fix is single-callback source switching (one output stream that
+  swaps sources sample-synchronously) — audio-engine surgery, do NOT rush it
+  pre-beta without a listening plan. Parked as **14b** pending the owner's
+  Volume Match verdict.
 - **15 — Collision-free export names** (`72b6b3f`): Track Master suggested
   the same `<stem>__master.wav` every export; the OS replace prompt was the
   only overwrite guard, against the "never overwrite by default"
