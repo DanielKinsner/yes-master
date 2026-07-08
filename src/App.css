@@ -2712,12 +2712,30 @@ button.primary:disabled {
 }
 
 .receipt-section-title {
-  margin: 0 0 0.45rem;
-  color: var(--text-2);
+  margin: 0 0 0.55rem;
+  color: var(--accent);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+/* Right-column containment panel — Results / Quality check / Audio format read
+   as one framed card (the mock's key move) with thin dividers between them. */
+.receipt-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: rgba(22, 26, 36, 0.4);
+  padding: 0 1.3rem;
+}
+
+.receipt-panel > section {
+  margin: 0;
+  padding: 1.2rem 0;
+}
+
+.receipt-panel > section + section {
+  border-top: 1px solid var(--border);
 }
 
 .receipt-track {
@@ -3045,12 +3063,18 @@ button.primary:disabled {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid var(--border);
+  gap: 0.65rem;
+  /* Clean rows stay airy and borderless — just check + label + value, like the
+     mock. Only a flagged row earns a box (below). */
+  padding: 0.4rem 0;
+  border: 1px solid transparent;
+  font-size: 0.88rem;
+}
+
+.receipt-quality-row.is-warning,
+.receipt-quality-row.is-critical {
+  padding: 0.55rem 0.7rem;
   border-radius: var(--radius-sm);
-  background: var(--bg-2);
-  font-size: 0.85rem;
 }
 
 .receipt-quality-icon {

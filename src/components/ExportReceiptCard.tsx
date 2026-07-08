@@ -184,6 +184,7 @@ export function ExportReceiptCard({
         <MasteringStyle settings={settings} />
           </div>
           <div className="receipt-col">
+            <div className="receipt-panel">
         {measurements && (
           // Delivered-master results. These numbers describe the written file
           // (post-landing), measured and carried on the payload all along.
@@ -259,6 +260,7 @@ export function ExportReceiptCard({
             </dl>
           </section>
         )}
+            </div>
           </div>
         </div>
         {measurements && (
