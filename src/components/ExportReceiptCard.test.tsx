@@ -13,7 +13,10 @@ import type {
 } from "../bindings";
 
 vi.mock("../lib/api", () => ({
-  api: { openOutput: vi.fn(async () => undefined) },
+  api: {
+    openOutput: vi.fn(async () => undefined),
+    buildInfo: vi.fn(async () => "v0.1.0 · abc1234 · 2026-06-10 12:00"),
+  },
 }));
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
@@ -359,6 +362,28 @@ describe("ExportReceiptCard", () => {
     const okRows = container.querySelectorAll(".receipt-quality-row.is-ok").length;
     const total = container.querySelectorAll(".receipt-quality-row").length;
     expect(okRows).toBeLessThan(total);
+  });
+
+  it("renders the footer with the export timestamp and real build stamp, no external link", async () => {
+    const container = render(
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings()}
+        analysis={analysis()}
+        onClose={() => {}}
+      />,
+    );
+    // Flush the async build_info effect.
+    await act(async () => {});
+    const footer = container.querySelector(".receipt-footer");
+    expect(footer?.textContent).toContain("Exported");
+    // From job.started_at_iso (2026-…); year is timezone-stable.
+    expect(footer?.textContent).toContain("2026");
+    // Real version · git hash · build time — the mock's "Engine v2.4.1" is fiction.
+    expect(footer?.textContent).toContain("v0.1.0 · abc1234 · 2026-06-10 12:00");
+    expect(footer?.textContent).not.toContain("Engine v2.4.1");
+    expect(footer?.textContent).not.toContain("yesmaster.app");
   });
 
   it("renders the Audio Format panel (bit depth, sample rate, file type; no channels)", () => {

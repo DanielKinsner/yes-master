@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { api } from "../lib/api";
 import { formatDuration } from "../lib/time-format";
 import { presetCopy } from "../lib/preset-copy";
@@ -42,6 +42,24 @@ export function ExportReceiptCard({
   onClose: () => void;
 }) {
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
+  // Real build stamp for the footer: version · git hash · build time, resolved
+  // from the build_info command (same source as the Help build stamp). Absent
+  // wherever the command isn't available (e.g. tests) — the footer degrades to
+  // the wordmark alone rather than showing a fabricated version.
+  const [buildInfo, setBuildInfo] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.resolve(api.buildInfo?.())
+      .then((info) => {
+        if (!cancelled && info) setBuildInfo(info);
+      })
+      .catch(() => {
+        /* build stamp is best-effort; omit silently on failure */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const reveal = async (path: string) => {
     if (!path) return;
     try {
@@ -254,6 +272,14 @@ export function ExportReceiptCard({
             </dl>
           </section>
         )}
+        <footer className="receipt-footer">
+          <span className="receipt-footer-stamp" title="Version · git hash · build time">
+            YES Master{buildInfo ? ` · ${buildInfo}` : ""}
+          </span>
+          <span className="receipt-footer-time">
+            Exported {formatExportedAt(receipt.job.started_at_iso)}
+          </span>
+        </footer>
       </div>
     </div>
   );
@@ -310,6 +336,15 @@ function fileTypeFromPath(path: string | undefined): string {
   const name = path.split(/[\\/]/).pop() ?? "";
   const dot = name.lastIndexOf(".");
   return dot > 0 ? name.slice(dot + 1).toUpperCase() : "";
+}
+
+// Footer timestamp. `started_at_iso` is the only time the receipt carries; a
+// track master render is near-instant, so it stamps the export. Labelled
+// "Exported" (not "Completed") to stay honest about which time this is.
+function formatExportedAt(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString(undefined, { dateStyle: "long", timeStyle: "short" });
 }
 
 // Copy affordance glyphs — inline SVG so they inherit currentColor and need no

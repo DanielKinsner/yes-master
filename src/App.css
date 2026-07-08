@@ -2998,6 +2998,31 @@ button.primary:disabled {
   margin-bottom: 1rem;
 }
 
+/* Footer — real build stamp + export timestamp, no external links. */
+.receipt-footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.receipt-footer-stamp {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.receipt-footer-time {
+  flex: 0 0 auto;
+}
+
 /* Quality Check — the receipt's honesty surface. Each row shows a source
    measurement with an icon reflecting the REAL delivered-master check level;
    a warned/critical row keeps its honest colour so the card can never read as
