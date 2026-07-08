@@ -361,6 +361,27 @@ describe("ExportReceiptCard", () => {
     expect(okRows).toBeLessThan(total);
   });
 
+  it("renders the Audio Format panel (bit depth, sample rate, file type; no channels)", () => {
+    const container = render(
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings()}
+        analysis={analysis()}
+        onClose={() => {}}
+      />,
+    );
+    const format = container.querySelector('[aria-label="Audio format"]');
+    expect(format?.textContent).toContain("Bit depth");
+    expect(format?.textContent).toContain("24-bit");
+    expect(format?.textContent).toContain("Sample rate");
+    expect(format?.textContent).toContain("48 kHz");
+    expect(format?.textContent).toContain("File type");
+    expect(format?.textContent).toContain("WAV");
+    // Channels row deliberately omitted (not measured on the receipt).
+    expect(format?.textContent).not.toContain("Channels");
+  });
+
   it("surfaces a format-only critical (sample-rate mismatch) as its own honest row", () => {
     const container = render(
       <ExportReceiptCard

@@ -153,12 +153,6 @@ export function ExportReceiptCard({
         </div>
         <MasteringStyle settings={settings} />
         {measurements && (
-          <div className="receipt-render-meta" aria-label="Rendered format">
-            <span>{formatSampleRate(measurements.sample_rate)}</span>
-            <span>{formatBitDepth(measurements.bit_depth)}</span>
-          </div>
-        )}
-        {measurements && (
           // Delivered-master results. These numbers describe the written file
           // (post-landing), measured and carried on the payload all along.
           <section className="receipt-results" aria-label="Results">
@@ -241,6 +235,25 @@ export function ExportReceiptCard({
             ))}
           </ul>
         </section>
+        {measurements && (
+          <section className="receipt-format" aria-label="Audio format">
+            <div className="receipt-section-title">Audio format</div>
+            <dl className="receipt-result-list">
+              <div className="receipt-result-row">
+                <dt>Bit depth</dt>
+                <dd>{formatBitDepth(measurements.bit_depth)}</dd>
+              </div>
+              <div className="receipt-result-row">
+                <dt>Sample rate</dt>
+                <dd>{formatSampleRate(measurements.sample_rate)}</dd>
+              </div>
+              <div className="receipt-result-row">
+                <dt>File type</dt>
+                <dd>{fileTypeFromPath(paths[0]) || "—"}</dd>
+              </div>
+            </dl>
+          </section>
+        )}
       </div>
     </div>
   );
@@ -288,6 +301,15 @@ function pluralize(count: number, singular: string): string {
 
 function fileNameFromPath(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
+}
+
+// Delivered file type from the output path extension (e.g. "…/x.wav" -> "WAV").
+// Empty when the path has no extension rather than inventing a format.
+function fileTypeFromPath(path: string | undefined): string {
+  if (!path) return "";
+  const name = path.split(/[\\/]/).pop() ?? "";
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? name.slice(dot + 1).toUpperCase() : "";
 }
 
 // Copy affordance glyphs — inline SVG so they inherit currentColor and need no

@@ -2993,6 +2993,11 @@ button.primary:disabled {
   text-align: right;
 }
 
+/* Audio Format — delivered file spec; reuses the Results label/value list. */
+.receipt-format {
+  margin-bottom: 1rem;
+}
+
 /* Quality Check — the receipt's honesty surface. Each row shows a source
    measurement with an icon reflecting the REAL delivered-master check level;
    a warned/critical row keeps its honest colour so the card can never read as
