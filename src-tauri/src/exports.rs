@@ -224,9 +224,70 @@ pub async fn open_output(output_path: String) -> CommandResult<()> {
     }
 }
 
+/// Owner finding 2026-07-08: Track Master pre-filled the SAME
+/// `<stem>__master.wav` suggestion on every export, so a second export of the
+/// same track offered an overwrite and the only guard was the OS replace
+/// prompt. "Exports never overwrite prior renders by default" is the app's
+/// promise, not the OS's — so the suggestion itself must dodge collisions:
+/// first free of `<name>.wav`, `<name>-2.wav`, `<name>-3.wav`, …. The
+/// directory not existing (first-ever export, or a stale remembered dir)
+/// means the base name is trivially free. The user can still type any name
+/// they want in the dialog — this only changes the default.
+#[tauri::command]
+pub fn suggest_export_filename(directory: String, file_name: String) -> String {
+    let dir = std::path::Path::new(&directory);
+    if !dir.is_dir() || !dir.join(&file_name).exists() {
+        return file_name;
+    }
+    let (stem, ext) = match file_name.rsplit_once('.') {
+        Some((s, e)) if !s.is_empty() => (s.to_string(), format!(".{e}")),
+        _ => (file_name.clone(), String::new()),
+    };
+    for n in 2..10_000u32 {
+        let candidate = format!("{stem}-{n}{ext}");
+        if !dir.join(&candidate).exists() {
+            return candidate;
+        }
+    }
+    file_name
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn export_name_suggestion_never_offers_an_existing_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let d = dir.path().to_string_lossy().to_string();
+        let name = "song__master.wav".to_string();
+
+        // Empty dir (and a nonexistent dir): base name is free.
+        assert_eq!(
+            suggest_export_filename(d.clone(), name.clone()),
+            "song__master.wav"
+        );
+        assert_eq!(
+            suggest_export_filename(format!("{d}/nope"), name.clone()),
+            "song__master.wav"
+        );
+
+        // First render exists -> suggest -2; then -3; extension preserved.
+        std::fs::write(dir.path().join("song__master.wav"), b"x").unwrap();
+        assert_eq!(
+            suggest_export_filename(d.clone(), name.clone()),
+            "song__master-2.wav"
+        );
+        std::fs::write(dir.path().join("song__master-2.wav"), b"x").unwrap();
+        assert_eq!(
+            suggest_export_filename(d.clone(), name),
+            "song__master-3.wav"
+        );
+
+        // Extensionless names still get suffixed rather than clobbered.
+        std::fs::write(dir.path().join("raw"), b"x").unwrap();
+        assert_eq!(suggest_export_filename(d, "raw".to_string()), "raw-2");
+    }
 
     fn settings(target_lufs: Option<f32>, ceiling_dbtp: Option<f32>) -> MasteringSettings {
         MasteringSettings {

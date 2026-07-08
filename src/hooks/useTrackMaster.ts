@@ -1937,12 +1937,22 @@ export function useTrackMaster() {
       try {
         if (!selectedTrack) return;
         const store = browserExportLocationStore();
+        // Never suggest a name that already exists in the remembered export
+        // dir — "exports never overwrite prior renders by default" is the
+        // app's guard, not the OS replace prompt's. Backend picks the first
+        // free <name>.wav / <name>-2.wav / …; any failure (or no remembered
+        // dir yet) falls back to the base suggestion unchanged.
+        const baseFilename = suggestedMasterFilename(selectedTrack);
+        const exportDir = lastExportDirectory(store, "track");
+        const uniqueFilename = exportDir
+          ? await Promise.resolve(
+              api.suggestExportFilename?.(exportDir, baseFilename),
+            )
+              .then((name) => name || baseFilename)
+              .catch(() => baseFilename)
+          : baseFilename;
         const chosenPath = await save({
-          defaultPath: defaultExportPath(
-            store,
-            "track",
-            suggestedMasterFilename(selectedTrack),
-          ),
+          defaultPath: defaultExportPath(store, "track", uniqueFilename),
           filters: [{ name: "WAV audio", extensions: ["wav"] }],
         });
         if (!chosenPath) return;

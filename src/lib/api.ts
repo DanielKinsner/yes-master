@@ -146,6 +146,12 @@ export const api = {
   openOutput: (outputPath: string) =>
     invoke<null>("open_output", { outputPath }),
 
+  // Collision-free export suggestion: first free of <name>.wav, <name>-2.wav, …
+  // in the remembered export directory ("never overwrite by default" is the
+  // app's guard, not the OS replace prompt's).
+  suggestExportFilename: (directory: string, fileName: string) =>
+    invoke<string>("suggest_export_filename", { directory, fileName }),
+
   saveProject: (path: string, state: ProjectState) =>
     invoke<null>("save_project", { path, state }),
 

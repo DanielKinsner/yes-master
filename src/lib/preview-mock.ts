@@ -178,6 +178,9 @@ export async function mockInvoke<T>(
     case "autosave_session":
     case "save_project":
       return null as unknown as T;
+    case "suggest_export_filename":
+      // No filesystem in the preview — the base suggestion is always "free".
+      return (args?.fileName ?? "master.wav") as unknown as T;
 
     case "import_tracks": {
       const paths = (args?.paths as string[]) ?? [];

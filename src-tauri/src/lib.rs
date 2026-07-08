@@ -205,6 +205,7 @@ pub fn run() {
             audio::seek_playback,
             audio::set_loop_region,
             exports::run_export_checks,
+            exports::suggest_export_filename,
             guardrails::guardrail_readout,
             guardrails::resolve_compression_plan,
             exports::open_output,

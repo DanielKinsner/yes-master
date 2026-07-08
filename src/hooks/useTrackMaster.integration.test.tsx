@@ -41,6 +41,7 @@ const mocks = vi.hoisted(() => {
     renderTrackMaster: vi.fn(),
     prepareWaveform: vi.fn(),
     runExportChecks: vi.fn(),
+    suggestExportFilename: vi.fn(),
     openOutput: vi.fn(),
     saveProject: vi.fn(),
     autosaveSession: vi.fn(),
@@ -2789,6 +2790,55 @@ describe("useTrackMaster integration dispatches", () => {
       "/Users/daniel/Desktop/exported-master.wav",
     );
     expect(lastExportDirectory(localStorage, "track")).toBe("/Users/daniel/Desktop");
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  it("suggests a collision-free filename when the remembered export dir has a prior render", async () => {
+    // Owner finding 2026-07-08: a second export of the same track pre-filled
+    // the SAME name, so the only overwrite guard was the OS replace prompt.
+    // With a remembered export dir, the suggestion must come from the
+    // backend's collision check (first free of name.wav / name-2.wav / …).
+    const track = makeTrack("export-1", "C:/audio/export source.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.save.mockResolvedValue(null); // user cancels — we only care about the suggestion
+    localStorage.setItem("yes-master:last-track-export-dir", "/Users/daniel/Desktop");
+    mocks.api.suggestExportFilename.mockResolvedValue("export-1__master-2.wav");
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+    await act(async () => {
+      await harness.current().exportMaster();
+    });
+
+    expect(mocks.api.suggestExportFilename).toHaveBeenCalledWith(
+      "/Users/daniel/Desktop",
+      "export-1__master.wav",
+    );
+    expect(mocks.save).toHaveBeenCalledWith({
+      defaultPath: "/Users/daniel/Desktop/export-1__master-2.wav",
+      filters: [{ name: "WAV audio", extensions: ["wav"] }],
+    });
+
+    // Backend failure degrades to the base suggestion — never blocks export.
+    mocks.save.mockClear();
+    mocks.api.suggestExportFilename.mockRejectedValue(new Error("io"));
+    await act(async () => {
+      await harness.current().exportMaster();
+    });
+    expect(mocks.save).toHaveBeenCalledWith({
+      defaultPath: "/Users/daniel/Desktop/export-1__master.wav",
+      filters: [{ name: "WAV audio", extensions: ["wav"] }],
+    });
+
+    localStorage.removeItem("yes-master:last-track-export-dir");
     await act(async () => {
       harness.root.unmount();
     });
