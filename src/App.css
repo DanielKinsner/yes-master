@@ -2589,9 +2589,29 @@ button.primary:disabled {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   padding: 1.4rem 1.6rem;
-  max-width: 620px;
+  max-width: 940px;
   width: 100%;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
   box-shadow: var(--elev-3);
+}
+
+/* Two-column premium body (mock layout): identity + file + style on the left,
+   results + quality + format on the right. Header, journey, the adaptive-DSP
+   line, and the footer stay full width. Collapses to one column on narrow
+   windows. minmax(0,…) lets long paths / target chips shrink instead of
+   forcing overflow. */
+.receipt-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 780px) {
+  .receipt-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
 }
 
 .receipt-header {

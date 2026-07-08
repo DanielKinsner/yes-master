@@ -126,6 +126,8 @@ export function ExportReceiptCard({
             </li>
           ))}
         </ol>
+        <div className="receipt-body">
+          <div className="receipt-col">
         {track && (
           <section className="receipt-track" aria-label="Track">
             <div className="receipt-section-title">Track</div>
@@ -170,6 +172,8 @@ export function ExportReceiptCard({
           ))}
         </div>
         <MasteringStyle settings={settings} />
+          </div>
+          <div className="receipt-col">
         {measurements && (
           // Delivered-master results. These numbers describe the written file
           // (post-landing), measured and carried on the payload all along.
@@ -200,33 +204,6 @@ export function ExportReceiptCard({
               </div>
             </dl>
           </section>
-        )}
-        {measurements && (
-          // B5 — adaptive-DSP traceability: a delivered master records what
-          // adaptation produced it (digest present = guardrails were active).
-          <div className="receipt-render-meta" aria-label="Adaptive DSP">
-            {measurements.source_profile_digest ? (
-              <>
-                <span>
-                  Adaptive{" "}
-                  {Math.round((measurements.effective_adaptive_strength ?? 0) * 100)}%
-                </span>
-                <span title="Source profile that drove adaptation — these describe the SOURCE, not the delivered master">
-                  {/* Visible "Source" prefix (export-metrics inquiry 2026-06-09):
-                      a hover-only tooltip let these source stats read as master
-                      measurements right under the output chips. */}
-                  Source · {measurements.source_profile_digest}
-                </span>
-              </>
-            ) : (
-              <span>Adaptive: off</span>
-            )}
-            {measurements.compression_digest && (
-              <span title="Backend-resolved adaptive compressor guard summary">
-                Compression · {measurements.compression_digest}
-              </span>
-            )}
-          </div>
         )}
         <section className="receipt-quality" aria-label="Quality check">
           <div className="receipt-section-title">Quality check</div>
@@ -271,6 +248,36 @@ export function ExportReceiptCard({
               </div>
             </dl>
           </section>
+        )}
+          </div>
+        </div>
+        {measurements && (
+          // B5 — adaptive-DSP traceability: a delivered master records what
+          // adaptation produced it (digest present = guardrails were active).
+          // Full-width below the columns — advisory context, not a headline.
+          <div className="receipt-render-meta" aria-label="Adaptive DSP">
+            {measurements.source_profile_digest ? (
+              <>
+                <span>
+                  Adaptive{" "}
+                  {Math.round((measurements.effective_adaptive_strength ?? 0) * 100)}%
+                </span>
+                <span title="Source profile that drove adaptation — these describe the SOURCE, not the delivered master">
+                  {/* Visible "Source" prefix (export-metrics inquiry 2026-06-09):
+                      a hover-only tooltip let these source stats read as master
+                      measurements right under the output chips. */}
+                  Source · {measurements.source_profile_digest}
+                </span>
+              </>
+            ) : (
+              <span>Adaptive: off</span>
+            )}
+            {measurements.compression_digest && (
+              <span title="Backend-resolved adaptive compressor guard summary">
+                Compression · {measurements.compression_digest}
+              </span>
+            )}
+          </div>
         )}
         <footer className="receipt-footer">
           <span className="receipt-footer-stamp" title="Version · git hash · build time">
