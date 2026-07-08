@@ -546,6 +546,16 @@ select {
   word-break: break-all;
 }
 
+/* "What am I running?" footer — quiet identity line, same dialect as
+   .track-meta-line (13c): a fact said once, in its one home. */
+.help-build-info {
+  margin: 0.6rem 0 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
 .app {
   display: grid;
   grid-template-columns: var(--rail-width-left) 1fr var(--rail-width-right);

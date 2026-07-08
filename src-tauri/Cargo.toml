@@ -20,6 +20,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+# Build-stamp formatting only (build.rs); not a runtime dependency.
+chrono = "0.4"
 
 [dependencies]
 tauri = { version = "2", features = [] }

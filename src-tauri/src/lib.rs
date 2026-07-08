@@ -63,8 +63,9 @@ pub fn run() {
             }
             crate::diagnostics::install_panic_hook();
             crate::diagnostics::info(format!(
-                "YES Master {} starting ({} {})",
+                "YES Master {} (build {}) starting ({} {})",
                 env!("CARGO_PKG_VERSION"),
+                BUILD_STAMP,
                 std::env::consts::OS,
                 std::env::consts::ARCH
             ));
@@ -206,6 +207,7 @@ pub fn run() {
             audio::set_loop_region,
             exports::run_export_checks,
             exports::suggest_export_filename,
+            build_info,
             guardrails::guardrail_readout,
             guardrails::resolve_compression_plan,
             exports::open_output,
@@ -226,6 +228,20 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// Owner finding 2026-07-08 ("what am I running?"): every dev build says
+/// "0.9.0", so hand-testing cannot tell builds apart and stale installs have
+/// burned test sessions. `YES_BUILD_STAMP` is set by build.rs to
+/// `<git-short-hash>[+] · <build time>` (`+` = dirty tree). Shown in the Help
+/// dialog and the startup log line.
+const BUILD_STAMP: &str = env!("YES_BUILD_STAMP");
+
+/// Version + build stamp for the Help dialog — the user-facing answer to
+/// "which build am I actually running?".
+#[tauri::command]
+fn build_info() -> String {
+    format!("{} · build {}", env!("CARGO_PKG_VERSION"), BUILD_STAMP)
 }
 
 /// Background update check (Slice 7). Pulls the updater manifest from GitHub

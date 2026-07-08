@@ -181,6 +181,8 @@ export async function mockInvoke<T>(
     case "suggest_export_filename":
       // No filesystem in the preview — the base suggestion is always "free".
       return (args?.fileName ?? "master.wav") as unknown as T;
+    case "build_info":
+      return "0.9.0 · build preview · browser" as unknown as T;
 
     case "import_tracks": {
       const paths = (args?.paths as string[]) ?? [];

@@ -152,6 +152,10 @@ export const api = {
   suggestExportFilename: (directory: string, fileName: string) =>
     invoke<string>("suggest_export_filename", { directory, fileName }),
 
+  // "What am I running?" — version · git hash · build time, stamped into the
+  // binary at compile time. Shown in the Help dialog.
+  buildInfo: () => invoke<string>("build_info"),
+
   saveProject: (path: string, state: ProjectState) =>
     invoke<null>("save_project", { path, state }),
 

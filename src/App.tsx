@@ -891,6 +891,22 @@ function AudioOutputSelector({
 
 export function HelpPanel({ onClose }: { onClose: () => void }) {
   const [diagnosticsNote, setDiagnosticsNote] = useState<string | null>(null);
+  // "What am I running?" — version + git hash + build time from the binary
+  // itself, so a hand-test can always tell WHICH build is installed.
+  const [buildInfo, setBuildInfo] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.resolve(api.buildInfo?.())
+      .then((info) => {
+        if (!cancelled && info) setBuildInfo(info);
+      })
+      .catch(() => {
+        /* browser preview / older backend — line simply stays hidden */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const saveDiagnostics = async () => {
     try {
       const chosen = await save({
@@ -925,6 +941,11 @@ export function HelpPanel({ onClose }: { onClose: () => void }) {
           </button>
           {diagnosticsNote && <p className="help-diagnostics-note">{diagnosticsNote}</p>}
         </section>
+        {buildInfo && (
+          <p className="help-build-info" title="Version · git hash · build time">
+            YES Master {buildInfo}
+          </p>
+        )}
       </div>
     </ChromeDialog>
   );
