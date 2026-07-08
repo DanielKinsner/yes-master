@@ -355,8 +355,37 @@ freeze stands):
   micro-rewind (incoming starts at the position captured at command time).
   A proper fix is single-callback source switching (one output stream that
   swaps sources sample-synchronously) — audio-engine surgery, do NOT rush it
-  pre-beta without a listening plan. Parked as **14b** pending the owner's
-  Volume Match verdict.
+  pre-beta without a listening plan.
+
+  **14b — owner's discriminating tests (2026-07-08, stamped build) — now a
+  three-part dossier. This is the next engineering slice; owner's
+  observations below ARE the acceptance tests.**
+  1. **The dip:** "a complete fade to ~0 volume in nearly imperceptible
+     time" on every A/B flip. Confirms sink-start latency: the incoming
+     rodio sink's first audio reaches the device after the outgoing fade is
+     already deep — unity-sum crossfade holds mathematically but not at the
+     DAC. Fix direction: sample-synchronous source switching inside ONE
+     output stream/callback (drop the two-sink swap), or measured
+     latency-compensated fade scheduling. Sacred-path surgery: plan +
+     listening verification required.
+  2. **VM stall (directional):** Volume Match ON, Original→Mastered stalls
+     ~500 ms (meter freezes, then catches up); Mastered→Original is clean.
+     Same directional behavior with Preview-LUFS ON, milder ("doesn't
+     choke"). Fingerprint: the landing/VM gain for the mastered side is
+     computed on demand at swap time (LUFS worker, `landing_pending`,
+     `LandingGainCache` in audio.rs) instead of being pre-warmed while
+     Original plays. Fix direction: pre-compute/warm the landing gain for
+     the OTHER mode in the background so a flip engages instantly;
+     investigate why repeat toggles still stall (cache miss across sink
+     rebuilds?).
+  3. **Frantic-toggle timeout:** rapid VM A/B flips can momentarily trip the
+     readiness timeout and surface the bottom-right error. Recoverable but a
+     stress crack on the hero interaction — likely worker pile-up; dedupe /
+     cancel-stale-workers on swap.
+  Acceptance = owner re-runs exactly these three tests by ear on a stamped
+  build: no audible dip, no O→M stall with VM on, no error under frantic
+  toggling. Full verify lanes + fixture slow lane if anything touches
+  render-side code (it should NOT — this is playback-side only).
 - **15 — Collision-free export names** (`72b6b3f`): Track Master suggested
   the same `<stem>__master.wav` every export; the OS replace prompt was the
   only overwrite guard, against the "never overwrite by default"
