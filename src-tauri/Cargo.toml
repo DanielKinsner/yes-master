@@ -44,7 +44,7 @@ symphonia = { version = "0.5", features = [
     "ogg",
     "vorbis",
 ] }
-rodio = { version = "0.20", features = ["symphonia-all"] }
+rodio = { version = "0.22", features = ["symphonia-all"] }
 hound = "3"
 ebur128 = "0.1"
 # Phase A5: FFT for the 6-band spectral analysis. rustfft is the
