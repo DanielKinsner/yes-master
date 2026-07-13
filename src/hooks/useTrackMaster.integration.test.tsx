@@ -2381,6 +2381,91 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("ignores a superseded A/B timeout after the newest switch succeeds", async () => {
+    let playbackHandler:
+      | ((tick: {
+          track_id: string | null;
+          position_sec: number;
+          is_playing: boolean;
+          is_loaded: boolean;
+          peak_dbfs: number;
+          gr_low_db: number;
+          gr_mid_db: number;
+          gr_high_db: number;
+          lufs_momentary: number;
+          lufs_integrated: number;
+          spectrum_db: number[];
+        }) => void)
+      | undefined;
+    mocks.onPlaybackTick.mockImplementation((handler) => {
+      playbackHandler = handler;
+      return Promise.resolve(() => {});
+    });
+    const track = makeTrack("frantic-switch-1", "C:/audio/frantic-switch.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+
+    let rejectStaleMaster!: (reason: unknown) => void;
+    mocks.api.playMaster.mockImplementationOnce(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          rejectStaleMaster = reject;
+        }),
+    );
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+    await act(async () => {
+      playbackHandler?.({
+        track_id: track.id,
+        position_sec: 3,
+        is_playing: true,
+        is_loaded: true,
+        peak_dbfs: -12,
+        gr_low_db: -120,
+        gr_mid_db: -120,
+        gr_high_db: -120,
+        lufs_momentary: -14,
+        lufs_integrated: -14,
+        spectrum_db: [],
+      });
+    });
+
+    let staleSwitch!: Promise<void>;
+    await act(async () => {
+      staleSwitch = harness.current().setPlaybackKind("master");
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(mocks.api.playMaster).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      await harness.current().setPlaybackKind("source");
+    });
+    expect(harness.current().transport.playbackKind).toBe("source");
+    expect(harness.current().error).toBeNull();
+
+    await act(async () => {
+      rejectStaleMaster(
+        new Error(
+          "Mastered preview did not become ready within 15 seconds; the file may still be decoding",
+        ),
+      );
+      await staleSwitch;
+    });
+
+    expect(harness.current().transport.playbackKind).toBe("source");
+    expect(harness.current().error).toBeNull();
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("does not autoplay on a paused kind switch and resumes at the same playhead", async () => {
     let playbackHandler:
       | ((tick: {

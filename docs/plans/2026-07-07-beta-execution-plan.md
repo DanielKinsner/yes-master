@@ -380,8 +380,13 @@ freeze stands):
      rebuilds?).
   3. **Frantic-toggle timeout:** rapid VM A/B flips can momentarily trip the
      readiness timeout and surface the bottom-right error. Recoverable but a
-     stress crack on the hero interaction — likely worker pile-up; dedupe /
-     cancel-stale-workers on swap.
+     stress crack on the hero interaction. **Mechanically fixed 2026-07-13:**
+     the backend already superseded older play epochs, but the frontend still
+     surfaced an older request's late timeout/cancellation after the newest
+     switch succeeded. A latest-request guard now makes only the newest A/B
+     switch authoritative for user-facing failure state, with an overlapping-
+     request integration regression test. Owner rapid-toggle confirmation on a
+     stamped build is still required before closing the acceptance item.
   Acceptance = owner re-runs exactly these three tests by ear on a stamped
   build: no audible dip, no O→M stall with VM on, no error under frantic
   toggling. Full verify lanes + fixture slow lane if anything touches

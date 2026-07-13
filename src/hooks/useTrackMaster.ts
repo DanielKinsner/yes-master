@@ -499,6 +499,11 @@ export function useTrackMaster() {
   );
   const volumeMatchRef = useRef(false);
   const exportLufsPreviewRef = useRef(false);
+  // A/B swaps are async and can overlap under rapid clicking. Only the newest
+  // switch owns user-facing failure state; the backend already cancels older
+  // play epochs, so surfacing a late timeout/cancellation from one of them
+  // would report an error even after the requested source is playing.
+  const playbackKindRequestRef = useRef(0);
   // Internal "force WYSIWYG" flag, distinct from the user-facing Advanced
   // `Preview LUFS` toggle (`transport.exportLufsPreview`). Standard auditions
   // with the loudness landing + limiter applied without ever mutating that
@@ -2180,6 +2185,8 @@ export function useTrackMaster() {
         setError(MASTERED_REQUIRES_ANALYSIS_MESSAGE);
         return;
       }
+      const requestId = playbackKindRequestRef.current + 1;
+      playbackKindRequestRef.current = requestId;
       setTransport((t) => ({ ...t, playbackKind: kind }));
       // Mid-playback swap: only call backend play methods while audio is
       // actively running. A loaded-but-paused track should let the user choose
@@ -2189,7 +2196,9 @@ export function useTrackMaster() {
         try {
           await playWithKind(kind, estimatedPlaybackPositionSec());
         } catch (err) {
-          setError(messageOf(err));
+          if (playbackKindRequestRef.current === requestId) {
+            setError(messageOf(err));
+          }
         }
       }
     },
