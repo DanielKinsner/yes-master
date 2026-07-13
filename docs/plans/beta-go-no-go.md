@@ -33,16 +33,17 @@ real hardware).
       `plugins.updater`; `src/App.tsx` updater toast; frontend + Rust lanes.
 - [x] **Premium-parity UI pass** applied (floating surfaces on the shared
       elevation scale). *Evidence:* Slice 9; the before/after A/B set.
-- [x] **CI is green on every push** (Windows, macOS, Android lanes + DSP
-      snapshots). *Advisory reminder:* the macOS lane gates the preset
-      byte-identity snapshots — do not merge red.
+- [ ] **The latest completed full CI run is green** (Windows, macOS, Android
+      lanes + DSP snapshots). Public-repository runners removed the prior
+      billing gate on 2026-07-13; check this box only after the current commit's
+      run completes green. *Advisory reminder:* do not merge red.
 - [x] **Owner-gate tripwires green** — AC-5, Phase-B, and album-character stay
       OFF for beta (D7). *Evidence:* `src-tauri/tests/owner_gates_default.rs`.
 
 ## 2. Signing & release pipeline (payday lane)
 
-- [ ] **Owner accounts created:** Apple Developer, Azure Trusted Signing,
-      GitHub Actions billing fixed (macOS runners). *Owner; per
+- [ ] **Owner accounts created:** Apple Developer and Azure Trusted Signing.
+      Normal CI currently runs free while the repository is public. *Owner; per
       `docs/RELEASE_SIGNING_SETUP.md`.*
 - [ ] **Signing secrets added** to the repo (Apple + Azure). *Owner.*
 - [ ] **`release.yml` activated:** a tagged release builds, **signs**,

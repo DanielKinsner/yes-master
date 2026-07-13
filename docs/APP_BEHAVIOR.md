@@ -232,8 +232,9 @@ further subjective retune.
 2. The full private fixture matrix runner evidence is complete; listening
    signoff on already-mastered outputs remains.
 3. Oomph needs listening notes before another targeted tuning pass.
-4. Public signing, notarization, autoupdate, and store-style distribution remain
-   deferred.
+4. Public code signing, notarization, and the already-integrated autoupdater are
+   beta launch blockers pending signing accounts, permanent updater keys, and
+   an end-to-end signed update proof. Store-style distribution remains deferred.
 5. Cloud-placeholder sources (OneDrive Files-On-Demand, Dropbox online-only)
    are untested territory: a dehydrated file can stall decode/analysis for
    the duration of a network hydration, and no unit test can construct one
