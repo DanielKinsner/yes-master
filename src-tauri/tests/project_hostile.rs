@@ -98,13 +98,26 @@ fn deep_nesting_bomb_errors_without_stack_overflow() {
 #[test]
 fn empty_and_traversal_paths_are_rejected() {
     assert!(load(&PathBuf::new()).is_err(), "empty path must error");
-    let evil = PathBuf::from("..\\..\\evil.ams.json");
+    // Forward slashes are path separators on every OS; backslashes are
+    // separators only on Windows (on Unix they're ordinary filename bytes,
+    // so "..\\.." is a single component and not a traversal there).
+    let evil = PathBuf::from("../../evil.ams.json");
     let err = load(&evil).expect_err("traversal path must error");
     let msg = format!("{err:?}");
     assert!(
         msg.contains("traversal"),
         "traversal rejection should be explicit, got: {msg}",
     );
+    #[cfg(windows)]
+    {
+        let evil = PathBuf::from("..\\..\\evil.ams.json");
+        let err = load(&evil).expect_err("backslash traversal path must error");
+        let msg = format!("{err:?}");
+        assert!(
+            msg.contains("traversal"),
+            "traversal rejection should be explicit, got: {msg}",
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
