@@ -46,7 +46,16 @@ const failures = [];
 const records = [];
 const anchorRecords = [];
 
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+let browser;
+try {
+  browser = await chromium.launch({ channel: "chrome", headless: true });
+} catch (error) {
+  console.error("Failed to launch Playwright Chrome.");
+  console.error(`  ${error?.message ?? error}`);
+  console.error("Hint: install the browser first with:");
+  console.error("  npx playwright install chrome");
+  process.exit(1);
+}
 const page = await browser.newPage();
 const consoleMessages = [];
 const pageErrors = [];
