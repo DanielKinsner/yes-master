@@ -14,6 +14,11 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    # Suppress breaking major bumps (e.g. rodio, rubato) that fail CI weekly.
+    # Patch/minor version updates and security advisories still flow through.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "cargo"
     directory: "/apps/iphone-native/rust"
     schedule:
