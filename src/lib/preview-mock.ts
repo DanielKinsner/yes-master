@@ -421,6 +421,11 @@ export async function mockListen<T>(
   if (channel === "playback:device-lost") {
     return () => {};
   }
+  if (channel === "updater:available") {
+    // Startup update check (Slice 7). The preview has no real updater, so this
+    // is a known no-op — registered explicitly to avoid the unhandled-channel warning.
+    return () => {};
+  }
   if (channel === "analysis:progress") {
     const wrapped = (fraction: number, label: string) =>
       handler({ payload: { fraction, label } as unknown as T });
