@@ -81,7 +81,7 @@ export default function Hero() {
             href="#get-started"
             className="inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-b from-cta-light to-cta-deep px-5 py-3 font-extrabold text-[#1c0d00] shadow-lg shadow-cta-deep/30 sm:w-auto"
           >
-            Join the free beta
+            Download free beta
           </a>
           <a
             href="#advanced"

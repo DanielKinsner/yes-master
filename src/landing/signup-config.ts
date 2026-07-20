@@ -1,4 +1,4 @@
-// Free-beta email capture configuration.
+// Optional free-beta email capture configuration. Downloads are always ungated.
 //
 // Paste your email-provider form-action URL here (Buttondown / MailerLite / Kit
 // all give you one). The form POSTs the email as URL-encoded form data.

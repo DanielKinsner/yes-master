@@ -3,9 +3,9 @@ import { SIGNUP_ENDPOINT, SIGNUP_FIELD } from "./signup-config";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-// Free-beta email capture. POSTs the address to the configured provider
-// endpoint. Until SIGNUP_ENDPOINT is set it renders a disabled "opening soon"
-// state, so the landing page is shippable before the mailing list exists.
+// Optional free-beta email capture. Downloads never depend on this form.
+// Until SIGNUP_ENDPOINT is set it renders a disabled "opening soon" state, so
+// the landing page remains shippable before a mailing list exists.
 export default function BetaSignup() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
@@ -30,7 +30,7 @@ export default function BetaSignup() {
   if (status === "success") {
     return (
       <p className="mx-auto mt-8 max-w-md text-lg font-bold text-good">
-        You're on the list — we'll email your download link.
+        You're on the list — we'll keep you posted and save your founder price.
       </p>
     );
   }
@@ -54,10 +54,10 @@ export default function BetaSignup() {
           className="inline-flex shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-cta-light to-cta-deep px-6 py-3 font-extrabold text-[#1c0d00] disabled:opacity-60"
         >
           {notWired
-            ? "Sign-up opening soon"
+            ? "Email updates opening soon"
             : status === "submitting"
               ? "Joining…"
-              : "Join the free beta"}
+              : "Get beta updates"}
         </button>
       </form>
       {status === "error" && (

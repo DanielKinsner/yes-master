@@ -1,4 +1,5 @@
 import BetaSignup from "./BetaSignup";
+import BetaDownload from "./BetaDownload";
 
 export default function FinalCTA() {
   return (
@@ -13,6 +14,14 @@ export default function FinalCTA() {
         <p className="mt-3 font-display text-xl font-bold text-brand sm:text-2xl">
           This is the one you stop on.
         </p>
+
+        <BetaDownload />
+
+        <div className="mx-auto mt-10 flex max-w-md items-center gap-4 text-xs font-black uppercase tracking-wide text-soft" aria-hidden="true">
+          <span className="h-px flex-1 bg-line" />
+          Optional email updates
+          <span className="h-px flex-1 bg-line" />
+        </div>
 
         <BetaSignup />
         <p className="mt-4 text-xs font-semibold text-muted">

@@ -83,7 +83,7 @@ it("unwired endpoint: controls disabled and a forced submit sends nothing", asyn
   const button = container.querySelector<HTMLButtonElement>("button[type=submit]");
   expect(input?.disabled).toBe(true);
   expect(button?.disabled).toBe(true);
-  expect(button?.textContent).toBe("Sign-up opening soon");
+  expect(button?.textContent).toBe("Email updates opening soon");
 
   // Even if the disabled attribute is stripped (devtools, extensions),
   // the submit handler itself must refuse to build a request.
@@ -110,7 +110,7 @@ it("wired endpoint: posts exactly the email field, urlencoded, then confirms", a
   // The body carries the email and nothing else — no tracking fields,
   // no metadata, exactly what the copy promises.
   expect(init.body).toBe(`email=${encodeURIComponent("dan+beta@example.com")}`);
-  expect(container.textContent).toContain("You're on the list");
+  expect(container.textContent).toContain("save your founder price");
 });
 
 it("provider failure surfaces the error state instead of throwing", async () => {

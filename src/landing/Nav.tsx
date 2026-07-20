@@ -32,7 +32,7 @@ export default function Nav() {
           href="#get-started"
           className="rounded-lg bg-gradient-to-b from-cta-light to-cta-deep px-4 py-2 font-extrabold text-[#1c0d00]"
         >
-          Join the free beta
+          Download free beta
         </a>
       </div>
     </nav>
