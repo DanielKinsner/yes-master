@@ -22,7 +22,11 @@ function Invoke-Step {
 
     Write-Host ""
     Write-Host "==> $Label" -ForegroundColor Cyan
+    $global:LASTEXITCODE = 0
     & $Command
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Label failed with exit code $LASTEXITCODE."
+    }
 }
 
 function Invoke-FrontendLane {
