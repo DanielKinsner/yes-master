@@ -56,6 +56,11 @@ describe("zero-cost beta release contract", () => {
     expect(workflow).toContain(".dmg");
     expect(workflow).toContain(".msi");
     expect(workflow).toContain(".sig");
+    expect(workflow).toContain("macOS updater signature (.app.tar.gz.sig)");
+    expect(workflow).toContain("Windows MSI updater signature (.msi.sig)");
+    expect(workflow).toContain("Windows NSIS updater signature (setup.exe.sig)");
+    expect(workflow).toContain("Updater manifest is missing macOS");
+    expect(workflow).toContain("Updater manifest is missing Windows");
   });
 
   it("bakes in the permanent updater public key instead of the discarded bootstrap", () => {

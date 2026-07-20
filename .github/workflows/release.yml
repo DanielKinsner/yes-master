@@ -225,7 +225,7 @@ jobs:
           releaseBody: |
             Early public beta for Windows and macOS.
 
-            The $0 release lane is not yet backed by paid Apple/Microsoft publisher certificates, so the operating system may show an unknown-developer warning. Verify SHA256SUMS.txt, follow the install guide, and only install files downloaded from this repository.
+            The $0 release lane is not yet backed by paid Apple/Microsoft publisher certificates, so the operating system may show an unknown-developer warning. Verify SHA256SUMS.txt, follow the [beta install guide](https://github.com/DanielKinsner/yes-master/blob/main/docs/BETA_INSTALL.md), and only install files downloaded from this repository.
           releaseDraft: true
           # The app checks /releases/latest/download/latest.json. GitHub excludes
           # prereleases from that channel, so beta identity lives in tag/title.
@@ -287,7 +287,9 @@ jobs:
             "Windows MSI installer (.msi)" = '\.msi$'
             "Windows NSIS installer (setup.exe)" = 'setup\.exe$'
             "updater manifest (latest.json)" = '^latest\.json$'
-            "updater signature (.sig)" = '\.sig$'
+            "macOS updater signature (.app.tar.gz.sig)" = '\.app\.tar\.gz\.sig$'
+            "Windows MSI updater signature (.msi.sig)" = '\.msi\.sig$'
+            "Windows NSIS updater signature (setup.exe.sig)" = 'setup\.exe\.sig$'
             "SHA-256 checksum ledger" = '^SHA256SUMS\.txt$'
           }
 
@@ -296,6 +298,17 @@ jobs:
               Write-Error "Draft is incomplete: missing $($entry.Key). Assets: $($names -join ', ')"
               exit 1
             }
+          }
+
+          $manifest = Get-Content -LiteralPath release-assets\latest.json -Raw | ConvertFrom-Json
+          $platforms = @($manifest.platforms.PSObject.Properties.Name)
+          if (-not ($platforms | Where-Object { $_ -match 'darwin' })) {
+            Write-Error "Updater manifest is missing macOS. Platforms: $($platforms -join ', ')"
+            exit 1
+          }
+          if (-not ($platforms | Where-Object { $_ -match 'windows' })) {
+            Write-Error "Updater manifest is missing Windows. Platforms: $($platforms -join ', ')"
+            exit 1
           }
 
           Write-Host "Draft release is complete and remains unpublished: $env:RELEASE_TAG"
