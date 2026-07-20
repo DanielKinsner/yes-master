@@ -10,9 +10,9 @@
 > (see the plan's stop-and-ask triggers). This doc gets you to the point where
 > the owner can flip the switch — it does not flip it.
 
-Legend — **Lane:** `agent` (done in the Opus lane) · `payday` (needs the owner's
-paid accounts / secrets) · `owner` (only the owner can do it, e.g. by ear or on
-real hardware).
+Legend — **Lane:** `agent` (mechanical code/release work) · `owner` (only the
+owner can do it, e.g. by ear, on real hardware, or by publishing). Paid signing
+is post-beta advisory under D16.
 
 ---
 
@@ -40,27 +40,27 @@ real hardware).
 - [x] **Owner-gate tripwires green** — AC-5, Phase-B, and album-character stay
       OFF for beta (D7). *Evidence:* `src-tauri/tests/owner_gates_default.rs`.
 
-## 2. Signing & release pipeline (payday lane)
+## 2. $0 release pipeline (agent + owner lanes)
 
-- [ ] **Owner accounts created:** Apple Developer and Azure Trusted Signing.
-      Normal CI currently runs free while the repository is public. *Owner; per
-      `docs/RELEASE_SIGNING_SETUP.md`.*
-- [ ] **Signing secrets added** to the repo (Apple + Azure). *Owner.*
-- [ ] **`release.yml` activated:** a tagged release builds, **signs**,
-      notarizes (macOS), and drafts a GitHub Release with installers
-      (macOS universal binary + Windows MSI/NSIS) attached. *Slice 10.*
-- [ ] **Signed artifacts are downloadable** from that release (draft is fine for
-      testing). *Slice 10.*
+- [x] **`release.yml` implements the $0 lane:** one universal macOS build,
+      Windows MSI/NSIS, mandatory updater signatures, SHA-256 checksums, a
+      draft release, and a final asset audit. Partial Apple/Azure secret groups
+      fail closed; absent paid groups do not block the beta. *Agent; D16.*
+- [ ] **A draft `v0.9.0-beta.1` workflow run is green** and contains `.dmg`,
+      `.app.tar.gz`, `.msi`, `.exe`, updater `.sig` files, `latest.json`, and
+      `SHA256SUMS.txt`. *Agent prepares; owner authorizes tag/push.*
+- [ ] **Draft artifacts are downloadable and their checksums match.** *Owner or
+      agent, before publish.*
+- [ ] *Advisory / post-beta:* Apple Developer notarization and Azure Artifact
+      Signing are configured when funding permits. They reduce OS-warning
+      friction but do not block the $0 beta.
 
 ## 3. Updater gates (added 2026-07-08 — both blocking)
 
-- [ ] **(i) Bootstrap updater pubkey replaced with the owner's real keypair
-      BEFORE the first signed release.** The committed pubkey in
-      `plugins.updater` is a throwaway whose private half was discarded; a
-      shipped app can only ever accept updates signed by the key baked into it,
-      so this is a one-way door. *Owner; steps in `docs/RELEASE_SIGNING_SETUP.md`
-      → "Auto-updater signing"; add `TAURI_SIGNING_PRIVATE_KEY` +
-      `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets.*
+- [x] **(i) Permanent updater key configured before the first release.** The
+      public key is committed, both GitHub signing secrets exist, and a local
+      Windows updater-enabled build emitted signed artifacts. The encrypted
+      private key remains outside git. *Evidence: 2026-07-20 release lane.*
 - [ ] **(ii) Update path proven end-to-end, once.** Install a 0.9.0 build,
       publish a draft **0.9.1** release, and confirm on a real machine that the
       app shows the update toast → "Restart to update" downloads, installs, and
@@ -86,17 +86,18 @@ real hardware).
       `docs/plans/2026-07-08-beta-listening-runbook.md`.* Any blocker it surfaces
       is itself blocking; any DSP/preset change it implies is owner-gated.
 
-## 6. Landing page & signup (payday lane — Slice 11)
+## 6. Landing page & optional signup
 
-- [ ] **Download button wired** to the GitHub Releases artifacts (ungated, D5),
-      replacing the current `mailto:`.
+- [x] **Download button wired** to GitHub Releases (ungated, D5/D16), with
+      Windows + universal Mac expectations and OS-warning disclosure.
 - [ ] **Beta copy live:** the beta model, a **concrete flip date**, and the $29
       founder-price promise (D2). *Flip-date / pricing copy that deviates from D2
       is a stop-and-ask, not an agent call.*
-- [ ] **Signup capture verified end-to-end** against the chosen provider (D4),
+- [ ] *Advisory:* **signup capture verified end-to-end** against the chosen provider (D4),
       after re-running the hardening plan's Workstream F checklist (pinned by
       `src/landing/BetaSignup.test.tsx`). The form stays safe-disabled until
-      this passes. *`npm run verify:landing` green.*
+      this passes. The ungated download remains live without signup.
+      *`npm run verify:landing` green.*
 
 ## 7. Legal (owner lane — D6, not a hard gate)
 

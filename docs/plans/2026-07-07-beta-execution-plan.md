@@ -30,27 +30,28 @@
 | D13 | Beta version number: **0.9.0** (numeric for MSI compatibility; 1.0.0 reserved for the paid flip). |
 | D14 | Premium-parity UI pass is in beta scope (owner's open-floor concern: some surfaces got the premium pass, others feel deferred). |
 | D15 | Owner devices for verification: M4 MacBook Pro (macOS), current Windows box, iPhone 16 (mobile stays parked regardless). No Android device — Android work stays parked. |
+| D16 | **$0 beta override (owner, 2026-07-20):** paid Apple Developer notarization and Azure Artifact Signing are post-beta trust upgrades, not public-beta blockers. Ship a macOS ad-hoc / Windows unsigned beta with clear OS-warning instructions and checksums. Free Tauri updater signing remains mandatory. The download is ungated; email capture stays optional and cannot block launch. This supersedes D3/D4 only where they made paid accounts or email launch-blocking. |
 
 ## Lanes
 
-Two lanes run in parallel. **Opus lane** = code/docs work executable now.
-**Owner lane** = things only Dan can do, mostly payday-gated.
+Two lanes run in parallel. **Agent lane** = code/docs work executable now.
+**Owner lane** = hardware, ears, dates, and the public switch. Paid accounts are
+post-beta under D16.
 
 ### Owner lane (Dan)
 
 | When | Task |
 |---|---|
-| Payday (~07-10) | Enroll Apple Developer ($99/yr) — identity verification has lead time, start first. |
-| Payday | Set up Azure Trusted Signing (~$10/mo). |
-| Payday | Fix GitHub Actions billing (macOS runners for `release.yml`). |
-| Payday | Pick + create the email provider account; hand the endpoint/API key to the agent. |
-| Payday | Add signing secrets to the repo per `docs/RELEASE_SIGNING_SETUP.md`. |
 | After runbook exists | Execute the one-sitting listening runbook (Slice 8) on Windows + the M4; write the listening note. |
-| First signed build | Install + run the macOS build on the M4 for real (closes the RC criterion). Confirm real-time snappiness on both machines. |
+| First draft build | Install + run the universal macOS build on the M4 and Windows build on the current box. Confirm real-time snappiness and record OS-warning behavior. |
+| Before launch | Choose the concrete beta end date and confirm the $29 founder-price copy. |
+| Public switch | Review the audited draft, publish it, deploy the landing page, and announce. |
+| Post-beta / when funded | Enroll Apple Developer and Azure Artifact Signing; add their optional secret groups. |
+| Optional | Pick an email provider. The beta download stays available without it. |
 | Anytime | Legal research (non-blocking). 2–3 royalty-clear before/after snippets for the landing A/B hero. Begin genuine KVR/community participation (2–3 wks before any promo). |
 | Non-blocking | Friend-run Intel Mac smoke test (install, import, master, export). |
 
-### Opus lane — ordered slices
+### Agent lane — ordered slices
 
 Commit small (per CLAUDE.md). Run the fast verify lane per touched surface;
 slow fixture lane only for DSP/export-touching slices (none below should touch
@@ -81,20 +82,20 @@ Source of wording: launch plan §2/§3 + D9. Exact edits:
   free time-boxed beta (~8 wks, concrete flip date announced at beta launch),
   single SKU $29 founder → $49 one-time perpetual license, permanent
   export-locked demo (full chain + receipt visible; render/export gated), sold
-  direct via Lemon Squeezy (MoR), signed installers on GitHub Releases, Tauri
-  updater.
+  direct via Lemon Squeezy (MoR), installers on GitHub Releases, Tauri updater.
+  *D16 later permits ad-hoc/unsigned OS installers for the $0 beta.*
 - **C** `docs/PRODUCT.md` Mobile Companions: replace the "pending owner
   definition" block with D9's wording + deliberate absences (no album
   mastering, no advanced controls, no custom delivery formats on phones).
 - **D** `docs/PRODUCT.md` Public Surface: landing page is a **supported product
   surface** — marketing + ungated download hub + optional email capture, later
   checkout. Closes "role pending".
-- **E** `docs/PRODUCT.md` Deferred list: REMOVE "Public code signing/
-  notarization" and "Autoupdate" (now launch-blocking); add a pointer to this
-  plan. Same removal in `docs/RELEASE_STABILIZATION.md` Deferred section.
-- **F** `docs/PRODUCT.md` Release-Candidate Meaning: add (i) macOS packaging
-  criterion parallel to the Windows line, (ii) "installers are signed by the
-  release pipeline".
+- **E** `docs/PRODUCT.md` Deferred list: original D8 edit made public code
+  signing/notarization launch-blocking. **Superseded by D16:** paid OS signing
+  is post-beta; only updater signing/proof remains blocking.
+- **F** `docs/PRODUCT.md` Release-Candidate Meaning: add macOS packaging
+  criterion parallel to Windows. **Superseded by D16:** OS-signed installers
+  are not required for the $0 beta.
 - **G** `CLAUDE.md` **and byte-identical** `AGENTS.md`: broaden the first
   non-negotiable to acknowledge iPhone/Android bridges + landing page as real,
   CI-tested surfaces (desktop still ships first); add
@@ -195,21 +196,19 @@ feel deferred."* Method (screenshot-driven, no redesign):
    flagged, not guessed.
 - Verify: layout-css tests + full frontend lane; visual A/B set for owner.
 
-#### Slice 10 — [PAYDAY-GATED] Release pipeline activation
-After owner adds secrets + fixes CI billing:
-- Activate `release.yml`: tagged release → build, sign (Azure Trusted
-  Signing + Apple Developer ID + notarization), publish installers + updater
-  manifest to GitHub Releases. macOS artifact = universal binary (D12).
-- Cut `v0.9.0-beta.1` tag → first signed release (can be a private/draft
-  release for owner install-testing).
+#### Slice 10 — $0 release pipeline activation
+- Activate `release.yml`: tagged release → universal macOS + Windows builds,
+  signed updater artifacts, checksums, and an audited **draft** GitHub Release.
+  Paid Apple/Azure signing is optional and activates only with complete secrets.
+- Cut `v0.9.0-beta.1` tag → first draft candidate; publish only after owner
+  hardware/listening approval.
 - Owner then does the real-machine macOS confirm + Windows install check.
 
-#### Slice 11 — [PAYDAY-GATED] Landing page launch wiring
-- Wire the Download button to the GitHub Releases artifacts (ungated, D5) —
-  replace the current `mailto:`.
-- Wire the signup form to the chosen provider endpoint (D4); re-run the
-  hardening plan Workstream F checklist against it before enabling (pinned by
-  `src/landing/BetaSignup.test.tsx`).
+#### Slice 11 — Landing page launch wiring
+- Wire the Download button to GitHub Releases (ungated, D5/D16).
+- Keep signup visibly optional and safe-disabled until a provider is chosen;
+  it cannot block the beta download. Re-run the hardening checklist before
+  enabling it (pinned by `src/landing/BetaSignup.test.tsx`).
 - Add the beta model + concrete flip date + founder-price promise copy
   (launch plan §5 item 1, D2).
 - Run `npm run verify:landing`.
@@ -400,12 +399,12 @@ freeze stands):
 
 #### Slice 12 — Beta go/no-go checklist (docs only)
 Assemble `docs/plans/beta-go-no-go.md` (shipped): listening note exists; macOS + Windows
-real-machine installs confirmed; signed artifacts downloadable; landing copy
-live with flip date; signup capture verified end-to-end; legal drafts bundled
+real-machine installs confirmed; audited artifacts downloadable with install
+guidance; landing copy live with flip date; legal drafts bundled
 as-is (D6); owner GTM checklist (KVR post etc.) is owner lane. Beta announce
 is an OWNER action — the agent never publishes/announces.
 Two updater gate items (added 2026-07-08): (i) **replace the bootstrap
-updater pubkey** with the owner's real keypair BEFORE the first signed
+updater pubkey** with the permanent keypair BEFORE the first
 release (per `docs/RELEASE_SIGNING_SETUP.md` — shipped apps can never accept
 updates signed by a different key); (ii) **prove the update path end-to-end**
 once: install a 0.9.0 build, publish a draft 0.9.1 release, confirm the

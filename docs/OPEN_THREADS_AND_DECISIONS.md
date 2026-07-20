@@ -78,6 +78,13 @@ close rather than letting them rot in scattered docs.
 > - **D14** Premium-parity UI pass is in beta scope (beta-plan Slice 9).
 > - **D15** Owner verification devices: M4 MacBook Pro, current Windows box,
 >   iPhone 16. No Android device — **Android stays parked**.
+> - **D16 (owner, 2026-07-20)** The public beta must have a **$0 launch path**.
+>   Apple Developer notarization and Azure Artifact Signing are post-beta trust
+>   upgrades, not beta blockers. The beta may ship macOS ad-hoc / Windows
+>   unsigned with clear Gatekeeper/SmartScreen guidance and release checksums.
+>   The free Tauri updater signature remains mandatory. The download stays
+>   ungated; optional email capture cannot block launch. This supersedes the
+>   paid-account/email blocking parts of D3/D4.
 >
 > Post-beta parking lot (explicitly NOT this plan): paid-flip export gate +
 > Lemon Squeezy activation, AC-5 / Phase-B / album-character calibration,
@@ -195,10 +202,9 @@ cluster can mostly close in one sitting.**
     mailing provider (Buttondown/MailerLite/Kit per signup-config comments) or
     build a Supabase backend, re-run the hardening plan's Workstream F
     checklist against it before going live.
-    **CLOSED 2026-07-07 (beta plan D8/D4, edit G):** the landing page is in
-    agent scope for launch work. Email provider is picked at payday (D4) and the
-    signup form + download button are wired in beta-plan Slice 11 (payday-gated);
-    the form stays safe-disabled until then.
+    **UPDATED 2026-07-20 (D16):** the landing page is in agent scope. The
+    ungated GitHub Releases download is wired. Email capture remains optional
+    and safe-disabled until a provider is chosen; it cannot block beta launch.
 12. Broaden the "Local desktop app for Mac and Windows" non-negotiable to acknowledge iPhone + Android (and web)? *(Recommended yes — the CI already runs the mobile lanes.)*
     **CLOSED 2026-07-07 (beta plan D8, edit G):** yes — CLAUDE.md/AGENTS.md first
     non-negotiable broadened to acknowledge the CI-tested iPhone/Android bridges
@@ -211,8 +217,9 @@ cluster can mostly close in one sitting.**
 13. Confirm **macOS build/install status** — add a parallel macOS-packaging release criterion to PRODUCT.md?
     **CLOSED 2026-07-07 (beta plan D8, edit F):** yes — PRODUCT.md
     Release-Candidate Meaning gains a macOS packaging criterion parallel to the
-    Windows line, plus "installers are signed by the release pipeline." The
-    real-machine macOS confirm on the M4 is owner lane (D15).
+    Windows line. D16 later superseded the OS-signing requirement for the $0
+    beta: ad-hoc/unsigned is acceptable with install guidance. The real-machine
+    macOS confirm on the M4 remains owner lane (D15).
 14. **Android signing/bundleRelease** is blocked on you providing a keystore — when?
 15. Mobile **background-audio** behavior (UIBackgroundModes / foreground service) — v1 limitation or build it?
 

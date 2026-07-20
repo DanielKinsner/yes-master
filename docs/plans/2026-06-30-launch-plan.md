@@ -6,6 +6,13 @@
 > checklist; it is NOT product canon — see `docs/PRODUCT.md` for canon (which
 > still needs the positioning reframe in §2, owner-gated).
 
+> **2026-07-20 owner override (D16):** the public beta must be launchable for
+> $0. Paid Apple Developer notarization and Azure Artifact Signing are now
+> post-beta trust upgrades, not beta blockers. Beta installers may be macOS
+> ad-hoc / Windows unsigned when the landing page and install guide clearly
+> explain the OS prompts. The free Tauri updater signature and its end-to-end
+> proof remain mandatory. This supersedes older "sign from first beta" wording.
+
 ## TL;DR
 
 Launch **desktop-first (Mac + Windows)** as a **free, time-boxed public beta**
@@ -29,7 +36,7 @@ that with reviews, testimonials, and a warm email list.
 | **Tier split** | Standard-vs-Advanced split **deferred to v2**, gated on album + proof/export depth once buyer data exists. Never gate receipt *visibility*. |
 | **Distribution** | Sell **direct** from the landing page via **Lemon Squeezy** (MoR, handles global tax). Installers hosted on **GitHub Releases**. Microsoft Store later; **skip Mac App Store**. |
 | **Licensing** | **One-time online activation** (cached, with an offline grace period). Keys issued by Lemon Squeezy. |
-| **Signing** | macOS **Apple Developer ID** + notarization ($99/yr). Windows **Azure Trusted Signing** ($10/mo). Sign from the **first** beta build. |
+| **Signing** | $0 beta: macOS ad-hoc + Windows unsigned with explicit install guidance; Tauri updater artifacts remain signed. Add Apple Developer ID/notarization and Azure Artifact Signing after beta funding permits. |
 | **Updates** | Tauri updater pulling from GitHub Releases. |
 | **Platform** | Desktop Mac + Win first. iPhone/Android parked to an audience-gated later phase (shared engine = no cost to defer). |
 | **Positioning** | Lead with performance / simplicity / honesty. Demote "local/private" to a speed-and-convenience footnote. |
@@ -93,15 +100,14 @@ substitutes for the celebrity social proof we don't have.
 - **Checkout:** Lemon Squeezy as merchant-of-record (remits VAT/GST/sales tax;
   no company required to start; issues license keys + activation API; ~5% + $0.50).
   Confirm payout-country support.
-- **Hosting:** signed installers published to **GitHub Releases**; the Tauri
-  updater reads its manifest from there.
-- **macOS signing:** Apple Developer Program ($99/yr) → Developer ID Application
-  cert + `notarytool` notarization + hardened runtime + entitlements. Currently
-  `signingIdentity` is ad-hoc `"-"` — must become a real identity.
-- **Windows signing:** Azure Trusted Signing (~$10/mo; open to individuals since
-  2026) → Authenticode. Sign from the first public build so SmartScreen reputation
-  starts accruing now (no cert buys instant trust; early users may still see a
-  warning until reputation builds).
+- **Hosting:** universal macOS + Windows installers published to **GitHub
+  Releases**; the Tauri updater reads its signed manifest from there.
+- **$0-beta signing:** macOS stays ad-hoc (`signingIdentity: "-"`) and Windows
+  may be unsigned. Publish explicit Gatekeeper/SmartScreen instructions and
+  SHA-256 checksums with every release.
+- **Post-beta trust upgrade:** Apple Developer ID + notarization and Azure
+  Artifact Signing / Authenticode. Add these when funding permits; the workflow
+  auto-activates each platform only when its complete secret group exists.
 - **Stores:** Microsoft Store later (near-0% cut, extra reach). Mac App Store
   skipped (15–30% cut + sandbox fights local file access).
 
@@ -123,9 +129,9 @@ substitutes for the celebrity social proof we don't have.
 **First-30-days checklist**
 1. Put the beta→paid model, flip date, and founder-price promise in writing on the landing page.
 2. Sign up for Lemon Squeezy; confirm payout country; decide sole-trader vs company.
-3. Enroll Apple Developer ($99/yr) + set up Azure Trusted Signing ($10/mo) — start the clock.
-4. Wire the release pipeline: signed installers → GitHub Releases + Tauri updater JSON; verify clean install + auto-update on real Mac and Windows.
-5. Add email opt-in to the landing page.
+3. Wire the $0 release pipeline: draft installers + checksums + signed Tauri updater JSON; verify clean install + auto-update on real Mac and Windows.
+4. Publish an ungated download on the landing page; keep email opt-in optional.
+5. After beta funding permits, enroll Apple Developer + Azure Artifact Signing to reduce OS-warning friction.
 6. Produce proof assets: 2–3 owned before/after clips + one 60–90s metering/receipt screen recording.
 7. Create KVR + one subreddit account; start participating (no promo).
 8. Announce the free beta on KVR once the page + download are flawless; collect emails.
@@ -141,18 +147,20 @@ Derived from the launch-readiness scan + the strategy above. Ordered by leverage
 > **Progress (2026-06-30):** ✅ Landing rewrite shipped (brand + positioning +
 > free-beta email capture; email provider endpoint pending). ✅ Release pipeline
 > drafted (`.github/workflows/release.yml` + `docs/RELEASE_SIGNING_SETUP.md`) —
-> macOS + Windows signing auto-activate once the owner adds account secrets.
+> macOS + Windows paid signing auto-activate later if the owner adds account
+> secrets; they are not $0-beta gates under D16.
 > ✅ Legal drafts written (`docs/legal/` EULA, privacy, refund) — pending owner
-> fill-in + lawyer pass. Remaining P0/P1 (export gate, license activation,
-> download-button wiring, version bump) are gated on the Lemon Squeezy account
-> and the first signed release.
+> fill-in + lawyer pass. The later paid product still needs Lemon Squeezy and
+> licensing; neither blocks the free beta. D16 supersedes the old first-signed-
+> release dependency.
 
 **P0 — without these there is nothing to launch**
-- [ ] **Release pipeline:** GitHub Actions workflow that builds, **signs**,
-  notarizes, and publishes installers to GitHub Releases on a tagged release.
-- [ ] **macOS signing + notarization** wired into the release build.
-- [ ] **Windows Authenticode signing** (Azure Trusted Signing) wired in.
-- [ ] **Landing "Download" button** wired to real release artifacts (currently a `mailto:`).
+- [x] **Release pipeline:** GitHub Actions workflow builds universal macOS and
+  Windows installers, signs updater artifacts, audits the draft, and fails
+  closed on partial optional signing configuration.
+- [ ] **Paid macOS signing + notarization** wired later. *Post-beta advisory.*
+- [ ] **Windows Authenticode signing** wired later. *Post-beta advisory.*
+- [x] **Landing "Download" button** wired to the ungated GitHub Releases URL.
 - [ ] **Export gate (free/paid boundary):** *Feasibility confirmed CLEAN
   (2026-06-30).* All exports funnel through a single chokepoint — the
   `render_track_master` and `render_album_plan` commands in
@@ -165,7 +173,8 @@ Derived from the launch-readiness scan + the strategy above. Ordered by leverage
 **P1 — needed for the paid flip**
 - [ ] **License activation** in the Tauri core: Lemon Squeezy key, one-time online
   check, cached with offline grace; fails gracefully offline.
-- [ ] **Tauri updater** integrated (currently absent) + signing keypair for update artifacts.
+- [x] **Tauri updater** integrated + permanent signing keypair configured; real
+  0.9.0 → 0.9.1 update proof remains open.
 - [ ] **Version bump** from 0.1.0 to a real beta version; set Windows publisher metadata.
 - [ ] **Landing page rewrite** to the §2 positioning + embed the A/B hero demo + email capture.
 - [ ] **Brand decision** applied across landing/app/docs.
@@ -188,7 +197,7 @@ Derived from the launch-readiness scan + the strategy above. Ordered by leverage
 
 ## 7. Phased roadmap
 
-1. **Phase 1 — Free beta** (~8–12 wks): signed desktop build (Win+Mac), GitHub
+1. **Phase 1 — Free beta** (~8–12 wks): desktop build (Win+Mac), GitHub
    Releases, an **ungated** download from the landing page with optional email
    capture beside it (corrected 2026-07-07 — beta plan **D5** overrides the
    original "email-gated" wording here). Full app, no watermark. GTM = KVR +
@@ -209,7 +218,8 @@ Derived from the launch-readiness scan + the strategy above. Ordered by leverage
   real beta→paid numbers; lean cheaper/more generous early to buy word-of-mouth.
 - **"Real-time" is a literal headline promise** — verify snappiness on mid-tier laptops.
 - **Export-lock leakage** would sink the funnel — must be a hard gate.
-- **Windows SmartScreen** friction until download reputation accrues — sign early, add an install note.
+- **Windows SmartScreen / macOS Gatekeeper friction** is expected for the $0
+  beta — publish exact install guidance and checksums; add paid signing later.
 - **No celebrity proof** — deliberately harvest named beta quotes + before/after clips, or the A/B angle has nothing to show.
 - **Beta discipline** — a hard flip date prevents an indefinite unpaid support burden.
 
@@ -217,7 +227,8 @@ Derived from the launch-readiness scan + the strategy above. Ordered by leverage
 
 ## 9. What only the owner can provide
 
-- Apple Developer account ($99/yr) + Azure Trusted Signing setup ($10/mo) — identity verification is yours.
+- Apple Developer + Azure Artifact Signing accounts when budget permits;
+  post-beta trust upgrades, not beta gates under D16.
 - Lemon Squeezy account; payout country; sole-trader vs company decision.
 - 2–3 royalty-clear before/after song snippets you own, for the A/B hero demo + clips.
 - The final brand-name call.

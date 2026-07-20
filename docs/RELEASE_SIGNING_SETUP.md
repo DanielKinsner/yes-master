@@ -1,142 +1,114 @@
-# Release & Code-Signing Setup
+# Release, Updater & Optional Code-Signing Setup
 
-How to turn the `.github/workflows/release.yml` pipeline into real, signed,
-downloadable installers. You only do this setup once. Until you do, the pipeline
-still works — it just produces **unsigned** builds that trip an "unknown
-developer" warning on download.
+The public beta has a **$0 release path** (D16, 2026-07-20). It produces a
+universal Mac build and Windows MSI/NSIS installers, signs every updater
+artifact with the permanent Tauri key, generates SHA-256 checksums, and leaves
+the GitHub Release as a draft for owner review.
 
-## How a release works (the 30-second version)
+Apple notarization and Windows Authenticode are optional post-beta trust
+upgrades. Without them, users will see Gatekeeper or SmartScreen prompts; link
+`docs/BETA_INSTALL.md` anywhere the beta is offered.
 
-1. Bump the version in three files (they must match): `package.json`,
-   `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`.
-2. Commit, then create and push a tag: `git tag v0.1.0-beta.1 && git push origin v0.1.0-beta.1`.
-3. The workflow builds macOS (Apple Silicon + Intel) and Windows installers and
-   creates a **draft** GitHub Release with them attached.
-4. You open the draft release on GitHub, sanity-check the files, and click
-   **Publish**. (It's a draft on purpose — nothing goes public until you say so.)
-5. The landing page's download button points at that release (wired up in the
-   release-pipeline follow-up).
+## How a $0 beta release works
 
-You can also run it manually from the Actions tab ("Run workflow") without a tag.
+1. Keep the version identical in `package.json`, `src-tauri/tauri.conf.json`,
+   and `src-tauri/Cargo.toml`.
+2. Commit, then create and push a beta tag such as `v0.9.0-beta.1`. Tagging and
+   pushing are owner-confirmed public actions.
+3. The workflow builds one `universal-apple-darwin` Mac artifact plus Windows
+   MSI/NSIS artifacts. It always uses the free updater-signing secrets.
+4. The workflow creates a **draft, non-prerelease** GitHub Release. The beta
+   identity remains in its tag/title; non-prerelease is required because the
+   app reads GitHub's `/releases/latest` channel after publication.
+5. A final audit requires the installers, updater archives/signatures,
+   `latest.json`, and `SHA256SUMS.txt`. It fails if the draft is incomplete.
+6. The owner downloads, installs, listens, and checks the draft. Only the owner
+   publishes it.
 
----
+The workflow can also be dispatched manually from GitHub Actions. It still
+creates a draft; it never silently publishes.
 
-## macOS signing (stable — do this first)
+## Permanent Tauri updater signing — configured
 
-Goal: a **Developer ID Application** certificate (the one for apps distributed
-*outside* the Mac App Store) + notarization.
+Updater signing is separate from Apple/Azure OS signing and costs nothing. It
+proves that an update was produced by the holder of the permanent private key.
+Every shipped app trusts the public key in `src-tauri/tauri.conf.json`, so this
+identity must remain stable.
 
-1. **Join the Apple Developer Program** — $99/yr, https://developer.apple.com/programs/.
-   Allow a day or two for identity verification.
-2. In the Apple Developer portal, create a **Developer ID Application**
-   certificate. Download it and double-click to install it in your Mac's
-   Keychain. (Not "Apple Development" — that one can't notarize for distribution.)
-3. In Keychain Access, export that certificate **and its private key** as a
-   `.p12` file. Give it a password — this is your `APPLE_CERTIFICATE_PASSWORD`.
-4. Base64-encode the `.p12` so it can live in a secret:
-   - macOS: `base64 -i certificate.p12 | pbcopy`
-5. Create an **app-specific password** for notarization at
-   https://appleid.apple.com (Sign-In & Security → App-Specific Passwords).
-   This is `APPLE_PASSWORD`.
-6. Find your **Team ID** on your Apple Developer account membership page
-   (`APPLE_TEAM_ID`).
+Configured 2026-07-20:
 
-Add these in GitHub → repo **Settings → Secrets and variables → Actions → New repository secret**:
+- The permanent public key is committed in `plugins.updater.pubkey`.
+- GitHub Actions secrets `TAURI_SIGNING_PRIVATE_KEY` and
+  `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` exist.
+- The encrypted private key is outside the repository at
+  `C:\Users\SM - Dan\.yes-master\keys\yes-master-updater.key`.
+- Its local password-recovery file is at
+  `C:\Users\SM - Dan\.yes-master\keys\yes-master-updater.key.password.dpapi`.
+  That DPAPI file is tied to this Windows account/machine.
 
-| Secret | Value |
-|---|---|
-| `APPLE_CERTIFICATE` | the base64 string from step 4 |
-| `APPLE_CERTIFICATE_PASSWORD` | the `.p12` password from step 3 |
-| `APPLE_ID` | your Apple account email |
-| `APPLE_PASSWORD` | the app-specific password from step 5 |
-| `APPLE_TEAM_ID` | your Team ID from step 6 |
-| `KEYCHAIN_PASSWORD` | any random string (a throwaway password for the CI keychain) |
+**Owner backup required:** store the encrypted private key and its passphrase
+in a cross-machine password manager. Never commit either. If the key is lost,
+already-installed apps cannot accept future automatic updates and users need a
+manual reinstall.
 
-Once these exist, the macOS jobs sign and notarize automatically. No code changes needed.
+Release builds apply `src-tauri/tauri.updater.conf.json`, which emits and signs
+the updater archives and `.sig` files. The app reads `latest.json` from:
 
----
+`https://github.com/DanielKinsner/yes-master/releases/latest/download/latest.json`
 
-## Windows signing (Azure Trusted Signing)
+The remaining beta gate is an end-to-end 0.9.0 → 0.9.1 update proof on a real
+installed build.
 
-Azure Trusted Signing is the cheap modern path (~$10/mo, and as of 2026 open to
-individuals — no company required). Unlike old certificates, there's no big
-up-front cert purchase.
+## Optional macOS trust upgrade (post-beta)
 
-1. In the Azure portal, set up **Trusted Signing** (a.k.a. Azure Artifact
-   Signing): create a Trusted Signing **account** and a **certificate profile**,
-   and complete the identity verification.
-2. Create an **App Registration** (Microsoft Entra ID) and a **client secret**.
-   Grant it the "Trusted Signing Certificate Profile Signer" role on your
-   account. You'll get a tenant ID, client ID, and client secret.
-3. Add these GitHub secrets:
+Goal: remove most Gatekeeper friction with a Developer ID Application
+certificate and Apple notarization.
 
-   | Secret | Value |
-   |---|---|
-   | `AZURE_TENANT_ID` | your Entra tenant ID |
-   | `AZURE_CLIENT_ID` | the App Registration's client ID |
-   | `AZURE_CLIENT_SECRET` | the App Registration's client secret |
-
-4. Edit `src-tauri/tauri.windows-signing.conf.json` and replace `YOUR_AZURE_ACCOUNT`,
-   `YOUR_CERT_PROFILE`, and the endpoint URL (e.g. `https://wus2.codesigning.azure.net`)
-   with your real values.
-
-> ⚠️ **Verify the signing CLI before the first signed release.** The crate/binary
-> used in the workflow (`trusted-signing-cli`) and in the `signCommand` is in flux
-> upstream — it has been renamed (e.g. `artifact-signing-cli`) and the tauri-action
-> integration has broken and been fixed more than once. Before relying on it,
-> check the current official guide — https://v2.tauri.app/distribute/sign/windows/ —
-> and confirm the install line in `release.yml` and the `signCommand` match. This
-> is the one piece we agreed to confirm together once your Azure account exists.
-
-**Heads-up on SmartScreen:** even correctly signed, brand-new Windows software
-shows a "Windows protected your PC" warning until your download earns
-"reputation" (a few weeks / some number of installs). This is why we sign from
-the very first beta build — to start that clock as early as possible.
-
----
-
-## Auto-updater signing
-
-The Tauri auto-updater is wired in (Slice 7): on launch the app checks these
-same GitHub Releases for a newer signed version (`src-tauri/tauri.conf.json` →
-`plugins.updater`). It needs its **own** signing keypair — separate from the OS
-code-signing certs above — so the app can verify an update genuinely came from
-you before trusting it.
-
-> ⚠️ **The `pubkey` currently committed in `plugins.updater` is a throwaway
-> bootstrap; its private half was discarded. You MUST generate your own keypair
-> before the first release, or update artifacts can never be signed to match
-> the app's expected key.**
-
-1. Generate the keypair once (it must stay stable forever — every shipped app
-   trusts this exact key):
-
-   ```
-   npm run tauri -- signer generate -w yes-master-updater.key
-   ```
-
-   It prints the **public key** and writes the password-protected **private
-   key** to `yes-master-updater.key`.
-2. Paste the printed public key into `src-tauri/tauri.conf.json` →
-   `plugins.updater.pubkey`, replacing the bootstrap value, and commit it.
-3. Add two GitHub secrets (Settings → Secrets and variables → Actions):
+1. Join the Apple Developer Program and create a **Developer ID Application**
+   certificate.
+2. Export the certificate and private key as a password-protected `.p12`.
+3. Base64-encode the `.p12`.
+4. Create an Apple app-specific password and record the Team ID.
+5. Add the complete GitHub secret group:
 
    | Secret | Value |
    |---|---|
-   | `TAURI_SIGNING_PRIVATE_KEY` | the full contents of `yes-master-updater.key` |
-   | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | the password you set in step 1 |
+   | `APPLE_CERTIFICATE` | base64 `.p12` |
+   | `APPLE_CERTIFICATE_PASSWORD` | `.p12` password |
+   | `APPLE_ID` | Apple account email |
+   | `APPLE_PASSWORD` | app-specific password |
+   | `APPLE_TEAM_ID` | Developer Team ID |
+   | `KEYCHAIN_PASSWORD` | random temporary CI-keychain password |
 
-4. Keep `yes-master-updater.key` in a password manager. **If you lose it,
-   already-installed apps can no longer auto-update** — you'd have to ship a new
-   pubkey and every user would re-download once by hand. Never commit it.
+The workflow signs/notarizes only when the **entire** group exists and fails on
+a partial group. No code change is required.
 
-Once the private-key secret exists, the release pipeline automatically emits and
-signs the updater artifacts (per-installer `.sig` files + `latest.json`) via the
-`src-tauri/tauri.updater.conf.json` overlay and attaches them to the draft
-release; the app reads `latest.json` from the release's
-`latest/download/latest.json` URL. Offline or before any release exists, the
-check fails silently and the app is fully usable.
+## Optional Windows trust upgrade (post-beta)
 
-## What's intentionally not here yet
+Goal: add Authenticode through Azure Artifact Signing. Until then, Windows
+builds remain usable after the user accepts SmartScreen.
 
-- **Linux.** Out of scope for launch (desktop = Mac + Windows).
+1. Create an Azure Artifact Signing account and certificate profile; complete
+   identity verification.
+2. Create a Microsoft Entra App Registration, client secret, and grant the
+   certificate-profile signer role.
+3. Add the complete GitHub secret group:
+
+   | Secret | Value |
+   |---|---|
+   | `AZURE_TENANT_ID` | Entra tenant ID |
+   | `AZURE_CLIENT_ID` | App Registration client ID |
+   | `AZURE_CLIENT_SECRET` | App Registration client secret |
+
+4. Replace the placeholders in
+   `src-tauri/tauri.windows-signing.conf.json` with the account, certificate
+   profile, and regional endpoint.
+
+The workflow uses the current `artifact-signing-cli`. It signs only when the
+complete Azure group exists and fails on a partial group.
+
+## Intentionally out of scope
+
+- Linux launch artifacts.
+- Mac App Store / Microsoft Store distribution.
+- Making optional email capture a download gate.

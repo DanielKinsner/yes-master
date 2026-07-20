@@ -232,9 +232,11 @@ further subjective retune.
 2. The full private fixture matrix runner evidence is complete; listening
    signoff on already-mastered outputs remains.
 3. Oomph needs listening notes before another targeted tuning pass.
-4. Public code signing, notarization, and the already-integrated autoupdater are
-   beta launch blockers pending signing accounts, permanent updater keys, and
-   an end-to-end signed update proof. Store-style distribution remains deferred.
+4. The already-integrated autoupdater still needs an end-to-end update proof.
+   Its permanent key is configured. Paid Apple notarization and Windows
+   Authenticode are post-beta trust upgrades; the $0 beta may ship ad-hoc /
+   unsigned installers with explicit OS-warning guidance (D16, 2026-07-20).
+   Store-style distribution remains deferred.
 5. Cloud-placeholder sources (OneDrive Files-On-Demand, Dropbox online-only)
    are untested territory: a dehydrated file can stall decode/analysis for
    the duration of a network hydration, and no unit test can construct one

@@ -260,6 +260,7 @@ Status: deferred to Wave 10 on 2026-06-16.
 - Album dashboard/report expansion.
 - Subjective preset retuning / listening calibration (Wave 10).
 
-Public signing / notarization and autoupdate are **no longer deferred** — they
-are beta launch-blocking (see `docs/plans/2026-07-07-beta-execution-plan.md`,
-Slices 7 & 10).
+Paid Apple signing/notarization and Windows Authenticode are post-beta trust
+upgrades under D16 (2026-07-20), not $0-beta blockers. The autoupdater remains
+in beta scope: its permanent key and signed artifacts are required, and the
+update path still needs one real-machine end-to-end proof.

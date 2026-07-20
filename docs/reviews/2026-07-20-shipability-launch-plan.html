@@ -1,0 +1,1072 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>YES Master — Shipability & Launch Plan — 2026-07-20</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: oklch(16% 0.018 252);
+      --surface: oklch(20% 0.02 252);
+      --surface-raised: oklch(23% 0.022 252);
+      --ink: oklch(92% 0.015 88);
+      --muted: oklch(74% 0.025 252);
+      --line: oklch(35% 0.03 252);
+      --blue: oklch(76% 0.115 256);
+      --blue-soft: oklch(27% 0.055 256);
+      --green: oklch(78% 0.115 154);
+      --green-soft: oklch(25% 0.05 154);
+      --amber: oklch(82% 0.12 78);
+      --amber-soft: oklch(28% 0.055 78);
+      --red: oklch(75% 0.145 24);
+      --red-soft: oklch(27% 0.06 24);
+      --focus: oklch(82% 0.14 256);
+      --body-size: 1.0625rem;
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 0.75rem;
+      --space-lg: 1rem;
+      --space-xl: 1.5rem;
+      --space-2xl: 2rem;
+      --space-3xl: 3rem;
+      --space-4xl: 4rem;
+      font-synthesis: none;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-family: "Atkinson Hyperlegible", Aptos, "Segoe UI", sans-serif;
+      font-size: var(--body-size);
+      line-height: 1.65;
+      font-kerning: normal;
+    }
+
+    body.high-contrast {
+      --page: oklch(10% 0.012 252);
+      --surface: oklch(14% 0.014 252);
+      --surface-raised: oklch(18% 0.016 252);
+      --ink: oklch(98% 0.006 88);
+      --muted: oklch(86% 0.014 252);
+      --line: oklch(58% 0.025 252);
+      --blue: oklch(84% 0.11 256);
+      --blue-soft: oklch(23% 0.06 256);
+      --green: oklch(86% 0.11 154);
+      --green-soft: oklch(22% 0.055 154);
+      --amber: oklch(89% 0.11 78);
+      --amber-soft: oklch(23% 0.06 78);
+      --red: oklch(85% 0.13 24);
+      --red-soft: oklch(23% 0.065 24);
+    }
+
+    a {
+      color: var(--blue);
+      text-underline-offset: 0.18em;
+      text-decoration-thickness: 0.08em;
+    }
+
+    a:hover {
+      text-decoration-thickness: 0.14em;
+    }
+
+    :focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+    }
+
+    .skip-link {
+      position: fixed;
+      top: var(--space-lg);
+      left: var(--space-lg);
+      z-index: 100;
+      transform: translateY(-180%);
+      background: var(--ink);
+      color: var(--surface);
+      padding: var(--space-md) var(--space-lg);
+      border-radius: 0.5rem;
+      font-weight: 800;
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    .utility-bar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-lg);
+      min-height: 3.5rem;
+      padding: var(--space-sm) clamp(1rem, 4vw, 3rem);
+      background: var(--surface-raised);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .utility-title {
+      font-size: 0.875rem;
+      font-weight: 850;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .utility-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: var(--space-sm);
+    }
+
+    button {
+      min-height: 2.75rem;
+      border: 1px solid var(--line);
+      border-radius: 0.65rem;
+      padding: 0.45rem 0.8rem;
+      background: var(--surface);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    button:hover,
+    button[aria-pressed="true"] {
+      background: var(--blue-soft);
+      border-color: var(--blue);
+    }
+
+    main {
+      width: min(100% - 2rem, 72rem);
+      margin-inline: auto;
+      padding: clamp(2rem, 6vw, 5rem) 0 6rem;
+    }
+
+    .eyebrow {
+      margin: 0 0 var(--space-lg);
+      color: var(--blue);
+      font-size: 0.82rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+    }
+
+    h1 {
+      max-width: 14ch;
+      font-size: clamp(2.6rem, 7vw, 5.7rem);
+      font-weight: 900;
+    }
+
+    h2 {
+      font-size: clamp(1.9rem, 4vw, 3.2rem);
+      font-weight: 880;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 850;
+    }
+
+    p,
+    li {
+      max-width: 70ch;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .hero {
+      padding-bottom: var(--space-4xl);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .decision {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin: var(--space-xl) 0;
+      padding: 0.5rem 0.8rem;
+      border: 2px solid var(--red);
+      border-radius: 999px;
+      background: var(--red-soft);
+      color: var(--red);
+      font-weight: 900;
+      letter-spacing: 0.035em;
+      text-transform: uppercase;
+    }
+
+    .decision::before {
+      content: "×";
+      display: grid;
+      width: 1.4rem;
+      height: 1.4rem;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--red);
+      color: var(--red-soft);
+      line-height: 1;
+    }
+
+    .hero-lead {
+      max-width: 50ch;
+      font-size: 1.35rem;
+      line-height: 1.48;
+      font-weight: 650;
+    }
+
+    .one-sentence {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: var(--space-lg);
+      margin-top: var(--space-2xl);
+      padding: var(--space-xl);
+      background: var(--blue-soft);
+      border: 1px solid color-mix(in oklch, var(--blue), var(--line) 55%);
+      border-radius: 1rem;
+    }
+
+    .one-sentence .label {
+      color: var(--blue);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .quick-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      margin-top: var(--space-2xl);
+    }
+
+    .quick-nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 2.75rem;
+      padding: 0.4rem 0.8rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--ink);
+      font-size: 0.92rem;
+      font-weight: 780;
+      text-decoration: none;
+    }
+
+    .quick-nav a:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    section {
+      padding-top: var(--space-4xl);
+      scroll-margin-top: 5rem;
+    }
+
+    .section-intro {
+      margin-top: var(--space-lg);
+      color: var(--muted);
+      font-size: 1.1rem;
+    }
+
+    .status-board {
+      margin-top: var(--space-2xl);
+      border-top: 1px solid var(--line);
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: 8.25rem minmax(11rem, 1fr) minmax(14rem, 2fr);
+      align-items: start;
+      gap: var(--space-xl);
+      padding: var(--space-xl) 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      min-height: 2rem;
+      width: fit-content;
+      min-width: 7.3rem;
+      padding: 0.22rem 0.6rem;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .status::before {
+      font-size: 0.95rem;
+      line-height: 1;
+    }
+
+    .ready {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    .ready::before {
+      content: "●";
+    }
+
+    .partial {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .partial::before {
+      content: "▲";
+    }
+
+    .blocked {
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .blocked::before {
+      content: "■";
+    }
+
+    .status-area {
+      font-weight: 850;
+    }
+
+    .status-note {
+      color: var(--muted);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-lg);
+      margin-top: var(--space-xl);
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .legend b {
+      color: var(--ink);
+    }
+
+    .blocker-list {
+      display: grid;
+      gap: var(--space-3xl);
+      margin-top: var(--space-3xl);
+      padding: 0;
+      list-style: none;
+      counter-reset: blockers;
+    }
+
+    .blocker {
+      display: grid;
+      grid-template-columns: 4rem minmax(0, 1fr);
+      gap: var(--space-xl);
+      counter-increment: blockers;
+    }
+
+    .blocker::before {
+      content: counter(blockers, decimal-leading-zero);
+      display: grid;
+      width: 4rem;
+      height: 4rem;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--red-soft);
+      color: var(--red);
+      font-size: 1.25rem;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .blocker-body {
+      padding-bottom: var(--space-3xl);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .blocker-body > p {
+      margin-top: var(--space-md);
+      color: var(--muted);
+    }
+
+    .action-line {
+      display: grid;
+      grid-template-columns: 6.25rem 1fr;
+      gap: var(--space-md);
+      margin-top: var(--space-lg);
+      padding: var(--space-lg);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 0.8rem;
+    }
+
+    .action-line strong {
+      color: var(--blue);
+    }
+
+    .lane-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-2xl);
+      margin-top: var(--space-2xl);
+    }
+
+    .lane {
+      padding-top: var(--space-lg);
+      border-top: 4px solid var(--blue);
+    }
+
+    .lane.owner {
+      border-top-color: var(--amber);
+    }
+
+    .lane p {
+      margin-top: var(--space-sm);
+      color: var(--muted);
+    }
+
+    .lane ul {
+      margin: var(--space-lg) 0 0;
+      padding-left: 1.25rem;
+    }
+
+    .lane li + li {
+      margin-top: var(--space-sm);
+    }
+
+    .phase-list {
+      display: grid;
+      gap: var(--space-xl);
+      margin-top: var(--space-3xl);
+    }
+
+    .phase {
+      display: grid;
+      grid-template-columns: 8rem minmax(0, 1fr);
+      gap: var(--space-2xl);
+      padding: var(--space-xl) 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .phase-label {
+      color: var(--blue);
+      font-size: 0.8rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .phase h3 {
+      margin-bottom: var(--space-md);
+    }
+
+    .checks {
+      display: grid;
+      gap: var(--space-sm);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .checks li {
+      position: relative;
+      padding-left: 1.9rem;
+    }
+
+    .checks li::before {
+      content: "□";
+      position: absolute;
+      top: 0;
+      left: 0;
+      color: var(--blue);
+      font-size: 1.2rem;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .stop-list {
+      margin-top: var(--space-2xl);
+      padding: var(--space-2xl);
+      background: var(--amber-soft);
+      border: 2px solid var(--amber);
+      border-radius: 1rem;
+    }
+
+    .stop-list h3 {
+      color: var(--amber);
+    }
+
+    .stop-list p {
+      margin-top: var(--space-sm);
+    }
+
+    .stop-list ul {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-sm) var(--space-xl);
+      margin: var(--space-lg) 0 0;
+      padding-left: 1.25rem;
+    }
+
+    details {
+      margin-top: var(--space-xl);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 0.8rem;
+    }
+
+    summary {
+      min-height: 3.5rem;
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-md) var(--space-lg);
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    summary::marker {
+      color: var(--blue);
+    }
+
+    .detail-body {
+      padding: 0 var(--space-lg) var(--space-xl);
+      color: var(--muted);
+    }
+
+    .detail-body ul {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+
+    .detail-body li + li {
+      margin-top: var(--space-sm);
+    }
+
+    code {
+      padding: 0.08em 0.3em;
+      border-radius: 0.3rem;
+      background: var(--blue-soft);
+      color: var(--ink);
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 0.9em;
+      font-variant-ligatures: none;
+      white-space: nowrap;
+    }
+
+    .final-call {
+      margin-top: var(--space-4xl);
+      padding: var(--space-2xl);
+      background: var(--green-soft);
+      border: 2px solid var(--green);
+      border-radius: 1rem;
+    }
+
+    .final-call h2 {
+      color: var(--green);
+    }
+
+    .final-call p {
+      margin-top: var(--space-lg);
+      font-size: 1.15rem;
+      font-weight: 650;
+    }
+
+    footer {
+      margin-top: var(--space-4xl);
+      padding-top: var(--space-xl);
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+
+    body.focus-mode [data-focus-extra] {
+      display: none;
+    }
+
+    body.focus-mode .section-intro {
+      max-width: 55ch;
+    }
+
+    @media (max-width: 760px) {
+      .utility-bar {
+        position: static;
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .utility-controls {
+        justify-content: flex-start;
+      }
+
+      .status-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-sm);
+      }
+
+      .blocker,
+      .phase {
+        grid-template-columns: 1fr;
+        gap: var(--space-lg);
+      }
+
+      .blocker::before {
+        width: 3rem;
+        height: 3rem;
+      }
+
+      .lane-grid,
+      .stop-list ul {
+        grid-template-columns: 1fr;
+      }
+
+      .action-line,
+      .one-sentence {
+        grid-template-columns: 1fr;
+      }
+
+      .one-sentence .label {
+        white-space: normal;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media print {
+      :root {
+        color-scheme: light;
+        --page: oklch(100% 0 0);
+        --surface: oklch(99% 0.004 88);
+        --surface-raised: oklch(100% 0 0);
+        --ink: oklch(20% 0.025 252);
+        --muted: oklch(42% 0.025 252);
+        --line: oklch(78% 0.02 252);
+        --blue: oklch(40% 0.15 256);
+        --blue-soft: oklch(93% 0.035 256);
+        --green: oklch(36% 0.12 154);
+        --green-soft: oklch(94% 0.04 154);
+        --amber: oklch(41% 0.12 68);
+        --amber-soft: oklch(95% 0.05 82);
+        --red: oklch(40% 0.16 24);
+        --red-soft: oklch(95% 0.04 24);
+        --body-size: 10.5pt;
+      }
+
+      body {
+        background: var(--page);
+      }
+
+      .utility-bar,
+      .quick-nav,
+      .skip-link {
+        display: none !important;
+      }
+
+      main {
+        width: 100%;
+        padding: 0;
+      }
+
+      section {
+        break-inside: avoid;
+      }
+
+      details {
+        break-inside: avoid;
+      }
+
+      details > *:not(summary) {
+        display: block !important;
+      }
+
+      a {
+        color: inherit;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to the decision</a>
+
+  <div class="utility-bar" aria-label="Reading controls">
+    <span class="utility-title">YES Master · Shipability</span>
+    <div class="utility-controls">
+      <button type="button" id="focus-toggle" aria-pressed="false">Focus mode</button>
+      <button type="button" id="contrast-toggle" aria-pressed="false">High contrast</button>
+      <button type="button" id="text-down" aria-label="Decrease text size">A−</button>
+      <button type="button" id="text-up" aria-label="Increase text size">A+</button>
+      <button type="button" onclick="window.print()">Print / PDF</button>
+    </div>
+  </div>
+
+  <main id="main">
+    <header class="hero">
+      <p class="eyebrow">Current assessment · July 20, 2026</p>
+      <h1>The app and $0 launch lane are ready for owner proof.</h1>
+      <div class="decision">No-go today</div>
+      <p class="hero-lead">
+        YES Master is mechanically strong enough for a public beta. The remaining
+        agent work is now complete locally: the release lane, permanent updater
+        identity, and ungated download are built. Real-machine listening,
+        install/update proof, a beta end date, and the public switch remain.
+      </p>
+
+      <div class="one-sentence" role="note" aria-label="The shortest possible plan">
+        <span class="label">The whole plan</span>
+        <strong>Commit the $0 lane → cut an audited draft → install and listen → prove one update → owner publishes.</strong>
+      </div>
+
+      <nav class="quick-nav" aria-label="Report sections">
+        <a href="#scoreboard">Status</a>
+        <a href="#blockers">3 remaining gates</a>
+        <a href="#ownership">Who does what</a>
+        <a href="#plan">Launch plan</a>
+        <a href="#avoid">Do not expand scope</a>
+        <a href="#evidence">Evidence</a>
+      </nav>
+    </header>
+
+    <section id="scoreboard">
+      <p class="eyebrow">01 · Status at a glance</p>
+      <h2>Green agent lane. Owner proof still open.</h2>
+      <p class="section-intro">Read the words inside each badge—the colors are only a second cue.</p>
+
+      <div class="legend" aria-label="Status legend">
+        <span><b>● Ready</b> — evidence exists</span>
+        <span><b>▲ Partial</b> — promising, one gate remains</span>
+        <span><b>■ Blocked</b> — cannot launch yet</span>
+      </div>
+
+      <div class="status-board">
+        <div class="status-row">
+          <span class="status ready">Ready</span>
+          <span class="status-area">Core mastering</span>
+          <span class="status-note">Track Master, export safety, project behavior, and regression coverage are beta-grade.</span>
+        </div>
+        <div class="status-row">
+          <span class="status ready">Ready</span>
+          <span class="status-area">CI &amp; tests</span>
+          <span class="status-note">Exact <code>origin/main</code> passed Windows, macOS/iPhone, Android, Rust, packaging, and snapshots.</span>
+        </div>
+        <div class="status-row">
+          <span class="status ready">Ready</span>
+          <span class="status-area">Windows</span>
+          <span class="status-note">Installed-app E2E passed; the $0 lane locally emitted MSI/NSIS installers and updater signatures. Draft workflow proof remains.</span>
+        </div>
+        <div class="status-row">
+          <span class="status partial">Partial</span>
+          <span class="status-area">macOS release</span>
+          <span class="status-note">Universal packaging is configured. The ad-hoc beta build still needs install/run proof on the owner’s M4.</span>
+        </div>
+        <div class="status-row">
+          <span class="status partial">Partial</span>
+          <span class="status-area">Auto-updater</span>
+          <span class="status-note">The permanent key, secrets, signatures, and discoverable release channel are configured. One installed 0.9.0 → 0.9.1 proof remains.</span>
+        </div>
+        <div class="status-row">
+          <span class="status partial">Partial</span>
+          <span class="status-area">Landing funnel</span>
+          <span class="status-note">The ungated download is built and responsive. A concrete beta end date and live deployment remain; email is optional.</span>
+        </div>
+        <div class="status-row">
+          <span class="status blocked">Blocked</span>
+          <span class="status-area">Owner acceptance</span>
+          <span class="status-note">The listening runbook, A/B dip decision, and two-machine snappiness confirmation are still open.</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="blockers">
+      <p class="eyebrow">02 · The short blocker list</p>
+      <h2>Only three owner-facing gates remain.</h2>
+
+      <ol class="blocker-list">
+        <li class="blocker">
+          <div class="blocker-body">
+            <h3>Cut and inspect the first audited draft</h3>
+            <p>The $0 workflow is repaired locally, updater secrets exist, and paid Apple/Azure accounts are optional. It has not been pushed or run on a beta tag yet.</p>
+            <div class="action-line">
+              <strong>Do this</strong>
+              <span>Owner-authorize the push/tag, let CI build the draft, then verify its required assets and checksums.</span>
+            </div>
+          </div>
+        </li>
+
+        <li class="blocker">
+          <div class="blocker-body">
+            <h3>Prove the exact candidate on real machines</h3>
+            <p>Automation cannot confirm Gatekeeper/SmartScreen instructions, M4 behavior, subjective audio quality, or real-time feel.</p>
+            <div class="action-line">
+              <strong>Do this</strong>
+              <span>Install the draft on Windows and M4, run the 60–90 minute listening script, and record the result.</span>
+            </div>
+          </div>
+        </li>
+
+        <li class="blocker">
+          <div class="blocker-body">
+            <h3>Prove one real automatic update</h3>
+            <p>The permanent key and latest-channel contract are repaired, but an installed app has not yet crossed versions through the updater.</p>
+            <div class="action-line">
+              <strong>Do this</strong>
+              <span>Install 0.9.0, publish an owner-approved 0.9.1, and confirm toast → install → relaunch.</span>
+            </div>
+          </div>
+        </li>
+
+      </ol>
+    </section>
+
+    <section id="ownership">
+      <p class="eyebrow">03 · Parallel work</p>
+      <h2>Two lanes. Neither has to wait for the other.</h2>
+
+      <div class="lane-grid">
+        <article class="lane">
+          <h3>Agent lane</h3>
+          <p>Completed locally on <code>codex/zero-cost-beta-release</code>.</p>
+          <ul>
+            <li>✓ Fast-forwarded local <code>main</code>.</li>
+            <li>✓ Repaired optional Windows signing and universal Mac packaging.</li>
+            <li>✓ Added draft-only fail-closed release and asset audit.</li>
+            <li>✓ Resolved the beta updater channel.</li>
+            <li>✓ Installed and locally proved the permanent updater key.</li>
+            <li>✓ Wired the ungated download; kept signup optional.</li>
+          </ul>
+        </article>
+
+        <article class="lane owner">
+          <h3>Owner lane</h3>
+          <p>Hardware, ears, date, and the public switch. No paid accounts required.</p>
+          <ul>
+            <li>Back up the updater key + passphrase cross-machine.</li>
+            <li>Choose the concrete beta end date.</li>
+            <li>Run Windows + M4 install/listening checks.</li>
+            <li>Approve the release tag and audited draft.</li>
+            <li>Publish and announce the beta.</li>
+            <li>Optional later: Apple/Azure signing and email provider.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="plan">
+      <p class="eyebrow">04 · The launch sequence</p>
+      <h2>Four controlled phases.</h2>
+      <p class="section-intro">Do not advance a phase until its short exit condition is true.</p>
+
+      <div class="phase-list">
+        <article class="phase">
+          <span class="phase-label">Phase 1</span>
+          <div>
+            <h3>Repair and unlock the release path</h3>
+            <ul class="checks">
+              <li>✓ Current signing CLI and Mac universal target.</li>
+              <li>✓ Permanent updater key generated; owner backup remains.</li>
+              <li>✓ Free updater secrets configured; Apple/Azure optional.</li>
+              <li>✓ Beta updater-channel behavior pinned and tested.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="phase">
+          <span class="phase-label">Phase 2</span>
+          <div>
+            <h3>Cut one audited $0 release candidate</h3>
+            <ul class="checks">
+              <li>Create a draft <code>v0.9.0-beta.1</code>.</li>
+              <li>Verify updater signatures and SHA-256 checksums.</li>
+              <li>Verify the Mac app contains both architectures.</li>
+              <li>Install the exact candidate on Windows and the M4.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="phase">
+          <span class="phase-label">Phase 3</span>
+          <div>
+            <h3>Prove the experience</h3>
+            <ul class="checks">
+              <li>Complete the listening runbook on both machines.</li>
+              <li>Explicitly pass A/B dip, Volume Match, frantic toggling, and long seek.</li>
+              <li>Install 0.9.0, publish an owner-approved 0.9.1, and prove update → relaunch.</li>
+              <li>Freeze DSP and UI when the candidate passes.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="phase">
+          <span class="phase-label">Phase 4</span>
+          <div>
+            <h3>Turn on the public funnel</h3>
+            <ul class="checks">
+              <li>Publish the Mac and Windows beta downloads.</li>
+              <li>Deploy the already-wired landing download.</li>
+              <li>Optionally enable signup after its provider is verified.</li>
+              <li>Add the concrete flip date and founder-price promise.</li>
+              <li>Re-run the live landing matrix; owner announces.</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="avoid">
+      <p class="eyebrow">05 · Scope guard</p>
+      <h2>Getting out means saying “not now.”</h2>
+
+      <div class="stop-list">
+        <h3>Do not delay the beta for these</h3>
+        <p>They are intentionally gated off, deferred, or reserved for the paid release.</p>
+        <ul>
+          <li>Adaptive Compressor calibration</li>
+          <li>Phase-B confidence gating</li>
+          <li>Album-character activation</li>
+          <li>Mobile launch work</li>
+          <li>More visual polish</li>
+          <li>Preset retuning without notes</li>
+          <li>Paid licensing/export gate</li>
+          <li>Paid Apple/Azure platform signing</li>
+          <li>Email-provider setup</li>
+          <li>Parked refactors</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="evidence" data-focus-extra>
+      <p class="eyebrow">06 · Evidence drawer</p>
+      <h2>Open only if you want the receipts.</h2>
+
+      <details>
+        <summary>What passed</summary>
+        <div class="detail-body">
+          <ul>
+            <li><a href="https://github.com/DanielKinsner/yes-master/actions/runs/29436519770">Exact <code>origin/main</code> CI run</a>: all five jobs green.</li>
+            <li>Local frontend: 60 test files, 546 tests passed.</li>
+            <li>Local production build passed.</li>
+            <li>Local npm audit found zero vulnerabilities.</li>
+            <li><a href="https://github.com/DanielKinsner/yes-master/blob/main/docs/reviews/2026-07-13-windows-e2e-report.md">Windows installed-app E2E report</a>: mechanically passed.</li>
+            <li><a href="https://yes-master.vercel.app">Live landing page</a>: 12 viewport sizes passed with no broken images, overflow, console errors, or anchor failures.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>Where the blocker list comes from</summary>
+        <div class="detail-body">
+          <ul>
+            <li><a href="../plans/beta-go-no-go.md">Beta go/no-go checklist</a></li>
+            <li><a href="../plans/2026-07-07-beta-execution-plan.md">Beta execution plan</a></li>
+            <li><a href="../plans/2026-07-08-beta-listening-runbook.md">Listening runbook</a></li>
+            <li><a href="../RELEASE_SIGNING_SETUP.md">Release signing setup</a></li>
+            <li><a href="../BETA_INSTALL.md">Public beta install guide</a></li>
+            <li><a href="../../.github/workflows/release.yml">Release workflow</a></li>
+            <li><a href="../../src-tauri/tauri.conf.json">Tauri updater configuration</a></li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>External platform facts used</summary>
+        <div class="detail-body">
+          <ul>
+            <li><a href="https://v2.tauri.app/distribute/sign/windows/">Tauri: current Windows signing command</a></li>
+            <li><a href="https://v2.tauri.app/reference/cli/">Tauri: universal macOS target</a></li>
+            <li><a href="https://docs.github.com/en/rest/releases/releases?apiVersion=latest">GitHub: “latest” excludes drafts and prereleases</a></li>
+          </ul>
+        </div>
+      </details>
+    </section>
+
+    <section class="final-call">
+      <h2>The recommended call</h2>
+      <p>
+        Declare a feature freeze and run the release plan. This is not a product
+        rescue. It is a controlled conversion from a strong local build into a
+        updateable, checksummed, downloadable $0 beta.
+      </p>
+    </section>
+
+    <footer>
+      <p>Updated after the 2026-07-20 $0-beta implementation. This HTML report is a readable companion; <a href="../plans/beta-go-no-go.md">the beta go/no-go checklist remains the source of truth</a>.</p>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const focusButton = document.querySelector("#focus-toggle");
+      const contrastButton = document.querySelector("#contrast-toggle");
+      const textDown = document.querySelector("#text-down");
+      const textUp = document.querySelector("#text-up");
+      let bodySize = 17;
+
+      function togglePressed(button, enabled) {
+        button.setAttribute("aria-pressed", String(enabled));
+      }
+
+      focusButton.addEventListener("click", () => {
+        const enabled = document.body.classList.toggle("focus-mode");
+        togglePressed(focusButton, enabled);
+      });
+
+      contrastButton.addEventListener("click", () => {
+        const enabled = document.body.classList.toggle("high-contrast");
+        togglePressed(contrastButton, enabled);
+      });
+
+      function updateTextSize(next) {
+        bodySize = Math.min(22, Math.max(16, next));
+        root.style.setProperty("--body-size", `${bodySize}px`);
+      }
+
+      textDown.addEventListener("click", () => updateTextSize(bodySize - 1));
+      textUp.addEventListener("click", () => updateTextSize(bodySize + 1));
+    })();
+  </script>
+</body>
+</html>

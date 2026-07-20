@@ -79,9 +79,10 @@ only human gates:
    enabled only after a by-ear A/B calibration session. Spec:
    `docs/plans/2026-06-12-adaptive-compressor-mvp-spec.md`.
 4. **Public desktop release** (desktop-first): a free public beta (Mac +
-   Windows together, v0.9.0) with signed installers on GitHub Releases and a
-   Tauri updater, then a paid 1.0 ($29 founder → $49). Code signing,
-   notarization, and autoupdate are now launch-blocking, not deferred. See
+   Windows together, v0.9.0) from GitHub Releases with a cryptographically
+   signed Tauri updater, then a paid 1.0 ($29 founder → $49). The $0 beta may
+   use ad-hoc/unsigned OS installers with clear install guidance; paid Apple
+   notarization and Windows Authenticode follow as trust upgrades. See
    `docs/plans/2026-07-07-beta-execution-plan.md`.
 5. **Mobile follow-on**: the iPhone and Android apps mirror Standard's fixed
    export and already share the engine; store-readiness (privacy manifest,

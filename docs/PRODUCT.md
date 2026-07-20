@@ -227,9 +227,13 @@ YES Master is release-candidate only when:
 - macOS packaging works: the universal-binary `.app` / `.dmg` builds, and the
   owner has installed and run it on real hardware (M4) — owner confirmation
   pending (D12 / D15 in `docs/plans/2026-07-07-beta-execution-plan.md`).
-- Installers are signed by the release pipeline (Apple Developer ID +
-  notarization on macOS, Azure Trusted Signing on Windows); see
-  `docs/plans/2026-07-07-beta-execution-plan.md`, Slice 10.
+- Beta installers are produced by the release pipeline as a universal macOS
+  build and Windows MSI/NSIS builds. For the **$0 public beta**, macOS may use
+  ad-hoc signing and Windows may be unsigned, with explicit Gatekeeper /
+  SmartScreen install guidance. Paid Apple notarization and Windows
+  Authenticode are post-beta trust upgrades, not beta blockers (D16).
+- Updater artifacts are cryptographically signed with the permanent Tauri
+  updater key; this free integrity gate remains beta-blocking.
 - Known temporary instrumentation is removed or deliberately documented.
 
 ## Mobile Companions
@@ -302,8 +306,9 @@ Model" below.
 - **Permanent export-locked demo.** After the flip the free build keeps the full
   real-time chain and the full receipt visible; only render/export is gated.
 - **Sold direct** via Lemon Squeezy (merchant-of-record; handles global tax).
-- **Signed installers on GitHub Releases**, with a Tauri updater pulling its
-  manifest from there.
+- **Installers on GitHub Releases**, with clear unsigned/ad-hoc beta warnings
+  until paid OS signing is added. The Tauri updater pulls a cryptographically
+  signed manifest from the same release.
 
 Strategy detail: `docs/plans/2026-06-30-launch-plan.md`; execution sequencing:
 `docs/plans/2026-07-07-beta-execution-plan.md`.
@@ -316,6 +321,7 @@ Strategy detail: `docs/plans/2026-06-30-launch-plan.md`; execution sequencing:
 - Further subjective preset retuning beyond the 2026-06-22 "85% lean", without
   fresh listening notes.
 
-Public code signing / notarization and autoupdate are **no longer deferred** —
-they are beta launch-blocking (see `docs/plans/2026-07-07-beta-execution-plan.md`,
-Slices 7 & 10, and "Distribution & Business Model" above).
+Paid Apple code signing/notarization and Windows Authenticode are deferred as
+post-beta trust upgrades (D16, 2026-07-20). The already-integrated,
+cryptographically signed autoupdater remains in beta scope and must pass its
+end-to-end update proof before launch.
