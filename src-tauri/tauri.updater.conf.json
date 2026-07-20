@@ -1,6 +1,5 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "//": "CI-only overlay applied via `--config` in .github/workflows/release.yml when the updater signing key secret exists. Kept OUT of the base tauri.conf.json so local, keyless `npm run build:windows` builds do NOT require TAURI_SIGNING_PRIVATE_KEY. Named `updater` (not a platform) so Tauri never auto-merges it. Enabling this makes the release build emit + sign the updater artifacts (per-installer .sig files and latest.json, the manifest the app's plugins.updater endpoint reads).",
   "bundle": {
     "createUpdaterArtifacts": true
   }

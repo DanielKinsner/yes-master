@@ -8,6 +8,15 @@ function readText(path: string): string {
 
 const workflow = readText("../../.github/workflows/release.yml");
 const windowsSigning = readText("../../src-tauri/tauri.windows-signing.conf.json");
+const updaterOverlay = JSON.parse(
+  readText("../../src-tauri/tauri.updater.conf.json"),
+) as Record<string, unknown>;
+const tauriConfig = JSON.parse(
+  readText("../../src-tauri/tauri.conf.json"),
+) as { plugins?: { updater?: { pubkey?: unknown } } };
+
+const DISCARDED_BOOTSTRAP_PUBKEY =
+  "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM5OEJBMEIzQzYyRURDRUUKUldUdTNDN0dzNkNMeVR5VVhUeXJERVVST05nZG5XSXFzK3RDZTBjZFgray81WXpxc2d5eDR3eGEK";
 
 describe("zero-cost beta release contract", () => {
   it("builds one universal macOS artifact instead of separate architecture releases", () => {
@@ -26,6 +35,7 @@ describe("zero-cost beta release contract", () => {
 
     expect(workflow).toContain("env.APPLE_CERTIFICATE != ''");
     expect(workflow).toContain("env.AZURE_CLIENT_ID != ''");
+    expect(updaterOverlay).not.toHaveProperty("//");
   });
 
   it("keeps the GitHub latest channel discoverable by the updater", () => {
@@ -46,5 +56,15 @@ describe("zero-cost beta release contract", () => {
     expect(workflow).toContain(".dmg");
     expect(workflow).toContain(".msi");
     expect(workflow).toContain(".sig");
+  });
+
+  it("bakes in the permanent updater public key instead of the discarded bootstrap", () => {
+    const pubkey = tauriConfig.plugins?.updater?.pubkey;
+    expect(typeof pubkey).toBe("string");
+    expect(pubkey).not.toBe(DISCARDED_BOOTSTRAP_PUBKEY);
+
+    const decoded = Buffer.from(pubkey as string, "base64").toString("utf8");
+    expect(decoded).toContain("minisign public key");
+    expect(decoded).toContain("RW");
   });
 });
