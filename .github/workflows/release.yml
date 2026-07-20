@@ -1,25 +1,22 @@
 name: Release
 
-# Cuts a signed, downloadable release. Push a version tag (e.g. v0.1.0-beta.1)
-# and this builds macOS (Apple Silicon + Intel) and Windows installers, then
-# creates a DRAFT GitHub Release with them attached for you to review + publish.
+# Zero-cost public-beta release lane.
 #
-# Signing auto-activates when the relevant secrets exist (see
-# docs/RELEASE_SIGNING_SETUP.md). Until then, builds still succeed — just
-# UNSIGNED (users get an "unknown developer" warning on download).
+# Every run creates a DRAFT GitHub Release. The owner is the only person who
+# publishes it. Windows and macOS builds work without paid OS-signing accounts,
+# with the expected SmartScreen / Gatekeeper warning. Apple Developer ID and
+# Azure Artifact Signing remain optional overlays for a later trust upgrade.
+#
+# Tauri updater signing is different: it is free, proves update authenticity,
+# and is mandatory. Preflight fails before building if either updater secret is
+# missing. See docs/RELEASE_SIGNING_SETUP.md.
 
 on:
   push:
     tags:
       - "v*"
   workflow_dispatch:
-    inputs:
-      prerelease:
-        description: "Mark the GitHub release as a pre-release (beta)"
-        type: boolean
-        default: true
 
-# tauri-action creates a GitHub Release, which needs write access to contents.
 permissions:
   contents: write
 
@@ -27,6 +24,18 @@ jobs:
   preflight:
     name: Preflight
     runs-on: windows-latest
+    env:
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -47,6 +56,47 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Require updater signing secrets
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
+            Write-Error "TAURI_SIGNING_PRIVATE_KEY is required. Releases never ship update artifacts that the app cannot authenticate."
+            exit 1
+          }
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD)) {
+            Write-Error "TAURI_SIGNING_PRIVATE_KEY_PASSWORD is required."
+            exit 1
+          }
+
+      - name: Validate optional OS-signing secret groups
+        shell: pwsh
+        run: |
+          $apple = @(
+            $env:APPLE_CERTIFICATE,
+            $env:APPLE_CERTIFICATE_PASSWORD,
+            $env:APPLE_ID,
+            $env:APPLE_PASSWORD,
+            $env:APPLE_TEAM_ID,
+            $env:KEYCHAIN_PASSWORD
+          )
+          $azure = @(
+            $env:AZURE_CLIENT_ID,
+            $env:AZURE_CLIENT_SECRET,
+            $env:AZURE_TENANT_ID
+          )
+
+          $applePresent = @($apple | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count
+          $azurePresent = @($azure | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count
+
+          if ($applePresent -ne 0 -and $applePresent -ne $apple.Count) {
+            Write-Error "Apple signing is optional, but a partial Apple secret set is unsafe. Add all six secrets or remove all six."
+            exit 1
+          }
+          if ($azurePresent -ne 0 -and $azurePresent -ne $azure.Count) {
+            Write-Error "Azure signing is optional, but a partial Azure secret set is unsafe. Add all three secrets or remove all three."
+            exit 1
+          }
 
       - name: Frontend tests
         run: npm test
@@ -82,27 +132,22 @@ jobs:
         run: cargo test --lib
 
   release:
-    name: Build & release (${{ matrix.label }})
+    name: Build draft (${{ matrix.label }})
     needs: preflight
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: macos-latest
-            label: macOS (Apple Silicon)
-            args: "--target aarch64-apple-darwin"
-          - platform: macos-latest
-            label: macOS (Intel)
-            args: "--target x86_64-apple-darwin"
+            label: macOS (Universal)
+            args: "--target universal-apple-darwin"
           - platform: windows-latest
             label: Windows
             args: ""
     runs-on: ${{ matrix.platform }}
 
-    # Secrets are mapped to env so we can BOTH gate steps on their presence with
-    # `if:` AND hand them to tauri-action. Empty until you add them in
-    # repo Settings -> Secrets and variables -> Actions.
     env:
+      # Optional paid trust overlays. Empty is the supported $0 beta path.
       APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
       APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
       APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -112,11 +157,8 @@ jobs:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      # Tauri updater signing (Slice 7). tauri-action reads these to sign the
-      # updater artifacts (latest.json + per-installer .sig). Empty until the
-      # owner generates the keypair and adds the secrets (see
-      # docs/RELEASE_SIGNING_SETUP.md); updater artifacts are only created when
-      # the private key is present.
+
+      # Mandatory, free Tauri updater signing.
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
@@ -132,7 +174,7 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ startsWith(matrix.platform, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
@@ -142,13 +184,8 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      # ---- macOS code signing + notarization ----
-      # Auto-enabled once the APPLE_CERTIFICATE secret exists. Imports the
-      # Developer ID Application cert into a temp keychain and exposes its
-      # identity as APPLE_SIGNING_IDENTITY for tauri-action. Notarization runs
-      # automatically when APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID are set.
       - name: Import Apple Developer ID certificate
-        if: ${{ startsWith(matrix.platform, 'macos') && env.APPLE_CERTIFICATE != '' }}
+        if: ${{ matrix.platform == 'macos-latest' && env.APPLE_CERTIFICATE != '' }}
         run: |
           echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
           security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
@@ -158,45 +195,107 @@ jobs:
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
           CERT_ID=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
+          if [ -z "$CERT_ID" ]; then
+            echo "Apple certificate was supplied, but no Developer ID Application identity was found." >&2
+            exit 1
+          fi
           echo "APPLE_SIGNING_IDENTITY=$CERT_ID" >> "$GITHUB_ENV"
-          echo "Imported signing identity: $CERT_ID"
 
-      # ---- Windows code signing (Azure Trusted Signing) ----
-      # Auto-enabled once the AZURE_* secrets exist. NOTE: the signing CLI crate
-      # name is in flux upstream — verify the current binary/crate name against
-      # https://v2.tauri.app/distribute/sign/windows/ before your first signed
-      # release (this is the one line we agreed to confirm together).
       - name: Install Windows signing CLI
         if: ${{ matrix.platform == 'windows-latest' && env.AZURE_CLIENT_ID != '' }}
-        run: cargo install trusted-signing-cli
+        run: cargo install artifact-signing-cli
 
-      - name: Assemble tauri build config overlays
+      - name: Assemble Tauri config overlays
         shell: bash
-        # Both overlays are named so they do NOT match Tauri's
-        # `tauri.<platform>.conf.json` auto-merge pattern; each is applied only
-        # here via --config, so local builds stay buildable without CI secrets.
-        #   - Windows signing overlay: only when the Azure creds exist.
-        #   - Updater-artifacts overlay: only when the updater signing key
-        #     exists (createUpdaterArtifacts requires the key at build time).
         run: |
-          ARGS=""
+          ARGS="--config src-tauri/tauri.updater.conf.json"
           if [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$AZURE_CLIENT_ID" ]; then
             ARGS="$ARGS --config src-tauri/tauri.windows-signing.conf.json"
           fi
-          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
-            ARGS="$ARGS --config src-tauri/tauri.updater.conf.json"
-          fi
           echo "EXTRA_ARGS=$ARGS" >> "$GITHUB_ENV"
 
-      - name: Build, sign & draft release
+      - name: Build and create draft release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
         with:
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('yes-master-v__VERSION__-manual-{0}', github.run_number) }}
-          releaseName: "YES Master __VERSION__"
-          releaseBody: "Download the installer for your platform from the assets below."
+          releaseName: "YES Master __VERSION__ — Public Beta"
+          releaseBody: |
+            Early public beta for Windows and macOS.
+
+            The $0 release lane is not yet backed by paid Apple/Microsoft publisher certificates, so the operating system may show an unknown-developer warning. Verify SHA256SUMS.txt, follow the install guide, and only install files downloaded from this repository.
           releaseDraft: true
-          prerelease: ${{ github.event.inputs.prerelease != 'false' }}
+          # The app checks /releases/latest/download/latest.json. GitHub excludes
+          # prereleases from that channel, so beta identity lives in tag/title.
+          prerelease: false
           args: ${{ matrix.args }} ${{ env.EXTRA_ARGS }}
+
+  release-audit:
+    name: Audit complete draft
+    needs: release
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        shell: pwsh
+        run: |
+          $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $releaseTag = if ("${{ github.ref_type }}" -eq "tag") {
+            "${{ github.ref_name }}"
+          } else {
+            "yes-master-v$packageVersion-manual-${{ github.run_number }}"
+          }
+          "RELEASE_TAG=$releaseTag" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Generate SHA-256 checksums
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path release-assets | Out-Null
+          gh release download $env:RELEASE_TAG --dir release-assets
+          $lines = Get-ChildItem -LiteralPath release-assets -File |
+            Sort-Object Name |
+            ForEach-Object {
+              $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+              "$hash  $($_.Name)"
+            }
+          $lines | Set-Content -LiteralPath SHA256SUMS.txt -Encoding utf8NoBOM
+          gh release upload $env:RELEASE_TAG SHA256SUMS.txt --clobber
+
+      - name: Audit draft release assets
+        shell: pwsh
+        run: |
+          $release = gh api "repos/${{ github.repository }}/releases/tags/$env:RELEASE_TAG" | ConvertFrom-Json
+          if (-not $release.draft) {
+            Write-Error "The workflow must leave the release as a draft for owner review."
+            exit 1
+          }
+          if ($release.prerelease) {
+            Write-Error "The beta updater uses GitHub's latest channel, which excludes prereleases."
+            exit 1
+          }
+
+          $names = @($release.assets | ForEach-Object { $_.name })
+          $required = [ordered]@{
+            "universal macOS installer (.dmg)" = '\.dmg$'
+            "macOS updater bundle (.app.tar.gz)" = '\.app\.tar\.gz$'
+            "Windows MSI installer (.msi)" = '\.msi$'
+            "Windows NSIS installer (setup.exe)" = 'setup\.exe$'
+            "updater manifest (latest.json)" = '^latest\.json$'
+            "updater signature (.sig)" = '\.sig$'
+            "SHA-256 checksum ledger" = '^SHA256SUMS\.txt$'
+          }
+
+          foreach ($entry in $required.GetEnumerator()) {
+            if (-not ($names | Where-Object { $_ -match $entry.Value })) {
+              Write-Error "Draft is incomplete: missing $($entry.Key). Assets: $($names -join ', ')"
+              exit 1
+            }
+          }
+
+          Write-Host "Draft release is complete and remains unpublished: $env:RELEASE_TAG"
