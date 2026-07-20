@@ -7,6 +7,12 @@ function readText(path: string): string {
 }
 
 const workflow = readText("../../.github/workflows/release.yml");
+const preflightJobHeader = workflow
+  .split("\n  preflight:\n")[1]
+  .split("\n    steps:\n")[0];
+const releaseJobHeader = workflow
+  .split("\n  release:\n")[1]
+  .split("\n    steps:\n")[0];
 const windowsSigning = readText("../../src-tauri/tauri.windows-signing.conf.json");
 const updaterOverlay = JSON.parse(
   readText("../../src-tauri/tauri.updater.conf.json"),
@@ -33,9 +39,23 @@ describe("zero-cost beta release contract", () => {
     expect(workflow).toContain("TAURI_SIGNING_PRIVATE_KEY_PASSWORD");
     expect(workflow).toContain("--config src-tauri/tauri.updater.conf.json");
 
-    expect(workflow).toContain("env.APPLE_CERTIFICATE != ''");
-    expect(workflow).toContain("env.AZURE_CLIENT_ID != ''");
+    expect(workflow).toContain("env.APPLE_SIGNING_ENABLED == 'true'");
+    expect(workflow).toContain("env.AZURE_SIGNING_ENABLED == 'true'");
     expect(updaterOverlay).not.toHaveProperty("//");
+  });
+
+  it("exposes signing secrets only to steps that need them", () => {
+    expect(preflightJobHeader).not.toContain(
+      "TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}",
+    );
+    expect(releaseJobHeader).not.toContain(
+      "TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}",
+    );
+    expect(releaseJobHeader).not.toContain(
+      "AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}",
+    );
+    expect(releaseJobHeader).toContain("APPLE_SIGNING_ENABLED");
+    expect(releaseJobHeader).toContain("AZURE_SIGNING_ENABLED");
   });
 
   it("keeps the GitHub latest channel discoverable by the updater", () => {
@@ -61,6 +81,7 @@ describe("zero-cost beta release contract", () => {
     expect(workflow).toContain("Windows NSIS updater signature (setup.exe.sig)");
     expect(workflow).toContain("Updater manifest is missing macOS");
     expect(workflow).toContain("Updater manifest is missing Windows");
+    expect(workflow).toContain('Where-Object Name -ne "SHA256SUMS.txt"');
   });
 
   it("bakes in the permanent updater public key instead of the discarded bootstrap", () => {

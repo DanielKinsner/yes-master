@@ -24,18 +24,6 @@ jobs:
   preflight:
     name: Preflight
     runs-on: windows-latest
-    env:
-      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-      APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -59,6 +47,9 @@ jobs:
 
       - name: Require updater signing secrets
         shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
             Write-Error "TAURI_SIGNING_PRIVATE_KEY is required. Releases never ship update artifacts that the app cannot authenticate."
@@ -71,6 +62,16 @@ jobs:
 
       - name: Validate optional OS-signing secret groups
         shell: pwsh
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         run: |
           $apple = @(
             $env:APPLE_CERTIFICATE,
@@ -147,20 +148,9 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     env:
-      # Optional paid trust overlays. Empty is the supported $0 beta path.
-      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-      APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-
-      # Mandatory, free Tauri updater signing.
-      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      # Non-secret switches keep credentials away from setup/build-tool steps.
+      APPLE_SIGNING_ENABLED: ${{ secrets.APPLE_CERTIFICATE != '' }}
+      AZURE_SIGNING_ENABLED: ${{ secrets.AZURE_CLIENT_ID != '' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -185,7 +175,11 @@ jobs:
         run: npm ci
 
       - name: Import Apple Developer ID certificate
-        if: ${{ matrix.platform == 'macos-latest' && env.APPLE_CERTIFICATE != '' }}
+        if: ${{ matrix.platform == 'macos-latest' && env.APPLE_SIGNING_ENABLED == 'true' }}
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
           echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
           security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
@@ -202,14 +196,14 @@ jobs:
           echo "APPLE_SIGNING_IDENTITY=$CERT_ID" >> "$GITHUB_ENV"
 
       - name: Install Windows signing CLI
-        if: ${{ matrix.platform == 'windows-latest' && env.AZURE_CLIENT_ID != '' }}
+        if: ${{ matrix.platform == 'windows-latest' && env.AZURE_SIGNING_ENABLED == 'true' }}
         run: cargo install artifact-signing-cli
 
       - name: Assemble Tauri config overlays
         shell: bash
         run: |
           ARGS="--config src-tauri/tauri.updater.conf.json"
-          if [ "${{ matrix.platform }}" = "windows-latest" ] && [ -n "$AZURE_CLIENT_ID" ]; then
+          if [ "${{ matrix.platform }}" = "windows-latest" ] && [ "$AZURE_SIGNING_ENABLED" = "true" ]; then
             ARGS="$ARGS --config src-tauri/tauri.windows-signing.conf.json"
           fi
           echo "EXTRA_ARGS=$ARGS" >> "$GITHUB_ENV"
@@ -218,7 +212,15 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         with:
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('yes-master-v__VERSION__-manual-{0}', github.run_number) }}
           releaseName: "YES Master __VERSION__ — Public Beta"
@@ -259,6 +261,7 @@ jobs:
           New-Item -ItemType Directory -Path release-assets | Out-Null
           gh release download $env:RELEASE_TAG --dir release-assets
           $lines = Get-ChildItem -LiteralPath release-assets -File |
+            Where-Object Name -ne "SHA256SUMS.txt" |
             Sort-Object Name |
             ForEach-Object {
               $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()

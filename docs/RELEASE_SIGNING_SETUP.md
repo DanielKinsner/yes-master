@@ -57,7 +57,9 @@ the updater archives and `.sig` files. The app reads `latest.json` from:
 `https://github.com/DanielKinsner/yes-master/releases/latest/download/latest.json`
 
 The remaining beta gate is an end-to-end 0.9.0 → 0.9.1 update proof on a real
-installed build.
+installed build. Because GitHub's `/latest` channel excludes drafts, this proof
+requires the owner to publish the full 0.9.1 release quietly before the public
+announcement; its files become publicly accessible at that moment.
 
 ## Optional macOS trust upgrade (post-beta)
 

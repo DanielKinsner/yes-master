@@ -62,9 +62,12 @@ is post-beta advisory under D16.
       Windows updater-enabled build emitted signed artifacts. The encrypted
       private key remains outside git. *Evidence: 2026-07-20 release lane.*
 - [ ] **(ii) Update path proven end-to-end, once.** Install a 0.9.0 build,
-      publish a draft **0.9.1** release, and confirm on a real machine that the
-      app shows the update toast → "Restart to update" downloads, installs, and
-      relaunches into 0.9.1. *Owner, on the M4 and/or Windows box.*
+      then owner-publish a full **0.9.1** release quietly before the public
+      announcement. GitHub's `/latest` channel cannot see drafts. Confirm on a
+      real machine that the app shows the update toast → "Restart to update"
+      downloads, installs, and relaunches into 0.9.1. The 0.9.1 files become
+      publicly accessible at this step even though they are not announced.
+      *Owner authorization required; M4 and/or Windows box.*
 
 ## 4. Real-machine confirmation (owner lane)
 

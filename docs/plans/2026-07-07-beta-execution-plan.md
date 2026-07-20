@@ -407,8 +407,9 @@ Two updater gate items (added 2026-07-08): (i) **replace the bootstrap
 updater pubkey** with the permanent keypair BEFORE the first
 release (per `docs/RELEASE_SIGNING_SETUP.md` — shipped apps can never accept
 updates signed by a different key); (ii) **prove the update path end-to-end**
-once: install a 0.9.0 build, publish a draft 0.9.1 release, confirm the
-toast → install → relaunch flow works on a real machine.
+once: install a 0.9.0 build, owner-publish a full 0.9.1 release quietly (drafts
+are invisible to GitHub's `/latest` channel), then confirm the toast → install
+→ relaunch flow on a real machine before announcing the beta.
 
 ---
 
