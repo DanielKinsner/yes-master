@@ -36,7 +36,13 @@ import type {
   UserPreset,
 } from "./bindings";
 import type { PlaybackKindUI, RenderProgressState } from "./hooks/useTrackMaster";
-import { LOUDNESS_PROFILES, loudnessTargetDisplay } from "./lib/effective-settings";
+import {
+  LOUDNESS_PROFILES,
+  effectiveLoudnessTarget,
+  loudnessTargetDisplay,
+} from "./lib/effective-settings";
+import { buildSequenceRows, type SequenceRow } from "./lib/album-sequence";
+import { trackCountLabel } from "./lib/album-copy";
 import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
 import { api, onUpdaterAvailable } from "./lib/api";
 import { save } from "./lib/tauri-runtime";
@@ -339,6 +345,24 @@ function App() {
     tm.setMode(nextMode);
   };
 
+  // U10 — sequence overview rows. Built from data the app already holds; the
+  // roles and arc offsets come from the backend's own planner (see
+  // `albumPlanPreview`) so what the rail shows is what will actually render.
+  const sequenceRows: SequenceRow[] =
+    tm.mode === "album"
+      ? buildSequenceRows({
+          tracks: tm.tracks,
+          analysisByTrackId: tm.analysisByTrackId,
+          overrideAlbum: tm.overrideAlbum,
+          plan: tm.albumPlanPreview,
+          // Guarded: album intent is absent until an album exists, and the
+          // overview must degrade to "no target shown" rather than throw.
+          albumTargetLufs: tm.albumIntent
+            ? effectiveLoudnessTarget(tm.albumIntent)
+            : null,
+        })
+      : [];
+
   return (
     <div className="app-root">
       <TopHeader
@@ -376,6 +400,7 @@ function App() {
         mode={tm.mode}
         onReorder={tm.reorderTracks}
         overrideAlbum={tm.overrideAlbum}
+        sequenceRows={sequenceRows}
         albumHeader={
           tm.mode === "album" && tm.tracks.length > 0 ? (
             <AlbumPanel
@@ -1006,6 +1031,80 @@ function BackToStandardConfirm({
   );
 }
 
+/**
+ * One track's sequence facts, scannable without opening the track (U10).
+ *
+ * Deliberately terse and single-line-per-fact: the goal is that twelve of
+ * these can be read down the rail at the supported minimum window size. Each
+ * chip also carries sr-only context, because "−2.1 LU" on its own is
+ * meaningless to someone who cannot see the column it sits in.
+ */
+export function SequenceRowFacts({ row }: { row: SequenceRow }) {
+  const facts: Array<{ key: string; text: string; sr: string; cls?: string }> = [];
+
+  if (row.analysisStatus === "pending") {
+    facts.push({
+      key: "pending",
+      text: "analyzing…",
+      sr: "Awaiting analysis.",
+      cls: "is-pending",
+    });
+  } else if (row.sourceLufs != null) {
+    facts.push({
+      key: "source",
+      text: `${row.sourceLufs.toFixed(1)}`,
+      sr: `Source loudness ${row.sourceLufs.toFixed(1)} LUFS.`,
+    });
+  }
+
+  if (row.targetLufs != null) {
+    facts.push({
+      key: "target",
+      text: `→ ${row.targetLufs.toFixed(1)}`,
+      sr: `Album target ${row.targetLufs.toFixed(1)} LUFS.`,
+    });
+  }
+  if (row.arcOffsetLabel) {
+    facts.push({
+      key: "arc",
+      text: row.arcOffsetLabel,
+      sr: `Flow offset ${row.arcOffsetLabel}.`,
+    });
+  }
+  if (row.roleLabel) {
+    facts.push({ key: "role", text: row.roleLabel, sr: `Role: ${row.roleLabel}.` });
+  }
+  if (row.overridesAlbum) {
+    facts.push({
+      key: "override",
+      text: "Overrides",
+      sr: "Overrides the album settings — renders with its own sound and its own target.",
+      cls: "is-override",
+    });
+  }
+  if (row.hasConcern) {
+    facts.push({
+      key: "concern",
+      text: "review",
+      sr: "This track has a quality check to review.",
+      cls: "is-warn",
+    });
+  }
+
+  if (facts.length === 0) return null;
+
+  return (
+    <span className="track-sequence-facts">
+      {facts.map((fact) => (
+        <span key={fact.key} className={`seq-chip ${fact.cls ?? ""}`}>
+          <span aria-hidden>{fact.text}</span>
+          <span className="sr-only">{fact.sr}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function Sidebar({
   tracks,
   selectedId,
@@ -1019,6 +1118,7 @@ function Sidebar({
   overrideAlbum,
   albumHeader,
   albumReceipt,
+  sequenceRows = [],
 }: {
   tracks: ImportedTrack[];
   selectedId: string | null;
@@ -1032,6 +1132,8 @@ function Sidebar({
   overrideAlbum: Set<string>;
   albumHeader?: ReactNode;
   albumReceipt?: ReactNode;
+  /// U10 — per-track sequence facts for Album mode. Empty in Track mode.
+  sequenceRows?: SequenceRow[];
 }) {
   const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -1077,7 +1179,12 @@ function Sidebar({
     (acc, t) => acc + (t.duration_seconds ?? 0),
     0,
   );
-  const totalLabel = totalSeconds > 0 ? `${tracks.length} tracks · ${formatDuration(totalSeconds)}` : `${tracks.length} tracks`;
+  // U10: shipped as "1 tracks". Small, but it is the kind of thing that makes
+  // a careful user wonder what else nobody checked.
+  const totalLabel =
+    totalSeconds > 0
+      ? `${trackCountLabel(tracks.length)} · ${formatDuration(totalSeconds)}`
+      : trackCountLabel(tracks.length);
   return (
     <aside className="sidebar">
       {/* Album Master: the identity block (title + chips + flow) absorbs the
@@ -1139,6 +1246,15 @@ function Sidebar({
                 <span className="track-meta">
                   {t.duration_seconds ? formatDuration(t.duration_seconds) : `.${t.source_format}`}
                 </span>
+                {/* U10 — sequence overview.
+                    Album mode held twelve tracks correctly while showing none
+                    of the sequence intelligence: no loudness arc, no role, no
+                    target, no per-track status. Everything below already
+                    existed in the app's own data; it was simply never shown,
+                    so a user had to open each track to read the record. */}
+                {mode === "album" && sequenceRows[index] && (
+                  <SequenceRowFacts row={sequenceRows[index]} />
+                )}
               </button>
               {albumReorderable && (
                 <div className="track-reorder-controls" aria-label="Album order controls">
@@ -1322,14 +1438,26 @@ export function OverrideBanner({
         title={explanation}
       >
         {isOverriding ? "Overrides album" : "Follows album"}
+        {/* U9/U10: the explanation was hover-only, so keyboard and
+            screen-reader users got the two-word chip and nothing else. */}
+        <span className="sr-only">. {explanation}</span>
       </span>
-      <div className="override-toggle">
+      {/* U9/U10 — one segmented choice.
+          This shipped with `disabled` on whichever option was ACTIVE. That is
+          backwards twice over: a disabled control leaves the tab order, so a
+          keyboard user could not focus their current state to find out what it
+          was, and a screen reader announced the selected option as
+          "unavailable". Selection is state, not absence of availability, so
+          both buttons stay enabled and `aria-pressed` carries the choice.
+          Re-selecting the active option is a no-op rather than a toggle. */}
+      <div className="override-toggle" role="group" aria-label="Album settings for this track">
         <button
           type="button"
           className={!isOverriding ? "on" : ""}
           aria-pressed={!isOverriding}
-          onClick={onToggle}
-          disabled={!isOverriding}
+          onClick={() => {
+            if (isOverriding) onToggle();
+          }}
         >
           Follow album
         </button>
@@ -1337,8 +1465,9 @@ export function OverrideBanner({
           type="button"
           className={isOverriding ? "on" : ""}
           aria-pressed={isOverriding}
-          onClick={onToggle}
-          disabled={isOverriding}
+          onClick={() => {
+            if (!isOverriding) onToggle();
+          }}
         >
           Override
         </button>

@@ -16,6 +16,13 @@
 import type { AlbumArcKind, ImportedTrack } from "../bindings";
 import { ALBUM_ARC_DISPLAY } from "../bindings";
 import { formatDuration } from "../lib/time-format";
+import {
+  ALBUM_FLOW_DESCRIPTION,
+  SINGLE_TRACK_ALBUM_NOTE,
+  flowAmountDescription,
+  flowAmountValueText,
+  trackCountLabel,
+} from "../lib/album-copy";
 
 type AlbumPanelProps = {
   tracks: ImportedTrack[];
@@ -55,21 +62,28 @@ export function AlbumPanel({
             type="text"
             className="album-title-input"
             value={albumTitle}
-            placeholder="Name this album"
+            // U10: "Name this album" clipped to "Name this alb..." in the
+            // sidebar. A placeholder that does not fit its field is worse than
+            // a shorter one that does.
+            placeholder="Album title"
             onChange={(e) => onAlbumTitle(e.target.value)}
             maxLength={120}
             aria-label="Album title"
           />
         </div>
         <div className="album-panel-chips">
-          <span className="meta-chip">
-            {tracks.length === 1 ? "1 track" : `${tracks.length} tracks`}
-          </span>
+          <span className="meta-chip">{trackCountLabel(tracks.length)}</span>
           {totalSeconds > 0 && (
             <span className="meta-chip">{formatDuration(totalSeconds)}</span>
           )}
         </div>
       </header>
+      {/* U10 — a one-track album is not broken, but the sequence half of the
+          feature has nothing to act on. Saying so is better than showing a flow
+          control that cannot change anything. */}
+      {tracks.length === 1 && (
+        <p className="album-single-track-note">{SINGLE_TRACK_ALBUM_NOTE}</p>
+      )}
       <div className="album-panel-controls">
         <div className="album-control-row">
           <label className="adv-label" htmlFor="album-arc-select">
@@ -88,6 +102,12 @@ export function AlbumPanel({
             ))}
           </select>
         </div>
+        {/* U10 — the flow name alone ("Cinematic") told the user nothing about
+            what it does to their record, and clipped to "Cinem..." in the rail
+            besides. The description is now on screen. */}
+        <p className="album-flow-description" id="album-flow-description">
+          {ALBUM_FLOW_DESCRIPTION[albumArcKind]}
+        </p>
         <div className="album-control-row">
           <label className="adv-label" htmlFor="album-intensity-range">
             Flow amount
@@ -101,11 +121,21 @@ export function AlbumPanel({
             value={albumIntensity}
             onChange={(e) => onAlbumIntensity(parseFloat(e.target.value))}
             className="album-intensity-range"
+            // U10 — `×1.00` was a number with no stated meaning anywhere in the
+            // product. A control nobody can interpret is not a feature.
+            aria-valuetext={flowAmountValueText(albumIntensity)}
+            aria-describedby="album-flow-amount-description"
           />
           <span className="album-intensity-value">
             ×{albumIntensity.toFixed(2)}
           </span>
         </div>
+        <p
+          className="album-flow-description"
+          id="album-flow-amount-description"
+        >
+          {flowAmountDescription(albumIntensity)}
+        </p>
       </div>
     </section>
   );

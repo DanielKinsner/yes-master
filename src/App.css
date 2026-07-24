@@ -773,11 +773,73 @@ select {
   cursor: not-allowed;
 }
 
+/* U10 — long filenames used to clip to a fragment on ONE line, which in Album
+   mode reduced "03 - the-long-working-title-take-4.wav" to noise you could not
+   tell apart from track 04. Two lines is enough to distinguish real filenames
+   while still bounding row height, and `break-word` handles the unbroken
+   hyphen-free names that a single-line ellipsis handled worst.
+   The full path remains on the row's `title` for pointer users. */
 .track-name {
   font-size: 0.85rem;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* U10 — the sequence overview: per-track facts that used to require opening
+   each track. Wraps rather than clipping, so a narrow rail loses none of it. */
+.track-sequence-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.18rem 0.32rem;
+  margin-top: 0.12rem;
+  font-size: 0.63rem;
+  line-height: 1.25;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.seq-chip {
+  white-space: nowrap;
+}
+
+.seq-chip.is-pending {
+  color: var(--text-2);
+  font-style: italic;
+}
+
+.seq-chip.is-override {
+  color: var(--accent-warm);
+  font-weight: 600;
+}
+
+.seq-chip.is-warn {
+  color: var(--accent-warm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* U10 — plain-language explanation for the album flow and its amount. `×1.00`
+   was on screen with nothing anywhere in the product to say what it scaled. */
+.album-flow-description {
+  margin: 0.15rem 0 0.35rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--text-2);
+}
+
+.album-single-track-note {
+  margin: 0.25rem 0 0.1rem;
+  padding: 0.4rem 0.5rem;
+  border-left: 2px solid var(--border-strong);
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--text-2);
 }
 
 .track-meta {

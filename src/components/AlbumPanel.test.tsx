@@ -67,9 +67,20 @@ describe("AlbumPanel", () => {
     expect(input).toBeTruthy();
     // Kept as an <input> for a11y + edit-in-place; prompt, not a boxed field.
     expect(input?.tagName).toBe("INPUT");
-    expect(input?.getAttribute("placeholder")).toBe("Name this album");
     expect(input?.getAttribute("aria-label")).toBe("Album title");
     expect(input?.getAttribute("maxlength")).toBe("120");
+
+    // U10 (2026-07-24): the placeholder was "Name this album", which clipped to
+    // "Name this alb..." in the sidebar rail. A placeholder that does not fit
+    // its own field is worse than a shorter one that does.
+    //
+    // This assertion is now on the PROPERTY that mattered rather than on one
+    // exact string, so the next copy tweak does not have to touch a test — but
+    // it still fails if someone reintroduces a placeholder too long for the
+    // rail. The rail is ~260px (--rail-width-left) minus padding and chips.
+    const placeholder = input?.getAttribute("placeholder") ?? "";
+    expect(placeholder.length).toBeGreaterThan(0);
+    expect(placeholder.length).toBeLessThanOrEqual(14);
   });
 
   it("renders album stats as metadata chips and fixes 1-track pluralization (Slice 13)", async () => {

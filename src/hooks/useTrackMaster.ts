@@ -1746,6 +1746,73 @@ export function useTrackMaster() {
   const [albumExportReport, setAlbumExportReport] =
     useState<import("../lib/api").AlbumRenderReport | null>(null);
 
+  // U10 — live album plan preview for the sidebar sequence overview.
+  //
+  // The sequence overview must show what will ACTUALLY render (roles, arc
+  // offsets), not a client-side re-derivation that could drift from the
+  // backend planner. So it asks the same `plan_album` the export uses.
+  //
+  // Read-only and disposable: it never feeds a render, and a failure just
+  // leaves the overview without roles/offsets rather than surfacing an error —
+  // a preview that cannot compute must not look like a broken export.
+  const [albumPlanPreview, setAlbumPlanPreview] =
+    useState<import("../bindings").AlbumPlan | null>(null);
+
+  useEffect(() => {
+    if (mode !== "album" || tracks.length === 0) {
+      setAlbumPlanPreview(null);
+      return;
+    }
+    const analyses = tracks
+      .map((t) => analysisMap[t.id])
+      .filter((a): a is AnalysisResult => !!a);
+    if (analyses.length !== tracks.length) {
+      setAlbumPlanPreview(null);
+      return;
+    }
+
+    let cancelled = false;
+    // Debounced: reorder and the flow-amount slider both fire rapidly, and the
+    // planner is a backend round trip.
+    const timer = setTimeout(() => {
+      const durations = tracks.map((t) => t.duration_seconds ?? 0);
+      const arc: import("../bindings").AlbumArc = {
+        kind: "preset",
+        preset: albumArcKind,
+      };
+      void api
+        .planAlbum(
+          albumTitle.trim() || tracks[0]?.display_name || "Album",
+          analyses,
+          durations,
+          arc,
+          albumIntensity,
+          albumSampleRate,
+          albumBitDepth,
+        )
+        .then((plan) => {
+          if (!cancelled) setAlbumPlanPreview(plan);
+        })
+        .catch(() => {
+          if (!cancelled) setAlbumPlanPreview(null);
+        });
+    }, 180);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    mode,
+    tracks,
+    analysisMap,
+    albumArcKind,
+    albumIntensity,
+    albumTitle,
+    albumSampleRate,
+    albumBitDepth,
+  ]);
+
   /// Phase B: build + render the album via the new AlbumPlan path. Picks
   /// up the current tracks, per-track analyses, per-track settings,
   /// current arc + intensity, and hands it to the backend. Returns the
@@ -2780,6 +2847,9 @@ export function useTrackMaster() {
     albumTitle,
     albumRendering,
     albumExportReport,
+    // U10: read-only inputs for the sidebar sequence overview.
+    albumPlanPreview,
+    analysisByTrackId: analysisMap,
     albumSampleRate,
     albumBitDepth,
     setAlbumArc,

@@ -7,6 +7,7 @@
 
 import { formatBitDepth, formatSampleRate } from "./ExportReceiptCard";
 import type { AlbumRenderReport } from "../lib/api";
+import { trackCountLabel } from "../lib/album-copy";
 
 function formatChannelCount(channels: number): string {
   if (channels === 1) return "mono";
@@ -60,7 +61,7 @@ export function AlbumExportReceipt({ report }: { report: AlbumRenderReport }) {
       <span className="album-export-receipt-label">Last export:</span>
       <code className="album-export-receipt-path">{report.album_wav_path}</code>
       <span className="album-export-receipt-meta">
-        {report.tracks.length} tracks · rendered {renderedRate} /{" "}
+        {trackCountLabel(report.tracks.length)} · rendered {renderedRate} /{" "}
         {formatBitDepth(report.bit_depth)} /{" "}
         {formatChannelCount(report.rendered_channels)} · requested {requestedRate}
         {requestedMismatch && `, got ${renderedRate}`} · manifest:{" "}
