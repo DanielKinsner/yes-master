@@ -28,6 +28,59 @@ Use this lane for normal UI, state, packaging-script, and backend contract work.
 The explicit `target\codex-rc` directory avoids collisions with a running debug
 app that may lock the default target executable on Windows.
 
+## Headless Web Lane (landing + `/app`)
+
+The default repeatable browser check for anything that renders. One command,
+no prerequisites, no manually started server:
+
+```powershell
+npm run verify:headless
+```
+
+It builds once, starts its own preview server on a free port, runs the landing
+responsive suite and the `/app` scenario suite against it, and tears the server
+down on every exit path. Evidence (screenshots + `summary.json`) lands under
+`test-output/headless/<timestamp>/`.
+
+**Browser runtime.** The lane uses Playwright's **bundled Chromium**, pinned by
+the `playwright` entry in `package-lock.json` — deliberately not the installed
+Chrome channel, whose version is whatever Chrome last auto-updated to and which
+does not exist on a CI runner at all. Install it once per machine:
+
+```powershell
+npx playwright install --with-deps chromium
+```
+
+**A missing browser fails the lane.** This is a gate; a gate that skips itself
+when a dependency is absent reports green and is worse than nothing.
+
+**`/app` preview scenarios.** Deterministic states selected with
+`?scenario=<name>` (see `PREVIEW_SCENARIOS` in `src/lib/preview-mock.ts`):
+`clean`, `empty`, `warning`, `long-copy`, `export-success`, `export-cancel`,
+`album-1`, `album-4`, `album-12`, `album-long`, `album-warning`. `?empty=1`
+still works as an alias for `empty`. Every scenario is checked at 1440×900 and,
+where layout matters, at the supported minimum 1360×740.
+
+**Console policy.** Any console error or warning fails the lane. The preview
+mock warns on an unhandled command or listen channel, so a drifted mock contract
+turns the lane red instead of producing noise nobody reads. Deliberately
+unsupported native-only behavior (`install_update`) is logged at *info* level
+with a named prefix and allowlisted in `scripts/verify-app-headless.mjs`.
+
+**What this lane does NOT prove.** Native dialogs, real audio device behavior,
+installer signing, updater installation, and anything about how the product
+sounds. Those are the installed-machine and owner-listening layers. Browser
+results are labelled `evidenceLayer: "browser-headless"` in every summary so
+they cannot be mistaken for native proof.
+
+To prove the lane still fails when it should:
+
+```powershell
+node scripts/verify-app-headless.mjs --url http://127.0.0.1:5177 --force-fail album-12
+```
+
+It must exit nonzero and name the scenario, route, viewport, and screenshot path.
+
 ## iPhone Native Bridge Lane
 
 When changing shared Rust types, `yes_master_lib` behavior, adaptive/profile

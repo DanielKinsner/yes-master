@@ -17,7 +17,8 @@
     "verify:landing": "node scripts/verify-landing-responsive.mjs",
     "verify:rust": "powershell -ExecutionPolicy Bypass -File scripts/verify-fast.ps1 -Lane rust",
     "verify:iphone": "powershell -ExecutionPolicy Bypass -File scripts/verify-fast.ps1 -Lane iphone",
-    "verify:android": "powershell -ExecutionPolicy Bypass -File scripts/verify-fast.ps1 -Lane android"
+    "verify:android": "powershell -ExecutionPolicy Bypass -File scripts/verify-fast.ps1 -Lane android",
+    "verify:headless": "node scripts/verify-headless.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.1.1",

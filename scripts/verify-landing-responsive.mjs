@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { chromium } from "playwright";
+import { launchHeadless, runtimeStamp } from "./lib/headless-browser.mjs";
 
 const matrix = [
   [2560, 1440],
@@ -46,16 +46,9 @@ const failures = [];
 const records = [];
 const anchorRecords = [];
 
-let browser;
-try {
-  browser = await chromium.launch({ channel: "chrome", headless: true });
-} catch (error) {
-  console.error("Failed to launch Playwright Chrome.");
-  console.error(`  ${error?.message ?? error}`);
-  console.error("Hint: install the browser first with:");
-  console.error("  npx playwright install chrome");
-  process.exit(1);
-}
+// Browser runtime is settled in scripts/lib/headless-browser.mjs (U3). A
+// missing browser exits nonzero there — this lane is a gate and must not skip.
+const browser = await launchHeadless();
 const page = await browser.newPage();
 const consoleMessages = [];
 const pageErrors = [];
@@ -258,6 +251,7 @@ for (const [width, height] of [
   }
 }
 
+const browserStamp = runtimeStamp(browser);
 await browser.close();
 
 const relevantConsoleMessages = consoleMessages.filter(
@@ -274,6 +268,11 @@ if (pageErrors.length > 0) {
 const summary = {
   url,
   outDir,
+  // SYNTHETIC evidence. A pass here proves layout, copy, and link behavior in a
+  // headless browser. It proves nothing about native dialogs, real audio,
+  // installer signing, updater install, or how anything sounds.
+  evidenceLayer: "browser-headless",
+  browser: browserStamp,
   matrix: records,
   anchors: anchorRecords,
   consoleMessages,

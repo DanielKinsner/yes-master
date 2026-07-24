@@ -12,10 +12,13 @@
 import type {
   AnalysisResult,
   AudioOutputDevice,
+  CompressionPlan,
+  GuardrailReadout,
   ImportedTrack,
   MasteringSettings,
   PlaybackTick,
   ProjectState,
+  QualityCheck,
   TrackId,
   UserPreset,
   WaveformPeaks,
@@ -25,6 +28,163 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 const PREVIEW_TRACK_ID = "preview-track-1";
 const PREVIEW_DURATION = 245;
 let mockSelectedAudioOutput: string | null = null;
+
+// Deterministic clock. The preview used to stamp `new Date()` / `Date.now()`
+// into analysis results, preset ids, and job ids, which made two runs of the
+// same scenario differ. The headless lane (U3) and the capture manifests (U7)
+// both need byte-stable output, so the preview uses a fixed instant and a
+// monotonic counter instead of wall-clock time.
+const PREVIEW_ISO = "2026-01-01T00:00:00.000Z";
+let previewIdCounter = 0;
+const nextPreviewId = (prefix: string) => `${prefix}-${++previewIdCounter}`;
+
+// ---------------------------------------------------------------------------
+// Deterministic preview scenarios (U3).
+//
+// Selected with `?scenario=<name>` on the /app URL. Each one is a fixed,
+// reproducible starting state so a headless test can assert a named expected
+// result instead of whatever the mock happened to seed. `?empty=1` is kept as
+// an alias for the `empty` scenario so existing links and docs still work.
+//
+// These are BROWSER-ONLY. `tauri-runtime.ts` never imports this module inside
+// the real WebView, so nothing here can change production behavior.
+// ---------------------------------------------------------------------------
+
+export type PreviewScenarioName =
+  | "clean"
+  | "empty"
+  | "warning"
+  | "long-copy"
+  | "export-success"
+  | "export-cancel"
+  | "album-1"
+  | "album-4"
+  | "album-12"
+  | "album-long"
+  | "album-warning";
+
+interface PreviewScenario {
+  /// Human-readable purpose, surfaced to the headless lane for failure output.
+  readonly purpose: string;
+  /// false => `load_recent_session` returns null (true first-run state).
+  readonly seedProject: boolean;
+  /// 0 => track mode. >0 => album mode with that many tracks.
+  readonly albumTracks: number;
+  /// Deliberately long display names, to exercise truncation and wrapping.
+  readonly longNames: boolean;
+  /// What `run_export_checks` returns.
+  readonly exportChecks: "clean" | "warning";
+  /// Whether the native save dialog resolves to a path or to cancellation.
+  readonly saveDialog: "path" | "cancel";
+  /// Album positions (1-based) that override the album settings.
+  readonly overridePositions: readonly number[];
+}
+
+const BASE_SCENARIO: PreviewScenario = {
+  purpose: "Seeded single-track project, no warnings.",
+  seedProject: true,
+  albumTracks: 0,
+  longNames: false,
+  exportChecks: "clean",
+  saveDialog: "cancel",
+  overridePositions: [],
+};
+
+export const PREVIEW_SCENARIOS: Record<PreviewScenarioName, PreviewScenario> = {
+  clean: BASE_SCENARIO,
+  empty: {
+    ...BASE_SCENARIO,
+    purpose: "True first-run state: no session, no track, empty state visible.",
+    seedProject: false,
+  },
+  warning: {
+    ...BASE_SCENARIO,
+    purpose: "Export checks report a warning and a critical, both reviewable.",
+    exportChecks: "warning",
+    // The checks only reach the UI through a COMPLETED export receipt, so this
+    // scenario has to take the save-succeeds path. With the default cancel the
+    // export never runs and the scenario would silently assert nothing.
+    saveDialog: "path",
+  },
+  "long-copy": {
+    ...BASE_SCENARIO,
+    purpose:
+      "Pathological filename length at the supported minimum desktop size.",
+    longNames: true,
+  },
+  "export-success": {
+    ...BASE_SCENARIO,
+    purpose: "Save dialog returns a path; export completes and shows a receipt.",
+    saveDialog: "path",
+  },
+  "export-cancel": {
+    ...BASE_SCENARIO,
+    purpose:
+      "Save dialog is cancelled; the UI must NOT show a success receipt.",
+    saveDialog: "cancel",
+  },
+  "album-1": {
+    ...BASE_SCENARIO,
+    purpose: "Album mode with a single track — the degenerate album case.",
+    albumTracks: 1,
+  },
+  "album-4": {
+    ...BASE_SCENARIO,
+    purpose: "Album mode, four tracks, one overriding the album settings.",
+    albumTracks: 4,
+    overridePositions: [3],
+  },
+  "album-12": {
+    ...BASE_SCENARIO,
+    purpose:
+      "Album mode, twelve tracks — scrolling, reorder boundaries, selection.",
+    albumTracks: 12,
+    overridePositions: [2, 9],
+  },
+  "album-long": {
+    ...BASE_SCENARIO,
+    purpose:
+      "Album mode with deliberately long track names and a long album title.",
+    albumTracks: 12,
+    longNames: true,
+    overridePositions: [5],
+  },
+  "album-warning": {
+    ...BASE_SCENARIO,
+    purpose: "Album mode where export checks surface a warning.",
+    albumTracks: 4,
+    exportChecks: "warning",
+  },
+};
+
+export const DEFAULT_SCENARIO: PreviewScenarioName = "clean";
+
+function currentSearchParams(): URLSearchParams {
+  return new URLSearchParams(globalThis.location?.search ?? "");
+}
+
+export function activeScenarioName(): PreviewScenarioName {
+  const params = currentSearchParams();
+  const requested = params.get("scenario");
+  if (requested && requested in PREVIEW_SCENARIOS) {
+    return requested as PreviewScenarioName;
+  }
+  if (requested) {
+    // An unrecognized scenario is a test-authoring bug, not a UI state. Say so
+    // loudly — the headless lane treats any [preview-mock] warning as a failure.
+    console.warn(`[preview-mock] unhandled scenario: ${requested}`);
+  }
+  // Back-compat: `?empty=1` predates the scenario switch.
+  if (params.has("empty")) return "empty";
+  return DEFAULT_SCENARIO;
+}
+
+function activeScenario(): PreviewScenario {
+  return PREVIEW_SCENARIOS[activeScenarioName()];
+}
+
+const LONG_NAME_TAIL =
+  "an-absurdly-long-working-title-that-should-truncate-not-overlap";
 
 const MOCK_AUDIO_OUTPUTS: AudioOutputDevice[] = [
   {
@@ -102,23 +262,101 @@ const PREVIEW_ANALYSIS: AnalysisResult = {
   transient_density: 0.55,
   stereo_width: 1.0,
   recommended_universal: DEFAULT_SETTINGS,
-  measured_at_iso: new Date().toISOString(),
+  measured_at_iso: PREVIEW_ISO,
   inferred_role: null,
   role_confidence: null,
   inferred_character: null,
   character_confidence: null,
 };
 
-const PREVIEW_PROJECT: ProjectState = {
-  schema_version: 1,
-  mode: "track",
-  tracks: [PREVIEW_TRACK],
-  track_order: [PREVIEW_TRACK_ID],
-  track_settings: { [PREVIEW_TRACK_ID]: DEFAULT_SETTINGS },
-  album_intent: null,
-  track_override_album: [],
-  last_saved_iso: null,
-};
+// Scenario-driven project construction. Deterministic for a given scenario:
+// same ids, same names, same order, every run.
+function albumTrackName(position: number, longNames: boolean): string {
+  const nn = String(position).padStart(2, "0");
+  return longNames
+    ? `${nn} - ${LONG_NAME_TAIL}-take-${position}.wav`
+    : `${nn} - Preview Track ${position}.wav`;
+}
+
+function previewProject(): ProjectState {
+  const scenario = activeScenario();
+
+  if (scenario.albumTracks > 0) {
+    const tracks: ImportedTrack[] = Array.from(
+      { length: scenario.albumTracks },
+      (_, index) => {
+        const position = index + 1;
+        return {
+          ...PREVIEW_TRACK,
+          id: `${PREVIEW_TRACK_ID}-${position}`,
+          path: `/preview/album/${position}.wav`,
+          display_name: albumTrackName(position, scenario.longNames),
+          // Vary duration a little so the sequence is not visually uniform.
+          duration_seconds: PREVIEW_DURATION - 40 + position * 7,
+        };
+      },
+    );
+    const order = tracks.map((track) => track.id);
+    return {
+      schema_version: 1,
+      mode: "album",
+      tracks,
+      track_order: order,
+      track_settings: Object.fromEntries(
+        order.map((id) => [id, DEFAULT_SETTINGS]),
+      ),
+      album_intent: DEFAULT_SETTINGS,
+      album_arc_kind: "cinematic",
+      album_intensity: 1.0,
+      album_title: scenario.longNames
+        ? `A Deliberately Overlong Album Title For Truncation Testing (${LONG_NAME_TAIL})`
+        : "Preview Album",
+      album_sample_rate: null,
+      album_bit_depth: null,
+      track_override_album: scenario.overridePositions
+        .filter((position) => position <= order.length)
+        .map((position) => order[position - 1]),
+      selected_track_id: order[0],
+      last_saved_iso: null,
+    };
+  }
+
+  const track: ImportedTrack = scenario.longNames
+    ? {
+        ...PREVIEW_TRACK,
+        display_name: `${LONG_NAME_TAIL}-final-master-v7-FINAL-actually-final.wav`,
+      }
+    : PREVIEW_TRACK;
+
+  return {
+    schema_version: 1,
+    mode: "track",
+    tracks: [track],
+    track_order: [PREVIEW_TRACK_ID],
+    track_settings: { [PREVIEW_TRACK_ID]: DEFAULT_SETTINGS },
+    album_intent: null,
+    track_override_album: [],
+    selected_track_id: PREVIEW_TRACK_ID,
+    last_saved_iso: null,
+  };
+}
+
+// Warning-scenario export checks. One warning and one critical so the review
+// surface has to render both levels and their detail text.
+const WARNING_EXPORT_CHECKS: QualityCheck[] = [
+  {
+    level: "warning",
+    code: "dynamic_range_low",
+    message:
+      "Dynamic range is low for this delivery target. The master will read as dense on quiet systems.",
+  },
+  {
+    level: "critical",
+    code: "true_peak_over_ceiling",
+    message:
+      "True peak exceeds the delivery ceiling. Lossy encoders are likely to clip this file.",
+  },
+];
 
 // Synthesize a stereo waveform that visually reads like a music track —
 // a couple of dynamic envelope swells over the duration, with stereo
@@ -166,15 +404,15 @@ export async function mockInvoke<T>(
 ): Promise<T> {
   switch (cmd) {
     case "load_recent_session":
-      // `?empty=1` boots the preview with no session — the true first-run
-      // state (EmptyState, auto-select on first import, analysis orb in
-      // the main slot). Default keeps the seeded preview project.
-      if (new URLSearchParams(globalThis.location?.search ?? "").has("empty")) {
+      // The `empty` scenario boots with no session — the true first-run state
+      // (EmptyState, auto-select on first import, analysis orb in the main
+      // slot). Every other scenario seeds its project.
+      if (!activeScenario().seedProject) {
         return null as unknown as T;
       }
-      return PREVIEW_PROJECT as unknown as T;
+      return previewProject() as unknown as T;
     case "load_project":
-      return PREVIEW_PROJECT as unknown as T;
+      return previewProject() as unknown as T;
     case "autosave_session":
     case "save_project":
       return null as unknown as T;
@@ -292,11 +530,11 @@ export async function mockInvoke<T>(
 
     case "save_user_preset": {
       const preset: UserPreset = {
-        id: `mock-preset-${Date.now()}`,
+        id: nextPreviewId("mock-preset"),
         name: (args?.name as string) ?? "Preview Preset",
         kind: (args?.kind as UserPreset["kind"]) ?? "track",
         settings: (args?.settings as MasteringSettings) ?? DEFAULT_SETTINGS,
-        created_at_iso: new Date().toISOString(),
+        created_at_iso: PREVIEW_ISO,
       };
       return preset as unknown as T;
     }
@@ -330,8 +568,13 @@ export async function mockInvoke<T>(
     }
 
     case "render_album_plan":
+      emitRenderProgress(
+        nextPreviewId("mock-album-render"),
+        PREVIEW_TRACK_ID,
+        "album",
+      );
       return {
-        job_id: `mock-album-render-${Date.now()}`,
+        job_id: nextPreviewId("mock-album-render"),
         status: { status: "done" },
         album_wav_path: "/preview/album.wav",
         manifest_path: "/preview/manifest.json",
@@ -348,15 +591,17 @@ export async function mockInvoke<T>(
     case "render_track_master": {
       const trackId = (args?.trackId as TrackId | undefined) ?? mockLoadedTrackId ?? PREVIEW_TRACK_ID;
       const outputPath = (args?.outputPath as string | null | undefined) ?? "/preview/output.wav";
-      const jobId = `mock-render-${Date.now()}`;
+      const jobId = nextPreviewId("mock-render");
+      const kind = cmd === "render_track_master" ? "master" : "preview";
+      emitRenderProgress(jobId, trackId, kind);
       return {
         id: jobId,
         job_id: jobId,
-        kind: cmd === "render_track_master" ? "master" : "preview",
+        kind,
         target_tracks: [trackId],
         status: { status: "done" },
         progress: 1.0,
-        started_at_iso: new Date().toISOString(),
+        started_at_iso: PREVIEW_ISO,
         output_paths: [outputPath],
       } as unknown as T;
     }
@@ -365,13 +610,121 @@ export async function mockInvoke<T>(
       return null as unknown as T;
 
     case "run_export_checks":
-      return [] as unknown as T;
+      return (
+        activeScenario().exportChecks === "warning" ? WARNING_EXPORT_CHECKS : []
+      ) as unknown as T;
+
+    // -----------------------------------------------------------------------
+    // Owner-gated calibration surfaces (U3 contract completion).
+    //
+    // These gates are OFF in production and stay OFF here. The setters mirror
+    // the real echo-back semantics so the UI toggle can be exercised, but the
+    // state is browser-local: this module is never loaded inside the Tauri
+    // WebView, so nothing here can enable a gated system in the product.
+    // -----------------------------------------------------------------------
+    case "adaptive_compression_enabled":
+      return mockAdaptiveCompression as unknown as T;
+
+    case "set_adaptive_compression":
+      mockAdaptiveCompression = Boolean(args?.enabled);
+      return mockAdaptiveCompression as unknown as T;
+
+    case "confidence_gating_enabled":
+      return mockConfidenceGating as unknown as T;
+
+    case "set_confidence_gating":
+      mockConfidenceGating = Boolean(args?.enabled);
+      return mockConfidenceGating as unknown as T;
+
+    // -----------------------------------------------------------------------
+    // Read-only adaptive readouts. Fixed, plausible values -- the preview does
+    // not run the DSP, and inventing a *varying* readout would imply it does.
+    // -----------------------------------------------------------------------
+    case "guardrail_readout":
+      return PREVIEW_GUARDRAIL_READOUT as unknown as T;
+
+    case "resolve_compression_plan":
+      return PREVIEW_COMPRESSION_PLAN as unknown as T;
+
+    case "evict_source_profile":
+      // Backend cache eviction; the preview holds no profile cache.
+      return null as unknown as T;
+
+    case "clear_device_lost":
+      // The preview never loses a device (playback:device-lost is a no-op),
+      // so clearing the latch is a genuine no-op rather than a stub.
+      return null as unknown as T;
 
     default:
+      if (NATIVE_ONLY_COMMANDS.has(cmd)) {
+        // Recognized and DELIBERATELY unsupported in a browser. Logged with a
+        // distinct prefix the headless lane allowlists, so "we know about this"
+        // is mechanically distinguishable from "nobody has looked at this".
+        console.info(`[preview-mock] native-only command, not simulated: ${cmd}`);
+        return null as unknown as T;
+      }
       console.warn(`[preview-mock] unhandled command: ${cmd}`, args);
       return null as unknown as T;
   }
 }
+
+// Commands whose real behavior only exists on an installed desktop build.
+// Faking them would be worse than declining: a browser cannot prove that an
+// update installs, and a green preview must never imply that it did.
+const NATIVE_ONLY_COMMANDS = new Set<string>(["install_update"]);
+
+// Owner-gated systems: OFF by default, exactly as they ship.
+let mockAdaptiveCompression = false;
+let mockConfidenceGating = false;
+
+const PREVIEW_GUARDRAIL_READOUT: GuardrailReadout = {
+  active: true,
+  strength: 0.62,
+  bright_trim: 0.18,
+  low_trim: 0.0,
+  density_trim: 0.24,
+  width_trim: 0.0,
+  brightness_share: 0.27,
+  low_share: 0.31,
+  dynamic_range_db: 5.2,
+  bright_deadband: 0.24,
+  low_deadband: 0.36,
+  width_corr_deadband: 0.35,
+  stereo_correlation: 0.52,
+  confidence: null,
+  effective_auto_width: 1.11,
+};
+
+const PREVIEW_COMPRESSION_PLAN: CompressionPlan = {
+  active: true,
+  low: {
+    threshold_db: -18.0,
+    ratio: 2.0,
+    density_mult: 1.0,
+    threshold_lift_db: 0.0,
+    ratio_mult: 1.0,
+    adaptive: false,
+  },
+  mid: {
+    threshold_db: -16.0,
+    ratio: 1.8,
+    density_mult: 1.0,
+    threshold_lift_db: 0.0,
+    ratio_mult: 1.0,
+    adaptive: false,
+  },
+  high: {
+    threshold_db: -14.0,
+    ratio: 1.6,
+    density_mult: 1.0,
+    threshold_lift_db: 0.0,
+    ratio_mult: 1.0,
+    adaptive: false,
+  },
+  reasons: [],
+  guidance: null,
+  digest: null,
+};
 
 export async function mockListen<T>(
   channel: string,
@@ -426,6 +779,11 @@ export async function mockListen<T>(
     // is a known no-op — registered explicitly to avoid the unhandled-channel warning.
     return () => {};
   }
+  if (channel === "render:progress") {
+    const wrapped = (payload: unknown) => handler({ payload: payload as T });
+    renderProgressHandlers.add(wrapped);
+    return () => renderProgressHandlers.delete(wrapped);
+  }
   if (channel === "analysis:progress") {
     const wrapped = (fraction: number, label: string) =>
       handler({ payload: { fraction, label } as unknown as T });
@@ -452,6 +810,22 @@ function emitAnalysisProgress(fraction: number, label: string): void {
   for (const h of analysisProgressHandlers) h(fraction, label);
 }
 
+// Render progress. The backend emits "render:progress" during preview, master,
+// and album renders; before U3 the preview left the channel unregistered, which
+// produced an unhandled-listen warning on every /app boot. Renders resolve
+// immediately in the preview, so this emits a single honest 1.0 completion
+// rather than a fake ramp -- inventing intermediate percentages would be
+// exactly the "no fake progress" failure U11 forbids.
+const renderProgressHandlers = new Set<(payload: unknown) => void>();
+function emitRenderProgress(
+  jobId: string,
+  trackId: TrackId,
+  kind: "preview" | "master" | "album",
+): void {
+  const payload = { job_id: jobId, track_id: trackId, kind, fraction: 1.0 };
+  for (const h of renderProgressHandlers) h(payload);
+}
+
 export async function mockOpen(
   opts?: { directory?: boolean; defaultPath?: string; multiple?: boolean; title?: string },
 ): Promise<string | string[] | null> {
@@ -462,6 +836,14 @@ export async function mockOpen(
 }
 
 export async function mockSave(): Promise<string | null> {
+  // The export-success / export-cancel scenarios differ ONLY here. Cancel is
+  // the conservative default because a browser has no filesystem: a scenario
+  // must opt in to the success path rather than get it by accident.
+  if (activeScenario().saveDialog === "path") {
+    const chosen = "/preview/exports/preview-master.wav";
+    console.info(`[preview-mock] save() returned ${chosen} (scenario)`);
+    return chosen;
+  }
   console.info("[preview-mock] save() returned null (cancelled)");
   return null;
 }

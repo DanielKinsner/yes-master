@@ -123,8 +123,22 @@ other build dirs); CI uses the default target and runs plain `cargo fmt --check`
 macOS, and Android lanes on every push, and the **macOS lane runs `cargo test`**
 — so the preset byte-identity snapshots gate there. `npm run verify:fast` /
 `verify:rust` / `verify:iphone` /
-`verify:android` wrap these lanes. If you touch the web landing page, run
-`npm run verify:landing`. The landing page **is** in agent scope — decided
+`verify:android` wrap these lanes. If you touch anything that renders — the
+landing page or the desktop UI — run the self-contained headless web lane:
+
+```powershell
+npm run verify:headless
+```
+
+It builds once, starts and tears down its own preview server, and runs the
+landing + `/app` scenario suites in Playwright's **bundled Chromium** (pinned by
+the lockfile — not the Chrome channel). Install the browser once per machine
+with `npx playwright install --with-deps chromium`; a missing browser **fails**
+the lane rather than skipping it. `npm run verify:landing` still runs the
+landing assertions alone against an already-running server. Details and the
+scenario list: `docs/TESTING.md` "Headless Web Lane".
+
+The landing page **is** in agent scope — decided
 2026-07-07 and reaffirmed by D16 on 2026-07-20; the Non-Negotiables above and
 `docs/PRODUCT.md` "Public Surface" are the current word. (The "open owner
 decision" phrasing that used to sit here was stale.)

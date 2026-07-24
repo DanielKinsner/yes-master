@@ -68,6 +68,46 @@ jobs:
           path: src-tauri/snapshot-diagnostics
           if-no-files-found: error
 
+  web-e2e:
+    # U3: the self-contained headless web lane. Before this job existed the
+    # landing checks needed a manually started server and therefore ran nowhere
+    # except the owner's machine, which meant they were never a gate.
+    #
+    # The browser is Playwright's BUNDLED CHROMIUM, pinned by the `playwright`
+    # entry in package-lock.json -- not the Chrome channel, which would depend
+    # on whatever Chrome a runner happens to have. The install step below is
+    # explicit and mandatory: if it fails, the job fails. This lane must never
+    # skip itself because a browser is missing.
+    name: Web E2E (headless Chromium)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install pinned Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Headless landing and /app suites
+        run: npm run verify:headless
+
+      - name: Upload headless evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-e2e-evidence
+          path: test-output/headless
+          if-no-files-found: warn
+
   windows:
     name: Windows desktop and host bridge lanes
     runs-on: windows-latest
