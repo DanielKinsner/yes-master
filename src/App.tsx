@@ -1826,6 +1826,11 @@ export function PresetTiles({
         {PRESET_OPTIONS.map((p) => {
           const active = isPresetActive(selected, p.value);
           const accent = PRESET_ACCENT[p.value.kind];
+          // U9: selected state was visual only (`.active`), and the character
+          // blurb was reachable only by hovering. Both now reach assistive tech:
+          // `aria-pressed` carries the state, and the blurb is described text
+          // rather than a tooltip. `title` stays for pointer users.
+          const blurbId = `preset-blurb-${p.value.kind}`;
           return (
             <button
               key={p.label}
@@ -1833,10 +1838,15 @@ export function PresetTiles({
               className={"tile " + (active ? "active" : "")}
               style={{ ["--tile-accent" as never]: accent }}
               onClick={() => onChange(p.value)}
+              aria-pressed={active}
+              aria-describedby={blurbId}
               title={`${p.label} — ${p.blurb}`}
             >
               <PresetIcon kind={p.value.kind} className="tile-icon" />
               <span className="tile-label">{p.label}</span>
+              <span id={blurbId} className="sr-only">
+                {p.blurb}
+              </span>
             </button>
           );
         })}
@@ -1921,6 +1931,10 @@ export function Macros({
         <span className="section-label">INTENSITY</span>
         <Knob
           label=""
+          // U9: named by the INTENSITY section label visually, but the control
+          // itself shipped with no accessible name at all.
+          ariaLabel="Intensity"
+          valueText={(v) => `${Math.round(v * 100)} percent, ${intensityLabel(v)}`}
           size="lg"
           tone={PRESET_TONE[settings.preset.kind]}
           value={settings.intensity}

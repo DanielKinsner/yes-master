@@ -87,6 +87,30 @@
   box-sizing: border-box;
 }
 
+/* U9 — screen-reader-only text.
+ *
+ * Several surfaces explained themselves through `title` alone, which is
+ * hover-only: unavailable to keyboard users, to touch, and to screen readers in
+ * most configurations. Where the explanation is genuinely secondary (a quality
+ * check's detail sentence, a preset's character blurb) it now also renders as
+ * sr-only text so the information EXISTS for assistive tech without changing
+ * the visual layout.
+ *
+ * Deliberately NOT `display: none` or `visibility: hidden` — both remove the
+ * node from the accessibility tree, which would defeat the entire purpose. The
+ * clip-rect technique keeps it in the tree while occupying no visual space. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Phase B — Album Master panel */
 /* Slice 13b: the album identity block now lives at the TOP of the left
    sidebar (not the center column), so it reads as a sidebar section — a

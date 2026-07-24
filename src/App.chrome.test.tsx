@@ -355,7 +355,19 @@ describe("advanced preset tiles", () => {
       />,
     );
 
-    const text = container.textContent ?? "";
+    // U9 (2026-07-24): this used to read `container.textContent`, which cannot
+    // distinguish "not visible" from "not in the DOM". The tiles now carry
+    // their character blurb as `.sr-only` text so screen-reader users get the
+    // description that was previously hover-only — visually nothing changed.
+    //
+    // The visual assertion below is UNCHANGED in strictness: it still requires
+    // that no blurb is visible on a tile. It is only measured correctly now,
+    // against visible text rather than raw DOM text. The a11y-tree half is
+    // asserted additionally, at the end of this test.
+    const visible = container.cloneNode(true) as HTMLElement;
+    visible.querySelectorAll(".sr-only").forEach((n) => n.remove());
+    const text = visible.textContent ?? "";
+
     // Both views now use the canonical names — the old "· … in Standard"
     // alias suffix is gone (preset-name unification).
     for (const name of ["Universal", "Clarity", "Tape", "Oomph"]) {
@@ -366,6 +378,9 @@ describe("advanced preset tiles", () => {
     expect(text).not.toContain("Vocal/upper-mid definition");
     expect(text).not.toContain("Saturation, glue, softer top");
     expect(text).not.toContain("Low-end weight, punch");
+
+    // ...and the blurb must nonetheless be reachable by assistive tech.
+    expect(container.textContent ?? "").toContain("Safe, well-rounded default");
     // The four Standard tiles lead the Advanced list in the same order, so
     // Oomph sits ahead of Spatial (the unification ordering decision).
     expect(text.indexOf("Oomph")).toBeGreaterThan(-1);

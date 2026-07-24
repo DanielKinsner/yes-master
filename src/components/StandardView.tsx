@@ -664,6 +664,11 @@ export function StandardView({
             </div>
             <Knob
               label=""
+              // U9: the visible label lives in the "2 · Intensity" step
+              // heading, so the knob renders none — but it still needs an
+              // accessible name, and shipped with `aria-label=""` (i.e. none).
+              ariaLabel="Intensity"
+              valueText={(v) => `${Math.round(v * 100)} percent, ${intensityLabel(v)}`}
               size="lg"
               tone={activeTone}
               value={s.intensity}

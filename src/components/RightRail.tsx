@@ -233,6 +233,15 @@ export function RightRail({
                       {row.crit ? "✗" : "△"}
                     </span>
                     <span>{row.label}</span>
+                    {/* U9: the severity was carried only by a colour class and
+                        a glyph marked aria-hidden, and the explanation only by
+                        a hover tooltip. A screen-reader user heard the label
+                        and nothing else — on the panel whose entire job is to
+                        make you review a warning before exporting. */}
+                    <span className="sr-only">
+                      {row.crit ? "Critical. " : "Warning. "}
+                      {row.detail}
+                    </span>
                   </li>
                 ))}
             </ul>
@@ -524,6 +533,13 @@ function QualityCheckPanel({
               {r.crit ? "✗" : r.warn ? "△" : "✓"}
             </span>
             <span className="quality-check-text">{r.label}</span>
+            {/* U9: same as the export-review list — pass/warn/critical was
+                conveyed by an aria-hidden glyph plus colour, and the detail by
+                a tooltip. Both now exist as text. */}
+            <span className="sr-only">
+              {r.crit ? "Critical. " : r.warn ? "Warning. " : "Pass. "}
+              {r.detail}
+            </span>
           </li>
         ))}
       </ul>

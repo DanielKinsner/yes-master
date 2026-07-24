@@ -56,6 +56,20 @@ type KnobProps = {
   centerValue?: boolean;
   caption?: string;
   disabled?: boolean;
+  /// U9 — accessible name when the visible `label` is intentionally empty
+  /// (some knobs are titled by an adjacent section heading instead). Without
+  /// this the hidden range input got `aria-label=""` and the control had NO
+  /// accessible name at all, which is how both Intensity knobs shipped.
+  ariaLabel?: string;
+  /// U9 — what a screen reader should announce INSTEAD of the raw number.
+  /// Defaults to the same `format(value)` string sighted users read, plus the
+  /// caption when there is one, so "0.5" becomes "50%, Moderate". A named
+  /// range is the difference between a usable control and a mystery slider.
+  valueText?: (v: number) => string;
+  /// U9 — why this control is unavailable. Rendered as sr-only text and
+  /// associated with the input, so a disabled knob can explain itself rather
+  /// than being silently inert.
+  disabledReason?: string;
   /// Color identity for this knob's accent ring + indicator. The Tone
   /// Shape knobs match their corresponding 7-band EQ nodes in
   /// VisualEqPanel.tsx — Low=cyan (#22d3ee, 200 Hz), Mid=purple (#a78bfa,
@@ -88,6 +102,9 @@ export function Knob({
   centerValue = false,
   caption,
   disabled = false,
+  ariaLabel,
+  valueText,
+  disabledReason,
   tone = "blue",
 }: KnobProps) {
   const dims = SIZES[size];
@@ -113,6 +130,7 @@ export function Knob({
   const trackPath = describeArc(cx, cy, arcR, startAngle, fullEndAngle, SWEEP_DEG);
 
   const id = useId().replace(/:/g, "_");
+  const disabledReasonId = `${id}-disabled-reason`;
 
   const dragRef = useRef<{ startY: number; startValue: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -336,9 +354,25 @@ export function Knob({
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
           className="knob-fallback"
-          aria-label={label}
+          // U9: fall back to `ariaLabel` when the visible label is empty. An
+          // empty aria-label leaves the control with no accessible name.
+          aria-label={label || ariaLabel}
+          // U9: announce the formatted value, not the raw slider number.
+          aria-valuetext={
+            valueText
+              ? valueText(value)
+              : caption
+                ? `${format(value)}, ${caption}`
+                : format(value)
+          }
+          aria-describedby={disabled && disabledReason ? disabledReasonId : undefined}
           disabled={disabled}
         />
+        {disabled && disabledReason && (
+          <span id={disabledReasonId} className="sr-only">
+            {disabledReason}
+          </span>
+        )}
       </div>
       {!centerValue && <span className="knob-value">{format(value)}</span>}
       {caption && <span className="knob-caption">{caption}</span>}
