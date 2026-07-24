@@ -445,7 +445,7 @@ anchor for a later session.
 | U12 | C1 | Complete | `42b23cc` | **The documented command was broken, not merely fragile.** `run_fixture_matrix` never normalized its `--output`, so `--output ../test-output/...` (the form both docs prescribe) produced render paths containing `..` and the render layer's traversal guard rejected every one: `InvalidPath("path traversal not allowed: ../evidence/matrix\renders\...")`. `run_reference_tuning_dir` already normalized, so the two lanes disagreed. Both now share `prepare_evidence_output_dir` (normalize → validate → create → re-verify). Output inside/equal to the private source dir is rejected **before** anything is created — previously renders wrote straight into the private fixture folder. Docs converted to forward slashes so one command works on Windows and macOS. New `src-tauri/tests/evidence_runner_paths.rs`: 7 tests, **5 red before the fix**, all green after; these runners had no integration test at all, which is why this survived. No DSP constant, preset, expected result, or golden touched — preset byte-identity snapshots pass unchanged. |
 | U13 | C2 | Complete | `dd60697` | **Hostile bounds — a real defect fixed.** Manual per-band compressor overrides had `finite_or` (NaN/Inf safe) but **no upper bound**; an enormous *finite* value from a hand-edited/corrupted `.ams.json` produced **non-finite audio from sample 0**. Now clamped to the current UI ranges (threshold −60..0 dB, ratio 1..20, attack 0.5..200 ms, release 5..2000 ms) in the **manual branch only**, so the preset path is structurally untouched — plus a guard test proving all 8 factory presets already sit inside those bounds, so even a manual fallback is a no-op. Compatibility pinned as **preserved in file, clamped at execution** (load neither rewrites nor rejects). **Characterization — pre-registered, then read.** Metric/thresholds/partitions/holdout committed before any adaptive number was computed; metric is the *inherited* `character_distance`, not a new one. 5 source classes (neutral/bright/boomy/dense + `wide` holdout), each set to genuinely cross its real guardrail deadband. **Result: min pairwise distance 1.509** (bright tightest; holdout 1.604) vs a 1.2 pin threshold → floor pinned at the **candidate** 1.0, deliberately not at the observed value. **Finding for U15:** Universal↔Clarity is the closest pair in 4 of 5 classes (Universal↔Spatial on the wide holdout) — that is what to listen to. No DSP constant, preset, target, limiter, Volume Match, or audition timing changed; snapshots + fingerprint golden pass unchanged. |
 | U9 | C2 | Complete | `ce8e276` | **Both Intensity knobs shipped with no accessible name at all** — `label=""` becomes `aria-label=""`, which is not a name. Fixed via a new `ariaLabel` prop on `Knob`, plus `aria-valuetext` so the control announces "50 percent, Moderate" instead of "0.5", plus an optional `disabledReason` rendered as associated text. Advanced preset tiles gained `aria-pressed` (selected state was a CSS class only) and `aria-describedby` → the character blurb, which was previously reachable only by hovering. Quality-check rows in both lists (source check + export review) had severity in an `aria-hidden` glyph and the explanation in a tooltip; both are now real text. Added a `.sr-only` utility. 8 new tests in `src/App.a11y-semantics.test.tsx`, all querying by **role and accessible name**; **7 of 8 verified red against the pre-U9 source**. One existing assertion in `App.chrome.test.tsx` was re-measured (visible text vs raw DOM text) — the visual criterion is unchanged in strictness and a new a11y-tree assertion was added alongside it. Installed NVDA/VoiceOver remains a U15 gate. |
-| U10 | C2 | **In progress** | `e182cfb`, `d4d3fcb`, +arc | **Done:** `1 tracks` plural (sidebar + album receipt); album sequence overview (source LUFS, album target, flow offset, role, override, analysis status, review flag) sourced from the backend's own `plan_album` so it matches what renders; compact sequence arc that responds to flow/amount/ordering and draws nothing rather than inventing a curve; flow + `Flow Amount ×1.00` explained in plain language; album title placeholder no longer clips in its own field; long filenames wrap to 2 lines instead of clipping to a fragment; one-track album explained; Follow/Override converted from **disabled-active-option** to a real segmented choice (both sides focusable, `aria-pressed` carries state); every disabled primary action (Export, audit WAV, Create Master, A/B Mastered) now states its reason accessibly — Create Master previously gave no reason at all for its most common disabled case. Export-cancel proven not to claim success. **NOT done, carried forward:** (a) audit for pre-existing duplicate warnings and one-owner-per-warning — new code reuses the existing quality owner, but existing duplicates were not hunted; (b) explicit verification of retry / overwrite-avoidance / receipt-action resolution / save-reload recovery text; (c) explicit reachability check for Delivery Format and Export Album in short viewports (no-overflow is verified, reachability is not); (d) scenarios S-D1/S-E1/S-F1/S-F2/S-F3 not yet run as named cases. |
+| U10 | C2 | **In progress** | `e182cfb`, `d4d3fcb`, `29aa9bd` | **Done:** `1 tracks` plural (sidebar + album receipt); album sequence overview (source LUFS, album target, flow offset, role, override, analysis status, review flag) sourced from the backend's own `plan_album` so it matches what renders; compact sequence arc that responds to flow/amount/ordering and draws nothing rather than inventing a curve; flow + `Flow Amount ×1.00` explained in plain language; album title placeholder no longer clips in its own field; long filenames wrap to 2 lines instead of clipping to a fragment; one-track album explained; Follow/Override converted from **disabled-active-option** to a real segmented choice (both sides focusable, `aria-pressed` carries state); every disabled primary action (Export, audit WAV, Create Master, A/B Mastered) now states its reason accessibly — Create Master previously gave no reason at all for its most common disabled case. Export-cancel proven not to claim success. **NOT done, carried forward:** (a) audit for pre-existing duplicate warnings and one-owner-per-warning — new code reuses the existing quality owner, but existing duplicates were not hunted; (b) explicit verification of retry / overwrite-avoidance / receipt-action resolution / save-reload recovery text; (c) explicit reachability check for Delivery Format and Export Album in short viewports (no-overflow is verified, reachability is not); (d) scenarios S-D1/S-E1/S-F1/S-F2/S-F3 not yet run as named cases. |
 | U11 | C2 | Not started | — | — |
 | U4 | C3 | Not started | — | — |
 | U5 | C3 | Not started | — | — |
@@ -463,6 +463,41 @@ anchor for a later session.
 Status values: `Not started`, `In progress`, `Complete`, `Complete with
 findings` (acceptance met, but something was found and recorded rather than
 fixed), `Blocked` (only for a hard stop — never for a queued owner question).
+
+### Session state — 2026-07-24 (read this first when resuming)
+
+**Where things stand.** C1 is closed (U1, U2, U3, U12). C2 is **partially
+done**: U13 and U9 are complete, U10 is substantially done but deliberately
+**not** ticked, and U11 has not started. Everything is committed and pushed to
+`main` — the candidate freeze is **NOT** in force, so `main` is open.
+
+**Resume at U10**, finishing its four open acceptance items (listed in its
+ledger row), then U11. U11 depends on U10 in the dependency graph; starting it
+on an open U10 is the wrong order.
+
+**Verified vs claimed.** Everything ticked above was verified by running it, and
+the commit messages quote the output. Specifically proved rather than assumed:
+the headless lane fails on a forced assertion, fails on a missing browser
+instead of skipping, and leaves zero orphan processes; the U9 semantics tests
+were confirmed red against pre-U9 source; the U12 path tests were red before the
+fix; and the preset byte-identity snapshots plus the fingerprint tolerance
+golden pass unchanged after every DSP-adjacent change, which is the mechanical
+proof no sound moved.
+
+**What a new machine will NOT have.** `private-audio-fixtures/` (117 MB) and
+`tests for presets/` (330 MB) are gitignored private audio, per the
+non-negotiables. Without them the slow fixture lane
+(`AMS_RUN_REAL_FIXTURE=1`) and both private evidence runners cannot run. Every
+lane that gates CI — frontend, headless web, Rust, both bridges — uses synthetic
+fixtures only and runs anywhere.
+
+**Owner-gated, untouched:** the Adaptive Compressor, Phase-B confidence, and
+album character all remain OFF. No preset, limiter, loudness target, Volume
+Match, or audition timing value was changed anywhere in C1 or C2.
+
+**Open owner questions:** six rows in `docs/OWNER_INPUT_QUEUE.md`. None block
+C2 or C3 work; the first of them starts to matter at C3, where public copy gets
+written.
 
 ### Resume protocol for a new session
 
