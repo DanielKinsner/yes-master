@@ -411,6 +411,7 @@ function App() {
               onAlbumArc={tm.setAlbumArc}
               onAlbumIntensity={tm.setAlbumIntensity}
               onAlbumTitle={tm.setAlbumTitle}
+              sequenceRows={sequenceRows}
             />
           ) : null
         }

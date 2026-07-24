@@ -109,7 +109,15 @@ const SCENARIOS = [
     viewports: [LAPTOP],
     settle: "ready",
     drive: exportWithReview,
-    mustNotContainAfterDrive: ["preview-master.wav"],
+    // U10: a cancelled export must leave no trace of success — not the output
+    // path, and not any of the language a completed export uses. Claiming a
+    // file was written when the user cancelled is the single worst thing this
+    // surface could do.
+    mustNotContainAfterDrive: [
+      "preview-master.wav",
+      "Reveal in file manager",
+      "Ready to ship",
+    ],
   },
   {
     name: "album-1",

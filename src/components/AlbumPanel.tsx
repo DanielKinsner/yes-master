@@ -16,6 +16,7 @@
 import type { AlbumArcKind, ImportedTrack } from "../bindings";
 import { ALBUM_ARC_DISPLAY } from "../bindings";
 import { formatDuration } from "../lib/time-format";
+import { sequenceArcHeights, type SequenceRow } from "../lib/album-sequence";
 import {
   ALBUM_FLOW_DESCRIPTION,
   SINGLE_TRACK_ALBUM_NOTE,
@@ -32,7 +33,57 @@ type AlbumPanelProps = {
   onAlbumArc: (kind: AlbumArcKind) => void;
   onAlbumIntensity: (v: number) => void;
   onAlbumTitle: (v: string) => void;
+  /// U10 — sequence rows for the compact arc. Optional so the panel still
+  /// renders (without an arc) before a plan exists.
+  sequenceRows?: SequenceRow[];
 };
+
+/**
+ * Compact sequence arc (U10).
+ *
+ * Draws the loudness shape the album will actually render, because the heights
+ * come from the backend plan's own per-track targets — so it responds to the
+ * flow choice, the flow amount, and the track ordering for free.
+ *
+ * Renders nothing when there is no spread to draw (flow amount 0, a single
+ * track, or no plan yet). A flat line implying "no arc" and an absent arc
+ * meaning "we don't know yet" are different states, and inventing a curve to
+ * fill the space would be exactly the kind of decorative dishonesty the plan
+ * forbids.
+ */
+function SequenceArc({ rows }: { rows: SequenceRow[] }) {
+  const heights = sequenceArcHeights(rows);
+  if (heights.length === 0) return null;
+
+  const width = 100;
+  const height = 22;
+  const step = heights.length > 1 ? width / (heights.length - 1) : width;
+  const points = heights
+    .map((h, i) => `${(i * step).toFixed(2)},${(height - h * height).toFixed(2)}`)
+    .join(" ");
+
+  return (
+    <div className="album-sequence-arc">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={`Loudness arc across ${heights.length} tracks, following the selected flow.`}
+      >
+        <polyline points={points} fill="none" strokeWidth={1.4} vectorEffect="non-scaling-stroke" />
+        {heights.map((h, i) => (
+          <circle
+            key={i}
+            cx={i * step}
+            cy={height - h * height}
+            r={1.6}
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+      </svg>
+    </div>
+  );
+}
 
 export function AlbumPanel({
   tracks,
@@ -42,6 +93,7 @@ export function AlbumPanel({
   onAlbumArc,
   onAlbumIntensity,
   onAlbumTitle,
+  sequenceRows = [],
 }: AlbumPanelProps) {
   const arcKinds: AlbumArcKind[] = [
     "cinematic",
@@ -108,6 +160,7 @@ export function AlbumPanel({
         <p className="album-flow-description" id="album-flow-description">
           {ALBUM_FLOW_DESCRIPTION[albumArcKind]}
         </p>
+        <SequenceArc rows={sequenceRows} />
         <div className="album-control-row">
           <label className="adv-label" htmlFor="album-intensity-range">
             Flow amount
