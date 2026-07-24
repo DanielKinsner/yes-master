@@ -15,6 +15,22 @@ This is an implementation plan, not an execution record. Creating it does not
 authorize DSP retuning, public deployment, release publication, updater
 activation, mobile expansion, or collection of private audio.
 
+> **Revision 2026-07-24b — mechanical audit applied.** The plan's scope,
+> decisions, and unit content are unchanged; this pass fixed executability
+> defects found by auditing the plan against the repo. Changes: U2 unblocked
+> from U3 and extended to the `postcss` advisory; U3 must settle its browser
+> runtime (`channel: "chrome"` vs bundled Chromium) before its lane becomes a
+> gate; U7 now depends on U11 with an explicitly defined capture-input digest;
+> U8 adds the `320×568` viewport that S-A3 requires; U11's non-existent
+> `ExportPanel.tsx` path corrected; U14 now owns the `0.9.1` version bump and
+> declares the candidate freeze that KTD14 and the gate policy otherwise
+> contradict; a scenario traceability table was added; U1 now states this plan's
+> relationship to the two existing beta documents and creates the owner input
+> queue; U15 records why the listening gate keeps reappearing. A long-horizon
+> **Execution Program** section was added: five sequential chunks, standing rules
+> for unattended execution, an owner input queue, a chunk status ledger, and a
+> resume protocol.
+
 ---
 
 ## Goal Capsule
@@ -49,8 +65,13 @@ approachable without looking cheap, and precise without feeling sterile.
 
 ### Execution posture
 
+- **This is a long-horizon program.** It is grouped into five sequential chunks
+  (see "Execution Program") so an implementing agent can run a whole chunk
+  unattended and a later session can resume from the chunk status ledger.
+  Owner-blocked questions go to `docs/OWNER_INPUT_QUEUE.md` and are answered in
+  batches; they never stall a chunk.
 - Work on `main` in small, independently green slices after this plan is
-  approved.
+  approved, up to the C4 candidate freeze.
 - Use headless browser and native synthetic-file tests as the default repeatable
   proof.
 - Reserve installed-app computer use for behaviors a browser mock cannot prove.
@@ -165,10 +186,44 @@ item with input, action, and expected result.
 | S-F2 | Complete Album mode with one, four, and twelve tracks, long filenames, mixed channel counts, follow/override states, and warnings at 1360×740 and 1440×900. | Ordering, sequence arc, common settings, per-track loudness/role/status, channel resolution, override state, warnings, and recovery are scannable, coherent, keyboard accessible, and not dependent on clipped labels. |
 | S-F3 | Export twice to the same intended destination, then save and reload the project. | Prior renders are not overwritten by default, receipt actions resolve correctly, and the restored project is usable. |
 | S-G1 | Submit a beta bug and general feedback without a YES Master account. | GitHub's account requirement is disclosed before the handoff, required reproducibility fields are present, and the user is warned not to publish private audio. |
-| S-G3 | Subscribe, decline, unsubscribe from, or ignore the optional newsletter. | Download access and product behavior never change; consent and unsubscribe behavior are clear; the newsletter can announce beta milestones, feedback prompts, and the public founder-price window without manufacturing urgency. |
 | S-G2 | Simulate offline, manifest, signature, and install failure during update. | The installed build remains usable and presents actionable retry or manual-download guidance. |
+| S-G3 | Subscribe, decline, unsubscribe from, or ignore the optional newsletter. | Download access and product behavior never change; consent and unsubscribe behavior are clear; the newsletter can announce beta milestones, feedback prompts, and the public founder-price window without manufacturing urgency. |
 | S-H1 | Run the owner listening dossier on the exact release-candidate commit. | A dated note records sources, settings, observed issues, and explicit signoff or rejection; silence is not treated as approval. |
 | S-I1 | Read the beta landing and guides as a mobile visitor while mobile remains parked. | The page truthfully says the desktop beta is the available product and does not promise a mobile download or parity. |
+
+### Scenario traceability
+
+Confidence check 2 requires every scenario family to have a passing result, an
+explicit parked status, or an owner-accepted exception. This table is the
+mapping — without it the scenario IDs are only scattered through unit prose and
+no one can prove the set is closed. **Proving unit** is where the scenario first
+gets a result; **closing owner** is the unit that may mark it closed. A scenario
+proved in a preview or injected state is not closed until its production or
+installed instance passes.
+
+| Scenario | Proving unit(s) | Closing owner | Evidence layer |
+|---|---|---|---|
+| S-A1 | U5, U6 | U17 | Browser headless → production smoke |
+| S-A2 | U5 | U17 | Browser headless → production smoke |
+| S-A3 | U8 | U8 | Browser headless (needs the `320×568` addition) |
+| S-B1 | U5 | U16 | Injected state → real draft release |
+| S-B2 | U16 | U16 | Installed-machine |
+| S-B3 | U16 | U16 | Installed-machine / staged lifecycle harness |
+| S-C1 | U15 | U16 | Installed-machine (Windows) |
+| S-C2 | U15 | U16 | Installed-machine (macOS) |
+| S-D1 | U9, U10 | U14 | Frontend unit + browser headless |
+| S-E1 | U10 | U15 | Browser headless → owner listening |
+| S-E2 | U13 | U15 | Native mechanical → owner listening |
+| S-F1 | U9, U10 | U14 | Frontend unit + browser headless |
+| S-F2 | U9, U10 | U15 | Browser headless → installed webview review |
+| S-F3 | U10 | U14 | Browser headless + native Rust synthetic E2E |
+| S-G1 | U4 | U4 | YAML/link check + manual read-through |
+| S-G2 | U16 | U16 | Installed-machine negative-path harness |
+| S-G3 | U4 | U17 | Form/consent tests → production smoke |
+| S-H1 | U15 | U15 | Owner listening (dated note) |
+| S-I1 | U5, U6 | U17 | Browser headless → production smoke |
+
+Any scenario added later must be added to this table in the same commit.
 
 ---
 
@@ -191,7 +246,7 @@ item with input, action, and expected result.
 | KTD11 | Treat purposeful delight as beta-critical and require reduced-motion behavior plus meaningful state feedback for every “alive” interaction. | The product should feel finished during the beta, while motion remains subordinate to comprehension, responsiveness, warnings, and audition timing. |
 | KTD12 | Record release evidence against the exact commit and artifacts under test. | A green result from another checkout, rebuilt artifact, or earlier SHA is not release evidence. |
 | KTD13 | Withdraw beta distribution/support without revoking installed local-first binaries; make any 1.0 export lock an optional-update licensing transition. | This preserves local-first trust while leaving a clear future commercial boundary and avoids coercing feedback. |
-| KTD14 | Run future implementation directly on `main` in small green slices. *(session-settled: user-directed; chosen over feature-branch drift)* | This is the owner-selected integration model for the current checkout; it avoids a second long-lived reconciliation branch. |
+| KTD14 | Run future implementation directly on `main` in small green slices, up to the C4 candidate freeze; `main` is then frozen until U17 closes or the candidate is rejected. *(session-settled: user-directed; chosen over feature-branch drift)* | This is the owner-selected integration model for the current checkout and avoids a second long-lived reconciliation branch. The freeze exists because continuous merging and exact-commit release evidence cannot both hold while U15 runs across days of owner time. |
 | KTD15 | Lead marketing to budget-conscious independent artists/DIY producers, then casual and emerging creators, then working producers/engineers; treat all others as non-target. | This prioritizes the people most likely to value fast, local, affordable finishing without using “broke” or “nonprofessional” as public language. |
 | KTD16 | Keep Album as lower-page proof of product depth until its sequence intelligence is visually legible; do not make album creators the secondary audience yet. | The headless visual review found real multi-track mechanics but severe sidebar truncation and almost no scan-level view of loudness arc, roles, targets, or coherence. |
 | KTD17 | Offer explicit Windows and Mac download actions; OS detection may highlight but never silently redirect. | Platform choice is clearer, more trustworthy, and easier to recover from than a one-button auto-detection funnel. |
@@ -238,7 +293,10 @@ item with input, action, and expected result.
 - Landing work evolves the current visual language without becoming a wholesale
   rebrand.
 - `0.9.0` is used only as the owner-controlled installed updater seed and
-  `0.9.1` is the first possible full public beta candidate.
+  `0.9.1` is the first possible full public beta candidate. This matches
+  `docs/plans/beta-go-no-go.md` §3(ii), which already specs installing a 0.9.0
+  build and publishing a full 0.9.1 to prove the update path. The repo currently
+  sits at `0.9.0` in all three manifests; **U14 owns the bump to `0.9.1`.**
 - The owner supplies the beta-end date and exact founder-window purchase terms.
 - Newsletter provider, consent storage, retention, sender identity, and
   unsubscribe operations are selected and provisioned as an external-service
@@ -266,7 +324,6 @@ item with input, action, and expected result.
 flowchart TD
     U1 --> U3["U3 Headless web foundation"]
     U1["U1 Canon and evidence contract"] --> U2["U2 Dependency hygiene"]
-    U3 --> U2
     U1 --> U4["U4 Beta tester program"]
     U3 --> U5["U5 Release-aware download"]
     U4 --> U5
@@ -274,6 +331,7 @@ flowchart TD
     U5 --> U6
     U6 --> U7["U7 Current-build proof assets"]
     U10 --> U7
+    U11 --> U7
     U7 --> U8["U8 Landing quality gates"]
     U3 --> U9["U9 Desktop accessibility"]
     U9 --> U10["U10 Objective desktop UX"]
@@ -297,6 +355,128 @@ flowchart TD
 
 ---
 
+## Execution Program (long-horizon)
+
+This is a **long-horizon program, not a single sitting.** It spans many agent
+sessions and at least one extended owner window, and the owner's explicit
+intent is *set and forget*: an implementing agent should be able to run a whole
+chunk end to end without waiting on an answer, and a later session should be
+able to resume without re-deriving where things stand.
+
+The twenty units are therefore grouped into five sequential chunks plus a parked
+set. Chunk order honors every dependency in the graph above, so an agent that
+works chunks in order never needs to reason about the graph itself.
+
+### Chunk map
+
+| Chunk | Units | Owner input required | Ends when | Runs unattended |
+|---|---|---|---|---|
+| **C1 — Ground truth and tooling** | U1, U2, U3, U12 | None | Canon reconciled, advisories clear, headless lane green in CI, fixture paths safe | Yes |
+| **C2 — Engine evidence and desktop quality** | U13, U9, U10, U11 | None | DSP characterization reported (not acted on), desktop accessible, Album legible, delight in with reduced-motion proof | Yes |
+| **C3 — Public surface** | U4, U5, U6, U7, U8 | Founder dates/terms, newsletter provider — **parked, not blocking** | Beta guide and forms exist, download is release-aware and inactive, landing narrative true, assets deterministic, gates green | Yes |
+| **C4 — Candidate freeze** | U14 | None to run; owner authorizes the tag | Version at `0.9.1`, all mechanical lanes green on one commit, candidate tagged, `main` frozen | Yes, then **hard stop** |
+| **C5 — Owner gates** | U15, U16, U17 | Continuous — this is the owner lane | Installed evidence, listening note signed, updater proved, public activated | No |
+| **CP — Parked** | U18, U19, U20 | Explicit unlock decision | Not started | No |
+
+Within C3, U4/U5/U6 carry no dependency on C2 and may be interleaved earlier if
+convenient; U7 and U8 genuinely cannot start until U10 and U11 are done.
+
+### Standing rules for unattended execution
+
+These exist so a session never stalls waiting for the owner, and never invents
+an owner decision to avoid stalling.
+
+1. **Never block on an owner decision.** Record the question in the owner input
+   queue, implement the conservative default, and keep going. Finish everything
+   in the unit that does not depend on the answer.
+2. **The conservative default is always the one that under-promises**:
+   unavailable over available, off over on, qualified copy over confident copy,
+   placeholder over invented date, unproved over assumed-proved. A default that
+   makes a public claim is never conservative.
+3. **Do not weaken an acceptance criterion to make it pass.** If a criterion
+   cannot be met, record it as a finding with evidence, complete the rest of the
+   unit, and flag it in the chunk report. Silently lowering a bar is the one
+   failure mode this program cannot detect later.
+4. **Commit in small chunks** per repo convention, one coherent change per
+   commit, with the unit ID in the message (e.g. `feat(landing): U5 release
+   state model`). Run the verification lane for the touched surfaces from
+   `AGENTS.md` before each commit.
+5. **Pull before committing.** This repo regularly has more than one agent
+   session working in it.
+6. **Do not push to the public remote without asking**, per repo convention.
+7. **Hard stops** — halt and ask, regardless of chunk: publishing any
+   non-draft release; deploying the landing; enabling any owner-gated system
+   (Adaptive Compressor, Phase-B confidence, album character); changing any DSP
+   constant, preset calibration, limiter, loudness target, Volume Match, or
+   audition timing value; committing private audio; handling signing or updater
+   secrets; writing a concrete price, date, or founder-window term; announcing
+   anything.
+8. **Report at chunk boundaries, not unit boundaries.** One summary per chunk:
+   what landed, what the tests prove, what went into the owner input queue, what
+   was found and not fixed.
+
+### Owner input queue
+
+U1 creates `docs/OWNER_INPUT_QUEUE.md`. It is the single place blocked-on-owner
+questions accumulate so the owner answers them in one batch instead of being
+interrupted mid-chunk. One row per question:
+
+| Date | Unit | Question | Conservative default in place | What changes when answered |
+|---|---|---|---|---|
+
+Known entries at plan time, to be seeded by U1: the founder-window dates and
+exact purchase terms (R24); the newsletter provider, consent storage, retention,
+and sender identity; the beta end date; the public beta announcement date; and
+whether `docs/legal/` drafts ship as-is.
+
+The queue is **not** a decision log. Once answered, the decision moves to
+`docs/OPEN_THREADS_AND_DECISIONS.md` and the row is struck through.
+
+### Chunk status ledger
+
+Update this table in the same commit that completes a unit. It is the resume
+anchor for a later session.
+
+| Unit | Chunk | Status | Completing commit | Notes |
+|---|---|---|---|---|
+| U1 | C1 | Not started | — | — |
+| U2 | C1 | Not started | — | — |
+| U3 | C1 | Not started | — | — |
+| U12 | C1 | Not started | — | — |
+| U13 | C2 | Not started | — | — |
+| U9 | C2 | Not started | — | — |
+| U10 | C2 | Not started | — | — |
+| U11 | C2 | Not started | — | — |
+| U4 | C3 | Not started | — | — |
+| U5 | C3 | Not started | — | — |
+| U6 | C3 | Not started | — | — |
+| U7 | C3 | Not started | — | — |
+| U8 | C3 | Not started | — | — |
+| U14 | C4 | Not started | — | — |
+| U15 | C5 | Not started | — | — |
+| U16 | C5 | Not started | — | — |
+| U17 | C5 | Not started | — | — |
+| U18 | CP | Parked | — | Owner unlock required |
+| U19 | CP | Parked | — | Owner unlock required |
+| U20 | CP | Parked | — | Owner unlock required |
+
+Status values: `Not started`, `In progress`, `Complete`, `Complete with
+findings` (acceptance met, but something was found and recorded rather than
+fixed), `Blocked` (only for a hard stop — never for a queued owner question).
+
+### Resume protocol for a new session
+
+1. Read the chunk status ledger above, then `docs/OWNER_INPUT_QUEUE.md`, then
+   the last twenty commits.
+2. **Verify the last unit marked complete actually passes its acceptance** by
+   running its named tests. Do not trust the tick — a tick is a claim, and this
+   program's whole premise is that claims need current evidence.
+3. If C4 has tagged a candidate, check whether the freeze is still in force
+   before touching `main`.
+4. Resume at the first unit that is not `Complete`, in chunk order.
+
+---
+
 ## Implementation Units
 
 ### Unit index
@@ -304,12 +484,12 @@ flowchart TD
 | Unit | Scope | Beta criticality | Depends on |
 |---|---|---|---|
 | U1 | Canon, claim matrix, decisions, evidence ledger | Blocker | — |
-| U2 | Dependency advisory remediation | Blocker | U1, U3 |
+| U2 | Dependency advisory remediation | Blocker | U1 |
 | U3 | Self-contained headless browser foundation | Blocker | U1 |
 | U4 | Beta guide and structured feedback | Blocker | U1 |
 | U5 | Release-aware safe download state | Blocker | U3, U4 |
 | U6 | Landing narrative and marketing truth | Blocker | U1, U5 |
-| U7 | Deterministic current-build proof assets | Blocker | U6, U10 |
+| U7 | Deterministic current-build proof assets | Blocker | U6, U10, U11 |
 | U8 | Landing responsive, accessibility, performance, SEO gates | Blocker | U3, U7 |
 | U9 | Desktop accessibility semantics | Blocker | U3 |
 | U10 | Objective desktop clarity and recovery | Blocker | U9 |
@@ -338,12 +518,23 @@ contradictions before public copy or release behavior changes.
 - `docs/OPEN_THREADS_AND_DECISIONS.md`
 - `docs/plans/2026-07-07-beta-execution-plan.md`
 - `docs/plans/beta-go-no-go.md`
+- `docs/OWNER_INPUT_QUEUE.md` (new)
 - `src/lib/release-readiness.test.ts`
 
 **Work:**
 
 - Add a dated audit-remediation block to the live queue and reconcile the stale
   landing-scope parenthetical in both byte-identical agent instruction files.
+- Create `docs/OWNER_INPUT_QUEUE.md` using the schema in the Execution Program
+  section and seed it with the known open questions listed there. This is what
+  lets later chunks run unattended without inventing owner decisions.
+- State this plan's relationship to the two existing beta documents so no future
+  session has to guess which is authoritative:
+  `docs/plans/2026-07-07-beta-execution-plan.md` is **executed history** — its
+  Slices 1–9 shipped and it is superseded as a forward queue by this plan;
+  `docs/plans/beta-go-no-go.md` remains the **live release gate** and this plan
+  feeds it rather than replacing it. Update `AGENTS.md`/`CLAUDE.md` required
+  reading accordingly.
 - Define the capability-and-evidence matrix for every public landing claim,
   platform statement, pricing statement, and beta promise.
 - Amend the landing brief so present-tense mobile claims and “no roadmap”
@@ -367,18 +558,32 @@ release, DSP, or UI behavior changes.
 
 ### U2 — Resolve the isolated dependency advisory
 
-**Purpose:** Remove the known high-severity `brace-expansion` development
-dependency path without mixing dependency churn into product changes.
+**Purpose:** Remove every known high-severity development dependency advisory
+without mixing dependency churn into product changes.
 
 **Primary paths:**
 
 - `package.json`
 - `package-lock.json`
 
+**Current advisory inventory (verified 2026-07-24 via `npm audit`):**
+
+| Advisory | Severity | Path | Notes |
+|---|---|---|---|
+| `brace-expansion` (GHSA-3jxr-9vmj-r5cp) | high | `rimraf` → `glob` → `minimatch` | DoS via exponential `{}` expansion; dev/build path only. |
+| `postcss` ≤ 8.5.17 (GHSA-r28c-9q8g-f849) | high | build toolchain | Path traversal via `sourceMappingURL` map auto-loading; dev/build path only. |
+
+Re-run `npm audit` at the start of this unit. The table above is the state at
+plan time, not a fixed scope — any high or critical advisory present when the
+unit runs is in scope, and any advisory that has since disappeared is recorded
+as resolved rather than silently dropped.
+
 **Work:**
 
 - Update the narrowest direct dependency path that removes the
   `rimraf`/`glob`/`minimatch` advisory chain.
+- Update the narrowest path that clears the `postcss` advisory, confirming the
+  Vite/Tailwind build output is unchanged.
 - Review lockfile changes for unrelated major upgrades and preserve the current
   runtime dependency surface.
 - Record any unavoidable exception in the evidence ledger with upstream
@@ -387,9 +592,14 @@ dependency path without mixing dependency churn into product changes.
 **Tests and acceptance:**
 
 - `npm audit` reports no unexplained high or critical advisory.
-- `npm test`, `npm run build`, and the headless lane from U3 pass against the
-  updated lockfile.
+- `npm test` and `npm run build` pass against the updated lockfile.
 - Fresh dependency installation reproduces the same locked graph.
+
+**Sequencing note:** This unit deliberately does **not** wait on U3. Its
+acceptance needs only `npm test` and `npm run build`, both of which exist today,
+and it is the only unit in the program carrying a live CVE. Once U3 exists, the
+headless lane runs against this lockfile as part of U14 rather than as a gate
+here.
 
 **Boundaries:** No product feature or formatting changes in this unit.
 
@@ -422,6 +632,19 @@ browser E2E lane for landing and desktop preview journeys.
   `resolve_compression_plan` do not produce unexplained console warnings.
 - Add a Chromium web-E2E CI job and ensure landing verification no longer
   depends on a manually started server.
+- **Settle the browser runtime before the lane becomes a gate.**
+  `scripts/verify-landing-responsive.mjs` currently launches
+  `chromium.launch({ channel: "chrome" })`, which requires a real Google Chrome
+  install rather than Playwright's bundled Chromium — this is why commit
+  `ef73c01` had to make a missing browser non-fatal. The repo's CI has no web
+  job at all today (`snapshot-diagnostics`, `windows`, `macos`, `android`).
+  Choose one and apply it consistently in the script, the wrapper, and CI:
+  **(i)** drop `channel` and use bundled Chromium (preferred — no external
+  install, version pinned by the Playwright dependency), or **(ii)** keep the
+  Chrome channel and add an explicit `npx playwright install --with-deps chrome`
+  step to the CI job and the local setup docs. Record the choice in the evidence
+  ledger. A lane that can silently skip because a browser is absent is not a
+  gate, so once this unit lands, a missing browser must fail the lane in CI.
 - Label browser results as synthetic so they are never mistaken for native
   dialog, audio, signing, or updater proof.
 
@@ -648,6 +871,17 @@ not an old desktop or parked mobile build.
 - Capture screens from a deterministic production build and generate a manifest
   containing source commit, capture-input digest, scenario, viewport,
   dimensions, and asset hash.
+- **Define the capture-input digest explicitly as a committed file list**, not
+  as "whatever changed." At minimum it covers every rendered surface the capture
+  scenarios exercise and every unit that can alter their appearance: the U6
+  landing components, the U10 desktop components, **and the U11 files**
+  (`src/App.css`, `src/App.tsx`, `src/components/RightRail.tsx`,
+  `src/components/Waveform.tsx`, `src/components/AlbumPanel.tsx`,
+  `src/components/AlbumExportReceipt.tsx`,
+  `src/components/ExportReceiptCard.tsx`), plus `src/lib/preview-mock.ts` and
+  the capture script itself. Store the list in the capture script so adding a
+  captured surface forces a deliberate digest update. This is what makes the
+  U11 dependency mechanical instead of a scheduling promise.
 - Add stale-manifest, missing-file, unexpected-dimension, and size-budget
   checks.
 - Use responsive image variants and lazy loading for below-fold proof.
@@ -686,6 +920,10 @@ regressions before deployment.
 - Extend the existing 12-viewport matrix with primary-CTA visibility, hero
   readability, target validity, image load, focus visibility, skip navigation,
   heading order, dialog/menu state, reduced motion, and console/network checks.
+- **Add `320×568` to the matrix.** `scripts/verify-landing-responsive.mjs`
+  currently runs twelve viewports from `2560×1440` down to `360×800`; S-A3
+  names `320×568` as a required width and no existing entry covers it. Without
+  this addition S-A3 cannot pass as written.
 - Add automated accessibility scanning and distinguish machine-detectable
   failures from manual screen-reader/zoom checks.
 - Verify touch-target spacing, pointer/coarse-pointer behavior, hover-independent
@@ -833,12 +1071,17 @@ through meaningful feedback after the underlying states are mechanically stable.
 
 - `src/App.tsx`
 - `src/App.css`
-- `src/components/RightRail.tsx`
+- `src/components/RightRail.tsx` (owns the `export-review-panel` section)
 - `src/components/Waveform.tsx`
-- `src/components/ExportPanel.tsx`
+- `src/components/ExportReceiptCard.tsx`
 - `src/components/AlbumPanel.tsx`
 - `src/components/AlbumExportReceipt.tsx`
 - relevant co-located tests
+
+> Path correction (2026-07-24): an earlier draft listed
+> `src/components/ExportPanel.tsx`, which does not exist. The export surfaces are
+> the `export-review-panel` section inside `RightRail.tsx`, `ExportReceiptCard.tsx`,
+> and `AlbumExportReceipt.tsx`.
 
 **Work:**
 
@@ -978,6 +1221,15 @@ using owner time or release credentials.
 
 **Work:**
 
+- **Bump the candidate version to `0.9.1` across all three desktop manifests**
+  (`package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`) and any
+  version-coherence test that pins them. The repo currently sits at `0.9.0`
+  everywhere. Under this plan `0.9.0` is only the owner-controlled installed
+  updater **seed** used to prove the update path in U16, and `0.9.1` is the
+  first full public beta candidate — which means the artifacts U14 produces,
+  U15 installs and listens to, and U16 promotes must already be `0.9.1`. No
+  other unit owns this bump; if it is skipped, U15's installed and listening
+  evidence lands on a version that never ships and KTD12 is violated.
 - Add a synthetic-WAV native flow: import, analyze, waveform, render,
   re-analyze, export validation/receipt, collision-safe second export, project
   save, and reload.
@@ -994,12 +1246,39 @@ using owner time or release credentials.
 
 **Tests and acceptance:**
 
-- S-D1 through S-G3 have a named mechanical or explicitly deferred manual
-  owner.
+- Every scenario whose closing owner is U14 or earlier in the "Scenario
+  traceability" table has a named mechanical result or an explicitly deferred
+  manual owner. (Do not read this as a numeric range — the scenario IDs are not
+  ordered by unit.)
 - The native synthetic test proves collision safety and save/reload on clean
   temp paths.
 - The current-tip remote Windows, macOS, and Android lanes are green.
 - No blocker is closed by evidence from a different commit.
+
+**Candidate freeze (declared here, binding through U17):**
+
+KTD14 runs implementation continuously on `main` in small green slices. The gate
+policy says release evidence is invalidated by a new release commit, and U16
+re-invalidates the candidate whenever a release-bound file changes. Those two
+rules cannot both hold while U15 is in progress — U15 spans days of owner work
+across two machines, and this repo regularly has more than one agent session
+working in it. Without a declared stop point, an unrelated commit landing
+mid-listening technically invalidates the listening.
+
+Therefore:
+
+- U14 **ends** by tagging the candidate (`v0.9.1-beta.1` or the owner's chosen
+  tag) at the exact commit whose evidence the ledger records.
+- From that tag until U17 closes or the candidate is rejected, **`main` is
+  frozen**: no commits land on `main`. Work discovered during U15–U17 is
+  recorded in the owner input queue and, if code is needed, staged on a branch
+  that cannot feed the candidate.
+- A rejected candidate returns to U14: unfreeze `main`, land the fixes, bump to
+  the next patch version, re-run the U14 gates, and tag a new candidate. Partial
+  re-use of prior evidence is allowed only where the ledger names the check as
+  demonstrably commit-independent.
+- The freeze is a plan rule, not a branch-protection change. Announce it in the
+  ledger entry that closes U14 so any parallel session sees it.
 
 **Boundaries:** Running an installed release, listening, publication, and
 production deployment remain U15–U17.
@@ -1020,6 +1299,18 @@ behavior and perceptual quality.
 
 - Refresh the listening runbook with the unresolved bidirectional A/B dossier
   from R16 and exact preset/source assignments.
+- **Record the sessions, not just the script.**
+  `docs/plans/2026-07-08-beta-listening-runbook.md` is currently a blank form —
+  every result line and the entire "Gate sign-off (this is the listening note)"
+  block are unfilled, and `docs/reviews/` contains no filled listening note.
+  That is the mechanical reason this gate reappears in every plan and drift
+  audit regardless of how many sittings the owner has actually done: under R15
+  and S-H1, an unrecorded session is indistinguishable from no session. A filled,
+  dated note — including a retroactive one covering prior sittings, marked as
+  such and naming the build it applied to — permanently closes the gate for its
+  build and stops it being re-added downstream. Save filled notes to
+  `docs/reviews/` as `YYYY-MM-DD-owner-listening-note.md` so they are
+  discoverable by the same search that currently finds nothing.
 - Install the candidate artifacts on clean supported Windows and macOS targets,
   including required Apple architectures.
 - Exercise native dialogs, long-source analysis, playback, cancel/retry,
