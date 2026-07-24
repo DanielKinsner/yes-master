@@ -3,6 +3,32 @@
 // EQUALIZER block in App.tsx.
 import { useEffect, useRef, useState } from "react";
 
+/**
+ * U10 — the reason an action is unavailable, as text rather than a tooltip.
+ *
+ * Every primary action already computed an accurate explanation for why it was
+ * disabled, and then put it in `title` — hover-only, so keyboard and
+ * screen-reader users met a dead control with no stated reason. This renders
+ * the same string into the accessibility tree; pair it with
+ * `aria-describedby={id}` on the control.
+ *
+ * Renders nothing when there is no reason, so an enabled control adds no noise.
+ */
+export function DisabledReason({
+  id,
+  reason,
+}: {
+  id: string;
+  reason?: string;
+}) {
+  if (!reason) return null;
+  return (
+    <span id={id} className="sr-only">
+      {reason}
+    </span>
+  );
+}
+
 export function PanelResetButton({
   label,
   onClick,

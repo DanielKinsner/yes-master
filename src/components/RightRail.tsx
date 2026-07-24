@@ -4,6 +4,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { AnalysisResult, QualityCheck } from "../bindings";
 import type { RenderFeedback, RenderProgressState } from "../hooks/useTrackMaster";
+import { DisabledReason } from "./fields";
 
 type RightRailProps = {
   /// QualityCheckPanel uses this for the preflight checks when no
@@ -73,6 +74,32 @@ export function RightRail({
   onUpdatePreview,
 }: RightRailProps) {
   const qualityRows = qualityRowsFor(lastChecks, analysis);
+
+  // U10 — disabled-action reasons computed once, then used for BOTH the
+  // tooltip and the accessible description. Keeping them as one expression is
+  // what stops the two drifting into saying different things.
+  const auditDisabled = !canRenderPreview || isRendering || isExporting;
+  const auditDisabledReason = isExporting
+    ? "Unavailable while an export is in progress — they share render state."
+    : isRendering
+      ? "Unavailable while a render is in progress — they share render state."
+      : !canRenderPreview
+        ? "Analyze a track first."
+        : undefined;
+  const auditTitle =
+    auditDisabledReason ??
+    "Render a temporary WAV with the current settings so you can audit it in another player or DAW. Not required for live audition — the Original/Mastered toggle plays through the chain in real time.";
+
+  const exportDisabled = !canExport || isExporting || isRendering;
+  const exportDisabledReason = isExporting
+    ? "An export is already running — it finishes or fails before the next one starts."
+    : isRendering
+      ? "Unavailable while a render-audit WAV is in progress — they share render state."
+      : !canExport
+        ? exportMode === "album"
+          ? "Import album tracks first."
+          : "Analyze a track first."
+        : undefined;
   const needsReview =
     exportMode === "track" && canExport && hasReviewRows(qualityRows);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -146,37 +173,27 @@ export function RightRail({
             type="button"
             className="ghost-btn right-rail-audit"
             onClick={onUpdatePreview}
-            disabled={!canRenderPreview || isRendering || isExporting}
-            title={
-              isExporting
-                ? "Disabled while an export is in progress — they share render state."
-                : !canRenderPreview
-                ? "Analyze a track first."
-                : "Render a temporary WAV with the current settings so you can audit it in another player or DAW. Not required for live audition — the Original/Mastered toggle plays through the chain in real time."
-            }
+            disabled={auditDisabled}
+            title={auditTitle}
+            // U10: the reason existed but only on hover. A keyboard user met a
+            // dead button with no stated cause.
+            aria-describedby={auditDisabledReason ? "audit-disabled-reason" : undefined}
           >
             {previewStale ? "Render audit WAV" : "Re-render audit WAV"}
           </button>
+          <DisabledReason id="audit-disabled-reason" reason={auditDisabledReason} />
         </details>
         <button
           type="button"
           className="primary right-rail-export"
           onClick={handlePrimaryExport}
-          disabled={!canExport || isExporting || isRendering}
-          title={
-            isExporting
-              ? "An export is already running — it finishes or fails before the next one starts."
-              : isRendering
-              ? "Disabled while a render-audit WAV is in progress — they share render state."
-              : !canExport
-              ? exportMode === "album"
-                ? "Import album tracks first."
-                : "Analyze a track first."
-              : undefined
-          }
+          disabled={exportDisabled}
+          title={exportDisabledReason}
+          aria-describedby={exportDisabledReason ? "export-disabled-reason" : undefined}
         >
           {exportLabel}
         </button>
+        <DisabledReason id="export-disabled-reason" reason={exportDisabledReason} />
         {activeRenderProgress && (
           <div className="right-rail-render-progress" role="status" aria-live="polite">
             <div className="right-rail-render-progress-head">

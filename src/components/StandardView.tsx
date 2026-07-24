@@ -26,6 +26,7 @@ import { effectiveLoudnessTarget } from "../lib/effective-settings";
 import { standardDeliverySpecLabel, standardExportNotes } from "../lib/standard-export";
 import { api } from "../lib/api";
 import { MasterOutPanel } from "./RightRail";
+import { DisabledReason } from "./fields";
 import { formatDuration } from "../lib/time-format";
 // L9: the hint copy now lives in FirstRunOverlay, rendered once at the App
 // root. The guide STATE still arrives here as a prop so the Mastered A/B can
@@ -325,6 +326,18 @@ function StandardRightRail({
   onEnterAdvanced: () => void;
   seamRefs: RailSeamRefs;
 }) {
+  // U10 — Create Master is disabled by three separate conditions; before this
+  // it explained only one of them, and only on hover. The most common case
+  // (no analysis yet) had no explanation at all.
+  const createMasterDisabled =
+    !tm.selectedAnalysis || tm.isExporting || tm.isRendering;
+  const createMasterDisabledReason = tm.isExporting
+    ? "An export is already running — it finishes or fails before the next one starts."
+    : tm.isRendering
+      ? "Unavailable while a render is in progress — they share render state."
+      : !tm.selectedAnalysis
+        ? "Analyze this track first — Create Master needs the source measurements."
+        : undefined;
   const receipt =
     tm.lastExportReceipt?.trackId === tm.selectedTrackId
       ? tm.lastExportReceipt
@@ -386,6 +399,8 @@ function StandardRightRail({
                 ? "Analyze this track before using Mastered playback."
                 : undefined
             }
+            // U10: the reason was hover-only.
+            aria-describedby={!canUseMaster ? "ab-master-disabled-reason" : undefined}
             className={
               (tm.transport.playbackKind === "master" ? "on" : "") +
               (guide.step === "flip" ? " guide-pulse" : "")
@@ -394,6 +409,14 @@ function StandardRightRail({
           >
             Mastered
           </button>
+          <DisabledReason
+            id="ab-master-disabled-reason"
+            reason={
+              !canUseMaster
+                ? "Analyze this track before using Mastered playback."
+                : undefined
+            }
+          />
         </div>
         <MasterOutPanel
           isAnalyzing={tm.isAnalyzing}
@@ -425,14 +448,16 @@ function StandardRightRail({
       </section>
 
       <div className="std-rail-export" ref={seamRefs.exportGroup}>
+        {/* U10 — Create Master was disabled by THREE conditions but only
+            explained one of them, and only on hover. With no analysis yet, the
+            app's primary action was dead and silent about why. */}
         <button
           type="button"
           className="primary std-create-master"
-          disabled={!tm.selectedAnalysis || tm.isExporting || tm.isRendering}
-          title={
-            tm.isExporting
-              ? "An export is already running — it finishes or fails before the next one starts."
-              : undefined
+          disabled={createMasterDisabled}
+          title={createMasterDisabledReason}
+          aria-describedby={
+            createMasterDisabledReason ? "create-master-disabled-reason" : undefined
           }
           onClick={() => {
             void tm.exportStandardMaster();
@@ -444,6 +469,10 @@ function StandardRightRail({
               ? "Preparing…"
               : "Create Master"}
         </button>
+        <DisabledReason
+          id="create-master-disabled-reason"
+          reason={createMasterDisabledReason}
+        />
         {activeRenderProgress && (
           <div className="std-render-progress" role="status" aria-live="polite">
             <div className="std-render-progress-label">

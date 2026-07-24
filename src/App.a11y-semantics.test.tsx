@@ -26,6 +26,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { PresetTiles } from "./App";
 import { Knob, intensityLabel } from "./components/Knob";
+import { DisabledReason } from "./components/fields";
 import type { Preset } from "./bindings";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT =
@@ -260,6 +261,30 @@ describe("U9 — preset tile semantics", () => {
     expect(pressed).toHaveLength(1);
     expect(accessibleName(pressed[0])).toBe("Universal");
 
+    await act(async () => root.unmount());
+  });
+});
+
+describe("U10 — disabled actions explain themselves", () => {
+  it("renders nothing when there is no reason", async () => {
+    const { container, root } = await render(
+      <DisabledReason id="x" reason={undefined} />,
+    );
+    // An enabled control must add no noise to the accessibility tree.
+    expect(container.textContent).toBe("");
+    await act(async () => root.unmount());
+  });
+
+  it("exposes the reason as text a screen reader can reach", async () => {
+    const { container, root } = await render(
+      <DisabledReason id="why" reason="Analyze this track first." />,
+    );
+    const node = container.querySelector("#why");
+    expect(node).toBeTruthy();
+    // sr-only, not display:none — the latter would remove it from the
+    // accessibility tree and defeat the entire point.
+    expect(node?.className).toContain("sr-only");
+    expect(node?.textContent).toBe("Analyze this track first.");
     await act(async () => root.unmount());
   });
 });
