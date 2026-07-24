@@ -1,7 +1,7 @@
 use crate::analysis::analyze_one;
 use crate::engine::mastering_render_to_path;
 use crate::evidence_lanes::{
-    csv_escape, current_gate_state, export_report_for, normalized_absolute_path, preset_slug,
+    csv_escape, current_gate_state, export_report_for, prepare_evidence_output_dir, preset_slug,
     resolve_adaptive_render_settings, sanitize_path_part, EvidenceGateState,
 };
 use crate::exports::export_checks_for_report;
@@ -207,7 +207,11 @@ pub fn run_reference_tuning_dir(
     crate::guardrails::init_adaptive_compression_from_env();
     let gate_state = current_gate_state();
     let cwd = std::env::current_dir().map_err(|e| CommandError::Io(format!("current dir: {e}")))?;
-    let output_dir = normalized_absolute_path(&cwd, output_dir);
+    // U12: same resolve -> validate -> create -> re-verify helper the fixture
+    // matrix uses, so the two lanes cannot drift on what a safe destination is.
+    // The reference dir holds the private source + reference masters, so it is
+    // not a legal output destination.
+    let output_dir = prepare_evidence_output_dir(&cwd, output_dir, &[reference_dir])?;
     let suite = discover_reference_suite(reference_dir)?;
     // Analyze the SOURCE with deep = true so the rendered settings can resolve Phase B
     // confidence the SAME way the app does — reference tuning must measure the app's
@@ -285,8 +289,7 @@ pub fn run_reference_tuning_dir(
         ));
     }
 
-    fs::create_dir_all(&output_dir)
-        .map_err(|e| CommandError::Io(format!("create reference tuning output: {e}")))?;
+    // The output dir was created and re-verified up front.
     let report = ReferenceTuningReport {
         generated_at_iso: now_iso(),
         reference_dir: reference_dir.to_string_lossy().to_string(),
@@ -375,6 +378,9 @@ fn csv_option(value: Option<f32>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // Only the unit tests below still exercise this directly; the runner now
+    // goes through prepare_evidence_output_dir (U12).
+    use crate::evidence_lanes::normalized_absolute_path;
     use crate::types::{
         AdvancedSettings, DeliveryProfile, MasteringSettings, QualityCheck, QualityLevel,
         SpectralBalance, TrackId, ISO_PLACEHOLDER,

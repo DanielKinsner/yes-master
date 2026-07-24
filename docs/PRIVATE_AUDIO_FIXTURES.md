@@ -72,6 +72,20 @@ The filenames above are examples. Use whatever local names are convenient.
 - Do not assume fixture files exist. If missing, fall back to synthetic tests and say that real-audio verification is still pending.
 - Prefer short clips for quick loops and full tracks/albums for slow verification.
 
+## Output paths for both runners
+
+The commands below use **forward slashes** deliberately. Windows accepts `/`;
+macOS does not accept `\`, where a backslash path is a single filename rather
+than a path. One spelling that works on both beats two spellings that drift.
+
+A relative `--output` that climbs out of `src-tauri` is expected and supported —
+the runner resolves it to an absolute path before deriving any render
+destination. The output directory may **not** be the private source directory or
+sit inside it: rendered masters do not belong next to private source audio.
+That is rejected before anything is created on disk, and re-checked afterwards in
+case a symlink or junction redirected the destination. Pinned by
+`src-tauri/tests/evidence_runner_paths.rs`.
+
 ## Already-Mastered Matrix
 
 Use this local-only runner to measure already-mastered source material across
@@ -79,7 +93,7 @@ the release-stabilization preset/compressor matrix:
 
 ```powershell
 cd src-tauri
-cargo run --example private_fixture_matrix -- --manifest ..\private-audio-fixtures\manifest.json --output ..\test-output\private-fixture-matrix
+cargo run --example private_fixture_matrix -- --manifest ../private-audio-fixtures/manifest.json --output ../test-output/private-fixture-matrix
 ```
 
 For Phase B confidence-gate evidence, run the same local-only matrix with the
@@ -88,7 +102,7 @@ owner gate seeded from the environment:
 ```powershell
 cd src-tauri
 $env:YES_MASTER_CONFIDENCE_GATING = "1"
-cargo run --example private_fixture_matrix -- --manifest ..\private-audio-fixtures\manifest.json --output ..\test-output\private-fixture-matrix-confidence
+cargo run --example private_fixture_matrix -- --manifest ../private-audio-fixtures/manifest.json --output ../test-output/private-fixture-matrix-confidence
 Remove-Item Env:\YES_MASTER_CONFIDENCE_GATING
 ```
 
@@ -119,7 +133,7 @@ reference masters from an external mastering service:
 
 ```powershell
 cd src-tauri
-cargo run --example private_reference_tuning -- --references "..\tests for presets" --output ..\test-output\private-reference-tuning
+cargo run --example private_reference_tuning -- --references "../tests for presets" --output ../test-output/private-reference-tuning
 ```
 
 For Phase B confidence-gate reference evidence:
@@ -127,7 +141,7 @@ For Phase B confidence-gate reference evidence:
 ```powershell
 cd src-tauri
 $env:YES_MASTER_CONFIDENCE_GATING = "1"
-cargo run --example private_reference_tuning -- --references "..\tests for presets" --output ..\test-output\private-reference-tuning-confidence
+cargo run --example private_reference_tuning -- --references "../tests for presets" --output ../test-output/private-reference-tuning-confidence
 Remove-Item Env:\YES_MASTER_CONFIDENCE_GATING
 ```
 

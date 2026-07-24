@@ -11,13 +11,14 @@
 //! The lane-specific case lists, report schemas, and CSV layouts stay in
 //! their own files on purpose — that divergence is intentional.
 
+use std::fs;
 use std::path::{Component, Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
 use crate::types::{
-    AnalysisResult, CompressionMode, ExportReport, MasteringSettings, Preset, RenderedMeasurements,
-    TrackId,
+    AnalysisResult, CommandError, CommandResult, CompressionMode, ExportReport, MasteringSettings,
+    Preset, RenderedMeasurements, TrackId,
 };
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -147,6 +148,132 @@ pub(crate) fn normalized_absolute_path(cwd: &Path, path: &Path) -> PathBuf {
         cwd.join(path)
     };
     lexically_normalize(&absolute)
+}
+
+/// Resolve, validate, and create an evidence-runner output directory.
+///
+/// Shared by the private fixture matrix and the reference-tuning runner so the
+/// two lanes cannot disagree about what a safe destination is. Before U12 only
+/// `reference_tuning` normalized its output at all, and `fixture_matrix` passed
+/// the caller's raw relative path straight through to the render layer — where
+/// the desktop traversal guard rejected every documented invocation, because
+/// `--output ../test-output/...` leaves a `..` in each render path.
+///
+/// **The order is load-bearing:** normalize → validate → create → re-verify.
+/// Creating first and validating after would mean a rejected destination had
+/// already been written to disk, which for these runners can mean rendered
+/// private masters sitting inside a private source folder.
+///
+/// `source_roots` are directories holding private input audio. The output may
+/// be neither one of them nor inside one.
+pub(crate) fn prepare_evidence_output_dir(
+    cwd: &Path,
+    requested: &Path,
+    source_roots: &[&Path],
+) -> CommandResult<PathBuf> {
+    if requested.as_os_str().is_empty() {
+        return Err(CommandError::InvalidPath(
+            "evidence output dir is empty".to_string(),
+        ));
+    }
+
+    // 1. Normalize. `..` is EXPECTED here — the documented commands are
+    //    relative and climb out of `src-tauri` — so it is resolved, not
+    //    rejected. Rejection is the render layer's job, on the absolute path
+    //    this produces.
+    let resolved = normalized_absolute_path(cwd, requested);
+
+    // 2. Validate. A `..` that survives normalization climbed past the root
+    //    and there is nothing sane left to point at.
+    if resolved
+        .components()
+        .any(|component| matches!(component, Component::ParentDir))
+    {
+        return Err(CommandError::InvalidPath(format!(
+            "evidence output dir escapes the filesystem root: {}",
+            requested.display()
+        )));
+    }
+    if resolved.file_name().is_none() && resolved.parent().is_some() {
+        return Err(CommandError::InvalidPath(format!(
+            "evidence output dir has no name: {}",
+            requested.display()
+        )));
+    }
+    for root in source_roots {
+        let root_abs = comparable_dir(&normalized_absolute_path(cwd, root));
+        if comparable_dir(&resolved).starts_with(&root_abs) {
+            return Err(CommandError::InvalidPath(format!(
+                "evidence output dir is inside the private source dir {} — \
+                 rendered masters must not be written next to private audio: {}",
+                root.display(),
+                requested.display()
+            )));
+        }
+    }
+
+    // 3. Create ONLY the destination that just passed validation.
+    fs::create_dir_all(&resolved)
+        .map_err(|e| CommandError::Io(format!("create evidence output dir: {e}")))?;
+
+    // 4. Re-verify the destination that now actually exists. Between the check
+    //    above and this line the path could resolve somewhere else — a symlink
+    //    or a Windows junction planted at the last component would land the
+    //    renders in the source dir after all.
+    let after_create = comparable_dir(&resolved);
+    for root in source_roots {
+        let root_abs = comparable_dir(&normalized_absolute_path(cwd, root));
+        if after_create.starts_with(&root_abs) {
+            return Err(CommandError::InvalidPath(format!(
+                "evidence output dir resolves into the private source dir {} after creation \
+                 (symlink or junction?): {}",
+                root.display(),
+                requested.display()
+            )));
+        }
+    }
+
+    // Return the plain absolute path, NOT the canonical one. On Windows
+    // `canonicalize` yields a verbatim `\\?\C:\...` path, which would then be
+    // stamped into every report string and every render destination (see
+    // tests/portability_paths.rs for why that shape causes trouble).
+    Ok(resolved)
+}
+
+/// Canonical form for containment comparisons only — never returned to a
+/// caller, because on Windows it is a verbatim `\\?\C:\...` path.
+///
+/// The output directory usually does NOT exist yet, so a plain `canonicalize`
+/// fails on it while succeeding on the source root — and then the two sides are
+/// in different path SHAPES and `starts_with` silently returns false. On
+/// Windows that is not theoretical: a temp path canonicalizes to the long form
+/// (`C:\Users\SM - Dan\...`) while the unresolved side is still the 8.3 short
+/// form (`C:\Users\SM-DAN~1\...`), so a containment check comparing them would
+/// pass every unsafe destination. This walks up to the nearest ancestor that
+/// does exist, canonicalizes THAT, and re-appends the missing tail, so both
+/// sides always end up in the same shape.
+fn comparable_dir(path: &Path) -> PathBuf {
+    if let Ok(canonical) = fs::canonicalize(path) {
+        return canonical;
+    }
+
+    let mut tail: Vec<&std::ffi::OsStr> = Vec::new();
+    let mut cursor = path;
+    while let Some(parent) = cursor.parent() {
+        let Some(name) = cursor.file_name() else {
+            break;
+        };
+        tail.push(name);
+        if let Ok(canonical) = fs::canonicalize(parent) {
+            let mut resolved = canonical;
+            for name in tail.iter().rev() {
+                resolved.push(name);
+            }
+            return resolved;
+        }
+        cursor = parent;
+    }
+    path.to_path_buf()
 }
 
 pub(crate) fn lexically_normalize(path: &Path) -> PathBuf {

@@ -1,8 +1,9 @@
 use crate::analysis::analyze_one;
 use crate::engine::mastering_render_to_path;
 use crate::evidence_lanes::{
-    csv_escape, current_gate_state, export_report_for, normalized_absolute_path, preset_slug,
-    resolve_adaptive_render_settings, sanitize_path_part, EvidenceGateState,
+    csv_escape, current_gate_state, export_report_for, normalized_absolute_path,
+    prepare_evidence_output_dir, preset_slug, resolve_adaptive_render_settings, sanitize_path_part,
+    EvidenceGateState,
 };
 use crate::exports::export_checks_for_report;
 use crate::types::*;
@@ -199,6 +200,16 @@ pub fn run_fixture_matrix(
     let gate_state = current_gate_state();
     let manifest_dir = manifest_path.parent().unwrap_or_else(|| Path::new("."));
     let cases = default_already_mastered_matrix();
+
+    // U12: resolve, validate, and create the output destination BEFORE any
+    // render path is derived from it. Previously the caller's raw `output_dir`
+    // went straight into `output_dir.join("renders")`, so the documented
+    // `--output ../test-output/...` produced render paths containing `..` and
+    // the render layer's traversal guard rejected every one of them. The
+    // manifest's own directory holds the private source audio and is therefore
+    // not a legal destination.
+    let cwd = std::env::current_dir().map_err(|e| CommandError::Io(format!("current dir: {e}")))?;
+    let output_dir = prepare_evidence_output_dir(&cwd, output_dir, &[manifest_dir])?;
     let render_dir = output_dir.join("renders");
     fs::create_dir_all(&render_dir)
         .map_err(|e| CommandError::Io(format!("create renders: {e}")))?;
@@ -261,8 +272,8 @@ pub fn run_fixture_matrix(
         ));
     }
 
-    fs::create_dir_all(output_dir)
-        .map_err(|e| CommandError::Io(format!("create matrix output dir: {e}")))?;
+    // The output dir was created and re-verified up front; no second
+    // create_dir_all is needed here.
     let report = PrivateFixtureMatrixReport {
         generated_at_iso: now_iso(),
         manifest_path: manifest_path.to_string_lossy().to_string(),

@@ -155,13 +155,34 @@ Before calling Track Master private-solid, manually verify with audio playing:
 - Volume Match off and on.
 - Export and open output.
 
+## Evidence-runner output paths (both private runners)
+
+The two private runners below take `--output`. A few rules, pinned by
+`src-tauri/tests/evidence_runner_paths.rs`:
+
+- **Relative output is expected and supported.** `--output ../test-output/...`
+  from `src-tauri` is the documented form; the runner resolves it to an
+  absolute path before deriving any render destination. (Before 2026-07-24 the
+  matrix runner did not, and the documented command failed outright with
+  `path traversal not allowed` — the raw `..` reached the render layer's
+  traversal guard.)
+- **Forward slashes, on every platform.** Windows accepts `/`, macOS does not
+  accept `\`. A backslash path on macOS is one filename containing backslashes,
+  not a path — so the commands below use `/` and work on both.
+- **The output may not be inside the private source directory** (the manifest's
+  folder, or the reference folder). Rendered masters do not belong next to
+  private source audio. The runner rejects it *before* creating anything, and
+  re-checks after creating in case a symlink or junction redirected it.
+- Reports and renders land under the requested directory only, and every
+  returned path is absolute so the evidence is unambiguous.
+
 ## Already-Mastered Regression Matrix
 
 Use the local-only runner documented in `docs/PRIVATE_AUDIO_FIXTURES.md`:
 
 ```powershell
 cd src-tauri
-cargo run --example private_fixture_matrix -- --manifest ..\private-audio-fixtures\manifest.json --output ..\test-output\private-fixture-matrix
+cargo run --example private_fixture_matrix -- --manifest ../private-audio-fixtures/manifest.json --output ../test-output/private-fixture-matrix
 ```
 
 To validate the Phase B confidence gate in the same headless lane:
@@ -169,7 +190,7 @@ To validate the Phase B confidence gate in the same headless lane:
 ```powershell
 cd src-tauri
 $env:YES_MASTER_CONFIDENCE_GATING = "1"
-cargo run --example private_fixture_matrix -- --manifest ..\private-audio-fixtures\manifest.json --output ..\test-output\private-fixture-matrix-confidence
+cargo run --example private_fixture_matrix -- --manifest ../private-audio-fixtures/manifest.json --output ../test-output/private-fixture-matrix-confidence
 Remove-Item Env:\YES_MASTER_CONFIDENCE_GATING
 ```
 
@@ -198,7 +219,7 @@ Use the local-only reference runner after preset/DSP retunes:
 
 ```powershell
 cd src-tauri
-cargo run --example private_reference_tuning -- --references "..\tests for presets" --output ..\test-output\private-reference-tuning
+cargo run --example private_reference_tuning -- --references "../tests for presets" --output ../test-output/private-reference-tuning
 ```
 
 To compare reference gaps with Phase B confidence gating enabled:
@@ -206,7 +227,7 @@ To compare reference gaps with Phase B confidence gating enabled:
 ```powershell
 cd src-tauri
 $env:YES_MASTER_CONFIDENCE_GATING = "1"
-cargo run --example private_reference_tuning -- --references "..\tests for presets" --output ..\test-output\private-reference-tuning-confidence
+cargo run --example private_reference_tuning -- --references "../tests for presets" --output ../test-output/private-reference-tuning-confidence
 Remove-Item Env:\YES_MASTER_CONFIDENCE_GATING
 ```
 
