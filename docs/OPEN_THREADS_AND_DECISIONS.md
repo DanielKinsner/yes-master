@@ -91,6 +91,48 @@ close rather than letting them rot in scattered docs.
 > Tier-1/Tier-2 adaptive follow-ons, mobile revival, Microsoft Store,
 > Advanced/Studio tier.
 
+> **2026-07-24 — Public Beta Quality Program opened; canon reconciled (U1).**
+> The active forward queue is now
+> `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md` (20 units in five
+> sequential chunks, C1–C5, with a chunk status ledger inside the plan). U1
+> landed the ground-truth reconciliation:
+> - **Document precedence is now stated, not inferred.**
+>   `docs/plans/2026-07-07-beta-execution-plan.md` is **executed history** — read
+>   it for why D1–D16 were decided, not as an open queue.
+>   The 2026-07-24 quality plan is the **active forward queue**.
+>   `docs/plans/beta-go-no-go.md` remains the **live release gate**; the quality
+>   plan feeds it rather than replacing it. Recorded in AGENTS.md/CLAUDE.md
+>   Required Reading.
+> - **`docs/OWNER_INPUT_QUEUE.md` created.** Owner-blocked questions accumulate
+>   there and are answered in batches; an agent never stalls a chunk and never
+>   invents an owner decision. Seeded with five open questions: founder-window
+>   dates/terms, newsletter provider + consent/retention/sender, beta end date,
+>   public announcement date/publication authorization, and whether
+>   `docs/legal/` drafts ship as-is. **When one is answered it moves here** and
+>   the queue row is struck through.
+> - **`docs/CAPABILITY_EVIDENCE_MATRIX.md` created** — every public landing
+>   claim, platform statement, pricing statement, and beta promise bound to a
+>   named evidence source (KTD5/R5). The audit found 26 claims: 12 proved, 6 to
+>   qualify, 1 to remove as unconditional (the `/releases/latest` download CTA —
+>   there is no verified full release behind it today), 4 owner-blocked, 2
+>   settled policies with no public surface yet. U5/U6/U7 execute the verdicts;
+>   U1 only made the list exist.
+> - **Four canon conflicts named and fixed** (documentation reconciliation only,
+>   no product decision changed): the landing brief forbade the "coming to your
+>   pocket" language the shipped page uses; the brief's Cross-platform pillar
+>   claimed mobile in the present tense; AGENTS.md/CLAUDE.md still called
+>   landing-page scope an open owner decision while their own Non-Negotiables
+>   (and D16) already said it was in scope; and the two beta documents had no
+>   stated precedence. The brief now carries an explicit **Mobile status**
+>   section permitting exactly one date-free "not currently available" sentence.
+> - **An exact-commit evidence ledger** (R17/KTD12) was added to
+>   `docs/plans/beta-go-no-go.md` §9 rather than creating a fourth release
+>   checklist. It also carries the candidate-freeze declaration; the freeze is
+>   **NOT in force** (no candidate tagged).
+>
+> Nothing in this block changes an owner decision. Where a decision was genuinely
+> absent, the conservative default was implemented and the question was queued.
+
 > **State of the project (2026-06-22):** late stabilization. The two big mechanical
 > queues (the final repo-wide review A1–E3, and the shippability roadmap S0–S7 +
 > AC-1…AC-4) are **fully shipped on main**. What remains is almost entirely

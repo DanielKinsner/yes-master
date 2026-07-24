@@ -9,6 +9,14 @@ function readText(path: string): string {
   );
 }
 
+function readMaybe(path: string): string | null {
+  try {
+    return readText(path);
+  } catch {
+    return null;
+  }
+}
+
 const workflow = readText("../../.github/workflows/release.yml");
 const preflightJobHeader = workflow
   .split("\n  preflight:\n")[1]
@@ -95,5 +103,196 @@ describe("zero-cost beta release contract", () => {
     const decoded = Buffer.from(pubkey as string, "base64").toString("utf8");
     expect(decoded).toContain("minisign public key");
     expect(decoded).toContain("RW");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// U1 — product canon and evidence contract (2026-07-24 quality program).
+//
+// These are STATIC INVARIANTS, not behavior tests. They exist because the canon
+// reconciliation U1 performed is the kind of thing that rots silently: someone
+// re-adds a present-tense mobile claim to the landing brief, or the two agent
+// instruction files drift, and nothing fails until a visitor reads an untrue
+// sentence on a public page. Each assertion below pins one reconciliation.
+// ---------------------------------------------------------------------------
+
+const agentsMd = readText("../../AGENTS.md");
+const claudeMd = readText("../../CLAUDE.md");
+const landingBrief = readText("../../docs/landing-brief.md");
+const productDoc = readText("../../docs/PRODUCT.md");
+const goNoGo = readText("../../docs/plans/beta-go-no-go.md");
+const ownerQueue = readText("../../docs/OWNER_INPUT_QUEUE.md");
+const claimMatrix = readText("../../docs/CAPABILITY_EVIDENCE_MATRIX.md");
+
+describe("product canon and evidence contract (U1)", () => {
+  it("keeps the two agent instruction files byte-identical", () => {
+    // AGENTS.md is what Codex reads and CLAUDE.md is what Claude reads. Drift
+    // between them means two agents working the same repo from different rules.
+    expect(claudeMd).toBe(agentsMd);
+  });
+
+  it("names exactly one authoritative source for each beta question", () => {
+    // Three beta documents exist. Before U1 nothing said how they rank, so a
+    // session could resume from executed history and redo shipped work.
+    expect(agentsMd).toContain("Which beta document is authoritative");
+    expect(agentsMd).toMatch(
+      /2026-07-07-beta-execution-plan\.md` is \*\*executed history/,
+    );
+    expect(agentsMd).toMatch(
+      /2026-07-24-001-feat-public-beta-quality-plan\.md` is the \*\*active\s*\n?\s*forward queue/,
+    );
+    expect(agentsMd).toMatch(
+      /beta-go-no-go\.md` is the \*\*live release gate/,
+    );
+
+    // Platform status -> PRODUCT.md. Release state + owner gates -> go/no-go.
+    // Undecided questions (incl. the beta end date) -> the owner input queue.
+    expect(agentsMd).toContain("docs/OWNER_INPUT_QUEUE.md");
+    expect(agentsMd).toContain("docs/CAPABILITY_EVIDENCE_MATRIX.md");
+    expect(ownerQueue).toContain("Beta end date");
+  });
+
+  it("does not leave landing-page scope described as an open owner decision", () => {
+    // Stale parenthetical: the Non-Negotiables, PRODUCT.md "Public Surface",
+    // and D16 all already put the landing page in scope.
+    expect(agentsMd).not.toContain(
+      "whether the landing page is in agent scope is an open",
+    );
+    expect(agentsMd).toContain("The landing page **is** in agent scope");
+  });
+
+  it("keeps the landing brief free of present-tense mobile availability claims", () => {
+    expect(landingBrief).toContain("## Mobile status");
+    expect(landingBrief).toContain("**iPhone and Android are parked.**");
+
+    // The scan covers the brief's CLAIM-BEARING sections only. Three parts of
+    // this document state rules rather than making claims — the header
+    // blockquote, "Mobile status", and "Hard rules for generation" — and all
+    // three necessarily QUOTE banned phrasing in order to prohibit it. Scanning
+    // them would fail on the prohibition itself. They are pinned separately
+    // below, so deleting a prohibition to dodge the scan does not work either.
+    const ruleStatingSections = ["Mobile status", "Hard rules for generation"];
+    const copySource = landingBrief
+      .split(/^## /m)
+      .slice(1) // drop the title + header blockquote (rule text)
+      .filter(
+        (section) =>
+          !ruleStatingSections.some((name) => section.startsWith(name)),
+      )
+      .join("\n");
+    expect(copySource).toContain("Feature pillars");
+    expect(copySource).toContain("What's on screen");
+
+    const bannedInCopySource = [
+      /companions on the same engine/i,
+      /coming soon/i,
+      /\bcoming (?:after|to)\b/i,
+      /download (?:for |on )?(?:iphone|android|ios)/i,
+      /available on (?:the )?app store/i,
+      /google play/i,
+    ];
+    for (const pattern of bannedInCopySource) {
+      expect(
+        pattern.test(copySource),
+        `landing brief copy source reintroduced a mobile availability claim matching ${pattern}`,
+      ).toBe(false);
+    }
+
+    // The prohibition list itself must survive. If someone deletes it, the
+    // scoped scan above would stop protecting anything.
+    const mobileStatus = landingBrief.slice(
+      landingBrief.indexOf("## Mobile status"),
+    );
+    expect(mobileStatus).toContain("It may not:");
+    expect(mobileStatus).toMatch(/give a date, a season, a release order/);
+    expect(landingBrief).toContain(
+      "**No roadmap, no \"coming soon,\" no version numbers, no build/dev detail.**",
+    );
+  });
+
+  it("binds every public claim to the evidence matrix", () => {
+    expect(landingBrief).toContain("docs/CAPABILITY_EVIDENCE_MATRIX.md");
+
+    // The matrix must still cover the three claim classes U1 audited. If a
+    // section is deleted wholesale the matrix stops being truth control.
+    expect(claimMatrix).toContain("## A — Product capability claims");
+    expect(claimMatrix).toContain("## B — Platform and availability claims");
+    expect(claimMatrix).toContain("## C — Pricing and beta-promise claims");
+
+    // The dead-CTA row is the single most load-bearing entry: it is the claim
+    // that would send a visitor to a release that does not exist.
+    expect(claimMatrix).toContain("releases/latest");
+    expect(claimMatrix).toMatch(/C-10[\s\S]{0,600}Remove \(as unconditional\)/);
+  });
+
+  it("keeps product policy desktop-first with mobile parked", () => {
+    expect(productDoc).toContain("The v1 public push is desktop-first");
+    expect(productDoc).toMatch(
+      /phones go live when the owner\s*\n?\s*judges them ready/,
+    );
+  });
+
+  it("retains the required release metadata in the go/no-go gate", () => {
+    // Losing any of these turns a checkbox back into an unevidenced claim.
+    expect(goNoGo).toContain("Update path proven end-to-end, once.");
+    expect(goNoGo).toContain("one-sitting listening runbook is executed and signed off");
+    expect(goNoGo).toContain("Exact-commit evidence ledger");
+
+    for (const column of [
+      "Commit SHA",
+      "Platform / toolchain",
+      "Artifact / version",
+      "Command or procedure",
+      "Evidence layer",
+      "Evidence location",
+    ]) {
+      expect(goNoGo, `evidence ledger lost the "${column}" column`).toContain(
+        column,
+      );
+    }
+
+    // Evidence layers are not interchangeable; the ledger must keep saying so.
+    for (const layer of [
+      "browser-headless",
+      "native-synthetic",
+      "installed-machine",
+      "owner-listening",
+      "production-smoke",
+    ]) {
+      expect(goNoGo).toContain(layer);
+    }
+
+    // The candidate freeze has to declare its own state or a parallel agent
+    // session cannot tell whether `main` is frozen.
+    expect(goNoGo).toMatch(/\*\*Freeze status: (NOT IN FORCE|IN FORCE)/);
+  });
+
+  it("keeps owner-blocked questions in the queue instead of guessed in docs", () => {
+    expect(ownerQueue).toContain("Never block on an owner decision");
+    expect(ownerQueue).toContain("Conservative default in place");
+
+    // Each seeded question must still carry a conservative default. A row that
+    // loses its default is a row that will get guessed.
+    for (const question of [
+      "Founder-window dates",
+      "Newsletter provider",
+      "Beta end date",
+      "Public beta announcement date",
+    ]) {
+      const row = ownerQueue
+        .split("\n")
+        .find((line) => line.includes(question) && line.startsWith("|"));
+      expect(row, `owner queue lost the "${question}" row`).toBeDefined();
+      expect(
+        (row as string).split("|").length,
+        `"${question}" row is missing columns`,
+      ).toBeGreaterThanOrEqual(6);
+    }
+  });
+
+  it("has not created a fourth competing release checklist", () => {
+    // R17 says the evidence ledger lives in the existing go/no-go artifact.
+    expect(readMaybe("../../docs/RELEASE_CHECKLIST.md")).toBeNull();
+    expect(readMaybe("../../docs/plans/release-evidence-ledger.md")).toBeNull();
   });
 });

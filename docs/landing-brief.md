@@ -53,8 +53,9 @@ A focused, studio-grade desktop interface:
 - **Style / preset tiles** and an **Intensity** control.
 - A big **Create Master** button (Standard), or an **export review** (Advanced)
   showing delivered LUFS, true peak, dynamic range, and pass/fail checks.
-- Companion **iPhone / Android** screens speak the same vocabulary — simple,
-  pocket-sized versions of the same controls.
+- Any **iPhone / Android** screen shown must be labelled as a not-currently-
+  available companion surface, never as part of the desktop beta proof
+  (amended 2026-07-24, U1 — see "Mobile status").
 
 ## Feature pillars (present tense)
 
@@ -69,8 +70,11 @@ A focused, studio-grade desktop interface:
   auditioning never changes your export level.
 - **Adaptive, gently.** It reads each track and eases its moves to fit — it
   tames, never overcooks.
-- **Cross-platform.** Windows and macOS desktop, with iPhone and Android
-  companions on the same engine.
+- **Cross-platform.** Windows and macOS desktop. **Desktop is the product you
+  can get.** (Amended 2026-07-24, U1: this pillar used to append the phone
+  bridges to the same sentence, which reads as three shipping products. The
+  engine sharing is true; the availability implication is not. See "Mobile
+  status" below.)
 
 ## Who it's for
 
@@ -86,10 +90,33 @@ curves. Trustworthy and legible over flashy. Three established directions to
 match: **trust-first** (simple, reassuring) · **control-room** (serious console)
 · **mobile-forward** (same vocabulary, pocket-sized).
 
+## Mobile status (added 2026-07-24, U1)
+
+**iPhone and Android are parked.** The shared engine really does power
+CI-tested native bridges, and their measured output is pinned bit-parity against
+desktop — but no mobile build is downloadable, dated, or owner-approved for
+release (owner decisions D9, D15; product policy in `docs/PRODUCT.md` "Mobile
+Companions").
+
+The page may state, **once and quietly**, that mobile is not currently
+available. It may not:
+
+- give a date, a season, a release order, or the word "soon";
+- list mobile features in a way that reads as a product a visitor can obtain;
+- show a mobile screenshot as evidence of the desktop beta.
+
+This is the single deliberate exception to the "no roadmap" hard rule below, and
+it exists because saying nothing at all about mobile would be *less* honest than
+saying "not yet" — a visitor who has seen the mobile screens should not be left
+guessing. Anything beyond one date-free sentence is out of bounds.
+
 ## Hard rules for generation
 
-- **Present tense only** — describe what it *is*, never what it *will be*.
+- **Present tense only** — describe what it *is*, never what it *will be*. The
+  one exception is the date-free mobile-status sentence above.
 - **No roadmap, no "coming soon," no version numbers, no build/dev detail.**
 - Standard is the hero; Advanced is the proof.
 - Load-bearing words: **real-time, simple, honest, legible** (and **local** framed
   as *instant*, not *private*).
+- **Every claim on the page needs a row in `docs/CAPABILITY_EVIDENCE_MATRIX.md`.**
+  A claim with no row is a defect, not an oversight.

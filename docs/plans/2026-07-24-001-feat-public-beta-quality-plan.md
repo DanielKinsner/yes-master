@@ -439,7 +439,7 @@ anchor for a later session.
 
 | Unit | Chunk | Status | Completing commit | Notes |
 |---|---|---|---|---|
-| U1 | C1 | Not started | — | — |
+| U1 | C1 | Complete | _this commit_ | Created `docs/OWNER_INPUT_QUEUE.md` (5 seeded questions) and `docs/CAPABILITY_EVIDENCE_MATRIX.md` (26 claims audited: 12 proved, 6 qualify, 1 remove, 4 owner-blocked, 2 missing public surface). Doc precedence stated in AGENTS/CLAUDE. Evidence ledger added to go/no-go §9. 4 canon conflicts fixed. **Finding for U5:** claim C-10 — the landing's primary CTA links unconditionally to `/releases/latest`, which resolves to nothing today. 8 static invariants added to `release-readiness.test.ts`; byte-identity and mobile-claim gates proven to fail on forced regression. |
 | U2 | C1 | Not started | — | — |
 | U3 | C1 | Not started | — | — |
 | U12 | C1 | Not started | — | — |

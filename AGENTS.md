@@ -16,7 +16,29 @@ phase plans as active spec. Use the current code plus the docs listed below.
 4. `docs/TESTING.md`
 5. `docs/RELEASE_STABILIZATION.md`
 6. `docs/plans/2026-06-30-launch-plan.md` (GTM / pricing strategy)
-7. `docs/plans/2026-07-07-beta-execution-plan.md` (beta launch execution)
+7. `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md` — the active
+   forward queue (chunks C1–C5 + a chunk status ledger; resume from the ledger)
+8. `docs/plans/beta-go-no-go.md` — the live release gate + exact-commit
+   evidence ledger
+9. `docs/OWNER_INPUT_QUEUE.md` — questions waiting on the owner. Read it before
+   concluding a decision was never made, and add to it instead of guessing.
+10. `docs/CAPABILITY_EVIDENCE_MATRIX.md` — every public claim bound to its
+    evidence source
+
+### Which beta document is authoritative
+
+Three documents describe the beta and they do **not** rank equally. Stated here
+so no future session has to guess:
+
+- `docs/plans/2026-07-07-beta-execution-plan.md` is **executed history.** Its
+  slices shipped. Read it for *why* decisions D1–D16 were made — it is still the
+  source of those decisions — but do not treat it as an open work queue. It is
+  superseded as a forward queue by the 2026-07-24 quality plan.
+- `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md` is the **active
+  forward queue.**
+- `docs/plans/beta-go-no-go.md` is the **live release gate.** The quality plan
+  feeds it rather than replacing it; nothing ships until its blocking boxes are
+  checked against real evidence.
 
 ## Non-Negotiables
 
@@ -102,8 +124,10 @@ macOS, and Android lanes on every push, and the **macOS lane runs `cargo test`**
 — so the preset byte-identity snapshots gate there. `npm run verify:fast` /
 `verify:rust` / `verify:iphone` /
 `verify:android` wrap these lanes. If you touch the web landing page, run
-`npm run verify:landing` (whether the landing page is in agent scope is an open
-owner decision — see `docs/OPEN_THREADS_AND_DECISIONS.md`).
+`npm run verify:landing`. The landing page **is** in agent scope — decided
+2026-07-07 and reaffirmed by D16 on 2026-07-20; the Non-Negotiables above and
+`docs/PRODUCT.md` "Public Surface" are the current word. (The "open owner
+decision" phrasing that used to sit here was stale.)
 
 When you touch shared crate types or `#[tauri::command]` signatures, also build
 AND test the iPhone native bridge — it re-uses `yes_master_lib` but none of the

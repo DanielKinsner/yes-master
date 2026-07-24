@@ -119,6 +119,49 @@ is post-beta advisory under D16.
 
 ---
 
+## 9. Exact-commit evidence ledger (added 2026-07-24 — U1 / R17 / KTD12)
+
+> **A checked box above is a claim. This table is the evidence behind it.**
+>
+> Every release-candidate proof item records **commit SHA, platform,
+> artifact/version, the command or procedure run, the result, and where the
+> evidence lives.** A green result from another checkout, a rebuilt artifact, or
+> an earlier SHA **is not release evidence** (KTD12). Release evidence is
+> invalidated by a new release commit unless the ledger names the check as
+> demonstrably commit-independent *and says why*.
+
+**Evidence layer** must be one of these, and they are **not interchangeable**:
+
+| Layer | Proves | Does not prove |
+|---|---|---|
+| `browser-headless` | Responsive layout, deterministic UI journeys, keyboard semantics, link/asset behavior, preview-state handling | Native dialogs, real audio device behavior, signing, updater install, listening quality |
+| `frontend-unit` | State rules, copy invariants, accessible names/states, deterministic rendering | Cross-page integration or installed behavior |
+| `native-synthetic` | Engine/import/render/export/project contracts with generated audio | Installed shell integration, real device output, subjective sound |
+| `private-fixture` | Behavior on representative real program material without committing audio | Owner preference or public licensing |
+| `installed-machine` | Installer, OS dialogs, file flows, updater, app shell, artifact identity | Subjective audio quality by itself |
+| `owner-listening` | Character, safety, transition perception, real-world confidence | Broad mechanical regression coverage |
+| `production-smoke` | Deployed landing, public links, current release artifacts, public metadata | Future availability or offline installed behavior |
+
+### Ledger
+
+| Date | Unit | Commit SHA | Platform / toolchain | Artifact / version | Command or procedure | Evidence layer | Result | Evidence location |
+|---|---|---|---|---|---|---|---|---|
+| _(populate as units close; U14 assembles the candidate row set)_ | | | | | | | | |
+
+### Candidate freeze
+
+U14 ends by tagging the release candidate at the exact commit whose evidence
+this ledger records. **From that tag until U17 closes or the candidate is
+rejected, `main` is frozen** — no commits land on `main`. Work discovered during
+U15–U17 goes to `docs/OWNER_INPUT_QUEUE.md` and, if code is needed, onto a
+branch that cannot feed the candidate. The freeze is a plan rule, not a
+branch-protection change, so **the U14 ledger entry must announce it** or a
+parallel agent session will not see it.
+
+**Freeze status: NOT IN FORCE.** No candidate is tagged. Work on `main` normally.
+
+---
+
 ## Decision
 
 Fill in when the blocking boxes above are checked.
