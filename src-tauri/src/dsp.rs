@@ -792,6 +792,74 @@ fn clamp_finite_or(value: f32, default: f32, lo: f32, hi: f32) -> f32 {
     }
 }
 
+// ---------------------------------------------------------------------------
+// U13 — manual compressor override bounds.
+//
+// These mirror the CURRENT UI ranges in `AdvancedPanel.tsx` exactly:
+//   Threshold -60..0 dB · Ratio 1..20 · Attack 0.5..200 ms · Release 5..2000 ms
+//
+// `finite_or` already neutralizes NaN/Inf, but an enormous FINITE value is a
+// valid f32 and reached the coefficients untouched — a hand-edited or
+// sync-corrupted `.ams.json` carrying a 1e12 ratio produced non-finite audio
+// from the first sample (pinned by `tests/project_hostile.rs`).
+//
+// These bound ONLY the manual-override branch. The preset branch is deliberately
+// left alone so preset calibration cannot be altered by a clamp — and
+// `preset_compressor_values_sit_inside_the_manual_override_bounds` proves every
+// factory preset already sits inside these ranges anyway, so a manual session
+// that falls back to a preset value is unaffected too.
+//
+// Compatibility: preserved in file, clamped at execution. Loading does not
+// rewrite the stored value and does not reject the file.
+const MANUAL_COMP_THRESHOLD_DB_MIN: f32 = -60.0;
+const MANUAL_COMP_THRESHOLD_DB_MAX: f32 = 0.0;
+const MANUAL_COMP_RATIO_MIN: f32 = 1.0;
+const MANUAL_COMP_RATIO_MAX: f32 = 20.0;
+const MANUAL_COMP_ATTACK_MS_MIN: f32 = 0.5;
+const MANUAL_COMP_ATTACK_MS_MAX: f32 = 200.0;
+const MANUAL_COMP_RELEASE_MS_MIN: f32 = 5.0;
+const MANUAL_COMP_RELEASE_MS_MAX: f32 = 2000.0;
+
+#[inline]
+fn manual_threshold_db(value: Option<f32>, fallback: f32) -> f32 {
+    clamp_finite_or(
+        value.unwrap_or(fallback),
+        fallback,
+        MANUAL_COMP_THRESHOLD_DB_MIN,
+        MANUAL_COMP_THRESHOLD_DB_MAX,
+    )
+}
+
+#[inline]
+fn manual_ratio(value: Option<f32>, fallback: f32) -> f32 {
+    clamp_finite_or(
+        value.unwrap_or(fallback),
+        fallback,
+        MANUAL_COMP_RATIO_MIN,
+        MANUAL_COMP_RATIO_MAX,
+    )
+}
+
+#[inline]
+fn manual_attack_ms(value: Option<f32>, fallback: f32) -> f32 {
+    clamp_finite_or(
+        value.unwrap_or(fallback),
+        fallback,
+        MANUAL_COMP_ATTACK_MS_MIN,
+        MANUAL_COMP_ATTACK_MS_MAX,
+    )
+}
+
+#[inline]
+fn manual_release_ms(value: Option<f32>, fallback: f32) -> f32 {
+    clamp_finite_or(
+        value.unwrap_or(fallback),
+        fallback,
+        MANUAL_COMP_RELEASE_MS_MIN,
+        MANUAL_COMP_RELEASE_MS_MAX,
+    )
+}
+
 #[inline]
 fn finite_or(value: f32, default: f32) -> f32 {
     if value.is_finite() {
@@ -1100,33 +1168,24 @@ impl ChainCoeffs {
             guarded_preset_shape(adaptive_compression_guards.map(|g| &g.high));
 
         let comp_low_threshold_db = if manual_compression {
-            finite_or(
-                settings
-                    .advanced
-                    .compression_low_threshold_db
-                    .unwrap_or(preset_threshold_db),
+            manual_threshold_db(
+                settings.advanced.compression_low_threshold_db,
                 preset_threshold_db,
             )
         } else {
             preset_low_threshold_db
         };
         let comp_mid_threshold_db = if manual_compression {
-            finite_or(
-                settings
-                    .advanced
-                    .compression_mid_threshold_db
-                    .unwrap_or(preset_threshold_db),
+            manual_threshold_db(
+                settings.advanced.compression_mid_threshold_db,
                 preset_threshold_db,
             )
         } else {
             preset_mid_threshold_db
         };
         let comp_high_threshold_db = if manual_compression {
-            finite_or(
-                settings
-                    .advanced
-                    .compression_high_threshold_db
-                    .unwrap_or(preset_threshold_db),
+            manual_threshold_db(
+                settings.advanced.compression_high_threshold_db,
                 preset_threshold_db,
             )
         } else {
@@ -1134,48 +1193,27 @@ impl ChainCoeffs {
         };
 
         let comp_low_ratio = if manual_compression {
-            finite_or(
-                settings
-                    .advanced
-                    .compression_low_ratio
-                    .unwrap_or(preset_ratio),
-                preset_ratio,
-            )
+            manual_ratio(settings.advanced.compression_low_ratio, preset_ratio)
         } else {
             preset_low_ratio
         }
         .max(1.0);
         let comp_mid_ratio = if manual_compression {
-            finite_or(
-                settings
-                    .advanced
-                    .compression_mid_ratio
-                    .unwrap_or(preset_ratio),
-                preset_ratio,
-            )
+            manual_ratio(settings.advanced.compression_mid_ratio, preset_ratio)
         } else {
             preset_mid_ratio
         }
         .max(1.0);
         let comp_high_ratio = if manual_compression {
-            finite_or(
-                settings
-                    .advanced
-                    .compression_high_ratio
-                    .unwrap_or(preset_ratio),
-                preset_ratio,
-            )
+            manual_ratio(settings.advanced.compression_high_ratio, preset_ratio)
         } else {
             preset_high_ratio
         }
         .max(1.0);
 
         let low_attack_ms = if manual_compression {
-            finite_or(
-                settings
-                    .advanced
-                    .compression_low_attack_ms
-                    .unwrap_or(preset.compressor_attack_ms),
+            manual_attack_ms(
+                settings.advanced.compression_low_attack_ms,
                 preset.compressor_attack_ms,
             )
         } else {
@@ -1183,11 +1221,8 @@ impl ChainCoeffs {
         }
         .max(0.1);
         let low_release_ms = if manual_compression {
-            finite_or(
-                settings
-                    .advanced
-                    .compression_low_release_ms
-                    .unwrap_or(preset.compressor_release_ms),
+            manual_release_ms(
+                settings.advanced.compression_low_release_ms,
                 preset.compressor_release_ms,
             )
         } else {
@@ -1195,11 +1230,8 @@ impl ChainCoeffs {
         }
         .max(0.1);
         let mid_attack_ms = if manual_compression {
-            finite_or(
-                settings
-                    .advanced
-                    .compression_mid_attack_ms
-                    .unwrap_or(preset.compressor_attack_ms),
+            manual_attack_ms(
+                settings.advanced.compression_mid_attack_ms,
                 preset.compressor_attack_ms,
             )
         } else {
@@ -1207,11 +1239,8 @@ impl ChainCoeffs {
         }
         .max(0.1);
         let mid_release_ms = if manual_compression {
-            finite_or(
-                settings
-                    .advanced
-                    .compression_mid_release_ms
-                    .unwrap_or(preset.compressor_release_ms),
+            manual_release_ms(
+                settings.advanced.compression_mid_release_ms,
                 preset.compressor_release_ms,
             )
         } else {
@@ -1219,11 +1248,8 @@ impl ChainCoeffs {
         }
         .max(0.1);
         let high_attack_ms = if manual_compression {
-            finite_or(
-                settings
-                    .advanced
-                    .compression_high_attack_ms
-                    .unwrap_or(preset.compressor_attack_ms),
+            manual_attack_ms(
+                settings.advanced.compression_high_attack_ms,
                 preset.compressor_attack_ms,
             )
         } else {
@@ -1231,11 +1257,8 @@ impl ChainCoeffs {
         }
         .max(0.1);
         let high_release_ms = if manual_compression {
-            finite_or(
-                settings
-                    .advanced
-                    .compression_high_release_ms
-                    .unwrap_or(preset.compressor_release_ms),
+            manual_release_ms(
+                settings.advanced.compression_high_release_ms,
                 preset.compressor_release_ms,
             )
         } else {
@@ -2513,6 +2536,63 @@ mod tests {
 
     fn approx_eq(a: f32, b: f32, tol: f32) -> bool {
         (a - b).abs() <= tol
+    }
+
+    /// U13 — the manual-override clamps must be incapable of altering preset
+    /// calibration.
+    ///
+    /// The clamps are applied only in the manual branch, so the preset branch
+    /// is structurally safe. But a manual session that has NOT set a given
+    /// band/parameter falls back to the preset's own value and that fallback
+    /// does pass through the clamp. This test proves every factory preset
+    /// already sits inside the bounds, so the fallback is a no-op today — and,
+    /// more importantly, it turns any future retune that walks a preset outside
+    /// the UI range into a loud failure here instead of a silent clamp.
+    #[test]
+    fn preset_compressor_values_sit_inside_the_manual_override_bounds() {
+        let presets = [
+            ("universal", Preset::Universal),
+            ("clarity", Preset::Clarity),
+            ("tape", Preset::Tape),
+            ("spatial", Preset::Spatial),
+            ("oomph", Preset::Oomph),
+            ("warmth", Preset::Warmth),
+            ("punch", Preset::Punch),
+            ("loud", Preset::Loud),
+        ];
+
+        for (name, preset) in presets {
+            let cal = preset_calibration(&preset);
+
+            assert!(
+                (MANUAL_COMP_THRESHOLD_DB_MIN..=MANUAL_COMP_THRESHOLD_DB_MAX)
+                    .contains(&cal.compressor_threshold_dbfs),
+                "preset {name} threshold {} is outside the manual bound \
+                 [{MANUAL_COMP_THRESHOLD_DB_MIN}, {MANUAL_COMP_THRESHOLD_DB_MAX}] — a manual \
+                 session falling back to it would be silently clamped",
+                cal.compressor_threshold_dbfs,
+            );
+            assert!(
+                (MANUAL_COMP_RATIO_MIN..=MANUAL_COMP_RATIO_MAX).contains(&cal.compressor_ratio),
+                "preset {name} ratio {} is outside the manual bound \
+                 [{MANUAL_COMP_RATIO_MIN}, {MANUAL_COMP_RATIO_MAX}]",
+                cal.compressor_ratio,
+            );
+            assert!(
+                (MANUAL_COMP_ATTACK_MS_MIN..=MANUAL_COMP_ATTACK_MS_MAX)
+                    .contains(&cal.compressor_attack_ms),
+                "preset {name} attack {} ms is outside the manual bound \
+                 [{MANUAL_COMP_ATTACK_MS_MIN}, {MANUAL_COMP_ATTACK_MS_MAX}]",
+                cal.compressor_attack_ms,
+            );
+            assert!(
+                (MANUAL_COMP_RELEASE_MS_MIN..=MANUAL_COMP_RELEASE_MS_MAX)
+                    .contains(&cal.compressor_release_ms),
+                "preset {name} release {} ms is outside the manual bound \
+                 [{MANUAL_COMP_RELEASE_MS_MIN}, {MANUAL_COMP_RELEASE_MS_MAX}]",
+                cal.compressor_release_ms,
+            );
+        }
     }
 
     /// The ISP skip gate is sound only if no interpolated estimate can exceed

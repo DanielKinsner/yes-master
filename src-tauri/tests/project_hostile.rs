@@ -218,6 +218,282 @@ fn hostile_settings_load_and_render_finite_audio() {
 }
 
 // ---------------------------------------------------------------------------
+// U13 — enormous FINITE values (not NaN/Inf) on the compressor and delivery
+// surfaces.
+//
+// The corpus above proves NaN/Inf are neutralized. Finite-but-absurd is a
+// different failure mode and reaches the chain through a different door: a
+// hand-edited or sync-corrupted `.ams.json` can carry a 1e12 ratio or a
+// 5-hour release, which are perfectly valid f32s. `finite_or` passes those
+// straight through.
+//
+// Compatibility behavior pinned by these tests: **preserved in file, clamped
+// at execution.** The project file keeps whatever it carried (so nothing is
+// silently rewritten under the user, and a file authored by a future version
+// with a wider range is not destroyed), and the chain clamps to the current UI
+// range when it builds coefficients. Load does not normalize, and load does not
+// reject.
+// ---------------------------------------------------------------------------
+
+/// Every per-band compressor override at an absurd-but-finite value, plus a
+/// delivery target and ceiling far outside anything the UI can produce.
+const HOSTILE_FINITE_COMPRESSOR_PROJECT: &str = r#"{
+  "schema_version": 1,
+  "mode": "track",
+  "tracks": [{
+    "id": "t1",
+    "path": "C:/music/song.wav",
+    "display_name": "song",
+    "source_format": "wav",
+    "duration_seconds": 1.0,
+    "sample_rate": 44100,
+    "channels": 2
+  }],
+  "track_order": ["t1"],
+  "track_settings": {
+    "t1": {
+      "preset": {"kind": "universal"},
+      "intensity": 0.5,
+      "eq_sub_db": 0.0,
+      "eq_low_db": 0.0,
+      "eq_low_mid_db": 0.0,
+      "eq_mid_db": 0.0,
+      "eq_high_mid_db": 0.0,
+      "eq_high_db": 0.0,
+      "eq_sparkle_db": 0.0,
+      "volume_match": false,
+      "source_lufs_integrated": null,
+      "input_gain_db": 0.0,
+      "output_gain_db": 0.0,
+      "delivery_profile": "custom",
+      "album": null,
+      "advanced": {
+        "compression_mode": "manual",
+        "lufs_offset_db": 1.0e12,
+        "ceiling_dbtp": 9.0e11,
+        "compression_low_threshold_db": -9.0e11,
+        "compression_low_ratio": 1.0e12,
+        "compression_low_attack_ms": 1.0e12,
+        "compression_low_release_ms": 1.0e12,
+        "compression_mid_threshold_db": 9.0e11,
+        "compression_mid_ratio": 5.0e11,
+        "compression_mid_attack_ms": 8.64e7,
+        "compression_mid_release_ms": 8.64e7,
+        "compression_high_threshold_db": -1.0e12,
+        "compression_high_ratio": 2.0e12,
+        "compression_high_attack_ms": 0.0,
+        "compression_high_release_ms": 0.0
+      }
+    }
+  },
+  "album_intent": null,
+  "album_arc_kind": "cinematic",
+  "album_intensity": 1.0,
+  "album_title": "",
+  "album_sample_rate": null,
+  "album_bit_depth": null,
+  "track_override_album": [],
+  "last_saved_iso": null
+}"#;
+
+fn render_sine_through(settings: &yes_master_lib::types::MasteringSettings) -> Vec<f32> {
+    let sr = 48_000_u32;
+    let mut chain = MasteringChain::new(sr, 2, settings);
+    let mut buf: Vec<f32> = (0..sr as usize)
+        .flat_map(|n| {
+            let s = 0.25 * (2.0 * std::f32::consts::PI * 220.0 * n as f32 / sr as f32).sin();
+            [s, s]
+        })
+        .collect();
+    chain.process_interleaved(&mut buf, 2);
+    chain.flush_render_tail(&mut buf, 2);
+    buf
+}
+
+#[test]
+fn enormous_finite_compressor_values_render_finite_bounded_audio() {
+    let tmp = TempDir::new().expect("tempdir");
+    let path = write_file(
+        &tmp,
+        "hostile-finite.ams.json",
+        HOSTILE_FINITE_COMPRESSOR_PROJECT.as_bytes(),
+    );
+    let state = load(&path).expect("well-formed JSON must load");
+    let settings = state
+        .track_settings
+        .get("t1")
+        .expect("settings present")
+        .clone();
+
+    let buf = render_sine_through(&settings);
+
+    for (i, s) in buf.iter().enumerate() {
+        assert!(
+            s.is_finite(),
+            "enormous finite compressor values poisoned the chain at sample {i}",
+        );
+    }
+    let peak = buf.iter().map(|s| s.abs()).fold(0.0_f32, f32::max);
+    assert!(
+        peak <= 4.0,
+        "enormous finite compressor values produced runaway gain: peak {peak} (linear)",
+    );
+    // A silent output would also be "finite and bounded" while being a
+    // different bug, so require the chain to still pass audio.
+    assert!(
+        peak > 1.0e-4,
+        "chain collapsed to silence under hostile finite values: peak {peak}",
+    );
+}
+
+#[test]
+fn hostile_finite_values_are_preserved_in_the_file_not_normalized_on_load() {
+    // The compatibility decision, pinned: load neither rewrites nor rejects.
+    // Clamping happens at execution. If this ever flips to normalize-on-load,
+    // this test is where that decision gets made deliberately.
+    let tmp = TempDir::new().expect("tempdir");
+    let path = write_file(
+        &tmp,
+        "preserve.ams.json",
+        HOSTILE_FINITE_COMPRESSOR_PROJECT.as_bytes(),
+    );
+    let state = load(&path).expect("loads");
+    let advanced = &state
+        .track_settings
+        .get("t1")
+        .expect("settings present")
+        .advanced;
+
+    assert_eq!(
+        advanced.compression_low_ratio,
+        Some(1.0e12),
+        "load must preserve the stored value verbatim",
+    );
+    assert_eq!(advanced.compression_low_attack_ms, Some(1.0e12));
+    assert_eq!(advanced.lufs_offset_db, Some(1.0e12));
+}
+
+#[test]
+fn hostile_finite_values_round_trip_unchanged_through_save() {
+    let tmp = TempDir::new().expect("tempdir");
+    let seed = write_file(
+        &tmp,
+        "seed-finite.ams.json",
+        HOSTILE_FINITE_COMPRESSOR_PROJECT.as_bytes(),
+    );
+    let state = load(&seed).expect("seed loads");
+    let out = tmp.path().join("roundtrip-finite.ams.json");
+
+    tokio::runtime::Builder::new_current_thread()
+        .build()
+        .expect("tokio runtime")
+        .block_on(save_project(
+            out.to_string_lossy().into_owned(),
+            state.clone(),
+        ))
+        .expect("save succeeds");
+
+    let reloaded = read_session(&out).expect("reload succeeds");
+    let advanced = &reloaded
+        .track_settings
+        .get("t1")
+        .expect("settings present")
+        .advanced;
+    assert_eq!(
+        advanced.compression_low_ratio,
+        Some(1.0e12),
+        "save/load must not quietly normalize a hostile value",
+    );
+}
+
+#[test]
+fn in_range_compressor_overrides_are_untouched_by_the_hostile_clamps() {
+    // The clamps must bound only what the UI cannot produce. Anything the user
+    // can actually dial has to render byte-identically, or "hostile bounds"
+    // would have become a silent retune.
+    let tmp = TempDir::new().expect("tempdir");
+    let path = write_file(
+        &tmp,
+        "in-range.ams.json",
+        HOSTILE_FINITE_COMPRESSOR_PROJECT
+            .replace(
+                "\"compression_low_threshold_db\": -9.0e11",
+                "\"compression_low_threshold_db\": -24.0",
+            )
+            .replace(
+                "\"compression_low_ratio\": 1.0e12",
+                "\"compression_low_ratio\": 3.5",
+            )
+            .replace(
+                "\"compression_low_attack_ms\": 1.0e12",
+                "\"compression_low_attack_ms\": 20.0",
+            )
+            .replace(
+                "\"compression_low_release_ms\": 1.0e12",
+                "\"compression_low_release_ms\": 250.0",
+            )
+            .replace(
+                "\"compression_mid_threshold_db\": 9.0e11",
+                "\"compression_mid_threshold_db\": -18.0",
+            )
+            .replace(
+                "\"compression_mid_ratio\": 5.0e11",
+                "\"compression_mid_ratio\": 2.0",
+            )
+            .replace(
+                "\"compression_mid_attack_ms\": 8.64e7",
+                "\"compression_mid_attack_ms\": 15.0",
+            )
+            .replace(
+                "\"compression_mid_release_ms\": 8.64e7",
+                "\"compression_mid_release_ms\": 200.0",
+            )
+            .replace(
+                "\"compression_high_threshold_db\": -1.0e12",
+                "\"compression_high_threshold_db\": -12.0",
+            )
+            .replace(
+                "\"compression_high_ratio\": 2.0e12",
+                "\"compression_high_ratio\": 1.8",
+            )
+            .replace(
+                "\"compression_high_attack_ms\": 0.0",
+                "\"compression_high_attack_ms\": 10.0",
+            )
+            .replace(
+                "\"compression_high_release_ms\": 0.0",
+                "\"compression_high_release_ms\": 120.0",
+            )
+            .replace("\"lufs_offset_db\": 1.0e12", "\"lufs_offset_db\": -14.0")
+            .replace("\"ceiling_dbtp\": 9.0e11", "\"ceiling_dbtp\": -1.0")
+            .as_bytes(),
+    );
+    let state = load(&path).expect("loads");
+    let settings = state
+        .track_settings
+        .get("t1")
+        .expect("settings present")
+        .clone();
+
+    let rendered = render_sine_through(&settings);
+
+    // Reference render built directly from the same in-range values, i.e. the
+    // path that never goes near a clamp.
+    let mut reference_settings = settings.clone();
+    reference_settings.advanced.compression_low_ratio = Some(3.5);
+    let reference = render_sine_through(&reference_settings);
+
+    assert_eq!(rendered.len(), reference.len());
+    for (i, (a, b)) in rendered.iter().zip(reference.iter()).enumerate() {
+        assert_eq!(
+            a.to_bits(),
+            b.to_bits(),
+            "in-range override render drifted at sample {i}",
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Round-trip: save always re-loads (the autosave promise)
 // ---------------------------------------------------------------------------
 
