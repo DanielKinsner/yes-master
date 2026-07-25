@@ -155,13 +155,36 @@ The export button is warning-aware:
 
 - No review rows: `Export Master`.
 - Warning or critical review rows: `Export With Review`.
-- First `Export With Review` click opens an inline review panel.
-- `Adjust Settings` closes the panel and does not export.
+- First `Export With Review` click opens the review gate, a modal.
+- `Adjust Settings` (and `Escape`, and the scrim) closes it and does not export.
 - `Export Anyway` calls the existing export path.
 
 Quality rows are advisory when the app can write a file. Technical failures
 still stop export through the render/save path: invalid paths, cancelled save
 dialogs, decode/render/write failures, or corrupt/non-finite render state.
+
+### One owner per warning (U10)
+
+Every warning, blocker, and advisory has exactly one owner and is presented
+once. Where a second surface must restate a fact to be usable — a decision gate
+needs to show what you are deciding about — that surface is **modal**, and the
+surface behind it is made `inert`, so no user ever meets the same fact twice.
+
+| Fact | Single owner | Location | Notes |
+|---|---|---|---|
+| Source preflight rows (true peak / loudness / dynamic range, pre-export) | `QualityCheckPanel` | Right rail, `SOURCE CHECK` | Derived from analysis by `derivePreflightChecks`. |
+| Export check rows (post-export) | `QualityCheckPanel` | Right rail, `EXPORT CHECK` | Same panel, fed by the receipt's checks. |
+| Pre-export decision | `ExportReviewDialog` | Modal over the rail | Restates the warned rows **because** the rail is inert behind it; it is the decision point, not a second report. |
+| Post-export result + quality rows | `ExportReceiptCard` | Modal | `aria-modal`, so it owns the checks while up. Rows built by `buildQualityRows`. |
+| Standard hard-stop ("saved, but…") | `standardExportNotes().invalid` | Standard rail, `role="alert"` | Standard suppresses cosmetic warnings entirely. |
+| Standard integrity note | `standardExportNotes().integrityNote` | Standard rail, inline | One tiny note, never a modal. |
+| Album delivery advisories (upsampled / upmixed / folded / override) | `AlbumExportReceipt` | Sidebar receipt | One line each, one place. |
+| Per-track album scan state (role, target, override, concern) | `SequenceRowFacts` | Sidebar track row | A chip's visible text plus its `.sr-only` expansion is **one** indicator rendered for two audiences, not a duplicate. |
+| Follow/Override control + its explanation | `OverrideBanner` | Track workspace header | The control; the sidebar chip is the scan indicator. Distinct purposes, distinct locations. |
+| Disabled-action reasons | the owning component | `title` + `aria-describedby` on the control | Computed once per action and reused for both, so the two cannot drift. |
+| Recoverable errors | `formatUserError` | `Toast`, `tone="danger"` | One mapping, one surface. |
+
+`src/App.warning-ownership.test.tsx` pins this table.
 
 ## Compressor Modes
 
