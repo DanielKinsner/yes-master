@@ -24,7 +24,7 @@ import { Toast } from "./components/Toast";
 import { ChromeDialog } from "./components/ChromeDialog";
 import { SettingsGroup } from "./components/SettingsGroup";
 import { AdvancedPanel } from "./components/AdvancedPanel";
-import { PanelResetButton } from "./components/fields";
+import { DisabledReason, PanelResetButton } from "./components/fields";
 import { ExportReceiptCard } from "./components/ExportReceiptCard";
 import { WaveformView } from "./components/Waveform";
 import type {
@@ -1649,9 +1649,17 @@ function DeckPreviewOptions({
   return (
     <div className="track-preview-toolbar">
       <div className="track-toolbar-group track-toolbar-group-compare" aria-label="Playback source">
+        {/* U10 — Advanced's A/B toggle carried its selected state as a CSS
+            class ALONE. Standard's equivalent got `aria-pressed` and an
+            accessible disabled reason; the Advanced one, on the app's most-used
+            control, was missed. Colour was the only signal that you were
+            listening to the master, and the disabled reason was hover-only —
+            the same defect U10 already fixed everywhere else. Found by the S-E1
+            rapid-A/B scenario, which could not read which side was selected. */}
         <div className="ab-toggle">
           <button
             type="button"
+            aria-pressed={playbackKind === "source"}
             className={playbackKind === "source" ? "on" : ""}
             onClick={() => onPlaybackKindChange("source")}
           >
@@ -1659,13 +1667,25 @@ function DeckPreviewOptions({
           </button>
           <button
             type="button"
+            aria-pressed={playbackKind === "master"}
             className={playbackKind === "master" ? "on" : ""}
             disabled={!canUseMaster}
             title={!canUseMaster ? "Analyze this track before using Mastered playback." : undefined}
+            aria-describedby={
+              !canUseMaster ? "advanced-ab-master-disabled-reason" : undefined
+            }
             onClick={() => onPlaybackKindChange("master")}
           >
             Mastered
           </button>
+          <DisabledReason
+            id="advanced-ab-master-disabled-reason"
+            reason={
+              !canUseMaster
+                ? "Analyze this track before using Mastered playback."
+                : undefined
+            }
+          />
         </div>
       </div>
       <div className="track-toolbar-group track-toolbar-group-options" aria-label="Preview options">
