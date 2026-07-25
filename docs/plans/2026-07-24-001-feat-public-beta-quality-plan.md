@@ -471,11 +471,17 @@ U13, U9, U10, U11 — U11 is `Complete with findings`, and its findings are
 listed in its ledger row rather than folded away. Everything is committed and
 pushed to `main`. The candidate freeze is **NOT** in force, so `main` is open.
 
-**C3 IS CLOSED.** U4, U5, U6, U7 and U8 are all complete and pushed. **Resume at C4 (U14)** — version bump to 0.9.1, every mechanical lane green on one commit, tag the candidate, freeze `main`. That chunk ends in a hard stop: everything after it is owner-lane. U7 and U8 were gated on U10
-and U11; both are now done, so nothing in C3 is blocked. C3 is where public
-copy gets written, so **read `docs/OWNER_INPUT_QUEUE.md` first** — its first
-three rows (founder window, newsletter provider, beta end date) start to bite
-there, and the conservative default for each is already in place.
+**C3 IS CLOSED.** U4, U5, U6, U7 and U8 are all complete and pushed, so C1,
+C2 and C3 are all done. **Resume at C4 (U14)** — version bump to 0.9.1, every
+mechanical lane green on one commit, tag the candidate, freeze `main`. That
+chunk ends in a hard stop: everything after it is owner-lane (U15/U16/U17).
+
+**The owner queue is now the binding constraint, not the code.** Three rows
+still hold conservative defaults that the public surface is built around:
+the **founder window** terms (no entitlement wording anywhere), the
+**newsletter provider** (form inert, no vendor inferred), and the **beta end
+date** (which mechanically keeps the download closed — see U5). None of them
+blocked C3; all of them shape what U16/U17 can say.
 
 **What U5 changed that later units must not undo.** The landing download is
 rendered from `resolveRelease()`, not from a URL constant. `RELEASE_METADATA`
