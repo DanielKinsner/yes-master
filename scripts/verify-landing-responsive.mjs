@@ -131,6 +131,49 @@ for (const [width, height] of matrix) {
         "Stop chasing the master",
         "Same engine",
       ].every((text) => body.textContent?.includes(text)),
+      // U5 / S-A1 / S-I1. Evaluated against the REAL deployed page, so this is
+      // the browser-headless instance of "a visitor arrives before a verified
+      // release exists". S-A2 (after one exists) has no real state to observe
+      // and stays an injected-state case in BetaDownload.test.tsx.
+      release: (() => {
+        const host = document.querySelector("[data-release-state]");
+        const state = host?.getAttribute("data-release-state") ?? null;
+        const deadLinks = Array.from(document.querySelectorAll("a[href]"))
+          .map((link) => link.getAttribute("href") ?? "")
+          .filter((href) => href.includes("/releases/latest"));
+
+        const inactive = host?.querySelector("button[disabled]") ?? null;
+        const describedBy = inactive?.getAttribute("aria-describedby") ?? null;
+        const reasonEl = describedBy
+          ? document.getElementById(describedBy)
+          : null;
+        const reasonRect = reasonEl?.getBoundingClientRect();
+        const reasonStyle = reasonEl ? getComputedStyle(reasonEl) : null;
+
+        return {
+          state,
+          deadLinks,
+          activeDownloads: host?.querySelectorAll("a[data-platform]").length ?? 0,
+          inactivePresent: Boolean(inactive),
+          reasonText: reasonEl?.textContent?.trim() ?? null,
+          // "Visible" means occupying space and painted — a reason rendered
+          // into a zero-height or clipped node is a tooltip with extra steps.
+          reasonVisible: Boolean(
+            reasonEl &&
+              reasonRect &&
+              reasonRect.width > 1 &&
+              reasonRect.height > 1 &&
+              reasonStyle?.display !== "none" &&
+              reasonStyle?.visibility !== "hidden" &&
+              Number(reasonStyle?.opacity ?? "1") > 0.1,
+          ),
+          mobileHonest: Boolean(
+            body.textContent?.includes(
+              "iPhone and Android are not currently available",
+            ) && body.textContent?.includes("no Linux build"),
+          ),
+        };
+      })(),
     };
   }, requiredSectionIds);
 
@@ -189,6 +232,53 @@ for (const [width, height] of matrix) {
     const visibleHiddenTargets = phoneHiddenTargets.filter((href) => visibleNavTargets.includes(href));
     if (visibleHiddenTargets.length > 0) {
       failures.push(`${width}x${height}: phone nav exposes desktop-only links ${visibleHiddenTargets.join(", ")}`);
+    }
+  }
+
+  // U5 — the download must never be a dead link, at any viewport.
+  const release = metrics.release;
+  if (!release?.state) {
+    failures.push(`${width}x${height}: no [data-release-state] host on the page`);
+  }
+  if ((release?.deadLinks?.length ?? 0) > 0) {
+    // The exact defect this unit removes: a link that only breaks in
+    // production, where nothing tests it.
+    failures.push(
+      `${width}x${height}: page links to /releases/latest (${release.deadLinks.join(", ")})`,
+    );
+  }
+  if (!release?.mobileHonest) {
+    failures.push(
+      `${width}x${height}: platform-support copy does not state the Linux and mobile position`,
+    );
+  }
+  // No release is verified yet, so the live page must be in a closed state.
+  // When one is verified this branch flips and S-A2 becomes observable here.
+  if (release?.state && release.state !== "verified-public") {
+    if (release.activeDownloads > 0) {
+      failures.push(
+        `${width}x${height}: ${release.activeDownloads} download action(s) rendered while release state is ${release.state}`,
+      );
+    }
+    if (!release.inactivePresent) {
+      failures.push(`${width}x${height}: closed state renders no inactive action`);
+    }
+    if (!release.reasonVisible) {
+      failures.push(
+        `${width}x${height}: inactive download has no visible, associated reason`,
+      );
+    }
+    if (!release.reasonText || release.reasonText.length < 20) {
+      failures.push(
+        `${width}x${height}: inactive download reason is missing or too short ("${release.reasonText}")`,
+      );
+    }
+    for (const leak of ["draft", "unverified", "candidate"]) {
+      if (release.reasonText?.toLowerCase().includes(leak)) {
+        failures.push(
+          `${width}x${height}: visitor-facing reason leaks internal state ("${leak}")`,
+        );
+      }
     }
   }
 
@@ -272,6 +362,16 @@ const summary = {
   // headless browser. It proves nothing about native dialogs, real audio,
   // installer signing, updater install, or how anything sounds.
   evidenceLayer: "browser-headless",
+  // Which named scenarios this lane actually observes, and which it cannot.
+  // Recorded so a green run is not mistaken for coverage it does not have.
+  scenarioCoverage: {
+    "S-A1": "observed — live page before a verified release exists",
+    "S-I1": "observed — platform-support copy at every viewport incl. 360px",
+    "S-A2":
+      "NOT observed here — needs a verified release; injected-state case lives in src/landing/BetaDownload.test.tsx, closed by U17",
+    "S-B1":
+      "NOT observed here — needs a real draft release; injected-state case lives in src/lib/release-readiness.test.ts, closed by U16",
+  },
   browser: browserStamp,
   matrix: records,
   anchors: anchorRecords,

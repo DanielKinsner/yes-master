@@ -2,6 +2,15 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  RELEASE_METADATA,
+  RELEASES_INDEX_URL,
+  detectPlatform,
+  resolveRelease,
+  type ReleaseMetadata,
+} from "../landing/release-config";
+import { DURING_BETA, validRelease } from "../landing/release-fixture";
+
 function readText(path: string): string {
   return readFileSync(new URL(path, import.meta.url), "utf8").replace(
     /\r\n/g,
@@ -220,9 +229,13 @@ describe("product canon and evidence contract (U1)", () => {
     expect(claimMatrix).toContain("## C — Pricing and beta-promise claims");
 
     // The dead-CTA row is the single most load-bearing entry: it is the claim
-    // that would send a visitor to a release that does not exist.
+    // that would send a visitor to a release that does not exist. U1 opened it
+    // as "Remove (as unconditional)"; U5 removed it, so the assertion now pins
+    // the *resolution* instead of the pending status. The row itself must
+    // survive — deleting it would erase the record that the page ever shipped
+    // a dead CTA, and the resolver below is what keeps it removed.
     expect(claimMatrix).toContain("releases/latest");
-    expect(claimMatrix).toMatch(/C-10[\s\S]{0,600}Remove \(as unconditional\)/);
+    expect(claimMatrix).toMatch(/C-10[\s\S]{0,900}Removed \(U5/);
   });
 
   it("keeps product policy desktop-first with mobile parked", () => {
@@ -294,5 +307,235 @@ describe("product canon and evidence contract (U1)", () => {
     // R17 says the evidence ledger lives in the existing go/no-go artifact.
     expect(readMaybe("../../docs/RELEASE_CHECKLIST.md")).toBeNull();
     expect(readMaybe("../../docs/plans/release-evidence-ledger.md")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// U5 — release state model.
+//
+// These are behaviour tests over the resolver, not static invariants. The one
+// thing they all defend: the download activates for exactly one input — a
+// fully verified, published, in-window release with both platform artifacts —
+// and every deviation from that closes it. Absent, malformed, stale, and
+// incomplete are not distinct outcomes for a visitor; they are all "nothing to
+// download", and treating them differently is how a dead CTA ships.
+// ---------------------------------------------------------------------------
+
+describe("release state model (U5)", () => {
+  // Negative control. Every rejection test below removes one field from this
+  // fixture, so if the fixture itself did not resolve to available, all of them
+  // would pass while proving nothing.
+  it("activates for a complete, verified, in-window release", () => {
+    const resolved = resolveRelease(validRelease(), DURING_BETA);
+    expect(resolved.state).toBe("verified-public");
+    expect(resolved.available).toBe(true);
+    expect(resolved.downloads.map((d) => d.id)).toEqual(["windows", "mac"]);
+    expect(resolved.diagnostics).toEqual([]);
+  });
+
+  it("ships closed: no release metadata is committed", () => {
+    // U16 verifies and U17 publishes. An agent populating this constant is an
+    // agent shipping a release, so the shipped default is pinned here.
+    expect(RELEASE_METADATA).toBeNull();
+    const resolved = resolveRelease();
+    expect(resolved.available).toBe(false);
+    expect(resolved.reasonCode).toBe("no-release");
+    expect(resolved.secondary.url).toBe(RELEASES_INDEX_URL);
+    expect(resolved.secondary.url).not.toContain("/releases/latest");
+  });
+
+  it("rejects an active state without the beta end date", () => {
+    // Owner-blocked in docs/OWNER_INPUT_QUEUE.md. A time-boxed beta with no
+    // stated end is a promise that cannot be kept, so it stays closed.
+    const resolved = resolveRelease(
+      validRelease({ betaEndsAt: null }),
+      DURING_BETA,
+    );
+    expect(resolved.available).toBe(false);
+    expect(resolved.state).toBe("candidate-published");
+    expect(resolved.diagnostics.join(" ")).toContain("betaEndsAt is unset");
+  });
+
+  it("rejects an active state without the expected platform artifacts", () => {
+    const cases: Array<[string, ReleaseMetadata, RegExp]> = [
+      [
+        "no Windows installer",
+        validRelease({
+          artifacts: {
+            windowsExe: null,
+            macUniversalDmg: validRelease().artifacts.macUniversalDmg,
+          },
+        }),
+        /windowsExe: missing/,
+      ],
+      [
+        "no Mac disk image",
+        validRelease({
+          artifacts: {
+            windowsExe: validRelease().artifacts.windowsExe,
+            macUniversalDmg: null,
+          },
+        }),
+        /macUniversalDmg: missing/,
+      ],
+      [
+        "an artifact hosted outside this repository",
+        validRelease({
+          artifacts: {
+            ...validRelease().artifacts,
+            windowsExe: {
+              url: "https://cdn.example.com/YES-Master-setup.exe",
+              sizeBytes: 1024,
+              sha256: "c".repeat(64),
+            },
+          },
+        }),
+        /windowsExe: url is not a/,
+      ],
+      [
+        "a missing checksum",
+        validRelease({
+          artifacts: {
+            ...validRelease().artifacts,
+            macUniversalDmg: {
+              url: `${validRelease().artifacts.macUniversalDmg!.url}`,
+              sizeBytes: 1024,
+              sha256: "not-a-digest",
+            },
+          },
+        }),
+        /macUniversalDmg: sha256/,
+      ],
+    ];
+
+    for (const [name, metadata, expected] of cases) {
+      const resolved = resolveRelease(metadata, DURING_BETA);
+      expect(resolved.available, `${name} should not activate`).toBe(false);
+      expect(resolved.downloads).toEqual([]);
+      expect(resolved.diagnostics.join(" ")).toMatch(expected);
+    }
+  });
+
+  it("rejects an active state without a coherent updater channel", () => {
+    // The shipped app reads GitHub's /releases/latest. A prerelease is invisible
+    // to that channel, so publishing one would give downloaders an app that can
+    // never update itself.
+    const prerelease = resolveRelease(
+      validRelease({ publication: "prerelease" }),
+      DURING_BETA,
+    );
+    expect(prerelease.available).toBe(false);
+    expect(prerelease.diagnostics.join(" ")).toContain("prerelease");
+
+    const wrongChannel = resolveRelease(
+      validRelease({ updaterChannel: "nightly" }),
+      DURING_BETA,
+    );
+    expect(wrongChannel.available).toBe(false);
+    expect(wrongChannel.diagnostics.join(" ")).toContain("incoherent");
+  });
+
+  it("rejects verification that predates the build it claims to cover", () => {
+    const resolved = resolveRelease(
+      validRelease({ publishedAt: "2026-08-01", verifiedAt: "2026-07-30" }),
+      DURING_BETA,
+    );
+    expect(resolved.available).toBe(false);
+    expect(resolved.diagnostics.join(" ")).toContain("predates");
+  });
+
+  it("keeps drafts closed and never leaks that a draft exists", () => {
+    // GitHub's /latest channel cannot see drafts (KTD3). S-B1: creating a draft
+    // must not open the landing page.
+    const resolved = resolveRelease(
+      validRelease({ publication: "draft" }),
+      DURING_BETA,
+    );
+    expect(resolved.state).toBe("draft-proof");
+    expect(resolved.available).toBe(false);
+    expect(resolved.downloads).toEqual([]);
+    expect(resolved.reason.toLowerCase()).not.toContain("draft");
+    expect(resolved.diagnostics.join(" ")).toContain("draft");
+  });
+
+  it("closes the download once the beta window has passed", () => {
+    const resolved = resolveRelease(
+      validRelease(),
+      new Date("2027-01-01T00:00:00Z"),
+    );
+    expect(resolved.available).toBe(false);
+    expect(resolved.reasonCode).toBe("beta-ended");
+    expect(resolved.state).toBe("unavailable");
+  });
+
+  it("treats malformed metadata exactly like absent metadata", () => {
+    const malformed = [
+      undefined,
+      "0.9.1" as unknown as ReleaseMetadata,
+      { version: "0.9.1" } as unknown as ReleaseMetadata,
+      validRelease({ publication: "shipped" as never }),
+      validRelease({ publishedAt: "2026-02-31" }),
+      validRelease({ releaseUrl: "https://example.com/downloads" }),
+    ];
+    for (const metadata of malformed) {
+      const resolved = resolveRelease(metadata as never, DURING_BETA);
+      expect(resolved.available).toBe(false);
+      expect(resolved.downloads).toEqual([]);
+      expect(resolved.diagnostics.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("never renders internal state as visitor-facing copy", () => {
+    const states: Array<ReleaseMetadata | null> = [
+      null,
+      validRelease({ publication: "draft" }),
+      validRelease({ publication: "prerelease" }),
+      validRelease({ verifiedAt: null }),
+      validRelease({ publication: "withdrawn" }),
+    ];
+    for (const metadata of states) {
+      const { reason } = resolveRelease(metadata, DURING_BETA);
+      expect(reason.length).toBeGreaterThan(0);
+      // Present tense, no roadmap, no build detail — docs/landing-brief.md.
+      for (const banned of [
+        /draft/i,
+        /prerelease/i,
+        /unverified/i,
+        /candidate/i,
+        /coming soon/i,
+        /\bwill be\b/i,
+        /\d+\.\d+\.\d+/,
+      ]) {
+        expect(reason, `reason leaked ${banned}`).not.toMatch(banned);
+      }
+    }
+  });
+
+  it("guesses the platform without ever excluding the other one", () => {
+    expect(detectPlatform({ platform: "Win32" })).toBe("windows");
+    expect(detectPlatform({ userAgentData: { platform: "Windows" } })).toBe(
+      "windows",
+    );
+    expect(detectPlatform({ platform: "MacIntel" })).toBe("mac");
+    expect(detectPlatform({ userAgent: "Mozilla/5.0 (Macintosh; ...)" })).toBe(
+      "mac",
+    );
+    expect(detectPlatform({ platform: "Linux x86_64" })).toBe("other");
+    expect(detectPlatform(undefined)).toBe("other");
+
+    // iPads report a Mac-shaped platform string. Handing a tablet visitor the
+    // desktop .dmg as "your" download would be a lie in the honest direction's
+    // opposite.
+    expect(detectPlatform({ platform: "iPad", userAgent: "Macintosh" })).toBe(
+      "other",
+    );
+    expect(
+      detectPlatform({ userAgent: "Mozilla/5.0 (Linux; Android 14)" }),
+    ).toBe("other");
+
+    // Detection can only ever be a hint: the resolver hands over both
+    // downloads regardless of what it returns.
+    const resolved = resolveRelease(validRelease(), DURING_BETA);
+    expect(resolved.downloads).toHaveLength(2);
   });
 });
