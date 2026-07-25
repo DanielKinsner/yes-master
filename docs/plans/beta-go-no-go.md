@@ -162,6 +162,15 @@ is post-beta advisory under D16.
 | 2026-07-25 | U10 | `e4b5117` | WSL2 Ubuntu / Chromium 149 | same `dist/` | S-E1 rapid A/B — 6 alternating switches, Volume Match toggled mid-run | browser-headless | PASS — playhead **0.15 → 1.356 monotonic** across all six switches (no rewind), `aria-pressed="true"` on the requested side every time (no stalled direction), no stale "still preparing" error after. **Closing owner remains U15** — this cannot judge how the switch sounds. | `summary.json` → `scenarios[].driverPayload` |
 | 2026-07-25 | U10 | `e4b5117` | Windows 11 / rustc 1.95.0, run against this WSL checkout | source `0.9.0` | `cargo test --lib` | native-synthetic | PASS — 418 passed, 0 failed, 2 ignored. **All 9 preset byte-identity snapshots pass unchanged** (`universal`, `clarity`, `warmth`, `punch`, `oomph`, `tape`, `spatial`, `loud`, `custom`) — the mechanical proof that a chunk of UI work moved no sound. | `src-tauri/` |
 | 2026-07-25 | U10 | `e4b5117` | Windows 11 / rustc 1.95.0 | — | `cargo test --lib export_name_suggestion` | native-synthetic | PASS — S-F3's native half: first free of `name.wav` / `name-2.wav` / `-3`, extension preserved, extensionless names suffixed rather than clobbered. | `src-tauri/src/exports.rs` |
+| 2026-07-25 | U11 | `1d5ffaf` | WSL2 Ubuntu / Node 24 | source `0.9.0` | `npm test`, `npm run build` | frontend-unit | PASS — 67 files, 626 tests, 3 skipped; build clean. 9 new delight-constraint tests. **Three guards verified by injection:** deleting a reduced-motion opt-out, adding `height` to a keyframe, and removing the verdict re-key each turn their test red. | `src/App.delight.test.tsx` |
+| 2026-07-25 | U11 | `1d5ffaf` | WSL2 Ubuntu / Playwright bundled Chromium 149.0.7827.55 | `dist/` from source `0.9.0` | `npm run verify:headless` | **browser-headless** | PASS — **24** scenario/viewport checks (19 + 5 reduced-motion). Reduced-motion passes run the SAME assertions with `reducedMotion: "reduce"`, so a state that only reads correctly with motion enabled fails. Motion-end and reduced-motion screenshots both written. | `test-output/headless/2026-07-25T18-49-10-282Z/` |
+| 2026-07-25 | U11 | `1d5ffaf` | Windows 11 / rustc 1.95.0, run against this WSL checkout | source `0.9.0` | `cargo test --lib` | native-synthetic | PASS — 418 passed, 0 failed, 2 ignored. **All 9 preset byte-identity snapshots pass unchanged** — re-checked after U11 because the rule is to check it every time, not only when the change looks DSP-adjacent. | `src-tauri/` |
+
+> **Scope note on the two 2026-07-25 rows above.** The lanes were run on the
+> tree at `1d5ffaf`; the commit that follows (`docs(beta): C2 complete`) is
+> documentation only and touches no source, test, or script. Stated here rather
+> than left for a reader to infer, per this ledger's own rule that a green
+> result from a different tree is not evidence.
 
 ### Candidate freeze
 

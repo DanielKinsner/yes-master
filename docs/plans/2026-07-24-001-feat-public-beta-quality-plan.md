@@ -446,7 +446,7 @@ anchor for a later session.
 | U13 | C2 | Complete | `dd60697` | **Hostile bounds — a real defect fixed.** Manual per-band compressor overrides had `finite_or` (NaN/Inf safe) but **no upper bound**; an enormous *finite* value from a hand-edited/corrupted `.ams.json` produced **non-finite audio from sample 0**. Now clamped to the current UI ranges (threshold −60..0 dB, ratio 1..20, attack 0.5..200 ms, release 5..2000 ms) in the **manual branch only**, so the preset path is structurally untouched — plus a guard test proving all 8 factory presets already sit inside those bounds, so even a manual fallback is a no-op. Compatibility pinned as **preserved in file, clamped at execution** (load neither rewrites nor rejects). **Characterization — pre-registered, then read.** Metric/thresholds/partitions/holdout committed before any adaptive number was computed; metric is the *inherited* `character_distance`, not a new one. 5 source classes (neutral/bright/boomy/dense + `wide` holdout), each set to genuinely cross its real guardrail deadband. **Result: min pairwise distance 1.509** (bright tightest; holdout 1.604) vs a 1.2 pin threshold → floor pinned at the **candidate** 1.0, deliberately not at the observed value. **Finding for U15:** Universal↔Clarity is the closest pair in 4 of 5 classes (Universal↔Spatial on the wide holdout) — that is what to listen to. No DSP constant, preset, target, limiter, Volume Match, or audition timing changed; snapshots + fingerprint golden pass unchanged. |
 | U9 | C2 | Complete | `ce8e276` | **Both Intensity knobs shipped with no accessible name at all** — `label=""` becomes `aria-label=""`, which is not a name. Fixed via a new `ariaLabel` prop on `Knob`, plus `aria-valuetext` so the control announces "50 percent, Moderate" instead of "0.5", plus an optional `disabledReason` rendered as associated text. Advanced preset tiles gained `aria-pressed` (selected state was a CSS class only) and `aria-describedby` → the character blurb, which was previously reachable only by hovering. Quality-check rows in both lists (source check + export review) had severity in an `aria-hidden` glyph and the explanation in a tooltip; both are now real text. Added a `.sr-only` utility. 8 new tests in `src/App.a11y-semantics.test.tsx`, all querying by **role and accessible name**; **7 of 8 verified red against the pre-U9 source**. One existing assertion in `App.chrome.test.tsx` was re-measured (visible text vs raw DOM text) — the visual criterion is unchanged in strictness and a new a11y-tree assertion was added alongside it. Installed NVDA/VoiceOver remains a U15 gate. |
 | U10 | C2 | Complete | `e182cfb`, `d4d3fcb`, `29aa9bd`, `b2d2115`, `f6458be`, `cb50f6c`, `b398e54`, `f46ef71`, `a5d6f0a`, `e4b5117` | **First pass (`e182cfb`…`29aa9bd`):** `1 tracks` plural; album sequence overview sourced from the backend's own `plan_album`; compact sequence arc that draws nothing rather than inventing a curve; flow + `Flow Amount ×1.00` in plain language; album title placeholder no longer clips; long filenames wrap; one-track album explained; Follow/Override as a real segmented choice; every disabled primary action states its reason accessibly; export-cancel proven not to claim success. **Second pass closes the four carried-forward items.** (a) **Duplicate audit — three real duplicates found and fixed, not zero.** DUP-1: the pre-export review gate rendered inline, so every warning appeared TWICE in one rail (label, detail, and a REVIEW badge each) — now a modal with the standing rail `inert` behind it, because a scrim alone leaves the second copy in the tab order and the a11y tree. DUP-2: `ExportReceiptCard` was a visual modal with no dialog semantics, so its quality rows and the rail's EXPORT CHECK rows sat in the a11y tree together. DUP-3: an `★` override mark duplicated the "Overrides" sequence chip in the same album row. Ownership table added to `docs/APP_BEHAVIOR.md` (11 facts), pinned by `src/App.warning-ownership.test.tsx` — **6 tests, all verified red against pre-fix source**. (b) **Verified:** overwrite-avoidance and save/reload recovery text were already proven and were re-run; two real gaps closed — receipt REVEAL was untested on both receipts (added, incl. per-row targets for multi-file receipts, negative-controlled by injecting `reveal(paths[0])`), and a FAILED export had no retry proof (added: plain-language message, raw cause kept, no fabricated receipt, `isExporting` released, second attempt succeeds). (c) **Reachability** is now a distinct lane check (`mustReach`): scroll into view, then assert real layout box + inside viewport + topmost at its own centre. Delivery Format and the Export action across `clean`/`long-copy`/all album scenarios at both sizes, geometry recorded in `summary.json`. **The check was wrong first time** and the negative control caught it — accepting `topmost.contains(el)` passed an injected cover while Playwright's click on the same button timed out. (d) **S-D1/S-E1/S-F1/S-F2/S-F3 instantiated as named cases**; `scenarioCoverage` in `summary.json` makes the set checkable. Building S-E1 **found a real defect**: Advanced's Original/Mastered toggle announced selection by CSS class alone (no `aria-pressed`) and explained its disabled state only on hover — Standard's equivalent got both in U9/U10, the Advanced one was missed twice (`a5d6f0a`). |
-| U11 | C2 | Not started | — | — |
+| U11 | C2 | Complete with findings | `98f2498`, `1d5ffaf` | **Three effects added, each with a named purpose stated at its definition; nothing else.** ORIENTATION — overlay entrance for the export receipt and the review gate (both became full-screen modals in U10a; appearing instantly at full opacity reads as a glitch). ORIENTATION — the album sequence arc settles when its shape changes, keyed on the computed points so an unchanged plan does nothing and the effect can never imply a change that did not happen. COMPREHENSION — the SAFE/REVIEW verdict badge, which previously flipped in silence, keyed on the verdict so ordinary re-renders do not fire it. Each has a reduced-motion opt-out **on top of** the pre-existing global kill switch, and none animates a reflowing property. **9 frontend tests + 5 reduced-motion scenario/viewport checks**; three guards verified red by injection (deleted opt-out; `height` in a keyframe; removed re-key). Headless 19 → **24** checks, with `*-reduced-motion-*.png` as the motion-end equivalents. **FINDINGS — deliberately not done, recorded rather than silently dropped:** (1) **no new acknowledgment for preset/Intensity changes.** Those are already audible (the chain updates live) and the surfaces already carry state via `aria-pressed` + selected styling; adding motion under a knob sweep is the same hazard the unit names for rapid A/B, so the effect was removed rather than argued about. (2) **import/drop, analysis progress/completion, Mastered readiness, save/undo already have acknowledgments** (drop overlay, AnalysisOrb + staged progress + waveform morph, hint chip + guide pulse, `landing-note`, project-feedback toast, `std-export-done`); they were audited, not re-decorated. (3) **The visual-consistency pass across all nine states is NOT closed by an agent.** Screenshots for empty/ready/review/exporting/receipt/Album/error states exist in `test-output/headless/<ts>/app/`, in both motion modes for three of them — but judging them against the three brand adjectives is taste, and taste is the owner's. Carried to U15 as a review item. (4) **Reorder/selection motion not added** — the unit permits it only "where it preserves sequence orientation", and moving rows under a user who is mid-reorder is the likeliest way to lose exactly that; no effect was added rather than shipping a questionable one. |
 | U4 | C3 | Not started | — | — |
 | U5 | C3 | Not started | — | — |
 | U6 | C3 | Not started | — | — |
@@ -464,16 +464,19 @@ Status values: `Not started`, `In progress`, `Complete`, `Complete with
 findings` (acceptance met, but something was found and recorded rather than
 fixed), `Blocked` (only for a hard stop — never for a queued owner question).
 
-### Session state — 2026-07-24 (read this first when resuming)
+### Session state — 2026-07-25 (read this first when resuming)
 
-**Where things stand.** C1 is closed (U1, U2, U3, U12). C2 is **partially
-done**: U13 and U9 are complete, U10 is substantially done but deliberately
-**not** ticked, and U11 has not started. Everything is committed and pushed to
-`main` — the candidate freeze is **NOT** in force, so `main` is open.
+**Where things stand. C1 and C2 are both CLOSED.** C1: U1, U2, U3, U12. C2:
+U13, U9, U10, U11 — U11 is `Complete with findings`, and its findings are
+listed in its ledger row rather than folded away. Everything is committed and
+pushed to `main`. The candidate freeze is **NOT** in force, so `main` is open.
 
-**Resume at U10**, finishing its four open acceptance items (listed in its
-ledger row), then U11. U11 depends on U10 in the dependency graph; starting it
-on an open U10 is the wrong order.
+**Resume at C3 (U4, U5, U6, U7, U8).** U7 and U8 were gated on U10 and U11;
+both are now done, so nothing in C3 is blocked. U4/U5/U6 carry no C2
+dependency and can be interleaved. C3 is where public copy gets written, so
+**read `docs/OWNER_INPUT_QUEUE.md` first** — its first three rows (founder
+window, newsletter provider, beta end date) start to bite there, and the
+conservative default for each is already in place.
 
 **Verified vs claimed.** Everything ticked above was verified by running it, and
 the commit messages quote the output. Specifically proved rather than assumed:
@@ -484,6 +487,25 @@ fix; and the preset byte-identity snapshots plus the fingerprint tolerance
 golden pass unchanged after every DSP-adjacent change, which is the mechanical
 proof no sound moved.
 
+**What the 2026-07-25 session added to that list.** Six new tests for U10(a)
+were each confirmed red against pre-fix source; the U10(c) reachability check
+was itself proved wrong by its own negative control and fixed; the U11 guards
+were each turned red by injection. Two defects were found by BUILDING the
+checks rather than by reading the code — the three simultaneous warning
+duplicates, and Advanced's A/B toggle announcing selection by colour alone.
+That is the argument for writing the check before believing the tick.
+
+**Where the Rust lane ran.** This machine is WSL2 with no Rust toolchain. The
+native lanes were run from the Windows toolchain (rustc 1.95.0) against this
+same checkout over `\\wsl.localhost\...`, with a Windows-side `--target-dir`.
+Results are real and are recorded that way in the go/no-go ledger. A future
+session on this box can use the same route instead of concluding the Rust lane
+is unavailable.
+
+**Still owner-gated, untouched:** the Adaptive Compressor, Phase-B confidence,
+and album character all remain OFF. No preset, limiter, loudness target, Volume
+Match, or audition timing value was changed anywhere in C1 or C2.
+
 **What a new machine will NOT have.** `private-audio-fixtures/` (117 MB) and
 `tests for presets/` (330 MB) are gitignored private audio, per the
 non-negotiables. Without them the slow fixture lane
@@ -491,13 +513,12 @@ non-negotiables. Without them the slow fixture lane
 lane that gates CI — frontend, headless web, Rust, both bridges — uses synthetic
 fixtures only and runs anywhere.
 
-**Owner-gated, untouched:** the Adaptive Compressor, Phase-B confidence, and
-album character all remain OFF. No preset, limiter, loudness target, Volume
-Match, or audition timing value was changed anywhere in C1 or C2.
-
-**Open owner questions:** six rows in `docs/OWNER_INPUT_QUEUE.md`. None block
-C2 or C3 work; the first of them starts to matter at C3, where public copy gets
-written.
+**Open owner questions:** still the same six rows in
+`docs/OWNER_INPUT_QUEUE.md` — C2 added none, because nothing in it needed an
+answer only the owner could give. One item was carried FORWARD rather than
+queued: U11's visual-consistency pass across the nine states is a taste
+judgment, so it is a U15 review item with the screenshots already produced,
+not a question waiting in the queue.
 
 ### Resume protocol for a new session
 
