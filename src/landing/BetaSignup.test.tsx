@@ -83,7 +83,19 @@ it("unwired endpoint: controls disabled and a forced submit sends nothing", asyn
   const button = container.querySelector<HTMLButtonElement>("button[type=submit]");
   expect(input?.disabled).toBe(true);
   expect(button?.disabled).toBe(true);
-  expect(button?.textContent).toBe("Email updates opening soon");
+  // U6: the label used to read "Email updates opening soon". "Soon" is a
+  // roadmap word the landing brief bans, and no provider is selected, so
+  // "opening" promised a schedule for something undecided.
+  expect(button?.textContent).toBe("Email updates");
+  expect(container.textContent).not.toMatch(/soon/i);
+
+  // The inert control must not look like the live CTA, and must carry a
+  // visible, associated reason rather than a bare greyed-out button.
+  expect(button?.className).not.toContain("bg-gradient-to-b");
+  const reasonId = button?.getAttribute("aria-describedby");
+  expect(reasonId).toBeTruthy();
+  const reason = container.querySelector(`#${reasonId}`);
+  expect(reason?.textContent).toContain("Email updates are not open");
 
   // Even if the disabled attribute is stripped (devtools, extensions),
   // the submit handler itself must refuse to build a request.
@@ -110,7 +122,13 @@ it("wired endpoint: posts exactly the email field, urlencoded, then confirms", a
   // The body carries the email and nothing else — no tracking fields,
   // no metadata, exactly what the copy promises.
   expect(init.body).toBe(`email=${encodeURIComponent("dan+beta@example.com")}`);
-  expect(container.textContent).toContain("save your founder price");
+  // U6: this used to promise to "save your founder price" — the C-22
+  // entitlement whose terms are undecided (owner queue row 1). It was
+  // unreachable while the form is unwired, and would have shipped the moment a
+  // provider was wired. A test asserting an owner-blocked claim is worse than
+  // no test: it makes the claim look approved.
+  expect(container.textContent).toContain("You're on the list");
+  expect(container.textContent).not.toMatch(/founder price|keep \$29/i);
 });
 
 it("provider failure surfaces the error state instead of throwing", async () => {
