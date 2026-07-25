@@ -18,12 +18,66 @@ const matrix = [
   [360, 800],
 ];
 
+// `requiresNavAnchor` (added U6): the section must exist on the page, but not
+// every section earns a nav slot. #mobile deliberately lost its link — a parked,
+// unobtainable surface does not get top-level navigation — while still being
+// required to exist, because the one date-free sentence it carries is the
+// honest answer to a visitor who has seen the phone screens.
 const requiredSections = [
-  { id: "top", requiresMobileNavAnchor: true, requiresMobilePageAnchor: true },
-  { id: "mobile", requiresMobileNavAnchor: false, requiresMobilePageAnchor: false },
-  { id: "standard", requiresMobileNavAnchor: false, requiresMobilePageAnchor: false },
-  { id: "advanced", requiresMobileNavAnchor: false, requiresMobilePageAnchor: true },
-  { id: "get-started", requiresMobileNavAnchor: true, requiresMobilePageAnchor: true },
+  {
+    id: "top",
+    requiresNavAnchor: true,
+    requiresMobileNavAnchor: true,
+    requiresMobilePageAnchor: true,
+  },
+  {
+    id: "how",
+    requiresNavAnchor: true,
+    requiresMobileNavAnchor: false,
+    requiresMobilePageAnchor: false,
+  },
+  {
+    id: "standard",
+    requiresNavAnchor: false,
+    requiresMobileNavAnchor: false,
+    requiresMobilePageAnchor: false,
+  },
+  {
+    id: "advanced",
+    requiresNavAnchor: true,
+    requiresMobileNavAnchor: false,
+    requiresMobilePageAnchor: true,
+  },
+  {
+    id: "sound",
+    requiresNavAnchor: false,
+    requiresMobileNavAnchor: false,
+    requiresMobilePageAnchor: false,
+  },
+  {
+    id: "album",
+    requiresNavAnchor: true,
+    requiresMobileNavAnchor: false,
+    requiresMobilePageAnchor: false,
+  },
+  {
+    id: "beta",
+    requiresNavAnchor: true,
+    requiresMobileNavAnchor: false,
+    requiresMobilePageAnchor: false,
+  },
+  {
+    id: "mobile",
+    requiresNavAnchor: false,
+    requiresMobileNavAnchor: false,
+    requiresMobilePageAnchor: false,
+  },
+  {
+    id: "get-started",
+    requiresNavAnchor: true,
+    requiresMobileNavAnchor: true,
+    requiresMobilePageAnchor: true,
+  },
 ];
 const requiredSectionIds = requiredSections.map((section) => section.id);
 
@@ -129,7 +183,13 @@ for (const [width, height] of matrix) {
         "see exactly what it did",
         "One engine",
         "Stop chasing the master",
-        "Same engine",
+        // U6 replaced "Same engine, headed to iPhone & Android" (a schedule
+        // the product never committed to) with the one permitted date-free
+        // sentence. These four anchor the rewritten hierarchy.
+        "Finished mix in",
+        "It reads the track before it touches it",
+        "A record, not a folder of files",
+        "What you are actually agreeing to",
       ].every((text) => body.textContent?.includes(text)),
       // U5 / S-A1 / S-I1. Evaluated against the REAL deployed page, so this is
       // the browser-headless instance of "a visitor arrives before a verified
@@ -218,7 +278,7 @@ for (const [width, height] of matrix) {
   for (const section of requiredSections) {
     const href = `#${section.id}`;
     if (width >= 640) {
-      if (!visibleNavTargets.includes(href)) {
+      if (section.requiresNavAnchor && !visibleNavTargets.includes(href)) {
         failures.push(`${width}x${height}: desktop nav missing visible ${href} link`);
       }
     } else if (section.requiresMobileNavAnchor && !visibleNavTargets.includes(href)) {
@@ -227,7 +287,9 @@ for (const [width, height] of matrix) {
   }
   if (width < 640) {
     const phoneHiddenTargets = requiredSections
-      .filter((section) => !section.requiresMobileNavAnchor)
+      .filter(
+        (section) => section.requiresNavAnchor && !section.requiresMobileNavAnchor,
+      )
       .map((section) => `#${section.id}`);
     const visibleHiddenTargets = phoneHiddenTargets.filter((href) => visibleNavTargets.includes(href));
     if (visibleHiddenTargets.length > 0) {
@@ -287,6 +349,7 @@ for (const [width, height] of matrix) {
 
 function anchorsForWidth(width) {
   return requiredSections
+    .filter((section) => section.requiresNavAnchor)
     .filter((section) => width >= 640 || section.requiresMobilePageAnchor)
     .map((section) => `#${section.id}`);
 }

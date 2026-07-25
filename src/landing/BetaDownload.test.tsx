@@ -285,7 +285,7 @@ describe("BetaDownload — verified public release", () => {
 // ---------------------------------------------------------------------------
 
 describe("BetaDownload — invariant copy", () => {
-  it("states platform support honestly for mobile and Linux (S-I1)", async () => {
+  it("states platform support honestly (S-I1)", async () => {
     for (const metadata of [null, validRelease()]) {
       document.body.innerHTML = "";
       const el = await renderFor(metadata);
@@ -293,13 +293,15 @@ describe("BetaDownload — invariant copy", () => {
 
       expect(text).toContain("Windows + universal Mac");
       expect(text).toContain("no Linux build");
-      expect(text).toContain("iPhone and Android are not currently available");
 
-      // The mobile sentence is the landing brief's one roadmap exception and
-      // is allowed to exist only if it stays date-free.
+      // The mobile statement itself is made once, page-level, in the section
+      // directly above this component (U6) — repeating it here was a second
+      // instance of a claim the brief permits exactly once. What this
+      // component must never do is promise a mobile download of its own.
       expect(text).not.toMatch(/coming soon/i);
       expect(text).not.toMatch(/download for (iphone|android|ios)/i);
       expect(text).not.toMatch(/app store|google play/i);
+      expect(text).not.toMatch(/iphone|android/i);
     }
   });
 
