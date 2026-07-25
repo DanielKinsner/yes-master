@@ -1,7 +1,13 @@
 #!/usr/bin/env node
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { launchHeadless, runtimeStamp } from "./lib/headless-browser.mjs";
+
+const require = createRequire(import.meta.url);
+// axe-core is injected as a script rather than driven through a wrapper: one
+// dependency, no adapter to keep in sync, and the same source CI installs.
+const AXE_SOURCE = await readFile(require.resolve("axe-core/axe.min.js"), "utf8");
 
 const matrix = [
   [2560, 1440],
@@ -16,6 +22,10 @@ const matrix = [
   [430, 932],
   [390, 844],
   [360, 800],
+  // S-A3 names 320x568 explicitly and no other entry covered it, so the
+  // scenario could not pass as written. It is the smallest width still in
+  // real use and the one where a fixed nav plus a CTA runs out of room first.
+  [320, 568],
 ];
 
 // `requiresNavAnchor` (added U6): the section must exist on the page, but not
@@ -91,6 +101,10 @@ function stamp() {
 }
 
 const url = option("--url") ?? process.env.LANDING_URL ?? "http://127.0.0.1:5177/";
+// U8 — production smoke mode (for U17). Off by default: it makes real network
+// requests to third parties, which is exactly what you want against a deployed
+// URL and exactly what you do not want in a hermetic CI lane.
+const smoke = process.argv.includes("--smoke");
 const outDir =
   option("--out") ?? path.join("test-output", "landing-responsive", stamp());
 
@@ -114,6 +128,26 @@ page.on("console", (message) => {
 });
 page.on("pageerror", (error) => {
   pageErrors.push(error.message);
+});
+
+// U8: a request that fails is invisible in the DOM. A dead stylesheet, a 404
+// asset, or a blocked font degrades the page silently and no layout assertion
+// notices.
+const failedRequests = [];
+page.on("requestfailed", (request) => {
+  const failure = request.failure()?.errorText ?? "unknown";
+  // ERR_ABORTED is the browser CANCELLING a request it no longer wants, not a
+  // resource that is broken. The responsive hero (U7) produces one every time
+  // the viewport changes and a different srcset candidate wins: the in-flight
+  // fetch for the old candidate is dropped. Treating a cancellation as a
+  // failure would make the responsive-image work itself unshippable.
+  if (failure.includes("ERR_ABORTED")) return;
+  failedRequests.push({ url: request.url(), failure });
+});
+page.on("response", (response) => {
+  if (response.status() >= 400) {
+    failedRequests.push({ url: response.url(), failure: `HTTP ${response.status()}` });
+  }
 });
 
 for (const [width, height] of matrix) {
@@ -199,6 +233,121 @@ for (const [width, height] of matrix) {
         "A record, not a folder of files",
         "What you are actually agreeing to",
       ].every((text) => body.textContent?.includes(text)),
+      // U8 — quality signals that no layout metric covers.
+      quality: (() => {
+        const visible = (el) => {
+          if (!el) return false;
+          const rect = el.getBoundingClientRect();
+          const style = getComputedStyle(el);
+          return (
+            rect.width > 1 &&
+            rect.height > 1 &&
+            style.display !== "none" &&
+            style.visibility !== "hidden" &&
+            Number(style.opacity) > 0.05
+          );
+        };
+
+        // Primary acquisition action must be present and fully on screen at
+        // every width — a CTA clipped by the viewport edge is the single most
+        // expensive layout bug a landing page can have.
+        const navCta = document.querySelector('nav a[href="#get-started"]');
+        const navRect = navCta?.getBoundingClientRect();
+        const heroCta = document.querySelector(
+          '#top a[href="#get-started"]',
+        );
+        const heroRect = heroCta?.getBoundingClientRect();
+
+        // In-page targets must resolve. A nav link to a section that was
+        // renamed scrolls nowhere and looks like nothing happened.
+        const inPage = Array.from(document.querySelectorAll('a[href^="#"]'));
+        const deadAnchors = inPage
+          .map((a) => a.getAttribute("href"))
+          .filter((href) => href && href !== "#" && !document.getElementById(href.slice(1)));
+
+        // External links must be absolute https and carry rel on new tabs.
+        const external = Array.from(document.querySelectorAll('a[href^="http"]'));
+        const unsafeExternal = external
+          .filter(
+            (a) =>
+              !a.getAttribute("href").startsWith("https://") ||
+              (a.getAttribute("target") === "_blank" &&
+                !(a.getAttribute("rel") || "").includes("noreferrer")),
+          )
+          .map((a) => a.getAttribute("href"));
+
+        // Heading order: h1 exists, is unique, and no level is skipped.
+        const levels = Array.from(
+          document.querySelectorAll("h1,h2,h3,h4,h5,h6"),
+        ).map((h) => Number(h.tagName.slice(1)));
+        const headingJumps = [];
+        for (let i = 1; i < levels.length; i += 1) {
+          if (levels[i] - levels[i - 1] > 1) {
+            headingJumps.push(`h${levels[i - 1]} -> h${levels[i]}`);
+          }
+        }
+
+        // Touch targets. WCAG 2.5.8 asks 24px; 44px is the Apple/Material
+        // guidance and the one that actually feels right one-handed.
+        const interactive = Array.from(
+          document.querySelectorAll("a[href], button, input, select"),
+        ).filter(visible);
+        // WCAG 2.5.8 exempts a link that sits INLINE inside a sentence — its
+        // size is set by the prose around it and padding it out would wreck the
+        // paragraph. Standalone controls get no such exemption.
+        const inlineInText = (el) => {
+          const parent = el.parentElement;
+          if (!parent) return false;
+          if (!["P", "LI", "SPAN", "STRONG", "EM"].includes(parent.tagName)) return false;
+          return (parent.textContent || "").trim().length >
+            (el.textContent || "").trim().length + 8;
+        };
+        const smallTargets = interactive
+          .filter((el) => !inlineInText(el))
+          .filter((el) => {
+            const rect = el.getBoundingClientRect();
+            return Math.min(rect.width, rect.height) < 24;
+          })
+          .map((el) => `${el.tagName.toLowerCase()}:${(el.textContent || "").trim().slice(0, 24)}`);
+
+        return {
+          navCtaVisible: visible(navCta),
+          navCtaInViewport: Boolean(
+            navRect &&
+              navRect.left >= -1 &&
+              navRect.right <= window.innerWidth + 1,
+          ),
+          heroCtaVisible: visible(heroCta),
+          heroCtaInViewport: Boolean(
+            heroRect &&
+              heroRect.left >= -1 &&
+              heroRect.right <= window.innerWidth + 1,
+          ),
+          deadAnchors,
+          unsafeExternal,
+          headingCount: levels.length,
+          h1Count: levels.filter((l) => l === 1).length,
+          headingJumps,
+          smallTargets,
+          hasMainLandmark: Boolean(document.querySelector("main")),
+          skipLinkHref:
+            document.querySelector('a[href="#main"]')?.getAttribute("href") ??
+            null,
+          // Beta-state indexability (U8). Checked against release state below.
+          robots:
+            document
+              .querySelector('meta[name="robots"]')
+              ?.getAttribute("content") ?? null,
+          title: document.title,
+          description:
+            document
+              .querySelector('meta[name="description"]')
+              ?.getAttribute("content") ?? null,
+          canonical:
+            document.querySelector('link[rel="canonical"]')?.getAttribute("href") ??
+            null,
+        };
+      })(),
       // U5 / S-A1 / S-I1. Evaluated against the REAL deployed page, so this is
       // the browser-headless instance of "a visitor arrives before a verified
       // release exists". S-A2 (after one exists) has no real state to observe
@@ -249,8 +398,10 @@ for (const [width, height] of matrix) {
     .filter((section) => !section.present)
     .map((section) => section.id);
 
-  if (metrics.title !== "YES Master") {
-    failures.push(`${width}x${height}: unexpected title "${metrics.title}"`);
+  // U8 widened the title for search/share. It must still name the product
+  // first — a title that leads with a tagline is unrecognisable in a tab strip.
+  if (!metrics.title.startsWith("YES Master")) {
+    failures.push(`${width}x${height}: title must start with "YES Master", got "${metrics.title}"`);
   }
   if (metrics.horizontalOverflow) {
     failures.push(`${width}x${height}: horizontal overflow (${metrics.scrollWidth} > ${metrics.clientWidth})`);
@@ -352,6 +503,73 @@ for (const [width, height] of matrix) {
     }
   }
 
+  // U8 assertions on the quality block.
+  const q = metrics.quality;
+  if (!q.navCtaVisible || !q.navCtaInViewport) {
+    failures.push(
+      `${width}x${height}: nav acquisition CTA is not fully visible on screen`,
+    );
+  }
+  if (!q.heroCtaVisible || !q.heroCtaInViewport) {
+    failures.push(
+      `${width}x${height}: hero acquisition CTA is not fully visible on screen`,
+    );
+  }
+  if (q.deadAnchors.length > 0) {
+    failures.push(
+      `${width}x${height}: in-page links point at nothing: ${q.deadAnchors.join(", ")}`,
+    );
+  }
+  if (q.unsafeExternal.length > 0) {
+    failures.push(
+      `${width}x${height}: external links are not https or lack rel on _blank: ${q.unsafeExternal.join(", ")}`,
+    );
+  }
+  if (q.h1Count !== 1) {
+    failures.push(`${width}x${height}: expected exactly one h1, found ${q.h1Count}`);
+  }
+  if (q.headingJumps.length > 0) {
+    failures.push(
+      `${width}x${height}: heading levels skip (${q.headingJumps.join(", ")})`,
+    );
+  }
+  if (!q.hasMainLandmark) {
+    failures.push(`${width}x${height}: no <main> landmark`);
+  }
+  if (q.skipLinkHref !== "#main") {
+    failures.push(`${width}x${height}: no skip link targeting #main`);
+  }
+  // Only enforced where the pointer is a finger. On a desktop width the input
+  // is a mouse, and a 20px nav link is not a defect there — applying a touch
+  // rule to a mouse surface produces noise, and noisy gates get muted.
+  if (width < 640 && q.smallTargets.length > 0) {
+    failures.push(
+      `${width}x${height}: touch targets under 24px on a phone width: ${q.smallTargets.join(", ")}`,
+    );
+  }
+  if (!q.title || q.title.length < 12 || q.title.length > 70) {
+    failures.push(`${width}x${height}: page title is missing or a bad length ("${q.title}")`);
+  }
+  if (!q.description || q.description.length < 60) {
+    failures.push(`${width}x${height}: meta description missing or too short`);
+  }
+  if (!q.canonical?.startsWith("https://")) {
+    failures.push(`${width}x${height}: canonical URL missing or not https`);
+  }
+  // Indexability follows the beta state. While no verified release exists the
+  // page must not be indexed: search traffic would land on a page that cannot
+  // deliver what it describes. U17 removes this when it announces.
+  if (release?.state !== "verified-public" && !/noindex/.test(q.robots ?? "")) {
+    failures.push(
+      `${width}x${height}: release state is ${release?.state} but the page is indexable — expected a noindex robots meta until U17`,
+    );
+  }
+  if (release?.state === "verified-public" && /noindex/.test(q.robots ?? "")) {
+    failures.push(
+      `${width}x${height}: a verified release is live but the page is still noindex — U17 must remove it`,
+    );
+  }
+
   // U7: prove the lazy assets actually arrive. Deferring an image is only
   // correct if it still loads when the visitor reaches it — a lazy image that
   // never resolves is a broken image with better manners, and the check above
@@ -451,6 +669,211 @@ for (const [width, height] of [
   }
 }
 
+// ---------------------------------------------------------------------------
+// U8 — accessibility scan, keyboard path, and reduced motion.
+//
+// Scoped to two widths on purpose. axe is not free (~1-2s per run) and its
+// findings are overwhelmingly width-independent; running it twelve times would
+// buy repetition, not coverage. A desktop and a phone width is where the
+// layout-dependent rules (contrast over the hero, target size) actually differ.
+// ---------------------------------------------------------------------------
+const axeRuns = [];
+for (const [width, height] of [
+  [1440, 900],
+  [390, 844],
+]) {
+  await page.setViewportSize({ width, height });
+  await page.goto(url, { waitUntil: "networkidle" });
+  await page.addScriptTag({ content: AXE_SOURCE });
+  const result = await page.evaluate(async () =>
+    // WCAG 2.0/2.1 A and AA. Best-practice rules are deliberately excluded:
+    // they are opinions, and a gate that fails on an opinion gets disabled.
+    await window.axe.run(document, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
+    }),
+  );
+
+  const blocking = result.violations.filter((violation) =>
+    ["serious", "critical"].includes(violation.impact),
+  );
+  axeRuns.push({
+    width,
+    height,
+    violations: result.violations.map((violation) => ({
+      id: violation.id,
+      impact: violation.impact,
+      help: violation.help,
+      nodes: violation.nodes.length,
+      targets: violation.nodes.slice(0, 4).map((node) => node.target.join(" ")),
+    })),
+    blockingCount: blocking.length,
+    passes: result.passes.length,
+  });
+
+  for (const violation of blocking) {
+    failures.push(
+      `${width}x${height}: a11y ${violation.impact} — ${violation.id}: ${violation.help} ` +
+        `(${violation.nodes.length} node(s): ${violation.nodes
+          .slice(0, 3)
+          .map((node) => node.target.join(" "))
+          .join(" | ")})`,
+    );
+  }
+}
+
+// Keyboard-only acquisition. The skip link must be the first stop and must
+// become visible when focused; a skip link that stays invisible is a phantom
+// focus stop, which is worse than not having one.
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(url, { waitUntil: "networkidle" });
+await page.keyboard.press("Tab");
+const keyboard = await page.evaluate(() => {
+  const active = document.activeElement;
+  const rect = active?.getBoundingClientRect();
+  const style = active ? getComputedStyle(active) : null;
+  return {
+    tag: active?.tagName ?? null,
+    href: active?.getAttribute?.("href") ?? null,
+    text: active?.textContent?.trim() ?? null,
+    visible: Boolean(rect && rect.width > 1 && rect.height > 1),
+    // "Visible focus" means SOMETHING changes. A UA outline counts; nothing
+    // does not.
+    hasFocusIndicator: Boolean(
+      style &&
+        (style.outlineStyle !== "none" ||
+          Number.parseFloat(style.outlineWidth) > 0 ||
+          style.boxShadow !== "none"),
+    ),
+  };
+});
+if (keyboard.href !== "#main") {
+  failures.push(
+    `keyboard: first Tab stop is ${keyboard.tag}[href=${keyboard.href}], expected the skip link`,
+  );
+}
+if (!keyboard.visible) {
+  failures.push("keyboard: the skip link is not visible when focused");
+}
+if (!keyboard.hasFocusIndicator) {
+  failures.push("keyboard: focused skip link has no visible focus indicator");
+}
+
+// Tab all the way to the acquisition action without losing focus to nothing.
+let reachedCta = false;
+let lostFocus = null;
+for (let i = 0; i < 40 && !reachedCta; i += 1) {
+  const state = await page.evaluate(() => {
+    const active = document.activeElement;
+    return {
+      href: active?.getAttribute?.("href") ?? null,
+      isBody: active === document.body,
+      tag: active?.tagName ?? null,
+    };
+  });
+  if (state.isBody && i > 0) {
+    lostFocus = i;
+    break;
+  }
+  if (state.href === "#get-started") reachedCta = true;
+  else await page.keyboard.press("Tab");
+}
+if (!reachedCta) {
+  failures.push(
+    `keyboard: never reached the acquisition CTA within 40 tab stops${lostFocus ? ` (focus fell to <body> at stop ${lostFocus})` : ""}`,
+  );
+}
+
+// Reduced motion: the page must still say everything it says. Content that
+// only exists once an animation has run is content some visitors never get.
+const reducedContext = await browser.newContext({
+  viewport: { width: 1440, height: 900 },
+  reducedMotion: "reduce",
+});
+const reducedPage = await reducedContext.newPage();
+await reducedPage.goto(url, { waitUntil: "networkidle" });
+const reducedText = await reducedPage.evaluate(() => document.body.innerText);
+for (const required of [
+  "Finished mix in",
+  "It reads the track before it touches it",
+  "A record, not a folder of files",
+  "What you are actually agreeing to",
+  "The download is not open",
+]) {
+  if (!reducedText.includes(required)) {
+    failures.push(`reduced-motion: "${required}" is missing with motion disabled`);
+  }
+}
+await reducedPage.screenshot({
+  path: path.join(outDir, "1440x900-reduced-motion.png"),
+});
+await reducedContext.close();
+
+// 200% zoom. WCAG 1.4.4 asks that content stay usable at 200%, and the usual
+// answer is "recorded manual check" — which nobody repeats. Zooming the page
+// and re-measuring overflow is mechanical, so it runs every time.
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(url, { waitUntil: "networkidle" });
+await page.evaluate(() => {
+  document.documentElement.style.zoom = "200%";
+});
+await page.waitForTimeout(400);
+const zoomState = await page.evaluate(() => {
+  const doc = document.documentElement;
+  const cta = document.querySelector('nav a[href="#get-started"]');
+  const rect = cta?.getBoundingClientRect();
+  return {
+    horizontalOverflow:
+      Math.max(doc.scrollWidth, document.body.scrollWidth) > doc.clientWidth + 1,
+    scrollWidth: Math.max(doc.scrollWidth, document.body.scrollWidth),
+    clientWidth: doc.clientWidth,
+    ctaOnScreen: Boolean(rect && rect.left >= -1 && rect.right <= window.innerWidth + 1),
+  };
+});
+if (zoomState.horizontalOverflow) {
+  failures.push(
+    `200% zoom: horizontal overflow (${zoomState.scrollWidth} > ${zoomState.clientWidth})`,
+  );
+}
+if (!zoomState.ctaOnScreen) {
+  failures.push("200% zoom: the acquisition CTA is pushed off screen");
+}
+await page.evaluate(() => {
+  document.documentElement.style.zoom = "";
+});
+
+// Production smoke (U17): every outbound link must actually resolve. A release
+// or feedback URL that 404s is invisible locally — the markup is perfect and
+// the destination is gone.
+const linkChecks = [];
+if (smoke) {
+  await page.goto(url, { waitUntil: "networkidle" });
+  const outbound = await page.evaluate(() =>
+    [
+      ...new Set(
+        Array.from(document.querySelectorAll('a[href^="https://"]')).map((a) =>
+          a.getAttribute("href"),
+        ),
+      ),
+    ],
+  );
+  for (const target of outbound) {
+    let status = 0;
+    let error = null;
+    try {
+      const response = await fetch(target, { method: "GET", redirect: "follow" });
+      status = response.status;
+    } catch (cause) {
+      error = String(cause?.message ?? cause);
+    }
+    linkChecks.push({ url: target, status, error });
+    if (error || status >= 400) {
+      failures.push(
+        `smoke: outbound link is dead — ${target} (${error ?? `HTTP ${status}`})`,
+      );
+    }
+  }
+}
+
 const browserStamp = runtimeStamp(browser);
 await browser.close();
 
@@ -463,6 +886,9 @@ if (relevantConsoleMessages.length > 0) {
 }
 if (pageErrors.length > 0) {
   failures.push(`page errors: ${JSON.stringify(pageErrors)}`);
+}
+if (failedRequests.length > 0) {
+  failures.push(`failed requests: ${JSON.stringify(failedRequests)}`);
 }
 
 const summary = {
@@ -483,10 +909,16 @@ const summary = {
       "NOT observed here — needs a real draft release; injected-state case lives in src/lib/release-readiness.test.ts, closed by U16",
   },
   browser: browserStamp,
+  axe: axeRuns,
+  keyboard,
+  zoom200: zoomState,
+  smoke,
+  linkChecks,
   matrix: records,
   anchors: anchorRecords,
   consoleMessages,
   pageErrors,
+  failedRequests,
   failures,
 };
 

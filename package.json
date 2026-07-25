@@ -21,7 +21,8 @@
     "verify:headless": "node scripts/verify-headless.mjs",
     "capture:landing": "node scripts/capture-landing-assets.mjs",
     "verify:landing-assets": "node scripts/verify-landing-assets.mjs",
-    "optimize:landing-art": "node scripts/optimize-landing-art.mjs"
+    "optimize:landing-art": "node scripts/optimize-landing-art.mjs",
+    "verify:landing-smoke": "node scripts/verify-landing-responsive.mjs --smoke --url"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.1.1",
@@ -36,6 +37,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "axe-core": "^4.12.1",
     "jsdom": "^25.0.1",
     "playwright": "^1.61.0",
     "rimraf": "^6.1.3",

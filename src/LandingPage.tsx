@@ -34,7 +34,18 @@ import FinalCTA from "./landing/FinalCTA";
 export default function LandingPage() {
   return (
     <div className="min-h-svh bg-night text-ink">
+      {/* U8 — skip link. The nav is fixed and comes before everything, so a
+          keyboard or screen-reader visitor otherwise tabs the whole bar on
+          every page load. Visually hidden until focused, then it is the first
+          thing on screen rather than a phantom focus ring. */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:font-extrabold focus:text-night"
+      >
+        Skip to main content
+      </a>
       <Nav />
+      <main id="main">
       <Hero />
       <Workflow />
       <ProofDeck />
@@ -43,6 +54,7 @@ export default function LandingPage() {
       <BetaTerms />
       <CrossPlatform />
       <FinalCTA />
+      </main>
     </div>
   );
 }

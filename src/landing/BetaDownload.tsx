@@ -103,12 +103,16 @@ export default function BetaDownload({
         </a>
       </p>
 
-      <p className="mt-2 text-xs font-semibold text-muted">
+      {/* U8: this is the ONLY next action while the download is closed, and it
+          was a bare text link under 24px tall — the hardest thing to hit on the
+          page, and the thing a phone visitor most needs. Padded into a real
+          tap target rather than left as prose. */}
+      <p className="mt-2">
         <a
           href={release.secondary.url}
           target="_blank"
           rel="noreferrer"
-          className="underline"
+          className="inline-flex min-h-11 items-center justify-center px-3 py-2 text-xs font-semibold text-muted underline"
         >
           {release.secondary.label}
         </a>
