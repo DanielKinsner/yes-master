@@ -75,7 +75,9 @@ const SETTLE_TIMEOUT_MS = 20_000;
 const SCENARIOS = [
   {
     name: "empty",
-    purpose: "True first-run state: no session, no track, empty state visible.",
+    scenarioId: "S-D1",
+    purpose:
+      "S-D1 (no track): first-run state offers import and no impossible export.",
     viewports: [LAPTOP, MIN_DESKTOP],
     settle: "empty",
     mustContain: ["Drop audio. Hear it mastered.", "Import audio"],
@@ -84,7 +86,9 @@ const SCENARIOS = [
   },
   {
     name: "clean",
-    purpose: "Seeded single-track project analyses to a ready, warning-free state.",
+    scenarioId: "S-F1",
+    purpose:
+      "S-F1 (Advanced, clean): seeded single-track project reaches a ready, warning-free state.",
     viewports: [LAPTOP, MIN_DESKTOP],
     settle: "ready",
     mustContain: ["READY", "Original", "Mastered"],
@@ -94,8 +98,9 @@ const SCENARIOS = [
   },
   {
     name: "warning",
+    scenarioId: "S-F1",
     purpose:
-      "Export checks report a warning and a critical; both reach the review surface.",
+      "S-F1 (warnings): a warning and a critical both reach the review surface.",
     viewports: [LAPTOP],
     settle: "ready",
     drive: exportWithReview,
@@ -106,8 +111,9 @@ const SCENARIOS = [
   },
   {
     name: "long-copy",
+    scenarioId: "S-F1",
     purpose:
-      "Pathological filename length must not overflow or hide controls at the minimum size.",
+      "S-F1 (long copy): pathological filename length must not overflow or hide controls.",
     viewports: [LAPTOP, MIN_DESKTOP],
     settle: "ready",
     mustContain: ["READY"],
@@ -118,7 +124,8 @@ const SCENARIOS = [
   },
   {
     name: "export-success",
-    purpose: "Save dialog returns a path; the export completes.",
+    scenarioId: "S-F3",
+    purpose: "S-F3 (write): save dialog returns a path; the export completes.",
     viewports: [LAPTOP],
     settle: "ready",
     drive: exportWithReview,
@@ -126,8 +133,9 @@ const SCENARIOS = [
   },
   {
     name: "export-cancel",
+    scenarioId: "S-F3",
     purpose:
-      "Save dialog is cancelled; the UI must NOT claim the export succeeded.",
+      "S-F3 (no write): save dialog cancelled; the UI must NOT claim success.",
     viewports: [LAPTOP],
     settle: "ready",
     drive: exportWithReview,
@@ -143,7 +151,9 @@ const SCENARIOS = [
   },
   {
     name: "album-1",
-    purpose: "Album mode with a single track — the degenerate album case.",
+    scenarioId: "S-F2",
+    purpose:
+      "S-F2 (one track): album mode with a single track — the degenerate case.",
     viewports: [LAPTOP, MIN_DESKTOP],
     settle: "album",
     mustContain: ["ALBUM", "1 TRACK"],
@@ -151,7 +161,9 @@ const SCENARIOS = [
   },
   {
     name: "album-4",
-    purpose: "Album mode, four tracks, one overriding the album settings.",
+    scenarioId: "S-F2",
+    purpose:
+      "S-F2 (four tracks): follow/override states, ordering, and common settings.",
     viewports: [LAPTOP, MIN_DESKTOP],
     settle: "album",
     mustContain: ["ALBUM", "4 TRACKS", "ALBUM FLOW", "01 - Preview Track 1.wav"],
@@ -159,8 +171,9 @@ const SCENARIOS = [
   },
   {
     name: "album-12",
+    scenarioId: "S-F2",
     purpose:
-      "Album mode, twelve tracks — scrolling, reorder boundaries, selection retention.",
+      "S-F2 (twelve tracks): scrolling, reorder boundaries, selection retention.",
     viewports: [LAPTOP, MIN_DESKTOP],
     settle: "album",
     mustContain: ["ALBUM", "12 TRACKS", "12 - Preview Track 12.wav"],
@@ -171,8 +184,9 @@ const SCENARIOS = [
   },
   {
     name: "album-long",
+    scenarioId: "S-F2",
     purpose:
-      "Album mode with long track names and a long album title at the minimum size.",
+      "S-F2 (long names): full-name discovery must not depend on clipped labels.",
     viewports: [LAPTOP, MIN_DESKTOP],
     settle: "album",
     mustContain: ["ALBUM", "12 TRACKS"],
@@ -181,10 +195,84 @@ const SCENARIOS = [
   },
   {
     name: "album-warning",
-    purpose: "Album mode where export checks surface a warning.",
+    scenarioId: "S-F2",
+    purpose: "S-F2 (warnings): album mode where export checks surface a warning.",
     viewports: [LAPTOP],
     settle: "album",
     mustContain: ["ALBUM", "4 TRACKS"],
+  },
+  {
+    // S-E1 (plan scenario family). Proving unit U10; closing owner U15, whose
+    // listening pass judges what this cannot: how the switch SOUNDS.
+    // Reuses the `clean` preview state but is a distinct named case, so it
+    // carries its own label for screenshots and evidence records.
+    name: "clean",
+    label: "S-E1-rapid-ab",
+    scenarioId: "S-E1",
+    purpose:
+      "S-E1: analyze, then switch Original->Mastered, Mastered->Original, and " +
+      "rapidly in both directions with Volume Match off and on. Playhead is " +
+      "preserved; no directional stall, stale readiness error, or inconsistent state.",
+    viewports: [LAPTOP],
+    settle: "ready",
+    drive: rapidAbSwitching,
+    // A stale readiness error must not surface after the switches resolved.
+    mustNotContainAfterDrive: ["Mastered preview is still preparing"],
+    assert: async (page, report) => {
+      const run = await abRun(page);
+      if (!run) {
+        report("S-E1: the A/B run recorded nothing — the driver did not execute");
+        return;
+      }
+      if (!run.volumeMatchToggled) {
+        report(
+          "S-E1: Volume Match was never toggled, so only half the matrix ran — " +
+            "the control was not found",
+        );
+      }
+      // Without this the whole scenario is vacuous: a transport pinned at 0
+      // can never dip to 0, so every playhead assertion below would pass on a
+      // completely dead app.
+      if (typeof run.startPlayhead !== "number" || run.startPlayhead <= 0.05) {
+        report(
+          `S-E1: playback never started (playhead ${run.startPlayhead}) — the ` +
+            "switching run proves nothing about playhead preservation",
+        );
+      }
+      if (run.samples.length < 6) {
+        report(
+          `S-E1: only ${run.samples.length} of 6 switches completed — a direction stalled`,
+        );
+      }
+      if (run.samples.some((value) => value === null)) {
+        report(
+          "S-E1: the playhead was unreadable during switching — the waveform " +
+            "slider lost its aria-valuenow",
+        );
+      }
+      // The playhead must survive the switch. A reset to zero is the specific
+      // failure the scenario names ("no near-zero dip"): switching source is
+      // not supposed to rewind the track.
+      const dipped = run.samples.filter(
+        (value) => typeof value === "number" && value < 0.05,
+      );
+      if (run.startPlayhead !== null && run.startPlayhead > 0.05 && dipped.length > 0) {
+        report(
+          `S-E1: playhead dipped to ~0 during switching (started at ${run.startPlayhead}, ` +
+            `saw ${JSON.stringify(dipped)}) — the switch rewound the track`,
+        );
+      }
+      // Each switch must land on the side it was asked for. A null or "false"
+      // here is a stalled direction: the click was accepted, the state was not.
+      run.pressedStates.forEach((state, index) => {
+        if (state !== "true") {
+          report(
+            `S-E1: switch ${index + 1} (to ${index % 2 === 0 ? "Mastered" : "Original"}) ` +
+              `did not take — aria-pressed was ${state}`,
+          );
+        }
+      });
+    },
   },
 ];
 
@@ -260,6 +348,115 @@ async function exportWithReview(page) {
     // here -- the scenario's assertions decide whether it was correct.
   });
 }
+
+/**
+ * S-E1 — rapid Original/Mastered switching, both directions, Volume Match off
+ * and on.
+ *
+ * The scenario the plan names is not "does the toggle work" — that is covered
+ * by a single switch. It is what happens when a mastering engineer does what
+ * they actually do: flip back and forth quickly while listening, with Volume
+ * Match in either state. The failure modes it is looking for are a playhead
+ * that resets to zero, a direction that stalls (one way works, the other
+ * sticks), and a stale readiness error surfacing after the switch resolved.
+ *
+ * So: start playback, then flip 6 times alternating direction, toggling Volume
+ * Match halfway through, sampling the transport clock throughout. The
+ * scenario's assertions check what the run left behind.
+ */
+async function rapidAbSwitching(page) {
+  // The waveform mounts a moment AFTER the READY marker, and it is what
+  // publishes the playhead. Waiting for the marker alone samples a slider that
+  // does not exist yet and reports "unreadable" about a healthy app.
+  await page.waitForSelector('[role="slider"][aria-valuenow]', {
+    timeout: SETTLE_TIMEOUT_MS,
+  });
+
+  // Play is an icon button: its accessible name is an aria-label, and matching
+  // on text content finds nothing. A silently-missed click would leave the
+  // playhead pinned at 0 and make every "did it dip to zero" assertion vacuous,
+  // so this resolves by ROLE AND NAME and the scenario asserts playback
+  // actually started.
+  await page
+    .getByRole("button", { name: "Play", exact: true })
+    .first()
+    .click()
+    .catch(() => {});
+
+  // The playhead is published as aria-valuenow on the waveform slider — a real
+  // number the app already exposes, not a test-only hook. A null here means the
+  // slider is missing, and the scenario asserts on that rather than shrugging.
+  const readPlayhead = () =>
+    page.evaluate(() => {
+      const el = document.querySelector('[role="slider"][aria-valuenow]');
+      if (!el) return null;
+      const raw = el.getAttribute("aria-valuenow");
+      const value = raw === null ? NaN : Number(raw);
+      return Number.isFinite(value) ? value : null;
+    });
+
+  const original = page.locator("button", { hasText: /^Original$/ }).first();
+  const mastered = page.locator("button", { hasText: /^Mastered$/ }).first();
+
+  // Wait for the transport to actually move before switching. "Rapid A/B while
+  // playing" is the scenario; doing it against a stopped transport would prove
+  // something easier and less useful.
+  let startPlayhead = await readPlayhead();
+  const moveDeadline = Date.now() + 5_000;
+  while (Date.now() < moveDeadline) {
+    const now = await readPlayhead();
+    if (typeof now === "number" && now > 0.05) {
+      startPlayhead = now;
+      break;
+    }
+    await page.waitForTimeout(150);
+  }
+  const samples = [];
+  const pressedStates = [];
+  let volumeMatchToggled = false;
+
+  for (let i = 0; i < 6; i += 1) {
+    // Halfway through, flip Volume Match so both halves of the matrix are
+    // exercised inside one continuous switching run.
+    if (i === 3) {
+      const vm = page.locator("button", { hasText: /Volume Match/ }).first();
+      if ((await vm.count()) > 0) {
+        await vm.click().catch(() => {});
+        volumeMatchToggled = true;
+      }
+    }
+    const wantMastered = i % 2 === 0;
+    const target = wantMastered ? mastered : original;
+    if ((await target.count()) === 0) break;
+    await target.click().catch(() => {});
+    // Deliberately short — "rapid" is the point. Long enough for React to
+    // commit, far shorter than the mock's 2.5s landing window, so switches
+    // genuinely overlap in-flight work.
+    await page.waitForTimeout(120);
+    samples.push(await readPlayhead());
+    pressedStates.push(
+      await page.evaluate((want) => {
+        const label = want ? "Mastered" : "Original";
+        const btn = Array.from(document.querySelectorAll("button")).find(
+          (b) => (b.textContent ?? "").trim() === label,
+        );
+        return btn ? btn.getAttribute("aria-pressed") : null;
+      }, wantMastered),
+    );
+  }
+
+  // Handed to the scenario's assertions via the page, so the checks live with
+  // the scenario definition rather than buried in the driver.
+  await page.evaluate(
+    (payload) => {
+      window.__abRun = payload;
+    },
+    { startPlayhead, samples, pressedStates, volumeMatchToggled },
+  );
+}
+
+/** Read back what rapidAbSwitching recorded, for scenario assertions. */
+const abRun = (page) => page.evaluate(() => window.__abRun ?? null);
 
 async function waitForControl(page, pattern, description) {
   const deadline = Date.now() + SETTLE_TIMEOUT_MS;
@@ -432,14 +629,14 @@ function fail({ scenario, route, viewport, screenshot, message }) {
 }
 
 for (const scenario of SCENARIOS) {
+  // A scenario may reuse a preview state under its own name (e.g. the S-E1
+  // rapid-A/B case drives the `clean` state), so evidence is keyed by label.
+  const label = scenario.label ?? scenario.name;
   for (const [width, height] of scenario.viewports) {
     const viewportLabel = `${width}x${height}`;
     const route = `/app?scenario=${scenario.name}`;
     const url = `${baseUrl}${route}`;
-    const screenshot = path.join(
-      outDir,
-      `${scenario.name}-${viewportLabel}.png`,
-    );
+    const screenshot = path.join(outDir, `${label}-${viewportLabel}.png`);
 
     const context = await browser.newContext({ viewport: { width, height } });
     const page = await context.newPage();
@@ -494,7 +691,7 @@ for (const scenario of SCENARIOS) {
 
       const report = (message) =>
         fail({
-          scenario: scenario.name,
+          scenario: label,
           route,
           viewport: viewportLabel,
           screenshot,
@@ -502,7 +699,7 @@ for (const scenario of SCENARIOS) {
         });
 
       // Deliberate self-test hook.
-      if (forceFailScenario === scenario.name) {
+      if (forceFailScenario === label || forceFailScenario === scenario.name) {
         report("forced assertion failure (--force-fail)");
       }
 
@@ -584,6 +781,18 @@ for (const scenario of SCENARIOS) {
           );
         }
       }
+
+      // Scenario-specific assertions that need more than text matching.
+      let driverPayload = null;
+      if (scenario.assert) {
+        await scenario.assert(page, report);
+        // Whatever the driver recorded travels into the evidence file, so a
+        // pass is a measurement someone can read rather than the absence of a
+        // complaint.
+        driverPayload = await page
+          .evaluate(() => window.__abRun ?? null)
+          .catch(() => null);
+      }
       if (consoleMessages.length > 0) {
         report(`console errors/warnings: ${JSON.stringify(consoleMessages)}`);
       }
@@ -592,13 +801,16 @@ for (const scenario of SCENARIOS) {
       }
 
       records.push({
-        scenario: scenario.name,
+        scenario: label,
+        scenarioId: scenario.scenarioId ?? null,
+        previewState: scenario.name,
         purpose: scenario.purpose,
         route,
         viewport: viewportLabel,
         screenshot,
         metrics,
         reachability: reachRecords,
+        driverPayload,
         consoleMessages,
         pageErrors,
       });
@@ -634,6 +846,20 @@ await writeFile(
         pattern: String(entry.pattern),
         reason: entry.reason,
       })),
+      // U10(d) — which plan scenario families this run actually covered, so
+      // "the set is closed" can be checked against a file instead of asserted
+      // from memory. Scenario IDs map to the traceability table in
+      // docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md.
+      scenarioCoverage: Object.fromEntries(
+        [...new Set(records.map((r) => r.scenarioId).filter(Boolean))]
+          .sort()
+          .map((id) => [
+            id,
+            records
+              .filter((r) => r.scenarioId === id)
+              .map((r) => `${r.scenario}@${r.viewport}`),
+          ]),
+      ),
       scenarios: records,
       failures,
     },
