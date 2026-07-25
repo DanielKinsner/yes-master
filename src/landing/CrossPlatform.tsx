@@ -1,58 +1,38 @@
-import iphoneImg from "../assets/landing/iphone-standard-ui.jpg";
-
-// Compact feature list shown beside the phone.
-const features = [
-  { title: "A/B in sync", body: "Original vs Mastered with volume match." },
-  { title: "Four styles", body: "Universal, Clarity, Tape, Oomph." },
-  { title: "Intensity control", body: "Subtle to pushed." },
-  { title: "Real-time meters", body: "LUFS, true peak, and gain reduction." },
-  { title: "Quality checks", body: "Instant feedback." },
-  { title: "No upload, no wait", body: "Runs on your device, so every change is instant." },
-];
-
+// U6 — mobile, reduced to what the canon actually permits.
+//
+// This section used to be the SECOND thing on the page: "Coming to your
+// pocket", "Same engine, headed to iPhone & Android", "coming after launch", a
+// phone screenshot, and six present-tense feature cards. Three problems, all
+// recorded in docs/CAPABILITY_EVIDENCE_MATRIX.md:
+//
+//   C-15  "coming after launch" is a schedule the product has not committed to.
+//   C-16  Six feature cards read as a product a visitor can obtain. They
+//         cannot obtain it. The engine sharing is true; the availability
+//         implication is not.
+//   C-17  A mobile screenshot sitting next to desktop beta proof is forbidden
+//         by R7, and this asset has no capture-commit binding. Removed rather
+//         than relabelled — U7 owns asset provenance and can reinstate a bound,
+//         labelled version if it earns its place.
+//
+// docs/landing-brief.md "Mobile status" allows exactly one restrained,
+// date-free sentence, and calls it the single deliberate exception to the
+// no-roadmap rule: saying nothing at all would be less honest than "not yet"
+// for a visitor who has seen the phone screens. Anything more is out of bounds.
+// Do not grow this section back.
 export default function CrossPlatform() {
   return (
     <section
       id="mobile"
-      className="border-t border-white/10 bg-night px-5 py-20 sm:px-8 sm:py-24"
+      className="border-t border-white/10 bg-night px-5 py-14 sm:px-8"
     >
-      <div className="mx-auto max-w-6xl">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-black uppercase tracking-wide text-brand-soft">
-            Coming to your pocket
-          </p>
-          <h2 className="mt-4 font-display text-3xl font-black leading-tight sm:text-5xl">
-            Same engine, headed to iPhone &amp; Android.
-          </h2>
-          <p className="mt-4 text-muted sm:text-lg">
-            Desktop first. The mobile companions share the exact same engine —
-            coming after launch.
-          </p>
-        </div>
-
-        <div className="mt-12 grid items-center gap-10 md:grid-cols-2 md:gap-14">
-          <div className="flex justify-center">
-            <img
-              src={iphoneImg}
-              alt="YES Master running on iPhone"
-              className="w-56 rounded-[2rem] border border-white/15 shadow-2xl sm:w-64"
-            />
-          </div>
-
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {features.map((feature) => (
-              <li
-                key={feature.title}
-                className="rounded-xl border border-line bg-card/60 p-4"
-              >
-                <h3 className="font-display text-base font-extrabold text-ink">
-                  {feature.title}
-                </h3>
-                <p className="mt-1 text-sm text-muted">{feature.body}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
+      <div className="mx-auto max-w-2xl text-center">
+        <h2 className="font-display text-xl font-black leading-tight sm:text-2xl">
+          Desktop is the product.
+        </h2>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          YES Master runs on Windows and macOS. iPhone and Android are not
+          currently available.
+        </p>
       </div>
     </section>
   );

@@ -24,9 +24,14 @@ export default function FinalCTA() {
         </div>
 
         <BetaSignup />
+        {/* C-22 removed. "Beta testers keep $29 forever" is an entitlement
+            promise, not a price: R24 makes the founder window a time-limited
+            launch window whose duration and terms are undecided
+            (docs/OWNER_INPUT_QUEUE.md row 1). The $29 → $49 model itself is
+            settled canon and now lives once, in the beta terms section, rather
+            than being restated here as a closing nudge. */}
         <p className="mt-4 text-xs font-semibold text-muted">
-          Free during the beta. When it launches it's a one-time $29 (then $49)
-          — beta testers keep $29 forever. Mac &amp; Windows.
+          Free during the beta. Mac &amp; Windows.
         </p>
       </div>
     </section>

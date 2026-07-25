@@ -1,6 +1,12 @@
 import standardImg from "../assets/landing/desktop-standard-ui.png";
 import advancedImg from "../assets/landing/desktop-advanced-ui.png";
 
+// U6 / claim C-07. These numbers are hand-authored and always were. They were
+// previously rendered as if they were product output, with nothing marking
+// them as illustrative — plausible, but not a measurement of anything. Until
+// U7 sources them from a deterministic capture bound to a commit, the block
+// carries an explicit "Example" label. A fabricated measurement presented as a
+// real one is the exact failure the evidence matrix exists to catch.
 const receipt: Array<[string, string, boolean]> = [
   ["Delivered LUFS", "-11.0 LUFS", false],
   ["True Peak", "-0.8 dBTP", false],
@@ -31,9 +37,16 @@ export default function ProofDeck() {
             <h3 className="mt-3 font-display text-2xl font-black">
               One click from finished to mastered.
             </h3>
+            {/* C-07 note above applies to the receipt block; this paragraph is
+                claim C-05. "True-peak safe, every time" was an absolute
+                guarantee the product deliberately does not make — you are
+                allowed to overcook a track and get an advisory warning instead
+                of a refusal. Narrowed to the fixed format and the ceiling the
+                limiter targets, both of which are real. */}
             <p className="mt-3 text-sm leading-relaxed text-muted">
-              Pick a style. Pick a loudness. Create Master. You get a clean
-              44.1 kHz / 24-bit WAV, true-peak safe, every time.
+              Pick a style. Pick a loudness. Create Master. You get a fixed
+              44.1 kHz / 24-bit WAV with the limiter's ceiling set to −1 dBTP —
+              and a measurement of what actually came out.
             </p>
             <img
               src={standardImg}
@@ -67,7 +80,10 @@ export default function ProofDeck() {
               Every master ships with a receipt: delivered LUFS, true peak,
               dynamic range, and quality checks. No guesswork.
             </p>
-            <dl className="mt-5 divide-y divide-white/10 rounded-lg border border-line bg-night/40 px-4">
+            <p className="mt-5 text-xs font-black uppercase tracking-wide text-muted">
+              Example receipt
+            </p>
+            <dl className="mt-2 divide-y divide-white/10 rounded-lg border border-line bg-night/40 px-4">
               {receipt.map(([label, value, good]) => (
                 <div key={label} className="flex justify-between py-3 text-sm">
                   <dt className="text-muted">{label}</dt>

@@ -1,12 +1,20 @@
 import brandIcon from "../assets/landing/yes-master-icon.png";
 
+import { resolveRelease, type ResolvedRelease } from "./release-config";
+
+// U6. "Mobile" is deliberately NOT a nav item any more: a parked, unobtainable
+// surface does not get top-level navigation. It keeps its section and its one
+// date-free sentence further down the page.
 const links = [
-  { label: "Standard", href: "#standard" },
+  { label: "How it works", href: "#how" },
   { label: "Advanced", href: "#advanced" },
-  { label: "Mobile", href: "#mobile" },
+  { label: "Album", href: "#album" },
+  { label: "Beta", href: "#beta" },
 ];
 
-export default function Nav() {
+export default function Nav({
+  release = resolveRelease(),
+}: { release?: ResolvedRelease } = {}) {
   return (
     <nav className="fixed inset-x-0 top-0 z-50 flex items-center justify-between gap-3 border-b border-white/10 bg-night/70 px-5 py-3 backdrop-blur-md sm:px-8">
       <a
@@ -32,7 +40,10 @@ export default function Nav() {
           href="#get-started"
           className="rounded-lg bg-gradient-to-b from-cta-light to-cta-deep px-4 py-2 font-extrabold text-[#1c0d00]"
         >
-          Download free beta
+          {/* Anchors to the section that tells the truth about availability,
+              so this is never a dead download — but it must not promise one
+              either while the release is closed (U5). */}
+          {release.available ? "Download free beta" : "About the beta"}
         </a>
       </div>
     </nav>

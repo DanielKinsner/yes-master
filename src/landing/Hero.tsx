@@ -2,6 +2,7 @@ import heroBg from "../assets/landing/hero-control-room-studio.jpg";
 import iconLocal from "../assets/landing/icon-local-first.png";
 import iconRealtime from "../assets/landing/icon-realtime.png";
 import iconRelease from "../assets/landing/icon-release-ready.png";
+import { resolveRelease, type ResolvedRelease } from "./release-config";
 
 // The three proof points. Edit the words here; the layout stays the same.
 const points = [
@@ -22,7 +23,13 @@ const points = [
   },
 ];
 
-export default function Hero() {
+// The hero CTA is an in-page anchor, so it can never be a dead download — but
+// a button reading "Download free beta" while the download is closed is still
+// a promise the next section has to take back. U5 made availability real
+// state; the label follows it.
+export default function Hero({
+  release = resolveRelease(),
+}: { release?: ResolvedRelease } = {}) {
   return (
     <section id="top" className="relative isolate min-h-svh overflow-hidden">
       {/* Background: the studio + app photo. object-cover crops, never stretches. */}
@@ -53,8 +60,9 @@ export default function Hero() {
         </h1>
 
         <p className="max-w-[440px] text-base leading-snug text-muted sm:text-lg">
-          Drop a track, pick a vibe, and hear the full mastering chain as you
-          listen. No upload, no waiting, no black box.
+          Drop a track, pick a sound, and hear the full mastering chain as you
+          listen. It reads what your mix already has and eases its own moves to
+          fit. No upload, no waiting, no black box.
         </p>
 
         <ul className="flex flex-col gap-5">
@@ -81,7 +89,7 @@ export default function Hero() {
             href="#get-started"
             className="inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-b from-cta-light to-cta-deep px-5 py-3 font-extrabold text-[#1c0d00] shadow-lg shadow-cta-deep/30 sm:w-auto"
           >
-            Download free beta
+            {release.available ? "Download free beta" : "About the free beta"}
           </a>
           <a
             href="#advanced"

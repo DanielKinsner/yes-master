@@ -82,9 +82,12 @@ export default function BetaDownload({
         No email required · Windows + universal Mac · Hosted on GitHub Releases
       </p>
 
+      {/* U6: the mobile statement is made ONCE, in the section directly above
+          this one — docs/landing-brief.md permits exactly one restrained,
+          date-free sentence and this component was repeating it. What belongs
+          here is what the download itself covers. */}
       <p className="mx-auto mt-2 max-w-lg text-xs leading-relaxed text-muted">
-        There is no Linux build, and iPhone and Android are not currently
-        available.
+        Desktop only — there is no Linux build.
       </p>
 
       <p className="mx-auto mt-2 max-w-lg text-xs leading-relaxed text-muted">
