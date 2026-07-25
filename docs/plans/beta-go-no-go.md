@@ -166,11 +166,13 @@ is post-beta advisory under D16.
 | 2026-07-25 | U11 | `1d5ffaf` | WSL2 Ubuntu / Playwright bundled Chromium 149.0.7827.55 | `dist/` from source `0.9.0` | `npm run verify:headless` | **browser-headless** | PASS — **24** scenario/viewport checks (19 + 5 reduced-motion). Reduced-motion passes run the SAME assertions with `reducedMotion: "reduce"`, so a state that only reads correctly with motion enabled fails. Motion-end and reduced-motion screenshots both written. | `test-output/headless/2026-07-25T18-49-10-282Z/` |
 | 2026-07-25 | U11 | `1d5ffaf` | Windows 11 / rustc 1.95.0, run against this WSL checkout | source `0.9.0` | `cargo test --lib` | native-synthetic | PASS — 418 passed, 0 failed, 2 ignored. **All 9 preset byte-identity snapshots pass unchanged** — re-checked after U11 because the rule is to check it every time, not only when the change looks DSP-adjacent. | `src-tauri/` |
 
-> **Scope note on the two 2026-07-25 rows above.** The lanes were run on the
-> tree at `1d5ffaf`; the commit that follows (`docs(beta): C2 complete`) is
-> documentation only and touches no source, test, or script. Stated here rather
-> than left for a reader to infer, per this ledger's own rule that a green
-> result from a different tree is not evidence.
+| 2026-07-25 | U11 | `e2440b1` | WSL2 Ubuntu / Chromium 149 | `dist/` from source `0.9.0` | **visual pass** — read the 1360×740 and 1440×900 screenshots by eye, then re-render after fixing | browser-headless | **2 DEFECTS FOUND AND FIXED** (`0c69f67`), both invisible to every automated assertion on that viewport: the workspace title clamp was gated behind `min-height: 820px` so it was OFF at the supported 740px-tall minimum (long filename wrapped to 8 lines, pushing transport/waveform off-screen); and the sticky export mask was transparent where the TOOLS row sits, so Delivery Format scrolled through it. Re-render confirms both clean. 2 regression tests; `npm test` 628 passed. | `test-output/headless/2026-07-25T19-20-23-046Z/` |
+
+> **Scope note on the 2026-07-25 rows above.** The U10/U11 lanes were run on the
+> tree at `1d5ffaf`; `docs(beta): C2 complete` is documentation only and touches
+> no source, test, or script. The visual-pass row and its fixes are at
+> `0c69f67`/`e2440b1`, after it. Stated rather than left to inference, per this
+> ledger's own rule that a green result from a different tree is not evidence.
 
 ### Candidate freeze
 
