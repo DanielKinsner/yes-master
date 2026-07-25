@@ -109,6 +109,47 @@ builds remain usable after the user accepts SmartScreen.
 The workflow uses the current `artifact-signing-cli`. It signs only when the
 complete Azure group exists and fails on a partial group.
 
+## Activating the landing download (added 2026-07-25, U5)
+
+Publishing a release does **not** turn the landing page's download on. The page
+renders from `src/landing/release-config.ts`, where `RELEASE_METADATA` ships as
+`null`. Until it is populated with a release that passes every check below, the
+page shows an inactive action and a plain reason, and points at the releases
+index rather than `/releases/latest`.
+
+This split is deliberate. `/releases/latest` 404s until a full non-draft release
+exists, and nothing in the build, the test suite, or the deploy notices a link
+that is only dead in production — which is exactly how the old CTA survived.
+
+`resolveRelease()` activates the download only when **all** of these hold:
+
+| Requirement | Why it gates the download |
+|---|---|
+| `publication` is `published` | Drafts and prereleases are invisible to GitHub's `/releases/latest`, so a downloader would get an app that can never update itself. |
+| `updaterChannel` is `latest` | Must match the channel baked into the shipped app. |
+| `betaEndsAt` is a real date, still in the future | A time-boxed beta with no stated end is a promise that cannot be kept. An expired window closes the download again on its own. |
+| `verifiedAt` is set and is **not** earlier than `publishedAt` | Verification that predates publication verified a different build. |
+| A `.exe` and a universal `.dmg`, both hosted under this repository's releases | An artifact URL pointing at any other host is a supply-chain hole, not a config option. |
+| Each artifact has a positive byte size and a 64-character SHA-256 | The size is shown to the visitor before they commit to the download; the digest is what `SHA256SUMS.txt` is checked against. |
+
+Anything missing, malformed, or stale resolves to unavailable. There is no
+partial state and no override.
+
+**Owner procedure once a release is published and verified:**
+
+1. Publish the release (owner action — see the $0 release path above).
+2. Record the two artifact URLs, byte sizes, and SHA-256 digests from
+   `SHA256SUMS.txt`.
+3. Set the beta end date. It is an owner decision and is tracked in
+   `docs/OWNER_INPUT_QUEUE.md`; until it is answered the download stays closed
+   even with a perfect release.
+4. Populate `RELEASE_METADATA`, run `npm test` and `npm run verify:headless`,
+   and confirm the landing lane now reports `verified-public`.
+5. Deploy (U17).
+
+Do not populate `RELEASE_METADATA` to "make the button work". Editing that
+constant is what publishes a download to the public.
+
 ## Intentionally out of scope
 
 - Linux launch artifacts.

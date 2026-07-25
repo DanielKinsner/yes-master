@@ -54,6 +54,23 @@ npx playwright install --with-deps chromium
 **A missing browser fails the lane.** This is a gate; a gate that skips itself
 when a dependency is absent reports green and is worse than nothing.
 
+**Landing release state (added U5).** At every viewport the landing suite
+asserts that no anchor on the page links to `/releases/latest`, that the
+`[data-release-state]` host exists, and — while no release is verified — that
+zero download actions are rendered, an inactive action is present, and its
+reason is *visibly painted* (non-zero box, not `display:none`/`hidden`/
+transparent) and associated via `aria-describedby`. It also fails if the
+visitor-facing reason contains `draft`, `unverified`, or `candidate`: the
+five-state release model is internal, and leaking it is a build-detail
+violation of `docs/landing-brief.md`.
+
+This lane observes **S-A1** and **S-I1** on the real page. It cannot observe
+**S-A2** (needs a verified release) or **S-B1** (needs a real draft); those are
+injected-state cases in `src/landing/BetaDownload.test.tsx` and
+`src/lib/release-readiness.test.ts`, and `summary.json` carries a
+`scenarioCoverage` map that says so explicitly — so a green run is never
+mistaken for coverage it does not have.
+
 **`/app` preview scenarios.** Deterministic states selected with
 `?scenario=<name>` (see `PREVIEW_SCENARIOS` in `src/lib/preview-mock.ts`):
 `clean`, `empty`, `warning`, `long-copy`, `export-success`, `export-cancel`,
