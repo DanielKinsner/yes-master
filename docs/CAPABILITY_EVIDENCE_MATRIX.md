@@ -25,9 +25,13 @@ from shipping; this table can.
 
 ## Status at U1
 
-This is an audit of the landing surface **as it stands today**, not a record of
-completed work. Nothing in the Qualify/Remove/Owner rows has been changed yet —
-U5, U6 and U7 execute them. U1's job was to make the list exist and be honest.
+This began as an audit of the landing surface, not a record of completed work.
+U5 executed the release/download rows (C-10, C-11) and U6 executed the copy
+rows (C-05, C-07 label, C-15, C-16, C-17, C-22) and added C-27 through C-34 for
+the sections the rewrite introduced. Rows still marked **Qualify**, **Owner**,
+or **Missing** have not been executed; U7 owns the remaining asset provenance
+work. A row's status is the current verdict, and the date in an "Applied" cell
+says when it stopped being a to-do.
 
 ---
 
@@ -53,9 +57,9 @@ U5, U6 and U7 execute them. U1's job was to make the list exist and be honest.
 | C-12 | "No email required" | `BetaDownload.tsx` | Proved | D5 / D16: download is ungated. `BetaSignup.test.tsx` pins the form as optional and safe-disabled. | U4 |
 | C-13 | "Hosted on GitHub Releases" | `BetaDownload.tsx` | Proved | `release.yml`; KTD3. | U5 |
 | C-14 | "Early beta installers are not yet backed by paid publisher certificates, so Windows or macOS may ask you to confirm that you trust the download." | `BetaDownload.tsx` | Proved | D16; `docs/RELEASE_SIGNING_SETUP.md`. This is a correctly-qualified claim and is the model for the rest. | U5 |
-| C-15 | "Coming to your pocket" / "Same engine, headed to iPhone & Android." / "coming after launch" | `CrossPlatform.tsx` | **Qualify** | Mobile is **parked** (D9, D15, KTD9) and has no owner-approved release date. "Coming after launch" is a roadmap promise the product has not committed to. Restate as not currently available, with no implied schedule. See the canon conflict note below. | U6 |
-| C-16 | Six present-tense mobile feature claims — "A/B in sync", "Four styles", "Intensity control", "Real-time meters", "Quality checks", "No upload, no wait" | `CrossPlatform.tsx` `features` | **Qualify** | Each is *mechanically* true of the built bridges (`docs/PRODUCT.md` Mobile Companions; iPhone `ContentView.swift` four-preset picker). But they read as a feature list for a product a visitor can obtain, and they cannot. Present them as what the shared engine already does on the bridges, not as an available product. | U6 |
-| C-17 | iPhone screenshot (`iphone-standard-ui.jpg`) presented adjacent to desktop beta proof | `CrossPlatform.tsx` | **Qualify** | R7 forbids a mobile UI image standing as current desktop-beta proof, and this asset has no capture-commit binding. Needs the U7 manifest treatment or an explicit non-current label. | U7 |
+| C-15 | ~~"Coming to your pocket" / "Same engine, headed to iPhone & Android." / "coming after launch"~~ → **"iPhone and Android are not currently available."** | `CrossPlatform.tsx` | **Applied (U6, 2026-07-25)** | Mobile is **parked** (D9, D15, KTD9) and has no owner-approved release date. "Coming after launch" is a roadmap promise the product has not committed to. Restate as not currently available, with no implied schedule. See the canon conflict note below. | U6 |
+| C-16 | ~~Six present-tense mobile feature claims — "A/B in sync", "Four styles", "Intensity control", "Real-time meters", "Quality checks", "No upload, no wait"~~ → **removed entirely** | `CrossPlatform.tsx` | **Applied (U6, 2026-07-25)** | Each is *mechanically* true of the built bridges (`docs/PRODUCT.md` Mobile Companions; iPhone `ContentView.swift` four-preset picker). But they read as a feature list for a product a visitor can obtain, and they cannot. Present them as what the shared engine already does on the bridges, not as an available product. | U6 |
+| C-17 | ~~iPhone screenshot (`iphone-standard-ui.jpg`) presented adjacent to desktop beta proof~~ → **removed from the page** | (no longer published) | **Applied (U6, 2026-07-25)** | R7 forbids a mobile UI image standing as current desktop-beta proof, and this asset has no capture-commit binding. Needs the U7 manifest treatment or an explicit non-current label. | U7 |
 | C-18 | "Mac & Windows." | `FinalCTA.tsx` footnote | Proved | D1: beta ships Mac + Windows together. | U6 |
 
 ## C — Pricing and beta-promise claims
@@ -69,6 +73,14 @@ U5, U6 and U7 execute them. U1's job was to make the list exist and be honest.
 | C-24 | "Optional email updates" signup | `FinalCTA.tsx` / `BetaSignup.tsx` | **Owner** | No provider selected; `SIGNUP_ENDPOINT = ""` and the form is safe-disabled (pinned by `BetaSignup.test.tsx`). Conservative default holds. → owner queue row 2. | U4 |
 | C-25 | Beta-end behavior — installers withdrawn, installed builds keep working, no kill switch (R26/KTD13) | not yet stated publicly | **Missing** | Settled policy with no public surface yet. Must appear in the beta guide. | U4 |
 | C-26 | GitHub account required to file structured feedback (R19/KTD4) | not yet stated publicly | **Missing** | Settled policy with no public surface yet. Must be disclosed *before* the handoff to GitHub, not after. | U4 |
+| C-27 | "It reads what your mix already has and eases its own moves to fit" / "adds impact where the material can take it" | `Hero.tsx`, `SoundCharacter.tsx` | Proved | `docs/PRODUCT.md` "Adaptive Mastering": loudness landing uses current track/render measurements, and a resolved source profile drives **reduce-only** Tier-1 guardrails weighted by per-axis confidence. Shipped and owner-listened 2026-06-11. Deliberately framed as restraint, never as rescue — already-processed input is a normal case, not a failure. | U6 |
+| C-28 | "a 44.1 kHz / 24-bit WAV with the limiter's ceiling at −1 dBTP" (Workflow + Standard card) | `Workflow.tsx`, `ProofDeck.tsx` | Proved | `docs/PRODUCT.md` line 55 / "Standard exports a fixed, known-safe default: 44.1 kHz / 24-bit WAV at −1 dBTP". Replaces C-05's absolute "true-peak safe, every time". | U6 |
+| C-29 | "Styles are starting points, not lanes" — every style runs the same loudness landing and safety stages; Intensity spans subtle to pushed | `SoundCharacter.tsx` | Proved | `docs/PRODUCT.md` "Loudness And Safety" (creative controls bold, export/quality stages measure and surface); preset set pinned by `preset_fingerprint.rs`; Intensity is a shipped control with its own a11y tests (U9). | U6 |
+| C-30 | Album: one loudness across the record, one delivery format, a receipt per track, per-track override, nothing silently altered | `AlbumProof.tsx` | Proved | `docs/PRODUCT.md` "Album Master" — owner-defined promise (2026-07-03), plus album-wide format with mixed-rate resampling, mixed mono/stereo resolution, per-track override, per-track receipts. Album UI acceptance closed in U10. | U6 |
+| C-31 | "It does not produce DDP images, cue sheets, or ISRC metadata, and it does not guarantee gapless playback." | `AlbumProof.tsx` | Proved | `docs/PRODUCT.md` "Album Master": these are **explicitly out of scope for v1**. Stated on the page because a reader who sees "album" will otherwise assume them. | U6 |
+| C-32 | "Telling us things is optional … Nothing is held back from anyone who never does." | `BetaTerms.tsx` | Proved | R19; `docs/BETA_TESTING.md` states the same promise (U4). The two surfaces must not disagree. | U6 |
+| C-33 | "a build you already installed keeps working. There is no kill switch and nothing expires on your machine." | `BetaTerms.tsx` | Proved | R26 / KTD13 — settled beta-end policy. Also stated in `docs/BETA_TESTING.md` (U4); this is C-25's landing-page instance. | U6 |
+| C-34 | "At launch YES Master is a one-time purchase: a $29 founder price, $49 standard." + "not a subscription" | `BetaTerms.tsx` | Proved *as a business model* | `docs/PRODUCT.md` "Distribution & Business Model": a single perpetual license, **$29 founder → $49 standard, one-time purchase (no subscription)**. The **window's** dates/duration/entitlement remain owner-blocked (C-22, owner queue row 1) and are explicitly not claimed. | U6 |
 
 ---
 

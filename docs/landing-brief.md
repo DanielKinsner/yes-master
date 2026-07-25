@@ -110,6 +110,36 @@ it exists because saying nothing at all about mobile would be *less* honest than
 saying "not yet" — a visitor who has seen the mobile screens should not be left
 guessing. Anything beyond one date-free sentence is out of bounds.
 
+## Page order (added 2026-07-25, U6)
+
+The sequence is the argument, not a layout preference. A visitor gets one
+hierarchy, and each section answers the question the previous one raises:
+
+1. **Hero** (`#top`) — the problem and the outcome.
+2. **Workflow** (`#how`) — what you actually do: three decisions.
+3. **Proof deck** (`#standard` / `#advanced`) — Standard as the hero, Advanced
+   as the depth, a receipt as the evidence.
+4. **Sound character** (`#sound`) — the styles, and adaptive restraint.
+5. **Album** (`#album`) — proof that the depth is real. Deliberately low.
+6. **Beta terms** (`#beta`) — the arrangement, stated before anyone downloads.
+7. **Mobile** (`#mobile`) — the one date-free sentence permitted below.
+8. **Final action** (`#get-started`) — the download, rendered from real release
+   state (`src/landing/release-config.ts`, U5).
+
+**Do not move Mobile back up.** It previously sat second, directly under the
+hero, with a phone screenshot and six present-tense feature cards — a product
+no visitor can obtain, occupying the page's most valuable position.
+
+**Album stays low.** Album-minded creators are inside the primary audience, not
+a second one; leading with a record-length workflow misrepresents what most
+visitors came to do, which is finish one track.
+
+**Audience order** (settled): independent artists finishing their own records
+first, creators releasing their first few tracks second, engineers who want the
+whole console third. Describe who it fits — never what anyone lacks. "Broke",
+"amateur", and "nonprofessional" are banned, and so is any framing that treats
+an already-processed track as a rescue case.
+
 ## Hard rules for generation
 
 - **Present tense only** — describe what it *is*, never what it *will be*. The
