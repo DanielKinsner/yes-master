@@ -168,6 +168,18 @@ is post-beta advisory under D16.
 
 | 2026-07-25 | U11 | `e2440b1` | WSL2 Ubuntu / Chromium 149 | `dist/` from source `0.9.0` | **visual pass** — read the 1360×740 and 1440×900 screenshots by eye, then re-render after fixing | browser-headless | **2 DEFECTS FOUND AND FIXED** (`0c69f67`), both invisible to every automated assertion on that viewport: the workspace title clamp was gated behind `min-height: 820px` so it was OFF at the supported 740px-tall minimum (long filename wrapped to 8 lines, pushing transport/waveform off-screen); and the sticky export mask was transparent where the TOOLS row sits, so Delivery Format scrolled through it. Re-render confirms both clean. 2 regression tests; `npm test` 628 passed. | `test-output/headless/2026-07-25T19-20-23-046Z/` |
 
+| 2026-07-25 | U4 | `85d35f6` | WSL2 Ubuntu / Node 22, **vitest 4.1.9** | source `0.9.0` | `npm test`, `npm run build`, `npm run verify:headless` | frontend-unit + browser-headless | PASS — 68 files, 651 tests, 3 skipped; build clean; headless 24/24. 23 new tests parse both issue forms as **real YAML**. Negative-controlled: demoting the privacy block, dropping a required flag, and adding Linux to the OS list each turn a test red. | `src/lib/beta-feedback-contract.test.ts` |
+| 2026-07-25 | U4 | `85d35f6` | WSL2 Ubuntu / Node 22 | `package-lock.json`, `dist/` | `npm audit`; build-output comparison with and without the new devDependency | frontend-unit | PASS — `yaml` 2.9.0 added as a **dev**Dependency (zero own dependencies). `npm audit` reports **0 vulnerabilities**; runtime dependency surface untouched; `dist/assets` **identical** with and without it, proven by building both ways rather than assumed from "it's dev-only". | commit diff |
+
+> **⚠ Toolchain correction (2026-07-25).** The `npm ci` run during the check
+> above replaced a stale installed **vitest 2.1.9** with the **4.1.9** that
+> `package.json` and the lockfile have both specified throughout. Every green
+> frontend run recorded earlier in this session executed on 2.1.9. The suite
+> passes on 4.1.9 (68 files / 651 tests) and the headless lane is green, so
+> nothing was concealed — but rows dated before this one were produced on a
+> runner that did not match the lockfile, and that is the kind of thing this
+> ledger exists to say out loud.
+
 > **Scope note on the 2026-07-25 rows above.** The U10/U11 lanes were run on the
 > tree at `1d5ffaf`; `docs(beta): C2 complete` is documentation only and touches
 > no source, test, or script. The visual-pass row and its fixes are at
