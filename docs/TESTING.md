@@ -67,6 +67,31 @@ turns the lane red instead of producing noise nobody reads. Deliberately
 unsupported native-only behavior (`install_update`) is logged at *info* level
 with a named prefix and allowlisted in `scripts/verify-app-headless.mjs`.
 
+**Reachability (`mustReach`, added U10(c)).** A separate question from both
+"does the text exist" (`textContent`) and "does the page overflow sideways". A
+control can exist, in the DOM, at the bottom of a scroll container, underneath
+a sticky footer — present to every assertion and unreachable to every user. A
+`mustReach` target is scrolled into view and then checked three ways:
+
+1. it has a real layout box (non-zero width and height);
+2. after scrolling, that box is inside the viewport;
+3. it is the topmost element at its own centre — nothing is covering it.
+
+Check 3 is the one worth having, and it is easy to write wrongly. Reachable
+means the topmost element is the target **or a descendant** of it. Treating an
+*ancestor* as acceptable ("it contains the button, so we must have hit it")
+silently passes a `::after { inset: 0 }` sheet laid over a sticky export group:
+the pseudo-element is not a node, so `elementFromPoint` returns the element
+that generated it — the button's own parent. The first draft of this check did
+exactly that and reported green while Playwright's click on the same button
+timed out.
+
+Current targets: the Delivery Format card and the Export action (Export Master
+/ Export Album) in `clean`, `long-copy`, and every album scenario, at both
+1440×900 and 1360×740. Per-target geometry is recorded in `summary.json` under
+`reachability`, so a pass is a measurement rather than an absence of
+complaints. Failures name the coverer.
+
 **What this lane does NOT prove.** Native dialogs, real audio device behavior,
 installer signing, updater installation, and anything about how the product
 sounds. Those are the installed-machine and owner-listening layers. Browser

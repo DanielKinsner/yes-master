@@ -45,6 +45,24 @@ const forceFailScenario = option("--force-fail");
 const MIN_DESKTOP = [1360, 740];
 const LAPTOP = [1440, 900];
 
+// U10(c) reachability targets. The two the unit names explicitly, because both
+// live at the far end of a scroll container in a short viewport: Delivery
+// Format is the last rail card above the sticky export group, and Export Album
+// is the album mode's terminal action.
+const DELIVERY_FORMAT = {
+  label: "Delivery Format card",
+  selector: ".rail-card-format",
+};
+const EXPORT_ALBUM = {
+  label: "Export Album button",
+  selector: "button",
+  text: "Export Album",
+};
+const EXPORT_MASTER = {
+  label: "Export action",
+  selector: "button.right-rail-export",
+};
+
 // The preview's staged analysis runs 5 x 800ms. Settling is detected by
 // polling for a terminal state rather than sleeping a fixed amount, but this
 // bounds how long we are willing to wait for one.
@@ -72,6 +90,7 @@ const SCENARIOS = [
     mustContain: ["READY", "Original", "Mastered"],
     mustNotContain: ["Drop audio. Hear it mastered."],
     mustHaveControls: ["Export With Review", "Original", "Mastered"],
+    mustReach: [DELIVERY_FORMAT, EXPORT_MASTER],
   },
   {
     name: "warning",
@@ -93,6 +112,9 @@ const SCENARIOS = [
     settle: "ready",
     mustContain: ["READY"],
     mustHaveControls: ["Export With Review"],
+    // U10(c): long copy is exactly what pushes the lower rail cards down, so
+    // this is where "Delivery Format still reachable" is worth asking.
+    mustReach: [DELIVERY_FORMAT, EXPORT_MASTER],
   },
   {
     name: "export-success",
@@ -125,6 +147,7 @@ const SCENARIOS = [
     viewports: [LAPTOP, MIN_DESKTOP],
     settle: "album",
     mustContain: ["ALBUM", "1 TRACK"],
+    mustReach: [DELIVERY_FORMAT, EXPORT_ALBUM],
   },
   {
     name: "album-4",
@@ -132,6 +155,7 @@ const SCENARIOS = [
     viewports: [LAPTOP, MIN_DESKTOP],
     settle: "album",
     mustContain: ["ALBUM", "4 TRACKS", "ALBUM FLOW", "01 - Preview Track 1.wav"],
+    mustReach: [DELIVERY_FORMAT, EXPORT_ALBUM],
   },
   {
     name: "album-12",
@@ -141,6 +165,9 @@ const SCENARIOS = [
     settle: "album",
     mustContain: ["ALBUM", "12 TRACKS", "12 - Preview Track 12.wav"],
     checkAlbumRows: 12,
+    // U10(c): twelve rows is the case that pushes the album's terminal action
+    // furthest down the rail.
+    mustReach: [DELIVERY_FORMAT, EXPORT_ALBUM],
   },
   {
     name: "album-long",
@@ -150,6 +177,7 @@ const SCENARIOS = [
     settle: "album",
     mustContain: ["ALBUM", "12 TRACKS"],
     checkAlbumRows: 12,
+    mustReach: [DELIVERY_FORMAT, EXPORT_ALBUM],
   },
   {
     name: "album-warning",
@@ -269,6 +297,78 @@ const controlNames = (page) =>
       (element.getAttribute("aria-label") || element.textContent || "").trim(),
     ),
   );
+
+/**
+ * U10(c) — REACHABILITY, which is a different question from the two this lane
+ * already answered.
+ *
+ * `mustContainAfterDrive` (textContent) proves a thing EXISTS. `horizontal
+ * overflow` proves the page does not spill sideways. Neither proves a user at
+ * the minimum supported size can actually GET to a control: a card can exist,
+ * inside a scroll container, under a sticky footer, clipped by an ancestor
+ * with `overflow: hidden` and no scrollport of its own — present in the DOM,
+ * unreachable in the app.
+ *
+ * So this scrolls the element into view the way a user would and then asks the
+ * platform three questions that a purely-DOM check cannot:
+ *   1. does it have a real box (non-zero width and height)?
+ *   2. after scrolling, is that box inside the viewport?
+ *   3. is it the topmost thing at its own centre — i.e. nothing is covering it?
+ *
+ * (3) is the one that matters most, because a control hidden under a sticky
+ * export bar looks perfect in every DOM assertion ever written.
+ */
+async function reachability(page, target) {
+  return page.evaluate(({ selector, text }) => {
+    const candidates = Array.from(document.querySelectorAll(selector));
+    const el = text
+      ? candidates.find((node) =>
+          (node.textContent ?? "").replace(/\s+/g, " ").includes(text),
+        )
+      : candidates[0];
+    if (!el) return { found: false };
+
+    el.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });
+
+    const rect = el.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    const hasBox = rect.width > 0 && rect.height > 0;
+    const inViewport =
+      rect.top >= 0 && rect.left >= 0 && rect.bottom <= vh && rect.right <= vw;
+
+    // Probe the centre of the element. If something else is painted there, the
+    // control is covered and a click would land on the coverer.
+    //
+    // Reachable means the topmost element is the control ITSELF or something
+    // INSIDE it (its label, its icon). An ANCESTOR coming back topmost is a
+    // failure, not a pass: that is what a `::after { inset: 0 }` sheet over a
+    // sticky export group looks like — the pseudo-element is not a node, so
+    // elementFromPoint reports the element that generated it, which happens to
+    // be the button's own parent. Accepting `topmost.contains(el)` here made
+    // the check pass while Playwright's click on the same button timed out.
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const topmost = document.elementFromPoint(cx, cy);
+    const notCovered = !!topmost && (topmost === el || el.contains(topmost));
+
+    return {
+      found: true,
+      hasBox,
+      inViewport,
+      notCovered,
+      rect: {
+        top: Math.round(rect.top),
+        bottom: Math.round(rect.bottom),
+        height: Math.round(rect.height),
+      },
+      viewport: { width: vw, height: vh },
+      coveredBy: notCovered
+        ? null
+        : `${topmost?.tagName ?? "nothing"}.${topmost?.className ?? ""}`.slice(0, 120),
+    };
+  }, target);
+}
 
 /**
  * Wait until a named terminal marker appears in the page text.
@@ -455,6 +555,35 @@ for (const scenario of SCENARIOS) {
           `album row count is ${metrics.albumRowCount}, expected ${scenario.checkAlbumRows}`,
         );
       }
+
+      // U10(c) — reachability at the supported minimum size.
+      const reachRecords = [];
+      for (const target of scenario.mustReach ?? []) {
+        const result = await reachability(page, target);
+        reachRecords.push({ label: target.label, ...result });
+        if (!result.found) {
+          report(
+            `"${target.label}" not found (selector ${target.selector}${
+              target.text ? ` containing "${target.text}"` : ""
+            })`,
+          );
+          continue;
+        }
+        if (!result.hasBox) {
+          report(`"${target.label}" has no layout box — it renders to nothing`);
+        }
+        if (!result.inViewport) {
+          report(
+            `"${target.label}" cannot be scrolled into view at ${viewportLabel}: ` +
+              `box top=${result.rect.top} bottom=${result.rect.bottom} in a ${result.viewport.height}px viewport`,
+          );
+        }
+        if (!result.notCovered) {
+          report(
+            `"${target.label}" is covered at its centre by ${result.coveredBy} — a click would not reach it`,
+          );
+        }
+      }
       if (consoleMessages.length > 0) {
         report(`console errors/warnings: ${JSON.stringify(consoleMessages)}`);
       }
@@ -469,6 +598,7 @@ for (const scenario of SCENARIOS) {
         viewport: viewportLabel,
         screenshot,
         metrics,
+        reachability: reachRecords,
         consoleMessages,
         pageErrors,
       });
