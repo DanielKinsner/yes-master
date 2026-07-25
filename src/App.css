@@ -847,11 +847,8 @@ select {
   color: var(--text-2);
 }
 
-.override-mark {
-  margin-left: 0.4rem;
-  color: var(--accent-warm);
-  font-size: 0.85em;
-}
+/* .override-mark removed with its markup in U10(a) — the "Overrides" sequence
+   chip is the single owner of that fact now. */
 
 .track-remove {
   background: transparent;
@@ -4139,12 +4136,33 @@ button.primary:disabled {
   font-size: 0.78rem;
 }
 
+/* U10(a) — the review gate is a modal decision surface, not a second copy of
+   the QUALITY CHECK panel. The scrim is what stops the same warning being on
+   screen twice; `aria-modal` on the panel does the same job for screen
+   readers. */
+.export-review-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(7, 8, 13, 0.72);
+  backdrop-filter: blur(10px);
+}
+
 .export-review-panel {
-  margin-top: 10px;
-  padding: 12px;
+  width: min(420px, 100%);
+  max-height: calc(100vh - 3rem);
+  overflow: auto;
+  padding: 16px;
   border: 1px solid rgba(248, 113, 113, 0.35);
   border-radius: 8px;
-  background: rgba(127, 29, 29, 0.16);
+  /* Opaque over the scrim — the rail behind must not read through as a second
+     copy of the same warning. */
+  background: color-mix(in srgb, var(--bg-2) 88%, rgba(127, 29, 29, 0.5));
+  /* Overlay surfaces sit on the shared elevation scale (Slice 9). */
+  box-shadow: var(--elev-3);
 }
 
 .export-review-head {

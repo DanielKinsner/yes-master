@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { api } from "../lib/api";
 import { formatDuration } from "../lib/time-format";
 import { presetCopy } from "../lib/preset-copy";
@@ -47,6 +47,18 @@ export function ExportReceiptCard({
   // wherever the command isn't available (e.g. tests) — the footer degrades to
   // the wordmark alone rather than showing a fabricated version.
   const [buildInfo, setBuildInfo] = useState<string | null>(null);
+  // Focus moves into the receipt when it opens and Escape closes it, matching
+  // ChromeDialog. Without this the dialog role would be a claim the keyboard
+  // behaviour did not honour.
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    dialogRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
   useEffect(() => {
     let cancelled = false;
     Promise.resolve(api.buildInfo?.())
@@ -108,8 +120,23 @@ export function ExportReceiptCard({
       ? { title: "File processed and verified", detail: "by the YES Master engine" }
       : { title: quality.label, detail: quality.detail };
   return (
-    <div className="receipt-backdrop" onClick={onClose}>
-      <div className="receipt" onClick={(e) => e.stopPropagation()}>
+    // U10(a) — the receipt has always been a visual modal (full-screen
+    // backdrop over the still-mounted rail) but carried no modal semantics. So
+    // the receipt's Quality check rows and the rail's EXPORT CHECK rows — the
+    // same export checks, rendered from the same payload — were BOTH in the
+    // accessibility tree at once. Sighted users saw one; screen-reader users
+    // met the same warning twice with no indication either was behind a
+    // dialog. `aria-modal` makes the receipt the single owner while it is up.
+    <div className="receipt-backdrop" role="presentation" onClick={onClose}>
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="receipt"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-receipt-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="receipt-header">
           <button type="button" className="toast-close receipt-close" onClick={onClose} aria-label="Close">
             ×
@@ -120,7 +147,9 @@ export function ExportReceiptCard({
                 <WordmarkGlyph />
                 YES Master
               </span>
-              <h2 className="receipt-title">{headerTitle}</h2>
+              <h2 className="receipt-title" id="export-receipt-title">
+                {headerTitle}
+              </h2>
               <p className="receipt-subtitle">{headerSubtitle}</p>
             </div>
             <div className={`receipt-verified receipt-verified-${quality.tone}`}>

@@ -1,7 +1,7 @@
 // Right-rail master-out / quality panels. MasterOutPanel is live transport
 // telemetry only; QualityCheckPanel owns source/export analysis.
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AnalysisResult, QualityCheck } from "../bindings";
 import type { RenderFeedback, RenderProgressState } from "../hooks/useTrackMaster";
 import { DisabledReason } from "./fields";
@@ -152,136 +152,193 @@ export function RightRail({
     onExport();
   };
 
+  const gateOpen = reviewOpen && needsReview;
+
   return (
     <aside className="right-rail">
       {/* UI_LAYOUT_REVISION_1600x940 L3 — rail order per spec:
           Quality Check → advancedSlot (Delivery / Advanced / Per-Band /
           Bit+SR cards, App.tsx composes) → sticky Export Master at
           bottom. Levels moved to the waveform deck's meters column;
-          MasterOutPanel moved in L2. */}
-      <QualityCheckPanel
-        checks={lastChecks}
-        analysis={analysis}
-        isAnalyzing={isAnalyzing}
-        onReanalyze={onReanalyze}
-      />
-      {advancedSlot}
-      <div className="right-rail-export-group">
-        <details className="right-rail-tools">
-          <summary>Tools</summary>
+          MasterOutPanel moved in L2.
+
+          U10(a): while the review gate is up it is the single owner of those
+          warnings, so the standing rail goes `inert` — out of the
+          accessibility tree and out of tab order. A scrim alone is not enough:
+          without this, the same warning is still readable behind it by a
+          screen reader and still reachable by Tab, which is the duplicate
+          wearing a disguise. */}
+      <div className="right-rail-standing" inert={gateOpen}>
+        <QualityCheckPanel
+          checks={lastChecks}
+          analysis={analysis}
+          isAnalyzing={isAnalyzing}
+          onReanalyze={onReanalyze}
+        />
+        {advancedSlot}
+        <div className="right-rail-export-group">
+          <details className="right-rail-tools">
+            <summary>Tools</summary>
+            <button
+              type="button"
+              className="ghost-btn right-rail-audit"
+              onClick={onUpdatePreview}
+              disabled={auditDisabled}
+              title={auditTitle}
+              // U10: the reason existed but only on hover. A keyboard user met a
+              // dead button with no stated cause.
+              aria-describedby={auditDisabledReason ? "audit-disabled-reason" : undefined}
+            >
+              {previewStale ? "Render audit WAV" : "Re-render audit WAV"}
+            </button>
+            <DisabledReason id="audit-disabled-reason" reason={auditDisabledReason} />
+          </details>
           <button
             type="button"
-            className="ghost-btn right-rail-audit"
-            onClick={onUpdatePreview}
-            disabled={auditDisabled}
-            title={auditTitle}
-            // U10: the reason existed but only on hover. A keyboard user met a
-            // dead button with no stated cause.
-            aria-describedby={auditDisabledReason ? "audit-disabled-reason" : undefined}
+            className="primary right-rail-export"
+            onClick={handlePrimaryExport}
+            disabled={exportDisabled}
+            title={exportDisabledReason}
+            aria-describedby={exportDisabledReason ? "export-disabled-reason" : undefined}
           >
-            {previewStale ? "Render audit WAV" : "Re-render audit WAV"}
+            {exportLabel}
           </button>
-          <DisabledReason id="audit-disabled-reason" reason={auditDisabledReason} />
-        </details>
-        <button
-          type="button"
-          className="primary right-rail-export"
-          onClick={handlePrimaryExport}
-          disabled={exportDisabled}
-          title={exportDisabledReason}
-          aria-describedby={exportDisabledReason ? "export-disabled-reason" : undefined}
-        >
-          {exportLabel}
-        </button>
-        <DisabledReason id="export-disabled-reason" reason={exportDisabledReason} />
-        {activeRenderProgress && (
-          <div className="right-rail-render-progress" role="status" aria-live="polite">
-            <div className="right-rail-render-progress-head">
-              <span>
-                {activeRenderProgress.label} {activeRenderProgress.percent}%
-              </span>
-              <button
-                type="button"
-                className="ghost-btn right-rail-cancel-render"
-                onClick={onCancelRender}
-                disabled={cancelRenderPending || !onCancelRender}
+          <DisabledReason id="export-disabled-reason" reason={exportDisabledReason} />
+          {activeRenderProgress && (
+            <div className="right-rail-render-progress" role="status" aria-live="polite">
+              <div className="right-rail-render-progress-head">
+                <span>
+                  {activeRenderProgress.label} {activeRenderProgress.percent}%
+                </span>
+                <button
+                  type="button"
+                  className="ghost-btn right-rail-cancel-render"
+                  onClick={onCancelRender}
+                  disabled={cancelRenderPending || !onCancelRender}
+                >
+                  {cancelRenderPending ? "Cancelling..." : "Cancel"}
+                </button>
+              </div>
+              <div
+                className="right-rail-render-progress-track"
+                role="progressbar"
+                aria-label={activeRenderProgress.label}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={activeRenderProgress.percent}
               >
-                {cancelRenderPending ? "Cancelling..." : "Cancel"}
-              </button>
+                <span
+                  className="right-rail-render-progress-fill"
+                  style={{ width: `${activeRenderProgress.percent}%` }}
+                />
+              </div>
             </div>
-            <div
-              className="right-rail-render-progress-track"
-              role="progressbar"
-              aria-label={activeRenderProgress.label}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={activeRenderProgress.percent}
-            >
-              <span
-                className="right-rail-render-progress-fill"
-                style={{ width: `${activeRenderProgress.percent}%` }}
-              />
-            </div>
-          </div>
-        )}
-        {visibleRenderFeedback && (
-          <p className="right-rail-render-feedback" role="status">
-            {visibleRenderFeedback.message}
-          </p>
-        )}
-        {reviewOpen && needsReview && (
-          <section className="export-review-panel" aria-label="Export review">
-            <header className="export-review-head">
-              <span className="export-review-title">Review before export</span>
-              <span className="quality-badge badge-warn">REVIEW</span>
-            </header>
-            <ul className="export-review-list">
-              {qualityRows
-                .filter((row) => row.warn || row.crit)
-                .map((row) => (
-                  <li
-                    key={row.key}
-                    className={
-                      "export-review-row " + (row.crit ? "is-crit" : "is-warn")
-                    }
-                    title={row.detail}
-                  >
-                    <span className="quality-check-glyph" aria-hidden>
-                      {row.crit ? "✗" : "△"}
-                    </span>
-                    <span>{row.label}</span>
-                    {/* U9: the severity was carried only by a colour class and
-                        a glyph marked aria-hidden, and the explanation only by
-                        a hover tooltip. A screen-reader user heard the label
-                        and nothing else — on the panel whose entire job is to
-                        make you review a warning before exporting. */}
-                    <span className="sr-only">
-                      {row.crit ? "Critical. " : "Warning. "}
-                      {row.detail}
-                    </span>
-                  </li>
-                ))}
-            </ul>
-            <div className="export-review-actions">
-              <button
-                type="button"
-                className="ghost-btn"
-                onClick={() => setReviewOpen(false)}
-              >
-                Adjust Settings
-              </button>
-              <button
-                type="button"
-                className="primary"
-                onClick={handleExportAnyway}
-              >
-                Export Anyway
-              </button>
-            </div>
-          </section>
-        )}
+          )}
+          {visibleRenderFeedback && (
+            <p className="right-rail-render-feedback" role="status">
+              {visibleRenderFeedback.message}
+            </p>
+          )}
+        </div>
       </div>
+      {gateOpen && (
+        <ExportReviewDialog
+          rows={qualityRows.filter((row) => row.warn || row.crit)}
+          onAdjust={() => setReviewOpen(false)}
+          onExportAnyway={handleExportAnyway}
+        />
+      )}
     </aside>
+  );
+}
+
+// U10(a) — the pre-export review gate.
+//
+// This used to render inline inside the export group, which meant every
+// warning was on screen TWICE at once: the QUALITY CHECK panel at the top of
+// the rail listed it, and this gate listed it again a few hundred pixels
+// below, REVIEW badge and all. Two owners, one warning.
+//
+// The gate is a decision surface, not a second report, so it is now a real
+// modal. It keeps the detail because at 1360x740 the standing panel is usually
+// scrolled out of view by the time you reach Export — a gate that made you
+// scroll back up to learn what you were confirming would be worse than the
+// duplicate it replaces. The standing rail is marked `inert` behind it, so
+// exactly one copy is presented to anyone, by any means.
+//
+// Semantics match the app's existing dialogs (ChromeDialog,
+// BackToStandardConfirm): role=dialog + aria-modal + labelled title + Escape +
+// focus moved in.
+function ExportReviewDialog({
+  rows,
+  onAdjust,
+  onExportAnyway,
+}: {
+  rows: QualityRow[];
+  onAdjust: () => void;
+  onExportAnyway: () => void;
+}) {
+  const dialogRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    dialogRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Escape is "Adjust Settings", never "Export Anyway" — dismissing a
+      // warning gate must not become a route to the flagged export.
+      if (e.key === "Escape") onAdjust();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onAdjust]);
+  return (
+    <div className="export-review-backdrop" role="presentation" onClick={onAdjust}>
+      <section
+        ref={dialogRef}
+        tabIndex={-1}
+        className="export-review-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-review-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="export-review-head">
+          <span className="export-review-title" id="export-review-title">
+            Review before export
+          </span>
+          <span className="quality-badge badge-warn">REVIEW</span>
+        </header>
+        <ul className="export-review-list">
+          {rows.map((row) => (
+            <li
+              key={row.key}
+              className={"export-review-row " + (row.crit ? "is-crit" : "is-warn")}
+              title={row.detail}
+            >
+              <span className="quality-check-glyph" aria-hidden>
+                {row.crit ? "✗" : "△"}
+              </span>
+              <span>{row.label}</span>
+              {/* U9: the severity was carried only by a colour class and
+                  a glyph marked aria-hidden, and the explanation only by
+                  a hover tooltip. A screen-reader user heard the label
+                  and nothing else — on the panel whose entire job is to
+                  make you review a warning before exporting. */}
+              <span className="sr-only">
+                {row.crit ? "Critical. " : "Warning. "}
+                {row.detail}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div className="export-review-actions">
+          <button type="button" className="ghost-btn" onClick={onAdjust}>
+            Adjust Settings
+          </button>
+          <button type="button" className="primary" onClick={onExportAnyway}>
+            Export Anyway
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
