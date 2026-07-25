@@ -92,6 +92,21 @@ Current targets: the Delivery Format card and the Export action (Export Master
 `reachability`, so a pass is a measurement rather than an absence of
 complaints. Failures name the coverer.
 
+**Reduced-motion variants (`reducedMotionVariant`, added U11).** A scenario so
+marked runs a second time with Playwright's `reducedMotion: "reduce"`, writing
+a `<label>-reduced-motion-<viewport>.png` alongside the normal shot. **The
+assertions are identical in both passes**, which is the point: reduced motion
+is meant to change how a state arrives, never which state you arrive at, so a
+scenario that only passes with motion enabled is a real failure rather than an
+expected difference. Currently on `clean` (the quality-verdict badge),
+`warning` (the review-gate overlay entrance), and `album-4` (the album
+sequence arc).
+
+**Scenario IDs.** Every scenario carries the plan's `scenarioId`
+(S-D1/S-E1/S-F1/S-F2/S-F3), and `summary.json` ends with a `scenarioCoverage`
+map from ID to the scenario/viewport checks that covered it — so "the scenario
+set is closed" is answerable from a file instead of from memory.
+
 **What this lane does NOT prove.** Native dialogs, real audio device behavior,
 installer signing, updater installation, and anything about how the product
 sounds. Those are the installed-machine and owner-listening layers. Browser

@@ -95,6 +95,9 @@ const SCENARIOS = [
     mustNotContain: ["Drop audio. Hear it mastered."],
     mustHaveControls: ["Export With Review", "Original", "Mastered"],
     mustReach: [DELIVERY_FORMAT, EXPORT_MASTER],
+    // U11: carries the quality-verdict badge; the reduced-motion pass proves
+    // the verdict still reads with the attention cue switched off.
+    reducedMotionVariant: true,
   },
   {
     name: "warning",
@@ -108,6 +111,9 @@ const SCENARIOS = [
       "Dynamic range is low",
       "True peak exceeds the delivery ceiling",
     ],
+    // U11: opens the review gate, so this covers the overlay entrance in both
+    // motion modes — the warning must be readable either way.
+    reducedMotionVariant: true,
   },
   {
     name: "long-copy",
@@ -168,6 +174,8 @@ const SCENARIOS = [
     settle: "album",
     mustContain: ["ALBUM", "4 TRACKS", "ALBUM FLOW", "01 - Preview Track 1.wav"],
     mustReach: [DELIVERY_FORMAT, EXPORT_ALBUM],
+    // U11: the album sequence arc and its settle animation live here.
+    reducedMotionVariant: true,
   },
   {
     name: "album-12",
@@ -632,13 +640,29 @@ for (const scenario of SCENARIOS) {
   // A scenario may reuse a preview state under its own name (e.g. the S-E1
   // rapid-A/B case drives the `clean` state), so evidence is keyed by label.
   const label = scenario.label ?? scenario.name;
+  // U11 — a scenario may additionally be run with prefers-reduced-motion
+  // forced, producing the reduced-motion equivalent screenshot the unit's
+  // acceptance asks for. The assertions are identical: reduced motion is
+  // supposed to change how a state ARRIVES, never which state you arrive at,
+  // so a scenario that only passes with motion enabled is a real failure.
+  const motionModes = scenario.reducedMotionVariant
+    ? ["no-preference", "reduce"]
+    : ["no-preference"];
+  for (const motion of motionModes) {
+  const motionSuffix = motion === "reduce" ? "-reduced-motion" : "";
   for (const [width, height] of scenario.viewports) {
     const viewportLabel = `${width}x${height}`;
     const route = `/app?scenario=${scenario.name}`;
     const url = `${baseUrl}${route}`;
-    const screenshot = path.join(outDir, `${label}-${viewportLabel}.png`);
+    const screenshot = path.join(
+      outDir,
+      `${label}${motionSuffix}-${viewportLabel}.png`,
+    );
 
-    const context = await browser.newContext({ viewport: { width, height } });
+    const context = await browser.newContext({
+      viewport: { width, height },
+      reducedMotion: motion,
+    });
     const page = await context.newPage();
     const consoleMessages = [];
     const pageErrors = [];
@@ -801,9 +825,10 @@ for (const scenario of SCENARIOS) {
       }
 
       records.push({
-        scenario: label,
+        scenario: label + motionSuffix,
         scenarioId: scenario.scenarioId ?? null,
         previewState: scenario.name,
+        motion,
         purpose: scenario.purpose,
         route,
         viewport: viewportLabel,
@@ -828,6 +853,7 @@ for (const scenario of SCENARIOS) {
     } finally {
       await context.close();
     }
+  }
   }
 }
 
