@@ -48,9 +48,15 @@ export default function ProofDeck() {
               44.1 kHz / 24-bit WAV with the limiter's ceiling set to −1 dBTP —
               and a measurement of what actually came out.
             </p>
+            {/* U7: below the fold, so lazy. Intrinsic size is declared to
+                reserve the box and avoid a layout shift when it arrives. */}
             <img
               src={standardImg}
               alt="YES Master Standard view"
+              width={1440}
+              height={1000}
+              loading="lazy"
+              decoding="async"
               className="mt-5 rounded-lg border border-line"
             />
           </article>
@@ -67,6 +73,10 @@ export default function ProofDeck() {
             <img
               src={advancedImg}
               alt="YES Master Advanced view"
+              width={1440}
+              height={1000}
+              loading="lazy"
+              decoding="async"
               className="mt-5 rounded-lg border border-line"
             />
           </article>

@@ -97,6 +97,12 @@ jobs:
       - name: Install pinned Chromium
         run: npx playwright install --with-deps chromium
 
+      # U7. Offline and fast: compares committed bytes against the committed
+      # manifest. Runs BEFORE the browser suites so a stale marketing capture
+      # fails in seconds rather than after a full headless run.
+      - name: Landing marketing proof is current
+        run: npm run verify:landing-assets
+
       - name: Headless landing and /app suites
         run: npm run verify:headless
 

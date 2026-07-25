@@ -175,9 +175,17 @@ for (const [width, height] of matrix) {
       navDisplay: navStyle?.display ?? null,
       navPosition: navStyle?.position ?? null,
       navLinks: sectionLinks,
+      // A BROKEN image is one the browser finished with and got nothing from:
+      // `complete` true, `naturalWidth` zero. An image that is merely not
+      // loaded YET is `complete === false` — which is the normal, correct state
+      // of a below-fold `loading="lazy"` asset (U7) and was being reported as
+      // broken here. Lazy images are separately proven to load, below.
       brokenImages: Array.from(document.images)
-        .filter((image) => !image.complete || image.naturalWidth === 0)
+        .filter((image) => image.complete && image.naturalWidth === 0)
         .map((image) => image.currentSrc || image.src),
+      lazyImages: Array.from(document.images)
+        .filter((image) => image.loading === "lazy")
+        .map((image) => image.getAttribute("src")),
       sections: required.map((id) => ({ id, present: Boolean(document.getElementById(id)) })),
       bodyHasExpectedCopy: [
         "see exactly what it did",
@@ -342,6 +350,45 @@ for (const [width, height] of matrix) {
         );
       }
     }
+  }
+
+  // U7: prove the lazy assets actually arrive. Deferring an image is only
+  // correct if it still loads when the visitor reaches it — a lazy image that
+  // never resolves is a broken image with better manners, and the check above
+  // deliberately cannot see it.
+  if (width === 1440 || width === 390) {
+    await page.evaluate(() =>
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }),
+    );
+    const lazyState = await page
+      .waitForFunction(
+        () => {
+          const lazy = Array.from(document.images).filter(
+            (image) => image.loading === "lazy",
+          );
+          return lazy.every((image) => image.complete && image.naturalWidth > 0)
+            ? lazy.map((image) => ({
+                src: image.getAttribute("src"),
+                width: image.naturalWidth,
+              }))
+            : null;
+        },
+        undefined,
+        { timeout: 10_000 },
+      )
+      .then((handle) => handle.jsonValue())
+      .catch(() => null);
+
+    if (!lazyState) {
+      failures.push(
+        `${width}x${height}: lazy images did not load after scrolling to the bottom`,
+      );
+    } else {
+      metrics.lazyLoaded = lazyState;
+    }
+    await page.evaluate(() =>
+      window.scrollTo({ top: 0, behavior: "instant" }),
+    );
   }
 
   records.push({ width, height, screenshot, metrics });

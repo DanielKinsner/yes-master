@@ -1,0 +1,66 @@
+{
+  "sourceCommit": "d94fcb456aea31a49d45e234f53707248e8d2e2e",
+  "captureInputDigest": "abd3daa1bd7470c6021fd3200ab9957376559e89f7823847633fe40208af7b4c",
+  "browser": {
+    "runtime": "playwright-bundled-chromium",
+    "version": "149.0.7827.55"
+  },
+  "evidenceLayer": "browser-headless",
+  "note": "Deterministic browser captures are marketing evidence. They prove nothing about installation, real audio, or how anything sounds.",
+  "assets": [
+    {
+      "id": "desktop-standard-ui",
+      "file": "src/assets/landing/desktop-standard-ui.png",
+      "scenario": "clean",
+      "view": "standard",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dimensions": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 486282,
+      "sha256": "2f76abfa12841e2a3fcb75457f20045b0c3218e3c8ad91b5565375d2736f1978",
+      "loading": "lazy",
+      "alt": "YES Master Standard view"
+    },
+    {
+      "id": "desktop-advanced-ui",
+      "file": "src/assets/landing/desktop-advanced-ui.png",
+      "scenario": "clean",
+      "view": "advanced",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dimensions": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 435862,
+      "sha256": "92bb0d4617bd1fe62c5da98f294e8fc67b74822cbe8eb151171b1cfed37ff4ee",
+      "loading": "lazy",
+      "alt": "YES Master Advanced view"
+    },
+    {
+      "id": "desktop-album-ui",
+      "file": "src/assets/landing/desktop-album-ui.png",
+      "scenario": "album-4",
+      "view": "advanced",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "dimensions": {
+        "width": 1440,
+        "height": 1000
+      },
+      "bytes": 469450,
+      "sha256": "befb2215acbcc5ea998d1bf698ccd748d898a91fe62c6a389d46d328275832e4",
+      "loading": "lazy",
+      "alt": "YES Master Album Master view with four tracks"
+    }
+  ]
+}

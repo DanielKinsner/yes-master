@@ -18,7 +18,10 @@
     "verify:rust": "powershell -ExecutionPolicy Bypass -File scripts/verify-fast.ps1 -Lane rust",
     "verify:iphone": "powershell -ExecutionPolicy Bypass -File scripts/verify-fast.ps1 -Lane iphone",
     "verify:android": "powershell -ExecutionPolicy Bypass -File scripts/verify-fast.ps1 -Lane android",
-    "verify:headless": "node scripts/verify-headless.mjs"
+    "verify:headless": "node scripts/verify-headless.mjs",
+    "capture:landing": "node scripts/capture-landing-assets.mjs",
+    "verify:landing-assets": "node scripts/verify-landing-assets.mjs",
+    "optimize:landing-art": "node scripts/optimize-landing-art.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.1.1",

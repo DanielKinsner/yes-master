@@ -28,6 +28,42 @@ Use this lane for normal UI, state, packaging-script, and backend contract work.
 The explicit `target\codex-rc` directory avoids collisions with a running debug
 app that may lock the default target executable on Windows.
 
+## Landing Marketing Proof (U7)
+
+```powershell
+npm run verify:landing-assets   # the gate — offline, no browser, milliseconds
+npm run capture:landing         # recapture after changing a captured surface
+npm run optimize:landing-art    # re-derive hero/icon variants from the master art
+```
+
+A screenshot on a marketing page has no expiry. The two desktop UI images
+shipped from a 2026-06-28 capture and then U9, U10 and U11 changed the console
+underneath them. Nothing failed, because nothing could.
+
+`src/assets/landing/manifest.json` binds every capture to a **capture-input
+digest**: a content hash over the explicit file list in
+`scripts/lib/landing-assets.mjs` (`CAPTURE_INPUTS`) — the app shell, every
+component, `preview-mock.ts`, and the capture script itself. Edit any of them
+without recapturing and the gate fails.
+
+**It is a content digest, not `HEAD`.** HEAD advances for reasons that cannot
+affect a screenshot — docs, Rust, CI config — and a gate that cries wolf on
+every commit is a gate people mute. An unrelated commit leaves valid proof
+valid; this is verified by a negative control.
+
+The gate catches four failures: **stale** (inputs changed), **missing**
+(manifest promises a file that is absent), **altered** (bytes differ from the
+capture), and **heavy** (eager imagery over 1.5 MB). It also fails if any
+mobile UI image is imported by the landing page (R7).
+
+**Eager budget.** Every capture is below the fold and `loading="lazy"` with a
+declared intrinsic size; the hero art ships as a 1280w/2560w `srcSet`. Eager
+imagery is **330 KB** against the 1.5 MB budget, down from 2530 KB. Do not
+raise the budget — shrink the art. The pristine hero master lives at
+`hero-control-room-studio-source.jpg`, is imported by nothing, and reaches no
+bundle; the shipped variants are always re-derived from it so repeated runs
+cannot stack generation loss.
+
 ## Headless Web Lane (landing + `/app`)
 
 The default repeatable browser check for anything that renders. One command,

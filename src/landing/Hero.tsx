@@ -1,4 +1,5 @@
 import heroBg from "../assets/landing/hero-control-room-studio.jpg";
+import heroBg1280 from "../assets/landing/hero-control-room-studio-1280.jpg";
 import iconLocal from "../assets/landing/icon-local-first.png";
 import iconRealtime from "../assets/landing/icon-realtime.png";
 import iconRelease from "../assets/landing/icon-release-ready.png";
@@ -33,10 +34,16 @@ export default function Hero({
   return (
     <section id="top" className="relative isolate min-h-svh overflow-hidden">
       {/* Background: the studio + app photo. object-cover crops, never stretches. */}
+      {/* U7: two variants so a phone does not download a 2560px photograph to
+          render it 390px wide. The master art lives beside this one as
+          *-source.jpg, imported by nothing and shipped in no bundle. */}
       <img
         src={heroBg}
+        srcSet={`${heroBg1280} 1280w, ${heroBg} 2560w`}
+        sizes="100vw"
         alt=""
         aria-hidden="true"
+        fetchPriority="high"
         className="absolute inset-0 -z-20 h-full w-full object-cover object-[62%_center]"
       />
       {/* Readability veil — phones only (text sits over the whole image there).

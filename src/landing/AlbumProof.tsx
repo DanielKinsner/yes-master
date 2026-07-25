@@ -1,3 +1,5 @@
+import albumImg from "../assets/landing/desktop-album-ui.png";
+
 // U6 — Album sits LOW on the page on purpose.
 //
 // It is proof that the depth is real, not the headline promise and not a
@@ -63,6 +65,18 @@ export default function AlbumProof() {
             </article>
           ))}
         </div>
+
+        {/* U7: a real capture of the album-4 scenario from the current build,
+            bound to the manifest. Lazy — it is well below the fold. */}
+        <img
+          src={albumImg}
+          alt="YES Master Album Master view with four tracks"
+          width={1440}
+          height={1000}
+          loading="lazy"
+          decoding="async"
+          className="mt-10 w-full rounded-xl border border-line"
+        />
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-muted">
           Album Master delivers audio, renders, and receipts. It does not
