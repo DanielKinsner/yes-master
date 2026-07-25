@@ -1182,6 +1182,23 @@ button.primary:disabled {
   margin: 0 0 0.3rem;
 }
 
+/* U10 follow-up — the workspace title clamp must not depend on window HEIGHT.
+   It used to exist only inside `@media (min-width: 1280px) and (min-height:
+   820px)`, so at the documented supported minimum of 1360x740 the height
+   condition failed and the clamp switched off — precisely where it matters
+   most. A long album filename wrapped to EIGHT lines and pushed the transport
+   and waveform off the top of the workspace. (The album fixture is literally
+   named "...-should-truncate-not-overlap-take-1.wav", so this was intended to
+   be clamped and quietly was not.)
+   Declared here, unconditionally, so a short window cannot disable it. The
+   1280/820 block still refines font-size and line-height on top. */
+.console-hero .track-title {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .track-sub {
   display: flex;
   flex-wrap: wrap;
@@ -4288,18 +4305,30 @@ button.primary:disabled {
   /* Soft gradient mask above the sticky group so the panels that scroll
      past behind it don't look abruptly clipped. Bottom padding (moved here
      from .right-rail) keeps the Export button off the very edge while its
-     solid background covers the strip below it — no scrolled content peeks
-     through anymore. */
+     solid background covers the strip below it.
+
+     U10 follow-up — the old stops were 0% transparent -> 95% at 35%, and the
+     TOOLS row sits inside that first 35%. At 1440x900 there is little to
+     scroll and nothing showed; at the supported minimum 1360x740 the Delivery
+     Format card scrolled straight THROUGH it, rendering "DELIVERY FORMAT"
+     printed on top of "TOOLS". The comment above used to claim "no scrolled
+     content peeks through anymore" — true of the Export button, which has its
+     own solid fill, and never true of the row above it.
+     The mask now reaches full opacity by 18%, which is above the TOOLS row,
+     so the softening survives and the overlap does not. */
   padding: 0.6rem 0 0.75rem;
   background:
-    linear-gradient(180deg, rgba(17, 21, 31, 0) 0%, rgba(17, 21, 31, 0.95) 35%, var(--bg-1) 100%);
+    linear-gradient(180deg, rgba(17, 21, 31, 0) 0%, var(--bg-1) 18%, var(--bg-1) 100%);
   z-index: 2;
 }
 
 .right-rail-tools {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: rgba(13, 16, 24, 0.42);
+  /* Opaque, not 42%. Belt and braces with the mask above: this row is the one
+     thing between the scrolling rail and the sticky export cluster, so it must
+     not be see-through even if the gradient stops are ever retuned. */
+  background: var(--bg-1);
   overflow: hidden;
 }
 

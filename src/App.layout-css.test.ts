@@ -194,6 +194,46 @@ describe("console layout CSS", () => {
     expect(block(".std-rail .master-out .lufs-meter")).toContain("min-height: 112px");
   });
 
+  // Both of these were found by actually LOOKING at the 1360x740 screenshots
+  // the headless lane produces, after every automated assertion on that
+  // viewport had passed. No-overflow was green, reachability was green, and
+  // the window still looked broken — which is the argument for the visual pass
+  // existing at all.
+  it("clamps the workspace title without depending on window HEIGHT", () => {
+    // The clamp used to live ONLY inside `@media (min-width: 1280px) and
+    // (min-height: 820px)`. The supported minimum is 1360x740, so the height
+    // condition failed and the clamp switched off exactly where it was needed:
+    // a long album filename wrapped to eight lines and pushed the transport
+    // and waveform off the top of the workspace.
+    const clamp = block(".console-hero .track-title");
+    expect(clamp).toContain("white-space: nowrap");
+    expect(clamp).toContain("text-overflow: ellipsis");
+    expect(clamp).toContain("overflow: hidden");
+
+    // And it must be declared OUTSIDE any height-gated media query. Asserting
+    // the properties alone would pass again the moment someone moves the rule
+    // back inside one, which is exactly how this regressed the first time.
+    const declaration = css.indexOf(".console-hero .track-title");
+    const heightGate = css.indexOf("@media (min-width: 1280px) and (min-height: 820px)");
+    expect(declaration).toBeGreaterThan(-1);
+    expect(heightGate).toBeGreaterThan(-1);
+    expect(declaration).toBeLessThan(heightGate);
+  });
+
+  it("keeps the sticky export cluster opaque above the TOOLS row", () => {
+    // The mask used to run 0% transparent -> 95% at 35%, and the TOOLS row
+    // sits inside that first 35%. At 1360x740 the Delivery Format card
+    // scrolled straight through it: "DELIVERY FORMAT" rendered on top of
+    // "TOOLS". Full opacity has to be reached ABOVE that row.
+    const group = block(".right-rail-export-group");
+    expect(group).toContain("var(--bg-1) 18%");
+    expect(group).not.toContain("rgba(17, 21, 31, 0.95) 35%");
+
+    // Belt and braces: the row itself is opaque, so a future retune of the
+    // gradient stops cannot make it see-through again.
+    expect(block(".right-rail-tools")).toContain("background: var(--bg-1)");
+  });
+
   it("keeps first-run hints out of the Standard Preview rail", () => {
     expect(block(".first-run-overlay")).toContain("pointer-events: none");
     expect(block(".first-run-overlay .hint-chip")).toContain("pointer-events: auto");
