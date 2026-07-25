@@ -399,7 +399,6 @@ function App() {
         analysisProgress={tm.analysisProgress}
         mode={tm.mode}
         onReorder={tm.reorderTracks}
-        overrideAlbum={tm.overrideAlbum}
         sequenceRows={sequenceRows}
         albumHeader={
           tm.mode === "album" && tm.tracks.length > 0 ? (
@@ -1116,7 +1115,6 @@ function Sidebar({
   analysisProgress,
   mode,
   onReorder,
-  overrideAlbum,
   albumHeader,
   albumReceipt,
   sequenceRows = [],
@@ -1130,7 +1128,9 @@ function Sidebar({
   analysisProgress: { label: string; progress: number } | null;
   mode: "track" | "album";
   onReorder: (fromIndex: number, toIndex: number) => void;
-  overrideAlbum: Set<string>;
+  // `overrideAlbum` used to come in here too, purely to drive the duplicate
+  // `★` mark removed in U10(a). `sequenceRows` already carries the same fact
+  // as `overridesAlbum`, so the second channel went with the second mark.
   albumHeader?: ReactNode;
   albumReceipt?: ReactNode;
   /// U10 — per-track sequence facts for Album mode. Empty in Track mode.
@@ -1236,14 +1236,13 @@ function Sidebar({
                 onClick={() => onSelect(t.id)}
                 title={t.path}
               >
-                <span className="track-name">
-                  {t.display_name}
-                  {mode === "album" && overrideAlbum.has(t.id) && (
-                    <span className="override-mark" title="Overrides album intent">
-                      ★
-                    </span>
-                  )}
-                </span>
+                {/* U10(a) — a `★ override-mark` used to sit here as well. It
+                    said the same thing as the "Overrides" sequence chip a few
+                    lines below, in the same row, at the same moment: two marks,
+                    one fact. The chip is the survivor because it carries a real
+                    accessible sentence rather than a title-attribute star, and
+                    it sits with the other per-track scan facts. */}
+                <span className="track-name">{t.display_name}</span>
                 <span className="track-meta">
                   {t.duration_seconds ? formatDuration(t.duration_seconds) : `.${t.source_format}`}
                 </span>
