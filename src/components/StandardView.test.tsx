@@ -586,6 +586,31 @@ describe("Standard export receipt", () => {
     await act(async () => root.unmount());
   });
 
+  // U10(b) — "receipt actions resolve to the actual output". Standard's done
+  // card is the only receipt most Standard users ever see, and its Show file
+  // button was untested: nothing proved it opened the file just written rather
+  // than a stale or reconstructed path.
+  it("'Show file' opens the exact path this receipt recorded", async () => {
+    const { api } = await import("../lib/api");
+    const openOutput = vi
+      .spyOn(api, "openOutput")
+      .mockResolvedValue(undefined as never);
+    const { container, root } = await render(
+      <StandardView tm={exportedTm()} onEnterAdvanced={() => {}} />,
+    );
+    const showFile = container.querySelector<HTMLButtonElement>(
+      ".std-export-done-open",
+    )!;
+    expect(showFile.textContent).toContain("Show file");
+    await act(async () => {
+      showFile.click();
+    });
+    expect(openOutput).toHaveBeenCalledTimes(1);
+    expect(openOutput).toHaveBeenCalledWith("C:/renders/Song Master.wav");
+    openOutput.mockRestore();
+    await act(async () => root.unmount());
+  });
+
   it("'View full report' affordance hands off to Advanced (where the full receipt renders)", async () => {
     const onEnterAdvanced = vi.fn();
     const { container, root } = await render(

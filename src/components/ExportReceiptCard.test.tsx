@@ -243,6 +243,92 @@ describe("ExportReceiptCard", () => {
     expect(container.querySelector(".receipt-file-copy.is-copied")).not.toBeNull();
   });
 
+  // U10(b) — "receipt actions resolve to the actual output".
+  //
+  // Copy was covered; reveal — the row's PRIMARY action — was not. A receipt
+  // that opens the wrong file is worse than one that opens nothing, because it
+  // looks like it worked.
+  it("reveals the exact saved path, not a reconstructed one", async () => {
+    const { api } = await import("../lib/api");
+    const openOutput = vi.mocked(api.openOutput);
+    openOutput.mockClear();
+    const container = render(
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings()}
+        analysis={analysis()}
+        onClose={() => {}}
+      />,
+    );
+    const openBtn = container.querySelector<HTMLButtonElement>(".receipt-file-open");
+    expect(openBtn).not.toBeNull();
+    await act(async () => {
+      openBtn!.click();
+    });
+    expect(openOutput).toHaveBeenCalledTimes(1);
+    expect(openOutput).toHaveBeenCalledWith("out/track.master.wav");
+  });
+
+  it("gives each saved file its own reveal and copy target", async () => {
+    // The multi-path case is where a per-row action goes wrong: one closure
+    // captured across a map sends every row to the first file. An album or
+    // multi-output export would then hand the user the wrong master with no
+    // sign anything was off.
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    const { api } = await import("../lib/api");
+    const openOutput = vi.mocked(api.openOutput);
+    openOutput.mockClear();
+
+    const multi = receipt([]);
+    multi.job = {
+      ...multi.job,
+      output_paths: ["out/01 opener.wav", "out/02 closer.wav"],
+    };
+
+    const container = render(
+      <ExportReceiptCard
+        receipt={multi}
+        track={track()}
+        settings={settings()}
+        analysis={analysis()}
+        onClose={() => {}}
+      />,
+    );
+
+    const rows = container.querySelectorAll(".receipt-file");
+    expect(rows).toHaveLength(2);
+    // Each row shows its own file name, not a shared one.
+    expect(rows[0].querySelector(".receipt-path-name")?.textContent).toBe(
+      "01 opener.wav",
+    );
+    expect(rows[1].querySelector(".receipt-path-name")?.textContent).toBe(
+      "02 closer.wav",
+    );
+
+    await act(async () => {
+      rows[1].querySelector<HTMLButtonElement>(".receipt-file-open")!.click();
+    });
+    expect(openOutput).toHaveBeenCalledWith("out/02 closer.wav");
+
+    await act(async () => {
+      rows[0].querySelector<HTMLButtonElement>(".receipt-file-open")!.click();
+    });
+    expect(openOutput).toHaveBeenLastCalledWith("out/01 opener.wav");
+
+    await act(async () => {
+      rows[1].querySelector<HTMLButtonElement>(".receipt-file-copy")!.click();
+    });
+    expect(writeText).toHaveBeenCalledWith("out/02 closer.wav");
+
+    // The header count follows the real path count rather than saying "File".
+    expect(container.textContent).toContain("Files saved");
+  });
+
   it("renders the preset's real name + blurb and the real intensity label", () => {
     const container = render(
       <ExportReceiptCard

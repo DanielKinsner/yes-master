@@ -4378,6 +4378,67 @@ describe("render progress timer", () => {
       });
     }
   });
+
+  // U10(b) — retry. Cancel was proven not to claim success; a FAILED export
+  // had no equivalent proof that the app comes back from it. A dead end after
+  // a transient write failure is the difference between "try again" and "this
+  // app is broken", and it is exactly the state a beta tester hits first.
+  it("recovers from a failed export and lets the next attempt through", async () => {
+    const track = makeTrack("master-retry", "C:/audio/master-retry.wav");
+    const outputPath = "/Users/daniel/Desktop/master-retry.wav";
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.save.mockResolvedValue(outputPath);
+    mocks.api.renderTrackMaster.mockRejectedValueOnce(
+      new Error("io error: The process cannot access the file"),
+    );
+    const harness = await renderHookHarness();
+
+    try {
+      await act(async () => {
+        await harness.current().importFiles([track.path]);
+      });
+      await waitFor(() => {
+        expect(harness.current().selectedTrackId).toBe(track.id);
+      });
+
+      await act(async () => {
+        await harness.current().exportMaster();
+      });
+
+      // The failure is reported in plain language with the raw cause kept for
+      // diagnosis, and it does NOT masquerade as a receipt.
+      expect(harness.current().lastExportReceipt).toBeNull();
+      expect(harness.current().error).toContain(
+        "Couldn't access the file. It may be moved, locked, or in use.",
+      );
+      expect(harness.current().error).toContain("io error");
+      // Crucially, the in-flight latch is released — a stuck `isExporting`
+      // would leave Export permanently disabled with an accurate-sounding
+      // "an export is already running" reason and no way out.
+      expect(harness.current().isExporting).toBe(false);
+
+      await act(async () => {
+        harness.current().clearError();
+      });
+      expect(harness.current().error).toBeNull();
+
+      // Retry: same action, now succeeding, produces a real receipt.
+      mocks.api.renderTrackMaster.mockResolvedValue(makeRenderJob(outputPath));
+      mocks.api.runExportChecks.mockResolvedValue([]);
+      await act(async () => {
+        await harness.current().exportMaster();
+      });
+
+      expect(harness.current().error).toBeNull();
+      expect(harness.current().lastExportReceipt?.outputPath).toBe(outputPath);
+      expect(mocks.api.renderTrackMaster).toHaveBeenCalledTimes(2);
+    } finally {
+      await act(async () => {
+        harness.root.unmount();
+      });
+    }
+  });
 });
 
 describe("useTrackMaster analysis-complete autosave (Q29)", () => {
