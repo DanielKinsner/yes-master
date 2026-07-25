@@ -1,0 +1,89 @@
+name: Beta workflow feedback
+description: It works, but it sounds wrong, reads wrong, or gets in your way.
+title: "[feedback] "
+labels: ["feedback", "beta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Before you fill this in
+
+        **This issue will be public**, and posting requires a free GitHub
+        account. There is no YES Master account.
+
+        **Please do not attach or upload private audio.** Describe the material
+        instead — that is enough for almost everything below.
+
+        Feedback about how something *sounds* is as valuable as a crash report.
+        "Punch at 60% sounds hollow on acoustic guitar" is a real, actionable
+        finding, and exactly what the preset tuning pass needs.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: What is this about?
+      options:
+        - A preset's character or how it sounds
+        - Loudness — target, level, or how loud the export came out
+        - Intensity — the amount control
+        - Original vs Mastered comparison / Volume Match
+        - Album mode — flow, ordering, per-track settings
+        - Export, delivery format, or the receipt
+        - Something was confusing or hard to find
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect instead?
+      description: If it is about sound, say what you heard and on what kind of material.
+      placeholder: |
+        Tape at 50% on a sparse acoustic mix pulled the low mids out further
+        than I expected — I wanted warmth and got a scoop.
+    validations:
+      required: true
+
+  - type: textarea
+    id: settings
+    attributes:
+      label: Settings in play
+      description: Preset, Intensity, delivery profile, loudness target, Volume Match on/off — whatever is relevant.
+      placeholder: "Tape, Intensity 50%, Streaming (Universal), Volume Match on"
+    validations:
+      required: false
+
+  - type: textarea
+    id: material
+    attributes:
+      label: The material
+      description: Genre or instrumentation, roughly how loud/dynamic, and whether it was already mastered.
+      placeholder: "Solo acoustic guitar + vocal, quite dynamic, unmastered mix around -18 LUFS"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: How much does this affect your work?
+      options:
+        - "Blocking — I cannot use this part of the app"
+        - "Significant — I work around it every time"
+        - "Minor — noticeable, but I live with it"
+        - "Polish — it just feels unfinished"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: follow-up
+    attributes:
+      label: May we follow up in this thread with questions?
+      description: >
+        Replies happen here in the issue, publicly. We do not collect email
+        addresses and will not contact you privately.
+      options:
+        - "Yes, ask me anything here"
+        - "No, this is all I want to say"
+    validations:
+      required: true

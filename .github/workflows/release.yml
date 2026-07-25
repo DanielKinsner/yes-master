@@ -228,6 +228,10 @@ jobs:
             Early public beta for Windows and macOS.
 
             The $0 release lane is not yet backed by paid Apple/Microsoft publisher certificates, so the operating system may show an unknown-developer warning. Verify SHA256SUMS.txt, follow the [beta install guide](https://github.com/DanielKinsner/yes-master/blob/main/docs/BETA_INSTALL.md), and only install files downloaded from this repository.
+
+            **New here?** The [beta testing guide](https://github.com/DanielKinsner/yes-master/blob/main/docs/BETA_TESTING.md) covers what is most useful to test, what is already known to be rough, how to save a diagnostics report, and what happens to your install when the beta ends.
+
+            Found something? Open a [bug report](https://github.com/DanielKinsner/yes-master/issues/new?template=beta-bug.yml) or send [workflow feedback](https://github.com/DanielKinsner/yes-master/issues/new?template=beta-feedback.yml). Issues are public and need a free GitHub account — please describe your audio rather than uploading it.
           releaseDraft: true
           # The app checks /releases/latest/download/latest.json. GitHub excludes
           # prereleases from that channel, so beta identity lives in tag/title.

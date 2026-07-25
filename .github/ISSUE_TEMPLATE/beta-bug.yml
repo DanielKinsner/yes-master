@@ -1,0 +1,143 @@
+name: Beta bug report
+description: Something is broken, wrong, or crashed.
+title: "[bug] "
+labels: ["bug", "beta"]
+body:
+  - type: markdown
+    attributes:
+      # This sits FIRST, before any field that could carry audio or personal
+      # detail. A privacy warning printed underneath the upload box is a
+      # warning nobody reads until it is too late.
+      value: |
+        ### Before you fill this in
+
+        **This issue will be public.** Anyone can read it, and posting requires
+        a free GitHub account. There is no YES Master account — we have no
+        login system and will never ask you to create one.
+
+        **Please do not attach or upload private audio.** If the problem only
+        happens with material you cannot share, describe the file in the
+        "Source audio" section instead. That is almost always enough to
+        reproduce it.
+
+        A **diagnostics report** (Help → Save diagnostics report) is the single
+        most useful thing you can attach to a crash. It is assembled locally,
+        contains no telemetry, and you choose where it is saved.
+
+  - type: input
+    id: version
+    attributes:
+      label: App version and build
+      description: Help → the build stamp at the bottom of the export receipt, or Settings → app info.
+      placeholder: "0.9.0 · a1b2c3d"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version
+      placeholder: "macOS 15.2, or Windows 11 23H2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-type
+    attributes:
+      label: How did you install it?
+      options:
+        - Windows .exe installer
+        - Windows .msi
+        - macOS .dmg
+        - Updated in-app from a previous beta
+        - Built from source
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Exact steps to reproduce
+      description: Number them. Assume we are starting from a fresh launch with no track loaded.
+      placeholder: |
+        1. Launch YES Master
+        2. Import a 44.1 kHz stereo WAV
+        3. Wait for analysis to finish
+        4. Select the Punch preset, set Intensity to 70%
+        5. Click Export Master
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened
+      description: If the app crashed or stopped responding, say which — they are different problems.
+    validations:
+      required: true
+
+  - type: textarea
+    id: source-audio
+    attributes:
+      label: Source audio
+      description: >
+        Describe the file rather than sending it. Format, sample rate, bit depth,
+        channels, length, and roughly how loud/dynamic it is.
+      placeholder: |
+        WAV, 48 kHz, 24-bit, stereo, 3:41
+        Roughly -9 LUFS, quite compressed, mixed loud
+    validations:
+      required: true
+
+  - type: dropdown
+    id: already-mastered
+    attributes:
+      label: Was the source already mastered?
+      description: This changes how the engine adapts, so it matters more than it sounds like it should.
+      options:
+        - "No — a mix, not mastered"
+        - "Yes — already mastered or heavily limited"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: diagnostics
+    attributes:
+      label: Diagnostics report
+      description: Help → Save diagnostics report. Attach it in the next field if you have one.
+      options:
+        - "Attached below"
+        - "Could not save one — the app was not responding"
+        - "Not attached"
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Diagnostics report contents, screenshots, or anything else
+      description: >
+        Paste the diagnostics text or drop screenshots here. **No private audio,
+        please** — see the note at the top.
+    validations:
+      required: false

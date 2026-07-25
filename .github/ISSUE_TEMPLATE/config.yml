@@ -1,0 +1,14 @@
+# Both routes into Issues are structured forms. Blank issues are disabled so a
+# beta report cannot arrive without the fields that make it actionable — the
+# version and OS especially, which are the two things nobody remembers to
+# include and nothing can be reproduced without.
+blank_issues_enabled: false
+
+contact_links:
+  - name: Installing, OS warnings, and checksums
+    url: https://github.com/DanielKinsner/yes-master/blob/main/docs/BETA_INSTALL.md
+    about: Install steps for Mac and Windows, why your OS warns about the app, and how to verify a download.
+
+  - name: Beta testing guide
+    url: https://github.com/DanielKinsner/yes-master/blob/main/docs/BETA_TESTING.md
+    about: What to test, known limitations, how to save a diagnostics report, and what happens when the beta ends.

@@ -43,3 +43,15 @@ shasum -a 256 'YES Master installer.dmg'
 The printed hash must match the line for that filename in `SHA256SUMS.txt`.
 If it does not match, do not run the file; report it through the repository's
 Issues page.
+
+## Next
+
+Installed and running? **[BETA_TESTING.md](BETA_TESTING.md)** covers what is
+most useful to test, the limitations already known about (so you do not spend
+time on them), how to save a diagnostics report, and what happens to your
+install when the beta ends.
+
+Reporting uses two structured forms on the repository's Issues page — one for
+bugs, one for workflow and sound feedback. Both are public and need a free
+GitHub account; there is no YES Master account. Please describe your audio
+rather than uploading it.
