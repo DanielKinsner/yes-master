@@ -588,7 +588,18 @@ function QualityCheckPanel({
               Re-analyze
             </button>
           )}
-          <span className={`quality-badge ${overallSafe ? "badge-safe" : "badge-warn"}`}>
+          {/* U11 — COMPREHENSION. This badge is the rail's whole verdict, and
+              it flipped between SAFE and REVIEW in complete silence: change a
+              setting, and the one word that says whether your master is clean
+              swapped with nothing to draw the eye. Keying on the verdict
+              remounts the badge only when the verdict itself changes, so the
+              acknowledgment fires on a real state change and never on an
+              ordinary re-render. The word is the information; the pulse only
+              says "look here". */}
+          <span
+            key={overallSafe ? "safe" : "review"}
+            className={`quality-badge ${overallSafe ? "badge-safe" : "badge-warn"}`}
+          >
             {overallSafe ? "SAFE" : "REVIEW"}
           </span>
         </div>

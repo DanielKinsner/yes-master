@@ -64,7 +64,19 @@ function SequenceArc({ rows }: { rows: SequenceRow[] }) {
 
   return (
     <div className="album-sequence-arc">
+      {/* U11 — ORIENTATION. Changing Album Flow or Flow Amount re-shapes this
+          arc, and the redraw was instantaneous and silent: the shape you were
+          reading became a different shape with nothing connecting the two, so
+          a small flow-amount nudge was easy to make and impossible to notice.
+
+          Keying the svg on the computed points remounts it when — and only
+          when — the shape actually changes, which runs the settle animation.
+          An unchanged plan re-render does nothing, so this cannot become
+          ambient motion. The arc still comes from the backend plan's own
+          targets, so this acknowledges a real change rather than implying one:
+          if the flow made no difference to the numbers, nothing moves. */}
       <svg
+        key={points}
         viewBox={`0 0 ${width} ${height}`}
         preserveAspectRatio="none"
         role="img"

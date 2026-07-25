@@ -2679,6 +2679,45 @@ button.primary:disabled {
   box-shadow: var(--elev-3);
 }
 
+/* U11 — ORIENTATION. Both of these surfaces now take the whole screen and put
+   the work behind them inert (U10a). Appearing instantly, at full opacity, in
+   the middle of the window reads as a glitch rather than as "a thing arrived":
+   there is nothing to tell you whether the app moved or you did. A short rise
+   answers that and then gets out of the way.
+   Not decoration, and deliberately not a delay: the dialog is interactive from
+   frame one — the animation is on appearance only, never gating input, and
+   focus has already moved in by the time it plays. */
+.receipt-backdrop,
+.export-review-backdrop {
+  animation: overlay-scrim-in 120ms ease-out both;
+}
+
+.receipt,
+.export-review-panel {
+  animation: overlay-surface-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes overlay-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes overlay-surface-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The surfaces still appear; only the movement goes. State comprehension
+     must not depend on an animation anyone can switch off. */
+  .receipt-backdrop,
+  .export-review-backdrop,
+  .receipt,
+  .export-review-panel {
+    animation: none;
+  }
+}
+
 /* Two-column premium body (mock layout): identity + file + style on the left,
    results + quality + format on the right. Header, journey, the adaptive-DSP
    line, and the footer stay full width. Collapses to one column on narrow
@@ -3670,6 +3709,22 @@ button.primary:disabled {
   padding: 0.12rem 0.45rem;
   border-radius: 999px;
   font-weight: 700;
+  /* U11 — fires on remount, and the badge only remounts when the verdict
+     itself flips (see RightRail). Colour and text carry the state; this only
+     draws the eye to the moment it changed. No size or margin is animated, so
+     the header cannot reflow. */
+  animation: quality-verdict-change 420ms ease-out both;
+}
+
+@keyframes quality-verdict-change {
+  0% { opacity: 0.5; box-shadow: 0 0 0 0 currentColor; }
+  40% { opacity: 1; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.10); }
+  100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The verdict still changes; only the attention cue goes. */
+  .quality-badge { animation: none; }
 }
 
 .badge-safe {
@@ -6583,4 +6638,22 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
 .album-sequence-arc circle {
   fill: var(--accent);
   opacity: 0.9;
+}
+
+/* U11 — the arc's settle. Fires on remount, and the component only remounts
+   when the computed shape genuinely changed (see SequenceArc). Fixed height on
+   the container above means this cannot shift layout: the svg fades and
+   settles inside a box that never resizes. */
+.album-sequence-arc svg {
+  animation: album-arc-settle 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes album-arc-settle {
+  from { opacity: 0.35; transform: scaleY(0.88); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The new shape still renders — only the settle is dropped. */
+  .album-sequence-arc svg { animation: none; }
 }
