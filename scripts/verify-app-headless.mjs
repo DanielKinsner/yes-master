@@ -683,6 +683,19 @@ for (const scenario of SCENARIOS) {
         scenario.settle,
       );
 
+      // The waveform's peaks land ~800ms AFTER analysis reports READY (the
+      // preview mock reproduces the real decode gap on purpose). Screenshotting
+      // the instant READY appears therefore captured "No waveform yet." in a
+      // ready-looking window — which is honest about that instant and
+      // misleading as evidence: anyone reviewing these images for the U11
+      // visual pass would report an empty waveform as a defect.
+      // Non-fatal: a scenario whose analysis is deliberately still pending
+      // (the album cases) has no waveform to wait for, and that is not an
+      // error.
+      await page
+        .waitForSelector('[role="slider"][aria-valuenow]', { timeout: 2_500 })
+        .catch(() => {});
+
       if (scenario.drive) {
         await scenario.drive(page);
         text = await bodyText(page);
