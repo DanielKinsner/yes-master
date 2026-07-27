@@ -35,10 +35,12 @@ is post-beta advisory under D16.
       `plugins.updater`; `src/App.tsx` updater toast; frontend + Rust lanes.
 - [x] **Premium-parity UI pass** applied (floating surfaces on the shared
       elevation scale). *Evidence:* Slice 9; the before/after A/B set.
-- [ ] **The latest completed full CI run is green** (Windows, macOS, Android
-      lanes + DSP snapshots). Public-repository runners removed the prior
-      billing gate on 2026-07-13; check this box only after the current commit's
-      run completes green. *Advisory reminder:* do not merge red.
+- [x] **The latest completed full CI run is green** (Windows, macOS, Android
+      lanes + DSP snapshots). *Evidence:* run `30284245225` at `5c008f6`
+      (2026-07-27) — all six jobs green, the first green main-tip run since
+      U12 (see the U14 ledger rows for what the red streak was hiding).
+      *Advisory reminder:* do not merge red — and **watch the run finish**;
+      the streak survived because nobody did.
 - [x] **Owner-gate tripwires green** — AC-5, Phase-B, and album-character stay
       OFF for beta (D7). *Evidence:* `src-tauri/tests/owner_gates_default.rs`.
 
@@ -214,7 +216,7 @@ is post-beta advisory under D16.
 | 2026-07-27 | U14 | `bd5a794` (run `30282437161`) | GitHub Actions | — | first watched remote CI run at a `main` tip | — | **FAILED — and the failure was the most valuable result of the day.** (1) macOS desktop lane: `fixture_matrix_rejects_traversal_past_the_filesystem_root` got "Read-only file system" instead of a traversal rejection — a real product bug in `lexically_normalize` (excess `..` cancelled in PAIRS at the root, so an even excess escaped detection; the tempdir test's verdict depended on directory depth parity). **`gh run list` shows every main-tip run since U12 red** — prior sessions pushed docs and never watched a run finish. (2) Windows lane frontend step: `release-readiness.test.ts` pins the freeze-status wording and rejected the close-out's "DECLARED" phrasing — proving the "docs-only commits are commit-independent" claim in the previous rows wrong for any doc a test reads. Both fixed in `48ed322`/`4e9fb3f`. | GitHub Actions run 30282437161 |
 | 2026-07-27 | U14 | `4e9fb3f` | Windows 11 / rustc 1.95.0 | source `0.9.1` | `cargo fmt --check`; `cargo clippy --all-targets -- -D warnings`; full `cargo test` with `AMS_RUN_REAL_FIXTURE=1`; `npm test`; both bridge lanes | native-synthetic + private-fixture + frontend-unit | PASS — fmt/clippy clean; **36 binaries, 590 passed, 0 failed** (588 + 2 new parity regression tests), **0 fixture skips**; frontend 72 files / 712 tests; iPhone 46, Android 26 + arm64 NDK check. The parity fix's even-excess test was **verified RED against the reverted code in place** before acceptance. One transient LNK1104 (linker could not reopen a test exe — stale file lock) disappeared on rerun with no code change; recorded as environment, not product. | run logs |
 | 2026-07-27 | U14 | `4e9fb3f` | Windows 11 / rustc 1.95.0 release profile | **`YES Master_0.9.1_x64_en-US.msi`** (9,957,376 bytes) · **`YES Master_0.9.1_x64-setup.exe`** (7,918,389 bytes) | `npm run build:windows` (runs `tsc -b` + `vite build` via `beforeBuildCommand`, then `tauri build --bundles msi,nsis`) | installed-machine (artifact identity only) | PASS — built from the remediated tree. SHA-256: msi `0ee6d1d2b2b96f4ec5a84a7b97945806f8aab6f9061cb33ecbfcdc2d2b75082b`, nsis-setup `7b443c5750773a874bf6a5c5f6df6e6ea690ec1e7045eff020a1fa3c4483cfa1`. **Draft artifacts, unsigned, NOT published** — updater signatures and publication are U16's transaction. These are the bytes U15 installs. | `src-tauri/target/release/bundle/` (local only, not committed) |
-| 2026-07-27 | U14 | remediated tip pending push | GitHub Actions | — | remote CI (snapshot-diagnostics, web-e2e, windows, macos, android) | — | **OPEN** — awaiting the tip run on the remediation commits. Check the boxes in §1 only after it completes green; the tag lands after that. | GitHub Actions |
+| 2026-07-27 | U14 | `5c008f6` (run `30284245225`) | GitHub Actions | — | remote CI (snapshot-diagnostics ×2, web-e2e, windows, macos, android) | — | **PASS — all six jobs green.** First green main-tip run since U12. The macOS lane runs the traversal test that was red for three days; the Windows lane runs the freeze-wording pin. The candidate tag lands on the docs commit that records this row; that diff is docs-only and its own CI run is watched to completion as well. | GitHub Actions run 30284245225 |
 
 ### Candidate freeze
 
@@ -226,17 +228,15 @@ branch that cannot feed the candidate. The freeze is a plan rule, not a
 branch-protection change, so **the U14 ledger entry must announce it** or a
 parallel agent session will not see it.
 
-**Freeze status: NOT IN FORCE — imminent.** The owner authorized push + tag on
-2026-07-27. The first tip run anyone actually watched finish exposed that
-**remote CI had been red since U12 landed** (the traversal test's verdict
-depended on temp-dir depth parity — see the U14 remediation rows above) plus a
-doc-wording pin this very line must satisfy. U14 remediation commits are
-landing on `main` to get the tip green; **the freeze takes force at the moment
-the candidate tag `v0.9.1-beta.1` lands on the final green tip.** A parallel
-agent session: coordinate before committing to `main` — the tag may land at
-any moment, and after it does, no commits land on `main` until U17 closes or
-the candidate is rejected (then: unfreeze, fix, bump patch, re-run gates,
-re-tag).
+**Freeze status: IN FORCE (declared 2026-07-27, U14 close-out).** Candidate
+tag `v0.9.1-beta.1` lands on the commit that records this line; remote CI is
+green at `5c008f6` (run `30284245225`, all six jobs) and every local lane is
+green per the U14 ledger rows. **No commits land on `main` from the tag until
+U17 closes or the candidate is rejected.** Work discovered during U15–U17 goes
+to `docs/OWNER_INPUT_QUEUE.md` and, if code is needed, onto a branch that
+cannot feed the candidate. A rejected candidate returns to U14: unfreeze,
+land fixes, bump to the next patch version, re-run the gates, re-tag. The
+freeze is a plan rule, not a branch-protection change.
 
 ---
 

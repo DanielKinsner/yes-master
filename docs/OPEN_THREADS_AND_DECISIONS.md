@@ -7,14 +7,14 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
-> **⚠ 2026-07-27 — CANDIDATE FREEZE IMMINENT (U14).** Every local mechanical
-> lane is green and the 0.9.1 draft installers are built with recorded
-> SHA-256s. The first watched tip CI run exposed that **remote CI had been red
-> since U12** (a parity-dependent traversal test — fixed in the U14
-> remediation commits); once the tip is green the owner-authorized tag
-> `v0.9.1-beta.1` lands and **`main` freezes until U17 closes**. Coordinate
-> before committing to `main`. Details: `docs/plans/beta-go-no-go.md`
-> §Candidate freeze and the U14 row in
+> **⚠ 2026-07-27 — CANDIDATE FREEZE IN FORCE (U14 closed).** `v0.9.1-beta.1`
+> is tagged; remote CI is green at the tip (run `30284245225` — the first
+> green main run since U12; the red streak hid a real traversal bug, fixed in
+> `48ed322`). **Do not commit to `main` until U17 closes or the candidate is
+> rejected** — branch and queue instead. Everything remaining is owner-lane:
+> U15 installed/listening gates → U16 release/updater transaction → U17
+> public activation. Details: `docs/plans/beta-go-no-go.md` §Candidate freeze
+> and the U14 row in
 > `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md`.
 
 > **2026-07-03:** a hardening push is in flight on
