@@ -217,7 +217,15 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+          # "-" = ad-hoc signing, the documented $0-lane default (matches
+          # signingIdentity in tauri.conf.json). Without the fallback, a run
+          # with NO Apple secrets exported an empty-but-set
+          # APPLE_SIGNING_IDENTITY, which overrides the config and made the
+          # bundler run `codesign -s ""` -> "no identity found" (first tag
+          # run, 2026-07-27). The fail-closed guard for PARTIAL secret groups
+          # lives in the import step above, which still exits 1 when a
+          # certificate is supplied but no identity is found.
+          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY || '-' }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
