@@ -195,6 +195,25 @@ jobs:
           fi
           echo "APPLE_SIGNING_IDENTITY=$CERT_ID" >> "$GITHUB_ENV"
 
+      # The notarization trio must be ABSENT, not empty, when Apple signing is
+      # off: tauri treats "all three env vars present" as "notarize", so
+      # empty-but-set values sent it into notarization with a blank team ID
+      # ("Team ID must be at least 3 characters", proving run 2026-07-27).
+      # GITHUB_ENV is only written when the secrets exist; secret values stay
+      # masked in logs either way.
+      - name: Export Apple notarization credentials
+        if: ${{ matrix.platform == 'macos-latest' && env.APPLE_SIGNING_ENABLED == 'true' }}
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          {
+            echo "APPLE_ID=$APPLE_ID"
+            echo "APPLE_PASSWORD=$APPLE_PASSWORD"
+            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
+          } >> "$GITHUB_ENV"
+
       - name: Install Windows signing CLI
         if: ${{ matrix.platform == 'windows-latest' && env.AZURE_SIGNING_ENABLED == 'true' }}
         run: cargo install artifact-signing-cli
@@ -214,9 +233,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID deliberately absent
+          # here — the "Export Apple notarization credentials" step above
+          # provides them only when Apple signing is configured, because
+          # empty-but-set values make tauri attempt notarization with blanks.
           # "-" = ad-hoc signing, the documented $0-lane default (matches
           # signingIdentity in tauri.conf.json). Without the fallback, a run
           # with NO Apple secrets exported an empty-but-set
