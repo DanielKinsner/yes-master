@@ -195,6 +195,25 @@ jobs:
           fi
           echo "APPLE_SIGNING_IDENTITY=$CERT_ID" >> "$GITHUB_ENV"
 
+      # The notarization trio must be ABSENT, not empty, when Apple signing is
+      # off: tauri treats "all three env vars present" as "notarize", so
+      # empty-but-set values sent it into notarization with a blank team ID
+      # ("Team ID must be at least 3 characters", proving run 2026-07-27).
+      # GITHUB_ENV is only written when the secrets exist; secret values stay
+      # masked in logs either way.
+      - name: Export Apple notarization credentials
+        if: ${{ matrix.platform == 'macos-latest' && env.APPLE_SIGNING_ENABLED == 'true' }}
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          {
+            echo "APPLE_ID=$APPLE_ID"
+            echo "APPLE_PASSWORD=$APPLE_PASSWORD"
+            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
+          } >> "$GITHUB_ENV"
+
       - name: Install Windows signing CLI
         if: ${{ matrix.platform == 'windows-latest' && env.AZURE_SIGNING_ENABLED == 'true' }}
         run: cargo install artifact-signing-cli
@@ -214,10 +233,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID deliberately absent
+          # here — the "Export Apple notarization credentials" step above
+          # provides them only when Apple signing is configured, because
+          # empty-but-set values make tauri attempt notarization with blanks.
+          # "-" = ad-hoc signing, the documented $0-lane default (matches
+          # signingIdentity in tauri.conf.json). Without the fallback, a run
+          # with NO Apple secrets exported an empty-but-set
+          # APPLE_SIGNING_IDENTITY, which overrides the config and made the
+          # bundler run `codesign -s ""` -> "no identity found" (first tag
+          # run, 2026-07-27). The fail-closed guard for PARTIAL secret groups
+          # lives in the import step above, which still exits 1 when a
+          # certificate is supplied but no identity is found.
+          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY || '-' }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -277,7 +305,19 @@ jobs:
       - name: Audit draft release assets
         shell: pwsh
         run: |
-          $release = gh api "repos/${{ github.repository }}/releases/tags/$env:RELEASE_TAG" | ConvertFrom-Json
+          # The releases/tags/<tag> endpoint resolves PUBLISHED releases only —
+          # a draft is not attached to a tag ref yet, so it 404s, the parsed
+          # object comes back empty, and "-not $release.draft" misfired as
+          # "must leave the release as a draft" (proving run 2, 2026-07-27).
+          # List and match tag_name instead; drafts appear there with auth.
+          $release = gh api "repos/${{ github.repository }}/releases?per_page=30" |
+            ConvertFrom-Json |
+            Where-Object { $_.tag_name -eq $env:RELEASE_TAG } |
+            Select-Object -First 1
+          if (-not $release) {
+            Write-Error "No release (draft or published) found for tag $env:RELEASE_TAG."
+            exit 1
+          }
           if (-not $release.draft) {
             Write-Error "The workflow must leave the release as a draft for owner review."
             exit 1
