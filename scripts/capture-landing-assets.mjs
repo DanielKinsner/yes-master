@@ -40,7 +40,13 @@ async function freePort() {
 }
 
 function run(command, args) {
-  execFileSync(command, args, { cwd: REPO_ROOT, stdio: "inherit" });
+  execFileSync(command, args, {
+    cwd: REPO_ROOT,
+    stdio: "inherit",
+    // npm is npm.cmd on Windows; a bare spawn only finds it through a shell
+    // (same pattern as verify-headless.mjs).
+    shell: process.platform === "win32",
+  });
 }
 
 async function waitForServer(url, timeoutMs = 30_000) {
@@ -114,10 +120,21 @@ console.log("[capture] building");
 run("npm", ["run", "build"]);
 
 console.log(`[capture] serving on ${baseUrl}`);
+// --host 127.0.0.1 explicitly: `vite preview` otherwise binds `localhost`,
+// which resolves to ::1 on Windows, and the 127.0.0.1 readiness probe then
+// times out against a server that started fine (same fix as verify-headless).
 const server = spawn(
   "npx",
-  ["vite", "preview", "--port", String(port), "--strictPort"],
-  { cwd: REPO_ROOT, stdio: "ignore", detached: true },
+  ["vite", "preview", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
+  {
+    cwd: REPO_ROOT,
+    stdio: "ignore",
+    // POSIX: detached puts the server in its own process group so the
+    // group-kill below can take vite down with its children. Windows: npx is
+    // npx.cmd (needs a shell), and teardown goes through taskkill instead.
+    detached: process.platform !== "win32",
+    shell: process.platform === "win32",
+  },
 );
 
 let browser;
@@ -201,7 +218,17 @@ try {
 } finally {
   if (browser) await browser.close();
   try {
-    process.kill(-server.pid);
+    if (process.platform === "win32") {
+      // process.kill(-pid) is a POSIX process-group kill; on Windows it
+      // throws, the catch swallowed it, and the preview server was orphaned.
+      // taskkill /T takes down the shell AND the vite process holding the
+      // port (same reasoning as verify-headless.mjs).
+      execFileSync("taskkill", ["/pid", String(server.pid), "/T", "/F"], {
+        stdio: "ignore",
+      });
+    } else {
+      process.kill(-server.pid);
+    }
   } catch {
     // already gone
   }

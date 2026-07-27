@@ -22,9 +22,14 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
+// fileURLToPath, not URL#pathname: pathname keeps percent-encoding and a
+// leading slash ("/C:/Users/SM%20-%20Dan/..."), which path.resolve on Windows
+// mangles into "C:\C:\...%20..." the moment the checkout path contains a
+// space. Found by U14 running this gate on a real Windows checkout.
 export const REPO_ROOT = path.resolve(
-  path.dirname(new URL(import.meta.url).pathname),
+  path.dirname(fileURLToPath(import.meta.url)),
   "..",
   "..",
 );
