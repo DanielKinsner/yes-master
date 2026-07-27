@@ -282,8 +282,19 @@ pub(crate) fn lexically_normalize(path: &Path) -> PathBuf {
         match component {
             Component::CurDir => {}
             Component::ParentDir => {
-                if !normalized.pop() {
-                    normalized.push(component.as_os_str());
+                // Only a Normal component may be cancelled by a `..`. A bare
+                // `pop()` here also popped a previously PUSHED `..`, so at the
+                // filesystem root excess `..` components cancelled in PAIRS —
+                // an even number of them vanished, the escapes-the-root
+                // validation saw nothing, and the runner went on to create
+                // `/evidence` at the root (rejected as read-only on macOS CI,
+                // silently creatable elsewhere). Whether the traversal test
+                // caught it depended on the temp dir's depth parity.
+                match normalized.components().next_back() {
+                    Some(Component::Normal(_)) => {
+                        normalized.pop();
+                    }
+                    _ => normalized.push(component.as_os_str()),
                 }
             }
             other => normalized.push(other.as_os_str()),
@@ -328,6 +339,55 @@ mod tests {
         fn drop(&mut self) {
             crate::guardrails::set_adaptive_compression_enabled(self.0);
         }
+    }
+
+    #[test]
+    fn excess_parent_dirs_survive_normalization_regardless_of_parity() {
+        // Regression for the 2026-07-27 macOS CI failure: a bare `pop()` in
+        // lexically_normalize also popped a previously pushed `..`, so at the
+        // root excess `..` components cancelled in PAIRS. An EVEN excess
+        // vanished entirely, the escapes-the-root validation saw a clean
+        // absolute path, and the runner tried to create `/evidence` at the
+        // filesystem root. Whether the tempdir-based integration test caught
+        // this depended on the temp dir's depth parity — these fixed-depth
+        // cases pin both parities on every OS.
+        for (cwd, requested) in [
+            // depth 2, four `..` → 2 excess (EVEN — the case that vanished)
+            ("/a/b", "../../../../evidence"),
+            // depth 2, five `..` → 3 excess (odd)
+            ("/a/b", "../../../../../evidence"),
+        ] {
+            let resolved = normalized_absolute_path(Path::new(cwd), Path::new(requested));
+            assert!(
+                resolved
+                    .components()
+                    .any(|c| matches!(c, Component::ParentDir)),
+                "excess `..` must stay visible after normalization, got {} from cwd={cwd} requested={requested}",
+                resolved.display(),
+            );
+            let error = prepare_evidence_output_dir(Path::new(cwd), Path::new(requested), &[])
+                .expect_err("a path that climbs past the root must be rejected");
+            let message = format!("{error}");
+            assert!(
+                message.contains("escapes"),
+                "rejection must name the escape, got: {message}",
+            );
+        }
+    }
+
+    #[test]
+    fn documented_relative_output_still_normalizes_and_passes_validation() {
+        // The documented commands run from src-tauri with `--output
+        // ../test-output/...` — one `..` that cancels against a real
+        // directory. The parity fix must not break the legitimate case.
+        let resolved = normalized_absolute_path(
+            Path::new("/repo/src-tauri"),
+            Path::new("../test-output/evidence"),
+        );
+        assert_eq!(resolved, Path::new("/repo/test-output/evidence"));
+        assert!(!resolved
+            .components()
+            .any(|c| matches!(c, Component::ParentDir)));
     }
 
     #[test]
