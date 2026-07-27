@@ -521,7 +521,14 @@ describe("release state model (U5)", () => {
       "mac",
     );
     expect(detectPlatform({ platform: "Linux x86_64" })).toBe("other");
-    expect(detectPlatform(undefined)).toBe("other");
+    // A navigator with no usable signal must resolve to "other". Passing
+    // `undefined` here would NOT test that: an explicit `undefined` argument
+    // triggers the default parameter, which falls back to the REAL jsdom
+    // navigator — whose user agent embeds the host OS, so the assertion
+    // passed on Linux and inverted on Windows (found by U14's first
+    // real-Windows frontend run, 2026-07-27).
+    expect(detectPlatform({})).toBe("other");
+    expect(detectPlatform({ platform: "", userAgent: "" })).toBe("other");
 
     // iPads report a Mac-shaped platform string. Handing a tablet visitor the
     // desktop .dmg as "your" download would be a lie in the honest direction's
