@@ -223,17 +223,17 @@ branch that cannot feed the candidate. The freeze is a plan rule, not a
 branch-protection change, so **the U14 ledger entry must announce it** or a
 parallel agent session will not see it.
 
-**Freeze status: DECLARED 2026-07-27 (U14 close-out).** Every local mechanical
-lane is green (rows above). `main` is frozen as of the U14 close-out docs
-commit: **no further commits land on `main`** except the owner-authorized
-candidate tag `v0.9.1-beta.1`, which goes on the close-out commit itself. Two
-owner actions complete C4: (1) authorize the push of the U14 commits so the
-remote CI row above can go green at the tip, and (2) authorize the tag. The
-commits after evidence commit `b00c4c8` are docs-only (`git diff b00c4c8..HEAD
---stat` shows only `docs/`), which is why the mechanical evidence remains valid
-at the tag point per this ledger's commit-independence clause. A parallel agent
-session seeing this line: do not commit to `main`; stage work on a branch and
-queue it in `docs/OWNER_INPUT_QUEUE.md`.
+**Freeze status: NOT IN FORCE — imminent.** The owner authorized push + tag on
+2026-07-27. The first tip run anyone actually watched finish exposed that
+**remote CI had been red since U12 landed** (the traversal test's verdict
+depended on temp-dir depth parity — see the U14 remediation rows above) plus a
+doc-wording pin this very line must satisfy. U14 remediation commits are
+landing on `main` to get the tip green; **the freeze takes force at the moment
+the candidate tag `v0.9.1-beta.1` lands on the final green tip.** A parallel
+agent session: coordinate before committing to `main` — the tag may land at
+any moment, and after it does, no commits land on `main` until U17 closes or
+the candidate is rejected (then: unfreeze, fix, bump patch, re-run gates,
+re-tag).
 
 ---
 
