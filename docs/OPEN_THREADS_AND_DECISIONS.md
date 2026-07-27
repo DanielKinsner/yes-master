@@ -7,6 +7,14 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **⚠ 2026-07-27 — CANDIDATE FREEZE DECLARED (U14).** Every local mechanical
+> lane is green at `b00c4c8` and the 0.9.1 draft installers are built with
+> recorded SHA-256s. **`main` is frozen** pending the owner's push + tag of
+> `v0.9.1-beta.1`; after that, everything remaining is owner-lane (U15–U17).
+> Details and rules: `docs/plans/beta-go-no-go.md` §Candidate freeze and the
+> U14 row in `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md`.
+> Do not commit to `main`; branch and queue instead.
+
 > **2026-07-03:** a hardening push is in flight on
 > `harden/2026-07-03-hostile-input` — see
 > `docs/plans/2026-07-03-hardening-plan.md`. It carries threads 11a, 11b, #13,

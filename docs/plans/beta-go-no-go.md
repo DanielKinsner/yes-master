@@ -18,9 +18,11 @@ is post-beta advisory under D16.
 
 ## 1. Engineering readiness (agent lane — shipped)
 
-- [x] **Beta version 0.9.0** across the three desktop manifests; Windows
-      publisher = "Daniel Kinsner". *Evidence:* Slice 1; `version-coherence` +
-      packaging tests; `npm run build:windows` produces `YES Master_0.9.0`.
+- [x] **Beta version 0.9.1** across the three desktop manifests (bumped from
+      0.9.0 by U14 — 0.9.0 is now only the updater seed U16 proves the update
+      path from); Windows publisher = "Daniel Kinsner". *Evidence:* Slice 1 for
+      the original mechanism; U14 commit `2955a8a` + `version-coherence` tests
+      for the 0.9.1 bump; `npm run build:windows` produces `YES Master_0.9.1`.
 - [x] **Product canon reflects the beta model** (free public beta → paid 1.0,
       Distribution & Business Model, mobile/landing scope). *Evidence:* Slice 2;
       `docs/PRODUCT.md`.
@@ -202,6 +204,15 @@ is post-beta advisory under D16.
 > `0c69f67`/`e2440b1`, after it. Stated rather than left to inference, per this
 > ledger's own rule that a green result from a different tree is not evidence.
 
+| 2026-07-27 | U14 | `b00c4c8` | Windows 11 / Node 24.15.0, vitest 4.1.9, fresh `npm ci` | source `0.9.1` | `npm test`; `npm audit` | frontend-unit | PASS — **72 files, 712 tests, 0 failed**; audit **0 vulnerabilities**. **First real-Windows run of the frontend suite in this program, and it found a defect the WSL2/macOS runs could not:** `detectPlatform(undefined)` triggered the default parameter and fell back to the real jsdom navigator, whose UA embeds the host OS — the assertion passed on Linux and inverted on Windows. Fixed (`7b8fc84`) to assert the intended contract (`{}` → `other`) host-independently. | `src/lib/release-readiness.test.ts` |
+| 2026-07-27 | U14 | `b00c4c8` | Windows 11 / rustc 1.95.0, native NTFS checkout | source `0.9.1` | `cargo fmt --check`; `cargo clippy --all-targets -- -D warnings`; `cargo test --lib`; full `cargo test` **with `AMS_RUN_REAL_FIXTURE=1`** | native-synthetic **+ private-fixture** | PASS — fmt and clippy clean; lib 418 passed / 2 ignored; full integration **36 binaries, 588 passed, 0 failed, 7 ignored** (all `#[ignore]`-marked long-runners). **Zero "Skipping real-fixture" lines** — the slow lane genuinely ran against `private-audio-fixtures/` on this machine. All 9 preset byte-identity snapshots pass unchanged — no sound moved. fmt/clippy/lib ran at `f4fd637`; the `f4fd637..b00c4c8` diff is `.mjs` scripts and PNGs only (no Rust input), the full suite ran at `b00c4c8`. | `src-tauri/`, run log |
+| 2026-07-27 | U14 | `b00c4c8` | Windows 11 / rustc 1.95.0 | new `tests/track_master_e2e.rs` | `cargo test --test track_master_e2e` | native-synthetic | PASS — the U14 synthetic-WAV flow: import probe → analysis (live progress) → waveform peaks → render → re-analysis of the rendered file → receipt + advisory checks from `RenderedMeasurements` → **collision-safe second export** (`__1` divert, first render byte-identical after) → project save → **reload** (settings/selection/view survive; reloaded path re-analyzes to the same LUFS), plus a mono variant. **Negative-controlled:** expecting `__2` instead of `__1` turns the flow test red. Receipt LUFS agrees with an independent measurement of the written file within 0.5 LU. | `src-tauri/tests/track_master_e2e.rs` |
+| 2026-07-27 | U14 | `b00c4c8` | Windows 11 / rustc 1.95.0; cargo-ndk 4.1.2, NDK r27.2, `--platform 29` | bridge crates | iPhone: `cargo check --all-targets` + `cargo test`; Android: `cargo test` + `cargo ndk -t arm64-v8a --platform 29 check` | native-synthetic | PASS — iPhone check clean, **46 passed / 1 ignored**; Android **26 passed**, arm64 NDK check clean. Run because U14's version bump touches the shared crate's `Cargo.toml`/locks. | `apps/iphone-native/rust/`, `apps/android-native/rust/` |
+| 2026-07-27 | U14 | `b00c4c8` | Windows 11 / Playwright bundled Chromium (lockfile-pinned) | `dist/` from source `0.9.1` | `npm run verify:headless` | browser-headless | PASS — landing suite (13 viewports, axe, keyboard, zoom, reduced-motion) + **24 `/app` scenario/viewport checks**. `scenarioCoverage` names S-D1, S-E1, S-F1, S-F2, S-F3 instances. Also run cold at session start against `fcf89a8` (U8 re-verification per the resume protocol) — green both times. | `test-output/headless/2026-07-27T15-44-52-678Z/` |
+| 2026-07-27 | U14 | `b00c4c8` | Windows 11 / Node 24 | `src/assets/landing/` | `npm run capture:landing`; `npm run verify:landing-assets` | browser-headless + frontend-unit | PASS — the version bump changed `preview-mock.ts` (a listed capture input) and **the U7 gate correctly failed the old captures**; three fresh 1440×1000 captures bound to digest `77e28589b93a…`, eager imagery unchanged at 330 KB, 7/7 asset tests green. Provenance note: the manifest's `sourceCommit` string reads `f4fd637` because the capture ran from a dirty tree before `b00c4c8` existed; freshness is decided by the content digest, which matches the committed inputs. **Windows tooling defects fixed first (`f315105`):** `URL#pathname` mangled a checkout path containing a space into `C:\C:\…%20…`; bare `npm`/`npx` spawns ENOENT on Windows; `process.kill(-pid)` silently orphaned the preview server; `vite preview` bound `::1` while the probe polled `127.0.0.1`. Every prior run of this tooling was WSL2/macOS, which is why all four survived U7. | `src/assets/landing/manifest.json` |
+| 2026-07-27 | U14 | `b00c4c8` | Windows 11 / rustc 1.95.0 release profile | **`YES Master_0.9.1_x64_en-US.msi`** (9,957,376 bytes) · **`YES Master_0.9.1_x64-setup.exe`** (7,916,332 bytes) | `npm run build:windows` (runs `tsc -b` + `vite build` via `beforeBuildCommand`, then `tauri build --bundles msi,nsis`) | installed-machine (artifact identity only) | PASS — both bundles built from the `b00c4c8` tree. SHA-256: msi `b9a73739992eac1d77b847889d3ded964bc8e049d0ca2ebf8fc7f84412c23a24`, nsis-setup `553989b9ec69a774a8d2b71b2e113f745aa2f336f100e509e28b4d1fdc3141e1`. **Draft artifacts, unsigned, NOT published** — updater signatures and publication are U16's transaction. These are the bytes U15 installs; installing and running them proves nothing yet (that is U15's job). | `src-tauri/target/release/bundle/` (local only, not committed) |
+| 2026-07-27 | U14 | tip pending push | GitHub Actions | — | remote CI (snapshot-diagnostics, web-e2e, windows, macos, android) | — | **OPEN — the one U14 mechanical gate that cannot run locally.** Requires the owner-authorized push of the U14 commits; check the boxes in §1 only after the tip run completes green. | GitHub Actions |
+
 ### Candidate freeze
 
 U14 ends by tagging the release candidate at the exact commit whose evidence
@@ -212,7 +223,17 @@ branch that cannot feed the candidate. The freeze is a plan rule, not a
 branch-protection change, so **the U14 ledger entry must announce it** or a
 parallel agent session will not see it.
 
-**Freeze status: NOT IN FORCE.** No candidate is tagged. Work on `main` normally.
+**Freeze status: DECLARED 2026-07-27 (U14 close-out).** Every local mechanical
+lane is green (rows above). `main` is frozen as of the U14 close-out docs
+commit: **no further commits land on `main`** except the owner-authorized
+candidate tag `v0.9.1-beta.1`, which goes on the close-out commit itself. Two
+owner actions complete C4: (1) authorize the push of the U14 commits so the
+remote CI row above can go green at the tip, and (2) authorize the tag. The
+commits after evidence commit `b00c4c8` are docs-only (`git diff b00c4c8..HEAD
+--stat` shows only `docs/`), which is why the mechanical evidence remains valid
+at the tag point per this ledger's commit-independence clause. A parallel agent
+session seeing this line: do not commit to `main`; stage work on a branch and
+queue it in `docs/OWNER_INPUT_QUEUE.md`.
 
 ---
 
