@@ -50,11 +50,18 @@ is post-beta advisory under D16.
       Windows MSI/NSIS, mandatory updater signatures, SHA-256 checksums, a
       draft release, and a final asset audit. Partial Apple/Azure secret groups
       fail closed; absent paid groups do not block the beta. *Agent; D16.*
-- [ ] **A draft `v0.9.0-beta.1` workflow run is green** and contains `.dmg`,
-      `.app.tar.gz`, `.msi`, `.exe`, updater `.sig` files, `latest.json`, and
-      `SHA256SUMS.txt`. *Agent prepares; owner authorizes tag/push.*
+- [x] **A draft `v0.9.1-beta.1` workflow run is green** and contains `.dmg`,
+      `.app.tar.gz`, `.msi`, `setup.exe`, all three updater `.sig` files,
+      `latest.json`, and `SHA256SUMS.txt` — 9 assets, verified by the
+      workflow's own audit job. *Evidence:* Release run `30294627200` at the
+      moved tag (commit `34f7c88`), 2026-07-27, after the owner-approved
+      workflow fixes (see ledger). (The box previously said `v0.9.0-beta.1`;
+      U14 renamed the candidate to 0.9.1 — 0.9.0 is the updater seed.)
 - [ ] **Draft artifacts are downloadable and their checksums match.** *Owner or
-      agent, before publish.*
+      agent, before publish.* The audit job already downloads every asset and
+      writes `SHA256SUMS.txt` from the downloaded bytes; what remains is an
+      independent download-and-compare against that ledger (natural U15/U16
+      step on the install machine).
 - [ ] *Advisory / post-beta:* Apple Developer notarization and Azure Artifact
       Signing are configured when funding permits. They reduce OS-warning
       friction but do not block the $0 beta.
@@ -217,6 +224,8 @@ is post-beta advisory under D16.
 | 2026-07-27 | U14 | `4e9fb3f` | Windows 11 / rustc 1.95.0 | source `0.9.1` | `cargo fmt --check`; `cargo clippy --all-targets -- -D warnings`; full `cargo test` with `AMS_RUN_REAL_FIXTURE=1`; `npm test`; both bridge lanes | native-synthetic + private-fixture + frontend-unit | PASS — fmt/clippy clean; **36 binaries, 590 passed, 0 failed** (588 + 2 new parity regression tests), **0 fixture skips**; frontend 72 files / 712 tests; iPhone 46, Android 26 + arm64 NDK check. The parity fix's even-excess test was **verified RED against the reverted code in place** before acceptance. One transient LNK1104 (linker could not reopen a test exe — stale file lock) disappeared on rerun with no code change; recorded as environment, not product. | run logs |
 | 2026-07-27 | U14 | `4e9fb3f` | Windows 11 / rustc 1.95.0 release profile | **`YES Master_0.9.1_x64_en-US.msi`** (9,957,376 bytes) · **`YES Master_0.9.1_x64-setup.exe`** (7,918,389 bytes) | `npm run build:windows` (runs `tsc -b` + `vite build` via `beforeBuildCommand`, then `tauri build --bundles msi,nsis`) | installed-machine (artifact identity only) | PASS — built from the remediated tree. SHA-256: msi `0ee6d1d2b2b96f4ec5a84a7b97945806f8aab6f9061cb33ecbfcdc2d2b75082b`, nsis-setup `7b443c5750773a874bf6a5c5f6df6e6ea690ec1e7045eff020a1fa3c4483cfa1`. **Draft artifacts, unsigned, NOT published** — updater signatures and publication are U16's transaction. These are the bytes U15 installs. | `src-tauri/target/release/bundle/` (local only, not committed) |
 | 2026-07-27 | U14 | `5c008f6` (run `30284245225`) | GitHub Actions | — | remote CI (snapshot-diagnostics ×2, web-e2e, windows, macos, android) | — | **PASS — all six jobs green.** First green main-tip run since U12. The macOS lane runs the traversal test that was red for three days; the Windows lane runs the freeze-wording pin. The candidate tag lands on the docs commit that records this row; that diff is docs-only and its own CI run is watched to completion as well. | GitHub Actions run 30284245225 |
+| 2026-07-27 | U14→U16 | `9317a00` tag run `30287485586`; proving runs `30289561235`, `30291637405`, `30292750295` | GitHub Actions | Release workflow | first tag-triggered Release run + three branch-dispatch proving runs | — | **The first tag run FAILED its macOS draft build and exposed three latent Release-workflow bugs, each fixed and proven on a branch (main frozen):** (1) empty-but-set `APPLE_SIGNING_IDENTITY` overrode the ad-hoc `"-"` config → `codesign -s ""` "no identity found"; (2) empty-but-set `APPLE_ID`/`APPLE_PASSWORD`/`APPLE_TEAM_ID` forced notarization with blanks → "Team ID must be at least 3 characters"; (3) the audit resolved the draft via `releases/tags/<tag>`, which cannot see drafts → the audit step had **never actually passed on any run**. Proving run 3 (`30292750295`) green end-to-end including the complete-draft audit. Owner approved merging the fixes and moving the tag same day. | GitHub Actions; branch history in merge `34f7c88` |
+| 2026-07-27 | U14/U16 | `34f7c88` (merge; tag `v0.9.1-beta.1` moved here) | GitHub Actions | draft release `v0.9.1-beta.1`, 9 assets | CI run `30294617651`; Release run `30294627200` (tag-triggered) | installed-machine (artifact identity) | **PASS — both.** CI green at the merge tip (workflow-file-only diff from `5c008f6`+docs, so every prior lane result stands). The tag-triggered Release run went green through the audit: draft `v0.9.1-beta.1` holds `YES.Master_0.9.1_universal.dmg`, `YES.Master_universal.app.tar.gz(+.sig)`, `YES.Master_0.9.1_x64_en-US.msi(+.sig)`, `YES.Master_0.9.1_x64-setup.exe(+.sig)`, `latest.json` (both platforms), `SHA256SUMS.txt`. **Draft, unpublished — publishing is the owner's click in U16/U17.** These workflow artifacts supersede the local `4e9fb3f` installers as the U15 install source, since they are the promotable bytes. | GitHub draft release `v0.9.1-beta.1` |
 
 ### Candidate freeze
 
@@ -229,14 +238,17 @@ branch-protection change, so **the U14 ledger entry must announce it** or a
 parallel agent session will not see it.
 
 **Freeze status: IN FORCE (declared 2026-07-27, U14 close-out).** Candidate
-tag `v0.9.1-beta.1` lands on the commit that records this line; remote CI is
-green at `5c008f6` (run `30284245225`, all six jobs) and every local lane is
-green per the U14 ledger rows. **No commits land on `main` from the tag until
-U17 closes or the candidate is rejected.** Work discovered during U15–U17 goes
-to `docs/OWNER_INPUT_QUEUE.md` and, if code is needed, onto a branch that
-cannot feed the candidate. A rejected candidate returns to U14: unfreeze,
-land fixes, bump to the next patch version, re-run the gates, re-tag. The
-freeze is a plan rule, not a branch-protection change.
+tag `v0.9.1-beta.1` sits at merge commit `34f7c88` (moved there with owner
+approval after the release-workflow fixes — see the U14→U16 ledger rows).
+Remote CI is green at that tip (run `30294617651`) and the tag-triggered
+Release run `30294627200` produced the complete 9-asset draft. **No commits
+land on `main` until U17 closes or the candidate is rejected**, with the two
+freeze-era exceptions already exercised: owner-queue/ledger docs updates, and
+owner-approved merges. Work discovered during U15–U17 goes to
+`docs/OWNER_INPUT_QUEUE.md` and, if code is needed, onto a branch that cannot
+feed the candidate. A rejected candidate returns to U14: unfreeze, land
+fixes, bump to the next patch version, re-run the gates, re-tag. The freeze
+is a plan rule, not a branch-protection change.
 
 ---
 

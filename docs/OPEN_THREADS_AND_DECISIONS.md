@@ -8,14 +8,18 @@ Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
 > **⚠ 2026-07-27 — CANDIDATE FREEZE IN FORCE (U14 closed).** `v0.9.1-beta.1`
-> is tagged; remote CI is green at the tip (run `30284245225` — the first
-> green main run since U12; the red streak hid a real traversal bug, fixed in
-> `48ed322`). **Do not commit to `main` until U17 closes or the candidate is
-> rejected** — branch and queue instead. Everything remaining is owner-lane:
-> U15 installed/listening gates → U16 release/updater transaction → U17
-> public activation. Details: `docs/plans/beta-go-no-go.md` §Candidate freeze
-> and the U14 row in
-> `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md`.
+> sits at merge commit `34f7c88`; remote CI is green at that tip and the
+> tag-triggered Release run `30294627200` produced the complete 9-asset draft
+> release (unpublished). **Owner decision, same day:** the first tag run
+> exposed three latent Release-workflow bugs (empty-but-set Apple env vars
+> breaking ad-hoc codesign and forcing blank notarization; a draft-blind
+> audit lookup that had never actually passed); the owner approved merging
+> the proven branch fixes and moving the tag rather than deferring to U16.
+> **Do not commit to `main` until U17 closes or the candidate is rejected** —
+> branch and queue instead. Everything remaining is owner-lane: U15
+> installed/listening gates → U16 release/updater transaction → U17 public
+> activation. Details: `docs/plans/beta-go-no-go.md` §Candidate freeze and
+> the U14 row in `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md`.
 
 > **2026-07-03:** a hardening push is in flight on
 > `harden/2026-07-03-hostile-input` — see

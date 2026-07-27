@@ -466,12 +466,14 @@ fixed), `Blocked` (only for a hard stop — never for a queued owner question).
 
 ### Session state — 2026-07-27 (read this first when resuming)
 
-**Where things stand. C1–C4 are ALL CLOSED.** The owner authorized push + tag
-on 2026-07-27; `v0.9.1-beta.1` is tagged at the U14 close-out commit with
-remote CI green at `5c008f6` (run `30284245225`). **The freeze is IN FORCE: do
-not commit to `main`** until U17 closes or the candidate is rejected. Work
-discovered from here goes to the owner input queue or a branch. Everything
-remaining is owner-lane: U15 → U16 → U17.
+**Where things stand. C1–C4 are ALL CLOSED.** `v0.9.1-beta.1` sits at merge
+commit `34f7c88` (moved with owner approval after the first tag run exposed
+three Release-workflow bugs — fixed, proven by dispatch, merged same day).
+Remote CI is green at that tip and the tag-triggered Release run
+`30294627200` produced the complete 9-asset draft release, unpublished.
+**The freeze is IN FORCE: do not commit to `main`** until U17 closes or the
+candidate is rejected. Work discovered from here goes to the owner input
+queue or a branch. Everything remaining is owner-lane: U15 → U16 → U17.
 
 **This session ran on a real Windows machine (native NTFS checkout, path
 containing a space) with both private fixture folders present — the first
@@ -480,10 +482,11 @@ latent defects (one host-dependent test assertion, three Windows-only script
 failures) and allowed the slow real-fixture lane to run locally: full cargo
 suite with `AMS_RUN_REAL_FIXTURE=1`, 588 passed, 0 failed, 0 fixture skips.
 
-**For U15:** install the exact draft artifacts whose SHA-256s are in the
-go/no-go ledger (`4e9fb3f` build: msi `0ee6d1…`, nsis-setup `7b443c…`, in
-`src-tauri/target/release/bundle/` on the office Windows machine) — do not
-rebuild them from a different commit.
+**For U15:** install from the **draft release `v0.9.1-beta.1` on GitHub**
+(9 assets built by Release run `30294627200` from `34f7c88`, checksummed in
+its `SHA256SUMS.txt`) — those are the promotable bytes, superseding the local
+`4e9fb3f` installers recorded earlier in the ledger. Do not rebuild from a
+different commit.
 
 **The owner queue is now the binding constraint, not the code.** Three rows
 still hold conservative defaults that the public surface is built around:
