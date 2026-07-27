@@ -305,7 +305,19 @@ jobs:
       - name: Audit draft release assets
         shell: pwsh
         run: |
-          $release = gh api "repos/${{ github.repository }}/releases/tags/$env:RELEASE_TAG" | ConvertFrom-Json
+          # The releases/tags/<tag> endpoint resolves PUBLISHED releases only —
+          # a draft is not attached to a tag ref yet, so it 404s, the parsed
+          # object comes back empty, and "-not $release.draft" misfired as
+          # "must leave the release as a draft" (proving run 2, 2026-07-27).
+          # List and match tag_name instead; drafts appear there with auth.
+          $release = gh api "repos/${{ github.repository }}/releases?per_page=30" |
+            ConvertFrom-Json |
+            Where-Object { $_.tag_name -eq $env:RELEASE_TAG } |
+            Select-Object -First 1
+          if (-not $release) {
+            Write-Error "No release (draft or published) found for tag $env:RELEASE_TAG."
+            exit 1
+          }
           if (-not $release.draft) {
             Write-Error "The workflow must leave the release as a draft for owner review."
             exit 1
