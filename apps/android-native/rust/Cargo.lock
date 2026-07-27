@@ -5357,7 +5357,7 @@ dependencies = [
 
 [[package]]
 name = "yes-master"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "audioadapter-buffers",
  "chrono",
