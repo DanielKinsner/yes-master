@@ -26,9 +26,17 @@ import { createServer } from "node:net";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 const SERVER_READY_TIMEOUT_MS = 60_000;
 const SERVER_STOP_TIMEOUT_MS = 10_000;
+const VITE_CLI = path.resolve(
+  path.dirname(fileURLToPath(import.meta.resolve("vite"))),
+  "..",
+  "..",
+  "bin",
+  "vite.js",
+);
 
 function option(name) {
   const index = process.argv.indexOf(name);
@@ -61,7 +69,6 @@ function run(command, args, label) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: "inherit",
-      shell: process.platform === "win32",
     });
     child.on("error", reject);
     child.on("exit", (code) => {
@@ -80,9 +87,8 @@ let stoppingPreview = false;
 
 /**
  * Kill the preview server AND its children. `child.kill()` alone is not enough
- * on Windows: npm/vite runs under a shell, so killing the shell orphans the
- * node process that actually holds the port. An orphaned preview server is the
- * specific failure this lane is required not to leave behind.
+ * on Windows: the preview can still own subprocesses, and an orphaned preview
+ * server is the specific failure this lane is required not to leave behind.
  */
 async function stopPreview() {
   const child = previewChild;
@@ -124,11 +130,18 @@ async function startPreview(port) {
   // which resolves to ::1 on Windows, and every 127.0.0.1 client then fails to
   // connect against a server that looks like it started fine.
   previewChild = spawn(
-    "npx",
-    ["vite", "preview", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
+    process.execPath,
+    [
+      VITE_CLI,
+      "preview",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(port),
+      "--strictPort",
+    ],
     {
       stdio: ["ignore", "pipe", "pipe"],
-      shell: process.platform === "win32",
       detached: process.platform !== "win32",
     },
   );
@@ -197,7 +210,11 @@ try {
 
   if (!skipBuild) {
     console.log("[verify:headless] building once...");
-    await run("npm", ["run", "build"], "npm run build");
+    const npmCli = process.env.npm_execpath;
+    if (!npmCli) {
+      throw new Error("npm_execpath is unavailable; run this lane through npm");
+    }
+    await run(process.execPath, [npmCli, "run", "build"], "npm run build");
   } else {
     console.log("[verify:headless] --skip-build: reusing the existing dist/");
   }
@@ -231,7 +248,7 @@ try {
   for (const suite of suites) {
     console.log(`[verify:headless] running ${suite.name} suite`);
     try {
-      await run("node", [suite.script, ...suite.args], suite.name);
+      await run(process.execPath, [suite.script, ...suite.args], suite.name);
       results.push({ suite: suite.name, ok: true });
     } catch (error) {
       // Run every suite even after one fails: a single command should report
