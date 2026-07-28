@@ -55,12 +55,16 @@ const DIMENSIONS: Dimension[] = [
 
 const DIMENSION_CODES = new Set(DIMENSIONS.flatMap((d) => d.codes));
 
-// Human labels for checks that don't belong to a source axis. Unknown future
-// codes fall back to "Check" rather than being silently dropped.
+// Human labels for checks that don't belong to a source axis.
 const UNMAPPED_LABELS: Record<string, string> = {
   bit_depth_low: "Bit depth",
   sample_rate_mismatch: "Sample rate",
 };
+
+function humanizeCheckCode(code: string): string {
+  const words = code.trim().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+  return words ? `${words[0].toUpperCase()}${words.slice(1)}` : "Check";
+}
 
 const STATE_RANK: Record<QualityRowState, number> = {
   ok: 0,
@@ -105,7 +109,7 @@ export function buildQualityRows(
     if (state === "ok") continue;
     rows.push({
       key: `extra-${check.code}`,
-      label: UNMAPPED_LABELS[check.code] ?? "Check",
+      label: UNMAPPED_LABELS[check.code] ?? humanizeCheckCode(check.code),
       value: null,
       state,
       note: check.message,

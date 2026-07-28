@@ -60,6 +60,17 @@ describe("buildQualityRows", () => {
     expect(hasQualityConcern(rows)).toBe(true);
   });
 
+  it("turns an unknown future check code into a useful human label", () => {
+    const rows = buildQualityRows(
+      [check("critical", "true_peak_over_ceiling", "True peak exceeds delivery ceiling.")],
+      analysis,
+    );
+    expect(rows.find((r) => r.key === "extra-true_peak_over_ceiling")).toMatchObject({
+      label: "True peak over ceiling",
+      state: "critical",
+    });
+  });
+
   it("takes the worst level when a dimension has multiple checks", () => {
     const rows = buildQualityRows(
       [
