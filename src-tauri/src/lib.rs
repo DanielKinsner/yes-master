@@ -235,10 +235,12 @@ pub fn run() {
 /// burned test sessions. `YES_BUILD_STAMP` is set by build.rs to
 /// `<git-short-hash>[+] · <build time>` (`+` = dirty tree). Shown in the Help
 /// dialog and the startup log line.
+#[cfg(feature = "app-runner")]
 const BUILD_STAMP: &str = env!("YES_BUILD_STAMP");
 
 /// Version + build stamp for the Help dialog — the user-facing answer to
 /// "which build am I actually running?".
+#[cfg(feature = "app-runner")]
 #[tauri::command]
 fn build_info() -> String {
     format!("{} · build {}", env!("CARGO_PKG_VERSION"), BUILD_STAMP)
