@@ -56,10 +56,6 @@ describe("landing marketing proof (U7)", () => {
   it("does not use HEAD as the freshness key", () => {
     // Freshness is content-derived on purpose: an unrelated commit must leave
     // valid proof valid, or the gate becomes noise that gets muted.
-    const head = execFileSync("git", ["rev-parse", "HEAD"], {
-      cwd: root,
-      encoding: "utf8",
-    }).trim();
     const script = readFileSync(
       resolve(root, "scripts/verify-landing-assets.mjs"),
       "utf8",
@@ -69,7 +65,6 @@ describe("landing marketing proof (U7)", () => {
     // sourceCommit is provenance only. It is allowed to be stale relative to
     // HEAD, and this asserts nothing compares them.
     expect(manifest.sourceCommit).toMatch(/^[a-f0-9]{7,40}$/);
-    expect(typeof head).toBe("string");
   });
 
   it("lazy-loads every below-fold capture and declares its intrinsic size", () => {
