@@ -9,7 +9,7 @@ name = "yes_master_android_bridge"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-jni = "0.21"
+jni = "0.22"
 serde_json = "1"
 # The iPhone-named crate is the platform-neutral native facade (analyze /
 # render / settings / live_stream behind a C ABI) — Android reuses it as an
