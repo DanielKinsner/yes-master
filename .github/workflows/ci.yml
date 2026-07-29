@@ -62,7 +62,7 @@ jobs:
           cargo test --lib snapshot_diagnostics -- --ignored --nocapture
 
       - name: Upload snapshot diagnostics
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: snapshot-diagnostics-${{ runner.os }}
           path: src-tauri/snapshot-diagnostics
@@ -108,7 +108,7 @@ jobs:
 
       - name: Upload headless evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-e2e-evidence
           path: test-output/headless
