@@ -16,7 +16,7 @@ interface BetaDownloadProps {
 }
 
 const CTA_CLASSES =
-  "inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-b from-cta-light to-cta-deep px-6 py-3 font-extrabold text-[#1c0d00] shadow-lg shadow-cta-deep/25 sm:w-auto";
+  "btn-cta min-h-12 w-full gap-2 !px-6 hover:btn-cta-hover sm:w-auto";
 
 // Deliberately shares no gradient, shadow, or CTA colour with the live button.
 // An inactive control that looks clickable is the failure this unit exists to

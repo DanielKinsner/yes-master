@@ -16,12 +16,12 @@ export default function Nav({
   release = resolveRelease(),
 }: { release?: ResolvedRelease } = {}) {
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 flex items-center justify-between gap-3 border-b border-white/10 bg-night/70 px-5 py-3 backdrop-blur-md sm:px-8">
+    <nav className="fixed inset-x-0 top-0 z-50 flex items-center justify-between gap-3 border-b border-white/[0.07] bg-night/60 px-5 py-3 shadow-[0_1px_0_rgba(0,0,0,0.5)] backdrop-blur-xl sm:px-8">
       <a
         href="#top"
-        className="flex items-center gap-2 font-display text-lg font-extrabold"
+        className="flex items-center gap-2.5 font-display text-lg font-extrabold tracking-[-0.01em]"
       >
-        <img src={brandIcon} alt="" className="h-7 w-7" />
+        <img src={brandIcon} alt="" className="h-7 w-7 drop-shadow-[0_0_8px_rgba(122,166,255,0.45)]" />
         <span>YES Master</span>
       </a>
 
@@ -31,14 +31,14 @@ export default function Nav({
           <a
             key={link.href}
             href={link.href}
-            className="hidden transition-colors hover:text-ink sm:inline"
+            className="hidden font-semibold transition-colors hover:text-ink sm:inline"
           >
             {link.label}
           </a>
         ))}
         <a
           href="#get-started"
-          className="rounded-lg bg-gradient-to-b from-cta-light to-cta-deep px-4 py-2 font-extrabold text-[#1c0d00]"
+          className="btn-cta !px-4 !py-2 text-sm hover:btn-cta-hover"
         >
           {/* Anchors to the section that tells the truth about availability,
               so this is never a dead download — but it must not promise one

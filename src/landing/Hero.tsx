@@ -33,55 +33,66 @@ export default function Hero({
 }: { release?: ResolvedRelease } = {}) {
   return (
     <section id="top" className="relative isolate min-h-svh overflow-hidden">
-      {/* Background: the studio + app photo. object-cover crops, never stretches. */}
-      {/* U7: two variants so a phone does not download a 2560px photograph to
-          render it 390px wide. The master art lives beside this one as
-          *-source.jpg, imported by nothing and shipped in no bundle. */}
+      {/* Background: the owner-generated console render of the real UI
+          (2026-08-18). object-cover crops, never stretches; anchored LEFT so
+          the dark studio wall stays behind the copy and the crop, when there
+          is one, takes the right-hand VU meters rather than the console. */}
+      {/* U7: two variants so a phone does not download the full-width render
+          to draw it 390px wide. The master art lives beside these as
+          *-source.png, imported by nothing and shipped in no bundle. */}
       <img
         src={heroBg}
-        srcSet={`${heroBg1280} 1280w, ${heroBg} 2560w`}
+        srcSet={`${heroBg1280} 1280w, ${heroBg} 1672w`}
         sizes="100vw"
         alt=""
         aria-hidden="true"
         fetchPriority="high"
-        className="absolute inset-0 -z-20 h-full w-full object-cover object-[62%_center]"
+        className="absolute inset-0 -z-20 h-full w-full object-cover object-[38%_center] lg:object-[22%_center]"
       />
-      {/* Readability veil — phones only (text sits over the whole image there).
-          On desktop there is NO gradient; the studio image's own dark left
-          backs the copy. */}
+      {/* Readability veils. Phones: a bottom-up scrim (text sits over the
+          whole image there). Desktop: a left-to-right veil that backs the copy
+          column and fades out before the console, plus a floor fade into the
+          page so the section hands off cleanly. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 -z-10 bg-gradient-to-t from-night/90 via-night/55 to-night/40 md:hidden"
+        className="absolute inset-0 -z-10 bg-gradient-to-t from-night/95 via-night/60 to-night/40 lg:hidden"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 -z-10 hidden bg-gradient-to-r from-night via-night/70 via-35% to-transparent to-62% lg:block"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-night to-transparent"
       />
 
       {/* Copy column. A normal block (so its width can never exceed the
-          screen), full width on phones, ~half on desktop. */}
-      <div className="relative flex min-h-svh w-full flex-col justify-start gap-6 px-5 pt-28 pb-20 sm:px-8 lg:w-[54%] lg:max-w-[600px] lg:pl-16">
-        <span className="text-xs font-black uppercase tracking-wide text-brand-soft">
-          YES Master
-        </span>
+          screen), full width on phones, ~45% on desktop, sitting over the
+          dark wall to the left of the console. */}
+      <div className="relative flex min-h-svh w-full flex-col justify-start gap-5 px-5 pt-24 pb-16 sm:px-8 lg:w-[46%] lg:max-w-[560px] lg:pb-16 lg:pl-16 lg:pt-28 xl:pl-24">
+        <span className="eyebrow">YES Master</span>
 
-        <h1 className="font-display text-[2.6rem] font-black leading-[0.9] tracking-tight sm:text-6xl lg:text-7xl">
+        <h1 className="font-display text-[2.5rem] font-black leading-[0.92] tracking-[-0.03em] sm:text-5xl lg:text-[3.2rem] xl:text-[3.7rem]">
           Master your track in real time
-          <span className="block text-brand">— and see exactly what it did.</span>
+          <span className="block text-brand-soft">— and see exactly what it did.</span>
         </h1>
 
-        <p className="max-w-[440px] text-base leading-snug text-muted sm:text-lg">
+        <p className="max-w-[440px] text-base leading-snug text-muted lg:text-[1.05rem]">
           Drop a track, pick a sound, and hear the full mastering chain as you
           listen. It reads what your mix already has and eases its own moves to
           fit. No upload, no waiting, no black box.
         </p>
 
-        <ul className="flex flex-col gap-5">
+        <ul className="flex flex-col gap-3">
           {points.map((point) => (
-            <li key={point.title} className="relative max-w-[360px] pl-[72px]">
+            <li key={point.title} className="relative max-w-[400px] pl-[54px]">
               <img
                 src={point.icon}
                 alt=""
                 aria-hidden="true"
-                className="absolute left-0 top-0 h-14 w-14"
+                className="absolute left-0 top-0 h-10 w-10"
               />
-              <p className="text-base leading-snug text-muted">
+              <p className="text-[0.9rem] leading-snug text-muted">
                 <strong className="font-extrabold text-ink">
                   {point.title}
                 </strong>{" "}
@@ -91,16 +102,16 @@ export default function Hero({
           ))}
         </ul>
 
-        <div className="mt-2 flex flex-col gap-3 sm:flex-row md:mt-auto">
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row">
           <a
             href="#get-started"
-            className="inline-flex w-full items-center justify-center rounded-lg bg-gradient-to-b from-cta-light to-cta-deep px-5 py-3 font-extrabold text-[#1c0d00] shadow-lg shadow-cta-deep/30 sm:w-auto"
+            className="btn-cta w-full hover:btn-cta-hover sm:w-auto"
           >
             {release.available ? "Download free beta" : "About the free beta"}
           </a>
           <a
             href="#advanced"
-            className="inline-flex w-full items-center justify-center rounded-lg border border-white/15 bg-white/5 px-5 py-3 font-extrabold text-ink sm:w-auto"
+            className="btn-ghost w-full hover:btn-ghost-hover sm:w-auto"
           >
             See Advanced control
           </a>

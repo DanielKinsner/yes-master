@@ -59,7 +59,7 @@ export default function BetaSignup() {
           placeholder="you@email.com"
           disabled={notWired || status === "submitting"}
           aria-label="Email address"
-          className="w-full rounded-lg border border-white/15 bg-white/5 px-4 py-3 text-ink placeholder:text-muted focus:border-brand focus:outline-none disabled:opacity-60"
+          className="w-full rounded-[0.65rem] border border-white/15 bg-black/30 px-4 py-3 text-ink shadow-[inset_0_1px_2px_rgba(0,0,0,0.45)] placeholder:text-muted focus:border-brand focus:outline-none disabled:opacity-60"
         />
         <button
           type="submit"
@@ -68,7 +68,7 @@ export default function BetaSignup() {
           className={
             notWired
               ? "inline-flex shrink-0 cursor-not-allowed items-center justify-center rounded-lg border border-white/15 bg-white/5 px-6 py-3 font-extrabold text-muted"
-              : "inline-flex shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-cta-light to-cta-deep px-6 py-3 font-extrabold text-[#1c0d00] disabled:opacity-60"
+              : "btn-cta shrink-0 !px-6 hover:btn-cta-hover disabled:opacity-60"
           }
         >
           {notWired

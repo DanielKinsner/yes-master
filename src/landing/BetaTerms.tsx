@@ -38,36 +38,36 @@ export default function BetaTerms() {
   return (
     <section
       id="beta"
-      className="border-t border-white/10 bg-night px-5 py-20 sm:px-8 sm:py-24"
+      className="border-t border-white/[0.06] bg-night px-5 py-20 sm:px-8 sm:py-28"
     >
       <div className="mx-auto max-w-6xl">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-black uppercase tracking-wide text-brand-soft">
-            The arrangement
-          </p>
-          <h2 className="mt-4 font-display text-3xl font-black leading-tight sm:text-5xl">
-            What you are actually agreeing to.
-          </h2>
-          <p className="mt-4 text-muted sm:text-lg">
-            It is a time-boxed public beta. Here is the whole deal, before you
-            download anything.
-          </p>
-        </div>
+        {/* Presentation (2026-08-18): heading on the left, the four terms as
+            a plain two-column list with hairline rules on the right — the
+            deal, stated, not four more cards. Same sentences. */}
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+          <div>
+            <p className="eyebrow">The arrangement</p>
+            <h2 className="mt-4 font-display text-3xl font-black leading-[1.02] tracking-[-0.02em] sm:text-5xl">
+              What you are actually agreeing to.
+            </h2>
+            <p className="mt-4 text-muted sm:text-lg">
+              It is a time-boxed public beta. Here is the whole deal, before you
+              download anything.
+            </p>
+          </div>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2">
-          {terms.map((term) => (
-            <article
-              key={term.title}
-              className="rounded-xl border border-line bg-card/60 p-5"
-            >
-              <h3 className="font-display text-base font-extrabold text-ink">
-                {term.title}
-              </h3>
-              <p className="mt-1 text-sm leading-relaxed text-muted">
-                {term.body}
-              </p>
-            </article>
-          ))}
+          <dl className="grid gap-x-8 gap-y-7 sm:grid-cols-2 lg:pt-2">
+            {terms.map((term) => (
+              <div key={term.title} className="border-t border-line pt-4">
+                <dt className="font-display text-base font-extrabold text-ink">
+                  {term.title}
+                </dt>
+                <dd className="mt-1.5 text-sm leading-relaxed text-muted">
+                  {term.body}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </div>
     </section>

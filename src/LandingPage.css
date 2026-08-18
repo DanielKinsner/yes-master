@@ -1,11 +1,15 @@
 /*
  * YES Master landing — styling entry point.
  *
- * This file is intentionally tiny. It does two things:
+ * This file is intentionally small. It does three things:
  *   1. Pulls in Tailwind (all the layout/spacing/color utilities the
  *      components use live as classes right next to the markup).
  *   2. Defines the brand palette + fonts ONCE, below, so the whole page
  *      stays consistent. Change a color here and it changes everywhere.
+ *   3. Defines a handful of shared surface/button utilities so every
+ *      section speaks the same visual language as the desktop app
+ *      (design/premium-pass, 2026-08-18): hairline seams, top-lit cards,
+ *      one cobalt accent for what is live, amber for the call to action.
  *
  * There is no other landing CSS. If you want to understand the page,
  * read the components in src/landing/ — each one is a section you can see.
@@ -14,18 +18,20 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brand palette ---------------------------------------------------- */
-  --color-night: #07080d;       /* page background, near-black */
-  --color-panel: #0b1019;       /* raised surfaces / cards */
-  --color-card: #10131a;
+  /* Brand palette — mirrors src/App.css :root so the site and the app
+     read as one product. ------------------------------------------------ */
+  --color-night: #07080c;       /* page background, near-black */
+  --color-panel: #0d1017;       /* raised surfaces */
+  --color-card: #131720;        /* cards */
 
-  --color-ink: #eef2fb;         /* primary text */
-  --color-muted: #aab4cc;       /* secondary text */
-  --color-soft: #6f7795;        /* faint text / labels */
-  --color-line: #232a3a;        /* hairline borders */
+  --color-ink: #eef1f8;         /* primary text */
+  --color-muted: #aeb6cc;       /* secondary text */
+  --color-soft: #8690ad;        /* faint text / labels — still ≥4.5:1 on night */
+  --color-line: rgba(158, 176, 214, 0.12);   /* hairline borders */
 
-  --color-brand: #2f80ff;       /* the vivid app/waveform blue */
-  --color-brand-soft: #4d8bff;
+  --color-brand: #4f86f7;       /* the cobalt app accent */
+  --color-brand-soft: #7aa6ff;
+  --color-brand-deep: #2f63e6;
 
   --color-cta: #e2982f;         /* CTA accent — confident, not candy */
   --color-cta-light: #efb066;
@@ -34,13 +40,95 @@
   --color-good: #6dd58f;        /* "all good" / pass states */
 
   /* Fonts ------------------------------------------------------------ */
-  --font-display: "Aptos Display", "Segoe UI Variable Display", "Bahnschrift", sans-serif;
-  --font-sans: "Aptos", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Aptos Display", "Segoe UI Variable Display", "SF Pro Display", "Bahnschrift", sans-serif;
+  --font-sans: "Aptos", "Segoe UI Variable Text", "Segoe UI", -apple-system, system-ui, sans-serif;
+
+  --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.35), 0 16px 40px -16px rgba(0, 0, 0, 0.6);
+  --shadow-frame: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 30px 80px -30px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+/* Shared surfaces ------------------------------------------------------ */
+
+/* A card: top-lit gradient, hairline seam, one shadow language. */
+@utility surface-card {
+  background:
+    linear-gradient(180deg, rgba(28, 33, 46, 0.72) 0%, rgba(13, 16, 24, 0.9) 100%);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-card);
+}
+
+/* A "device" frame around a screenshot: dark bezel, soft floor shadow. */
+@utility surface-frame {
+  background: #0a0d14;
+  border: 1px solid rgba(158, 176, 214, 0.18);
+  box-shadow: var(--shadow-frame);
+}
+
+/* Section eyebrow label. */
+@utility eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-brand-soft);
+}
+
+/* Buttons ---------------------------------------------------------------- */
+
+@utility btn-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  padding: 0.8rem 1.4rem;
+  font-weight: 800;
+  color: #1c0d00;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 50%),
+    linear-gradient(180deg, var(--color-cta-light) 0%, var(--color-cta-deep) 100%);
+  border: 1px solid rgba(255, 220, 160, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 10px 26px -10px rgba(205, 120, 38, 0.9);
+  transition: transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 140ms, filter 140ms;
+}
+@utility btn-cta-hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.45),
+    0 14px 32px -10px rgba(205, 120, 38, 1);
+}
+
+@utility btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  padding: 0.8rem 1.4rem;
+  font-weight: 800;
+  color: var(--color-ink);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: background 140ms, border-color 140ms, transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@utility btn-ghost-hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.24);
+  transform: translateY(-1px);
 }
 
 /* Minimal globals — everything else is utility classes in the markup. */
 html {
   color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 }
 
 body {
@@ -48,4 +136,5 @@ body {
   background: var(--color-night);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }

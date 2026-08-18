@@ -35,11 +35,17 @@ import { REPO_ROOT, pngDimensions } from "./lib/landing-assets.mjs";
 // made re-running it stack generation loss on the master art — the comment
 // claiming otherwise was simply wrong. Keeping the master is worth 1.4 MB of
 // repo that ships to nobody.
+//
+// 2026-08-18: the master art is now the owner-generated console render of the
+// real UI (1672×941 PNG). Variants are JPEG; the "full" one is encoded at the
+// source's native width (the script never upscales), so `Hero.tsx`'s srcSet
+// declares 1672w, not 2560w.
 const HERO = {
-  source: "src/assets/landing/hero-control-room-studio-source.jpg",
+  source: "src/assets/landing/hero-control-room-studio-source.png",
+  sourceType: "image/png",
   variants: [
-    { file: "src/assets/landing/hero-control-room-studio.jpg", width: 2560, quality: 0.82 },
-    { file: "src/assets/landing/hero-control-room-studio-1280.jpg", width: 1280, quality: 0.82 },
+    { file: "src/assets/landing/hero-control-room-studio.jpg", width: 1672, quality: 0.86 },
+    { file: "src/assets/landing/hero-control-room-studio-1280.jpg", width: 1280, quality: 0.84 },
   ],
 };
 
@@ -95,7 +101,7 @@ try {
   // Hero variants, always encoded from the pristine source above, so repeated
   // runs are idempotent in quality even though the bytes drift.
   const heroSource = await readFile(path.join(REPO_ROOT, HERO.source));
-  const heroUrl = `data:image/jpeg;base64,${heroSource.toString("base64")}`;
+  const heroUrl = `data:${HERO.sourceType};base64,${heroSource.toString("base64")}`;
   for (const variant of HERO.variants) {
     const encoded = await page.evaluate(
       async ({ url, width, quality }) => {

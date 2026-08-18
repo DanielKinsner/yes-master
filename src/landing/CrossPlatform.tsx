@@ -23,7 +23,7 @@ export default function CrossPlatform() {
   return (
     <section
       id="mobile"
-      className="border-t border-white/10 bg-night px-5 py-14 sm:px-8"
+      className="border-t border-white/[0.06] bg-night px-5 py-14 sm:px-8"
     >
       <div className="mx-auto max-w-2xl text-center">
         <h2 className="font-display text-xl font-black leading-tight sm:text-2xl">
