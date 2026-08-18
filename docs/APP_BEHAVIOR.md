@@ -172,8 +172,9 @@ surface behind it is made `inert`, so no user ever meets the same fact twice.
 
 | Fact | Single owner | Location | Notes |
 |---|---|---|---|
-| Source preflight rows (true peak / loudness / dynamic range, pre-export) | `QualityCheckPanel` | Right rail, `SOURCE CHECK` | Derived from analysis by `derivePreflightChecks`. |
-| Export check rows (post-export) | `QualityCheckPanel` | Right rail, `EXPORT CHECK` | Same panel, fed by the receipt's checks. |
+| Source analysis (loudness / dynamic range / spectrum / stereo / true peak) + Re-analyze | `SourceInsight` | Under the track title, `INSIGHT` disclosure | Structured rows from `sourceInsightRows`. Since 2026-08-18 the right rail carries no `SOURCE CHECK` card — the rail is configuration → processing → delivery → export. |
+| "New analysis to review" (`REVIEW`) | `SourceInsight` | Insight row badge | An **unacknowledged analysis revision**, not a warning: keyed on `track_id + measured_at_iso` (`lib/source-insight.ts`), cleared by clicking the badge or "Mark reviewed", persisted in localStorage, returns after Re-analyze or a new source. Findings keep their own status regardless. |
+| Export check rows (post-export) | `SourceInsight` | Insight disclosure, "Last export" group | Fed by the receipt's checks; the pre-export gate still derives its rows from the same analysis (`derivePreflightChecks` in RightRail). |
 | Pre-export decision | `ExportReviewDialog` | Modal over the rail | Restates the warned rows **because** the rail is inert behind it; it is the decision point, not a second report. |
 | Post-export result + quality rows | `ExportReceiptCard` | Modal | `aria-modal`, so it owns the checks while up. Rows built by `buildQualityRows`. |
 | Standard hard-stop ("saved, but…") | `standardExportNotes().invalid` | Standard rail, `role="alert"` | Standard suppresses cosmetic warnings entirely. |

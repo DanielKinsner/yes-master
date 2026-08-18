@@ -129,8 +129,8 @@ function DeliveryProfileCard({
 }) {
   const profile = settings.delivery_profile;
   return (
-    <section className="panel rail-card rail-card-delivery">
-      <header className="panel-head">
+    <section className="rail-section rail-card-delivery">
+      <header className="panel-head rail-section-head">
         <span className="panel-title">DELIVERY PROFILE</span>
       </header>
       <select
@@ -299,8 +299,8 @@ function AdvancedControlsCard({
     });
   };
   return (
-    <details className="panel rail-card rail-card-advanced">
-      <summary className="panel-head panel-head-summary">
+    <details className="rail-section rail-card-advanced">
+      <summary className="panel-head panel-head-summary rail-section-head">
         <span className="panel-title">ADVANCED CONTROLS</span>
         <PanelResetButton
           label="Reset advanced controls"
@@ -534,14 +534,17 @@ function PerBandCompressorCard({
   };
   const activeBandFields = bandFields[active];
   return (
-    <section className="panel rail-card rail-card-per-band">
-      <header className="panel-head">
+    <section className={"rail-section rail-card-per-band is-mode-" + compressorMode}>
+      <header className="panel-head rail-section-head">
         <span className="panel-title">PER-BAND COMPRESSOR</span>
         <PanelResetButton
           label="Reset per-band compressor"
           onClick={resetPerBandCompressor}
         />
       </header>
+      {/* 2026-08-18: operating MODE is the primary switch; the BAND picker
+          only exists in Manual and reads as a subordinate row (small pills
+          + Link stereo on the same line) instead of a second full tab bar. */}
       <div className="compressor-mode-tabs" role="tablist" aria-label="Compressor mode">
         {(["preset", "manual", "off"] as CompressionMode[]).map((mode) => (
           <button
@@ -615,29 +618,31 @@ function PerBandCompressorCard({
       )}
       {manualEnabled && (
         <>
-          <label className="per-band-link-stereo">
-            <input
-              type="checkbox"
-              checked={a.compression_link_stereo !== false}
-              onChange={(e) =>
-                onUpdate("compression_link_stereo", e.target.checked ? null : false)
-              }
-            />
-            <span>Link stereo</span>
-          </label>
-          <div className="per-band-tabs" role="tablist">
-            {(["low", "mid", "high"] as Band[]).map((band) => (
-              <button
-                key={band}
-                type="button"
-                role="tab"
-                aria-selected={active === band}
-                className={"per-band-tab" + (active === band ? " is-active" : "")}
-                onClick={() => setActive(band)}
-              >
-                {band === "low" ? "Low" : band === "mid" ? "Mid" : "High"}
-              </button>
-            ))}
+          <div className="per-band-row">
+            <div className="per-band-tabs" role="tablist" aria-label="Compressor band">
+              {(["low", "mid", "high"] as Band[]).map((band) => (
+                <button
+                  key={band}
+                  type="button"
+                  role="tab"
+                  aria-selected={active === band}
+                  className={"per-band-tab" + (active === band ? " is-active" : "")}
+                  onClick={() => setActive(band)}
+                >
+                  {band === "low" ? "Low" : band === "mid" ? "Mid" : "High"}
+                </button>
+              ))}
+            </div>
+            <label className="per-band-link-stereo">
+              <input
+                type="checkbox"
+                checked={a.compression_link_stereo !== false}
+                onChange={(e) =>
+                  onUpdate("compression_link_stereo", e.target.checked ? null : false)
+                }
+              />
+              <span>Link stereo</span>
+            </label>
           </div>
           <div className="per-band-active-body">
             <CompressionKnobGrid
@@ -898,11 +903,11 @@ function DeliveryFormatCard({
   const effectiveSampleRateValue =
     sampleRate === undefined ? effectiveSampleRate(settings) : sampleRate;
   return (
-    <section className="panel rail-card rail-card-format">
-      <header className="panel-head">
+    <section className="rail-section rail-card-format">
+      <header className="panel-head rail-section-head">
         <span className="panel-title">DELIVERY FORMAT</span>
       </header>
-      <div className="rail-card-body">
+      <div className="rail-card-body rail-format-grid">
         <SelectField
           label="Bit depth"
           value={effectiveBitDepthValue}
@@ -925,8 +930,8 @@ function DeliveryFormatCard({
           ]}
           onChange={onSampleRate}
         />
-        <p className="format-note">{note}</p>
       </div>
+      <p className="format-note">{note}</p>
     </section>
   );
 }

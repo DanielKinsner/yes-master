@@ -1222,116 +1222,6 @@ button.primary:disabled {
   }
 }
 
-.analysis-summary {
-  display: block;
-  color: var(--text-2);
-  margin: 0.6rem 0 0;
-  padding-top: 0.58rem;
-  border-top: 1px solid rgba(58, 70, 96, 0.58);
-  min-width: 0;
-  max-width: none;
-  position: relative;
-  z-index: 5;
-}
-
-.analysis-summary > summary {
-  cursor: pointer;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 0;
-  list-style: none;
-  color: var(--text-1);
-  font-size: 0.78rem;
-  letter-spacing: 0.03em;
-  min-height: 30px;
-}
-
-.analysis-summary > summary::-webkit-details-marker {
-  display: none;
-}
-
-.analysis-summary-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.35rem;
-  height: 1.35rem;
-  border-radius: 50%;
-  color: var(--accent-bright);
-  background: rgba(77, 139, 255, 0.12);
-  border: 1px solid rgba(77, 139, 255, 0.35);
-  filter: drop-shadow(0 0 4px rgba(111, 163, 255, 0.3));
-  flex-shrink: 0;
-}
-
-.analysis-summary-text {
-  display: flex;
-  align-items: baseline;
-  gap: 0.85rem;
-  flex: 1;
-  min-width: 0;
-}
-
-.analysis-summary-eyebrow {
-  font-size: 0.62rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-2);
-  font-weight: 600;
-}
-
-.analysis-summary-headline {
-  font-size: 0.82rem;
-  color: var(--text-0);
-  line-height: 1;
-  font-weight: 650;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.analysis-summary-chevron {
-  color: var(--text-2);
-  font-size: 0.95rem;
-  transition: transform 100ms ease;
-}
-
-.analysis-summary-status {
-  flex: 0 0 auto;
-  margin-left: 0.15rem;
-}
-
-.analysis-summary[open] .analysis-summary-chevron {
-  transform: rotate(180deg);
-}
-
-.analysis-summary > summary:hover {
-  /* No-op: the gradient panel already conveys hover affordance via
-     pointer; we don't want to add a re-paint flash. */
-}
-
-.analysis-summary > ul {
-  list-style: none;
-  position: absolute;
-  top: calc(100% + 0.35rem);
-  left: 0;
-  width: min(560px, calc(100vw - 2rem));
-  z-index: var(--z-dropdown);
-  padding: 0.55rem 0.65rem 0.6rem;
-  margin: 0;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: linear-gradient(180deg, rgba(31, 37, 51, 0.98) 0%, rgba(17, 21, 31, 0.98) 100%);
-  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.42);
-}
-
-.analysis-summary > ul > li {
-  padding: 0.12rem 0;
-  color: var(--text-1);
-  line-height: 1.35;
-}
-
 /* Waveform deck module. The deck stays focused on transport, waveform, and
    live Master Out; comparison/preview controls live in the track header. */
 .wf-deck {
@@ -3613,64 +3503,6 @@ button.primary:disabled {
 
 /* QUALITY SUMMARY card */
 
-.quality-summary-body {
-  display: flex;
-  gap: 0.7rem;
-  align-items: flex-start;
-}
-
-.quality-icon {
-  width: 1.9rem;
-  height: 1.9rem;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.quality-icon-ok {
-  background: rgba(108, 208, 138, 0.18);
-  color: #6cd08a;
-}
-
-.quality-icon-warn {
-  background: rgba(245, 200, 66, 0.18);
-  color: #f5c842;
-}
-
-.quality-icon-bad {
-  background: rgba(231, 76, 60, 0.22);
-  color: #ff7676;
-}
-
-.quality-icon-info {
-  background: var(--bg-3);
-  color: var(--text-2);
-}
-
-.quality-summary-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.quality-grade {
-  font-size: 0.92rem;
-  color: var(--text-0);
-  font-weight: 600;
-}
-
-.quality-blurb {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--text-1);
-  line-height: 1.4;
-}
-
 .status-pill {
   font-size: 0.65rem;
   font-weight: 700;
@@ -3729,76 +3561,6 @@ button.primary:disabled {
   color: #f5c842;
   background: rgba(245, 200, 66, 0.18);
   border: 1px solid rgba(245, 200, 66, 0.35);
-}
-
-.quality-check-head {
-  gap: 0.65rem;
-}
-
-.quality-check-head-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.45rem;
-  min-width: 0;
-}
-
-.quality-reanalyze {
-  min-height: 24px;
-  padding: 0.18rem 0.52rem;
-  border-radius: 999px;
-  font-size: 0.66rem;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.quality-check-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.quality-check-row {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.78rem;
-  color: var(--text-1);
-}
-
-.quality-check-glyph {
-  width: 1rem;
-  height: 1rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  font-size: 0.7rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.quality-check-row.is-ok .quality-check-glyph {
-  background: rgba(108, 208, 138, 0.22);
-  color: #6cd08a;
-}
-
-.quality-check-row.is-warn .quality-check-glyph {
-  background: rgba(245, 200, 66, 0.22);
-  color: #f5c842;
-}
-
-.quality-check-row.is-crit .quality-check-glyph {
-  background: rgba(231, 76, 60, 0.24);
-  color: #ff7676;
-}
-
-.quality-check-text {
-  font-variant-numeric: tabular-nums;
 }
 
 /* UI_LAYOUT_REVISION_1600x940 L3 — rail card variants. The four
@@ -4238,6 +4000,28 @@ button.primary:disabled {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* Glyph inside the pre-export gate rows (the only remaining user of this
+   class after the rail's Source Check panel went away, 2026-08-18). */
+.quality-check-glyph {
+  width: 1rem;
+  height: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.export-review-row.is-warn .quality-check-glyph {
+  background: rgba(245, 200, 66, 0.22);
+  color: #f5c842;
+}
+.export-review-row.is-crit .quality-check-glyph {
+  background: rgba(231, 76, 60, 0.24);
+  color: #ff7676;
 }
 
 .export-review-row {
@@ -5022,18 +4806,6 @@ button.primary:disabled {
     white-space: nowrap;
   }
 
-  .console-hero .analysis-summary {
-    flex: 1 1 auto;
-    min-width: 280px;
-    max-width: none;
-    min-height: 0;
-  }
-
-  .console-hero .analysis-summary-icon {
-    width: 1.25rem;
-    height: 1.25rem;
-  }
-
   .track-toolbar-group {
     min-height: 30px;
   }
@@ -5200,24 +4972,6 @@ button.primary:disabled {
   .wf-deck-meters .master-out .readout-label {
     font-size: 0.28rem;
     line-height: 1;
-  }
-
-  .console-hero .analysis-summary {
-    position: relative;
-    z-index: 5;
-  }
-
-  .console-hero .analysis-summary > ul {
-    position: absolute;
-    top: calc(100% + 0.35rem);
-    left: 0;
-    right: 0;
-    z-index: var(--z-dropdown);
-    padding: 0.55rem 0.65rem 0.6rem;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: linear-gradient(180deg, rgba(31, 37, 51, 0.98) 0%, rgba(17, 21, 31, 0.98) 100%);
-    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.42);
   }
 
   .presets {
@@ -5395,10 +5149,6 @@ button.primary:disabled {
     gap: 0.38rem;
   }
 
-  .console-hero .analysis-summary {
-    max-width: none;
-  }
-
   .wf-deck {
     grid-template-columns: 104px minmax(0, 1fr) 186px;
     gap: 0.6rem;
@@ -5482,11 +5232,6 @@ button.primary:disabled {
   .console-hero .track-header-meta-row {
     flex-wrap: nowrap;
     gap: 0.5rem;
-  }
-
-  .console-hero .analysis-summary {
-    min-width: 240px;
-    max-width: none;
   }
 
   .wf-deck {
@@ -6967,7 +6712,6 @@ button.primary.std-create-master {
 .std-delivery-change,
 .std-add-track,
 .std-reanalyze-track,
-.quality-reanalyze,
 .panel-reset-button {
   background: rgba(255, 255, 255, 0.035);
   border: 1px solid var(--hairline);
@@ -6981,7 +6725,6 @@ button.primary.std-create-master {
 .std-delivery-change:hover,
 .std-add-track:hover,
 .std-reanalyze-track:hover,
-.quality-reanalyze:hover,
 .panel-reset-button:hover {
   background: rgba(255, 255, 255, 0.07);
   border-color: var(--border-strong);
@@ -7531,4 +7274,541 @@ input:focus-visible,
 
 @media (prefers-reduced-motion: reduce) {
   .track-master-console > * { animation: none; }
+}
+
+/* =====================================================================
+   RIGHT RAIL + SOURCE INSIGHT — organisation & hierarchy pass (2026-08-18)
+   ---------------------------------------------------------------------
+   The rail becomes ONE surface: sections are separated by spacing, a
+   heading row and a hairline — not by nested cards. Source Check left the
+   rail; the analysis disclosure under the track title (Source Insight)
+   owns it. Configuration → processing → delivery → export.
+   ===================================================================== */
+
+/* --- Rail as the container ------------------------------------------- */
+
+.right-rail {
+  padding: 0.35rem 0.85rem 0;
+  gap: 0;
+}
+
+.right-rail-standing {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* A section: heading row + content, hairline between sections. No card. */
+.rail-section {
+  padding: 0.62rem 0 0.7rem;
+  border-top: 1px solid var(--hairline);
+}
+.rail-section:first-child { border-top: 0; padding-top: 0.4rem; }
+.rail-section > .rail-card-body { gap: 0.4rem; }
+
+.rail-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 1.5rem;
+  margin-bottom: 0.42rem;
+}
+.rail-section-head .panel-title {
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  font-weight: 650;
+  color: var(--text-1);
+}
+.rail-section-head .panel-title::before { height: 0.72rem; }
+
+/* Advanced Controls' summary is the section head. Whole row toggles. */
+details.rail-section > summary.rail-section-head {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  margin-bottom: 0;
+}
+details.rail-section > summary.rail-section-head::-webkit-details-marker { display: none; }
+details.rail-section[open] > summary.rail-section-head { margin-bottom: 0.42rem; }
+details.rail-section > summary.rail-section-head::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: 0.15rem;
+  border-right: 1.5px solid var(--text-2);
+  border-bottom: 1.5px solid var(--text-2);
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 160ms var(--ease-out), border-color 160ms;
+  flex-shrink: 0;
+}
+details.rail-section[open] > summary.rail-section-head::after {
+  transform: rotate(-135deg) translateY(-1px);
+}
+details.rail-section > summary.rail-section-head:hover .panel-title { color: var(--text-0); }
+.rail-section-head .panel-reset-button { margin-left: auto; }
+
+/* Delivery Profile: title + select. Nothing else. */
+.rail-card-delivery .loudness-profile-select,
+.rail-card-delivery .rail-card-select { margin: 0; }
+
+/* Delivery Format: side by side. */
+.rail-format-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 0.6rem;
+}
+.rail-format-grid .adv-field { min-width: 0; }
+.rail-format-grid .adv-select { width: 100%; min-width: 0; }
+.rail-card-format .format-note { margin-top: 0.4rem; }
+
+/* --- Advanced Controls: knobs define the group ------------------------ */
+
+.adv-knob-grid {
+  gap: 0.15rem 0.35rem;
+  padding: 0.25rem 0 0.15rem;
+  margin: 0 0 0.35rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.adv-knob-grid .knob-vis { margin: -0.1rem auto -0.15rem; }
+.adv-knob-grid .knob-label {
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+}
+.adv-knob-grid .knob-caption {
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  color: var(--text-2);
+  opacity: 0.85;
+}
+
+/* Feel controls: quieter than the knobs, tight 2×2. */
+.rail-card-advanced .advanced-grid {
+  gap: 0.35rem 0.9rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--hairline);
+}
+.rail-card-advanced .adv-label {
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+}
+.rail-card-advanced .adv-control { gap: 0.3rem; }
+.rail-card-advanced .adv-value { font-size: 0.72rem; }
+.rail-card-advanced .adv-number { width: 3.1rem; font-size: 0.7rem; padding: 0.12rem 0.3rem; }
+/* Auto reads as part of the value, not a detached box. */
+.rail-card-advanced .adv-auto-pill {
+  border: 0;
+  background: transparent;
+  padding: 0 0 0 0.3rem;
+  color: var(--text-2);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+}
+.rail-card-advanced .adv-auto-reset {
+  border-color: transparent;
+  background: transparent;
+  padding: 0 0.25rem;
+  font-size: 0.6rem;
+}
+.rail-card-advanced .adv-auto-reset:hover { background: rgba(255, 255, 255, 0.06); }
+.rail-card-advanced .adaptive-block { padding-top: 0.15rem; }
+
+/* --- Per-band compressor: mode > band > controls ---------------------- */
+
+.compressor-mode-tabs { margin: 0 0 0.35rem; }
+.compressor-mode-note {
+  margin: 0 0 0.35rem;
+  font-size: 0.7rem;
+  color: var(--text-2);
+}
+.compressor-density-field { margin: 0 0 0.35rem; }
+
+/* Off: only the mode row + one quiet line. */
+.rail-card-per-band.is-mode-off .compressor-mode-note { margin-bottom: 0; }
+.rail-card-per-band.is-mode-off .compressor-preset-summary { display: none; }
+
+/* Info lines lose their boxes: tonal text rows with a hairline between. */
+.compressor-preset-summary,
+.compressor-adaptive-band,
+.adaptive-readout {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0.28rem 0;
+  font-size: 0.7rem;
+  color: var(--text-1);
+}
+.compressor-preset-summary { border-top: 1px solid var(--hairline); padding-top: 0.4rem; }
+.compressor-adaptive-bands { gap: 0; margin-top: 0.3rem; border-top: 1px solid var(--hairline); }
+.compressor-adaptive-band { min-height: 0; border-bottom: 1px solid var(--hairline); }
+.compressor-adaptive-band:last-child { border-bottom: 0; }
+.compressor-adaptive-guidance,
+.compressor-source-note {
+  border-radius: 8px;
+  padding: 0.38rem 0.5rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.7rem;
+}
+
+/* Band row: small pills + Link stereo on one line, subordinate to mode. */
+.per-band-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin: 0.1rem 0 0.4rem;
+}
+.per-band-tabs {
+  display: inline-flex;
+  gap: 2px;
+  margin: 0;
+  padding: 2px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--surface-inset);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  overflow: visible;
+}
+.per-band-tab {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.22rem 0.62rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  transition: background 140ms var(--ease-out), color 140ms;
+}
+.per-band-tab.is-active {
+  background: var(--surface-raised);
+  color: var(--text-0);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.per-band-link-stereo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  color: var(--text-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.per-band-link-stereo input { accent-color: var(--accent); margin: 0; }
+.per-band-link-stereo:hover { color: var(--text-1); }
+
+/* Compressor knob grid: a faint surface (the one subsystem that earns a
+   little grouping), not a black box. */
+.compressor-knob-grid {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--hairline);
+  box-shadow: none;
+  padding: 0.35rem 0.3rem 0.25rem;
+  gap: 0.15rem 0.35rem;
+}
+.compressor-knob-grid .knob-label {
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+}
+
+/* --- Tools + Export ---------------------------------------------------- */
+
+.right-rail-export-group {
+  padding: 0.5rem 0 0.75rem;
+  gap: 0.4rem;
+}
+.right-rail-tools {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  border-top: 1px solid var(--hairline);
+}
+.right-rail-tools > summary {
+  padding: 0.55rem 0 0.35rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  font-weight: 650;
+  color: var(--text-2);
+  cursor: pointer;
+  list-style: none;
+}
+.right-rail-tools > summary::-webkit-details-marker { display: none; }
+.right-rail-tools > summary:hover { color: var(--text-1); }
+.right-rail-tools .right-rail-audit { margin: 0.1rem 0 0.4rem; }
+.right-rail-export { margin-top: 0.15rem; }
+
+/* --- Scrollbar: chrome, not a component -------------------------------- */
+
+.right-rail::-webkit-scrollbar { width: 6px; }
+.right-rail::-webkit-scrollbar-thumb {
+  background: rgba(158, 176, 214, 0.1);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  border-radius: 3px;
+}
+.right-rail:hover::-webkit-scrollbar-thumb { background: rgba(158, 176, 214, 0.2); background-clip: padding-box; }
+.right-rail::-webkit-scrollbar-thumb:hover { background: rgba(158, 176, 214, 0.32); background-clip: padding-box; }
+
+/* --- Source Insight ---------------------------------------------------- */
+
+.source-insight {
+  position: relative;
+  margin: 0.55rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--hairline);
+  min-width: 0;
+  z-index: 6;
+}
+.source-insight-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.source-insight-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.22rem 0.55rem 0.22rem 0.35rem;
+  margin-left: -0.35rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-0);
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms;
+}
+.source-insight-toggle:hover,
+.source-insight-toggle[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--hairline);
+}
+.source-insight-eyebrow {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+.source-insight-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #6cd08a;
+  box-shadow: 0 0 6px rgba(108, 208, 138, 0.6);
+}
+.source-insight-dot.is-info { background: var(--accent-bright); box-shadow: 0 0 6px rgba(122, 166, 255, 0.55); }
+.source-insight-dot.is-caution { background: #f2a83b; box-shadow: 0 0 6px rgba(242, 168, 59, 0.6); }
+.source-insight-dot.is-problem { background: #ff6b6b; box-shadow: 0 0 6px rgba(255, 107, 107, 0.65); }
+.source-insight-headline {
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.source-insight-chevron {
+  display: inline-flex;
+  color: var(--text-2);
+  transition: transform 160ms var(--ease-out), color 120ms;
+  flex-shrink: 0;
+}
+.source-insight-toggle:hover .source-insight-chevron { color: var(--text-0); }
+.source-insight-toggle[aria-expanded="true"] .source-insight-chevron { transform: rotate(180deg); }
+
+/* REVIEW = unacknowledged revision. Amber but calm; click acknowledges. */
+.source-insight-review {
+  flex-shrink: 0;
+  padding: 0.16rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(242, 168, 59, 0.45);
+  background: rgba(242, 168, 59, 0.12);
+  color: #f5c46b;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.source-insight-review:hover {
+  background: rgba(242, 168, 59, 0.22);
+  border-color: rgba(242, 168, 59, 0.7);
+  color: #ffd98a;
+}
+
+/* The disclosure: anchored under the row, aligned to its left edge, only
+   as wide as its content needs. Restrained radius + shadow. */
+.source-insight-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: -0.35rem;
+  width: min(440px, calc(100vw - 2rem));
+  padding: 0.6rem 0.75rem 0.55rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background:
+    linear-gradient(180deg, rgba(30, 36, 50, 0.92) 0%, rgba(14, 17, 25, 0.98) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 18px 44px -14px rgba(0, 0, 0, 0.85),
+    0 4px 12px -4px rgba(0, 0, 0, 0.6);
+  animation: insight-in 140ms var(--ease-out) both;
+}
+.source-insight-panel::before {
+  /* the anchor: a small notch under the row */
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 1.1rem;
+  width: 8px;
+  height: 8px;
+  background: rgba(30, 36, 50, 0.95);
+  border-left: 1px solid var(--border-strong);
+  border-top: 1px solid var(--border-strong);
+  transform: rotate(45deg);
+}
+@keyframes insight-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: none; }
+}
+.source-insight-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0 0.35rem;
+}
+.source-insight-panel-head.is-secondary {
+  margin-top: 0.5rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--hairline);
+}
+.source-insight-panel-title {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.source-insight-unread {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f5c46b;
+}
+.source-insight-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 0.9rem;
+}
+.source-insight-item {
+  display: contents;
+}
+.source-insight-item dt,
+.source-insight-item dd {
+  margin: 0;
+  padding: 0.3rem 0;
+  border-top: 1px solid var(--hairline);
+}
+.source-insight-item:first-child dt,
+.source-insight-item:first-child dd { border-top: 0; }
+.source-insight-item dt {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.source-insight-item dd {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.source-insight-value {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--text-0);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.source-insight-note {
+  font-size: 0.74rem;
+  color: var(--text-1);
+}
+.source-insight-glyph {
+  display: inline-block;
+  width: 0.8rem;
+  text-align: center;
+  font-size: 0.7rem;
+  color: #6cd08a;
+}
+.source-insight-glyph.is-info { color: var(--text-2); }
+.source-insight-glyph.is-caution { color: #f2a83b; }
+.source-insight-glyph.is-problem { color: #ff6b6b; }
+.source-insight-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+.source-insight-check {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.28rem 0;
+  border-top: 1px solid var(--hairline);
+  font-size: 0.76rem;
+  color: var(--text-1);
+}
+.source-insight-check:first-child { border-top: 0; }
+.source-insight-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--hairline);
+}
+.source-insight-actions .ghost-btn {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.74rem;
+}
+.source-insight-ack {
+  border-color: rgba(242, 168, 59, 0.45);
+  color: #f5c46b;
+}
+.source-insight-ack:hover:not(:disabled) {
+  background: rgba(242, 168, 59, 0.14);
+  border-color: rgba(242, 168, 59, 0.7);
+  color: #ffd98a;
+}
+.source-insight-reviewed {
+  font-size: 0.7rem;
+  color: var(--text-2);
+  padding: 0 0.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .source-insight-panel { animation: none; }
 }
