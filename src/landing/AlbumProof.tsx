@@ -33,52 +33,58 @@ export default function AlbumProof() {
   return (
     <section
       id="album"
-      className="border-t border-white/10 bg-night px-5 py-20 sm:px-8 sm:py-24"
+      className="relative border-t border-white/[0.06] bg-night px-5 py-20 sm:px-8 sm:py-28"
     >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_100%_50%,rgba(79,134,247,0.07),transparent_60%)]"
+      />
       <div className="mx-auto max-w-6xl">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-black uppercase tracking-wide text-brand-soft">
-            Depth, when the work needs it
-          </p>
-          <h2 className="mt-4 font-display text-3xl font-black leading-tight sm:text-5xl">
-            A record, not a folder of files.
-          </h2>
-          <p className="mt-4 text-muted sm:text-lg">
-            Album Master lives in Advanced. Your tracks come out sounding like
-            one deliberate record — and nothing is silently altered to get them
-            there.
-          </p>
+        {/* Presentation (2026-08-18): copy + guarantees on the left, the real
+            album capture framed on the right, so the section reads as one
+            composition rather than a heading, a grid, then a picture. */}
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center">
+          <div>
+            <p className="eyebrow">Depth, when the work needs it</p>
+            <h2 className="mt-4 font-display text-3xl font-black leading-[1.02] tracking-[-0.02em] sm:text-5xl">
+              A record, not a folder of files.
+            </h2>
+            <p className="mt-4 text-muted sm:text-lg">
+              Album Master lives in Advanced. Your tracks come out sounding like
+              one deliberate record — and nothing is silently altered to get them
+              there.
+            </p>
+
+            <dl className="mt-8 grid gap-x-6 gap-y-5 sm:grid-cols-2">
+              {guarantees.map((item) => (
+                <div key={item.title} className="border-t border-line pt-4">
+                  <dt className="font-display text-base font-extrabold text-ink">
+                    {item.title}
+                  </dt>
+                  <dd className="mt-1 text-sm leading-relaxed text-muted">
+                    {item.body}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
+          {/* U7: a real capture of the album-4 scenario from the current build,
+              bound to the manifest. Lazy — it is well below the fold. */}
+          <div className="surface-frame overflow-hidden rounded-2xl p-1.5">
+            <img
+              src={albumImg}
+              alt="YES Master Album Master view with four tracks"
+              width={1440}
+              height={1000}
+              loading="lazy"
+              decoding="async"
+              className="block w-full rounded-[0.85rem]"
+            />
+          </div>
         </div>
 
-        <div className="mt-12 grid gap-4 sm:grid-cols-2">
-          {guarantees.map((item) => (
-            <article
-              key={item.title}
-              className="rounded-xl border border-line bg-card/60 p-5"
-            >
-              <h3 className="font-display text-base font-extrabold text-ink">
-                {item.title}
-              </h3>
-              <p className="mt-1 text-sm leading-relaxed text-muted">
-                {item.body}
-              </p>
-            </article>
-          ))}
-        </div>
-
-        {/* U7: a real capture of the album-4 scenario from the current build,
-            bound to the manifest. Lazy — it is well below the fold. */}
-        <img
-          src={albumImg}
-          alt="YES Master Album Master view with four tracks"
-          width={1440}
-          height={1000}
-          loading="lazy"
-          decoding="async"
-          className="mt-10 w-full rounded-xl border border-line"
-        />
-
-        <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-muted">
+        <p className="mx-auto mt-10 max-w-2xl text-center text-xs leading-relaxed text-muted">
           Album Master delivers audio, renders, and receipts. It does not
           produce DDP images, cue sheets, or ISRC metadata, and it does not
           guarantee gapless playback.

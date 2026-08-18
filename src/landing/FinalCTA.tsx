@@ -5,13 +5,17 @@ export default function FinalCTA() {
   return (
     <section
       id="get-started"
-      className="border-t border-white/10 bg-night px-5 py-20 text-center sm:px-8 sm:py-28"
+      className="relative border-t border-white/[0.06] bg-night px-5 py-24 text-center sm:px-8 sm:py-32"
     >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_60%_at_50%_100%,rgba(79,134,247,0.12),transparent_65%)]"
+      />
       <div className="mx-auto max-w-2xl">
-        <h2 className="font-display text-3xl font-black leading-tight sm:text-5xl">
+        <h2 className="font-display text-4xl font-black leading-[1.02] tracking-[-0.03em] sm:text-6xl">
           Stop chasing the master.
         </h2>
-        <p className="mt-3 font-display text-xl font-bold text-brand sm:text-2xl">
+        <p className="mt-3 font-display text-xl font-bold text-brand-soft sm:text-2xl">
           This is the one you stop on.
         </p>
 

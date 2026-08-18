@@ -84,9 +84,14 @@ describe("landing marketing proof (U7)", () => {
 
   it("serves a smaller hero to small screens", () => {
     const hero = landingSource("Hero.tsx");
+    // Two variants: a 1280w one for phones and the full-width master. The
+    // master's width follows the source art (2560 for the original photo,
+    // 1672 for the 2026-08-18 console render), so assert the shape — a phone
+    // variant plus a strictly wider one — rather than a magic number.
     expect(hero).toContain("srcSet");
     expect(hero).toContain("1280w");
-    expect(hero).toContain("2560w");
+    const widths = [...hero.matchAll(/(\d{3,4})w\b/g)].map((m) => Number(m[1]));
+    expect(Math.max(...widths)).toBeGreaterThan(1280);
   });
 
   it("keeps no mobile UI image on the desktop-beta page", () => {
