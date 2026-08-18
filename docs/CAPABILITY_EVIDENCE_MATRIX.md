@@ -39,7 +39,7 @@ says when it stopped being a to-do.
 
 | ID | Claim (as currently published) | Surface | Status | Evidence source | Owning unit |
 |---|---|---|---|---|---|
-| C-01 | "Master your track in real time. See exactly what it did." | `Hero.tsx` h1 | Proved | Real-time chain is the shipped architecture (`docs/ARCHITECTURE.md`); receipt surface pinned by `ExportReceiptCard` tests. Perceived responsiveness on real hardware is an **owner** item (go/no-go §4). | U6 |
+| C-01 | "Master your track in real time. Hear every move. Ship with proof." | `Hero.tsx` h1 | Proved | Real-time chain is the shipped architecture (`docs/ARCHITECTURE.md`); receipt surface pinned by `ExportReceiptCard` tests. Perceived responsiveness on real hardware is an **owner** item (go/no-go §4). | U6 |
 | C-02 | "The full chain runs as you listen — no upload, no reprocessing wait." | `Hero.tsx` proof point | Proved | Local-first engine; no network path in the audition chain. `docs/APP_BEHAVIOR.md`. | U6 |
 | C-03 | "Simple by default, deep when you want it" | `Hero.tsx` proof point | Proved | Standard/Advanced split is shipped; `StandardView.tsx` / `AdvancedPanel.tsx` and their tests. | U6 |
 | C-04 | "A pass/fail receipt shows your LUFS, true-peak, and dynamic range" | `Hero.tsx` proof point | Proved | `export_checks_for_report` + `ExportReceiptCard` tests; native synthetic E2E covers the receipt (U14). | U6 |

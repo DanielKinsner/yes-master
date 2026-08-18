@@ -222,7 +222,7 @@ for (const [width, height] of matrix) {
         .map((image) => image.getAttribute("src")),
       sections: required.map((id) => ({ id, present: Boolean(document.getElementById(id)) })),
       bodyHasExpectedCopy: [
-        "see exactly what it did",
+        "Hear every move. Ship with proof.",
         "One engine",
         "Stop chasing the master",
         // U6 replaced "Same engine, headed to iPhone & Android" (a schedule
