@@ -27,6 +27,7 @@ import { AdvancedPanel } from "./components/AdvancedPanel";
 import { DisabledReason, PanelResetButton } from "./components/fields";
 import { ExportReceiptCard } from "./components/ExportReceiptCard";
 import { WaveformView } from "./components/Waveform";
+import { PlayPauseGlyph } from "./components/TransportGlyph";
 import type {
   AnalysisResult,
   AudioOutputDevice,
@@ -1832,7 +1833,7 @@ function Transport({
         onClick={onPlayPause}
         aria-label={isPlaying ? "Pause" : "Play"}
       >
-        {isPlaying ? "⏸" : "▶"}
+        <PlayPauseGlyph playing={isPlaying} size={26} />
       </button>
       <span className="time">
         {formatTime(currentSec)}
