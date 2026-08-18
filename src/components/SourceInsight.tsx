@@ -186,3 +186,34 @@ function StatusGlyph({ status }: { status: InsightStatus }) {
     </span>
   );
 }
+
+/// The row for a track that has no analysis yet (failed decode, cancelled
+/// analysis, or a project loaded before analysis ran). Without it the only
+/// way to (re)run analysis in Advanced disappeared with the rail's Source
+/// Check — and the decode-error toast tells people to "use Re-analyze".
+export function SourceInsightEmpty({
+  isAnalyzing = false,
+  onReanalyze,
+}: {
+  isAnalyzing?: boolean;
+  onReanalyze?: () => void;
+}) {
+  return (
+    <div className="source-insight is-empty">
+      <div className="source-insight-row">
+        <span className="source-insight-toggle is-static" aria-disabled="true">
+          <span className="source-insight-eyebrow">Insight</span>
+          <span className="source-insight-dot is-info" aria-hidden="true" />
+          <span className="source-insight-headline is-muted">
+            {isAnalyzing ? "Analyzing source…" : "Not analyzed yet."}
+          </span>
+        </span>
+        {onReanalyze && !isAnalyzing && (
+          <button type="button" className="ghost-btn source-insight-reanalyze" onClick={onReanalyze}>
+            Analyze
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

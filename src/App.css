@@ -7809,6 +7809,11 @@ details.rail-section > summary.rail-section-head:hover .panel-title { color: var
   padding: 0 0.25rem;
 }
 
+.source-insight-toggle.is-static { cursor: default; }
+.source-insight-toggle.is-static:hover { background: transparent; border-color: transparent; }
+.source-insight-headline.is-muted { color: var(--text-2); font-weight: 500; }
+.source-insight.is-empty .source-insight-reanalyze { padding: 0.22rem 0.6rem; font-size: 0.72rem; }
+
 @media (prefers-reduced-motion: reduce) {
   .source-insight-panel { animation: none; }
 }

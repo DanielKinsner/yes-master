@@ -28,7 +28,7 @@ import { DisabledReason, PanelResetButton } from "./components/fields";
 import { ExportReceiptCard } from "./components/ExportReceiptCard";
 import { WaveformView } from "./components/Waveform";
 import { PlayPauseGlyph } from "./components/TransportGlyph";
-import { SourceInsight } from "./components/SourceInsight";
+import { SourceInsight, SourceInsightEmpty } from "./components/SourceInsight";
 import { useInsightReview } from "./hooks/useInsightReview";
 import type {
   AnalysisResult,
@@ -1582,7 +1582,7 @@ export function TrackHeader({
             />
           </div>
         </div>
-        {analysis && (
+        {analysis ? (
           <SourceInsight
             analysis={analysis}
             lastChecks={lastChecks}
@@ -1591,6 +1591,8 @@ export function TrackHeader({
             onAcknowledge={() => insightReview.acknowledge(analysis)}
             onReanalyze={onReanalyze}
           />
+        ) : (
+          <SourceInsightEmpty isAnalyzing={isAnalyzing} onReanalyze={onReanalyze} />
         )}
       </div>
     </section>
