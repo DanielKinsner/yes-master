@@ -5114,17 +5114,6 @@ button.primary:disabled {
     box-shadow: 0 -16px 28px rgba(5, 8, 14, 0.92);
   }
 
-  .rail-card-advanced:not([open]) {
-    padding-bottom: 0.45rem;
-  }
-
-  .rail-card-advanced:not([open]) .panel-head {
-    margin-bottom: 0;
-  }
-
-  .rail-card-advanced:not([open]) .advanced-grid {
-    display: none;
-  }
 }
 
 @media (min-width: 1700px) and (min-height: 960px) {
@@ -7849,19 +7838,72 @@ details.rail-section > summary.rail-section-head:hover .panel-title { color: var
 .rail-format-grid .adv-select { padding: 0.24rem 0.45rem; font-size: 0.8rem; }
 .rail-card-format .format-note { margin-top: 0.3rem; }
 
-/* Tools + export */
-.right-rail-export-group { padding: 0.35rem 0 0.6rem; gap: 0.3rem; }
-.right-rail-tools > summary { padding: 0.4rem 0 0.25rem; }
-.right-rail-export { padding: 0.68rem 1rem; }
-
-/* Narrow rail (≤1400px → 280px): the feel-control rows would otherwise
-   wrap their slider/value/field onto extra lines and double the section. */
-@media (max-width: 1400px) {
-  .rail-card-advanced .adv-control { grid-template-columns: 1fr auto; }
-  .rail-card-advanced .adv-control .adv-number { grid-column: 2; }
-  .rail-card-advanced .adv-control input[type="range"] { grid-column: 1 / -1; grid-row: 2; }
-  .rail-card-advanced .adv-control .adv-value { grid-column: 1; grid-row: 1; text-align: left; }
+/* Feel controls: two rows per field — [label · value · box] over [slider].
+   The label used to sit on its own line above the value row (three rows).
+   Same controls, same ranges; the row is what got tighter. */
+.rail-card-advanced .advanced-grid .adv-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label value"
+    "slider box";
+  align-items: center;
+  column-gap: 0.25rem;
+  row-gap: 0.05rem;
 }
+.rail-card-advanced .advanced-grid .adv-label {
+  grid-area: label;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  white-space: nowrap;
+  /* The label may run into the value column's empty space (the value is
+     end-aligned and short); the number box below is what sizes that column,
+     so clipping the label to it would truncate PRESENCE/AIR. */
+  overflow: visible;
+  font-size: 0.6rem;
+  letter-spacing: 0.02em;
+}
+.rail-card-advanced .advanced-grid .adv-control .adv-value { justify-self: end; }
+.rail-card-advanced .advanced-grid .adv-control .adv-value { font-size: 0.66rem; }
+.rail-card-advanced .advanced-grid .adv-control { display: contents; }
+.rail-card-advanced .advanced-grid .adv-control .adv-value { grid-area: value; white-space: nowrap; font-size: 0.7rem; }
+.rail-card-advanced .advanced-grid .adv-control .adv-number { grid-area: box; width: 2.15rem; padding: 0.1rem 0.15rem; font-size: 0.66rem; }
+.rail-card-advanced .advanced-grid .adv-control input[type="range"] { grid-area: slider; height: 18px; }
+/* The Auto pill / ↺ AUTO chip live inside the label; keep them from
+   pushing the label text out. */
+.rail-card-advanced .advanced-grid .adv-auto-pill,
+.rail-card-advanced .advanced-grid .adv-auto-reset { flex-shrink: 0; }
+
+/* Rail knobs a touch smaller in the rail. */
+.adv-knob-grid .knob-vis,
+.compressor-knob-grid .knob-vis { transform: scale(0.8); margin: -0.4rem auto -0.44rem; }
+.adv-knob-grid .knob-caption { margin-top: -0.12rem; }
+
+/* Final density (1440x900, Advanced open + Manual): section rhythm and the
+   redundant Manual note. */
+.rail-section { padding: 0.42rem 0 0.46rem; }
+.rail-section-head { margin-bottom: 0.26rem; }
+.rail-card-per-band.is-mode-manual .compressor-mode-note { display: none; }
+.rail-card-per-band.is-mode-manual .compressor-mode-tabs { margin-bottom: 0.32rem; }
+.rail-card-format .format-note { margin-top: 0.22rem; }
+/* Knob label/value line boxes were carrying ~4px of slack each. */
+.adv-knob-grid .knob-label,
+.compressor-knob-grid .knob-label,
+.adv-knob-grid .knob-value,
+.compressor-knob-grid .knob-value,
+.adv-knob-grid .knob-caption { line-height: 1.15; }
+.rail-card-advanced .adaptive-block:empty { display: none; }
+.rail-card-advanced .adaptive-block { padding-top: 0; }
+.rail-card-delivery .loudness-profile-select { padding-top: 0.24rem; padding-bottom: 0.24rem; }
+.adv-knob-grid { margin-bottom: 0.1rem; }
+.rail-format-grid .adv-select { padding-top: 0.2rem; padding-bottom: 0.2rem; }
+
+/* Tools + export */
+.right-rail-export-group { padding: 0.2rem 0 0.4rem; gap: 0.25rem; }
+.right-rail-tools > summary { padding: 0.25rem 0 0.15rem; }
+.right-rail-export { padding: 0.62rem 1rem; }
 
 .source-insight-toggle.is-static { cursor: default; }
 .source-insight-toggle.is-static:hover { background: transparent; border-color: transparent; }
