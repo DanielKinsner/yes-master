@@ -7913,3 +7913,35 @@ details.rail-section > summary.rail-section-head:hover .panel-title { color: var
 @media (prefers-reduced-motion: reduce) {
   .source-insight-panel { animation: none; }
 }
+
+/* --- Owner pass 2026-08-18 (final): breathing room + text hierarchy ----
+   Section headings read as headings (brighter, a touch larger); control
+   titles are visible (text-1, not text-2); the feel-control sliders get air. */
+.rail-section { padding: 0.62rem 0 0.68rem; }
+.rail-section-head { margin-bottom: 0.45rem; min-height: 1.5rem; }
+.rail-section-head .panel-title {
+  font-size: 0.74rem;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  color: var(--text-0);
+}
+.rail-section-head .panel-title::before { height: 0.8rem; opacity: 1; }
+
+/* Control titles: seen, not whispered. */
+.adv-knob-grid .knob-label,
+.compressor-knob-grid .knob-label,
+.rail-card-advanced .advanced-grid .adv-label,
+.rail-format-grid .adv-label {
+  color: var(--text-1);
+  font-weight: 600;
+}
+.rail-card-advanced .advanced-grid .adv-label { font-size: 0.62rem; letter-spacing: 0.015em; }
+.adv-knob-grid .knob-label,
+.compressor-knob-grid .knob-label { font-size: 0.66rem; }
+
+/* Sliders breathe. */
+.rail-card-advanced .advanced-grid { gap: 0.6rem 1rem; padding-top: 0.55rem; }
+.rail-card-advanced .advanced-grid .adv-field { row-gap: 0.2rem; }
+.rail-card-advanced .advanced-grid .adv-control input[type="range"] { height: 22px; }
+.adv-knob-grid { margin-bottom: 0.3rem; }
+.compressor-density-field { margin-bottom: 0.4rem; }
