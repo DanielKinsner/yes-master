@@ -6736,17 +6736,6 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
     var(--bg-0);
 }
 
-/* Matte grain. Fixed, non-interactive, ~3% — reads as finish, not noise. */
-.app-root::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
-}
-
 .workspace {
   background:
     radial-gradient(ellipse 70% 50% at 35% 0%, rgba(79, 134, 247, 0.07), transparent 60%),
@@ -7497,5 +7486,4 @@ input:focus-visible,
 
 @media (prefers-reduced-motion: reduce) {
   .track-master-console > * { animation: none; }
-  .app-root::after { display: none; }
 }
