@@ -13,7 +13,8 @@ album — and shows you exactly what it did.
 
 ## Hero copy (pick or mix)
 
-**Primary:** Master your track in real time — and see exactly what it did.
+**Primary:** Master your track in real time. See exactly what it did.
+(Two beats since 2026-08-18; the em-dash form wrapped raggedly against the console hero.)
 
 **Supporting subheads:**
 - Not just louder. More legible.

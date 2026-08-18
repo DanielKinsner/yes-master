@@ -72,9 +72,12 @@ export default function Hero({
       <div className="relative flex min-h-svh w-full flex-col justify-start gap-5 px-5 pt-24 pb-16 sm:px-8 lg:w-[46%] lg:max-w-[560px] lg:pb-16 lg:pl-16 lg:pt-28 xl:pl-24">
         <span className="eyebrow">YES Master</span>
 
-        <h1 className="font-display text-[2.5rem] font-black leading-[0.92] tracking-[-0.03em] sm:text-5xl lg:text-[3.2rem] xl:text-[3.7rem]">
-          Master your track in real time
-          <span className="block text-brand-soft">— and see exactly what it did.</span>
+        {/* Two beats, balanced wrapping (text-balance) so neither line rags
+            into an orphan. The first sentence is the pinned primary message
+            (docs/landing-brief.md); the second is the punch. */}
+        <h1 className="max-w-[12ch] text-balance font-display text-[2.6rem] font-black leading-[0.95] tracking-[-0.03em] sm:text-[3.4rem] lg:text-[3.3rem] xl:text-[3.9rem]">
+          Master your track in real time.
+          <span className="mt-2 block text-brand-soft">See exactly what it did.</span>
         </h1>
 
         <p className="max-w-[440px] text-base leading-snug text-muted lg:text-[1.05rem]">
