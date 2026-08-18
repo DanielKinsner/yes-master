@@ -23,6 +23,7 @@ import type {
   UserPreset,
   WaveformPeaks,
 } from "../bindings";
+import { EQ_BAND_DEFAULTS } from "../bindings";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 
 const PREVIEW_TRACK_ID = "preview-track-1";
@@ -235,6 +236,7 @@ const DEFAULT_SETTINGS: MasteringSettings = {
   eq_high_mid_db: 0,
   eq_high_db: 0,
   eq_sparkle_db: 0,
+  eq_bands: { ...EQ_BAND_DEFAULTS },
   volume_match: false,
   input_gain_db: 0,
   output_gain_db: 0,

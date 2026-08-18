@@ -7,7 +7,8 @@
 // these functions detect and enforce (see design spec §2b).
 
 import type { MasteringSettings } from "../bindings";
-import { ADAPTIVE_STRENGTH_DEFAULT } from "../bindings";
+import { ADAPTIVE_STRENGTH_DEFAULT, EQ_BAND_DEFAULTS } from "../bindings";
+import { eqBandsAreDefault } from "./tone-reset";
 
 export function hasNonManagedEdits(s: MasteringSettings): boolean {
   if (
@@ -17,7 +18,8 @@ export function hasNonManagedEdits(s: MasteringSettings): boolean {
     s.eq_mid_db !== 0 ||
     s.eq_high_mid_db !== 0 ||
     s.eq_high_db !== 0 ||
-    s.eq_sparkle_db !== 0
+    s.eq_sparkle_db !== 0 ||
+    !eqBandsAreDefault(s)
   ) {
     return true;
   }
@@ -66,6 +68,7 @@ export function resetToStandardManaged(s: MasteringSettings): MasteringSettings 
     eq_high_mid_db: 0,
     eq_high_db: 0,
     eq_sparkle_db: 0,
+    eq_bands: { ...EQ_BAND_DEFAULTS },
     input_gain_db: 0,
     output_gain_db: 0,
     advanced: {

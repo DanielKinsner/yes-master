@@ -1,8 +1,9 @@
 import type { MasteringSettings } from "../bindings";
+import { EQ_BAND_DEFAULTS } from "../bindings";
 
 // "Fast reset" for the Visual EQ + Intensity area (the macros row): bring
-// intensity back to its 50% neutral and flatten the seven EQ bands to 0 dB,
-// leaving every other creative choice (preset, gains, delivery profile,
+// intensity back to its 50% neutral, flatten the seven EQ bands to 0 dB and
+// put their frequencies back on the chain defaults (2026-08-18), leaving every other creative choice (preset, gains, delivery profile,
 // volume match, advanced/compressor) exactly as the user left it. Kept as a
 // pure helper so the reset's scope is pinned by tests, and so the hook can
 // apply it as ONE settings mutation = one undo step.
@@ -23,7 +24,18 @@ export function resetToneSettings(settings: MasteringSettings): MasteringSetting
     eq_high_mid_db: 0,
     eq_high_db: 0,
     eq_sparkle_db: 0,
+    eq_bands: { ...EQ_BAND_DEFAULTS },
   };
+}
+
+/// True when every band sits on its default frequency (or the field is
+/// absent, which the engine reads as the defaults).
+export function eqBandsAreDefault(settings: MasteringSettings): boolean {
+  const b = settings.eq_bands;
+  if (!b) return true;
+  return (Object.keys(EQ_BAND_DEFAULTS) as (keyof typeof EQ_BAND_DEFAULTS)[]).every(
+    (k) => b[k] === EQ_BAND_DEFAULTS[k],
+  );
 }
 
 /// True when the tone area is already at neutral — used to disable the reset
@@ -38,6 +50,7 @@ export function isToneFlat(settings: MasteringSettings): boolean {
     settings.eq_mid_db === 0 &&
     settings.eq_high_mid_db === 0 &&
     settings.eq_high_db === 0 &&
-    settings.eq_sparkle_db === 0
+    settings.eq_sparkle_db === 0 &&
+    eqBandsAreDefault(settings)
   );
 }
