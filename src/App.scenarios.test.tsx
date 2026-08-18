@@ -31,6 +31,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EmptyState } from "./components/EmptyState";
 import { RightRail } from "./components/RightRail";
+import { SourceInsight } from "./components/SourceInsight";
 import { formatUserError, userErrorMessage } from "./lib/user-errors";
 import { supportedAudioExtensionFromName } from "./lib/supported-formats";
 import {
@@ -299,21 +300,23 @@ describe("S-F1 — single-track workflow is named, announced, and readable", () 
         message: "True peak reached -0.2 dBTP, above the -1.0 dBTP ceiling.",
       },
     ];
+    // 2026-08-18: export checks are presented in Source Insight (under the
+    // track title), in its "Last export" group, once the disclosure is open.
     const { container, root } = await renderNode(
-      <RightRail
+      <SourceInsight
         analysis={analysisFor({ true_peak_dbtp: -0.2 })}
         lastChecks={checks}
-        canExport
-        isExporting={false}
-        isRendering={false}
-        onExport={vi.fn()}
-        previewStale
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
+        unreviewed={false}
+        onAcknowledge={vi.fn()}
       />,
     );
+    await act(async () => {
+      container
+        .querySelector<HTMLButtonElement>(".source-insight-toggle")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
     // Severity and explanation both exist as text a screen reader will reach.
-    expect(container.textContent).toContain("Warning.");
+    expect(container.textContent).toContain("Caution.");
     expect(container.textContent).toContain(
       "True peak reached -0.2 dBTP, above the -1.0 dBTP ceiling.",
     );

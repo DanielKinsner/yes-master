@@ -26,10 +26,8 @@ type RightRailProps = {
   renderProgress?: RenderProgressState | null;
   renderFeedback?: RenderFeedback | null;
   cancelRenderPending?: boolean;
-  isAnalyzing?: boolean;
   onExport: () => void;
   onCancelRender?: () => void;
-  onReanalyze?: () => void;
   // UI restyle 2026-05-14: the secondary "Render audit WAV" action used
   // to live in the main StaleBar. Moved here so the playback strip can
   // become a quiet status indicator, while audit-WAV stays one click
@@ -65,10 +63,8 @@ export function RightRail({
   renderProgress,
   renderFeedback,
   cancelRenderPending = false,
-  isAnalyzing = false,
   onExport,
   onCancelRender,
-  onReanalyze,
   previewStale,
   canRenderPreview,
   onUpdatePreview,
@@ -169,12 +165,10 @@ export function RightRail({
           screen reader and still reachable by Tab, which is the duplicate
           wearing a disguise. */}
       <div className="right-rail-standing" inert={gateOpen}>
-        <QualityCheckPanel
-          checks={lastChecks}
-          analysis={analysis}
-          isAnalyzing={isAnalyzing}
-          onReanalyze={onReanalyze}
-        />
+        {/* 2026-08-18: SOURCE CHECK left the rail. Source analysis lives in
+            Insight under the track title (components/SourceInsight.tsx); the
+            rail is configuration → processing → delivery → export. The
+            pre-export gate below still reads the same rows. */}
         {advancedSlot}
         <div className="right-rail-export-group">
           <details className="right-rail-tools">
@@ -550,86 +544,6 @@ function qualityRowsFor(
 
 function hasReviewRows(rows: QualityRow[]): boolean {
   return rows.some((row) => row.warn || row.crit);
-}
-
-function QualityCheckPanel({
-  checks,
-  analysis,
-  isAnalyzing,
-  onReanalyze,
-}: {
-  checks: QualityCheck[] | undefined;
-  analysis: AnalysisResult | undefined;
-  isAnalyzing: boolean;
-  onReanalyze?: () => void;
-}) {
-  const hasExportChecks = !!checks && checks.length > 0;
-  const rows = qualityRowsFor(checks, analysis);
-  const showReanalyze = !hasExportChecks && !!onReanalyze;
-
-  const overallSafe = rows.every((r) => r.ok);
-  return (
-    <section className={`panel quality-check ${overallSafe ? "is-safe" : "has-issues"}`}>
-      <header className="panel-head quality-check-head">
-        <span className="panel-title">{hasExportChecks ? "EXPORT CHECK" : "SOURCE CHECK"}</span>
-        <div className="quality-check-head-actions">
-          {showReanalyze && (
-            <button
-              type="button"
-              className="ghost-btn quality-reanalyze"
-              disabled={isAnalyzing}
-              onClick={onReanalyze}
-              title={
-                isAnalyzing
-                  ? "Analysis is already running."
-                  : "Refresh this track's source analysis and waveform."
-              }
-            >
-              Re-analyze
-            </button>
-          )}
-          {/* U11 — COMPREHENSION. This badge is the rail's whole verdict, and
-              it flipped between SAFE and REVIEW in complete silence: change a
-              setting, and the one word that says whether your master is clean
-              swapped with nothing to draw the eye. Keying on the verdict
-              remounts the badge only when the verdict itself changes, so the
-              acknowledgment fires on a real state change and never on an
-              ordinary re-render. The word is the information; the pulse only
-              says "look here". */}
-          <span
-            key={overallSafe ? "safe" : "review"}
-            className={`quality-badge ${overallSafe ? "badge-safe" : "badge-warn"}`}
-          >
-            {overallSafe ? "SAFE" : "REVIEW"}
-          </span>
-        </div>
-      </header>
-      <ul className="quality-check-list">
-        {rows.map((r) => (
-          <li
-            key={r.key}
-            className={
-              "quality-check-row " +
-              (r.crit ? "is-crit" : r.warn ? "is-warn" : "is-ok")
-            }
-            title={r.detail}
-          >
-            <span className="quality-check-glyph" aria-hidden>
-              {r.crit ? "✗" : r.warn ? "△" : "✓"}
-            </span>
-            <span className="quality-check-text">{r.label}</span>
-            {/* U9: same as the export-review list — pass/warn/critical was
-                conveyed by an aria-hidden glyph plus colour, and the detail by
-                a tooltip. Both now exist as text. */}
-            <span className="sr-only">
-              {r.crit ? "Critical. " : r.warn ? "Warning. " : "Pass. "}
-              {r.detail}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
 }
 
 function friendlyCheckLabel(c: QualityCheck): string {

@@ -481,83 +481,9 @@ describe("RightRail source checks", () => {
     });
   });
 
-  it("labels pre-export analysis as source measurements", async () => {
-    const { container, root } = await renderNode(
-      <RightRail
-        analysis={HOT_SOURCE_ANALYSIS}
-        lastChecks={undefined}
-        canExport
-        isExporting={false}
-        isRendering={false}
-        onExport={vi.fn()}
-        previewStale={false}
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
-      />,
-    );
-
-    expect(container.textContent).toContain("SOURCE CHECK");
-    expect(container.textContent).toContain("Source true peak 0.2 dBTP");
-    expect(container.textContent).toContain("Source loudness -10.5 LUFS");
-    expect(container.textContent).toContain("Source dynamic range 3.3 LU");
-
-    await act(async () => {
-      root.unmount();
-    });
-  });
-
-  it("hosts re-analysis in the Source Check card", async () => {
-    const onReanalyze = vi.fn();
-    const { container, root } = await renderNode(
-      <RightRail
-        analysis={HOT_SOURCE_ANALYSIS}
-        lastChecks={undefined}
-        canExport
-        isExporting={false}
-        isRendering={false}
-        isAnalyzing={false}
-        onExport={vi.fn()}
-        onReanalyze={onReanalyze}
-        previewStale={false}
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
-      />,
-    );
-
-    const reanalyze = container.querySelector<HTMLButtonElement>(".quality-reanalyze");
-    expect(reanalyze?.textContent).toContain("Re-analyze");
-    expect(reanalyze?.disabled).toBe(false);
-
-    await act(async () => {
-      reanalyze?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-
-    expect(onReanalyze).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      root.render(
-        <RightRail
-          analysis={HOT_SOURCE_ANALYSIS}
-          lastChecks={undefined}
-          canExport
-          isExporting={false}
-          isRendering={false}
-          isAnalyzing
-          onExport={vi.fn()}
-          onReanalyze={onReanalyze}
-          previewStale={false}
-          canRenderPreview
-          onUpdatePreview={vi.fn()}
-        />,
-      );
-    });
-
-    expect(container.querySelector<HTMLButtonElement>(".quality-reanalyze")?.disabled).toBe(true);
-
-    await act(async () => {
-      root.unmount();
-    });
-  });
+  // 2026-08-18: SOURCE CHECK (measurements + Re-analyze) moved out of the rail
+  // into Source Insight under the track title — see SourceInsight.test.tsx.
+  // The pre-export gate above still derives its rows from the same analysis.
 
   it("keeps audit WAV rendering disabled until analysis exists", async () => {
     const onUpdatePreview = vi.fn();
