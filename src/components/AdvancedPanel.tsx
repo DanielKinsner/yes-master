@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Knob } from "./Knob";
-import { GainField, NumberField, PanelResetButton, SelectField } from "./fields";
+import { NumberField, PanelResetButton, SelectField } from "./fields";
 import type {
   AnalysisResult,
   CompressionMode,
@@ -308,35 +308,83 @@ function AdvancedControlsCard({
         />
         <span className="panel-chevron" aria-hidden>⌄</span>
       </summary>
-      <div className="advanced-grid rail-card-body">
-        <GainField
+      {/* 2026-08-18 (owner): the four "numbers you know" — gains, target,
+          ceiling — are knobs (same family as the per-band compressor), each
+          with a typeable field; the four "feel" controls below stay half-width
+          sliders in a 2×2 grid, Adapt Strength included. */}
+      <div className="adv-knob-grid rail-card-body">
+        <Knob
           label="Input gain"
           value={settings.input_gain_db}
+          min={-24}
+          max={24}
+          step={0.1}
+          defaultValue={0}
+          size="sm"
+          tone="blue"
+          format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
           onChange={onInputGain}
+          editable
+          unit="dB"
         />
-        <GainField
+        <Knob
           label="Output gain"
           value={settings.output_gain_db}
+          min={-24}
+          max={24}
+          step={0.1}
+          defaultValue={0}
+          size="sm"
+          tone="cyan"
+          format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
           onChange={onOutputGain}
+          editable
+          unit="dB"
         />
-        <NumberField
+        <Knob
           label="LUFS target"
-          value={effectiveLufsTarget}
-          step={0.5}
+          value={effectiveLufsTarget ?? -14}
           min={-24}
           max={-6}
+          step={0.5}
+          size="sm"
+          tone="purple"
           format={(v) => `${v.toFixed(1)} LUFS`}
+          caption={
+            effectiveLufsTarget === null
+              ? "Auto"
+              : a.lufs_offset_db === null && settings.delivery_profile !== "custom"
+                ? "Profile"
+                : undefined
+          }
           onChange={onLoudnessTarget}
+          onReset={() => onLoudnessTarget(null)}
+          editable
+          unit="LUFS"
         />
-        <NumberField
+        <Knob
           label="Ceiling"
-          value={effectiveCeiling}
-          step={0.1}
+          value={effectiveCeiling ?? -1}
           min={-3}
           max={0}
+          step={0.1}
+          size="sm"
+          tone="green"
           format={(v) => `${v.toFixed(1)} dBTP`}
+          caption={
+            effectiveCeiling === null
+              ? "Auto"
+              : a.ceiling_dbtp === null && settings.delivery_profile !== "custom"
+                ? "Profile"
+                : undefined
+          }
           onChange={(v) => update("ceiling_dbtp", v)}
+          onReset={() => update("ceiling_dbtp", null)}
+          editable
+          unit="dBTP"
         />
+      </div>
+      <div className="advanced-grid rail-card-body">
         <NumberField
           label="Width"
           value={a.width}
@@ -369,13 +417,6 @@ function AdvancedControlsCard({
           showAutoReset
           onChange={(v) => update("presence_air", v)}
         />
-      </div>
-      {/* Adapt Strength + its live trim readout, grouped as ONE block so the
-          slider's effect is legible right beside it (the slider used to sit in
-          the grid with the readout floated separately below). Each axis shows
-          its realized trim AND the source share vs that axis's deadband, so a
-          "-0%" reads as "source already in range" rather than looking broken. */}
-      <div className="adaptive-block rail-card-body" style={{ paddingTop: "0.2rem" }}>
         <NumberField
           label="Adapt strength"
           value={a.adaptive_strength ?? ADAPTIVE_STRENGTH_DEFAULT}
@@ -386,6 +427,12 @@ function AdvancedControlsCard({
           disabled={albumMode}
           onChange={(v) => update("adaptive_strength", v)}
         />
+      </div>
+      {/* Adapt Strength's live trim readout stays directly under the grid.
+          Each axis shows its realized trim AND the source share vs that
+          axis's deadband, so a "-0%" reads as "source already in range"
+          rather than looking broken. */}
+      <div className="adaptive-block rail-card-body" style={{ paddingTop: "0.2rem" }}>
         {albumMode ? (
           <div
             style={{ fontSize: "0.72rem", opacity: 0.7, padding: "0.3rem 0.1rem" }}
@@ -647,17 +694,22 @@ function CompressionKnobGrid({
 }) {
   return (
     <div className="compressor-knob-grid">
+      {/* 2026-08-18 (owner): steps were 0.5 dB / 5 ms and there was nowhere
+          to type — that was a chosen quantisation, not an engine limit. Now
+          fine steps (Shift-drag is finer still) and a typeable field. */}
       <Knob
         label="Threshold"
         value={threshold}
         min={-60}
         max={0}
-        step={0.5}
+        step={0.1}
         defaultValue={defaultThreshold}
         size="sm"
         tone="blue"
         format={(v) => `${v.toFixed(1)} dB`}
         onChange={onThreshold}
+        editable
+        unit="dB"
       />
       <Knob
         label="Ratio"
@@ -670,30 +722,36 @@ function CompressionKnobGrid({
         tone="cyan"
         format={(v) => `${v.toFixed(1)}:1`}
         onChange={onRatio}
+        editable
+        unit=":1"
       />
       <Knob
         label="Attack"
         value={attack}
         min={0.5}
         max={200}
-        step={1}
+        step={0.5}
         defaultValue={defaultAttack}
         size="sm"
         tone="purple"
-        format={(v) => `${v.toFixed(0)} ms`}
+        format={(v) => `${v.toFixed(1)} ms`}
         onChange={onAttack}
+        editable
+        unit="ms"
       />
       <Knob
         label="Release"
         value={release}
         min={5}
         max={2000}
-        step={5}
+        step={1}
         defaultValue={defaultRelease}
         size="sm"
         tone="green"
         format={(v) => `${v.toFixed(0)} ms`}
         onChange={onRelease}
+        editable
+        unit="ms"
       />
     </div>
   );

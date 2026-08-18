@@ -4091,11 +4091,13 @@ button.primary:disabled {
     linear-gradient(180deg, rgba(16, 20, 31, 0.66), rgba(9, 12, 19, 0.48));
 }
 
+.adv-knob-grid .knob,
 .compressor-knob-grid .knob {
   gap: 0.18rem;
   min-width: 0;
 }
 
+.adv-knob-grid .knob-label,
 .compressor-knob-grid .knob-label {
   /* Match the Advanced-drawer subheadings: brighter (--text-1) and a touch
      larger so the two card families read with one consistent label voice. */
@@ -4105,11 +4107,13 @@ button.primary:disabled {
   color: var(--text-1);
 }
 
+.adv-knob-grid .knob-value,
 .compressor-knob-grid .knob-value {
   font-size: 0.72rem;
   color: var(--text-0);
 }
 
+.adv-knob-grid .knob-vis,
 .compressor-knob-grid .knob-vis {
   margin: -0.15rem auto -0.2rem;
   transform: scale(0.9);
@@ -7365,6 +7369,119 @@ button.primary.std-create-master {
 .eq-band-boost .eq-node-halo { stroke: #7aa6ff; }
 .eq-band-cut .eq-node-halo { stroke: #f2a83b; }
 .eq-band-flat .eq-node-halo { stroke: rgba(158, 176, 214, 0.7); }
+
+/* --- Advanced Controls knob grid + typeable knob fields --------------- */
+
+/* Same housing as the per-band compressor's knob grid, so the two knob
+   quartets in the rail read as one family. */
+.adv-knob-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.5rem;
+  padding: 0.5rem 0.4rem 0.4rem;
+  margin: 0.15rem 0 0.4rem;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface-inset);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.compressor-knob-grid {
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface-inset);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  gap: 0.35rem 0.5rem;
+  padding: 0.5rem 0.4rem 0.4rem;
+}
+
+/* The typeable value under a knob: reads like the plain value label until
+   you click it, then it's a field. Unit sits beside it in the same tone as
+   the readout units elsewhere. */
+.knob-field {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2rem;
+  max-width: 100%;
+}
+.knob-field-input {
+  width: 4.2em;
+  min-width: 0;
+  padding: 0.12rem 0.3rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-0);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+  transition: border-color 120ms, background 120ms;
+}
+.knob-field-input::-webkit-outer-spin-button,
+.knob-field-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.knob-field-input:hover {
+  border-color: var(--hairline);
+  background: rgba(255, 255, 255, 0.04);
+}
+.knob-field-input:focus {
+  border-color: rgba(122, 166, 255, 0.55);
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  outline: none;
+}
+.knob-field-input:disabled { opacity: 0.5; }
+/* The value-as-button: identical to the plain value at rest, a hint of
+   field on hover so it's discoverable. */
+button.knob-value-editable {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  padding: 0.1rem 0.35rem;
+  margin: -0.1rem -0.35rem;
+  cursor: text;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  transition: border-color 120ms, background 120ms;
+}
+button.knob-value-editable:hover {
+  border-color: var(--hairline);
+  background: rgba(255, 255, 255, 0.04);
+}
+button.knob-value-editable:disabled { cursor: default; }
+.knob-field-unit {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+/* --- Native dropdowns: dark popup to match the shell ------------------ */
+
+/* Chromium/WebView2 paints the <select> popup with the element's own
+   color-scheme; without this the list opened light grey (owner report). */
+select {
+  color-scheme: dark;
+  accent-color: var(--accent);
+}
+select option,
+select optgroup {
+  background: #131720;
+  color: var(--text-0);
+}
+select option:checked {
+  background: rgba(79, 134, 247, 0.28);
+}
 
 /* --- Focus ----------------------------------------------------------- */
 
