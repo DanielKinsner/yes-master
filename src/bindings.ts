@@ -228,14 +228,16 @@ export const EQ_BAND_DEFAULTS: Readonly<EqBandFrequencies> = Object.freeze({
 
 /// `[min, max]` per band — keep in lockstep with `EqBandFrequencies::RANGES`
 /// in src-tauri/src/types.rs (a Rust unit test pins the Rust side; the
-/// bindings-drift lane pins the key set).
+/// bindings-drift lane pins the key set). Ceilings sit UNDER the next band's
+/// default and floors ABOVE the previous band's, so an extreme never lands
+/// on a neighbour's resting spot.
 export const EQ_BAND_RANGES: Readonly<Record<keyof EqBandFrequencies, readonly [number, number]>> =
   Object.freeze({
     sub_hz: [30, 150],
-    low_hz: [100, 400],
+    low_hz: [100, 350],
     low_mid_hz: [250, 800],
     mid_hz: [800, 3000],
-    high_mid_hz: [2000, 6000],
+    high_mid_hz: [2000, 5500],
     high_hz: [4000, 10_000],
     sparkle_hz: [8000, 16_000],
   });

@@ -152,9 +152,44 @@ describe("VisualEqPanel — frequency drag (2026-08-18)", () => {
       compact: true,
     });
     const mid = el.querySelectorAll(".eq-node-hit")[MID_INDEX];
-    act(() => mid.dispatchEvent(new MouseEvent("dblclick", { bubbles: true })));
+    act(() => pointer("dblclick", mid, xForHz(2600), yForDb(4)));
     expect(onEqPoint).toHaveBeenCalledWith("mid", 0, EQ_BAND_DEFAULTS.mid_hz);
     expect(onEq).not.toHaveBeenCalled();
+  });
+
+  // Found by the browser torture pass: two bands parked on the same
+  // frequency (here LOW at its 350 Hz ceiling and LOW-MID pulled down to
+  // 350). With per-node hit circles the top-most stole every press, so the
+  // one underneath could never be grabbed or double-clicked back. The band
+  // is now decided by nearest node.
+  it("picks the band by nearest node when two nodes overlap", () => {
+    const onEqPoint = vi.fn();
+    const el = mount({
+      settings: settings({
+        eq_low_db: 3,
+        eq_bands: { ...EQ_BAND_DEFAULTS, low_hz: 350, low_mid_hz: 350 },
+      }),
+      onEq: vi.fn(),
+      onEqPoint,
+      compact: true,
+    });
+    const svg = el.querySelector("svg.eq-overlay")!;
+    // Both nodes share x (350 Hz); LOW is at +3 dB, LOW-MID at 0 dB. A press
+    // nearer +3 dB must select LOW.
+    act(() => pointer("dblclick", svg, xForHz(350), yForDb(3)));
+    expect(onEqPoint).toHaveBeenLastCalledWith("low", 0, EQ_BAND_DEFAULTS.low_hz);
+    // …and one nearer 0 dB selects LOW-MID.
+    act(() => pointer("dblclick", svg, xForHz(350), yForDb(0)));
+    expect(onEqPoint).toHaveBeenLastCalledWith("low-mid", 0, EQ_BAND_DEFAULTS.low_mid_hz);
+  });
+
+  it("ignores presses that land on no node", () => {
+    const onEqPoint = vi.fn();
+    const el = mount({ settings: settings(), onEq: vi.fn(), onEqPoint, compact: true });
+    const svg = el.querySelector("svg.eq-overlay")!;
+    act(() => pointer("pointerdown", svg, xForHz(1000), yForDb(10)));
+    act(() => pointer("pointermove", svg, xForHz(1200), yForDb(8)));
+    expect(onEqPoint).not.toHaveBeenCalled();
   });
 
   it("without onEqPoint the legacy gain-only path still drags vertically", () => {

@@ -279,29 +279,65 @@ export function VisualEqPanel({
   const nodeRole = (db: number): "boost" | "cut" | "flat" =>
     db > 0.05 ? "boost" : db < -0.05 ? "cut" : "flat";
 
-  // Pointer handlers — drag vertically to set gain; double-click resets.
+  // Pointer → viewBox coordinates via the SVG's CTM, independent of CSS
+  // scaling or window size.
+  const toLocal = useCallback((event: { clientX: number; clientY: number }) => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    return pt.matrixTransform(ctm.inverse());
+  }, []);
+
+  // Which band a pointer position "means": the NEAREST node within the hit
+  // radius, decided from geometry rather than element stacking. With movable
+  // bands two nodes can share a spot (LOW parked at its 400 Hz ceiling on
+  // top of LOW-MID's 400 Hz default); per-node hit circles would let the
+  // top-most steal every press and the one underneath could never be grabbed
+  // or double-clicked back. Ties go to the band already being dragged.
+  const HIT_RADIUS = 18;
+  const bandAt = useCallback(
+    (local: { x: number; y: number }): BandId | null => {
+      let best: BandId | null = null;
+      let bestD = Infinity;
+      for (const band of BANDS) {
+        const dx = localFreqToX(bandHz[band.id]) - local.x;
+        const dy = localDbToY(gains[band.id]) - local.y;
+        const d = Math.hypot(dx, dy);
+        // Strictly nearer wins; an exact tie goes to the band already being
+        // dragged, else to the later (top-drawn) band — what the eye sees.
+        if (d <= HIT_RADIUS && (d < bestD || (d === bestD && (band.id === dragging || dragging === null)))) {
+          best = band.id;
+          bestD = d;
+        }
+      }
+      return best;
+    },
+    [bandHz, gains, dragging, localFreqToX, localDbToY],
+  );
+
   const handlePointerDown = useCallback(
-    (band: BandId, event: React.PointerEvent<SVGElement>) => {
+    (event: React.PointerEvent<SVGSVGElement>) => {
+      const local = toLocal(event);
+      if (!local) return;
+      const band = bandAt(local);
+      if (!band) return;
       event.preventDefault();
-      const target = event.currentTarget;
-      target.setPointerCapture(event.pointerId);
+      event.currentTarget.setPointerCapture(event.pointerId);
       setDragging(band);
     },
-    [],
+    [toLocal, bandAt],
   );
 
   const handlePointerMove = useCallback(
-    (band: BandId, event: React.PointerEvent<SVGElement>) => {
-      if (dragging !== band || !svgRef.current) return;
-      const svg = svgRef.current;
-      // Use the SVG's CTM to translate clientX/Y into the viewBox's local
-      // coordinate space — independent of CSS scaling or window resize.
-      const pt = svg.createSVGPoint();
-      pt.x = event.clientX;
-      pt.y = event.clientY;
-      const ctm = svg.getScreenCTM();
-      if (!ctm) return;
-      const local = pt.matrixTransform(ctm.inverse());
+    (event: React.PointerEvent<SVGSVGElement>) => {
+      if (!dragging) return;
+      const local = toLocal(event);
+      if (!local) return;
+      const band = dragging;
       const newDb = Math.round(yToDbInPlot(local.y) * 10) / 10;
       if (onEqPoint) {
         const [lo, hi] = EQ_BAND_RANGES[BAND_HZ_KEY[band]];
@@ -311,12 +347,12 @@ export function VisualEqPanel({
         onEq(band, newDb);
       }
     },
-    [dragging, onEq, onEqPoint, yToDbInPlot, xToHzInPlot],
+    [dragging, toLocal, onEq, onEqPoint, yToDbInPlot, xToHzInPlot],
   );
 
   const handlePointerUp = useCallback(
-    (band: BandId, event: React.PointerEvent<SVGElement>) => {
-      if (dragging !== band) return;
+    (event: React.PointerEvent<SVGSVGElement>) => {
+      if (!dragging) return;
       const target = event.currentTarget;
       if (target.hasPointerCapture(event.pointerId)) {
         target.releasePointerCapture(event.pointerId);
@@ -329,11 +365,15 @@ export function VisualEqPanel({
   // Double-click: gain back to 0 dB AND the band back on its default
   // frequency (one gesture = "this band as shipped").
   const handleDoubleClick = useCallback(
-    (band: BandId) => {
+    (event: React.MouseEvent<SVGSVGElement>) => {
+      const local = toLocal(event);
+      if (!local) return;
+      const band = bandAt(local);
+      if (!band) return;
       if (onEqPoint) onEqPoint(band, 0, EQ_BAND_DEFAULTS[BAND_HZ_KEY[band]]);
       else onEq(band, 0);
     },
-    [onEq, onEqPoint],
+    [toLocal, bandAt, onEq, onEqPoint],
   );
 
   return (
@@ -352,6 +392,12 @@ export function VisualEqPanel({
         className="eq-overlay"
         viewBox={`0 0 ${VBW} ${VBH}`}
         preserveAspectRatio="none"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onDoubleClick={handleDoubleClick}
+        style={{ touchAction: "none" }}
       >
         <defs>
           <clipPath id={clipAboveId}>
@@ -495,16 +541,13 @@ export function VisualEqPanel({
                 cy={y}
                 r={renderedRadius}
               />
+              {/* Hit area is only a cursor hint now — the SVG-level handlers
+                  below decide the band by nearest node (see bandAt). */}
               <circle
                 className="eq-node-hit"
                 cx={x}
                 cy={y}
-                r={18}
-                onPointerDown={(e) => handlePointerDown(band.id, e)}
-                onPointerMove={(e) => handlePointerMove(band.id, e)}
-                onPointerUp={(e) => handlePointerUp(band.id, e)}
-                onPointerCancel={(e) => handlePointerUp(band.id, e)}
-                onDoubleClick={() => handleDoubleClick(band.id)}
+                r={HIT_RADIUS}
                 style={{ cursor: onEqPoint ? "move" : "ns-resize", touchAction: "none" }}
               />
               {isDragging && (

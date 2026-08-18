@@ -550,13 +550,17 @@ impl EqBandFrequencies {
     };
 
     /// `[min, max]` per band, in the struct's field order. Mirrored by
-    /// `EQ_BAND_RANGES` in `src/components/VisualEqPanel.tsx`.
+    /// `EQ_BAND_RANGES` in `src/bindings.ts`. Chosen so neighbours cannot
+    /// cross AND so a band pushed to its extreme never lands exactly on the
+    /// neighbouring band's DEFAULT (LOW tops out at 350, under LOW-MID's
+    /// 400; HIGH-MID at 5500, under HIGH's 6000) — two nodes on the same
+    /// pixel is an ambiguity the UI would otherwise have to guess at.
     pub const RANGES: [(f32, f32); 7] = [
         (30.0, 150.0),
-        (100.0, 400.0),
+        (100.0, 350.0),
         (250.0, 800.0),
         (800.0, 3000.0),
-        (2000.0, 6000.0),
+        (2000.0, 5500.0),
         (4000.0, 10_000.0),
         (8000.0, 16_000.0),
     ];
@@ -1158,6 +1162,38 @@ mod eq_band_frequency_tests {
         assert_eq!(d.clamped(), d, "defaults must sit inside their own ranges");
     }
 
+    /// A band at its extreme must not sit on a neighbour's default position.
+    #[test]
+    fn extremes_never_coincide_with_a_neighbours_default() {
+        let d = EqBandFrequencies::default();
+        let defaults = [
+            d.sub_hz,
+            d.low_hz,
+            d.low_mid_hz,
+            d.mid_hz,
+            d.high_mid_hz,
+            d.high_hz,
+            d.sparkle_hz,
+        ];
+        let r = EqBandFrequencies::RANGES;
+        for i in 0..7 {
+            if i + 1 < 7 {
+                assert!(
+                    r[i].1 < defaults[i + 1],
+                    "band {i} ceiling hits band {}'s default",
+                    i + 1
+                );
+            }
+            if i > 0 {
+                assert!(
+                    r[i].0 > defaults[i - 1],
+                    "band {i} floor hits band {}'s default",
+                    i - 1
+                );
+            }
+        }
+    }
+
     #[test]
     fn ranges_are_ordered_and_contain_their_defaults() {
         let d = EqBandFrequencies::default();
@@ -1197,7 +1233,7 @@ mod eq_band_frequency_tests {
         };
         let c = wild.clamped();
         assert_eq!(c.sub_hz, 30.0);
-        assert_eq!(c.low_hz, 400.0);
+        assert_eq!(c.low_hz, 350.0);
         assert_eq!(c.low_mid_hz, 400.0, "NaN falls back to the default");
         assert_eq!(c.mid_hz, 1500.0, "inf falls back to the default");
         assert_eq!(c.high_mid_hz, 2000.0);
