@@ -511,6 +511,86 @@ impl Default for AlbumPlan {
     }
 }
 
+/// Per-band centre / corner frequencies for the seven user EQ bands, in Hz.
+///
+/// Until 2026-08-18 these were constants inside `ChainCoeffs::from_settings`;
+/// the Visual EQ drew seven draggable points that could only move vertically,
+/// which read as a parametric EQ and behaved as a fixed-band one (owner
+/// feedback). The defaults below are EXACTLY those constants, so a settings
+/// value that never touches this struct produces bit-identical coefficients —
+/// that is what keeps every preset byte-identity snapshot green.
+///
+/// `#[serde(default)]` at the use site keeps every pre-existing `.ams.json`
+/// project and user preset loading. Each band has a clamp range
+/// (`RANGES`) chosen so neighbouring bands cannot cross and the two shelves
+/// stay at the ends of the spectrum; the engine clamps on the way in, so a
+/// hostile or stale value can never place a peak at 20 kHz.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub struct EqBandFrequencies {
+    pub sub_hz: f32,
+    pub low_hz: f32,
+    pub low_mid_hz: f32,
+    pub mid_hz: f32,
+    pub high_mid_hz: f32,
+    pub high_hz: f32,
+    pub sparkle_hz: f32,
+}
+
+impl EqBandFrequencies {
+    /// The chain's historical fixed frequencies. Do not retune casually — the
+    /// preset calibration (`PresetCalibration`) was voiced against them.
+    pub const DEFAULT: Self = Self {
+        sub_hz: 80.0,
+        low_hz: 200.0,
+        low_mid_hz: 400.0,
+        mid_hz: 1500.0,
+        high_mid_hz: 3500.0,
+        high_hz: 6000.0,
+        sparkle_hz: 12_000.0,
+    };
+
+    /// `[min, max]` per band, in the struct's field order. Mirrored by
+    /// `EQ_BAND_RANGES` in `src/components/VisualEqPanel.tsx`.
+    pub const RANGES: [(f32, f32); 7] = [
+        (30.0, 150.0),
+        (100.0, 400.0),
+        (250.0, 800.0),
+        (800.0, 3000.0),
+        (2000.0, 6000.0),
+        (4000.0, 10_000.0),
+        (8000.0, 16_000.0),
+    ];
+
+    /// Every band clamped into its range; non-finite values fall back to the
+    /// default for that band.
+    pub fn clamped(self) -> Self {
+        fn c(v: f32, (lo, hi): (f32, f32), fallback: f32) -> f32 {
+            if v.is_finite() {
+                v.clamp(lo, hi)
+            } else {
+                fallback
+            }
+        }
+        let d = Self::DEFAULT;
+        let r = Self::RANGES;
+        Self {
+            sub_hz: c(self.sub_hz, r[0], d.sub_hz),
+            low_hz: c(self.low_hz, r[1], d.low_hz),
+            low_mid_hz: c(self.low_mid_hz, r[2], d.low_mid_hz),
+            mid_hz: c(self.mid_hz, r[3], d.mid_hz),
+            high_mid_hz: c(self.high_mid_hz, r[4], d.high_mid_hz),
+            high_hz: c(self.high_hz, r[5], d.high_hz),
+            sparkle_hz: c(self.sparkle_hz, r[6], d.sparkle_hz),
+        }
+    }
+}
+
+impl Default for EqBandFrequencies {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MasteringSettings {
     pub preset: Preset,
@@ -536,6 +616,11 @@ pub struct MasteringSettings {
     /// `#[serde(default)]` keeps older project files loading at 0.0.
     #[serde(default)]
     pub eq_sparkle_db: f32,
+    /// 2026-08-18: per-band frequencies for the seven EQ bands above. Defaults
+    /// are the chain's historical constants (see `EqBandFrequencies`), so
+    /// older projects/presets load unchanged and sound unchanged.
+    #[serde(default)]
+    pub eq_bands: EqBandFrequencies,
     pub volume_match: bool,
     /// Source-track integrated LUFS, injected by the playback driver
     /// before each `updateChain` so the chain can compute a proper
@@ -1054,6 +1139,90 @@ pub struct LoopRegion {
 }
 
 #[cfg(test)]
+mod eq_band_frequency_tests {
+    use super::*;
+
+    /// The pin that keeps every preset byte-identity snapshot honest: the
+    /// defaults ARE the constants `ChainCoeffs::from_settings` used before
+    /// bands became settings. Change these and the snapshots must change too.
+    #[test]
+    fn defaults_are_the_historical_chain_frequencies() {
+        let d = EqBandFrequencies::default();
+        assert_eq!(d.sub_hz, 80.0);
+        assert_eq!(d.low_hz, 200.0);
+        assert_eq!(d.low_mid_hz, 400.0);
+        assert_eq!(d.mid_hz, 1500.0);
+        assert_eq!(d.high_mid_hz, 3500.0);
+        assert_eq!(d.high_hz, 6000.0);
+        assert_eq!(d.sparkle_hz, 12_000.0);
+        assert_eq!(d.clamped(), d, "defaults must sit inside their own ranges");
+    }
+
+    #[test]
+    fn ranges_are_ordered_and_contain_their_defaults() {
+        let d = EqBandFrequencies::default();
+        let defaults = [
+            d.sub_hz,
+            d.low_hz,
+            d.low_mid_hz,
+            d.mid_hz,
+            d.high_mid_hz,
+            d.high_hz,
+            d.sparkle_hz,
+        ];
+        for (i, ((lo, hi), v)) in EqBandFrequencies::RANGES.iter().zip(defaults).enumerate() {
+            assert!(lo < hi, "band {i}: range must be ascending");
+            assert!(
+                *lo <= v && v <= *hi,
+                "band {i}: default {v} outside [{lo}, {hi}]"
+            );
+        }
+        // Each band's floor stays at or above the previous band's floor so the
+        // rendered plot never has bands swap places by default ordering.
+        for w in EqBandFrequencies::RANGES.windows(2) {
+            assert!(w[0].0 <= w[1].0);
+        }
+    }
+
+    #[test]
+    fn clamped_bounds_every_band_and_rejects_non_finite() {
+        let wild = EqBandFrequencies {
+            sub_hz: 1.0,
+            low_hz: 99_999.0,
+            low_mid_hz: f32::NAN,
+            mid_hz: f32::INFINITY,
+            high_mid_hz: -5.0,
+            high_hz: 10_000.0,
+            sparkle_hz: 16_000.0,
+        };
+        let c = wild.clamped();
+        assert_eq!(c.sub_hz, 30.0);
+        assert_eq!(c.low_hz, 400.0);
+        assert_eq!(c.low_mid_hz, 400.0, "NaN falls back to the default");
+        assert_eq!(c.mid_hz, 1500.0, "inf falls back to the default");
+        assert_eq!(c.high_mid_hz, 2000.0);
+        assert_eq!(c.high_hz, 10_000.0);
+        assert_eq!(c.sparkle_hz, 16_000.0);
+    }
+
+    /// Older `.ams.json` projects and user presets carry no `eq_bands` key.
+    #[test]
+    fn mastering_settings_without_eq_bands_loads_defaults() {
+        let json = r#"{
+            "preset": {"kind": "universal"},
+            "intensity": 0.5,
+            "eq_low_db": 0.0,
+            "eq_mid_db": 0.0,
+            "eq_high_db": 0.0,
+            "volume_match": false,
+            "advanced": {}
+        }"#;
+        let parsed: MasteringSettings = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(parsed.eq_bands, EqBandFrequencies::default());
+    }
+}
+
+#[cfg(test)]
 mod album_plan_serde_tests {
     use super::*;
 
@@ -1115,6 +1284,7 @@ mod effective_settings_tests {
             eq_high_mid_db: 0.0,
             eq_high_db: 0.0,
             eq_sparkle_db: 0.0,
+            eq_bands: EqBandFrequencies::default(),
             volume_match: false,
             source_lufs_integrated: None,
             input_gain_db: 0.0,

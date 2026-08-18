@@ -44,6 +44,7 @@ fn oomph_settings(volume_match: bool) -> MasteringSettings {
         eq_high_mid_db: 0.0,
         eq_high_db: 0.0,
         eq_sparkle_db: 0.0,
+        eq_bands: yes_master_lib::EqBandFrequencies::default(),
         volume_match,
         source_lufs_integrated: Some(-13.0),
         input_gain_db: 0.0,
