@@ -263,13 +263,37 @@ export function WaveformView({
         aria-valuemax={durationSec}
         aria-valuenow={currentTimeSec}
       >
-        {channel.map((v, i) => {
-          const x = (i / channel.length) * W;
-          const barW = (W / channel.length) * 0.85;
-          const barH = v * (H * 0.88);
-          const y = (H - barH) / 2;
-          return <rect key={i} x={x} y={y} width={barW} height={barH} rx={0.5} />;
-        })}
+        <WaveformDefs prefix="wf" />
+        {/* The peak bars are a clip mask, drawn once. Two gradient-filled
+            sheets are clipped by it: the full unplayed sheet, then the
+            played sheet cut at the playhead — so the heard span lights up
+            without duplicating the peak DOM or fighting CSS in a <use>
+            shadow tree. */}
+        <clipPath id="wf-bars-clip">
+          {channel.map((v, i) => {
+            const x = (i / channel.length) * W;
+            const barW = (W / channel.length) * 0.85;
+            const barH = v * (H * 0.88);
+            const y = (H - barH) / 2;
+            return <rect key={i} x={x} y={y} width={barW} height={barH} rx={0.5} />;
+          })}
+        </clipPath>
+        <rect
+          className="wf-sheet wf-sheet-unplayed"
+          x={0}
+          y={0}
+          width={W}
+          height={H}
+          clipPath="url(#wf-bars-clip)"
+        />
+        <rect
+          className="wf-sheet wf-sheet-played"
+          x={0}
+          y={0}
+          width={playheadX}
+          height={H}
+          clipPath="url(#wf-bars-clip)"
+        />
         {regionRect && (
           <rect
             className="wf-region"
@@ -362,13 +386,32 @@ function WaveformOverview({
       aria-valuemax={durationSec}
       aria-valuenow={currentTimeSec}
     >
-      {channel.map((v, i) => {
-        const x = (i / channel.length) * W;
-        const barW = (W / channel.length) * 0.85;
-        const barH = v * (H * 0.92);
-        const y = (H - barH) / 2;
-        return <rect key={i} x={x} y={y} width={barW} height={barH} rx={0.5} />;
-      })}
+      <WaveformDefs prefix="wfo" />
+      <clipPath id="wfo-bars-clip">
+        {channel.map((v, i) => {
+          const x = (i / channel.length) * W;
+          const barW = (W / channel.length) * 0.85;
+          const barH = v * (H * 0.92);
+          const y = (H - barH) / 2;
+          return <rect key={i} x={x} y={y} width={barW} height={barH} rx={0.5} />;
+        })}
+      </clipPath>
+      <rect
+        className="wf-sheet wf-sheet-unplayed"
+        x={0}
+        y={0}
+        width={W}
+        height={H}
+        clipPath="url(#wfo-bars-clip)"
+      />
+      <rect
+        className="wf-sheet wf-sheet-played"
+        x={0}
+        y={0}
+        width={playheadX}
+        height={H}
+        clipPath="url(#wfo-bars-clip)"
+      />
       {regionRect && (
         <rect
           className="wf-overview-region"
@@ -386,5 +429,28 @@ function WaveformOverview({
         y2={H}
       />
     </svg>
+  );
+}
+
+// Shared gradient defs for the main waveform ("wf") and the overview ("wfo").
+// Both SVGs are always mounted together, so the ids must differ per prefix.
+// Unplayed bars are a dim cool cobalt that brightens toward the centre line;
+// the played span is lit — the same hue, pushed toward white at the peaks.
+// Both sheets span the full viewBox height, so the default bounding-box
+// gradient lands identically on each even though the played sheet is narrower.
+function WaveformDefs({ prefix }: { prefix: string }) {
+  return (
+    <defs>
+      <linearGradient id={`${prefix}-fill-unplayed`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#3760b8" stopOpacity="0.55" />
+        <stop offset="50%" stopColor="#5f8fe6" stopOpacity="0.85" />
+        <stop offset="100%" stopColor="#3760b8" stopOpacity="0.55" />
+      </linearGradient>
+      <linearGradient id={`${prefix}-fill-played`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#7aa6ff" stopOpacity="0.95" />
+        <stop offset="50%" stopColor="#dbe7ff" stopOpacity="1" />
+        <stop offset="100%" stopColor="#7aa6ff" stopOpacity="0.95" />
+      </linearGradient>
+    </defs>
   );
 }

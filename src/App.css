@@ -1,21 +1,41 @@
 :root {
-  --bg-0: #07080d;
-  --bg-1: #10131a;
-  --bg-2: #161a24;
-  --bg-3: #1f2533;
-  --bg-4: #2a3142;
-  --border: #232a3a;
-  --border-strong: #313a4f;
-  --text-0: #ecf0fa;
-  --text-1: #b0b8d0;
-  --text-2: #6f7795;
-  --accent: #4d8bff;
-  --accent-bright: #6fa3ff;
-  --accent-deep: #2a6bf2;
+  /* Premium pass (design/premium-pass): the neutrals stay in the same
+     cool-graphite family the preset art and landing page were built on, but
+     the steps are re-spaced so the shell reads as one lit material —
+     bg-0 floor, bg-1 rails, bg-2 cards, bg-3 raised controls, bg-4 hover.
+     Borders become translucent hairlines (they pick up whatever sits behind
+     them instead of drawing hard grey lines everywhere), and the accent is
+     nudged toward a deeper cobalt so it reads as a chosen colour rather than
+     a framework default. */
+  --bg-0: #07080c;
+  --bg-1: #0d1017;
+  --bg-2: #131720;
+  --bg-3: #1b2130;
+  --bg-4: #252d40;
+  --border: rgba(158, 176, 214, 0.1);
+  --border-strong: rgba(158, 176, 214, 0.2);
+  --hairline: rgba(255, 255, 255, 0.06);
+  --text-0: #eef1f8;
+  --text-1: #aeb6cc;
+  --text-2: #6d7592;
+  --accent: #4f86f7;
+  --accent-bright: #7aa6ff;
+  --accent-deep: #2f63e6;
   --accent-warm: #ffb86b;
   --accent-danger: #ff7676;
-  --accent-glow: 0 0 18px rgba(77, 139, 255, 0.45);
-  --accent-glow-soft: 0 0 10px rgba(77, 139, 255, 0.3);
+  --accent-glow: 0 0 18px rgba(79, 134, 247, 0.4);
+  --accent-glow-soft: 0 0 10px rgba(79, 134, 247, 0.26);
+  /* Surfaces: top-lit gradients so every card looks like the same brushed
+     panel under one light source (see the "Premium pass" section at the
+     end of this file for where each is used). */
+  --surface-card:
+    linear-gradient(180deg, rgba(28, 33, 46, 0.72) 0%, rgba(13, 16, 24, 0.9) 100%);
+  --surface-raised:
+    linear-gradient(180deg, rgba(44, 52, 70, 0.95) 0%, rgba(30, 36, 50, 0.98) 100%);
+  --surface-inset:
+    linear-gradient(180deg, rgba(5, 7, 11, 0.9) 0%, rgba(11, 14, 20, 0.85) 100%);
+  --focus-ring: 0 0 0 2px var(--bg-0), 0 0 0 4px rgba(122, 166, 255, 0.85);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --center-switch-width: 260px;
   --center-switch-height: 38px;
   /* Rail widths (audit 11a item 7): the workbench grids share one left
@@ -34,9 +54,9 @@
   --z-overlay: 120;
   --z-receipt: 200;
   --z-dnd: 300;
-  --radius: 8px;
-  --radius-sm: 5px;
-  --radius-card: 7px;
+  --radius: 10px;
+  --radius-sm: 7px;
+  --radius-card: 12px;
 
   /* Elevation scale (vera/premium-depth): three deliberate tiers, each a
      soft ambient shadow + a tight contact shadow + a 1px top sheen, so
@@ -289,6 +309,9 @@ select {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  /* Dynamic viewport height where supported: embedded webviews / browser
+     panes with their own chrome otherwise clip the bottom status bar. */
+  height: 100dvh;
   background: var(--bg-0);
   color: var(--text-0);
 }
@@ -6685,4 +6708,794 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
 @media (prefers-reduced-motion: reduce) {
   /* The new shape still renders — only the settle is dropped. */
   .album-sequence-arc svg { animation: none; }
+}
+
+/* =====================================================================
+   PREMIUM PASS — design/premium-pass (2026-08-18)
+   ---------------------------------------------------------------------
+   One coherent visual skin over the existing layout. Everything below
+   is deliberately appended so it wins ties in the cascade without
+   rewriting the 6k lines of layout above it; nothing here changes
+   geometry that the layout tests pin (grid areas, rail widths, the
+   center-switch size, seam alignment).
+
+   The direction: a mastering desk you'd want to touch. Cool graphite
+   surfaces lit from above, hairline seams instead of drawn borders,
+   the cobalt accent reserved for what is LIVE (A/B, selection, the
+   one primary action), calm typography with real numerals, and a
+   matte grain over the whole shell so it reads as material, not as a
+   web page.
+   ===================================================================== */
+
+/* --- Shell material -------------------------------------------------- */
+
+.app-root {
+  position: relative;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(79, 134, 247, 0.07), transparent 55%),
+    var(--bg-0);
+}
+
+/* Matte grain. Fixed, non-interactive, ~3% — reads as finish, not noise. */
+.app-root::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+}
+
+.workspace {
+  background:
+    radial-gradient(ellipse 70% 50% at 35% 0%, rgba(79, 134, 247, 0.07), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 95% 100%, rgba(255, 184, 107, 0.035), transparent 60%),
+    var(--bg-0);
+}
+
+.sidebar,
+.right-rail,
+.std-tracks,
+.std-rail {
+  background:
+    linear-gradient(180deg, rgba(20, 24, 34, 0.55) 0%, rgba(9, 11, 17, 0.7) 100%),
+    var(--bg-1);
+}
+
+.sidebar { border-right: 1px solid var(--hairline); }
+.right-rail,
+.std-rail { border-left: 1px solid var(--hairline); }
+.std-tracks { border-right: 1px solid var(--hairline); }
+
+/* --- Header ---------------------------------------------------------- */
+
+.top-header {
+  min-height: 54px;
+  background:
+    linear-gradient(180deg, rgba(24, 29, 41, 0.75) 0%, rgba(12, 15, 22, 0.9) 100%);
+  border-bottom: 1px solid var(--hairline);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.brand-mark {
+  filter: drop-shadow(0 0 8px rgba(122, 166, 255, 0.35));
+}
+
+.brand-name {
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+}
+
+/* Segmented controls: an inset track with a raised, lit thumb. Used for
+   Track/Album, Preset/Manual/Off and the Standard loudness picker. The
+   Original/Mastered A/B keeps the accent fill on purpose — it's the one
+   switch that tells you what you're HEARING right now. */
+.top-header-tabs {
+  background: var(--surface-inset);
+  border: 1px solid var(--hairline);
+  border-radius: 9px;
+  padding: 3px;
+  gap: 2px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.top-tab {
+  border-radius: 6px;
+  font-weight: 500;
+  color: var(--text-2);
+  transition: background 140ms var(--ease-out), color 140ms var(--ease-out), box-shadow 140ms;
+}
+
+.top-tab:hover { color: var(--text-0); }
+
+.top-tab.is-active {
+  background: var(--surface-raised);
+  color: var(--text-0);
+  font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.icon-tile {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-1);
+  transition: color 120ms, background 120ms, border-color 120ms, transform 120ms var(--ease-out);
+}
+
+.icon-tile:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--hairline);
+  color: var(--text-0);
+}
+
+.icon-tile:active { transform: scale(0.96); }
+
+.icon-tile:disabled {
+  background: transparent;
+  border-color: transparent;
+}
+
+/* --- Type ------------------------------------------------------------ */
+
+.track-title {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  background: linear-gradient(180deg, #ffffff 0%, var(--text-1) 130%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.std-title {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.track-sub,
+.track-meta-line {
+  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  color: var(--text-2);
+}
+
+/* Section markers: quieter, wider, the tick becomes a soft cobalt bar of
+   light rather than a hard stripe. */
+.section-label,
+.std-step-label {
+  color: var(--text-1);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+
+.panel-title,
+.std-rail-title,
+.std-tracks-head {
+  color: var(--text-1);
+  font-weight: 650;
+  letter-spacing: 0.17em;
+}
+
+.section-label::before,
+.panel-title::before,
+.std-step-label::before,
+.std-rail-title::before,
+.std-tracks-head::before {
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent-deep));
+  box-shadow: 0 0 10px rgba(79, 134, 247, 0.55);
+  opacity: 1;
+}
+
+/* Big numerals: lighter weight, tighter tracking — the number is the
+   hero, the unit whispers. */
+.readout-number,
+.loudness-number {
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  font-feature-settings: "tnum" 1, "ss01" 1;
+}
+
+.time,
+.wf-deck-transport .time,
+.std-time {
+  font-feature-settings: "tnum" 1;
+  letter-spacing: 0.01em;
+}
+
+/* --- Cards & panels -------------------------------------------------- */
+
+.wf-deck,
+.presets,
+.knobs-row,
+.signal-chain,
+.transport,
+.panel,
+.std-step,
+.std-rail-card,
+.std-wave-deck,
+.advanced {
+  background: var(--surface-card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-card);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 12px 32px -8px rgba(0, 0, 0, 0.5);
+}
+
+/* Cards inside the rails sit closer to the surface. */
+.panel,
+.std-rail-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Meter housing inside the waveform deck stays chrome-less. */
+.wf-deck-meters .panel {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.wf-deck-meters .panel + .panel { border-top: 1px solid var(--hairline); }
+.std-rail .master-out { background: transparent; border: 0; box-shadow: none; }
+
+/* Inner boxes lose their drawn borders — tonal fill only, so a card never
+   contains a second card. */
+.readout,
+.right-rail-tools,
+.compressor-preset-summary,
+.compressor-adaptive-band,
+.adaptive-readout {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  border-radius: 9px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.right-rail-tools {
+  background: var(--bg-1);
+  border-color: var(--hairline);
+}
+
+.wf-card,
+.std-wave { border: 0; }
+.std-wave { border-left: 1px solid var(--hairline); }
+
+/* --- Waveform -------------------------------------------------------- */
+
+/* The peak bars are a clipPath in Waveform.tsx; two gradient "sheets" are
+   clipped by it — the full unplayed sheet (dim cobalt) and the played sheet
+   cut at the playhead (lit). Selectors carry `rect` so they outrank the
+   legacy `.wf rect { fill: currentColor }` rule above. The overview is its
+   own SVG with its own gradient ids ("wfo-"). */
+.wf rect.wf-sheet-unplayed { fill: url(#wf-fill-unplayed); fill-opacity: 1; }
+.wf rect.wf-sheet-played { fill: url(#wf-fill-played); fill-opacity: 1; }
+.wf-overview rect.wf-sheet-unplayed { fill: url(#wfo-fill-unplayed); fill-opacity: 1; }
+.wf-overview rect.wf-sheet-played { fill: url(#wfo-fill-played); fill-opacity: 1; }
+
+.wf rect.wf-region,
+.wf-overview rect.wf-overview-region {
+  fill: var(--accent-bright);
+  fill-opacity: 0.12;
+}
+
+.wf-playhead {
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 1.25;
+  filter: drop-shadow(0 0 6px rgba(122, 166, 255, 0.85));
+}
+
+.wf-main {
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 12%, transparent 88%, rgba(0, 0, 0, 0.18)),
+    var(--surface-inset);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.wf-overview {
+  border-radius: 6px;
+  background: var(--surface-inset);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Transport ------------------------------------------------------- */
+
+.play-btn,
+.std-play {
+  background:
+    radial-gradient(120% 120% at 30% 22%, rgba(190, 212, 255, 0.95) 0%, rgba(79, 134, 247, 0.95) 38%, rgba(37, 78, 180, 1) 72%, rgba(18, 34, 78, 1) 100%);
+  border: 1px solid rgba(160, 190, 255, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.25),
+    0 10px 28px -6px rgba(47, 99, 230, 0.7),
+    0 0 0 6px rgba(79, 134, 247, 0.06);
+  transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out), filter 160ms;
+}
+
+.play-btn:hover,
+.std-play:hover {
+  filter: brightness(1.06);
+  transform: scale(1.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.25),
+    0 14px 34px -6px rgba(47, 99, 230, 0.85),
+    0 0 0 8px rgba(79, 134, 247, 0.09);
+}
+
+.play-btn:active,
+.std-play:active { transform: scale(0.97); }
+
+/* --- Buttons --------------------------------------------------------- */
+
+button.primary,
+.right-rail-export {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
+  border: 1px solid rgba(160, 190, 255, 0.35);
+  border-radius: 9px;
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 22px -8px rgba(47, 99, 230, 0.8);
+  transition: transform 140ms var(--ease-out), box-shadow 140ms var(--ease-out), filter 140ms;
+}
+
+button.primary:hover:not(:disabled),
+.right-rail-export:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 12px 28px -8px rgba(47, 99, 230, 0.95);
+}
+
+button.primary:active:not(:disabled),
+.right-rail-export:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+  filter: brightness(0.98);
+}
+
+button.primary:disabled,
+.right-rail-export:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--hairline);
+  color: var(--text-2);
+  text-shadow: none;
+  box-shadow: none;
+}
+
+button.primary.std-create-master {
+  border-radius: 12px;
+  border: 1px solid rgba(160, 190, 255, 0.35);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 48%),
+    linear-gradient(135deg, var(--accent-deep) 0%, var(--accent) 60%, var(--accent-bright) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 12px 30px -8px rgba(47, 99, 230, 0.85);
+}
+
+.ghost-btn,
+.icon-btn,
+.toolbar-toggle,
+.std-delivery-change,
+.std-add-track,
+.std-reanalyze-track,
+.quality-reanalyze,
+.panel-reset-button {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--hairline);
+  color: var(--text-1);
+  transition: background 120ms, border-color 120ms, color 120ms, transform 120ms var(--ease-out);
+}
+
+.ghost-btn:hover:not(:disabled),
+.icon-btn:hover:not(:disabled),
+.toolbar-toggle:hover,
+.std-delivery-change:hover,
+.std-add-track:hover,
+.std-reanalyze-track:hover,
+.quality-reanalyze:hover,
+.panel-reset-button:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--border-strong);
+  color: var(--text-0);
+}
+
+.icon-btn.on,
+.toolbar-toggle.is-on {
+  color: var(--text-0);
+  border-color: rgba(122, 166, 255, 0.5);
+  background: rgba(79, 134, 247, 0.14);
+}
+
+/* Original / Mastered — the LIVE switch keeps the accent. */
+.ab-toggle,
+.std-rail-ab {
+  background: var(--surface-inset);
+  border: 1px solid var(--hairline);
+  border-radius: 9px;
+  padding: 3px;
+  gap: 2px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.ab-toggle button,
+.std-rail-ab button {
+  border-radius: 6px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.ab-toggle button:not(.on):hover,
+.std-rail-ab button:not(.on):hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-0);
+}
+
+.ab-toggle button.on,
+.std-rail-ab button.on {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
+  color: #fff;
+  font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 6px 16px -6px rgba(47, 99, 230, 0.9);
+}
+
+/* Preset / Manual / Off — neutral raised thumb. */
+.compressor-mode-tabs {
+  background: var(--surface-inset);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.compressor-mode-tab {
+  border-right: 0;
+  border-radius: 5px;
+  transition: background 140ms var(--ease-out), color 140ms;
+}
+
+.compressor-mode-tab.is-active {
+  background: var(--surface-raised);
+  color: var(--text-0);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Standard loudness picker — raised neutral with a cobalt readout. */
+.std-seg-option {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+}
+
+.std-seg-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-strong);
+}
+
+.std-seg-option.is-active {
+  background: var(--surface-raised);
+  border-color: rgba(122, 166, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 8px 20px -8px rgba(0, 0, 0, 0.7);
+}
+
+/* Selects: inset field with a hairline; keep native padding/chevron. */
+.settings-select,
+.rail-card-select,
+.adv-select,
+.loudness-profile-select,
+.modal-input,
+.preset-save-name {
+  background-color: rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  color: var(--text-0);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  transition: border-color 120ms, box-shadow 120ms;
+}
+
+.settings-select:hover,
+.rail-card-select:hover,
+.adv-select:hover,
+.loudness-profile-select:hover {
+  border-color: var(--border-strong);
+}
+
+/* --- Preset tiles ---------------------------------------------------- */
+
+.tile,
+.std-tile {
+  border-radius: 12px;
+  border: 1px solid var(--hairline);
+  background:
+    radial-gradient(
+      circle at 50% 28%,
+      color-mix(in srgb, var(--tile-accent, var(--accent)) 20%, transparent),
+      transparent 60%
+    ),
+    var(--surface-card);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    transform 180ms var(--ease-out),
+    border-color 180ms,
+    box-shadow 180ms var(--ease-out);
+}
+
+.tile:hover,
+.std-tile:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--tile-accent, var(--accent)) 30%, var(--border-strong));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 24px -8px rgba(0, 0, 0, 0.6);
+}
+
+.tile.active,
+.std-tile.is-active {
+  border-color: color-mix(in srgb, var(--tile-accent, var(--accent)) 60%, rgba(255, 255, 255, 0.2));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px color-mix(in srgb, var(--tile-accent, var(--accent)) 30%, transparent),
+    0 14px 30px -10px rgba(0, 0, 0, 0.7),
+    0 0 36px -6px color-mix(in srgb, var(--tile-accent, var(--accent)) 45%, transparent);
+}
+
+.tile-label { font-weight: 600; letter-spacing: 0.01em; }
+.std-tile-label { font-weight: 600; letter-spacing: 0.01em; }
+.std-tile.is-active::after {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* --- Chips ----------------------------------------------------------- */
+
+.meta-chip,
+.status-pill,
+.override-status {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: var(--hairline);
+  border-radius: 999px;
+}
+
+.override-toggle {
+  background: var(--surface-inset);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.override-toggle button {
+  border-radius: 999px;
+}
+
+.override-toggle button.on {
+  background: var(--surface-raised);
+  color: var(--text-0);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.hint-chip {
+  border-color: rgba(122, 166, 255, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    rgba(47, 99, 230, 0.16);
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 20px -10px rgba(0, 0, 0, 0.7);
+}
+
+/* --- Track rows ------------------------------------------------------ */
+
+.track-row,
+.std-track-row {
+  border-radius: 10px;
+}
+
+.track-row.active,
+.std-track-row.is-active {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
+    rgba(79, 134, 247, 0.08);
+  border-color: rgba(122, 166, 255, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 3px 0 0 -1px var(--accent);
+}
+
+/* --- Meters ---------------------------------------------------------- */
+
+.lufs-bar {
+  border-radius: 5px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.lufs-bar-track {
+  background:
+    repeating-linear-gradient(
+      to top,
+      transparent 0%,
+      transparent calc(100% / 6 - 1px),
+      rgba(255, 255, 255, 0.06) calc(100% / 6 - 1px),
+      rgba(255, 255, 255, 0.06) calc(100% / 6)
+    ),
+    linear-gradient(180deg, #0a0d14, #12161f);
+}
+
+.lufs-bar-fill {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.16), transparent 40%, rgba(0, 0, 0, 0.18)),
+    linear-gradient(
+      to top,
+      #3f7cf2 0%,
+      #4fc08a 30%,
+      #c9dc5c 65%,
+      #ffb35c 85%,
+      #ff5c5c 97%
+    );
+  box-shadow: 0 0 10px rgba(79, 134, 247, 0.35);
+}
+
+.lufs-bar-label { font-weight: 650; }
+
+/* --- Sidebar footer / bottom bar ------------------------------------- */
+
+.sidebar-footer {
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.25));
+  border-top: 1px solid var(--hairline);
+}
+
+.bottom-status {
+  background: linear-gradient(180deg, rgba(12, 15, 22, 0.95), rgba(8, 10, 15, 0.98));
+  border-top: 1px solid var(--hairline);
+  color: var(--text-2);
+}
+
+/* --- Signal chain ---------------------------------------------------- */
+
+.chain-stage-disc {
+  background: var(--surface-raised);
+  border-color: var(--hairline);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Empty state ----------------------------------------------------- */
+
+.empty-state h1 {
+  font-size: clamp(1.7rem, 2.6vw, 2.3rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.empty-state p {
+  color: var(--text-1);
+  font-size: 1.02rem;
+  line-height: 1.55;
+}
+
+.empty-hero-brand {
+  color: var(--text-2);
+  letter-spacing: 0.38em;
+}
+
+.empty-state button.primary {
+  padding: 0.8rem 1.9rem;
+  font-size: 0.98rem;
+  border-radius: 999px;
+}
+
+/* --- Overlays -------------------------------------------------------- */
+
+.chrome-dialog,
+.modal-card,
+.receipt,
+.export-review-panel,
+.toast {
+  background:
+    linear-gradient(180deg, rgba(30, 36, 50, 0.9) 0%, rgba(14, 17, 25, 0.98) 100%);
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 30px 80px -20px rgba(0, 0, 0, 0.85),
+    0 8px 24px -8px rgba(0, 0, 0, 0.6);
+}
+
+.toast { border-radius: 12px; }
+
+/* Groups inside a dialog: tonal, not bordered — one card, not cards in a card. */
+.settings-group,
+.help-section,
+.receipt-panel {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.toast-ok { border-color: rgba(108, 208, 138, 0.5); }
+.toast-warn { border-color: rgba(255, 184, 107, 0.5); }
+.toast-danger { border-color: rgba(255, 118, 118, 0.55); }
+
+/* --- Focus ----------------------------------------------------------- */
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+[role="slider"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* --- Scrollbars ------------------------------------------------------ */
+
+.right-rail::-webkit-scrollbar,
+.track-list::-webkit-scrollbar,
+.workspace::-webkit-scrollbar { width: 8px; }
+.right-rail::-webkit-scrollbar-track,
+.track-list::-webkit-scrollbar-track,
+.workspace::-webkit-scrollbar-track { background: transparent; }
+.right-rail::-webkit-scrollbar-thumb,
+.track-list::-webkit-scrollbar-thumb,
+.workspace::-webkit-scrollbar-thumb {
+  background: rgba(158, 176, 214, 0.16);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.right-rail::-webkit-scrollbar-thumb:hover,
+.track-list::-webkit-scrollbar-thumb:hover,
+.workspace::-webkit-scrollbar-thumb:hover { background: rgba(158, 176, 214, 0.3); background-clip: padding-box; }
+
+/* --- Motion: one orchestrated reveal for the Advanced console -------- */
+
+.track-master-console > * {
+  animation: console-rise 480ms var(--ease-out) both;
+}
+.track-master-console > :nth-child(1) { animation-delay: 0ms; }
+.track-master-console > :nth-child(2) { animation-delay: 60ms; }
+.track-master-console > :nth-child(3) { animation-delay: 110ms; }
+.track-master-console > :nth-child(4) { animation-delay: 160ms; }
+
+@keyframes console-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track-master-console > * { animation: none; }
+  .app-root::after { display: none; }
 }
