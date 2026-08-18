@@ -67,7 +67,7 @@ const F_MIN = 20;
 const F_MAX = 20_000;
 const DB_MIN = -12;
 const DB_MAX = 12;
-const GRID_FREQS = [50, 100, 200, 500, 1_000, 2_000, 5_000, 10_000];
+const GRID_FREQS = [20, 50, 100, 200, 500, 1_000, 2_000, 5_000, 10_000, 20_000];
 const GRID_DBS = [-12, -6, 0, 6, 12];
 
 const LOG_F_MIN = Math.log10(F_MIN);
@@ -209,6 +209,21 @@ export function VisualEqPanel({
     `M ${PAD_LEFT} ${zeroY.toFixed(2)} ` +
     curvePoints.map((p) => `L ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ") +
     ` L ${(PAD_LEFT + plotW).toFixed(2)} ${zeroY.toFixed(2)} Z`;
+  // Boost vs cut are drawn in two colours (owner mockup 2026-08-18): the
+  // response line + fill are rendered twice, once clipped to the half of the
+  // plot ABOVE the 0 dB line (cool blue = lift) and once clipped to the half
+  // BELOW it (amber = cut). Both clips + the two fade gradients live in
+  // <defs>; ids are suffixed by variant so a compact and a full panel can
+  // coexist without colliding.
+  const idSuffix = compact ? "c" : "f";
+  const clipAboveId = `eq-clip-above-${idSuffix}`;
+  const clipBelowId = `eq-clip-below-${idSuffix}`;
+  const gradBoostId = `eq-grad-boost-${idSuffix}`;
+  const gradCutId = `eq-grad-cut-${idSuffix}`;
+  const plotBottom = PAD_TOP + plotH;
+  /// Signed colour role for a band's node: lifted, cut, or resting at 0 dB.
+  const nodeRole = (db: number): "boost" | "cut" | "flat" =>
+    db > 0.05 ? "boost" : db < -0.05 ? "cut" : "flat";
 
   // Pointer handlers — drag vertically to set gain; double-click resets.
   const handlePointerDown = useCallback(
@@ -275,6 +290,24 @@ export function VisualEqPanel({
         viewBox={`0 0 ${VBW} ${VBH}`}
         preserveAspectRatio="none"
       >
+        <defs>
+          <clipPath id={clipAboveId}>
+            <rect x={PAD_LEFT} y={PAD_TOP} width={plotW} height={Math.max(0, zeroY - PAD_TOP)} />
+          </clipPath>
+          <clipPath id={clipBelowId}>
+            <rect x={PAD_LEFT} y={zeroY} width={plotW} height={Math.max(0, plotBottom - zeroY)} />
+          </clipPath>
+          {/* userSpaceOnUse so the fade is anchored to the 0 dB line, not to
+              the bounding box of whatever the curve happens to be. */}
+          <linearGradient id={gradBoostId} gradientUnits="userSpaceOnUse" x1="0" y1={PAD_TOP} x2="0" y2={zeroY}>
+            <stop offset="0%" className="eq-grad-boost-hi" />
+            <stop offset="100%" className="eq-grad-boost-lo" />
+          </linearGradient>
+          <linearGradient id={gradCutId} gradientUnits="userSpaceOnUse" x1="0" y1={zeroY} x2="0" y2={plotBottom}>
+            <stop offset="0%" className="eq-grad-cut-lo" />
+            <stop offset="100%" className="eq-grad-cut-hi" />
+          </linearGradient>
+        </defs>
         {/* Grid: major frequency lines + minor sub-octave ticks. */}
         {GRID_FREQS.map((hz) => (
           <line
@@ -357,9 +390,16 @@ export function VisualEqPanel({
           d += `L ${binX(n).toFixed(2)} ${bottom.toFixed(2)} Z`;
           return <path className="eq-spectrum-fill" d={d} />;
         })()}
-        {/* Response curve: fill under, then line on top. */}
-        <path className="eq-response-fill" d={fillPath} />
-        <path className="eq-response-line" d={curvePath} />
+        {/* Response curve: fill under, then line on top — each drawn twice,
+            clipped to the boost half (blue) and the cut half (amber). */}
+        <g clipPath={`url(#${clipAboveId})`}>
+          <path className="eq-response-fill eq-response-fill-boost" d={fillPath} style={{ fill: `url(#${gradBoostId})` }} />
+          <path className="eq-response-line eq-response-line-boost" d={curvePath} />
+        </g>
+        <g clipPath={`url(#${clipBelowId})`}>
+          <path className="eq-response-fill eq-response-fill-cut" d={fillPath} style={{ fill: `url(#${gradCutId})` }} />
+          <path className="eq-response-line eq-response-line-cut" d={curvePath} />
+        </g>
         {/* Per-band nodes. Each renders a colored dot + label; the
             invisible hit-target above (eq-node-hit) is twice the size
             so dragging is forgiving. */}
@@ -368,19 +408,21 @@ export function VisualEqPanel({
           const y = localDbToY(gains[band.id]);
           const isDragging = dragging === band.id;
           const isPrimary = band.tier === "primary";
-          const nodeRadius = isPrimary ? 5 : 3.8;
+          const role = nodeRole(gains[band.id]);
+          // Hollow ring nodes: the ring colour says boost (blue) / cut
+          // (amber) / flat (dim), the dark centre keeps the curve legible
+          // through the node. Primary bands get a slightly larger ring.
+          const nodeRadius = isPrimary ? 5.6 : 4.6;
           const renderedRadius = isDragging ? nodeRadius + 1 : nodeRadius;
-          const nodeOpacity = isPrimary ? 0.52 : 0.4;
           const labelOpacity = isPrimary ? 0.92 : 0.7;
           return (
-            <g key={band.id} style={{ "--node-color": band.color } as React.CSSProperties}>
+            <g key={band.id} className={`eq-band eq-band-${role}`}>
               {isDragging && (
                 <circle
                   className="eq-node-halo"
                   cx={x}
                   cy={y}
                   r={nodeRadius + 5}
-                  stroke={band.color}
                 />
               )}
               <circle
@@ -388,8 +430,6 @@ export function VisualEqPanel({
                 cx={x}
                 cy={y}
                 r={renderedRadius}
-                fill={band.color}
-                fillOpacity={nodeOpacity}
               />
               <circle
                 className="eq-node-hit"

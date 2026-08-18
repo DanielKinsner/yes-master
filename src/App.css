@@ -7431,6 +7431,55 @@ button.primary.std-create-master {
 .toast-warn { border-color: rgba(255, 184, 107, 0.5); }
 .toast-danger { border-color: rgba(255, 118, 118, 0.55); }
 
+/* --- Dynamic EQ (owner mockup 2026-08-18) ---------------------------- */
+
+/* Boost is cool blue above the 0 dB line, cut is amber below it; each half
+   is a clipped copy of the same curve (VisualEqPanel.tsx). Nodes are hollow
+   rings coloured by their role, dark-centred so the curve stays legible. */
+.visual-eq-panel,
+.visual-eq-panel-compact {
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background:
+    radial-gradient(120% 90% at 50% 100%, rgba(79, 134, 247, 0.06), transparent 60%),
+    linear-gradient(180deg, rgba(6, 9, 15, 0.92) 0%, rgba(10, 13, 21, 0.9) 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.eq-grid-major { stroke: rgba(132, 154, 205, 0.12); }
+.eq-zero-line { stroke: rgba(236, 240, 250, 0.28); stroke-width: 1; }
+.eq-label { fill: rgba(158, 176, 214, 0.55); }
+
+.eq-response-line-boost {
+  stroke: #7aa6ff;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 4px rgba(122, 166, 255, 0.55));
+}
+.eq-response-line-cut {
+  stroke: #f2a83b;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 4px rgba(242, 168, 59, 0.5));
+}
+
+.eq-grad-boost-hi { stop-color: #5b8ff5; stop-opacity: 0.42; }
+.eq-grad-boost-lo { stop-color: #5b8ff5; stop-opacity: 0.03; }
+.eq-grad-cut-lo { stop-color: #f2a83b; stop-opacity: 0.04; }
+.eq-grad-cut-hi { stop-color: #f2a83b; stop-opacity: 0.38; }
+
+.eq-node {
+  fill: #0a0f1a;
+  stroke-width: 2px;
+  transition: r 80ms ease, stroke 120ms ease, filter 120ms ease;
+}
+.eq-band-boost .eq-node { stroke: #7aa6ff; filter: drop-shadow(0 0 4px rgba(122, 166, 255, 0.7)); }
+.eq-band-cut .eq-node { stroke: #f2a83b; filter: drop-shadow(0 0 4px rgba(242, 168, 59, 0.65)); }
+.eq-band-flat .eq-node { stroke: rgba(158, 176, 214, 0.55); }
+.eq-band-flat .eq-node:hover { stroke: rgba(200, 214, 245, 0.85); }
+.eq-node.is-dragging { stroke-width: 2.5px; }
+.eq-band-boost .eq-node-halo { stroke: #7aa6ff; }
+.eq-band-cut .eq-node-halo { stroke: #f2a83b; }
+.eq-band-flat .eq-node-halo { stroke: rgba(158, 176, 214, 0.7); }
+
 /* --- Focus ----------------------------------------------------------- */
 
 button:focus-visible,
