@@ -7809,6 +7809,60 @@ details.rail-section > summary.rail-section-head:hover .panel-title { color: var
   padding: 0 0.25rem;
 }
 
+/* --- Rail density: everything open must fit 1440x900 without scrolling ---
+   (owner ask 2026-08-18). Trims are per-section, not "make everything tiny":
+   section padding, select heights, knob envelope inside the rail, and the
+   export group's own padding. Measured: Delivery 74→~58, Advanced 249→~215,
+   Compressor(Manual) 327→~295, Format 127→~104, Export group 109→~92. */
+
+.rail-section { padding: 0.5rem 0 0.55rem; }
+.rail-section:first-child { padding-top: 0.3rem; }
+.rail-section-head { min-height: 1.35rem; margin-bottom: 0.32rem; }
+.rail-card-delivery .loudness-profile-select { padding-top: 0.28rem; padding-bottom: 0.28rem; }
+
+/* Knobs inside the rail: same knob, tighter envelope. */
+.adv-knob-grid,
+.compressor-knob-grid { gap: 0.05rem 0.35rem; }
+.adv-knob-grid .knob,
+.compressor-knob-grid .knob { gap: 0.1rem; }
+.adv-knob-grid .knob-vis,
+.compressor-knob-grid .knob-vis { transform: scale(0.86); margin: -0.28rem auto -0.32rem; }
+.adv-knob-grid .knob-caption { margin-top: -0.05rem; }
+.adv-knob-grid { padding: 0.15rem 0 0.05rem; margin-bottom: 0.25rem; }
+.rail-card-advanced .advanced-grid { gap: 0.25rem 0.8rem; padding-top: 0.3rem; }
+.rail-card-advanced .adv-field { gap: 0.18rem; }
+.rail-card-advanced .adaptive-block { padding-top: 0.05rem; }
+
+/* Compressor */
+.compressor-mode-tabs { margin-bottom: 0.28rem; }
+.compressor-mode-tab { padding: 0.28rem 0.4rem; }
+.compressor-mode-note { margin-bottom: 0.28rem; }
+.per-band-row { margin: 0 0 0.3rem; }
+.compressor-knob-grid { padding: 0.25rem 0.3rem 0.15rem; }
+.compressor-density-field { margin-bottom: 0.25rem; }
+.compressor-preset-summary,
+.compressor-adaptive-band { padding: 0.22rem 0; }
+
+/* Delivery Format */
+.rail-format-grid { gap: 0.3rem 0.6rem; }
+.rail-format-grid .adv-field { gap: 0.18rem; }
+.rail-format-grid .adv-select { padding: 0.24rem 0.45rem; font-size: 0.8rem; }
+.rail-card-format .format-note { margin-top: 0.3rem; }
+
+/* Tools + export */
+.right-rail-export-group { padding: 0.35rem 0 0.6rem; gap: 0.3rem; }
+.right-rail-tools > summary { padding: 0.4rem 0 0.25rem; }
+.right-rail-export { padding: 0.68rem 1rem; }
+
+/* Narrow rail (≤1400px → 280px): the feel-control rows would otherwise
+   wrap their slider/value/field onto extra lines and double the section. */
+@media (max-width: 1400px) {
+  .rail-card-advanced .adv-control { grid-template-columns: 1fr auto; }
+  .rail-card-advanced .adv-control .adv-number { grid-column: 2; }
+  .rail-card-advanced .adv-control input[type="range"] { grid-column: 1 / -1; grid-row: 2; }
+  .rail-card-advanced .adv-control .adv-value { grid-column: 1; grid-row: 1; text-align: left; }
+}
+
 .source-insight-toggle.is-static { cursor: default; }
 .source-insight-toggle.is-static:hover { background: transparent; border-color: transparent; }
 .source-insight-headline.is-muted { color: var(--text-2); font-weight: 500; }

@@ -299,15 +299,16 @@ function AdvancedControlsCard({
     });
   };
   return (
-    <details className="rail-section rail-card-advanced">
-      <summary className="panel-head panel-head-summary rail-section-head">
+    <section className="rail-section rail-card-advanced">
+      {/* 2026-08-18 (owner): always open — with the rail flattened there is
+          room for it, and the knobs are the mastering identity of the rail. */}
+      <header className="panel-head rail-section-head">
         <span className="panel-title">ADVANCED CONTROLS</span>
         <PanelResetButton
           label="Reset advanced controls"
           onClick={resetAdvancedControls}
         />
-        <span className="panel-chevron" aria-hidden>⌄</span>
-      </summary>
+      </header>
       {/* 2026-08-18 (owner): the four "numbers you know" — gains, target,
           ceiling — are knobs (same family as the per-band compressor), each
           with a typeable field; the four "feel" controls below stay half-width
@@ -446,7 +447,7 @@ function AdvancedControlsCard({
           <AdaptiveReadout readout={adaptiveReadout} />
         ) : null}
       </div>
-    </details>
+    </section>
   );
 }
 
