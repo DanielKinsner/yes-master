@@ -28,12 +28,15 @@ import { DisabledReason, PanelResetButton } from "./components/fields";
 import { ExportReceiptCard } from "./components/ExportReceiptCard";
 import { WaveformView } from "./components/Waveform";
 import { PlayPauseGlyph } from "./components/TransportGlyph";
+import { SourceInsight } from "./components/SourceInsight";
+import { useInsightReview } from "./hooks/useInsightReview";
 import type {
   AnalysisResult,
   AudioOutputDevice,
   ImportedTrack,
   MasteringSettings,
   Preset,
+  QualityCheck,
   UserPreset,
 } from "./bindings";
 import type { PlaybackKindUI, RenderProgressState } from "./hooks/useTrackMaster";
@@ -480,14 +483,6 @@ function App() {
         cancelRenderPending={
           !!tm.renderProgress && tm.cancelRequestedJobId === tm.renderProgress.job_id
         }
-        isAnalyzing={tm.isAnalyzing}
-        onReanalyze={
-          tm.selectedTrack
-            ? () => {
-                void tm.reanalyzeTrack(tm.selectedTrack!.id);
-              }
-            : undefined
-        }
         previewStale={tm.previewStale}
         canRenderPreview={!!tm.selectedAnalysis}
         onUpdatePreview={tm.updatePreview}
@@ -634,7 +629,7 @@ function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
 
   // Slice 13c metadata diet: the footer speaks only while something is
   // happening. Coarse session state lives in the header SessionStatus pill;
-  // quality verdicts live in the right-rail Source Check. At rest this bar
+  // quality verdicts live in Source Insight under the track title. At rest this bar
   // holds only the live meters — no permanent "Ready"/summary chatter.
   let processing: string | null = null;
   if (tm.isExporting) {
@@ -1335,6 +1330,14 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         <TrackHeader
           track={track}
           analysis={tm.selectedAnalysis}
+          lastChecks={
+            tm.lastExportReceipt?.trackId === tm.selectedTrackId
+              ? tm.lastExportReceipt?.checks
+              : undefined
+          }
+          onReanalyze={() => {
+            void tm.reanalyzeTrack(track.id);
+          }}
           isAlbum={tm.mode === "album"}
           isOverriding={tm.selectedIsOverriding}
           onToggleOverride={() => tm.toggleOverrideAlbum(track.id)}
@@ -1481,6 +1484,8 @@ export function OverrideBanner({
 export function TrackHeader({
   track,
   analysis,
+  lastChecks,
+  onReanalyze,
   isAlbum,
   isOverriding,
   onToggleOverride,
@@ -1498,6 +1503,10 @@ export function TrackHeader({
 }: {
   track: ImportedTrack;
   analysis: AnalysisResult | undefined;
+  /// Checks from the most recent export of this track (shown inside Insight).
+  lastChecks?: QualityCheck[];
+  /// Re-analyze lives in Insight now (2026-08-18), not the right rail.
+  onReanalyze?: () => void;
   isAlbum: boolean;
   isOverriding: boolean;
   onToggleOverride: () => void;
@@ -1513,6 +1522,7 @@ export function TrackHeader({
   onVolumeMatchChange: (on: boolean) => void;
   onExportLufsPreviewChange: (on: boolean) => void;
 }) {
+  const insightReview = useInsightReview();
   const chips: { key: string; label: string }[] = [];
   if (track.source_format) {
     chips.push({ key: "fmt", label: track.source_format.toUpperCase() });
@@ -1540,8 +1550,8 @@ export function TrackHeader({
             <div className="track-header-meta-row">
               {/* Slice 13c: identity facts as one quiet line, not boxed chips.
                   Analysis state is not repeated here — an unanalyzed track
-                  surfaces via Source Check's "Awaiting analysis" row and the
-                  busy pills while analysis runs. */}
+                  simply has no Insight row yet, and the busy pills show
+                  while analysis runs. */}
               <span className="track-meta-line">
                 {chips.map((c) => c.label).join(" · ")}
               </span>
@@ -1572,7 +1582,16 @@ export function TrackHeader({
             />
           </div>
         </div>
-        {analysis && <AnalysisSummary analysis={analysis} />}
+        {analysis && (
+          <SourceInsight
+            analysis={analysis}
+            lastChecks={lastChecks}
+            unreviewed={insightReview.isUnreviewed(analysis)}
+            isAnalyzing={isAnalyzing}
+            onAcknowledge={() => insightReview.acknowledge(analysis)}
+            onReanalyze={onReanalyze}
+          />
+        )}
       </div>
     </section>
   );
@@ -1717,92 +1736,6 @@ function DeckPreviewOptions({
 }
 
 /// Plain-English commentary on the analysis numbers — one line per dimension.
-/// Phase 12.1 Dan feedback: "A more prominent assessment of what was done
-/// after analyzation, even perhaps in plain English in a dropdown underneath
-/// the stats." Each line maps a numeric range to a short, non-alarmist phrase.
-function AnalysisSummary({ analysis }: { analysis: AnalysisResult }) {
-  const lines: string[] = [];
-
-  // Loudness commentary.
-  const lufs = analysis.lufs_integrated;
-  if (lufs > -8) {
-    lines.push(
-      `Source very loud at ${lufs.toFixed(1)} LUFS — may sound flat vs streaming references.`,
-    );
-  } else if (lufs > -12) {
-    lines.push(`Source loud at ${lufs.toFixed(1)} LUFS — streaming-loud territory.`);
-  } else if (lufs > -16) {
-    lines.push(`Source ${lufs.toFixed(1)} LUFS — close to typical streaming targets.`);
-  } else {
-    lines.push(`Source ${lufs.toFixed(1)} LUFS — conservative loudness, room to push.`);
-  }
-
-  // Dynamics commentary.
-  const dr = analysis.dynamic_range_lu;
-  if (dr < 5) {
-    lines.push(`Highly compressed (DR ${dr.toFixed(1)} LU) — limited dynamic contrast.`);
-  } else if (dr < 8) {
-    lines.push(`Moderately compressed (DR ${dr.toFixed(1)} LU).`);
-  } else {
-    lines.push(`Healthy dynamic range (DR ${dr.toFixed(1)} LU).`);
-  }
-
-  // Spectral commentary.
-  const high = analysis.spectral_balance.high;
-  const low = analysis.spectral_balance.low;
-  if (high > 0.35) {
-    lines.push("Bright, presence-forward spectrum.");
-  } else if (high < 0.18) {
-    lines.push("Dark, low-mid-focused spectrum.");
-  } else if (low > 0.45) {
-    lines.push("Low-heavy spectrum.");
-  } else {
-    lines.push("Balanced spectrum.");
-  }
-
-  // Stereo width commentary.
-  const w = analysis.stereo_width;
-  if (w > 0.7) {
-    lines.push("Wide stereo image.");
-  } else if (w < 0.3) {
-    lines.push("Narrow / mono-leaning stereo image.");
-  } else {
-    lines.push("Standard stereo image.");
-  }
-
-  // True peak commentary.
-  const tp = analysis.true_peak_dbtp;
-  if (tp > -0.1) {
-    lines.push(`True peak ${tp.toFixed(2)} dBTP — at or above the digital ceiling, risky.`);
-  } else if (tp > -1.0) {
-    lines.push(`True peak ${tp.toFixed(2)} dBTP — fine digitally, lossy codecs may overshoot.`);
-  } else {
-    lines.push(`True peak ${tp.toFixed(2)} dBTP — comfortable headroom.`);
-  }
-
-  // Most actionable headline = source loudness. Commentary stays collapsed so
-  // the insight can sit on the metadata row without becoming a second header.
-  const [headline, ...rest] = lines;
-  const expandedLines = [headline, ...rest];
-  return (
-    <details className="analysis-summary">
-      <summary>
-        <span className="analysis-summary-text">
-          <span className="analysis-summary-eyebrow">Insight</span>
-          <span className="analysis-summary-headline">{headline}</span>
-        </span>
-      </summary>
-      {expandedLines.length > 0 && (
-        <ul>
-          {expandedLines.map((line, i) => (
-            <li key={i}>{line}</li>
-          ))}
-        </ul>
-      )}
-    </details>
-  );
-}
-
 /// UI_LAYOUT_REVISION_1600x940 L1 — slim Transport.
 /// Original/Mastered + Volume Match moved to TrackHeader (their natural
 /// home alongside the track title and analysis chips), so this component

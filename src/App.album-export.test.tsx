@@ -490,7 +490,11 @@ describe("album export actions", () => {
 
     const { container, root } = await renderApp();
 
-    expect(container.textContent).toContain("SOURCE CHECK");
+    // 2026-08-18: the rail no longer carries a SOURCE CHECK card; source
+    // analysis is the Insight row under the title. The export gate still
+    // reads the same analysis.
+    expect(container.textContent).not.toContain("SOURCE CHECK");
+    expect(container.querySelector(".source-insight")).not.toBeNull();
     const exportButton = Array.from(container.querySelectorAll("button")).find(
       (button) => button.textContent?.trim() === "Export With Review",
     );

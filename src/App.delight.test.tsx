@@ -194,39 +194,43 @@ describe("U11 — reduced motion removes the motion, not the meaning", () => {
   it("state still reads correctly with motion disabled", async () => {
     // The comprehension claim: the verdict is carried by the WORD and the
     // colour class, never by the animation. Disabling motion must not disable
-    // the verdict.
-    const { container, root } = await renderNode(rail(CLEAN));
+    // the verdict. Since 2026-08-18 the standing verdict lives in the export
+    // gate (the rail's SOURCE CHECK badge is gone); the gate's REVIEW badge is
+    // the word that must survive.
+    const { container, root } = await renderNode(rail(HOT));
+    const exportButton = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent?.trim() === "Export With Review",
+    ) as HTMLButtonElement | undefined;
+    expect(exportButton).toBeTruthy();
+    await act(async () => {
+      exportButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
     const badge = container.querySelector(".quality-badge");
-    expect(badge?.textContent).toBe("SAFE");
-    expect(badge?.className).toContain("badge-safe");
+    expect(badge?.textContent).toBe("REVIEW");
+    expect(badge?.className).toContain("badge-warn");
     await act(async () => root.unmount());
   });
 });
 
 describe("U11 — effects acknowledge real changes only", () => {
-  it("the verdict badge re-keys when the verdict flips, and not otherwise", async () => {
+  it("the export action re-labels only when the verdict actually flips", async () => {
+    // The rail's standing verdict is now the export button's own label
+    // ("Export Master" vs "Export With Review"). A re-render with the same
+    // analysis must not change it; a genuinely hot analysis must.
+    const label = (c: HTMLElement) =>
+      Array.from(c.querySelectorAll("button")).find((b) =>
+        /^Export (Master|With Review)$/.test(b.textContent?.trim() ?? ""),
+      )?.textContent?.trim();
     const { container, root } = await renderNode(rail(CLEAN));
-    const before = container.querySelector(".quality-badge");
-    expect(before?.textContent).toBe("SAFE");
-
-    // A re-render that does not change the verdict must not re-key — otherwise
-    // the "acknowledgment" fires on ordinary renders and becomes ambient
-    // decoration, which the unit forbids.
+    expect(label(container)).toBe("Export Master");
     await act(async () => {
-      root.render(rail(CLEAN, { isAnalyzing: false }));
+      root.render(rail(CLEAN, { previewStale: false }));
     });
-    const same = container.querySelector(".quality-badge");
-    expect(same).toBe(before);
-    expect(same?.textContent).toBe("SAFE");
-
-    // A real verdict change re-keys, so the acknowledgment plays.
+    expect(label(container)).toBe("Export Master");
     await act(async () => {
       root.render(rail(HOT));
     });
-    const after = container.querySelector(".quality-badge");
-    expect(after?.textContent).toBe("REVIEW");
-    expect(after).not.toBe(before);
-
+    expect(label(container)).toBe("Export With Review");
     await act(async () => root.unmount());
   });
 

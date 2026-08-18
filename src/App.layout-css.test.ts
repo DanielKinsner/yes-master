@@ -153,7 +153,7 @@ describe("console layout CSS", () => {
     expect(css).toContain(
       "grid-template-columns: 86px minmax(0, 1fr) 174px",
     );
-    expect(block(".analysis-summary-headline")).toContain("white-space: nowrap");
+    expect(block(".source-insight-headline")).toContain("white-space: nowrap");
   });
 
   it("keeps manual compressor knobs compact inside the right rail", () => {
