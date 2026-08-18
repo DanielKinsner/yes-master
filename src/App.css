@@ -6722,9 +6722,10 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
    The direction: a mastering desk you'd want to touch. Cool graphite
    surfaces lit from above, hairline seams instead of drawn borders,
    the cobalt accent reserved for what is LIVE (A/B, selection, the
-   one primary action), calm typography with real numerals, and a
-   matte grain over the whole shell so it reads as material, not as a
-   web page.
+   one primary action), calm typography with real numerals — so it
+   reads as material, not as a web page. (A matte grain overlay was
+   tried and dropped: it doubled the landing screenshots' PNG weight
+   and put a full-screen compositing layer over a real-time UI.)
    ===================================================================== */
 
 /* --- Shell material -------------------------------------------------- */
