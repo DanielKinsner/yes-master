@@ -7476,6 +7476,18 @@ button.primary.std-create-master {
 .eq-band-flat .eq-node { stroke: rgba(158, 176, 214, 0.55); }
 .eq-band-flat .eq-node:hover { stroke: rgba(200, 214, 245, 0.85); }
 .eq-node.is-dragging { stroke-width: 2.5px; }
+/* Live "+2.5 dB · 1.5k" readout above the node being dragged. */
+.eq-node-readout {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  fill: var(--text-0);
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: rgba(6, 9, 15, 0.9);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
 .eq-band-boost .eq-node-halo { stroke: #7aa6ff; }
 .eq-band-cut .eq-node-halo { stroke: #f2a83b; }
 .eq-band-flat .eq-node-halo { stroke: rgba(158, 176, 214, 0.7); }

@@ -1412,6 +1412,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           settings={tm.selectedSettings}
           onIntensity={tm.setIntensity}
           onEq={tm.setEqBand}
+          onEqPoint={tm.setEqBandPoint}
           onResetTone={tm.resetToneControls}
           onLoudnessTargetProfile={tm.setLoudnessTargetProfile}
           spectrumDb={tm.transport.spectrumDb}
@@ -2055,6 +2056,7 @@ export function Macros({
   settings,
   onIntensity,
   onEq,
+  onEqPoint,
   onResetTone,
   onLoudnessTargetProfile,
   spectrumDb,
@@ -2065,6 +2067,13 @@ export function Macros({
   onEq: (
     band: "sub" | "low" | "low-mid" | "mid" | "high-mid" | "high" | "sparkle",
     db: number,
+  ) => void;
+  // 2026-08-18 — a Visual EQ node drag sets gain AND frequency in one
+  // mutation (see useTrackMaster.setEqBandPoint for why it must be one).
+  onEqPoint?: (
+    band: "sub" | "low" | "low-mid" | "mid" | "high-mid" | "high" | "sparkle",
+    db: number,
+    hz: number,
   ) => void;
   // Fast reset for this whole area — flatten intensity + every EQ band.
   onResetTone: () => void;
@@ -2157,6 +2166,7 @@ export function Macros({
         <VisualEqPanel
           settings={settings}
           onEq={onEq}
+          onEqPoint={onEqPoint}
           compact
           spectrumDb={spectrumDb}
         />
