@@ -202,6 +202,46 @@ export interface AlbumPlan {
   delivery_bit_depth?: number | null;
 }
 
+/// Per-band centre / corner frequencies for the seven user EQ bands (Hz).
+/// Mirrors `EqBandFrequencies` in src-tauri/src/types.rs. The defaults are
+/// the chain's historical fixed frequencies; the engine clamps every band
+/// into `EQ_BAND_RANGES` on the way in, so the UI's clamp is a courtesy.
+export interface EqBandFrequencies {
+  sub_hz: number;
+  low_hz: number;
+  low_mid_hz: number;
+  mid_hz: number;
+  high_mid_hz: number;
+  high_hz: number;
+  sparkle_hz: number;
+}
+
+export const EQ_BAND_DEFAULTS: Readonly<EqBandFrequencies> = Object.freeze({
+  sub_hz: 80,
+  low_hz: 200,
+  low_mid_hz: 400,
+  mid_hz: 1500,
+  high_mid_hz: 3500,
+  high_hz: 6000,
+  sparkle_hz: 12_000,
+});
+
+/// `[min, max]` per band — keep in lockstep with `EqBandFrequencies::RANGES`
+/// in src-tauri/src/types.rs (a Rust unit test pins the Rust side; the
+/// bindings-drift lane pins the key set). Ceilings sit UNDER the next band's
+/// default and floors ABOVE the previous band's, so an extreme never lands
+/// on a neighbour's resting spot.
+export const EQ_BAND_RANGES: Readonly<Record<keyof EqBandFrequencies, readonly [number, number]>> =
+  Object.freeze({
+    sub_hz: [30, 150],
+    low_hz: [100, 350],
+    low_mid_hz: [250, 800],
+    mid_hz: [800, 3000],
+    high_mid_hz: [2000, 5500],
+    high_hz: [4000, 10_000],
+    sparkle_hz: [8000, 16_000],
+  });
+
 export interface MasteringSettings {
   preset: Preset;
   intensity: number;
@@ -214,6 +254,11 @@ export interface MasteringSettings {
   eq_high_mid_db: number;
   eq_high_db: number;
   eq_sparkle_db: number;
+  /// 2026-08-18 — per-band frequencies. Optional on the TS side because
+  /// settings objects built before this field existed (older localStorage
+  /// state, tests) may lack it; readers use `EQ_BAND_DEFAULTS` as the
+  /// fallback and Rust's `#[serde(default)]` does the same on load.
+  eq_bands?: EqBandFrequencies;
   volume_match: boolean;
   /// Source-track integrated LUFS — populated by the frontend before
   /// each `updateChain` so the chain can compute proper Volume Match

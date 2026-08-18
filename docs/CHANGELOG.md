@@ -12,6 +12,25 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-08-18 — Premium design pass, blue/amber dynamic EQ, movable EQ bands
+
+- **Desktop shell restyle** (`design/premium-pass`, merged): hairline seams,
+  top-lit graphite surfaces, cobalt accent reserved for what is live, raised
+  neutral segmented controls, gradient waveform with a lit played span,
+  refined buttons/chips/selects/meters/overlays, one staggered console reveal.
+- **Dynamic EQ redraw**: boost is blue above 0 dB, cut is amber below (two
+  clipped copies of the same curve), hollow ring nodes coloured by role.
+- **Landing redesign**: owner-supplied 4K console hero, app-matched tokens,
+  timeline workflow, framed captures, real preset artwork, definition-list
+  terms; every July claims test still pins the copy. Headline is now
+  "Master your track in real time. Hear every move. Ship with proof."
+- **EQ bands movable in frequency** (`feat/eq-variable-bands`): each of the
+  seven bands' Hz is a setting (`MasteringSettings.eq_bands`), clamped by the
+  engine to a per-band window; defaults equal the historical constants so
+  presets, projects and byte-identity snapshots are unchanged. Node drag =
+  gain + frequency in one mutation (one undo step); double-click resets both.
+  Rust/TS goldens re-blessed; iPhone + Android bridges rebuilt and tested.
+
 ## 2026-07-08 — Export receipt rebuilt into the "Export Complete" card
 
 Owner-approved premium slice (an explicit exception to the UI-polish freeze).

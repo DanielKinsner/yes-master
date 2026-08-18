@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { MasteringSettings } from "../bindings";
-import { ADAPTIVE_STRENGTH_DEFAULT } from "../bindings";
+import { ADAPTIVE_STRENGTH_DEFAULT, EQ_BAND_DEFAULTS } from "../bindings";
 import { forceAdvancedOnStandardEntry, hasNonManagedEdits, resetToStandardManaged } from "./standard-managed";
 
 function base(overrides: Partial<MasteringSettings> = {}): MasteringSettings {
@@ -54,6 +54,15 @@ function base(overrides: Partial<MasteringSettings> = {}): MasteringSettings {
 describe("hasNonManagedEdits", () => {
   it("is false for a clean Standard-shaped settings object", () => {
     expect(hasNonManagedEdits(base())).toBe(false);
+  });
+
+  // 2026-08-18 — a moved EQ band is an Advanced-only edit: Standard has no
+  // control for it, so entering Standard must count it (and reset it).
+  it("counts a band moved off its default frequency as an Advanced edit", () => {
+    const moved = base({ eq_bands: { ...EQ_BAND_DEFAULTS, low_mid_hz: 640 } });
+    expect(hasNonManagedEdits(moved)).toBe(true);
+    expect(resetToStandardManaged(moved).eq_bands).toEqual(EQ_BAND_DEFAULTS);
+    expect(hasNonManagedEdits(base({ eq_bands: { ...EQ_BAND_DEFAULTS } }))).toBe(false);
   });
 
   it("ignores managed fields (preset, intensity, loudness, delivery format)", () => {

@@ -60,6 +60,7 @@ import type {
   ViewMode,
   WaveformPeaks,
 } from "../bindings";
+import { EQ_BAND_DEFAULTS, EQ_BAND_RANGES } from "../bindings";
 
 // The autosave and Save-As paths must serialize the SAME project snapshot.
 // These were two byte-identical literals edited in lockstep — a real
@@ -97,6 +98,17 @@ function buildProjectState(args: {
   };
 }
 
+/// Band id (as the UI names it) → the `eq_bands` key it edits.
+const EQ_BAND_KEY = {
+  sub: "sub_hz",
+  low: "low_hz",
+  "low-mid": "low_mid_hz",
+  mid: "mid_hz",
+  "high-mid": "high_mid_hz",
+  high: "high_hz",
+  sparkle: "sparkle_hz",
+} as const;
+
 const DEFAULT_SETTINGS: MasteringSettings = {
   preset: { kind: "universal" },
   intensity: 0.5,
@@ -107,6 +119,7 @@ const DEFAULT_SETTINGS: MasteringSettings = {
   eq_high_mid_db: 0,
   eq_high_db: 0,
   eq_sparkle_db: 0,
+  eq_bands: { ...EQ_BAND_DEFAULTS },
   volume_match: false,
   input_gain_db: 0,
   output_gain_db: 0,
@@ -1690,6 +1703,39 @@ export function useTrackMaster() {
     [selectedTrackId, updateSettings],
   );
 
+  // 2026-08-18 — a Visual EQ node carries gain AND frequency, and a drag
+  // moves both. They must land as ONE settings mutation: `updateSettings`
+  // computes `next` from the current-render snapshot (see its comment), so
+  // two calls inside one pointer event would each start from the same
+  // `prev` and the second would silently drop the first. One call = one
+  // undo step = one live-chain push. Hz is clamped to the band's range here
+  // as a courtesy; the engine clamps again on the way in.
+  const setEqBandPoint = useCallback(
+    (
+      band: "sub" | "low" | "low-mid" | "mid" | "high-mid" | "high" | "sparkle",
+      db: number,
+      hz: number,
+    ) => {
+      if (!selectedTrackId) return;
+      const key = EQ_BAND_KEY[band];
+      const [lo, hi] = EQ_BAND_RANGES[key];
+      const clampedHz = Math.round(Math.max(lo, Math.min(hi, hz)));
+      updateSettings(selectedTrackId, (prev) => {
+        const next = { ...prev };
+        if (band === "sub") next.eq_sub_db = db;
+        else if (band === "low") next.eq_low_db = db;
+        else if (band === "low-mid") next.eq_low_mid_db = db;
+        else if (band === "mid") next.eq_mid_db = db;
+        else if (band === "high-mid") next.eq_high_mid_db = db;
+        else if (band === "high") next.eq_high_db = db;
+        else next.eq_sparkle_db = db;
+        next.eq_bands = { ...EQ_BAND_DEFAULTS, ...(prev.eq_bands ?? {}), [key]: clampedHz };
+        return next;
+      });
+    },
+    [selectedTrackId, updateSettings],
+  );
+
   // Fast reset for the Visual EQ + Intensity area: flatten intensity and all
   // seven EQ bands in a SINGLE updateSettings mutation so it lands as one
   // undo step (vs. eight coalesced setEqBand/setIntensity calls) and pushes
@@ -2831,6 +2877,7 @@ export function useTrackMaster() {
     setPreset,
     setIntensity,
     setEqBand,
+    setEqBandPoint,
     resetToneControls,
     resetToStandardManaged,
     setAdvanced,

@@ -13,26 +13,65 @@
 // numerically-exact dB-vs-frequency response (the actual Rust chain
 // does the audible work; the curve is a "shape preview").
 //
-// V1 intentionally OMITS:
-//   * Horizontal drag (the DSP doesn't yet support variable band
-//     frequency or Q — the UI must not promise what the engine can't
-//     honor; per the restyle plan, frequency drag waits for variable
-//     bands in Rust).
+// 2026-08-18 — bands are movable in FREQUENCY as well as gain: the engine
+// now reads per-band Hz from `settings.eq_bands` (`EqBandFrequencies` in
+// Rust, defaults = the old fixed constants). Drag = gain (vertical) AND
+// frequency (horizontal, clamped to the band's `EQ_BAND_RANGES` window so
+// neighbours cannot cross); double-click puts BOTH back to default. Q and
+// shelf slope stay fixed — the UI must not promise what the engine can't
+// honor.
+//
+// Still intentionally OMITTED:
 //   * Warmth + Presence/Air nodes (different units — 0..1 saturation
 //     drive vs dB EQ — would need separate scaling and don't fit the
 //     same plot cleanly).
 // Live FFT spectrum can render as an underlay when `spectrumDb` is supplied.
 
 import { useCallback, useRef, useState } from "react";
-import type { MasteringSettings } from "../bindings";
+import type { EqBandFrequencies, MasteringSettings } from "../bindings";
+import { EQ_BAND_DEFAULTS, EQ_BAND_RANGES } from "../bindings";
 
 type BandId = "sub" | "low" | "low-mid" | "mid" | "high-mid" | "high" | "sparkle";
+
+/// Band id → the `eq_bands` key that holds its frequency.
+const BAND_HZ_KEY: Record<BandId, keyof EqBandFrequencies> = {
+  sub: "sub_hz",
+  low: "low_hz",
+  "low-mid": "low_mid_hz",
+  mid: "mid_hz",
+  "high-mid": "high_mid_hz",
+  high: "high_hz",
+  sparkle: "sparkle_hz",
+};
+
+/// Resolve every band's current frequency: settings first, defaults for any
+/// missing key (older saved state predates `eq_bands`).
+export function resolveBandHz(settings: MasteringSettings): Record<BandId, number> {
+  const b = settings.eq_bands;
+  const out = {} as Record<BandId, number>;
+  for (const id of Object.keys(BAND_HZ_KEY) as BandId[]) {
+    const key = BAND_HZ_KEY[id];
+    const v = b?.[key];
+    out[id] = typeof v === "number" && Number.isFinite(v) ? v : EQ_BAND_DEFAULTS[key];
+  }
+  return out;
+}
+
+/// Human frequency label: 80, 400, 1.5k, 12k.
+export function formatHz(hz: number): string {
+  if (hz >= 1000) {
+    const k = hz / 1000;
+    return `${Number.isInteger(k) ? k : k.toFixed(1)}k`;
+  }
+  return `${Math.round(hz)}`;
+}
 type BandKind = "shelf-low" | "peak" | "shelf-high";
 type BandTier = "primary" | "secondary";
 
 interface Band {
   id: BandId;
   label: string;
+  /// Default centre/corner frequency; the live value comes from settings.
   hz: number;
   color: string;
   kind: BandKind;
@@ -101,9 +140,9 @@ function yToDb(y: number, height: number): number {
 /// declared Q-octaves; shelves use a logistic sigmoid centered at the
 /// shelf frequency. Sum across all bands at each plot point to draw the
 /// composite curve.
-function bandResponseDb(hz: number, band: Band, gainDb: number): number {
+function bandResponseDb(hz: number, band: Band, gainDb: number, bandHz: number): number {
   if (gainDb === 0) return 0;
-  const distOctaves = Math.log2(hz / band.hz);
+  const distOctaves = Math.log2(hz / bandHz);
   switch (band.kind) {
     case "peak": {
       // Gaussian whose FWHM ≈ 1 octave at Q=1 (qOctaves ≈ 1).
@@ -120,10 +159,14 @@ function bandResponseDb(hz: number, band: Band, gainDb: number): number {
   }
 }
 
-function totalResponseDb(hz: number, gains: Record<BandId, number>): number {
+function totalResponseDb(
+  hz: number,
+  gains: Record<BandId, number>,
+  bandHz: Record<BandId, number>,
+): number {
   let total = 0;
   for (const band of BANDS) {
-    total += bandResponseDb(hz, band, gains[band.id]);
+    total += bandResponseDb(hz, band, gains[band.id], bandHz[band.id]);
   }
   return total;
 }
@@ -131,6 +174,12 @@ function totalResponseDb(hz: number, gains: Record<BandId, number>): number {
 interface VisualEqPanelProps {
   settings: MasteringSettings;
   onEq: (band: BandId, db: number) => void;
+  /** 2026-08-18 — when provided, a node drag reports gain AND frequency in
+   * ONE call (the host stores both in one mutation; two separate setters
+   * would race — see useTrackMaster.setEqBandPoint). Optional so read-only
+   * hosts and older callers keep working: without it the nodes drag
+   * vertically only through `onEq`. */
+  onEqPoint?: (band: BandId, db: number, hz: number) => void;
   /** `true` renders the dense embedded variant used inside the
    * mastering-deck Tone Shape cell — no card chrome, no
    * outer header, no per-node value labels, smaller viewBox
@@ -146,13 +195,14 @@ interface VisualEqPanelProps {
 export function VisualEqPanel({
   settings,
   onEq,
+  onEqPoint,
   compact = false,
   spectrumDb,
 }: VisualEqPanelProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
-  // Drag state: which band is being dragged, and the pixel-space y where
-  // the pointer is. We don't capture frequency drag at all in v1.
+  // Drag state: which band is being dragged.
   const [dragging, setDragging] = useState<BandId | null>(null);
+  const bandHz = resolveBandHz(settings);
 
   const gains: Record<BandId, number> = {
     "sub": settings.eq_sub_db,
@@ -185,6 +235,10 @@ export function VisualEqPanel({
   const localFreqToX = (hz: number) => PAD_LEFT + freqToX(hz, plotW);
   const localDbToY = (db: number) => PAD_TOP + dbToY(db, plotH);
   const yToDbInPlot = (y: number) => yToDb(y - PAD_TOP, plotH);
+  const xToHzInPlot = (x: number) => {
+    const t = Math.max(0, Math.min(1, (x - PAD_LEFT) / plotW));
+    return Math.pow(10, LOG_F_MIN + t * LOG_F_SPAN);
+  };
 
   // Pre-compute the composite response curve as an SVG path. 180 sample
   // points across the log-frequency range gives smooth visuals without
@@ -195,7 +249,7 @@ export function VisualEqPanel({
     const t = i / N_SAMPLES;
     const logHz = LOG_F_MIN + t * LOG_F_SPAN;
     const hz = Math.pow(10, logHz);
-    const db = totalResponseDb(hz, gains);
+    const db = totalResponseDb(hz, gains, bandHz);
     curvePoints.push({ x: PAD_LEFT + t * plotW, y: localDbToY(db) });
   }
   const curvePath = curvePoints
@@ -225,38 +279,80 @@ export function VisualEqPanel({
   const nodeRole = (db: number): "boost" | "cut" | "flat" =>
     db > 0.05 ? "boost" : db < -0.05 ? "cut" : "flat";
 
-  // Pointer handlers — drag vertically to set gain; double-click resets.
+  // Pointer → viewBox coordinates via the SVG's CTM, independent of CSS
+  // scaling or window size.
+  const toLocal = useCallback((event: { clientX: number; clientY: number }) => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    return pt.matrixTransform(ctm.inverse());
+  }, []);
+
+  // Which band a pointer position "means": the NEAREST node within the hit
+  // radius, decided from geometry rather than element stacking. With movable
+  // bands two nodes can share a spot (LOW parked at its 400 Hz ceiling on
+  // top of LOW-MID's 400 Hz default); per-node hit circles would let the
+  // top-most steal every press and the one underneath could never be grabbed
+  // or double-clicked back. Ties go to the band already being dragged.
+  const HIT_RADIUS = 18;
+  const bandAt = useCallback(
+    (local: { x: number; y: number }): BandId | null => {
+      let best: BandId | null = null;
+      let bestD = Infinity;
+      for (const band of BANDS) {
+        const dx = localFreqToX(bandHz[band.id]) - local.x;
+        const dy = localDbToY(gains[band.id]) - local.y;
+        const d = Math.hypot(dx, dy);
+        // Strictly nearer wins; an exact tie goes to the band already being
+        // dragged, else to the later (top-drawn) band — what the eye sees.
+        if (d <= HIT_RADIUS && (d < bestD || (d === bestD && (band.id === dragging || dragging === null)))) {
+          best = band.id;
+          bestD = d;
+        }
+      }
+      return best;
+    },
+    [bandHz, gains, dragging, localFreqToX, localDbToY],
+  );
+
   const handlePointerDown = useCallback(
-    (band: BandId, event: React.PointerEvent<SVGElement>) => {
+    (event: React.PointerEvent<SVGSVGElement>) => {
+      const local = toLocal(event);
+      if (!local) return;
+      const band = bandAt(local);
+      if (!band) return;
       event.preventDefault();
-      const target = event.currentTarget;
-      target.setPointerCapture(event.pointerId);
+      event.currentTarget.setPointerCapture(event.pointerId);
       setDragging(band);
     },
-    [],
+    [toLocal, bandAt],
   );
 
   const handlePointerMove = useCallback(
-    (band: BandId, event: React.PointerEvent<SVGElement>) => {
-      if (dragging !== band || !svgRef.current) return;
-      const svg = svgRef.current;
-      // Use the SVG's CTM to translate clientX/Y into the viewBox's local
-      // coordinate space — independent of CSS scaling or window resize.
-      const pt = svg.createSVGPoint();
-      pt.x = event.clientX;
-      pt.y = event.clientY;
-      const ctm = svg.getScreenCTM();
-      if (!ctm) return;
-      const local = pt.matrixTransform(ctm.inverse());
-      const newDb = yToDbInPlot(local.y);
-      onEq(band, Math.round(newDb * 10) / 10);
+    (event: React.PointerEvent<SVGSVGElement>) => {
+      if (!dragging) return;
+      const local = toLocal(event);
+      if (!local) return;
+      const band = dragging;
+      const newDb = Math.round(yToDbInPlot(local.y) * 10) / 10;
+      if (onEqPoint) {
+        const [lo, hi] = EQ_BAND_RANGES[BAND_HZ_KEY[band]];
+        const rawHz = xToHzInPlot(local.x);
+        onEqPoint(band, newDb, Math.round(Math.max(lo, Math.min(hi, rawHz))));
+      } else {
+        onEq(band, newDb);
+      }
     },
-    [dragging, onEq, yToDbInPlot],
+    [dragging, toLocal, onEq, onEqPoint, yToDbInPlot, xToHzInPlot],
   );
 
   const handlePointerUp = useCallback(
-    (band: BandId, event: React.PointerEvent<SVGElement>) => {
-      if (dragging !== band) return;
+    (event: React.PointerEvent<SVGSVGElement>) => {
+      if (!dragging) return;
       const target = event.currentTarget;
       if (target.hasPointerCapture(event.pointerId)) {
         target.releasePointerCapture(event.pointerId);
@@ -266,11 +362,18 @@ export function VisualEqPanel({
     [dragging],
   );
 
+  // Double-click: gain back to 0 dB AND the band back on its default
+  // frequency (one gesture = "this band as shipped").
   const handleDoubleClick = useCallback(
-    (band: BandId) => {
-      onEq(band, 0);
+    (event: React.MouseEvent<SVGSVGElement>) => {
+      const local = toLocal(event);
+      if (!local) return;
+      const band = bandAt(local);
+      if (!band) return;
+      if (onEqPoint) onEqPoint(band, 0, EQ_BAND_DEFAULTS[BAND_HZ_KEY[band]]);
+      else onEq(band, 0);
     },
-    [onEq],
+    [toLocal, bandAt, onEq, onEqPoint],
   );
 
   return (
@@ -289,6 +392,12 @@ export function VisualEqPanel({
         className="eq-overlay"
         viewBox={`0 0 ${VBW} ${VBH}`}
         preserveAspectRatio="none"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onDoubleClick={handleDoubleClick}
+        style={{ touchAction: "none" }}
       >
         <defs>
           <clipPath id={clipAboveId}>
@@ -404,7 +513,8 @@ export function VisualEqPanel({
             invisible hit-target above (eq-node-hit) is twice the size
             so dragging is forgiving. */}
         {BANDS.map((band) => {
-          const x = localFreqToX(band.hz);
+          const hzNow = bandHz[band.id];
+          const x = localFreqToX(hzNow);
           const y = localDbToY(gains[band.id]);
           const isDragging = dragging === band.id;
           const isPrimary = band.tier === "primary";
@@ -431,18 +541,25 @@ export function VisualEqPanel({
                 cy={y}
                 r={renderedRadius}
               />
+              {/* Hit area is only a cursor hint now — the SVG-level handlers
+                  below decide the band by nearest node (see bandAt). */}
               <circle
                 className="eq-node-hit"
                 cx={x}
                 cy={y}
-                r={18}
-                onPointerDown={(e) => handlePointerDown(band.id, e)}
-                onPointerMove={(e) => handlePointerMove(band.id, e)}
-                onPointerUp={(e) => handlePointerUp(band.id, e)}
-                onPointerCancel={(e) => handlePointerUp(band.id, e)}
-                onDoubleClick={() => handleDoubleClick(band.id)}
-                style={{ cursor: "ns-resize", touchAction: "none" }}
+                r={HIT_RADIUS}
+                style={{ cursor: onEqPoint ? "move" : "ns-resize", touchAction: "none" }}
               />
+              {isDragging && (
+                <text
+                  className="eq-node-readout"
+                  x={x}
+                  y={Math.max(PAD_TOP + 10, y - 11)}
+                  textAnchor="middle"
+                >
+                  {`${gains[band.id] > 0 ? "+" : ""}${gains[band.id].toFixed(1)} dB · ${formatHz(hzNow)}`}
+                </text>
+              )}
               {!compact && (
                 <text
                   className="eq-node-label"

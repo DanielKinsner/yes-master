@@ -21,6 +21,7 @@ import { computeRailAlignment } from "../lib/rail-alignment";
 import type { useTrackMaster } from "../hooks/useTrackMaster";
 import { Knob, intensityLabel } from "./Knob";
 import { WaveformView } from "./Waveform";
+import { PlayPauseGlyph } from "./TransportGlyph";
 import { PresetIcon, PRESET_ACCENT } from "./PresetIcon";
 import { effectiveLoudnessTarget } from "../lib/effective-settings";
 import { standardDeliverySpecLabel, standardExportNotes } from "../lib/standard-export";
@@ -623,14 +624,7 @@ export function StandardView({
               aria-label={tm.transport.isPlaying ? "Pause" : "Play"}
               onClick={tm.togglePlay}
             >
-              <span
-                className={
-                  "std-play-glyph" + (tm.transport.isPlaying ? " is-pause" : "")
-                }
-                aria-hidden
-              >
-                {tm.transport.isPlaying ? "❚❚" : "►"}
-              </span>
+              <PlayPauseGlyph playing={tm.transport.isPlaying} size={26} />
             </button>
             <span className="std-time">
               {formatDuration(tm.transport.currentTimeSec)} / {formatDuration(tm.selectedTrack?.duration_seconds)}

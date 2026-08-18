@@ -14,7 +14,7 @@
 // double-click to reset to defaultValue. Hidden range input for keyboard /
 // screen-reader access.
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 type KnobSize = "sm" | "md" | "lg";
 export type KnobTone =
@@ -76,6 +76,17 @@ type KnobProps = {
   /// 1.5 kHz), High=blue (#60a5fa, 6 kHz). Other places use the remaining
   /// tones for their own band identity. Defaults to blue.
   tone?: KnobTone;
+  /// 2026-08-18 — render the value under the knob as a typeable field
+  /// (click, type, Enter; Esc cancels; clamped to [min, max]). Every knob
+  /// that drives a number the user might know exactly ("-14", "1.4")
+  /// should turn this on — dragging is for feel, typing is for intent.
+  editable?: boolean;
+  /// Called on double-click INSTEAD of `onChange(defaultValue)` when set —
+  /// for controls whose "home" is a non-numeric state (Auto / follow the
+  /// delivery profile) rather than a number.
+  onReset?: () => void;
+  /// Unit suffix shown inside the typeable field ("dB", "LUFS").
+  unit?: string;
 };
 
 const SIZES: Record<KnobSize, { px: number; font: number; valueFont: number }> = {
@@ -106,6 +117,9 @@ export function Knob({
   valueText,
   disabledReason,
   tone = "blue",
+  editable = false,
+  onReset,
+  unit,
 }: KnobProps) {
   const dims = SIZES[size];
   const toneColor = TONE_COLOR[tone];
@@ -177,8 +191,31 @@ export function Knob({
 
   const handleDoubleClick = () => {
     if (disabled) return;
-    if (defaultValue !== undefined) onChange(defaultValue);
+    if (onReset) onReset();
+    else if (defaultValue !== undefined) onChange(defaultValue);
   };
+
+  // Typeable value field. Draft-while-editing so "-1" / "1." survive
+  // keystrokes without the parent re-formatting them; commits on Enter/blur,
+  // clamps to the knob's range, Esc abandons.
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string | null>(null);
+  const fieldRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (!editing) setDraft(null);
+  }, [editing]);
+  const commitDraft = (raw: string) => {
+    const parsed = parseFloat(raw);
+    if (Number.isFinite(parsed)) {
+      let next = Math.max(min, Math.min(max, parsed));
+      if (step > 0) next = Math.round(next / step) * step;
+      next = parseFloat(next.toFixed(5));
+      if (next !== value) onChange(next);
+    }
+    setDraft(null);
+    setEditing(false);
+  };
+  const fieldDecimals = step >= 1 ? 0 : step >= 0.1 ? 1 : 2;
 
   // Tick mark geometry — pre-compute angles so the loop body stays tight.
   const ticks: { angle: number; major: boolean; active: boolean }[] = [];
@@ -374,7 +411,52 @@ export function Knob({
           </span>
         )}
       </div>
-      {!centerValue && <span className="knob-value">{format(value)}</span>}
+      {!centerValue && !editable && <span className="knob-value">{format(value)}</span>}
+      {editable && !editing && (
+        // Reads as the plain value until clicked; then it is a field.
+        <button
+          type="button"
+          className="knob-value knob-value-editable"
+          disabled={disabled}
+          title="Click to type a value"
+          aria-label={`Edit ${label || ariaLabel}`}
+          onClick={() => {
+            setDraft(value.toFixed(fieldDecimals));
+            setEditing(true);
+          }}
+        >
+          {format(value)}
+        </button>
+      )}
+      {editable && editing && (
+        <span className="knob-field">
+          <input
+            ref={fieldRef}
+            type="number"
+            className="knob-field-input"
+            min={min}
+            max={max}
+            step={step}
+            disabled={disabled}
+            autoFocus
+            value={draft ?? ""}
+            aria-label={`${label || ariaLabel} value`}
+            title={onReset ? "Type a value; double-click the knob to reset" : "Type a value"}
+            onFocus={(e) => e.target.select()}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={(e) => commitDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                commitDraft((e.target as HTMLInputElement).value);
+              } else if (e.key === "Escape") {
+                setDraft(null);
+                setEditing(false);
+              }
+            }}
+          />
+          {unit && <span className="knob-field-unit">{unit}</span>}
+        </span>
+      )}
       {caption && <span className="knob-caption">{caption}</span>}
     </div>
   );

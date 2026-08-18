@@ -6,7 +6,7 @@ use std::f32::consts::PI;
 // Coefficients computed per RBJ Audio EQ Cookbook
 // ============================================================================
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BiquadCoeffs {
     pub b0: f32,
     pub b1: f32,
@@ -958,13 +958,19 @@ impl ChainCoeffs {
         } else {
             BiquadCoeffs::identity()
         };
-        let sub = BiquadCoeffs::peaking(sr, 80.0, 0.8, effective_sub_db);
-        let low = BiquadCoeffs::low_shelf(sr, 200.0, effective_low_db, 0.7);
-        let low_mid = BiquadCoeffs::peaking(sr, 400.0, 0.9, effective_low_mid_db);
-        let mid = BiquadCoeffs::peaking(sr, 1500.0, 0.8, effective_mid_db);
-        let high_mid = BiquadCoeffs::peaking(sr, 3500.0, 0.9, effective_high_mid_db);
-        let high = BiquadCoeffs::high_shelf(sr, 6000.0, effective_high_db, 0.7);
-        let sparkle = BiquadCoeffs::high_shelf(sr, 12_000.0, effective_sparkle_db, 0.7);
+        // Band frequencies come from settings (2026-08-18); the defaults are the
+        // constants that lived here before (80/200/400/1500/3500/6000/12000),
+        // so untouched settings produce identical coefficients. Clamped here
+        // so the engine — not the UI — owns the guarantee that bands cannot
+        // cross or leave their range. Q / shelf slope stay fixed.
+        let bands = settings.eq_bands.clamped();
+        let sub = BiquadCoeffs::peaking(sr, bands.sub_hz, 0.8, effective_sub_db);
+        let low = BiquadCoeffs::low_shelf(sr, bands.low_hz, effective_low_db, 0.7);
+        let low_mid = BiquadCoeffs::peaking(sr, bands.low_mid_hz, 0.9, effective_low_mid_db);
+        let mid = BiquadCoeffs::peaking(sr, bands.mid_hz, 0.8, effective_mid_db);
+        let high_mid = BiquadCoeffs::peaking(sr, bands.high_mid_hz, 0.9, effective_high_mid_db);
+        let high = BiquadCoeffs::high_shelf(sr, bands.high_hz, effective_high_db, 0.7);
+        let sparkle = BiquadCoeffs::high_shelf(sr, bands.sparkle_hz, effective_sparkle_db, 0.7);
 
         // Compatibility shims for the rest of from_settings, which expects
         // legacy names. preset_gain_db / preset_sat / preset_width map to
@@ -3096,6 +3102,7 @@ mod tests {
             eq_high_mid_db: 0.0,
             eq_high_db: 0.0,
             eq_sparkle_db: 0.0,
+            eq_bands: crate::types::EqBandFrequencies::default(),
             volume_match: false,
             source_lufs_integrated: None,
             input_gain_db: 0.0,
@@ -3129,6 +3136,7 @@ mod tests {
             eq_high_mid_db: 0.0,
             eq_high_db: 0.0,
             eq_sparkle_db: 0.0,
+            eq_bands: crate::types::EqBandFrequencies::default(),
             volume_match: false,
             source_lufs_integrated: None,
             input_gain_db: 0.0,
@@ -3173,6 +3181,7 @@ mod tests {
             eq_high_mid_db: 0.0,
             eq_high_db: 0.0,
             eq_sparkle_db: 0.0,
+            eq_bands: crate::types::EqBandFrequencies::default(),
             volume_match: false,
             source_lufs_integrated: None,
             input_gain_db: 0.0,
@@ -3272,6 +3281,7 @@ mod tests {
             eq_high_mid_db: 0.0,
             eq_high_db: 0.0,
             eq_sparkle_db: 0.0,
+            eq_bands: crate::types::EqBandFrequencies::default(),
             volume_match: false,
             source_lufs_integrated: None,
             input_gain_db: 0.0,
@@ -3323,6 +3333,7 @@ mod tests {
             eq_high_mid_db: 0.0,
             eq_high_db: 0.0,
             eq_sparkle_db: 0.0,
+            eq_bands: crate::types::EqBandFrequencies::default(),
             volume_match: false,
             source_lufs_integrated: None,
             input_gain_db: 0.0,
@@ -3373,6 +3384,7 @@ mod tests {
             eq_high_mid_db: 0.0,
             eq_high_db: 0.0,
             eq_sparkle_db: 0.0,
+            eq_bands: crate::types::EqBandFrequencies::default(),
             volume_match: false,
             source_lufs_integrated: None,
             input_gain_db: 0.0,
@@ -3426,6 +3438,7 @@ mod tests {
             eq_high_mid_db: 0.0,
             eq_high_db: 0.0,
             eq_sparkle_db: 0.0,
+            eq_bands: crate::types::EqBandFrequencies::default(),
             volume_match: false,
             source_lufs_integrated: None,
             input_gain_db: 0.0,
@@ -3471,6 +3484,7 @@ mod tests {
             eq_high_mid_db: 0.0,
             eq_high_db: 0.0,
             eq_sparkle_db: 0.0,
+            eq_bands: crate::types::EqBandFrequencies::default(),
             volume_match: false,
             source_lufs_integrated: None,
             input_gain_db: 0.0,
@@ -3517,6 +3531,7 @@ mod tests {
             eq_high_mid_db: 0.0,
             eq_high_db: 0.0,
             eq_sparkle_db: 0.0,
+            eq_bands: crate::types::EqBandFrequencies::default(),
             volume_match: false,
             source_lufs_integrated: None,
             input_gain_db: 0.0,
@@ -3554,6 +3569,7 @@ mod tests {
             eq_high_mid_db: 0.0,
             eq_high_db: 0.0,
             eq_sparkle_db: 0.0,
+            eq_bands: crate::types::EqBandFrequencies::default(),
             volume_match: false,
             source_lufs_integrated: None,
             input_gain_db: 0.0,
@@ -3601,6 +3617,7 @@ mod tests {
             eq_high_mid_db: 0.0,
             eq_high_db: 0.0,
             eq_sparkle_db: 0.0,
+            eq_bands: crate::types::EqBandFrequencies::default(),
             volume_match: false,
             source_lufs_integrated: None,
             input_gain_db: 0.0,
@@ -4373,6 +4390,7 @@ mod tests {
                 eq_high_mid_db: 0.0,
                 eq_high_db: 0.0,
                 eq_sparkle_db: 0.0,
+                eq_bands: crate::types::EqBandFrequencies::default(),
                 volume_match: false,
                 source_lufs_integrated: None,
                 input_gain_db: 0.0,
@@ -5390,6 +5408,49 @@ mod tests {
             (high_20000 - 6.0).abs() < 0.5,
             "20000 Hz (above shelf): expected near +6 dB, got {:.3}",
             high_20000
+        );
+    }
+
+    /// 2026-08-18 — band frequencies come from settings. Untouched settings
+    /// must yield the SAME coefficients as the historical constants (this is
+    /// the local form of the byte-identity guarantee), and moving one band's
+    /// frequency must move ONLY that band's filter.
+    #[test]
+    fn eq_band_frequencies_drive_the_chain() {
+        let sr = 48_000u32;
+        let mut base = default_master_settings();
+        base.eq_mid_db = 4.0;
+        base.eq_low_mid_db = -3.0;
+        let reference = ChainCoeffs::from_settings(sr, &base);
+        let expected_mid = BiquadCoeffs::peaking(sr as f32, 1500.0, 0.8, 4.0);
+        assert_eq!(
+            reference.mid, expected_mid,
+            "default band == historical constant"
+        );
+
+        let mut moved = base.clone();
+        moved.eq_bands.mid_hz = 2200.0;
+        let shifted = ChainCoeffs::from_settings(sr, &moved);
+        assert_ne!(
+            shifted.mid, reference.mid,
+            "moving mid_hz must change the mid filter"
+        );
+        assert_eq!(
+            shifted.low_mid, reference.low_mid,
+            "…and only the mid filter"
+        );
+        assert_eq!(
+            shifted.mid,
+            BiquadCoeffs::peaking(sr as f32, 2200.0, 0.8, 4.0)
+        );
+
+        // Out-of-range values are clamped by the engine, not trusted.
+        let mut hostile = base.clone();
+        hostile.eq_bands.mid_hz = 20_000.0;
+        let clamped = ChainCoeffs::from_settings(sr, &hostile);
+        assert_eq!(
+            clamped.mid,
+            BiquadCoeffs::peaking(sr as f32, 3000.0, 0.8, 4.0)
         );
     }
 

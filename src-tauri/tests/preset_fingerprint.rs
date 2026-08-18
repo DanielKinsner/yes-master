@@ -282,6 +282,7 @@ fn default_settings_for(preset: Preset, intensity: f32) -> MasteringSettings {
         eq_high_mid_db: 0.0,
         eq_high_db: 0.0,
         eq_sparkle_db: 0.0,
+        eq_bands: yes_master_lib::EqBandFrequencies::default(),
         volume_match: false,
         source_lufs_integrated: None,
         input_gain_db: 0.0,

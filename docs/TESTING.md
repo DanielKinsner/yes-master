@@ -64,6 +64,19 @@ master lives at `hero-control-room-studio-source.jpg`, is imported by nothing,
 and reaches no bundle; the shipped variants are always re-derived from it so
 repeated runs cannot stack generation loss.
 
+## Visual EQ drag torture (manual, browser)
+
+```powershell
+node scripts/verify-eq-drag.mjs test-output   # needs the dev server on :5199 (or --url)
+```
+
+Pushes all seven EQ nodes to their frequency floors/ceilings and ±12 dB in the
+real browser build and asserts clamping (via the live readout), band ordering
+at the extremes, double-click reset, the panel reset button, one-step undo,
+user-preset round trip, Standard↔Advanced round trip, album-mode drag, and a
+clean console. Not a gate — run it after touching `VisualEqPanel.tsx` or the
+EQ setters in `useTrackMaster.ts`.
+
 ## Headless Web Lane (landing + `/app`)
 
 The default repeatable browser check for anything that renders. One command,

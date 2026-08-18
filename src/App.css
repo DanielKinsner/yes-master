@@ -919,16 +919,6 @@ select {
   gap: 0.4rem;
 }
 
-.empty-state-glyph {
-  width: 64px;
-  height: 64px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 0.5rem;
-  filter: drop-shadow(0 0 16px rgba(77, 139, 255, 0.35));
-}
-
 .empty-state h1 {
   font-size: 1.6rem;
   letter-spacing: -0.01em;
@@ -1220,19 +1210,6 @@ button.primary:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.track-sub {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  color: var(--text-1);
-  font-variant-numeric: tabular-nums;
-}
-
-.track-sub .dot {
-  color: var(--text-2);
 }
 
 @keyframes clip-pulse {
@@ -2095,12 +2072,6 @@ button.primary:disabled {
   margin-right: 0.25rem;
 }
 
-.user-preset-empty {
-  font-size: 0.78rem;
-  color: var(--text-2);
-  font-style: italic;
-}
-
 .user-preset-chip {
   display: flex;
   align-items: stretch;
@@ -2378,10 +2349,6 @@ button.primary:disabled {
 .ghost-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-
-.export-btn {
-  min-width: 200px;
 }
 
 /* Advanced panel */
@@ -3719,26 +3686,11 @@ button.primary:disabled {
   color: var(--text-2);
 }
 
-.status-ok {
-  color: #6cd08a;
-  background: rgba(108, 208, 138, 0.14);
-  border-color: rgba(108, 208, 138, 0.4);
-  box-shadow: 0 0 8px rgba(108, 208, 138, 0.25);
-}
-
 .status-warn {
   color: #f5c842;
   background: rgba(245, 200, 66, 0.14);
   border-color: rgba(245, 200, 66, 0.4);
   box-shadow: 0 0 8px rgba(245, 200, 66, 0.25);
-}
-
-.status-clip {
-  color: #fff;
-  background: #c0392b;
-  border-color: #e74c3c;
-  box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
-  animation: clip-pulse 0.7s ease-in-out infinite;
 }
 
 /* QUALITY CHECK */
@@ -4139,11 +4091,13 @@ button.primary:disabled {
     linear-gradient(180deg, rgba(16, 20, 31, 0.66), rgba(9, 12, 19, 0.48));
 }
 
+.adv-knob-grid .knob,
 .compressor-knob-grid .knob {
   gap: 0.18rem;
   min-width: 0;
 }
 
+.adv-knob-grid .knob-label,
 .compressor-knob-grid .knob-label {
   /* Match the Advanced-drawer subheadings: brighter (--text-1) and a touch
      larger so the two card families read with one consistent label voice. */
@@ -4153,11 +4107,13 @@ button.primary:disabled {
   color: var(--text-1);
 }
 
+.adv-knob-grid .knob-value,
 .compressor-knob-grid .knob-value {
   font-size: 0.72rem;
   color: var(--text-0);
 }
 
+.adv-knob-grid .knob-vis,
 .compressor-knob-grid .knob-vis {
   margin: -0.15rem auto -0.2rem;
   transform: scale(0.9);
@@ -4477,17 +4433,6 @@ button.primary:disabled {
   text-shadow: 0 0 4px rgba(111, 163, 255, 0.5);
 }
 
-/* Workspace section labels — used above presets, etc. for cohesion with the
-   right-rail panel labels and the macros row. */
-.workspace-section-label {
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-2);
-  font-weight: 600;
-  margin: 0.5rem 0 0;
-}
-
 .meta-chip {
   font-size: 0.72rem;
   letter-spacing: 0.04em;
@@ -4539,43 +4484,6 @@ button.primary:disabled {
   justify-content: flex-end;
 }
 
-.status-dot-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--text-1);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.status-dot-glyph {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-2);
-  flex-shrink: 0;
-}
-
-.status-dot-ok .status-dot-glyph {
-  background: #6cd08a;
-  box-shadow: 0 0 6px rgba(108, 208, 138, 0.65);
-}
-
-.status-dot-warn .status-dot-glyph {
-  background: #f5c842;
-  box-shadow: 0 0 6px rgba(245, 200, 66, 0.55);
-}
-
-.status-dot-bad .status-dot-glyph {
-  background: #ff7676;
-  box-shadow: 0 0 6px rgba(255, 118, 118, 0.65);
-}
-
-.status-dot-idle .status-dot-glyph {
-  background: var(--text-2);
-}
-
 .status-readout {
   display: inline-flex;
   align-items: baseline;
@@ -4608,71 +4516,11 @@ button.primary:disabled {
   border-color: var(--border-strong);
 }
 
-/* Advanced panel embedded in right rail. */
-.advanced-panel-slot summary.panel-head-summary {
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-.advanced-panel-slot summary.panel-head-summary::-webkit-details-marker {
-  display: none;
-}
-
 .panel-chevron {
   /* Removed: the whole ADVANCED CONTROLS header is clickable to toggle,
      so the dropdown caret was redundant chrome. (Only used on that one
      summary, so hiding it here removes it everywhere it appeared.) */
   display: none;
-}
-
-.advanced-panel-slot[open] .panel-chevron {
-  transform: rotate(180deg);
-}
-
-.advanced-slot-body {
-  /* Slice D — pulled in tighter from 0.5rem so the Advanced drawer
-     reads as a dense settings tray rather than a verbose form. */
-  margin-top: 0.35rem;
-}
-
-.advanced-slot-body .advanced {
-  /* The AdvancedPanel ships its own .advanced wrapper styles for the
-     standalone (workspace) presentation. Inside the right rail we tighten
-     spacing and let our panel chrome handle the head/border. */
-  padding: 0;
-  background: transparent;
-  border: none;
-}
-
-.advanced-slot-body .section-head {
-  display: none;
-}
-
-.advanced-slot-body .advanced-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.advanced-slot-body .adv-field {
-  gap: 0.15rem;
-  padding: 0.25rem 0;
-  border-bottom: 1px dashed rgba(111, 163, 255, 0.06);
-}
-
-.advanced-slot-body .adv-field:last-child {
-  border-bottom: none;
-}
-
-.advanced-slot-body .adv-label {
-  font-size: 0.7rem;
-  letter-spacing: 0.04em;
-}
-
-.advanced-slot-body .adv-control {
-  grid-template-columns: 1fr auto 64px;
-  gap: 0.4rem;
 }
 
 .adv-field.is-auto .adv-value {
@@ -4722,15 +4570,6 @@ button.primary:disabled {
 .adv-auto-reset:focus-visible {
   color: var(--text-1);
   border-color: var(--accent, var(--text-2));
-}
-
-.advanced-slot-body .adv-value {
-  font-size: 0.72rem;
-}
-
-.advanced-slot-body .adv-number {
-  font-size: 0.72rem;
-  padding: 0.14rem 0.3rem;
 }
 
 /* Phase 12.2 P3 — Signal-chain visualization.
@@ -5181,10 +5020,6 @@ button.primary:disabled {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .console-hero .track-sub {
-    gap: 0.35rem;
   }
 
   .console-hero .analysis-summary {
@@ -5931,10 +5766,7 @@ button.primary:disabled {
 }
 .std-play:hover { transform: scale(1.06); box-shadow: 0 8px 30px rgba(42,107,242,0.6); }
 .std-play:active { transform: scale(0.98); }
-/* Optical centering for the ► triangle only (equivalent to the old
-   padding-left: 3px content shift); the ❚❚ pause glyph stays true-center. */
-.std-play-glyph { transform: translateX(1.5px); }
-.std-play-glyph.is-pause { transform: none; }
+
 .std-play::after {
   content: ""; position: absolute; inset: -5px; border-radius: 50%; pointer-events: none;
   border: 1px solid color-mix(in srgb, var(--accent-bright) 40%, transparent); opacity: 0; transition: opacity 160ms ease;
@@ -6848,7 +6680,6 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
   letter-spacing: -0.025em;
 }
 
-.track-sub,
 .track-meta-line {
   letter-spacing: 0.06em;
   font-size: 0.72rem;
@@ -7027,6 +6858,53 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
 
 .play-btn:active,
 .std-play:active { transform: scale(0.97); }
+
+/* One transport disc in both views: same size envelope, same SVG glyph
+   (components/TransportGlyph.tsx), same hover ring. The two views used to
+   render different Unicode characters at different sizes. */
+.play-btn,
+.std-play {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  width: clamp(58px, 6vh, 76px);
+  height: clamp(58px, 6vh, 76px);
+  color: #fff;
+}
+.transport-glyph {
+  display: block;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}
+.play-btn::after,
+.std-play::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1px solid rgba(122, 166, 255, 0.4);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.play-btn:hover::after,
+.std-play:hover::after { opacity: 1; }
+
+/* Same time readout under both discs. */
+.wf-deck-transport .time,
+.std-time {
+  font-size: 0.8rem;
+  color: var(--text-1);
+  letter-spacing: 0.01em;
+}
+
+/* Same quiet track-row selection in both rails (Advanced's original look). */
+.std-track-row.is-active {
+  background: rgba(79, 134, 247, 0.12);
+  border-color: transparent;
+  box-shadow: inset 0 0 0 1px rgba(79, 134, 247, 0.35);
+  color: var(--text-0);
+}
 
 /* --- Buttons --------------------------------------------------------- */
 
@@ -7476,9 +7354,134 @@ button.primary.std-create-master {
 .eq-band-flat .eq-node { stroke: rgba(158, 176, 214, 0.55); }
 .eq-band-flat .eq-node:hover { stroke: rgba(200, 214, 245, 0.85); }
 .eq-node.is-dragging { stroke-width: 2.5px; }
+/* Live "+2.5 dB · 1.5k" readout above the node being dragged. */
+.eq-node-readout {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  fill: var(--text-0);
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: rgba(6, 9, 15, 0.9);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
 .eq-band-boost .eq-node-halo { stroke: #7aa6ff; }
 .eq-band-cut .eq-node-halo { stroke: #f2a83b; }
 .eq-band-flat .eq-node-halo { stroke: rgba(158, 176, 214, 0.7); }
+
+/* --- Advanced Controls knob grid + typeable knob fields --------------- */
+
+/* Same housing as the per-band compressor's knob grid, so the two knob
+   quartets in the rail read as one family. */
+.adv-knob-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.5rem;
+  padding: 0.5rem 0.4rem 0.4rem;
+  margin: 0.15rem 0 0.4rem;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface-inset);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.compressor-knob-grid {
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface-inset);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  gap: 0.35rem 0.5rem;
+  padding: 0.5rem 0.4rem 0.4rem;
+}
+
+/* The typeable value under a knob: reads like the plain value label until
+   you click it, then it's a field. Unit sits beside it in the same tone as
+   the readout units elsewhere. */
+.knob-field {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2rem;
+  max-width: 100%;
+}
+.knob-field-input {
+  width: 4.2em;
+  min-width: 0;
+  padding: 0.12rem 0.3rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-0);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+  transition: border-color 120ms, background 120ms;
+}
+.knob-field-input::-webkit-outer-spin-button,
+.knob-field-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.knob-field-input:hover {
+  border-color: var(--hairline);
+  background: rgba(255, 255, 255, 0.04);
+}
+.knob-field-input:focus {
+  border-color: rgba(122, 166, 255, 0.55);
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  outline: none;
+}
+.knob-field-input:disabled { opacity: 0.5; }
+/* The value-as-button: identical to the plain value at rest, a hint of
+   field on hover so it's discoverable. */
+button.knob-value-editable {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  padding: 0.1rem 0.35rem;
+  margin: -0.1rem -0.35rem;
+  cursor: text;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  transition: border-color 120ms, background 120ms;
+}
+button.knob-value-editable:hover {
+  border-color: var(--hairline);
+  background: rgba(255, 255, 255, 0.04);
+}
+button.knob-value-editable:disabled { cursor: default; }
+.knob-field-unit {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+/* --- Native dropdowns: dark popup to match the shell ------------------ */
+
+/* Chromium/WebView2 paints the <select> popup with the element's own
+   color-scheme; without this the list opened light grey (owner report). */
+select {
+  color-scheme: dark;
+  accent-color: var(--accent);
+}
+select option,
+select optgroup {
+  background: #131720;
+  color: var(--text-0);
+}
+select option:checked {
+  background: rgba(79, 134, 247, 0.28);
+}
 
 /* --- Focus ----------------------------------------------------------- */
 

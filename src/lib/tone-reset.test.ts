@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { MasteringSettings } from "../bindings";
-import { isToneFlat, resetToneSettings, TONE_DEFAULT_INTENSITY } from "./tone-reset";
+import { EQ_BAND_DEFAULTS } from "../bindings";
+import {
+  eqBandsAreDefault,
+  isToneFlat,
+  resetToneSettings,
+  TONE_DEFAULT_INTENSITY,
+} from "./tone-reset";
 
 // The "fast reset" for the Visual EQ + Intensity area. Pure logic so the
 // reset's exact scope (intensity + the seven EQ bands, and ONLY those) is
@@ -18,6 +24,7 @@ function settings(overrides: Partial<MasteringSettings> = {}): MasteringSettings
     eq_high_mid_db: -2.5,
     eq_high_db: 1.5,
     eq_sparkle_db: 3,
+    eq_bands: { ...EQ_BAND_DEFAULTS, mid_hz: 2200, low_hz: 160 },
     volume_match: true,
     input_gain_db: -1.5,
     output_gain_db: 0.5,
@@ -64,6 +71,15 @@ describe("resetToneSettings", () => {
     expect(out.eq_sparkle_db).toBe(0);
   });
 
+  // 2026-08-18 — bands became movable in frequency; "reset to flat" must
+  // put them back where the chain ships them, or a moved band survives a
+  // reset that says it flattened everything.
+  it("returns every band to its default frequency", () => {
+    const out = resetToneSettings(settings());
+    expect(out.eq_bands).toEqual(EQ_BAND_DEFAULTS);
+    expect(eqBandsAreDefault(out)).toBe(true);
+  });
+
   it("leaves preset, gains, delivery, volume-match, and advanced untouched", () => {
     const input = settings();
     const out = resetToneSettings(input);
@@ -84,6 +100,18 @@ describe("resetToneSettings", () => {
 });
 
 describe("isToneFlat", () => {
+  it("is false while any band is off its default frequency, true once restored", () => {
+    const flat = resetToneSettings(settings());
+    expect(isToneFlat(flat)).toBe(true);
+    const moved = { ...flat, eq_bands: { ...EQ_BAND_DEFAULTS, high_mid_hz: 4200 } };
+    expect(isToneFlat(moved)).toBe(false);
+    // Settings that predate `eq_bands` read as default (Rust fills the same).
+    const legacy = { ...flat };
+    delete (legacy as Partial<MasteringSettings>).eq_bands;
+    expect(eqBandsAreDefault(legacy)).toBe(true);
+    expect(isToneFlat(legacy)).toBe(true);
+  });
+
   it("is true when intensity is the default and all EQ bands are 0", () => {
     expect(isToneFlat(resetToneSettings(settings()))).toBe(true);
   });
