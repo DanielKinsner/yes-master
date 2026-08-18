@@ -36,15 +36,14 @@ import { REPO_ROOT, pngDimensions } from "./lib/landing-assets.mjs";
 // claiming otherwise was simply wrong. Keeping the master is worth 1.4 MB of
 // repo that ships to nobody.
 //
-// 2026-08-18: the master art is now the owner-generated console render of the
-// real UI (1672×941 PNG). Variants are JPEG; the "full" one is encoded at the
-// source's native width (the script never upscales), so `Hero.tsx`'s srcSet
-// declares 1672w, not 2560w.
+// 2026-08-18: the master art is the owner-generated 4K console render of the
+// real UI (3840×2160 JPEG). Variants: a 2560w desktop encode and a 1280w
+// phone encode; `Hero.tsx`'s srcSet declares the same widths.
 const HERO = {
-  source: "src/assets/landing/hero-control-room-studio-source.png",
-  sourceType: "image/png",
+  source: "src/assets/landing/hero-control-room-studio-source.jpg",
+  sourceType: "image/jpeg",
   variants: [
-    { file: "src/assets/landing/hero-control-room-studio.jpg", width: 1672, quality: 0.86 },
+    { file: "src/assets/landing/hero-control-room-studio.jpg", width: 2560, quality: 0.82 },
     { file: "src/assets/landing/hero-control-room-studio-1280.jpg", width: 1280, quality: 0.84 },
   ],
 };

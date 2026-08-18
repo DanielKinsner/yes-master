@@ -33,16 +33,16 @@ export default function Hero({
 }: { release?: ResolvedRelease } = {}) {
   return (
     <section id="top" className="relative isolate min-h-svh overflow-hidden">
-      {/* Background: the owner-generated console render of the real UI
+      {/* Background: the owner-generated 4K console render of the real UI
           (2026-08-18). object-cover crops, never stretches; anchored LEFT so
           the dark studio wall stays behind the copy and the crop, when there
           is one, takes the right-hand VU meters rather than the console. */}
       {/* U7: two variants so a phone does not download the full-width render
           to draw it 390px wide. The master art lives beside these as
-          *-source.png, imported by nothing and shipped in no bundle. */}
+          *-source.jpg, imported by nothing and shipped in no bundle. */}
       <img
         src={heroBg}
-        srcSet={`${heroBg1280} 1280w, ${heroBg} 1672w`}
+        srcSet={`${heroBg1280} 1280w, ${heroBg} 2560w`}
         sizes="100vw"
         alt=""
         aria-hidden="true"
@@ -69,13 +69,13 @@ export default function Hero({
       {/* Copy column. A normal block (so its width can never exceed the
           screen), full width on phones, ~45% on desktop, sitting over the
           dark wall to the left of the console. */}
-      <div className="relative flex min-h-svh w-full flex-col justify-start gap-5 px-5 pt-24 pb-16 sm:px-8 lg:w-[46%] lg:max-w-[560px] lg:pb-16 lg:pl-16 lg:pt-28 xl:pl-24">
+      <div className="relative flex min-h-svh w-full flex-col justify-start gap-5 px-5 pt-24 pb-16 sm:px-8 lg:w-[48%] lg:max-w-[600px] lg:pb-16 lg:pl-16 lg:pt-28 xl:max-w-[640px] xl:pl-24">
         <span className="eyebrow">YES Master</span>
 
         {/* Two beats, balanced wrapping (text-balance) so neither line rags
             into an orphan. The first sentence is the pinned primary message
             (docs/landing-brief.md); the second is the punch. */}
-        <h1 className="max-w-[12ch] text-balance font-display text-[2.6rem] font-black leading-[0.95] tracking-[-0.03em] sm:text-[3.4rem] lg:text-[3.3rem] xl:text-[3.9rem]">
+        <h1 className="max-w-[17ch] text-balance font-display text-[2.6rem] font-black leading-[0.95] tracking-[-0.03em] sm:text-[3.4rem] lg:text-[3.1rem] xl:text-[3.5rem]">
           Master your track in real time.
           <span className="mt-2 block text-brand-soft">Hear every move. Ship with proof.</span>
         </h1>

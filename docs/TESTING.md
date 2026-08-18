@@ -57,13 +57,12 @@ capture), and **heavy** (eager imagery over 1.5 MB). It also fails if any
 mobile UI image is imported by the landing page (R7).
 
 **Eager budget.** Every capture is below the fold and `loading="lazy"` with a
-declared intrinsic size; the hero art ships as a 1280w/1672w `srcSet` (the
-2026-08-18 console render is 1672 px wide; the script never upscales). Eager
-imagery is **~250 KB** against the 1.5 MB budget. Do not raise the budget —
-shrink the art. The pristine hero master lives at
-`hero-control-room-studio-source.png`, is imported by nothing, and reaches no
-bundle; the shipped JPEG variants are always re-derived from it so repeated
-runs cannot stack generation loss.
+declared intrinsic size; the hero art ships as a 1280w/2560w `srcSet` derived
+from the 2026-08-18 4K console render. Eager imagery stays well under the
+1.5 MB budget. Do not raise the budget — shrink the art. The pristine hero
+master lives at `hero-control-room-studio-source.jpg`, is imported by nothing,
+and reaches no bundle; the shipped variants are always re-derived from it so
+repeated runs cannot stack generation loss.
 
 ## Headless Web Lane (landing + `/app`)
 
