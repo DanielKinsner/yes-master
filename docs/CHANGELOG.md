@@ -12,6 +12,19 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-08-19 — Pass 3: colour & state semantics
+
+- **Amber rule**: on the console chrome amber means EQ/bipolar *cut* and
+  nothing else; warnings keep amber only inside warning surfaces (export
+  gate, receipt rows, concern chips). Source Insight's REVIEW pill is a
+  neutral **New** status chip; the compressor hint's rule is neutral.
+- **Edited markers**: Tone Shape, input/output gain and compressor knobs
+  show a small dot beside the label while off their default (`Knob`
+  `editedIndicator`; Intensity deliberately not); the active Styles tile
+  says **edited** when Advanced edits sit on top of the style.
+- Cobalt-for-live already held for the loudness picker and tiles (raised
+  neutral / preset accent) — verified, no change.
+
 ## 2026-08-19 — Stuck-analysis root cause, per-track "analyzing", deep-scan progress, header rhythm
 
 - **Root cause of "analysis running for minutes on one small file"** (owner

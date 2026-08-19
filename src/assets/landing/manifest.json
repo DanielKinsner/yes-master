@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "e61f1683a9f21db560febe3d9b655fd7b8ff7a59",
-  "captureInputDigest": "fb4db713f4717fe66da2fcf7e248a60e2e266982a3328bdf22298676823ae68a",
+  "sourceCommit": "8d1fdc27cda35d85f9f03c1b269422334dd64e37",
+  "captureInputDigest": "3a33def73b3197029c6c42e2abefc2de65bed9d7bf4d9d1ccb48ef1702b4d3b4",
   "browser": {
     "runtime": "playwright-bundled-chromium",
     "version": "149.0.7827.55"
@@ -39,8 +39,8 @@
         "width": 1440,
         "height": 1000
       },
-      "bytes": 580096,
-      "sha256": "be800f3ba9d46b8f9b33abe0dfb4b49c22f39ef12dff483ee12a63706b125858",
+      "bytes": 579567,
+      "sha256": "4bc4f76dcf51144ebc45dcf78c27e76d057490a20716d010a48b874133176fd7",
       "loading": "lazy",
       "alt": "YES Master Advanced view"
     },
@@ -57,8 +57,8 @@
         "width": 1440,
         "height": 1000
       },
-      "bytes": 625431,
-      "sha256": "d38c205ba87892ed1da12aa298c7eddd3b0758cac3c0672a377349c8d1843b59",
+      "bytes": 625249,
+      "sha256": "bb89e64c72076e7bcf75b4b4dbedaa34666d4ca61e6315b395844f6799730146",
       "loading": "lazy",
       "alt": "YES Master Album Master view with four tracks"
     }
