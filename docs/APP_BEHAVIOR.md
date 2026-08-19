@@ -54,7 +54,13 @@ Track Master supports:
 - Visible Save/Open Project feedback.
 - Live Master Out meters with plain Standard labels and technical Advanced
   labels/tooltips: live loudness is not the selected target, since-play LUFS is
-  the current playback run, and peak is dBFS/peak behavior.
+  the current playback run, and peak is dBFS/peak behavior. Meters have
+  real ballistics (2026-08-19): peaks fall at a controlled rate and a
+  peak-hold pip marks the highest recent peak (red above −1 dBFS). The
+  Advanced per-band compressor card shows live gain reduction per band
+  while the master plays. The Original/Mastered flip and the played span of
+  the waveform react visually to which source is audible; all such motion
+  is presentation-only and respects `prefers-reduced-motion`.
 - A first-run guide in Standard view: subtle floating coachmarks that walk a
   new user to the Original→Mastered flip, then a send-off and one Advanced
   pointer. Dismissible, never blocking, persisted under
