@@ -989,20 +989,22 @@ button.primary:disabled {
   flex-wrap: wrap;
 }
 
-/* Sized to the badge line (≤ the 25px session-status pill) so the album
-   header height — and the waveform card top — matches Track Master's. */
+/* Pass 2 (2026-08-19): the Follows/Overrides status chip is assistive-tech
+   only at every size. The segmented Follow album / Override control already
+   states the choice (aria-pressed + label); the chip carried the same fact
+   a second time and, in the flow layout (1360×740), pushed the header to
+   three stacked rows. The chip stays in the DOM so the per-state
+   explanation remains text for screen readers (U9/U10). */
 .override-status {
-  cursor: help;
-  min-height: 0;
-  padding: 0.14rem 0.45rem;
-  line-height: 1.1;
-}
-
-/* Overriding state reuses the existing album-override accent (no new color). */
-.override-status.is-overriding {
-  color: rgb(255, 184, 107);
-  background: rgba(255, 184, 107, 0.14);
-  border-color: rgba(255, 184, 107, 0.45);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .override-toggle {
@@ -4783,22 +4785,11 @@ button.primary:disabled {
     white-space: nowrap;
   }
   .console-hero .session-status { flex-shrink: 0; }
-  /* Album Master's override control on the one-line badge row: the
-     segmented Follow album / Override already states the choice, so the
-     status chip is kept for assistive tech only and the banner may not
-     stack internally (that grew the header and broke 13b parity). */
+  /* Album Master's override control on the one-line badge row may not
+     stack internally (that grew the header and broke 13b parity). The
+     status chip itself is assistive-tech-only at EVERY size since Pass 2
+     (2026-08-19) — see .override-status below the banner rules. */
   .console-hero .override-banner { flex-wrap: nowrap; flex-shrink: 0; }
-  .console-hero .override-status {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
 
   .console-hero .track-title {
     font-size: clamp(1.45rem, 2.1vw, 1.95rem);
@@ -5362,6 +5353,28 @@ button.primary:disabled {
   .intensity-block .knob-vis { max-width: 100px; }
   .tone-shape-knobs { gap: 0.45rem; }
   .tone-shape-knobs .knob-vis { max-width: 54px; }
+
+  /* Pass 2 (2026-08-19): in the flow layout the title block was squeezed to
+     ~220px beside the 550px preview toolbar, so Album Master's meta row
+     (identity · Follow/Override · session pill) stacked into three lines
+     and the waveform sat ~60px lower than Track Master's. Title + meta row
+     take the full width; the toolbar sits on its own line beneath. */
+  .track-header-primary {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.4rem;
+  }
+  .track-header-actions {
+    justify-content: flex-start;
+    min-width: 0;
+  }
+  .track-header-meta-row { flex-wrap: nowrap; }
+  .track-header-meta-row .track-meta-line {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 /* ─── Premium: focus & reduced-motion (vera/premium-motion-focus) ────────

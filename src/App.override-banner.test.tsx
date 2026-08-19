@@ -75,6 +75,10 @@ describe("OverrideBanner (Slice 13 chip + U10 segmented choice)", () => {
   // MORE behavior than the old ones did: state, availability, that the active
   // side does not fire, and that the inactive side does.
 
+  // Pass 2 (2026-08-19): the chip is assistive-tech-only at every size now
+  // (App.css .override-status is visually hidden) — the segmented control
+  // states the choice visually; the chip keeps the per-state explanation as
+  // text. These assertions are about the DOM contract, which is unchanged.
   it("shows a Follows-album chip and makes both sides focusable", async () => {
     const onToggle = vi.fn();
     const { container } = await render(
