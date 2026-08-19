@@ -295,13 +295,28 @@ export function WaveformView({
           clipPath="url(#wf-bars-clip)"
         />
         {regionRect && (
-          <rect
-            className="wf-region"
-            x={regionRect.startX}
-            y={0}
-            width={Math.max(1, regionRect.endX - regionRect.startX)}
-            height={H}
-          />
+          // Loop region reads as a BRACKET, not a tint (owner 2026-08-19):
+          // a soft fill, a lit band along the top edge, and two crisp
+          // start/end rails (non-scaling, so the stretched viewBox can't
+          // fatten them). The same shapes repeat in the overview strip.
+          <g className="wf-region-group" aria-hidden="true">
+            <rect
+              className="wf-region"
+              x={regionRect.startX}
+              y={0}
+              width={Math.max(1, regionRect.endX - regionRect.startX)}
+              height={H}
+            />
+            <rect
+              className="wf-region-band"
+              x={regionRect.startX}
+              y={0}
+              width={Math.max(1, regionRect.endX - regionRect.startX)}
+              height={5}
+            />
+            <line className="wf-region-edge" x1={regionRect.startX} y1={0} x2={regionRect.startX} y2={H} />
+            <line className="wf-region-edge" x1={regionRect.endX} y1={0} x2={regionRect.endX} y2={H} />
+          </g>
         )}
         <line
           className="wf-playhead"
@@ -413,13 +428,17 @@ function WaveformOverview({
         clipPath="url(#wfo-bars-clip)"
       />
       {regionRect && (
-        <rect
-          className="wf-overview-region"
-          x={regionRect.startX}
-          y={0}
-          width={Math.max(1, regionRect.endX - regionRect.startX)}
-          height={H}
-        />
+        <g className="wf-region-group" aria-hidden="true">
+          <rect
+            className="wf-overview-region"
+            x={regionRect.startX}
+            y={0}
+            width={Math.max(1, regionRect.endX - regionRect.startX)}
+            height={H}
+          />
+          <line className="wf-region-edge" x1={regionRect.startX} y1={0} x2={regionRect.startX} y2={H} />
+          <line className="wf-region-edge" x1={regionRect.endX} y1={0} x2={regionRect.endX} y2={H} />
+        </g>
       )}
       <line
         className="wf-overview-playhead"

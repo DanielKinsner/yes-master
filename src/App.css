@@ -6590,8 +6590,25 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
 .wf rect.wf-region,
 .wf-overview rect.wf-overview-region {
   fill: var(--accent-bright);
-  fill-opacity: 0.12;
+  fill-opacity: 0.16;
+  pointer-events: none;
 }
+/* Loop bracket: lit top band + start/end rails (owner 2026-08-19 — the
+   tint alone read as "greyed out", not "this part loops"). */
+.wf rect.wf-region-band {
+  fill: var(--accent-bright);
+  fill-opacity: 0.85;
+  pointer-events: none;
+}
+.wf line.wf-region-edge,
+.wf-overview line.wf-region-edge {
+  stroke: var(--accent-bright);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 4px rgba(122, 166, 255, 0.7));
+  pointer-events: none;
+}
+.wf-overview line.wf-region-edge { stroke-width: 1.5px; }
 
 .wf-playhead {
   stroke: rgba(255, 255, 255, 0.95);
