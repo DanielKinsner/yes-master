@@ -74,8 +74,16 @@ Track Master supports:
   silently. Spec: `docs/superpowers/specs/2026-06-11-first-run-guide-design.md`.
 - A first-launch welcome hero: when no track is loaded, the empty state
   shows the orb idling as the brand visual with the product promise and
-  import CTA. Never a wall — import and drag-drop always work; reduced
-  motion gets a static glyph.
+  import CTA, plus **Try a demo track** (2026-08-19): the engine synthesises
+  a short loop once into app-data and imports it, so a first-run user with
+  nothing to drop still reaches the A/B. Never a wall — import and drag-drop
+  always work; reduced motion gets a static glyph.
+- Keyboard (2026-08-19): Space play/pause; ← / → seek 5 s (Shift 30 s); Home;
+  **A** flips Original/Mastered; **L** toggles the loop (Advanced only);
+  Ctrl/Cmd+Z/Y undo/redo; **?** opens the Shortcuts overlay. All yield to
+  text entry; seek/A/L also yield to focused knobs, number fields, selects.
+- Standard cards carry a per-card ↺ (Style → Universal, Intensity → 50%,
+  Loudness → Low), disabled at the default (2026-08-19).
 - An analysis orb: a particle point-cloud animates in the waveform slot
   while analysis runs and persists through the waveform decode, then
   morphs into the track's real waveform when peaks arrive. Presentation

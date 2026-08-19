@@ -12,6 +12,28 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-08-19 — Pass 4: moments & onboarding
+
+- **Keyboard**: ← / → seek 5 s (Shift: 30 s), Home jumps to start, **A**
+  flips Original/Mastered, **L** toggles the loop (Advanced only), **?**
+  opens a Shortcuts overlay. One catalogue (`lib/shortcuts.ts`) feeds the
+  handlers, the overlay and Help, so the overlay can never advertise a dead
+  key; all shortcuts yield to text entry and the seek/A/L keys also yield to
+  focused knobs / number fields / selects.
+- **"Try a demo track"** beside Import in the empty state: the engine
+  synthesises a 24 s loop (Am–F–C–G pad, bass, drums; mixed quiet, peaks
+  −8 dBFS so the master has room to move) once into app-data
+  `demo/yes-master-demo.wav` and imports it (`demo.rs`,
+  `prepare_demo_track`). A bundled CC track can replace the generator later
+  without changing the contract.
+- **Standard per-card reset**: a quiet ↺ on each step label — Style →
+  Universal, Intensity → 50%, Loudness → Low — disabled at the default.
+- **Export Complete card**: visible **Show file** + **Done** actions; the
+  preview mock now carries delivered measurements so captures show the
+  Results section; the Mastering-target chip is neutral (fact, not warning).
+- Settings/Help (one `ChromeDialog`) and toasts (one `Toast` + stack) were
+  already consistent — verified, no change.
+
 ## 2026-08-19 — Pass 3: colour & state semantics
 
 - **Amber rule**: on the console chrome amber means EQ/bipolar *cut* and
