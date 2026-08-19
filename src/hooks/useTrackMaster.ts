@@ -35,6 +35,12 @@ import {
   resetToStandardManaged as resetToStandardManagedSettings,
 } from "../lib/standard-managed";
 import { standardExportSettings } from "../lib/standard-export";
+import {
+  SEEK_STEP_LARGE_SEC,
+  SEEK_STEP_SEC,
+  isTextEntryTarget,
+  isValueControlTarget,
+} from "../lib/shortcuts";
 import { buildExportReport } from "../lib/export-receipt";
 import { userErrorMessage, type UserErrorContext } from "../lib/user-errors";
 import {
@@ -2418,6 +2424,59 @@ export function useTrackMaster() {
       setError(messageOf(err));
     }
   }, [transport.loop, selectedRegion]);
+
+  // Pass 4 (2026-08-19) — transport keys beyond Space. Catalogue + target
+  // rules live in lib/shortcuts.ts (shared with the `?` overlay):
+  //   ← / →        seek ±5 s (Shift: ±30 s)      Home  jump to 0
+  //   A            flip Original / Mastered       L     toggle loop (Advanced)
+  // All yield to text entry; seek/A/L also yield to focused value controls
+  // (knob range inputs, number fields, selects) where arrows and letters
+  // already mean something. No modifiers — Ctrl/Cmd combos belong to the
+  // undo handler below.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (isTextEntryTarget(e.target) || isValueControlTarget(e.target)) return;
+      if (!selectedTrack) return;
+      const key = e.key;
+      if (key === "ArrowLeft" || key === "ArrowRight") {
+        e.preventDefault();
+        const step = e.shiftKey ? SEEK_STEP_LARGE_SEC : SEEK_STEP_SEC;
+        const delta = key === "ArrowRight" ? step : -step;
+        const duration = selectedTrack.duration_seconds;
+        const next = Math.max(0, estimatedPlaybackPositionSec() + delta);
+        void seek(Number.isFinite(duration) ? Math.min(next, duration as number) : next);
+        return;
+      }
+      if (key === "Home") {
+        e.preventDefault();
+        void seek(0);
+        return;
+      }
+      const lower = key.length === 1 ? key.toLowerCase() : key;
+      if (lower === "a") {
+        e.preventDefault();
+        void setPlaybackKind(transport.playbackKind === "master" ? "source" : "master");
+        return;
+      }
+      if (lower === "l") {
+        // Standard (forced WYSIWYG) has no loop UI; a hidden loop there is
+        // exactly what F3 removed. Advanced only.
+        if (forceWysiwygRef.current) return;
+        e.preventDefault();
+        void toggleLoop();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [
+    selectedTrack,
+    estimatedPlaybackPositionSec,
+    seek,
+    setPlaybackKind,
+    transport.playbackKind,
+    toggleLoop,
+  ]);
 
   // F3 (owner smoke): looping is Advanced-only, but the armed state used to
   // survive a switch to Standard — which has no loop UI at all, leaving a

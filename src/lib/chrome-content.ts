@@ -81,7 +81,7 @@ export const HELP_SECTIONS: Array<[string, string]> = [
   ],
   [
     "Keyboard shortcuts",
-    "Space toggles playback. Ctrl/Cmd+Z/Y undo and redo. Shift+drag loop region is Advanced only.",
+    "Space toggles playback. Left/Right seek 5 s (Shift: 30 s), Home jumps to the start, A flips Original/Mastered, L toggles the loop (Advanced only). Ctrl/Cmd+Z/Y undo and redo. Shift+drag loop region is Advanced only. Press ? any time for the full list.",
   ],
   [
     "Glossary",

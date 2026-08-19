@@ -9,6 +9,7 @@ import {
   TopHeader,
   TrackHeader,
   type AudioOutputSettingsState,
+  ShortcutsPanel,
 } from "./App";
 import type { ImportedTrack } from "./bindings";
 import { STANDARD_EXPORT_DELIVERY } from "./lib/standard-export";
@@ -249,6 +250,28 @@ describe("top chrome", () => {
       buttonByLabel(container, "Close Help").click();
     });
 
+    expect(onClose).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  // Pass 4 (2026-08-19): the `?` overlay lists exactly the catalogue the
+  // key handlers read, so it can never advertise a dead key.
+  it("renders the Shortcuts overlay from the shared catalogue", async () => {
+    const { SHORTCUTS } = await import("./lib/shortcuts");
+    const onClose = vi.fn();
+    const { container, root } = await renderNode(<ShortcutsPanel onClose={onClose} />);
+    const text = container.textContent ?? "";
+    for (const entry of SHORTCUTS) {
+      expect(text).toContain(entry.label);
+      for (const k of entry.keys) expect(text).toContain(k);
+    }
+    expect(container.querySelectorAll(".shortcut-row").length).toBe(SHORTCUTS.length);
+    expect(container.querySelector(".shortcut-scope")?.textContent).toBe("Advanced");
+    await act(async () => {
+      buttonByLabel(container, "Close Shortcuts").click();
+    });
     expect(onClose).toHaveBeenCalledTimes(1);
     await act(async () => {
       root.unmount();

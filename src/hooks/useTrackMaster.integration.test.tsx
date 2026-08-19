@@ -2021,6 +2021,91 @@ describe("useTrackMaster integration dispatches", () => {
     expect(finishes).toBe(begins);
   });
 
+  // Pass 4 (2026-08-19): transport keys beyond Space. Arrows seek, A flips
+  // Original/Mastered, L toggles the loop (Advanced only), and every one of
+  // them yields to text entry and to focused value controls.
+  describe("transport keyboard shortcuts", () => {
+    function key(init: KeyboardEventInit & { target?: HTMLElement }) {
+      const { target, ...rest } = init;
+      const ev = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...rest });
+      (target ?? window).dispatchEvent(ev);
+      return ev;
+    }
+
+    async function importOne() {
+      // 120 s so the ±30 s seeks do not clamp at the end (clamping IS a
+      // behaviour; it is covered by the "never below zero" step).
+      const track = { ...makeTrack("kb-1", "C:/audio/kb.wav"), duration_seconds: 120 };
+      mocks.api.importTracks.mockResolvedValue([track]);
+      const harness = await renderHookHarness();
+      await act(async () => {
+        await harness.current().importFiles([track.path]);
+      });
+      await waitFor(() => expect(harness.current().selectedAnalysis).toBeTruthy());
+      return { harness, track };
+    }
+
+    it("ArrowRight / ArrowLeft seek by 5 s (Shift: 30 s), Home jumps to 0", async () => {
+      const { harness } = await importOne();
+      expect(harness.current().transport.currentTimeSec).toBe(0);
+      await act(async () => { key({ key: "ArrowRight" }); });
+      expect(harness.current().transport.currentTimeSec).toBeCloseTo(5, 3);
+      await act(async () => { key({ key: "ArrowRight", shiftKey: true }); });
+      expect(harness.current().transport.currentTimeSec).toBeCloseTo(35, 3);
+      await act(async () => { key({ key: "ArrowLeft" }); });
+      expect(harness.current().transport.currentTimeSec).toBeCloseTo(30, 3);
+      await act(async () => { key({ key: "Home" }); });
+      expect(harness.current().transport.currentTimeSec).toBe(0);
+      // Never below zero.
+      await act(async () => { key({ key: "ArrowLeft" }); });
+      expect(harness.current().transport.currentTimeSec).toBe(0);
+      await act(async () => { harness.root.unmount(); });
+    });
+
+    it("A flips Original <-> Mastered once analysis exists", async () => {
+      const { harness } = await importOne();
+      expect(harness.current().transport.playbackKind).toBe("source");
+      await act(async () => { key({ key: "a" }); });
+      expect(harness.current().transport.playbackKind).toBe("master");
+      await act(async () => { key({ key: "A" }); });
+      expect(harness.current().transport.playbackKind).toBe("source");
+      await act(async () => { harness.root.unmount(); });
+    });
+
+    it("L toggles the loop in Advanced and is ignored in Standard (no loop UI there)", async () => {
+      const { harness } = await importOne();
+      expect(harness.current().transport.loop).toBe(false);
+      await act(async () => { key({ key: "l" }); });
+      expect(harness.current().transport.loop).toBe(true);
+      await act(async () => { key({ key: "l" }); });
+      expect(harness.current().transport.loop).toBe(false);
+      // Standard = forced WYSIWYG; L must not arm a hidden loop there.
+      await act(async () => { harness.current().setForceWysiwyg(true); });
+      await act(async () => { key({ key: "l" }); });
+      expect(harness.current().transport.loop).toBe(false);
+      await act(async () => { harness.root.unmount(); });
+    });
+
+    it("all of them yield to text entry and to focused value controls", async () => {
+      const { harness } = await importOne();
+      const text = document.createElement("input");
+      text.type = "text";
+      document.body.appendChild(text);
+      const range = document.createElement("input");
+      range.type = "range";
+      document.body.appendChild(range);
+      await act(async () => {
+        key({ key: "ArrowRight", target: text });
+        key({ key: "a", target: text });
+        key({ key: "ArrowRight", target: range });
+        key({ key: "a", target: range });
+      });
+      expect(harness.current().transport.currentTimeSec).toBe(0);
+      expect(harness.current().transport.playbackKind).toBe("source");
+      await act(async () => { harness.root.unmount(); });
+    });
+  });
+
   it("re-pushes the live chain when switching Album<->Track during Mastered playback (§5)", async () => {
     const track = makeTrack("mode-switch-1", "C:/audio/modeswitch.wav");
     mocks.api.importTracks.mockResolvedValue([track]);

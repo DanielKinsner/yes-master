@@ -12,6 +12,7 @@ import { useFirstRunGuide } from "./hooks/useFirstRunGuide";
 import { StandardView } from "./components/StandardView";
 import { FirstRunOverlay } from "./components/FirstRunOverlay";
 import { hasNonManagedEdits, isStandardPreset, needsStandardReturnReset } from "./lib/standard-managed";
+import { SHORTCUTS, isTextEntryTarget } from "./lib/shortcuts";
 import { PresetIcon, PRESET_ACCENT, PRESET_TONE } from "./components/PresetIcon";
 import { RightRail, MasterOutPanel } from "./components/RightRail";
 import { VisualEqPanel } from "./components/VisualEqPanel";
@@ -224,7 +225,19 @@ const EMPTY_AUDIO_OUTPUT_SETTINGS: AudioOutputSettingsState = {
 function App() {
   const tm = useTrackMaster();
   const audioOutput = useAudioOutputSettings(tm.clearPlaybackDeviceLost);
-  const [chromePanel, setChromePanel] = useState<"settings" | "help" | null>(null);
+  const [chromePanel, setChromePanel] = useState<"settings" | "help" | "shortcuts" | null>(null);
+  // Pass 4 (2026-08-19): `?` opens the shortcut list (Shift+/ on most
+  // layouts — we read the produced character). Yields to text entry.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "?" || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (isTextEntryTarget(e.target)) return;
+      e.preventDefault();
+      setChromePanel((p) => (p === "shortcuts" ? null : "shortcuts"));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const [modeNotice, setModeNotice] = useState<string | null>(null);
   // Slice 7b: the version of an available update (null = none / dismissed).
   const [updateAvailable, setUpdateAvailable] = useState<string | null>(null);
@@ -607,6 +620,9 @@ function App() {
       {chromePanel === "help" && (
         <HelpPanel onClose={() => setChromePanel(null)} />
       )}
+      {chromePanel === "shortcuts" && (
+        <ShortcutsPanel onClose={() => setChromePanel(null)} />
+      )}
       {nav.returnConfirmOpen && (
         <BackToStandardConfirm
           saving={tm.savingPreset}
@@ -968,6 +984,33 @@ export function HelpPanel({ onClose }: { onClose: () => void }) {
           </p>
         )}
       </div>
+    </ChromeDialog>
+  );
+}
+
+/// Pass 4 (2026-08-19): the `?` overlay. Reads the same catalogue the key
+/// handlers read (lib/shortcuts.ts), so it cannot advertise a dead key.
+export function ShortcutsPanel({ onClose }: { onClose: () => void }) {
+  return (
+    <ChromeDialog title="Shortcuts" eyebrow="Keyboard" onClose={onClose}>
+      <dl className="shortcut-list">
+        {SHORTCUTS.map((s) => (
+          <div className="shortcut-row" key={s.label}>
+            <dt className="shortcut-keys">
+              {s.keys.map((k, i) => (
+                <kbd key={`${k}-${i}`}>{k}</kbd>
+              ))}
+            </dt>
+            <dd className="shortcut-label">
+              {s.label}
+              {s.scope === "advanced" && <span className="shortcut-scope">Advanced</span>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="shortcut-note">
+        Shortcuts yield to text fields, and seek / A / L also yield while a knob, number field or select has focus.
+      </p>
     </ChromeDialog>
   );
 }

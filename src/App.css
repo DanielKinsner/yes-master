@@ -8351,3 +8351,40 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
   border: 1px solid var(--hairline);
   background: rgba(255, 255, 255, 0.06);
 }
+
+/* =====================================================================
+   PASS 4 (2026-08-19) — moments & onboarding
+   ===================================================================== */
+
+/* `?` shortcut overlay — reads lib/shortcuts.ts. */
+.shortcut-list { display: grid; gap: 0.35rem; margin: 0.2rem 0 0.6rem; }
+.shortcut-row {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.28rem 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.shortcut-row:last-child { border-bottom: 0; }
+.shortcut-keys { display: inline-flex; gap: 0.28rem; flex-wrap: wrap; }
+.shortcut-keys kbd {
+  font: 600 0.7rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text-0);
+  padding: 0.22rem 0.42rem;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-strong);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+}
+.shortcut-label { color: var(--text-1); font-size: 0.8rem; display: flex; gap: 0.5rem; align-items: center; }
+.shortcut-scope {
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.06rem 0.4rem;
+}
+.shortcut-note { color: var(--text-2); font-size: 0.72rem; margin: 0; }
