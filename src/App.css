@@ -8156,3 +8156,31 @@ input:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .gr-meter-fill { transition: none; }
 }
+
+/* PURPOSE: ORIENTATION — entering Advanced, the rail and sidebar arrive
+   from their own edges while the deck rises (console-rise). One
+   choreography, three surfaces; opacity + transform only. */
+@keyframes rail-in    { from { opacity: 0; transform: translateX(14px); }  to { opacity: 1; transform: none; } }
+@keyframes sidebar-in { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
+.app:not(.app-standard) .right-rail { animation: rail-in 420ms var(--ease-out) both; animation-delay: 80ms; }
+.app:not(.app-standard) .sidebar    { animation: sidebar-in 420ms var(--ease-out) both; }
+
+/* PURPOSE: ORIENTATION — a clean export draws its check after the card has
+   landed (overlay-surface-in), so "done" is a gesture, not a static glyph.
+   stroke-dashoffset only; the circle is untouched. */
+@keyframes check-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.receipt-verified-clean .receipt-check-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: check-draw 420ms var(--ease-out) 220ms forwards;
+}
+/* PURPOSE: ORIENTATION — Standard's "Master created" ✓ pops in once. */
+@keyframes done-pop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+.std-export-done-check { display: inline-block; animation: done-pop 360ms var(--ease-out) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app:not(.app-standard) .right-rail,
+  .app:not(.app-standard) .sidebar,
+  .std-export-done-check { animation: none; }
+  .receipt-verified-clean .receipt-check-path { animation: none; stroke-dashoffset: 0; }
+}

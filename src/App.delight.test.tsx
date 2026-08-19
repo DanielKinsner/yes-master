@@ -183,6 +183,10 @@ describe("U11 — reduced motion removes the motion, not the meaning", () => {
       ".wf-sheet-played",
       ".lufs-bar-hold",
       ".gr-meter-fill",
+      ".right-rail",
+      ".sidebar",
+      ".receipt-check-path",
+      ".std-export-done-check",
     ]) {
       expect(reduced).toContain(selector);
     }
@@ -261,6 +265,10 @@ describe("U11 — effects acknowledge real changes only", () => {
       "quality-verdict-change",
       // Alive pass 1 (2026-08-19)
       "ab-land",
+      "rail-in",
+      "sidebar-in",
+      "check-draw",
+      "done-pop",
     ]) {
       const at = CSS.indexOf(`@keyframes ${name}`);
       expect(at, `keyframes ${name} missing`).toBeGreaterThan(-1);
