@@ -3,7 +3,14 @@ import { describe, expect, it } from "vitest";
 
 import type { MasteringSettings } from "../bindings";
 import { ADAPTIVE_STRENGTH_DEFAULT, EQ_BAND_DEFAULTS } from "../bindings";
-import { forceAdvancedOnStandardEntry, hasNonManagedEdits, resetToStandardManaged } from "./standard-managed";
+import {
+  forceAdvancedOnStandardEntry,
+  hasNonManagedEdits,
+  isStandardPreset,
+  needsStandardReturnReset,
+  resetForStandardReturn,
+  resetToStandardManaged,
+} from "./standard-managed";
 
 function base(overrides: Partial<MasteringSettings> = {}): MasteringSettings {
   return {
@@ -231,5 +238,43 @@ describe("forceAdvancedOnStandardEntry (always-clean invariant guard)", () => {
 
   it("is false when there is no selected track (nothing to leak)", () => {
     expect(guard({ isAlbum: false, hasTrack: false, settings: base({ eq_low_db: 9 }) })).toBe(false);
+  });
+});
+
+// Owner 2026-08-19: an Advanced-only style (Spatial / Warmth / Punch / Loud /
+// custom) has no Standard tile. Returning to Standard with one selected used
+// to land on "no style selected" with no warning; now it is gated like any
+// other Advanced edit, and the reset lands on Universal at the same intensity.
+describe("non-Standard preset on the Advanced→Standard return", () => {
+  it("knows which presets have a Standard tile", () => {
+    expect(isStandardPreset({ kind: "universal" })).toBe(true);
+    expect(isStandardPreset({ kind: "clarity" })).toBe(true);
+    expect(isStandardPreset({ kind: "tape" })).toBe(true);
+    expect(isStandardPreset({ kind: "oomph" })).toBe(true);
+    expect(isStandardPreset({ kind: "spatial" })).toBe(false);
+    expect(isStandardPreset({ kind: "loud" })).toBe(false);
+    expect(isStandardPreset({ kind: "custom", id: "mine" } as never)).toBe(false);
+  });
+
+  it("needsStandardReturnReset is hasNonManagedEdits OR a non-Standard preset", () => {
+    expect(needsStandardReturnReset(base())).toBe(false);
+    expect(needsStandardReturnReset(base({ eq_low_db: 1 }))).toBe(true);
+    expect(needsStandardReturnReset(base({ preset: { kind: "spatial" } }))).toBe(true);
+    // Still NOT a non-managed edit in the Reset-all sense: style stays the
+    // user's on the Advanced rail's Reset all (owner 2026-08-19).
+    expect(hasNonManagedEdits(base({ preset: { kind: "spatial" } }))).toBe(false);
+  });
+
+  it("resetForStandardReturn lands a non-Standard preset on Universal at the same intensity", () => {
+    const out = resetForStandardReturn(base({ preset: { kind: "spatial" }, intensity: 0.75, eq_low_db: 2 }));
+    expect(out.preset).toEqual({ kind: "universal" });
+    expect(out.intensity).toBe(0.75);
+    expect(out.eq_low_db).toBe(0);
+  });
+
+  it("resetForStandardReturn keeps a Standard preset untouched", () => {
+    const out = resetForStandardReturn(base({ preset: { kind: "oomph" }, eq_low_db: 2 }));
+    expect(out.preset).toEqual({ kind: "oomph" });
+    expect(out.eq_low_db).toBe(0);
   });
 });

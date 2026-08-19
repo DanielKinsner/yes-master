@@ -6,9 +6,10 @@
 // invariant — its non-managed fields are always at their defaults — which
 // these functions detect and enforce (see design spec §2b).
 
-import type { MasteringSettings } from "../bindings";
+import type { MasteringSettings, Preset } from "../bindings";
 import { ADAPTIVE_STRENGTH_DEFAULT, EQ_BAND_DEFAULTS } from "../bindings";
 import { eqBandsAreDefault } from "./tone-reset";
+import { presetToStyle } from "./standard-mapping";
 
 export function hasNonManagedEdits(s: MasteringSettings): boolean {
   if (
@@ -113,3 +114,27 @@ export function forceAdvancedOnStandardEntry(args: {
 // its own test. The invariant tests now compose the production pieces —
 // `forceAdvancedOnStandardEntry` + `hasNonManagedEdits` — exactly the way
 // the navigation machine does.)
+
+// ---------------------------------------------------------------------------
+// Advanced→Standard return gate (owner 2026-08-19).
+//
+// Standard has tiles for four styles only. An Advanced-only preset (Spatial /
+// Warmth / Punch / Loud / custom) is NOT a "non-managed edit" — the Advanced
+// rail's Reset all keeps the user's style by owner decision — but Standard
+// cannot show it: the return used to land on "no tile selected" with the
+// intensity knob wherever Advanced left it and no warning. So the RETURN
+// path gates on a wider predicate and its reset lands on Universal at the
+// same intensity; Reset all keeps using `resetToStandardManaged`.
+
+export function isStandardPreset(preset: Preset): boolean {
+  return presetToStyle(preset) !== null;
+}
+
+export function needsStandardReturnReset(s: MasteringSettings): boolean {
+  return hasNonManagedEdits(s) || !isStandardPreset(s.preset);
+}
+
+export function resetForStandardReturn(s: MasteringSettings): MasteringSettings {
+  const base = resetToStandardManaged(s);
+  return isStandardPreset(s.preset) ? base : { ...base, preset: { kind: "universal" } };
+}

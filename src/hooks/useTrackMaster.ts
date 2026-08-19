@@ -30,7 +30,10 @@ import {
   shouldCoalesceCommit,
 } from "../lib/history-stack";
 import { resetToneSettings } from "../lib/tone-reset";
-import { resetToStandardManaged as resetToStandardManagedSettings } from "../lib/standard-managed";
+import {
+  resetForStandardReturn as resetForStandardReturnSettings,
+  resetToStandardManaged as resetToStandardManagedSettings,
+} from "../lib/standard-managed";
 import { standardExportSettings } from "../lib/standard-export";
 import { buildExportReport } from "../lib/export-receipt";
 import { userErrorMessage, type UserErrorContext } from "../lib/user-errors";
@@ -1757,6 +1760,15 @@ export function useTrackMaster() {
     updateSettings(selectedTrackId, (prev) => resetToStandardManagedSettings(prev));
   }, [selectedTrackId, updateSettings]);
 
+  // Owner 2026-08-19: the Advanced→Standard return's reset. Same as Reset
+  // all, plus an Advanced-only style (Spatial / Warmth / Punch / Loud /
+  // custom) lands on Universal at the same intensity, because Standard has
+  // no tile for it. One undo step like every other settings edit.
+  const resetForStandardReturn = useCallback(() => {
+    if (!selectedTrackId) return;
+    updateSettings(selectedTrackId, (prev) => resetForStandardReturnSettings(prev));
+  }, [selectedTrackId, updateSettings]);
+
   // UI-truthfulness contract (B7): when the user edits a field that a
   // non-Custom DeliveryProfile would shadow at render time, the
   // displayed value MUST become the value export uses. The pure logic
@@ -2880,6 +2892,7 @@ export function useTrackMaster() {
     setEqBandPoint,
     resetToneControls,
     resetToStandardManaged,
+    resetForStandardReturn,
     setAdvanced,
     setInputGain,
     setOutputGain,

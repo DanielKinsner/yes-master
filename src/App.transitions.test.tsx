@@ -575,6 +575,44 @@ describe("App Standard<->Advanced view transitions", () => {
     });
   });
 
+  it("7b) an Advanced-only style (Spatial) with no other edits is gated too; Reset lands on Universal with a selected tile (owner 2026-08-19)", async () => {
+    seedViewMode("standard");
+    mocks.api.loadRecentSession.mockResolvedValue(
+      makeSession({ ...DEFAULT_SETTINGS, preset: { kind: "spatial" }, intensity: 0.75 }),
+    );
+    const { root, container } = await mountApp();
+
+    // Forced into Advanced: Standard has no Spatial tile.
+    await waitFor(() => {
+      expect(hasSidebar(container)).toBe(true);
+    });
+    expect(affordanceText(container)).toBe("‹ Back to Standard");
+
+    await click(affordance(container)!);
+    await waitFor(() => {
+      expect(confirmDialog(container)).not.toBeNull();
+    });
+    // The dialog says what will happen, by name.
+    expect(confirmDialog(container)!.textContent).toContain("Spatial");
+    expect(confirmDialog(container)!.textContent).toContain("Universal");
+
+    await click(findButtonByText(container, "Reset & continue"));
+    await waitFor(() => {
+      expect(confirmDialog(container)).toBeNull();
+      expect(affordanceText(container)).toBe("Advanced");
+    });
+    // Standard shows a selected tile (Universal) — never "nothing selected".
+    const active = container.querySelector(".std-tile.is-active");
+    expect(active).not.toBeNull();
+    expect(active!.textContent).toContain("Universal");
+    // Intensity survived the return.
+    expect(container.textContent).toContain("75%");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("8) album-mode session forces Advanced even when last-Standard", async () => {
     // Album Master is Advanced-only in v1: even with last-Standard seeded and a
     // clean track, an album-mode session must force Advanced.

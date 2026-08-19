@@ -11,7 +11,7 @@ import { useNavigationMachine } from "./hooks/useNavigationMachine";
 import { useFirstRunGuide } from "./hooks/useFirstRunGuide";
 import { StandardView } from "./components/StandardView";
 import { FirstRunOverlay } from "./components/FirstRunOverlay";
-import { hasNonManagedEdits } from "./lib/standard-managed";
+import { hasNonManagedEdits, isStandardPreset, needsStandardReturnReset } from "./lib/standard-managed";
 import { PresetIcon, PRESET_ACCENT, PRESET_TONE } from "./components/PresetIcon";
 import { RightRail, MasterOutPanel } from "./components/RightRail";
 import { VisualEqPanel } from "./components/VisualEqPanel";
@@ -54,7 +54,7 @@ import { requestGuideReset } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
 import { SUPPORTED_FORMATS_COPY } from "./lib/supported-formats";
 import { formatDuration } from "./lib/time-format";
-import { PRESET_OPTIONS } from "./lib/preset-copy";
+import { PRESET_OPTIONS, presetCopy } from "./lib/preset-copy";
 import "./App.css";
 
 // The first four mirror the Standard tiles (Universal/Clarity/Tape/Oomph) in
@@ -242,8 +242,12 @@ function App() {
     hadPriorSession: tm.hadPriorSession,
     isAlbum: tm.mode === "album",
     hasTrack: !!tm.selectedTrack,
+    // Owner 2026-08-19: an Advanced-only style (Spatial / Warmth / Punch /
+    // Loud / custom) counts as dirty for the Standard gate — Standard has no
+    // tile for it, so the return must confirm + land on Universal instead of
+    // silently showing no selected style.
     hasNonManagedEdits:
-      !!tm.selectedTrack && hasNonManagedEdits(tm.selectedSettings),
+      !!tm.selectedTrack && needsStandardReturnReset(tm.selectedSettings),
     // setMode is plain state (albumIntent/overrides live separately), so
     // leaving and re-entering Album loses no album configuration.
     leaveAlbumMode: () => tm.setMode("track"),
@@ -262,7 +266,7 @@ function App() {
     // A silent return (clean track, or nothing selected) reaches Standard now,
     // so record it now; a dirty return opens the confirm dialog and is recorded
     // on completeReturn instead (cancel keeps Advanced, deliberately unrecorded).
-    if (!tm.selectedTrack || !hasNonManagedEdits(tm.selectedSettings)) {
+    if (!tm.selectedTrack || !needsStandardReturnReset(tm.selectedSettings)) {
       tm.rememberTrackView(tm.selectedTrackId, "standard");
     }
     nav.requestBackToStandard();
@@ -608,9 +612,15 @@ function App() {
       {nav.returnConfirmOpen && (
         <BackToStandardConfirm
           saving={tm.savingPreset}
+          nonStandardStyle={
+            tm.selectedSettings && !isStandardPreset(tm.selectedSettings.preset)
+              ? presetCopy(tm.selectedSettings.preset).label
+              : null
+          }
+          hasAdvancedEdits={!!tm.selectedSettings && hasNonManagedEdits(tm.selectedSettings)}
           onCancel={nav.cancelReturn}
           onReset={() => {
-            tm.resetToStandardManaged();
+            tm.resetForStandardReturn();
             completeReturnToStandard();
           }}
           onSaveAsPreset={async (name) => {
@@ -618,7 +628,7 @@ function App() {
             // is async; never discard the user's edits when the write failed.
             const ok = await tm.saveUserPreset(name);
             if (ok) {
-              tm.resetToStandardManaged();
+              tm.resetForStandardReturn();
               completeReturnToStandard();
             }
             return ok;
@@ -981,11 +991,20 @@ export function HelpPanel({ onClose }: { onClose: () => void }) {
 
 function BackToStandardConfirm({
   saving,
+  nonStandardStyle = null,
+  hasAdvancedEdits = true,
   onCancel,
   onReset,
   onSaveAsPreset,
 }: {
   saving: boolean;
+  /// Label of the selected style when it has no Standard tile (Spatial,
+  /// Warmth, Punch, Loud, custom) — the dialog then says the return lands on
+  /// Universal. Null when the style is one of Standard's four.
+  nonStandardStyle?: string | null;
+  /// Whether there are Advanced (non-managed) edits to clear. False when the
+  /// ONLY reason for the gate is the non-Standard style.
+  hasAdvancedEdits?: boolean;
   onCancel: () => void;
   onReset: () => void;
   onSaveAsPreset: (name: string) => Promise<boolean>;
@@ -1010,8 +1029,12 @@ function BackToStandardConfirm({
       <div className="modal-card">
         <h2 className="modal-title">Back to Standard</h2>
         <p className="modal-body">
-          Back to Standard clears your advanced edits but keeps your style,
-          intensity, and loudness settings. Save them as a preset first?
+          {nonStandardStyle && hasAdvancedEdits &&
+            `Back to Standard clears your advanced edits and switches ${nonStandardStyle} to Universal (Standard has no ${nonStandardStyle} style); intensity and loudness stay. Save them as a preset first?`}
+          {nonStandardStyle && !hasAdvancedEdits &&
+            `Standard has no ${nonStandardStyle} style. Going back switches to Universal at the same intensity and loudness. Save ${nonStandardStyle} as a preset first?`}
+          {!nonStandardStyle &&
+            "Back to Standard clears your advanced edits but keeps your style, intensity, and loudness settings. Save them as a preset first?"}
         </p>
         <div className="modal-save-row">
           <input
