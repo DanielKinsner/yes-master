@@ -1869,10 +1869,12 @@ button.primary:disabled {
 .tile:hover {
   border-color: var(--border-strong);
   transform: translateY(-1px);
+  /* Owner 2026-08-19: hover ~40% as dramatic as before (wash 32→27%,
+     icon lift/scale and shadow cut to match in the shared rule below). */
   background:
     radial-gradient(
       ellipse 80% 70% at 50% 32%,
-      color-mix(in srgb, var(--tile-accent, #4d8bff) 32%, transparent),
+      color-mix(in srgb, var(--tile-accent, #4d8bff) 27%, transparent),
       transparent 60%
     ),
     linear-gradient(180deg, rgba(31, 37, 51, 0.9) 0%, rgba(13, 16, 24, 0.96) 100%);
@@ -1898,8 +1900,8 @@ button.primary:disabled {
 }
 
 .tile:hover .tile-icon {
-  filter: brightness(1.05) saturate(1.05);
-  transform: translateY(-1px) scale(1.03);
+  filter: brightness(0.99) saturate(1.05);
+  transform: scale(1.012);
 }
 
 .tile.active .tile-icon {
@@ -4624,13 +4626,14 @@ button.primary:disabled {
   transition: transform 80ms ease;
 }
 
+/* Owner 2026-08-19: hover glow + drag effect ~30% less dramatic. */
 .knob-vis svg:hover {
-  transform: scale(1.025);
+  transform: scale(1.017);
 }
 
 .knob-vis svg.is-dragging,
 .knob-vis svg:active {
-  transform: scale(1.04);
+  transform: scale(1.028);
 }
 
 /* Halo behind the knob — placed on .knob-vis so it sits BEHIND the SVG
@@ -4644,15 +4647,15 @@ button.primary:disabled {
 
 .knob:hover .knob-vis {
   box-shadow:
-    0 0 22px color-mix(in srgb, var(--knob-tone, #4d8bff) 35%, transparent),
-    0 0 60px color-mix(in srgb, var(--knob-tone, #4d8bff) 14%, transparent);
+    0 0 16px color-mix(in srgb, var(--knob-tone, #4d8bff) 25%, transparent),
+    0 0 42px color-mix(in srgb, var(--knob-tone, #4d8bff) 10%, transparent);
 }
 
 .knob:active .knob-vis,
 .knob .knob-vis:has(svg.is-dragging) {
   box-shadow:
-    0 0 28px color-mix(in srgb, var(--knob-tone, #4d8bff) 60%, transparent),
-    0 0 80px color-mix(in srgb, var(--knob-tone, #4d8bff) 22%, transparent);
+    0 0 20px color-mix(in srgb, var(--knob-tone, #4d8bff) 42%, transparent),
+    0 0 56px color-mix(in srgb, var(--knob-tone, #4d8bff) 15%, transparent);
 }
 
 .knob-fallback {
@@ -5659,20 +5662,21 @@ button.primary:disabled {
   transition: filter 150ms ease, transform 150ms ease;
 }
 .std-tile:hover {
-  transform: translateY(-3px);
+  transform: translateY(-1px);
   border-color: var(--border-strong);
+  /* Owner 2026-08-19: hover ~40% as dramatic as before. */
   background:
     radial-gradient(
       ellipse 80% 70% at 50% 32%,
-      color-mix(in srgb, var(--tile-accent, var(--accent)) 32%, transparent),
+      color-mix(in srgb, var(--tile-accent, var(--accent)) 27%, transparent),
       transparent 60%
     ),
     linear-gradient(180deg, rgba(31, 37, 51, 0.9) 0%, rgba(13, 16, 24, 0.96) 100%);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
 }
 .std-tile:hover .std-tile-icon img {
-  filter: brightness(1.05) saturate(1.05);
-  transform: translateY(-1px) scale(1.03);
+  filter: brightness(0.99) saturate(1.05);
+  transform: scale(1.012);
 }
 .std-tile.is-active {
   color: var(--text-0);
@@ -5697,12 +5701,9 @@ button.primary:disabled {
     drop-shadow(0 0 18px color-mix(in srgb, var(--tile-accent, var(--accent)) 60%, transparent));
   transform: scale(1.05);
 }
-.std-tile.is-active::after {
-  content: "✓"; position: absolute; top: 0.7rem; right: 0.75rem;
-  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
-  font-size: 0.7rem; color: #fff;
-  background: color-mix(in srgb, var(--tile-accent, var(--accent)) 85%, black 15%);
-}
+/* Owner 2026-08-19: the ✓ chip on the selected Standard tile is gone —
+   border, glow and tinted label already say "selected", the same way the
+   Advanced tiles do. One language for both views. */
 .std-tile-label { font-size: 0.98rem; font-weight: 600; letter-spacing: 0.02em; }
 .std-tile.is-active .std-tile-label { color: var(--tile-accent, var(--accent)); }
 
@@ -6919,11 +6920,12 @@ button.primary.std-create-master {
 
 .tile:hover,
 .std-tile:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--tile-accent, var(--accent)) 30%, var(--border-strong));
+  /* Owner 2026-08-19: ~40% of the previous lift / tint / shadow. */
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--tile-accent, var(--accent)) 12%, var(--border-strong));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 10px 24px -8px rgba(0, 0, 0, 0.6);
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 4px 10px -4px rgba(0, 0, 0, 0.35);
 }
 
 .tile.active,
@@ -6938,9 +6940,6 @@ button.primary.std-create-master {
 
 .tile-label { font-weight: 600; letter-spacing: 0.01em; }
 .std-tile-label { font-weight: 600; letter-spacing: 0.01em; }
-.std-tile.is-active::after {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
 
 /* --- Chips ----------------------------------------------------------- */
 
@@ -7893,12 +7892,16 @@ input:focus-visible,
 
 /* --- T1 · headings: rail sections AND deck blocks speak one language ---
    (.panel-title = rail + meter panels, .section-label = deck blocks, tracks,
-   styles; the Standard face keeps its own std-* headings.) */
+   styles. Owner 2026-08-19: the Standard face's headings — step labels,
+   rail titles, TRACKS — sit on the same rung: same size, weight, white.) */
 .panel-title,
 .section-label,
 .rail-section-head .panel-title,
 .knobs-row .section-label,
-.presets .section-label {
+.presets .section-label,
+.std-step-label,
+.std-rail-title,
+.std-tracks-head {
   font-size: var(--t1-size);
   letter-spacing: var(--t1-track);
   font-weight: 700;
@@ -7906,7 +7909,10 @@ input:focus-visible,
 }
 .panel-title::before,
 .section-label::before,
-.rail-section-head .panel-title::before { height: 0.8rem; opacity: 1; }
+.rail-section-head .panel-title::before,
+.std-step-label::before,
+.std-rail-title::before,
+.std-tracks-head::before { height: 0.8rem; opacity: 1; }
 
 /* --- T2 · control titles: seen, not whispered; same weight everywhere -- */
 .adv-knob-grid .knob-label,
@@ -8088,11 +8094,17 @@ input:focus-visible,
 .app[data-playback-kind="master"] .wf-sheet-played {
   filter: saturate(1.18) brightness(1.12);
 }
+/* PURPOSE: COMPREHENSION — MASTER OUT bars run a hair more saturated
+   (owner 2026-08-19: ~6%, "almost not noticeable") only while the master
+   is what you hear. Filter only. */
+.lufs-bar-fill { transition: height 90ms linear, filter 320ms var(--ease-out); }
+.app[data-playback-kind="master"] .lufs-bar-fill { filter: saturate(1.06); }
 
 @media (prefers-reduced-motion: reduce) {
   .ab-toggle button.on,
   .std-rail-ab button.on { animation: none; }
   .wf-sheet-played { transition: none; }
+  .lufs-bar-fill { transition: height 90ms linear; }
 }
 
 /* PURPOSE: COMPREHENSION — peak-hold pip: the highest recent peak stays

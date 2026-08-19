@@ -182,6 +182,7 @@ describe("U11 — reduced motion removes the motion, not the meaning", () => {
       ".ab-toggle button.on",
       ".wf-sheet-played",
       ".lufs-bar-hold",
+      ".lufs-bar-fill",
       ".gr-meter-fill",
       ".right-rail",
       ".sidebar",
