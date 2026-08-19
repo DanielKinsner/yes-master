@@ -10,7 +10,16 @@ import { prefersReducedMotion } from "../lib/motion";
 import { SUPPORTED_FORMATS_COPY } from "../lib/supported-formats";
 import { AnalysisOrb } from "./AnalysisOrb";
 
-export function EmptyState({ onAdd }: { onAdd: () => void }) {
+export function EmptyState({
+  onAdd,
+  onDemo,
+}: {
+  onAdd: () => void;
+  /// Pass 4 (2026-08-19): "Try a demo track" — the engine synthesises a
+  /// short loop into app-data and imports it, so a first-run user with
+  /// nothing to drop still reaches the Original → Mastered moment.
+  onDemo?: () => void;
+}) {
   const reducedMotion = prefersReducedMotion();
   return (
     <div className="empty-state empty-hero">
@@ -24,9 +33,16 @@ export function EmptyState({ onAdd }: { onAdd: () => void }) {
         export a technically checked master — without ever risking the source
         file.
       </p>
-      <button type="button" className="primary" onClick={onAdd}>
-        Import audio
-      </button>
+      <div className="empty-hero-actions">
+        <button type="button" className="primary" onClick={onAdd}>
+          Import audio
+        </button>
+        {onDemo && (
+          <button type="button" className="ghost-btn empty-hero-demo" onClick={onDemo}>
+            Try a demo track
+          </button>
+        )}
+      </div>
       <p className="empty-foot">
         Supports {SUPPORTED_FORMATS_COPY}.
       </p>

@@ -8412,3 +8412,7 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
   margin: 0.2rem 0 0.5rem;
 }
 .receipt-actions .primary { min-width: 6rem; }
+
+/* Empty state: Import + "Try a demo track" side by side. */
+.empty-hero-actions { display: inline-flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; justify-content: center; }
+.empty-hero-demo { min-height: 44px; padding: 0 1.1rem; border-radius: 999px; }

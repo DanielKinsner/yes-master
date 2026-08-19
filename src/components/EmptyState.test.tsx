@@ -36,6 +36,26 @@ describe("EmptyState welcome hero", () => {
     await act(async () => root.unmount());
   });
 
+  // Pass 4 (2026-08-19): a first-run user with nothing to drop still
+  // reaches the A/B — "Try a demo track" beside Import. Hidden when the
+  // host passes no onDemo (older callers / surfaces without an engine).
+  it("offers a demo track beside Import when onDemo is provided", async () => {
+    const onDemo = vi.fn();
+    const { container, root } = await render(<EmptyState onAdd={() => {}} onDemo={onDemo} />);
+    const btn = Array.from(container.querySelectorAll<HTMLButtonElement>("button"))
+      .find((b) => b.textContent?.includes("Try a demo track"))!;
+    expect(btn).toBeTruthy();
+    await act(async () => { btn.click(); });
+    expect(onDemo).toHaveBeenCalledOnce();
+    await act(async () => root.unmount());
+  });
+
+  it("hides the demo affordance without onDemo", async () => {
+    const { container, root } = await render(<EmptyState onAdd={() => {}} />);
+    expect(container.textContent).not.toContain("demo track");
+    await act(async () => root.unmount());
+  });
+
   it("keeps the supported formats footnote", async () => {
     const { container, root } = await render(<EmptyState onAdd={() => {}} />);
     const text = container.textContent ?? "";

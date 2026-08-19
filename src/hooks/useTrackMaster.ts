@@ -1441,6 +1441,18 @@ export function useTrackMaster() {
     await reanalyzeTracks(tracks);
   }, [tracks, reanalyzeTracks]);
 
+  // Pass 4 (2026-08-19): the empty state's "Try a demo track" — the engine
+  // synthesises the loop once into app-data and we import it like any file.
+  const importDemoTrack = useCallback(async () => {
+    setError(null);
+    try {
+      const path = await api.prepareDemoTrack();
+      await importFilesRef.current([path]);
+    } catch (err) {
+      setError(messageOf(err));
+    }
+  }, []);
+
   const importFiles = useCallback(
     async (paths: string[]) => {
       if (paths.length === 0) return;
@@ -2969,6 +2981,7 @@ export function useTrackMaster() {
 
     openImportDialog,
     importFiles,
+    importDemoTrack,
     reanalyzeTrack,
     reanalyzeAll,
     selectTrack,

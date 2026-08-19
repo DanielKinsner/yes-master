@@ -5,6 +5,7 @@ pub mod audio;
 pub mod confidence;
 pub mod decode;
 pub mod deep_analysis;
+pub mod demo;
 pub mod diagnostics;
 pub mod dsp;
 pub mod engine;
@@ -224,6 +225,7 @@ pub fn run() {
             settings::list_user_presets,
             settings::delete_user_preset,
             diagnostics::save_diagnostics_report,
+            demo::prepare_demo_track,
             install_update,
         ])
         .run(tauri::generate_context!())

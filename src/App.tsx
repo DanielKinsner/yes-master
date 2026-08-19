@@ -462,6 +462,10 @@ function App() {
               nav.requestBackToStandard();
               void tm.openImportDialog();
             }}
+            onDemo={() => {
+              nav.requestBackToStandard();
+              void tm.importDemoTrack();
+            }}
           />
         )}
       </main>
@@ -523,7 +527,9 @@ function App() {
         // switching, so this handler only owns the view change.
         <StandardView tm={tm} guide={guide} onEnterAdvanced={enterAdvanced} />
       )}
-      {view === "standard" && !tm.selectedTrack && <EmptyState onAdd={tm.openImportDialog} />}
+      {view === "standard" && !tm.selectedTrack && (
+        <EmptyState onAdd={tm.openImportDialog} onDemo={tm.importDemoTrack} />
+      )}
       {/* First-run coachmark (L9): a floating sibling of the drop/toast
           overlays, not an inline rail chip. Only Standard's flow drives it;
           gate on the same condition that mounts StandardView so a stale step

@@ -624,6 +624,9 @@ export async function mockInvoke<T>(
     case "cancel_render":
       return null as unknown as T;
 
+    case "prepare_demo_track":
+      return "/preview/demo/yes-master-demo.wav" as unknown as T;
+
     case "run_export_checks":
       return (
         activeScenario().exportChecks === "warning" ? WARNING_EXPORT_CHECKS : []

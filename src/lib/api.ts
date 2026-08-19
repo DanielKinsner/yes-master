@@ -286,6 +286,8 @@ export const api = {
   /// Write a plain-text diagnostics report (recent logs + session summary,
   /// assembled locally — nothing is transmitted) to a user-chosen path.
   /// Returns the written path.
+  /// Pass 4 (2026-08-19): synthesise (once) and return the demo track path.
+  prepareDemoTrack: () => invoke<string>("prepare_demo_track"),
   saveDiagnosticsReport: (targetPath: string) =>
     invoke<string>("save_diagnostics_report", { targetPath }),
 
