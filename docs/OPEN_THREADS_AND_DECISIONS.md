@@ -7,7 +7,20 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
-> **⚠ 2026-07-27 — CANDIDATE FREEZE IN FORCE (U14 closed).** `v0.9.1-beta.1`
+> **2026-08-19 — The 2026-07-27 candidate (`v0.9.1-beta.1` @ `34f7c88`) is
+> SUPERSEDED; the freeze is lifted. Owner decision.** Three weeks of
+> feature/design work landed on `main` after the tag (movable EQ bands,
+> bipolar knobs, Source Insight, the premium restyle, the four UI polish
+> passes, the stuck-analysis fix), so the tagged bytes no longer match what
+> will ship. Version is now **0.9.2** (three manifests + preview mock). Next
+> candidate: install + the one listening sitting on current `main`, then
+> re-run U14's gates and re-tag **`v0.9.2-beta.1`**; the 07-27 draft
+> releases (`v0.9.1-beta.1` and the three stray `-manual-*` drafts) are stale
+> and should be deleted on GitHub before the new tag. U15–U17 remain
+> owner-lane. The freeze rule itself stands: it re-enters force at the next
+> tag. Details: `docs/plans/beta-go-no-go.md` §Candidate freeze.
+
+> *(Historical, 2026-07-27 — superseded above.)* **⚠ CANDIDATE FREEZE IN FORCE (U14 closed).** `v0.9.1-beta.1`
 > sits at merge commit `34f7c88`; remote CI is green at that tip and the
 > tag-triggered Release run `30294627200` produced the complete 9-asset draft
 > release (unpublished). **Owner decision, same day:** the first tag run

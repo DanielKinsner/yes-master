@@ -12,6 +12,18 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-08-19 — Candidate `v0.9.1-beta.1` superseded; version 0.9.2
+
+Owner decision: the 2026-07-27 candidate no longer represents `main` (~70
+commits of feature/design work landed after the tag), so it is superseded
+and the candidate freeze is lifted until the next tag. Version bumped to
+**0.9.2** in the three desktop manifests, the three Cargo.locks, the preview
+mock build stamp, the lockfile and the bug-form placeholder
+(`version-coherence.test.ts` green). Next: install + the one listening
+sitting on current `main`, re-run U14's gates, re-tag `v0.9.2-beta.1`, delete
+the stale 07-27 drafts on GitHub. Recorded in `docs/OPEN_THREADS_AND_DECISIONS.md`
+and `docs/plans/beta-go-no-go.md` §Candidate freeze.
+
 ## 2026-08-19 — Pass 4: moments & onboarding
 
 - **Keyboard**: ← / → seek 5 s (Shift: 30 s), Home jumps to start, **A**

@@ -29,7 +29,7 @@ body:
     attributes:
       label: App version and build
       description: Help → the build stamp at the bottom of the export receipt, or Settings → app info.
-      placeholder: "0.9.1 · a1b2c3d"
+      placeholder: "0.9.2 · a1b2c3d"
     validations:
       required: true
 

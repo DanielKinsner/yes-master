@@ -227,6 +227,8 @@ is post-beta advisory under D16.
 | 2026-07-27 | U14→U16 | `9317a00` tag run `30287485586`; proving runs `30289561235`, `30291637405`, `30292750295` | GitHub Actions | Release workflow | first tag-triggered Release run + three branch-dispatch proving runs | — | **The first tag run FAILED its macOS draft build and exposed three latent Release-workflow bugs, each fixed and proven on a branch (main frozen):** (1) empty-but-set `APPLE_SIGNING_IDENTITY` overrode the ad-hoc `"-"` config → `codesign -s ""` "no identity found"; (2) empty-but-set `APPLE_ID`/`APPLE_PASSWORD`/`APPLE_TEAM_ID` forced notarization with blanks → "Team ID must be at least 3 characters"; (3) the audit resolved the draft via `releases/tags/<tag>`, which cannot see drafts → the audit step had **never actually passed on any run**. Proving run 3 (`30292750295`) green end-to-end including the complete-draft audit. Owner approved merging the fixes and moving the tag same day. | GitHub Actions; branch history in merge `34f7c88` |
 | 2026-07-27 | U14/U16 | `34f7c88` (merge; tag `v0.9.1-beta.1` moved here) | GitHub Actions | draft release `v0.9.1-beta.1`, 9 assets | CI run `30294617651`; Release run `30294627200` (tag-triggered) | installed-machine (artifact identity) | **PASS — both.** CI green at the merge tip (workflow-file-only diff from `5c008f6`+docs, so every prior lane result stands). The tag-triggered Release run went green through the audit: draft `v0.9.1-beta.1` holds `YES.Master_0.9.1_universal.dmg`, `YES.Master_universal.app.tar.gz(+.sig)`, `YES.Master_0.9.1_x64_en-US.msi(+.sig)`, `YES.Master_0.9.1_x64-setup.exe(+.sig)`, `latest.json` (both platforms), `SHA256SUMS.txt`. **Draft, unpublished — publishing is the owner's click in U16/U17.** These workflow artifacts supersede the local `4e9fb3f` installers as the U15 install source, since they are the promotable bytes. | GitHub draft release `v0.9.1-beta.1` |
 
+| 2026-08-19 | U14 (re-opened) | `main` @ HEAD (0.9.2) | — | — | — | — | **Candidate `v0.9.1-beta.1` SUPERSEDED (owner).** ~70 commits landed after the tag; version bumped to 0.9.2 in three manifests + preview mock + lockfile. No new tag yet: U14's gates must be re-run on the new tip (local lanes were green at each landing commit today: npm 786/786, cargo 36/36 binaries, iPhone + Android bridges, headless 24 checks, landing asset gate). Stale 07-27 drafts to be deleted on GitHub. | this ledger |
+
 ### Candidate freeze
 
 U14 ends by tagging the release candidate at the exact commit whose evidence
@@ -237,18 +239,26 @@ branch that cannot feed the candidate. The freeze is a plan rule, not a
 branch-protection change, so **the U14 ledger entry must announce it** or a
 parallel agent session will not see it.
 
-**Freeze status: IN FORCE (declared 2026-07-27, U14 close-out).** Candidate
-tag `v0.9.1-beta.1` sits at merge commit `34f7c88` (moved there with owner
-approval after the release-workflow fixes — see the U14→U16 ledger rows).
-Remote CI is green at that tip (run `30294617651`) and the tag-triggered
-Release run `30294627200` produced the complete 9-asset draft. **No commits
-land on `main` until U17 closes or the candidate is rejected**, with the two
-freeze-era exceptions already exercised: owner-queue/ledger docs updates, and
-owner-approved merges. Work discovered during U15–U17 goes to
-`docs/OWNER_INPUT_QUEUE.md` and, if code is needed, onto a branch that cannot
-feed the candidate. A rejected candidate returns to U14: unfreeze, land
-fixes, bump to the next patch version, re-run the gates, re-tag. The freeze
-is a plan rule, not a branch-protection change.
+**Freeze status: NOT IN FORCE (candidate superseded 2026-08-19, owner
+decision).** The 2026-07-27 candidate `v0.9.1-beta.1` @ `34f7c88` was
+declared superseded: `main` moved ~70 commits past the tag (feature + design
+work through 2026-08-19), so the tagged bytes no longer represent the beta.
+Version bumped to **0.9.2**. Per the rule below, a rejected/superseded
+candidate returns to U14: land fixes (done — they are on `main`), bump the
+patch version (done), **re-run the gates on the new tip, re-tag
+`v0.9.2-beta.1`**, delete the stale 07-27 drafts on GitHub (`v0.9.1-beta.1`,
+`yes-master-v0.9.1-manual-2/3/4`). The freeze re-enters force at that tag.
+
+*Historical (2026-07-27):* Candidate tag `v0.9.1-beta.1` sat at merge commit
+`34f7c88` (moved there with owner approval after the release-workflow fixes —
+see the U14→U16 ledger rows). Remote CI was green at that tip (run
+`30294617651`) and the tag-triggered Release run `30294627200` produced the
+complete 9-asset draft. The freeze rule: **no commits land on `main` between
+a candidate tag and U17 closing**, with two exceptions: owner-queue/ledger
+docs updates, and owner-approved merges. Work discovered during U15–U17 goes
+to `docs/OWNER_INPUT_QUEUE.md` and, if code is needed, onto a branch that
+cannot feed the candidate. The freeze is a plan rule, not a branch-protection
+change.
 
 ---
 
