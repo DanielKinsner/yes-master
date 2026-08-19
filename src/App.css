@@ -7886,7 +7886,9 @@ input:focus-visible,
   --t1-size: 0.74rem;  --t1-track: 0.15em;
   --t2-size: 0.64rem;  --t2-track: 0.08em;
   --t3-size: 0.74rem;
-  --t4-size: 0.6rem;   --t4-track: 0.08em;
+  /* Pass 2 (2026-08-19): T4 was 0.6rem (9.6px) — the legibility floor on a
+     1366x768 laptop. One step up; the rail still fits 1440x900 expanded. */
+  --t4-size: 0.64rem;  --t4-track: 0.08em;
 }
 
 /* --- T1 · headings: rail sections AND deck blocks speak one language ---
@@ -8255,3 +8257,17 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
   .is-jump-target { animation: none; }
   .chain-stage-disc { transition: none; }
 }
+
+/* Per-band compressor card density: the plan rows and the preset summary
+   read as a compact table — one line each, tabular numbers, hairlines —
+   instead of 1.75rem pill rows. The GR bars sit tighter too. */
+.compressor-adaptive-band {
+  min-height: 0;
+  padding: 0.16rem 0;
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+}
+.compressor-adaptive-bands { margin-top: 0.2rem; }
+.compressor-preset-summary { font-size: 0.66rem; line-height: 1.3; padding: 0.3rem 0 0.2rem; }
+.gr-meters { gap: 0.14rem; margin: 0.05rem 0 0.25rem; }
+.compressor-mode-note { font-size: 0.66rem; }
