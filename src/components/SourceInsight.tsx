@@ -9,8 +9,9 @@
 //               status), an optional "Last export" group, and the actions.
 //
 // REVIEW here means "this analysis revision hasn't been acknowledged" — see
-// lib/source-insight.ts. Clicking the badge acknowledges; so does "Mark
-// reviewed" in the panel. Findings keep their own status after that.
+// lib/source-insight.ts. Opening the disclosure IS the acknowledgement
+// (owner 2026-08-19): the pill disappears the moment the panel opens, and
+// clicking the pill itself opens the panel. Findings keep their own status.
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import type { AnalysisResult, QualityCheck } from "../bindings";
@@ -64,7 +65,13 @@ export function SourceInsight({
     };
   }, [open]);
 
-  const acknowledge = useCallback(() => onAcknowledge(), [onAcknowledge]);
+  // Opening = reviewing. Acknowledge on the open transition only, so a
+  // fresh revision arriving while the panel is already open still gets its
+  // pill (the user hasn't looked at the NEW numbers yet).
+  const openAndAcknowledge = useCallback(() => {
+    setOpen(true);
+    if (unreviewed) onAcknowledge();
+  }, [unreviewed, onAcknowledge]);
 
   return (
     <div ref={rootRef} className={"source-insight" + (open ? " is-open" : "")}>
@@ -74,7 +81,7 @@ export function SourceInsight({
           className="source-insight-toggle"
           aria-expanded={open}
           aria-controls={panelId}
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => (open ? setOpen(false) : openAndAcknowledge())}
         >
           <span className="source-insight-eyebrow">Insight</span>
           <span className={`source-insight-dot is-${overall}`} aria-hidden="true" />
@@ -89,11 +96,13 @@ export function SourceInsight({
           <button
             type="button"
             className="source-insight-review"
-            title="New analysis — click to mark it reviewed"
-            aria-label="New analysis to review — mark reviewed"
+            title="New analysis — click to review it"
+            aria-label="New analysis to review — open source analysis"
+            aria-expanded={open}
+            aria-controls={panelId}
             onClick={(e) => {
               e.stopPropagation();
-              acknowledge();
+              openAndAcknowledge();
             }}
           >
             Review
@@ -105,7 +114,6 @@ export function SourceInsight({
         <div id={panelId} className="source-insight-panel" role="region" aria-label="Source analysis">
           <div className="source-insight-panel-head">
             <span className="source-insight-panel-title">Source analysis</span>
-            {unreviewed && <span className="source-insight-unread">Unreviewed</span>}
           </div>
           <dl className="source-insight-list">
             {rows.map((r) => (
@@ -158,15 +166,6 @@ export function SourceInsight({
               >
                 {isAnalyzing ? "Analyzing…" : "Re-analyze"}
               </button>
-            )}
-            {unreviewed ? (
-              <button type="button" className="ghost-btn source-insight-ack" onClick={acknowledge}>
-                Mark reviewed
-              </button>
-            ) : (
-              <span className="source-insight-reviewed" aria-live="polite">
-                Reviewed ✓
-              </span>
             )}
           </div>
         </div>

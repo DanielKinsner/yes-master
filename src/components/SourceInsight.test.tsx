@@ -125,24 +125,32 @@ function Host({ analysis, checks }: { analysis: AnalysisResult; checks?: Quality
 }
 
 describe("SourceInsight — REVIEW is an unacknowledged revision, not a warning", () => {
-  it("shows REVIEW for a fresh analysis, clears it on acknowledge, and keeps findings", () => {
+  it("clicking the REVIEW pill opens the panel and clears the pill; findings stay", () => {
     const el = mount(<Host analysis={HOT} />);
     const badge = () => el.querySelector<HTMLButtonElement>(".source-insight-review");
     expect(badge()).not.toBeNull();
-    // Clicking the badge acknowledges without opening the panel.
+    // Owner 2026-08-19: the pill is a way IN, not a checkbox.
     click(badge());
     expect(badge()).toBeNull();
-    expect(el.querySelector(".source-insight-panel")).toBeNull();
+    expect(el.querySelector(".source-insight-panel")).not.toBeNull();
     // The findings — including the hot true peak — are still there.
-    click(el.querySelector(".source-insight-toggle"));
     expect(el.querySelector(".source-insight-item.is-problem")).not.toBeNull();
-    expect(el.textContent).toContain("Reviewed ✓");
+  });
+
+  it("opening the disclosure is the acknowledgement — the pill goes as soon as it opens", () => {
+    const el = mount(<Host analysis={HOT} />);
+    expect(el.querySelector(".source-insight-review")).not.toBeNull();
+    click(el.querySelector(".source-insight-toggle"));
+    expect(el.querySelector(".source-insight-panel")).not.toBeNull();
+    expect(el.querySelector(".source-insight-review")).toBeNull();
+    // No leftover "mark reviewed" affordance to click twice.
+    expect(el.textContent).not.toContain("Mark reviewed");
+    expect(el.textContent).not.toContain("Unreviewed");
   });
 
   it("stays reviewed across re-renders and open/close, returns for a new revision or source", () => {
     const el = mount(<Host analysis={HOT} />);
     click(el.querySelector(".source-insight-toggle"));
-    click(el.querySelector(".source-insight-ack"));
     expect(el.querySelector(".source-insight-review")).toBeNull();
     // Same revision, new object identity (ordinary settings churn) → still reviewed.
     rerender(<Host analysis={{ ...HOT }} />);
