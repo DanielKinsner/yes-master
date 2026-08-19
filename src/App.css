@@ -5324,8 +5324,12 @@ button.primary:disabled {
     padding: 0.55rem 0.62rem;
   }
 
+  /* Dials scale with the viewport height the deck row actually has
+     (2026-08-19): since the knob box now hugs its dial there is no hidden
+     slack to absorb, so a fixed 104px left the Intensity block top-heavy
+     at 900-1000px tall windows. Floors keep 1360x820 honest. */
   .intensity-block .knob-vis {
-    max-width: 104px;
+    max-width: clamp(96px, 12vh, 124px);
   }
 
   .tone-shape-knobs {
@@ -5333,7 +5337,7 @@ button.primary:disabled {
   }
 
   .tone-shape-knobs .knob-vis {
-    max-width: 56px;
+    max-width: clamp(52px, 7vh, 68px);
   }
 
   .equalizer-block .visual-eq-panel-compact {
