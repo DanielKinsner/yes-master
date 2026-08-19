@@ -446,10 +446,13 @@ function WaveformDefs({ prefix }: { prefix: string }) {
         <stop offset="50%" stopColor="#5f8fe6" stopOpacity="0.85" />
         <stop offset="100%" stopColor="#3760b8" stopOpacity="0.55" />
       </linearGradient>
+      {/* Owner 2026-08-19: ~25% less intense than the first cut — each stop
+          is blended a quarter of the way back toward the unplayed colour, so
+          the heard span still reads as lit without going to paper-white. */}
       <linearGradient id={`${prefix}-fill-played`} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#7aa6ff" stopOpacity="0.95" />
-        <stop offset="50%" stopColor="#dbe7ff" stopOpacity="1" />
-        <stop offset="100%" stopColor="#7aa6ff" stopOpacity="0.95" />
+        <stop offset="0%" stopColor="#6995ed" stopOpacity="0.85" />
+        <stop offset="50%" stopColor="#bcd1f9" stopOpacity="0.96" />
+        <stop offset="100%" stopColor="#6995ed" stopOpacity="0.85" />
       </linearGradient>
     </defs>
   );
