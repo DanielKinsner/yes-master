@@ -7858,7 +7858,6 @@ input:focus-visible,
 /* --- T4 · subtext: captions, notes, auto pills ---------------------- */
 .adv-knob-grid .knob-caption,
 .tone-shape-knobs .knob-caption,
-.rail-card-advanced .adv-auto-pill,
 .rail-card-advanced .adv-auto-reset {
   font-size: var(--t4-size);
   letter-spacing: var(--t4-track);
@@ -7894,9 +7893,11 @@ input:focus-visible,
 .compressor-knob-grid .knob-value,
 .adv-knob-grid .knob-caption { line-height: 1.15; }
 
-/* Feel controls: two rows per field — [label · value · box] over [slider]. */
+/* Rail sliders — the four feel controls AND Preset Density — share one
+   two-row layout: [label · value · box] over [slider]. */
 .rail-card-advanced .advanced-grid { gap: 0.6rem 1rem; padding-top: 0.55rem; }
-.rail-card-advanced .advanced-grid .adv-field {
+.rail-card-advanced .advanced-grid .adv-field,
+.compressor-density-field .adv-field {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
@@ -7906,7 +7907,8 @@ input:focus-visible,
   column-gap: 0.25rem;
   row-gap: 0.2rem;
 }
-.rail-card-advanced .advanced-grid .adv-label {
+.rail-card-advanced .advanced-grid .adv-label,
+.compressor-density-field .adv-label {
   grid-area: label;
   display: inline-flex;
   align-items: center;
@@ -7918,14 +7920,22 @@ input:focus-visible,
      so clipping the label to it would truncate PRESENCE/AIR. */
   overflow: visible;
 }
-.rail-card-advanced .advanced-grid .adv-control { display: contents; }
-.rail-card-advanced .advanced-grid .adv-control .adv-value { grid-area: value; justify-self: end; white-space: nowrap; font-size: 0.7rem; }
-.rail-card-advanced .advanced-grid .adv-control .adv-number { grid-area: box; width: 2.15rem; padding: 0.1rem 0.15rem; font-size: 0.66rem; }
-.rail-card-advanced .advanced-grid .adv-control input[type="range"] { grid-area: slider; height: 22px; }
+.rail-card-advanced .advanced-grid .adv-control,
+.compressor-density-field .adv-control { display: contents; }
+.rail-card-advanced .advanced-grid .adv-control .adv-value,
+.compressor-density-field .adv-control .adv-value { grid-area: value; justify-self: end; white-space: nowrap; font-size: 0.7rem; }
+.rail-card-advanced .advanced-grid .adv-control .adv-number,
+.compressor-density-field .adv-control .adv-number { grid-area: box; width: 2.15rem; padding: 0.1rem 0.15rem; font-size: 0.66rem; }
+.rail-card-advanced .advanced-grid .adv-control input[type="range"],
+.compressor-density-field .adv-control input[type="range"] { grid-area: slider; height: 22px; }
 /* The Auto pill / ↺ AUTO chip live inside the label; keep them from
    pushing the label text out. */
 .rail-card-advanced .advanced-grid .adv-auto-pill,
-.rail-card-advanced .advanced-grid .adv-auto-reset { flex-shrink: 0; }
+.rail-card-advanced .advanced-grid .adv-auto-reset,
+.compressor-density-field .adv-auto-pill,
+.compressor-density-field .adv-auto-reset { flex-shrink: 0; }
+/* Same "don't say Auto three times" rule as the feel controls above. */
+.compressor-density-field .adv-auto-pill { display: none; }
 .rail-card-advanced .adaptive-block { padding-top: 0; }
 .rail-card-advanced .adaptive-block:empty { display: none; }
 
