@@ -7927,8 +7927,11 @@ input:focus-visible,
 .compressor-knob-grid { gap: 0.05rem 0.35rem; }
 .adv-knob-grid .knob,
 .compressor-knob-grid .knob { gap: 0.1rem; }
+/* Dial size (owner 2026-08-19): between the old 45px rail dial and the
+   deck's ~63px Tone Shape dials. No transform — the box hugs the dial, so
+   no negative-margin compensation either. */
 .adv-knob-grid .knob-vis,
-.compressor-knob-grid .knob-vis { transform: scale(0.8); margin: -0.4rem auto -0.44rem; }
+.compressor-knob-grid .knob-vis { transform: none; max-width: 54px; margin: 0 auto; }
 .adv-knob-grid .knob-caption { margin-top: -0.12rem; }
 .adv-knob-grid { padding: 0.15rem 0 0.05rem; margin-bottom: 0.3rem; }
 .adv-knob-grid .knob-label,
