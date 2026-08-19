@@ -342,12 +342,17 @@ export function VisualEqPanel({
       if (onEqPoint) {
         const [lo, hi] = EQ_BAND_RANGES[BAND_HZ_KEY[band]];
         const rawHz = xToHzInPlot(local.x);
-        onEqPoint(band, newDb, Math.round(Math.max(lo, Math.min(hi, rawHz))));
+        const newHz = Math.round(Math.max(lo, Math.min(hi, rawHz)));
+        // Pointer jitter inside one 0.1 dB / 1 Hz cell would otherwise push
+        // an identical settings mutation (and a live-chain update) per move.
+        if (newDb === gains[band] && newHz === bandHz[band]) return;
+        onEqPoint(band, newDb, newHz);
       } else {
+        if (newDb === gains[band]) return;
         onEq(band, newDb);
       }
     },
-    [dragging, toLocal, onEq, onEqPoint, yToDbInPlot, xToHzInPlot],
+    [dragging, toLocal, onEq, onEqPoint, yToDbInPlot, xToHzInPlot, gains, bandHz],
   );
 
   const handlePointerUp = useCallback(
