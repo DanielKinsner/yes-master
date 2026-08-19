@@ -464,7 +464,9 @@ function CircleCheckGlyph() {
   return (
     <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <circle cx="12" cy="12" r="9" />
-      <path d="M8.5 12.2l2.4 2.4 4.6-4.8" />
+      {/* pathLength=1 lets CSS draw the stroke with unit dash values
+          (alive pass 1: .receipt-check-path draws on a clean export). */}
+      <path className="receipt-check-path" pathLength={1} d="M8.5 12.2l2.4 2.4 4.6-4.8" />
     </svg>
   );
 }

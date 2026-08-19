@@ -390,7 +390,15 @@ function App() {
         }}
         onBackToStandard={backToStandard}
       />
-    <div className={"app" + (view === "standard" ? " app-standard" : "")}>
+    {/* Alive pass 1 (2026-08-19): the root says what the user is HEARING so
+        CSS can react to it — the A/B flip bloom, the brighter played span
+        while Mastered is audible. Presentation only; nothing reads these
+        attributes back. Pinned by App.playback-kind.test.tsx. */}
+    <div
+      className={"app" + (view === "standard" ? " app-standard" : "")}
+      data-playback-kind={tm.transport.playbackKind === "master" ? "master" : "source"}
+      data-playing={tm.transport.isPlaying ? "true" : "false"}
+    >
       {view === "advanced" && (
         <>
       <Sidebar
@@ -473,6 +481,8 @@ function App() {
               albumMode={tm.mode === "album"}
               onResetAll={tm.resetToStandardManaged}
               canResetAll={hasNonManagedEdits(tm.selectedSettings)}
+              liveGr={tm.transport.compressionGr}
+              isPlayingMaster={tm.transport.isPlaying && tm.transport.playbackKind === "master"}
             />
           ) : undefined
         }

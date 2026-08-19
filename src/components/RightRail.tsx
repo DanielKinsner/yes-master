@@ -2,6 +2,7 @@
 // telemetry only; QualityCheckPanel owns source/export analysis.
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useMeterBallistics } from "../hooks/useMeterBallistics";
 import type { AnalysisResult, QualityCheck } from "../bindings";
 import type { RenderFeedback, RenderProgressState } from "../hooks/useTrackMaster";
 import { DisabledReason } from "./fields";
@@ -367,6 +368,10 @@ export function MasterOutPanel({
     isPlaying && v > -120 ? v : undefined;
   const liveL = live(peakLeftDbfs);
   const liveR = live(peakRightDbfs);
+  // Alive pass 1 (2026-08-19): real ballistics — rate-limited fall and a
+  // peak-hold pip — so the bars read like meters, not like a number.
+  const ballL = useMeterBallistics(liveL, isPlaying);
+  const ballR = useMeterBallistics(liveR, isPlaying);
   const liveMomentary = live(lufsMomentary);
   const liveIntegrated = live(lufsIntegrated);
   // Live Peak readout = the louder of the two channels.
@@ -441,8 +446,8 @@ export function MasterOutPanel({
       </header>
       <div className="lufs-meter">
         <div className="lufs-bars">
-          <PeakMeterBar value={liveL} label="L" title="Left channel peak (dBFS)" />
-          <PeakMeterBar value={liveR} label="R" title="Right channel peak (dBFS)" />
+          <PeakMeterBar value={ballL.display} hold={ballL.hold} label="L" title="Left channel peak (dBFS)" />
+          <PeakMeterBar value={ballR.display} hold={ballR.hold} label="R" title="Right channel peak (dBFS)" />
         </div>
         <PeakScale />
       </div>
@@ -474,10 +479,13 @@ function PeakScale() {
 
 function PeakMeterBar({
   value,
+  hold,
   label,
   title,
 }: {
   value: number | undefined;
+  /// Peak-hold level (dBFS). Undefined = no pip (idle).
+  hold?: number;
   label: string;
   title?: string;
 }) {
@@ -490,10 +498,18 @@ function PeakMeterBar({
   const fill = value !== undefined ? ratio(value) : 0;
   const clipping = value !== undefined && value > -0.1;
   const ceilRatio = ratio(PEAK_CEIL_DBFS);
+  const holdOver = hold !== undefined && hold > PEAK_CEIL_DBFS;
   return (
     <div className={`lufs-bar${clipping ? " is-clipping" : ""}`} title={title}>
       <div className="lufs-bar-track" />
       <div className="lufs-bar-fill" style={{ height: `${fill * 100}%` }} />
+      {hold !== undefined && (
+        <div
+          className={`lufs-bar-hold${holdOver ? " is-hold-over" : ""}`}
+          style={{ bottom: `${ratio(hold) * 100}%` }}
+          aria-hidden
+        />
+      )}
       <div
         className="peak-ceil-line"
         style={{ bottom: `${ceilRatio * 100}%` }}

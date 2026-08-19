@@ -8055,3 +8055,132 @@ input:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .source-insight-panel { animation: none; }
 }
+
+/* =====================================================================
+   ALIVE PASS 1 (2026-08-19) — motion that says "you are hearing the master"
+   ---------------------------------------------------------------------
+   Every rule here is presentation-only and keys on the .app root's
+   data-playback-kind / data-playing attributes (App.tsx). Each effect
+   names its PURPOSE (U11 rule), animates compositor-safe properties only,
+   and opts out under reduced motion. Registered in App.delight.test.tsx.
+   Plan: docs/superpowers/plans/2026-08-19-ui-alive-pass-1.md
+   ===================================================================== */
+
+/* PURPOSE: ORIENTATION — the selected side of the A/B lands with a short
+   bloom so the flip reads as an event, not a colour change. Fires when
+   `.on` is (re)applied, i.e. exactly on a flip (and once on mount). */
+@keyframes ab-land {
+  0%   { transform: scale(0.98); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 0 rgba(79, 134, 247, 0); }
+  45%  { transform: scale(1.035); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 22px rgba(122, 166, 255, 0.55); }
+  100% { transform: scale(1); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), var(--accent-glow-soft); }
+}
+.ab-toggle button.on,
+.std-rail-ab button.on {
+  animation: ab-land 360ms var(--ease-out) both;
+}
+
+/* PURPOSE: COMPREHENSION — while the MASTER is what you hear, the played
+   span of the waveform runs warmer/brighter than the cobalt used for the
+   original. Filter only: no reflow, gradient stops stay as authored. */
+.wf-sheet-played {
+  transition: filter 320ms var(--ease-out);
+}
+.app[data-playback-kind="master"] .wf-sheet-played {
+  filter: saturate(1.18) brightness(1.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ab-toggle button.on,
+  .std-rail-ab button.on { animation: none; }
+  .wf-sheet-played { transition: none; }
+}
+
+/* PURPOSE: COMPREHENSION — peak-hold pip: the highest recent peak stays
+   visible for a second so a transient you heard is a line you can read.
+   Positioned by `bottom` (set inline per tick, not animated); only colour
+   and glow transition. Red once it crosses the -1 dBFS ceiling. */
+.lufs-bar-hold {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  margin-bottom: -1px;
+  background: #e8efff;
+  box-shadow: 0 0 6px rgba(122, 166, 255, 0.7);
+  opacity: 0.95;
+  pointer-events: none;
+  transition: background-color 120ms linear, box-shadow 120ms linear;
+}
+.lufs-bar-hold.is-hold-over {
+  background: #ff5d5d;
+  box-shadow: 0 0 8px rgba(255, 93, 93, 0.8);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lufs-bar-hold { transition: none; }
+}
+
+/* PURPOSE: COMPREHENSION — the compressor card shows what the compressor
+   is DOING, per band, while the master plays. Bars grow from the right
+   (reduction pulls level down); transform-only so the rail never reflows. */
+.gr-meters {
+  display: grid;
+  gap: 0.22rem;
+  margin: 0.1rem 0 0.35rem;
+}
+.gr-meter {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr 3.6rem;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.66rem;
+  color: var(--text-2);
+}
+.gr-meter-label { letter-spacing: 0.08em; text-transform: uppercase; }
+.gr-meter-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-1); }
+.gr-meter-track {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-inset);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.gr-meter-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: right center;
+  background: linear-gradient(90deg, rgba(122, 166, 255, 0.35), #7aa6ff);
+  transition: transform 70ms linear;
+}
+.gr-meters[data-live="false"] { opacity: 0.55; }
+@media (prefers-reduced-motion: reduce) {
+  .gr-meter-fill { transition: none; }
+}
+
+/* PURPOSE: ORIENTATION — entering Advanced, the rail and sidebar arrive
+   from their own edges while the deck rises (console-rise). One
+   choreography, three surfaces; opacity + transform only. */
+@keyframes rail-in    { from { opacity: 0; transform: translateX(14px); }  to { opacity: 1; transform: none; } }
+@keyframes sidebar-in { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
+.app:not(.app-standard) .right-rail { animation: rail-in 420ms var(--ease-out) both; animation-delay: 80ms; }
+.app:not(.app-standard) .sidebar    { animation: sidebar-in 420ms var(--ease-out) both; }
+
+/* PURPOSE: ORIENTATION — a clean export draws its check after the card has
+   landed (overlay-surface-in), so "done" is a gesture, not a static glyph.
+   stroke-dashoffset only; the circle is untouched. */
+@keyframes check-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.receipt-verified-clean .receipt-check-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: check-draw 420ms var(--ease-out) 220ms forwards;
+}
+/* PURPOSE: ORIENTATION — Standard's "Master created" ✓ pops in once. */
+@keyframes done-pop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+.std-export-done-check { display: inline-block; animation: done-pop 360ms var(--ease-out) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app:not(.app-standard) .right-rail,
+  .app:not(.app-standard) .sidebar,
+  .std-export-done-check { animation: none; }
+  .receipt-verified-clean .receipt-check-path { animation: none; stroke-dashoffset: 0; }
+}

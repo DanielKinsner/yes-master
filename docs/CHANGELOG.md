@@ -12,6 +12,28 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-08-19 — Alive pass 1: A/B flip moment, meter ballistics, live GR, console motion
+
+Plan: `docs/superpowers/plans/2026-08-19-ui-alive-pass-1.md` (Passes 2–4
+roadmap in its appendix). Presentation only — no audio-path, playhead,
+render, or export semantics changed; the L10 audio crossfade on A/B is as it
+was.
+
+- **A/B flip lands**: the selected side of Original/Mastered blooms once on
+  flip; while Mastered is audible the waveform's played span runs brighter
+  (the `.app` root now carries `data-playback-kind` / `data-playing`,
+  pinned by `App.playback-kind.test.tsx`).
+- **MASTER OUT ballistics**: rate-limited fall (24 dB/s) + peak-hold pips
+  (1 s hold, 12 dB/s decay; red above −1 dBFS). Pure helper
+  `lib/meter-ballistics.ts`, unit-tested; `hooks/useMeterBallistics.ts`.
+- **Live per-band gain reduction** in the Per-band Compressor card while the
+  master plays (`lib/gain-reduction.ts`); the playback tick had carried
+  `gr_*_db` since Phase 12.2 with no surface.
+- **Console motion**: rail + sidebar arrive with the deck on entering
+  Advanced; a clean export draws its check; Standard's ✓ pops. Every effect
+  is registered in `App.delight.test.tsx` (reduced-motion opt-out, no reflow
+  properties, named purpose).
+
 ## 2026-08-19 — Bipolar knobs, global Advanced reset, one type hierarchy
 
 - **Bipolar boost/cut knobs**: Tone Shape Low/Mid/High and the rail's
