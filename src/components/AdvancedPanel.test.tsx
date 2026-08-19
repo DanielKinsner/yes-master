@@ -55,6 +55,8 @@ async function renderPanel(opts?: {
   onAdvanced?: (adv: MasteringSettings["advanced"]) => void;
   onResetAll?: () => void;
   canResetAll?: boolean;
+  liveGr?: { low: number; mid: number; high: number } | null;
+  isPlayingMaster?: boolean;
 }): Promise<{ container: HTMLDivElement; root: Root }> {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -73,6 +75,8 @@ async function renderPanel(opts?: {
         adaptiveReadout={opts?.adaptiveReadout}
         onResetAll={opts?.onResetAll}
         canResetAll={opts?.canResetAll}
+        liveGr={opts?.liveGr}
+        isPlayingMaster={opts?.isPlayingMaster}
       />,
     );
   });
@@ -197,6 +201,38 @@ describe("AdvancedPanel", () => {
     });
     expect(onAdvanced).toHaveBeenCalledTimes(1);
     expect(onAdvanced.mock.calls[0][0].width).toBeNull();
+    await act(async () => {
+      root.unmount();
+    });
+  });
+  // Alive pass 1 (2026-08-19) — live per-band gain reduction bars.
+  it("shows live per-band gain reduction while the master plays", async () => {
+    const { container, root } = await renderPanel({
+      liveGr: { low: -6, mid: -3, high: -120 },
+      isPlayingMaster: true,
+    });
+    const fills = container.querySelectorAll(".gr-meter-fill");
+    expect(fills.length).toBe(3);
+    expect((fills[0] as HTMLElement).style.transform).toBe("scaleX(0.5)");
+    expect((fills[1] as HTMLElement).style.transform).toBe("scaleX(0.25)");
+    expect((fills[2] as HTMLElement).style.transform).toBe("scaleX(0)");
+    expect(container.querySelector(".gr-meters")!.getAttribute("data-live")).toBe("true");
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("keeps GR bars empty when not auditioning the master", async () => {
+    const { container, root } = await renderPanel({
+      liveGr: { low: -6, mid: -3, high: -1 },
+      isPlayingMaster: false,
+    });
+    const fills = container.querySelectorAll(".gr-meter-fill");
+    expect(fills.length).toBe(3);
+    for (const el of fills) {
+      expect((el as HTMLElement).style.transform).toBe("scaleX(0)");
+    }
+    expect(container.querySelector(".gr-meters")!.getAttribute("data-live")).toBe("false");
     await act(async () => {
       root.unmount();
     });

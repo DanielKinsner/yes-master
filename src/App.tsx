@@ -481,6 +481,8 @@ function App() {
               albumMode={tm.mode === "album"}
               onResetAll={tm.resetToStandardManaged}
               canResetAll={hasNonManagedEdits(tm.selectedSettings)}
+              liveGr={tm.transport.compressionGr}
+              isPlayingMaster={tm.transport.isPlaying && tm.transport.playbackKind === "master"}
             />
           ) : undefined
         }

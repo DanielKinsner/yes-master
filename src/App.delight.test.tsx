@@ -182,6 +182,7 @@ describe("U11 — reduced motion removes the motion, not the meaning", () => {
       ".ab-toggle button.on",
       ".wf-sheet-played",
       ".lufs-bar-hold",
+      ".gr-meter-fill",
     ]) {
       expect(reduced).toContain(selector);
     }

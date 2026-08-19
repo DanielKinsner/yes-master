@@ -8118,3 +8118,41 @@ input:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .lufs-bar-hold { transition: none; }
 }
+
+/* PURPOSE: COMPREHENSION — the compressor card shows what the compressor
+   is DOING, per band, while the master plays. Bars grow from the right
+   (reduction pulls level down); transform-only so the rail never reflows. */
+.gr-meters {
+  display: grid;
+  gap: 0.22rem;
+  margin: 0.1rem 0 0.35rem;
+}
+.gr-meter {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr 3.6rem;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.66rem;
+  color: var(--text-2);
+}
+.gr-meter-label { letter-spacing: 0.08em; text-transform: uppercase; }
+.gr-meter-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-1); }
+.gr-meter-track {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-inset);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.gr-meter-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: right center;
+  background: linear-gradient(90deg, rgba(122, 166, 255, 0.35), #7aa6ff);
+  transition: transform 70ms linear;
+}
+.gr-meters[data-live="false"] { opacity: 0.55; }
+@media (prefers-reduced-motion: reduce) {
+  .gr-meter-fill { transition: none; }
+}

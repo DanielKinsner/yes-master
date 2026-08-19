@@ -24,6 +24,7 @@ import {
 } from "../lib/effective-settings";
 import { compressorAutoReadouts } from "../lib/compressor-auto";
 import { adaptiveReadoutEnabled } from "../lib/debug-flags";
+import { grLabel, grToFill } from "../lib/gain-reduction";
 
 /// UI_LAYOUT_REVISION_1600x940 L3 — AdvancedPanel renders four
 /// separate rail cards (Delivery Profile, Advanced Controls,
@@ -47,6 +48,8 @@ export function AdvancedPanel({
   albumMode = false,
   onResetAll,
   canResetAll = false,
+  liveGr = null,
+  isPlayingMaster = false,
 }: {
   analysis?: AnalysisResult;
   settings: MasteringSettings;
@@ -77,6 +80,11 @@ export function AdvancedPanel({
   /// Standard-managed and stay. The host wires `resetToStandardManaged`.
   onResetAll?: () => void;
   canResetAll?: boolean;
+  /// Alive pass 1 (2026-08-19): live per-band gain reduction from the
+  /// playback tick (dB, negative = reduction, -120 = none). Only shown while
+  /// the MASTER is auditioning — Original has no compressor to meter.
+  liveGr?: { low: number; mid: number; high: number } | null;
+  isPlayingMaster?: boolean;
 }) {
   const a = settings.advanced;
   const update = (
@@ -165,6 +173,8 @@ export function AdvancedPanel({
         onAdvanced={onAdvanced}
         onUpdate={update}
         compressionPlan={compressionPlan}
+        liveGr={liveGr}
+        isPlayingMaster={isPlayingMaster}
       />
       {showDeliveryFormat && (
         <DeliveryFormatCard
@@ -527,6 +537,8 @@ function PerBandCompressorCard({
   onAdvanced,
   onUpdate,
   compressionPlan,
+  liveGr,
+  isPlayingMaster,
 }: {
   analysis?: AnalysisResult;
   settings: MasteringSettings;
@@ -537,6 +549,8 @@ function PerBandCompressorCard({
     value: number | boolean | null,
   ) => void;
   compressionPlan?: CompressionPlan | null;
+  liveGr: { low: number; mid: number; high: number } | null;
+  isPlayingMaster: boolean;
 }) {
   type Band = "low" | "mid" | "high";
   const [active, setActive] = useState<Band>("low");
@@ -640,6 +654,30 @@ function PerBandCompressorCard({
         {compressorMode === "off" &&
           "Creative compressor bypassed; limiter and delivery checks remain active."}
       </div>
+      {/* Alive pass 1 (2026-08-19): what the compressor is DOING, per band,
+          while the master plays. The tick has carried gr_*_db since Phase
+          12.2; this is its first surface. Presentation only. */}
+      {compressorMode !== "off" && (
+        <div
+          className="gr-meters"
+          data-live={isPlayingMaster ? "true" : "false"}
+          aria-label="Live gain reduction per band"
+        >
+          {(["low", "mid", "high"] as Band[]).map((band) => {
+            const db = isPlayingMaster && liveGr ? liveGr[band] : undefined;
+            const fill = grToFill(db);
+            return (
+              <div key={band} className="gr-meter" title={`${bandLabel(band)} gain reduction`}>
+                <span className="gr-meter-label">{bandLabel(band)}</span>
+                <span className="gr-meter-track" aria-hidden>
+                  <span className="gr-meter-fill" style={{ transform: `scaleX(${fill})` }} />
+                </span>
+                <span className="gr-meter-value">{grLabel(db)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {compressorMode === "preset" && (
         <div className="compressor-density-field">
           <NumberField
