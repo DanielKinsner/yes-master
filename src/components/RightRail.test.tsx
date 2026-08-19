@@ -154,6 +154,67 @@ describe("MasterOutPanel", () => {
     });
   });
 
+  // Alive pass 1 (2026-08-19) — peak-hold pips ride the L/R bars while
+  // playing, vanish when idle, and turn red above the -1 dBFS ceiling.
+  it("renders a peak-hold pip per channel while playing", async () => {
+    const { container, root } = await renderNode(
+      <MasterOutPanel
+        isAnalyzing={false}
+        peakDbfs={-6}
+        peakLeftDbfs={-6}
+        peakRightDbfs={-9}
+        isPlaying
+        lufsMomentary={-14}
+        lufsIntegrated={-14.5}
+      />,
+    );
+    const pips = container.querySelectorAll(".lufs-bar-hold");
+    expect(pips.length).toBe(2);
+    // -6 dB on a -36..0 scale sits at 83.33% from the bottom.
+    expect((pips[0] as HTMLElement).style.bottom).toBe("83.33333333333334%");
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("hides the peak-hold pip while idle", async () => {
+    const { container, root } = await renderNode(
+      <MasterOutPanel
+        isAnalyzing={false}
+        peakDbfs={-6}
+        peakLeftDbfs={-6}
+        peakRightDbfs={-6}
+        isPlaying={false}
+        lufsMomentary={-14}
+        lufsIntegrated={-14.5}
+      />,
+    );
+    expect(container.querySelectorAll(".lufs-bar-hold").length).toBe(0);
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("flags a hold above the -1 dBFS ceiling", async () => {
+    const { container, root } = await renderNode(
+      <MasterOutPanel
+        isAnalyzing={false}
+        peakDbfs={-0.3}
+        peakLeftDbfs={-0.3}
+        peakRightDbfs={-12}
+        isPlaying
+        lufsMomentary={-10}
+        lufsIntegrated={-10}
+      />,
+    );
+    const pips = container.querySelectorAll(".lufs-bar-hold");
+    expect(pips[0].classList.contains("is-hold-over")).toBe(true);
+    expect(pips[1].classList.contains("is-hold-over")).toBe(false);
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("uses simpler readout labels in Standard mode", async () => {
     const { container, root } = await renderNode(
       <MasterOutPanel

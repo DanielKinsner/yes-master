@@ -8094,3 +8094,27 @@ input:focus-visible,
   .std-rail-ab button.on { animation: none; }
   .wf-sheet-played { transition: none; }
 }
+
+/* PURPOSE: COMPREHENSION — peak-hold pip: the highest recent peak stays
+   visible for a second so a transient you heard is a line you can read.
+   Positioned by `bottom` (set inline per tick, not animated); only colour
+   and glow transition. Red once it crosses the -1 dBFS ceiling. */
+.lufs-bar-hold {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  margin-bottom: -1px;
+  background: #e8efff;
+  box-shadow: 0 0 6px rgba(122, 166, 255, 0.7);
+  opacity: 0.95;
+  pointer-events: none;
+  transition: background-color 120ms linear, box-shadow 120ms linear;
+}
+.lufs-bar-hold.is-hold-over {
+  background: #ff5d5d;
+  box-shadow: 0 0 8px rgba(255, 93, 93, 0.8);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lufs-bar-hold { transition: none; }
+}

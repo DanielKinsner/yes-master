@@ -181,6 +181,7 @@ describe("U11 — reduced motion removes the motion, not the meaning", () => {
       // Alive pass 1 (2026-08-19)
       ".ab-toggle button.on",
       ".wf-sheet-played",
+      ".lufs-bar-hold",
     ]) {
       expect(reduced).toContain(selector);
     }
