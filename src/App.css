@@ -4783,9 +4783,32 @@ button.primary:disabled {
      chips are free to wrap). */
   .console-hero .track-meta-line {
     /* 13b parity guard, retargeted for 13c's single-line form: at console
-       sizes the identity line must not wrap and grow the header. */
-    flex-shrink: 0;
+       sizes the identity line must not wrap and grow the header. It may
+       ELLIPSIZE instead when Album Master's override control shares the
+       row (2026-08-19) — before, the line was flex-shrink: 0 and the row
+       simply ran under the Original/Mastered switch. */
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .console-hero .session-status { flex-shrink: 0; }
+  /* Album Master's override control on the one-line badge row: the
+     segmented Follow album / Override already states the choice, so the
+     status chip is kept for assistive tech only and the banner may not
+     stack internally (that grew the header and broke 13b parity). */
+  .console-hero .override-banner { flex-wrap: nowrap; flex-shrink: 0; }
+  .console-hero .override-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .console-hero .track-title {
@@ -5175,6 +5198,23 @@ button.primary:disabled {
 }
 
 @media (max-width: 1699px) and (min-width: 1280px) and (min-height: 820px) {
+  /* Console sizes under 1700px: the two preview toggles stack so the
+     title column keeps enough width for Album Master's one-line badge row
+     (format line · Follow album/Override · status) beside the switch.
+     Two 26px rows sit inside the header's 55px, so the waveform card's Y
+     is unchanged in both modes (13b parity). */
+  .console-hero .track-toolbar-group-options {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.2rem;
+    padding-left: 0.6rem;
+  }
+  .console-hero .track-toolbar-group-options .toolbar-toggle {
+    min-height: 26px;
+    padding: 0 0.55rem;
+    font-size: 0.74rem;
+    gap: 0.38rem;
+  }
   .app {
     grid-template-columns: 230px minmax(0, 1fr) 280px;
   }
