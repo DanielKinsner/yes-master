@@ -8195,3 +8195,63 @@ input:focus-visible,
   .std-export-done-check { animation: none; }
   .receipt-verified-clean .receipt-check-path { animation: none; stroke-dashoffset: 0; }
 }
+
+/* =====================================================================
+   PASS 2 (2026-08-19) — hierarchy, density, laptop size
+   ===================================================================== */
+
+/* Rail advisories read as quiet notes, not boxed alerts: the compressor
+   "source dynamic range is low" hint and the adaptive guidance were the
+   only filled/bordered blocks left on the rail, so they shouted over the
+   controls they annotate. A 2px left rule in the note's own hue keeps the
+   meaning; the box goes. */
+.compressor-source-note,
+.compressor-adaptive-guidance {
+  background: transparent;
+  border: 0;
+  border-left: 2px solid;
+  border-radius: 0;
+  padding: 0.1rem 0 0.1rem 0.55rem;
+  margin: 0.1rem 0 0.45rem;
+  color: var(--text-1);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+.compressor-source-note { border-left-color: rgba(255, 166, 64, 0.7); }
+.compressor-adaptive-guidance { border-left-color: rgba(125, 210, 173, 0.7); }
+
+/* "Overrides" in the sidebar is a choice, not a warning — it shared the
+   warn hue with real concerns. Neutral weight, no alarm colour. */
+.seq-chip.is-override {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+/* Signal-chain stages are buttons now (jump to the stage's controls).
+   Reset the button chrome so the strip looks exactly as it did; the cursor
+   and a hover lift say "clickable". */
+button.chain-stage {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+button.chain-stage:hover .chain-stage-disc { transform: translateY(-1px); }
+button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
+.chain-stage-disc { transition: transform 140ms var(--ease-out), box-shadow 160ms var(--ease-out); }
+
+/* PURPOSE: ORIENTATION - the jump target glows for a moment so the eye
+   lands where the scroll did. box-shadow only. */
+@keyframes jump-target-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(122, 166, 255, 0); }
+  25%  { box-shadow: 0 0 0 2px rgba(122, 166, 255, 0.55), 0 0 24px rgba(122, 166, 255, 0.35); }
+  100% { box-shadow: 0 0 0 0 rgba(122, 166, 255, 0); }
+}
+.is-jump-target { animation: jump-target-flash 1100ms var(--ease-out) both; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) {
+  .is-jump-target { animation: none; }
+  .chain-stage-disc { transition: none; }
+}
