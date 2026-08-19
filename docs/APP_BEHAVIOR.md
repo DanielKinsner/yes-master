@@ -84,9 +84,12 @@ Track Master supports:
   `docs/superpowers/specs/2026-06-11-analysis-orb-design.md`.
 - Real analysis progress: the backend emits `analysis:progress` events at
   the actual analyzer phase boundaries (decode → dynamics → stereo field →
-  tonal balance → deep scan), batch-rescaled across multi-track imports.
-  The UI's stage labels and bar track real work; the old paced timer
-  remains only as a pre-first-event fallback.
+  tonal balance → deep scan), batch-rescaled across multi-track imports,
+  and the deep scan itself reports sub-progress (0.80→0.98) as its windows
+  run. The UI's stage labels and bar track real work; the old paced timer
+  remains only as a pre-first-event fallback. "Analyzing" is per track
+  (2026-08-19): the header pill, Insight card and waveform slot reflect
+  the selected track's own batch, not any batch anywhere.
 - A clean Standard `Create Master` confirms itself: success card with file
   name, landed LUFS, and a Show file action. Invalid renders keep the
   prominent re-render alert; album receipts stay in their own flow.

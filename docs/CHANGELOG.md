@@ -12,6 +12,28 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-08-19 — Stuck-analysis root cause, per-track "analyzing", deep-scan progress, header rhythm
+
+- **Root cause of "analysis running for minutes on one small file"** (owner
+  report): the session-restore path skipped `finishAnalysis` when its effect
+  had been cancelled mid-flight (Fast Refresh re-running App's effects in
+  `tauri dev` does exactly that), so the batch stayed in the in-flight set
+  for the life of the session and the pill/card said "analyzing" over a
+  finished result. Measured: the Rust analysis of a mono 48 kHz 1:51 file
+  takes 0.7 s release / 0.9 s debug. Fix: every begun batch is finished
+  unconditionally (source-pinned in `useTrackMaster.integration.test.tsx`).
+- **"Analyzing" is per track**: `isAnalyzing` is true only while the
+  *selected* track is in an in-flight batch (`isAnyAnalyzing` remains for
+  the stage timer and the analysis-complete autosave). Another track's
+  batch no longer lights the pill/Insight card/waveform slot.
+- **Deep-scan sub-progress**: the costliest stage now emits 0.80→0.98 as
+  the windowed scan runs (`scan_windows_with_progress`; output identical,
+  snapshots green, iPhone + Android lanes green), so the bar moves instead
+  of parking at 80%.
+- **Track header rhythm**: a touch more air under the title; the meta row is
+  one quiet line; the session pill sits at text height with no fill (the
+  dot carries the state); INSIGHT's label shares the title's left gutter.
+
 ## 2026-08-19 — Pass 2: hierarchy, density, laptop size
 
 - **Analysis progress has two owners, not four**: the header SessionStatus
