@@ -27,7 +27,7 @@ import { effectiveLoudnessTarget } from "../lib/effective-settings";
 import { standardDeliverySpecLabel, standardExportNotes } from "../lib/standard-export";
 import { api } from "../lib/api";
 import { MasterOutPanel } from "./RightRail";
-import { DisabledReason } from "./fields";
+import { DisabledReason, PanelResetButton } from "./fields";
 import { formatDuration } from "../lib/time-format";
 // L9: the hint copy now lives in FirstRunOverlay, rendered once at the App
 // root. The guide STATE still arrives here as a prop so the Mastered A/B can
@@ -652,7 +652,14 @@ export function StandardView({
 
         <div className="std-steps">
           <div className="std-step std-step-style">
-            <span className="std-step-label">1 · Style</span>
+            <span className="std-step-label">
+              1 · Style
+              <PanelResetButton
+                label="Reset style to Universal"
+                disabled={s.preset.kind === "universal"}
+                onClick={() => tm.setPreset({ kind: "universal" })}
+              />
+            </span>
             <span className="std-step-hint">Choose the character you want.</span>
             <StyleTiles preset={s.preset} onSelect={tm.setPreset} />
           </div>
@@ -667,7 +674,14 @@ export function StandardView({
             // knob arc tone — intensity visibly belongs to the chosen style.
             style={{ ["--tile-accent" as never]: PRESET_ACCENT[s.preset.kind] }}
           >
-            <span className="std-step-label">2 · Intensity</span>
+            <span className="std-step-label">
+              2 · Intensity
+              <PanelResetButton
+                label="Reset intensity to 50%"
+                disabled={Math.abs(s.intensity - 0.5) < 0.005}
+                onClick={() => tm.setIntensity(0.5)}
+              />
+            </span>
             <span className="std-step-hint">Set how strong the effect is.</span>
             <div className="std-zone-chips" role="group" aria-label="Intensity presets">
               {INTENSITY_ZONES.map((z) => (
@@ -707,7 +721,14 @@ export function StandardView({
           </div>
 
           <div className="std-step std-step-loudness" ref={seamRefs.loudness}>
-            <span className="std-step-label">3 · Loudness</span>
+            <span className="std-step-label">
+              3 · Loudness
+              <PanelResetButton
+                label="Reset loudness to Low"
+                disabled={targetToLoudness(effectiveLoudnessTarget(s)) === "low"}
+                onClick={() => tm.setLoudnessTarget(-14)}
+              />
+            </span>
             <span className="std-step-hint">Choose your target loudness.</span>
             <LoudnessSegmented
               targetLufs={effectiveLoudnessTarget(s)}

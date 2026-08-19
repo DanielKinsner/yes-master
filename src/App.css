@@ -8388,3 +8388,18 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
   padding: 0.06rem 0.4rem;
 }
 .shortcut-note { color: var(--text-2); font-size: 0.72rem; margin: 0; }
+
+/* Standard per-card reset: a quiet ↺ at the end of each step label (Style →
+   Universal, Intensity → 50%, Loudness → Low), disabled at the default.
+   Inline in the label span so the Intensity card's grid areas are untouched. */
+.std-step-label .panel-reset-button {
+  width: 18px;
+  height: 18px;
+  margin-left: 0.15rem;
+  font-size: 0.72rem;
+  opacity: 0.7;
+  background: transparent;
+  border-color: var(--hairline);
+}
+.std-step-label .panel-reset-button:disabled { opacity: 0.3; cursor: default; }
+.std-step-label .panel-reset-button:not(:disabled):hover { opacity: 1; border-color: var(--border-strong); color: var(--text-0); }

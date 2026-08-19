@@ -208,6 +208,35 @@ describe("intensity zone chips", () => {
   });
 });
 
+// Pass 4 (2026-08-19): each Standard card carries its own quiet ↺ — Style →
+// Universal, Intensity → 50%, Loudness → Low (−14) — disabled when already
+// there. Advanced has had per-panel resets all along; Standard only had the
+// Change→Advanced hand-off.
+describe("Standard per-card reset", () => {
+  it("renders a reset on each card, disabled at the card's default", async () => {
+    const setPreset = vi.fn();
+    const setIntensity = vi.fn();
+    const setLoudnessTarget = vi.fn();
+    // tape / 0.5 / -11: Style and Loudness are off-default, Intensity is at it.
+    const { container, root } = await render(
+      <StandardView tm={fakeTm({ setPreset, setIntensity, setLoudnessTarget })} onEnterAdvanced={() => {}} />,
+    );
+    const byLabel = (l: string) =>
+      container.querySelector<HTMLButtonElement>(`button[aria-label="${l}"]`)!;
+    expect(byLabel("Reset style to Universal").disabled).toBe(false);
+    expect(byLabel("Reset intensity to 50%").disabled).toBe(true);
+    expect(byLabel("Reset loudness to Low").disabled).toBe(false);
+
+    await act(async () => { byLabel("Reset style to Universal").click(); });
+    expect(setPreset).toHaveBeenCalledWith({ kind: "universal" });
+    await act(async () => { byLabel("Reset loudness to Low").click(); });
+    expect(setLoudnessTarget).toHaveBeenCalledWith(-14);
+    await act(async () => { byLabel("Reset intensity to 50%").click(); });
+    expect(setIntensity).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+});
+
 describe("sourceLufsCopy", () => {
   it("reads 'close to' within ±1.5 LU of the target (band edges inclusive)", () => {
     expect(sourceLufsCopy(-12.5, -14)).toBe("Source -12.5 LUFS · close to your -14 LUFS target");
