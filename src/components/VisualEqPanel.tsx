@@ -521,8 +521,9 @@ export function VisualEqPanel({
           const role = nodeRole(gains[band.id]);
           // Hollow ring nodes: the ring colour says boost (blue) / cut
           // (amber) / flat (dim), the dark centre keeps the curve legible
-          // through the node. Primary bands get a slightly larger ring.
-          const nodeRadius = isPrimary ? 5.6 : 4.6;
+          // through the node. One size for every band (owner 2026-08-19):
+          // tier still shows in the label weight, not the dot.
+          const nodeRadius = 4.6;
           const renderedRadius = isDragging ? nodeRadius + 1 : nodeRadius;
           const labelOpacity = isPrimary ? 0.92 : 0.7;
           return (

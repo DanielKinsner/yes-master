@@ -323,6 +323,7 @@ function AdvancedControlsCard({
           defaultValue={0}
           size="sm"
           tone="blue"
+          bipolar
           format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
           onChange={onInputGain}
           editable
@@ -337,6 +338,7 @@ function AdvancedControlsCard({
           defaultValue={0}
           size="sm"
           tone="cyan"
+          bipolar
           format={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} dB`}
           onChange={onOutputGain}
           editable

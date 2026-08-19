@@ -28,6 +28,23 @@ export type KnobTone =
 
 // Solid color per tone — used for the accent arc, indicator notch, and the
 // CSS variable that downstream halo/glow rules reference via color-mix.
+// Bipolar (boost / cut) knobs — EQ gains and the input/output trims — take
+// their colour from the SIGN of the value, not from a fixed tone: lifts are
+// the Visual EQ's boost blue, cuts its amber, so a Tone Shape knob at +3 dB
+// and the node it drives read as the same thing. Mirrors the `--eq-boost` /
+// `--eq-cut` tokens in App.css (pinned by Knob.bipolar.test.tsx).
+export const BIPOLAR_BOOST_COLOR = "#7aa6ff";
+export const BIPOLAR_CUT_COLOR = "#f2a83b";
+// Resting at exactly the centre: a quiet neutral so "flat" reads as flat.
+const BIPOLAR_FLAT_COLOR = "#9eb0d6";
+
+export type KnobRole = "boost" | "cut" | "flat";
+
+export function bipolarRole(value: number, center: number, step: number): KnobRole {
+  const eps = Math.max(step / 2, 1e-6);
+  return value > center + eps ? "boost" : value < center - eps ? "cut" : "flat";
+}
+
 const TONE_COLOR: Record<KnobTone, string> = {
   // `blue` is aligned with VisualEqPanel.tsx's HIGH band (#60a5fa) so the
   // Tone Shape HIGH knob and its 6 kHz EQ node read as the same color.
@@ -87,6 +104,12 @@ type KnobProps = {
   onReset?: () => void;
   /// Unit suffix shown inside the typeable field ("dB", "LUFS").
   unit?: string;
+  /// 2026-08-19 — boost/cut knob. The value arc grows FROM the centre
+  /// (`bipolarCenter`, default 0) toward the value instead of from `min`,
+  /// and the accent colour follows the sign: blue above centre, amber
+  /// below (the Visual EQ's palette), neutral at rest. `tone` is ignored.
+  bipolar?: boolean;
+  bipolarCenter?: number;
 };
 
 const SIZES: Record<KnobSize, { px: number; font: number; valueFont: number }> = {
@@ -120,9 +143,19 @@ export function Knob({
   editable = false,
   onReset,
   unit,
+  bipolar = false,
+  bipolarCenter = 0,
 }: KnobProps) {
   const dims = SIZES[size];
-  const toneColor = TONE_COLOR[tone];
+  const role: KnobRole | null = bipolar ? bipolarRole(value, bipolarCenter, step) : null;
+  const toneColor =
+    role === "boost"
+      ? BIPOLAR_BOOST_COLOR
+      : role === "cut"
+        ? BIPOLAR_CUT_COLOR
+        : role === "flat"
+          ? BIPOLAR_FLAT_COLOR
+          : TONE_COLOR[tone];
   const px = dims.px;
   const cx = px / 2;
   const cy = px / 2;
@@ -136,11 +169,22 @@ export function Knob({
   const notchOuterR = capR - px * 0.03;
   const notchInnerR = capR * 0.42;
 
-  const t = max > min ? Math.max(0, Math.min(1, (value - min) / (max - min))) : 0;
+  const norm = (v: number) =>
+    max > min ? Math.max(0, Math.min(1, (v - min) / (max - min))) : 0;
+  const t = norm(value);
+  // Where the value arc STARTS: `min` for an ordinary knob, the centre for a
+  // bipolar one (so a cut sweeps anticlockwise from 12 o'clock).
+  const tOrigin = bipolar ? norm(bipolarCenter) : 0;
   const startAngle = (START_ANGLE_DEG * Math.PI) / 180;
+  const originAngle = ((START_ANGLE_DEG + SWEEP_DEG * tOrigin) * Math.PI) / 180;
   const endAngle = ((START_ANGLE_DEG + SWEEP_DEG * t) * Math.PI) / 180;
   const fullEndAngle = ((START_ANGLE_DEG + SWEEP_DEG) * Math.PI) / 180;
-  const arcPath = describeArc(cx, cy, arcR, startAngle, endAngle, SWEEP_DEG * t);
+  const arcSweepDeg = SWEEP_DEG * (t - tOrigin);
+  const arcPath =
+    arcSweepDeg >= 0
+      ? describeArc(cx, cy, arcR, originAngle, endAngle, arcSweepDeg)
+      : describeArc(cx, cy, arcR, endAngle, originAngle, -arcSweepDeg);
+  const hasArc = Math.abs(arcSweepDeg) > 1e-6;
   const trackPath = describeArc(cx, cy, arcR, startAngle, fullEndAngle, SWEEP_DEG);
 
   const id = useId().replace(/:/g, "_");
@@ -224,7 +268,12 @@ export function Knob({
     const angleDeg = START_ANGLE_DEG + SWEEP_DEG * frac;
     const angle = (angleDeg * Math.PI) / 180;
     const major = i % MAJOR_EVERY === 0 || i === TICK_COUNT - 1;
-    const active = frac <= t + 1e-6;
+    // Lit ticks span origin→value (both directions for a bipolar knob).
+    const lo = Math.min(tOrigin, t);
+    const hi = Math.max(tOrigin, t);
+    const active = bipolar
+      ? hasArc && frac >= lo - 1e-6 && frac <= hi + 1e-6
+      : frac <= t + 1e-6;
     ticks.push({ angle, major, active });
   }
 
@@ -236,7 +285,7 @@ export function Knob({
 
   return (
     <div
-      className={`knob knob-${size} knob-tone-${tone} ${disabled ? "is-disabled" : ""}`}
+      className={`knob knob-${size} knob-tone-${tone}${role ? ` knob-bipolar knob-role-${role}` : ""}${disabled ? " is-disabled" : ""}`}
       style={{ ["--knob-tone" as never]: toneColor }}
     >
       {label && <span className="knob-label">{label}</span>}
@@ -305,13 +354,27 @@ export function Knob({
                 y1={y1}
                 x2={x2}
                 y2={y2}
-                stroke={tk.active ? "var(--accent-bright)" : "rgba(120,135,165,0.32)"}
+                stroke={tk.active ? (bipolar ? toneColor : "var(--accent-bright)") : "rgba(120,135,165,0.32)"}
                 strokeWidth={tk.major ? 2 : 1}
                 strokeLinecap="round"
                 opacity={tk.active ? 1 : 0.85}
               />
             );
           })}
+
+          {/* Bipolar centre detent — a marker at the origin so "0 dB" has a
+              physical home on the dial even when nothing is lit. */}
+          {bipolar && (
+            <line
+              x1={cx + tickMajorInnerR * Math.cos(originAngle)}
+              y1={cy + tickMajorInnerR * Math.sin(originAngle)}
+              x2={cx + tickOuterR * Math.cos(originAngle)}
+              y2={cy + tickOuterR * Math.sin(originAngle)}
+              stroke={role === "flat" ? "rgba(214, 224, 245, 0.75)" : "rgba(214, 224, 245, 0.45)"}
+              strokeWidth={2}
+              strokeLinecap="round"
+            />
+          )}
 
           {/* Accent value arc (between ticks and cap) */}
           <path
@@ -321,7 +384,7 @@ export function Knob({
             strokeWidth={Math.max(2, px * 0.025)}
             strokeLinecap="round"
           />
-          {t > 0 && (
+          {hasArc && (
             <path
               d={arcPath}
               fill="none"

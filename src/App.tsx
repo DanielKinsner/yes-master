@@ -2049,6 +2049,7 @@ export function Macros({
             label="Low"
             size="md"
             tone="cyan"
+            bipolar
             value={settings.eq_low_db}
             min={-12}
             max={12}
@@ -2061,6 +2062,7 @@ export function Macros({
             label="Mid"
             size="md"
             tone="purple"
+            bipolar
             value={settings.eq_mid_db}
             min={-12}
             max={12}
@@ -2073,6 +2075,7 @@ export function Macros({
             label="High"
             size="md"
             tone="blue"
+            bipolar
             value={settings.eq_high_db}
             min={-12}
             max={12}

@@ -22,6 +22,12 @@
   --accent-bright: #7aa6ff;
   --accent-deep: #2f63e6;
   --accent-warm: #ffb86b;
+  /* Signed-gain palette: lifts are blue, cuts are amber — shared by the
+     Visual EQ (curve, fill, nodes) and every bipolar knob (Tone Shape
+     L/M/H, input/output gain). Knob.tsx carries the same two hexes as
+     BIPOLAR_BOOST_COLOR / BIPOLAR_CUT_COLOR; a test pins them together. */
+  --eq-boost: #7aa6ff;
+  --eq-cut: #f2a83b;
   --accent-danger: #ff7676;
   --accent-glow: 0 0 18px rgba(79, 134, 247, 0.4);
   --accent-glow-soft: 0 0 10px rgba(79, 134, 247, 0.26);
@@ -7061,28 +7067,28 @@ button.primary.std-create-master {
 .eq-label { fill: rgba(158, 176, 214, 0.55); }
 
 .eq-response-line-boost {
-  stroke: #7aa6ff;
+  stroke: var(--eq-boost);
   stroke-width: 2;
   filter: drop-shadow(0 0 4px rgba(122, 166, 255, 0.55));
 }
 .eq-response-line-cut {
-  stroke: #f2a83b;
+  stroke: var(--eq-cut);
   stroke-width: 2;
   filter: drop-shadow(0 0 4px rgba(242, 168, 59, 0.5));
 }
 
 .eq-grad-boost-hi { stop-color: #5b8ff5; stop-opacity: 0.42; }
 .eq-grad-boost-lo { stop-color: #5b8ff5; stop-opacity: 0.03; }
-.eq-grad-cut-lo { stop-color: #f2a83b; stop-opacity: 0.04; }
-.eq-grad-cut-hi { stop-color: #f2a83b; stop-opacity: 0.38; }
+.eq-grad-cut-lo { stop-color: var(--eq-cut); stop-opacity: 0.04; }
+.eq-grad-cut-hi { stop-color: var(--eq-cut); stop-opacity: 0.38; }
 
 .eq-node {
   fill: #0a0f1a;
   stroke-width: 2px;
   transition: r 80ms ease, stroke 120ms ease, filter 120ms ease;
 }
-.eq-band-boost .eq-node { stroke: #7aa6ff; filter: drop-shadow(0 0 4px rgba(122, 166, 255, 0.7)); }
-.eq-band-cut .eq-node { stroke: #f2a83b; filter: drop-shadow(0 0 4px rgba(242, 168, 59, 0.65)); }
+.eq-band-boost .eq-node { stroke: var(--eq-boost); filter: drop-shadow(0 0 4px rgba(122, 166, 255, 0.7)); }
+.eq-band-cut .eq-node { stroke: var(--eq-cut); filter: drop-shadow(0 0 4px rgba(242, 168, 59, 0.65)); }
 .eq-band-flat .eq-node { stroke: rgba(158, 176, 214, 0.55); }
 .eq-band-flat .eq-node:hover { stroke: rgba(200, 214, 245, 0.85); }
 .eq-node.is-dragging { stroke-width: 2.5px; }
@@ -7098,8 +7104,8 @@ button.primary.std-create-master {
   stroke-width: 3px;
   stroke-linejoin: round;
 }
-.eq-band-boost .eq-node-halo { stroke: #7aa6ff; }
-.eq-band-cut .eq-node-halo { stroke: #f2a83b; }
+.eq-band-boost .eq-node-halo { stroke: var(--eq-boost); }
+.eq-band-cut .eq-node-halo { stroke: var(--eq-cut); }
 .eq-band-flat .eq-node-halo { stroke: rgba(158, 176, 214, 0.7); }
 
 /* --- Advanced Controls knob grid + typeable knob fields --------------- */
