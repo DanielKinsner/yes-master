@@ -897,13 +897,6 @@ select {
   color: var(--accent-danger);
 }
 
-.sidebar-status {
-  padding: 0.6rem 1.1rem;
-  font-size: 0.75rem;
-  color: var(--accent);
-  border-top: 1px solid var(--border);
-}
-
 /* Workspace */
 .workspace {
   overflow-y: auto;
@@ -4282,13 +4275,6 @@ button.primary:disabled {
   color: var(--text-0);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-}
-
-.status-processing-label {
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 0.7rem;
 }
 
 .status-idle {

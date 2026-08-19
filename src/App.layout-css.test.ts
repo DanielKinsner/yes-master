@@ -71,12 +71,14 @@ describe("console layout CSS", () => {
     // Analyzed/Quality summary dots (quality lives in Source Check).
     expect(appTsx).not.toContain("StatusDot");
     expect(appTsx).not.toContain('"Quality —"');
-    // The footer pill renders only while busy — there is no resting-state
-    // assignment ("Ready"/"Idle" text) left in the processing chain.
+    // Pass 2 (2026-08-19): the footer's processing pill is gone entirely —
+    // it was the fourth copy of the analysis stage on one screen. The bar is
+    // live meters only; the header SessionStatus pill owns coarse state.
     // (The SessionStatus pill and the output-settings dialog legitimately
     // keep their own "Ready" strings — different homes, different questions.)
-    expect(appTsx).toContain("let processing: string | null = null;");
-    expect(appTsx).toContain("{processing !== null && (");
+    expect(appTsx).not.toContain("let processing: string | null = null;");
+    expect(appTsx).not.toContain("status-processing-label");
+    expect(appTsx).not.toContain('className="sidebar-status"');
   });
 
   it("keeps Album Master chrome compact and avoids inferred story chips", () => {

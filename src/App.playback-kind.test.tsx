@@ -7,6 +7,46 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
+import type { MasteringSettings } from "./bindings";
+
+const SETTINGS: MasteringSettings = {
+  preset: { kind: "universal" },
+  intensity: 0.5,
+  eq_sub_db: 0,
+  eq_low_db: 0,
+  eq_low_mid_db: 0,
+  eq_mid_db: 0,
+  eq_high_mid_db: 0,
+  eq_high_db: 0,
+  eq_sparkle_db: 0,
+  volume_match: false,
+  input_gain_db: 0,
+  output_gain_db: 0,
+  delivery_profile: "streaming-universal",
+  advanced: {
+    lufs_offset_db: null,
+    ceiling_dbtp: null,
+    width: null,
+    warmth: null,
+    presence_air: null,
+    compression_density: null,
+    compression_low_threshold_db: null,
+    compression_low_ratio: null,
+    compression_low_attack_ms: null,
+    compression_low_release_ms: null,
+    compression_mid_threshold_db: null,
+    compression_mid_ratio: null,
+    compression_mid_attack_ms: null,
+    compression_mid_release_ms: null,
+    compression_high_threshold_db: null,
+    compression_high_ratio: null,
+    compression_high_attack_ms: null,
+    compression_high_release_ms: null,
+    compression_link_stereo: null,
+    bit_depth: null,
+    target_sample_rate: null,
+  },
+};
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true;
@@ -22,10 +62,13 @@ vi.mock("./hooks/useTrackMaster", () => ({
   },
 }));
 
-function trackState(transport: {
-  playbackKind: "source" | "master";
-  isPlaying: boolean;
-}): Record<string, unknown> {
+function trackState(
+  transport: {
+    playbackKind: "source" | "master";
+    isPlaying: boolean;
+  },
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   return {
     mode: "track",
     setMode: vi.fn(),
@@ -117,6 +160,12 @@ function trackState(transport: {
     resetToStandardManaged: vi.fn(),
     exportStandardMaster: vi.fn(),
     saveUserPreset: vi.fn(),
+    isAnalyzing: false,
+    analysisProgress: null,
+    rememberTrackView: vi.fn(),
+    rememberedTrackView: vi.fn(() => null),
+    disarmLoop: vi.fn(),
+    ...overrides,
   };
 }
 
@@ -155,5 +204,45 @@ describe("app root exposes what the user is hearing", () => {
     const app = host.querySelector(".app");
     expect(app!.getAttribute("data-playback-kind")).toBe("master");
     expect(app!.getAttribute("data-playing")).toBe("true");
+  });
+});
+
+// Pass 2 (2026-08-19): analysis progress used to print FOUR times on one
+// Advanced screen (header pill, waveform slot, sidebar footer, bottom status
+// bar). Two owners remain: the header SessionStatus pill (coarse state) and
+// the waveform slot (rich progress). Pinned by counting the label.
+describe("analysis progress has two owners, not four", () => {
+  it("prints the stage label at most twice in Advanced while analyzing", async () => {
+    const track = {
+      id: "t1",
+      path: "/audio/t1.wav",
+      display_name: "t1.wav",
+      source_format: "wav",
+      duration_seconds: 120,
+      sample_rate: 44_100,
+      channels: 2,
+    };
+    mocks.tm = trackState(
+      { playbackKind: "source", isPlaying: false },
+      {
+        tracks: [track],
+        selectedTrackId: "t1",
+        selectedTrack: track,
+        selectedSettings: SETTINGS,
+        isAnalyzing: true,
+        analysisProgress: { label: "Checking dynamics", progress: 0.5 },
+      },
+    );
+    window.localStorage.setItem(
+      "yes-master:view-mode",
+      JSON.stringify({ migrated: true, lastView: "advanced" }),
+    );
+    const host = await mount();
+    const text = host.textContent ?? "";
+    const count = text.split("Checking dynamics").length - 1;
+    expect(count).toBeGreaterThanOrEqual(1);
+    expect(count).toBeLessThanOrEqual(2);
+    expect(host.querySelector(".sidebar-status")).toBeNull();
+    expect(host.querySelector(".status-processing-label")).toBeNull();
   });
 });

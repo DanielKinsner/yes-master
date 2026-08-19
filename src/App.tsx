@@ -411,8 +411,6 @@ function App() {
         onSelect={tm.selectTrack}
         onRemove={tm.removeTrack}
         onAdd={tm.openImportDialog}
-        isAnalyzing={tm.isAnalyzing}
-        analysisProgress={tm.analysisProgress}
         mode={tm.mode}
         onReorder={tm.reorderTracks}
         sequenceRows={sequenceRows}
@@ -649,21 +647,13 @@ function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
   const peakDisplay = isPlaying && peak > -80 ? `${peak.toFixed(1)} dBFS` : "—";
   const lufsDisplay = isPlaying && liveLufs > -80 ? `${liveLufs.toFixed(1)} LUFS` : "—";
 
-  // Slice 13c metadata diet: the footer speaks only while something is
-  // happening. Coarse session state lives in the header SessionStatus pill;
-  // quality verdicts live in Source Insight under the track title. At rest this bar
-  // holds only the live meters — no permanent "Ready"/summary chatter.
-  let processing: string | null = null;
-  if (tm.isExporting) {
-    processing = "Exporting…";
-  } else if (tm.isRendering) {
-    processing = "Rendering audit…";
-  } else if (tm.isAnalyzing) {
-    processing = tm.analysisProgress?.label ?? "Analyzing…";
-  } else if (tm.isLoadingWaveform) {
-    processing = "Decoding…";
-  }
-
+  // Slice 13c metadata diet, tightened 2026-08-19 (Pass 2): this bar holds
+  // ONLY the live meters. Coarse session state (analyzing / rendering /
+  // realtime / ready, with progress) is owned by the header SessionStatus
+  // pill; the rich analysis progress is owned by the waveform slot; render
+  // progress + cancel by the rail's Export control. The "Processing ·
+  // Checking dynamics" pill that used to sit here was the fourth copy of the
+  // same fact on one screen.
   return (
     <footer className="bottom-status">
       <div className="bottom-status-left" />
@@ -677,14 +667,7 @@ function BottomStatusBar({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
           <span className="status-readout-value">{lufsDisplay}</span>
         </span>
       </div>
-      <div className="bottom-status-right">
-        {processing !== null && (
-          <>
-            <span className="status-processing-label">Processing</span>
-            <span className="status-pill status-warn">{processing}</span>
-          </>
-        )}
-      </div>
+      <div className="bottom-status-right" />
     </footer>
   );
 }
@@ -1142,8 +1125,6 @@ function Sidebar({
   onSelect,
   onRemove,
   onAdd,
-  isAnalyzing,
-  analysisProgress,
   mode,
   onReorder,
   albumHeader,
@@ -1155,8 +1136,6 @@ function Sidebar({
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
   onAdd: () => void;
-  isAnalyzing: boolean;
-  analysisProgress: { label: string; progress: number } | null;
   mode: "track" | "album";
   onReorder: (fromIndex: number, toIndex: number) => void;
   // `overrideAlbum` used to come in here too, purely to drive the duplicate
@@ -1330,11 +1309,9 @@ function Sidebar({
       {albumReceipt}
 
       <div className="sidebar-footer">
-        {isAnalyzing && (
-          <div className="sidebar-status">
-            {analysisProgress?.label ?? "Analyzing…"}
-          </div>
-        )}
+        {/* Pass 2 (2026-08-19): the footer's "Checking dynamics" line is
+            gone — per-row "analyzing…" state plus the header pill and the
+            waveform slot already carry it. */}
         <button
           type="button"
           className="primary sidebar-import-btn"
