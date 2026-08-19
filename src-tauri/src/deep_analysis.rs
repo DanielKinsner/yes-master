@@ -313,6 +313,19 @@ fn percentile_finite_unsorted(values: &mut Vec<f32>, p: f32) -> Option<f32> {
 /// interleaved samples. Mono = (L+R)/2 for spectral/loudness; L/R kept for the
 /// stereo axis. Caps at MAX_SCAN_WINDOWS by widening the hop.
 pub fn scan_windows(samples: &[f32], sample_rate: u32, channels: usize) -> Vec<WindowMetrics> {
+    scan_windows_with_progress(samples, sample_rate, channels, &mut |_| {})
+}
+
+/// `scan_windows` with a 0..=1 progress callback, invoked every few dozen
+/// windows (2026-08-19: the deep scan is the costliest analysis stage and
+/// used to report nothing between its start and end, so the UI bar parked
+/// at 80% and read as stuck). Identical output to `scan_windows`.
+pub fn scan_windows_with_progress(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: usize,
+    progress: &mut dyn FnMut(f32),
+) -> Vec<WindowMetrics> {
     if channels == 0 || sample_rate == 0 {
         return Vec::new();
     }
@@ -338,7 +351,10 @@ pub fn scan_windows(samples: &[f32], sample_rate: u32, channels: usize) -> Vec<W
     let mut planner = FftPlanner::<f32>::new();
     let detail_fft = planner.plan_fft_forward(detail_fft_size);
 
-    let mut out = Vec::new();
+    let expected = (total_frames.saturating_sub(SHORT_WINDOW) / hop + 1).max(1);
+    // Report roughly every 1/32 of the scan (and at least every 32 windows).
+    let report_every = (expected / 32).max(1);
+    let mut out = Vec::with_capacity(expected);
     let mut mono_scratch = Vec::with_capacity(SHORT_WINDOW);
     let mut start = 0usize;
     while start + SHORT_WINDOW <= total_frames {
@@ -354,6 +370,9 @@ pub fn scan_windows(samples: &[f32], sample_rate: u32, channels: usize) -> Vec<W
             &detail_fft,
             &mut mono_scratch,
         ));
+        if out.len() % report_every == 0 {
+            progress((out.len() as f32 / expected as f32).min(1.0));
+        }
         start += hop;
     }
     out

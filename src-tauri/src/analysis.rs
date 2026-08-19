@@ -133,10 +133,18 @@ pub(crate) fn analyze_one_with_progress(
     let deep_analysis = if deep {
         let bands31 =
             compute_spectral_balance_31band(&pcm.samples, pcm.sample_rate, pcm.channels as usize);
-        let windows = crate::deep_analysis::scan_windows(
+        // Sub-progress across the windowed scan: 0.8 → 0.98 so the bar moves
+        // through the most expensive stage instead of parking at 80%.
+        let windows = crate::deep_analysis::scan_windows_with_progress(
             &pcm.samples,
             pcm.sample_rate,
             pcm.channels as usize,
+            &mut |frac| {
+                progress(
+                    0.8 + 0.18 * frac.clamp(0.0, 1.0),
+                    "Building mastering context",
+                )
+            },
         );
         match bands31 {
             Some(bands) if !windows.is_empty() => Some(std::sync::Arc::new(
@@ -787,6 +795,61 @@ fn compute_transient_density(samples: &[f32], channels: usize) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 2026-08-19 (owner: "the bar parks at 80% and looks stuck"): the deep
+    /// scan is the most expensive stage, so it reports sub-progress — the
+    /// "Building mastering context" label is emitted at several fractions
+    /// strictly between 0.8 and 1.0 on a file long enough to have windows.
+    #[test]
+    fn deep_stage_reports_sub_progress_between_0_8_and_1_0() {
+        let sr = 48_000_u32;
+        let secs = 30;
+        let n = sr as usize * secs;
+        let mut seed = 0x9E37_79B9u32;
+        let samples: Vec<f32> = (0..n)
+            .map(|_| {
+                seed ^= seed << 13;
+                seed ^= seed >> 17;
+                seed ^= seed << 5;
+                (seed as f32 / u32::MAX as f32) * 0.6 - 0.3
+            })
+            .collect();
+        let dir = std::env::temp_dir().join("yes-master-subprogress");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("mono30s.wav");
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: sr,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut w = hound::WavWriter::create(&path, spec).unwrap();
+        for &x in &samples {
+            w.write_sample((x * 32767.0) as i16).unwrap();
+        }
+        w.finalize().unwrap();
+
+        let seen = std::cell::RefCell::new(Vec::<(f32, &'static str)>::new());
+        let res = analyze_one_with_progress(TrackId("sub".into()), &path, true, &|f, l| {
+            seen.borrow_mut().push((f, l))
+        });
+        assert!(res.is_ok());
+        let seen = seen.borrow();
+        let intermediate: Vec<f32> = seen
+            .iter()
+            .filter(|(f, l)| *l == "Building mastering context" && *f > 0.8 && *f < 1.0)
+            .map(|(f, _)| *f)
+            .collect();
+        assert!(
+            intermediate.len() >= 3,
+            "expected >= 3 intermediate deep-stage fractions, got {intermediate:?}"
+        );
+        // Monotonic.
+        for w in intermediate.windows(2) {
+            assert!(w[1] >= w[0], "non-monotonic: {intermediate:?}");
+        }
+        let _ = std::fs::remove_file(&path);
+    }
 
     /// Spectral flux should read materially higher on a percussive
     /// signal (impulse train) than on a sustained one (continuous sine
