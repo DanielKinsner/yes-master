@@ -8271,3 +8271,27 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
 .compressor-preset-summary { font-size: 0.66rem; line-height: 1.3; padding: 0.3rem 0 0.2rem; }
 .gr-meters { gap: 0.14rem; margin: 0.05rem 0 0.25rem; }
 .compressor-mode-note { font-size: 0.66rem; }
+
+/* Track header rhythm (owner 2026-08-19: "crowded and uneven"). Three rows
+   under the title used three treatments at three heights. Now: the title
+   gets a touch more air; the meta row is ONE quiet line — identity text,
+   the override control, and a session pill the same height as the text
+   (hairline, no fill; the dot carries the state, the fill no longer shouts
+   while a background job runs); the INSIGHT row's label starts on the same
+   left gutter as the title. */
+.track-title { margin-bottom: 0.32rem; }
+.track-header-meta-row { gap: 0.6rem; }
+.session-status {
+  min-height: 20px;
+  padding: 0.06rem 0.5rem 0.06rem 0.42rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  background: transparent;
+  border-color: var(--hairline);
+}
+.session-status-idle { background: transparent; color: var(--text-2); }
+.session-status-live { background: transparent; color: var(--text-1); border-color: rgba(108, 208, 138, 0.28); }
+.session-status-busy { background: transparent; color: var(--text-1); border-color: rgba(255, 184, 107, 0.28); }
+.session-progress { width: 44px; height: 3px; }
+.source-insight { margin-top: 0.5rem; padding-top: 0.45rem; }
+.source-insight-toggle { margin-left: -0.35rem; }
