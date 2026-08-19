@@ -3268,11 +3268,6 @@ button.primary:disabled {
   color: var(--text-0);
 }
 
-.panel-head-summary .panel-reset-button {
-  margin-left: auto;
-  margin-right: 0.35rem;
-}
-
 .panel-reset-button:disabled {
   opacity: 0.32;
   cursor: default;
@@ -3555,12 +3550,6 @@ button.primary:disabled {
 @media (prefers-reduced-motion: reduce) {
   /* The verdict still changes; only the attention cue goes. */
   .quality-badge { animation: none; }
-}
-
-.badge-safe {
-  color: #6cd08a;
-  background: rgba(108, 208, 138, 0.18);
-  border: 1px solid rgba(108, 208, 138, 0.35);
 }
 
 .badge-warn {
@@ -4306,13 +4295,6 @@ button.primary:disabled {
   border-color: var(--border-strong);
 }
 
-.panel-chevron {
-  /* Removed: the whole ADVANCED CONTROLS header is clickable to toggle,
-     so the dropdown caret was redundant chrome. (Only used on that one
-     summary, so hiding it here removes it everywhere it appeared.) */
-  display: none;
-}
-
 .adv-field.is-auto .adv-value {
   color: var(--text-2);
   font-style: italic;
@@ -4634,6 +4616,10 @@ button.primary:disabled {
 
 .knob-vis svg {
   display: block;
+  /* Scales with .knob-vis when a breakpoint clamps it; the viewBox keeps
+     the dial square. */
+  max-width: 100%;
+  height: auto;
   outline: none;
   transition: transform 80ms ease;
 }
@@ -7317,30 +7303,6 @@ input:focus-visible,
 }
 .rail-section-head .panel-title::before { height: 0.72rem; }
 
-/* Advanced Controls' summary is the section head. Whole row toggles. */
-details.rail-section > summary.rail-section-head {
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-  margin-bottom: 0;
-}
-details.rail-section > summary.rail-section-head::-webkit-details-marker { display: none; }
-details.rail-section[open] > summary.rail-section-head { margin-bottom: 0.42rem; }
-details.rail-section > summary.rail-section-head::after {
-  content: "";
-  width: 7px;
-  height: 7px;
-  margin-left: 0.15rem;
-  border-right: 1.5px solid var(--text-2);
-  border-bottom: 1.5px solid var(--text-2);
-  transform: rotate(45deg) translateY(-2px);
-  transition: transform 160ms var(--ease-out), border-color 160ms;
-  flex-shrink: 0;
-}
-details.rail-section[open] > summary.rail-section-head::after {
-  transform: rotate(-135deg) translateY(-1px);
-}
-details.rail-section > summary.rail-section-head:hover .panel-title { color: var(--text-0); }
 .rail-section-head .panel-reset-button { margin-left: auto; }
 
 /* Rail header: the rail's own title + the global Reset all (owner
@@ -7826,16 +7788,96 @@ details.rail-section > summary.rail-section-head:hover .panel-title { color: var
   font-size: 0.74rem;
 }
 
-/* --- Rail density: everything open must fit 1440x900 without scrolling ---
-   (owner ask 2026-08-18). Trims are per-section, not "make everything tiny":
-   section padding, select heights, knob envelope inside the rail, and the
-   export group's own padding. Measured: Delivery 74→~58, Advanced 249→~215,
-   Compressor(Manual) 327→~295, Format 127→~104, Export group 109→~92. */
+/* =====================================================================
+   Rail + deck TYPE HIERARCHY and rail density (consolidated 2026-08-19).
 
-.rail-section { padding: 0.5rem 0 0.55rem; }
+   Three earlier override layers ("Rail density", "Rail knobs a touch
+   smaller", "Owner pass (final)") each re-declared the same selectors with
+   slightly different numbers; the last one won, the rest was dead weight.
+   This block is the single resolved layer, organised by TIER so every
+   knob, slider, heading and subtext sits on one of four rungs:
+
+     T1  heading   — section titles (rail .panel-title / deck .section-label)
+     T2  control   — what a knob/slider is (LOW · INPUT GAIN · WIDTH)
+     T3  value     — what it currently reads (+6.0 dB · Auto · 1.11)
+     T4  subtext   — captions, notes, auto pills (PROFILE · "Preset values…")
+
+   The rungs are tokens so a future tweak moves the whole tier at once.
+   ===================================================================== */
+:root {
+  --t1-size: 0.74rem;  --t1-track: 0.15em;
+  --t2-size: 0.64rem;  --t2-track: 0.08em;
+  --t3-size: 0.74rem;
+  --t4-size: 0.6rem;   --t4-track: 0.08em;
+}
+
+/* --- T1 · headings: rail sections AND deck blocks speak one language ---
+   (.panel-title = rail + meter panels, .section-label = deck blocks, tracks,
+   styles; the Standard face keeps its own std-* headings.) */
+.panel-title,
+.section-label,
+.rail-section-head .panel-title,
+.knobs-row .section-label,
+.presets .section-label {
+  font-size: var(--t1-size);
+  letter-spacing: var(--t1-track);
+  font-weight: 700;
+  color: var(--text-0);
+}
+.panel-title::before,
+.section-label::before,
+.rail-section-head .panel-title::before { height: 0.8rem; opacity: 1; }
+
+/* --- T2 · control titles: seen, not whispered; same weight everywhere -- */
+.adv-knob-grid .knob-label,
+.compressor-knob-grid .knob-label,
+.tone-shape-knobs .knob-label,
+.rail-card-advanced .advanced-grid .adv-label,
+.rail-format-grid .adv-label,
+.compressor-density-field .adv-label {
+  font-size: var(--t2-size);
+  letter-spacing: var(--t2-track);
+  font-weight: 600;
+  color: var(--text-1);
+}
+/* The feel-control labels carry an inline Auto pill; tighter tracking keeps
+   "PRESENCE/AIR" on its line at rail width. */
+.rail-card-advanced .advanced-grid .adv-label { font-size: 0.62rem; letter-spacing: 0.015em; }
+
+/* --- T3 · values: tabular, white, one size -------------------------- */
+.adv-knob-grid .knob-value,
+.compressor-knob-grid .knob-value,
+.tone-shape-knobs .knob-value,
+.rail-card-advanced .adv-value {
+  font-size: var(--t3-size);
+  font-weight: 600;
+  color: var(--text-0);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- T4 · subtext: captions, notes, auto pills ---------------------- */
+.adv-knob-grid .knob-caption,
+.tone-shape-knobs .knob-caption,
+.rail-card-advanced .adv-auto-pill,
+.rail-card-advanced .adv-auto-reset {
+  font-size: var(--t4-size);
+  letter-spacing: var(--t4-track);
+  font-weight: 500;
+  color: var(--text-2);
+}
+.compressor-mode-note,
+.compressor-preset-summary,
+.rail-card-format .format-note {
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--text-2);
+}
+
+/* --- Rail density (1440x900 is the design viewport) ------------------ */
+.rail-section { padding: 0.62rem 0 0.68rem; }
 .rail-section:first-child { padding-top: 0.3rem; }
-.rail-section-head { min-height: 1.35rem; margin-bottom: 0.32rem; }
-.rail-card-delivery .loudness-profile-select { padding-top: 0.28rem; padding-bottom: 0.28rem; }
+.rail-section-head { margin-bottom: 0.45rem; min-height: 1.5rem; }
+.rail-card-delivery .loudness-profile-select { padding-top: 0.24rem; padding-bottom: 0.24rem; }
 
 /* Knobs inside the rail: same knob, tighter envelope. */
 .adv-knob-grid,
@@ -7843,32 +7885,17 @@ details.rail-section > summary.rail-section-head:hover .panel-title { color: var
 .adv-knob-grid .knob,
 .compressor-knob-grid .knob { gap: 0.1rem; }
 .adv-knob-grid .knob-vis,
-.compressor-knob-grid .knob-vis { transform: scale(0.86); margin: -0.28rem auto -0.32rem; }
-.adv-knob-grid .knob-caption { margin-top: -0.05rem; }
-.adv-knob-grid { padding: 0.15rem 0 0.05rem; margin-bottom: 0.25rem; }
-.rail-card-advanced .advanced-grid { gap: 0.25rem 0.8rem; padding-top: 0.3rem; }
-.rail-card-advanced .adv-field { gap: 0.18rem; }
-.rail-card-advanced .adaptive-block { padding-top: 0.05rem; }
+.compressor-knob-grid .knob-vis { transform: scale(0.8); margin: -0.4rem auto -0.44rem; }
+.adv-knob-grid .knob-caption { margin-top: -0.12rem; }
+.adv-knob-grid { padding: 0.15rem 0 0.05rem; margin-bottom: 0.3rem; }
+.adv-knob-grid .knob-label,
+.compressor-knob-grid .knob-label,
+.adv-knob-grid .knob-value,
+.compressor-knob-grid .knob-value,
+.adv-knob-grid .knob-caption { line-height: 1.15; }
 
-/* Compressor */
-.compressor-mode-tabs { margin-bottom: 0.28rem; }
-.compressor-mode-tab { padding: 0.28rem 0.4rem; }
-.compressor-mode-note { margin-bottom: 0.28rem; }
-.per-band-row { margin: 0 0 0.3rem; }
-.compressor-knob-grid { padding: 0.25rem 0.3rem 0.15rem; }
-.compressor-density-field { margin-bottom: 0.25rem; }
-.compressor-preset-summary,
-.compressor-adaptive-band { padding: 0.22rem 0; }
-
-/* Delivery Format */
-.rail-format-grid { gap: 0.3rem 0.6rem; }
-.rail-format-grid .adv-field { gap: 0.18rem; }
-.rail-format-grid .adv-select { padding: 0.24rem 0.45rem; font-size: 0.8rem; }
-.rail-card-format .format-note { margin-top: 0.3rem; }
-
-/* Feel controls: two rows per field — [label · value · box] over [slider].
-   The label used to sit on its own line above the value row (three rows).
-   Same controls, same ranges; the row is what got tighter. */
+/* Feel controls: two rows per field — [label · value · box] over [slider]. */
+.rail-card-advanced .advanced-grid { gap: 0.6rem 1rem; padding-top: 0.55rem; }
 .rail-card-advanced .advanced-grid .adv-field {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -7877,7 +7904,7 @@ details.rail-section > summary.rail-section-head:hover .panel-title { color: var
     "slider box";
   align-items: center;
   column-gap: 0.25rem;
-  row-gap: 0.05rem;
+  row-gap: 0.2rem;
 }
 .rail-card-advanced .advanced-grid .adv-label {
   grid-area: label;
@@ -7890,49 +7917,43 @@ details.rail-section > summary.rail-section-head:hover .panel-title { color: var
      end-aligned and short); the number box below is what sizes that column,
      so clipping the label to it would truncate PRESENCE/AIR. */
   overflow: visible;
-  font-size: 0.6rem;
-  letter-spacing: 0.02em;
 }
-.rail-card-advanced .advanced-grid .adv-control .adv-value { justify-self: end; }
-.rail-card-advanced .advanced-grid .adv-control .adv-value { font-size: 0.66rem; }
 .rail-card-advanced .advanced-grid .adv-control { display: contents; }
-.rail-card-advanced .advanced-grid .adv-control .adv-value { grid-area: value; white-space: nowrap; font-size: 0.7rem; }
+.rail-card-advanced .advanced-grid .adv-control .adv-value { grid-area: value; justify-self: end; white-space: nowrap; font-size: 0.7rem; }
 .rail-card-advanced .advanced-grid .adv-control .adv-number { grid-area: box; width: 2.15rem; padding: 0.1rem 0.15rem; font-size: 0.66rem; }
-.rail-card-advanced .advanced-grid .adv-control input[type="range"] { grid-area: slider; height: 18px; }
+.rail-card-advanced .advanced-grid .adv-control input[type="range"] { grid-area: slider; height: 22px; }
 /* The Auto pill / ↺ AUTO chip live inside the label; keep them from
    pushing the label text out. */
 .rail-card-advanced .advanced-grid .adv-auto-pill,
 .rail-card-advanced .advanced-grid .adv-auto-reset { flex-shrink: 0; }
+.rail-card-advanced .adaptive-block { padding-top: 0; }
+.rail-card-advanced .adaptive-block:empty { display: none; }
 
-/* Rail knobs a touch smaller in the rail. */
-.adv-knob-grid .knob-vis,
-.compressor-knob-grid .knob-vis { transform: scale(0.8); margin: -0.4rem auto -0.44rem; }
-.adv-knob-grid .knob-caption { margin-top: -0.12rem; }
-
-/* Final density (1440x900, Advanced open + Manual): section rhythm and the
-   redundant Manual note. */
-.rail-section { padding: 0.42rem 0 0.46rem; }
-.rail-section-head { margin-bottom: 0.26rem; }
+/* Compressor */
+.compressor-mode-tabs { margin-bottom: 0.28rem; }
+.compressor-mode-tab { padding: 0.28rem 0.4rem; }
+.compressor-mode-note { margin-bottom: 0.28rem; }
+.per-band-row { margin: 0 0 0.3rem; }
+.compressor-knob-grid { padding: 0.25rem 0.3rem 0.15rem; }
+.compressor-density-field { margin-bottom: 0.4rem; }
+.compressor-preset-summary,
+.compressor-adaptive-band { padding: 0.22rem 0; }
+/* Manual: the mode tabs say it; the note underneath repeated them. */
 .rail-card-per-band.is-mode-manual .compressor-mode-note { display: none; }
 .rail-card-per-band.is-mode-manual .compressor-mode-tabs { margin-bottom: 0.32rem; }
+
+/* Delivery Format */
+.rail-format-grid { gap: 0.3rem 0.6rem; }
+.rail-format-grid .adv-field { gap: 0.18rem; }
+.rail-format-grid .adv-select { padding: 0.2rem 0.45rem; font-size: 0.8rem; }
 .rail-card-format .format-note { margin-top: 0.22rem; }
-/* Knob label/value line boxes were carrying ~4px of slack each. */
-.adv-knob-grid .knob-label,
-.compressor-knob-grid .knob-label,
-.adv-knob-grid .knob-value,
-.compressor-knob-grid .knob-value,
-.adv-knob-grid .knob-caption { line-height: 1.15; }
-.rail-card-advanced .adaptive-block:empty { display: none; }
-.rail-card-advanced .adaptive-block { padding-top: 0; }
-.rail-card-delivery .loudness-profile-select { padding-top: 0.24rem; padding-bottom: 0.24rem; }
-.adv-knob-grid { margin-bottom: 0.1rem; }
-.rail-format-grid .adv-select { padding-top: 0.2rem; padding-bottom: 0.2rem; }
 
 /* Tools + export */
 .right-rail-export-group { padding: 0.2rem 0 0.4rem; gap: 0.25rem; }
 .right-rail-tools > summary { padding: 0.25rem 0 0.15rem; }
 .right-rail-export { padding: 0.62rem 1rem; }
 
+/* Source Insight — empty state */
 .source-insight-toggle.is-static { cursor: default; }
 .source-insight-toggle.is-static:hover { background: transparent; border-color: transparent; }
 .source-insight-headline.is-muted { color: var(--text-2); font-weight: 500; }
@@ -7941,35 +7962,3 @@ details.rail-section > summary.rail-section-head:hover .panel-title { color: var
 @media (prefers-reduced-motion: reduce) {
   .source-insight-panel { animation: none; }
 }
-
-/* --- Owner pass 2026-08-18 (final): breathing room + text hierarchy ----
-   Section headings read as headings (brighter, a touch larger); control
-   titles are visible (text-1, not text-2); the feel-control sliders get air. */
-.rail-section { padding: 0.62rem 0 0.68rem; }
-.rail-section-head { margin-bottom: 0.45rem; min-height: 1.5rem; }
-.rail-section-head .panel-title {
-  font-size: 0.74rem;
-  letter-spacing: 0.15em;
-  font-weight: 700;
-  color: var(--text-0);
-}
-.rail-section-head .panel-title::before { height: 0.8rem; opacity: 1; }
-
-/* Control titles: seen, not whispered. */
-.adv-knob-grid .knob-label,
-.compressor-knob-grid .knob-label,
-.rail-card-advanced .advanced-grid .adv-label,
-.rail-format-grid .adv-label {
-  color: var(--text-1);
-  font-weight: 600;
-}
-.rail-card-advanced .advanced-grid .adv-label { font-size: 0.62rem; letter-spacing: 0.015em; }
-.adv-knob-grid .knob-label,
-.compressor-knob-grid .knob-label { font-size: 0.66rem; }
-
-/* Sliders breathe. */
-.rail-card-advanced .advanced-grid { gap: 0.6rem 1rem; padding-top: 0.55rem; }
-.rail-card-advanced .advanced-grid .adv-field { row-gap: 0.2rem; }
-.rail-card-advanced .advanced-grid .adv-control input[type="range"] { height: 22px; }
-.adv-knob-grid { margin-bottom: 0.3rem; }
-.compressor-density-field { margin-bottom: 0.4rem; }

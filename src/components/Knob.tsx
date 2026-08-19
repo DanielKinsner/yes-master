@@ -289,7 +289,10 @@ export function Knob({
       style={{ ["--knob-tone" as never]: toneColor }}
     >
       {label && <span className="knob-label">{label}</span>}
-      <div className="knob-vis" style={{ width: px, height: px }}>
+      {/* Width only: the SVG is display:block with height:auto, so when a
+          breakpoint clamps .knob-vis narrower the box shrinks WITH the dial
+          instead of leaving a dead band above the value (2026-08-19). */}
+      <div className="knob-vis" style={{ width: px }}>
         <svg
           width={px}
           height={px}
