@@ -8055,3 +8055,42 @@ input:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .source-insight-panel { animation: none; }
 }
+
+/* =====================================================================
+   ALIVE PASS 1 (2026-08-19) — motion that says "you are hearing the master"
+   ---------------------------------------------------------------------
+   Every rule here is presentation-only and keys on the .app root's
+   data-playback-kind / data-playing attributes (App.tsx). Each effect
+   names its PURPOSE (U11 rule), animates compositor-safe properties only,
+   and opts out under reduced motion. Registered in App.delight.test.tsx.
+   Plan: docs/superpowers/plans/2026-08-19-ui-alive-pass-1.md
+   ===================================================================== */
+
+/* PURPOSE: ORIENTATION — the selected side of the A/B lands with a short
+   bloom so the flip reads as an event, not a colour change. Fires when
+   `.on` is (re)applied, i.e. exactly on a flip (and once on mount). */
+@keyframes ab-land {
+  0%   { transform: scale(0.98); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 0 rgba(79, 134, 247, 0); }
+  45%  { transform: scale(1.035); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 22px rgba(122, 166, 255, 0.55); }
+  100% { transform: scale(1); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), var(--accent-glow-soft); }
+}
+.ab-toggle button.on,
+.std-rail-ab button.on {
+  animation: ab-land 360ms var(--ease-out) both;
+}
+
+/* PURPOSE: COMPREHENSION — while the MASTER is what you hear, the played
+   span of the waveform runs warmer/brighter than the cobalt used for the
+   original. Filter only: no reflow, gradient stops stay as authored. */
+.wf-sheet-played {
+  transition: filter 320ms var(--ease-out);
+}
+.app[data-playback-kind="master"] .wf-sheet-played {
+  filter: saturate(1.18) brightness(1.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ab-toggle button.on,
+  .std-rail-ab button.on { animation: none; }
+  .wf-sheet-played { transition: none; }
+}
