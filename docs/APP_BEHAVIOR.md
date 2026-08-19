@@ -37,7 +37,13 @@ Track Master supports:
 - Visual EQ/tone shaping.
 - Volume Match for audition only.
 - Delivery profile selection.
-- Advanced controls.
+- Advanced controls. The Advanced rail carries a global **Reset all**
+  (2026-08-19) that returns every non-managed control — gains, EQ gains and
+  band positions, feel controls, compressor, adaptive strength — to its
+  first-open state in one undo step; style, intensity, loudness target and
+  delivery format are Standard-managed and stay. Signed-gain knobs (Tone
+  Shape, input/output gain) are bipolar: blue above 0 dB, amber below,
+  matching the Visual EQ.
 - Explicit compressor modes.
 - Per-band compressor detail.
 - Delivery format selection.

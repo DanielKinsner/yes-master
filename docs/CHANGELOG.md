@@ -12,6 +12,28 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-08-19 — Bipolar knobs, global Advanced reset, one type hierarchy
+
+- **Bipolar boost/cut knobs**: Tone Shape Low/Mid/High and the rail's
+  Input/Output gain knobs grow their arc from the centre and follow the
+  Visual EQ's signed palette — blue above 0 dB, amber below, neutral at rest
+  (`Knob` `bipolar`; `--eq-boost` / `--eq-cut` tokens pinned to the TS
+  constants by `Knob.bipolar.test.tsx`). Visual EQ nodes are one size.
+- **Reset all** on the Advanced rail (Track and Album Master): one header
+  action puts every non-managed control back to its first-open state
+  (`resetToStandardManaged`), one undo step; style / intensity / loudness
+  target / delivery format stay.
+- **Insight review**: opening the INSIGHT disclosure acknowledges the analysis
+  (the REVIEW pill disappears as it opens); clicking the pill opens it. The
+  in-panel "Mark reviewed" / Unreviewed affordances are gone.
+- **Type hierarchy**: the rail's three stacked density override layers
+  collapsed into one tokenised block with four rungs (heading / control /
+  value / subtext); deck section labels and Tone Shape knob titles sit on the
+  same rungs as the rail; Preset Density uses the feel-control slider layout.
+- **Album header fix**: at console sizes under 1700px the two preview toggles
+  stack so Album Master's one-line badge row no longer runs under the
+  Original/Mastered switch; the waveform card's Y is unchanged in both modes.
+
 ## 2026-08-18 — Premium design pass, blue/amber dynamic EQ, movable EQ bands
 
 - **Desktop shell restyle** (`design/premium-pass`, merged): hairline seams,
