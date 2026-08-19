@@ -61,6 +61,11 @@ Track Master supports:
   while the master plays. The Original/Mastered flip and the played span of
   the waveform react visually to which source is audible; all such motion
   is presentation-only and respects `prefers-reduced-motion`.
+- Returning from Advanced to Standard confirms first when the track carries
+  Advanced edits **or** an Advanced-only style (Spatial / Warmth / Punch /
+  Loud / custom — Standard has tiles for four styles only). The reset clears
+  the edits and, for an Advanced-only style, lands on Universal at the same
+  intensity and loudness; the dialog says so by name. (2026-08-19)
 - A first-run guide in Standard view: subtle floating coachmarks that walk a
   new user to the Original→Mastered flip, then a send-off and one Advanced
   pointer. Dismissible, never blocking, persisted under

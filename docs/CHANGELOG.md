@@ -12,6 +12,22 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-08-19 — Owner tune of the alive pass + Standard-return gate for Advanced-only styles
+
+- **Quieter**: preset tile hover ~40% as dramatic; knob hover glow + drag
+  effect ~30% less; MASTER OUT bars +6% saturation only while Mastered is
+  audible.
+- **One heading rung**: Standard's step labels / rail titles / TRACKS now sit
+  on Advanced's T1 rung (size, weight, white). The ✓ chip on Standard's
+  selected Style tile is gone — border/glow/tinted label already say it.
+- **Advanced→Standard with an Advanced-only style** (Spatial / Warmth /
+  Punch / Loud / custom) now goes through the Back-to-Standard confirm
+  (it used to land on "no style selected"). The dialog names the style and
+  says it becomes Universal at the same intensity/loudness; Reset all on
+  the Advanced rail still keeps the style (`needsStandardReturnReset` /
+  `resetForStandardReturn` in `lib/standard-managed.ts`, pinned by
+  `App.transitions.test.tsx` 7b).
+
 ## 2026-08-19 — Alive pass 1: A/B flip moment, meter ballistics, live GR, console motion
 
 Plan: `docs/superpowers/plans/2026-08-19-ui-alive-pass-1.md` (Passes 2–4
