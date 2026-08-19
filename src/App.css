@@ -8295,3 +8295,59 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
 .session-progress { width: 44px; height: 3px; }
 .source-insight { margin-top: 0.5rem; padding-top: 0.45rem; }
 .source-insight-toggle { margin-left: -0.35rem; }
+
+/* =====================================================================
+   PASS 3 (2026-08-19) — colour & state semantics
+   ---------------------------------------------------------------------
+   Rule: on the console chrome, AMBER means "cut" (EQ / bipolar knobs) and
+   nothing else. Warnings keep amber only inside warning surfaces (export
+   gate, receipt rows, sidebar concern chips). Anything amber that sat on
+   the deck/rail without being a cut — REVIEW pill, the compressor hint's
+   rule, the busy pill fill — is now neutral.
+   ===================================================================== */
+
+/* "New analysis" is a quiet status, not a warning. */
+.source-insight-review {
+  border-color: var(--hairline);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-1);
+}
+.source-insight-review:hover {
+  border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-0);
+}
+/* Compressor hint: informational, neutral rule. */
+.compressor-source-note { border-left-color: var(--border-strong); }
+
+/* Edited markers — which controls have been touched. Knobs that opt in
+   get a 5px dot beside the label; the active Styles tile gets an "edited"
+   tag when Advanced edits sit on top of the style. Neutral-bright, never
+   the accent (the accent is reserved for what is live / selected). */
+.knob-label { position: relative; }
+.knob-edited-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 0.3rem;
+  border-radius: 50%;
+  background: var(--text-0);
+  opacity: 0.85;
+  vertical-align: middle;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+}
+.tile { position: relative; }
+.tile-edited {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--text-1);
+  padding: 0.08rem 0.38rem;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: rgba(255, 255, 255, 0.06);
+}

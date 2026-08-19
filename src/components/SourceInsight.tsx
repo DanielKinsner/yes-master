@@ -105,7 +105,7 @@ export function SourceInsight({
               openAndAcknowledge();
             }}
           >
-            Review
+            New
           </button>
         )}
       </div>

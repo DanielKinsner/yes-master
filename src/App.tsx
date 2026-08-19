@@ -1411,6 +1411,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         onChange={tm.setPreset}
         savingPreset={tm.savingPreset}
         onSave={tm.saveUserPreset}
+        edited={hasNonManagedEdits(tm.selectedSettings)}
       />
       <SignalChain settings={tm.selectedSettings} />
       <div
@@ -1843,11 +1844,16 @@ export function PresetTiles({
   onChange,
   savingPreset,
   onSave,
+  edited = false,
 }: {
   selected: Preset;
   onChange: (preset: Preset) => void;
   savingPreset: boolean;
   onSave: (name: string) => Promise<boolean>;
+  /// Pass 3 (2026-08-19): the selected style carries Advanced edits on top
+  /// (hasNonManagedEdits) — the active tile says "edited" so the style name
+  /// alone never claims to describe the sound.
+  edited?: boolean;
 }) {
   const [name, setName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -1942,6 +1948,11 @@ export function PresetTiles({
             >
               <PresetIcon kind={p.value.kind} className="tile-icon" />
               <span className="tile-label">{p.label}</span>
+              {active && edited && (
+                <span className="tile-edited" title="Advanced edits on top of this style">
+                  edited
+                </span>
+              )}
               <span id={blurbId} className="sr-only">
                 {p.blurb}
               </span>
@@ -2062,6 +2073,7 @@ export function Macros({
             size="md"
             tone="cyan"
             bipolar
+            editedIndicator
             value={settings.eq_low_db}
             min={-12}
             max={12}
@@ -2075,6 +2087,7 @@ export function Macros({
             size="md"
             tone="purple"
             bipolar
+            editedIndicator
             value={settings.eq_mid_db}
             min={-12}
             max={12}
@@ -2088,6 +2101,7 @@ export function Macros({
             size="md"
             tone="blue"
             bipolar
+            editedIndicator
             value={settings.eq_high_db}
             min={-12}
             max={12}

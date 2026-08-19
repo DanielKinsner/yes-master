@@ -393,6 +393,7 @@ function AdvancedControlsCard({
       <div className="adv-knob-grid rail-card-body">
         <Knob
           label="Input gain"
+          editedIndicator
           value={settings.input_gain_db}
           min={-24}
           max={24}
@@ -408,6 +409,7 @@ function AdvancedControlsCard({
         />
         <Knob
           label="Output gain"
+          editedIndicator
           value={settings.output_gain_db}
           min={-24}
           max={24}
@@ -812,6 +814,7 @@ function CompressionKnobGrid({
           fine steps (Shift-drag is finer still) and a typeable field. */}
       <Knob
         label="Threshold"
+        editedIndicator
         value={threshold}
         min={-60}
         max={0}
@@ -826,6 +829,7 @@ function CompressionKnobGrid({
       />
       <Knob
         label="Ratio"
+        editedIndicator
         value={ratio}
         min={1}
         max={20}
@@ -840,6 +844,7 @@ function CompressionKnobGrid({
       />
       <Knob
         label="Attack"
+        editedIndicator
         value={attack}
         min={0.5}
         max={200}
@@ -854,6 +859,7 @@ function CompressionKnobGrid({
       />
       <Knob
         label="Release"
+        editedIndicator
         value={release}
         min={5}
         max={2000}

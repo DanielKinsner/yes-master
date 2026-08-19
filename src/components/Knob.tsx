@@ -67,6 +67,11 @@ type KnobProps = {
   max: number;
   step?: number;
   defaultValue?: number;
+  /// Pass 3 (2026-08-19): show a small dot beside the label while the value
+  /// differs from `defaultValue` — "this control has been touched". Opt in
+  /// on controls that are EDITS (Tone Shape, gains, compressor), not on
+  /// creative choices (Intensity).
+  editedIndicator?: boolean;
   size?: KnobSize;
   format: (v: number) => string;
   onChange: (v: number) => void;
@@ -145,8 +150,14 @@ export function Knob({
   unit,
   bipolar = false,
   bipolarCenter = 0,
+  editedIndicator = false,
 }: KnobProps) {
   const dims = SIZES[size];
+  // Pass 3 (2026-08-19): opt-in "touched" marker — a dot beside the label
+  // while the value differs from its default. Opt-in because Intensity is a
+  // creative choice, not an edit.
+  const edited =
+    editedIndicator && defaultValue !== undefined && Math.abs(value - defaultValue) > step / 4;
   const role: KnobRole | null = bipolar ? bipolarRole(value, bipolarCenter, step) : null;
   const toneColor =
     role === "boost"
@@ -285,10 +296,15 @@ export function Knob({
 
   return (
     <div
-      className={`knob knob-${size} knob-tone-${tone}${role ? ` knob-bipolar knob-role-${role}` : ""}${disabled ? " is-disabled" : ""}`}
+      className={`knob knob-${size} knob-tone-${tone}${role ? ` knob-bipolar knob-role-${role}` : ""}${disabled ? " is-disabled" : ""}${edited ? " is-edited" : ""}`}
       style={{ ["--knob-tone" as never]: toneColor }}
     >
-      {label && <span className="knob-label">{label}</span>}
+      {label && (
+        <span className="knob-label">
+          {label}
+          {edited && <span className="knob-edited-dot" aria-hidden title="Edited — double-click the knob to reset" />}
+        </span>
+      )}
       {/* Width only: the SVG is display:block with height:auto, so when a
           breakpoint clamps .knob-vis narrower the box shrinks WITH the dial
           instead of leaving a dead band above the value (2026-08-19). */}
