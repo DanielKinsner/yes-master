@@ -21,8 +21,8 @@ Dates are milestone dates, not exact commit times.
   constants by `Knob.bipolar.test.tsx`). Visual EQ nodes are one size.
 - **Reset all** on the Advanced rail (Track and Album Master): one header
   action puts every non-managed control back to its first-open state
-  (`resetToStandardManaged`), one undo step; style / intensity / loudness
-  target / delivery format stay.
+  (`resetToStandardManaged`), one undo step, behind a confirm dialog; style /
+  intensity / loudness target / delivery format stay.
 - **Insight review**: opening the INSIGHT disclosure acknowledges the analysis
   (the REVIEW pill disappears as it opens); clicking the pill opens it. The
   in-panel "Mark reviewed" / Unreviewed affordances are gone.

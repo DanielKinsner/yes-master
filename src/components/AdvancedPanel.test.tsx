@@ -114,10 +114,33 @@ describe("AdvancedPanel", () => {
     const dirty = await renderPanel({ onResetAll, canResetAll: true });
     const live = dirty.container.querySelector<HTMLButtonElement>("button.rail-reset-all");
     expect(live?.disabled).toBe(false);
+    // Owner 2026-08-19: a misclick must not wipe a tuning — the button
+    // opens a confirmation, and only the confirm fires the reset.
     await act(async () => {
       live?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
+    expect(onResetAll).not.toHaveBeenCalled();
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog?.textContent).toContain("Reset all Advanced controls?");
+    // Cancel path closes without resetting.
+    const keep = Array.from(dialog!.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("Keep my settings"),
+    );
+    await act(async () => {
+      keep?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onResetAll).not.toHaveBeenCalled();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    // Confirm path resets once.
+    await act(async () => {
+      live?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    const confirm = document.querySelector<HTMLButtonElement>("button.rail-reset-all-confirm");
+    await act(async () => {
+      confirm?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
     expect(onResetAll).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
     await act(async () => {
       dirty.root.unmount();
     });

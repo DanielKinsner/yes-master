@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChromeDialog } from "./ChromeDialog";
 import { Knob } from "./Knob";
 import { NumberField, PanelResetButton, SelectField } from "./fields";
 import type {
@@ -84,6 +85,10 @@ export function AdvancedPanel({
   ) => {
     onAdvanced({ ...a, [field]: value });
   };
+  // Reset all is one click away from wiping a full tuning, so it confirms
+  // (owner 2026-08-19). Per-section ↺ buttons stay single-click — their
+  // blast radius is one section and undo covers them comfortably.
+  const [confirmResetAll, setConfirmResetAll] = useState(false);
   return (
     <>
       {onResetAll && (
@@ -93,7 +98,7 @@ export function AdvancedPanel({
             type="button"
             className="rail-reset-all"
             disabled={!canResetAll}
-            onClick={onResetAll}
+            onClick={() => setConfirmResetAll(true)}
             title={
               canResetAll
                 ? "Put every Advanced control back to where it starts. Style, intensity, loudness target and delivery format stay."
@@ -104,6 +109,40 @@ export function AdvancedPanel({
             <span aria-hidden="true">↺</span> Reset all
           </button>
         </header>
+      )}
+      {onResetAll && confirmResetAll && (
+        <ChromeDialog
+          title="Reset all Advanced controls?"
+          eyebrow="Advanced"
+          onClose={() => setConfirmResetAll(false)}
+        >
+          <p className="reset-all-confirm-copy">
+            Every gain, EQ band, feel control, compressor setting and adaptive
+            strength goes back to where it starts when Advanced opens. Your
+            style, intensity, loudness target and delivery format stay. Undo
+            brings it all back in one step.
+          </p>
+          <div className="export-review-actions">
+            <button
+              type="button"
+              className="ghost-btn"
+              autoFocus
+              onClick={() => setConfirmResetAll(false)}
+            >
+              Keep my settings
+            </button>
+            <button
+              type="button"
+              className="primary rail-reset-all-confirm"
+              onClick={() => {
+                setConfirmResetAll(false);
+                onResetAll();
+              }}
+            >
+              Reset all
+            </button>
+          </div>
+        </ChromeDialog>
       )}
       <DeliveryProfileCard
         settings={settings}

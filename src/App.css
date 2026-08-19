@@ -7403,6 +7403,12 @@ input:focus-visible,
   color: var(--text-0);
 }
 .rail-reset-all:disabled { opacity: 0.38; cursor: default; }
+.reset-all-confirm-copy {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--text-1);
+}
 
 /* Delivery Profile: title + select. Nothing else. */
 .rail-card-delivery .loudness-profile-select,
