@@ -222,7 +222,7 @@ describe("AdvancedPanel", () => {
     });
   });
 
-  it("keeps GR bars empty when not auditioning the master", async () => {
+  it("keeps GR bars empty when not auditioning the master, and shows each band's working values instead of dashes (owner 2026-08-19)", async () => {
     const { container, root } = await renderPanel({
       liveGr: { low: -6, mid: -3, high: -1 },
       isPlayingMaster: false,
@@ -233,6 +233,12 @@ describe("AdvancedPanel", () => {
       expect((el as HTMLElement).style.transform).toBe("scaleX(0)");
     }
     expect(container.querySelector(".gr-meters")!.getAttribute("data-live")).toBe("false");
+    // Idle: threshold · ratio per band, not "—".
+    const values = [...container.querySelectorAll(".gr-meter-value")].map((v) => v.textContent ?? "");
+    for (const v of values) {
+      expect(v).toMatch(/-?\d+\.\d dB · \d+\.\d:1/);
+      expect(v).not.toBe("—");
+    }
     await act(async () => {
       root.unmount();
     });

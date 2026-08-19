@@ -668,13 +668,42 @@ function PerBandCompressorCard({
           {(["low", "mid", "high"] as Band[]).map((band) => {
             const db = isPlayingMaster && liveGr ? liveGr[band] : undefined;
             const fill = grToFill(db);
+            // Idle (owner 2026-08-19: "are there not values to be displayed
+            // here?"): the row shows the band's WORKING values — threshold ·
+            // ratio, manual override or preset/density-derived — and flips
+            // to live gain reduction while the master plays.
+            const manualThreshold = bandFields[band].threshold;
+            const manualRatio = bandFields[band].ratio;
+            const thresholdDb =
+              manualEnabled && manualThreshold != null
+                ? manualThreshold
+                : autoReadouts[band].thresholdDb;
+            const ratio =
+              manualEnabled && manualRatio != null ? manualRatio : autoReadouts[band].ratio;
+            // Density 0 in Preset mode = the preset compressor is inactive;
+            // identity values ("0.0 dB · 1.0:1") would read as real settings.
+            const presetInactive =
+              !manualEnabled &&
+              (settings.advanced.compression_density ??
+                (settings.preset.kind === "custom" ? 0 : 0.5)) <= 0.001;
+            const idleText = presetInactive
+              ? "inactive"
+              : `${thresholdDb.toFixed(1)} dB · ${ratio.toFixed(1)}:1`;
             return (
-              <div key={band} className="gr-meter" title={`${bandLabel(band)} gain reduction`}>
+              <div
+                key={band}
+                className="gr-meter"
+                title={
+                  isPlayingMaster
+                    ? `${bandLabel(band)} gain reduction (live)`
+                    : `${bandLabel(band)} threshold · ratio — live gain reduction shows here while Mastered plays`
+                }
+              >
                 <span className="gr-meter-label">{bandLabel(band)}</span>
                 <span className="gr-meter-track" aria-hidden>
                   <span className="gr-meter-fill" style={{ transform: `scaleX(${fill})` }} />
                 </span>
-                <span className="gr-meter-value">{grLabel(db)}</span>
+                <span className="gr-meter-value">{isPlayingMaster ? grLabel(db) : idleText}</span>
               </div>
             );
           })}

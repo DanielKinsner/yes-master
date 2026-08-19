@@ -8424,3 +8424,7 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-0);
 }
+
+/* GR rows carry "−18.0 dB · 2.0:1" while idle — wider value column. */
+.gr-meter { grid-template-columns: 2.4rem 1fr 6.4rem; }
+.gr-meter-value { white-space: nowrap; }
