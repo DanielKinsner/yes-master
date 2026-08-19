@@ -27,7 +27,7 @@
 //     same plot cleanly).
 // Live FFT spectrum can render as an underlay when `spectrumDb` is supplied.
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { EqBandFrequencies, MasteringSettings } from "../bindings";
 import { EQ_BAND_DEFAULTS, EQ_BAND_RANGES } from "../bindings";
 
@@ -227,8 +227,33 @@ export function VisualEqPanel({
   const PAD_BOTTOM = compact ? 18 : 34;
   const AXIS_LABEL_Y_OFFSET = compact ? 12 : 14;
   const BAND_LABEL_Y_OFFSET = 28;
-  const VBW = compact ? 420 : 720;
   const VBH = compact ? 180 : 272;
+  // 2026-08-19 — the viewBox FOLLOWS the rendered aspect ratio. The plot
+  // used to be a fixed 420x180 box stretched with preserveAspectRatio="none",
+  // so on a wide deck (4K, or any tall-and-wide window) every label, node
+  // ring and stroke was smeared horizontally. Now the height stays fixed in
+  // user units and the width is re-derived from the element's real aspect,
+  // so one user unit is the same size in x and y. Without layout (jsdom)
+  // or a ResizeObserver the historical width is kept.
+  const DEFAULT_VBW = compact ? 420 : 720;
+  const [vbw, setVbw] = useState(DEFAULT_VBW);
+  useLayoutEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || typeof ResizeObserver === "undefined") return;
+    const apply = (w: number, h: number) => {
+      if (!(w > 0 && h > 0)) return;
+      const next = Math.round(Math.max(VBH * 1.6, Math.min(VBH * 8, (VBH * w) / h)));
+      setVbw((prev) => (Math.abs(prev - next) > 1 ? next : prev));
+    };
+    const rect = svg.getBoundingClientRect();
+    apply(rect.width, rect.height);
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) apply(entry.contentRect.width, entry.contentRect.height);
+    });
+    observer.observe(svg);
+    return () => observer.disconnect();
+  }, [VBH]);
+  const VBW = vbw;
   const plotW = VBW - PAD_LEFT - PAD_RIGHT;
   const plotH = VBH - PAD_TOP - PAD_BOTTOM;
 

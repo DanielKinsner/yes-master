@@ -5360,6 +5360,19 @@ button.primary:disabled {
     flex-direction: column;
     gap: 0.75rem;
   }
+
+  /* Flow layout (the 1360x740 minimum window lands here): the deck row
+     kept the full-size 130px / 76px dials with `auto` columns, so the
+     Intensity dial ran under the Tone Shape knobs and the three Tone Shape
+     knobs overlapped each other (owner screenshot 2026-08-19). Clamp the
+     dials and give each block a real minimum column. */
+  .knobs-row {
+    grid-template-columns: minmax(112px, auto) minmax(196px, auto) minmax(230px, 1fr) minmax(160px, 190px);
+    gap: 0.75rem;
+  }
+  .intensity-block .knob-vis { max-width: 100px; }
+  .tone-shape-knobs { gap: 0.45rem; }
+  .tone-shape-knobs .knob-vis { max-width: 54px; }
 }
 
 /* ─── Premium: focus & reduced-motion (vera/premium-motion-focus) ────────

@@ -30,6 +30,12 @@ Dates are milestone dates, not exact commit times.
   collapsed into one tokenised block with four rungs (heading / control /
   value / subtext); deck section labels and Tone Shape knob titles sit on the
   same rungs as the rail; Preset Density uses the feel-control slider layout.
+- **Visual EQ at any aspect**: the panel's viewBox width now follows its
+  rendered aspect ratio (height fixed in user units), so labels, nodes and
+  strokes are no longer smeared horizontally on wide decks (4K); the drag
+  torture script normalises node x to the plot area accordingly. Rail dials
+  54px; played waveform span softened ~25%; the 1360x740 flow layout clamps
+  the deck dials so Intensity no longer runs under Tone Shape.
 - **Album header fix**: at console sizes under 1700px the two preview toggles
   stack so Album Master's one-line badge row no longer runs under the
   Original/Mastered switch; the waveform card's Y is unchanged in both modes.

@@ -31,7 +31,17 @@ await p.waitForSelector(".eq-node-hit", { timeout: 40000 }); await p.waitForTime
 const hits = p.locator(".eq-node-hit");
 const nodes = p.locator(".eq-node");
 const readout = () => p.locator(".eq-node-readout").first().textContent().catch(() => null);
-const nodeCx = async (i) => Number(await nodes.nth(i).getAttribute("cx"));
+// cx normalised to a fixed 420-wide frame: since 2026-08-19 the panel's
+// viewBox width follows its rendered aspect (so a layout change — e.g. the
+// MY PRESETS row appearing — re-scales every user-unit x). Frequency is the
+// invariant; a fixed-frame cx is how this script compares it.
+const nodeCx = async (i) => {
+  const raw = Number(await nodes.nth(i).getAttribute("cx"));
+  const vb = await p.locator(".equalizer-block svg.eq-overlay").first().getAttribute("viewBox");
+  const vbw = vb ? Number(vb.split(/\s+/)[2]) : 420;
+  // Compact-panel padding is 28 left / 8 right in user units at any width.
+  return ((raw - 28) / (vbw - 36)) * (420 - 36) + 28;
+};
 const center = async (i) => { const box = await hits.nth(i).boundingBox(); return [box.x + box.width / 2, box.y + box.height / 2]; };
 async function drag(i, dx, dy, holdReadout = false) {
   const [cx, cy] = await center(i);
