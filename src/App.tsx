@@ -471,6 +471,8 @@ function App() {
               adaptiveReadout={tm.guardrailReadout}
               compressionPlan={tm.compressionPlan}
               albumMode={tm.mode === "album"}
+              onResetAll={tm.resetToStandardManaged}
+              canResetAll={hasNonManagedEdits(tm.selectedSettings)}
             />
           ) : undefined
         }

@@ -53,6 +53,8 @@ async function renderPanel(opts?: {
   settings?: MasteringSettings;
   adaptiveReadout?: GuardrailReadout | null;
   onAdvanced?: (adv: MasteringSettings["advanced"]) => void;
+  onResetAll?: () => void;
+  canResetAll?: boolean;
 }): Promise<{ container: HTMLDivElement; root: Root }> {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -69,6 +71,8 @@ async function renderPanel(opts?: {
         onDeliveryBitDepth={vi.fn()}
         onDeliverySampleRate={vi.fn()}
         adaptiveReadout={opts?.adaptiveReadout}
+        onResetAll={opts?.onResetAll}
+        canResetAll={opts?.canResetAll}
       />,
     );
   });
@@ -91,6 +95,34 @@ function readoutWithAutoWidth(effectiveAutoWidth: number): GuardrailReadout {
 }
 
 describe("AdvancedPanel", () => {
+  it("renders no rail header without a global reset; with one, Reset all is disabled until something is edited (owner 2026-08-19)", async () => {
+    const bare = await renderPanel();
+    expect(bare.container.querySelector(".rail-header")).toBeNull();
+    await act(async () => {
+      bare.root.unmount();
+    });
+
+    const onResetAll = vi.fn();
+    const clean = await renderPanel({ onResetAll, canResetAll: false });
+    const btn = clean.container.querySelector<HTMLButtonElement>("button.rail-reset-all");
+    expect(btn).not.toBeNull();
+    expect(btn?.disabled).toBe(true);
+    await act(async () => {
+      clean.root.unmount();
+    });
+
+    const dirty = await renderPanel({ onResetAll, canResetAll: true });
+    const live = dirty.container.querySelector<HTMLButtonElement>("button.rail-reset-all");
+    expect(live?.disabled).toBe(false);
+    await act(async () => {
+      live?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onResetAll).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      dirty.root.unmount();
+    });
+  });
+
   it("states that Track Master delivery exports WAV files", async () => {
     const { container, root } = await renderPanel();
 

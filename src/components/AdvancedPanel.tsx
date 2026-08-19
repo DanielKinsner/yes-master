@@ -44,6 +44,8 @@ export function AdvancedPanel({
   adaptiveReadout,
   compressionPlan,
   albumMode = false,
+  onResetAll,
+  canResetAll = false,
 }: {
   analysis?: AnalysisResult;
   settings: MasteringSettings;
@@ -67,6 +69,13 @@ export function AdvancedPanel({
   adaptiveReadout?: GuardrailReadout | null;
   compressionPlan?: CompressionPlan | null;
   albumMode?: boolean;
+  /// 2026-08-19 (owner): one global reset for the whole Advanced rail —
+  /// every non-managed control (gains, EQ + band positions, feel controls,
+  /// compressor, adaptive strength) back to where it sits when Advanced is
+  /// first opened. Style, intensity, loudness target and delivery format are
+  /// Standard-managed and stay. The host wires `resetToStandardManaged`.
+  onResetAll?: () => void;
+  canResetAll?: boolean;
 }) {
   const a = settings.advanced;
   const update = (
@@ -77,6 +86,25 @@ export function AdvancedPanel({
   };
   return (
     <>
+      {onResetAll && (
+        <header className="rail-header">
+          <span className="rail-header-title">Advanced</span>
+          <button
+            type="button"
+            className="rail-reset-all"
+            disabled={!canResetAll}
+            onClick={onResetAll}
+            title={
+              canResetAll
+                ? "Put every Advanced control back to where it starts. Style, intensity, loudness target and delivery format stay."
+                : "Every Advanced control is already at its starting value."
+            }
+            aria-label="Reset all Advanced controls"
+          >
+            <span aria-hidden="true">↺</span> Reset all
+          </button>
+        </header>
+      )}
       <DeliveryProfileCard
         settings={settings}
         onDeliveryProfile={onDeliveryProfile}

@@ -7343,6 +7343,48 @@ details.rail-section[open] > summary.rail-section-head::after {
 details.rail-section > summary.rail-section-head:hover .panel-title { color: var(--text-0); }
 .rail-section-head .panel-reset-button { margin-left: auto; }
 
+/* Rail header: the rail's own title + the global Reset all (owner
+   2026-08-19). One tier above the section heads: same family, a touch
+   larger, no accent bar — it names the surface, not a block in it. */
+.rail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0 0.4rem;
+  border-bottom: 1px solid var(--hairline);
+}
+.rail-header + .rail-section { border-top: 0; }
+.rail-header-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-0);
+}
+.rail-reset-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-1);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.rail-reset-all:hover:not(:disabled),
+.rail-reset-all:focus-visible {
+  border-color: rgba(111, 163, 255, 0.45);
+  background: rgba(111, 163, 255, 0.12);
+  color: var(--text-0);
+}
+.rail-reset-all:disabled { opacity: 0.38; cursor: default; }
+
 /* Delivery Profile: title + select. Nothing else. */
 .rail-card-delivery .loudness-profile-select,
 .rail-card-delivery .rail-card-select { margin: 0; }
