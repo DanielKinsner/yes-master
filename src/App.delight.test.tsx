@@ -188,6 +188,7 @@ describe("U11 — reduced motion removes the motion, not the meaning", () => {
       ".sidebar",
       ".receipt-check-path",
       ".std-export-done-check",
+      ".is-jump-target",
     ]) {
       expect(reduced).toContain(selector);
     }
@@ -270,6 +271,7 @@ describe("U11 — effects acknowledge real changes only", () => {
       "sidebar-in",
       "check-draw",
       "done-pop",
+      "jump-target-flash",
     ]) {
       const at = CSS.indexOf(`@keyframes ${name}`);
       expect(at, `keyframes ${name} missing`).toBeGreaterThan(-1);

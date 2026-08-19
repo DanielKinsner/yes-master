@@ -408,6 +408,7 @@ export function VisualEqPanel({
 
   return (
     <section
+      id="jump-visual-eq"
       className={`visual-eq-panel ${compact ? "visual-eq-panel-compact" : ""}`}
       aria-label="Visual EQ"
     >

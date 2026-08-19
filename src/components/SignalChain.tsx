@@ -17,6 +17,32 @@ type Stage = {
   icon: () => ReactElement;
 };
 
+// Pass 2 (2026-08-19): each stage that has an editable home jumps to it on
+// click, so the strip is a map of the console, not decoration. The ids are
+// stamped on the target sections (VisualEqPanel, AdvancedPanel cards, the
+// Intensity block); SOURCE has no control and stays a plain node.
+export const STAGE_JUMP_TARGETS = {
+  eq: "jump-visual-eq",
+  warmth: "jump-advanced-controls",
+  air: "jump-advanced-controls",
+  comp: "jump-per-band-compressor",
+  width: "jump-advanced-controls",
+  sat: "jump-intensity",
+  limit: "jump-advanced-controls",
+} as const;
+
+export function jumpToStageTarget(key: string): void {
+  const id = (STAGE_JUMP_TARGETS as Record<string, string | undefined>)[key];
+  if (!id || typeof document === "undefined") return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  // Brief highlight so the eye lands where the scroll did. Class only; the
+  // CSS owns the look and the reduced-motion opt-out.
+  el.classList.add("is-jump-target");
+  window.setTimeout(() => el.classList.remove("is-jump-target"), 1200);
+}
+
 // Mirrors the per-preset `warmth` saturation baselines in
 // src-tauri/src/dsp.rs (PRESET_* calibration). Display-only; the mirror is
 // tripwired against src/preset-mirrors.json (generated from dsp.rs) in
@@ -209,11 +235,9 @@ export function SignalChain({ settings }: { settings: MasteringSettings }) {
 
 function StageNode({ stage }: { stage: Stage }) {
   const glowOpacity = stage.active ? Math.max(0.25, stage.intensity) : 0;
-  return (
-    <div
-      className={`chain-stage ${stage.active ? "is-active" : "is-off"}`}
-      title={`${stage.label} — ${stage.detail}`}
-    >
+  const jumpable = stage.key in STAGE_JUMP_TARGETS;
+  const body = (
+    <>
       <span
         className="chain-stage-disc"
         style={{
@@ -228,7 +252,25 @@ function StageNode({ stage }: { stage: Stage }) {
       </span>
       <span className="chain-stage-label">{stage.label}</span>
       <span className="chain-stage-detail">{stage.detail}</span>
-    </div>
+    </>
+  );
+  const className = `chain-stage ${stage.active ? "is-active" : "is-off"}`;
+  if (!jumpable) {
+    return (
+      <div className={className} title={`${stage.label} — ${stage.detail}`}>
+        {body}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={className}
+      title={`${stage.label} — ${stage.detail}. Jump to its controls.`}
+      onClick={() => jumpToStageTarget(stage.key)}
+    >
+      {body}
+    </button>
   );
 }
 

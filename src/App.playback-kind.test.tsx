@@ -160,7 +160,6 @@ function trackState(
     resetToStandardManaged: vi.fn(),
     exportStandardMaster: vi.fn(),
     saveUserPreset: vi.fn(),
-    isAnalyzing: false,
     analysisProgress: null,
     rememberTrackView: vi.fn(),
     rememberedTrackView: vi.fn(() => null),

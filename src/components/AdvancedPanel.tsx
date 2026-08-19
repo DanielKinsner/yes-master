@@ -376,7 +376,7 @@ function AdvancedControlsCard({
     });
   };
   return (
-    <section className="rail-section rail-card-advanced">
+    <section id="jump-advanced-controls" className="rail-section rail-card-advanced">
       {/* 2026-08-18 (owner): always open — with the rail flattened there is
           room for it, and the knobs are the mastering identity of the rail. */}
       <header className="panel-head rail-section-head">
@@ -618,7 +618,7 @@ function PerBandCompressorCard({
   };
   const activeBandFields = bandFields[active];
   return (
-    <section className={"rail-section rail-card-per-band is-mode-" + compressorMode}>
+    <section id="jump-per-band-compressor" className={"rail-section rail-card-per-band is-mode-" + compressorMode}>
       <header className="panel-head rail-section-head">
         <span className="panel-title">PER-BAND COMPRESSOR</span>
         <PanelResetButton

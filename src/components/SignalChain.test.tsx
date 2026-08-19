@@ -3,7 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { MasteringSettings } from "../bindings";
-import { SignalChain } from "./SignalChain";
+import { SignalChain, STAGE_JUMP_TARGETS } from "./SignalChain";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true;
@@ -74,6 +74,36 @@ describe("SignalChain", () => {
     expect(
       container.querySelector('[aria-label*="signal chain detail" i]'),
     ).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  // Pass 2 (2026-08-19): every stage that has an editable home is a button
+  // that jumps to it — the strip stops reading as decoration. SOURCE has no
+  // control, so it stays a plain node.
+  it("stages with a home are buttons that scroll their target into view", async () => {
+    // Stand in the targets so the jump has somewhere to land.
+    const eq = document.createElement("section");
+    eq.id = STAGE_JUMP_TARGETS.eq;
+    const scrolled: string[] = [];
+    (eq as unknown as { scrollIntoView: () => void }).scrollIntoView = () => scrolled.push(eq.id);
+    document.body.appendChild(eq);
+
+    const { container, root } = await renderSignalChain();
+    const buttons = container.querySelectorAll("button.chain-stage");
+    // in/source is not a button; the other seven are.
+    expect(buttons.length).toBe(7);
+    expect(container.querySelector(".chain-stage:not(button)")).not.toBeNull();
+
+    const eqBtn = [...buttons].find((b) => b.textContent?.includes("EQ"))!;
+    expect(eqBtn.getAttribute("title")).toMatch(/jump|open|go to/i);
+    await act(async () => {
+      eqBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(scrolled).toEqual([STAGE_JUMP_TARGETS.eq]);
+    expect(eq.classList.contains("is-jump-target")).toBe(true);
 
     await act(async () => {
       root.unmount();

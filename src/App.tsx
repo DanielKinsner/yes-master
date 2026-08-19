@@ -2033,7 +2033,7 @@ export function Macros({
 }) {
   return (
     <section className="macros knobs-row">
-      <div className="intensity-block">
+      <div id="jump-intensity" className="intensity-block">
         <span className="section-label">INTENSITY</span>
         <Knob
           label=""
