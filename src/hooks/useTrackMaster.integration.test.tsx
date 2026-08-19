@@ -1917,9 +1917,15 @@ describe("useTrackMaster integration dispatches", () => {
       await importB;
     });
 
-    // A progress event for the still-running EARLIER batch (A) must still show.
+    // A progress event for the still-running EARLIER batch (A) must still be
+    // tracked. Since 2026-08-19 the flag is per track: it is SHOWN for track
+    // A (selected) and not for the finished B — so select A first.
     await act(async () => {
       progressHandler?.({ batch_id: batchA, label: "Reading tonal balance", fraction: 0.42 });
+    });
+    expect(harness.current().analysisProgress).toBeNull(); // B selected, B done
+    await act(async () => {
+      harness.current().selectTrack(trackA.id);
     });
     expect(harness.current().analysisProgress?.label).toBe("Reading tonal balance");
     expect(harness.current().analysisProgress?.progress).toBe(0.42);
@@ -1931,6 +1937,88 @@ describe("useTrackMaster integration dispatches", () => {
     await act(async () => {
       harness.root.unmount();
     });
+  });
+
+  // 2026-08-19 (owner stuck-analysis report): "analyzing" is per TRACK, not
+  // app-wide. With two tracks' batches in flight, the SELECTED track's flag
+  // follows its own batch; another track's batch must not light the pill or
+  // the Insight card over a finished result.
+  it("isAnalyzing follows the selected track's own batch, not any batch anywhere", async () => {
+    const batchIds: string[] = [];
+    const resolvers: Record<string, (v: AnalysisResult[]) => void> = {};
+    mocks.api.analyzeTracks.mockImplementation(
+      (_tracks: Array<{ id: TrackId }>, batchId: string) => {
+        batchIds.push(batchId);
+        const d = deferred<AnalysisResult[]>();
+        resolvers[batchId] = d.resolve;
+        return d.promise;
+      },
+    );
+    const trackA = makeTrack("pt-a", "C:/audio/pt-a.wav");
+    const trackB = makeTrack("pt-b", "C:/audio/pt-b.wav");
+    mocks.api.importTracks.mockImplementation((paths: string[]) =>
+      Promise.resolve([paths[0].includes("pt-a") ? trackA : trackB]),
+    );
+    const harness = await renderHookHarness();
+
+    let importA: Promise<void> | undefined;
+    await act(async () => {
+      importA = harness.current().importFiles([trackA.path]);
+    });
+    await waitFor(() => expect(batchIds).toHaveLength(1));
+    let importB: Promise<void> | undefined;
+    await act(async () => {
+      importB = harness.current().importFiles([trackB.path]);
+    });
+    await waitFor(() => expect(batchIds).toHaveLength(2));
+    const [batchA, batchB] = batchIds;
+
+    // B is selected (latest import) and its batch is running.
+    expect(harness.current().selectedTrackId).toBe(trackB.id);
+    expect(harness.current().isAnalyzing).toBe(true);
+    expect(harness.current().isAnyAnalyzing).toBe(true);
+
+    // B's batch finishes while A's is still running: B (selected) is DONE.
+    await act(async () => {
+      resolvers[batchB]([makeAnalysis(trackB.id)]);
+      await importB;
+    });
+    expect(harness.current().isAnalyzing).toBe(false);
+    expect(harness.current().isAnyAnalyzing).toBe(true);
+
+    // Selecting A shows A's own in-flight state.
+    await act(async () => {
+      harness.current().selectTrack(trackA.id);
+    });
+    expect(harness.current().isAnalyzing).toBe(true);
+
+    await act(async () => {
+      resolvers[batchA]([makeAnalysis(trackA.id)]);
+      await importA;
+    });
+    expect(harness.current().isAnalyzing).toBe(false);
+    expect(harness.current().isAnyAnalyzing).toBe(false);
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
+  // Root cause of the 2026-08-19 "analysis running for minutes on one small
+  // file" report: the session-restore path skipped finishAnalysis when its
+  // effect had been cancelled mid-flight (Fast Refresh re-running App's
+  // effects in `tauri dev` does exactly that), so the batch stayed in the
+  // in-flight set for the life of the session and the pill/card said
+  // "analyzing" over a finished result. A begun batch is ALWAYS finished.
+  it("every beginAnalysis() is paired with an unconditional finishAnalysis (source pin)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const src = readFileSync(resolve(process.cwd(), "src/hooks/useTrackMaster.ts"), "utf8");
+    expect(src).not.toMatch(/if\s*\(\s*!cancelled\s*\)\s*finishAnalysis/);
+    // Call sites only: the definition is `const beginAnalysis = useCallback(`.
+    const begins = (src.match(/beginAnalysis\(/g) ?? []).length;
+    const finishes = (src.match(/finishAnalysis\(batchId\)/g) ?? []).length;
+    expect(begins).toBeGreaterThan(0);
+    expect(finishes).toBe(begins);
   });
 
   it("re-pushes the live chain when switching Album<->Track during Mastered playback (§5)", async () => {

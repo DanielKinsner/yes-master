@@ -342,7 +342,11 @@ export function useTrackMaster() {
   const [waveformMap, setWaveformMap] = useState<Record<TrackId, WaveformPeaks>>({});
   const [settingsMap, setSettingsMap] = useState<Record<TrackId, MasteringSettings>>({});
   const [staleSet, setStaleSet] = useState<Set<TrackId>>(new Set());
-  const [analysisInFlightCount, setAnalysisInFlightCount] = useState(0);
+  // Which tracks are in an in-flight analysis batch (2026-08-19): the
+  // "analyzing" flag is per TRACK. The selected track's pill / Insight card /
+  // waveform slot follow ITS batch; another track's batch does not light
+  // them over a finished result.
+  const [analyzingTrackIds, setAnalyzingTrackIds] = useState<TrackId[]>([]);
   const [analysisStageIndex, setAnalysisStageIndex] = useState(0);
   const [isLoadingWaveform, setIsLoadingWaveform] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
@@ -443,7 +447,12 @@ export function useTrackMaster() {
     label: string;
     progress: number;
   } | null>(null);
-  const isAnalyzing = analysisInFlightCount > 0;
+  const isAnyAnalyzing = analyzingTrackIds.length > 0;
+  // Per-track (2026-08-19): true only while the SELECTED track is in an
+  // in-flight batch. Consumers (header pill, Insight card, waveform slot,
+  // Standard) all speak about the selected track.
+  const isAnalyzing =
+    selectedTrackId !== null && analyzingTrackIds.includes(selectedTrackId);
   const analysisProgress = isAnalyzing
     ? (realAnalysisProgress ?? ANALYSIS_PROGRESS_STAGES[analysisStageIndex])
     : null;
@@ -496,8 +505,8 @@ export function useTrackMaster() {
   // single "current" id means a batch finishing never drops a *different* batch's
   // analysis:progress events — the old single-ref design nulled the ref when the
   // most-recent batch finished first, silently dropping an earlier batch's progress.
-  const inFlightAnalysisBatchesRef = useRef<Set<string>>(new Set());
-  const analysisInFlightRef = useRef(0);
+  // batchId -> the track ids that batch covers.
+  const inFlightAnalysisBatchesRef = useRef<Map<string, TrackId[]>>(new Map());
   const selectedTrackIdRef = useRef<TrackId | null>(null);
   selectedTrackIdRef.current = selectedTrackId;
 
@@ -539,19 +548,35 @@ export function useTrackMaster() {
     () => exportLufsPreviewRef.current || (forceWysiwygRef.current && !volumeMatchRef.current),
     [],
   );
-  const beginAnalysis = useCallback(() => {
-    const batchId = nextAnalysisBatchId();
-    inFlightAnalysisBatchesRef.current.add(batchId);
-    analysisInFlightRef.current = inFlightAnalysisBatchesRef.current.size;
-    setAnalysisInFlightCount(analysisInFlightRef.current);
-    return batchId;
+  const publishAnalyzingTrackIds = useCallback(() => {
+    const ids = new Set<TrackId>();
+    for (const list of inFlightAnalysisBatchesRef.current.values()) {
+      for (const id of list) ids.add(id);
+    }
+    setAnalyzingTrackIds(Array.from(ids));
   }, []);
 
-  const finishAnalysis = useCallback((batchId: string) => {
-    inFlightAnalysisBatchesRef.current.delete(batchId);
-    analysisInFlightRef.current = inFlightAnalysisBatchesRef.current.size;
-    setAnalysisInFlightCount(analysisInFlightRef.current);
-  }, []);
+  const beginAnalysis = useCallback(
+    (trackIds: TrackId[]) => {
+      const batchId = nextAnalysisBatchId();
+      inFlightAnalysisBatchesRef.current.set(batchId, trackIds);
+      publishAnalyzingTrackIds();
+      return batchId;
+    },
+    [publishAnalyzingTrackIds],
+  );
+
+  // A begun batch is ALWAYS finished — callers put this in `finally` with no
+  // guard. (The session-restore path used to skip it when its effect had
+  // been cancelled mid-flight; the batch then stayed in this map forever and
+  // the UI said "analyzing" over a finished result — owner report 2026-08-19.)
+  const finishAnalysis = useCallback(
+    (batchId: string) => {
+      inFlightAnalysisBatchesRef.current.delete(batchId);
+      publishAnalyzingTrackIds();
+    },
+    [publishAnalyzingTrackIds],
+  );
 
   // React-state glue around `applyChainDispatchOverrides` (Vitest-
   // tested). Pulls volumeMatchRef + analysisMap from the hook's
@@ -779,7 +804,7 @@ export function useTrackMaster() {
   }, []);
 
   useEffect(() => {
-    if (!isAnalyzing) {
+    if (!isAnyAnalyzing) {
       setAnalysisStageIndex(0);
       // A finished (or failed) analysis must not leak its last real event
       // into the next run's first frames.
@@ -793,7 +818,7 @@ export function useTrackMaster() {
       );
     }, 1400);
     return () => window.clearInterval(timer);
-  }, [isAnalyzing]);
+  }, [isAnyAnalyzing]);
 
   // Phase 7.3: load user presets on mount; subsequent saves/deletes refresh
   // the list directly so we don't need to re-fetch.
@@ -861,7 +886,7 @@ export function useTrackMaster() {
 
         // Best-effort re-analyze + re-waveform for restored tracks.
         if (restoredTracks.length > 0) {
-          const batchId = beginAnalysis();
+          const batchId = beginAnalysis(restoredTracks.map((t) => t.id));
           try {
             const results = await api.analyzeTracks(
               restoredTracks.map((t) => ({ id: t.id, path: t.path })),
@@ -875,7 +900,11 @@ export function useTrackMaster() {
           } catch (err) {
             console.warn("Session restore: analyze failed", err);
           } finally {
-            if (!cancelled) finishAnalysis(batchId);
+            // Unconditional: the batch was begun on THIS hook instance's
+            // ref, so it must be removed from it even if the effect was
+            // cancelled mid-flight (Fast Refresh re-run) — otherwise
+            // isAnalyzing sticks for the life of the session.
+            finishAnalysis(batchId);
           }
           for (const t of restoredTracks) {
             if (cancelled) break;
@@ -952,13 +981,15 @@ export function useTrackMaster() {
   // the debounced save.
   const wasAnalyzingRef = useRef(false);
   useEffect(() => {
-    const justFinished = wasAnalyzingRef.current && !isAnalyzing;
-    wasAnalyzingRef.current = isAnalyzing;
+    // App-wide edge (any batch), not the selected track's — a save must
+    // follow every completed analysis, whichever track it was for.
+    const justFinished = wasAnalyzingRef.current && !isAnyAnalyzing;
+    wasAnalyzingRef.current = isAnyAnalyzing;
     if (!sessionLoaded || !justFinished || tracks.length === 0) return;
     api.autosaveSession(snapshotProjectState()).catch((err) => {
       console.warn("Analysis-complete autosave failed", err);
     });
-  }, [isAnalyzing, sessionLoaded, tracks.length, snapshotProjectState]);
+  }, [isAnyAnalyzing, sessionLoaded, tracks.length, snapshotProjectState]);
 
   const selectedTrack = useMemo(
     () => tracks.find((t) => t.id === selectedTrackId),
@@ -1338,7 +1369,7 @@ export function useTrackMaster() {
   const analyzeKnownTracks = useCallback(
     async (targetTracks: ImportedTrack[]): Promise<AnalysisResult[]> => {
       if (targetTracks.length === 0) return [];
-      const batchId = beginAnalysis();
+      const batchId = beginAnalysis(targetTracks.map((t) => t.id));
       try {
         const results = await api.analyzeTracks(
           targetTracks.map((t) => ({ id: t.id, path: t.path })),
@@ -2774,7 +2805,7 @@ export function useTrackMaster() {
       // Best-effort re-analyze + re-waveform for the restored tracks so the
       // user lands in a working state without manually pressing Analyze.
       if (state.tracks && state.tracks.length > 0) {
-        const batchId = beginAnalysis();
+        const batchId = beginAnalysis(state.tracks.map((t) => t.id));
         try {
           const results = await api.analyzeTracks(
             state.tracks.map((t) => ({ id: t.id, path: t.path })),
@@ -2857,6 +2888,7 @@ export function useTrackMaster() {
     selectedSettings,
     previewStale,
     isAnalyzing,
+    isAnyAnalyzing,
     analysisProgress,
     isLoadingWaveform,
     isRendering,
