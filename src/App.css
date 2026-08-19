@@ -8416,3 +8416,11 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
 /* Empty state: Import + "Try a demo track" side by side. */
 .empty-hero-actions { display: inline-flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; justify-content: center; }
 .empty-hero-demo { min-height: 44px; padding: 0 1.1rem; border-radius: 999px; }
+
+/* Receipt "Mastering target" chip is a fact, not a warning — neutral
+   (Pass 3 amber rule). */
+.receipt-target-chip {
+  border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-0);
+}
