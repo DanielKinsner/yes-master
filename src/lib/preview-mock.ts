@@ -605,6 +605,19 @@ export async function mockInvoke<T>(
         progress: 1.0,
         started_at_iso: PREVIEW_ISO,
         output_paths: [outputPath],
+        // Pass 4 (2026-08-19): delivered measurements, so the preview's
+        // Export Complete card shows its Results section like the real one.
+        measurements: {
+          lufs_integrated: -14.1,
+          true_peak_dbtp: -1.02,
+          dynamic_range_lu: 7.4,
+          sample_rate: 44_100,
+          bit_depth: 24,
+          effective_adaptive_strength: 0.5,
+          source_profile_digest: null,
+          confidence_digest: null,
+          compression_digest: null,
+        },
       } as unknown as T;
     }
 

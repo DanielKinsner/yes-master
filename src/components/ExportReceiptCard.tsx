@@ -321,6 +321,20 @@ export function ExportReceiptCard({
             </div>
           </details>
         )}
+        {/* Pass 4 (2026-08-19): visible actions. The filename row already
+            reveals on click, but nothing said so; "Show file" makes it a
+            button, and "Done" is the obvious way out (the × and Escape still
+            work). */}
+        <div className="receipt-actions">
+          {paths[0] && (
+            <button type="button" className="ghost-btn receipt-action-show" onClick={() => reveal(paths[0])}>
+              Show file
+            </button>
+          )}
+          <button type="button" className="primary receipt-action-done" onClick={onClose}>
+            Done
+          </button>
+        </div>
         <footer className="receipt-footer">
           <span className="receipt-footer-stamp" title="Version · git hash · build time">
             YES Master{buildInfo ? ` · ${buildInfo}` : ""}

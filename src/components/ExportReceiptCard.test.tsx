@@ -270,6 +270,36 @@ describe("ExportReceiptCard", () => {
     expect(openOutput).toHaveBeenCalledWith("out/track.master.wav");
   });
 
+  // Pass 4 (2026-08-19): visible actions — "Show file" reveals the first
+  // saved path, "Done" closes. The filename row still reveals too.
+  it("offers Show file and Done as visible actions", async () => {
+    const { api } = await import("../lib/api");
+    const openOutput = vi.mocked(api.openOutput);
+    openOutput.mockClear();
+    const onClose = vi.fn();
+    const container = render(
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings()}
+        analysis={analysis()}
+        onClose={onClose}
+      />,
+    );
+    const show = container.querySelector<HTMLButtonElement>(".receipt-action-show");
+    const done = container.querySelector<HTMLButtonElement>(".receipt-action-done");
+    expect(show?.textContent).toBe("Show file");
+    expect(done?.textContent).toBe("Done");
+    await act(async () => {
+      show!.click();
+    });
+    expect(openOutput).toHaveBeenCalledWith("out/track.master.wav");
+    await act(async () => {
+      done!.click();
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("gives each saved file its own reveal and copy target", async () => {
     // The multi-path case is where a per-row action goes wrong: one closure
     // captured across a map sends every row to the first file. An album or
