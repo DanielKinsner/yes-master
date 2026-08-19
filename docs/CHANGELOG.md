@@ -12,6 +12,29 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-08-19 — Pass 2: hierarchy, density, laptop size
+
+- **Analysis progress has two owners, not four**: the header SessionStatus
+  pill (coarse, with progress) and the waveform slot (rich). The sidebar
+  footer line and the bottom bar's "Processing · …" pill are gone; the
+  bottom bar is live meters only (pinned by a count test in
+  `App.playback-kind.test.tsx`).
+- **Flow layout (≤1279 wide or ≤819 tall, i.e. the 1360×740 floor)**: title +
+  meta row take the full width and the preview toolbar sits beneath, so
+  Album Master's row (identity · Follow/Override · pill) is one line and
+  Track/Album headers land the waveform at the same Y. The Follows/Overrides
+  status chip is assistive-tech-only at every size (the segmented control
+  states the choice).
+- **Signal-chain stages jump to their controls**: EQ / Warmth / Air / Comp /
+  Width / Saturation / Limiter are buttons that scroll the owning section
+  into view and flash it (`STAGE_JUMP_TARGETS`, `#jump-*` ids); Source stays
+  a plain node.
+- **Rail density**: compressor advisory + adaptive guidance are hairline
+  notes (2px rule, no box); per-band plan rows + preset summary read as a
+  compact table; sidebar "Overrides" is neutral, not warn-coloured.
+- **T4 type rung** 0.6 → 0.64rem (captions/pills/subtext) for laptop
+  legibility.
+
 ## 2026-08-19 — Owner tune of the alive pass + Standard-return gate for Advanced-only styles
 
 - **Quieter**: preset tile hover ~40% as dramatic; knob hover glow + drag
