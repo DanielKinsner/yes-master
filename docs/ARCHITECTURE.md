@@ -18,6 +18,8 @@ Important frontend helpers:
   the `Preset` compressor UI. The filename is historical; the user-facing
   behavior is not track-aware auto-analysis.
 - `src/lib/export-location.ts` tracks last-used export folders and path helpers.
+- `src/lib/shortcuts.ts` is the one keyboard-shortcut catalogue (handlers,
+  the `?` overlay and Help all read it).
 
 ## Rust Backend
 
@@ -28,6 +30,9 @@ Important frontend helpers:
 - `src-tauri/src/engine.rs` handles analysis, rendering, LUFS landing, output
   measurements, and album render entry points.
 - `src-tauri/src/exports.rs` runs export quality checks.
+- `src-tauri/src/demo.rs` synthesises the empty state's demo track once into
+  app-data (`prepare_demo_track`); swap the generator for a bundled file
+  without changing the command's contract.
 - `src-tauri/src/types.rs` defines shared command/data contracts.
 - `src-tauri/src/album_render.rs` is the active album render path
   (`render_album_plan_impl`), invoked by the `render_album_plan` command in
