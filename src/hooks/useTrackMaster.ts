@@ -2424,6 +2424,11 @@ export function useTrackMaster() {
   );
 
   const toggleLoop = useCallback(async () => {
+    // Arming requires a drawn region — the same rule that disables the loop
+    // button. Guarded here (not per caller) so the L shortcut can't arm an
+    // invisible loop that springs to life when a region is drawn later
+    // (2026-08-20 adversarial review). Disarming is always allowed.
+    if (!transport.loop && !selectedRegion) return;
     const nextLoop = !transport.loop;
     setTransport((t) => ({ ...t, loop: nextLoop }));
     try {
@@ -2433,6 +2438,9 @@ export function useTrackMaster() {
         await api.setLoopRegion(null);
       }
     } catch (err) {
+      // Roll the optimistic flip back — the UI must not claim a loop state
+      // the backend refused.
+      setTransport((t) => ({ ...t, loop: !nextLoop }));
       setError(messageOf(err));
     }
   }, [transport.loop, selectedRegion]);

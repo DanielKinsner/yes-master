@@ -1199,7 +1199,11 @@ describe("useTrackMaster integration dispatches", () => {
       expect(harness.current().transport.peakDbfs).toBe(-6);
     });
 
-    // Arm loop on the playing track so we can prove it is disarmed for the sibling.
+    // Arm loop on the playing track so we can prove it is disarmed for the
+    // sibling. Arming requires a drawn region (same rule as the loop button).
+    await act(async () => {
+      await harness.current().setRegion({ start_sec: 1, end_sec: 2 });
+    });
     await act(async () => {
       await harness.current().toggleLoop();
     });
@@ -2072,17 +2076,42 @@ describe("useTrackMaster integration dispatches", () => {
       await act(async () => { harness.root.unmount(); });
     });
 
-    it("L toggles the loop in Advanced and is ignored in Standard (no loop UI there)", async () => {
+    it("L cannot arm a loop without a region; with one it toggles in Advanced and is ignored in Standard", async () => {
       const { harness } = await importOne();
       expect(harness.current().transport.loop).toBe(false);
+      // No region drawn: L is a no-op. The loop button is disabled in this
+      // state and the keyboard path obeys the same rule — otherwise L arms an
+      // invisible loop that springs to life when a region is drawn later
+      // (2026-08-20 adversarial review).
+      mocks.api.setLoopRegion.mockClear();
+      await act(async () => { key({ key: "l" }); });
+      expect(harness.current().transport.loop).toBe(false);
+      expect(mocks.api.setLoopRegion).not.toHaveBeenCalled();
+      // Drawing a region does not arm the loop by itself…
+      await act(async () => { await harness.current().setRegion({ start_sec: 5, end_sec: 15 }); });
+      expect(harness.current().transport.loop).toBe(false);
+      // …but L now toggles it, both ways.
       await act(async () => { key({ key: "l" }); });
       expect(harness.current().transport.loop).toBe(true);
+      expect(mocks.api.setLoopRegion).toHaveBeenCalledWith({ start_sec: 5, end_sec: 15 });
       await act(async () => { key({ key: "l" }); });
       expect(harness.current().transport.loop).toBe(false);
       // Standard = forced WYSIWYG; L must not arm a hidden loop there.
       await act(async () => { harness.current().setForceWysiwyg(true); });
       await act(async () => { key({ key: "l" }); });
       expect(harness.current().transport.loop).toBe(false);
+      await act(async () => { harness.root.unmount(); });
+    });
+
+    it("rolls the optimistic loop flag back when the backend rejects the change", async () => {
+      const { harness } = await importOne();
+      await act(async () => { await harness.current().setRegion({ start_sec: 5, end_sec: 15 }); });
+      mocks.api.setLoopRegion.mockRejectedValueOnce(new Error("sink gone"));
+      await act(async () => { await harness.current().toggleLoop(); });
+      // The backend refused to arm; the UI must not claim a loop that is not
+      // running.
+      expect(harness.current().transport.loop).toBe(false);
+      expect(harness.current().error).toContain("sink gone");
       await act(async () => { harness.root.unmount(); });
     });
 
