@@ -34,6 +34,20 @@ close rather than letting them rot in scattered docs.
 > activation. Details: `docs/plans/beta-go-no-go.md` §Candidate freeze and
 > the U14 row in `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md`.
 
+> **2026-08-20 — Adversarial-review follow-up (agent fixes shipped; owner
+> clicks remain).** The confirmed findings from the 2026-08-20 review are
+> fixed on `main` (loop-arm guard, npm + Rust advisory bumps in all three
+> lockfiles, CI security-audit job, release-workflow hardening, go/no-go +
+> README reconciliation — see `docs/CHANGELOG.md` 2026-08-20). **Owner
+> actions still open, all free GitHub repo settings + one click each,
+> recommended before the public beta:** enable Dependabot security alerts (+
+> security updates), secret scanning with push protection, and private
+> vulnerability reporting on the public repo (Settings → Code security);
+> delete the four stale 07-27 draft releases; and note the hardened
+> `release.yml` gets its proving run on the next tag/dispatch. Two feel
+> decisions are queued in `docs/OWNER_INPUT_QUEUE.md` (Space-on-checkbox,
+> single-key shortcut preference).
+
 > **2026-07-03:** a hardening push is in flight on
 > `harden/2026-07-03-hostile-input` — see
 > `docs/plans/2026-07-03-hardening-plan.md`. It carries threads 11a, 11b, #13,

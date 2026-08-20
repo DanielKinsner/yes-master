@@ -12,6 +12,40 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-08-20 — Adversarial-review fixes: loop guard, dependency advisories, CI security gate, release hardening
+
+A full-repo adversarial review (Codex; docs in `docs/reviews/2026-08-20-*`)
+was triaged finding-by-finding and the confirmed items fixed:
+
+- **Loop bug (real):** the `L` shortcut could arm a loop with no region drawn
+  — the button is disabled in that state but the keyboard path bypassed it,
+  and drawing a region later silently started looping. `toggleLoop` now
+  requires a region to arm (disarm always allowed) and rolls the optimistic
+  flag back if the backend rejects the change. The old test encoded the bug;
+  replaced with the intended contract + a rollback test.
+- **Dependency advisories cleared:** npm `brace-expansion` → 5.0.9 and
+  `nanoid` → 3.3.18 (both dev-only, `npm audit` now 0 at every level);
+  `plist` 1.9.0 → 1.10.0 / `quick-xml` 0.39.4 → 0.41.0 (RUSTSEC-2026-0194/5,
+  DoS, low exposure — Tauri plumbing, no user-XML path) in **all three**
+  Cargo lockfiles (desktop, iPhone, Android). All lanes re-run green.
+- **CI security gate added:** a `security-audit` job fails on high+ npm
+  advisories and on actual RustSec vulnerabilities in the three lockfiles
+  (cargo-audit 0.22.2 pinned; unmaintained-crate warnings warn, not fail).
+  CI could previously stay green after a new advisory published.
+- **Release workflow hardened:** workflow token dropped to `contents: read`
+  with job-level write only where the draft is created/audited; every action
+  SHA-pinned (the workflow holds the updater signing key); Azure secrets
+  scoped to the Windows leg; `artifact-signing-cli` pinned `0.11.0 --locked`.
+  Next draft run doubles as the proving run.
+- **Docs reconciled:** go/no-go top boxes no longer show superseded 0.9.1
+  evidence as current (banner + reset candidate boxes, history kept); README
+  updated to the 0.9.2 candidate and the active plan.
+- **Not fixed on purpose** (owner feel decisions, queued in
+  `docs/OWNER_INPUT_QUEUE.md`): Space-on-checkbox carve-out and a
+  disable/remap preference for the single-key shortcuts. The review's framing
+  of the global Space transport as a defect was rejected — it is the
+  Phase 12.1 owner-requested DAW behavior.
+
 ## 2026-08-19 — Candidate `v0.9.1-beta.1` superseded; version 0.9.2
 
 Owner decision: the 2026-07-27 candidate no longer represents `main` (~70
