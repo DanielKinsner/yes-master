@@ -176,9 +176,7 @@ impl SpectrumAnalyzer {
     /// Reset smoothing state — called when a new playback starts so
     /// the bars don't bleed over from the previous track.
     pub fn reset(&mut self) {
-        for v in &mut self.prev_db {
-            *v = SPECTRUM_FLOOR_DB;
-        }
+        self.prev_db.fill(SPECTRUM_FLOOR_DB);
     }
 
     #[cfg(test)]
