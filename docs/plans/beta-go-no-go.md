@@ -14,15 +14,25 @@ Legend — **Lane:** `agent` (mechanical code/release work) · `owner` (only the
 owner can do it, e.g. by ear, on real hardware, or by publishing). Paid signing
 is post-beta advisory under D16.
 
+> **⚠ Current candidate: 0.9.2 — NOT YET TAGGED (2026-08-20).** The
+> `v0.9.1-beta.1` candidate was superseded by the owner on 2026-08-19 (see the
+> ledger row and "Candidate freeze" below). Any box below whose evidence names
+> 0.9.1, a 07-27 run, or the `34f7c88` tag is **historical** — it proved the
+> superseded candidate, not this one. Candidate-specific boxes have been reset
+> and re-check only against evidence produced at the future `v0.9.2-beta.1`
+> tag. Feature/mechanism boxes (things that live in the repo and are covered by
+> tests on every push) remain checked.
+
 ---
 
 ## 1. Engineering readiness (agent lane — shipped)
 
-- [x] **Beta version 0.9.1** across the three desktop manifests (bumped from
-      0.9.0 by U14 — 0.9.0 is now only the updater seed U16 proves the update
-      path from); Windows publisher = "Daniel Kinsner". *Evidence:* Slice 1 for
-      the original mechanism; U14 commit `2955a8a` + `version-coherence` tests
-      for the 0.9.1 bump; `npm run build:windows` produces `YES Master_0.9.1`.
+- [x] **Beta version 0.9.2** across the three desktop manifests (0.9.1 was
+      superseded 2026-08-19; 0.9.0 remains only the updater seed U16 proves the
+      update path from); Windows publisher = "Daniel Kinsner". *Evidence:* Slice
+      1 for the original mechanism; the 2026-08-19 bump commit + the standing
+      `version-coherence` tests. *(Historical: U14 commit `2955a8a` did the
+      0.9.0→0.9.1 bump.)*
 - [x] **Product canon reflects the beta model** (free public beta → paid 1.0,
       Distribution & Business Model, mobile/landing scope). *Evidence:* Slice 2;
       `docs/PRODUCT.md`.
@@ -35,12 +45,13 @@ is post-beta advisory under D16.
       `plugins.updater`; `src/App.tsx` updater toast; frontend + Rust lanes.
 - [x] **Premium-parity UI pass** applied (floating surfaces on the shared
       elevation scale). *Evidence:* Slice 9; the before/after A/B set.
-- [x] **The latest completed full CI run is green** (Windows, macOS, Android
-      lanes + DSP snapshots). *Evidence:* run `30284245225` at `5c008f6`
-      (2026-07-27) — all six jobs green, the first green main-tip run since
-      U12 (see the U14 ledger rows for what the red streak was hiding).
+- [ ] **The latest completed full CI run is green at the 0.9.2 candidate tip**
+      (Windows, macOS, Android lanes + DSP snapshots + the 2026-08-20
+      security-audit job). Re-record at the commit that gets the
+      `v0.9.2-beta.1` tag. *(Historical: run `30284245225` at `5c008f6`,
+      2026-07-27, all six jobs green for the superseded 0.9.1 candidate.)*
       *Advisory reminder:* do not merge red — and **watch the run finish**;
-      the streak survived because nobody did.
+      the 07-27 red streak survived because nobody did.
 - [x] **Owner-gate tripwires green** — AC-5, Phase-B, and album-character stay
       OFF for beta (D7). *Evidence:* `src-tauri/tests/owner_gates_default.rs`.
 
@@ -50,13 +61,17 @@ is post-beta advisory under D16.
       Windows MSI/NSIS, mandatory updater signatures, SHA-256 checksums, a
       draft release, and a final asset audit. Partial Apple/Azure secret groups
       fail closed; absent paid groups do not block the beta. *Agent; D16.*
-- [x] **A draft `v0.9.1-beta.1` workflow run is green** and contains `.dmg`,
+      **Note (2026-08-20):** the workflow was hardened (least-privilege token,
+      SHA-pinned actions, scoped Azure secrets, pinned signing CLI) after its
+      last green run — the next draft run doubles as the proving run for that
+      change.
+- [ ] **A draft `v0.9.2-beta.1` workflow run is green** and contains `.dmg`,
       `.app.tar.gz`, `.msi`, `setup.exe`, all three updater `.sig` files,
       `latest.json`, and `SHA256SUMS.txt` — 9 assets, verified by the
-      workflow's own audit job. *Evidence:* Release run `30294627200` at the
-      moved tag (commit `34f7c88`), 2026-07-27, after the owner-approved
-      workflow fixes (see ledger). (The box previously said `v0.9.0-beta.1`;
-      U14 renamed the candidate to 0.9.1 — 0.9.0 is the updater seed.)
+      workflow's own audit job. *(Historical: the superseded `v0.9.1-beta.1`
+      draft went green in Release run `30294627200` at the moved tag
+      `34f7c88`, 2026-07-27, after the owner-approved workflow fixes — see
+      ledger.)*
 - [ ] **Draft artifacts are downloadable and their checksums match.** *Owner or
       agent, before publish.* The audit job already downloads every asset and
       writes `SHA256SUMS.txt` from the downloaded bytes; what remains is an
@@ -73,10 +88,10 @@ is post-beta advisory under D16.
       Windows updater-enabled build emitted signed artifacts. The encrypted
       private key remains outside git. *Evidence: 2026-07-20 release lane.*
 - [ ] **(ii) Update path proven end-to-end, once.** Install a 0.9.0 build,
-      then owner-publish a full **0.9.1** release quietly before the public
+      then owner-publish a full **0.9.2** release quietly before the public
       announcement. GitHub's `/latest` channel cannot see drafts. Confirm on a
       real machine that the app shows the update toast → "Restart to update"
-      downloads, installs, and relaunches into 0.9.1. The 0.9.1 files become
+      downloads, installs, and relaunches into 0.9.2. The 0.9.2 files become
       publicly accessible at this step even though they are not announced.
       *Owner authorization required; M4 and/or Windows box.*
 

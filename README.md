@@ -67,7 +67,7 @@ only human gates:
 1. **Correctness first** (done): audio-corruption and overwrite-protection
    fixes, frontend state races, cross-platform DSP snapshot verification on
    real macOS hardware.
-2. **Contract hardening** (in progress): a single supported-format contract
+2. **Contract hardening** (done): a single supported-format contract
    wired from UI copy to decoder; identity-carrying progress events; a
    cross-language parity fixture pinning the Standard export recipe across
    TypeScript, desktop Rust, iPhone, and Android so no platform can drift
@@ -78,12 +78,15 @@ only human gates:
    the already-validated preset sound, shipped behind a runtime gate, and
    enabled only after a by-ear A/B calibration session. Spec:
    `docs/plans/2026-06-12-adaptive-compressor-mvp-spec.md`.
-4. **Public desktop release** (desktop-first): a free public beta (Mac +
-   Windows together, v0.9.0) from GitHub Releases with a cryptographically
-   signed Tauri updater, then a paid 1.0 ($29 founder → $49). The $0 beta may
-   use ad-hoc/unsigned OS installers with clear install guidance; paid Apple
-   notarization and Windows Authenticode follow as trust upgrades. See
-   `docs/plans/2026-07-07-beta-execution-plan.md`.
+4. **Public desktop release** (desktop-first, in progress): a free public
+   beta (Mac + Windows together, current candidate v0.9.2) from GitHub
+   Releases with a cryptographically signed Tauri updater, then a paid 1.0
+   ($29 founder → $49). The $0 beta may use ad-hoc/unsigned OS installers
+   with clear install guidance; paid Apple notarization and Windows
+   Authenticode follow as trust upgrades. The active work queue is
+   `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md` and the live
+   release gate is `docs/plans/beta-go-no-go.md`
+   (`docs/plans/2026-07-07-beta-execution-plan.md` is executed history).
 5. **Mobile follow-on**: the iPhone and Android apps mirror Standard's fixed
    export and already share the engine; store-readiness (privacy manifest,
    signing, lifecycle hardening) is planned but sequenced after desktop. Plans:
