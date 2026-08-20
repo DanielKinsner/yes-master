@@ -296,3 +296,38 @@ jobs:
       - name: Android ARM64 Rust check
         working-directory: apps/android-native/rust
         run: cargo ndk -t arm64-v8a --platform 29 check
+
+  # 2026-08-20: CI used to stay green after a new advisory was published —
+  # nothing ever re-checked the lockfiles. This job fails on any high/critical
+  # npm advisory and on any actual RustSec vulnerability in the three Cargo
+  # lockfiles. Unmaintained-crate warnings (the Linux-only gtk family that
+  # tauri pulls in) warn without failing, so real advisories are never buried
+  # in noise. cargo-audit is version-pinned so the gate itself is reproducible.
+  security-audit:
+    name: Dependency advisories (npm + RustSec)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: npm advisories (high+ fail)
+        run: npm audit --audit-level=high
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked --version 0.22.2
+
+      - name: RustSec advisories (desktop + iPhone + Android lockfiles)
+        run: |
+          cargo audit --file src-tauri/Cargo.lock
+          cargo audit --file apps/iphone-native/rust/Cargo.lock
+          cargo audit --file apps/android-native/rust/Cargo.lock
