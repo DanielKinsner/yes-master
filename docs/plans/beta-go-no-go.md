@@ -109,11 +109,19 @@ is post-beta advisory under D16.
 
 ## 5. Listening gate (owner lane)
 
-- [ ] **The one-sitting listening runbook is executed and signed off**, and its
-      filled-in note is saved. Closes the Manual Listening Gate + preset
-      distinctness (#7). *Owner; script:
-      `docs/plans/2026-07-08-beta-listening-runbook.md`.* Any blocker it surfaces
-      is itself blocking; any DSP/preset change it implies is owner-gated.
+> **2026-08-25 (owner):** the standing listening gates are **approved** — the
+> owner has done meaningful listening tests across sessions and signed off
+> (`docs/OPEN_THREADS_AND_DECISIONS.md`, 2026-08-25 block). What remains
+> below is one final by-ear confirmation on the installed candidate build —
+> a spot-check, not the full multi-gate sweep the runbook was written for.
+
+- [ ] **One final by-ear check on the installed candidate** immediately before
+      activation: does the installed build still sound right (a normal track +
+      an already-mastered track, Original/Mastered A/B, one export listened
+      to). *Owner. The 2026-07-08 runbook remains available as a script if
+      wanted, but full execution is no longer required.* Any blocker it
+      surfaces is itself blocking; any DSP/preset change it implies is
+      owner-gated.
 
 ## 6. Landing page & optional signup
 
