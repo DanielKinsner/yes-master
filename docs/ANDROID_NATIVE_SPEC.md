@@ -239,6 +239,19 @@ session state resets to Idle on relaunch.
 **Owner QA still pending (D4):** latency/buffer feel on hardware — the
 only by-ear item. Functional flow verified by tests + emulator-free lanes.
 
+**U19 (2026-08-25) — accessibility/semantics remediation + Compose lane.**
+The theme moved to `ui/theme/Theme.kt` (`YesMasterTheme`; policy: pinned
+dark console in both OS modes), TalkBack semantics were added across the
+Ready/Done/Error screens (named sliders with time announcement, merged
+Volume Match switch, style-tile selection state, polite live regions for
+interruptions/stages), and the Done/Error screens scroll on small
+displays/large font. **Automated UI lane (explicit choice): JVM/Robolectric
+Compose tests** in `app/src/testDebug/java/.../UiSemanticsTest.kt` — they
+run in the same `gradlew test` CI already executes, no emulator. What that
+lane can never prove: real TalkBack behavior, background audio, and
+platform file flows — those remain the physical-device pre-release gate
+(quality-plan U20, owner-unlocked).
+
 **Next session:** execute
 `docs/archive/plans/2026-06-10-001-android-a4-action-plan.md` — batched A4 work
 (process-death restore, import fail-fast, cache reaping, bridge tidiness)
