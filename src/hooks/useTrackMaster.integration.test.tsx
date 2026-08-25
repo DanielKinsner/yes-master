@@ -2133,6 +2133,46 @@ describe("useTrackMaster integration dispatches", () => {
       expect(harness.current().transport.playbackKind).toBe("source");
       await act(async () => { harness.root.unmount(); });
     });
+
+    // Owner decision 2026-08-25 (2026-08-20 review follow-up): Space is the
+    // ONLY keyboard way to toggle a checkbox or radio, so on those two input
+    // types the native toggle wins and the transport handler stays out of it
+    // (no preventDefault, no play). Everywhere else Space remains transport.
+    it("Space yields to checkboxes and radios but still drives transport elsewhere", async () => {
+      const { harness } = await importOne();
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      document.body.appendChild(checkbox);
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      document.body.appendChild(radio);
+
+      mocks.api.playTrack.mockClear();
+      let onCheckbox!: KeyboardEvent;
+      let onRadio!: KeyboardEvent;
+      await act(async () => {
+        onCheckbox = key({ key: " ", code: "Space", target: checkbox });
+        onRadio = key({ key: " ", code: "Space", target: radio });
+      });
+      // Native toggle path untouched: not claimed, no playback started.
+      expect(onCheckbox.defaultPrevented).toBe(false);
+      expect(onRadio.defaultPrevented).toBe(false);
+      expect(mocks.api.playTrack).not.toHaveBeenCalled();
+
+      // Control: the same key with no special focus still starts playback and
+      // claims the event (page must not scroll). Without this, the two
+      // assertions above would pass vacuously if Space broke entirely.
+      let onWindow!: KeyboardEvent;
+      await act(async () => {
+        onWindow = key({ key: " ", code: "Space" });
+      });
+      await waitFor(() => expect(mocks.api.playTrack).toHaveBeenCalled());
+      expect(onWindow.defaultPrevented).toBe(true);
+
+      checkbox.remove();
+      radio.remove();
+      await act(async () => { harness.root.unmount(); });
+    });
   });
 
   it("re-pushes the live chain when switching Album<->Track during Mastered playback (§5)", async () => {

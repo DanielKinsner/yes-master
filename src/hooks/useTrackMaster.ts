@@ -2300,6 +2300,10 @@ export function useTrackMaster() {
   // range inputs (knobs), selects, and buttons don't need space for entry, so
   // it drives play/stop there too; previously focus parking on a knob or the
   // Delivery Profile select swallowed it, which made play feel waveform-only.
+  // Checkboxes and radios are the one carve-out (owner decision 2026-08-25):
+  // Space is the ONLY keyboard way to toggle them, so a keyboard user could
+  // never flip Link Stereo while Space was transport-everywhere. There the
+  // native toggle wins and transport stays untouched.
   // preventDefault stops page scroll and the focused control's own space action.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -2307,14 +2311,13 @@ export function useTrackMaster() {
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
       const inputType = (target as HTMLInputElement | null)?.type;
+      if (tag === "INPUT" && (inputType === "checkbox" || inputType === "radio")) {
+        return;
+      }
       const isTextEntry =
         tag === "TEXTAREA" ||
         (target?.isContentEditable ?? false) ||
-        (tag === "INPUT" &&
-          inputType !== "range" &&
-          inputType !== "number" &&
-          inputType !== "checkbox" &&
-          inputType !== "radio");
+        (tag === "INPUT" && inputType !== "range" && inputType !== "number");
       if (isTextEntry) return;
       e.preventDefault();
       void togglePlay();
