@@ -12,6 +12,32 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-08-25 — Owner decisions batch, Space carve-out, U19 Android remediation, U18 plan
+
+Owner decisions recorded in session (details in
+`docs/OPEN_THREADS_AND_DECISIONS.md` 2026-08-25 block): the standing
+listening gates are **approved** — one final by-ear check remains, folded
+into U15 immediately before beta activation (AC-5/Phase-B/album-character
+calibration stays parked post-beta); the queued Space and single-key
+questions were answered; and the parked mobile remediation chunk was
+unlocked (U18/U19 — in-app quality only, U20 still parked).
+
+- **Desktop:** Space now passes through to checkbox/radio inputs — the only
+  keyboard way to toggle them (Link Stereo was untogglable by keyboard);
+  transport everywhere else. Regression test verified red pre-fix. A/L/?
+  single-key shortcuts ship as-is for beta (preference = post-beta polish).
+- **Android (U19 complete):** theme extracted to `ui/theme/Theme.kt` (policy:
+  pinned dark console in both OS modes); TalkBack semantics across
+  Ready/Done/Error (named sliders, seek announces time, merged Volume Match
+  switch, style-tile selection state, polite live regions); Done/Error
+  screens scroll on small displays/large font. New **JVM/Robolectric Compose
+  lane** (14 tests, negative-controlled) gates the same `gradlew test` CI
+  runs; physical-device TalkBack/background-audio proof stays U20.
+- **iPhone (U18 ready):** both impossible states confirmed real (Mastered
+  selectable and Create Master tappable with no track). Swift can't build on
+  the Windows box, so a decision-complete Mac-session plan shipped instead:
+  `docs/plans/2026-08-25-u18-iphone-remediation-plan.md`.
+
 ## 2026-08-20 — Adversarial-review fixes: loop guard, dependency advisories, CI security gate, release hardening
 
 A full-repo adversarial review (Codex; docs in `docs/reviews/2026-08-20-*`)
