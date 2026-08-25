@@ -248,7 +248,13 @@ describe("product canon and evidence contract (U1)", () => {
   it("retains the required release metadata in the go/no-go gate", () => {
     // Losing any of these turns a checkbox back into an unevidenced claim.
     expect(goNoGo).toContain("Update path proven end-to-end, once.");
-    expect(goNoGo).toContain("one-sitting listening runbook is executed and signed off");
+    // 2026-08-25 owner decision: the standing listening gates are approved;
+    // the go/no-go keeps ONE final by-ear spot-check on the installed
+    // candidate. This pin moved with the decision — it still guards against
+    // the listening line disappearing entirely.
+    expect(goNoGo).toContain(
+      "One final by-ear check on the installed candidate",
+    );
     expect(goNoGo).toContain("Exact-commit evidence ledger");
 
     for (const column of [
