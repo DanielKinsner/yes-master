@@ -79,6 +79,17 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        unitTests {
+            // Compose semantics lane: Robolectric renders real composables on
+            // the JVM, which needs Android resources on the test classpath.
+            // Chosen lane (U19): JVM/Robolectric is the automated gate — it
+            // runs on any dev machine and in CI's existing `gradlew test` with
+            // no emulator; a physical-device pass stays an explicit
+            // pre-release gate (U20), never implied by this lane.
+            isIncludeAndroidResources = true
+        }
+    }
     packaging {
         jniLibs {
             // cargo-ndk copies every cdylib in the dependency graph, but the
@@ -222,4 +233,12 @@ dependencies {
     implementation("com.google.code.gson:gson:2.11.0")
 
     testImplementation("junit:junit:4.13.2")
+    // Compose semantics lane (see testOptions above).
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    // debugImplementation, not testImplementation: the rule's host activity
+    // must be merged into the debug manifest for Robolectric to resolve it.
+    // The release APK (what ships) is untouched.
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    testImplementation("org.robolectric:robolectric:4.14.1")
 }
