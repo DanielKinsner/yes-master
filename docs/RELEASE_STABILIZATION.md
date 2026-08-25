@@ -246,7 +246,14 @@ Status: complete on 2026-05-28.
 
 ### Manual Listening Gate
 
-Status: deferred to Wave 10 on 2026-06-16.
+Status: **closed as approved 2026-08-25 (owner)** — after meaningful listening
+across sessions, the owner signed off on the current sound; the full sweep
+below is no longer a standing gate. One final by-ear spot-check on the
+installed candidate remains, folded into the go/no-go §5 listening line
+(`docs/plans/beta-go-no-go.md`). Details:
+`docs/OPEN_THREADS_AND_DECISIONS.md` (2026-08-25 block).
+
+*(Original sweep, kept for reference / the optional final check script:)*
 
 - Verify normal, already-mastered/compressed, and long edge-case sources by ear.
 - Sweep Intensity, EQ/tone, output gain, compressor controls, Preview LUFS, and
