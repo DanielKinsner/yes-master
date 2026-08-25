@@ -456,8 +456,8 @@ anchor for a later session.
 | U15 | C5 | Not started | — | — |
 | U16 | C5 | Not started | — | — |
 | U17 | C5 | Not started | — | — |
-| U18 | CP | Parked | — | Owner unlock required |
-| U19 | CP | Parked | — | Owner unlock required |
+| U18 | CP | Unlocked (owner, 2026-08-25) | — | In-app remediation only; Swift side needs a Mac session (no Xcode on the Windows box). No distribution/parity claim. |
+| U19 | CP | Unlocked (owner, 2026-08-25) | — | In-app remediation only; no store work. |
 | U20 | CP | Parked | — | Owner unlock required |
 
 Status values: `Not started`, `In progress`, `Complete`, `Complete with

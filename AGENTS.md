@@ -77,15 +77,13 @@ deep-analysis per-OS fixture bits landed in `88853dc`, so the Mac SHA issue is
 closed; do not treat snapshot regeneration as open. Listen before any further
 preset retuning.
 
-Owner-gated listening signoffs, **deferred to Wave 10** (per
-`docs/RELEASE_STABILIZATION.md`) — not the immediate queue:
-
-1. Manual Listening Gate — normal / already-mastered / long-source sweeps and
-   a clean-vs-warning export comparison, by ear (owner signoff).
-2. Reference Retune listening — aggregate runner completed 2026-05-28;
-   listening notes pending. Oomph is the least-matched preset; listen before
-   changing it. Re-run after the 85% lean.
-3. Already-mastered matrix listening signoff (runner evidence complete).
+Owner listening signoffs: **approved 2026-08-25** — the owner has listened
+and signed off on the current sound; the formerly-deferred Wave 10 gates
+(Manual Listening Gate, Reference Retune notes, already-mastered matrix)
+are closed, collapsed into **one final by-ear check immediately before beta
+activation** (U15). AC-5 / Phase-B / album-character calibration sittings
+stay parked post-beta (D7). Details:
+`docs/OPEN_THREADS_AND_DECISIONS.md` (2026-08-25 block).
 
 The 2026-06-16 final repo-wide review implementation queue has also shipped.
 See `docs/archive/plans/2026-06-16-final-review-implementation-plan.md` for the commit

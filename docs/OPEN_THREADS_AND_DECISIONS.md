@@ -34,6 +34,27 @@ close rather than letting them rot in scattered docs.
 > activation. Details: `docs/plans/beta-go-no-go.md` §Candidate freeze and
 > the U14 row in `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md`.
 
+> **2026-08-25 — Owner decisions (in-session, Dan): listening gates approved;
+> one final pre-launch check remains; mobile remediation unlocked.**
+> 1. **Listening gates collapsed.** The owner has done meaningful listening
+>    tests and approves the current sound. The separate owner-gated listening
+>    threads — #4 (Manual Listening Gate), #5 (Reference Retune notes),
+>    #6 (already-mastered matrix signoff), #7 (85%-lean distinctness confirm)
+>    and Part B Q1/Q2 — are **closed as approved**, collapsed into **one final
+>    by-ear check immediately before beta activation** (part of the U15
+>    sitting). Do not treat them as open gates or re-queue them.
+>    **Unchanged:** AC-5, Phase-B confidence, and album character stay gated
+>    OFF — those are post-beta *calibration* sittings (D7), not launch gates.
+> 2. **Space carve-out approved and shipped** (`167f066`): Space passes
+>    through to checkbox/radio inputs (their only keyboard toggle); transport
+>    everywhere else. Regression test verified red against the pre-fix handler.
+> 3. **Single-key shortcuts (A / L / ?) ship as-is** for beta; a
+>    disable/remap preference is post-beta polish.
+> 4. **Mobile in-app remediation unlocked: U18 (iPhone) and U19 (Android)**
+>    from the quality plan's parked chunk are now agent-lane work. U20
+>    (mobile release evidence) stays parked; no distribution or parity claim
+>    changes — desktop still ships first.
+
 > **2026-08-20 — Adversarial-review follow-up (agent fixes shipped; owner
 > clicks remain).** The confirmed findings from the 2026-08-20 review are
 > fixed on `main` (loop-arm guard, npm + Rust advisory bumps in all three
@@ -193,6 +214,11 @@ _None purely-mechanical — the macOS byte-identity SHA thread (former #1) is
 resolved; see "Confirmed SHIPPED" below. Remaining threads are owner-gated._
 
 ### OPEN — owner-gated (listening / taste)
+
+> **2026-08-25 owner approval:** threads **4, 5, 6, 7** below are **closed as
+> approved** — the owner has listened and signed off; what remains is one
+> final by-ear check immediately before beta activation (U15). Threads 2, 3,
+> and 7a stay open as post-beta calibration (D7). Rows kept for history.
 
 | # | Thread | Source | Action |
 |---|---|---|---|
