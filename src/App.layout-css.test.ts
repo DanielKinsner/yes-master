@@ -256,6 +256,33 @@ describe("console layout CSS", () => {
     }
   });
 
+  it("keeps muted text (--text-2) at WCAG AA contrast on the panel ground (audit A-02)", () => {
+    // The axe lane measures the live page; this computes the same ratio from
+    // the tokens so a palette edit fails fast without a browser run. --text-2
+    // labels small text (TOOLS summary, receipt path/blurb), so the 4.5:1
+    // small-text bar applies, measured against the lighter panel ground
+    // (--bg-1), which is the worst case of the two grounds.
+    const token = (name: string): string => {
+      const match = css.match(new RegExp(`${name}:\\s*#([0-9a-fA-F]{6})`));
+      if (!match) throw new Error(`token ${name} not found as a 6-digit hex`);
+      return match[1];
+    };
+    const luminance = (hex: string): number => {
+      const channel = (index: number) => {
+        const c = parseInt(hex.slice(index, index + 2), 16) / 255;
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      };
+      return (
+        0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4)
+      );
+    };
+    const l1 = luminance(token("--text-2"));
+    const l2 = luminance(token("--bg-1"));
+    const ratio =
+      (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("keeps first-run hints out of the Standard Preview rail", () => {
     expect(block(".first-run-overlay")).toContain("pointer-events: none");
     expect(block(".first-run-overlay .hint-chip")).toContain("pointer-events: auto");

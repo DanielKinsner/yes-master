@@ -14,9 +14,17 @@
 // `[preview-mock] unhandled ...` warning, and this lane fails on any warning —
 // so the mock contract cannot silently rot.
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { launchHeadless, runtimeStamp } from "./lib/headless-browser.mjs";
+
+// Audit A-02: the committed axe-core build (pinned by the lockfile) is the
+// scanner — never a CDN copy, so the gate is reproducible offline.
+const axeSource = await readFile(
+  createRequire(import.meta.url).resolve("axe-core/axe.min.js"),
+  "utf8",
+);
 
 function option(name) {
   const index = process.argv.indexOf(name);
@@ -98,6 +106,8 @@ const SCENARIOS = [
     // U11: carries the quality-verdict badge; the reduced-motion pass proves
     // the verdict still reads with the attention cue switched off.
     reducedMotionVariant: true,
+    // Audit A-02: loaded Advanced is a permanently axe-gated state.
+    axe: true,
   },
   {
     // Audit U-01. The static CSS test used to read the FIRST `.right-rail-tools`
@@ -121,7 +131,9 @@ const SCENARIOS = [
     scenarioId: "S-F1",
     purpose:
       "S-F1 (warnings): a warning and a critical both reach the review surface.",
-    viewports: [LAPTOP],
+    // Audit A-02: the open warning receipt is axe-gated at BOTH supported
+    // desktop sizes, so the minimum viewport joined the laptop one here.
+    viewports: [LAPTOP, MIN_DESKTOP],
     settle: "ready",
     drive: exportWithReview,
     mustContainAfterDrive: [
@@ -131,6 +143,9 @@ const SCENARIOS = [
     // U11: opens the review gate, so this covers the overlay entrance in both
     // motion modes — the warning must be readable either way.
     reducedMotionVariant: true,
+    // Audit A-02: scanned while the receipt is OPEN (the drive leaves it up),
+    // so the modal's own accessibility is what the scan measures.
+    axe: true,
   },
   {
     name: "long-copy",
@@ -372,6 +387,54 @@ async function exportWithReview(page) {
     // expected outcome for export-cancel, so absence of change is not an error
     // here -- the scenario's assertions decide whether it was correct.
   });
+}
+
+/**
+ * Audit A-02 — WCAG 2.0/2.1 A+AA axe scan of the live app state.
+ *
+ * Violations fail the lane. Incomplete results are persisted as review
+ * evidence, not passes, and never silently discarded. A scan that runs zero
+ * rules proves nothing and is itself a failure. No rule is suppressed here
+ * to green the lane — a real violation gets a focused fix commit instead.
+ */
+async function runAxeScan(page, report, contextLabel) {
+  await page.evaluate(axeSource);
+  const results = await page.evaluate(async () =>
+    window.axe.run(document, {
+      runOnly: {
+        type: "tag",
+        values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+      },
+    }),
+  );
+  const compact = (list) =>
+    list.map((rule) => ({
+      id: rule.id,
+      impact: rule.impact ?? null,
+      nodes: rule.nodes.length,
+      targets: rule.nodes.slice(0, 5).map((node) => node.target.join(" ")),
+      failureSummary:
+        rule.nodes[0]?.failureSummary ?? rule.description ?? rule.id,
+    }));
+  const payload = {
+    totalRules:
+      results.passes.length +
+      results.incomplete.length +
+      results.violations.length,
+    passes: results.passes.length,
+    violations: compact(results.violations),
+    incomplete: compact(results.incomplete),
+  };
+  if (payload.totalRules === 0) {
+    report(`axe scan at ${contextLabel} ran zero rules — the scan proves nothing`);
+  }
+  for (const violation of payload.violations) {
+    report(
+      `axe violation "${violation.id}" (${violation.impact}, ${violation.nodes} node(s)) ` +
+        `at ${contextLabel}: ${violation.failureSummary} [${violation.targets.join(", ")}]`,
+    );
+  }
+  return payload;
 }
 
 /**
@@ -757,6 +820,10 @@ await mkdir(outDir, { recursive: true });
 
 const failures = [];
 const records = [];
+// Audit A-02 — one row per completed axe scan; checked against the expected
+// matrix after the run so a silently skipped, duplicated, or empty scan is a
+// failure, not a quiet gap.
+const axeRuns = [];
 const browser = await launchHeadless();
 
 /** Record a failure with everything needed to act on it without re-running. */
@@ -850,6 +917,20 @@ for (const scenario of SCENARIOS) {
       let preScreenshotEvidence = null;
       if (scenario.beforeScreenshot) {
         preScreenshotEvidence = await scenario.beforeScreenshot(page, report);
+      }
+
+      // Audit A-02 — axe scan of this exact settled/driven state, composed
+      // WITH (never instead of) any pre-screenshot collector above. Runs only
+      // in the normal-motion pass so the coverage ledger counts each
+      // state/viewport exactly once.
+      let axe = null;
+      if (scenario.axe && motion === "no-preference") {
+        axe = await runAxeScan(page, report, `${label}@${viewportLabel}`);
+        axeRuns.push({
+          label,
+          viewport: viewportLabel,
+          totalRules: axe.totalRules,
+        });
       }
 
       const domText = await documentText(page);
@@ -992,6 +1073,7 @@ for (const scenario of SCENARIOS) {
         metrics,
         reachability: reachRecords,
         preScreenshotEvidence,
+        axe,
         driverPayload,
         consoleMessages,
         pageErrors,
@@ -1014,6 +1096,30 @@ for (const scenario of SCENARIOS) {
   }
 }
 
+// Audit A-02 — the axe coverage ledger. Every expected state/viewport must
+// have been scanned exactly once with a positive rule total. Task 8 extends
+// this matrix with the loaded-Standard scenario at both viewports.
+const EXPECTED_AXE_MATRIX = [
+  ["clean", "1440x900"],
+  ["clean", "1360x740"],
+  ["warning", "1440x900"],
+  ["warning", "1360x740"],
+];
+for (const [expectedLabel, expectedViewport] of EXPECTED_AXE_MATRIX) {
+  const hits = axeRuns.filter(
+    (run) => run.label === expectedLabel && run.viewport === expectedViewport,
+  );
+  if (hits.length !== 1) {
+    failures.push(
+      `[axeCoverage] expected exactly one axe scan for ${expectedLabel}@${expectedViewport}, got ${hits.length}`,
+    );
+  } else if (!(hits[0].totalRules > 0)) {
+    failures.push(
+      `[axeCoverage] the axe scan for ${expectedLabel}@${expectedViewport} ran zero rules`,
+    );
+  }
+}
+
 const browserStamp = runtimeStamp(browser);
 await browser.close();
 
@@ -1025,6 +1131,9 @@ await writeFile(
       outDir,
       evidenceLayer: "browser-headless",
       browser: browserStamp,
+      // Audit A-02 — which states were axe-scanned and with how many rules;
+      // per-scan violations/incomplete detail lives on each scenario record.
+      axeCoverage: axeRuns,
       consoleAllowlist: CONSOLE_ALLOWLIST.map((entry) => ({
         pattern: String(entry.pattern),
         reason: entry.reason,

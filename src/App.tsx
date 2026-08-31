@@ -2311,6 +2311,7 @@ export function LoudnessTarget({
       </div>
       <select
         className="loudness-profile-select"
+        aria-label="Loudness target"
         value={profileId}
         onChange={(e) => handleProfileChange(e.target.value)}
       >

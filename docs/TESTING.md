@@ -103,6 +103,15 @@ npx playwright install --with-deps chromium
 **A missing browser fails the lane.** This is a gate; a gate that skips itself
 when a dependency is absent reports green and is worse than nothing.
 
+**Accessibility scans (audit A-02).** Axe-gated scenarios run the committed
+`axe-core` build (pinned by the lockfile, injected from `node_modules`, never a
+CDN) against WCAG 2.0/2.1 A + AA tags on the live settled state. Any violation
+fails the lane; `incomplete` results are persisted in `summary.json` as review
+evidence, not passes. An `axeCoverage` ledger requires each expected
+state/viewport pair to be scanned exactly once with a positive rule total, so a
+silently skipped or empty scan is a failure. Do not suppress a rule to green
+the lane — a real violation gets its own focused fix commit.
+
 **Landing quality gates (added U8).** The matrix is now **13 viewports** —
 `320×568` was added because S-A3 names it and nothing covered it. At every
 viewport the lane also asserts: both acquisition CTAs are fully on screen, no

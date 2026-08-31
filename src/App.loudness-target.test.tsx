@@ -87,6 +87,23 @@ afterEach(() => {
 });
 
 describe("LoudnessTarget component", () => {
+  it("gives the profile select an accessible name (audit A-01)", async () => {
+    // The visible "LOUDNESS TARGET" copy is a sibling <span>, not a label —
+    // without aria-label a screen reader announces an anonymous combobox.
+    // Every other select in the app carries a name; this was the only one
+    // that didn't.
+    const { container, root } = await renderLoudnessTarget({
+      settings: makeSettings("streaming-universal"),
+      onProfileSelect: vi.fn(),
+    });
+
+    const select = container.querySelector("select");
+    expect(select?.getAttribute("aria-label")).toBe("Loudness target");
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("delegates explicit LUFS picks to the hook-level loudness transition", async () => {
     const onProfileSelect = vi.fn();
     const { container, root } = await renderLoudnessTarget({
