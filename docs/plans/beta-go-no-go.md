@@ -14,6 +14,18 @@ Legend — **Lane:** `agent` (mechanical code/release work) · `owner` (only the
 owner can do it, e.g. by ear, on real hardware, or by publishing). Paid signing
 is post-beta advisory under D16.
 
+> **⚠ 2026-08-31 (adversarial audit): `v0.9.2-beta.1` is AUDIT-BLOCKED /
+> NO-GO pending owner disposition.** Confirmed launch blockers live in
+> release-bound code (hostile-import panic L-01, updater notice loss/recovery
+> L-02/L-03, sticky-TOOLS transparency U-01, receipt accessibility A-01/A-03/
+> U-02, RustSec gate S-01/S-02) — see
+> `docs/superpowers/plans/2026-08-31-adversarial-audit-remediation-and-launch-readiness.md`.
+> Beta.1 is **not yet rejected**: its tag, draft, and every evidence row below
+> stay frozen as beta.1 evidence pending the owner's Task-12 disposition. If
+> rejected, a replacement `v0.9.2-beta.2` is built from the remediation branch
+> and this gate re-runs; beta.1 evidence is then marked superseded, never
+> rewritten as beta.2 proof.
+>
 > **Current candidate: 0.9.2 — TAGGED `v0.9.2-beta.1` @ `c750da6`
 > (2026-08-31).** The `v0.9.1-beta.1` candidate was superseded by the owner on
 > 2026-08-19 (see the ledger row and "Candidate freeze" below). Any box below

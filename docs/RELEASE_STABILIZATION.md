@@ -83,8 +83,9 @@ Current behavior:
 
 - Mastered preview readiness timeouts are surfaced as recoverable user-facing
   feedback instead of silent transport failure.
-- A full 25-minute manual playback reproduction is still a listening/signoff
-  item, not completed evidence.
+- The listening/signoff side closed with the owner's 2026-08-25 approval (see
+  "Manual Listening Gate" below); the single remaining by-ear item is the
+  final installed-candidate spot-check in go/no-go §5.
 
 Verification coverage:
 

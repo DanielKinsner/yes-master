@@ -157,14 +157,8 @@ Generated 2026-06-22 from the docs-hygiene recon.
 - **Cloud-placeholder awareness**: detect `FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS`
   on import and warn ("this file will download from OneDrive before analysis")
   instead of stalling silently; pair with a decode/analysis watchdog timeout.
-- **Auto-updater** (Tauri updater plugin + signed release feed): every beta
-  install is currently stranded on its version forever. Blocked on CI/release
-  budget, not on code.
-
 ## Refactor / architecture
 
-- Explicit **Standard/Advanced/Album navigation state machine** making illegal UI
-  states unrepresentable (consolidate App.tsx view-mode + project-mode).
 - Owner-gated **engine-adjacent cleanup** slice (process_sample,
   analyze_tracks_core_lite, dsp one-pole/soft-knee hoist) activatable by one owner line.
 - Regenerate **graphify cache with repo-relative paths** (or untrack) for

@@ -1,15 +1,28 @@
 # YES Master — Owner Launch Checklist (2026-08-31)
 
-Everything the agent lane could do is done. This is the exact remaining path to
-a live free public beta, written for the owner: what to click, what you should
-see, and what to do if you don't see it. Gate references:
-`docs/plans/beta-go-no-go.md` (§3ii, §4, §5, §6, §8).
+> **⚠ 2026-08-31 (later the same day): candidate `v0.9.2-beta.1` is
+> AUDIT-BLOCKED / NO-GO pending owner disposition.** The adversarial audit
+> confirmed launch blockers in release-bound code (hostile-import panic,
+> updater notice loss/recovery, sticky-TOOLS transparency, receipt
+> accessibility) — see
+> `docs/superpowers/plans/2026-08-31-adversarial-audit-remediation-and-launch-readiness.md`
+> and the Claude triage beside it. Remediation is landing on
+> `codex/launch-readiness-remediation`. **Do not run the steps below against
+> the beta.1 draft** until the owner has recorded a beta.1 disposition (Task
+> 12); if beta.1 is rejected, this checklist re-runs against the replacement
+> `v0.9.2-beta.2` candidate. Beta.1 is not yet rejected — its tag, draft
+> (id 379883047), and evidence stay frozen and untouched.
 
-**Where things stand:** candidate `v0.9.2-beta.1` is tagged at `c750da6`, the
-draft release (id 379883047) built green with all 9 assets, checksums verified
-independently on the Windows box, and the four stale 0.9.1 drafts are deleted.
-The draft is NOT flagged prerelease, so publishing it makes it
-`/releases/latest` — which the auto-updater and the landing page both require.
+This is the exact remaining path to a live free public beta, written for the
+owner: what to click, what you should see, and what to do if you don't see it.
+Gate references: `docs/plans/beta-go-no-go.md` (§3ii, §4, §5, §6, §8).
+
+**Where things stand (pre-audit record):** candidate `v0.9.2-beta.1` is tagged
+at `c750da6`, the draft release (id 379883047) built green with all 9 assets,
+checksums verified independently on the Windows box, and the four stale 0.9.1
+drafts are deleted. The draft is NOT flagged prerelease, so publishing it makes
+it `/releases/latest` — which the auto-updater and the landing page both
+require.
 
 **Cost to launch: $0.** Optional post-beta spends: Apple Developer $99/yr
 (removes the Mac "unidentified developer" warning on future releases), Azure

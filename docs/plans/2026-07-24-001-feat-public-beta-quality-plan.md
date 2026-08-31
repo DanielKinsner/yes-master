@@ -464,6 +464,20 @@ Status values: `Not started`, `In progress`, `Complete`, `Complete with
 findings` (acceptance met, but something was found and recorded rather than
 fixed), `Blocked` (only for a hard stop — never for a queued owner question).
 
+### Session state — 2026-08-31 addendum (adversarial audit)
+
+**`v0.9.2-beta.1` @ `c750da6` is AUDIT-BLOCKED / NO-GO pending owner
+disposition — not yet rejected.** The 2026-08-31 adversarial audit confirmed
+release-bound blockers (hostile-import panic, updater notice loss/recovery,
+sticky-TOOLS transparency, receipt accessibility, RustSec unsound blind
+spot). Remediation plan:
+`docs/superpowers/plans/2026-08-31-adversarial-audit-remediation-and-launch-readiness.md`;
+branch: `codex/launch-readiness-remediation`. **U15–U17 stay OPEN** and must
+not run against beta.1 until the owner records a disposition (plan Task 12);
+if rejected, they run against the replacement `v0.9.2-beta.2`. Beta.1's tag,
+draft, and evidence stay frozen; the C1–C3 history below is executed record
+and remains untouched.
+
 ### Session state — 2026-07-27 (read this first when resuming)
 
 **Where things stand. C1–C4 are ALL CLOSED.** `v0.9.1-beta.1` sits at merge

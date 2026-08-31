@@ -157,16 +157,21 @@ What deliberately does not adapt today:
 - Preset tone tilt is fixed per preset (not reference-matched). The fixed
   voicing was re-tuned to an owner-directed "85% lean" on 2026-06-22 (commit
   659bea5; `custom` untouched) — Windows-verified; macOS byte-identity snapshot
-  work is closed/superseded, while owner listening remains pending (see
-  `docs/OPEN_THREADS_AND_DECISIONS.md`).
+  work is closed/superseded. Owner listening was **approved 2026-08-25**; the
+  only remaining sound gate is one final by-ear spot-check on the installed
+  candidate, and any further preset retuning requires a new listening note
+  (see `docs/OPEN_THREADS_AND_DECISIONS.md`, 2026-08-25 block).
 - Phase-B per-window confidence gating is built but OFF by default,
   pending the owner calibration sitting.
 
-Direction (decided 2026-06-12, not yet shipped): per-band track-aware
-compression with transient protection and already-mastered stand-down is
-part of the MVP, built reduce-only and gated off until owner calibration —
-spec: `docs/plans/2026-06-12-adaptive-compressor-mvp-spec.md`. Do not
-describe it as current behavior until that spec's final phase lands.
+Adaptive Compressor (decided 2026-06-12): per-band track-aware compression
+with transient protection and already-mastered stand-down is **built,
+reduce-only, and gated off** pending the owner calibration sitting — spec:
+`docs/plans/2026-06-12-adaptive-compressor-mvp-spec.md`. It exists in the
+code but is not current listening behavior; do not enable it or describe it
+as active. Note the distinction: the Tier-1 guardrail restraint described
+under Compressor Canon below IS active today; the per-band adaptive
+processing is what stays disabled.
 
 ## Compressor Canon
 

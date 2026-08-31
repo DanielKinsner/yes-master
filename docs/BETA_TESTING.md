@@ -72,8 +72,9 @@ them is worse than described.
   moving the audio afterwards, restores the project with per-track "source
   missing" errors rather than relinking. Use **Re-analyze** after putting the
   files back. A relink affordance is not built yet.
-- **Some presets are still being tuned by ear.** Character notes are welcome and
-  are exactly what the tuning pass needs.
+- **Preset voicing is settled** — the current sound has been listened to and
+  signed off. Character notes are still welcome: a future tuning pass only
+  opens on new listening notes, and yours are exactly what would justify one.
 - **Minimum window size is 1360×740.** Smaller is not supported yet.
 
 ## Diagnostics

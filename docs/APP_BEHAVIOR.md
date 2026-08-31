@@ -279,11 +279,14 @@ further subjective retune.
 
 ## Current Gaps
 
-1. Manual listening signoff is still required; automated tests cannot approve
-   taste.
-2. The full private fixture matrix runner evidence is complete; listening
-   signoff on already-mastered outputs remains.
-3. Oomph needs listening notes before another targeted tuning pass.
+1. Owner listening was **approved 2026-08-25** — automated tests still cannot
+   approve taste, so any FUTURE sound change reopens a listening note. The one
+   remaining sound gate is a final by-ear spot-check on the installed
+   candidate (go/no-go §5).
+2. The full private fixture matrix runner evidence is complete; the
+   already-mastered listening matrix closed with the 2026-08-25 approval.
+3. Preset retuning (Oomph included) is closed unless a new listening note
+   opens it.
 4. The already-integrated autoupdater still needs an end-to-end update proof.
    Its permanent key is configured. Paid Apple notarization and Windows
    Authenticode are post-beta trust upgrades; the $0 beta may ship ad-hoc /

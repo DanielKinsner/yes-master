@@ -12,6 +12,42 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-08-31 — Adversarial audit: beta.1 blocked; Phase A remediation lands
+
+The 2026-08-31 adversarial audit confirmed launch blockers in release-bound
+code; `v0.9.2-beta.1` @ `c750da6` is **audit-blocked / NO-GO pending owner
+disposition** (not rejected; tag/draft/evidence frozen). Claude verified all
+30 findings against code (24 confirmed, 0 refuted — triage doc beside the
+plan) and executed remediation on `codex/launch-readiness-remediation`,
+red-test-first, one behavior per commit:
+
+- **Import hardening (L-01):** `files.rs` lost its private unguarded
+  Symphonia probe; import metadata now routes through decode's
+  `guard_untrusted_audio_parse` boundary — a crafted 0 Hz WAV returns a
+  typed error instead of panicking `import_tracks`.
+- **Updater (L-02/L-03):** availability is latched in managed state and
+  queryable (`available_update_version`), so a missed startup event can't
+  strand the notice; failed installs keep a recovery toast with single-flight
+  Retry + fixed-origin "Download manually" (`open_release_page`, opener
+  plugin, URL pinned identically in TS/Rust/landing).
+- **UI/a11y (U-01, A-01/A-02/A-03, U-02):** sticky TOOLS opaque again (the
+  last cascade rule had gone transparent; browser probe now gates computed
+  alpha); loudness select named; committed axe-core WCAG A/AA gate over four
+  app states (drove a `--text-2` contrast lift to AA); export receipt got a
+  real focus trap + restoration to the rail Export button, a fixed grid
+  shell with a scroll-only body, and a 32×32 close target.
+- **Evidence honesty (T-01/T-02/T-03):** loaded Standard has a permanent
+  browser scenario; album-warning now runs a REAL Export Album and proves
+  the four delivery advisories; landing CTA tests measure per-axis and say
+  exactly what they gate (hero-above-fold question queued for the owner).
+- **Build/security (B-01, S-01/S-02):** Vite config selection is explicit
+  everywhere (stale emitted `vite.config.js` shadow deleted, never ignorable
+  again); `anyhow` patched to 1.0.103 in all three locks; CI `cargo audit`
+  now `--deny unsound` with exactly the Linux GTK3 exception.
+- **Docs (D-01):** PRODUCT/APP_BEHAVIOR/BETA_TESTING/matrix/backlog/banners
+  reconciled to the 2026-08-25 listening approval and the audit-blocked
+  candidate state; the highest-risk truths are pinned by static tests.
+
 ## 2026-08-25 — Owner decisions batch, Space carve-out, U19 Android remediation, U18 plan
 
 Owner decisions recorded in session (details in

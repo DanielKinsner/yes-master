@@ -45,6 +45,44 @@ const tauriConfig = JSON.parse(
 const DISCARDED_BOOTSTRAP_PUBKEY =
   "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM5OEJBMEIzQzYyRURDRUUKUldUdTNDN0dzNkNMeVR5VVhUeXJERVVST05nZG5XSXFzK3RDZTBjZFgray81WXpxc2d5eDR3eGEK";
 
+describe("launch truth stays mechanically sticky (audit D-01)", () => {
+  // Only the few truths whose drift would cause UNSAFE ACTION are pinned —
+  // acting on "listening still pending" could retune approved sound; a
+  // resurrected idea-backlog entry could rebuild a shipped system.
+  it("owner listening is recorded as approved, not pending", () => {
+    const product = readText("../../docs/PRODUCT.md");
+    expect(product).not.toMatch(/owner listening remains pending/i);
+    expect(product).toContain("approved 2026-08-25");
+  });
+
+  it("the adaptive compressor stays described as built but gated off", () => {
+    const product = readText("../../docs/PRODUCT.md");
+    expect(product).toMatch(/gated off/i);
+  });
+
+  it("shipped updater and navigation-machine entries are gone from the idea backlog", () => {
+    const backlog = readText("../../docs/IDEAS_BACKLOG.md");
+    expect(backlog).not.toContain("**Auto-updater**");
+    expect(backlog).not.toContain("navigation state machine");
+  });
+
+  it("capability rows C-05, C-07, C-25, and C-26 are Applied", () => {
+    const matrix = readText("../../docs/CAPABILITY_EVIDENCE_MATRIX.md");
+    for (const row of ["C-05", "C-07", "C-25", "C-26"]) {
+      const line = matrix
+        .split("\n")
+        .find((candidate) => candidate.includes(`| ${row} |`));
+      expect(line, `row ${row} missing from the capability matrix`).toBeDefined();
+      expect(line, `row ${row} must be Applied`).toContain("Applied");
+    }
+  });
+
+  it("presets are approved: further retuning requires a new listening note", () => {
+    const betaGuide = readText("../../docs/BETA_TESTING.md");
+    expect(betaGuide).not.toContain("still being tuned by ear");
+  });
+});
+
 describe("RustSec gate fails closed on unsound advisories (audit S-02)", () => {
   it("all three CI cargo-audit commands deny unsound with only the exact Linux GTK3 exception", () => {
     // Plain `cargo audit` treats unsoundness advisories as warnings — CI

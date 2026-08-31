@@ -7,6 +7,17 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **2026-08-31 — Adversarial audit: `v0.9.2-beta.1` @ `c750da6` is
+> AUDIT-BLOCKED / NO-GO pending owner disposition (not yet rejected).**
+> Confirmed release-bound blockers (hostile-import panic, updater notice
+> loss/recovery, sticky-TOOLS transparency, receipt accessibility, RustSec
+> unsound blind spot). Remediation runs on
+> `codex/launch-readiness-remediation` per
+> `docs/superpowers/plans/2026-08-31-adversarial-audit-remediation-and-launch-readiness.md`
+> (Claude's verified triage sits beside it). Beta.1's tag, draft release
+> (379883047), and evidence stay frozen until the owner's Task-12
+> disposition; U15–U17 do not run against beta.1.
+
 > **2026-08-19 — The 2026-07-27 candidate (`v0.9.1-beta.1` @ `34f7c88`) is
 > SUPERSEDED; the freeze is lifted. Owner decision.** Three weeks of
 > feature/design work landed on `main` after the tag (movable EQ bands,
@@ -215,20 +226,30 @@ resolved; see "Confirmed SHIPPED" below. Remaining threads are owner-gated._
 
 ### OPEN — owner-gated (listening / taste)
 
-> **2026-08-25 owner approval:** threads **4, 5, 6, 7** below are **closed as
-> approved** — the owner has listened and signed off; what remains is one
-> final by-ear check immediately before beta activation (U15). Threads 2, 3,
-> and 7a stay open as post-beta calibration (D7). Rows kept for history.
+> Post-beta calibration only (D7). The formerly-open listening gates (old
+> rows 4, 5, 6, 7) were **approved 2026-08-25** and now live under "Closed as
+> approved" below — do not treat them as open, and do not retune presets
+> without a new listening note.
 
 | # | Thread | Source | Action |
 |---|---|---|---|
 | 2 | **AC-5 Adaptive Compressor calibration + default-gate flip** | adaptive-compressor-mvp-spec §5; HANDOFF_2026-06-13_AC5_CALIBRATION_PREP | Owner listening session. AC-1…AC-4 shipped; queue private fixtures, run OFF-vs-ON A/B, capture keep/adjust/reject per constant, land a single AC-5 flip commit (lock 9 constants, flip default, regen snapshots, update PRODUCT/APP_BEHAVIOR). Ship gate-OFF until then. |
 | 3 | **Phase-B confidence gating** calibration + default flip | RELEASE_STABILIZATION Active Gates; AC-5 prep | Owner-gated; bundle into the AC-5 sitting (same fixtures/ears). Decide whether the default flips ON in a separate commit. No code change before listening notes. |
-| 4 | **Manual Listening Gate** (normal / already-mastered / long-source sweeps + clean-vs-warning export by ear) | Jump-Fix #1; deferred to Wave 10 | Owner by-ear pass. Include 8 kHz + 11.025 kHz sources (Nyquist clamp proof). Sweep Intensity/EQ/gain/compressor/Preview-LUFS/Volume-Match during playback; export clean + warning case, compare. Record a listening-note doc. |
-| 5 | **Reference Retune listening notes** (Oomph least-matched) | Jump-Fix #2; deferred to Wave 10 | Re-run the private reference-tuning runner **after the 85% lean**, capture per-preset notes (Oomph: bolder without mud/pumping). Don't change export LUFS landing or compressor semantics. **The paired preset-fingerprint harness shipped 2026-07-03** (`src-tauri/tests/preset_fingerprint.rs`: safety bounds + pairwise distinctness floor + tolerance golden; owner report via `write_owner_fingerprint_report`, see TESTING.md) — future retunes are now mechanically gated; the listening notes themselves remain owner-gated. |
-| 6 | **Already-mastered matrix listening signoff** | Jump-Fix #3; deferred to Wave 10 | Owner by-ear signoff against existing aggregate evidence; pairs with AC-5 stand-down listening. Re-run since the 85% lean is a DSP change. |
-| 7 | **Confirm the 85% lean resolved the "characterless presets" regression** | 2026-06-15 stabilization plan | Part of the Manual Listening Gate: confirm Universal/Clarity/Tape/Oomph are audibly distinct at matched loudness post-85%-lean. If still too similar, capture a listening note before further retune. |
 | 7a | **Album character system listening + flip decision** | 2026-07-03 hardening plan D7 | The album genre-inference system (per-track character labels → loudness pulls + EQ/width/warmth/intensity biases, `album.rs`) was gated OFF by default on 2026-07-03 (owner decision; it had never had a listening gate and silently altered tracks, contradicting the album promise). Owner A/B listening session decides whether it returns as a visible opt-in. Any flip commit removes or demotes the filename-keyword label override. |
+
+### Closed as approved — 2026-08-25 owner listening signoff (history)
+
+The owner listened across sessions and signed off on the current sound; these
+four gates are **closed**, collapsed into one final by-ear spot-check on the
+installed candidate immediately before beta activation (U15 / go-no-go §5).
+Rows preserved for their dated history — they are not open work:
+
+| # | Thread (closed) | Source | What the gate had asked |
+|---|---|---|---|
+| 4 | **Manual Listening Gate** (normal / already-mastered / long-source sweeps + clean-vs-warning export by ear) | Jump-Fix #1; deferred to Wave 10 | Owner by-ear pass incl. 8 kHz + 11.025 kHz sources; sweep Intensity/EQ/gain/compressor/Preview-LUFS/Volume-Match during playback; export clean + warning case, compare. |
+| 5 | **Reference Retune listening notes** (Oomph least-matched) | Jump-Fix #2; deferred to Wave 10 | Re-run the private reference-tuning runner after the 85% lean, capture per-preset notes. The paired preset-fingerprint harness (shipped 2026-07-03) still mechanically gates any FUTURE retune. |
+| 6 | **Already-mastered matrix listening signoff** | Jump-Fix #3; deferred to Wave 10 | Owner by-ear signoff against aggregate evidence post-85%-lean. |
+| 7 | **"Characterless presets" regression check** | 2026-06-15 stabilization plan | Confirm Universal/Clarity/Tape/Oomph audibly distinct at matched loudness post-85%-lean. |
 
 ### OPEN — roadmap / scope (no listening required)
 
