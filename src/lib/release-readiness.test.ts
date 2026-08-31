@@ -83,6 +83,36 @@ describe("launch truth stays mechanically sticky (audit D-01)", () => {
   });
 });
 
+describe("launch records name exact commits, not branches (review #5/#6)", () => {
+  // The owner's Task-12 disposition acts on records — if they point at a
+  // branch name or a superseded candidate, the wrong bytes get promoted.
+  it("all three launch records carry the exact Phase A commit map", () => {
+    for (const path of [
+      "../../docs/CHANGELOG.md",
+      "../../docs/plans/beta-go-no-go.md",
+      "../../docs/plans/2026-08-31-owner-launch-checklist.md",
+    ]) {
+      const record = readText(path);
+      for (const hash of ["b81d820", "691392d", "016b29f", "0cf48ce"]) {
+        expect(record, `${path} must name commit ${hash}`).toContain(hash);
+      }
+    }
+  });
+
+  it("the quality plan's 2026-07-27 block is historical, not resume authority", () => {
+    const plan = readText(
+      "../../docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md",
+    );
+    expect(plan).toContain(
+      "2026-07-27 (HISTORICAL — superseded as resume authority)",
+    );
+    expect(plan).not.toContain("read this first when resuming");
+    // The obsolete U15 install direction (v0.9.1-beta.1 draft bytes) must
+    // stay explicitly disclaimed wherever the old prose survives as history.
+    expect(plan).toContain("install from the `v0.9.1-beta.1` draft is obsolete");
+  });
+});
+
 describe("RustSec gate fails closed on unsound advisories (audit S-02)", () => {
   it("all three CI cargo-audit commands deny unsound with only the exact Linux GTK3 exception", () => {
     // Plain `cargo audit` treats unsoundness advisories as warnings — CI

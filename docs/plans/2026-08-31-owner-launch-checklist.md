@@ -12,6 +12,15 @@
 > 12); if beta.1 is rejected, this checklist re-runs against the replacement
 > `v0.9.2-beta.2` candidate. Beta.1 is not yet rejected — its tag, draft
 > (id 379883047), and evidence stay frozen and untouched.
+>
+> **Remediation is COMPLETE and independently reviewed.** Exact commits on
+> `codex/launch-readiness-remediation`: `b81d820` `d874d90` `5fe2a90`
+> `e1f0b36` `6986032` `9f60023` `a20ab26` `69c789f` `a15284a` `9a4bf1f`
+> `63657cc` `acab580` `1c9b35a` `80e2898` `691392d` (Tasks 1–11), Codex
+> review `6ed3b53`, review fixes `016b29f` `333c6dc` `0cf48ce` + the
+> launch-records commit (full task↔commit map: `docs/CHANGELOG.md`
+> 2026-08-31 entry). Your Task-12 disposition decides what happens next;
+> any beta.2 build must name the exact reviewed commit it was built from.
 
 This is the exact remaining path to a live free public beta, written for the
 owner: what to click, what you should see, and what to do if you don't see it.

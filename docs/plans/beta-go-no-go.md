@@ -26,6 +26,18 @@ is post-beta advisory under D16.
 > and this gate re-runs; beta.1 evidence is then marked superseded, never
 > rewritten as beta.2 proof.
 >
+> **Exact remediation commits (Phase A, Tasks 1–11 + review fixes) on
+> `codex/launch-readiness-remediation`:** `b81d820` (T1 import panic
+> shield), `d874d90` (T2 updater latch), `5fe2a90` (T3 install recovery),
+> `e1f0b36` (T4 TOOLS opacity), `6986032`+`9f60023` (T5 contrast + axe
+> gate), `a20ab26` (T6 focus trap), `a15284a` (T7 receipt shell),
+> `9a4bf1f`/`63657cc`/`acab580` (T8 evidence honesty), `1c9b35a` (T9 vite
+> config), `80e2898` (T10 RustSec), `691392d` (T11 docs), `69c789f`
+> (capture refresh); independent Codex review `6ed3b53` and its fixes
+> `016b29f`/`333c6dc`/`0cf48ce` + the launch-records commit. A future
+> beta.2 is built from the reviewed tip of this branch, and its evidence
+> rows cite that exact commit — never a branch name alone.
+>
 > **Current candidate: 0.9.2 — TAGGED `v0.9.2-beta.1` @ `c750da6`
 > (2026-08-31).** The `v0.9.1-beta.1` candidate was superseded by the owner on
 > 2026-08-19 (see the ledger row and "Candidate freeze" below). Any box below

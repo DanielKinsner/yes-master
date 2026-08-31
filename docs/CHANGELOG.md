@@ -47,6 +47,25 @@ red-test-first, one behavior per commit:
 - **Docs (D-01):** PRODUCT/APP_BEHAVIOR/BETA_TESTING/matrix/backlog/banners
   reconciled to the 2026-08-25 listening approval and the audit-blocked
   candidate state; the highest-risk truths are pinned by static tests.
+- **Independent review pass (same day):** Codex reviewed the branch
+  (`docs/superpowers/plans/2026-08-31-phase-a-codex-review.md`, verdict
+  HOLD, 8 findings — all verified and fixed): updater dismissal could
+  swallow a failed install and stale replay could resurrect a dismissed
+  toast; album render didn't gate updater actions; the contrast token was
+  computed against the wrong ground and axe could scan mid-animation; the
+  receipt geometry probe could pass without Show file or real scroll.
+
+**Exact Phase A commits** on `codex/launch-readiness-remediation`:
+Task 1 `b81d820` import panic shield · Task 2 `d874d90` updater
+latch/replay · Task 3 `5fe2a90` failed-install recovery · Task 4 `e1f0b36`
+sticky-TOOLS opacity · Task 5 `6986032` contrast token + `9f60023`
+loudness name/axe gate · Task 6 `a20ab26` receipt focus trap · Task 7
+`a15284a` receipt shell · Task 8 `9a4bf1f` loaded-Standard + `63657cc`
+album advisories + `acab580` CTA honesty · Task 9 `1c9b35a` vite config ·
+Task 10 `80e2898` RustSec gate · Task 11 `691392d` docs · capture refresh
+`69c789f` · Codex review `6ed3b53` · review fixes `016b29f` (updater
+#3/#4/#8), `333c6dc` (contrast #2), `0cf48ce` (axe settle #1 + geometry
+#7), and the launch-records commit carrying this map (#5/#6).
 
 ## 2026-08-25 — Owner decisions batch, Space carve-out, U19 Android remediation, U18 plan
 
