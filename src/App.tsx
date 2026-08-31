@@ -354,13 +354,25 @@ function App() {
   // Idempotent availability setter shared by the event and the query paths:
   // the same version never resets an in-flight install/failure state, so an
   // event/query overlap cannot duplicate or regress the notice.
+  // A dismissed version stays dismissed: without the ref, the startup query
+  // resolving AFTER the user closed the event-driven toast would re-open it
+  // (review finding #8 — the setter treated null as fresh availability).
+  const dismissedUpdateVersionRef = useRef<string | null>(null);
   const noteUpdateAvailable = useCallback((version: string) => {
+    if (dismissedUpdateVersionRef.current === version) return;
     setUpdateNotice((notice) =>
       notice && notice.version === version
         ? notice
         : { status: "available", version },
     );
   }, []);
+
+  const dismissUpdateNotice = () => {
+    setUpdateNotice((notice) => {
+      if (notice) dismissedUpdateVersionRef.current = notice.version;
+      return null;
+    });
+  };
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -391,16 +403,15 @@ function App() {
     // backend no-op path) — lands in the same recoverable failed state; the
     // notice is never cleared by a failure (audit L-03).
     if (!updateNotice || updateNotice.status === "installing") return;
-    setUpdateNotice({ status: "installing", version: updateNotice.version });
+    const { version } = updateNotice;
+    setUpdateNotice({ status: "installing", version });
+    // The version is captured HERE, not read back from the notice at
+    // settlement: dismissing the installing toast must not swallow the
+    // outcome (review finding #3). The user clicked install — a failure of
+    // that install is new information they need, so it surfaces even after
+    // a dismissal; only unclicked *availability* stays dismissed.
     const fail = () =>
-      setUpdateNotice(
-        (notice) =>
-          notice && {
-            status: "failed",
-            version: notice.version,
-            manualOpenFailed: false,
-          },
-      );
+      setUpdateNotice({ status: "failed", version, manualOpenFailed: false });
     api.installUpdate().then(fail, (err) => {
       console.warn("Update install failed", err);
       fail();
@@ -660,15 +671,20 @@ function App() {
             <Toast
               message={`Update available — v${updateNotice.version}`}
               tone="info"
-              onClose={() => setUpdateNotice(null)}
+              onClose={dismissUpdateNotice}
               actions={[
                 {
                   label: "Restart to update",
                   onClick: installUpdate,
+                  // Restarting mid-render would kill the user's export. All
+                  // three busy flags gate this: track export, preview
+                  // render, AND album render (review finding #4 — album
+                  // export sets its own flag, not isExporting).
                   disabled:
                     updateNotice.status === "installing" ||
                     tm.isExporting ||
-                    tm.isRendering,
+                    tm.isRendering ||
+                    tm.albumRendering,
                   disabledTitle:
                     updateNotice.status === "installing"
                       ? "Downloading and installing…"
@@ -685,12 +701,13 @@ function App() {
                   : "Update couldn't install. Retry, or download it manually."
               }
               tone="warn"
-              onClose={() => setUpdateNotice(null)}
+              onClose={dismissUpdateNotice}
               actions={[
                 {
                   label: "Retry",
                   onClick: installUpdate,
-                  disabled: tm.isExporting || tm.isRendering,
+                  disabled:
+                    tm.isExporting || tm.isRendering || tm.albumRendering,
                   disabledTitle:
                     "Finishing your export first — this re-enables the moment it's done.",
                 },

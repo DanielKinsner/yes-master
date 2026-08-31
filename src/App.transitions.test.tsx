@@ -1011,4 +1011,122 @@ describe("App updater toast (Slice 7b)", () => {
       root.unmount();
     });
   });
+
+  it("surfaces a failure even when the installing toast was dismissed mid-flight (review #3)", async () => {
+    // The user clicked install, then closed the toast while it ran. The
+    // install's OUTCOME is new information — it must not vanish with the
+    // dismissal, or a failed install looks like a pending restart forever.
+    const fire = captureUpdaterFire();
+    const pending = deferred<null>();
+    mocks.api.installUpdate.mockReturnValue(pending.promise);
+    const { root, container } = await mountApp();
+    await act(async () => {
+      fire.current("2.0.0");
+    });
+    await click(container.querySelector<HTMLButtonElement>(".toast-action")!);
+
+    // Dismiss while installing — the toast disappears…
+    await click(
+      container.querySelector<HTMLButtonElement>(".toast .toast-close")!,
+    );
+    expect(container.textContent).not.toContain("Update available");
+
+    // …but the rejection still lands in the recoverable failed state.
+    await act(async () => {
+      pending.reject(new Error("offline"));
+    });
+    await waitFor(() => {
+      expect(container.textContent).toContain("Update couldn't install");
+    });
+    expect(findButtonByText(container, "Retry")).toBeTruthy();
+    expect(findButtonByText(container, "Download manually")).toBeTruthy();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("surfaces the no-restart no-op path after a mid-flight dismissal too (review #3)", async () => {
+    const fire = captureUpdaterFire();
+    const pending = deferred<null>();
+    mocks.api.installUpdate.mockReturnValue(pending.promise);
+    const { root, container } = await mountApp();
+    await act(async () => {
+      fire.current("2.0.0");
+    });
+    await click(container.querySelector<HTMLButtonElement>(".toast-action")!);
+    await click(
+      container.querySelector<HTMLButtonElement>(".toast .toast-close")!,
+    );
+
+    // install_update resolving means restart() never ran (backend no-op).
+    await act(async () => {
+      pending.resolve(null);
+    });
+    await waitFor(() => {
+      expect(container.textContent).toContain("Update couldn't install");
+    });
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("never resurrects a dismissed notice when the startup query resolves late (review #8)", async () => {
+    // Race: listener registers → event shows the toast → user dismisses →
+    // the startup availability query (issued at registration) resolves LAST.
+    // The stale reply must not undo the dismissal.
+    const fire = captureUpdaterFire();
+    const lateQuery = deferred<string | null>();
+    mocks.api.availableUpdateVersion.mockReturnValue(lateQuery.promise);
+    const { root, container } = await mountApp();
+
+    await act(async () => {
+      fire.current("2.0.0");
+    });
+    await waitFor(() => {
+      expect(container.querySelector(".toast-action")).not.toBeNull();
+    });
+    await click(
+      container.querySelector<HTMLButtonElement>(".toast .toast-close")!,
+    );
+    expect(container.querySelector(".toast-action")).toBeNull();
+
+    await act(async () => {
+      lateQuery.resolve("2.0.0");
+    });
+    expect(container.querySelector(".toast-action")).toBeNull();
+    expect(container.textContent).not.toContain("Update available");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("does not query availability until listener registration has resolved (Task 2 ordering)", async () => {
+    // Register FIRST, query second — if the query ever moves ahead of the
+    // resolved registration, the missed-event window between them reopens.
+    // (The L-02 test above only checks call order; this holds registration
+    // unresolved and proves the query genuinely waits on it.)
+    const registration = deferred<() => void>();
+    mocks.onUpdaterAvailable.mockReturnValue(registration.promise);
+    mocks.api.availableUpdateVersion.mockResolvedValue("3.0.0");
+    const { root, container } = await mountApp();
+
+    expect(mocks.api.availableUpdateVersion).not.toHaveBeenCalled();
+
+    await act(async () => {
+      registration.resolve(() => {});
+    });
+    await waitFor(() => {
+      expect(mocks.api.availableUpdateVersion).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(container.querySelector(".toast")?.textContent).toContain("3.0.0");
+    });
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
 });

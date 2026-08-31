@@ -16,6 +16,15 @@ import type {
 
 const mocks = vi.hoisted(() => ({
   tm: null as Record<string, unknown> | null,
+  api: {
+    listAudioOutputDevices: vi.fn(() => Promise.resolve([])),
+    setAudioOutputDevice: vi.fn(() => Promise.resolve(null)),
+    availableUpdateVersion: vi.fn(() => Promise.resolve<string | null>(null)),
+    installUpdate: vi.fn(() => Promise.resolve(null)),
+    openReleasePage: vi.fn(() => Promise.resolve(null)),
+    openOutput: vi.fn(() => Promise.resolve(null)),
+  },
+  onUpdaterAvailable: vi.fn(() => Promise.resolve(() => {})),
 }));
 
 vi.mock("./hooks/useTrackMaster", () => ({
@@ -23,6 +32,14 @@ vi.mock("./hooks/useTrackMaster", () => ({
     if (!mocks.tm) throw new Error("mock tm not configured");
     return mocks.tm;
   },
+}));
+
+// The updater toast guards read tm busy flags in App's own JSX — this file's
+// mocked-hook seam is the one place a busy state is a plain field rather
+// than a full driven flow, so the three-flag guard matrix is tested here.
+vi.mock("./lib/api", () => ({
+  api: mocks.api,
+  onUpdaterAvailable: mocks.onUpdaterAvailable,
 }));
 
 const track: ImportedTrack = {
@@ -508,6 +525,100 @@ describe("album export actions", () => {
       container.querySelector(".bottom-status-left")?.textContent ?? "",
     ).toBe("");
     expect(container.textContent).not.toContain("Quality OK");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+});
+
+describe("updater actions during busy renders (review #4)", () => {
+  async function waitFor(assertion: () => void, timeoutMs = 2000): Promise<void> {
+    const startedAt = Date.now();
+    let lastError: unknown;
+    while (Date.now() - startedAt < timeoutMs) {
+      try {
+        assertion();
+        return;
+      } catch (error) {
+        lastError = error;
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        });
+      }
+    }
+    throw lastError;
+  }
+
+  afterEach(() => {
+    mocks.api.availableUpdateVersion.mockReset();
+    mocks.api.availableUpdateVersion.mockResolvedValue(null);
+    mocks.api.installUpdate.mockReset();
+    mocks.api.installUpdate.mockResolvedValue(null);
+  });
+
+  // Restart-to-update relaunches the app. Every busy flag that represents an
+  // in-flight render must disable it: track export (isExporting), preview
+  // render (isRendering), and album render (albumRendering) — the last one
+  // is a SEPARATE flag on the hook and was originally omitted from the guard.
+  for (const busyFlag of ["isExporting", "isRendering", "albumRendering"]) {
+    it(`disables Restart to update while ${busyFlag} is true`, async () => {
+      mocks.api.availableUpdateVersion.mockResolvedValue("9.9.9");
+      mocks.tm = { ...baseTrackMasterState(), [busyFlag]: true };
+
+      const { container, root } = await renderApp();
+      await waitFor(() => {
+        expect(container.querySelector(".toast-action")).not.toBeNull();
+      });
+
+      const action = container.querySelector<HTMLButtonElement>(".toast-action");
+      expect(action?.textContent).toBe("Restart to update");
+      expect(action?.disabled).toBe(true);
+      expect(action?.title).toContain("Finishing your export first");
+
+      await act(async () => {
+        root.unmount();
+      });
+    });
+  }
+
+  it("disables Retry on the failed toast while an album render runs", async () => {
+    mocks.api.availableUpdateVersion.mockResolvedValue("9.9.9");
+    let rejectInstall!: (reason?: unknown) => void;
+    mocks.api.installUpdate.mockReturnValue(
+      new Promise<null>((_resolve, reject) => {
+        rejectInstall = reject;
+      }),
+    );
+    mocks.tm = { ...baseTrackMasterState() };
+
+    const { container, root } = await renderApp();
+    await waitFor(() => {
+      expect(container.querySelector(".toast-action")).not.toBeNull();
+    });
+
+    // Idle at click time, so the install starts…
+    const action = container.querySelector<HTMLButtonElement>(".toast-action");
+    expect(action?.disabled).toBe(false);
+    await act(async () => {
+      action!.click();
+    });
+
+    // …then an album render begins before the failure lands. The re-render
+    // triggered by the failed state re-reads the (mutated) hook value.
+    mocks.tm.albumRendering = true;
+    await act(async () => {
+      rejectInstall(new Error("offline"));
+    });
+    await waitFor(() => {
+      expect(container.textContent).toContain("Update couldn't install");
+    });
+
+    const retry = Array.from(
+      container.querySelectorAll<HTMLButtonElement>(".toast-action"),
+    ).find((button) => button.textContent?.trim() === "Retry");
+    expect(retry).toBeTruthy();
+    expect(retry?.disabled).toBe(true);
 
     await act(async () => {
       root.unmount();
