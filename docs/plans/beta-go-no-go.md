@@ -69,18 +69,25 @@ is post-beta advisory under D16.
       SHA-pinned actions, scoped Azure secrets, pinned signing CLI) after its
       last green run — the next draft run doubles as the proving run for that
       change.
-- [ ] **A draft `v0.9.2-beta.1` workflow run is green** and contains `.dmg`,
+- [x] **A draft `v0.9.2-beta.1` workflow run is green** and contains `.dmg`,
       `.app.tar.gz`, `.msi`, `setup.exe`, all three updater `.sig` files,
       `latest.json`, and `SHA256SUMS.txt` — 9 assets, verified by the
-      workflow's own audit job. *(Historical: the superseded `v0.9.1-beta.1`
+      workflow's own audit job. *Evidence:* tag-triggered Release run
+      `33409477883` at `c750da6`, 2026-08-31, all four jobs green (Preflight,
+      macOS Universal, Windows, Audit complete draft) — also the proving run
+      for the 2026-08-20 workflow hardening. Draft release `379883047` holds
+      exactly the 9 named assets, confirmed by releases-API readback. See the
+      2026-08-31 ledger rows. *(Historical: the superseded `v0.9.1-beta.1`
       draft went green in Release run `30294627200` at the moved tag
       `34f7c88`, 2026-07-27, after the owner-approved workflow fixes — see
       ledger.)*
-- [ ] **Draft artifacts are downloadable and their checksums match.** *Owner or
-      agent, before publish.* The audit job already downloads every asset and
-      writes `SHA256SUMS.txt` from the downloaded bytes; what remains is an
-      independent download-and-compare against that ledger (natural U15/U16
-      step on the install machine).
+- [x] **Draft artifacts are downloadable and their checksums match.** *Evidence:*
+      2026-08-31, on the Windows install machine — `SHA256SUMS.txt`, the
+      `.msi`, `setup.exe`, and the universal `.dmg` were downloaded fresh from
+      the draft via the assets API and re-hashed locally with `sha256sum`; all
+      three installers MATCH the workflow's ledger. See the 2026-08-31
+      download-and-compare ledger row. (The audit job had already verified all
+      9 assets from its own download.)
 - [ ] *Advisory / post-beta:* Apple Developer notarization and Azure Artifact
       Signing are configured when funding permits. They reduce OS-warning
       friction but do not block the $0 beta.
@@ -259,6 +266,8 @@ is post-beta advisory under D16.
 | 2026-08-31 | U14 (re-run) | `c750da6` | Windows 11 / rustc stable | source `0.9.2` | full `cargo test --target-dir target\codex-rc` **with `AMS_RUN_REAL_FIXTURE=1`** | native-synthetic + private-fixture | PASS — all test binaries green, **0 failures**, only `#[ignore]`-marked long-runners skipped; **zero "Skipping real-fixture" lines** — the slow lane genuinely ran against `private-audio-fixtures/` on this machine. Preset byte-identity snapshots covered by the same suite. | run log (this session) |
 | 2026-08-31 | U14 (re-run) | `c750da6` | GitHub Actions | — | CI run `32873776284` (job-level readback via API) | — | PASS — all **seven** jobs green at the candidate commit: macOS desktop+iPhone, Android host JVM, Web E2E headless Chromium, npm+RustSec advisories, Windows desktop+bridge, snapshot diagnostics (macos, windows). This is the latest completed CI run at the tip. | GitHub Actions run 32873776284 |
 | 2026-08-31 | U14 close | `c750da6` | GitHub | tag `v0.9.2-beta.1` | `git tag v0.9.2-beta.1 c750da6 && git push origin v0.9.2-beta.1`; DELETE on the four stale draft releases (IDs 360595663, 360624379, 360618088, 360611557 — all HTTP 204; releases list confirmed empty after) | — | **Candidate tagged; freeze IN FORCE.** Owner approved tag + draft-cleanup in-session (2026-08-31). Tag-triggered Release run `33409477883` started — its result gets its own row below; it is also the proving run for the 2026-08-20 workflow hardening. | GitHub tag `v0.9.2-beta.1`; releases API readback |
+| 2026-08-31 | U16 (draft) | `c750da6` | GitHub Actions | draft release `379883047` (`v0.9.2-beta.1`), 9 assets | tag-triggered Release run `33409477883`, watched to completion (~28 min); job-level readback | installed-machine (artifact identity) | **PASS — all four jobs green** (Preflight, Build draft macOS Universal, Build draft Windows, Audit complete draft). First green run of the 2026-08-20-hardened workflow, so the hardening's proving run is closed. Draft holds `YES.Master_0.9.2_universal.dmg`, `YES.Master_universal.app.tar.gz(+.sig)`, `YES.Master_0.9.2_x64_en-US.msi(+.sig)`, `YES.Master_0.9.2_x64-setup.exe(+.sig)`, `latest.json`, `SHA256SUMS.txt`. **Draft, unpublished — publishing is the owner's click in U16/U17.** | GitHub Actions run 33409477883; draft release 379883047 |
+| 2026-08-31 | U16 (checksums) | `c750da6` | Windows 11 (the install machine) | draft assets: msi `a5e0266d…`, setup.exe `0f6b62f0…`, dmg `61956c13…` | independent download of `SHA256SUMS.txt` + both Windows installers + the dmg via the assets API, then local `sha256sum` compare against the ledger | installed-machine (artifact identity) | **PASS — all three installers MATCH** the workflow-written ledger, byte-for-byte by digest. Files staged for the owner's U15 install at `Downloads/yes-master-0.9.2-beta/`, alongside the locally-built signed `0.9.0` seed MSI for the §3(ii) updater proof. | `Downloads/yes-master-0.9.2-beta/` (local only, not committed) |
 
 ### Candidate freeze
 
