@@ -16,7 +16,7 @@ use std::path::Path;
 use symphonia::core::audio::{AudioBufferRef, SampleBuffer};
 use symphonia::core::codecs::{DecoderOptions, CODEC_TYPE_NULL};
 use symphonia::core::errors::Error as SymphoniaError;
-use symphonia::core::formats::FormatOptions;
+use symphonia::core::formats::{FormatOptions, Track};
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::Hint;
@@ -103,7 +103,13 @@ fn reconcile_decoded_channel_count(observed: &mut Option<u16>, actual: u16) -> C
 /// at will. Convert it into the same typed `CommandError::Decode` any
 /// other malformed file gets. (Cargo profiles keep the default unwind
 /// strategy, so `catch_unwind` is effective in dev and release.)
-fn decode_panic_boundary<T>(
+///
+/// EVERY Symphonia parse of user-supplied bytes must run inside this guard
+/// — decode, waveform peaks, format probe, and import metadata alike. The
+/// import path once grew its own unguarded probe in files.rs and a crafted
+/// 0 Hz WAV panicked the command, leaving the frontend's import promise
+/// unresolved (2026-08-31 audit, L-01).
+fn guard_untrusted_audio_parse<T>(
     path: &Path,
     body: impl FnOnce() -> CommandResult<T>,
 ) -> CommandResult<T> {
@@ -116,7 +122,7 @@ fn decode_panic_boundary<T>(
 }
 
 pub fn decode_full(path: &Path) -> CommandResult<DecodedPcm> {
-    decode_panic_boundary(path, || decode_full_inner(path)).inspect_err(|e| {
+    guard_untrusted_audio_parse(path, || decode_full_inner(path)).inspect_err(|e| {
         crate::diagnostics::warn(format!("decode failed for {}: {e}", path.display()))
     })
 }
@@ -343,7 +349,7 @@ fn fold_interleaved_above_stereo_to_stereo(samples: Vec<f32>, channels: u16) -> 
 }
 
 pub fn decode_to_peaks(path: &Path, target_pixels: u32) -> CommandResult<DecodedPeaks> {
-    decode_panic_boundary(path, || decode_to_peaks_inner(path, target_pixels))
+    guard_untrusted_audio_parse(path, || decode_to_peaks_inner(path, target_pixels))
 }
 
 fn decode_to_peaks_inner(path: &Path, target_pixels: u32) -> CommandResult<DecodedPeaks> {
@@ -469,14 +475,32 @@ fn decode_to_peaks_inner(path: &Path, target_pixels: u32) -> CommandResult<Decod
     })
 }
 
-/// Read just the container/codec header to learn the source format without
-/// decoding any audio. Used by the album render path to resolve album-wide
-/// delivery format before any track is processed.
-pub fn probe_audio_format(path: &Path) -> CommandResult<ProbedAudioFormat> {
-    decode_panic_boundary(path, || probe_audio_format_inner(path))
+/// Header metadata as the container actually declares it — `None` where the
+/// container omits a field. Callers decide their own fallbacks; this layer
+/// only guarantees the values that ARE present are sane (no zero rate, no
+/// zero channels, finite duration).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct ProbedAudioMetadata {
+    pub(crate) duration_seconds: Option<f64>,
+    pub(crate) sample_rate: Option<u32>,
+    pub(crate) channels: Option<u16>,
 }
 
-fn probe_audio_format_inner(path: &Path) -> CommandResult<ProbedAudioFormat> {
+/// First track Symphonia can actually decode; skips metadata-only tracks.
+fn first_decodable_track(tracks: &[Track]) -> Option<&Track> {
+    tracks
+        .iter()
+        .find(|track| track.codec_params.codec != CODEC_TYPE_NULL)
+}
+
+/// Read just the container/codec header — no audio decode — inside the
+/// untrusted-parse guard. The single metadata probe for every command path
+/// (import and album format resolution both map over this).
+pub(crate) fn probe_audio_metadata(path: &Path) -> CommandResult<ProbedAudioMetadata> {
+    guard_untrusted_audio_parse(path, || probe_audio_metadata_inner(path))
+}
+
+fn probe_audio_metadata_inner(path: &Path) -> CommandResult<ProbedAudioMetadata> {
     let file = std::fs::File::open(path).map_err(|e| CommandError::Io(e.to_string()))?;
     let mss = MediaSourceStream::new(Box::new(file), Default::default());
     let mut hint = Hint::new();
@@ -491,20 +515,55 @@ fn probe_audio_format_inner(path: &Path) -> CommandResult<ProbedAudioFormat> {
             &MetadataOptions::default(),
         )
         .map_err(|e| CommandError::Decode(e.to_string()))?;
-    let track = probed
-        .format
-        .tracks()
-        .iter()
-        .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
+    let format = probed.format;
+    let track = first_decodable_track(format.tracks())
         .ok_or_else(|| CommandError::Decode("no decodable track".to_string()))?;
+    let params = &track.codec_params;
+
+    if params.sample_rate == Some(0) {
+        return Err(CommandError::Decode(
+            "invalid sample rate 0 in source header".to_string(),
+        ));
+    }
+    let channels = match params.channels.map(|c| c.count()) {
+        Some(0) => {
+            return Err(CommandError::Decode(
+                "invalid channel count 0 in source header".to_string(),
+            ))
+        }
+        Some(count) => Some(u16::try_from(count).map_err(|_| {
+            CommandError::Decode(format!(
+                "unsupported channel count {count} in source header"
+            ))
+        })?),
+        None => None,
+    };
+    let duration_seconds = match (params.n_frames, params.sample_rate) {
+        (Some(frames), Some(sr)) if sr > 0 => {
+            let seconds = frames as f64 / f64::from(sr);
+            seconds.is_finite().then_some(seconds)
+        }
+        _ => None,
+    };
+
+    Ok(ProbedAudioMetadata {
+        duration_seconds,
+        sample_rate: params.sample_rate,
+        channels,
+    })
+}
+
+/// Read just the container/codec header to learn the source format without
+/// decoding any audio. Used by the album render path to resolve album-wide
+/// delivery format before any track is processed. Strict mapping over
+/// `probe_audio_metadata`: a missing rate falls back to 44.1 kHz and missing
+/// channels to stereo (some containers omit the fields), matching the
+/// pre-existing compatibility contract.
+pub fn probe_audio_format(path: &Path) -> CommandResult<ProbedAudioFormat> {
+    let metadata = probe_audio_metadata(path)?;
     Ok(ProbedAudioFormat {
-        sample_rate: validated_sample_rate(track.codec_params.sample_rate)?,
-        channels: track
-            .codec_params
-            .channels
-            .map(|c| c.count())
-            .unwrap_or(2)
-            .max(1) as u16,
+        sample_rate: validated_sample_rate(metadata.sample_rate)?,
+        channels: metadata.channels.unwrap_or(2).max(1),
     })
 }
 
@@ -517,6 +576,31 @@ pub fn probe_sample_rate(path: &Path) -> CommandResult<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use symphonia::core::audio::Channels;
+    use symphonia::core::codecs::{CodecParameters, CODEC_TYPE_PCM_S16LE};
+
+    fn audio_track(id: u32, sample_rate: u32, channels: Channels) -> Track {
+        let mut params = CodecParameters::new();
+        params
+            .for_codec(CODEC_TYPE_PCM_S16LE)
+            .with_sample_rate(sample_rate)
+            .with_channels(channels)
+            .with_n_frames(u64::from(sample_rate));
+        Track::new(id, params)
+    }
+
+    #[test]
+    fn metadata_track_selection_skips_null_tracks_before_audio() {
+        let tracks = vec![
+            Track::new(1, CodecParameters::new()),
+            audio_track(7, 48_000, Channels::FRONT_LEFT | Channels::FRONT_RIGHT),
+        ];
+
+        let selected = first_decodable_track(&tracks).expect("audio track");
+        assert_eq!(selected.id, 7);
+        assert_eq!(selected.codec_params.sample_rate, Some(48_000));
+        assert_eq!(selected.codec_params.channels.map(|c| c.count()), Some(2));
+    }
 
     fn write_silence_wav(path: &Path, sample_rate: u32) {
         let spec = hound::WavSpec {

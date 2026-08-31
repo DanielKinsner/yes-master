@@ -294,6 +294,29 @@ async fn import_tracks_rejects_garbage_wav_instead_of_defaulting_metadata() {
 }
 
 #[tokio::test]
+async fn import_tracks_turns_zero_sample_rate_parser_panic_into_decode_error() {
+    // A 0 Hz fmt chunk asserts inside symphonia-core (TimeBase::new) before
+    // any of our validation runs. decode_full/probe_audio_format learned this
+    // the hard way (D1, 2026-07-03) and sit behind a panic boundary — the
+    // import metadata path must produce the same typed error, never a panic
+    // that leaves the frontend's import promise unresolved.
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let path = tmp.path().join("zero-rate.wav");
+    std::fs::write(&path, common::crafted_wav(2, 0, 16, &[0_u8; 400], None)).expect("write");
+
+    let err = files::import_tracks(vec![path.to_string_lossy().to_string()])
+        .await
+        .expect_err("hostile zero-rate wav must be a typed error");
+    match err {
+        CommandError::Decode(msg) => assert!(
+            msg.contains("malformed audio file"),
+            "expected the panic-boundary error, got: {msg}"
+        ),
+        other => panic!("expected Decode, got {other:?}"),
+    }
+}
+
+#[tokio::test]
 async fn import_tracks_extracts_metadata_from_synthetic_wav() {
     let tmp = tempfile::tempdir().expect("tempdir");
     let path = tmp.path().join("sine.wav");

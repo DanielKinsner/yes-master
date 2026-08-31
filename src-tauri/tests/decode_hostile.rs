@@ -10,41 +10,14 @@ use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 use yes_master_lib::decode::{decode_full, probe_audio_format};
 
+mod common;
+use common::crafted_wav;
+
 fn write_bytes(dir: &TempDir, name: &str, bytes: &[u8]) -> PathBuf {
     let path = dir.path().join(name);
     let mut f = std::fs::File::create(&path).expect("create");
     f.write_all(bytes).expect("write");
     path
-}
-
-/// Hand-rolled RIFF/WAVE with attacker-controlled fmt fields and data.
-fn crafted_wav(
-    channels: u16,
-    sample_rate: u32,
-    bits: u16,
-    data: &[u8],
-    data_size_lie: Option<u32>,
-) -> Vec<u8> {
-    let block_align = channels.saturating_mul(bits / 8).max(1);
-    let byte_rate = sample_rate.saturating_mul(block_align as u32);
-    let data_size = data_size_lie.unwrap_or(data.len() as u32);
-    let riff_size = 36u32.saturating_add(data_size);
-    let mut out = Vec::new();
-    out.extend_from_slice(b"RIFF");
-    out.extend_from_slice(&riff_size.to_le_bytes());
-    out.extend_from_slice(b"WAVE");
-    out.extend_from_slice(b"fmt ");
-    out.extend_from_slice(&16u32.to_le_bytes());
-    out.extend_from_slice(&1u16.to_le_bytes()); // PCM
-    out.extend_from_slice(&channels.to_le_bytes());
-    out.extend_from_slice(&sample_rate.to_le_bytes());
-    out.extend_from_slice(&byte_rate.to_le_bytes());
-    out.extend_from_slice(&block_align.to_le_bytes());
-    out.extend_from_slice(&bits.to_le_bytes());
-    out.extend_from_slice(b"data");
-    out.extend_from_slice(&data_size.to_le_bytes());
-    out.extend_from_slice(data);
-    out
 }
 
 /// The invariant every hostile case must satisfy: no panic (implicit),
