@@ -77,8 +77,20 @@ interface PreviewScenario {
   readonly exportChecks: "clean" | "warning";
   /// Whether the native save dialog resolves to a path or to cancellation.
   readonly saveDialog: "path" | "cancel";
+  /// Audit T-02: whether the album export DIRECTORY picker resolves to a
+  /// path. Separate from saveDialog — album export picks a folder, not a
+  /// file. Cancel stays the browser-conservative default; a scenario must
+  /// opt in to the export-proceeds path.
+  readonly albumDirectory: "path" | "cancel";
   /// Album positions (1-based) that override the album settings.
   readonly overridePositions: readonly number[];
+  /// Audit T-02: per-position (1-based) SOURCE formats for seeded album
+  /// tracks. Positions not listed keep the 48 kHz stereo preview default.
+  /// The album render report derives from these seeded records, so delivery
+  /// advisories (upsample/upmix/fold) emerge from real data, not a flag.
+  readonly albumSourceFormats: Readonly<
+    Record<number, { sampleRate: number; channels: number }>
+  >;
 }
 
 const BASE_SCENARIO: PreviewScenario = {
@@ -88,7 +100,9 @@ const BASE_SCENARIO: PreviewScenario = {
   longNames: false,
   exportChecks: "clean",
   saveDialog: "cancel",
+  albumDirectory: "cancel",
   overridePositions: [],
+  albumSourceFormats: {},
 };
 
 export const PREVIEW_SCENARIOS: Record<PreviewScenarioName, PreviewScenario> = {
@@ -152,9 +166,22 @@ export const PREVIEW_SCENARIOS: Record<PreviewScenarioName, PreviewScenario> = {
   },
   "album-warning": {
     ...BASE_SCENARIO,
-    purpose: "Album mode where export checks surface a warning.",
+    // Audit T-02: this scenario used to stop at a settled album view. It now
+    // seeds mixed source formats and lets the directory pick succeed, so the
+    // headless lane can run a REAL Export Album and prove the supported
+    // post-export delivery advisories (upsample / upmix / fold / override).
+    purpose:
+      "Album mode: a real Export Album run surfaces the supported post-export delivery advisories.",
     albumTracks: 4,
     exportChecks: "warning",
+    albumDirectory: "path",
+    overridePositions: [3],
+    albumSourceFormats: {
+      1: { sampleRate: 44_100, channels: 1 },
+      2: { sampleRate: 48_000, channels: 2 },
+      3: { sampleRate: 48_000, channels: 4 },
+      4: { sampleRate: 48_000, channels: 2 },
+    },
   },
 };
 
@@ -288,6 +315,7 @@ function previewProject(): ProjectState {
       { length: scenario.albumTracks },
       (_, index) => {
         const position = index + 1;
+        const sourceFormat = scenario.albumSourceFormats[position];
         return {
           ...PREVIEW_TRACK,
           id: `${PREVIEW_TRACK_ID}-${position}`,
@@ -295,6 +323,10 @@ function previewProject(): ProjectState {
           display_name: albumTrackName(position, scenario.longNames),
           // Vary duration a little so the sequence is not visually uniform.
           duration_seconds: PREVIEW_DURATION - 40 + position * 7,
+          // Audit T-02: scenario-owned source formats, so the album render
+          // report can derive real delivery advisories from the seed.
+          sample_rate: sourceFormat?.sampleRate ?? PREVIEW_TRACK.sample_rate,
+          channels: sourceFormat?.channels ?? PREVIEW_TRACK.channels,
         };
       },
     );
@@ -569,25 +601,71 @@ export async function mockInvoke<T>(
       } as unknown as T;
     }
 
-    case "render_album_plan":
+    case "render_album_plan": {
       emitRenderProgress(
         nextPreviewId("mock-album-render"),
         PREVIEW_TRACK_ID,
         "album",
       );
+      // Audit T-02: the report DERIVES from the seeded project joined to the
+      // actual request — never a fabricated block. Source rates/channels come
+      // from the seeded ImportedTrack records (joined by track id, falling
+      // back to path); override_album comes from request.tracks[], so broken
+      // UI-to-render wiring cannot be masked by the seed. Delivery follows
+      // the real engine's album policy: highest source rate, stereo fold.
+      const albumRequest = (args?.request ?? {}) as {
+        tracks?: Array<{
+          track_id?: string;
+          source_path?: string;
+          override_album?: boolean;
+        }>;
+      };
+      const requestTracks = albumRequest.tracks ?? [];
+      const seededTracks = previewProject().tracks;
+      const joined = requestTracks.map((requested, index) => {
+        const source =
+          seededTracks.find((t) => t.id === requested.track_id) ??
+          seededTracks.find((t) => t.path === requested.source_path) ??
+          null;
+        return {
+          track_id: (requested.track_id ??
+            source?.id ??
+            `unknown-${index + 1}`) as TrackId,
+          position: index + 1,
+          source_sample_rate: source?.sample_rate ?? 48_000,
+          source_channels: source?.channels ?? 2,
+          override_album: Boolean(requested.override_album),
+        };
+      });
+      const renderedSampleRate = Math.max(
+        44_100,
+        ...joined.map((t) => t.source_sample_rate),
+      );
+      const renderedChannels = 2;
       return {
         job_id: nextPreviewId("mock-album-render"),
         status: { status: "done" },
         album_wav_path: "/preview/album.wav",
         manifest_path: "/preview/manifest.json",
         requested_sample_rate: null,
-        rendered_sample_rate: 44_100,
-        source_sample_rates: [44_100],
+        rendered_sample_rate: renderedSampleRate,
+        source_sample_rates: joined.map((t) => t.source_sample_rate),
         bit_depth: 24,
-        rendered_channels: 2,
-        source_channels: [2],
-        tracks: [],
+        rendered_channels: renderedChannels,
+        source_channels: joined.map((t) => t.source_channels),
+        tracks: joined.map((t) => ({
+          track_id: t.track_id,
+          position: t.position,
+          output_path: `/preview/exports/${String(t.position).padStart(2, "0")}.wav`,
+          measured_lufs: -14.0,
+          source_sample_rate: t.source_sample_rate,
+          rendered_sample_rate: renderedSampleRate,
+          source_channels: t.source_channels,
+          rendered_channels: renderedChannels,
+          override_album: t.override_album,
+        })),
       } as unknown as T;
+    }
 
     case "render_track_preview":
     case "render_track_master": {
@@ -855,6 +933,14 @@ function emitRenderProgress(
 export async function mockOpen(
   opts?: { directory?: boolean; defaultPath?: string; multiple?: boolean; title?: string },
 ): Promise<string | string[] | null> {
+  // Audit T-02: the album export DIRECTORY pick may resolve so Export Album
+  // can actually run in the browser lane. Scenario-gated; file picks and
+  // every non-opted scenario keep the conservative cancel.
+  if (opts?.directory && activeScenario().albumDirectory === "path") {
+    const chosen = "/preview/exports";
+    console.info(`[preview-mock] open() returned ${chosen} (scenario album directory)`);
+    return chosen;
+  }
   // Browser-preview can't access the OS filesystem. Returning null mimics
   // "user cancelled the dialog" so error paths render correctly.
   console.info("[preview-mock] open() returned null (cancelled)", opts);

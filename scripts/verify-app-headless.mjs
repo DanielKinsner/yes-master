@@ -316,12 +316,28 @@ const SCENARIOS = [
     mustReach: [DELIVERY_FORMAT, EXPORT_ALBUM],
   },
   {
+    // Audit T-02. This scenario used to settle mid-analysis and screenshot —
+    // it never clicked Export Album, and the old mock could not have produced
+    // an advisory anyway. It now drives the real export and proves the four
+    // SUPPORTED post-export delivery advisories. The compatibility query
+    // stays ?scenario=album-warning; the evidence label says what the
+    // scenario actually proves.
     name: "album-warning",
+    label: "album-advisory",
     scenarioId: "S-F2",
-    purpose: "S-F2 (warnings): album mode where export checks surface a warning.",
-    viewports: [LAPTOP],
-    settle: "album",
-    mustContain: ["ALBUM", "4 TRACKS"],
+    purpose:
+      "S-F2 (album advisories): a real Export Album run surfaces the supported " +
+      "post-export delivery advisories (upsample, upmix, fold, override).",
+    viewports: [LAPTOP, MIN_DESKTOP],
+    settle: "album-ready",
+    drive: driveAlbumExport,
+    mustContainAfterDrive: [
+      "Last export:",
+      "Upsampled source 44.1 kHz",
+      "Upmixed source mono",
+      "Folded source 4 ch to stereo",
+      "Override: track 3 rendered with its own settings",
+    ],
   },
   {
     // S-E1 (plan scenario family). Proving unit U10; closing owner U15, whose
@@ -517,6 +533,31 @@ async function runAxeScan(page, report, contextLabel) {
     );
   }
   return payload;
+}
+
+/**
+ * Audit T-02 — drive the real Export Album action and bring the post-export
+ * receipt (with its delivery advisories) into view for the screenshot.
+ */
+async function driveAlbumExport(page) {
+  const exportAlbum = page
+    .locator("button", { hasText: /^Export Album$/ })
+    .first();
+  if ((await exportAlbum.count()) === 0) {
+    throw new Error("Export Album button not found");
+  }
+  await exportAlbum.click();
+  await waitForText(
+    page,
+    (text) => text.includes("Last export:"),
+    "the album export receipt",
+    documentText,
+  );
+  await page.evaluate(() => {
+    document
+      .querySelector(".album-export-receipt")
+      ?.scrollIntoView({ block: "center", behavior: "instant" });
+  });
 }
 
 /**
@@ -1068,6 +1109,10 @@ const SETTLE_MARKERS = {
   empty: (text) => text.includes("Drop audio. Hear it mastered."),
   ready: (text) => text.includes("READY"),
   album: (text) => /\d+ TRACKS?\b/.test(text),
+  // Audit T-02: the album EXPORT drive needs every track analyzed first —
+  // the count present AND no analysis still running.
+  "album-ready": (text) =>
+    /4 TRACKS\b/.test(text) && !/analyzing/i.test(text),
 };
 
 // ---------------------------------------------------------------------------
