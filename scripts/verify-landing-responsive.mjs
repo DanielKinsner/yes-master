@@ -310,19 +310,32 @@ for (const [width, height] of matrix) {
           })
           .map((el) => `${el.tagName.toLowerCase()}:${(el.textContent || "").trim().slice(0, 24)}`);
 
+        // Audit T-03: containment is measured PER AXIS and reported honestly.
+        // Horizontal clipping is a layout bug at any width. Vertical (fold)
+        // containment is a different question: the fixed nav CTA is the
+        // all-axis acquisition guarantee; whether the HERO CTA must also sit
+        // above the fold on short phones is an owner taste/spec decision
+        // (docs/OWNER_INPUT_QUEUE.md, 2026-08-31) — recorded, not asserted.
+        const axes = (rect) => ({
+          horizontal: Boolean(
+            rect && rect.left >= -1 && rect.right <= window.innerWidth + 1,
+          ),
+          vertical: Boolean(
+            rect && rect.top >= -1 && rect.bottom <= window.innerHeight + 1,
+          ),
+        });
+        const navAxes = axes(navRect);
+        const heroAxes = axes(heroRect);
+
         return {
           navCtaVisible: visible(navCta),
-          navCtaInViewport: Boolean(
-            navRect &&
-              navRect.left >= -1 &&
-              navRect.right <= window.innerWidth + 1,
-          ),
+          navCtaHorizontal: navAxes.horizontal,
+          navCtaVertical: navAxes.vertical,
+          navCtaAllAxes: navAxes.horizontal && navAxes.vertical,
           heroCtaVisible: visible(heroCta),
-          heroCtaInViewport: Boolean(
-            heroRect &&
-              heroRect.left >= -1 &&
-              heroRect.right <= window.innerWidth + 1,
-          ),
+          heroCtaHorizontal: heroAxes.horizontal,
+          heroCtaVertical: heroAxes.vertical,
+          heroCtaAllAxes: heroAxes.horizontal && heroAxes.vertical,
           deadAnchors,
           unsafeExternal,
           headingCount: levels.length,
@@ -504,15 +517,24 @@ for (const [width, height] of matrix) {
   }
 
   // U8 assertions on the quality block.
+  //
+  // Audit T-03: these say exactly what they measure. The FIXED NAV CTA is the
+  // all-axis acquisition guarantee, so it must be fully contained on both
+  // axes. The HERO CTA is gated on the horizontal axis only: on short phones
+  // it legitimately sits below introductory copy, and whether it must also be
+  // above the fold is an owner taste/spec decision recorded in
+  // docs/OWNER_INPUT_QUEUE.md (2026-08-31). Its vertical/all-axis containment
+  // is still measured and lands in summary.json as evidence for that
+  // decision, non-blockingly.
   const q = metrics.quality;
-  if (!q.navCtaVisible || !q.navCtaInViewport) {
+  if (!q.navCtaVisible || !q.navCtaAllAxes) {
     failures.push(
-      `${width}x${height}: nav acquisition CTA is not fully visible on screen`,
+      `${width}x${height}: nav acquisition CTA is not fully contained on both axes`,
     );
   }
-  if (!q.heroCtaVisible || !q.heroCtaInViewport) {
+  if (!q.heroCtaVisible || !q.heroCtaHorizontal) {
     failures.push(
-      `${width}x${height}: hero acquisition CTA is not fully visible on screen`,
+      `${width}x${height}: hero CTA is horizontally clipped`,
     );
   }
   if (q.deadAnchors.length > 0) {
