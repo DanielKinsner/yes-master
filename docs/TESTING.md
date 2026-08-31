@@ -182,6 +182,15 @@ mistaken for coverage it does not have.
 still works as an alias for `empty`. Every scenario is checked at 1440×900 and,
 where layout matters, at the supported minimum 1360×740.
 
+**Export-receipt shell geometry (audit U-02).** The `warning` scenario's
+reduced-motion pass measures the OPEN receipt after two settled animation
+frames, before any reachability scrolling: the card must fit the viewport,
+Done / Show file / × must be initially visible and topmost at their centres,
+the close target must be ≥24×24 px, and scrolling `.receipt-scroll-region`
+(the only scrolling part of the card) must not move the pinned action/footer
+rows. The structural sibling-order half of this contract is pinned in
+`src/components/ExportReceiptCard.test.tsx`.
+
 **Console policy.** Any console error or warning fails the lane. The preview
 mock warns on an unhandled command or listen channel, so a drifted mock contract
 turns the lane red instead of producing noise nobody reads. Deliberately

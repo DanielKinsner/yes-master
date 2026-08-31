@@ -146,6 +146,9 @@ const SCENARIOS = [
     // Audit A-02: scanned while the receipt is OPEN (the drive leaves it up),
     // so the modal's own accessibility is what the scan measures.
     axe: true,
+    // Audit U-02: settled receipt geometry, measured only in the
+    // reduced-motion pass (returns null in the normal-motion pass).
+    beforeScreenshot: receiptGeometryProbe,
     // Audit A-03 — real-browser focus containment + restoration. Runs AFTER
     // the screenshot and axe scan (both need the receipt open): Tab from Done
     // must stay inside the receipt; Escape must close it and hand focus to
@@ -486,6 +489,161 @@ async function runAxeScan(page, report, contextLabel) {
     );
   }
   return payload;
+}
+
+/**
+ * Audit U-02 — export-receipt shell geometry, measured in the reduced-motion
+ * pass (the entrance animation is off, so rectangles are settled) after two
+ * animation frames, BEFORE any reachability helper scrolls anything.
+ *
+ * The contract: the receipt card fits the viewport; Done / Show file / Close
+ * are initially visible and topmost at their centres (no scrolling needed to
+ * reach an action); only the information body (.receipt-scroll-region)
+ * scrolls, and scrolling it does not move the actions or footer; the close
+ * target is at least 24x24 px (WCAG 2.5.8).
+ */
+async function receiptGeometryProbe(page, report, context) {
+  if (context.motion !== "reduce") return null;
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  const geometry = await page.evaluate(() => {
+    const receipt = document.querySelector(".receipt");
+    const actions = document.querySelector(".receipt-actions");
+    const closeBtn = document.querySelector(".receipt-close");
+    const footer = document.querySelector(".receipt-footer");
+    const scrollRegion = document.querySelector(".receipt-scroll-region");
+    if (!receipt || !actions || !closeBtn) return { found: false };
+    const rect = (el) => {
+      const b = el.getBoundingClientRect();
+      return {
+        left: Math.round(b.left),
+        right: Math.round(b.right),
+        top: Math.round(b.top),
+        bottom: Math.round(b.bottom),
+        width: Math.round(b.width),
+        height: Math.round(b.height),
+      };
+    };
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const inside = (inner, outer) =>
+      inner.left >= outer.left - 1 &&
+      inner.right <= outer.right + 1 &&
+      inner.top >= outer.top - 1 &&
+      inner.bottom <= outer.bottom + 1;
+
+    const controlProbe = (el) => {
+      if (!el) return { missing: true };
+      const b = el.getBoundingClientRect();
+      const topmost = document.elementFromPoint(
+        b.left + b.width / 2,
+        b.top + b.height / 2,
+      );
+      return {
+        rect: rect(el),
+        inViewport: b.top >= 0 && b.bottom <= vh && b.left >= 0 && b.right <= vw,
+        topmostOk: !!topmost && (topmost === el || el.contains(topmost)),
+        topmost: topmost
+          ? `${topmost.tagName}.${String(topmost.className).slice(0, 60)}`
+          : "nothing",
+      };
+    };
+    const controls = {
+      done: controlProbe(document.querySelector(".receipt-action-done")),
+      showFile: controlProbe(document.querySelector(".receipt-action-show")),
+      close: controlProbe(closeBtn),
+    };
+
+    // Scroll the information body; the action/footer rows must not move.
+    let scrollInvariance = null;
+    if (scrollRegion) {
+      const before = {
+        actions: rect(actions),
+        footer: footer ? rect(footer) : null,
+      };
+      scrollRegion.scrollTop = 200;
+      const after = {
+        actions: rect(actions),
+        footer: footer ? rect(footer) : null,
+        scrolledTo: scrollRegion.scrollTop,
+      };
+      scrollRegion.scrollTop = 0;
+      scrollInvariance = { before, after };
+    }
+
+    const receiptRect = rect(receipt);
+    return {
+      found: true,
+      viewport: { width: vw, height: vh },
+      receipt: receiptRect,
+      receiptFits: receiptRect.top >= 0 && receiptRect.bottom <= vh,
+      actions: rect(actions),
+      actionsInsideReceipt: inside(rect(actions), receiptRect),
+      actionsBottomInViewport: rect(actions).bottom <= vh,
+      close: rect(closeBtn),
+      hasScrollRegion: !!scrollRegion,
+      controls,
+      scrollInvariance,
+    };
+  });
+
+  if (!geometry.found) {
+    report("U-02: receipt geometry probe found no open receipt/actions/close");
+    return geometry;
+  }
+  if (!geometry.receiptFits) {
+    report(
+      `U-02: the receipt card itself overflows the viewport (top ${geometry.receipt.top}, bottom ${geometry.receipt.bottom} in ${geometry.viewport.height}px)`,
+    );
+  }
+  if (!geometry.actionsInsideReceipt || !geometry.actionsBottomInViewport) {
+    report(
+      `U-02: receipt actions are not fully inside the visible shell (actions bottom ${geometry.actions.bottom}, receipt bottom ${geometry.receipt.bottom}, viewport ${geometry.viewport.height})`,
+    );
+  }
+  if (geometry.close.width < 24 || geometry.close.height < 24) {
+    report(
+      `U-02: receipt close target is ${geometry.close.width}x${geometry.close.height}px — below the 24x24 WCAG 2.5.8 minimum`,
+    );
+  }
+  if (!geometry.hasScrollRegion) {
+    report(
+      "U-02: no .receipt-scroll-region — the whole card scrolls, so actions and close scroll away with the content",
+    );
+  }
+  for (const [name, control] of Object.entries(geometry.controls)) {
+    if (control.missing) {
+      if (name !== "showFile") report(`U-02: receipt control "${name}" missing`);
+      continue;
+    }
+    if (!control.inViewport) {
+      report(
+        `U-02: "${name}" is not initially visible (rect ${JSON.stringify(control.rect)}) before any scroll`,
+      );
+    }
+    if (!control.topmostOk) {
+      report(
+        `U-02: "${name}" is covered at its centre by ${control.topmost}`,
+      );
+    }
+  }
+  if (geometry.scrollInvariance) {
+    const { before, after } = geometry.scrollInvariance;
+    if (
+      after.scrolledTo > 0 &&
+      (before.actions.top !== after.actions.top ||
+        (before.footer && after.footer && before.footer.top !== after.footer.top))
+    ) {
+      report(
+        "U-02: scrolling the receipt body moved the actions/footer — they are inside the scroll region",
+      );
+    }
+  }
+  return geometry;
 }
 
 /**
@@ -967,7 +1125,11 @@ for (const scenario of SCENARIOS) {
       // separate migration.
       let preScreenshotEvidence = null;
       if (scenario.beforeScreenshot) {
-        preScreenshotEvidence = await scenario.beforeScreenshot(page, report);
+        preScreenshotEvidence = await scenario.beforeScreenshot(page, report, {
+          motion,
+          viewportLabel,
+          label,
+        });
       }
 
       // Audit A-02 — axe scan of this exact settled/driven state, composed

@@ -244,6 +244,10 @@ export function ExportReceiptCard({
             </div>
           </div>
         </header>
+        {/* Audit U-02: ONLY this region scrolls. The header above and the
+            actions/footer rows below are fixed grid rows of the card, so
+            Done / Show file / × stay visible however long the content is. */}
+        <div className="receipt-scroll-region">
         <div className="receipt-body">
           <div className="receipt-col">
         {track && (
@@ -400,6 +404,7 @@ export function ExportReceiptCard({
             </div>
           </details>
         )}
+        </div>
         {/* Pass 4 (2026-08-19): visible actions. The filename row already
             reveals on click, but nothing said so; "Show file" makes it a
             button, and "Done" is the obvious way out (the × and Escape still

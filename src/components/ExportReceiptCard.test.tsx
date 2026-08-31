@@ -623,6 +623,50 @@ function focusEl(el: Element | null): void {
   });
 }
 
+describe("ExportReceiptCard fixed shell (audit U-02)", () => {
+  it("keeps scroll region, actions, and footer as sibling rows in that order", () => {
+    // The card is a fixed grid shell: header / scrolling body / actions /
+    // footer. If actions or footer ever slip INSIDE the scroll region they
+    // scroll away with long content — the exact defect this fixes. Pixel
+    // geometry is proven by the browser probe (receiptGeometryProbe in
+    // verify-app-headless.mjs); this pins the structure that makes it true.
+    const container = render(
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings()}
+        analysis={analysis()}
+        onClose={() => {}}
+      />,
+    );
+    const card = container.querySelector(".receipt");
+    const children = Array.from(card?.children ?? []).map(
+      (child) => child.className || child.tagName.toLowerCase(),
+    );
+    const scrollIndex = children.findIndex((c) =>
+      String(c).includes("receipt-scroll-region"),
+    );
+    const actionsIndex = children.findIndex((c) =>
+      String(c).includes("receipt-actions"),
+    );
+    const footerIndex = children.findIndex((c) =>
+      String(c).includes("receipt-footer"),
+    );
+    expect(scrollIndex).toBeGreaterThan(-1);
+    expect(actionsIndex).toBeGreaterThan(scrollIndex);
+    expect(footerIndex).toBeGreaterThan(actionsIndex);
+    // The information body and details live INSIDE the scroll region; the
+    // close button stays in the pinned header OUTSIDE it.
+    const scrollRegion = container.querySelector(".receipt-scroll-region");
+    expect(scrollRegion?.querySelector(".receipt-body")).not.toBeNull();
+    expect(scrollRegion?.querySelector(".receipt-actions")).toBeNull();
+    expect(scrollRegion?.querySelector(".receipt-close")).toBeNull();
+    expect(
+      container.querySelector(".receipt-header .receipt-close"),
+    ).not.toBeNull();
+  });
+});
+
 describe("ExportReceiptCard focus containment (audit A-03)", () => {
   it("focuses the dialog on mount", () => {
     const container = renderFocusHarness();

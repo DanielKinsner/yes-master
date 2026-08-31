@@ -2590,8 +2590,24 @@ button.primary:disabled {
   max-width: 960px;
   width: 100%;
   max-height: calc(100vh - 4rem);
-  overflow-y: auto;
+  /* Audit U-02: the card is a fixed shell — header / scrolling body /
+     actions / footer. Only .receipt-scroll-region scrolls, so Done, Show
+     file, and the × close are always visible without scrolling. The card
+     itself never scrolls (the old overflow-y: auto let the actions and the
+     header-anchored close scroll away with the content). */
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  overflow: hidden;
   box-shadow: var(--elev-3);
+}
+
+.receipt-scroll-region {
+  min-height: 0;
+  overflow-y: auto;
+  /* Small inset + stable gutter so the appearing scrollbar neither overlaps
+     content nor reflows it. */
+  padding-right: 0.4rem;
+  scrollbar-gutter: stable;
 }
 
 /* U11 — ORIENTATION. Both of these surfaces now take the whole screen and put
@@ -2660,6 +2676,14 @@ button.primary:disabled {
   position: absolute;
   top: -0.2rem;
   right: -0.2rem;
+  /* Audit U-02: the inherited .toast-close metrics measured ~21x21px —
+     under the WCAG 2.5.8 24x24 minimum. Fixed 32x32 hit target, glyph
+     centered, no padding arithmetic. */
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
 }
 
 .receipt-header-main {
