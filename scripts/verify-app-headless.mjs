@@ -127,6 +127,34 @@ const SCENARIOS = [
     beforeScreenshot: toolsOverlapProbe,
   },
   {
+    // Audit T-01. Every seeded scenario resolves to Advanced (a prior session
+    // exists, so view-mode restores it), which left LOADED Standard — the
+    // view a returning Standard user actually works in — with zero permanent
+    // browser coverage. This drives the supported "Back to Standard"
+    // affordance from the clean seed instead of inventing a new mock state.
+    name: "clean",
+    label: "standard-clean",
+    scenarioId: "S-F1",
+    purpose:
+      "S-F1 (loaded Standard): the simplified three-step view with a real track — " +
+      "steps, delivery line, transport, and Create Master all present and reachable.",
+    viewports: [LAPTOP, MIN_DESKTOP],
+    settle: "ready",
+    drive: driveToLoadedStandard,
+    mustContainAfterDrive: [
+      "Choose the character you want.",
+      "Set how strong the effect is.",
+      "Choose your target loudness.",
+      "Standard WAV",
+    ],
+    mustHaveControls: ["Advanced", "Create Master", "Original", "Mastered"],
+    mustReach: [
+      { label: "Create Master button", selector: "button.std-create-master" },
+    ],
+    // Audit A-02 via Task 8: loaded Standard joins the axe matrix.
+    axe: true,
+  },
+  {
     name: "warning",
     scenarioId: "S-F1",
     purpose:
@@ -489,6 +517,27 @@ async function runAxeScan(page, report, contextLabel) {
     );
   }
   return payload;
+}
+
+/**
+ * Audit T-01 — drive the clean seed into LOADED Standard through the same
+ * affordance a user clicks. Dirty advanced edits open the reset confirm; the
+ * clean seed usually skips it, but the drive tolerates both.
+ */
+async function driveToLoadedStandard(page) {
+  const back = page.locator("button.top-advanced").first();
+  if ((await back.count()) === 0) {
+    throw new Error("top view affordance (button.top-advanced) not found");
+  }
+  await back.click();
+  const reset = page.locator("button", { hasText: /^Reset & continue$/ }).first();
+  await reset
+    .waitFor({ state: "visible", timeout: 1_000 })
+    .then(() => reset.click())
+    .catch(() => {
+      /* no confirm modal — settings were clean */
+    });
+  await page.waitForSelector(".standard-view", { timeout: SETTLE_TIMEOUT_MS });
 }
 
 /**
@@ -1315,6 +1364,8 @@ for (const scenario of SCENARIOS) {
 const EXPECTED_AXE_MATRIX = [
   ["clean", "1440x900"],
   ["clean", "1360x740"],
+  ["standard-clean", "1440x900"],
+  ["standard-clean", "1360x740"],
   ["warning", "1440x900"],
   ["warning", "1360x740"],
 ];

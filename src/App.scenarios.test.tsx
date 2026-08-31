@@ -8,7 +8,9 @@
 //
 //   S-D1  frontend-unit (here) + browser-headless (`empty` scenario)
 //   S-F1  frontend-unit (here) + browser-headless (`clean`, `warning`,
-//         `long-copy`, `export-success`, `export-cancel`)
+//         `long-copy`, `export-success`, `export-cancel`, and — audit T-01 —
+//         LOADED Standard via the `standard-clean` evidence label, which
+//         drives Back-to-Standard from the clean seed at both viewports)
 //   S-F3  frontend-unit (here) + browser-headless (`export-success` /
 //         `export-cancel`) + native-synthetic
 //         (src-tauri/src/exports.rs::suggest_export_filename tests)
