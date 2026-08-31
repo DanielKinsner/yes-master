@@ -132,6 +132,14 @@ state/viewport pair to be scanned exactly once with a positive rule total, so a
 silently skipped or empty scan is a failure. Do not suppress a rule to green
 the lane — a real violation gets its own focused fix commit.
 
+Scans are **settled first** (phase-A review #1): before axe and the
+screenshot, the runner awaits every finite CSS animation and fails if one is
+still running — axe composites real pixels, and a scan taken during the 160ms
+overlay entrance once measured the receipt's muted text at 4.07:1 while the
+settled page passed. `--force-axe-fail <scenario>` is the standing negative
+control: it plants a deliberately unreadable element after settle and the
+named scenario's scan must go red, proving the gate can fail.
+
 **Landing quality gates (added U8).** The matrix is now **13 viewports** —
 `320×568` was added because S-A3 names it and nothing covered it. At every
 viewport the lane also asserts: both acquisition CTAs are fully on screen, no
@@ -208,8 +216,12 @@ frames, before any reachability scrolling: the card must fit the viewport,
 Done / Show file / × must be initially visible and topmost at their centres,
 the close target must be ≥24×24 px, and scrolling `.receipt-scroll-region`
 (the only scrolling part of the card) must not move the pinned action/footer
-rows. The structural sibling-order half of this contract is pinned in
-`src/components/ExportReceiptCard.test.tsx`.
+rows. The probe **fails closed** (phase-A review #7): all three named
+controls are required — no exemptions — and the scroll-invariance step must
+achieve real scroll travel; zero travel means the overflow fixture proved
+nothing and is itself a failure, mirroring the tools-overlap probe's
+"no overlap = failure" rule. The structural sibling-order half of this
+contract is pinned in `src/components/ExportReceiptCard.test.tsx`.
 
 **Console policy.** Any console error or warning fails the lane. The preview
 mock warns on an unhandled command or listen channel, so a drifted mock contract

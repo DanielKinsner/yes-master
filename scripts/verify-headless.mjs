@@ -51,6 +51,9 @@ function stamp() {
 const outDir = option("--out") ?? path.join("test-output", "headless", stamp());
 const skipBuild = flag("--skip-build");
 const forceFail = option("--force-fail");
+// Forwarded to the app suite: its post-settle axe negative control
+// (phase-A review #1 — see docs/TESTING.md "Accessibility scans").
+const forceAxeFail = option("--force-axe-fail");
 
 /** Ask the OS for a port nobody is using, so parallel runs cannot collide. */
 function findFreePort() {
@@ -245,6 +248,7 @@ try {
         "--out",
         path.join(outDir, "app"),
         ...(forceFail ? ["--force-fail", forceFail] : []),
+        ...(forceAxeFail ? ["--force-axe-fail", forceAxeFail] : []),
       ],
     },
   ];

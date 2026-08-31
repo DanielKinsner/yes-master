@@ -47,6 +47,12 @@ const outDir =
 // viewport/route/scenario/screenshot) rather than only ever passing.
 const forceFailScenario = option("--force-fail");
 
+// Axe self-test switch (phase-A review #1): injects a deliberately
+// under-contrast element into the named scenario just before its axe scan,
+// AFTER animation settle — proving the settled-state scan can still fail.
+// A scan that only ever passes proves nothing about the gate.
+const forceAxeFailScenario = option("--force-axe-fail");
+
 // The supported minimum desktop size is 1360x740 (APP_BEHAVIOR.md, resolved
 // 2026-07-08). Every scenario is checked there as well as at a common laptop
 // size, because "fits at 1440x900" has never been the interesting question.
@@ -707,7 +713,11 @@ async function receiptGeometryProbe(page, report, context) {
   }
   for (const [name, control] of Object.entries(geometry.controls)) {
     if (control.missing) {
-      if (name !== "showFile") report(`U-02: receipt control "${name}" missing`);
+      // Phase-A review #7: no exemptions — the contract names Done, Show
+      // file, AND Close as required. The probed receipt is a successful
+      // export, which always carries Show file; tolerating its absence let
+      // the gate pass a receipt that lost an action.
+      report(`U-02: receipt control "${name}" missing`);
       continue;
     }
     if (!control.inViewport) {
@@ -723,10 +733,17 @@ async function receiptGeometryProbe(page, report, context) {
   }
   if (geometry.scrollInvariance) {
     const { before, after } = geometry.scrollInvariance;
-    if (
-      after.scrolledTo > 0 &&
-      (before.actions.top !== after.actions.top ||
-        (before.footer && after.footer && before.footer.top !== after.footer.top))
+    // Phase-A review #7: a probe that could not scroll proved nothing —
+    // fail closed, like the tools-overlap probe's "no overlap = failure".
+    // The warning receipt's body genuinely overflows at both supported
+    // viewports, so zero travel means the fixture (or the shell) broke.
+    if (after.scrolledTo <= 0) {
+      report(
+        "U-02: the receipt body did not scroll (scrolledTo=0) — the overflow fixture proved nothing about scroll invariance",
+      );
+    } else if (
+      before.actions.top !== after.actions.top ||
+      (before.footer && after.footer && before.footer.top !== after.footer.top)
     ) {
       report(
         "U-02: scrolling the receipt body moved the actions/footer — they are inside the scroll region",
@@ -1226,12 +1243,63 @@ for (const scenario of SCENARIOS) {
         });
       }
 
+      // Phase-A review #1 — an axe scan must describe the SETTLED state, not
+      // a frame of the 160ms overlay entrance: axe composites real pixels,
+      // so a mid-animation receipt scanned its muted text at partial opacity
+      // (measured 4.07–4.45:1 in the review's run while the settled page
+      // passes). Await every FINITE animation — infinite ones (spinners, the
+      // verified-check draw) never finish and are excluded — looping because
+      // a settling state change can start a follow-on animation. If nothing
+      // finite is at rest within the deadline, fail closed: "the wait didn't
+      // work" must be a red, never a silent early scan. Scoped to axe-gated
+      // scenarios: their states are idle by construction, while interaction
+      // scenarios like S-E1 legitimately retrigger transitions.
+      if (scenario.axe && motion === "no-preference") {
+        const unsettled = await page.evaluate(async () => {
+          const finite = (animation) => {
+            const timing = animation.effect?.getTiming?.();
+            return Boolean(timing) && timing.iterations !== Infinity;
+          };
+          const runningFinite = () =>
+            document
+              .getAnimations()
+              .filter(finite)
+              .filter((animation) => animation.playState === "running");
+          const deadline = Date.now() + 5_000;
+          let running = runningFinite();
+          while (running.length > 0 && Date.now() < deadline) {
+            await Promise.all(
+              running.map((animation) => animation.finished.catch(() => {})),
+            );
+            running = runningFinite();
+          }
+          return running.length;
+        });
+        if (unsettled > 0) {
+          report(
+            `animation settle failed: ${unsettled} finite animation(s) still running before the axe scan`,
+          );
+        }
+      }
+
       // Audit A-02 — axe scan of this exact settled/driven state, composed
       // WITH (never instead of) any pre-screenshot collector above. Runs only
       // in the normal-motion pass so the coverage ledger counts each
       // state/viewport exactly once.
       let axe = null;
       if (scenario.axe && motion === "no-preference") {
+        if (forceAxeFailScenario === label || forceAxeFailScenario === scenario.name) {
+          // Self-test: a known-unreadable element planted AFTER settle. If
+          // the scan cannot flag this, the gate is decorative.
+          await page.evaluate(() => {
+            const probe = document.createElement("div");
+            probe.id = "axe-self-test-low-contrast";
+            probe.textContent = "axe self-test: deliberately unreadable";
+            probe.style.cssText =
+              "position:fixed;bottom:4px;left:4px;font-size:12px;color:#141821;background:#0d1017;z-index:99999";
+            document.body.appendChild(probe);
+          });
+        }
         axe = await runAxeScan(page, report, `${label}@${viewportLabel}`);
         axeRuns.push({
           label,
