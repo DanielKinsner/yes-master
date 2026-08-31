@@ -103,6 +103,26 @@ npx playwright install --with-deps chromium
 **A missing browser fails the lane.** This is a gate; a gate that skips itself
 when a dependency is absent reports green and is worse than nothing.
 
+## RustSec Gate (audit S-01/S-02)
+
+CI runs `cargo audit --deny unsound --ignore RUSTSEC-2024-0429 --file <lock>`
+over all three lockfiles (desktop, iPhone, Android). `--deny unsound` fails
+closed: a new unsoundness advisory turns CI red instead of warning into the
+void (that blind spot let RUSTSEC-2026-0190 in `anyhow` sit unnoticed). The
+single exception is **exactly** `RUSTSEC-2024-0429` — the Linux-only
+GTK3/`glib 0.18` path Tauri pulls in — because Linux is deferred for this
+beta; remove the `--ignore` when upstream leaves `glib 0.18`. Never widen the
+exception to a category or suppress all warnings. Locally:
+
+```powershell
+cargo audit --deny unsound --ignore RUSTSEC-2024-0429 --file src-tauri/Cargo.lock
+cargo audit --deny unsound --ignore RUSTSEC-2024-0429 --file apps/iphone-native/rust/Cargo.lock
+cargo audit --deny unsound --ignore RUSTSEC-2024-0429 --file apps/android-native/rust/Cargo.lock
+```
+
+The static half of the gate (`release-readiness.test.ts`) pins all three CI
+commands to that exact shape.
+
 **Accessibility scans (audit A-02).** Axe-gated scenarios run the committed
 `axe-core` build (pinned by the lockfile, injected from `node_modules`, never a
 CDN) against WCAG 2.0/2.1 A + AA tags on the live settled state. Any violation

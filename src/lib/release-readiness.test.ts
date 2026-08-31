@@ -45,6 +45,29 @@ const tauriConfig = JSON.parse(
 const DISCARDED_BOOTSTRAP_PUBKEY =
   "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM5OEJBMEIzQzYyRURDRUUKUldUdTNDN0dzNkNMeVR5VVhUeXJERVVST05nZG5XSXFzK3RDZTBjZFgray81WXpxc2d5eDR3eGEK";
 
+describe("RustSec gate fails closed on unsound advisories (audit S-02)", () => {
+  it("all three CI cargo-audit commands deny unsound with only the exact Linux GTK3 exception", () => {
+    // Plain `cargo audit` treats unsoundness advisories as warnings — CI
+    // stayed green while RUSTSEC-2026-0190 (anyhow) sat in all three locks.
+    // The gate must deny unsound, with exactly one narrow, removable
+    // exception: the Linux-only GTK3 path (RUSTSEC-2024-0429), because Linux
+    // is deferred for this beta.
+    const ci = readText("../../.github/workflows/ci.yml");
+    const auditCommands = ci
+      .split("\n")
+      .filter(
+        (line) =>
+          line.includes("cargo audit") && !line.trim().startsWith("#"),
+      );
+    expect(auditCommands).toHaveLength(3);
+    for (const command of auditCommands) {
+      expect(command).toContain("--deny unsound");
+      expect(command).toContain("--ignore RUSTSEC-2024-0429");
+      expect(command).toContain("--file");
+    }
+  });
+});
+
 describe("updater manual-recovery origin (audit L-03)", () => {
   it("pins the fixed Releases URL identically in frontend, Rust, and landing sources", () => {
     // The desktop open_release_page command must only ever open this URL.
