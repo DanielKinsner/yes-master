@@ -14,14 +14,14 @@ Legend — **Lane:** `agent` (mechanical code/release work) · `owner` (only the
 owner can do it, e.g. by ear, on real hardware, or by publishing). Paid signing
 is post-beta advisory under D16.
 
-> **⚠ Current candidate: 0.9.2 — NOT YET TAGGED (2026-08-20).** The
-> `v0.9.1-beta.1` candidate was superseded by the owner on 2026-08-19 (see the
-> ledger row and "Candidate freeze" below). Any box below whose evidence names
-> 0.9.1, a 07-27 run, or the `34f7c88` tag is **historical** — it proved the
-> superseded candidate, not this one. Candidate-specific boxes have been reset
-> and re-check only against evidence produced at the future `v0.9.2-beta.1`
-> tag. Feature/mechanism boxes (things that live in the repo and are covered by
-> tests on every push) remain checked.
+> **Current candidate: 0.9.2 — TAGGED `v0.9.2-beta.1` @ `c750da6`
+> (2026-08-31).** The `v0.9.1-beta.1` candidate was superseded by the owner on
+> 2026-08-19 (see the ledger row and "Candidate freeze" below). Any box below
+> whose evidence names 0.9.1, a 07-27 run, or the `34f7c88` tag is
+> **historical** — it proved the superseded candidate, not this one.
+> Candidate-specific boxes re-check only against evidence produced at the
+> `v0.9.2-beta.1` tag. Feature/mechanism boxes (things that live in the repo
+> and are covered by tests on every push) remain checked.
 
 ---
 
@@ -45,10 +45,14 @@ is post-beta advisory under D16.
       `plugins.updater`; `src/App.tsx` updater toast; frontend + Rust lanes.
 - [x] **Premium-parity UI pass** applied (floating surfaces on the shared
       elevation scale). *Evidence:* Slice 9; the before/after A/B set.
-- [ ] **The latest completed full CI run is green at the 0.9.2 candidate tip**
+- [x] **The latest completed full CI run is green at the 0.9.2 candidate tip**
       (Windows, macOS, Android lanes + DSP snapshots + the 2026-08-20
-      security-audit job). Re-record at the commit that gets the
-      `v0.9.2-beta.1` tag. *(Historical: run `30284245225` at `5c008f6`,
+      security-audit job). *Evidence:* CI run `32873776284` at `c750da6` —
+      the commit the `v0.9.2-beta.1` tag sits on — completed 2026-08-25, all
+      **seven** jobs green (macOS desktop+iPhone, Android host JVM, Web E2E
+      headless, npm+RustSec advisories, Windows desktop+bridge, snapshot
+      diagnostics ×2), watched to completion and re-verified by job-level API
+      readback on 2026-08-31. *(Historical: run `30284245225` at `5c008f6`,
       2026-07-27, all six jobs green for the superseded 0.9.1 candidate.)*
       *Advisory reminder:* do not merge red — and **watch the run finish**;
       the 07-27 red streak survived because nobody did.
@@ -251,6 +255,10 @@ is post-beta advisory under D16.
 | 2026-07-27 | U14/U16 | `34f7c88` (merge; tag `v0.9.1-beta.1` moved here) | GitHub Actions | draft release `v0.9.1-beta.1`, 9 assets | CI run `30294617651`; Release run `30294627200` (tag-triggered) | installed-machine (artifact identity) | **PASS — both.** CI green at the merge tip (workflow-file-only diff from `5c008f6`+docs, so every prior lane result stands). The tag-triggered Release run went green through the audit: draft `v0.9.1-beta.1` holds `YES.Master_0.9.1_universal.dmg`, `YES.Master_universal.app.tar.gz(+.sig)`, `YES.Master_0.9.1_x64_en-US.msi(+.sig)`, `YES.Master_0.9.1_x64-setup.exe(+.sig)`, `latest.json` (both platforms), `SHA256SUMS.txt`. **Draft, unpublished — publishing is the owner's click in U16/U17.** These workflow artifacts supersede the local `4e9fb3f` installers as the U15 install source, since they are the promotable bytes. | GitHub draft release `v0.9.1-beta.1` |
 
 | 2026-08-19 | U14 (re-opened) | `main` @ HEAD (0.9.2) | — | — | — | — | **Candidate `v0.9.1-beta.1` SUPERSEDED (owner).** ~70 commits landed after the tag; version bumped to 0.9.2 in three manifests + preview mock + lockfile. No new tag yet: U14's gates must be re-run on the new tip (local lanes were green at each landing commit today: npm 786/786, cargo 36/36 binaries, iPhone + Android bridges, headless 24 checks, landing asset gate). Stale 07-27 drafts to be deleted on GitHub. | this ledger |
+| 2026-08-31 | U14 (re-run) | `c750da6` | Windows 11 / Node 24, vitest 4.1.9 | source `0.9.2` | `npm test` | frontend-unit | PASS — **81 files, 788 tests, 0 failed.** Run on the exact commit that received the `v0.9.2-beta.1` tag, immediately before tagging. | run log (this session) |
+| 2026-08-31 | U14 (re-run) | `c750da6` | Windows 11 / rustc stable | source `0.9.2` | full `cargo test --target-dir target\codex-rc` **with `AMS_RUN_REAL_FIXTURE=1`** | native-synthetic + private-fixture | PASS — all test binaries green, **0 failures**, only `#[ignore]`-marked long-runners skipped; **zero "Skipping real-fixture" lines** — the slow lane genuinely ran against `private-audio-fixtures/` on this machine. Preset byte-identity snapshots covered by the same suite. | run log (this session) |
+| 2026-08-31 | U14 (re-run) | `c750da6` | GitHub Actions | — | CI run `32873776284` (job-level readback via API) | — | PASS — all **seven** jobs green at the candidate commit: macOS desktop+iPhone, Android host JVM, Web E2E headless Chromium, npm+RustSec advisories, Windows desktop+bridge, snapshot diagnostics (macos, windows). This is the latest completed CI run at the tip. | GitHub Actions run 32873776284 |
+| 2026-08-31 | U14 close | `c750da6` | GitHub | tag `v0.9.2-beta.1` | `git tag v0.9.2-beta.1 c750da6 && git push origin v0.9.2-beta.1`; DELETE on the four stale draft releases (IDs 360595663, 360624379, 360618088, 360611557 — all HTTP 204; releases list confirmed empty after) | — | **Candidate tagged; freeze IN FORCE.** Owner approved tag + draft-cleanup in-session (2026-08-31). Tag-triggered Release run `33409477883` started — its result gets its own row below; it is also the proving run for the 2026-08-20 workflow hardening. | GitHub tag `v0.9.2-beta.1`; releases API readback |
 
 ### Candidate freeze
 
@@ -262,15 +270,19 @@ branch that cannot feed the candidate. The freeze is a plan rule, not a
 branch-protection change, so **the U14 ledger entry must announce it** or a
 parallel agent session will not see it.
 
-**Freeze status: NOT IN FORCE (candidate superseded 2026-08-19, owner
-decision).** The 2026-07-27 candidate `v0.9.1-beta.1` @ `34f7c88` was
-declared superseded: `main` moved ~70 commits past the tag (feature + design
-work through 2026-08-19), so the tagged bytes no longer represent the beta.
-Version bumped to **0.9.2**. Per the rule below, a rejected/superseded
-candidate returns to U14: land fixes (done — they are on `main`), bump the
-patch version (done), **re-run the gates on the new tip, re-tag
-`v0.9.2-beta.1`**, delete the stale 07-27 drafts on GitHub (`v0.9.1-beta.1`,
-`yes-master-v0.9.1-manual-2/3/4`). The freeze re-enters force at that tag.
+**Freeze status: IN FORCE (tag `v0.9.2-beta.1` @ `c750da6`, 2026-08-31).**
+The gates were re-run on the new tip (see the 2026-08-31 ledger rows), the
+candidate was re-tagged with owner approval given in-session, and the four
+stale 07-27 drafts (`v0.9.1-beta.1`, `yes-master-v0.9.1-manual-2/3/4`) were
+deleted from GitHub the same day. From this tag until U17 closes or the
+candidate is rejected, no commits land on `main` except owner-queue/ledger
+docs updates and owner-approved merges.
+
+*Historical (2026-08-19):* the 2026-07-27 candidate `v0.9.1-beta.1` @
+`34f7c88` was declared superseded by the owner: `main` moved ~70 commits past
+the tag (feature + design work through 2026-08-19), so the tagged bytes no
+longer represented the beta. Version bumped to **0.9.2** and U14 re-entered
+per the rule below.
 
 *Historical (2026-07-27):* Candidate tag `v0.9.1-beta.1` sat at merge commit
 `34f7c88` (moved there with owner approval after the release-workflow fixes —
