@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from "react";
 import { api } from "../lib/api";
 import { formatDuration } from "../lib/time-format";
 import { presetCopy } from "../lib/preset-copy";
@@ -27,6 +33,7 @@ export function ExportReceiptCard({
   settings,
   analysis,
   onClose,
+  returnFocusRef,
 }: {
   receipt: ExportReceipt;
   // The source track behind this receipt (selectedTrack at the render site).
@@ -40,6 +47,11 @@ export function ExportReceiptCard({
   // source measurements. `null` if the analysis isn't available.
   analysis: AnalysisResult | null;
   onClose: () => void;
+  // Audit A-03: the PERSISTENT control focus returns to when the receipt
+  // closes (App wires the rail's Export button). Never a conditional control
+  // like "Export Anyway" — restoration to an unmounted target is a focus
+  // reset to <body>.
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
   // Real build stamp for the footer: version · git hash · build time, resolved
@@ -47,18 +59,85 @@ export function ExportReceiptCard({
   // wherever the command isn't available (e.g. tests) — the footer degrades to
   // the wordmark alone rather than showing a fabricated version.
   const [buildInfo, setBuildInfo] = useState<string | null>(null);
-  // Focus moves into the receipt when it opens and Escape closes it, matching
-  // ChromeDialog. Without this the dialog role would be a claim the keyboard
-  // behaviour did not honour.
   const dialogRef = useRef<HTMLDivElement | null>(null);
+
+  // Latest onClose without reinstalling the window listener every render.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  // Audit A-03 — ONE explicit close coordinator for Done, ×, backdrop, and
+  // Escape. Focus is deliberately NOT restored from effect cleanup:
+  // StrictMode's development probe runs cleanup while the receipt is still
+  // mounted and would yank focus out of a live dialog. Instead the restore is
+  // queued behind a macrotask, generation-checked, and applied only once the
+  // dialog has really unmounted and the persistent target is still connected.
+  const restoreGeneration = useRef(0);
+  const closeAndRestore = () => {
+    onCloseRef.current();
+    const generation = ++restoreGeneration.current;
+    const target = returnFocusRef?.current ?? null;
+    window.setTimeout(() => {
+      if (restoreGeneration.current !== generation) return;
+      if (dialogRef.current?.isConnected) return; // close was ignored/cancelled
+      if (target && target.isConnected) target.focus();
+    }, 0);
+  };
+  const closeAndRestoreRef = useRef(closeAndRestore);
+  useEffect(() => {
+    closeAndRestoreRef.current = closeAndRestore;
+  });
+
+  // Focus moves into the receipt once on open (matching ChromeDialog); the
+  // StrictMode double-invoke just focuses the same dialog twice.
   useEffect(() => {
     dialogRef.current?.focus();
+  }, []);
+
+  // Audit A-03 — full keyboard containment. Tab/Shift+Tab traverse only the
+  // enabled focusable descendants, wrapping at both ends; focus that somehow
+  // lands outside is pulled back in. Escape routes through the coordinator.
+  // Installed once; latest handlers reach it via refs.
+  useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        closeAndRestoreRef.current();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      e.preventDefault();
+      const focusables = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), ' +
+            'select:not([disabled]), textarea:not([disabled]), summary, ' +
+            '[tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusables.length === 0) {
+        dialog.focus();
+        return;
+      }
+      const active =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      const index = active ? focusables.indexOf(active) : -1;
+      const lastIndex = focusables.length - 1;
+      const target = e.shiftKey
+        ? index <= 0
+          ? focusables[lastIndex]
+          : focusables[index - 1]
+        : index === -1 || index === lastIndex
+          ? focusables[0]
+          : focusables[index + 1];
+      target.focus();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, []);
   useEffect(() => {
     let cancelled = false;
     Promise.resolve(api.buildInfo?.())
@@ -127,7 +206,7 @@ export function ExportReceiptCard({
     // accessibility tree at once. Sighted users saw one; screen-reader users
     // met the same warning twice with no indication either was behind a
     // dialog. `aria-modal` makes the receipt the single owner while it is up.
-    <div className="receipt-backdrop" role="presentation" onClick={onClose}>
+    <div className="receipt-backdrop" role="presentation" onClick={closeAndRestore}>
       <div
         ref={dialogRef}
         tabIndex={-1}
@@ -138,7 +217,7 @@ export function ExportReceiptCard({
         onClick={(e) => e.stopPropagation()}
       >
         <header className="receipt-header">
-          <button type="button" className="toast-close receipt-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="toast-close receipt-close" onClick={closeAndRestore} aria-label="Close">
             ×
           </button>
           <div className="receipt-header-main">
@@ -331,7 +410,7 @@ export function ExportReceiptCard({
               Show file
             </button>
           )}
-          <button type="button" className="primary receipt-action-done" onClick={onClose}>
+          <button type="button" className="primary receipt-action-done" onClick={closeAndRestore}>
             Done
           </button>
         </div>

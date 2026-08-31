@@ -1,4 +1,4 @@
-import { act } from "react";
+import { StrictMode, act, useRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -554,5 +554,181 @@ describe("format helpers", () => {
     expect(formatSampleRate(800)).toBe("800 Hz");
     expect(formatBitDepth(24)).toBe("24-bit");
     expect(formatBitDepth(32)).toBe("32-bit float");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Audit A-03 — modal focus containment and restoration.
+//
+// StrictMode on purpose: its development-only effect probe (mount → cleanup →
+// remount) is exactly what broke naive cleanup-based focus restoration — the
+// probe runs cleanup while the receipt is still mounted, yanking focus out of
+// a live dialog. The harness mirrors the App shape: a PERSISTENT Export
+// button (the restoration target) plus background controls the trap must
+// keep unreachable.
+// ---------------------------------------------------------------------------
+
+function FocusHarness() {
+  const [open, setOpen] = useState(true);
+  const exportRef = useRef<HTMLButtonElement>(null);
+  return (
+    <div>
+      <button type="button" className="right-rail-export" ref={exportRef}>
+        Export With Review
+      </button>
+      <button type="button" className="background-control">
+        Background control
+      </button>
+      {open && (
+        <ExportReceiptCard
+          receipt={receipt([])}
+          track={track()}
+          settings={settings()}
+          analysis={analysis()}
+          onClose={() => setOpen(false)}
+          returnFocusRef={exportRef}
+        />
+      )}
+    </div>
+  );
+}
+
+function renderFocusHarness(): HTMLElement {
+  return render(
+    <StrictMode>
+      <FocusHarness />
+    </StrictMode>,
+  );
+}
+
+function pressKey(key: string, options: { shiftKey?: boolean } = {}): void {
+  act(() => {
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, ...options }),
+    );
+  });
+}
+
+async function flushRestoreQueue(): Promise<void> {
+  // closeAndRestore queues the focus move behind a macrotask so it runs only
+  // after React has really unmounted the dialog.
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
+function focusEl(el: Element | null): void {
+  act(() => {
+    (el as HTMLElement | null)?.focus();
+  });
+}
+
+describe("ExportReceiptCard focus containment (audit A-03)", () => {
+  it("focuses the dialog on mount", () => {
+    const container = renderFocusHarness();
+    expect(document.activeElement).toBe(container.querySelector(".receipt"));
+  });
+
+  it("Tab from the dialog lands on Close; Shift+Tab lands on Done", () => {
+    const container = renderFocusHarness();
+    pressKey("Tab");
+    expect(document.activeElement).toBe(
+      container.querySelector(".receipt-close"),
+    );
+
+    focusEl(container.querySelector(".receipt"));
+    pressKey("Tab", { shiftKey: true });
+    expect(document.activeElement).toBe(
+      container.querySelector(".receipt-action-done"),
+    );
+  });
+
+  it("Tab wraps Done -> Close and Shift+Tab wraps Close -> Done", () => {
+    const container = renderFocusHarness();
+    focusEl(container.querySelector(".receipt-action-done"));
+    pressKey("Tab");
+    expect(document.activeElement).toBe(
+      container.querySelector(".receipt-close"),
+    );
+
+    pressKey("Tab", { shiftKey: true });
+    expect(document.activeElement).toBe(
+      container.querySelector(".receipt-action-done"),
+    );
+  });
+
+  it("pulls focus back inside if it ever lands on a background control", () => {
+    const container = renderFocusHarness();
+    focusEl(container.querySelector(".background-control"));
+    pressKey("Tab");
+    const active = document.activeElement;
+    expect(container.querySelector(".receipt")?.contains(active)).toBe(true);
+  });
+
+  it("Escape closes the receipt and restores focus to the persistent Export button", async () => {
+    const container = renderFocusHarness();
+    pressKey("Escape");
+    await flushRestoreQueue();
+    expect(container.querySelector(".receipt")).toBeNull();
+    expect(document.activeElement).toBe(
+      container.querySelector(".right-rail-export"),
+    );
+  });
+
+  it("Done restores focus to Export", async () => {
+    const container = renderFocusHarness();
+    const done = container.querySelector<HTMLButtonElement>(
+      ".receipt-action-done",
+    );
+    act(() => {
+      done?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flushRestoreQueue();
+    expect(container.querySelector(".receipt")).toBeNull();
+    expect(document.activeElement).toBe(
+      container.querySelector(".right-rail-export"),
+    );
+  });
+
+  it("the x close restores focus to Export", async () => {
+    const container = renderFocusHarness();
+    const close = container.querySelector<HTMLButtonElement>(".receipt-close");
+    act(() => {
+      close?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flushRestoreQueue();
+    expect(container.querySelector(".receipt")).toBeNull();
+    expect(document.activeElement).toBe(
+      container.querySelector(".right-rail-export"),
+    );
+  });
+
+  it("a backdrop click restores focus to Export", async () => {
+    const container = renderFocusHarness();
+    const backdrop = container.querySelector<HTMLElement>(".receipt-backdrop");
+    act(() => {
+      // Dispatched ON the backdrop (not a descendant), so the dialog's
+      // stopPropagation is not in play; bubbles so React's delegated
+      // listener sees it.
+      backdrop?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flushRestoreQueue();
+    expect(container.querySelector(".receipt")).toBeNull();
+    expect(document.activeElement).toBe(
+      container.querySelector(".right-rail-export"),
+    );
+  });
+
+  it("StrictMode's effect probe never moves focus to Export while the receipt is open", async () => {
+    const container = renderFocusHarness();
+    const done = container.querySelector<HTMLButtonElement>(
+      ".receipt-action-done",
+    );
+    focusEl(done);
+    await flushRestoreQueue();
+    // The dialog is still mounted; the dev probe's cleanup must not have
+    // "restored" focus out of the live dialog.
+    expect(container.querySelector(".receipt")).not.toBeNull();
+    expect(document.activeElement).toBe(done);
   });
 });

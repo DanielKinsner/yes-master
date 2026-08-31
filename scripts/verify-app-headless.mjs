@@ -146,6 +146,57 @@ const SCENARIOS = [
     // Audit A-02: scanned while the receipt is OPEN (the drive leaves it up),
     // so the modal's own accessibility is what the scan measures.
     axe: true,
+    // Audit A-03 — real-browser focus containment + restoration. Runs AFTER
+    // the screenshot and axe scan (both need the receipt open): Tab from Done
+    // must stay inside the receipt; Escape must close it and hand focus to
+    // the persistent rail Export button.
+    assert: async (page, report) => {
+      const contained = await page.evaluate(() => {
+        const done = document.querySelector(".receipt-action-done");
+        if (!(done instanceof HTMLElement)) return { ran: false };
+        done.focus();
+        return { ran: true };
+      });
+      if (!contained.ran) {
+        report("A-03: the receipt's Done button was not found — the drive did not leave the receipt open");
+        return;
+      }
+      await page.keyboard.press("Tab");
+      const afterTab = await page.evaluate(() => {
+        const receipt = document.querySelector(".receipt");
+        return {
+          insideReceipt:
+            !!receipt && receipt.contains(document.activeElement),
+          active: `${document.activeElement?.tagName}.${String(
+            document.activeElement?.className ?? "",
+          ).slice(0, 60)}`,
+        };
+      });
+      if (!afterTab.insideReceipt) {
+        report(
+          `A-03: Tab escaped the open receipt to ${afterTab.active} — focus is not contained`,
+        );
+      }
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(50);
+      const afterEscape = await page.evaluate(() => ({
+        receiptOpen: !!document.querySelector(".receipt"),
+        exportOwnsFocus:
+          document.activeElement ===
+          document.querySelector("button.right-rail-export"),
+        active: `${document.activeElement?.tagName}.${String(
+          document.activeElement?.className ?? "",
+        ).slice(0, 60)}`,
+      }));
+      if (afterEscape.receiptOpen) {
+        report("A-03: Escape did not close the receipt");
+      }
+      if (!afterEscape.exportOwnsFocus) {
+        report(
+          `A-03: after Escape, focus is on ${afterEscape.active} instead of the persistent Export button`,
+        );
+      }
+    },
   },
   {
     name: "long-copy",

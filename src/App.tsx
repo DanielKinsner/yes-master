@@ -253,6 +253,9 @@ function App() {
   // parallel booleans — a failed install must keep the version and its
   // recovery actions visible instead of silently vanishing.
   const [updateNotice, setUpdateNotice] = useState<UpdateNotice | null>(null);
+  // Audit A-03: the persistent rail Export button — the export receipt's
+  // focus-restoration target on every close path.
+  const exportButtonRef = useRef<HTMLButtonElement>(null);
   useWebviewZoomShortcuts();
 
   // B5.1: Standard/Advanced/Album navigation is ONE legal-state machine
@@ -532,6 +535,7 @@ function App() {
       <RightRail
         analysis={tm.selectedAnalysis}
         lastChecks={selectedExportChecks}
+        exportButtonRef={exportButtonRef}
         advancedSlot={
           tm.selectedTrack ? (
             <AdvancedPanel
@@ -703,6 +707,9 @@ function App() {
           settings={tm.selectedSettings}
           analysis={tm.selectedAnalysis ?? null}
           onClose={tm.clearExportReceipt}
+          // Audit A-03: focus returns to the PERSISTENT rail Export button on
+          // every close path — never to a conditional control.
+          returnFocusRef={exportButtonRef}
         />
       )}
       {chromePanel === "settings" && (

@@ -1,7 +1,7 @@
 // Right-rail master-out / quality panels. MasterOutPanel is live transport
 // telemetry only; QualityCheckPanel owns source/export analysis.
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { useMeterBallistics } from "../hooks/useMeterBallistics";
 import type { AnalysisResult, QualityCheck } from "../bindings";
 import type { RenderFeedback, RenderProgressState } from "../hooks/useTrackMaster";
@@ -36,6 +36,10 @@ type RightRailProps = {
   previewStale: boolean;
   canRenderPreview: boolean;
   onUpdatePreview: () => void;
+  // Audit A-03: App holds this ref and hands it to ExportReceiptCard as the
+  // focus-restoration target — the persistent Export button is where focus
+  // returns when the receipt closes.
+  exportButtonRef?: Ref<HTMLButtonElement>;
 };
 
 type QualityRow = {
@@ -69,6 +73,7 @@ export function RightRail({
   previewStale,
   canRenderPreview,
   onUpdatePreview,
+  exportButtonRef,
 }: RightRailProps) {
   const qualityRows = qualityRowsFor(lastChecks, analysis);
 
@@ -190,6 +195,7 @@ export function RightRail({
           </details>
           <button
             type="button"
+            ref={exportButtonRef}
             className="primary right-rail-export"
             onClick={handlePrimaryExport}
             disabled={exportDisabled}
