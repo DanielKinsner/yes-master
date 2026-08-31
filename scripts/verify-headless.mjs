@@ -134,6 +134,10 @@ async function startPreview(port) {
     [
       VITE_CLI,
       "preview",
+      // Audit B-01: select the TypeScript config explicitly — Vite resolves a
+      // stray emitted vite.config.js FIRST otherwise.
+      "--config",
+      "vite.config.ts",
       "--host",
       "127.0.0.1",
       "--port",

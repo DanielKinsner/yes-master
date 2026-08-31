@@ -125,7 +125,9 @@ console.log(`[capture] serving on ${baseUrl}`);
 // times out against a server that started fine (same fix as verify-headless).
 const server = spawn(
   "npx",
-  ["vite", "preview", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
+  // Audit B-01: explicit --config so a stray emitted vite.config.js can
+  // never shadow the TypeScript source.
+  ["vite", "preview", "--config", "vite.config.ts", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
   {
     cwd: REPO_ROOT,
     stdio: "ignore",
