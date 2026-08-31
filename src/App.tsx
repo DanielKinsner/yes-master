@@ -338,14 +338,27 @@ function App() {
   // never interrupted.
   useEffect(() => {
     let unlisten: (() => void) | undefined;
+    let cancelled = false;
     onUpdaterAvailable((version) => setUpdateAvailable(version))
       .then((un) => {
         unlisten = un;
+        // Audit L-02: the startup emit is edge-triggered and can win the
+        // race against this registration — the backend latches the version,
+        // so query it once the listener is live. Register FIRST, query
+        // second, or the missed-event window reopens between them. Both
+        // paths land in the same idempotent setter, so an event/query
+        // overlap cannot duplicate the notice.
+        return api.availableUpdateVersion().then((version) => {
+          if (!cancelled && version) setUpdateAvailable(version);
+        });
       })
       .catch(() => {
         /* no updater here (e.g. browser preview) — ignore */
       });
-    return () => unlisten?.();
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
   }, []);
 
   const installUpdate = () => {

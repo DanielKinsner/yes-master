@@ -50,6 +50,7 @@ const mocks = vi.hoisted(() => {
     setAudioOutputDevice: vi.fn(),
     clearDeviceLost: vi.fn(),
     installUpdate: vi.fn(),
+    availableUpdateVersion: vi.fn(),
     runExportChecks: vi.fn(),
     openOutput: vi.fn(),
     saveProject: vi.fn(),
@@ -848,6 +849,37 @@ describe("App updater toast (Slice 7b)", () => {
 
     await click(action!);
     expect(mocks.api.installUpdate).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("recovers an update latched before the listener attached (audit L-02)", async () => {
+    // The backend's startup emit is edge-triggered and can beat React's
+    // listener registration — in that case the event never fires at all.
+    // The latched version must still surface via the availability query.
+    const fire = captureUpdaterFire();
+    mocks.api.availableUpdateVersion.mockResolvedValue("2.1.0");
+    const { root, container } = await mountApp();
+
+    await waitFor(() => {
+      expect(container.querySelector(".toast")?.textContent).toContain("2.1.0");
+    });
+
+    // Registration must precede the query, or the gap between query and a
+    // later emit reopens the missed-event window.
+    const registeredAt = mocks.onUpdaterAvailable.mock.invocationCallOrder[0];
+    const queriedAt =
+      (mocks.api.availableUpdateVersion as Mock).mock.invocationCallOrder[0];
+    expect(registeredAt).toBeLessThan(queriedAt);
+
+    // Event + query overlap resolves through the same idempotent setter —
+    // never a duplicated notice.
+    await act(async () => {
+      fire.current("2.1.0");
+    });
+    expect(container.querySelectorAll(".toast-action").length).toBe(1);
 
     await act(async () => {
       root.unmount();

@@ -131,6 +131,10 @@ export const api = {
   // Slice 7b: download + install the available update and relaunch. Fired ONLY
   // by the user clicking the update toast's action (never automatically).
   installUpdate: () => invoke<null>("install_update"),
+  // Audit L-02: the backend latches the available version before emitting the
+  // edge-triggered startup event, so a frontend that attached its listener too
+  // late can still recover the notice by query. Reading never consumes.
+  availableUpdateVersion: () => invoke<string | null>("available_update_version"),
 
   runExportChecks: (
     report: ExportReport,

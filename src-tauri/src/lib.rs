@@ -56,6 +56,7 @@ pub fn run() {
         .manage(profile_store)
         .manage(player)
         .manage(engine::RenderJobRegistry::default())
+        .manage(UpdateAvailability::default())
         .setup(|app| {
             // Local-first diagnostics: rotating log + panic capture. Init
             // first so everything below (sweep included) can log.
@@ -227,6 +228,7 @@ pub fn run() {
             diagnostics::save_diagnostics_report,
             demo::prepare_demo_track,
             install_update,
+            available_update_version,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -248,19 +250,68 @@ fn build_info() -> String {
     format!("{} · build {}", env!("CARGO_PKG_VERSION"), BUILD_STAMP)
 }
 
+/// Latched updater availability (audit L-02). `updater:available` is an
+/// edge-triggered emit: if the network check wins the race against React's
+/// listener registration, Tauri drops the event and the notice is lost until
+/// the next app restart. The version is latched here BEFORE the emit so the
+/// frontend can query it at any time; reading never consumes the latch.
+#[cfg(feature = "app-runner")]
+#[derive(Default)]
+struct UpdateAvailability(std::sync::Mutex<Option<String>>);
+
+#[cfg(feature = "app-runner")]
+impl UpdateAvailability {
+    fn record(&self, version: String) -> Result<(), String> {
+        let mut slot = self
+            .0
+            .lock()
+            .map_err(|_| "update availability state poisoned".to_string())?;
+        *slot = Some(version);
+        Ok(())
+    }
+
+    fn current(&self) -> Result<Option<String>, String> {
+        let slot = self
+            .0
+            .lock()
+            .map_err(|_| "update availability state poisoned".to_string())?;
+        Ok(slot.clone())
+    }
+}
+
+/// Frontend query for the latched availability. Registered alongside the
+/// event so detection before, during, or after listener registration all
+/// resolve to the same single notice.
+#[cfg(feature = "app-runner")]
+#[tauri::command]
+fn available_update_version(
+    state: tauri::State<'_, UpdateAvailability>,
+) -> Result<Option<String>, String> {
+    state.current()
+}
+
 /// Background update check (Slice 7). Pulls the updater manifest from GitHub
 /// Releases (the endpoint + public key live in `tauri.conf.json`
-/// `plugins.updater`). If a newer signed release exists it emits
-/// `updater:available` with the version so the UI can surface it; the update is
-/// NOT auto-downloaded or applied (that stays a user choice). Any network or
-/// plugin error bubbles to the caller, which logs it silently — so the app is
-/// fully usable with no network.
+/// `plugins.updater`). If a newer signed release exists it latches the version
+/// (see [`UpdateAvailability`]) and emits `updater:available` so the UI can
+/// surface it; the update is NOT auto-downloaded or applied (that stays a user
+/// choice). Any network or plugin error bubbles to the caller, which logs it
+/// silently — so the app is fully usable with no network.
 #[cfg(feature = "app-runner")]
 async fn run_update_check(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
     use tauri_plugin_updater::UpdaterExt;
     match app.updater()?.check().await? {
         Some(update) => {
             crate::diagnostics::info(format!("update available: {}", update.version));
+            // Latch first, emit second: a frontend that misses the emit can
+            // still recover the version by query; one that catches both paths
+            // funnels them through the same idempotent setter.
+            if let Err(e) = app
+                .state::<UpdateAvailability>()
+                .record(update.version.clone())
+            {
+                crate::diagnostics::warn(format!("update availability latch failed: {e}"));
+            }
             let _ = app.emit("updater:available", update.version);
         }
         None => crate::diagnostics::info("update check: up to date"),
@@ -275,6 +326,29 @@ async fn run_update_check(app: tauri::AppHandle) -> tauri_plugin_updater::Result
 /// update to install; if nothing is available (already current) it is a no-op.
 /// On success `restart()` never returns; any failure is returned as a string so
 /// the toast can dismiss gracefully.
+#[cfg(all(test, feature = "app-runner"))]
+mod update_availability_tests {
+    use super::UpdateAvailability;
+
+    #[test]
+    fn latched_version_survives_repeated_reads() {
+        let store = UpdateAvailability::default();
+        assert_eq!(store.current().expect("empty read"), None);
+
+        store.record("0.9.3".to_string()).expect("record");
+        assert_eq!(
+            store.current().expect("first read"),
+            Some("0.9.3".to_string())
+        );
+        // Reading must never consume the latch: the frontend may query at
+        // any time after (or instead of) the startup event, more than once.
+        assert_eq!(
+            store.current().expect("second read"),
+            Some("0.9.3".to_string())
+        );
+    }
+}
+
 #[cfg(feature = "app-runner")]
 #[tauri::command]
 async fn install_update(app: tauri::AppHandle) -> Result<(), String> {

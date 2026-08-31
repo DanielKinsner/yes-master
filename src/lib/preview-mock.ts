@@ -689,7 +689,12 @@ export async function mockInvoke<T>(
 // Commands whose real behavior only exists on an installed desktop build.
 // Faking them would be worse than declining: a browser cannot prove that an
 // update installs, and a green preview must never imply that it did.
-const NATIVE_ONLY_COMMANDS = new Set<string>(["install_update"]);
+const NATIVE_ONLY_COMMANDS = new Set<string>([
+  "install_update",
+  // Queried on every mount (L-02 replay); a browser has no updater, and the
+  // null return means "no update" — exactly the truthful preview answer.
+  "available_update_version",
+]);
 
 // Owner-gated systems: OFF by default, exactly as they ship.
 let mockAdaptiveCompression = false;
