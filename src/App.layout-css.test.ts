@@ -256,12 +256,14 @@ describe("console layout CSS", () => {
     }
   });
 
-  it("keeps muted text (--text-2) at WCAG AA contrast on the panel ground (audit A-02)", () => {
+  it("keeps muted text (--text-2) at WCAG AA contrast on its lightest ground (audit A-02 / review #2)", () => {
     // The axe lane measures the live page; this computes the same ratio from
     // the tokens so a palette edit fails fast without a browser run. --text-2
     // labels small text (TOOLS summary, receipt path/blurb), so the 4.5:1
-    // small-text bar applies, measured against the lighter panel ground
-    // (--bg-1), which is the worst case of the two grounds.
+    // small-text bar applies. The worst case is the LIGHTEST ground it paints
+    // on: --bg-2 — the receipt's .receipt-file-open / .receipt-style panels
+    // (the first version of this test measured --bg-1 and let a 4.52:1
+    // borderline through; the live lane then failed on --bg-2 — review #2).
     const token = (name: string): string => {
       const match = css.match(new RegExp(`${name}:\\s*#([0-9a-fA-F]{6})`));
       if (!match) throw new Error(`token ${name} not found as a 6-digit hex`);
@@ -277,10 +279,14 @@ describe("console layout CSS", () => {
       );
     };
     const l1 = luminance(token("--text-2"));
-    const l2 = luminance(token("--bg-1"));
+    const l2 = luminance(token("--bg-2"));
     const ratio =
       (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-    expect(ratio).toBeGreaterThanOrEqual(4.5);
+    // 4.8 not 4.5: the live lane samples browser-composited pixels, so a
+    // ratio that only just clears AA in token math can still fail there
+    // (that is exactly how 4.52:1 shipped and then failed). The margin
+    // keeps token edits honestly clear of the line, not camped on it.
+    expect(ratio).toBeGreaterThanOrEqual(4.8);
   });
 
   it("keeps first-run hints out of the Standard Preview rail", () => {

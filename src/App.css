@@ -17,12 +17,14 @@
   --hairline: rgba(255, 255, 255, 0.06);
   --text-0: #eef1f8;
   --text-1: #aeb6cc;
-  /* Audit A-02: #6d7592 measured 4.17:1 on --bg-1 — just under the WCAG AA
-     4.5:1 line for the small muted text this token labels (TOOLS summary,
-     receipt path/blurb). #767f9d is the minimal brighten that clears AA with
-     margin (4.80:1) while staying visibly muted; the layout-css test computes
-     the ratio so the token cannot drift back under. */
-  --text-2: #767f9d;
+  /* Audit A-02 + phase-A review #2: this token labels small muted text
+     whose LIGHTEST real ground is --bg-2 (the receipt's path/blurb panels
+     .receipt-file-open/.receipt-style — the first fix computed against
+     --bg-1 and landed at 4.52:1 on --bg-2, a margin the entrance animation's
+     opacity blending erased in live axe scans). #858ead measures 5.52:1 on
+     --bg-2 (5.86 on --bg-1, 4.95 on --bg-3) while staying visibly muted;
+     the layout-css test computes the --bg-2 ratio so it cannot drift back. */
+  --text-2: #858ead;
   --accent: #4f86f7;
   --accent-bright: #7aa6ff;
   --accent-deep: #2f63e6;
