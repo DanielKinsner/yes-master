@@ -16,6 +16,19 @@ function block(selector: string): string {
   return match[1];
 }
 
+/// EVERY source block whose selector list starts with this exact selector —
+/// for structural claims that must hold across all declarations, because
+/// `block()` reads only the FIRST match and a later block can win the cascade
+/// (that first-match blind spot is how the transparent TOOLS row went green;
+/// audit U-01). Effective-style claims belong to the browser probe in
+/// scripts/verify-app-headless.mjs, never to source text.
+function blocks(selector: string): string[] {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const matches = [...css.matchAll(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, "gm"))];
+  if (matches.length === 0) throw new Error(`CSS block not found: ${selector}`);
+  return matches.map((m) => m[1]);
+}
+
 describe("console layout CSS", () => {
   it("aligns the preset tiles and signal chain on the same 8-column grid", () => {
     expect(block(".tile-row")).toContain(
@@ -231,9 +244,16 @@ describe("console layout CSS", () => {
     expect(group).toContain("var(--bg-1) 18%");
     expect(group).not.toContain("rgba(17, 21, 31, 0.95) 35%");
 
-    // Belt and braces: the row itself is opaque, so a future retune of the
-    // gradient stops cannot make it see-through again.
-    expect(block(".right-rail-tools")).toContain("background: var(--bg-1)");
+    // Belt and braces: no .right-rail-tools source block may declare a
+    // transparent background. This is a STRUCTURAL tripwire only — the first
+    // block being opaque proved nothing when a later unconditional block won
+    // the cascade with `transparent` (audit U-01). The authoritative check is
+    // the browser-computed alpha probe in verify-app-headless.mjs
+    // (clean-tools-overlap), because specificity, media conditions, and
+    // source order all participate in what actually paints.
+    for (const toolsBlock of blocks(".right-rail-tools")) {
+      expect(toolsBlock).not.toContain("background: transparent");
+    }
   });
 
   it("keeps first-run hints out of the Standard Preview rail", () => {

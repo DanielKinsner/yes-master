@@ -100,6 +100,23 @@ const SCENARIOS = [
     reducedMotionVariant: true,
   },
   {
+    // Audit U-01. The static CSS test used to read the FIRST `.right-rail-tools`
+    // source block (opaque) while the LAST unconditional block won the cascade
+    // with `background: transparent` — a false green. Only the browser's
+    // computed style is authoritative, so this scenario proves opacity at the
+    // exact moment rail content genuinely sits behind the sticky surface.
+    name: "clean",
+    label: "clean-tools-overlap",
+    scenarioId: "S-F1",
+    purpose:
+      "S-F1 (sticky TOOLS, audit U-01): with the rail scrolled so a section " +
+      "genuinely intersects the sticky TOOLS surface, its computed background " +
+      "must be fully opaque and own the overlapped pixels.",
+    viewports: [LAPTOP, MIN_DESKTOP],
+    settle: "ready",
+    beforeScreenshot: toolsOverlapProbe,
+  },
+  {
     name: "warning",
     scenarioId: "S-F1",
     purpose:
@@ -355,6 +372,119 @@ async function exportWithReview(page) {
     // expected outcome for export-cancel, so absence of change is not an error
     // here -- the scenario's assertions decide whether it was correct.
   });
+}
+
+/**
+ * Audit U-01 — the sticky TOOLS surface, measured where it matters.
+ *
+ * Never model CSS precedence as "last matching text block wins": specificity,
+ * `!important`, media conditions, and source order all participate, so only
+ * `getComputedStyle` on a live page is authoritative. This probe:
+ *   1. walks the rail's scroll range until a `.rail-section` box genuinely
+ *      intersects the `.right-rail-tools` box (no overlap = the probe proved
+ *      nothing, which is itself a failure);
+ *   2. requires the computed background alpha at that moment to be >= 0.999 —
+ *      a merely translucent surface is not a pass;
+ *   3. asks `elementFromPoint` at an actual intersection point and requires
+ *      the topmost element to be TOOLS or a descendant of it.
+ * The returned payload lands in summary.json beside the screenshot taken in
+ * the SAME frame, so the image and the measurements describe one state.
+ */
+async function toolsOverlapProbe(page, report) {
+  const result = await page.evaluate(() => {
+    const rail = document.querySelector(".right-rail");
+    const tools = document.querySelector(".right-rail-tools");
+    if (!rail || !tools) return { found: false };
+
+    const sections = Array.from(
+      document.querySelectorAll(".right-rail .rail-section"),
+    );
+    const intersect = (a, b) => {
+      const left = Math.max(a.left, b.left);
+      const right = Math.min(a.right, b.right);
+      const top = Math.max(a.top, b.top);
+      const bottom = Math.min(a.bottom, b.bottom);
+      // Require a meaningful overlap, not a 1px rounding kiss.
+      return right - left > 4 && bottom - top > 4
+        ? { left, right, top, bottom }
+        : null;
+    };
+
+    let overlap = null;
+    let overlapCount = 0;
+    const maxScroll = rail.scrollHeight - rail.clientHeight;
+    for (let scrollTop = 0; scrollTop <= maxScroll; scrollTop += 8) {
+      rail.scrollTop = scrollTop;
+      const toolsRect = tools.getBoundingClientRect();
+      const hits = sections
+        .map((section) => intersect(section.getBoundingClientRect(), toolsRect))
+        .filter(Boolean);
+      if (hits.length > 0) {
+        overlap = hits[0];
+        overlapCount = hits.length;
+        break;
+      }
+    }
+
+    const style = getComputedStyle(tools);
+    const backgroundColor = style.backgroundColor;
+    // Computed colors normalize to rgb(...) (alpha 1) or rgba(..., a).
+    const match = backgroundColor.match(/^rgba?\(([^)]+)\)$/);
+    const parts = match ? match[1].split(",").map((p) => parseFloat(p)) : [];
+    const alpha = parts.length === 4 ? parts[3] : match ? 1 : 0;
+
+    let sampledPoint = null;
+    let topmostElement = null;
+    let toolsTopmost = null;
+    if (overlap) {
+      const x = (overlap.left + overlap.right) / 2;
+      const y = (overlap.top + overlap.bottom) / 2;
+      const topmost = document.elementFromPoint(x, y);
+      sampledPoint = { x: Math.round(x), y: Math.round(y) };
+      topmostElement = topmost
+        ? `${topmost.tagName}.${String(topmost.className).slice(0, 80)}`
+        : "nothing";
+      toolsTopmost = !!topmost && (topmost === tools || tools.contains(topmost));
+    }
+
+    return {
+      found: true,
+      railScrollTop: rail.scrollTop,
+      maxScroll,
+      overlapCount,
+      backgroundColor,
+      alpha,
+      sampledPoint,
+      topmostElement,
+      toolsTopmost,
+    };
+  });
+
+  if (!result.found) {
+    report(
+      "tools overlap probe: .right-rail or .right-rail-tools not found — the rail did not render",
+    );
+    return result;
+  }
+  if (result.overlapCount === 0) {
+    report(
+      `no rail section ever intersected the sticky TOOLS surface across the full ` +
+        `scroll range (max ${result.maxScroll}px) — the probe proved nothing at this viewport`,
+    );
+  }
+  if (result.alpha < 0.999) {
+    report(
+      `sticky TOOLS computed background is not opaque: ${result.backgroundColor} ` +
+        `(alpha ${result.alpha}) — scrolled rail content can paint through it`,
+    );
+  }
+  if (result.overlapCount > 0 && !result.toolsTopmost) {
+    report(
+      `at the sampled overlap point the topmost element is ${result.topmostElement}, ` +
+        `not the TOOLS surface — content paints or hits above it`,
+    );
+  }
+  return result;
 }
 
 /**
@@ -700,6 +830,28 @@ for (const scenario of SCENARIOS) {
         await scenario.drive(page);
         text = await bodyText(page);
       }
+
+      const report = (message) =>
+        fail({
+          scenario: label,
+          route,
+          viewport: viewportLabel,
+          screenshot,
+          message,
+        });
+
+      // General pre-screenshot hook: runs after settle/drive but BEFORE the
+      // screenshot, so its measurements and the captured image describe the
+      // same frame (e.g. the U-01 tools-overlap probe leaves the rail
+      // scrolled to the exact overlap it measured). Its serializable payload
+      // travels into summary.json on this scenario's record. The legacy
+      // window.__abRun payload for `assert` scenarios is kept until a
+      // separate migration.
+      let preScreenshotEvidence = null;
+      if (scenario.beforeScreenshot) {
+        preScreenshotEvidence = await scenario.beforeScreenshot(page, report);
+      }
+
       const domText = await documentText(page);
       const controls = await controlNames(page);
 
@@ -725,15 +877,6 @@ for (const scenario of SCENARIOS) {
           ).length,
         };
       });
-
-      const report = (message) =>
-        fail({
-          scenario: label,
-          route,
-          viewport: viewportLabel,
-          screenshot,
-          message,
-        });
 
       // Deliberate self-test hook.
       if (forceFailScenario === label || forceFailScenario === scenario.name) {
@@ -848,6 +991,7 @@ for (const scenario of SCENARIOS) {
         screenshot,
         metrics,
         reachability: reachRecords,
+        preScreenshotEvidence,
         driverPayload,
         consoleMessages,
         pageErrors,

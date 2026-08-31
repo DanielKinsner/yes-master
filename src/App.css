@@ -7611,7 +7611,12 @@ input:focus-visible,
 .right-rail-tools {
   border: 0;
   border-radius: 0;
-  background: transparent;
+  /* Audit U-01: this is the LAST unconditional .right-rail-tools rule, so it
+     wins the cascade. `transparent` here let the compressor readout paint
+     through the sticky TOOLS row at 1360x740 (proven by the headless
+     clean-tools-overlap probe). Opaque, like the earlier belt-and-braces rule
+     this block was accidentally overriding. */
+  background: var(--bg-1);
   border-top: 1px solid var(--hairline);
 }
 .right-rail-tools > summary {
