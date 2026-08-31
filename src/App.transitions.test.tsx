@@ -51,6 +51,7 @@ const mocks = vi.hoisted(() => {
     clearDeviceLost: vi.fn(),
     installUpdate: vi.fn(),
     availableUpdateVersion: vi.fn(),
+    openReleasePage: vi.fn(),
     runExportChecks: vi.fn(),
     openOutput: vi.fn(),
     saveProject: vi.fn(),
@@ -850,6 +851,110 @@ describe("App updater toast (Slice 7b)", () => {
     await click(action!);
     expect(mocks.api.installUpdate).toHaveBeenCalledTimes(1);
 
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("disables install while pending and never double-fires (single-flight)", async () => {
+    const fire = captureUpdaterFire();
+    const pending = deferred<null>();
+    mocks.api.installUpdate.mockReturnValue(pending.promise);
+    const { root, container } = await mountApp();
+    await act(async () => {
+      fire.current("2.0.0");
+    });
+
+    const action = container.querySelector<HTMLButtonElement>(".toast-action");
+    await click(action!);
+    expect(mocks.api.installUpdate).toHaveBeenCalledTimes(1);
+    // Installing entered synchronously: the action is disabled before the
+    // backend promise settles, so a second click cannot double-install.
+    expect(
+      container.querySelector<HTMLButtonElement>(".toast-action")?.disabled,
+    ).toBe(true);
+    await click(container.querySelector<HTMLButtonElement>(".toast-action")!);
+    expect(mocks.api.installUpdate).toHaveBeenCalledTimes(1);
+
+    pending.reject(new Error("offline"));
+    await waitFor(() => {
+      expect(container.textContent).toContain("Update couldn't install");
+    });
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("keeps a failed install visible with Retry and Download manually (audit L-03)", async () => {
+    const fire = captureUpdaterFire();
+    mocks.api.installUpdate.mockRejectedValue(new Error("offline"));
+    const { root, container } = await mountApp();
+    await act(async () => {
+      fire.current("2.0.0");
+    });
+    await click(container.querySelector<HTMLButtonElement>(".toast-action")!);
+
+    // The failure must NOT clear the notice — it converts to a recovery
+    // toast that keeps the version and offers both paths out.
+    await waitFor(() => {
+      expect(container.textContent).toContain(
+        "Update couldn't install. Retry, or download it manually.",
+      );
+    });
+    expect(findButtonByText(container, "Retry")).toBeTruthy();
+    expect(findButtonByText(container, "Download manually")).toBeTruthy();
+
+    // Retry fires exactly one new request.
+    mocks.api.installUpdate.mockReturnValue(deferred<null>().promise);
+    await click(findButtonByText(container, "Retry"));
+    expect(mocks.api.installUpdate).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("treats an install that returns without restarting as a failure", async () => {
+    // install_update resolving means restart() never ran — the backend
+    // no-op path. Leaving the toast on 'installing' forever would strand
+    // the user; it must land in the same recoverable failed state.
+    const fire = captureUpdaterFire();
+    mocks.api.installUpdate.mockResolvedValue(null);
+    const { root, container } = await mountApp();
+    await act(async () => {
+      fire.current("2.0.0");
+    });
+    await click(container.querySelector<HTMLButtonElement>(".toast-action")!);
+    await waitFor(() => {
+      expect(container.textContent).toContain("Update couldn't install");
+    });
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("opens the fixed releases page for manual recovery, and paints the literal URL if the opener fails", async () => {
+    const fire = captureUpdaterFire();
+    mocks.api.installUpdate.mockRejectedValue(new Error("offline"));
+    mocks.api.openReleasePage.mockRejectedValue(new Error("no opener"));
+    const { root, container } = await mountApp();
+    await act(async () => {
+      fire.current("2.0.0");
+    });
+    await click(container.querySelector<HTMLButtonElement>(".toast-action")!);
+    await waitFor(() => {
+      expect(container.textContent).toContain("Update couldn't install");
+    });
+
+    await click(findButtonByText(container, "Download manually"));
+    expect(mocks.api.openReleasePage).toHaveBeenCalledTimes(1);
+    // Opener failure keeps the notice AND paints the fixed URL so the user
+    // can copy it — the last rung of the recovery ladder.
+    await waitFor(() => {
+      expect(container.textContent).toContain(
+        "https://github.com/DanielKinsner/yes-master/releases",
+      );
+    });
     await act(async () => {
       root.unmount();
     });

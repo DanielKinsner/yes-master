@@ -10,6 +10,7 @@ import {
   type ReleaseMetadata,
 } from "../landing/release-config";
 import { DURING_BETA, validRelease } from "../landing/release-fixture";
+import { RELEASES_INDEX_URL as DESKTOP_RELEASES_INDEX_URL } from "./release-links";
 
 function readText(path: string): string {
   return readFileSync(new URL(path, import.meta.url), "utf8").replace(
@@ -43,6 +44,24 @@ const tauriConfig = JSON.parse(
 
 const DISCARDED_BOOTSTRAP_PUBKEY =
   "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM5OEJBMEIzQzYyRURDRUUKUldUdTNDN0dzNkNMeVR5VVhUeXJERVVST05nZG5XSXFzK3RDZTBjZFgray81WXpxc2d5eDR3eGEK";
+
+describe("updater manual-recovery origin (audit L-03)", () => {
+  it("pins the fixed Releases URL identically in frontend, Rust, and landing sources", () => {
+    // The desktop open_release_page command must only ever open this URL.
+    // Three sources carry it: the frontend copy constant, the private Rust
+    // constant, and the landing page's derived releases-index. If any of
+    // them drifts, manual recovery could point somewhere else.
+    expect(DESKTOP_RELEASES_INDEX_URL).toBe(
+      "https://github.com/DanielKinsner/yes-master/releases",
+    );
+    expect(DESKTOP_RELEASES_INDEX_URL).toBe(RELEASES_INDEX_URL);
+
+    const rustLib = readText("../../src-tauri/src/lib.rs");
+    expect(rustLib).toContain(
+      `RELEASES_INDEX_URL: &str = "${DESKTOP_RELEASES_INDEX_URL}"`,
+    );
+  });
+});
 
 describe("zero-cost beta release contract", () => {
   it("builds one universal macOS artifact instead of separate architecture releases", () => {

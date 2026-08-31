@@ -50,6 +50,7 @@ import { buildSequenceRows, type SequenceRow } from "./lib/album-sequence";
 import { trackCountLabel } from "./lib/album-copy";
 import { HELP_SECTIONS, SETTINGS_GROUPS } from "./lib/chrome-content";
 import { api, onUpdaterAvailable } from "./lib/api";
+import { RELEASES_INDEX_URL } from "./lib/release-links";
 import { save } from "./lib/tauri-runtime";
 import { requestGuideReset } from "./lib/first-run-guide";
 import { isToneFlat } from "./lib/tone-reset";
@@ -66,6 +67,15 @@ import "./App.css";
 
 const AUDIO_OUTPUT_STORAGE_KEY = "yes-master:audio-output-device";
 const SYSTEM_DEFAULT_AUDIO_OUTPUT = "system-default";
+
+/// The updater notice lifecycle (audit L-03). One union instead of parallel
+/// booleans: a failed install keeps the version and its recovery actions;
+/// `manualOpenFailed` marks the opener itself failing, at which point the UI
+/// paints the literal Releases URL as the last recovery rung.
+type UpdateNotice =
+  | { status: "available"; version: string }
+  | { status: "installing"; version: string }
+  | { status: "failed"; version: string; manualOpenFailed: boolean };
 
 export interface AudioOutputSettingsState {
   devices: AudioOutputDevice[];
@@ -239,8 +249,10 @@ function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
   const [modeNotice, setModeNotice] = useState<string | null>(null);
-  // Slice 7b: the version of an available update (null = none / dismissed).
-  const [updateAvailable, setUpdateAvailable] = useState<string | null>(null);
+  // Slice 7b + audit L-03: the updater notice is one explicit lifecycle, not
+  // parallel booleans — a failed install must keep the version and its
+  // recovery actions visible instead of silently vanishing.
+  const [updateNotice, setUpdateNotice] = useState<UpdateNotice | null>(null);
   useWebviewZoomShortcuts();
 
   // B5.1: Standard/Advanced/Album navigation is ONE legal-state machine
@@ -336,20 +348,29 @@ function App() {
   // startup check (Slice 7) emits `updater:available`; the toast's action
   // installs on click and is disabled while an export/render runs, so work is
   // never interrupted.
+  // Idempotent availability setter shared by the event and the query paths:
+  // the same version never resets an in-flight install/failure state, so an
+  // event/query overlap cannot duplicate or regress the notice.
+  const noteUpdateAvailable = useCallback((version: string) => {
+    setUpdateNotice((notice) =>
+      notice && notice.version === version
+        ? notice
+        : { status: "available", version },
+    );
+  }, []);
+
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     let cancelled = false;
-    onUpdaterAvailable((version) => setUpdateAvailable(version))
+    onUpdaterAvailable((version) => noteUpdateAvailable(version))
       .then((un) => {
         unlisten = un;
         // Audit L-02: the startup emit is edge-triggered and can win the
         // race against this registration — the backend latches the version,
         // so query it once the listener is live. Register FIRST, query
-        // second, or the missed-event window reopens between them. Both
-        // paths land in the same idempotent setter, so an event/query
-        // overlap cannot duplicate the notice.
+        // second, or the missed-event window reopens between them.
         return api.availableUpdateVersion().then((version) => {
-          if (!cancelled && version) setUpdateAvailable(version);
+          if (!cancelled && version) noteUpdateAvailable(version);
         });
       })
       .catch(() => {
@@ -359,14 +380,40 @@ function App() {
       cancelled = true;
       unlisten?.();
     };
-  }, []);
+  }, [noteUpdateAvailable]);
 
   const installUpdate = () => {
-    // Success relaunches the app (never returns); a failed/offline download
-    // just dismisses the toast — never a modal.
-    api.installUpdate().catch((err) => {
+    // Success relaunches the app (install_update never resolves). Everything
+    // else — rejection OR an unexpected resolve without a restart (the
+    // backend no-op path) — lands in the same recoverable failed state; the
+    // notice is never cleared by a failure (audit L-03).
+    if (!updateNotice || updateNotice.status === "installing") return;
+    setUpdateNotice({ status: "installing", version: updateNotice.version });
+    const fail = () =>
+      setUpdateNotice(
+        (notice) =>
+          notice && {
+            status: "failed",
+            version: notice.version,
+            manualOpenFailed: false,
+          },
+      );
+    api.installUpdate().then(fail, (err) => {
       console.warn("Update install failed", err);
-      setUpdateAvailable(null);
+      fail();
+    });
+  };
+
+  const openReleasePage = () => {
+    // Fixed-origin manual recovery: the native command opens ONLY the
+    // Releases index (no frontend-supplied URL). If even the opener fails,
+    // keep the notice and paint the literal URL so it can be copied.
+    api.openReleasePage().catch(() => {
+      setUpdateNotice((notice) =>
+        notice && notice.status === "failed"
+          ? { ...notice, manualOpenFailed: true }
+          : notice,
+      );
     });
   };
 
@@ -564,7 +611,7 @@ function App() {
         tm.error ||
         tm.projectFeedback ||
         modeNotice ||
-        updateAvailable) && (
+        updateNotice) && (
         <div className="toast-stack" aria-live="polite">
           {tm.playbackDeviceLost && (
             <div className="device-loss-banner" role="alert">
@@ -605,18 +652,46 @@ function App() {
               onClose={tm.clearProjectFeedback}
             />
           )}
-          {updateAvailable && (
+          {updateNotice && updateNotice.status !== "failed" && (
             <Toast
-              message={`Update available — v${updateAvailable}`}
+              message={`Update available — v${updateNotice.version}`}
               tone="info"
-              onClose={() => setUpdateAvailable(null)}
-              action={{
-                label: "Restart to update",
-                onClick: installUpdate,
-                disabled: tm.isExporting || tm.isRendering,
-                disabledTitle:
-                  "Finishing your export first — this re-enables the moment it's done.",
-              }}
+              onClose={() => setUpdateNotice(null)}
+              actions={[
+                {
+                  label: "Restart to update",
+                  onClick: installUpdate,
+                  disabled:
+                    updateNotice.status === "installing" ||
+                    tm.isExporting ||
+                    tm.isRendering,
+                  disabledTitle:
+                    updateNotice.status === "installing"
+                      ? "Downloading and installing…"
+                      : "Finishing your export first — this re-enables the moment it's done.",
+                },
+              ]}
+            />
+          )}
+          {updateNotice?.status === "failed" && (
+            <Toast
+              message={
+                updateNotice.manualOpenFailed
+                  ? `Update couldn't install. Download it manually: ${RELEASES_INDEX_URL}`
+                  : "Update couldn't install. Retry, or download it manually."
+              }
+              tone="warn"
+              onClose={() => setUpdateNotice(null)}
+              actions={[
+                {
+                  label: "Retry",
+                  onClick: installUpdate,
+                  disabled: tm.isExporting || tm.isRendering,
+                  disabledTitle:
+                    "Finishing your export first — this re-enables the moment it's done.",
+                },
+                { label: "Download manually", onClick: openReleasePage },
+              ]}
             />
           )}
         </div>

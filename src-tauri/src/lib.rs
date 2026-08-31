@@ -53,6 +53,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_opener::init())
         .manage(profile_store)
         .manage(player)
         .manage(engine::RenderJobRegistry::default())
@@ -229,6 +230,7 @@ pub fn run() {
             demo::prepare_demo_track,
             install_update,
             available_update_version,
+            open_release_page,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -248,6 +250,25 @@ const BUILD_STAMP: &str = env!("YES_BUILD_STAMP");
 #[tauri::command]
 fn build_info() -> String {
     format!("{} · build {}", env!("CARGO_PKG_VERSION"), BUILD_STAMP)
+}
+
+/// The ONLY URL the desktop app will ever hand to the system opener (audit
+/// L-03). Private + zero-argument command by design: a frontend cannot pass
+/// a URL, so a compromised renderer cannot steer the opener elsewhere. Must
+/// stay byte-identical to src/lib/release-links.ts (release-readiness test
+/// pins both sources).
+#[cfg(feature = "app-runner")]
+const RELEASES_INDEX_URL: &str = "https://github.com/DanielKinsner/yes-master/releases";
+
+/// Manual recovery for a failed update install: open the fixed GitHub
+/// Releases index in the system browser. See [`RELEASES_INDEX_URL`].
+#[cfg(feature = "app-runner")]
+#[tauri::command]
+fn open_release_page(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .open_url(RELEASES_INDEX_URL, None::<&str>)
+        .map_err(|e| e.to_string())
 }
 
 /// Latched updater availability (audit L-02). `updater:available` is an

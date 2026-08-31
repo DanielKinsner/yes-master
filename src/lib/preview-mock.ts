@@ -694,6 +694,9 @@ const NATIVE_ONLY_COMMANDS = new Set<string>([
   // Queried on every mount (L-02 replay); a browser has no updater, and the
   // null return means "no update" — exactly the truthful preview answer.
   "available_update_version",
+  // Fixed-origin manual recovery (L-03): only an installed build has the
+  // opener plugin; a browser preview has no update failure to recover from.
+  "open_release_page",
 ]);
 
 // Owner-gated systems: OFF by default, exactly as they ship.

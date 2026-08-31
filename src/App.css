@@ -2529,6 +2529,16 @@ button.primary:disabled {
   color: var(--text-0);
 }
 
+/* Audit L-03: a toast can stack more than one action (the updater failure
+   toast's Retry + Download manually pair). Inline row, no wrap collapse —
+   the toast max-width keeps the pair on one comfortable line. */
+.toast-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
 /* Slice 7b: the updater toast's inline action ("Restart to update"). */
 .toast-action {
   background: transparent;

@@ -47,7 +47,7 @@ describe("Toast", () => {
         message="Update available — v1.2.3"
         tone="info"
         onClose={() => {}}
-        action={{ label: "Restart to update", onClick }}
+        actions={[{ label: "Restart to update", onClick }]}
       />,
     );
     const btn = container.querySelector<HTMLButtonElement>(".toast-action");
@@ -69,12 +69,15 @@ describe("Toast", () => {
         message="Update available — v1.2.3"
         tone="info"
         onClose={() => {}}
-        action={{
-          label: "Restart to update",
-          onClick,
-          disabled: true,
-          disabledTitle: "Finishing your export first — this re-enables when it's done.",
-        }}
+        actions={[
+          {
+            label: "Restart to update",
+            onClick,
+            disabled: true,
+            disabledTitle:
+              "Finishing your export first — this re-enables when it's done.",
+          },
+        ]}
       />,
     );
     const btn = container.querySelector<HTMLButtonElement>(".toast-action");
@@ -82,6 +85,46 @@ describe("Toast", () => {
     expect(btn?.getAttribute("title")).toBe(
       "Finishing your export first — this re-enables when it's done.",
     );
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("renders multiple actions in order and a disabled one never fires (audit L-03)", async () => {
+    const onRetry = vi.fn();
+    const onManual = vi.fn();
+    const { container, root } = await render(
+      <Toast
+        message="Update couldn't install. Retry, or download it manually."
+        tone="warn"
+        onClose={() => {}}
+        actions={[
+          {
+            label: "Retry",
+            onClick: onRetry,
+            disabled: true,
+            disabledTitle:
+              "Finishing your export first — this re-enables when it's done.",
+          },
+          { label: "Download manually", onClick: onManual },
+        ]}
+      />,
+    );
+    const buttons = Array.from(
+      container.querySelectorAll<HTMLButtonElement>(".toast-actions .toast-action"),
+    );
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      "Retry",
+      "Download manually",
+    ]);
+
+    await click(buttons[0]);
+    expect(onRetry).not.toHaveBeenCalled();
+    await click(buttons[1]);
+    expect(onManual).toHaveBeenCalledTimes(1);
+
+    // The dismiss button survives alongside stacked actions.
+    expect(container.querySelector(".toast-close")).not.toBeNull();
     await act(async () => {
       root.unmount();
     });

@@ -135,6 +135,10 @@ export const api = {
   // edge-triggered startup event, so a frontend that attached its listener too
   // late can still recover the notice by query. Reading never consumes.
   availableUpdateVersion: () => invoke<string | null>("available_update_version"),
+  // Audit L-03: manual recovery when an install fails. The backend opens the
+  // FIXED GitHub Releases index (src/lib/release-links.ts) — the command takes
+  // no URL, so the frontend cannot steer the opener anywhere else.
+  openReleasePage: () => invoke<null>("open_release_page"),
 
   runExportChecks: (
     report: ExportReport,
