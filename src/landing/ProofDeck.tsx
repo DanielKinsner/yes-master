@@ -1,5 +1,6 @@
 import standardImg from "../assets/landing/desktop-standard-ui.png";
-import advancedImg from "../assets/landing/desktop-advanced-ui.png";
+import advancedImg from "../assets/landing/owner-advanced-session.jpg";
+import advancedImg1280 from "../assets/landing/owner-advanced-session-1280.jpg";
 
 // U6 / claim C-07. These numbers are hand-authored and always were. They were
 // previously rendered as if they were product output, with nothing marking
@@ -15,9 +16,14 @@ const receipt: Array<[string, string, boolean]> = [
   ["Status", "Ready to ship", true],
 ];
 
-// Presentation (2026-08-18): the two real captures get the room — framed like
-// the product, side by side — and the receipt reads as the printed slip it
-// is. Same claims, same "Example" label ordering (label before first number).
+// Presentation (2026-08-18): the two captures get the room — framed like the
+// product, side by side — and the receipt reads as the printed slip it is.
+// Same claims, same "Example" label ordering (label before first number).
+//
+// 2026-09-01: the Advanced plate is an OWNER capture of a real session ("The
+// Machine Restocks on Friday", meters live, hand-shaped EQ). It is not in the
+// asset manifest because it is not a scripted capture; the manifest-bound
+// Standard capture stays as the Standard plate.
 export default function ProofDeck() {
   return (
     <section id="standard" className="relative bg-night px-5 py-20 sm:px-8 sm:py-28">
@@ -28,8 +34,13 @@ export default function ProofDeck() {
         <div className="max-w-2xl">
           <p className="eyebrow">From fast finish to full control</p>
           <h2 className="mt-4 font-display text-3xl font-black leading-[1.02] tracking-[-0.02em] sm:text-5xl">
-            One engine. Three ways to trust it.
+            One engine. Two rooms.
           </h2>
+          <p className="mt-4 text-muted sm:text-lg">
+            Standard is one clean column and one button. Advanced is the whole
+            console. They are the same engine, and both hand you the same
+            receipt.
+          </p>
         </div>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-2">
@@ -70,15 +81,18 @@ export default function ProofDeck() {
               When you want the full room.
             </h3>
             <p className="mt-3 max-w-[52ch] text-[0.95rem] leading-relaxed text-muted">
-              Eight presets, a 7-band EQ, compressor modes, width and warmth,
-              live metering, and export review with a measured receipt.
+              A real session, meters live. Eight presets, a 7-band EQ,
+              compressor modes, width and warmth, live metering, and export
+              review with a measured receipt.
             </p>
             <div className="surface-frame mt-6 overflow-hidden rounded-xl p-1.5">
               <img
                 src={advancedImg}
-                alt="YES Master Advanced view"
-                width={1440}
-                height={1000}
+                srcSet={`${advancedImg1280} 1280w, ${advancedImg} 2048w`}
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                alt="YES Master Advanced view during a real session, meters live"
+                width={2048}
+                height={1151}
                 loading="lazy"
                 decoding="async"
                 className="block w-full rounded-[0.6rem]"

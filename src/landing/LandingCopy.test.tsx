@@ -49,9 +49,9 @@ describe("landing hierarchy (U6)", () => {
     // platform reality → action. The order IS the argument; asserting section
     // presence alone would let someone shuffle it back.
     const order = [
-      "Master your track in real time",
+      "Your Endgame Sound.",
       "Finished mix in. Finished master out.",
-      "One engine. Three ways to trust it.",
+      "One engine. Two rooms.",
       "It reads the track before it touches it.",
       "A record, not a folder of files.",
       "What you are actually agreeing to.",
@@ -72,7 +72,7 @@ describe("landing hierarchy (U6)", () => {
     // Leading with a record-length workflow misrepresents what most visitors
     // came to do, which is finish one track.
     expect(positionOf("A record, not a folder of files.")).toBeGreaterThan(
-      positionOf("One engine. Three ways to trust it."),
+      positionOf("One engine. Two rooms."),
     );
     expect(positionOf("A record, not a folder of files.")).toBeGreaterThan(
       positionOf("It reads the track before it touches it."),
