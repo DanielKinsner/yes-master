@@ -15,7 +15,7 @@ import {
 import { PresetIcon, PRESET_ACCENT } from "./PresetIcon";
 import { intensityLabel } from "./Knob";
 import {
-  DELIVERY_PROFILE_DISPLAY,
+  DELIVERY_PROFILE_SHORT,
   DELIVERY_PROFILE_TARGET_LUFS,
 } from "../bindings";
 import type {
@@ -693,11 +693,12 @@ function channelLabel(channels: number): string {
   return channels === 1 ? "Mono" : channels === 2 ? "Stereo" : `${channels}ch`;
 }
 
-// The Mastering Target chip: the real delivery-profile name + its target LUFS.
-// `custom` (and any profile without a target) shows the name alone rather than
-// inventing a number.
+// The Mastering Target chip: the delivery profile's SHORT name + its target
+// LUFS ("Streaming · -14.0 LUFS", D11b). The descriptive name stays in the
+// Delivery Profile dropdown where there is room. `custom` (and any profile
+// without a target) shows the name alone rather than inventing a number.
 function masteringTargetLabel(profile: DeliveryProfile): string {
-  const name = DELIVERY_PROFILE_DISPLAY[profile];
+  const name = DELIVERY_PROFILE_SHORT[profile];
   const target = DELIVERY_PROFILE_TARGET_LUFS[profile];
   return target != null ? `${name} · ${target.toFixed(1)} LUFS` : name;
 }

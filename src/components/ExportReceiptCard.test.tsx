@@ -217,9 +217,10 @@ describe("ExportReceiptCard", () => {
     expect(rows).toContain("Dynamic range8.5 LU");
     // We measure dynamic range, not EBU Loudness Range — "LRA" must not appear.
     expect(container.textContent).not.toContain("LRA");
-    // Mastering Target chip = real profile name + real target LUFS.
+    // Mastering Target chip = the profile's SHORT name + real target LUFS
+    // (D11b, 2026-09-01); the descriptive name lives in the dropdown.
     expect(container.querySelector(".receipt-target-chip")?.textContent).toBe(
-      "Streaming (Spotify / YouTube / Tidal / Amazon) · -14.0 LUFS",
+      "Streaming · -14.0 LUFS",
     );
   });
 
