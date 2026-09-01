@@ -252,6 +252,27 @@ lane can never prove: real TalkBack behavior, background audio, and
 platform file flows — those remain the physical-device pre-release gate
 (quality-plan U20, owner-unlocked).
 
+**U19 follow-up (2026-09-01) — iPhone visual parity + native bridge repair.**
+The Android UI now mirrors the complete iPhone Track Master console from first
+launch through receipt instead of showing a sparse import-only prototype.
+Analysis uses the same blurred, animated presentation on both mobile platforms,
+with a three-second minimum successful presentation and reduced-motion support.
+
+The earlier arm64 tester APK was reproduced failing at JNI load time with
+`UnsatisfiedLinkError`: the audio dependency's C++ wrapper referenced
+`__gxx_personality_v0`, but the symbol was not present in the packaged bridge.
+Android link flags now include the static C++ runtime and ABI support while
+keeping Android system libraries dynamic. The Gradle build packages arm64-v8a
+and x86_64, rejects missing/stale bridge ABIs, and verifies 16 KB LOAD
+alignment. A connected instrumentation test calls the real JNI bridge so this
+class of packaging failure cannot pass on JVM tests alone.
+
+Android 16 arm64 emulator evidence covers the real system picker with MP3,
+analysis, audition, every style/loudness/control family, render, system share
+sheet, and a second render that preserved the first WAV. This closes the
+reported bridge failure and supplies emulator evidence; final physical-device
+feel and by-ear playback remain part of U20.
+
 **Next session:** execute
 `docs/archive/plans/2026-06-10-001-android-a4-action-plan.md` — batched A4 work
 (process-death restore, import fail-fast, cache reaping, bridge tidiness)

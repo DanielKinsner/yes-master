@@ -12,6 +12,33 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-09-01 — Mobile visual parity and Android device-verified MP3 flow
+
+- **Android first launch and mastering flow:** replaced the sparse prototype
+  surface with the same complete Track Master console, visual hierarchy, and
+  control vocabulary as iPhone. Empty, ready, working, done, and error states
+  now share one dark, scroll-safe mobile system.
+- **Mobile analysis presentation:** iPhone and Android now blur the app beneath
+  the desktop-inspired analysis animation. Successful fast analyses remain
+  visible for at least three seconds; real longer analyses are never extended,
+  failures are immediate, and reduced-motion settings are respected.
+- **Android bridge repair:** reproduced the tester APK's
+  `UnsatisfiedLinkError` on an Android 16 arm64 emulator and traced it to a
+  missing C++ ABI symbol required by the native audio dependency. The APK now
+  packages loadable arm64 and x86_64 bridges, checks every expected ABI plus
+  16 KB ELF alignment during the build, and calls the real JNI bridge in a
+  connected-device test.
+- **End-to-end Android evidence:** imported a real MP3 through the system file
+  picker, analyzed it, auditioned playback, exercised all mastering controls,
+  rendered and shared a 44.1 kHz / 24-bit WAV, then rendered again and proved
+  the first export was not overwritten. Android host, lint, assembly, and
+  connected-device lanes are green.
+- **Desktop export safety:** changing only a delivery format field while a
+  named target is selected now preserves that target's effective loudness and
+  true-peak values when transitioning to Custom, with regression coverage.
+- **Build dependency hygiene:** refreshed the transitive Browserslist data
+  packages to the patched release; `npm audit --audit-level=high` is clean.
+
 ## 2026-08-31 — Adversarial audit: beta.1 blocked; Phase A remediation lands
 
 The 2026-08-31 adversarial audit confirmed launch blockers in release-bound
