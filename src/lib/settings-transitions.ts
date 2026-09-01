@@ -118,6 +118,31 @@ export function applyDeliveryProfileSelection(
   };
 }
 
+/// Changing only the export format still means leaving a named delivery
+/// profile. Capture every currently effective profile value first so a bit
+/// depth or sample-rate edit cannot revive stale hidden Custom settings.
+export function applyDeliveryBitDepthSelection(
+  prev: MasteringSettings,
+  bitDepth: number | null,
+): MasteringSettings {
+  const custom = applyDeliveryProfileSelection(prev, "custom");
+  return {
+    ...custom,
+    advanced: { ...custom.advanced, bit_depth: bitDepth },
+  };
+}
+
+export function applyDeliverySampleRateSelection(
+  prev: MasteringSettings,
+  sampleRate: number | null,
+): MasteringSettings {
+  const custom = applyDeliveryProfileSelection(prev, "custom");
+  return {
+    ...custom,
+    advanced: { ...custom.advanced, target_sample_rate: sampleRate },
+  };
+}
+
 /// Shared write rule for explicit loudness target edits. The center
 /// quick-select and the right-rail LUFS number both mean "use this target,"
 /// so both force Custom and write the same advanced field in one state

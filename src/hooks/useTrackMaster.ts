@@ -19,7 +19,9 @@ import {
 import {
   applyAdvancedWithProfileFlip,
   applyChainDispatchOverrides,
+  applyDeliveryBitDepthSelection,
   applyDeliveryProfileSelection,
+  applyDeliverySampleRateSelection,
   applyExplicitLoudnessTarget,
   applyLoudnessTargetSelection,
 } from "../lib/settings-transitions";
@@ -2040,11 +2042,9 @@ export function useTrackMaster() {
   const setDeliveryBitDepth = useCallback(
     (bitDepth: number | null) => {
       if (!selectedTrackId) return;
-      updateSettings(selectedTrackId, (prev) => ({
-        ...prev,
-        delivery_profile: "custom",
-        advanced: { ...prev.advanced, bit_depth: bitDepth },
-      }));
+      updateSettings(selectedTrackId, (prev) =>
+        applyDeliveryBitDepthSelection(prev, bitDepth),
+      );
     },
     [selectedTrackId, updateSettings],
   );
@@ -2052,11 +2052,9 @@ export function useTrackMaster() {
   const setDeliverySampleRate = useCallback(
     (sampleRate: number | null) => {
       if (!selectedTrackId) return;
-      updateSettings(selectedTrackId, (prev) => ({
-        ...prev,
-        delivery_profile: "custom",
-        advanced: { ...prev.advanced, target_sample_rate: sampleRate },
-      }));
+      updateSettings(selectedTrackId, (prev) =>
+        applyDeliverySampleRateSelection(prev, sampleRate),
+      );
     },
     [selectedTrackId, updateSettings],
   );

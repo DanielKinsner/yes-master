@@ -15,7 +15,9 @@ import {
 import {
   applyAdvancedWithProfileFlip,
   applyChainDispatchOverrides,
+  applyDeliveryBitDepthSelection,
   applyDeliveryProfileSelection,
+  applyDeliverySampleRateSelection,
   applyExplicitLoudnessTarget,
   applyLoudnessTargetSelection,
   SHADOWED_ADVANCED_KEYS,
@@ -225,6 +227,34 @@ describe("applyDeliveryProfileSelection", () => {
     expect(next.advanced.warmth).toBe(0.4);
     expect(next.advanced.presence_air).toBe(0.6);
     expect(next.advanced.compression_density).toBe(0.2);
+  });
+
+  it("preserves the effective loudness and ceiling when bit depth becomes Custom", () => {
+    const prev = makeSettings("streaming-universal", {
+      lufs_offset_db: -7,
+      ceiling_dbtp: -9,
+    });
+
+    const next = applyDeliveryBitDepthSelection(prev, 16);
+
+    expect(next.delivery_profile).toBe("custom");
+    expect(next.advanced.lufs_offset_db).toBe(-14);
+    expect(next.advanced.ceiling_dbtp).toBe(-1);
+    expect(next.advanced.bit_depth).toBe(16);
+  });
+
+  it("preserves the effective loudness and ceiling when sample rate becomes Custom", () => {
+    const prev = makeSettings("streaming-universal", {
+      lufs_offset_db: -7,
+      ceiling_dbtp: -9,
+    });
+
+    const next = applyDeliverySampleRateSelection(prev, 96_000);
+
+    expect(next.delivery_profile).toBe("custom");
+    expect(next.advanced.lufs_offset_db).toBe(-14);
+    expect(next.advanced.ceiling_dbtp).toBe(-1);
+    expect(next.advanced.target_sample_rate).toBe(96_000);
   });
 });
 describe("loudness target transitions", () => {
