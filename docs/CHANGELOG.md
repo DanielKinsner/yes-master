@@ -14,6 +14,11 @@ Dates are milestone dates, not exact commit times.
 
 ## 2026-09-01 — Mobile visual parity and Android device-verified MP3 flow
 
+- **Landing page (later 2026-09-01):** the hero runs full-bleed at every width on
+  an ultra-wide plate of the same scene (3840w/1280w variants); the mobile
+  sentence and section were removed; the workflow headline is pinned to one
+  sentence per line; the export receipt's low-dynamic-range check now reads as
+  post-export advice and names the delivered measurement.
 - **Landing page:** headline is now "One-click mastering. Your Endgame Sound."
   pinned to two lines; the hero art is the owner's re-rendered console
   composite with a real session on screen; the Standard, Advanced and Album

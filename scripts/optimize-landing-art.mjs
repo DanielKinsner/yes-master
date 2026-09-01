@@ -41,11 +41,16 @@ import { REPO_ROOT, pngDimensions } from "./lib/landing-assets.mjs";
 // phone encode; `Hero.tsx`'s srcSet declares the same widths.
 // 2026-09-01: master re-rendered by the owner with a real session on screen
 // ("The Machine Restocks on Friday"); variants re-derived by this script.
+// 2026-09-01 (later): the master is now the owner's ULTRA-WIDE plate of the
+// same scene (5715×2831, ~2:1) so the hero can run full-bleed at every width
+// like the sign-off band: the tablet lives in the right half, the left third
+// is dark console and stays empty for the copy. Desktop variant is 3840w so a
+// 4K canvas gets real pixels; phones still get 1280w.
 const HERO = {
   source: "src/assets/landing/hero-control-room-studio-source.jpg",
   sourceType: "image/jpeg",
   variants: [
-    { file: "src/assets/landing/hero-control-room-studio.jpg", width: 2560, quality: 0.82 },
+    { file: "src/assets/landing/hero-control-room-studio.jpg", width: 3840, quality: 0.8 },
     { file: "src/assets/landing/hero-control-room-studio-1280.jpg", width: 1280, quality: 0.84 },
   ],
 };
