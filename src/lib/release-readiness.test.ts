@@ -86,15 +86,63 @@ describe("launch truth stays mechanically sticky (audit D-01)", () => {
 describe("launch records name exact commits, not branches (review #5/#6)", () => {
   // The owner's Task-12 disposition acts on records — if they point at a
   // branch name or a superseded candidate, the wrong bytes get promoted.
-  it("all three launch records carry the exact Phase A commit map", () => {
+  //
+  // Review finding #5, second pass: a bare hash LIST is not a map, and a
+  // redirect to another record is not self-containment. The owner must be
+  // able to answer "which commit fixed Task N" from whichever of the three
+  // records is open in front of them — Tasks 5 and 8 are multi-commit, so
+  // order alone cannot reconstruct the association. Each record must carry
+  // every Phase A hash AND its task binding, in either the label-first form
+  // ("Task 5 `6986032` … `9f60023`") or the label-after form
+  // ("`6986032`+`9f60023` (T5 …)"), with no foreign hash or task marker
+  // spliced between a task and its commits — so a wrong pairing (a hash
+  // sitting under another task's label) fails, not just a missing one.
+  const PHASE_A_TASK_COMMITS: ReadonlyArray<[task: number, hashes: string[]]> =
+    [
+      [1, ["b81d820"]],
+      [2, ["d874d90"]],
+      [3, ["5fe2a90"]],
+      [4, ["e1f0b36"]],
+      [5, ["6986032", "9f60023"]],
+      [6, ["a20ab26"]],
+      [7, ["a15284a"]],
+      [8, ["9a4bf1f", "63657cc", "acab580"]],
+      [9, ["1c9b35a"]],
+      [10, ["80e2898"]],
+      [11, ["691392d"]],
+    ];
+
+  // Prose allowed between a label and its hashes, but nothing that could
+  // rebind the association: no other task marker, no other 7-hex hash.
+  const FILLER = String.raw`(?:(?!Task \d|\(T\d|\b[0-9a-f]{7}\b)[\s\S])*?`;
+
+  it("all three launch records carry the complete Task 1–11 → commit map", () => {
     for (const path of [
       "../../docs/CHANGELOG.md",
       "../../docs/plans/beta-go-no-go.md",
       "../../docs/plans/2026-08-31-owner-launch-checklist.md",
     ]) {
       const record = readText(path);
-      for (const hash of ["b81d820", "691392d", "016b29f", "0cf48ce"]) {
-        expect(record, `${path} must name commit ${hash}`).toContain(hash);
+      for (const [task, hashes] of PHASE_A_TASK_COMMITS) {
+        for (const hash of hashes) {
+          expect(record, `${path} must name commit ${hash}`).toContain(hash);
+        }
+        const chain = hashes.join(FILLER);
+        const labelFirst = new RegExp(`Task ${task}\\b${FILLER}${chain}`);
+        const labelAfter = new RegExp(`${chain}${FILLER}\\(T${task}\\b`);
+        expect(
+          labelFirst.test(record) || labelAfter.test(record),
+          `${path} must associate Task ${task} with ${hashes.join(
+            ", ",
+          )} — a bare hash list or a redirect to another record is not a map`,
+        ).toBe(true);
+      }
+      // The independent review and its fix commits are part of the reviewed
+      // tip's provenance; every record must name them too.
+      for (const hash of ["6ed3b53", "016b29f", "333c6dc", "0cf48ce"]) {
+        expect(record, `${path} must name review commit ${hash}`).toContain(
+          hash,
+        );
       }
     }
   });

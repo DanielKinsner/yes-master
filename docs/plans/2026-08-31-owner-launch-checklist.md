@@ -13,14 +13,23 @@
 > `v0.9.2-beta.2` candidate. Beta.1 is not yet rejected — its tag, draft
 > (id 379883047), and evidence stay frozen and untouched.
 >
-> **Remediation is COMPLETE and independently reviewed.** Exact commits on
-> `codex/launch-readiness-remediation`: `b81d820` `d874d90` `5fe2a90`
-> `e1f0b36` `6986032` `9f60023` `a20ab26` `69c789f` `a15284a` `9a4bf1f`
-> `63657cc` `acab580` `1c9b35a` `80e2898` `691392d` (Tasks 1–11), Codex
-> review `6ed3b53`, review fixes `016b29f` `333c6dc` `0cf48ce` + the
-> launch-records commit (full task↔commit map: `docs/CHANGELOG.md`
-> 2026-08-31 entry). Your Task-12 disposition decides what happens next;
-> any beta.2 build must name the exact reviewed commit it was built from.
+> **Remediation is COMPLETE and independently reviewed.** Exact task↔commit
+> map on `codex/launch-readiness-remediation` — self-contained here on
+> purpose: this is the record you act from, so it must not lean on another
+> file. Task 1 `b81d820` import panic shield · Task 2 `d874d90` updater
+> latch/replay · Task 3 `5fe2a90` failed-install recovery · Task 4
+> `e1f0b36` sticky-TOOLS opacity · Task 5 `6986032` + `9f60023` contrast
+> token, loudness name/axe gate · Task 6 `a20ab26` receipt focus trap ·
+> Task 7 `a15284a` receipt shell · Task 8 `9a4bf1f` + `63657cc` +
+> `acab580` loaded-Standard, album advisories, CTA honesty · Task 9
+> `1c9b35a` vite config · Task 10 `80e2898` RustSec gate · Task 11
+> `691392d` docs reconcile · capture refresh `69c789f` · Codex review
+> `6ed3b53` · review fixes `016b29f` (updater), `333c6dc` (contrast),
+> `0cf48ce` (axe settle + geometry) · launch records `9919611` plus this
+> map. The same map is repeated in `docs/CHANGELOG.md` (2026-08-31 entry)
+> and `docs/plans/beta-go-no-go.md`. Your Task-12 disposition decides what
+> happens next; any beta.2 build must name the exact reviewed commit it
+> was built from.
 
 This is the exact remaining path to a live free public beta, written for the
 owner: what to click, what you should see, and what to do if you don't see it.
