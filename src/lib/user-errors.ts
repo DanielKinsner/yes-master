@@ -57,6 +57,29 @@ export function formatUserError(
     };
   }
 
+  // Backend `CommandError::Render` ("render error: …", types.rs). The write
+  // is atomic (tmp + rename), so a failed render leaves no partial file.
+  if (lower.startsWith("render error:")) {
+    return {
+      message:
+        "The render failed and no file was written. Try again; if it repeats, save a diagnostics report from Help.",
+      detail: raw,
+    };
+  }
+
+  // audio.rs raises both "audio device unavailable: …" (default device) and
+  // "audio output device unavailable (<name>): …" (a chosen device).
+  if (
+    lower.includes("audio device unavailable") ||
+    lower.includes("audio output device unavailable")
+  ) {
+    return {
+      message:
+        "No audio output device is available. Choose an output in Settings, then press Play.",
+      detail: raw,
+    };
+  }
+
   return {
     message: "Something went wrong.",
     detail: raw,

@@ -23,6 +23,29 @@ describe("formatUserError", () => {
     );
   });
 
+  it("maps render failures to plain language and keeps the raw detail", () => {
+    // S6.3 (2026-09-01): CommandError::Render surfaces as "render error: …".
+    expect(formatUserError("render error: rendered samples contain non-finite value at index 3")).toEqual({
+      message:
+        "The render failed and no file was written. Try again; if it repeats, save a diagnostics report from Help.",
+      detail: "render error: rendered samples contain non-finite value at index 3",
+    });
+  });
+
+  it("maps both audio-device-unavailable shapes to the Settings hint", () => {
+    // audio.rs: default-device form and chosen-device form.
+    for (const raw of [
+      "audio device unavailable: no default output device",
+      "audio output device unavailable (Speakers (Realtek)): device disconnected",
+    ]) {
+      expect(formatUserError(raw)).toEqual({
+        message:
+          "No audio output device is available. Choose an output in Settings, then press Play.",
+        detail: raw,
+      });
+    }
+  });
+
   it("keeps unknown raw errors available", () => {
     expect(userErrorMessage("backend exploded")).toBe(
       "Something went wrong. Details: backend exploded",
