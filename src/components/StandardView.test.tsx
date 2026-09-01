@@ -618,6 +618,37 @@ describe("Standard export receipt", () => {
     await act(async () => root.unmount());
   });
 
+  it("says why the master was saved under a new name, and stays silent otherwise", async () => {
+    // S6.4 (2026-09-01): never-overwrite diverted the write to a __n sibling.
+    const renamed = await render(
+      <StandardView
+        tm={exportedTm({
+          lastExportReceipt: {
+            trackId: "t1",
+            outputPath: "C:/renders/Song Master__1.wav",
+            checks: [],
+            kind: "track",
+            job: { measurements: { lufs_integrated: -14.1 } },
+            divertedFrom: "C:/renders/Song Master.wav",
+          },
+        } as unknown as Partial<TM>)}
+        onEnterAdvanced={() => {}}
+      />,
+    );
+    expect(renamed.container.querySelector(".std-export-done")?.textContent).toContain(
+      "Saved as Song Master__1.wav — Song Master.wav already existed and was left untouched.",
+    );
+    await act(async () => renamed.root.unmount());
+
+    const plain = await render(
+      <StandardView tm={exportedTm()} onEnterAdvanced={() => {}} />,
+    );
+    expect(plain.container.querySelector(".std-export-done")?.textContent).not.toContain(
+      "already existed",
+    );
+    await act(async () => plain.root.unmount());
+  });
+
   // U10(b) — "receipt actions resolve to the actual output". Standard's done
   // card is the only receipt most Standard users ever see, and its Show file
   // button was untested: nothing proved it opened the file just written rather

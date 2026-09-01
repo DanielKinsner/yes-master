@@ -293,6 +293,15 @@ export function ExportReceiptCard({
             </div>
           ))}
         </div>
+        {/* S6.4: never-overwrite diverted the write to a __n sibling — say
+            so here, or the user hunts for the name they typed. */}
+        {receipt.divertedFrom && (
+          <span className="track-meta-line receipt-diverted-note">
+            Saved as {fileNameFromPath(receipt.outputPath)} —{" "}
+            {fileNameFromPath(receipt.divertedFrom)} already existed and was
+            left untouched.
+          </span>
+        )}
         <MasteringStyle settings={settings} />
           </div>
           <div className="receipt-col">

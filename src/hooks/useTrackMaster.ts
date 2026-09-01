@@ -230,6 +230,11 @@ export interface ExportReceipt {
   checks: QualityCheck[];
   job: RenderJob;
   kind: "track";
+  /// The path chosen in the save dialog when the engine saved under a
+  /// different NAME: the chosen file already existed and never-overwrite
+  /// diverted to a `__{n}` sibling (ship review S6.4, 2026-09-01). Absent
+  /// when the render landed exactly where the user pointed.
+  divertedFrom?: string;
 }
 
 export interface ProjectFeedback {
@@ -2154,6 +2159,15 @@ export function useTrackMaster() {
           return;
         }
         const outputPath = job.output_paths[0] ?? "";
+        // S6.4: the engine diverts to a `__{n}` sibling when the chosen file
+        // already exists (never-overwrite, engine.rs explicit_output_path /
+        // wav_writer finalize). Compare file NAMES rather than whole strings:
+        // a divert only ever changes the name, and this must never fire on a
+        // directory spelled differently but pointing at the same place.
+        const chosenName = chosenOutputPath.split(/[\\/]/).pop() ?? chosenOutputPath;
+        const savedName = outputPath.split(/[\\/]/).pop() ?? outputPath;
+        const divertedFrom =
+          outputPath && savedName !== chosenName ? chosenOutputPath : undefined;
         const report = buildExportReport({
           trackId: selectedTrackId,
           outputPath,
@@ -2169,6 +2183,7 @@ export function useTrackMaster() {
           checks,
           job,
           kind: "track",
+          divertedFrom,
         });
       } catch (err) {
         setError(messageOf(err));

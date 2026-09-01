@@ -537,6 +537,15 @@ function StandardRightRail({
               {doneFileName}
               {doneLufs != null && ` · ${doneLufs.toFixed(1)} LUFS`}
             </div>
+            {/* S6.4: never-overwrite diverted the write to a __n sibling —
+                say so, or the user hunts for the name they typed. */}
+            {receipt.divertedFrom && (
+              <div className="std-export-done-meta">
+                Saved as {doneFileName} —{" "}
+                {receipt.divertedFrom.split(/[\\/]/).pop() ?? receipt.divertedFrom}{" "}
+                already existed and was left untouched.
+              </div>
+            )}
             <button
               type="button"
               className="ghost-btn std-export-done-open"

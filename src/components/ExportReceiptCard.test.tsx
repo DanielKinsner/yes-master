@@ -163,6 +163,42 @@ describe("ExportReceiptCard", () => {
     expect(container.textContent).toContain("Compression · compression eased low 20%");
   });
 
+  it("says why a render was saved under a new name, and stays silent otherwise", () => {
+    // S6.4 (2026-09-01): never-overwrite diverted the write to a __n sibling.
+    const diverted: ExportReceipt = {
+      ...receipt([]),
+      outputPath: "out/track.master__1.wav",
+      job: { ...job(), output_paths: ["out/track.master__1.wav"] },
+      divertedFrom: "out/track.master.wav",
+    };
+    const renamed = render(
+      <ExportReceiptCard
+        receipt={diverted}
+        track={track()}
+        settings={settings()}
+        analysis={analysis()}
+        onClose={() => {}}
+      />,
+    );
+    expect(renamed.textContent).toContain(
+      "Saved as track.master__1.wav — track.master.wav already existed and was left untouched.",
+    );
+    act(() => root?.unmount());
+    root = null;
+    document.body.innerHTML = "";
+
+    const plain = render(
+      <ExportReceiptCard
+        receipt={receipt([])}
+        track={track()}
+        settings={settings()}
+        analysis={analysis()}
+        onClose={() => {}}
+      />,
+    );
+    expect(plain.textContent).not.toContain("already existed");
+  });
+
   it("renders the Results panel from measured values, labelling dynamic range (not LRA)", () => {
     const container = render(
       <ExportReceiptCard

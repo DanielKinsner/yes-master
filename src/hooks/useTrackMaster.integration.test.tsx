@@ -3122,6 +3122,51 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("records the chosen name when the engine diverted to a __n sibling, and nothing otherwise", async () => {
+    // S6.4 (2026-09-01): never-overwrite is the engine's guard; the receipt
+    // must say when it fired, so the user does not hunt for the name typed.
+    const track = makeTrack("export-1", "C:/audio/export source.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.api.runExportChecks.mockResolvedValue([]);
+    mocks.save.mockResolvedValue("C:/renders/Song Master.wav");
+    mocks.api.renderTrackMaster.mockResolvedValue(
+      makeRenderJob("C:/renders/Song Master__1.wav"),
+    );
+    const harness = await renderHookHarness();
+
+    await act(async () => {
+      await harness.current().importFiles([track.path]);
+    });
+    await waitFor(() => {
+      expect(harness.current().selectedTrackId).toBe(track.id);
+    });
+
+    await act(async () => {
+      await harness.current().exportMaster();
+    });
+    expect(harness.current().lastExportReceipt?.outputPath).toBe(
+      "C:/renders/Song Master__1.wav",
+    );
+    expect(harness.current().lastExportReceipt?.divertedFrom).toBe(
+      "C:/renders/Song Master.wav",
+    );
+
+    // Same NAME back, even with the directory spelled differently → no
+    // divert is recorded (the compare is on the file name on purpose).
+    mocks.api.renderTrackMaster.mockResolvedValue(
+      makeRenderJob("C:\\renders\\Song Master.wav"),
+    );
+    await act(async () => {
+      await harness.current().exportMaster();
+    });
+    expect(harness.current().lastExportReceipt?.divertedFrom).toBeUndefined();
+
+    await act(async () => {
+      harness.root.unmount();
+    });
+  });
+
   it("suggests a collision-free filename when the remembered export dir has a prior render", async () => {
     // Owner finding 2026-07-08: a second export of the same track pre-filled
     // the SAME name, so the only overwrite guard was the OS replace prompt.

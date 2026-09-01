@@ -29,10 +29,12 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 
 import App from "./App";
 import type {
+  AnalysisResult,
   ImportedTrack,
   MasteringSettings,
   ProjectMode,
   ProjectState,
+  RenderJob,
   WaveformPeaks,
 } from "./bindings";
 
@@ -1132,6 +1134,130 @@ describe("App updater toast (Slice 7b)", () => {
     await waitFor(() => {
       expect(container.querySelector(".toast")?.textContent).toContain("3.0.0");
     });
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+});
+
+// ---- S6.4 (2026-09-01): "why was my export renamed?" ------------------------
+//
+// The engine never overwrites: when the chosen file already exists it saves
+// to a `__{n}` sibling. That guard is a non-negotiable; what was missing is
+// the sentence telling the user it happened, on BOTH receipt surfaces
+// (Standard's "Master created" card and the full Advanced receipt).
+
+function makeAnalysis(trackId: string): AnalysisResult {
+  return {
+    track_id: trackId,
+    lufs_integrated: -14,
+    lufs_short_term_max: -12,
+    true_peak_dbtp: -1.2,
+    dynamic_range_lu: 9,
+    spectral_balance: { low: 0.33, mid: 0.34, high: 0.33 },
+    transient_density: 0.5,
+    stereo_width: 0.5,
+    recommended_universal: DEFAULT_SETTINGS,
+    measured_at_iso: "2026-09-01T00:00:00Z",
+    inferred_role: null,
+    role_confidence: null,
+    inferred_character: null,
+    character_confidence: null,
+    spectral_balance_6band: null,
+    transient_flux: null,
+    stereo_correlation: null,
+    dynamic_range_p95_p10_db: null,
+    lufs_short_term_max_3s: null,
+    energy_density_score: null,
+  };
+}
+
+function makeRenderJob(path: string): RenderJob {
+  return {
+    id: "render-1",
+    job_id: "render-1",
+    kind: "master",
+    target_tracks: ["restored-1"],
+    status: { status: "done" },
+    progress: 1,
+    started_at_iso: "2026-09-01T00:00:00.000Z",
+    output_paths: [path],
+    measurements: {
+      lufs_integrated: -14,
+      true_peak_dbtp: -1,
+      dynamic_range_lu: 8,
+      sample_rate: 44_100,
+      bit_depth: 24,
+    },
+  };
+}
+
+describe("S6.4 — a render saved under a new name says why", () => {
+  const CHOSEN = "C:/renders/Song Master.wav";
+  const DIVERTED = "C:/renders/Song Master__1.wav";
+  const SENTENCE =
+    "Saved as Song Master__1.wav — Song Master.wav already existed and was left untouched.";
+
+  async function mountWithAnalyzedTrack(renderedPath: string) {
+    seedViewMode("standard");
+    mocks.api.loadRecentSession.mockResolvedValue(makeSession(CLEAN_SETTINGS));
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis("restored-1")]);
+    mocks.api.runExportChecks.mockResolvedValue([]);
+    mocks.save.mockResolvedValue(CHOSEN);
+    mocks.api.renderTrackMaster.mockResolvedValue(makeRenderJob(renderedPath));
+    return mountApp();
+  }
+
+  async function createMaster(container: HTMLElement): Promise<void> {
+    await waitFor(() => {
+      expect(container.querySelector(".std-tiles")).not.toBeNull();
+    });
+    const button = container.querySelector<HTMLButtonElement>(".std-create-master");
+    if (!button) throw new Error("Create Master button not found");
+    await waitFor(() => {
+      expect(button.disabled).toBe(false);
+    });
+    await click(button);
+    await waitFor(() => {
+      expect(container.querySelector(".std-export-done")).not.toBeNull();
+    });
+  }
+
+  it("names the chosen file on both receipt surfaces when never-overwrite diverted", async () => {
+    const { root, container } = await mountWithAnalyzedTrack(DIVERTED);
+
+    await createMaster(container);
+    expect(mocks.api.renderTrackMaster).toHaveBeenCalledWith(
+      "restored-1",
+      "C:/audio/restored.wav",
+      expect.anything(),
+      CHOSEN,
+    );
+    expect(container.querySelector(".std-export-done")?.textContent).toContain(SENTENCE);
+
+    // Standard hands off to the full receipt in Advanced; the same sentence
+    // has to be there too, under "File saved".
+    const report = container.querySelector<HTMLButtonElement>(".std-export-done-report");
+    if (!report) throw new Error("View full report button not found");
+    await click(report);
+    await waitFor(() => {
+      expect(container.querySelector(".receipt")).not.toBeNull();
+    });
+    expect(container.querySelector(".receipt")?.textContent).toContain(SENTENCE);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("says nothing extra when the render landed exactly where the user pointed", async () => {
+    const { root, container } = await mountWithAnalyzedTrack(CHOSEN);
+
+    await createMaster(container);
+    const card = container.querySelector(".std-export-done")?.textContent ?? "";
+    expect(card).toContain("Song Master.wav");
+    expect(card).not.toContain("already existed");
 
     await act(async () => {
       root.unmount();

@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "0f67d874fe515a085fb0893a67eaf13b1abb914a",
-  "captureInputDigest": "513db3b7be8ac9bd4a37e069b38945c0e42c6041e00ea39c884cb7109c8e74b7",
+  "sourceCommit": "c953bfac4f569b0a46a7afb7dff648ecabb4199e",
+  "captureInputDigest": "8a0b0039935cec5544fd893eaf12982c150582f02482d5b5743393056e25622d",
   "browser": {
     "runtime": "playwright-bundled-chromium",
     "version": "149.0.7827.55"
@@ -21,8 +21,8 @@
         "width": 1440,
         "height": 1000
       },
-      "bytes": 516238,
-      "sha256": "23891c05eeca09c07e1b6b09dabb6f98929f98c9991fda944a7aca855c173a13",
+      "bytes": 516239,
+      "sha256": "5be626d20fd2dbdea8df53af00e756930e36c779a845585c58940e07d4782cb8",
       "loading": "lazy",
       "alt": "YES Master Standard view"
     },
