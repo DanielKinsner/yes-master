@@ -12,8 +12,10 @@ import advancedImg1280 from "../assets/landing/owner-advanced-session-1280.jpg";
 // remain the mechanical regression evidence; these are the real thing.
 export default function Proof() {
   return (
-    <section id="standard" className="border-t border-rule px-5 py-20 sm:px-8 sm:py-28">
-      <span id="advanced" className="sr-only" />
+    <section id="standard" className="relative border-t border-rule px-5 py-20 sm:px-8 sm:py-28">
+      {/* "Advanced" nav anchor, pinned to the section's top edge so the link
+          lands where every other section link lands. */}
+      <span id="advanced" aria-hidden="true" className="absolute left-0 top-0 h-px w-px" />
       <div className="mx-auto max-w-6xl">
         <div className="grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-5">
