@@ -231,3 +231,58 @@ mapping to the owner checklist, strengthen the launch-record test so all three
 records must carry the complete mapping rather than four sentinel hashes, then
 repeat the focused documentation test and this disposition review. The frozen
 beta.1 objects and owner-only reality gates remain untouched.
+
+---
+
+## 2026-09-01 Finding 5 Resolution (Claude adjudication + fix)
+
+All eight verdicts above were independently re-adjudicated in code at
+`1824e87` before any change. The seven RESOLVED verdicts held under
+re-verification (settle loop `scripts/verify-app-headless.mjs:1257-1283`;
+`--text-2` on `--bg-2` at `src/App.css:27` + `src/App.layout-css.test.ts:259-290`;
+clicked-version capture `src/App.tsx:406-418`; `albumRendering` in both
+guards `src/App.tsx:683-687,709-710`; historical resume block quality-plan
+`:481-490`; fail-closed geometry `verify-app-headless.mjs:714-743`;
+per-version dismissal `src/App.tsx:360-375`). Finding 1's five-second
+deadline weakness was confirmed non-blocking: an over-long finite animation
+delays the scan or reports a settle failure — it can no longer produce the
+original silent early scan.
+
+**Finding 5 was independently CONFIRMED NOT RESOLVED**, on the addendum's
+exact evidence: the owner checklist's 15-hash ordered list cannot
+reconstruct task associations (Tasks 5 and 8 are multi-commit), its "full
+map" was a redirect to the changelog, and the sentinel test at
+`src/lib/release-readiness.test.ts:89-100` green-lit the omission. The
+`9919611` commit-message claim that all three records carried the map was
+also confirmed false for the checklist.
+
+**Fix (commit `8e35381`), red-test-first:**
+
+- `src/lib/release-readiness.test.ts` now requires all three launch records
+  to carry the complete Task 1-11 → exact-commit mapping,
+  association-checked in both label-first and label-after syntaxes via a
+  tempered filler that refuses to cross any other task marker or 7-hex
+  hash — a missing task, a missing hash, or a wrong task/hash pairing each
+  fail. Proven red against the unmodified `1824e87` documents: only the
+  owner checklist failed (at Task 1), while the changelog and go/no-go
+  maps passed untouched. Nine standalone regex controls additionally
+  proved both swapped-pairing directions, split multi-commit hashes, and
+  the bare-list case all red.
+- `docs/plans/2026-08-31-owner-launch-checklist.md` now carries the full
+  self-contained task↔commit map; the changelog and go/no-go maps are
+  byte-identical to `1824e87`.
+
+**Verification at `8e35381`:** `npm test` PASS (82 files, 832 tests);
+`npm run build` PASS; `npm run verify:headless` PASS (landing suite + 31
+app scenario/viewport checks; evidence
+`test-output/headless/2026-09-01T14-34-24-409Z`);
+`npm run verify:headless -- --skip-build --force-axe-fail warning`
+EXPECTED FAIL exit 1 (`color-contrast` at `#axe-self-test-low-contrast`,
+1.07:1, both 1440x900 and 1360x740; evidence
+`test-output/headless/2026-09-01T14-37-51-709Z`); `git diff --check`
+clean. Rust, presets, DSP, tags, drafts, and `main` untouched; the range
+`1824e87..HEAD` changes only the two finding-5 files and this addendum.
+
+With finding 5 resolved, all eight findings are resolved at this tip. The
+Task-12 disposition itself remains the owner's; frozen beta.1 objects
+(`v0.9.2-beta.1` @ `c750da6`, draft `379883047`) stay untouched.
