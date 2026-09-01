@@ -2283,7 +2283,7 @@ export function Macros({
           show the curve, nodes, and grid cleanly. */}
       <div className="equalizer-block">
         <div className="equalizer-block-head">
-          <span className="section-label">EQUALIZER (Dynamic)</span>
+          <span className="section-label">EQUALIZER</span>
           <PanelResetButton
             label="Reset intensity & EQ to flat"
             onClick={onResetTone}
