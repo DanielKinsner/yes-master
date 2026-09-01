@@ -32,7 +32,17 @@ export default function Hero({
   release = resolveRelease(),
 }: { release?: ResolvedRelease } = {}) {
   return (
-    <section id="top" className="relative isolate min-h-svh overflow-hidden">
+    <section id="top" className="relative isolate overflow-hidden">
+      {/* 2026-09-01: the composition — art, veils and copy together — is capped
+          at 1920px and centred. Full-bleed was fine up to a 1080p/1440p laptop,
+          but on a 4K canvas at 100% the copy column sat 64px from the screen
+          edge while every section below it was centred, and re-anchoring the
+          copy alone puts it on top of the console. So the whole hero centres
+          as one piece; the room is near-black at both edges, and two fades
+          (only rendered past 1920px) hide the seam where the art ends. The
+          height is the viewport up to the art's own 1080, so a capped-width
+          hero never zooms the console to fill a 4K viewport's height. */}
+      <div className="relative mx-auto min-h-[min(100svh,1080px)] max-w-[1920px]">
       {/* Background: the owner-generated 4K console render of the real UI
           (2026-08-18; re-rendered 2026-09-01 with a real session on screen).
           object-cover crops, never stretches; anchored LEFT so
@@ -66,11 +76,19 @@ export default function Hero({
         aria-hidden="true"
         className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-night to-transparent"
       />
+      <div
+        aria-hidden="true"
+        className="absolute inset-y-0 left-0 -z-10 hidden w-48 bg-gradient-to-r from-night to-transparent min-[1921px]:block"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-y-0 right-0 -z-10 hidden w-48 bg-gradient-to-l from-night to-transparent min-[1921px]:block"
+      />
 
       {/* Copy column. A normal block (so its width can never exceed the
           screen), full width on phones, ~45% on desktop, sitting over the
           dark wall to the left of the console. */}
-      <div className="relative flex min-h-svh w-full flex-col justify-start gap-5 px-5 pt-24 pb-16 sm:px-8 lg:w-[48%] lg:max-w-[600px] lg:pb-16 lg:pl-16 lg:pt-28 xl:max-w-[640px] xl:pl-24">
+      <div className="relative flex min-h-[min(100svh,1080px)] w-full flex-col justify-start gap-5 px-5 pt-24 pb-16 sm:px-8 lg:w-[48%] lg:max-w-[600px] lg:pb-16 lg:pl-16 lg:pt-28 xl:max-w-[640px] xl:pl-24">
         <span className="eyebrow">YES Master</span>
 
         {/* Two beats, one line each. At lg+ the sentences are pinned with
@@ -126,6 +144,7 @@ export default function Hero({
             See Advanced control
           </a>
         </div>
+      </div>
       </div>
     </section>
   );
