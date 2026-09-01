@@ -43,7 +43,7 @@ truth about the file you're shipping. **No waiting. No black box.**
   (Universal · Clarity · Tape · Oomph), a **Loudness** (Low / Medium / High),
   shape with **Intensity**, hit **Create Master**. A/B Original vs Mastered at
   the same playhead. No clutter, no ceremony.
-- **Advanced — the proof.** The full console: eight presets, a 7-band visual EQ,
+- **Advanced — the proof.** The full console: eight styles, a 7-band visual EQ,
   width/warmth, compressor controls, live metering, delivery formats, and an
   export review with a measured receipt.
 

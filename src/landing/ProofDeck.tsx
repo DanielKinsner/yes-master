@@ -87,7 +87,7 @@ export default function ProofDeck() {
               When you want the full room.
             </h3>
             <p className="mt-3 max-w-[52ch] text-[0.95rem] leading-relaxed text-muted">
-              A real session, meters live. Eight presets, a 7-band EQ,
+              A real session, meters live. Eight styles, a 7-band EQ,
               compressor modes, width and warmth, live metering, and export
               review with a measured receipt.
             </p>

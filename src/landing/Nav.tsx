@@ -2,9 +2,10 @@ import brandIcon from "../assets/landing/yes-master-icon.png";
 
 import { resolveRelease, type ResolvedRelease } from "./release-config";
 
-// U6. "Mobile" is deliberately NOT a nav item any more: a parked, unobtainable
-// surface does not get top-level navigation. It keeps its section and its one
-// date-free sentence further down the page.
+// U6. "Mobile" is deliberately NOT a nav item: a parked, unobtainable surface
+// does not get top-level navigation. Its section and its one date-free
+// sentence were removed from the page on 2026-09-01 (fae26f9, owner call), so
+// there is no longer a mobile section to link to.
 const links = [
   { label: "How it works", href: "#how" },
   { label: "Advanced", href: "#advanced" },

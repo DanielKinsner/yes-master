@@ -85,7 +85,7 @@ export default function BetaSignup() {
       )}
       {status === "error" && (
         <p className="mt-2 text-sm text-[#ff9a8b]">
-          Something went wrong — try again, or email hello@yesmaster.app.
+          Something went wrong — try again in a moment.
         </p>
       )}
     </div>

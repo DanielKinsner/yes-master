@@ -52,6 +52,29 @@ describe("landing document head (U8)", () => {
     expect(meta("og:title")).toContain("YES Master");
   });
 
+  it("every absolute URL in the head shares one origin", () => {
+    // D1 (2026-09-01): no custom domain exists. Every absolute URL the page
+    // publishes points at the deployed origin, and all four must agree — a
+    // half-updated head (canonical moved, share image not) is exactly the
+    // drift this catches. When a domain is bought, this is the one place to
+    // change the expected origin (docs/OWNER_INPUT_QUEUE.md, "Custom domain?").
+    const canonical =
+      html.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? "";
+    const urls: Record<string, string> = {
+      canonical,
+      "og:url": meta("og:url") ?? "",
+      "og:image": meta("og:image") ?? "",
+      "twitter:image": meta("twitter:image") ?? "",
+    };
+    for (const [tag, value] of Object.entries(urls)) {
+      expect(value, `${tag} is missing`).toBeTruthy();
+      expect(
+        new URL(value).origin,
+        `${tag} does not share the deployed origin`,
+      ).toBe("https://yes-master.vercel.app");
+    }
+  });
+
   it("stays out of search until there is something to download", () => {
     // Mechanically tied to release state, not left as a note somebody has to
     // remember. Indexing a page whose download is closed sends people to a

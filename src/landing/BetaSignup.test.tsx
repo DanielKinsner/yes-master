@@ -141,7 +141,10 @@ it("provider failure surfaces the error state instead of throwing", async () => 
   await submitForm(container);
 
   expect(container.textContent).toContain("Something went wrong");
-  expect(container.textContent).toContain("hello@yesmaster.app");
+  expect(container.textContent).toContain("try again");
+  // D1 (2026-09-01): no custom domain exists, so the error copy must not
+  // promise a mailbox on one. Support is the GitHub forms.
+  expect(container.textContent).not.toContain("yesmaster.app");
 });
 
 it("non-OK provider response also lands in the error state", async () => {

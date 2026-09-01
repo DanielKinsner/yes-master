@@ -82,10 +82,10 @@ export default function BetaDownload({
         No email required · Windows + universal Mac · Hosted on GitHub Releases
       </p>
 
-      {/* U6: the mobile statement is made ONCE, in the section directly above
-          this one — docs/landing-brief.md permits exactly one restrained,
-          date-free sentence and this component was repeating it. What belongs
-          here is what the download itself covers. */}
+      {/* U6: what belongs here is what the download itself covers. The mobile
+          sentence this component once repeated was removed from the page
+          altogether on 2026-09-01 (fae26f9, owner call); do not reintroduce
+          it here. */}
       <p className="mx-auto mt-2 max-w-lg text-xs leading-relaxed text-muted">
         Desktop only — there is no Linux build.
       </p>
