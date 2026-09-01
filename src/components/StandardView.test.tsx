@@ -291,10 +291,13 @@ describe("TracksRail", () => {
     await act(async () => root.unmount());
   });
 
-  it("'+ Add Tracks' opens the import dialog", async () => {
+  it("the tracks-rail 'Import audio' button opens the import dialog", async () => {
     const openImportDialog = vi.fn();
     const { container, root } = await render(<StandardView tm={fakeTm({ openImportDialog })} onEnterAdvanced={() => {}} />);
     const add = container.querySelector<HTMLButtonElement>(".std-add-track")!;
+    // One name for import everywhere (ship review S6.1): the rail button
+    // says the same thing as the empty state and the Advanced sidebar.
+    expect(add.textContent?.trim()).toBe("Import audio");
     await act(async () => { add.click(); });
     expect(openImportDialog).toHaveBeenCalled();
     await act(async () => root.unmount());

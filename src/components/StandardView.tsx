@@ -175,7 +175,7 @@ function TracksRail({ tm }: { tm: TM }) {
         className="ghost-btn std-add-track"
         onClick={tm.openImportDialog}
       >
-        + Add Tracks
+        Import audio
       </button>
       <div
         className={

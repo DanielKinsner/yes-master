@@ -682,7 +682,15 @@ describe("welcome hero import funnel", () => {
     });
     expect(hasSidebar(container)).toBe(true);
 
-    await click(findButtonByText(container, "Import audio"));
+    // Scoped to the empty-state hero on purpose: since S6.1 (one label for
+    // import) the Advanced sidebar footer button carries the same text, and
+    // it is the HERO button whose onAdd routes back to Standard.
+    const heroImport = container.querySelector<HTMLButtonElement>(
+      ".empty-hero-actions button.primary",
+    );
+    if (!heroImport) throw new Error("empty-state Import audio button not found");
+    expect(heroImport.textContent?.trim()).toBe("Import audio");
+    await click(heroImport);
 
     await waitFor(() => {
       expect(affordanceText(container)).toBe("Advanced");

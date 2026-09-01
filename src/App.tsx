@@ -531,8 +531,9 @@ function App() {
               // it lands in Standard (the default face) even when the last
               // session ended in Advanced. With no track loaded the
               // machine's back-to-standard door is always silent (no
-              // confirm). The pro paths — sidebar "+ Add Tracks", drag-
-              // drop — deliberately keep the current view.
+              // confirm). The pro paths — the sidebar / tracks-rail
+              // "Import audio" buttons, drag-drop — deliberately keep the
+              // current view.
               nav.requestBackToStandard();
               void tm.openImportDialog();
             }}
@@ -1483,7 +1484,7 @@ function Sidebar({
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
-          Import Audio
+          Import audio
         </button>
       </div>
     </aside>

@@ -156,6 +156,20 @@ function buttonByText(container: HTMLElement, text: string): HTMLButtonElement {
   return button;
 }
 
+// The empty-state hero's import button, by container rather than by text:
+// since S6.1 (one label for import) the tracks rail and the Advanced sidebar
+// say "Import audio" too, and these tests mean the hero specifically.
+function emptyStateImportButton(container: HTMLElement): HTMLButtonElement {
+  const button = container.querySelector<HTMLButtonElement>(
+    ".empty-hero-actions button.primary",
+  );
+  if (!button) throw new Error("empty-state Import audio button not found");
+  if ((button.textContent ?? "").trim() !== "Import audio") {
+    throw new Error(`empty-state import button says "${button.textContent}"`);
+  }
+  return button;
+}
+
 beforeEach(() => {
   installTestLocalStorage();
   localStorage.clear();
@@ -176,7 +190,7 @@ describe("App user-facing errors", () => {
     const { root, container } = await mountApp();
 
     await waitFor(() => {
-      expect(buttonByText(container, "Import audio")).toBeTruthy();
+      expect(emptyStateImportButton(container)).toBeTruthy();
     });
 
     await act(async () => {
@@ -189,7 +203,7 @@ describe("App user-facing errors", () => {
     });
 
     await act(async () => {
-      buttonByText(container, "Import audio").click();
+      emptyStateImportButton(container).click();
     });
     await waitFor(() => {
       expect(container.textContent).toContain("Couldn't read bad.wav.");
@@ -210,7 +224,7 @@ describe("App user-facing errors", () => {
     const { root, container } = await mountApp();
 
     await waitFor(() => {
-      expect(buttonByText(container, "Import audio")).toBeTruthy();
+      expect(emptyStateImportButton(container)).toBeTruthy();
     });
 
     await act(async () => {
