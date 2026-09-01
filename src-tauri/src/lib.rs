@@ -57,10 +57,44 @@ pub(crate) fn should_maximize_for_work_area(
     work_w < default_w || work_h < default_h
 }
 
-/// D4 tier 1 (owner decision 2026-09-01): open at the configured 1920×1080,
-/// centred, when the primary monitor's logical work area holds it; maximized
-/// when it does not. Every error path is ignored — a missing monitor, an odd
-/// scale factor, or a failed maximize must never block launch.
+/// Layout floor from `tauri.conf.json` (`minWidth` / `minHeight`), logical
+/// pixels. The console is composed down to exactly this size.
+#[cfg(feature = "app-runner")]
+const LAYOUT_FLOOR_WIDTH: f64 = 1360.0;
+#[cfg(feature = "app-runner")]
+const LAYOUT_FLOOR_HEIGHT: f64 = 740.0;
+/// Never zoom the console below this. Past it the type is smaller than the
+/// scrollbar it replaces; the owner's call is to revert tier 2 rather than
+/// tune it (D4, 2026-09-01).
+#[cfg(feature = "app-runner")]
+const MIN_FIT_ZOOM: f64 = 0.8;
+
+/// D4 tier 2: the NATIVE webview zoom factor that fits the layout floor into
+/// a work area smaller than it. 1.0 whenever the floor already fits — never
+/// above 1.0 — and clamped at `MIN_FIT_ZOOM` below. Native zoom (what
+/// Ctrl+minus does in a browser) stays crisp and keeps CSS breakpoints
+/// honest because CSS pixels scale with it; the CSS `zoom` property is the
+/// thing `useWebviewZoomShortcuts` deliberately pins to 1, and it is not
+/// touched here.
+#[cfg(feature = "app-runner")]
+pub(crate) fn fit_zoom_for_work_area(work_w: f64, work_h: f64) -> f64 {
+    // Garbage in, no zoom: a non-finite or non-positive work area is not a
+    // reason to shrink the console.
+    if !work_w.is_finite() || !work_h.is_finite() || work_w <= 0.0 || work_h <= 0.0 {
+        return 1.0;
+    }
+    let factor = (work_w / LAYOUT_FLOOR_WIDTH)
+        .min(work_h / LAYOUT_FLOOR_HEIGHT)
+        .min(1.0);
+    factor.max(MIN_FIT_ZOOM)
+}
+
+/// D4 (owner decision 2026-09-01), tiers 1 and 2: open at the configured
+/// 1920×1080, centred, when the primary monitor's logical work area holds
+/// it; maximized when it does not; and, below the 1360×740 layout floor,
+/// natively zoomed so the whole console still fits. Every error path is
+/// ignored — a missing monitor, an odd scale factor, a failed maximize or
+/// zoom must never block launch.
 #[cfg(feature = "app-runner")]
 fn fit_main_window_to_display(app: &tauri::AppHandle) {
     let Some(window) = app.get_webview_window("main") else {
@@ -83,14 +117,61 @@ fn fit_main_window_to_display(app: &tauri::AppHandle) {
             "window maximized: work area {work_w:.0}x{work_h:.0} logical < {DEFAULT_WINDOW_WIDTH:.0}x{DEFAULT_WINDOW_HEIGHT:.0}"
         ));
     }
+    let zoom = fit_zoom_for_work_area(work_w, work_h);
+    if zoom < 1.0 && window.set_zoom(zoom).is_ok() {
+        crate::diagnostics::info(format!(
+            "window zoom {zoom:.3}: work area {work_w:.0}x{work_h:.0} logical < floor {LAYOUT_FLOOR_WIDTH:.0}x{LAYOUT_FLOOR_HEIGHT:.0}"
+        ));
+    }
 }
 
 #[cfg(all(test, feature = "app-runner"))]
 mod window_fit_tests {
-    use super::{should_maximize_for_work_area, DEFAULT_WINDOW_HEIGHT, DEFAULT_WINDOW_WIDTH};
+    use super::{
+        fit_zoom_for_work_area, should_maximize_for_work_area, DEFAULT_WINDOW_HEIGHT,
+        DEFAULT_WINDOW_WIDTH, MIN_FIT_ZOOM,
+    };
 
     fn maximize(work_w: f64, work_h: f64) -> bool {
         should_maximize_for_work_area(work_w, work_h, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+    }
+
+    #[test]
+    fn fit_zoom_for_1080p_at_150_percent_is_width_limited() {
+        // 1280/1360 = 0.941… is the tighter ratio (720/740 = 0.973…).
+        let zoom = fit_zoom_for_work_area(1280.0, 720.0);
+        assert!((zoom - 1280.0 / 1360.0).abs() < 1e-9, "{zoom}");
+        assert!(zoom > 0.94 && zoom < 0.942, "{zoom}");
+    }
+
+    #[test]
+    fn fit_zoom_is_unity_whenever_the_floor_fits() {
+        assert_eq!(fit_zoom_for_work_area(1536.0, 864.0), 1.0);
+        assert_eq!(fit_zoom_for_work_area(1920.0, 1080.0), 1.0);
+        assert_eq!(fit_zoom_for_work_area(2560.0, 1440.0), 1.0);
+    }
+
+    #[test]
+    fn fit_zoom_clamps_at_the_minimum() {
+        assert_eq!(fit_zoom_for_work_area(1000.0, 600.0), MIN_FIT_ZOOM);
+    }
+
+    #[test]
+    fn fit_zoom_leaves_degenerate_work_areas_alone() {
+        // Garbage in, no zoom — never a zero, NaN, or clamped factor.
+        assert_eq!(fit_zoom_for_work_area(0.0, 0.0), 1.0);
+        assert_eq!(fit_zoom_for_work_area(-1.0, 720.0), 1.0);
+        assert_eq!(fit_zoom_for_work_area(f64::NAN, f64::NAN), 1.0);
+        assert_eq!(fit_zoom_for_work_area(f64::INFINITY, 720.0), 1.0);
+    }
+
+    #[test]
+    fn fit_zoom_still_fits_1080p_at_175_percent() {
+        // 1097×617 logical → 0.807, above the clamp: the console fits. At
+        // 200 % (960×540) it would clamp, which is the documented caveat.
+        let zoom = fit_zoom_for_work_area(1097.0, 617.0);
+        assert!(zoom > MIN_FIT_ZOOM && zoom < 0.81, "{zoom}");
+        assert_eq!(fit_zoom_for_work_area(960.0, 540.0), MIN_FIT_ZOOM);
     }
 
     #[test]
