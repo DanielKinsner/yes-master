@@ -2,15 +2,26 @@ package com.yesmaster.app
 
 import android.app.Application
 import android.net.Uri
+import android.os.SystemClock
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+
+internal const val MINIMUM_ANALYSIS_PRESENTATION_MILLIS = 3_000L
+
+internal fun remainingAnalysisPresentationMillis(
+    startedAtMillis: Long,
+    finishedAtMillis: Long,
+    minimumMillis: Long = MINIMUM_ANALYSIS_PRESENTATION_MILLIS,
+): Long = (minimumMillis - (finishedAtMillis - startedAtMillis)).coerceAtLeast(0)
 
 /** One linear flow for the MVP: import → analyze → choose → master → done. */
 sealed interface UiState {
@@ -82,6 +93,7 @@ class MasteringViewModel(
                 val supported = try {
                     NativeBridge.supportsImportExtension(extension)
                 } catch (e: LinkageError) {
+                    Log.e("YESMaster", "Native audio bridge failed during import", e)
                     _state.value = UiState.Error(nativeBridgeUnavailableMessage(e))
                     return@launch
                 }
@@ -109,6 +121,7 @@ class MasteringViewModel(
 
     private suspend fun analyze(sourcePath: String, displayName: String) {
         _state.value = UiState.Working("Analyzing…")
+        val startedAt = SystemClock.elapsedRealtime()
         try {
             val analysis = withContext(Dispatchers.IO) {
                 Wire.analysis(NativeBridge.analyzeFileJson(sourcePath))
@@ -117,6 +130,12 @@ class MasteringViewModel(
                 _state.value = UiState.Error(message = it)
                 return
             }
+            delay(
+                remainingAnalysisPresentationMillis(
+                    startedAtMillis = startedAt,
+                    finishedAtMillis = SystemClock.elapsedRealtime(),
+                ),
+            )
             val ready = UiState.Ready(
                 displayName = displayName,
                 sourcePath = sourcePath,
@@ -126,6 +145,7 @@ class MasteringViewModel(
             _state.value = ready
             armAudition(ready)
         } catch (e: LinkageError) {
+            Log.e("YESMaster", "Native audio bridge failed during analysis", e)
             _state.value = UiState.Error(
                 message = nativeBridgeUnavailableMessage(e),
                 retrySourcePath = sourcePath,
@@ -205,6 +225,7 @@ class MasteringViewModel(
                     previous = ready,
                 )
             } catch (e: LinkageError) {
+                Log.e("YESMaster", "Native audio bridge failed during mastering", e)
                 _state.value = UiState.Error(nativeBridgeUnavailableMessage(e), previous = ready)
             } catch (e: Exception) {
                 _state.value = UiState.Error(masteringFailureMessage(e), previous = ready)
@@ -237,7 +258,7 @@ class MasteringViewModel(
     }
 
     private fun nativeBridgeUnavailableMessage(error: LinkageError): String =
-        "Native audio bridge could not load. Reinstall YES Master and try again. (${error.javaClass.simpleName})"
+        "The audio engine could not start on this device. Install the newest YES Master build and try again. (${error.javaClass.simpleName})"
 
     private fun masteringFailureMessage(error: Exception): String = when (error) {
         is SecurityException -> "Android blocked access to the music library. Check storage permissions and try again."

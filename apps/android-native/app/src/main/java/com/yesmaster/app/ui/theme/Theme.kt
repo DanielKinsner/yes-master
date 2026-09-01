@@ -11,16 +11,27 @@ import androidx.compose.ui.graphics.Color
  */
 object YesMasterColors {
     /** Accent blue — primary actions, selected states. */
-    val Accent = Color(0xFF5EA8FF)
+    val Accent = Color(0xFF4F9EFF)
+    val AccentBright = Color(0xFF8CCBFF)
+    val Cyan = Color(0xFF45E0F5)
+    val Amber = Color(0xFFFFB84D)
+    val Oomph = Color(0xFFF77171)
 
     /** App background — near-black console. */
-    val Background = Color(0xFF0B0D10)
+    val Background = Color(0xFF020817)
+    val BackgroundMid = Color(0xFF07132B)
+    val BackgroundDeep = Color(0xFF01040C)
 
     /** Card / sheet surface. */
-    val Surface = Color(0xFF14181D)
+    val Surface = Color(0xFF07142E)
+    val SurfaceDeep = Color(0xFF030816)
 
     /** Secondary surface (unselected tiles, field chrome). */
-    val SurfaceVariant = Color(0xFF1B2026)
+    val SurfaceVariant = Color(0xFF0A1936)
+    val Border = Color(0xFF3E64A8)
+    val TextPrimary = Color(0xFFF2F6FF)
+    val TextSecondary = Color(0xFFA6B5D5)
+    val TextMuted = Color(0xFF7284A8)
 }
 
 internal val YesMasterDarkScheme = darkColorScheme(
@@ -28,6 +39,10 @@ internal val YesMasterDarkScheme = darkColorScheme(
     background = YesMasterColors.Background,
     surface = YesMasterColors.Surface,
     surfaceVariant = YesMasterColors.SurfaceVariant,
+    onPrimary = YesMasterColors.TextPrimary,
+    onBackground = YesMasterColors.TextPrimary,
+    onSurface = YesMasterColors.TextPrimary,
+    onSurfaceVariant = YesMasterColors.TextSecondary,
 )
 
 /**

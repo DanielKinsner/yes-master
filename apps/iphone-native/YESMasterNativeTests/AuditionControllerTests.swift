@@ -30,6 +30,17 @@ final class AuditionControllerTests: XCTestCase {
         XCTAssertEqual(ctx.controller.statusText, "Ready. Press play to audition.")
     }
 
+    func testFastAnalysisKeepsTheProcessingMomentVisible() async throws {
+        let ctx = try makeLoadedController(minimumAnalysisPresentationSeconds: 0.05)
+
+        try await Task.sleep(nanoseconds: 10_000_000)
+        XCTAssertTrue(ctx.controller.isAnalyzing)
+
+        await ctx.controller.analysisTask?.value
+        XCTAssertFalse(ctx.controller.isAnalyzing)
+        XCTAssertNotNil(ctx.controller.analysisResult)
+    }
+
     func testLiveSettingsForwardToEngineAndNeverRender() throws {
         let ctx = try makeLoadedController()
 
@@ -296,7 +307,10 @@ final class AuditionControllerTests: XCTestCase {
         let tempBase: URL
     }
 
-    private func makeLoadedController(renderer: FakeRenderer = FakeRenderer()) throws -> Context {
+    private func makeLoadedController(
+        renderer: FakeRenderer = FakeRenderer(),
+        minimumAnalysisPresentationSeconds: TimeInterval = 0
+    ) throws -> Context {
         let tempBase = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempBase, withIntermediateDirectories: true)
         let storage = RenderStorage(baseDirectory: tempBase)
@@ -305,7 +319,11 @@ final class AuditionControllerTests: XCTestCase {
         let output = RecordingOutput()
         let engine = LiveAudioEngine(output: output, makeStream: { _, _, _, _ in stream })
         let controller = AuditionController(
-            engine: engine, renderer: renderer, importStore: importStore, renderStorage: storage
+            engine: engine,
+            renderer: renderer,
+            importStore: importStore,
+            renderStorage: storage,
+            minimumAnalysisPresentationSeconds: minimumAnalysisPresentationSeconds
         )
 
         let source = tempBase.appendingPathComponent("source.wav")

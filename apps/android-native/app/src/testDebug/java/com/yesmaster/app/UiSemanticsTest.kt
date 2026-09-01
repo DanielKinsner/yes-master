@@ -17,6 +17,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -127,7 +128,7 @@ class UiSemanticsTest {
     @Test
     fun preparingDisablesTransportAndShowsTheReason() {
         setReadyScreen(auditionUi = AuditionUi(status = AuditionUi.Status.Preparing))
-        compose.onNodeWithText("Play").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Play").assertIsNotEnabled()
         compose.onNodeWithContentDescription("Playback position").assertIsNotEnabled()
         compose.onNodeWithText("Mastered").assertIsNotEnabled()
         compose.onNodeWithText("Original").assertIsNotEnabled()
@@ -141,12 +142,12 @@ class UiSemanticsTest {
     fun styleTilesExposeSelectionState() {
         var chosen: StandardStyle? = null
         setReadyScreen(onChoices = { style, _, _ -> chosen = style })
-        compose.onNodeWithText("Universal").assertIsSelected()
-        compose.onNodeWithText("Clarity").assertIsNotSelected()
-        compose.onNodeWithText("Clarity").performClick()
-        compose.onNodeWithText("Clarity").assertIsSelected()
-        compose.onNodeWithText("Universal").assertIsNotSelected()
+        compose.onNodeWithTag("style-balanced").assertIsSelected()
+        compose.onNodeWithTag("style-bright").assertIsNotSelected().assertIsEnabled()
+        compose.onNodeWithTag("style-bright").performScrollTo().performClick()
         assertEquals(StandardStyle.BRIGHT, chosen)
+        compose.onNodeWithTag("style-bright").assertIsSelected()
+        compose.onNodeWithTag("style-balanced").assertIsNotSelected()
     }
 
     // ---- Interruption notices are announced ------------------------------

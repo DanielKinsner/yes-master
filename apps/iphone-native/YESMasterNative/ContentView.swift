@@ -82,6 +82,20 @@ struct ContentView: View {
                 .frame(maxWidth: 430)
                 .frame(maxWidth: .infinity)
             }
+            .blur(radius: controller.isAnalyzing ? 7 : 0)
+            .scaleEffect(controller.isAnalyzing && !reduceMotion ? 0.992 : 1)
+            .allowsHitTesting(!controller.isAnalyzing)
+            .accessibilityHidden(controller.isAnalyzing)
+            .animation(
+                reduceMotion ? nil : .easeOut(duration: 0.28),
+                value: controller.isAnalyzing
+            )
+
+            if controller.isAnalyzing {
+                AnalysisOverlay()
+                    .transition(.opacity)
+                    .zIndex(10)
+            }
         }
         .preferredColorScheme(.dark)
         .fileImporter(
@@ -276,7 +290,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private var processingBanner: some View {
-        if controller.isAnalyzing || controller.isRendering {
+        if controller.isRendering {
             VStack(spacing: 8) {
                 HStack(spacing: 10) {
                     ProcessingSpinner()
@@ -697,6 +711,82 @@ struct ContentView: View {
     private var intensityLabel: String {
         let percent = Int((controller.presetIntensity * 100).rounded())
         return "\(percent)%"
+    }
+}
+
+private struct AnalysisOverlay: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isRotating = false
+    @State private var isPulsing = false
+
+    var body: some View {
+        ZStack {
+            Color(red: 0.005, green: 0.012, blue: 0.032)
+                .opacity(0.68)
+                .ignoresSafeArea()
+
+            VStack(spacing: 22) {
+                ZStack {
+                    ForEach(0..<4, id: \.self) { index in
+                        Circle()
+                            .stroke(
+                                Color(red: 0.31, green: 0.67, blue: 1.0)
+                                    .opacity(0.34 - Double(index) * 0.055),
+                                lineWidth: index == 0 ? 1.6 : 1
+                            )
+                            .frame(
+                                width: CGFloat(104 + index * 34),
+                                height: CGFloat(104 + index * 34)
+                            )
+                    }
+
+                    Circle()
+                        .trim(from: 0.08, to: 0.78)
+                        .stroke(
+                            AngularGradient(
+                                colors: [
+                                    Color(red: 0.40, green: 0.76, blue: 1.0),
+                                    Color(red: 0.93, green: 0.78, blue: 0.35),
+                                    Color(red: 0.40, green: 0.76, blue: 1.0)
+                                ],
+                                center: .center
+                            ),
+                            style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                        )
+                        .frame(width: 94, height: 94)
+                        .rotationEffect(.degrees(isRotating ? 360 : 0))
+
+                    Image(systemName: "waveform.path.ecg")
+                        .font(.system(size: 35, weight: .bold))
+                        .foregroundStyle(Color(red: 0.78, green: 0.92, blue: 1.0))
+                        .shadow(color: Color.blue.opacity(0.72), radius: 18)
+                }
+                .scaleEffect(!reduceMotion && isPulsing ? 1.035 : 1)
+                .frame(height: 220)
+
+                VStack(spacing: 8) {
+                    Text("ANALYZING TRACK")
+                        .font(.system(size: 14, weight: .heavy))
+                        .tracking(3.2)
+                        .foregroundStyle(.white)
+
+                    Text("Listening for loudness, dynamics, and tone")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color(red: 0.63, green: 0.72, blue: 0.88))
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Analyzing track. Listening for loudness, dynamics, and tone.")
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.linear(duration: 1.15).repeatForever(autoreverses: false)) {
+                isRotating = true
+            }
+            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
+                isPulsing = true
+            }
+        }
     }
 }
 

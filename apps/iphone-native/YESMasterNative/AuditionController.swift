@@ -98,6 +98,7 @@ final class AuditionController: ObservableObject {
     private let renderer: MasteringRenderer
     private let importStore: ImportedTrackStore
     private let renderStorage: RenderStorage
+    private let minimumAnalysisPresentationNanoseconds: UInt64
 
     private(set) var analysisTask: Task<Void, Never>?
     private(set) var renderTask: Task<Void, Never>?
@@ -111,12 +112,16 @@ final class AuditionController: ObservableObject {
         engine: LiveAudioEngine = LiveAudioEngine(),
         renderer: MasteringRenderer = NativeMasteringBridge(),
         importStore: ImportedTrackStore = ImportedTrackStore(),
-        renderStorage: RenderStorage = RenderStorage()
+        renderStorage: RenderStorage = RenderStorage(),
+        minimumAnalysisPresentationSeconds: TimeInterval = 3.0
     ) {
         self.engine = engine
         self.renderer = renderer
         self.importStore = importStore
         self.renderStorage = renderStorage
+        self.minimumAnalysisPresentationNanoseconds = UInt64(
+            max(0, minimumAnalysisPresentationSeconds) * 1_000_000_000
+        )
         self.supportedImportContentTypes = renderer.supportedImportContentTypes
         observeAudioSession()
     }
@@ -212,11 +217,25 @@ final class AuditionController: ObservableObject {
         setStatus("Analyzing audio...")
 
         let renderer = renderer
+        let minimumPresentation = minimumAnalysisPresentationNanoseconds
         analysisTask = Task {
+            let startedAt = DispatchTime.now().uptimeNanoseconds
             let result = await Task.detached {
                 Result { try renderer.analyzeTrack(at: track.localURL) }
             }.value
 
+            guard !Task.isCancelled else { return }
+            // The engine is intentionally quick on short songs. Keep the
+            // analysis moment visible long enough to communicate that the
+            // track was actually inspected, without delaying genuine long
+            // analyses. Failures surface immediately so recovery is never
+            // hidden behind presentation timing.
+            if case .success = result {
+                let elapsed = DispatchTime.now().uptimeNanoseconds - startedAt
+                if elapsed < minimumPresentation {
+                    try? await Task.sleep(nanoseconds: minimumPresentation - elapsed)
+                }
+            }
             guard !Task.isCancelled else { return }
             isAnalyzing = false
             switch result {
