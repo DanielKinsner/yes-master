@@ -7,13 +7,23 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
-> **2026-09-01 — Hero CTA stays copy-first on short phones (owner decision
-> D10, Friday ship plan).** The fixed nav CTA is the all-axis acquisition
-> control at every viewport; the hero CTA is gated horizontally only and may
-> sit below the fold on short phones by design, because the introductory copy
+> **2026-09-01 — Friday ship plan executed (S1–S7); hero CTA stays
+> copy-first (D10).** The decision-complete plan
+> `docs/plans/2026-09-01-friday-ship-execution-plan.md` carries the owner's
+> in-session decisions **D1–D11** in its §1 table: no custom domain (public
+> URLs use the deployed origin), Dependabot PRs closed not merged, the beta.1
+> disposition and beta.2 tag **not yet decided** (D3), window sizing in three
+> tiers (D4), the Style/Preset vocabulary rule (D9), and the three taste
+> calls (D11). Every executor slice shipped on `main` — `docs/CHANGELOG.md`
+> (2026-09-01, ship-review entry) and the go/no-go §9 ledger name the exact
+> SHAs and lanes. Still owner lane (plan §5): the display-scaling hand-test,
+> the beta.1 disposition + beta.2 tag, install / by-ear check / updater
+> proof, publishing, and the trigger phrase that unlocks the landing flip.
+> **D10 in one line:** the fixed nav CTA is the all-axis acquisition control
+> at every viewport; the hero CTA is gated horizontally only and may sit
+> below the fold on short phones by design, because the introductory copy
 > comes first. Owner-queue row T-03 is closed; the rule is permanent in
-> `docs/TESTING.md` "Landing quality gates". No layout change. Plan:
-> `docs/plans/2026-09-01-friday-ship-execution-plan.md`.
+> `docs/TESTING.md` "Landing quality gates". No layout change.
 
 > **2026-08-31 — Adversarial audit: `v0.9.2-beta.1` @ `c750da6` is
 > AUDIT-BLOCKED / NO-GO pending owner disposition (not yet rejected).**
