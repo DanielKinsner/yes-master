@@ -420,10 +420,10 @@ for (const [width, height] of matrix) {
   if (!metrics.heroPresent) {
     failures.push(`${width}x${height}: missing #top hero section`);
   }
-  // The hero fills the viewport up to the composition's own height (1080px,
-  // the art's native 16:9 at the 1920px cap — 2026-09-01). Past that it is
-  // centred with room around it rather than zoomed to fill.
-  const heroFloor = Math.min(height, 1080) * 0.9;
+  // The hero is a full-bleed band on desktop: 45vw tall, never past the
+  // viewport (2026-09-01, ultra-wide plate). On phones the copy column keeps
+  // it at least a viewport tall. Either way it may not collapse.
+  const heroFloor = (width >= 1024 ? Math.min(height, width * 0.45) : height) * 0.9;
   if (typeof metrics.heroHeight !== "number" || metrics.heroHeight < heroFloor) {
     failures.push(`${width}x${height}: hero height is ${metrics.heroHeight}, expected at least ${Math.round(heroFloor)}`);
   }
