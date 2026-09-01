@@ -34,7 +34,8 @@ export default function Hero({
   return (
     <section id="top" className="relative isolate min-h-svh overflow-hidden">
       {/* Background: the owner-generated 4K console render of the real UI
-          (2026-08-18). object-cover crops, never stretches; anchored LEFT so
+          (2026-08-18; re-rendered 2026-09-01 with a real session on screen).
+          object-cover crops, never stretches; anchored LEFT so
           the dark studio wall stays behind the copy and the crop, when there
           is one, takes the right-hand VU meters rather than the console. */}
       {/* U7: two variants so a phone does not download the full-width render

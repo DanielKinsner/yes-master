@@ -39,6 +39,8 @@ import { REPO_ROOT, pngDimensions } from "./lib/landing-assets.mjs";
 // 2026-08-18: the master art is the owner-generated 4K console render of the
 // real UI (3840×2160 JPEG). Variants: a 2560w desktop encode and a 1280w
 // phone encode; `Hero.tsx`'s srcSet declares the same widths.
+// 2026-09-01: master re-rendered by the owner with a real session on screen
+// ("The Machine Restocks on Friday"); variants re-derived by this script.
 const HERO = {
   source: "src/assets/landing/hero-control-room-studio-source.jpg",
   sourceType: "image/jpeg",

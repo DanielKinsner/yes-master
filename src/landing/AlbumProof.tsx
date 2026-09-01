@@ -1,4 +1,5 @@
-import albumImg from "../assets/landing/desktop-album-ui.png";
+import albumImg from "../assets/landing/owner-album-session.jpg";
+import albumImg1280 from "../assets/landing/owner-album-session-1280.jpg";
 
 // U6 — Album sits LOW on the page on purpose.
 //
@@ -69,14 +70,16 @@ export default function AlbumProof() {
             </dl>
           </div>
 
-          {/* U7: a real capture of the album-4 scenario from the current build,
-              bound to the manifest. Lazy — it is well below the fold. */}
+          {/* 2026-09-01: an OWNER capture of Album Master in a real session
+              (manifest `ownerCaptures`). Lazy — it is well below the fold. */}
           <div className="surface-frame overflow-hidden rounded-2xl p-1.5">
             <img
               src={albumImg}
-              alt="YES Master Album Master view with four tracks"
-              width={1440}
-              height={1000}
+              srcSet={`${albumImg1280} 1280w, ${albumImg} 2048w`}
+              sizes="(min-width: 1024px) 58vw, 100vw"
+              alt="YES Master Album Master view during a real session, meters live"
+              width={2048}
+              height={1147}
               loading="lazy"
               decoding="async"
               className="block w-full rounded-[0.85rem]"

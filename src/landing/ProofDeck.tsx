@@ -1,4 +1,5 @@
-import standardImg from "../assets/landing/desktop-standard-ui.png";
+import standardImg from "../assets/landing/owner-standard-session.jpg";
+import standardImg1280 from "../assets/landing/owner-standard-session-1280.jpg";
 import advancedImg from "../assets/landing/owner-advanced-session.jpg";
 import advancedImg1280 from "../assets/landing/owner-advanced-session-1280.jpg";
 
@@ -20,10 +21,10 @@ const receipt: Array<[string, string, boolean]> = [
 // product, side by side — and the receipt reads as the printed slip it is.
 // Same claims, same "Example" label ordering (label before first number).
 //
-// 2026-09-01: the Advanced plate is an OWNER capture of a real session ("The
-// Machine Restocks on Friday", meters live, hand-shaped EQ). It is not in the
-// asset manifest because it is not a scripted capture; the manifest-bound
-// Standard capture stays as the Standard plate.
+// 2026-09-01: both plates are OWNER captures of a real session ("The Machine
+// Restocks on Friday", meters live, Mastered selected, hand-shaped EQ). They
+// are bound in `manifest.json` under `ownerCaptures` (hash, size, import); the
+// deterministic captures remain the mechanical regression evidence.
 export default function ProofDeck() {
   return (
     <section id="standard" className="relative bg-night px-5 py-20 sm:px-8 sm:py-28">
@@ -65,9 +66,11 @@ export default function ProofDeck() {
             <div className="surface-frame mt-6 overflow-hidden rounded-xl p-1.5">
               <img
                 src={standardImg}
-                alt="YES Master Standard view"
-                width={1440}
-                height={1000}
+                srcSet={`${standardImg1280} 1280w, ${standardImg} 2048w`}
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                alt="YES Master Standard view during a real session, meters live"
+                width={2048}
+                height={1147}
                 loading="lazy"
                 decoding="async"
                 className="block w-full rounded-[0.6rem]"
