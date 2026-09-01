@@ -27,13 +27,16 @@ contact the owner.
 | # | Decision | Consequence |
 |---|---|---|
 | D1 | **No custom domain exists.** The owner has not bought `yesmaster.app`. Every absolute URL the landing page publishes points at the deployed origin `https://yes-master.vercel.app`. | Slice S2 rewrites the four head tags in `index.html` and drops the `hello@yesmaster.app` address from the signup error copy. Buying a domain is a post-launch owner item (queued in `docs/OWNER_INPUT_QUEUE.md` by S1). |
-| D2 | **GitHub writes.** The executor may push its own commits from this plan to `main` (docs and the two small code fixes). The **17 open Dependabot PRs are closed, not merged**, with a one-line comment; nothing dependency-related merges before the tag. | S4. Reversible (a closed PR can be reopened). Post-launch backlog: merge them in CI-gated batches (§9). *Owner may veto D2 before launching the executor; if vetoed, the executor commits locally and stops at each push point.* |
+| D2 | **GitHub writes.** The executor may push its own commits from this plan to `main` (docs and the two small code fixes). The **17 open Dependabot PRs are closed, not merged**, with a one-line comment; nothing dependency-related merges before the tag. | S4. Reversible (a closed PR can be reopened). Post-launch backlog: merge them in CI-gated batches (§9). Owner confirmed 2026-09-01: no veto; push and close. |
 | D3 | **Beta.1 disposition and the beta.2 tag are NOT decided.** | The executor never tags. It stops at Checkpoint 2 and Checkpoint 3 with the exact green SHA, and the owner records the disposition in `docs/OWNER_INPUT_QUEUE.md` (row "Beta.1 disposition") when ready. |
 | D4 | **Window sizing is read from the display, three tiers.** Tier 1 (must): at startup read the primary monitor's logical work area; open at 1920×1080 centered when it fits, maximized when it does not. Tier 2 (Tier B): when the work area is below the layout floor (1360×740 logical) apply a **native** webview zoom to fit, clamped 0.8–1.0, never above 1.0 — not CSS zoom. Tier 3 (post-launch): remember window geometry across launches and a UI-scale preference. Opening maximized for everyone was rejected: it changes how the app looks on large monitors in launch week. | S3 (Tier 1), S6.5 (Tier 2), §9 (Tier 3). Owner hand-tests on the 4K office monitor at 250 % (simulates a 1536×864 laptop → maximize) and 300 % (1280×720 → zoom-to-fit). |
 | D5 | **Tier B polish proceeds** after Checkpoint 2 unless the owner says stop: one commit each, in the order listed in S6. | Each Tier B commit moves the tag target; Checkpoint 3 re-reports the final green SHA. |
 | D6 | **Beta guide gets a display-scaling limitation line** even though D4 ships, because the minimum window is still 1360×740 logical. | S1. |
-| D7 | **Mac updater proof is optional owner lane.** If skipped, the accepted risk is written into go/no-go §3(ii) rather than left implicit. | §5 owner lane. |
-| D8 | **Out of scope for Friday:** renaming "EQUALIZER (DYNAMIC)", shortening the receipt target chip, the Style/Preset vocabulary pass, loudness-control ownership in Advanced, hero-CTA-above-the-fold, email provider, paid signing, any DSP change. | §10 parking lot. |
+| D7 | **Mac updater proof:** do it on Thursday if the M4 is at hand. If it has not happened by the time the owner says "publish", the executor writes the accepted risk into go/no-go §3(ii) **without asking again**, and the first patch release (0.9.3) is the Mac updater's proving run. | §5 owner lane. |
+| D8 | **Out of scope for Friday:** the app-wide Style/Preset rename, loudness-control ownership in Advanced, email provider, paid signing, any DSP change, any layout change. | §10 parking lot. |
+| D9 | **Vocabulary rule (decided, applied narrowly now, fully post-launch).** A **Style** is one of the eight factory characters (Universal … Loud). A **Preset** is a recipe the *user* saved ("My presets", "Save as preset"). Under that rule most current copy is already right; the one public inconsistency is the landing's "Eight presets", which becomes **"Eight styles"**. The Advanced compressor's "Preset" mode/"Preset density"/"Preset values from Universal" refer to the Style's values and are renamed in the post-launch pass, not now (tests, docs and a mode enum hang off them). | S2 (landing word); §9 (the rest). |
+| D10 | **Hero CTA stays below the introductory copy on short phones.** The fixed nav CTA is the acquisition guarantee on every viewport; the hero button is a second door, not the only one. Decision closes owner-queue row T-03 as "copy-first". No layout change. | S1 records it and makes the nav/hero distinction permanent in `docs/TESTING.md`. |
+| D11 | **Three small taste calls, decided:** (a) the section label "EQUALIZER (Dynamic)" becomes **"EQUALIZER"** — the chain is a static 7-band EQ with adaptive reduce-only trims, and "dynamic EQ" means a different tool to any engineer; (b) the receipt's "Mastering target" chip uses a **short profile name** ("Streaming · −14.0 LUFS"), with the long descriptive name staying in the Delivery Profile dropdown where there is room; (c) the per-band compressor card's "Effective compression" line **stays** — it is the only place attack/release are shown at idle, so it is not a duplicate. | S6.6, S6.7; (c) is a no-op. |
 
 Plain-English "so what": the app is done; this plan removes the things that
 would embarrass the launch (a share card pointing at a domain nobody owns, a
@@ -109,6 +112,16 @@ Files and exact changes:
   (D1)."*, what changes when answered *"Buy the domain, attach it to the
   Vercel project, update the four `index.html` tags and the same-origin test,
   re-check the share card in a real chat paste."*
+- **Close owner-queue row T-03 (D10).** In `docs/OWNER_INPUT_QUEUE.md`
+  strike the T-03 row through in the same style as the answered rows and
+  point it at a new dated line in `docs/OPEN_THREADS_AND_DECISIONS.md`
+  ("2026-09-01 — hero CTA stays copy-first on short phones; the fixed nav CTA
+  is the all-axis acquisition control"). In `docs/TESTING.md`, in the
+  landing-lane section (search for the CTA containment / `summary.json`
+  wording), add one paragraph stating the permanent rule: the nav CTA is
+  gated on both axes at every viewport; the hero CTA is gated horizontally
+  only and may sit below the fold on short phones by design. Do not change
+  any test threshold.
 - `git mv VERA-SHIP-PLAN.md docs/archive/plans/2026-07-12-vera-ship-plan.md`.
   Add one line at the top of the moved file: *"Archived 2026-09-01 — July
   snapshot, superseded by `docs/plans/beta-go-no-go.md` and
@@ -144,6 +157,12 @@ idles).
 - `src/landing/Nav.tsx:5-7`: fix the stale comment (the mobile section and
   its sentence were removed 2026-09-01; say so, do not describe it as still
   present).
+- **"Eight presets" → "Eight styles" (D9)** in `src/landing/ProofDeck.tsx:90`.
+  Update the C-06 claim text in `docs/CAPABILITY_EVIDENCE_MATRIX.md:47` to
+  the new wording (evidence unchanged) and the matching line in
+  `docs/landing-brief.md:46` ("eight styles"). Check
+  `src/landing/LandingCopy.test.tsx` for a pin on the old phrase and update
+  it.
 - `grep -rn "yesmaster.app" src index.html docs/*.md` afterwards: the only
   remaining hits may be historical docs under `docs/plans/` and
   `docs/archive/`. `docs/landing-brief.md` and
@@ -283,8 +302,28 @@ pins deliberately and say so in the commit message.
    - Revert rule (write it in the commit message): if the owner's 300 %
      hand-test says the zoomed console reads worse than a scrollbar would,
      this item is reverted, not tuned.
+   - With the 0.8 clamp, a 1080p display fits down to 175 % scaling
+     (1097×617 logical → factor 0.807). Update the S1 caveat in
+     `docs/BETA_TESTING.md` so it says the right rail may not fit **at 200 %
+     or above** (it said 175 % before this item), and run `npm test`.
    Verify: Rust lane as in S3; `npm run build:windows`. Commit:
    `desktop: native zoom-to-fit below the 1360x740 layout floor (D4 tier 2)`.
+6. **"EQUALIZER (Dynamic)" → "EQUALIZER" (D11a).** `src/App.tsx:2285`
+   section label. Grep `src` and `docs` for the old label (tests, TESTING.md
+   scenario notes) and update pins. Commit: `ui: the equalizer label no longer says Dynamic`.
+7. **Short profile names on the receipt chip (D11b).** Add
+   `DELIVERY_PROFILE_SHORT: Record<DeliveryProfile, string>` beside
+   `DELIVERY_PROFILE_DISPLAY` in `src/bindings.ts`:
+   `streaming-universal → "Streaming"`, `apple-music → "Apple Music"`,
+   `cd → "CD"`, `vinyl-premaster → "Vinyl"`, `loud-rock → "Loud Rock"`,
+   `broadcast-eu → "Broadcast EU"`, `broadcast-us → "Broadcast US"`,
+   `custom → "Custom"`. Use it only in
+   `ExportReceiptCard.tsx` `masteringTargetLabel` (so the chip reads
+   "Streaming · -14.0 LUFS"); the Delivery Profile dropdown keeps the long
+   names. Update the pin at `src/components/ExportReceiptCard.test.tsx:186`
+   and add a test that every profile has a short name (drift guard, same
+   shape as the existing display-map tests). Commit:
+   `receipt: short delivery-profile name on the mastering-target chip`.
 
 ### S7 — Records, push, watch CI → **Checkpoint 3**
 
@@ -397,7 +436,11 @@ are how executors drift; deviations logged are how the plan gets better.
   monitors present at launch; add a "UI scale" preference in Settings that
   drives the same native zoom as S6.5; revisit the 1360×740 layout floor.
 - Mac updater proving run on the first patch release if D7 was skipped.
-- Vocabulary pass (Style vs Preset; compressor "Preset" mode naming).
+- Vocabulary pass under the D9 rule: rename the compressor mode "Preset" →
+  "Style" (mode enum stays `preset` on the wire; only labels change),
+  "Preset density" → "Style density", "Preset values from Universal" →
+  "Universal's values", and sweep Help/Settings copy. Tests and
+  `docs/APP_BEHAVIOR.md` "Compressor Modes" follow.
 - Loudness has one owner in Advanced.
 - Relink missing sources; corrupt `user_presets.json` recovery;
   `engine.rs:190` `eprintln!` → `diagnostics::warn`.
@@ -408,7 +451,9 @@ are how executors drift; deviations logged are how the plan gets better.
 
 ## 10. Parking lot (explicitly not in scope)
 
-"EQUALIZER (DYNAMIC)" label, receipt "Mastering target" chip length,
-per-band compressor idle duplication, the 1360×740 Intensity-chip clip,
-hero CTA above the fold on phones, email provider, Apple/Windows paid
-signing, any mobile app work, any refactor of the state hook or CSS.
+The app-wide Style/Preset rename (D9 rule is decided; the sweep is
+post-launch), loudness-control ownership in Advanced, the 1360×740
+Intensity-chip clip at the floor, the hero layout (D10 decided: unchanged),
+email provider, Apple/Windows paid signing, any mobile app work, any
+refactor of the state hook or CSS, opening maximized by default on large
+monitors (rejected under D4).
