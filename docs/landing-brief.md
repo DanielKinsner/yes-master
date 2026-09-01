@@ -13,7 +13,12 @@ album — and shows you exactly what it did.
 
 ## Hero copy (pick or mix)
 
-**Primary:** Master your track in real time. Hear every move. Ship with proof.
+**Live (2026-09-01):** One-click mastering. Your Endgame Sound.
+(Two beats, one line each, pinned so neither can rag. The name is the promise:
+Y.E.S. = Your Endgame Sound, carried by title case alone — a colour shift and a
+glow were both tried and both announced it.)
+
+**Previous primary:** Master your track in real time. Hear every move. Ship with proof.
 (Two beats since 2026-08-18; the em-dash form wrapped raggedly against the console hero.)
 
 **Supporting subheads:**
@@ -119,7 +124,11 @@ hierarchy, and each section answers the question the previous one raises:
 1. **Hero** (`#top`) — the problem and the outcome.
 2. **Workflow** (`#how`) — what you actually do: three decisions.
 3. **Proof deck** (`#standard` / `#advanced`) — Standard as the hero, Advanced
-   as the depth, a receipt as the evidence.
+   as the depth, a receipt as the evidence. Since 2026-09-01 the plates are the
+   owner's real-session captures ("The Machine Restocks on Friday").
+3b. **Sign-off** — the one photograph on the page (owner-generated 2026-09-01:
+   a desk at dusk, a hand about to sign a printed sheet). Full-bleed, no UI,
+   no claim. It is the page's single permitted mood image.
 4. **Sound character** (`#sound`) — the styles, and adaptive restraint.
 5. **Album** (`#album`) — proof that the depth is real. Deliberately low.
 6. **Beta terms** (`#beta`) — the arrangement, stated before anyone downloads.

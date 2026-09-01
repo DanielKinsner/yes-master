@@ -212,6 +212,19 @@ try {
     assets,
   };
 
+  // 2026-09-01: owner captures (the page's real-session plates) are maintained
+  // by hand and verified separately (verify-landing-assets.mjs §5). A recapture
+  // refreshes the deterministic set and must not drop them on the floor.
+  try {
+    const existing = JSON.parse(
+      await readFile(path.join(REPO_ROOT, MANIFEST_PATH), "utf8"),
+    );
+    if (existing.ownerCapturesNote) manifest.ownerCapturesNote = existing.ownerCapturesNote;
+    if (existing.ownerCaptures) manifest.ownerCaptures = existing.ownerCaptures;
+  } catch {
+    // No previous manifest: nothing to carry forward.
+  }
+
   await writeFile(
     path.join(REPO_ROOT, MANIFEST_PATH),
     `${JSON.stringify(manifest, null, 2)}\n`,

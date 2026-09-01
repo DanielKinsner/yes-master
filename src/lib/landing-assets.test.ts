@@ -67,18 +67,45 @@ describe("landing marketing proof (U7)", () => {
     expect(manifest.sourceCommit).toMatch(/^[a-f0-9]{7,40}$/);
   });
 
-  it("lazy-loads every below-fold capture and declares its intrinsic size", () => {
+  it("binds every owner capture by hash, date and session", () => {
+    // 2026-09-01: the page's plates are the owner's real-session screenshots.
+    // They cannot be proven current by content, so they are bound by what can
+    // be checked — and each one must be the one that was reviewed.
+    const owners = manifest.ownerCaptures as Array<Record<string, unknown>>;
+    expect(owners.length).toBe(3);
+    for (const capture of owners) {
+      expect(capture.sha256, `${capture.id} has no hash`).toMatch(/^[a-f0-9]{64}$/);
+      expect(capture.capturedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(capture.session, `${capture.id} names no session`).toBeTruthy();
+      expect(capture.alt, `${capture.id} has no alt`).toBeTruthy();
+    }
+    expect(manifest.ownerCapturesNote).toMatch(/nothing mechanical proves them current/i);
+  });
+
+  it("lazy-loads every below-fold plate and declares its intrinsic size", () => {
     const proof = landingSource("ProofDeck.tsx") + landingSource("AlbumProof.tsx");
     const imgTags = proof.match(/<img[\s\S]*?\/>/g) ?? [];
     expect(imgTags.length).toBe(3);
+    const owners = manifest.ownerCaptures as Array<{
+      file: string;
+      dimensions: { width: number; height: number };
+    }>;
     for (const tag of imgTags) {
       expect(tag, "below-fold proof must be lazy").toContain('loading="lazy"');
+      expect(tag).toMatch(/alt="[^"]+"/);
       // Without width/height the image has no reserved box and its arrival
       // shoves the page around — the thing lazy loading is supposed to avoid
-      // making worse.
-      expect(tag).toMatch(/width=\{1440\}/);
-      expect(tag).toMatch(/height=\{1000\}/);
-      expect(tag).toMatch(/alt="[^"]+"/);
+      // making worse. The reserved box must be the file's real size.
+      const width = Number(tag.match(/width=\{(\d+)\}/)?.[1]);
+      const height = Number(tag.match(/height=\{(\d+)\}/)?.[1]);
+      expect(
+        owners.some((o) => o.dimensions.width === width && o.dimensions.height === height),
+        `no owner capture is ${width}x${height}`,
+      ).toBe(true);
+    }
+    // Nothing in the manifest is dead weight: every owner capture is on the page.
+    for (const capture of owners) {
+      expect(proof).toContain(capture.file.replace("src/assets/landing/", "../assets/landing/"));
     }
   });
 

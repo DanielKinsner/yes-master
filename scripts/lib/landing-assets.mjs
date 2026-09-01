@@ -88,9 +88,15 @@ const LAPTOP = { width: 1440, height: 1000 };
 /**
  * Canonical capture scenarios.
  *
- * `published: true` means the asset is imported by the landing page and is
- * therefore subject to the freshness and budget gates. A capture that nothing
- * imports is dead weight in the repo, so there are none.
+ * `published: true` means the capture is required to exist, be manifest-bound,
+ * and be current against CAPTURE_INPUTS. It is the mechanical regression
+ * evidence that the console still renders the way the page claims.
+ *
+ * 2026-09-01: the page's PLATES are no longer these captures. The owner
+ * replaced them with real-session screenshots (`manifest.ownerCaptures`,
+ * verified below by hash, size and import). The deterministic set stays
+ * because it is the only capture that can be proven current by content: an
+ * owner screenshot goes stale silently, a scripted one fails the gate.
  */
 export const SHOTS = [
   {
@@ -154,6 +160,42 @@ export function captureInputDigest(root = REPO_ROOT) {
     hash.update(relative).update("\0").update(sha256(normalized)).update("\n");
   }
   return hash.digest("hex");
+}
+
+/**
+ * Minimal JPEG SOF read — walks the marker chain to the first start-of-frame
+ * and returns its dimensions. Owner captures ship as JPEG; this keeps the
+ * verify lane dependency-free for one more integer pair.
+ */
+export function jpegDimensions(buffer) {
+  if (buffer.length < 4 || buffer[0] !== 0xff || buffer[1] !== 0xd8) return null;
+  let offset = 2;
+  while (offset + 9 < buffer.length) {
+    if (buffer[offset] !== 0xff) { offset += 1; continue; }
+    const marker = buffer[offset + 1];
+    if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+      offset += 2;
+      continue;
+    }
+    const length = buffer.readUInt16BE(offset + 2);
+    // SOF0–SOF3, SOF5–SOF7, SOF9–SOF11, SOF13–SOF15 all carry the frame size.
+    if (
+      (marker >= 0xc0 && marker <= 0xcf) &&
+      marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc
+    ) {
+      return {
+        height: buffer.readUInt16BE(offset + 5),
+        width: buffer.readUInt16BE(offset + 7),
+      };
+    }
+    offset += 2 + length;
+  }
+  return null;
+}
+
+/** PNG or JPEG dimensions, whichever the bytes are. */
+export function imageDimensions(buffer) {
+  return pngDimensions(buffer) ?? jpegDimensions(buffer);
 }
 
 /** Minimal PNG header read — avoids a dependency for two integers. */

@@ -58,7 +58,11 @@ mobile UI image is imported by the landing page (R7).
 
 **Eager budget.** Every capture is below the fold and `loading="lazy"` with a
 declared intrinsic size; the hero art ships as a 1280w/2560w `srcSet` derived
-from the 2026-08-18 4K console render. Eager imagery stays well under the
+from the owner's 4K console render (re-rendered 2026-09-01 with a real session
+on screen). Since 2026-09-01 the page's plates are the owner's real-session
+screenshots, bound in the manifest under `ownerCaptures` (hash, size, import);
+the deterministic captures remain the mechanical regression evidence. Eager
+imagery stays well under the
 1.5 MB budget. Do not raise the budget — shrink the art. The pristine hero
 master lives at `hero-control-room-studio-source.jpg`, is imported by nothing,
 and reaches no bundle; the shipped variants are always re-derived from it so

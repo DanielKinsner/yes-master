@@ -2,6 +2,7 @@ import Nav from "./landing/Nav";
 import Hero from "./landing/Hero";
 import Workflow from "./landing/Workflow";
 import ProofDeck from "./landing/ProofDeck";
+import SignOff from "./landing/SignOff";
 import SoundCharacter from "./landing/SoundCharacter";
 import AlbumProof from "./landing/AlbumProof";
 import BetaTerms from "./landing/BetaTerms";
@@ -21,6 +22,7 @@ import FinalCTA from "./landing/FinalCTA";
  *   Hero            problem and outcome
  *   Workflow        what you actually do — three decisions
  *   ProofDeck       credible product proof, Standard as hero / Advanced as depth
+ *   SignOff         the one photograph, full-bleed
  *   SoundCharacter  character controls and adaptive restraint
  *   AlbumProof      depth proof, deliberately LOW — not a second audience
  *   BetaTerms       what the arrangement is, before anyone downloads
@@ -49,6 +51,7 @@ export default function LandingPage() {
       <Hero />
       <Workflow />
       <ProofDeck />
+      <SignOff />
       <SoundCharacter />
       <AlbumProof />
       <BetaTerms />

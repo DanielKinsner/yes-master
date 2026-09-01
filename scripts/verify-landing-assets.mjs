@@ -23,9 +23,11 @@ import {
   REPO_ROOT,
   SHOTS,
   captureInputDigest,
+  imageDimensions,
   pngDimensions,
   sha256,
 } from "./lib/landing-assets.mjs";
+import { readdirSync } from "node:fs";
 
 const failures = [];
 
@@ -102,6 +104,61 @@ for (const asset of manifest.assets ?? []) {
   }
 
   if (asset.loading === "eager") eagerBytes += bytes.length;
+}
+
+// 5. OWNER CAPTURES (2026-09-01). Real-session screenshots the owner chose as
+//    the page's plates. Nothing mechanical can prove them current, so the gate
+//    proves what it can: the bytes are the bytes that were reviewed, the size
+//    the page reserves is the size on disk, and every one is actually imported
+//    (a listed capture nothing shows is dead weight, exactly like a shot).
+const landingSources = readdirSync(path.join(REPO_ROOT, "src/landing"))
+  .filter((file) => file.endsWith(".tsx") && !file.includes(".test."))
+  .map((file) => read(`src/landing/${file}`).toString("utf8"))
+  .join("\n");
+for (const capture of manifest.ownerCaptures ?? []) {
+  for (const key of ["id", "file", "sha256", "bytes", "dimensions", "capturedAt", "session", "alt"]) {
+    if (capture[key] === undefined || capture[key] === "") {
+      failures.push(`owner capture ${capture.id ?? "?"}: missing "${key}"`);
+    }
+  }
+  let bytes;
+  try {
+    bytes = read(capture.file);
+  } catch {
+    failures.push(`${capture.id}: ${capture.file} is in the manifest but not on disk`);
+    continue;
+  }
+  const actual = sha256(bytes);
+  if (actual !== capture.sha256) {
+    failures.push(
+      `${capture.id}: file content does not match the manifest ` +
+        `(expected ${String(capture.sha256).slice(0, 12)}…, found ${actual.slice(0, 12)}…)`,
+    );
+  }
+  if (bytes.length !== capture.bytes) {
+    failures.push(`${capture.id}: expected ${capture.bytes} bytes, found ${bytes.length}`);
+  }
+  const dimensions = imageDimensions(bytes);
+  if (
+    dimensions?.width !== capture.dimensions?.width ||
+    dimensions?.height !== capture.dimensions?.height
+  ) {
+    failures.push(
+      `${capture.id}: expected ${capture.dimensions?.width}x${capture.dimensions?.height}, ` +
+        `found ${dimensions?.width}x${dimensions?.height}`,
+    );
+  }
+  const importPath = capture.file.replace(/^src\/assets\/landing\//, "../assets/landing/");
+  if (!landingSources.includes(importPath)) {
+    failures.push(`${capture.id}: ${capture.file} is in the manifest but no landing component imports it`);
+  }
+  if (capture.phoneFile) {
+    try {
+      read(capture.phoneFile);
+    } catch {
+      failures.push(`${capture.id}: phone variant ${capture.phoneFile} is missing`);
+    }
+  }
 }
 
 // 4. HEAVY. The budget covers everything the browser fetches before the visitor

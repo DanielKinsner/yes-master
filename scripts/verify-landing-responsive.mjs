@@ -222,7 +222,8 @@ for (const [width, height] of matrix) {
         .map((image) => image.getAttribute("src")),
       sections: required.map((id) => ({ id, present: Boolean(document.getElementById(id)) })),
       bodyHasExpectedCopy: [
-        "Hear every move. Ship with proof.",
+        "One-click mastering.",
+        "Your Endgame Sound.",
         "One engine",
         "Stop chasing the master",
         // U6 replaced "Same engine, headed to iPhone & Android" (a schedule
@@ -428,7 +429,7 @@ for (const [width, height] of matrix) {
   if (metrics.imageFit !== "cover") {
     failures.push(`${width}x${height}: hero image fit is ${metrics.imageFit}, expected cover`);
   }
-  if (!metrics.heroHeadline?.includes("Master your track in real time")) {
+  if (!metrics.heroHeadline?.includes("Your Endgame Sound")) {
     failures.push(`${width}x${height}: hero headline missing expected copy`);
   }
   if (metrics.brokenImages.length > 0) {
