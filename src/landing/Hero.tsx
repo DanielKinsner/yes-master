@@ -72,12 +72,21 @@ export default function Hero({
       <div className="relative flex min-h-svh w-full flex-col justify-start gap-5 px-5 pt-24 pb-16 sm:px-8 lg:w-[48%] lg:max-w-[600px] lg:pb-16 lg:pl-16 lg:pt-28 xl:max-w-[640px] xl:pl-24">
         <span className="eyebrow">YES Master</span>
 
-        {/* Two beats, balanced wrapping (text-balance) so neither line rags
-            into an orphan. The first sentence is the pinned primary message
-            (docs/landing-brief.md); the second is the punch. */}
-        <h1 className="max-w-[17ch] text-balance font-display text-[2.6rem] font-black leading-[0.95] tracking-[-0.03em] sm:text-[3.4rem] lg:text-[3.1rem] xl:text-[3.5rem]">
-          Master your track in real time.
-          <span className="mt-2 block text-brand-soft">Hear every move. Ship with proof.</span>
+        {/* Two beats, one line each. At lg+ the sentences are pinned with
+            whitespace-nowrap so the headline can never rag into the orphaned
+            "mastering." / "Sound." it produced at the old 3.5rem — the type is
+            sized (2.3rem @ lg, 2.85rem @ xl) to keep 5-10% headroom on the
+            longer line at every width from 1024 up, measured in the WIDEST
+            fallback face, so a narrower Segoe/SF only gains slack. On
+            phones it wraps normally with text-balance. The Y/E/S carry the
+            accent so the acronym reads without being announced. */}
+        <h1 className="text-balance font-display text-[2.4rem] font-black leading-[1.02] tracking-[-0.03em] sm:text-[3rem] lg:whitespace-nowrap lg:text-[2.3rem] xl:text-[2.85rem]">
+          <span className="block">One-click mastering.</span>
+          <span className="mt-1 block text-brand-soft">
+            <span className="text-ink">Y</span>our{" "}
+            <span className="text-ink">E</span>ndgame{" "}
+            <span className="text-ink">S</span>ound.
+          </span>
         </h1>
 
         <p className="max-w-[440px] text-base leading-snug text-muted lg:text-[1.05rem]">
