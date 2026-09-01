@@ -196,7 +196,6 @@ if (eagerBytes > EAGER_BUDGET_BYTES) {
 const landingSource = [
   "src/landing/Hero.tsx",
   "src/landing/ProofDeck.tsx",
-  "src/landing/CrossPlatform.tsx",
   "src/landing/AlbumProof.tsx",
   "src/landing/SoundCharacter.tsx",
   "src/landing/BetaTerms.tsx",

@@ -96,12 +96,25 @@ pub fn export_checks_for_report(
     }
 
     if report.measured_dynamic_range_lu < 5.0 {
+        // 2026-09-01 (owner): this receipt is shown AFTER the render, so the
+        // advice must be post-export advice — "verify by ear before exporting"
+        // told the user to do something they had already done. And the number
+        // must say whose it is: the receipt's quality rows are labelled with
+        // SOURCE analysis values, while this measurement is the DELIVERED file
+        // on the track path (source-analysis fallback on the album path, where
+        // measurements_are_rendered is false). Unlabelled, "6.3 LU" next to
+        // "5.0 LU" read as a contradiction.
+        let subject = if report.measurements_are_rendered {
+            "Delivered dynamic range"
+        } else {
+            "Dynamic range"
+        };
+        let dr = report.measured_dynamic_range_lu;
         checks.push(QualityCheck {
             level: QualityLevel::Warning,
             code: "dynamic_range_low".to_string(),
             message: format!(
-                "Dynamic range is {:.1} LU. Highly compressed material; verify by ear before exporting.",
-                report.measured_dynamic_range_lu
+                "{subject} is {dr:.1} LU. Highly compressed; listen back before you ship it."
             ),
         });
     }
@@ -136,7 +149,7 @@ pub fn export_checks_for_report(
         checks.push(QualityCheck {
             level: QualityLevel::Critical,
             code: "non_finite_metering".to_string(),
-            message: "LUFS measurement is not finite. Re-analyze before exporting.".to_string(),
+            message: "LUFS measurement is not finite. Re-analyze and export again.".to_string(),
         });
     }
 

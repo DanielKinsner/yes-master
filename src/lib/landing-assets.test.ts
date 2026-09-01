@@ -126,7 +126,6 @@ describe("landing marketing proof (U7)", () => {
     const everything = [
       "Hero.tsx",
       "ProofDeck.tsx",
-      "CrossPlatform.tsx",
       "AlbumProof.tsx",
       "SoundCharacter.tsx",
       "BetaTerms.tsx",

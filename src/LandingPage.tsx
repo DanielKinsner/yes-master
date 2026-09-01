@@ -7,7 +7,6 @@ import Plate from "./sheet/Plate";
 import Sound from "./sheet/Sound";
 import Album from "./sheet/Album";
 import Terms from "./sheet/Terms";
-import Platform from "./sheet/Platform";
 import GetStarted from "./sheet/GetStarted";
 import Footer from "./sheet/Footer";
 
@@ -29,7 +28,7 @@ import Footer from "./sheet/Footer";
  *   Sound       character controls and adaptive restraint
  *   Album       depth proof, deliberately low
  *   Terms       the arrangement, before anyone downloads
- *   Platform    one date-free line that mobile is not available
+ *   (no mobile section — owner, 2026-09-01: the page says nothing about mobile)
  *   GetStarted  the action
  */
 export default function LandingPage() {
@@ -51,7 +50,6 @@ export default function LandingPage() {
         <Sound />
         <Album />
         <Terms />
-        <Platform />
         <GetStarted />
       </main>
       <Footer />

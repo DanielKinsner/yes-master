@@ -16,7 +16,11 @@ export default function Nav({
   release = resolveRelease(),
 }: { release?: ResolvedRelease } = {}) {
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 flex items-center justify-between gap-3 border-b border-white/[0.07] bg-night/60 px-5 py-3 shadow-[0_1px_0_rgba(0,0,0,0.5)] backdrop-blur-xl sm:px-8">
+    <nav className="fixed inset-x-0 top-0 z-50 flex border-b border-white/[0.07] bg-night/60 px-5 py-3 shadow-[0_1px_0_rgba(0,0,0,0.5)] backdrop-blur-xl sm:px-8">
+      {/* The bar spans the screen; its contents ride the same 1920px rail as
+          the hero composition, so on a 4K canvas the wordmark and the CTA sit
+          with the page instead of in the corners. */}
+      <div className="mx-auto flex w-full max-w-[1920px] items-center justify-between gap-3">
       <a
         href="#top"
         className="flex items-center gap-2.5 font-display text-lg font-extrabold tracking-[-0.01em]"
@@ -45,6 +49,7 @@ export default function Nav({
               either while the release is closed (U5). */}
           {release.available ? "Download free beta" : "About the beta"}
         </a>
+      </div>
       </div>
     </nav>
   );
