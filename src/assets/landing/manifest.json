@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "016b29ff3c1e734868c6c7e01fa6fcd21048e7bd",
-  "captureInputDigest": "706be3fae1f5b6d19d714c0707fabded333731ebb5bac46bffd6272b2fc1588f",
+  "sourceCommit": "f6e65bf0e023d0dcc524507b7abaf6972fe97e45",
+  "captureInputDigest": "1704b50260dcd3560d63c1137517c83b2597b4c2248731ebfc97eb6834956c48",
   "browser": {
     "runtime": "playwright-bundled-chromium",
     "version": "149.0.7827.55"
@@ -21,8 +21,8 @@
         "width": 1440,
         "height": 1000
       },
-      "bytes": 516337,
-      "sha256": "f5fb69ffa9a2990794b51d5ab777e97fa8bd531e5d5b9dd817340b9045eeff1c",
+      "bytes": 500190,
+      "sha256": "7e8911012c4abfd7b8c4f44eba8addeba89ab1e61cfd21cf5f06142d83bcada4",
       "loading": "lazy",
       "alt": "YES Master Standard view"
     },
@@ -39,8 +39,8 @@
         "width": 1440,
         "height": 1000
       },
-      "bytes": 583605,
-      "sha256": "19cc62218e504a8d0e30e1d21a6136e03135f2dcbaae4491070b0a7cacdb6497",
+      "bytes": 560992,
+      "sha256": "d812e7764c4378f0de69d422794517e7b89c55acd78c1434116b590074e0afed",
       "loading": "lazy",
       "alt": "YES Master Advanced view"
     },
@@ -57,10 +57,61 @@
         "width": 1440,
         "height": 1000
       },
-      "bytes": 629845,
-      "sha256": "e4e3c8ac559e86c442369c003cec4530c901b893e51ff4ca19053d5f03cd2c3e",
+      "bytes": 603056,
+      "sha256": "1752fa7297d05c20de83808f208285cfdcb58c03f24126b03f9c6bdcf9773710",
       "loading": "lazy",
       "alt": "YES Master Album Master view with four tracks"
+    }
+  ],
+  "ownerCapturesNote": "Owner captures are real-session screenshots the owner chose as the page's plates (2026-09-01). They are bound by hash, size and import like everything else, but nothing mechanical proves them current: when the console changes, recapture and re-run `npm run capture:landing` to refresh the deterministic set, then replace these by hand and update this block.",
+  "ownerCaptures": [
+    {
+      "id": "owner-standard-session",
+      "file": "src/assets/landing/owner-standard-session.jpg",
+      "phoneFile": "src/assets/landing/owner-standard-session-1280.jpg",
+      "view": "standard",
+      "capturedAt": "2026-09-01",
+      "session": "The Machine Restocks on Friday",
+      "bytes": 198055,
+      "sha256": "a2e1d274b28c90c7b63870081c29c1d78423f64b55b4583cfd8cccd88d6289cc",
+      "dimensions": {
+        "width": 2048,
+        "height": 1147
+      },
+      "loading": "lazy",
+      "alt": "YES Master Standard view during a real session, meters live"
+    },
+    {
+      "id": "owner-advanced-session",
+      "file": "src/assets/landing/owner-advanced-session.jpg",
+      "phoneFile": "src/assets/landing/owner-advanced-session-1280.jpg",
+      "view": "advanced",
+      "capturedAt": "2026-09-01",
+      "session": "The Machine Restocks on Friday",
+      "bytes": 283458,
+      "sha256": "0571fcba0241acf8f000a0da44da4fe528bef2897618478ccf7fad19bd53c230",
+      "dimensions": {
+        "width": 2048,
+        "height": 1151
+      },
+      "loading": "lazy",
+      "alt": "YES Master Advanced view during a real session, meters live"
+    },
+    {
+      "id": "owner-album-session",
+      "file": "src/assets/landing/owner-album-session.jpg",
+      "phoneFile": "src/assets/landing/owner-album-session-1280.jpg",
+      "view": "album",
+      "capturedAt": "2026-09-01",
+      "session": "The Machine Restocks on Friday",
+      "bytes": 291045,
+      "sha256": "fa5fd1a195c97ca09259f90881884f7bbe7518194d2c0e10b5b5fb10e7e6be58",
+      "dimensions": {
+        "width": 2048,
+        "height": 1147
+      },
+      "loading": "lazy",
+      "alt": "YES Master Album Master view during a real session, meters live"
     }
   ]
 }

@@ -14,6 +14,12 @@ Dates are milestone dates, not exact commit times.
 
 ## 2026-09-01 — Mobile visual parity and Android device-verified MP3 flow
 
+- **Landing page:** headline is now "One-click mastering. Your Endgame Sound."
+  pinned to two lines; the hero art is the owner's re-rendered console
+  composite with a real session on screen; the Standard, Advanced and Album
+  plates are the owner's real-session captures, bound in the asset manifest
+  under `ownerCaptures`; a full-bleed sign-off photograph sits between the
+  proof and the styles; the proof section reads "One engine. Two rooms."
 - **Android first launch and mastering flow:** replaced the sparse prototype
   surface with the same complete Track Master console, visual hierarchy, and
   control vocabulary as iPhone. Empty, ready, working, done, and error states

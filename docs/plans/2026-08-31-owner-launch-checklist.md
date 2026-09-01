@@ -13,6 +13,22 @@
 > `v0.9.2-beta.2` candidate. Beta.1 is not yet rejected — its tag, draft
 > (id 379883047), and evidence stay frozen and untouched.
 >
+> **⚠ 2026-09-01: a second, independent blocker is confirmed in the beta.1
+> bytes.** A hands-on packaged-app QA pass on the Mac (at `3d9ba6c`) found
+> that changing only Track Master bit depth or sample rate silently replaced
+> the active loudness target with a hidden analysis offset (a track showing
+> Streaming −14.0 LUFS jumped to 0.3 LUFS after a format-only edit; a silent
+> stress fixture showed 56.0 LUFS). The defect exists in the tagged `c750da6`
+> bytes, so **the staged beta.1 installers on the office PC carry it too.**
+> Fixed on `main` by `1400373` (format edits now route through the Custom
+> transition rule that captures the effective loudness/ceiling first, with
+> regression tests), re-verified at `9225da6` — see the 2026-09-01 rows in
+> `docs/plans/beta-go-no-go.md`. With both the audit blockers and this
+> defect in the tagged bytes, the recommended Task-12 disposition is:
+> **reject `v0.9.2-beta.1`, tag `v0.9.2-beta.2` at the exact reviewed
+> `main` tip, re-run the Release workflow, and run this checklist against
+> the beta.2 draft.**
+>
 > **Remediation is COMPLETE and independently reviewed.** Exact task↔commit
 > map on `codex/launch-readiness-remediation` — self-contained here on
 > purpose: this is the record you act from, so it must not lean on another
