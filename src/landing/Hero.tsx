@@ -33,32 +33,32 @@ export default function Hero({
 }: { release?: ResolvedRelease } = {}) {
   return (
     <section id="top" className="relative isolate overflow-hidden">
-      {/* 2026-09-01: the composition — art, veils and copy together — is capped
-          at 1920px and centred. Full-bleed was fine up to a 1080p/1440p laptop,
-          but on a 4K canvas at 100% the copy column sat 64px from the screen
-          edge while every section below it was centred, and re-anchoring the
-          copy alone puts it on top of the console. So the whole hero centres
-          as one piece; the room is near-black at both edges, and two fades
-          (only rendered past 1920px) hide the seam where the art ends. The
-          height is the viewport up to the art's own 1080, so a capped-width
-          hero never zooms the console to fill a 4K viewport's height. */}
-      <div className="relative mx-auto min-h-[min(100svh,1080px)] max-w-[1920px]">
-      {/* Background: the owner-generated 4K console render of the real UI
-          (2026-08-18; re-rendered 2026-09-01 with a real session on screen).
-          object-cover crops, never stretches; anchored LEFT so
-          the dark studio wall stays behind the copy and the crop, when there
-          is one, takes the right-hand VU meters rather than the console. */}
+      {/* 2026-09-01 (later): FULL-BLEED, like the sign-off band. The art is
+          the owner's ultra-wide plate (~2:1) of the same scene: tablet in the
+          right half, the left third dark and empty. So the hero runs edge to
+          edge at every width — a 2.2:1 band on desktop (45vw tall, never past
+          the viewport) with the copy in the dark third, its gutter scaling
+          with the screen (6vw) so a 4K canvas reads as one composition rather
+          than copy in a corner. The earlier 1920px cap is gone; it existed
+          only because the 16:9 art had nowhere to put the copy at 4K. */}
+      <div className="relative min-h-svh lg:min-h-[min(45vw,100svh)]">
+      {/* Background: the owner-generated console render of the real UI
+          (2026-08-18; re-rendered 2026-09-01 with a real session on screen;
+          ultra-wide plate later the same day). object-cover crops, never
+          stretches. Phones anchor on the tablet's left edge so the screen
+          stays in frame under the copy; desktop sits a little low so the
+          crop, when there is one, takes the empty ceiling. */}
       {/* U7: two variants so a phone does not download the full-width render
           to draw it 390px wide. The master art lives beside these as
           *-source.jpg, imported by nothing and shipped in no bundle. */}
       <img
         src={heroBg}
-        srcSet={`${heroBg1280} 1280w, ${heroBg} 2560w`}
+        srcSet={`${heroBg1280} 1280w, ${heroBg} 3840w`}
         sizes="100vw"
         alt=""
         aria-hidden="true"
         fetchPriority="high"
-        className="absolute inset-0 -z-20 h-full w-full object-cover object-[38%_center] lg:object-[22%_center]"
+        className="absolute inset-0 -z-20 h-full w-full object-cover object-[42%_center] lg:object-[50%_58%]"
       />
       {/* Readability veils. Phones: a bottom-up scrim (text sits over the
           whole image there). Desktop: a left-to-right veil that backs the copy
@@ -68,27 +68,24 @@ export default function Hero({
         aria-hidden="true"
         className="absolute inset-0 -z-10 bg-gradient-to-t from-night/95 via-night/60 to-night/40 lg:hidden"
       />
+      {/* The desktop veil is capped in width so on a wide canvas it backs the
+          copy and stops before the tablet, instead of dimming half the console. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 -z-10 hidden bg-gradient-to-r from-night via-night/70 via-35% to-transparent to-62% lg:block"
+        className="absolute inset-y-0 left-0 -z-10 hidden w-full max-w-[1100px] bg-gradient-to-r from-night via-night/70 via-35% to-transparent to-90% lg:block"
       />
       <div
         aria-hidden="true"
         className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-night to-transparent"
       />
-      <div
-        aria-hidden="true"
-        className="absolute inset-y-0 left-0 -z-10 hidden w-48 bg-gradient-to-r from-night to-transparent min-[1921px]:block"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-y-0 right-0 -z-10 hidden w-48 bg-gradient-to-l from-night to-transparent min-[1921px]:block"
-      />
 
       {/* Copy column. A normal block (so its width can never exceed the
           screen), full width on phones, ~45% on desktop, sitting over the
           dark wall to the left of the console. */}
-      <div className="relative flex min-h-[min(100svh,1080px)] w-full flex-col justify-start gap-5 px-5 pt-24 pb-16 sm:px-8 lg:w-[48%] lg:max-w-[600px] lg:pb-16 lg:pl-16 lg:pt-28 xl:max-w-[640px] xl:pl-24">
+      {/* Desktop: the gutter is a MARGIN that scales with the screen (6vw), and
+          the max-width is the copy's own width — as padding it ate the column
+          on a 4K canvas and squeezed the copy to 378px. */}
+      <div className="relative flex min-h-svh w-full flex-col justify-start gap-5 px-5 pt-24 pb-16 sm:px-8 lg:ml-[max(4rem,6vw)] lg:min-h-[min(45vw,100svh)] lg:w-auto lg:max-w-[600px] lg:justify-center lg:px-0 lg:pb-20 lg:pt-28 xl:max-w-[640px]">
         <span className="eyebrow">YES Master</span>
 
         {/* Two beats, one line each. At lg+ the sentences are pinned with
