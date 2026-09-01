@@ -15,7 +15,7 @@ const rows: Array<{ label: string; value: string; pass?: boolean }> = [
 export default function Receipt({ className = "", style }: { className?: string; style?: CSSProperties }) {
   return (
     <figure
-      className={`receipt w-[19rem] max-w-full px-6 pb-9 pt-6 lg:w-[20.5rem] ${className}`}
+      className={`receipt w-full max-w-[19rem] px-6 pb-9 pt-6 lg:max-w-[20.5rem] ${className}`}
       style={style}
       aria-label="Example master receipt"
     >

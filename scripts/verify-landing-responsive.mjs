@@ -150,9 +150,22 @@ page.on("response", (response) => {
   }
 });
 
+// The landing has a one-time page-load reveal (opacity/transform, ~1.5s).
+// Geometry and contrast are measured on the settled page, not mid-fade — a
+// half-faded button is not a contrast defect and a rising receipt is not a
+// layout one. Reduced-motion is exercised separately below.
+async function settled(page) {
+  await page.evaluate(() =>
+    Promise.all(
+      document.getAnimations().map((animation) => animation.finished.catch(() => {})),
+    ),
+  );
+}
+
 for (const [width, height] of matrix) {
   await page.setViewportSize({ width, height });
   await page.goto(url, { waitUntil: "networkidle" });
+  await settled(page);
 
   const screenshot = path.join(outDir, `${width}x${height}.png`);
   await page.screenshot({ path: screenshot, fullPage: false });
@@ -161,13 +174,14 @@ for (const [width, height] of matrix) {
     const doc = document.documentElement;
     const body = document.body;
     const hero = document.getElementById("top");
-    const heroImage = hero?.querySelector('img[aria-hidden="true"]');
+    // The hero's object is the example receipt (a <figure>), not a background
+    // image. It is the product's proof and must be present at every width.
+    const heroObject = hero?.querySelector("figure");
     const heroHeadline = hero?.querySelector("h1");
     const heroCopy = heroHeadline?.closest("div");
     const nav = document.querySelector("nav");
     const heroRect = hero?.getBoundingClientRect();
     const copyRect = heroCopy?.getBoundingClientRect();
-    const imageStyle = heroImage ? getComputedStyle(heroImage) : null;
     const copyStyle = heroCopy ? getComputedStyle(heroCopy) : null;
     const navStyle = nav ? getComputedStyle(nav) : null;
     const sectionLinks = Array.from(nav?.querySelectorAll('a[href^="#"]') ?? []).map((link) => {
@@ -194,8 +208,8 @@ for (const [width, height] of matrix) {
       heroWidth: heroRect?.width ?? null,
       heroPresent: Boolean(hero),
       heroHeadline: heroHeadline?.textContent ?? null,
-      imageFit: imageStyle?.objectFit ?? null,
-      imagePosition: imageStyle?.objectPosition ?? null,
+      heroObjectPresent: Boolean(heroObject),
+      heroObjectWidth: heroObject?.getBoundingClientRect().width ?? null,
       copyDisplay: copyStyle?.display ?? null,
       copyRect: copyRect
         ? {
@@ -208,6 +222,16 @@ for (const [width, height] of matrix) {
         : null,
       navDisplay: navStyle?.display ?? null,
       navPosition: navStyle?.position ?? null,
+      // Pinned means pinned: scroll well past the hero and the bar must still
+      // sit at the top edge. This is what "fixed" used to stand in for.
+      navPinnedTop: (() => {
+        if (!nav) return null;
+        const y = window.scrollY;
+        window.scrollTo(0, 900);
+        const top = nav.getBoundingClientRect().top;
+        window.scrollTo(0, y);
+        return top;
+      })(),
       navLinks: sectionLinks,
       // A BROKEN image is one the browser finished with and got nothing from:
       // `complete` true, `naturalWidth` zero. An image that is merely not
@@ -222,7 +246,8 @@ for (const [width, height] of matrix) {
         .map((image) => image.getAttribute("src")),
       sections: required.map((id) => ({ id, present: Boolean(document.getElementById(id)) })),
       bodyHasExpectedCopy: [
-        "Hear every move. Ship with proof.",
+        "One-click mastering.",
+        "Your Endgame Sound.",
         "One engine",
         "Stop chasing the master",
         // U6 replaced "Same engine, headed to iPhone & Android" (a schedule
@@ -422,13 +447,17 @@ for (const [width, height] of matrix) {
   if (!metrics.heroPresent) {
     failures.push(`${width}x${height}: missing #top hero section`);
   }
-  if (typeof metrics.heroHeight !== "number" || metrics.heroHeight < height * 0.9) {
-    failures.push(`${width}x${height}: hero height is ${metrics.heroHeight}, expected at least ${Math.round(height * 0.9)}`);
+  // The sheet hero is not a full-bleed image, so it owes no viewport-height
+  // minimum. What it owes is the action: on a desktop width the hero CTA must
+  // sit inside the first viewport (phones are the owner-queue question, see
+  // the T-03 note below).
+  if (width >= 1024 && !metrics.quality.heroCtaVertical) {
+    failures.push(`${width}x${height}: hero CTA is below the first viewport on a desktop width`);
   }
-  if (metrics.imageFit !== "cover") {
-    failures.push(`${width}x${height}: hero image fit is ${metrics.imageFit}, expected cover`);
+  if (!metrics.heroObjectPresent || (metrics.heroObjectWidth ?? 0) < 200) {
+    failures.push(`${width}x${height}: hero receipt object missing or collapsed (${metrics.heroObjectWidth})`);
   }
-  if (!metrics.heroHeadline?.includes("Master your track in real time")) {
+  if (!metrics.heroHeadline?.includes("Your Endgame Sound")) {
     failures.push(`${width}x${height}: hero headline missing expected copy`);
   }
   if (metrics.brokenImages.length > 0) {
@@ -443,8 +472,11 @@ for (const [width, height] of matrix) {
   if (metrics.copyDisplay === "none" || !metrics.copyRect || metrics.copyRect.width < 240) {
     failures.push(`${width}x${height}: live hero copy is not visible`);
   }
-  if (metrics.navDisplay !== "flex" || metrics.navPosition !== "fixed") {
-    failures.push(`${width}x${height}: landing nav is ${metrics.navPosition}/${metrics.navDisplay}, expected fixed/flex`);
+  if (!["fixed", "sticky"].includes(metrics.navPosition ?? "")) {
+    failures.push(`${width}x${height}: landing nav is ${metrics.navPosition}, expected fixed or sticky`);
+  }
+  if (typeof metrics.navPinnedTop !== "number" || Math.abs(metrics.navPinnedTop) > 1) {
+    failures.push(`${width}x${height}: landing nav does not stay pinned to the top when scrolled (${metrics.navPinnedTop})`);
   }
   const visibleNavTargets = metrics.navLinks.filter((link) => link.visible).map((link) => link.href);
   for (const section of requiredSections) {
@@ -706,6 +738,7 @@ for (const [width, height] of [
 ]) {
   await page.setViewportSize({ width, height });
   await page.goto(url, { waitUntil: "networkidle" });
+  await settled(page);
   await page.addScriptTag({ content: AXE_SOURCE });
   const result = await page.evaluate(async () =>
     // WCAG 2.0/2.1 A and AA. Best-practice rules are deliberately excluded:

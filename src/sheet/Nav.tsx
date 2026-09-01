@@ -17,7 +17,7 @@ export default function Nav({
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 py-3">
         <a
           href="#top"
-          className="font-display text-[1.45rem] leading-none tracking-[-0.01em] text-ink"
+          className="inline-flex min-h-11 items-center font-display text-[1.45rem] leading-none tracking-[-0.01em] text-ink"
         >
           YES Master
         </a>

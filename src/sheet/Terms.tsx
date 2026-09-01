@@ -41,12 +41,14 @@ export default function Terms() {
 
           <dl className="grid gap-x-10 sm:grid-cols-2 lg:col-span-8 lg:pt-1">
             {terms.map((term) => (
-              <div key={term.mark} className="grid grid-cols-[2rem_1fr] border-t border-rule py-5">
-                <span className="font-display text-[1.15rem] text-ink-3">{term.mark}</span>
-                <div>
-                  <dt className="text-[1.05rem] font-semibold text-ink">{term.title}</dt>
-                  <dd className="mt-1.5 text-[0.95rem] leading-[1.6] text-ink-2">{term.body}</dd>
-                </div>
+              <div key={term.mark} className="border-t border-rule py-5">
+                <dt className="grid grid-cols-[2rem_1fr] text-[1.05rem] font-semibold text-ink">
+                  <span aria-hidden="true" className="font-display text-[1.15rem] font-normal text-ink-3">
+                    {term.mark}
+                  </span>
+                  <span>{term.title}</span>
+                </dt>
+                <dd className="mt-1.5 pl-8 text-[0.95rem] leading-[1.6] text-ink-2">{term.body}</dd>
               </div>
             ))}
           </dl>

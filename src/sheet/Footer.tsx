@@ -10,7 +10,7 @@ export default function Footer() {
           href={REPO_URL}
           target="_blank"
           rel="noreferrer"
-          className="font-semibold text-ink-2 underline decoration-rule-strong underline-offset-4 hover:text-ink"
+          className="inline-flex min-h-11 items-center font-semibold text-ink-2 underline decoration-rule-strong underline-offset-4 hover:text-ink"
         >
           GitHub
         </a>
