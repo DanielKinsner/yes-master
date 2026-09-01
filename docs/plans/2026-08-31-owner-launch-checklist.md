@@ -87,8 +87,11 @@ Staged on the office PC: `Downloads\yes-master-0.9.2-beta\` — the draft's
    visible to you while signed in).
 2. Download `YES.Master_0.9.2_universal.dmg`, open it, drag YES Master to
    Applications.
-3. First launch: **right-click the app → Open → Open**. Expected "unidentified
-   developer" warning (no Apple Developer account yet).
+3. First launch: macOS will block it. Open **System Settings → Privacy &
+   Security**, find the YES Master message, click **Open Anyway**, then
+   **Open**. (Right-click → Open no longer bypasses Gatekeeper for unsigned
+   apps on macOS 15 and later.) Expected "unidentified developer" warning (no
+   Apple Developer account yet).
 4. **You should see:** the app opens and feels snappy. This closes the
    PRODUCT.md real-machine RC criterion.
 

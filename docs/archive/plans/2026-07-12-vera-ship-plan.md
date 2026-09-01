@@ -1,5 +1,8 @@
 # YES Master — Ship Plan
 
+*Archived 2026-09-01 — July snapshot, superseded by `docs/plans/beta-go-no-go.md`
+and `docs/plans/2026-09-01-friday-ship-execution-plan.md`.*
+
 *Vera, 2026-07-12 (Fable session), corrected against live repo evidence on
 2026-07-13. Current frontend suite: **546 tests pass**.*
 

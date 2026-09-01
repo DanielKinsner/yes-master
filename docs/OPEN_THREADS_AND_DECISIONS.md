@@ -7,6 +7,14 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **2026-09-01 — Hero CTA stays copy-first on short phones (owner decision
+> D10, Friday ship plan).** The fixed nav CTA is the all-axis acquisition
+> control at every viewport; the hero CTA is gated horizontally only and may
+> sit below the fold on short phones by design, because the introductory copy
+> comes first. Owner-queue row T-03 is closed; the rule is permanent in
+> `docs/TESTING.md` "Landing quality gates". No layout change. Plan:
+> `docs/plans/2026-09-01-friday-ship-execution-plan.md`.
+
 > **2026-08-31 — Adversarial audit: `v0.9.2-beta.1` @ `c750da6` is
 > AUDIT-BLOCKED / NO-GO pending owner disposition (not yet rejected).**
 > Confirmed release-bound blockers (hostile-import panic, updater notice

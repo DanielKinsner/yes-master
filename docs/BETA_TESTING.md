@@ -76,6 +76,10 @@ them is worse than described.
   signed off. Character notes are still welcome: a future tuning pass only
   opens on new listening notes, and yours are exactly what would justify one.
 - **Minimum window size is 1360×740.** Smaller is not supported yet.
+- **High display scaling is tight.** The minimum window is 1360×740 logical
+  pixels, so on a 1080p display at 150 % scaling the app opens maximized and
+  fills the screen; at 175 % or above the right rail may not fit. Lower the
+  display scale for that session if you hit it.
 
 ## Diagnostics
 

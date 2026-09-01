@@ -146,16 +146,28 @@ named scenario's scan must go red, proving the gate can fail.
 
 **Landing quality gates (added U8).** The matrix is now **13 viewports** —
 `320×568` was added because S-A3 names it and nothing covered it. At every
-viewport the lane also asserts: both acquisition CTAs are fully on screen, no
-in-page link points at a missing section, every external link is https and
-carries `rel` on `_blank`, exactly one `h1` with no skipped heading levels, a
-`<main>` landmark, a skip link targeting `#main`, title/description/canonical
-sanity, and — **at phone widths only** — touch targets of at least 24px.
+viewport the lane also asserts: the acquisition CTAs are contained (per the
+nav/hero rule below), no in-page link points at a missing section, every
+external link is https and carries `rel` on `_blank`, exactly one `h1` with no
+skipped heading levels, a `<main>` landmark, a skip link targeting `#main`,
+title/description/canonical sanity, and — **at phone widths only** — touch
+targets of at least 24px.
 
 The touch rule is width-scoped on purpose: on a desktop width the input is a
 mouse, and failing a 20px nav link there is noise. Links sitting *inline inside
 a sentence* are exempt (WCAG 2.5.8), because their size comes from the prose
 and padding them wrecks the paragraph.
+
+**Nav CTA vs hero CTA (permanent rule; owner decision D10, 2026-09-01).** The
+fixed nav CTA is the acquisition guarantee: it is gated on **both axes** at
+every viewport, and a nav CTA that is clipped or below the fold anywhere fails
+the lane. The hero CTA is a second door, not the only one: it is gated
+**horizontally only** — horizontal clipping is a layout bug at any width — and
+it may sit below the fold on short phones **by design**, because the
+introductory copy comes first. Its per-viewport fold containment is still
+recorded in `summary.json` (`heroCtaAllAxes`) as evidence, never as a gate.
+This closed owner-queue row T-03 as "copy-first"; do not promote the hero
+check to all-axis without a new owner decision.
 
 **Accessibility scan.** axe-core runs at `1440×900` and `390×844` against
 `wcag2a/wcag2aa/wcag21a/wcag21aa`. Best-practice rules are excluded — they are
