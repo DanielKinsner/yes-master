@@ -162,6 +162,10 @@ describe("top chrome", () => {
     expect(container.textContent).toContain("Advanced · delivery profile");
     expect(container.textContent).toContain("Streaming Universal — 48 kHz, 24-bit WAV");
     expect(container.textContent).toContain(".ams.json Save As / Open");
+    // S6.2 (2026-09-01): the App Info group no longer carries a placeholder
+    // "Build" row — Help shows the real version and build stamp.
+    expect(container.textContent).toContain("Private audio stays on this machine");
+    expect(container.textContent).not.toContain("Local desktop build");
 
     await act(async () => {
       buttonByLabel(container, "Close Settings").click();

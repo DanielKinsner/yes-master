@@ -47,10 +47,10 @@ export const SETTINGS_GROUPS: Array<{
   },
   {
     title: "App Info",
-    rows: [
-      ["Build", "Local desktop build"],
-      ["Privacy", "Private audio stays on this machine"],
-    ],
+    // No "Build" row here: Help owns the real version + build stamp
+    // (build_info command). A placeholder string beside a real one reads as
+    // a bug (ship review 2026-09-01, S6.2).
+    rows: [["Privacy", "Private audio stays on this machine"]],
   },
 ];
 
