@@ -34,6 +34,92 @@ use std::time::Duration;
 #[cfg(feature = "app-runner")]
 use tauri::{Emitter, Manager};
 
+/// Default main-window size from `tauri.conf.json` (`app.windows[0]`), in
+/// logical pixels. Named consts rather than a runtime config read: the
+/// maximize decision is a pure function that unit tests drive directly, and
+/// nothing on the launch path should wait on a config lookup.
+#[cfg(feature = "app-runner")]
+const DEFAULT_WINDOW_WIDTH: f64 = 1920.0;
+#[cfg(feature = "app-runner")]
+const DEFAULT_WINDOW_HEIGHT: f64 = 1080.0;
+
+/// True when the monitor's logical work area cannot hold the configured
+/// default window. Logical, not physical: Windows display scaling shrinks
+/// the usable canvas (1080p at 150 % is 1280×720 logical) and the app is
+/// composed for 1920×1080 logical (tauri.conf.json).
+#[cfg(feature = "app-runner")]
+pub(crate) fn should_maximize_for_work_area(
+    work_w: f64,
+    work_h: f64,
+    default_w: f64,
+    default_h: f64,
+) -> bool {
+    work_w < default_w || work_h < default_h
+}
+
+/// D4 tier 1 (owner decision 2026-09-01): open at the configured 1920×1080,
+/// centred, when the primary monitor's logical work area holds it; maximized
+/// when it does not. Every error path is ignored — a missing monitor, an odd
+/// scale factor, or a failed maximize must never block launch.
+#[cfg(feature = "app-runner")]
+fn fit_main_window_to_display(app: &tauri::AppHandle) {
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+    let Ok(Some(monitor)) = window.primary_monitor() else {
+        return;
+    };
+    let scale = monitor.scale_factor();
+    if !scale.is_finite() || scale <= 0.0 {
+        return;
+    }
+    let work = monitor.work_area().size;
+    let work_w = f64::from(work.width) / scale;
+    let work_h = f64::from(work.height) / scale;
+    if should_maximize_for_work_area(work_w, work_h, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+        && window.maximize().is_ok()
+    {
+        crate::diagnostics::info(format!(
+            "window maximized: work area {work_w:.0}x{work_h:.0} logical < {DEFAULT_WINDOW_WIDTH:.0}x{DEFAULT_WINDOW_HEIGHT:.0}"
+        ));
+    }
+}
+
+#[cfg(all(test, feature = "app-runner"))]
+mod window_fit_tests {
+    use super::{should_maximize_for_work_area, DEFAULT_WINDOW_HEIGHT, DEFAULT_WINDOW_WIDTH};
+
+    fn maximize(work_w: f64, work_h: f64) -> bool {
+        should_maximize_for_work_area(work_w, work_h, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+    }
+
+    #[test]
+    fn laptop_1080p_at_125_percent_maximizes() {
+        assert!(maximize(1536.0, 864.0));
+    }
+
+    #[test]
+    fn laptop_1080p_at_150_percent_maximizes() {
+        assert!(maximize(1280.0, 720.0));
+    }
+
+    #[test]
+    fn exact_default_fits_without_maximizing() {
+        assert!(!maximize(1920.0, 1080.0));
+    }
+
+    #[test]
+    fn qhd_fits_without_maximizing() {
+        assert!(!maximize(2560.0, 1440.0));
+    }
+
+    #[test]
+    fn short_work_area_maximizes_even_when_wide_enough() {
+        // Width fits; a taskbar has eaten the bottom rows.
+        assert!(maximize(1920.0, 1000.0));
+    }
+}
+
 #[cfg(feature = "app-runner")]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -72,6 +158,9 @@ pub fn run() {
                 std::env::consts::OS,
                 std::env::consts::ARCH
             ));
+            // D4 tier 1: maximize when the display cannot hold 1920×1080
+            // logical. Runs after diagnostics init so the decision is logged.
+            fit_main_window_to_display(app.handle());
             // D5: reclaim render tmp files stranded by a process kill /
             // OS shutdown mid-render (no render can be running yet).
             if let Ok(app_data) = app.path().app_data_dir() {
