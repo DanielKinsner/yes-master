@@ -3,6 +3,7 @@ import Hero from "./sheet/Hero";
 import Chain from "./sheet/Chain";
 import Workflow from "./sheet/Workflow";
 import Proof from "./sheet/Proof";
+import Plate from "./sheet/Plate";
 import Sound from "./sheet/Sound";
 import Album from "./sheet/Album";
 import Terms from "./sheet/Terms";
@@ -24,6 +25,7 @@ import Footer from "./sheet/Footer";
  *   Chain       the eight stages, in the app's order
  *   Workflow    what you actually do — three decisions
  *   Proof       Standard as the room, Advanced as the console
+ *   Plate       the one photograph, full-bleed
  *   Sound       character controls and adaptive restraint
  *   Album       depth proof, deliberately low
  *   Terms       the arrangement, before anyone downloads
@@ -45,6 +47,7 @@ export default function LandingPage() {
         <Chain />
         <Workflow />
         <Proof />
+        <Plate />
         <Sound />
         <Album />
         <Terms />
