@@ -29,7 +29,7 @@ contact the owner.
 | D1 | **No custom domain exists.** The owner has not bought `yesmaster.app`. Every absolute URL the landing page publishes points at the deployed origin `https://yes-master.vercel.app`. | Slice S2 rewrites the four head tags in `index.html` and drops the `hello@yesmaster.app` address from the signup error copy. Buying a domain is a post-launch owner item (queued in `docs/OWNER_INPUT_QUEUE.md` by S1). |
 | D2 | **GitHub writes.** The executor may push its own commits from this plan to `main` (docs and the two small code fixes). The **17 open Dependabot PRs are closed, not merged**, with a one-line comment; nothing dependency-related merges before the tag. | S4. Reversible (a closed PR can be reopened). Post-launch backlog: merge them in CI-gated batches (§9). *Owner may veto D2 before launching the executor; if vetoed, the executor commits locally and stops at each push point.* |
 | D3 | **Beta.1 disposition and the beta.2 tag are NOT decided.** | The executor never tags. It stops at Checkpoint 2 and Checkpoint 3 with the exact green SHA, and the owner records the disposition in `docs/OWNER_INPUT_QUEUE.md` (row "Beta.1 disposition") when ready. |
-| D4 | **Window sizing fix ships** (maximize on displays whose logical work area is smaller than the configured 1920×1080, plus `center: true`). | S3. Owner hand-tests once at 150 % display scaling. |
+| D4 | **Window sizing is read from the display, three tiers.** Tier 1 (must): at startup read the primary monitor's logical work area; open at 1920×1080 centered when it fits, maximized when it does not. Tier 2 (Tier B): when the work area is below the layout floor (1360×740 logical) apply a **native** webview zoom to fit, clamped 0.8–1.0, never above 1.0 — not CSS zoom. Tier 3 (post-launch): remember window geometry across launches and a UI-scale preference. Opening maximized for everyone was rejected: it changes how the app looks on large monitors in launch week. | S3 (Tier 1), S6.5 (Tier 2), §9 (Tier 3). Owner hand-tests on the 4K office monitor at 250 % (simulates a 1536×864 laptop → maximize) and 300 % (1280×720 → zoom-to-fit). |
 | D5 | **Tier B polish proceeds** after Checkpoint 2 unless the owner says stop: one commit each, in the order listed in S6. | Each Tier B commit moves the tag target; Checkpoint 3 re-reports the final green SHA. |
 | D6 | **Beta guide gets a display-scaling limitation line** even though D4 ships, because the minimum window is still 1360×740 logical. | S1. |
 | D7 | **Mac updater proof is optional owner lane.** If skipped, the accepted risk is written into go/no-go §3(ii) rather than left implicit. | §5 owner lane. |
@@ -196,7 +196,9 @@ signature changes, so the mobile bridge lanes are not triggered — re-check
 that claim against the actual diff. Commit:
 `desktop: maximize when the logical work area is smaller than the default window (D4)`.
 
-Owner hand-test (§5, item 1) covers the real-display proof.
+Owner hand-test (§5, item 1) covers the real-display proof. Remembering the
+user's last window geometry (`tauri-plugin-window-state`) is the mature next
+step but is a new dependency; it is post-launch (§9), not this slice.
 
 ### S4 — Close the Dependabot PRs (no commit)
 
@@ -262,6 +264,27 @@ pins deliberately and say so in the commit message.
      return a different `output_paths[0]` than the save dialog path and
      asserts the sentence in both surfaces; one negative case (same path → no
      sentence). Commit: `export: tell the user when a render was saved under a new name`.
+5. **Fit-to-floor zoom (D4 Tier 2).** Intent: a display whose logical work
+   area is *below* the layout floor (1360×740) should still show the whole
+   console rather than clipping the right rail. Mechanism: the webview's
+   **native** zoom (the same thing Ctrl+minus does in a browser — crisp, and
+   CSS breakpoints respond because CSS pixels scale with it), never the CSS
+   `zoom` property (that is what `useWebviewZoomShortcuts` in `App.tsx`
+   deliberately pins to 1 because it blurred and broke breakpoint math; leave
+   that code alone).
+   - First verify the API in the locked crate: `grep -n "pub fn set_zoom" ~/.cargo/registry/src/*/tauri-2.11.1/src/webview/*.rs`.
+     If it is absent, stop this item and log it — do not substitute CSS zoom.
+   - In the same `setup` block as S3, after the maximize decision: compute
+     `factor = min(work_w / 1360, work_h / 740, 1.0)`, clamp to `>= 0.8`, and
+     call `window.set_zoom(factor)` only when `factor < 1.0`; log the factor
+     via `diagnostics::info`. Pure helper `fit_zoom_for_work_area(work_w, work_h) -> f64`
+     with unit tests: `1280×720 → 0.941…` (height-limited: 720/740),
+     `1536×864 → 1.0`, `1920×1080 → 1.0`, `1000×600 → 0.8` (clamped).
+   - Revert rule (write it in the commit message): if the owner's 300 %
+     hand-test says the zoomed console reads worse than a scrollbar would,
+     this item is reverted, not tuned.
+   Verify: Rust lane as in S3; `npm run build:windows`. Commit:
+   `desktop: native zoom-to-fit below the 1360x740 layout floor (D4 tier 2)`.
 
 ### S7 — Records, push, watch CI → **Checkpoint 3**
 
@@ -281,11 +304,17 @@ pins deliberately and say so in the commit message.
 
 ## 5. Owner lane (after Checkpoint 3)
 
-1. **Scaling hand-test (5 min, office PC).** Settings → System → Display →
-   Scale → 150 %. Launch the dev build (`npm run tauri dev`) or the freshly
-   built installer from S3. You should see the app open maximized, right rail
-   and Create Master visible. Set the scale back. If it does not fit, that is a
-   stop-and-fix for the executor, not a doc note.
+1. **Scaling hand-test (5 min, office PC, 4K monitor).** Settings → System →
+   Display → Scale. **250 %** makes the 4K screen behave like a 1536×864
+   laptop: launch the dev build (`npm run tauri dev`) or the installer from
+   S3; you should see the app open **maximized**, right rail and Create
+   Master visible. **300 %** behaves like a 1280×720 laptop: after S6.5 the
+   app should open maximized *and* zoomed slightly smaller so nothing clips;
+   before S6.5 it is maximized but tight (the documented caveat). Judge the
+   300 % result by eye: crisp and complete = keep; worse than a scrollbar =
+   tell the executor to revert S6.5. Set the scale back to your normal value.
+   If Tier 1 does not fit at 250 %, that is a stop-and-fix for the executor,
+   not a doc note.
 2. **Beta.1 disposition (D3).** When ready, tell the executor (or the next
    session) *"reject beta.1, tag beta.2 at <SHA>"* using the Checkpoint 3 SHA.
    The tagging procedure is the existing U14 close-out in the go/no-go ledger
@@ -363,6 +392,10 @@ are how executors drift; deviations logged are how the plan gets better.
   chrono, tauri-build 2.6.3, futures-executor, jni 0.21→0.22 Android-only).
   None were security fixes on 2026-09-01 (`npm audit` and RustSec clean).
 - Bump the Node-20 GitHub actions (`checkout@v4`, `setup-node@v4`, `setup-java@v4`).
+- **Window geometry memory (D4 Tier 3):** adopt `tauri-plugin-window-state`
+  so size/position/maximized persist across launches, clamped to the
+  monitors present at launch; add a "UI scale" preference in Settings that
+  drives the same native zoom as S6.5; revisit the 1360×740 layout floor.
 - Mac updater proving run on the first patch release if D7 was skipped.
 - Vocabulary pass (Style vs Preset; compressor "Preset" mode naming).
 - Loudness has one owner in Advanced.
