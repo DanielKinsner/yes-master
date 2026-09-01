@@ -6,9 +6,21 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-val nativeAbis = listOf("arm64-v8a")
+// One tester APK for current Android phones plus the common x86_64 emulator
+// lane. The previously distributed arm64-only APK installed on the owner's
+// test phone, confirming that device is 64-bit; x86_64 keeps device testing
+// possible without platform translation.
+val nativeAbis = listOf("arm64-v8a", "x86_64")
 val pinnedNdkVersion = "27.2.12479018"
 val minimumLoadSegmentAlignment = 0x4000L
+val androidRustLinkFlags = listOf(
+    "-C link-arg=-Wl,-z,max-page-size=16384",
+    // oboe-sys 0.6.1 emits c++_static but omits its C++ ABI companion,
+    // leaving __gxx_personality_v0 unresolved until the APK is opened.
+    // Keep both at the end of the final link so the bridge is self-contained.
+    "-C link-arg=-lc++_static",
+    "-C link-arg=-lc++abi",
+).joinToString(" ")
 
 val resolveConfiguredNdkDir = {
     System.getenv("ANDROID_NDK_HOME")
@@ -57,9 +69,10 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
-            // Sideload MVP targets real hardware; emulator x86_64 can be
-            // added to this list when wanted.
+            // One sideloadable package covers current 64-bit phones and the
+            // x86_64 emulator used by the connected bridge-load gate.
             abiFilters += nativeAbis
         }
     }
@@ -132,16 +145,38 @@ val cargoNdk = tasks.register<Exec>("cargoNdk") {
     inputs.dir(file("../../../src-tauri/capabilities"))
     outputs.dir(file("src/main/jniLibs"))
 
+    doFirst {
+        // jniLibs is generated and ignored. Clear it whenever this task runs
+        // so removing an ABI or cdylib cannot leave a stale library packaged
+        // or evaluated by the verification tasks below.
+        project.delete(file("src/main/jniLibs"))
+    }
+
     val pathSeparator = File.pathSeparator
     val cargoBinDir = File(System.getProperty("user.home"), ".cargo/bin")
-    if (cargoBinDir.isDirectory) {
-        environment("PATH", cargoBinDir.absolutePath + pathSeparator + System.getenv("PATH"))
-    }
+    val rustupCargo = File(System.getProperty("user.home"), ".rustup/toolchains")
+        .listFiles()
+        ?.filter { it.isDirectory && it.name.startsWith("stable-") }
+        ?.sortedByDescending { it.lastModified() }
+        ?.flatMap { toolchain ->
+            sequenceOf("cargo.exe", "cargo").map { File(toolchain, "bin/$it") }.toList()
+        }
+        ?.firstOrNull { it.isFile }
     val cargoExe = sequenceOf("cargo.exe", "cargo")
         .map { File(cargoBinDir, it) }
         .firstOrNull { it.isFile }
         ?.absolutePath
+        ?: rustupCargo?.absolutePath
         ?: "cargo"
+    val cargoToolchainBin = File(cargoExe).parentFile
+    val cargoSearchPath = listOfNotNull(
+        cargoBinDir.takeIf { it.isDirectory }?.absolutePath,
+        cargoToolchainBin?.takeIf { it.isDirectory }?.absolutePath,
+        System.getenv("PATH"),
+    ).joinToString(pathSeparator)
+    if (cargoSearchPath.isNotBlank()) {
+        environment("PATH", cargoSearchPath)
+    }
 
     val ndkDir = resolveConfiguredNdkDir()
     if (ndkDir != null) {
@@ -153,6 +188,17 @@ val cargoNdk = tasks.register<Exec>("cargoNdk") {
     // by the old toolchain.
     inputs.property("ndkDir", ndkDir ?: "")
     inputs.property("cargo", cargoExe)
+    inputs.property("androidRustLinkFlags", androidRustLinkFlags)
+
+    // Keep every ABI explicit so the package remains loadable on newer 16 KB
+    // page-size devices and the alignment gate below has one rule for all
+    // libraries.
+    listOf(
+        "AARCH64_LINUX_ANDROID",
+        "X86_64_LINUX_ANDROID",
+    ).forEach { target ->
+        environment("CARGO_TARGET_${target}_RUSTFLAGS", androidRustLinkFlags)
+    }
 
     commandLine(
         listOf(cargoExe, "ndk") +
@@ -210,6 +256,27 @@ val verifyNativeLoadAlignment = tasks.register("verifyNativeLoadAlignment") {
     }
 }
 
+val verifyNativeBridgeCoverage = tasks.register("verifyNativeBridgeCoverage") {
+    dependsOn(cargoNdk)
+    val bridgeName = "libyes_master_android_bridge.so"
+    val expected = nativeAbis.map { abi -> file("src/main/jniLibs/$abi/$bridgeName") }
+    inputs.files(expected)
+
+    doLast {
+        val missing = expected.filterNot { it.isFile && it.length() > 0 }
+        if (missing.isNotEmpty()) {
+            throw GradleException(
+                "Tester APK is missing the native audio bridge for: " +
+                    missing.joinToString { it.parentFile.name }
+            )
+        }
+    }
+}
+
+verifyNativeLoadAlignment.configure {
+    dependsOn(verifyNativeBridgeCoverage)
+}
+
 // Hook into jniLib merging only — APK packaging needs the .so, but the JVM
 // unit-test lane (the wire drift gate's fourth consumer) must stay runnable
 // on a machine with no Rust or NDK installed.
@@ -241,4 +308,6 @@ dependencies {
     // The release APK (what ships) is untouched.
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     testImplementation("org.robolectric:robolectric:4.14.1")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
 }
