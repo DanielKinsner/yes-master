@@ -1,60 +1,57 @@
-import Nav from "./landing/Nav";
-import Hero from "./landing/Hero";
-import Workflow from "./landing/Workflow";
-import ProofDeck from "./landing/ProofDeck";
-import SoundCharacter from "./landing/SoundCharacter";
-import AlbumProof from "./landing/AlbumProof";
-import BetaTerms from "./landing/BetaTerms";
-import CrossPlatform from "./landing/CrossPlatform";
-import FinalCTA from "./landing/FinalCTA";
+import Nav from "./sheet/Nav";
+import Hero from "./sheet/Hero";
+import Chain from "./sheet/Chain";
+import Workflow from "./sheet/Workflow";
+import Proof from "./sheet/Proof";
+import Sound from "./sheet/Sound";
+import Album from "./sheet/Album";
+import Terms from "./sheet/Terms";
+import Platform from "./sheet/Platform";
+import GetStarted from "./sheet/GetStarted";
+import Footer from "./sheet/Footer";
 
 /*
- * The YES Master landing page, top to bottom.
+ * The YES Master landing page — "the delivery sheet" — top to bottom.
  *
- * Each line below is a section of the page. Open any one in src/landing/
- * to see (and edit) exactly what it shows. There is no hidden styling —
- * the look lives as Tailwind classes right inside each component, and the
- * brand colors/fonts are defined once in LandingPage.css.
+ * Each line is a section; open it in src/sheet/ to see and edit exactly what
+ * it shows. The look lives as Tailwind classes inside each section, and the
+ * paper/ink palette, type, and shared utilities are defined once in
+ * LandingPage.css.
  *
- * ORDER IS THE ARGUMENT (U6). One visitor hierarchy, in this sequence:
+ * ORDER IS THE ARGUMENT (U6). One visitor hierarchy, unchanged in sequence:
  *
- *   Hero            problem and outcome
- *   Workflow        what you actually do — three decisions
- *   ProofDeck       credible product proof, Standard as hero / Advanced as depth
- *   SoundCharacter  character controls and adaptive restraint
- *   AlbumProof      depth proof, deliberately LOW — not a second audience
- *   BetaTerms       what the arrangement is, before anyone downloads
- *   CrossPlatform   one date-free line that mobile is not available
- *   FinalCTA        the action
- *
- * CrossPlatform used to sit SECOND, immediately under the hero — a parked,
- * unobtainable product in the page's most valuable position, with six
- * present-tense feature cards. Do not move it back up.
+ *   Hero        the promise, with the receipt as the object
+ *   Chain       the eight stages, in the app's order
+ *   Workflow    what you actually do — three decisions
+ *   Proof       Standard as the room, Advanced as the console
+ *   Sound       character controls and adaptive restraint
+ *   Album       depth proof, deliberately low
+ *   Terms       the arrangement, before anyone downloads
+ *   Platform    one date-free line that mobile is not available
+ *   GetStarted  the action
  */
 export default function LandingPage() {
   return (
-    <div className="min-h-svh bg-night text-ink">
-      {/* U8 — skip link. The nav is fixed and comes before everything, so a
-          keyboard or screen-reader visitor otherwise tabs the whole bar on
-          every page load. Visually hidden until focused, then it is the first
-          thing on screen rather than a phantom focus ring. */}
+    <div className="min-h-svh bg-paper text-ink">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:font-extrabold focus:text-night"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:font-semibold focus:text-paper-white"
       >
         Skip to main content
       </a>
       <Nav />
       <main id="main">
-      <Hero />
-      <Workflow />
-      <ProofDeck />
-      <SoundCharacter />
-      <AlbumProof />
-      <BetaTerms />
-      <CrossPlatform />
-      <FinalCTA />
+        <Hero />
+        <Chain />
+        <Workflow />
+        <Proof />
+        <Sound />
+        <Album />
+        <Terms />
+        <Platform />
+        <GetStarted />
       </main>
+      <Footer />
     </div>
   );
 }

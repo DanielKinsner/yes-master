@@ -1,140 +1,224 @@
 /*
- * YES Master landing — styling entry point.
+ * YES Master landing — "the delivery sheet".
  *
- * This file is intentionally small. It does three things:
- *   1. Pulls in Tailwind (all the layout/spacing/color utilities the
- *      components use live as classes right next to the markup).
- *   2. Defines the brand palette + fonts ONCE, below, so the whole page
- *      stays consistent. Change a color here and it changes everywhere.
- *   3. Defines a handful of shared surface/button utilities so every
- *      section speaks the same visual language as the desktop app
- *      (design/premium-pass, 2026-08-18): hairline seams, top-lit cards,
- *      one cobalt accent for what is live, amber for the call to action.
+ * The page is designed like the sheet a mastering house hands back with your
+ * master: paper, ink, hairline rules, a numbered margin, and the receipt as
+ * the hero object. The product's whole pitch is that it shows you what it
+ * did, so the page is built out of the one artifact that proves it.
  *
- * There is no other landing CSS. If you want to understand the page,
- * read the components in src/landing/ — each one is a section you can see.
+ * Three things live here and nowhere else:
+ *   1. Tailwind, imported once.
+ *   2. The palette and type — paper and ink, one cobalt accent (the app's own
+ *      blue) reserved for what is live, one green reserved for a pass.
+ *   3. A handful of shared utilities (buttons, eyebrow, plate, receipt edge)
+ *      and the page-load reveal, so every section speaks one language.
+ *
+ * Everything else is Tailwind classes next to the markup in src/sheet/.
  */
 
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&display=swap");
 @import "tailwindcss";
 
 @theme {
-  /* Brand palette — mirrors src/App.css :root so the site and the app
-     read as one product. ------------------------------------------------ */
-  --color-night: #07080c;       /* page background, near-black */
-  --color-panel: #0d1017;       /* raised surfaces */
-  --color-card: #131720;        /* cards */
+  /* Paper and ink. Both tinted — the paper warm, the ink toward the app's
+     cobalt — so the two never read as dead grey on white. */
+  --color-paper: oklch(96.6% 0.009 85);
+  --color-paper-deep: oklch(93.4% 0.012 85);
+  --color-paper-white: oklch(99.1% 0.004 85);
 
-  --color-ink: #eef1f8;         /* primary text */
-  --color-muted: #aeb6cc;       /* secondary text */
-  --color-soft: #8690ad;        /* faint text / labels — still ≥4.5:1 on night */
-  --color-line: rgba(158, 176, 214, 0.12);   /* hairline borders */
+  --color-ink: oklch(21% 0.018 262);
+  --color-ink-2: oklch(38% 0.018 262);   /* secondary copy — 7:1 on paper */
+  --color-ink-3: oklch(46% 0.016 262);   /* captions, labels — ≥4.5:1 on paper */
 
-  --color-brand: #4f86f7;       /* the cobalt app accent */
-  --color-brand-soft: #7aa6ff;
-  --color-brand-deep: #2f63e6;
+  --color-rule: oklch(21% 0.018 262 / 0.14);
+  --color-rule-strong: oklch(21% 0.018 262 / 0.45);
 
-  --color-cta: #e2982f;         /* CTA accent — confident, not candy */
-  --color-cta-light: #efb066;
-  --color-cta-deep: #cd7826;
+  /* The app's blue, deepened until it holds 4.5:1 as text on paper. */
+  --color-accent: oklch(51% 0.2 262);
+  --color-accent-bright: #4f86f7;   /* the in-app hue, for swatches only */
 
-  --color-good: #6dd58f;        /* "all good" / pass states */
+  --color-pass: oklch(47% 0.13 152);
 
-  /* Fonts ------------------------------------------------------------ */
-  --font-display: "Aptos Display", "Segoe UI Variable Display", "SF Pro Display", "Bahnschrift", sans-serif;
-  --font-sans: "Aptos", "Segoe UI Variable Text", "Segoe UI", -apple-system, system-ui, sans-serif;
+  /* The dark of the app itself, for the plates the captures sit on. */
+  --color-screen: #0b0e15;
 
-  --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.35), 0 16px 40px -16px rgba(0, 0, 0, 0.6);
-  --shadow-frame: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 30px 80px -30px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --font-display: "Instrument Serif", "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-sans: "Instrument Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Shared surfaces ------------------------------------------------------ */
+/* Type ------------------------------------------------------------------ */
 
-/* A card: top-lit gradient, hairline seam, one shadow language. */
-@utility surface-card {
-  background:
-    linear-gradient(180deg, rgba(28, 33, 46, 0.72) 0%, rgba(13, 16, 24, 0.9) 100%);
-  border: 1px solid var(--color-line);
-  box-shadow: var(--shadow-card);
-}
-
-/* A "device" frame around a screenshot: dark bezel, soft floor shadow. */
-@utility surface-frame {
-  background: #0a0d14;
-  border: 1px solid rgba(158, 176, 214, 0.18);
-  box-shadow: var(--shadow-frame);
-}
-
-/* Section eyebrow label. */
+/* Small caps label with a section number in front: "01 / Three decisions". */
 @utility eyebrow {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--color-brand-soft);
+  color: var(--color-ink-3);
 }
 
-/* Buttons ---------------------------------------------------------------- */
-
-@utility btn-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.65rem;
-  padding: 0.8rem 1.4rem;
-  font-weight: 800;
-  color: #1c0d00;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 50%),
-    linear-gradient(180deg, var(--color-cta-light) 0%, var(--color-cta-deep) 100%);
-  border: 1px solid rgba(255, 220, 160, 0.45);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 1px 2px rgba(0, 0, 0, 0.45),
-    0 10px 26px -10px rgba(205, 120, 38, 0.9);
-  transition: transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 140ms, filter 140ms;
-}
-@utility btn-cta-hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 2px 4px rgba(0, 0, 0, 0.45),
-    0 14px 32px -10px rgba(205, 120, 38, 1);
-}
-
-@utility btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.65rem;
-  padding: 0.8rem 1.4rem;
-  font-weight: 800;
+/* Section headline. Serif, roman, tight — the size is fluid, the voice isn't. */
+@utility headline {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.25rem, 1.4rem + 3.2vw, 4rem);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
   color: var(--color-ink);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  transition: background 140ms, border-color 140ms, transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-@utility btn-ghost-hover {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(255, 255, 255, 0.24);
+
+/* Surfaces -------------------------------------------------------------- */
+
+/* A capture of the app, sitting on the paper like a printed photograph:
+   a hairline, a dark bezel the width of a pencil line, one soft floor shadow. */
+@utility plate {
+  background: var(--color-screen);
+  padding: 0.3rem;
+  border-radius: 0.6rem;
+  border: 1px solid oklch(21% 0.018 262 / 0.5);
+  box-shadow:
+    0 1px 0 oklch(99% 0 0 / 0.35),
+    0 24px 48px -28px oklch(21% 0.018 262 / 0.55),
+    0 2px 6px -2px oklch(21% 0.018 262 / 0.35);
+}
+
+/* The receipt: whiter than the page, torn along the bottom. */
+@utility receipt {
+  background: var(--color-paper-white);
+  color: var(--color-ink);
+  box-shadow:
+    0 1px 0 oklch(99% 0 0 / 0.6),
+    0 30px 50px -30px oklch(21% 0.018 262 / 0.45),
+    0 4px 10px -6px oklch(21% 0.018 262 / 0.3);
+  mask:
+    linear-gradient(#000 0 0) top / 100% calc(100% - 11px) no-repeat,
+    conic-gradient(from -45deg at 50% 100%, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 11px repeat-x;
+}
+
+/* Buttons --------------------------------------------------------------- */
+
+@utility btn-ink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-paper-white);
+  background: var(--color-ink);
+  border: 1px solid var(--color-ink);
+  transition: background 160ms var(--ease-out-quint), border-color 160ms var(--ease-out-quint), transform 160ms var(--ease-out-quint);
+}
+@utility btn-ink-hover {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
   transform: translateY(-1px);
 }
 
-/* Minimal globals — everything else is utility classes in the markup. */
-html {
-  color-scheme: dark;
-  scroll-behavior: smooth;
+@utility btn-line {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-ink);
+  background: transparent;
+  border: 1px solid var(--color-rule-strong);
+  transition: border-color 160ms var(--ease-out-quint), transform 160ms var(--ease-out-quint);
+}
+@utility btn-line-hover {
+  border-color: var(--color-ink);
+  transform: translateY(-1px);
+}
+
+/* An inactive control that must not look clickable: no fill, dashed hairline,
+   caption-grey text. Deliberately shares nothing with the live buttons. */
+@utility btn-inert {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-ink-3);
+  background: transparent;
+  border: 1px dashed var(--color-rule-strong);
+  cursor: not-allowed;
+}
+
+/* Motion ----------------------------------------------------------------- */
+
+/* One page-load reveal on the hero, staggered by --d. Transform and opacity
+   only. Nothing else on the page animates on its own. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes settle {
+  from { opacity: 0; transform: translateY(28px) rotate(-5deg); }
+  to   { opacity: 1; transform: translateY(0) rotate(-2deg); }
+}
+@keyframes draw {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@utility rise {
+  animation: rise 900ms var(--ease-out-quint) both;
+  animation-delay: var(--d, 0ms);
+}
+@utility settle {
+  animation: settle 1100ms var(--ease-out-quint) both;
+  animation-delay: var(--d, 0ms);
+}
+@utility draw {
+  transform-origin: left center;
+  animation: draw 1400ms var(--ease-out-quint) both;
+  animation-delay: var(--d, 0ms);
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .rise, .settle, .draw {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+  .settle { transform: rotate(-2deg); }
   html { scroll-behavior: auto; }
+}
+
+/* Globals ----------------------------------------------------------------- */
+
+html {
+  color-scheme: light;
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
-  background: var(--color-night);
+  background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  font-kerning: normal;
   -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: oklch(51% 0.2 262 / 0.18);
 }
