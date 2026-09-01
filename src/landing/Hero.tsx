@@ -79,11 +79,12 @@ export default function Hero({
             longer line at every width from 1024 up, measured in the WIDEST
             fallback face, so a narrower Segoe/SF only gains slack. On
             phones it wraps normally with text-balance. The Y/E/S are the same
-            colour as the rest of the line and carry only a white glow, so the
-            acronym is findable without a second colour shouting it. */}
+            colour as the rest of the line and carry only a tight white glow —
+            a rim on the letter, not a haze around it — so the acronym is
+            findable without a second colour shouting it. */}
         <h1 className="text-balance font-display text-[2.4rem] font-black leading-[1.02] tracking-[-0.03em] sm:text-[3rem] lg:whitespace-nowrap lg:text-[2.3rem] xl:text-[2.85rem]">
           <span className="block">One-click mastering.</span>
-          <span className="mt-1 block text-brand-soft [&>span]:[text-shadow:0_0_10px_rgba(255,255,255,0.85),0_0_28px_rgba(255,255,255,0.5)]">
+          <span className="mt-1 block text-brand-soft [&>span]:[text-shadow:0_0_9px_rgba(255,255,255,0.6)]">
             <span>Y</span>our <span>E</span>ndgame <span>S</span>ound.
           </span>
         </h1>
