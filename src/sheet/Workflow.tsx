@@ -25,7 +25,10 @@ export default function Workflow() {
         <div className="grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <p className="eyebrow">01 / Three decisions</p>
-            <h2 className="headline mt-4">Finished mix in. Finished master out.</h2>
+            <h2 className="headline mt-4">
+              <span className="block">Finished mix in.</span>
+              <span className="block">Finished master out.</span>
+            </h2>
           </div>
           <p className="max-w-[30rem] text-[1.05rem] leading-[1.6] text-ink-2 lg:col-span-6 lg:col-start-7 lg:pt-2">
             No session to set up, no chain to build, no queue to wait in.
