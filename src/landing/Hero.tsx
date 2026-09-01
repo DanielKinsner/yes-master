@@ -78,15 +78,12 @@ export default function Hero({
             sized (2.3rem @ lg, 2.85rem @ xl) to keep 5-10% headroom on the
             longer line at every width from 1024 up, measured in the WIDEST
             fallback face, so a narrower Segoe/SF only gains slack. On
-            phones it wraps normally with text-balance. The Y/E/S are the same
-            colour as the rest of the line and carry only a tight white glow —
-            a rim on the letter, not a haze around it — so the acronym is
-            findable without a second colour shouting it. */}
+            phones it wraps normally with text-balance. The YES acronym is
+            carried by title case alone — a colour shift and a glow were both
+            tried and both announced it. */}
         <h1 className="text-balance font-display text-[2.4rem] font-black leading-[1.02] tracking-[-0.03em] sm:text-[3rem] lg:whitespace-nowrap lg:text-[2.3rem] xl:text-[2.85rem]">
           <span className="block">One-click mastering.</span>
-          <span className="mt-1 block text-brand-soft [&>span]:[text-shadow:0_0_9px_rgba(255,255,255,0.6)]">
-            <span>Y</span>our <span>E</span>ndgame <span>S</span>ound.
-          </span>
+          <span className="mt-1 block text-brand-soft">Your Endgame Sound.</span>
         </h1>
 
         <p className="max-w-[440px] text-base leading-snug text-muted lg:text-[1.05rem]">
