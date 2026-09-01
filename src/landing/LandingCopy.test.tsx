@@ -55,7 +55,6 @@ describe("landing hierarchy (U6)", () => {
       "It reads the track before it touches it.",
       "A record, not a folder of files.",
       "What you are actually agreeing to.",
-      "Desktop is the product.",
       "Stop chasing the master.",
     ];
     const positions = order.map(positionOf);
@@ -80,13 +79,14 @@ describe("landing hierarchy (U6)", () => {
     expect(text).toContain("Album Master lives in Advanced");
   });
 
-  it("demotes mobile out of the position it used to occupy", () => {
-    // It was the SECOND section on the page — a parked, unobtainable product
-    // in the most valuable slot, with six present-tense feature cards.
-    expect(positionOf("Desktop is the product.")).toBeGreaterThan(
-      positionOf("What you are actually agreeing to."),
-    );
+  it("says nothing about mobile at all", () => {
+    // History: a mobile section sat SECOND on the page with six feature cards
+    // (cut by U6 to one date-free sentence low on the page), and on
+    // 2026-09-01 the owner removed the sentence as well. There is no mobile
+    // section, no anchor, and no mention of a phone platform anywhere.
     expect(html).not.toContain('href="#mobile"');
+    expect(html).not.toContain('id="mobile"');
+    expect(text).not.toMatch(/iphone|android|\bios\b/i);
   });
 });
 
@@ -111,12 +111,9 @@ describe("prohibited claims (U6)", () => {
       expect(text, `page reintroduced ${banned}`).not.toMatch(banned);
     }
 
-    // Exactly one restrained sentence, per docs/landing-brief.md "Mobile
-    // status" — which permits this as the single deliberate exception to the
-    // no-roadmap rule.
-    expect(text).toContain("iPhone and Android are not currently available");
-    expect(text.match(/iPhone and Android are not currently available/g))
-      .toHaveLength(1);
+    // The one permitted sentence ("iPhone and Android are not currently
+    // available") was removed by the owner on 2026-09-01; the page now says
+    // nothing about mobile (asserted above).
 
     // The phone screenshot is gone. R7 forbids a mobile UI image standing as
     // desktop-beta proof, and that asset has no capture-commit binding (C-17).

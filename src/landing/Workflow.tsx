@@ -37,8 +37,11 @@ export default function Workflow() {
       <div className="mx-auto max-w-6xl">
         <div className="max-w-2xl">
           <p className="eyebrow">Three decisions</p>
+          {/* Two sentences, one line each (owner, 2026-09-01): the natural wrap
+              broke after the second "Finished", which reads as a stutter. */}
           <h2 className="mt-4 font-display text-3xl font-black leading-[1.02] tracking-[-0.02em] sm:text-5xl">
-            Finished mix in. Finished master out.
+            <span className="block sm:whitespace-nowrap">Finished mix in.</span>
+            <span className="block sm:whitespace-nowrap">Finished master out.</span>
           </h2>
           <p className="mt-4 text-muted sm:text-lg">
             No session to set up, no chain to build, no queue to wait in.
