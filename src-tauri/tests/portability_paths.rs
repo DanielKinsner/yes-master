@@ -17,13 +17,18 @@
 //! remains an owner exploratory test (docs/OWNER_SMOKE_TEST.html #13) and
 //! an open gap recorded in APP_BEHAVIOR.md.
 
+#[cfg(windows)]
 use hound::{SampleFormat, WavSpec, WavWriter};
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(windows)]
+use std::path::PathBuf;
+#[cfg(windows)]
 use tempfile::TempDir;
 use yes_master_lib::decode::decode_full;
 use yes_master_lib::files::has_parent_dir_component;
 use yes_master_lib::types::CommandError;
 
+#[cfg(windows)]
 fn write_stereo_sine_wav(path: &PathBuf, sample_rate: u32, duration_sec: f32, amplitude: f32) {
     let spec = WavSpec {
         channels: 2,
