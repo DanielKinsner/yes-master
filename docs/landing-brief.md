@@ -96,7 +96,15 @@ curves. Trustworthy and legible over flashy. Three established directions to
 match: **trust-first** (simple, reassuring) · **control-room** (serious console)
 · **mobile-forward** (same vocabulary, pocket-sized).
 
-## Mobile status (added 2026-07-24, U1)
+## Mobile status (added 2026-07-24, U1; superseded 2026-09-01)
+
+**Owner decision, 2026-09-01: the landing page says nothing about mobile at
+all.** The one permitted sentence ("iPhone and Android are not currently
+available") read as an odd, unprompted line on a desktop product page, and the
+owner removed it. There is no mobile section, no anchor, and no mention of a
+phone platform anywhere on the page. `LandingCopy.test.tsx` asserts this. The
+history below is kept so nobody reintroduces the sentence thinking it was an
+oversight.
 
 **iPhone and Android are parked.** The shared engine really does power
 CI-tested native bridges, and their measured output is pinned bit-parity against
@@ -132,13 +140,14 @@ hierarchy, and each section answers the question the previous one raises:
 4. **Sound character** (`#sound`) — the styles, and adaptive restraint.
 5. **Album** (`#album`) — proof that the depth is real. Deliberately low.
 6. **Beta terms** (`#beta`) — the arrangement, stated before anyone downloads.
-7. **Mobile** (`#mobile`) — the one date-free sentence permitted below.
-8. **Final action** (`#get-started`) — the download, rendered from real release
+7. **Final action** (`#get-started`) — the download, rendered from real release
    state (`src/landing/release-config.ts`, U5).
 
-**Do not move Mobile back up.** It previously sat second, directly under the
-hero, with a phone screenshot and six present-tense feature cards — a product
-no visitor can obtain, occupying the page's most valuable position.
+**There is no Mobile section** (owner, 2026-09-01). It previously sat second,
+directly under the hero, with a phone screenshot and six present-tense feature
+cards — a product no visitor can obtain, occupying the page's most valuable
+position — and was then reduced to one sentence low on the page before being
+removed entirely. Do not bring it back in any size.
 
 **Album stays low.** Album-minded creators are inside the primary audience, not
 a second one; leading with a record-length workflow misrepresents what most

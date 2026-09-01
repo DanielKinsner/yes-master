@@ -77,12 +77,6 @@ const requiredSections = [
     requiresMobilePageAnchor: false,
   },
   {
-    id: "mobile",
-    requiresNavAnchor: false,
-    requiresMobileNavAnchor: false,
-    requiresMobilePageAnchor: false,
-  },
-  {
     id: "get-started",
     requiresNavAnchor: true,
     requiresMobileNavAnchor: true,
@@ -398,10 +392,13 @@ for (const [width, height] of matrix) {
               reasonStyle?.visibility !== "hidden" &&
               Number(reasonStyle?.opacity ?? "1") > 0.1,
           ),
-          mobileHonest: Boolean(
-            body.textContent?.includes(
-              "iPhone and Android are not currently available",
-            ) && body.textContent?.includes("no Linux build"),
+          // Platform honesty (owner, 2026-09-01): the Linux position is stated
+          // once, and mobile is not mentioned at all — the one permitted
+          // "iPhone and Android are not currently available" sentence was
+          // removed as an odd line on a desktop product page.
+          platformHonest: Boolean(
+            body.textContent?.includes("no Linux build") &&
+              !/iphone|android|\bios\b/i.test(body.textContent ?? ""),
           ),
         };
       })(),
@@ -486,9 +483,9 @@ for (const [width, height] of matrix) {
       `${width}x${height}: page links to /releases/latest (${release.deadLinks.join(", ")})`,
     );
   }
-  if (!release?.mobileHonest) {
+  if (!release?.platformHonest) {
     failures.push(
-      `${width}x${height}: platform-support copy does not state the Linux and mobile position`,
+      `${width}x${height}: platform-support copy must state the Linux position and say nothing about mobile`,
     );
   }
   // No release is verified yet, so the live page must be in a closed state.

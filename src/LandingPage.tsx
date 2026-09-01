@@ -6,7 +6,6 @@ import SignOff from "./landing/SignOff";
 import SoundCharacter from "./landing/SoundCharacter";
 import AlbumProof from "./landing/AlbumProof";
 import BetaTerms from "./landing/BetaTerms";
-import CrossPlatform from "./landing/CrossPlatform";
 import FinalCTA from "./landing/FinalCTA";
 
 /*
@@ -26,12 +25,13 @@ import FinalCTA from "./landing/FinalCTA";
  *   SoundCharacter  character controls and adaptive restraint
  *   AlbumProof      depth proof, deliberately LOW — not a second audience
  *   BetaTerms       what the arrangement is, before anyone downloads
- *   CrossPlatform   one date-free line that mobile is not available
  *   FinalCTA        the action
  *
- * CrossPlatform used to sit SECOND, immediately under the hero — a parked,
- * unobtainable product in the page's most valuable position, with six
- * present-tense feature cards. Do not move it back up.
+ * There is no mobile section. It used to sit SECOND under the hero (six
+ * present-tense feature cards for a product nobody could obtain), was cut
+ * to one date-free sentence low on the page (U6), and on 2026-09-01 the
+ * owner removed the sentence too: the page says nothing about mobile at
+ * all. Do not bring it back in any size.
  */
 export default function LandingPage() {
   return (
@@ -55,7 +55,6 @@ export default function LandingPage() {
       <SoundCharacter />
       <AlbumProof />
       <BetaTerms />
-      <CrossPlatform />
       <FinalCTA />
       </main>
     </div>
