@@ -28,8 +28,11 @@ const receipt: Array<[string, string, boolean]> = [
 export default function ProofDeck() {
   return (
     <section id="standard" className="relative bg-night px-5 py-20 sm:px-8 sm:py-28">
-      {/* The "Advanced" nav link points here too. */}
-      <span id="advanced" className="sr-only" />
+      {/* The "Advanced" nav link points here too. The anchor is pinned to the
+          section's TOP EDGE: as an sr-only span in normal flow it sat inside
+          the top padding, so "Advanced" landed 112px deeper than every other
+          nav link and cut the heading off under the fixed bar (owner, 2026-09-01). */}
+      <span id="advanced" aria-hidden="true" className="absolute left-0 top-0 h-px w-px" />
 
       <div className="mx-auto max-w-6xl">
         <div className="max-w-2xl">
