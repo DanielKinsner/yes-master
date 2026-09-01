@@ -1,15 +1,15 @@
-import standardImg from "../assets/landing/desktop-standard-ui.png";
+import standardImg from "../assets/landing/owner-standard-session.jpg";
+import standardImg1280 from "../assets/landing/owner-standard-session-1280.jpg";
 import advancedImg from "../assets/landing/owner-advanced-session.jpg";
 import advancedImg1280 from "../assets/landing/owner-advanced-session-1280.jpg";
 
 // Two rooms, one engine. Both captures are printed like photographs on the
 // sheet — a plate, a figure number, a caption — not floated in bezels.
 //
-// Fig. 1 is the deterministic Standard capture bound to the asset manifest
-// (U7). Fig. 2 is an OWNER capture of a real session (2026-09-01: "The
-// Machine Restocks on Friday", meters live, a hand-shaped EQ). It is not in
-// the manifest because it is not a scripted capture; it is the real thing,
-// which for the room that promises "the full console" is the better proof.
+// Both figures are OWNER captures of a real session (2026-09-01: "The Machine
+// Restocks on Friday", meters live, Mastered selected, a hand-shaped EQ),
+// bound in manifest.json under `ownerCaptures`. The deterministic captures
+// remain the mechanical regression evidence; these are the real thing.
 export default function Proof() {
   return (
     <section id="standard" className="border-t border-rule px-5 py-20 sm:px-8 sm:py-28">
@@ -32,9 +32,11 @@ export default function Proof() {
           <div className="plate overflow-hidden">
             <img
               src={standardImg}
-              alt="YES Master Standard view"
-              width={1440}
-              height={1000}
+              srcSet={`${standardImg1280} 1280w, ${standardImg} 2048w`}
+              sizes="100vw"
+              alt="YES Master Standard view during a real session, meters live"
+              width={2048}
+              height={1147}
               loading="lazy"
               decoding="async"
               className="block w-full rounded-[0.35rem]"
@@ -43,8 +45,8 @@ export default function Proof() {
           <figcaption className="mt-4 grid gap-2 text-[0.9rem] leading-[1.55] text-ink-2 sm:grid-cols-[7rem_1fr]">
             <span className="font-display text-[1.05rem] text-ink">Fig. 1</span>
             <span>
-              <strong className="font-semibold text-ink">Standard.</strong> Pick a
-              style. Pick a loudness. Create Master. You get a fixed 44.1 kHz /
+              <strong className="font-semibold text-ink">Standard.</strong> A
+              real session, meters live. Pick a style. Pick a loudness. Create Master. You get a fixed 44.1 kHz /
               24-bit WAV with the limiter's ceiling set to −1 dBTP — and a
               measurement of what actually came out.
             </span>

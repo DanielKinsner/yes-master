@@ -1,4 +1,5 @@
-import albumImg from "../assets/landing/desktop-album-ui.png";
+import albumImg from "../assets/landing/owner-album-session.jpg";
+import albumImg1280 from "../assets/landing/owner-album-session-1280.jpg";
 
 // Album sits low on purpose: proof that the depth is real, not a second
 // audience. Exclusions are stated because a mastering engineer reading
@@ -42,9 +43,11 @@ export default function Album() {
             <div className="plate overflow-hidden">
               <img
                 src={albumImg}
-                alt="YES Master Album Master view with four tracks"
-                width={1440}
-                height={1000}
+                srcSet={`${albumImg1280} 1280w, ${albumImg} 2048w`}
+                sizes="(min-width: 1024px) 58vw, 100vw"
+                alt="YES Master Album Master view during a real session, meters live"
+                width={2048}
+                height={1147}
                 loading="lazy"
                 decoding="async"
                 className="block w-full rounded-[0.35rem]"
@@ -52,7 +55,7 @@ export default function Album() {
             </div>
             <figcaption className="mt-4 grid gap-2 text-[0.9rem] leading-[1.55] text-ink-2 sm:grid-cols-[7rem_1fr]">
               <span className="font-display text-[1.05rem] text-ink">Fig. 3</span>
-              <span>Album Master with four tracks following one album decision.</span>
+              <span>Album Master in a real session, the track following the album decision.</span>
             </figcaption>
           </figure>
 
