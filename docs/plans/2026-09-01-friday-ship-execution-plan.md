@@ -457,3 +457,85 @@ Intensity-chip clip at the floor, the hero layout (D10 decided: unchanged),
 email provider, Apple/Windows paid signing, any mobile app work, any
 refactor of the state hook or CSS, opening maximized by default on large
 monitors (rejected under D4).
+
+---
+
+## 11. Execution record (2026-09-01, office PC, executor session)
+
+**Outcome.** S0–S7 shipped on `main`; nothing tagged or published (D3).
+Checkpoint 2 SHA `0f67d87` (CI run `33568823137`, 7/7 green). Checkpoint 3
+SHA `59d2a0b` (CI run `33572999889`, 7/7 green). This record commit sits on
+top and changes docs, one script comment, and the unlinked user guide only.
+
+| Slice | Commit | Note |
+|---|---|---|
+| S1 | `c5dec99` | docs (checklist Mac step, scaling caveat, domain row, T-03 closed, Vera plan archived) |
+| S2 | `c9f1b67` | head URLs from the deployed origin, same-origin test, "Eight styles" |
+| S3 | `0f67d87` | maximize when the work area is smaller than 1920×1080 (D4 tier 1) |
+| S4 | — | 17 Dependabot PRs closed, none merged |
+| S6.1 | `25d3b53` | "Import audio" at all three entry points |
+| S6.2 | `eb8330b` | Settings Build row removed |
+| S6.3 | `c953bfa` | render / audio-device errors mapped |
+| S6.4 | `06e8a41` | diverted-export sentence on both receipts |
+| S6.5 | `5418039` | native zoom-to-fit below the floor (D4 tier 2; revert-not-tune) |
+| S6.6 | `030f134` | "EQUALIZER" |
+| S6.7 | `7d16b06` | short profile name on the receipt chip |
+| S7 | `59d2a0b` | changelog, ledger rows, decisions pointer |
+
+**Lanes at the final code tip `7d16b06`:** `npm test` 82 files / 844 tests
+(835 at S0); `npm run build` green; `npm run verify:headless` PASSED
+(landing suite + 31 `/app` checks); `cargo fmt` / `clippy -D warnings`
+clean; `cargo test` 611 passed / 0 failed / 7 ignored; `npm run
+build:windows` both bundles. `npm test` re-run at `59d2a0b`.
+
+**Deviation log** (every judgment call, plan-vs-reality mismatch, and
+ripple beyond a slice's footprint):
+
+- **S0.** Tip was `1f57638`, three docs-only commits past `5c39af4`; only
+  the plan file differed. All four review facts held.
+- **S1.** `docs/TESTING.md` still said "both acquisition CTAs are fully on
+  screen", which contradicts the new nav/hero rule; reworded to "contained
+  (per the nav/hero rule below)". The beta-guide caveat described S3
+  behaviour one commit ahead of the code (same push). T-03 struck in place
+  in the Open table rather than moved. No Vera links existed to fix.
+- **S2.** `BetaDownload.tsx` carried the same stale "mobile section above"
+  comment as `Nav.tsx`; both fixed, comment-only. No `LandingCopy` pin on
+  "Eight presets" existed. `docs/USER_GUIDE.html` kept the old words until
+  this record commit.
+- **S3.** Used `window.primary_monitor()` (same monitor as the AppHandle
+  call). Added a non-finite / non-positive scale guard. Re-checked the
+  mobile-bridge claim against the diff: both bridges use
+  `default-features = false`, so nothing under `app-runner` reaches them.
+- **S6.1.** The landing asset gate hashes every non-test component, so any
+  console copy change forces `npm run capture:landing`; it rewrites only the
+  three deterministic PNGs and the manifest digest, carrying the owner
+  plates forward. Recaptured at S6.1, S6.4, S6.6 and S6.7. Test queries were
+  scoped to the empty-state hero by container because the sidebar button
+  now shares the exact text.
+- **S6.2.** No existing pin on the Build row; a negative pin was added.
+- **S6.3.** `audio.rs` also emits "audio output device unavailable (<name>)",
+  which the plan's literal substring misses; both shapes matched explicitly.
+- **S6.4.** The compare is on the file NAME, not the whole path: a divert
+  only ever changes the name, and a differently spelled directory must never
+  trip the sentence (pinned by the hook's negative case). Coverage went
+  wider than "one App case": hook, card, Standard card, and two App-level
+  cases, because no App test previously drove Create Master end to end.
+- **S6.5.** The plan's aside called 1280×720 height-limited; it is
+  width-limited (1280/1360 = 0.941, the value the plan gave). Degenerate
+  inputs return 1.0 (no zoom) after a first test draft exposed that
+  `f64::min` discards NaN.
+- **S7.** The OPEN_THREADS block cites D1–D11 (the table has eleven rows,
+  not eight). Ledger rows name `7d16b06` as the code tip and say why.
+
+**Owner lane additions (beyond §5):**
+
+- **Re-plate the three landing images (owner, 2026-09-02).** The
+  real-session plates `owner-standard-session`, `owner-advanced-session`
+  and `owner-album-session` still show "+ Add Tracks", "Import Audio" and
+  "EQUALIZER (DYNAMIC)". Re-shoot from the same session on current `main`,
+  replace by hand, and update the manifest's `ownerCaptures` block (its own
+  note describes the step). Land before the landing flip (§5 item 6). The
+  share card's console text is unreadable at its size; refresh it only if
+  convenient.
+- `docs/USER_GUIDE.html` wording was fixed here, but the guide is still
+  linked from nothing (§9).

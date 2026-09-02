@@ -309,8 +309,9 @@ for (const [width, height] of matrix) {
         // Horizontal clipping is a layout bug at any width. Vertical (fold)
         // containment is a different question: the fixed nav CTA is the
         // all-axis acquisition guarantee; whether the HERO CTA must also sit
-        // above the fold on short phones is an owner taste/spec decision
-        // (docs/OWNER_INPUT_QUEUE.md, 2026-08-31) — recorded, not asserted.
+        // above the fold on short phones was an owner taste/spec decision,
+        // DECIDED copy-first on 2026-09-01 (D10; docs/TESTING.md "Landing
+        // quality gates") — still recorded here, never asserted.
         const axes = (rect) => ({
           horizontal: Boolean(
             rect && rect.left >= -1 && rect.right <= window.innerWidth + 1,
@@ -523,11 +524,13 @@ for (const [width, height] of matrix) {
   // Audit T-03: these say exactly what they measure. The FIXED NAV CTA is the
   // all-axis acquisition guarantee, so it must be fully contained on both
   // axes. The HERO CTA is gated on the horizontal axis only: on short phones
-  // it legitimately sits below introductory copy, and whether it must also be
-  // above the fold is an owner taste/spec decision recorded in
-  // docs/OWNER_INPUT_QUEUE.md (2026-08-31). Its vertical/all-axis containment
-  // is still measured and lands in summary.json as evidence for that
-  // decision, non-blockingly.
+  // it legitimately sits below introductory copy. Whether it must also be
+  // above the fold was an owner taste/spec decision — DECIDED 2026-09-01
+  // (D10, copy-first): it may sit below the fold by design. The rule is
+  // permanent in docs/TESTING.md "Landing quality gates" and recorded in
+  // docs/OPEN_THREADS_AND_DECISIONS.md (2026-09-01 block). Its
+  // vertical/all-axis containment is still measured and lands in
+  // summary.json as evidence, non-blockingly.
   const q = metrics.quality;
   if (!q.navCtaVisible || !q.navCtaAllAxes) {
     failures.push(
