@@ -1119,6 +1119,29 @@ mod tests {
     }
 
     #[test]
+    fn spectral_balance_31band_preserves_stereo_polarity_invariant_energy() {
+        let sr = 48_000;
+        let mono: Vec<f32> = (0..sr)
+            .map(|i| 0.3 * (std::f32::consts::TAU * 8000.0 * i as f32 / sr as f32).sin())
+            .collect();
+        let reference = compute_spectral_balance_31band(&mono, sr, 1).unwrap();
+        for polarity in [1.0, -1.0] {
+            let stereo: Vec<f32> = mono
+                .iter()
+                .flat_map(|&sample| [sample, polarity * sample])
+                .collect();
+            let actual = compute_spectral_balance_31band(&stereo, sr, 2)
+                .expect("opposite channel polarity is not silence");
+            for (i, (expected, measured)) in reference.iter().zip(actual).enumerate() {
+                assert!(
+                    (expected - measured).abs() < 1e-5,
+                    "band {i}: channel polarity changed energy from {expected} to {measured}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn spectral_balance_31band_sums_to_unity_and_rolls_up_near_6band() {
         let sr = 48_000_u32;
         let n = sr as usize * 2;

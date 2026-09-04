@@ -380,7 +380,7 @@ function previewProject(): ProjectState {
 const WARNING_EXPORT_CHECKS: QualityCheck[] = [
   {
     level: "warning",
-    code: "loudness_very_high",
+    code: "lufs_very_loud",
     message:
       "Delivered loudness is very high. Compare with the original before sharing.",
   },
@@ -688,8 +688,8 @@ export async function mockInvoke<T>(
         // Pass 4 (2026-08-19): delivered measurements, so the preview's
         // Export Complete card shows its Results section like the real one.
         measurements: {
-          lufs_integrated: -14.1,
-          true_peak_dbtp: -1.02,
+          lufs_integrated: activeScenario().exportChecks === "warning" ? -6.0 : -14.1,
+          true_peak_dbtp: activeScenario().exportChecks === "warning" ? 0.2 : -1.02,
           dynamic_range_lu: 7.4,
           sample_rate: 44_100,
           bit_depth: 24,
