@@ -878,7 +878,7 @@ pub fn render_album_plan_impl_with_cancel(
                 return Err(CommandError::Other("album render cancelled".to_string()));
             }
 
-            let (delivered_lufs, _, _) = crate::wav_writer::measure_delivery(
+            let (delivered_lufs, delivered_tp, _) = crate::wav_writer::measure_delivery(
                 &samples,
                 album_sample_rate,
                 rendered_channel_count,
@@ -890,6 +890,9 @@ pub fn render_album_plan_impl_with_cancel(
                 position: entry.position,
                 output_path: per_track_path.to_string_lossy().to_string(),
                 measured_lufs,
+                target_lufs: shadowed.effective_target_lufs(),
+                true_peak_dbtp: delivered_tp,
+                ceiling_dbtp: shadowed.effective_ceiling_dbtp(),
                 source_sample_rate: pcm.sample_rate,
                 rendered_sample_rate: album_sample_rate,
                 source_channels: file_channel_count,

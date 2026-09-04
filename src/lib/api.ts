@@ -40,6 +40,10 @@ export interface AlbumTrackRenderRecord {
   position: number;
   output_path: string;
   measured_lufs: number;
+  /** Absent in older reports; null means no loudness target was requested. */
+  target_lufs?: number | null;
+  true_peak_dbtp?: number;
+  ceiling_dbtp?: number;
   source_sample_rate: number;
   rendered_sample_rate: number;
   source_channels: number;
@@ -380,10 +384,8 @@ export function onAnalysisProgress(
   );
 }
 
-/// Edge-triggered: true while Mastered audition is playing hotter than the
-/// loudness target because the corrective landing gain is still being
-/// measured; false once it crossfades in. Drives the "landing loudness…"
-/// note by the meters.
+/// Edge-triggered: requested preview landing or Volume Match is being measured.
+/// Drives the "Measuring preview level…" note, including while paused.
 export type LandingStatusEvent = LandingStatus;
 
 export function onLandingStatus(

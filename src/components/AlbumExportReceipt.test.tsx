@@ -27,6 +27,26 @@ afterEach(() => {
 });
 
 describe("AlbumExportReceipt", () => {
+  it("shows delivered per-track loudness, target and peak without claiming a shortfall is failure", async () => {
+    const report = {
+      job_id: "details", status: { status: "done" }, album_wav_path: "album.wav", manifest_path: "manifest.json",
+      requested_sample_rate: null, rendered_sample_rate: 48000, source_sample_rates: [48000],
+      bit_depth: 24, rendered_channels: 2, source_channels: [2],
+      tracks: [{ track_id: "one", position: 1, output_path: "C:/Masters/01-Song.wav", measured_lufs: -15.2,
+        target_lufs: -14, true_peak_dbtp: -1.0, ceiling_dbtp: -1,
+        source_sample_rate: 48000, rendered_sample_rate: 48000, source_channels: 2, rendered_channels: 2,
+        override_album: false }],
+    } as AlbumRenderReport;
+    const { container } = await renderNode(<AlbumExportReceipt report={report} />);
+    expect(container.querySelector("summary")?.textContent).toContain("Track results");
+    expect(container.textContent).toContain("01-Song.wav");
+    expect(container.textContent).toContain("-15.2 LUFS");
+    expect(container.textContent).toContain("Target -14.0 LUFS");
+    expect(container.textContent).toContain("-1.00 dBTP");
+    expect(container.textContent).toContain("1.2 LU below target");
+    expect(container.textContent).not.toContain("failed");
+  });
+
   it("shows the rendered delivery format and upsample advisory", async () => {
     const report: AlbumRenderReport = {
       job_id: "album-render-job",
@@ -97,6 +117,8 @@ describe("AlbumExportReceipt", () => {
 
     const receipt = container.querySelector(".album-export-receipt");
     expect(receipt?.textContent).toContain("Folded source 4 ch to stereo");
+    expect(receipt?.textContent).toContain("Target not recorded");
+    expect(receipt?.textContent).toContain("Not recorded");
     expect(receipt?.textContent).not.toContain("Override:");
   });
 

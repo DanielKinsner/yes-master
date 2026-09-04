@@ -118,6 +118,19 @@ fn album_render_single_track_edge() {
     let out_dir = tmp.path().join("solo_out");
     let report = render_album_plan_impl(&request, &out_dir, None).expect("render");
     assert_eq!(report.tracks.len(), 1);
+    let delivered = serde_json::to_value(&report.tracks[0]).unwrap();
+    assert!(
+        delivered["target_lufs"].is_number(),
+        "receipt must record the resolved album target"
+    );
+    assert!(
+        delivered["true_peak_dbtp"].is_number(),
+        "receipt must record delivered true peak"
+    );
+    assert!(
+        delivered["ceiling_dbtp"].is_number(),
+        "receipt must record the applied ceiling"
+    );
     assert!(std::path::Path::new(&report.album_wav_path).exists());
     let reader = hound::WavReader::open(&report.album_wav_path).expect("open");
     // 1 s of input, no gap, ≈ 1 s of output.
@@ -258,9 +271,20 @@ fn album_receipt_measures_delivery_and_continuous_pcm_matches_track_files() {
             track.samples, continuous.samples,
             "{bits}-bit album must preserve delivered track PCM"
         );
-        let mut meter = ebur128::EbuR128::new(track.channels.into(), sr, ebur128::Mode::I).unwrap();
+        let mut meter = ebur128::EbuR128::new(
+            track.channels.into(),
+            sr,
+            ebur128::Mode::I | ebur128::Mode::TRUE_PEAK,
+        )
+        .unwrap();
         meter.add_frames_f32(&track.samples).unwrap();
         let actual = meter.loudness_global().unwrap() as f32;
+        let delivered = serde_json::to_value(&report.tracks[0]).unwrap();
+        let expected_tp = 20.0 * meter.true_peak(0).unwrap().log10();
+        let reported_tp = delivered["true_peak_dbtp"]
+            .as_f64()
+            .expect("delivered true peak missing");
+        assert!((expected_tp - reported_tp).abs() < 0.02);
         assert!(
             (actual - report.tracks[0].measured_lufs).abs() < 0.02,
             "{bits}-bit album LUFS: saved {actual}, receipt {}",

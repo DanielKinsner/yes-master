@@ -1,18 +1,56 @@
 // Album export receipt — the post-export delivery summary + advisories.
 //
-// Slice 13b moved this out of AlbumPanel (which is now the sidebar identity
-// block) so the receipt can live at the sidebar bottom, near the export rail,
-// while the album title/chips/flow controls sit at the sidebar top. Logic is
-// unchanged from its previous AlbumPanel home.
-
 import { formatBitDepth, formatSampleRate } from "./ExportReceiptCard";
-import type { AlbumRenderReport } from "../lib/api";
+import type { AlbumRenderReport, AlbumTrackRenderRecord } from "../lib/api";
 import { trackCountLabel } from "../lib/album-copy";
 
 function formatChannelCount(channels: number): string {
   if (channels === 1) return "mono";
   if (channels === 2) return "stereo";
   return `${channels} ch`;
+}
+
+function TrackResult({ track }: { track: AlbumTrackRenderRecord }) {
+  const filename = track.output_path.split(/[\\/]/).pop() || `Track ${track.position}`;
+  const target = track.target_lufs;
+  const peak = track.true_peak_dbtp;
+  const ceiling = track.ceiling_dbtp;
+  const hasLoudness = Number.isFinite(track.measured_lufs) && track.measured_lufs > -70;
+  const hasTarget = target != null && Number.isFinite(target);
+  const hasPeak = peak != null && Number.isFinite(peak);
+  const hasCeiling = ceiling != null && Number.isFinite(ceiling);
+  const difference = hasTarget && hasLoudness ? track.measured_lufs - target : 0;
+  const aboveCeiling = hasPeak && hasCeiling && peak > ceiling + 0.05;
+  return (
+    <li className="album-track-result">
+      <strong title={track.output_path}>{filename}</strong>
+      {track.override_album && <span className="album-track-result-note">Own settings</span>}
+      <dl>
+        <div>
+          <dt>Loudness</dt>
+          <dd>{hasLoudness ? `${track.measured_lufs.toFixed(1)} LUFS` : "Below metering range"}</dd>
+        </div>
+        <div>
+          <dt>True peak</dt>
+          <dd>{hasPeak ? `${peak.toFixed(2)} dBTP` : "Not recorded"}</dd>
+        </div>
+      </dl>
+      <span className="album-track-result-note">
+        {hasTarget ? `Target ${target.toFixed(1)} LUFS` : target === null ? "No loudness target" : "Target not recorded"}
+        {hasCeiling && ` · ceiling ${ceiling.toFixed(1)} dBTP`}
+      </span>
+      {Math.abs(difference) > 0.5 && (
+        <span className="album-track-result-note">
+          {Math.abs(difference).toFixed(1)} LU {difference < 0 ? "below" : "above"} target.
+        </span>
+      )}
+      {aboveCeiling && (
+        <span className="album-export-receipt-advisory">
+          Above ceiling by {(peak - ceiling).toFixed(2)} dB. Review before sharing.
+        </span>
+      )}
+    </li>
+  );
 }
 
 export function AlbumExportReceipt({ report }: { report: AlbumRenderReport }) {
@@ -88,6 +126,16 @@ export function AlbumExportReceipt({ report }: { report: AlbumRenderReport }) {
           Override: track {overriddenPositions.join(", ")} rendered with its own
           settings
         </span>
+      )}
+      {report.tracks.length > 0 && (
+        <details className="album-receipt-tracks">
+          <summary>Track results ({report.tracks.length})</summary>
+          <ol aria-label="Delivered track measurements">
+            {report.tracks.map((track) => (
+              <TrackResult key={track.track_id} track={track} />
+            ))}
+          </ol>
+        </details>
       )}
     </div>
   );

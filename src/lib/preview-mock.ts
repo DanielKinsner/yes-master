@@ -660,6 +660,9 @@ export async function mockInvoke<T>(
           position: t.position,
           output_path: `/preview/exports/${String(t.position).padStart(2, "0")}.wav`,
           measured_lufs: -14.0,
+          target_lufs: -14.0,
+          true_peak_dbtp: -1.05,
+          ceiling_dbtp: -1.0,
           source_sample_rate: t.source_sample_rate,
           rendered_sample_rate: renderedSampleRate,
           source_channels: t.source_channels,
@@ -903,7 +906,7 @@ export async function mockListen<T>(
   return () => {};
 }
 
-// "Landing loudness…" simulation plumbing: play_master flips pending on,
+// "Measuring preview level…" simulation plumbing: play_master flips pending on,
 // then off after a short window (see mockInvoke).
 const landingStatusHandlers = new Set<(pending: boolean) => void>();
 function emitLandingStatus(pending: boolean): void {

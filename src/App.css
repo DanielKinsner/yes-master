@@ -292,6 +292,16 @@
   font-weight: 700;
 }
 
+.album-receipt-tracks { min-width: 0; width: 100%; }
+.album-receipt-tracks summary { cursor: pointer; padding: 0.45rem 0; color: var(--text-1); font-weight: 600; }
+.album-receipt-tracks summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.album-receipt-tracks ol { list-style: none; margin: 0; padding: 0; }
+.album-track-result { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.75rem 0; border-top: 1px solid var(--border); }
+.album-track-result strong { overflow-wrap: anywhere; color: var(--text-1); }
+.album-track-result dl { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 0; }
+.album-track-result dt, .album-track-result-note { color: var(--text-2); font-size: 0.72rem; }
+.album-track-result dd { margin: 0.15rem 0 0; color: var(--text-1); font-variant-numeric: tabular-nums; }
+
 .album-export-receipt.is-cancelled {
   color: var(--text-1);
 }
@@ -5880,6 +5890,7 @@ button.primary:disabled {
   text-align: left;
   padding: clamp(0.55rem, 1.25vh, 0.92rem) 1rem;
 }
+
 
 /* Reserve room for every intensity chip at the supported 740px height.
    Compress the decorative waveform and knob spacing before controls. */

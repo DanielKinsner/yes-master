@@ -87,6 +87,7 @@
     },
     "tracks": [
       {
+        "ceiling_dbtp": -1.0,
         "measured_lufs": -13.5,
         "output_path": "out/wire-sample.master.wav",
         "override_album": true,
@@ -95,7 +96,9 @@
         "rendered_sample_rate": 48000,
         "source_channels": 2,
         "source_sample_rate": 44100,
-        "track_id": "wire-sample"
+        "target_lufs": -14.0,
+        "track_id": "wire-sample",
+        "true_peak_dbtp": -1.100000023841858
       }
     ]
   },

@@ -509,7 +509,7 @@ pub(crate) fn preview_volume_match_gain(
 ) -> CommandResult<f32> {
     let mut render_settings = settings.clone();
     render_settings.volume_match = false;
-    let source_window = preview_landing_window(samples, sample_rate, channels);
+    let source_window = volume_match_window(samples, sample_rate, channels);
     let source_lufs = sanitize_lufs(measure_integrated_lufs(
         &source_window,
         sample_rate,
@@ -539,7 +539,7 @@ pub(crate) fn preview_volume_match_gain(
 /// The representative ~8 s middle window the optional Volume Match measures, instead
 /// of the full track (≈15-20× cheaper, within ~0.5 dB of full-track for normal
 /// music). Same centering math as the desktop preview path.
-fn preview_landing_window(samples: &[f32], sample_rate: u32, channels: u16) -> Vec<f32> {
+pub(crate) fn volume_match_window(samples: &[f32], sample_rate: u32, channels: u16) -> Vec<f32> {
     const PREVIEW_WINDOW_SECS: f32 = 8.0;
     let channels_usize = channels.max(1) as usize;
     let total_frames = samples.len() / channels_usize;
@@ -779,6 +779,9 @@ pub struct AlbumTrackRenderRecord {
     pub position: u32,
     pub output_path: String,
     pub measured_lufs: f32,
+    pub target_lufs: Option<f32>,
+    pub true_peak_dbtp: f32,
+    pub ceiling_dbtp: f32,
     pub source_sample_rate: u32,
     pub rendered_sample_rate: u32,
     pub source_channels: u16,

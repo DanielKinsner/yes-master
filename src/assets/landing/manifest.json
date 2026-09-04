@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "93aafae7b726347201645e8755fbd637d3dbbfaa",
-  "captureInputDigest": "73e244c4b2ab12ef70377a49ae4d20aad5c3382559d3851c93453c83d8c62479",
+  "sourceCommit": "8f4d3384d6860d6d06e892d19352cb2253125d14",
+  "captureInputDigest": "9e87ad73c461b6918e1c9dcc7111e169599357bb211160b8694ad296c4fc1efd",
   "browser": {
     "runtime": "playwright-bundled-chromium",
     "version": "149.0.7827.55"
@@ -21,8 +21,8 @@
         "width": 1440,
         "height": 1000
       },
-      "bytes": 516312,
-      "sha256": "b243c7ee314e358cfa3ca80267e63a2878fd46c502bdb1c9bc893351839ad7b5",
+      "bytes": 516152,
+      "sha256": "7542925373db23b8bc6700322da98784a9f7f6ea0edb7e8ac2bb6986411f7a0e",
       "loading": "lazy",
       "alt": "YES Master Standard view"
     },
@@ -39,8 +39,8 @@
         "width": 1440,
         "height": 1000
       },
-      "bytes": 582437,
-      "sha256": "3d285551ef2dfc6d39b1f19aa41eb738054922bb8abb4ef0bfcbbb178eebd106",
+      "bytes": 582459,
+      "sha256": "9d488c2ef13cd717cbbaa087c58b1bab8b15f15b1c8645df0c490d54df09fdec",
       "loading": "lazy",
       "alt": "YES Master Advanced view"
     },

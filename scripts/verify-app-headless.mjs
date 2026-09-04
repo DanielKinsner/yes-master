@@ -265,7 +265,7 @@ const SCENARIOS = [
       "S-F3 (no write): save dialog cancelled; the UI must NOT claim success.",
     viewports: [LAPTOP],
     settle: "ready",
-    drive: exportClean,
+    drive: (page) => exportClean(page, false),
     // U10: a cancelled export must leave no trace of success — not the output
     // path, and not any of the language a completed export uses. Claiming a
     // file was written when the user cancelled is the single worst thing this
@@ -344,6 +344,9 @@ const SCENARIOS = [
       "Upmixed source mono",
       "Folded source 4 ch to stereo",
       "Override: track 3 rendered with its own settings",
+      "Track results (4)",
+      "Target -14.0 LUFS",
+      "-1.05 dBTP",
     ],
   },
   {
@@ -565,6 +568,10 @@ async function driveAlbumExport(page) {
       .querySelector(".album-export-receipt")
       ?.scrollIntoView({ block: "center", behavior: "instant" });
   });
+  await page.locator(".album-receipt-tracks summary").click();
+  if (await page.locator(".album-track-result").count() !== 4) {
+    throw new Error("Album receipt omitted delivered track results");
+  }
 }
 
 /**
@@ -588,11 +595,14 @@ async function driveToLoadedStandard(page) {
   await page.waitForSelector(".standard-view", { timeout: SETTLE_TIMEOUT_MS });
 }
 
-async function exportClean(page) {
+async function exportClean(page, expectReceipt = true) {
   await waitForControl(page, /^Export Master$/, "the clean export action");
   await page.locator("button", { hasText: /^Export Master$/ }).first().click();
   if (await page.locator("button", { hasText: /^Export Anyway$/ }).count()) {
     throw new Error("Clean export unexpectedly required review");
+  }
+  if (expectReceipt) {
+    await waitForText(page, text => text.includes("preview-master.wav"), "the completed export receipt", documentText);
   }
 }
 
