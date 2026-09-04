@@ -241,16 +241,15 @@ pub fn populate_profile_store(
 //     ceiling. Returned value is 0.0 when the landing is a no-op
 //     (silent signal, near-zero delta, or no headroom for upward push).
 //   * `apply_ceiling_bounded_landing_with_measurements`: math + in-place
-//     gain multiply. Returns the applied delta in dB so callers that
-//     track post-landing measurements (e.g. the track-export receipt)
-//     can shift their tracked LUFS+TP by the same amount.
+//     gain multiply. Returns the applied delta in dB for preview estimates.
+//     Receipts remeasure final delivery PCM.
 //   * `measure_and_apply_ceiling_bounded_landing`: full ebur128 pass +
 //     apply. For callers that don't already have LUFS+TP measurements
 //     in hand (album-simple, album-plan).
 //
 // The audio.rs live-preview helper delegates to `preview_landing` below and
 // returns its gain scalar, so desktop and phone audition measure the same
-// render-rate window before applying the pure landing math.
+// whole track at the render rate before applying the pure landing math.
 // ============================================================================
 
 /// Compute the LUFS-landing delta in dB given pre-measured loudness +
@@ -304,13 +303,9 @@ pub(crate) fn ceiling_bounded_landing_delta_db(
 
 /// Apply ceiling-bounded LUFS landing in-place to a sample slice given
 /// pre-measured loudness + true peak. Returns the applied delta in
-/// dB (0.0 if no gain was applied) so callers that track post-landing
-/// measurements can shift them by the same amount via
-/// `measured_lufs += applied; measured_true_peak_dbtp += applied;`.
-///
-/// Under a uniform linear gain `g`, integrated LUFS and true-peak
-/// both shift by exactly `20·log10(g)` dB — so callers never need to
-/// re-run the ebur128 pass after scaling.
+/// dB (0.0 if no gain was applied). True peak shifts by this amount;
+/// integrated loudness is an estimate because the absolute gate can change
+/// membership. Export receipts remeasure the final delivered PCM.
 fn apply_ceiling_bounded_landing_with_measurements(
     samples: &mut [f32],
     measured_lufs: f32,
@@ -419,18 +414,18 @@ pub fn measure_integrated_lufs_at_path(path: &Path) -> CommandResult<f32> {
 pub struct PreviewLanding {
     /// Linear gain to apply after the chain so the master lands near target.
     pub gain_lin: f32,
-    /// Resulting integrated LUFS of the mastered window after the landing gain —
+    /// Estimated integrated LUFS of the mastered track after the landing gain —
     /// used for audition Volume Match. `f32::NEG_INFINITY` when unavailable
-    /// (no target, or an effectively-silent window).
+    /// (no target, or an effectively-silent track).
     pub mastered_lufs: f32,
 }
 
-/// Compute the live-preview loudness landing for `settings`: process a
-/// representative ~8 s window through the chain, measure integrated LUFS +
+/// Compute the live-preview loudness landing for `settings`: process the
+/// whole track through the chain, measure integrated LUFS +
 /// BS.1770 true peak, and route through the SAME `ceiling_bounded_landing_delta_db`
 /// the export path uses — so the live preview lands at the same level the full
 /// render will. Mirrors the desktop preview path (`audio.rs`). Returns unity gain
-/// when there's no loudness target or the window is effectively silent. This is
+/// when there's no loudness target or the track is effectively silent. This is
 /// the off-audio-thread measurement the iPhone bridge calls on settings changes.
 pub fn preview_landing(
     samples: &[f32],
@@ -541,7 +536,7 @@ pub(crate) fn preview_volume_match_gain(
     Ok(10.0_f32.powf(attenuation_db / 20.0))
 }
 
-/// The representative ~8 s middle window the preview landing measures, instead
+/// The representative ~8 s middle window the optional Volume Match measures, instead
 /// of the full track (≈15-20× cheaper, within ~0.5 dB of full-track for normal
 /// music). Same centering math as the desktop preview path.
 fn preview_landing_window(samples: &[f32], sample_rate: u32, channels: u16) -> Vec<f32> {
@@ -562,9 +557,12 @@ fn render_preview_landing_window(
     settings: &MasteringSettings,
 ) -> CommandResult<(Vec<f32>, u32)> {
     let channels_usize = channels.max(1) as usize;
-    let mut rendered = preview_landing_window(samples, sample_rate, channels);
+    // A quiet middle window cannot bound peaks or loudness elsewhere. This
+    // runs on the landing worker; mirror export's processing and tail flush.
+    let mut rendered = samples.to_vec();
     let mut chain = crate::dsp::MasteringChain::new(sample_rate, channels_usize, settings);
     chain.process_interleaved(&mut rendered, channels_usize);
+    chain.flush_render_tail(&mut rendered, channels_usize);
 
     let rendered_sample_rate = settings.effective_sample_rate(sample_rate);
     if rendered_sample_rate != sample_rate {
@@ -1134,27 +1132,22 @@ pub fn mastering_render_with_cancel(
     // for the export receipt (Codex audit 2026-05-13 P0: the receipt must
     // describe the rendered output, not the source analysis).
     //
-    // We measure once and shift the result mathematically if landing applies.
-    // Under a uniform linear gain `g`, integrated LUFS and true-peak both
-    // shift by exactly `20·log10(g)` dB, and LRA (a range between gated
-    // loudness percentiles) is preserved. So we never need to re-run the
-    // ~25 MB-per-track ebur128 pass after scaling.
+    // Measure before landing to choose a ceiling-bounded gain. The receipt
+    // gets a separate measurement of final delivery PCM: quantization and
+    // absolute-gate changes cannot be represented by shifting these values.
     let channels_u32 = u32::from(pcm.channels.max(1));
     let mut ebu = EbuR128::new(
         channels_u32,
         rendered_sample_rate,
-        Mode::I | Mode::LRA | Mode::TRUE_PEAK,
+        Mode::I | Mode::TRUE_PEAK,
     )
     .map_err(|e| CommandError::Render(format!("ebur128 init: {e}")))?;
     ebu.add_frames_f32(&samples)
         .map_err(|e| CommandError::Render(format!("ebur128 feed: {e}")))?;
-    let mut measured_lufs = sanitize_lufs(
+    let measured_lufs = sanitize_lufs(
         ebu.loudness_global()
             .map_err(|e| CommandError::Render(format!("ebur128 global: {e}")))? as f32,
     );
-    let lra = ebu
-        .loudness_range()
-        .map_err(|e| CommandError::Render(format!("ebur128 lra: {e}")))? as f32;
     let mut peak_lin: f64 = 0.0;
     for ch in 0..channels_u32 {
         let tp = ebu
@@ -1164,36 +1157,32 @@ pub fn mastering_render_with_cancel(
             peak_lin = tp;
         }
     }
-    let mut measured_true_peak_dbtp = if peak_lin > 0.0 {
+    let measured_true_peak_dbtp = if peak_lin > 0.0 {
         (20.0 * peak_lin.log10()) as f32
     } else {
         -60.0
     };
     let measure_ms = stage_ms(t_stage);
 
-    // Ceiling-bounded LUFS landing. Routes through the shared helper
-    // with the LUFS+TP we already measured for the receipt. The
-    // helper returns the applied delta in dB so we can shift the
-    // tracked measurements (which feed `RenderedMeasurements`) in
-    // lockstep — under a uniform linear gain, integrated LUFS and
-    // true-peak both shift by exactly the same dB amount, so no
-    // second ebur128 pass is needed.
+    // The same ceiling-bounded landing rule is used by audition and export.
     if let Some(target_lufs) = render_settings.effective_target_lufs() {
         let ceiling_dbtp = render_settings.effective_ceiling_dbtp();
-        let applied_delta_db = apply_ceiling_bounded_landing_with_measurements(
+        apply_ceiling_bounded_landing_with_measurements(
             &mut samples,
             measured_lufs,
             measured_true_peak_dbtp,
             target_lufs,
             ceiling_dbtp,
         );
-        if applied_delta_db != 0.0 {
-            measured_lufs += applied_delta_db;
-            measured_true_peak_dbtp += applied_delta_db;
-        }
     }
 
     let bit_depth = render_settings.effective_bit_depth();
+    let (delivered_lufs, delivered_tp, lra) = crate::wav_writer::measure_delivery(
+        &samples,
+        rendered_sample_rate,
+        pcm.channels,
+        bit_depth,
+    )?;
     // B5 — record what adaptation actually produced this master. `render_settings`
     // already carries the backend-resolved profile (B2), so this mirrors the
     // chain's own gating: a digest is recorded only when a profile was present AND
@@ -1221,8 +1210,8 @@ pub fn mastering_render_with_cancel(
     let compression_digest =
         crate::guardrails::compression_plan_for_resolved_settings(&render_settings).digest;
     let measurements = RenderedMeasurements {
-        lufs_integrated: measured_lufs,
-        true_peak_dbtp: measured_true_peak_dbtp,
+        lufs_integrated: sanitize_lufs(delivered_lufs),
+        true_peak_dbtp: delivered_tp,
         dynamic_range_lu: if lra.is_finite() { lra } else { 0.0 },
         sample_rate: rendered_sample_rate,
         bit_depth,

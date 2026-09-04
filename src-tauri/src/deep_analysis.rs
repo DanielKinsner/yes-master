@@ -443,7 +443,7 @@ fn measure_window(
     let mono_slice = mono_scratch.as_slice();
     // The 3-band read is retained for Phase-A diagnostics and historical tests.
     // Phase-B confidence consumes the sample-rate-aware 31-band detail below.
-    let three = crate::analysis::compute_spectral_balance(mono_slice, 1);
+    let three = crate::analysis::compute_spectral_balance(mono_slice, sample_rate, 1);
     let detail = window_detail_features(mono_slice, sample_rate, detail_fft);
 
     // stereo: width = side/(mid+side); correlation via two-pass.
@@ -814,9 +814,9 @@ mod tests {
                 1_075_574_712,
                 1_056_964_498,
                 920_402_093,
-                987_294_494,
-                1_058_191_413,
-                1_054_455_467,
+                979_870_399,
+                1_048_248_139,
+                1_061_226_053,
                 778_431_265,
                 1_052_326_102,
                 1_059_283_861,
@@ -832,9 +832,9 @@ mod tests {
                 1_075_533_567,
                 1_056_951_073,
                 978_623_375,
-                986_776_872,
-                1_058_180_669,
-                1_054_478_976,
+                979_258_547,
+                1_048_205_208,
+                1_061_237_383,
                 781_233_218,
                 1_051_673_207,
                 1_059_610_309,

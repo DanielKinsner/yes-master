@@ -1491,39 +1491,26 @@ pub struct ChannelState {
 }
 
 // ============================================================================
-// Limiter — linked-stereo brick-wall limiter with lookahead.
-// Phase 11.2.a: sample-peak detection, instant attack, exponential release.
-// Phase 11.2.b: 2× upsample inter-sample peak via Lagrange-4 midpoint (x=0.5).
-// Phase 11.2.c: 4× upsample by also evaluating x=0.25 and x=0.75. The three
-//   coefficient triplets below are the 4-point Lagrange basis polynomials
-//   evaluated at fractional positions 0.25, 0.5, and 0.75 between samples
-//   `b` and `c`, with neighbors `a` and `d` providing curvature. ITU-R
-//   BS.1770 recommends ≥ 4× oversampling for true-peak; this estimator is a
-//   close approximation that avoids the cost of a polyphase FIR.
+// Limiter — linked stereo, FIR intersample detection, lookahead gain ramps.
+// The 48-tap Hann-windowed sinc reconstructs four phases per input sample.
+// This is the same filter family used by ebur128's independent output meter;
+// unlike four-point polynomial interpolation it captures near-Nyquist peaks.
 // ============================================================================
+const TRUE_PEAK_TAPS: usize = 12;
 
-/// 4-point Lagrange interpolator coefficients at three fractional positions
-/// inside a (b, c) sample pair. For samples (a, b, c, d) at indices
-/// (-1, 0, 1, 2), each row gives the basis weights at one of (x = 0.25, 0.5,
-/// 0.75) so that `L(x) = w[0]·a + w[1]·b + w[2]·c + w[3]·d`.
-///
-/// Coefficients verified by hand-computing the 4-point Lagrange polynomial at
-/// each fractional position. Each row sums to 1.0 (interpolation invariant).
-const LAGRANGE_INTERSAMPLE_COEFFS: [[f32; 4]; 3] = [
-    [-0.0546875, 0.8203125, 0.2734375, -0.0390625], // x = 0.25
-    [-0.0625, 0.5625, 0.5625, -0.0625],             // x = 0.5
-    [-0.0390625, 0.2734375, 0.8203125, -0.0546875], // x = 0.75 (mirror of 0.25)
-];
-
-/// Skip gate for the inter-sample-peak scan: if `raw_peak * ISP_SKIP_MARGIN`
-/// is below the ceiling, no interpolated estimate can cross it. Must be ≥ the
-/// largest ABSOLUTE-weight row sum of `LAGRANGE_INTERSAMPLE_COEFFS` (1.25 at
-/// x = 0.5) — an interpolated output is a weighted sum of four samples each
-/// ≤ peak, so that sum is its hard bound. Pinned by
-/// `isp_skip_margin_covers_the_estimator_bound` so a future coefficient edit
-/// can't silently invalidate the gate again (2026-07-06 audit: 1.2 < 1.25).
-const ISP_SKIP_MARGIN: f32 = 1.26;
-
+fn true_peak_filter() -> &'static [[f32; TRUE_PEAK_TAPS]; 4] {
+    static FILTER: std::sync::OnceLock<[[f32; TRUE_PEAK_TAPS]; 4]> = std::sync::OnceLock::new();
+    FILTER.get_or_init(|| {
+        std::array::from_fn(|phase| {
+            std::array::from_fn(|tap| {
+                let j = (tap * 4 + phase) as f64;
+                let window = 0.5 * (1.0 - (std::f64::consts::TAU * j / 48.0).cos());
+                let x = std::f64::consts::PI * (j - 24.0) / 4.0;
+                (window * if x.abs() < 1e-9 { 1.0 } else { x.sin() / x }) as f32
+            })
+        })
+    })
+}
 #[derive(Debug, Clone)]
 pub struct Limiter {
     channels: usize,
@@ -1532,6 +1519,7 @@ pub struct Limiter {
     release_coef: f32,
     /// Ring buffer of interleaved samples sized `lookahead_frames * channels`.
     buffer: Vec<f32>,
+    required_gains: Vec<f32>,
     /// Index of the next frame to overwrite (also the oldest frame in the buffer).
     head_frame: usize,
     /// How many frames have been written so far (capped at `lookahead_frames`).
@@ -1552,20 +1540,22 @@ impl Limiter {
         release_ms: f32,
     ) -> Self {
         let ch = channels.max(1);
-        let lookahead_frames =
-            (((lookahead_ms / 1000.0) * sample_rate as f32).round() as usize).max(1);
+        let lookahead_frames = (((lookahead_ms / 1000.0) * sample_rate as f32).round() as usize)
+            .max(TRUE_PEAK_TAPS + 1);
         let release_coef = if release_ms > 0.0 {
             (-1.0_f32 / (release_ms / 1000.0 * sample_rate as f32)).exp()
         } else {
             0.0
         };
         let ceiling_lin = 10.0_f32.powf(ceiling_dbfs / 20.0);
+        let _ = true_peak_filter(); // initialize off the audio callback
         Self {
             channels: ch,
             ceiling_lin,
             lookahead_frames,
             release_coef,
             buffer: vec![0.0; lookahead_frames * ch],
+            required_gains: vec![1.0; lookahead_frames],
             head_frame: 0,
             filled_frames: 0,
             gain: 1.0,
@@ -1581,6 +1571,8 @@ impl Limiter {
             return;
         }
         let head_base = self.head_frame * ch;
+        let outgoing_required = self.required_gains[self.head_frame];
+        self.required_gains[self.head_frame] = 1.0;
         // Read the OLDEST frame from the ring before overwriting.
         for i in 0..ch {
             self.oldest_frame_buf[i] = self.buffer[head_base + i];
@@ -1589,78 +1581,55 @@ impl Limiter {
         for i in 0..ch {
             let s = if i < frame.len() { frame[i] } else { 0.0 };
             self.buffer[head_base + i] = s;
+            self.required_gains[self.head_frame] = self.required_gains[self.head_frame]
+                .min((self.ceiling_lin / s.abs().max(1e-9)).min(1.0));
         }
         self.head_frame = (self.head_frame + 1) % self.lookahead_frames;
         if self.filled_frames < self.lookahead_frames {
             self.filled_frames += 1;
         }
 
-        // Scan the buffer for the peak. Two passes:
-        //   1) Raw sample peaks (linked stereo, single max across channels).
-        //   2) Lagrange-4 inter-sample peaks at x ∈ {0.25, 0.5, 0.75} between
-        //      every adjacent frame pair — catches the true peak across the
-        //      sub-sample positions that a 4× upsample would expose. Phase
-        //      11.2.b checked x=0.5 only; sign-asymmetric patterns can place
-        //      the true peak near x=0.25 or x=0.75 with a relatively small
-        //      x=0.5 estimate, which is what this loop now covers.
-        let mut peak: f32 = 0.0;
-        for &s in &self.buffer {
-            let a = s.abs();
-            if a > peak {
-                peak = a;
+        // Detect the newly completed FIR span once, not once per lookahead
+        // sample. Constrain its entire support so all contributing samples
+        // have reached the requested reduction before they leave the delay.
+        let mut peak = 0.0_f32;
+        let support: [usize; TRUE_PEAK_TAPS] = std::array::from_fn(|tap| {
+            let offset = tap + 1;
+            if self.head_frame >= offset {
+                self.head_frame - offset
+            } else {
+                self.head_frame + self.lookahead_frames - offset
             }
-        }
-        // Phase A4 perf: the Lagrange-4 inter-sample peak loop is the
-        // dominant cost in the limiter (O(lookahead × channels × 3
-        // positions) per output frame). The estimator itself bounds how far
-        // an interpolated value can exceed the raw sample peak: an output is
-        // a weighted sum of four samples each ≤ peak, so it is capped by the
-        // row's ABSOLUTE-weight sum — 1.25 for the x = 0.5 row (the largest;
-        // see `isp_skip_margin_covers_the_estimator_bound`). If raw peak ×
-        // 1.26 (bound + slack) is still below the ceiling, no possible
-        // inter-sample estimate can cross it — skip the loop entirely. Saves
-        // the heavy work on any frame with ~2 dB of headroom, which on quiet
-        // material is basically every frame. (2026-07-06 audit: the previous
-        // 1.2 margin sat BELOW the estimator's own 1.25 worst case, letting
-        // adversarial sign-alternating material skip a scan that would have
-        // caught up to ~0.35 dB of overshoot. `ISP_SKIP_MARGIN` lives at
-        // module scope, test-pinned against the coefficient rows.)
-        let frames = self.filled_frames;
-        if frames >= 4 && peak * ISP_SKIP_MARGIN > self.ceiling_lin {
-            for f in 1..(frames - 2) {
-                for c in 0..ch {
-                    let prev = self.frame_sample(f - 1, c);
-                    let a = self.frame_sample(f, c);
-                    let b = self.frame_sample(f + 1, c);
-                    let nxt = self.frame_sample(f + 2, c);
-                    for w in &LAGRANGE_INTERSAMPLE_COEFFS {
-                        let mid = w[0] * prev + w[1] * a + w[2] * b + w[3] * nxt;
-                        let abs_mid = mid.abs();
-                        if abs_mid > peak {
-                            peak = abs_mid;
-                        }
-                    }
+        });
+        for c in 0..ch {
+            for weights in true_peak_filter() {
+                let mut value = 0.0;
+                for (tap, weight) in weights.iter().enumerate() {
+                    value += self.buffer[support[tap] * ch + c] * weight;
                 }
+                peak = peak.max(value.abs());
             }
         }
-
-        let required = if peak > self.ceiling_lin {
-            self.ceiling_lin / peak.max(1.0e-9)
-        } else {
-            1.0
-        };
-
-        if required < self.gain {
-            // Instant attack — the lookahead gives us time to ramp the OUTPUT
-            // down before the peak hits the read pointer, so an instantaneous
-            // gain change here translates to a smooth dip in the audible output.
-            self.gain = required;
-        } else {
-            // Exponential release toward `required` (which is 1.0 when no
-            // reduction is currently needed).
-            self.gain = required - (required - self.gain) * self.release_coef;
+        // Small reconstruction/envelope margin, applied only when limiting.
+        let required = (self.ceiling_lin / (peak * 1.012).max(1e-9)).min(1.0);
+        for index in support {
+            self.required_gains[index] = self.required_gains[index].min(required);
         }
-
+        // Each future constraint supplies a linear attack ramp. Taking their
+        // minimum honors all peaks, including a smaller nearer peak. The
+        // release envelope can only retain MORE attenuation than these ramps.
+        let ramp_frames = (self.lookahead_frames - TRUE_PEAK_TAPS).max(1) as f32;
+        let mut envelope = outgoing_required;
+        let (before, after) = self.required_gains.split_at(self.head_frame);
+        for (distance, &target) in after.iter().chain(before).enumerate() {
+            let ramp = target + (1.0 - target) * ((distance + 1) as f32 / ramp_frames).min(1.0);
+            envelope = envelope.min(ramp);
+        }
+        if envelope < self.gain {
+            self.gain = envelope;
+        } else {
+            self.gain = envelope - (envelope - self.gain) * self.release_coef;
+        }
         // Output the OLDEST frame * current gain.
         for i in 0..frame.len().min(ch) {
             frame[i] = self.oldest_frame_buf[i] * self.gain;
@@ -1674,6 +1643,7 @@ impl Limiter {
         self.head_frame = 0;
         self.filled_frames = 0;
         self.gain = 1.0;
+        self.required_gains.fill(1.0);
     }
 
     fn copy_state_from(&mut self, prior: &Self) -> bool {
@@ -1687,6 +1657,7 @@ impl Limiter {
         self.lookahead_frames = prior.lookahead_frames;
         self.release_coef = prior.release_coef;
         self.buffer.copy_from_slice(&prior.buffer);
+        self.required_gains.copy_from_slice(&prior.required_gains);
         self.head_frame = prior.head_frame;
         self.filled_frames = prior.filled_frames;
         self.gain = prior.gain;
@@ -1704,6 +1675,7 @@ impl Limiter {
     /// inter-sample-peak scan inert for the first lookahead window of every
     /// stream (2026-07-06 audit). `head - filled (mod len)` is the oldest
     /// written slot in both warmup and steady state.
+    #[cfg(test)]
     fn frame_sample(&self, f: usize, c: usize) -> f32 {
         let oldest =
             (self.head_frame + self.lookahead_frames - self.filled_frames) % self.lookahead_frames;
@@ -2401,9 +2373,10 @@ impl MasteringChain {
                     (env_db - thr_db) * (1.0 - 1.0 / ratio)
                 } else {
                     let x = env_db - (thr_db - half_knee);
-                    let t = x / knee;
-                    let above = (env_db - thr_db) * (1.0 - 1.0 / ratio);
-                    t * t * above.max(0.0)
+                    // Quadratic soft knee: joins unity and the hard-knee
+                    // curve with continuous value and slope. Multiplying
+                    // hard-knee GR by a fade can reverse the output slope.
+                    (1.0 - 1.0 / ratio) * x * x / (2.0 * knee)
                 };
                 let gr_abs = gr_db.max(0.0);
                 // Phase A4 perf: skip the powf entirely when this band/
@@ -2599,25 +2572,6 @@ mod tests {
                 cal.compressor_release_ms,
             );
         }
-    }
-
-    /// The ISP skip gate is sound only if no interpolated estimate can exceed
-    /// `raw_peak * ISP_SKIP_MARGIN`. An interpolated output is a weighted sum
-    /// of four samples each ≤ peak in magnitude, so its hard bound is the
-    /// row's absolute-weight sum. 2026-07-06 audit: the old 1.2 margin sat
-    /// below the x = 0.5 row's 1.25 — this pin keeps a future coefficient
-    /// edit from silently reopening that gap.
-    #[test]
-    fn isp_skip_margin_covers_the_estimator_bound() {
-        let worst: f32 = LAGRANGE_INTERSAMPLE_COEFFS
-            .iter()
-            .map(|row| row.iter().map(|w| w.abs()).sum::<f32>())
-            .fold(0.0, f32::max);
-        assert!(
-            ISP_SKIP_MARGIN >= worst,
-            "ISP_SKIP_MARGIN ({ISP_SKIP_MARGIN}) must cover the estimator's \
-             worst-case gain ({worst})"
-        );
     }
 
     /// 2026-07-06 audit: during warmup the ring's oldest WRITTEN frame is

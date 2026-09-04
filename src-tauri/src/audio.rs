@@ -1343,8 +1343,10 @@ fn update_chain_preview_landing_plan(
     }
 
     UpdateChainPreviewLandingPlan {
-        coeff_gain: current_live_gain,
-        remembered_gain: current_live_gain,
+        // An old boost was measured against a different chain. Retain only
+        // attenuation while the new whole-track measurement is pending.
+        coeff_gain: current_live_gain.min(1.0),
+        remembered_gain: current_live_gain.min(1.0),
         needs_measurement: true,
     }
 }
@@ -1544,17 +1546,6 @@ fn apply_preview_volume_match_gain_from_cache(
     );
 }
 
-fn preview_landing_window(samples: &[f32], sample_rate: u32, channels: u16) -> Vec<f32> {
-    const PREVIEW_WINDOW_SECS: f32 = 8.0;
-    let channels_usize = channels.max(1) as usize;
-    let total_frames = samples.len() / channels_usize;
-    let window_frames = ((PREVIEW_WINDOW_SECS * sample_rate as f32) as usize).min(total_frames);
-    let start_frame = total_frames.saturating_sub(window_frames) / 2;
-    let start = start_frame * channels_usize;
-    let end = ((start_frame + window_frames) * channels_usize).min(samples.len());
-    samples[start..end].to_vec()
-}
-
 /// Spawn a `lufs-preview-landing` worker thread that measures the export
 /// landing gain for `settings` against the cached decoded PCM and sends
 /// the result back through `command_tx` as `PreviewLandingReady`. Returns
@@ -1577,7 +1568,7 @@ fn try_spawn_lufs_preview_worker(
         return false;
     };
     let channels = cache_entry.pcm.channels;
-    let samples = preview_landing_window(cache_entry.pcm.samples.as_slice(), sample_rate, channels);
+    let samples = cache_entry.pcm.samples.clone();
     let command_tx = command_tx.clone();
     let spawn_result = std::thread::Builder::new()
         .name("lufs-preview-landing".to_string())
@@ -4069,6 +4060,18 @@ mod tests {
         assert!((plan.coeff_gain - 1.0).abs() < f32::EPSILON);
         assert!((plan.remembered_gain - 1.0).abs() < f32::EPSILON);
         assert!(!plan.needs_measurement);
+    }
+
+    #[test]
+    fn pending_preview_never_reuses_boost_from_different_settings() {
+        let cache = PreviewLandingCache::new();
+        let settings = settings_with_intensity(0.5);
+        let plan = update_chain_preview_landing_plan(&cache, &settings, true, 4.0);
+        assert!(
+            plan.coeff_gain <= 1.0,
+            "unmeasured settings inherited an unsafe boost"
+        );
+        assert!(plan.needs_measurement);
     }
 
     #[test]

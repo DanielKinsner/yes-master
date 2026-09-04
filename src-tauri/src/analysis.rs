@@ -103,7 +103,8 @@ pub(crate) fn analyze_one_with_progress(
 
     progress(0.55, "Evaluating stereo field");
     let stereo_width = compute_stereo_width(&pcm.samples, pcm.channels as usize);
-    let spectral_balance = compute_spectral_balance(&pcm.samples, pcm.channels as usize);
+    let spectral_balance =
+        compute_spectral_balance(&pcm.samples, pcm.sample_rate, pcm.channels as usize);
     let transient_density = compute_transient_density(&pcm.samples, pcm.channels as usize);
 
     progress(0.65, "Reading tonal balance");
@@ -301,51 +302,40 @@ fn compute_stereo_width(samples: &[f32], channels: usize) -> f32 {
     }
 }
 
-pub(crate) fn compute_spectral_balance(samples: &[f32], channels: usize) -> SpectralBalance {
-    if samples.is_empty() || channels == 0 {
-        return SpectralBalance {
-            low: 0.33,
-            mid: 0.34,
-            high: 0.33,
-        };
-    }
-    // Simple band split via first-order RC filters. Phase 11b can replace with
-    // Linkwitz-Riley crossovers or FFT for sharper bands.
-    let mut low_lp_state = 0.0_f64;
-    let mut high_lp_state = 0.0_f64;
-    let mut low_sq = 0.0_f64;
-    let mut mid_sq = 0.0_f64;
-    let mut high_sq = 0.0_f64;
-
-    // Assume 44.1 kHz reference; the bands are approximate either way.
-    let low_alpha = 0.015; // ~100 Hz first-order LP at 44.1k
-    let high_alpha = 0.45; // ~3 kHz first-order LP boundary for mid/high split
-
-    for frame in samples.chunks(channels) {
-        let mut mono = 0.0_f64;
-        for &s in frame.iter() {
-            mono += f64::from(s);
+pub(crate) fn compute_spectral_balance(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: usize,
+) -> SpectralBalance {
+    // Bilinear one-pole splits at physical frequencies, independently per
+    // channel. Sum energies, not waveforms: stereo side content is still sound.
+    let mut states = vec![[0.0_f64; 3]; channels];
+    let coefficient = |hz: f64| {
+        let g = (std::f64::consts::PI * hz / sample_rate.max(1) as f64).tan();
+        (g / (1.0 + g), (g - 1.0) / (g + 1.0))
+    };
+    let (low_a, low_b) = coefficient(100.0_f64.min(sample_rate as f64 * 0.2));
+    let (high_a, high_b) = coefficient(3000.0_f64.min(sample_rate as f64 * 0.4));
+    let mut energies = [0.0_f64; 3];
+    if channels > 0 {
+        for frame in samples.chunks_exact(channels) {
+            for (&sample, state) in frame.iter().zip(states.iter_mut()) {
+                let x = sample as f64;
+                let low = low_a * (x + state[0]) - low_b * state[1];
+                let upper = high_a * (x + state[0]) - high_b * state[2];
+                *state = [x, low, upper];
+                for (energy, value) in energies.iter_mut().zip([low, upper - low, x - upper]) {
+                    *energy += value * value;
+                }
+            }
         }
-        mono /= channels as f64;
-
-        low_lp_state += low_alpha * (mono - low_lp_state);
-        high_lp_state += high_alpha * (mono - high_lp_state);
-
-        let low = low_lp_state;
-        let mid = high_lp_state - low_lp_state;
-        let high = mono - high_lp_state;
-
-        low_sq += low * low;
-        mid_sq += mid * mid;
-        high_sq += high * high;
     }
-
-    let total = low_sq + mid_sq + high_sq;
+    let total: f64 = energies.iter().sum();
     if total > 0.0 {
         SpectralBalance {
-            low: (low_sq / total) as f32,
-            mid: (mid_sq / total) as f32,
-            high: (high_sq / total) as f32,
+            low: (energies[0] / total) as f32,
+            mid: (energies[1] / total) as f32,
+            high: (energies[2] / total) as f32,
         }
     } else {
         SpectralBalance {
@@ -355,7 +345,6 @@ pub(crate) fn compute_spectral_balance(samples: &[f32], channels: usize) -> Spec
         }
     }
 }
-
 // ============================================================================
 // Phase A5: richer pre-mastering analysis. Implementations ported from
 // Codex's `src/album_mastering_studio/analysis.py`. Originally these fed only
@@ -447,40 +436,37 @@ pub(crate) fn compute_spectral_balance_6band(
     let mut buf: Vec<Complex<f32>> = Vec::with_capacity(fft_size);
     let mut start = 0_usize;
     while start + fft_size <= total_frames {
-        buf.clear();
-        for i in 0..fft_size {
-            let mut mono = 0.0_f32;
-            let frame_start = (start + i) * channels;
-            for c in 0..channels {
-                mono += samples[frame_start + c];
+        for channel in 0..channels {
+            buf.clear();
+            for i in 0..fft_size {
+                let mono = samples[(start + i) * channels + channel];
+                // Hann window — reduces spectral leakage.
+                let w = 0.5 * (1.0 - (two_pi * i as f32 / (fft_size as f32 - 1.0)).cos());
+                buf.push(Complex {
+                    re: mono * w,
+                    im: 0.0,
+                });
             }
-            mono /= channels as f32;
-            // Hann window — reduces spectral leakage.
-            let w = 0.5 * (1.0 - (two_pi * i as f32 / (fft_size as f32 - 1.0)).cos());
-            buf.push(Complex {
-                re: mono * w,
-                im: 0.0,
-            });
-        }
-        fft.process(&mut buf);
-        for (bin, c) in buf.iter().copied().enumerate().take(bins).skip(1) {
-            let freq = bin as f32 * bin_hz;
-            let idx = if freq >= edges[0] && freq < edges[1] {
-                0
-            } else if freq >= edges[1] && freq < edges[2] {
-                1
-            } else if freq >= edges[2] && freq < edges[3] {
-                2
-            } else if freq >= edges[3] && freq < edges[4] {
-                3
-            } else if freq >= edges[4] && freq < edges[5] {
-                4
-            } else if freq >= edges[5] && freq < edges[6] {
-                5
-            } else {
-                continue;
-            };
-            bands[idx] += (c.re as f64) * (c.re as f64) + (c.im as f64) * (c.im as f64);
+            fft.process(&mut buf);
+            for (bin, c) in buf.iter().copied().enumerate().take(bins).skip(1) {
+                let freq = bin as f32 * bin_hz;
+                let idx = if freq >= edges[0] && freq < edges[1] {
+                    0
+                } else if freq >= edges[1] && freq < edges[2] {
+                    1
+                } else if freq >= edges[2] && freq < edges[3] {
+                    2
+                } else if freq >= edges[3] && freq < edges[4] {
+                    3
+                } else if freq >= edges[4] && freq < edges[5] {
+                    4
+                } else if freq >= edges[5] && freq < edges[6] {
+                    5
+                } else {
+                    continue;
+                };
+                bands[idx] += (c.re as f64) * (c.re as f64) + (c.im as f64) * (c.im as f64);
+            }
         }
         start += hop;
     }
@@ -536,28 +522,25 @@ pub(crate) fn compute_spectral_balance_31band(
     let mut buf: Vec<Complex<f32>> = Vec::with_capacity(fft_size);
     let mut start = 0_usize;
     while start + fft_size <= total_frames {
-        buf.clear();
-        for i in 0..fft_size {
-            let mut mono = 0.0_f32;
-            let frame_start = (start + i) * channels;
-            for c in 0..channels {
-                mono += samples[frame_start + c];
+        for channel in 0..channels {
+            buf.clear();
+            for i in 0..fft_size {
+                let mono = samples[(start + i) * channels + channel];
+                // Hann window — reduces spectral leakage.
+                let w = 0.5 * (1.0 - (two_pi * i as f32 / (fft_size as f32 - 1.0)).cos());
+                buf.push(Complex {
+                    re: mono * w,
+                    im: 0.0,
+                });
             }
-            mono /= channels as f32;
-            // Hann window — reduces spectral leakage.
-            let w = 0.5 * (1.0 - (two_pi * i as f32 / (fft_size as f32 - 1.0)).cos());
-            buf.push(Complex {
-                re: mono * w,
-                im: 0.0,
-            });
-        }
-        fft.process(&mut buf);
-        for (bin, c) in buf.iter().copied().enumerate().take(bins).skip(1) {
-            let freq = bin as f32 * bin_hz;
-            let Some(idx) = third_octave_band(freq) else {
-                continue;
-            };
-            bands[idx] += (c.re as f64) * (c.re as f64) + (c.im as f64) * (c.im as f64);
+            fft.process(&mut buf);
+            for (bin, c) in buf.iter().copied().enumerate().take(bins).skip(1) {
+                let freq = bin as f32 * bin_hz;
+                let Some(idx) = third_octave_band(freq) else {
+                    continue;
+                };
+                bands[idx] += (c.re as f64) * (c.re as f64) + (c.im as f64) * (c.im as f64);
+            }
         }
         start += hop;
     }

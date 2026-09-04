@@ -205,6 +205,71 @@ fn album_render_repeated_plan_keeps_prior_per_track_files_and_manifest() {
 }
 
 #[test]
+fn album_receipt_measures_delivery_and_continuous_pcm_matches_track_files() {
+    let tmp = TempDir::new().unwrap();
+    let sr = 48000;
+    let path = tmp.path().join("delivery.wav");
+    let samples: Vec<f32> = (0..sr)
+        .map(|i| 0.5 * (std::f32::consts::TAU * 997.0 * i as f32 / sr as f32).sin())
+        .collect();
+    write_wav_mono(&path, sr, &samples);
+    let analysis = fake_analysis("delivery", TrackRole::AlbumTrack, None, 0.5, 0.5);
+    for bits in [16, 24, 32] {
+        let mut plan = album::build_album_plan(
+            "Delivery".into(),
+            &[&analysis],
+            &[1.0],
+            AlbumArc::Preset {
+                preset: AlbumArcKind::Cinematic,
+            },
+            1.0,
+        );
+        plan.delivery_bit_depth = Some(bits);
+        let mut settings = default_master_settings();
+        settings.preset = yes_master_lib::Preset::Custom {
+            id: "neutral".into(),
+        };
+        settings.input_gain_db = -1.5;
+        settings.output_gain_db = 12.0;
+        settings.advanced.compression_mode = yes_master_lib::CompressionMode::Off;
+        settings.advanced.bit_depth = Some(bits);
+        let report = render_album_plan_impl(
+            &AlbumPlanRenderRequest {
+                plan,
+                tracks: vec![AlbumTrackRenderInput {
+                    track_id: TrackId("delivery".into()),
+                    source_path: path.to_string_lossy().into(),
+                    settings,
+                    override_album: true,
+                }],
+            },
+            &tmp.path().join(format!("out-{bits}")),
+            None,
+        )
+        .unwrap();
+        let track = yes_master_lib::decode::decode_full(std::path::Path::new(
+            &report.tracks[0].output_path,
+        ))
+        .unwrap();
+        let continuous =
+            yes_master_lib::decode::decode_full(std::path::Path::new(&report.album_wav_path))
+                .unwrap();
+        assert_eq!(
+            track.samples, continuous.samples,
+            "{bits}-bit album must preserve delivered track PCM"
+        );
+        let mut meter = ebur128::EbuR128::new(track.channels.into(), sr, ebur128::Mode::I).unwrap();
+        meter.add_frames_f32(&track.samples).unwrap();
+        let actual = meter.loudness_global().unwrap() as f32;
+        assert!(
+            (actual - report.tracks[0].measured_lufs).abs() < 0.02,
+            "{bits}-bit album LUFS: saved {actual}, receipt {}",
+            report.tracks[0].measured_lufs
+        );
+    }
+}
+
+#[test]
 fn album_render_output_is_byte_identical_with_volume_match_on_or_off() {
     let tmp = TempDir::new().expect("tempdir");
     let sr = 48_000_u32;

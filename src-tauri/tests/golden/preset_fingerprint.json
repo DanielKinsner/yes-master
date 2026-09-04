@@ -10,11 +10,11 @@
       0.64876366
     ],
     "landed_lufs_pink": -14.463196,
-    "landed_lufs_drums": -14.611857,
-    "crest_db_drums": 13.612035,
-    "psr_db_drums": 13.566134,
-    "width_delta_db": 0.89569247,
-    "thd_proxy_db": -37.602173
+    "landed_lufs_drums": -14.737524,
+    "crest_db_drums": 13.592625,
+    "psr_db_drums": 13.543875,
+    "width_delta_db": 0.89575386,
+    "thd_proxy_db": -38.11284
   },
   {
     "preset": "Clarity",
@@ -27,11 +27,11 @@
       1.0577536
     ],
     "landed_lufs_pink": -14.841012,
-    "landed_lufs_drums": -14.89956,
-    "crest_db_drums": 13.899655,
-    "psr_db_drums": 13.875104,
+    "landed_lufs_drums": -15.068274,
+    "crest_db_drums": 13.796135,
+    "psr_db_drums": 13.765624,
     "width_delta_db": 0.7297878,
-    "thd_proxy_db": -39.493484
+    "thd_proxy_db": -39.957882
   },
   {
     "preset": "Tape",
@@ -44,11 +44,11 @@
       0.5620127
     ],
     "landed_lufs_pink": -13.064685,
-    "landed_lufs_drums": -13.658149,
-    "crest_db_drums": 12.658389,
-    "psr_db_drums": 12.613081,
-    "width_delta_db": -0.612186,
-    "thd_proxy_db": -36.479034
+    "landed_lufs_drums": -13.886943,
+    "crest_db_drums": 12.783333,
+    "psr_db_drums": 12.734041,
+    "width_delta_db": -0.62500864,
+    "thd_proxy_db": -36.512558
   },
   {
     "preset": "Spatial",
@@ -61,11 +61,11 @@
       0.78898335
     ],
     "landed_lufs_pink": -13.572761,
-    "landed_lufs_drums": -14.208379,
-    "crest_db_drums": 13.208735,
-    "psr_db_drums": 13.181483,
-    "width_delta_db": 3.2245607,
-    "thd_proxy_db": -39.30253
+    "landed_lufs_drums": -14.441545,
+    "crest_db_drums": 13.3379345,
+    "psr_db_drums": 13.305507,
+    "width_delta_db": 3.217924,
+    "thd_proxy_db": -39.324066
   },
   {
     "preset": "Oomph",
@@ -78,11 +78,11 @@
       -1.0521555
     ],
     "landed_lufs_pink": -13.976441,
-    "landed_lufs_drums": -13.583058,
-    "crest_db_drums": 12.583222,
-    "psr_db_drums": 12.460728,
-    "width_delta_db": -1.6225817,
-    "thd_proxy_db": -39.908836
+    "landed_lufs_drums": -13.642844,
+    "crest_db_drums": 12.539235,
+    "psr_db_drums": 12.413194,
+    "width_delta_db": -1.6436244,
+    "thd_proxy_db": -40.503426
   },
   {
     "preset": "Warmth",
@@ -95,44 +95,44 @@
       -0.78894806
     ],
     "landed_lufs_pink": -12.913073,
-    "landed_lufs_drums": -14.063034,
-    "crest_db_drums": 13.063361,
-    "psr_db_drums": 13.000309,
-    "width_delta_db": -0.25090018,
-    "thd_proxy_db": -38.20428
+    "landed_lufs_drums": -14.096021,
+    "crest_db_drums": 12.992411,
+    "psr_db_drums": 12.930424,
+    "width_delta_db": -0.24415332,
+    "thd_proxy_db": -38.220776
   },
   {
     "preset": "Punch",
     "band_tilt_db": [
-      -1.8830462,
-      -0.4198084,
-      -1.457078,
-      1.0367575,
-      0.032320976,
-      0.2846632
+      -1.8801031,
+      -0.4158926,
+      -1.4580832,
+      1.0369272,
+      0.032422066,
+      0.28470325
     ],
-    "landed_lufs_pink": -9.572698,
-    "landed_lufs_drums": -12.841084,
-    "crest_db_drums": 11.841172,
-    "psr_db_drums": 11.846805,
-    "width_delta_db": 0.20564632,
-    "thd_proxy_db": -37.882736
+    "landed_lufs_pink": -9.5727,
+    "landed_lufs_drums": -13.2817545,
+    "crest_db_drums": 12.1065235,
+    "psr_db_drums": 12.094345,
+    "width_delta_db": 0.20719905,
+    "thd_proxy_db": -37.90487
   },
   {
     "preset": "Loud",
     "band_tilt_db": [
-      -2.7528954,
-      -0.7049713,
-      -1.4447021,
-      0.6202812,
-      -0.14434433,
-      0.7358742
+      -2.415184,
+      -0.7481804,
+      -1.7204514,
+      0.42018127,
+      -0.07369614,
+      0.8747978
     ],
-    "landed_lufs_pink": -6.6810737,
-    "landed_lufs_drums": -11.95083,
-    "crest_db_drums": 10.950887,
-    "psr_db_drums": 10.961472,
-    "width_delta_db": -0.03425999,
-    "thd_proxy_db": -38.808983
+    "landed_lufs_pink": -6.981695,
+    "landed_lufs_drums": -12.665029,
+    "crest_db_drums": 11.561419,
+    "psr_db_drums": 11.554955,
+    "width_delta_db": -0.018816538,
+    "thd_proxy_db": -38.846733
   }
 ]

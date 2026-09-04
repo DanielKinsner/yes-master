@@ -17,6 +17,42 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// Append already delivered PCM without decoding a whole track or applying
+/// dither a second time. Assembly memory is independent of album duration.
+fn append_delivered_track<W: std::io::Write + std::io::Seek>(
+    writer: &mut hound::WavWriter<W>,
+    path: &Path,
+    cancel_flag: Option<&AtomicBool>,
+) -> CommandResult<()> {
+    let file = std::fs::File::open(path).map_err(|e| CommandError::Io(e.to_string()))?;
+    let mut reader = hound::WavReader::new(std::io::BufReader::with_capacity(1 << 20, file))
+        .map_err(|e| CommandError::Io(e.to_string()))?;
+    if reader.spec() != writer.spec() {
+        return Err(CommandError::Render(
+            "Delivered track format differs from album".into(),
+        ));
+    }
+    fn copy_samples<S: hound::Sample, W: std::io::Write + std::io::Seek>(
+        samples: impl Iterator<Item = Result<S, hound::Error>>,
+        writer: &mut hound::WavWriter<W>,
+        cancel_flag: Option<&AtomicBool>,
+    ) -> CommandResult<()> {
+        for (i, sample) in samples.enumerate() {
+            if i % 4096 == 0 && render_cancelled(cancel_flag) {
+                return Err(CommandError::Other("album render cancelled".into()));
+            }
+            writer
+                .write_sample(sample.map_err(|e| CommandError::Io(e.to_string()))?)
+                .map_err(|e| CommandError::Io(e.to_string()))?;
+        }
+        Ok(())
+    }
+    match reader.spec().sample_format {
+        hound::SampleFormat::Float => copy_samples(reader.samples::<f32>(), writer, cancel_flag),
+        hound::SampleFormat::Int => copy_samples(reader.samples::<i32>(), writer, cancel_flag),
+    }
+}
+
 /// Resolve the album-wide delivery sample rate. An explicit request wins;
 /// otherwise Auto = the highest source rate among the tracks (quality-safe:
 /// never forces a needless downsample, deterministic for mixed sources).
@@ -623,7 +659,6 @@ pub fn render_album_plan_impl_with_cancel(
     //
     //   Pass 2 - open the album writer, stream each track's samples in,
     //   inject Gap silence frames per TransitionSpec, finalize.
-    let mut rendered_samples: Vec<Vec<f32>> = Vec::with_capacity(total_tracks);
     let mut track_records: Vec<AlbumTrackRenderRecord> = Vec::with_capacity(total_tracks);
 
     // Per-stage wall-time aggregates across all tracks (F9/F11, mirrors the
@@ -843,11 +878,13 @@ pub fn render_album_plan_impl_with_cancel(
                 return Err(CommandError::Other("album render cancelled".to_string()));
             }
 
-            let measured_lufs = sanitize_lufs(measure_integrated_lufs(
+            let (delivered_lufs, _, _) = crate::wav_writer::measure_delivery(
                 &samples,
                 album_sample_rate,
                 rendered_channel_count,
-            )?);
+                bit_depth,
+            )?;
+            let measured_lufs = sanitize_lufs(delivered_lufs);
             track_records.push(AlbumTrackRenderRecord {
                 track_id: entry.track_id.clone(),
                 position: entry.position,
@@ -859,7 +896,6 @@ pub fn render_album_plan_impl_with_cancel(
                 rendered_channels: rendered_channel_count,
                 override_album: input.override_album,
             });
-            rendered_samples.push(samples);
         }
         Ok(())
     })();
@@ -917,12 +953,16 @@ pub fn render_album_plan_impl_with_cancel(
             let album_buf = std::io::BufWriter::with_capacity(1 << 20, album_file);
             let mut album_writer = hound::WavWriter::new(album_buf, spec)
                 .map_err(|e| CommandError::Io(e.to_string()))?;
-            for (i, samples) in rendered_samples.iter().enumerate() {
+            for (i, track) in track_records.iter().enumerate() {
                 if render_cancelled(cancel_flag) {
                     return Err(CommandError::Other("album render cancelled".to_string()));
                 }
-                write_samples_into_writer(&mut album_writer, samples, bit_depth)?;
-                if i + 1 < rendered_samples.len() {
+                append_delivered_track(
+                    &mut album_writer,
+                    Path::new(&track.output_path),
+                    cancel_flag,
+                )?;
+                if i + 1 < track_records.len() {
                     // Transition slot between track i and track i+1.
                     if let Some(t) = request.plan.transitions.get(i) {
                         if matches!(t.kind, TransitionKind::Gap) {

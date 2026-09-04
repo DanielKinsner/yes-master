@@ -118,6 +118,66 @@ pub(crate) fn wav_spec(
     })
 }
 
+/// Meter the exact deterministic PCM representation the writer delivers.
+/// Integer dither/clipping and the loudness absolute gate invalidate simply
+/// shifting pre-landing measurements. Scratch space is bounded, not track-sized.
+pub(crate) fn measure_delivery(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    bit_depth: u16,
+) -> CommandResult<(f32, f32, f32)> {
+    use ebur128::{EbuR128, Mode};
+    wav_spec(channels, sample_rate, bit_depth)?;
+    let mut ebu = EbuR128::new(
+        u32::from(channels),
+        sample_rate,
+        Mode::I | Mode::LRA | Mode::TRUE_PEAK,
+    )
+    .map_err(|e| CommandError::Render(e.to_string()))?;
+    if bit_depth == 32 {
+        ebu.add_frames_f32(samples)
+            .map_err(|e| CommandError::Render(e.to_string()))?;
+    } else {
+        let mut rng = DitherRng::new(0x000A_11CE);
+        let mut scratch = Vec::with_capacity(4096 * channels as usize);
+        for chunk in samples.chunks(4096 * channels as usize) {
+            scratch.clear();
+            scratch.extend(chunk.iter().map(|&sample| {
+                if bit_depth == 16 {
+                    quantize_16_tpdf(sample, &mut rng) as f32 / INT16_SCALE
+                } else {
+                    quantize_24_tpdf(sample, &mut rng) as f32 / INT24_SCALE
+                }
+            }));
+            ebu.add_frames_f32(&scratch)
+                .map_err(|e| CommandError::Render(e.to_string()))?;
+        }
+    }
+    let lufs = ebu
+        .loudness_global()
+        .map_err(|e| CommandError::Render(e.to_string()))? as f32;
+    let lra = ebu
+        .loudness_range()
+        .map_err(|e| CommandError::Render(e.to_string()))? as f32;
+    let mut peak = 0.0_f64;
+    for channel in 0..u32::from(channels) {
+        peak = peak.max(
+            ebu.true_peak(channel)
+                .map_err(|e| CommandError::Render(e.to_string()))?,
+        );
+    }
+    Ok((
+        lufs,
+        if peak > 0.0 {
+            (20.0 * peak.log10()) as f32
+        } else {
+            -60.0
+        },
+        lra,
+    ))
+}
+
 pub(crate) fn write_samples_into_writer(
     writer: &mut hound::WavWriter<std::io::BufWriter<std::fs::File>>,
     samples: &[f32],
@@ -143,7 +203,7 @@ pub(crate) fn write_samples_into_writer(
         32 => {
             for &s in samples {
                 writer
-                    .write_sample(s.clamp(-1.0, 1.0))
+                    .write_sample(s)
                     .map_err(|e| CommandError::Io(e.to_string()))?;
             }
         }
@@ -311,7 +371,7 @@ fn write_wav_direct(
         32 => {
             for &s in samples {
                 writer
-                    .write_sample(s.clamp(-1.0, 1.0))
+                    .write_sample(s)
                     .map_err(|e| CommandError::Io(e.to_string()))?;
             }
         }
@@ -511,10 +571,13 @@ mod tests {
             .samples::<f32>()
             .collect::<Result<Vec<_>, _>>()
             .expect("decode 32-bit samples");
-        assert_eq!(decoded, vec![-1.0, -0.25, 0.0, 0.25, 1.0]);
+        assert_eq!(
+            decoded, samples,
+            "float WAV must preserve finite over-range samples"
+        );
         assert_eq!(
             sha256_file(&out),
-            "ca8a2aef746c21b009a818f48c1cbfb4b13a51fb72aae503ee5f85e6950813f7"
+            "9fe112001f0779d38e043676d6793d49cdaecc29fbfb3f753c018572e21c2d5b"
         );
     }
 
