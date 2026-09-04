@@ -94,14 +94,65 @@ audio callback deadline guarantee. The high-rate margin and full-track preview
 cost still deserve dedicated profiling on slower hardware; no claim that all
 performance concerns are closed.
 
-## Remaining follow-up beyond this correction pass
+## Follow-up implementation (2026-09-04)
 
-- Long-session live-meter growth and cold Volume Match latency need dedicated
-  profiling and regression work. Neither is claimed fixed by the limiter benchmark.
-- Album receipt expansion (per-track target/peak presentation) and broader
-  controller/CSS simplification remain follow-up product/maintenance work.
-- Native audio-device behavior and the combined by-ear comparison remain
-  physical tests; browser captures and host bridge tests do not establish them.
+- `7c4c8d6`: bounded live integrated-meter history, allocation-free feed/reset,
+  and limiter envelope pruning. The long-listen test first reproduced ten
+  callback allocations, then passed with zero. Live histogram bins are 0.1 LU;
+  export measurement remains exact. Limiter sound references did not change.
+- `d2e30af`: Album receipts expose each track's resolved target, delivered LUFS,
+  delivered true peak, and ceiling. Target shortfalls stay informational; older
+  receipts explicitly label missing measurements. Browser scenarios expand the
+  real export receipt and assert all four tracks' results. Fixed the clean-export
+  test's race by waiting for its asynchronous receipt before asserting it.
+- `ac8859c`: cold Volume Match runs on the existing preview worker; its early
+  result need not wait for whole-track landing. The command-thread lookup has
+  no PCM/render access. One pending request replaces duplicate controller logic.
+  Repeated A/B switches reuse the current PCM worker, and recreated audio states
+  receive distinct source epochs so old device-state workers cannot poison caches.
+  Both lifecycle regressions failed before their respective fixes.
+
+The fixed-size meter replaces the growing custom block history; this also removes
+its repeatedly scanned logic. Preview coefficient publication and measurement
+scheduling now have shared paths. These are targeted maintenance changes; file
+size alone is not a reason for a broader controller or CSS rewrite.
+
+### Follow-up evidence
+
+- Frontend: 831 tests / 82 files passed; TypeScript and Vite builds passed.
+- Rust: full suite 630 passed / 7 ignored, followed by all 448 final library
+  tests after the additional device-epoch regression; strict all-target Clippy
+  and formatting passed. DSP fingerprints and golden tolerances unchanged.
+- Private fixture contracts: 54 passed with `AMS_RUN_REAL_FIXTURE=1`, including
+  actual fixture analysis, rendering, and saved-file metering.
+- iPhone: all-target check and 46 host tests passed / 1 diagnostic ignored.
+  Android: 26 host tests and arm64 API-29 cross-check passed.
+- Headless: 31 app scenario/viewport checks plus landing suite passed; the
+  expanded Album receipt at 1360x740 was also visually inspected.
+- Final Windows MSI and NSIS packaging passed at implementation commit
+  `ac8859c`; no installation, push, publication, or deployment. This is local
+  evidence, not macOS validation or remote CI.
+
+Logs: `test-output/audio-correctness-followup-2026-09-04/`. Browser evidence:
+`test-output/headless/2026-09-04T23-07-10-511Z/`. Neither substitutes for
+hardware playback or listening approval.
+
+Optimized-development diagnostics on this machine: standalone 192 kHz limiter
+improved from roughly 3.2x realtime to 5.2x–10.3x while limiting, and 37x on quiet
+input. The full chain processed ten seconds of synthetic stereo at about 70x
+(44.1 kHz), 29x (96 kHz), and 7.4x (192 kHz), compared with the prior pass's
+22x/7x/2.4x. These are indicative throughput measurements taken during other
+build activity, not guarantees of callback deadlines on slower devices.
+
+### Remaining owner batch and performance limits
+
+The mechanical follow-up queue above is implemented. One combined by-ear and
+native playback check remains, including cold Volume Match and rapid A/B on real
+hardware. Full-track landing still has a full-track measurement cost, and first
+playback may decode synchronously if prewarming has not completed. Slower-device
+profiling remains useful; no universal latency guarantee is claimed. Preset
+retuning, adaptive-compressor calibration, and other parked feature expansions
+remain outside this correction pass. Release activity remains parked.
 
 ## Combined listening checklist
 

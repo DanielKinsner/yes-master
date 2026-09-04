@@ -37,6 +37,16 @@ sample-rate invariance, saved-file metering, float headroom, and limiter attack
 and independently measured true peaks (48 rate/frequency/phase/burst cases up
 to 192 kHz). `tests/album_render.rs` additionally checks delivered-file LUFS and
 continuous/per-track PCM parity at all three supported bit depths.
+Album records also verify resolved targets and independently measured delivered
+true peak. `tests/realtime_meter.rs` tracks allocations during three minutes of
+synthetic playback plus reset, and compares the bounded live meter against exact
+integration across loud, quiet, and silent sections at three sample rates.
+
+Audio controller tests exercise actual background Volume Match/landing worker
+messages, cache-only cold lookup, pending toggles, same-source A/B worker reuse,
+and source-epoch isolation when an output-device change recreates the controller.
+`cargo run --example limiter_bench` is a deterministic throughput diagnostic;
+wall-clock performance thresholds are deliberately not CI assertions.
 
 Output snapshots remain a separate change detector. When a mathematical DSP
 correction intentionally changes them, keep existing tolerances, explain the

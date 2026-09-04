@@ -16,6 +16,10 @@ close rather than letting them rot in scattered docs.
 > features remain unchanged; sound-affecting mathematical corrections await
 > that combined listening pass. Existing historical listening approvals do
 > not constitute approval of these new corrections.
+> Follow-up implementation now includes bounded live metering, faster high-rate
+> limiting, background cold Volume Match, worker reuse across A/B switches, and
+> per-track Album target/peak receipts. See the same ledger for regression and
+> local build evidence; the combined owner listening/hardware batch remains open.
 
 > **2026-09-04 — Display-scaling owner hand-test CLOSED / PASS.** The
 > installed Windows build stamped `e5943f4` was checked on the 4K office
