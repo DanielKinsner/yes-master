@@ -12,6 +12,26 @@ Dates are milestone dates, not exact commit times.
 
 ---
 
+## 2026-09-04 — Audio correctness and regression hardening
+
+Integrated into `main`; not a published release. Implementation commits
+`e4de416` through `ac8859c`, with evidence in
+`docs/plans/2026-09-04-audio-correctness.md`.
+
+- Corrected compressor soft-knee continuity, limiter lookahead/true-peak behavior,
+  stereo/sample-rate analysis, and whole-track preview landing.
+- Receipts measure delivered PCM; Album output assembly streams files and
+  exposes per-track targets and peaks. Signal-chain indicators follow resolved
+  backend processing. Standard controls fit the supported minimum height.
+- Bounded live-meter history, accelerated high-rate limiting, moved cold Volume
+  Match off the command thread, and protected workers across A/B/device changes.
+- Added synthetic math, delivery, memory and lifecycle regressions in normal
+  test lanes. Updated sound references only for explained mathematical changes;
+  no preset calibration or golden tolerance relaxation.
+- Local Rust/frontend/native-bridge/browser/Windows package checks passed.
+  Combined owner listening/native playback remains open. Machine-switch notes
+  include the independent export measurement and minor receipt follow-ups.
+
 ## 2026-09-01 — Ship-review fixes and Tier B polish (Friday ship plan S1–S7)
 
 Executor run of `docs/plans/2026-09-01-friday-ship-execution-plan.md`, the

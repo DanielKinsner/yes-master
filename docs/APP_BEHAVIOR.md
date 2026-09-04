@@ -35,7 +35,13 @@ Track Master supports:
 - Region selection and loop playback.
 - Presets and intensity.
 - Visual EQ/tone shaping.
-- Volume Match for audition only.
+- Volume Match for audition only; a cold measurement runs in the background.
+- Preview LUFS matches whole-track export loudness. The LUFS target is an
+  integrated target, not a momentary loudness cap. Since-play LUFS measures
+  the current playback run; live peak is dBFS, separate from export true peak.
+- Export receipts report delivered PCM loudness/peak/LRA. Album receipts expand
+  to per-track delivered loudness, true peak, resolved target and ceiling.
+  Target shortfalls are informational; warning-aware export remains advisory.
 - Delivery profile selection.
 - Advanced controls. The Advanced rail carries a global **Reset all**
   (2026-08-19; it confirms first — a misclick must not wipe a tuning) that returns every non-managed control — gains, EQ gains and

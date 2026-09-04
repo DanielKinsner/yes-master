@@ -16,7 +16,7 @@ No preset retuning or activation of gated adaptive features is included.
 - [x] Delivery: measurements of delivered PCM, consistent float/integer behavior.
 - [x] UI: signal chain truthfulness, Standard minimum-size controls, receipts.
 - [x] Album assembly: stream delivered PCM instead of retaining the whole album.
-- [ ] Finish profiling long/high-rate work and repair demonstrated bottlenecks.
+- [x] Profile long/high-rate work and repair demonstrated bottlenecks; slower-device checks remain advisory.
 - [x] Full required local verification and documented remaining platform limits.
 - [ ] One combined owner listening pass (pending owner, after mechanical work).
 
@@ -161,3 +161,34 @@ quiet breakdowns into loud choruses, already-mastered audio, and high-rate
 sources. Sweep intensity and manual compression; toggle Original/Mastered and
 Volume Match at a fixed playhead; compare audition with the saved master.
 Record one consolidated taste decision after the objective suite is green.
+
+## Machine-switch handoff (2026-09-04)
+
+Owner authorized merging this work to `main` and cleaning the handoff for a
+machine switch. Resume on the latest remote `main`; the implementation history
+and evidence above remain valid records, not a request to repeat every lane.
+
+- Owner is testing with `npm run tauri dev` from this checkout. The receipt
+  screenshot identifies build `980116b`; no installer update is needed for that
+  workflow. On another machine, pull `main`, run `npm ci`, then `npm run tauri dev`
+  with that machine's documented native prerequisites.
+- Owner accepts the existing live-meter presentation after the LUFS/peak
+  explanation. Do not treat visible meter-label changes as an approved open task.
+- An independent FFmpeg check of one owner-exported WAV agreed on -14.0 LUFS,
+  approximately -5.1 dBTP, stereo 24-bit PCM and 48 kHz. LRA was 5.6 LU versus
+  the receipt's 5.8 LU; the cause is not established. Track this small discrepancy
+  for a focused measurement comparison, not as proof of a ceiling failure.
+- The Custom receipt chip omits the numeric target. This is a minor copy follow-up,
+  not an audio defect or a reason to expand the current merge.
+- Neither the screenshot nor those measurements closes the combined owner
+  listening/native-playback batch. Keep that batch open; no preset retuning,
+  release tagging, publication, or deployment is authorized by this merge.
+- Private audio, test-output logs, local packages and screenshots are not in git
+  and will not travel with the checkout. Do not infer that the other machine has
+  the same fixtures. The synthetic regression suite needs no private audio.
+
+Merge preparation verification: the full Rust suite with `AMS_RUN_REAL_FIXTURE=1`
+passed 631 tests / 7 explicit diagnostic ignores; frontend passed 831 tests / 82
+files; the landing asset digest and `git diff --check` passed. No additional DSP
+changes were made during this docs/integration pass. Consult GitHub Actions for
+remote checks on the merged `main` commit; earlier local evidence is not CI proof.

@@ -10,6 +10,12 @@
 > (see the plan's stop-and-ask triggers). This doc gets you to the point where
 > the owner can flip the switch — it does not flip it.
 
+> **2026-09-04 update:** audio-correctness work is integrated into `main` for
+> continued development, not beta activation. Local verification and the open
+> combined listening batch are recorded in
+> `docs/plans/2026-09-04-audio-correctness.md`. Historical candidate/signoff rows
+> below do not certify these new sound-affecting changes. Release work is parked.
+
 Legend — **Lane:** `agent` (mechanical code/release work) · `owner` (only the
 owner can do it, e.g. by ear, on real hardware, or by publishing). Paid signing
 is post-beta advisory under D16.

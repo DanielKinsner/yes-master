@@ -3,6 +3,15 @@
 This is the active jump-fix queue for the new YES Master repo. Keep it aligned
 with `docs/PRODUCT.md` and `docs/APP_BEHAVIOR.md`.
 
+## Current correctness handoff
+
+The 2026-09-04 solo-audit mechanical fixes and regression follow-up are
+implemented and integrated into `main` for a machine switch. See
+`docs/plans/2026-09-04-audio-correctness.md` for commits, test evidence and
+remaining limits. Owner listening/native playback remains one combined batch.
+Earlier preset listening approvals do not close that newer batch. Release
+activity is parked; merging these fixes does not activate the beta.
+
 ## Implemented Stabilization Slices
 
 ### Final Repo-Wide Review Implementation

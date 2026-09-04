@@ -39,6 +39,21 @@ Important frontend helpers:
   `engine.rs`. `album.rs` is the separate album *planner*; the two are
   complementary, not duplicate.
 
+## Preview and measurement lifecycle
+
+Preview LUFS measures the whole processed track off the audio thread. Cold
+Volume Match uses the shared preview worker and returns its representative
+8-second measurement first. A cache-only command path applies gains; one active
+worker plus the latest pending edit avoids duplicate jobs on the same source.
+Source epochs reject old results after track/device changes, independently of
+playback coefficient generations. Same-source A/B switching reuses in-flight work.
+
+Live integrated metering uses bounded 0.1 LU histogram history and fixed batches;
+feed/reset allocate nothing. Export receipts measure delivered PCM with exact
+history. Album assembly streams delivered tracks into the continuous WAV.
+Signal-chain indicators use backend-resolved stage activity rather than copied
+frontend preset tables.
+
 ## Signal-Chain Direction
 
 The mastering chain, as implemented in `MasteringChain::process_frame_inplace`

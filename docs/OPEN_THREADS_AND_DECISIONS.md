@@ -11,8 +11,8 @@ close rather than letting them rot in scattered docs.
 > Owner requested implementation of the fresh solo audit findings, with
 > regression tests, and deferred listening to **one combined pass toward the
 > end**. No release spending, tagging, publication, or deployment is requested.
-> Work/evidence ledger: `docs/plans/2026-09-04-audio-correctness.md` on
-> `codex/audio-correctness-regressions`. Preset calibration and gated adaptive
+> Work/evidence ledger: `docs/plans/2026-09-04-audio-correctness.md`, merged
+> to `main` for the owner's machine switch. Preset calibration and gated adaptive
 > features remain unchanged; sound-affecting mathematical corrections await
 > that combined listening pass. Existing historical listening approvals do
 > not constitute approval of these new corrections.
@@ -20,6 +20,10 @@ close rather than letting them rot in scattered docs.
 > limiting, background cold Volume Match, worker reuse across A/B switches, and
 > per-track Album target/peak receipts. See the same ledger for regression and
 > local build evidence; the combined owner listening/hardware batch remains open.
+> Owner tests via `npm run tauri dev` and accepts the current meter presentation.
+> Minor follow-ups: explain the 0.2 LU independent LRA difference and include
+> the numeric target on Custom export receipts. Neither is a confirmed audio
+> defect. Private fixtures/local evidence do not travel with git.
 
 > **2026-09-04 — Display-scaling owner hand-test CLOSED / PASS.** The
 > installed Windows build stamped `e5943f4` was checked on the 4K office

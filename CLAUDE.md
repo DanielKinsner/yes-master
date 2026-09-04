@@ -69,7 +69,15 @@ The previous five queue items all shipped — see "Implemented Stabilization
 Slices" in `docs/RELEASE_STABILIZATION.md`. The full live queue and owner
 decisions live in `docs/OPEN_THREADS_AND_DECISIONS.md`.
 
-**Most recent DSP change:** the 8 character presets were re-voiced to the
+**Latest correctness work (2026-09-04):** compressor knee and limiter math,
+whole-track preview landing, delivered-file metering, bounded live metering,
+and asynchronous Volume Match are implemented. The execution/evidence ledger is
+`docs/plans/2026-09-04-audio-correctness.md`. No preset calibration was retuned.
+A combined owner listening/native-playback pass remains open; the historical
+approval below does not approve these newer sound-affecting corrections.
+Release activity remains parked. Resume from the ledger on the latest `main`.
+
+**Most recent preset calibration:** the 8 character presets were re-voiced to the
 "85% lean" (commit `659bea5`; `custom` untouched). Windows byte-identity
 snapshots were regenerated and the Windows build is installed. The macOS
 snapshot SHAs were recorded on Apple Silicon in `cc03d56`, and the follow-up
@@ -78,7 +86,7 @@ closed; do not treat snapshot regeneration as open. Listen before any further
 preset retuning.
 
 Owner listening signoffs: **approved 2026-08-25** — the owner has listened
-and signed off on the current sound; the formerly-deferred Wave 10 gates
+and signed off on the sound as of that date; the formerly-deferred Wave 10 gates
 (Manual Listening Gate, Reference Retune notes, already-mastered matrix)
 are closed, collapsed into **one final by-ear check immediately before beta
 activation** (U15). AC-5 / Phase-B / album-character calibration sittings
