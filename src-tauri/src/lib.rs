@@ -89,6 +89,24 @@ pub(crate) fn fit_zoom_for_work_area(work_w: f64, work_h: f64) -> f64 {
     factor.max(MIN_FIT_ZOOM)
 }
 
+/// Choose the dimensions that actually contain the webview. A maximized
+/// decorated window's client area is shorter than the monitor work area on
+/// Windows because the native title bar and borders are outside the client.
+/// Fall back to the monitor work area when the client measurement is missing
+/// or invalid so display probing can never block launch.
+#[cfg(feature = "app-runner")]
+pub(crate) fn fit_zoom_for_available_area(
+    work_w: f64,
+    work_h: f64,
+    client_area: Option<(f64, f64)>,
+) -> f64 {
+    let client_area = client_area.filter(|(client_w, client_h)| {
+        client_w.is_finite() && client_h.is_finite() && *client_w > 0.0 && *client_h > 0.0
+    });
+    let (available_w, available_h) = client_area.unwrap_or((work_w, work_h));
+    fit_zoom_for_work_area(available_w, available_h)
+}
+
 /// D4 (owner decision 2026-09-01), tiers 1 and 2: open at the configured
 /// 1920×1080, centred, when the primary monitor's logical work area holds
 /// it; maximized when it does not; and, below the 1360×740 layout floor,
@@ -110,26 +128,49 @@ fn fit_main_window_to_display(app: &tauri::AppHandle) {
     let work = monitor.work_area().size;
     let work_w = f64::from(work.width) / scale;
     let work_h = f64::from(work.height) / scale;
-    if should_maximize_for_work_area(work_w, work_h, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
-        && window.maximize().is_ok()
-    {
+    let maximized =
+        should_maximize_for_work_area(work_w, work_h, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+            && window.maximize().is_ok();
+    if maximized {
         crate::diagnostics::info(format!(
             "window maximized: work area {work_w:.0}x{work_h:.0} logical < {DEFAULT_WINDOW_WIDTH:.0}x{DEFAULT_WINDOW_HEIGHT:.0}"
         ));
     }
-    let zoom = fit_zoom_for_work_area(work_w, work_h);
+
+    // `work_area` describes the maximized OUTER window. The layout lives in
+    // the client area, which excludes the native title bar and borders. At
+    // 300% Windows scaling that difference was enough for Standard's bottom
+    // intensity controls to remain clipped even though the work-area zoom
+    // arithmetic was correct. Tauri's `inner_size` is explicitly the client
+    // area; read it only after maximize so it describes the final viewport.
+    let client_area = maximized
+        .then(|| window.inner_size().ok())
+        .flatten()
+        .map(|client| {
+            (
+                f64::from(client.width) / scale,
+                f64::from(client.height) / scale,
+            )
+        });
+    let zoom = fit_zoom_for_available_area(work_w, work_h, client_area);
     if zoom < 1.0 && window.set_zoom(zoom).is_ok() {
-        crate::diagnostics::info(format!(
-            "window zoom {zoom:.3}: work area {work_w:.0}x{work_h:.0} logical < floor {LAYOUT_FLOOR_WIDTH:.0}x{LAYOUT_FLOOR_HEIGHT:.0}"
-        ));
+        if let Some((client_w, client_h)) = client_area {
+            crate::diagnostics::info(format!(
+                "window zoom {zoom:.3}: client area {client_w:.0}x{client_h:.0} logical within work area {work_w:.0}x{work_h:.0} < floor {LAYOUT_FLOOR_WIDTH:.0}x{LAYOUT_FLOOR_HEIGHT:.0}"
+            ));
+        } else {
+            crate::diagnostics::info(format!(
+                "window zoom {zoom:.3}: client area unavailable; work-area fallback {work_w:.0}x{work_h:.0} logical < floor {LAYOUT_FLOOR_WIDTH:.0}x{LAYOUT_FLOOR_HEIGHT:.0}"
+            ));
+        }
     }
 }
 
 #[cfg(all(test, feature = "app-runner"))]
 mod window_fit_tests {
     use super::{
-        fit_zoom_for_work_area, should_maximize_for_work_area, DEFAULT_WINDOW_HEIGHT,
-        DEFAULT_WINDOW_WIDTH, MIN_FIT_ZOOM,
+        fit_zoom_for_available_area, fit_zoom_for_work_area, should_maximize_for_work_area,
+        DEFAULT_WINDOW_HEIGHT, DEFAULT_WINDOW_WIDTH, MIN_FIT_ZOOM,
     };
 
     fn maximize(work_w: f64, work_h: f64) -> bool {
@@ -142,6 +183,16 @@ mod window_fit_tests {
         let zoom = fit_zoom_for_work_area(1280.0, 720.0);
         assert!((zoom - 1280.0 / 1360.0).abs() < 1e-9, "{zoom}");
         assert!(zoom > 0.94 && zoom < 0.942, "{zoom}");
+    }
+
+    #[test]
+    fn fit_zoom_prefers_the_post_maximize_client_area() {
+        // Owner's 4K / 300% repro: Windows reported a 1280x672 work area,
+        // but native title-bar chrome leaves a shorter webview client area.
+        // Fitting the outer work area produced 0.908 and clipped Standard's
+        // intensity quick-set buttons; the client height must drive the fit.
+        let zoom = fit_zoom_for_available_area(1280.0, 672.0, Some((1280.0, 640.0)));
+        assert!((zoom - 640.0 / 740.0).abs() < 1e-9, "{zoom}");
     }
 
     #[test]
