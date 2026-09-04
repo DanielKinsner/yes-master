@@ -354,6 +354,13 @@ pins deliberately and say so in the commit message.
    tell the executor to revert S6.5. Set the scale back to your normal value.
    If Tier 1 does not fit at 250 %, that is a stop-and-fix for the executor,
    not a doc note.
+   **Completed 2026-09-04 — PASS:** the installed Windows build stamped
+   `e5943f4` was checked on the 4K office monitor at 250 % and 300 %. Standard
+   was fully visible and manipulable without a center scrollbar; Advanced's
+   center and right rail remained scrollable; the 300 % result was crisp and
+   complete. The initial 300 % failure was fixed by fitting native zoom to the
+   post-maximize client area rather than the larger monitor work area. An
+   accidental 350 % observation is excluded from this gate.
 2. **Beta.1 disposition (D3).** When ready, tell the executor (or the next
    session) *"reject beta.1, tag beta.2 at <SHA>"* using the Checkpoint 3 SHA.
    The tagging procedure is the existing U14 close-out in the go/no-go ledger

@@ -7,6 +7,17 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **2026-09-04 — Display-scaling owner hand-test CLOSED / PASS.** The
+> installed Windows build stamped `e5943f4` was checked on the 4K office
+> monitor at **250 %** and **300 %** scaling. Standard remained fully visible
+> and manipulable without a center scrollbar; Advanced retained its intended
+> center/right-rail scrolling; the 300 % result was crisp and complete. An
+> accidental 350 % observation is not part of the gate. The follow-up fix
+> makes startup zoom use the actual post-maximize webview client area instead
+> of the monitor work area, with regression coverage. Remaining owner lane:
+> beta.1 disposition + beta.2 tag, candidate install / final by-ear check /
+> updater proof, publishing, and the landing activation phrase.
+
 > **2026-09-01 — Friday ship plan executed (S1–S7); hero CTA stays
 > copy-first (D10).** The decision-complete plan
 > `docs/plans/2026-09-01-friday-ship-execution-plan.md` carries the owner's
@@ -16,8 +27,8 @@ close rather than letting them rot in scattered docs.
 > tiers (D4), the Style/Preset vocabulary rule (D9), and the three taste
 > calls (D11). Every executor slice shipped on `main` — `docs/CHANGELOG.md`
 > (2026-09-01, ship-review entry) and the go/no-go §9 ledger name the exact
-> SHAs and lanes. Still owner lane (plan §5): the display-scaling hand-test,
-> the beta.1 disposition + beta.2 tag, install / by-ear check / updater
+> SHAs and lanes. Still owner lane (plan §5): the beta.1 disposition + beta.2
+> tag, install / by-ear check / updater
 > proof, publishing, and the trigger phrase that unlocks the landing flip.
 > **D10 in one line:** the fixed nav CTA is the all-axis acquisition control
 > at every viewport; the hero CTA is gated horizontally only and may sit
