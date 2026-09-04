@@ -1074,13 +1074,14 @@ export function useTrackMaster() {
   }, []);
 
   useEffect(() => {
+    const reqId = ++guardrailReadoutReq.current;
     if (!selectedTrackId) {
       setGuardrailReadout(null);
       setCompressionPlan(null);
       compressionPlanSurface.current = null;
       return;
     }
-    const reqId = ++guardrailReadoutReq.current;
+    setGuardrailReadout(null);
     void selectedAnalysis; // dep: refetch when analysis lands so the store is ready
     const album = mode === "album";
     const surface = `${selectedTrackId}:${album}:${adaptiveCompressionGate}`;
@@ -1115,6 +1116,7 @@ export function useTrackMaster() {
           setCompressionPlan(null);
         }
       });
+    return () => { guardrailReadoutReq.current += 1; };
   }, [
     selectedTrackId,
     selectedSettings,

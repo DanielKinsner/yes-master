@@ -47,7 +47,7 @@ const DEFAULT_SETTINGS: MasteringSettings = {
   },
 };
 
-async function renderSignalChain(): Promise<{
+async function renderSignalChain(resolved?: { eq_active: boolean; warmth_active: boolean; air_active: boolean; compression_active: boolean; width: number; saturation: number }): Promise<{
   container: HTMLDivElement;
   root: Root;
 }> {
@@ -55,7 +55,7 @@ async function renderSignalChain(): Promise<{
   document.body.appendChild(container);
   const root = createRoot(container);
   await act(async () => {
-    root.render(<SignalChain settings={DEFAULT_SETTINGS} />);
+    root.render(<SignalChain settings={DEFAULT_SETTINGS} resolved={resolved} />);
   });
   return { container, root };
 }
@@ -65,6 +65,15 @@ afterEach(() => {
 });
 
 describe("SignalChain", () => {
+  it("shows factory EQ and backend-resolved stages even when user EQ offsets are zero", async () => {
+    const { container, root } = await renderSignalChain({ eq_active: true, warmth_active: false, air_active: false, compression_active: false, width: 1, saturation: 0 });
+    const stage = (label: string) => [...container.querySelectorAll('.chain-stage')].find(node => node.querySelector('.chain-stage-label')?.textContent === label)!;
+    expect(stage('EQ').classList.contains('is-active')).toBe(true);
+    expect(stage('Comp').classList.contains('is-off')).toBe(true);
+    expect(stage('Width').textContent).toContain('neutral');
+    expect(stage('Saturation').classList.contains('is-off')).toBe(true);
+    await act(async () => root.unmount());
+  });
   it("renders as a static chain bar without an expand dropdown affordance", async () => {
     const { container, root } = await renderSignalChain();
 

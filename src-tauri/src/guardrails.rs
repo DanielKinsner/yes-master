@@ -618,6 +618,8 @@ fn floor_boost(preset_db: f32, mult: f32) -> f32 {
 /// before the post-chain LUFS-landing stage — label any UI accordingly.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub struct GuardrailReadout {
+    #[serde(default)]
+    pub signal_chain: Option<SignalChainReadout>,
     pub active: bool,
     pub strength: f32,
     pub bright_trim: f32,
@@ -659,6 +661,46 @@ pub struct GuardrailReadout {
     pub effective_auto_width: Option<f32>,
 }
 
+/// Presentation derived from actual chain coefficients, not a frontend preset
+/// table. The canonical rate affects filter shape, not whether a stage is active.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub struct SignalChainReadout {
+    pub eq_active: bool,
+    pub warmth_active: bool,
+    pub air_active: bool,
+    pub compression_active: bool,
+    pub width: f32,
+    pub saturation: f32,
+}
+
+impl SignalChainReadout {
+    fn for_settings(settings: &MasteringSettings) -> Self {
+        use crate::dsp::{BiquadCoeffs, ChainCoeffs};
+        let coeffs = ChainCoeffs::from_settings(48_000, settings);
+        let active = |b: &BiquadCoeffs| *b != BiquadCoeffs::identity();
+        let eq_active = [
+            &coeffs.sub_highpass,
+            &coeffs.sub,
+            &coeffs.low,
+            &coeffs.low_mid,
+            &coeffs.mid,
+            &coeffs.high_mid,
+            &coeffs.high,
+            &coeffs.sparkle,
+        ]
+        .into_iter()
+        .any(active);
+        Self {
+            eq_active,
+            warmth_active: active(&coeffs.warmth),
+            air_active: active(&coeffs.presence_air),
+            compression_active: coeffs.compression_active,
+            width: coeffs.width_side_scale,
+            saturation: coeffs.saturation_amount,
+        }
+    }
+}
+
 /// Realized trim fraction (AFTER the +0.5 dB character floor) for a set of preset
 /// EQ bands at `preset_scale`: how much of the total POSITIVE boost the guardrail
 /// actually removed. The raw cap fraction (`1 - mult`) overstates near the floor;
@@ -686,6 +728,7 @@ fn realized_eq_trim(bands: &[f32], preset_scale: f32, trim: impl Fn(f32) -> f32)
 /// floor, computed against the actual preset bands); density/width are floor-free
 /// and exact.
 pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
+    let signal_chain = Some(SignalChainReadout::for_settings(settings));
     let strength = settings
         .advanced
         .adaptive_strength
@@ -706,6 +749,7 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
             );
             let preset_scale = 0.4 + 1.2 * settings.intensity.clamp(0.0, 1.0);
             GuardrailReadout {
+                signal_chain,
                 active: true,
                 strength,
                 bright_trim: realized_eq_trim(
@@ -734,6 +778,7 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
             }
         }
         None => GuardrailReadout {
+            signal_chain,
             active: false,
             strength,
             bright_trim: 0.0,
@@ -1344,6 +1389,18 @@ mod tests {
         assert_eq!(r.bright_deadband, BRIGHT_DEADBAND);
         assert_eq!(r.low_deadband, LOW_DEADBAND);
         assert_eq!(r.width_corr_deadband, WIDTH_CORR_DEADBAND);
+    }
+
+    #[test]
+    fn signal_readout_reports_factory_eq_and_manual_fallback_processing() {
+        let mut settings = settings_with(None, None);
+        settings.advanced.compression_mode = crate::types::CompressionMode::Manual;
+        let readout = serde_json::to_value(readout_for(&settings)).unwrap();
+        assert_eq!(readout["signal_chain"]["eq_active"], true);
+        assert_eq!(readout["signal_chain"]["compression_active"], true);
+        settings.advanced.compression_mode = crate::types::CompressionMode::Off;
+        let off = serde_json::to_value(readout_for(&settings)).unwrap();
+        assert_eq!(off["signal_chain"]["compression_active"], false);
     }
 
     #[test]

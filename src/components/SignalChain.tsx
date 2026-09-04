@@ -1,17 +1,16 @@
 // Phase 12.2 P3 — explicit signal-chain visualization. Renders a horizontal
 // strip of stages above the transport so the user sees, at a glance, what
 // the mastering chain is doing to their audio. Each stage lights up when
-// the relevant settings are non-neutral, with a glow proportional to the
-// magnitude of the change.
+// backend-resolved processing stage is active. Pending readouts stay unknown.
 
 import { Fragment, type ReactElement } from "react";
-import type { MasteringSettings, Preset } from "../bindings";
+import type { MasteringSettings, SignalChainReadout } from "../bindings";
 
 type Stage = {
   key: string;
   label: string;
   detail: string;
-  active: boolean;
+  active: boolean | null;
   /// 0..1 intensity used to scale the glow. Below 0.05 reads as off.
   intensity: number;
   icon: () => ReactElement;
@@ -43,172 +42,27 @@ export function jumpToStageTarget(key: string): void {
   window.setTimeout(() => el.classList.remove("is-jump-target"), 1200);
 }
 
-// Mirrors the per-preset `warmth` saturation baselines in
-// src-tauri/src/dsp.rs (PRESET_* calibration). Display-only; the mirror is
-// tripwired against src/preset-mirrors.json (generated from dsp.rs) in
-// src/lib/preset-mirrors.test.ts, so a retune that forgets this table
-// fails npm test. Exported for that test only.
-export function presetSaturation(preset: Preset): number {
-  switch (preset.kind) {
-    case "universal":
-      return 0.055;
-    case "clarity":
-      return 0.025;
-    case "tape":
-      return 0.15;
-    case "spatial":
-      return 0.04;
-    case "oomph":
-      return 0.045;
-    case "warmth":
-      return 0.13;
-    case "punch":
-      return 0.035;
-    case "loud":
-      return 0.055;
-    default:
-      return 0;
-  }
-}
-
-// Mirrors the per-preset `stereo_width` baselines in
-// src-tauri/src/dsp.rs (PRESET_* calibration). Display-only; the mirror is
-// tripwired against src/preset-mirrors.json (generated from dsp.rs) in
-// src/lib/preset-mirrors.test.ts, so a retune that forgets this table
-// fails npm test. Exported for that test only.
-export function presetDefaultWidth(preset: Preset): number {
-  switch (preset.kind) {
-    case "universal":
-      return 1.11;
-    case "clarity":
-      return 1.09;
-    case "tape":
-      return 0.93;
-    case "spatial":
-      return 1.45;
-    case "oomph":
-      return 0.84;
-    case "warmth":
-      return 0.98;
-    case "punch":
-      return 1.04;
-    case "loud":
-      return 1.03;
-    default:
-      return 1.0;
-  }
-}
-
-function buildStages(settings: MasteringSettings): Stage[] {
-  const eqMax = Math.max(
-    Math.abs(settings.eq_low_db),
-    Math.abs(settings.eq_mid_db),
-    Math.abs(settings.eq_high_db),
-  );
-  const eqIntensity = Math.min(1, eqMax / 6);
-  const warmth = settings.advanced.warmth ?? 0;
-  const air = settings.advanced.presence_air ?? 0;
-  const compressorMode = settings.advanced.compression_mode ?? "preset";
-  const presetCompDensity =
-    settings.preset.kind === "custom" ? 0 : settings.advanced.compression_density ?? 0.5;
-  const manualCompActive =
-    settings.advanced.compression_low_threshold_db != null ||
-    settings.advanced.compression_mid_threshold_db != null ||
-    settings.advanced.compression_high_threshold_db != null;
-  const comp =
-    compressorMode === "off"
-      ? 0
-      : compressorMode === "manual"
-        ? manualCompActive
-          ? 0.75
-          : 0
-        : presetCompDensity;
-  const presetWidth = presetDefaultWidth(settings.preset);
-  const effectiveWidth = settings.advanced.width ?? presetWidth;
-  const widthDelta = Math.abs(effectiveWidth - 1.0);
-  const sat = presetSaturation(settings.preset) * (0.4 + 1.2 * Math.min(1, Math.max(0, settings.intensity)));
+function buildStages(settings: MasteringSettings, resolved?: SignalChainReadout | null): Stage[] {
+  const stage = (key: string, label: string, active: boolean | undefined, detail: string, icon: () => ReactElement): Stage => ({
+    key, label, active: active ?? null, detail: active === undefined ? "Awaiting analysis" : detail,
+    intensity: active ? 0.6 : 0, icon,
+  });
+  const width = resolved?.width;
+  const widthActive = width === undefined ? undefined : Math.abs(width - 1) > 0.001;
+  const saturationActive = resolved ? resolved.saturation > 0 : undefined;
   return [
-    {
-      key: "in",
-      label: "Source",
-      detail: `Intensity ${(settings.intensity * 100).toFixed(0)}%`,
-      active: true,
-      intensity: 1,
-      icon: SourceIcon,
-    },
-    {
-      key: "eq",
-      label: "EQ",
-      detail: `Low ${signed(settings.eq_low_db, 1)} dB · Mid ${signed(settings.eq_mid_db, 1)} dB · High ${signed(settings.eq_high_db, 1)} dB`,
-      active: eqIntensity > 0.01,
-      intensity: eqIntensity,
-      icon: EqIcon,
-    },
-    {
-      key: "warmth",
-      label: "Warmth",
-      detail: warmth > 0 ? `+${(warmth * 4).toFixed(1)} dB @ 300 Hz` : "off",
-      active: warmth > 0.01,
-      intensity: warmth,
-      icon: WarmthIcon,
-    },
-    {
-      key: "air",
-      label: "Air",
-      detail: air > 0 ? `+${(air * 4).toFixed(1)} dB @ 10 kHz` : "off",
-      active: air > 0.01,
-      intensity: air,
-      icon: AirIcon,
-    },
-    {
-      key: "comp",
-      label: "Comp",
-      detail:
-        compressorMode === "off"
-          ? "off"
-          : compressorMode === "manual"
-            ? comp > 0
-              ? "manual"
-              : "manual idle"
-            : `Preset ${(comp * 100).toFixed(0)}%`,
-      active: comp > 0.01,
-      intensity: comp,
-      icon: CompIcon,
-    },
-    {
-      key: "width",
-      label: "Width",
-      detail: widthDelta < 0.01 ? "neutral" : `${(effectiveWidth * 100).toFixed(0)}%`,
-      active: widthDelta > 0.01,
-      intensity: Math.min(1, widthDelta * 1.5),
-      icon: WidthIcon,
-    },
-    {
-      key: "sat",
-      label: "Saturation",
-      detail: sat > 0.01 ? `${(sat * 100).toFixed(0)}% drive` : "off",
-      active: sat > 0.01,
-      intensity: Math.min(1, sat * 4),
-      icon: SatIcon,
-    },
-    {
-      key: "limit",
-      label: "Limiter",
-      detail: `Ceiling ${(settings.advanced.ceiling_dbtp ?? -1).toFixed(1)} dBTP`,
-      active: true,
-      intensity: 1,
-      icon: LimiterIcon,
-    },
+    stage("in", "Source", true, `Intensity ${(settings.intensity * 100).toFixed(0)}%`, SourceIcon),
+    stage("eq", "EQ", resolved?.eq_active, resolved?.eq_active ? "Style + adjustments" : "flat", EqIcon),
+    stage("warmth", "Warmth", resolved?.warmth_active, resolved?.warmth_active ? "on" : "off", WarmthIcon),
+    stage("air", "Air", resolved?.air_active, resolved?.air_active ? "on" : "off", AirIcon),
+    stage("comp", "Comp", resolved?.compression_active, resolved?.compression_active ? (settings.advanced.compression_mode ?? "preset") : "off", CompIcon),
+    stage("width", "Width", widthActive, widthActive ? `${((width ?? 1) * 100).toFixed(0)}%` : "neutral", WidthIcon),
+    stage("sat", "Saturation", saturationActive, saturationActive ? `${((resolved?.saturation ?? 0) * 100).toFixed(0)}% drive` : "off", SatIcon),
+    stage("limit", "Limiter", true, "Ceiling protection", LimiterIcon),
   ];
 }
-
-function signed(v: number, digits: number): string {
-  if (v === 0) return "0";
-  return `${v > 0 ? "+" : ""}${v.toFixed(digits)}`;
-}
-
-export function SignalChain({ settings }: { settings: MasteringSettings }) {
-  const stages = buildStages(settings);
+export function SignalChain({ settings, resolved }: { settings: MasteringSettings; resolved?: SignalChainReadout | null }) {
+  const stages = buildStages(settings, resolved);
   return (
     <section
       className="signal-chain"
@@ -254,7 +108,7 @@ function StageNode({ stage }: { stage: Stage }) {
       <span className="chain-stage-detail">{stage.detail}</span>
     </>
   );
-  const className = `chain-stage ${stage.active ? "is-active" : "is-off"}`;
+  const className = `chain-stage ${stage.active === null ? "is-pending" : stage.active ? "is-active" : "is-off"}`;
   if (!jumpable) {
     return (
       <div className={className} title={`${stage.label} — ${stage.detail}`}>

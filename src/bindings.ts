@@ -360,6 +360,7 @@ export interface Confidence {
 /// fractions removed from each preset move; the `*_share`/`dynamic_range_db`/
 /// `stereo_correlation` fields are the source context that drove them.
 export interface GuardrailReadout {
+  signal_chain?: SignalChainReadout | null;
   active: boolean;
   strength: number;
   bright_trim: number;
@@ -383,6 +384,15 @@ export interface GuardrailReadout {
   // preset baseline after the Tier-1 trim (raw baseline when inactive).
   // Drives the Width slider's Auto thumb position + "Auto · 1.11" readout.
   effective_auto_width?: number | null;
+}
+
+export interface SignalChainReadout {
+  eq_active: boolean;
+  warmth_active: boolean;
+  air_active: boolean;
+  compression_active: boolean;
+  width: number;
+  saturation: number;
 }
 
 export type GuardReason =

@@ -394,6 +394,14 @@
     "low_deadband": 0.0625,
     "low_share": 0.25,
     "low_trim": 0.25,
+    "signal_chain": {
+      "air_active": false,
+      "compression_active": true,
+      "eq_active": true,
+      "saturation": 0.054999999701976776,
+      "warmth_active": false,
+      "width": 1.1100000143051147
+    },
     "stereo_correlation": 0.5,
     "strength": 0.5,
     "width_corr_deadband": 0.25,

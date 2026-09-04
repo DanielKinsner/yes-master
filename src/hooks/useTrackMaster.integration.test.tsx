@@ -1775,6 +1775,24 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("does not display a previous processing readout while changed settings are pending", async () => {
+    const track = makeTrack("readout-pending", "C:/audio/readout-pending.wav");
+    const readout = makeGuardrailReadout(true);
+    const pending = deferred<GuardrailReadout>();
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.api.guardrailReadout.mockResolvedValue(readout);
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles([track.path]); });
+    await waitFor(() => expect(harness.current().guardrailReadout).toEqual(readout));
+    mocks.api.guardrailReadout.mockReturnValue(pending.promise);
+    await act(async () => { harness.current().setIntensity(0.8); });
+    expect(harness.current().guardrailReadout).toBeNull();
+    await act(async () => { pending.resolve(readout); await pending.promise; });
+    await waitFor(() => expect(harness.current().guardrailReadout).toEqual(readout));
+    await act(async () => harness.root.unmount());
+  });
+
   it("refetches the compression plan when the adaptive compression gate changes", async () => {
     const track = makeTrack("compression-plan-gate", "C:/audio/plan-gate.wav");
     const gateOffPlan = makeCompressionPlan(false, "gate off");

@@ -1575,7 +1575,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
         onSave={tm.saveUserPreset}
         edited={hasNonManagedEdits(tm.selectedSettings)}
       />
-      <SignalChain settings={tm.selectedSettings} />
+      <SignalChain settings={tm.selectedSettings} resolved={tm.guardrailReadout?.signal_chain} />
       <div
         className={
           "console-controls" +

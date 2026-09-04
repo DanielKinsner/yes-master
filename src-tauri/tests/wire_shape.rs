@@ -246,6 +246,14 @@ fn render_job_sample() -> RenderJob {
 
 fn guardrail_readout_sample() -> GuardrailReadout {
     GuardrailReadout {
+        signal_chain: Some(yes_master_lib::guardrails::SignalChainReadout {
+            eq_active: true,
+            warmth_active: false,
+            air_active: false,
+            compression_active: true,
+            width: 1.11,
+            saturation: 0.055,
+        }),
         active: true,
         strength: 0.5,
         bright_trim: 0.25,
