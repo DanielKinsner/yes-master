@@ -465,7 +465,7 @@ export function MasterOutPanel({
       </dl>
       {landingPending && (
         <p className="landing-note" role="status">
-          Landing loudness… level settles in a moment.
+          Measuring preview level…
         </p>
       )}
     </section>

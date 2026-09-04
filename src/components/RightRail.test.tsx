@@ -595,7 +595,7 @@ describe("MasterOutPanel landing note", () => {
   it("shows the landing note while the corrective gain is pending", async () => {
     const { container, root } = await renderNode(panel(true));
     const note = container.querySelector(".landing-note");
-    expect(note?.textContent).toContain("Landing loudness");
+    expect(note?.textContent).toContain("Measuring preview level");
     await act(async () => { root.unmount(); });
   });
 

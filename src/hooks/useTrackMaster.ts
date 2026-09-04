@@ -449,9 +449,8 @@ export function useTrackMaster() {
     },
     [],
   );
-  // "Landing loudness…": true while Mastered audition plays hotter than the
-  // loudness target because the corrective landing gain is still being
-  // measured in the background. Edge-triggered from the backend.
+  // Requested preview landing or Volume Match is being measured in the
+  // background. Edge-triggered from the backend, including while paused.
   const [landingPending, setLandingPending] = useState(false);
   // Real analysis progress from the backend's "analysis:progress" events
   // (actual phase boundaries). The paced-timer stages below remain only as
