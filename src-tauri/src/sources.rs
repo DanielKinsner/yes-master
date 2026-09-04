@@ -350,7 +350,7 @@ impl rodio::Source for MeteredPcmSource {
         let target_sample = target_frame.saturating_mul(channels);
         self.position = target_sample.min(self.samples.len());
         self.lufs_meter = crate::dsp::MomentaryLufs::new(self.sample_rate);
-        self.integrated_lufs_meter = crate::dsp::IntegratedLufs::new(self.sample_rate);
+        self.integrated_lufs_meter.reset();
         self.frame_out_pos = channels;
         Ok(())
     }
@@ -680,7 +680,7 @@ impl rodio::Source for MasteringSource {
         // Original and Mastered must measure the same program span or the
         // O/M integrated-LUFS comparison drifts after every loop wrap.
         self.lufs_meter = crate::dsp::MomentaryLufs::new(self.sample_rate);
-        self.integrated_lufs_meter = crate::dsp::IntegratedLufs::new(self.sample_rate);
+        self.integrated_lufs_meter.reset();
         self.frame_out_pos = channels;
         Ok(())
     }

@@ -1520,6 +1520,8 @@ pub struct Limiter {
     /// Ring buffer of interleaved samples sized `lookahead_frames * channels`.
     buffer: Vec<f32>,
     required_gains: Vec<f32>,
+    /// Number of non-unity constraints in the ring; avoids scanning clean audio.
+    limited_frames: usize,
     /// Index of the next frame to overwrite (also the oldest frame in the buffer).
     head_frame: usize,
     /// How many frames have been written so far (capped at `lookahead_frames`).
@@ -1556,6 +1558,7 @@ impl Limiter {
             release_coef,
             buffer: vec![0.0; lookahead_frames * ch],
             required_gains: vec![1.0; lookahead_frames],
+            limited_frames: 0,
             head_frame: 0,
             filled_frames: 0,
             gain: 1.0,
@@ -1572,6 +1575,9 @@ impl Limiter {
         }
         let head_base = self.head_frame * ch;
         let outgoing_required = self.required_gains[self.head_frame];
+        if outgoing_required < 1.0 {
+            self.limited_frames -= 1;
+        }
         self.required_gains[self.head_frame] = 1.0;
         // Read the OLDEST frame from the ring before overwriting.
         for i in 0..ch {
@@ -1583,6 +1589,9 @@ impl Limiter {
             self.buffer[head_base + i] = s;
             self.required_gains[self.head_frame] = self.required_gains[self.head_frame]
                 .min((self.ceiling_lin / s.abs().max(1e-9)).min(1.0));
+        }
+        if self.required_gains[self.head_frame] < 1.0 {
+            self.limited_frames += 1;
         }
         self.head_frame = (self.head_frame + 1) % self.lookahead_frames;
         if self.filled_frames < self.lookahead_frames {
@@ -1613,6 +1622,9 @@ impl Limiter {
         // Small reconstruction/envelope margin, applied only when limiting.
         let required = (self.ceiling_lin / (peak * 1.012).max(1e-9)).min(1.0);
         for index in support {
+            if self.required_gains[index] == 1.0 && required < 1.0 {
+                self.limited_frames += 1;
+            }
             self.required_gains[index] = self.required_gains[index].min(required);
         }
         // Each future constraint supplies a linear attack ramp. Taking their
@@ -1622,7 +1634,17 @@ impl Limiter {
         let mut envelope = outgoing_required;
         let (before, after) = self.required_gains.split_at(self.head_frame);
         for (distance, &target) in after.iter().chain(before).enumerate() {
-            let ramp = target + (1.0 - target) * ((distance + 1) as f32 / ramp_frames).min(1.0);
+            if self.limited_frames == 0 {
+                break;
+            }
+            let fraction = ((distance + 1) as f32 / ramp_frames).min(1.0);
+            // For every target in [0,1], ramp >= fraction. Farther frames
+            // cannot lower the envelope once this bound exceeds it. Retain
+            // two ulps of slack for floating-point multiply/add rounding.
+            if fraction > envelope + 2.0 * f32::EPSILON {
+                break;
+            }
+            let ramp = target + (1.0 - target) * fraction;
             envelope = envelope.min(ramp);
         }
         if envelope < self.gain {
@@ -1644,6 +1666,7 @@ impl Limiter {
         self.filled_frames = 0;
         self.gain = 1.0;
         self.required_gains.fill(1.0);
+        self.limited_frames = 0;
     }
 
     fn copy_state_from(&mut self, prior: &Self) -> bool {
@@ -1658,6 +1681,7 @@ impl Limiter {
         self.release_coef = prior.release_coef;
         self.buffer.copy_from_slice(&prior.buffer);
         self.required_gains.copy_from_slice(&prior.required_gains);
+        self.limited_frames = prior.limited_frames;
         self.head_frame = prior.head_frame;
         self.filled_frames = prior.filled_frames;
         self.gain = prior.gain;
@@ -1901,152 +1925,75 @@ impl MomentaryLufs {
 //   5. Integrated loudness = -0.691 + 10·log10(mean of remaining block energies).
 //
 // We cache the computed value at block-emit time (every 100 ms) instead of
-// recomputing on every UI tick — the O(N) re-scan grows with listen-through
-// length and would otherwise add up over multi-track sessions.
+// recomputing on every UI tick. Histogram history bounds memory and query work
+// independently of listen-through length.
 // ============================================================================
 
-const LUFS_INTEGRATED_BLOCK_MS: f32 = 400.0;
-const LUFS_INTEGRATED_STEP_MS: f32 = 100.0;
-const LUFS_ABS_GATE_LUFS: f32 = -70.0;
-const LUFS_REL_GATE_LU: f32 = 10.0;
-
-#[derive(Debug, Clone)]
+/// Bounded-memory live integrated meter. Histogram mode uses 0.1 LU bins;
+/// export receipts continue using exact, non-histogram history. Small fixed
+/// batches amortize library calls without filtering 100 ms in one callback.
+#[derive(Debug)]
 pub struct IntegratedLufs {
-    hs_coeffs: BiquadCoeffs,
-    hp_coeffs: BiquadCoeffs,
-    hs_state: [BiquadState; 2],
-    hp_state: [BiquadState; 2],
-    /// Ring buffer of per-sample channel-summed squared values (post K-weighting),
-    /// sized to one 400 ms block. The running sum is maintained incrementally as
-    /// each new sample replaces the oldest, so the per-frame cost is O(1) rather
-    /// than O(block_size).
-    ring: Vec<f64>,
-    ring_pos: usize,
-    ring_sum: f64,
-    ring_filled: bool,
-    block_size: usize,
-    block_step: usize,
-    samples_since_step: usize,
-    /// (block_mean_sq, block_loudness) for every block that passed the absolute
-    /// gate. Storing pre-computed block_loudness keeps the relative-gate scan
-    /// in the cheap addition/compare regime — no log10 in the hot recompute.
-    blocks: Vec<(f64, f32)>,
-    /// Cached BS.1770-4 integrated value. Recomputed only at block-emit time
-    /// (every 100 ms), so `lufs()` is O(1) for UI ticks.
+    meter: ebur128::EbuR128,
+    pending: [f32; 128],
+    pending_samples: usize,
+    frames_since_readout: usize,
+    readout_step: usize,
     cached_lufs: f32,
 }
 
 impl IntegratedLufs {
     pub fn new(sample_rate: u32) -> Self {
-        let sr = sample_rate as f32;
-        // Phase A1 of the port plan moved the momentary meter onto the
-        // BS.1770-4 reference K-weighting builders. The integrated meter
-        // is conceptually the same K-weighting prefilter followed by a
-        // block-energy aggregator with gating — so it inherits the same
-        // reference filters here for consistency.
-        let hs_coeffs = BiquadCoeffs::k_weighting_pre(sample_rate);
-        let hp_coeffs = BiquadCoeffs::k_weighting_rlb(sample_rate);
-        let block_size = ((LUFS_INTEGRATED_BLOCK_MS * 0.001 * sr).round() as usize).max(1);
-        let block_step = ((LUFS_INTEGRATED_STEP_MS * 0.001 * sr).round() as usize).max(1);
         Self {
-            hs_coeffs,
-            hp_coeffs,
-            hs_state: [BiquadState::default(); 2],
-            hp_state: [BiquadState::default(); 2],
-            ring: vec![0.0; block_size],
-            ring_pos: 0,
-            ring_sum: 0.0,
-            ring_filled: false,
-            block_size,
-            block_step,
-            samples_since_step: 0,
-            blocks: Vec::new(),
+            meter: ebur128::EbuR128::new(
+                2,
+                sample_rate,
+                ebur128::Mode::I | ebur128::Mode::HISTOGRAM,
+            )
+            .expect("validated playback sample rate"),
+            pending: [0.0; 128],
+            pending_samples: 0,
+            frames_since_readout: 0,
+            readout_step: (sample_rate as usize / 10).max(1),
             cached_lufs: -120.0,
         }
     }
 
-    /// Feed one stereo frame (left, right). Returns the current integrated
-    /// LUFS reading (cached between block boundaries, so cheap).
     #[inline]
     pub fn process_frame(&mut self, left: f32, right: f32) -> f32 {
-        let l_hs = self.hs_state[0].process(&self.hs_coeffs, left);
-        let l_hp = self.hp_state[0].process(&self.hp_coeffs, l_hs);
-        let r_hs = self.hs_state[1].process(&self.hs_coeffs, right);
-        let r_hp = self.hp_state[1].process(&self.hp_coeffs, r_hs);
-        let energy = (l_hp as f64) * (l_hp as f64) + (r_hp as f64) * (r_hp as f64);
-        // Slide the ring window: subtract the value being displaced, add the new.
-        let displaced = self.ring[self.ring_pos];
-        self.ring[self.ring_pos] = energy;
-        self.ring_sum = self.ring_sum - displaced + energy;
-        self.ring_pos += 1;
-        if self.ring_pos >= self.block_size {
-            self.ring_pos = 0;
-            self.ring_filled = true;
-        }
-        self.samples_since_step += 1;
-        if self.samples_since_step >= self.block_step && self.ring_filled {
-            self.samples_since_step = 0;
-            // Guard against negative ring_sum from f64 cancellation drift over
-            // long sessions. The true mean-square is non-negative by definition.
-            let block_mean_sq = (self.ring_sum / self.block_size as f64).max(0.0);
-            if block_mean_sq > 1.0e-12 {
-                let block_loudness =
-                    (LUFS_BS1770_OFFSET as f64 + 10.0 * block_mean_sq.log10()) as f32;
-                if block_loudness >= LUFS_ABS_GATE_LUFS {
-                    self.blocks.push((block_mean_sq, block_loudness));
-                    self.cached_lufs = self.compute_integrated();
-                }
+        self.pending[self.pending_samples] = left;
+        self.pending[self.pending_samples + 1] = right;
+        self.pending_samples += 2;
+        if self.pending_samples == self.pending.len() {
+            self.pending_samples = 0;
+            let fed = self.meter.add_frames_f32(&self.pending).is_ok();
+            self.frames_since_readout += self.pending.len() / 2;
+            if self.frames_since_readout >= self.readout_step {
+                self.frames_since_readout %= self.readout_step;
+                self.cached_lufs = if fed {
+                    self.meter
+                        .loudness_global()
+                        .ok()
+                        .filter(|value| value.is_finite())
+                        .map_or(-120.0, |value| value as f32)
+                } else {
+                    -120.0
+                };
             }
         }
         self.cached_lufs
     }
 
-    fn compute_integrated(&self) -> f32 {
-        if self.blocks.is_empty() {
-            return -120.0;
-        }
-        let abs_gated_sum: f64 = self.blocks.iter().map(|&(e, _)| e).sum();
-        let abs_gated_mean = abs_gated_sum / self.blocks.len() as f64;
-        if abs_gated_mean <= 1.0e-12 {
-            return -120.0;
-        }
-        let abs_gated_lufs = LUFS_BS1770_OFFSET as f64 + 10.0 * abs_gated_mean.log10();
-        let rel_threshold = (abs_gated_lufs - LUFS_REL_GATE_LU as f64) as f32;
-        let mut rel_gated_sum = 0.0f64;
-        let mut rel_gated_count = 0u64;
-        for &(e, loudness) in &self.blocks {
-            if loudness >= rel_threshold {
-                rel_gated_sum += e;
-                rel_gated_count += 1;
-            }
-        }
-        if rel_gated_count == 0 {
-            return -120.0;
-        }
-        let rel_gated_mean = rel_gated_sum / rel_gated_count as f64;
-        if rel_gated_mean <= 1.0e-12 {
-            return -120.0;
-        }
-        (LUFS_BS1770_OFFSET as f64 + 10.0 * rel_gated_mean.log10()) as f32
-    }
-
-    /// Current integrated LUFS readout (cached, O(1)). `-120.0` until at least
-    /// one 400 ms block has been completed and passed the absolute gate.
+    /// Cached live reading; -120 until a complete nonsilent block is available.
     pub fn lufs(&self) -> f32 {
         self.cached_lufs
     }
 
     pub fn reset(&mut self) {
-        self.hs_state = [BiquadState::default(); 2];
-        self.hp_state = [BiquadState::default(); 2];
-        for v in self.ring.iter_mut() {
-            *v = 0.0;
-        }
-        self.ring_pos = 0;
-        self.ring_sum = 0.0;
-        self.ring_filled = false;
-        self.samples_since_step = 0;
-        self.blocks.clear();
+        self.meter.reset();
+        self.pending.fill(0.0);
+        self.pending_samples = 0;
+        self.frames_since_readout = 0;
         self.cached_lufs = -120.0;
     }
 }
