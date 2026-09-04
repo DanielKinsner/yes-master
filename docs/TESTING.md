@@ -28,6 +28,27 @@ Use this lane for normal UI, state, packaging-script, and backend contract work.
 The explicit `target\codex-rc` directory avoids collisions with a running debug
 app that may lock the default target executable on Windows.
 
+## Audio correctness regressions
+
+`cargo test` includes `tests/audio_invariants.rs` without private fixtures or
+opt-in flags. It generates deterministic signals and checks preview/export
+landing on a quiet-middle/loud-ends track, compressor monotonicity, stereo and
+sample-rate invariance, saved-file metering, float headroom, and limiter attack
+and independently measured true peaks (48 rate/frequency/phase/burst cases up
+to 192 kHz). `tests/album_render.rs` additionally checks delivered-file LUFS and
+continuous/per-track PCM parity at all three supported bit depths.
+
+Output snapshots remain a separate change detector. When a mathematical DSP
+correction intentionally changes them, keep existing tolerances, explain the
+delta, and record listening approval separately. Passing snapshots alone does
+not establish mathematical correctness or sound quality.
+
+Frontend regressions cover delivered versus source receipt values, LRA wording,
+resolved signal-chain activity, and removal of stale processing readouts. The
+headless Standard scenario checks full control bounds and pointer reachability
+at the supported minimum size before any scrolling; a screenshot or successful
+auto-scrolling click alone is insufficient.
+
 ## Landing Marketing Proof (U7)
 
 ```powershell

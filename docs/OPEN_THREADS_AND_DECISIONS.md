@@ -7,6 +7,16 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **2026-09-04 — Correctness work authorized; release activity parked.**
+> Owner requested implementation of the fresh solo audit findings, with
+> regression tests, and deferred listening to **one combined pass toward the
+> end**. No release spending, tagging, publication, or deployment is requested.
+> Work/evidence ledger: `docs/plans/2026-09-04-audio-correctness.md` on
+> `codex/audio-correctness-regressions`. Preset calibration and gated adaptive
+> features remain unchanged; sound-affecting mathematical corrections await
+> that combined listening pass. Existing historical listening approvals do
+> not constitute approval of these new corrections.
+
 > **2026-09-04 — Display-scaling owner hand-test CLOSED / PASS.** The
 > installed Windows build stamped `e5943f4` was checked on the 4K office
 > monitor at **250 %** and **300 %** scaling. Standard remained fully visible
