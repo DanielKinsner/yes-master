@@ -179,7 +179,7 @@ export function ExportReceiptCard({
   const paths = receipt.job.output_paths;
   const measurements = receipt.job.measurements ?? null;
   const quality = exportQualitySummary(receipt.checks);
-  const qualityRows = buildQualityRows(receipt.checks, analysis);
+  const qualityRows = buildQualityRows(receipt.checks, analysis, measurements);
   // A Critical quality row means the saved file needs attention — don't present
   // it as an unqualified "complete". The file IS written and valid (criticals are
   // advisory format/loudness flags), so "saved" stays accurate while the header
@@ -321,9 +321,7 @@ export function ExportReceiptCard({
                 <dd>{measurements.true_peak_dbtp.toFixed(2)} dBTP</dd>
               </div>
               <div className="receipt-result-row">
-                {/* Measured dynamic range — deliberately NOT labelled "LRA":
-                    the engine measures dynamic range, not EBU Loudness Range. */}
-                <dt>Dynamic range</dt>
+                <dt>Loudness range (LRA)</dt>
                 <dd>{measurements.dynamic_range_lu.toFixed(1)} LU</dd>
               </div>
               <div className="receipt-result-row receipt-result-row-target">
@@ -337,8 +335,8 @@ export function ExportReceiptCard({
             </dl>
           </section>
         )}
-        <section className="receipt-quality" aria-label="Quality check">
-          <div className="receipt-section-title">Quality check</div>
+          <section className="receipt-quality" aria-label="Export checks">
+            <div className="receipt-section-title">{measurements ? "Export checks" : "Source observations"}</div>
           <ul className="receipt-quality-list">
             {qualityRows.map((row) => (
               <li key={row.key} className={`receipt-quality-row is-${row.state}`}>

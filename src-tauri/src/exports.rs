@@ -96,25 +96,19 @@ pub fn export_checks_for_report(
     }
 
     if report.measured_dynamic_range_lu < 5.0 {
-        // 2026-09-01 (owner): this receipt is shown AFTER the render, so the
-        // advice must be post-export advice — "verify by ear before exporting"
-        // told the user to do something they had already done. And the number
-        // must say whose it is: the receipt's quality rows are labelled with
-        // SOURCE analysis values, while this measurement is the DELIVERED file
-        // on the track path (source-analysis fallback on the album path, where
-        // measurements_are_rendered is false). Unlabelled, "6.3 LU" next to
-        // "5.0 LU" read as a contradiction.
+        // LRA describes longer-term loudness variation, not transient dynamics
+        // or proof of compression. Identify delivered versus fallback values.
         let subject = if report.measurements_are_rendered {
-            "Delivered dynamic range"
+            "Delivered loudness range (LRA)"
         } else {
-            "Dynamic range"
+            "Loudness range (LRA)"
         };
         let dr = report.measured_dynamic_range_lu;
         checks.push(QualityCheck {
-            level: QualityLevel::Warning,
+            level: QualityLevel::Info,
             code: "dynamic_range_low".to_string(),
             message: format!(
-                "{subject} is {dr:.1} LU. Highly compressed; listen back before you ship it."
+                "{subject} is {dr:.1} LU: little longer-term loudness variation. This does not measure transient dynamics."
             ),
         });
     }
@@ -153,8 +147,7 @@ pub fn export_checks_for_report(
         });
     }
 
-    // Phase 12.2 — already-compressed source advisory. Fires when the SOURCE
-    // material is dynamically squashed (DR < 6 LU) AND Preset mode is asking
+    // Listening suggestion when the source has low LRA and Preset mode asks
     // for moderate-to-heavy compression density (> 0.3). Manual mode is an
     // explicit user decision; Off mode bypasses the creative compressor.
     // Advisory only — does not block export.
@@ -170,10 +163,10 @@ pub fn export_checks_for_report(
             && matches!(s.advanced.compression_mode, CompressionMode::Preset)
         {
             checks.push(QualityCheck {
-                level: QualityLevel::Warning,
+                level: QualityLevel::Info,
                 code: "comp_density_on_compressed_source".to_string(),
                 message:
-                    "Source appears already compressed (DR < 6 LU). Heavy compression may pump."
+                    "Source loudness range (LRA) is low. Compare with compression Off to judge transient movement by ear."
                         .to_string(),
             });
         }
@@ -350,6 +343,20 @@ mod tests {
 
     fn codes(checks: &[QualityCheck]) -> Vec<&str> {
         checks.iter().map(|c| c.code.as_str()).collect()
+    }
+
+    #[test]
+    fn low_lra_is_an_observation_not_a_compression_warning() {
+        let mut measured = report(-14.0, -1.1, true);
+        measured.measured_dynamic_range_lu = 0.0;
+        let checks = export_checks_for_report(&measured, None, None);
+        let lra = checks
+            .iter()
+            .find(|check| check.code == "dynamic_range_low")
+            .unwrap();
+        assert!(matches!(lra.level, QualityLevel::Info));
+        assert!(lra.message.contains("LRA"));
+        assert!(!lra.message.contains("compressed"));
     }
 
     /// The inquiry scenario: -9 target, -1 ceiling, delivered -10.26 LUFS with

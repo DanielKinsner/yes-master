@@ -216,7 +216,7 @@ describe("U10(a) DUP-1 — the pre-export review gate does not restate the panel
     expect(occurrences(text, DYNAMICS_MESSAGE)).toBe(1);
     // The friendly one-liner label is the same story.
     expect(occurrences(text, "True peak above safe ceiling")).toBe(1);
-    expect(occurrences(text, "Heavy compression detected")).toBe(1);
+    expect(occurrences(text, "Low loudness range (LRA)")).toBe(1);
     // And a single REVIEW badge, not one per surface.
     expect(occurrences(text, "REVIEW")).toBe(1);
 

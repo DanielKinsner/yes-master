@@ -64,7 +64,7 @@ describe("SourceInsight — presentation", () => {
     expect(panel!.textContent).toContain("-10.5 LUFS");
     expect(panel!.textContent).toContain("True peak");
     expect(panel!.textContent).toContain("0.20 dBTP");
-    expect(panel!.textContent).toContain("Dynamic range");
+    expect(panel!.textContent).toContain("Loudness range (LRA)");
     expect(panel!.textContent).toContain("3.3 LU");
     // Severity is text, not just a glyph/colour.
     expect(panel!.textContent).toContain("Problem");

@@ -328,7 +328,7 @@ describe("RightRail source checks", () => {
     expect(onExport).not.toHaveBeenCalled();
     expect(container.textContent).toContain("Review before export");
     expect(container.textContent).toContain("Source true peak 0.2 dBTP");
-    expect(container.textContent).toContain("Source dynamic range 3.3 LU");
+    expect(container.textContent).not.toContain("Source loudness range (LRA) 3.3 LU");
 
     const adjustButton = Array.from(container.querySelectorAll("button")).find(
       (button) => button.textContent?.trim() === "Adjust Settings",

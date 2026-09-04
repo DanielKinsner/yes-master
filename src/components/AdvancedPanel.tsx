@@ -562,7 +562,7 @@ function PerBandCompressorCard({
   const manualEnabled = compressorMode === "manual";
   const adaptivePlan =
     compressorMode === "preset" && compressionPlan?.active ? compressionPlan : null;
-  const sourceLooksCompressed =
+  const sourceHasLowLra =
     (analysis?.dynamic_range_lu ?? Number.POSITIVE_INFINITY) < 6.0;
   const setCompressorMode = (mode: CompressionMode) => {
     if (mode === "manual") {
@@ -722,9 +722,9 @@ function PerBandCompressorCard({
           />
         </div>
       )}
-      {sourceLooksCompressed && compressorMode === "preset" && (
+      {sourceHasLowLra && compressorMode === "preset" && (
         <div className="compressor-source-note" role="note">
-          Source dynamic range is low; lower density or switch Off if preset compression collapses movement.
+          Source loudness range (LRA) is low. Compare with compression Off to judge transient movement by ear.
         </div>
       )}
       {!manualEnabled && compressorMode === "preset" && (

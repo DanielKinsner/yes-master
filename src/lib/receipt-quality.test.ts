@@ -15,6 +15,14 @@ function check(level: QualityCheck["level"], code: string, message = code): Qual
 }
 
 describe("buildQualityRows", () => {
+  it("uses delivered values beside export checks rather than unrelated source measurements", () => {
+    const rows = buildQualityRows([check("warning", "true_peak_high")], analysis, {
+      true_peak_dbtp: 0.2, lufs_integrated: -14, dynamic_range_lu: 3,
+    });
+    expect(rows[0]).toMatchObject({ label: "Delivered true peak", value: "0.2 dBTP", state: "warning" });
+    expect(rows[1].value).toBe("-14.0 LUFS");
+    expect(rows[2].label).toBe("Delivered loudness range (LRA)");
+  });
   it("renders the three source rows all-clean when the export is ok", () => {
     const rows = buildQualityRows([check("info", "export_ok")], analysis);
     expect(rows.map((r) => r.key)).toEqual(["true-peak", "loudness", "dynamic-range"]);

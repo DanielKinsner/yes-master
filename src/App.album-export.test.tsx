@@ -392,8 +392,8 @@ describe("album export actions", () => {
     expect(results?.textContent).toContain("-10.3 LUFS");
     expect(results?.textContent).toContain("True peak");
     expect(results?.textContent).toContain("-0.97 dBTP");
-    // Dynamic range, deliberately not labelled "LRA" (we don't measure LRA).
-    expect(results?.textContent).toContain("Dynamic range");
+    // The engine's loudness_range() result must be labelled LRA.
+    expect(results?.textContent).toContain("Loudness range (LRA)");
     expect(results?.textContent).toContain("10.9 LU");
 
     // The adaptive digest is SOURCE data — it must carry a visible label so

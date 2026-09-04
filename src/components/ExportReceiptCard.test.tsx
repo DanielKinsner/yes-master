@@ -199,7 +199,7 @@ describe("ExportReceiptCard", () => {
     expect(plain.textContent).not.toContain("already existed");
   });
 
-  it("renders the Results panel from measured values, labelling dynamic range (not LRA)", () => {
+  it("labels the engine's EBU loudness range accurately in the delivered results", () => {
     const container = render(
       <ExportReceiptCard
         receipt={receipt([])}
@@ -214,9 +214,7 @@ describe("ExportReceiptCard", () => {
     );
     expect(rows).toContain("Integrated loudness-13.5 LUFS");
     expect(rows).toContain("True peak-1.25 dBTP");
-    expect(rows).toContain("Dynamic range8.5 LU");
-    // We measure dynamic range, not EBU Loudness Range — "LRA" must not appear.
-    expect(container.textContent).not.toContain("LRA");
+    expect(rows).toContain("Loudness range (LRA)8.5 LU");
     // Mastering Target chip = the profile's SHORT name + real target LUFS
     // (D11b, 2026-09-01); the descriptive name lives in the dropdown.
     expect(container.querySelector(".receipt-target-chip")?.textContent).toBe(
@@ -485,10 +483,10 @@ describe("ExportReceiptCard", () => {
     expect(container.querySelectorAll(".receipt-quality-row.is-ok")).toHaveLength(3);
     expect(container.querySelector(".receipt-quality-row.is-warning")).toBeNull();
     expect(container.querySelector(".receipt-quality-row.is-critical")).toBeNull();
-    // Source values from analysis.
-    expect(container.textContent).toContain("2.5 dBTP");
-    expect(container.textContent).toContain("-7.5 LUFS");
-    expect(container.textContent).toContain("6.6 LU");
+    // Delivered measurements, not the unrelated source values.
+    expect(container.textContent).toContain("-1.3 dBTP");
+    expect(container.textContent).toContain("-13.5 LUFS");
+    expect(container.textContent).toContain("8.5 LU");
   });
 
   it("renders the warning-state Quality Check variant — never all-green when flagged", () => {
@@ -510,7 +508,7 @@ describe("ExportReceiptCard", () => {
     // The honest state + colour reaches the loudness row and its message shows.
     const warned = container.querySelector(".receipt-quality-row.is-warning");
     expect(warned).not.toBeNull();
-    expect(warned?.textContent).toContain("Source loudness");
+    expect(warned?.textContent).toContain("Delivered loudness");
     expect(warned?.textContent).toContain("Integrated loudness is -6.0 LUFS.");
     // Not an all-green card: at least one row is non-ok.
     const okRows = container.querySelectorAll(".receipt-quality-row.is-ok").length;

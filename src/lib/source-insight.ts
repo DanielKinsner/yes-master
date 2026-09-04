@@ -58,29 +58,14 @@ export function sourceInsightRows(analysis: AnalysisResult): InsightRow[] {
     rows.push({ key: "loudness", label: "Loudness", value: `${lufs.toFixed(1)} LUFS`, note, status });
   }
 
-  const dr = analysis.dynamic_range_lu;
-  {
-    let note: string;
-    let status: InsightStatus;
-    if (dr < 4) {
-      note = "Highly compressed — limited dynamic contrast.";
-      status = "problem";
-    } else if (dr < 5) {
-      note = "Highly compressed — limited dynamic contrast.";
-      status = "caution";
-    } else if (dr < 6) {
-      note = "Compressed — modest dynamic contrast.";
-      status = "caution";
-    } else if (dr < 8) {
-      note = "Moderately compressed.";
-      status = "info";
-    } else {
-      note = "Healthy dynamic range.";
-      status = "ok";
-    }
-    rows.push({ key: "dynamics", label: "Dynamic range", value: `${dr.toFixed(1)} LU`, note, status });
-  }
-
+  // Wire field retained for saved-project compatibility; the measurement is
+  // EBU loudness range, not crest factor or evidence of compression.
+  const lra = analysis.dynamic_range_lu;
+  rows.push({
+    key: "dynamics", label: "Loudness range (LRA)", value: `${lra.toFixed(1)} LU`,
+    note: lra < 5 ? "Little longer-term loudness variation." : lra < 8 ? "Moderate longer-term loudness variation." : "Wide longer-term loudness variation.",
+    status: "info",
+  });
   const high = analysis.spectral_balance.high;
   const low = analysis.spectral_balance.low;
   {
@@ -175,7 +160,7 @@ export function friendlyCheckLabel(c: QualityCheck): string {
     case "lufs_very_loud":
       return "Very loud master";
     case "dynamic_range_low":
-      return "Heavy compression detected";
+      return "Low loudness range (LRA)";
     case "bit_depth_low":
       return "Bit depth below 16 bits";
     case "sample_rate_mismatch":
@@ -183,7 +168,7 @@ export function friendlyCheckLabel(c: QualityCheck): string {
     case "non_finite_metering":
       return "Non-finite loudness measurement";
     case "comp_density_on_compressed_source":
-      return "Already-compressed source";
+      return "Low source loudness range";
     default:
       return c.message;
   }

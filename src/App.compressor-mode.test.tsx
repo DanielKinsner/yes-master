@@ -531,7 +531,7 @@ describe("AdvancedPanel compressor mode", () => {
       analysis: makeAnalysis(4.8),
       settings: makeSettings({ compression_mode: "preset" }),
     });
-    expect(preset.container.textContent).toContain("Source dynamic range is low");
+    expect(preset.container.textContent).toContain("Source loudness range (LRA) is low");
 
     await act(async () => {
       preset.root.unmount();

@@ -2,8 +2,8 @@ import type { AnalysisResult, QualityCheck, QualityLevel } from "../bindings";
 
 // Quality Check rows for the export receipt — the receipt's honesty surface.
 //
-// The row VALUES are the source analysis measurements (true peak / loudness /
-// dynamic range). The row STATE is driven by the REAL export checks
+// Row values use delivered measurements, with an explicitly labelled source
+// fallback for older receipts. Row state is driven by the REAL export checks
 // (src-tauri/src/exports.rs), which describe the delivered master along the
 // same three axes. A dimension with no relevant check is genuinely clean
 // (green); a warning/critical check flips its row to the honest state + colour
@@ -18,18 +18,20 @@ export type QualityRowState = "ok" | "warning" | "critical";
 export interface QualityRow {
   key: string;
   label: string;
-  // Source measurement for the three axis rows; null for appended format rows
+  // Delivered/source measurement for axis rows; null for appended format rows
   // (whose meaning lives entirely in the note) or when analysis is unavailable.
   value: string | null;
   state: QualityRowState;
   note?: string;
 }
 
+type Measurements = Pick<AnalysisResult, "true_peak_dbtp" | "lufs_integrated" | "dynamic_range_lu">;
+
 interface Dimension {
   key: string;
   label: string;
   codes: string[];
-  value: (a: AnalysisResult) => string;
+  value: (a: Measurements) => string;
 }
 
 const DIMENSIONS: Dimension[] = [
@@ -47,7 +49,7 @@ const DIMENSIONS: Dimension[] = [
   },
   {
     key: "dynamic-range",
-    label: "Source dynamic range",
+    label: "Source loudness range (LRA)",
     codes: ["dynamic_range_low", "comp_density_on_compressed_source"],
     value: (a) => `${a.dynamic_range_lu.toFixed(1)} LU`,
   },
@@ -79,6 +81,7 @@ function levelToState(level: QualityLevel): QualityRowState {
 export function buildQualityRows(
   checks: QualityCheck[],
   analysis: AnalysisResult | null,
+  delivered?: Measurements | null,
 ): QualityRow[] {
   const rows: QualityRow[] = DIMENSIONS.map((dim) => {
     // The check with the highest severity in this dimension drives the row.
@@ -94,8 +97,8 @@ export function buildQualityRows(
     }
     return {
       key: dim.key,
-      label: dim.label,
-      value: analysis ? dim.value(analysis) : null,
+      label: delivered ? dim.label.replace("Source", "Delivered") : dim.label,
+      value: delivered ? dim.value(delivered) : analysis ? dim.value(analysis) : null,
       state: chosen ? levelToState(chosen.level) : "ok",
       note: chosen && levelToState(chosen.level) !== "ok" ? chosen.message : undefined,
     };

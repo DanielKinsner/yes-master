@@ -380,9 +380,9 @@ function previewProject(): ProjectState {
 const WARNING_EXPORT_CHECKS: QualityCheck[] = [
   {
     level: "warning",
-    code: "dynamic_range_low",
+    code: "loudness_very_high",
     message:
-      "Dynamic range is low for this delivery target. The master will read as dense on quiet systems.",
+      "Delivered loudness is very high. Compare with the original before sharing.",
   },
   {
     level: "critical",
@@ -490,6 +490,8 @@ export async function mockInvoke<T>(
         (args?.tracks as Array<{ id: TrackId; path: string }>) ?? [];
       const results: AnalysisResult[] = tracks.map((t) => ({
         ...PREVIEW_ANALYSIS,
+        true_peak_dbtp: activeScenario().exportChecks === "warning"
+          ? 0.2 : PREVIEW_ANALYSIS.true_peak_dbtp,
         track_id: t.id,
       }));
       return results as unknown as T;
@@ -782,6 +784,7 @@ let mockAdaptiveCompression = false;
 let mockConfidenceGating = false;
 
 const PREVIEW_GUARDRAIL_READOUT: GuardrailReadout = {
+  signal_chain: { eq_active: true, warmth_active: false, air_active: false, compression_active: true, width: 1.11, saturation: 0.055 },
   active: true,
   strength: 0.62,
   bright_trim: 0.18,

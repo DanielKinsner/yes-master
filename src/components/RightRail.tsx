@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { useMeterBallistics } from "../hooks/useMeterBallistics";
 import type { AnalysisResult, QualityCheck } from "../bindings";
 import type { RenderFeedback, RenderProgressState } from "../hooks/useTrackMaster";
+import { friendlyCheckLabel } from "../lib/source-insight";
 import { DisabledReason } from "./fields";
 
 type RightRailProps = {
@@ -568,34 +569,6 @@ function hasReviewRows(rows: QualityRow[]): boolean {
   return rows.some((row) => row.warn || row.crit);
 }
 
-function friendlyCheckLabel(c: QualityCheck): string {
-  // The export checks come in as short technical codes. The reference UI
-  // uses plain-language one-liners; surface those when we can recognize the
-  // code, fall back to the raw message otherwise.
-  switch (c.code) {
-    case "export_ok":
-      return "No issues detected";
-    case "true_peak_high":
-      return "True peak above safe ceiling";
-    case "streaming_headroom_low":
-      return "Low streaming headroom";
-    case "lufs_very_loud":
-      return "Very loud master";
-    case "dynamic_range_low":
-      return "Heavy compression detected";
-    case "bit_depth_low":
-      return "Bit depth below 16 bits";
-    case "sample_rate_mismatch":
-      return "Sample rate does not match delivery";
-    case "non_finite_metering":
-      return "Non-finite loudness measurement";
-    case "comp_density_on_compressed_source":
-      return "Already-compressed source";
-    default:
-      return c.message;
-  }
-}
-
 function derivePreflightChecks(analysis: AnalysisResult | undefined): QualityRow[] {
   if (!analysis) {
     return [
@@ -631,11 +604,11 @@ function derivePreflightChecks(analysis: AnalysisResult | undefined): QualityRow
     },
     {
       key: "dr",
-      ok: dr >= 6.0,
-      warn: dr >= 4.0 && dr < 6.0,
-      crit: dr < 4.0,
-      label: `Source dynamic range ${dr.toFixed(1)} LU`,
-      detail: `Analyzed source dynamic range at ${dr.toFixed(2)} LU.`,
+      ok: true,
+      warn: false,
+      crit: false,
+      label: `Source loudness range (LRA) ${dr.toFixed(1)} LU`,
+      detail: `Longer-term loudness variation: ${dr.toFixed(2)} LU. This does not measure transient dynamics.`,
     },
   ];
 }

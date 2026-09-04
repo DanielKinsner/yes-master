@@ -43,20 +43,29 @@ describe("sourceInsightRows", () => {
     expect(byKey.loudness.note).toMatch(/streaming targets/);
     expect(byKey.loudness.status).toBe("ok");
     expect(byKey.dynamics.value).toBe("4.6 LU");
-    expect(byKey.dynamics.status).toBe("caution");
+    expect(byKey.dynamics.status).toBe("info");
     expect(byKey.spectrum.value).toBe("Dark");
     expect(byKey.stereo.value).toBe("Narrow");
     expect(byKey["true-peak"].value).toBe("-2.33 dBTP");
     expect(byKey["true-peak"].status).toBe("ok");
   });
 
-  it("keeps the Source Check severities: hot true peak and crushed dynamics are problems", () => {
+  it("flags hot peaks and loudness without diagnosing compression from low LRA", () => {
     const rows = sourceInsightRows(analysis({ true_peak_dbtp: 0.2, dynamic_range_lu: 3.3, lufs_integrated: -5 }));
     const byKey = Object.fromEntries(rows.map((r) => [r.key, r]));
     expect(byKey["true-peak"].status).toBe("problem");
-    expect(byKey.dynamics.status).toBe("problem");
+    expect(byKey.dynamics.status).toBe("info");
+    expect(byKey.dynamics.label).toBe("Loudness range (LRA)");
+    expect(byKey.dynamics.note).not.toMatch(/compressed|healthy/i);
     expect(byKey.loudness.status).toBe("problem");
     expect(insightOverallStatus(rows)).toBe("problem");
+  });
+
+  it("does not diagnose compression in a steady high-crest pulse train", () => {
+    const row = sourceInsightRows(analysis({ dynamic_range_lu: 0 })).find(r => r.key === "dynamics")!;
+    expect(row.status).toBe("info");
+    expect(row.note).toMatch(/variation/i);
+    expect(row.note).not.toMatch(/compressed/i);
   });
 
   it("headline is the loudness sentence the old inline summary used", () => {
