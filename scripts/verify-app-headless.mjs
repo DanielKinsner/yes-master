@@ -107,7 +107,7 @@ const SCENARIOS = [
     settle: "ready",
     mustContain: ["READY", "Original", "Mastered"],
     mustNotContain: ["Drop audio. Hear it mastered."],
-    mustHaveControls: ["Export With Review", "Original", "Mastered"],
+    mustHaveControls: ["Export Master", "Original", "Mastered"],
     mustReach: [DELIVERY_FORMAT, EXPORT_MASTER],
     // U11: carries the quality-verdict badge; the reduced-motion pass proves
     // the verdict still reads with the attention cue switched off.
@@ -147,6 +147,7 @@ const SCENARIOS = [
     viewports: [LAPTOP, MIN_DESKTOP],
     settle: "ready",
     drive: driveToLoadedStandard,
+    beforeScreenshot: standardControlsGeometryProbe,
     mustContainAfterDrive: [
       "Choose the character you want.",
       "Set how strong the effect is.",
@@ -171,7 +172,7 @@ const SCENARIOS = [
     settle: "ready",
     drive: exportWithReview,
     mustContainAfterDrive: [
-      "Dynamic range is low",
+      "Delivered loudness is very high",
       "True peak exceeds the delivery ceiling",
     ],
     // U11: opens the review gate, so this covers the overlay entrance in both
@@ -243,7 +244,7 @@ const SCENARIOS = [
     viewports: [LAPTOP, MIN_DESKTOP],
     settle: "ready",
     mustContain: ["READY"],
-    mustHaveControls: ["Export With Review"],
+    mustHaveControls: ["Export Master"],
     // U10(c): long copy is exactly what pushes the lower rail cards down, so
     // this is where "Delivery Format still reachable" is worth asking.
     mustReach: [DELIVERY_FORMAT, EXPORT_MASTER],
@@ -254,7 +255,7 @@ const SCENARIOS = [
     purpose: "S-F3 (write): save dialog returns a path; the export completes.",
     viewports: [LAPTOP],
     settle: "ready",
-    drive: exportWithReview,
+    drive: exportClean,
     mustContainAfterDrive: ["preview-master.wav"],
   },
   {
@@ -264,7 +265,7 @@ const SCENARIOS = [
       "S-F3 (no write): save dialog cancelled; the UI must NOT claim success.",
     viewports: [LAPTOP],
     settle: "ready",
-    drive: exportWithReview,
+    drive: exportClean,
     // U10: a cancelled export must leave no trace of success — not the output
     // path, and not any of the language a completed export uses. Claiming a
     // file was written when the user cancelled is the single worst thing this
@@ -585,6 +586,29 @@ async function driveToLoadedStandard(page) {
       /* no confirm modal — settings were clean */
     });
   await page.waitForSelector(".standard-view", { timeout: SETTLE_TIMEOUT_MS });
+}
+
+async function exportClean(page) {
+  await waitForControl(page, /^Export Master$/, "the clean export action");
+  await page.locator("button", { hasText: /^Export Master$/ }).first().click();
+  if (await page.locator("button", { hasText: /^Export Anyway$/ }).count()) {
+    throw new Error("Clean export unexpectedly required review");
+  }
+}
+
+async function standardControlsGeometryProbe(page, report) {
+  const controls = await page.locator('.std-zone-chip, .std-tile, .std-seg-option, .std-create-master').evaluateAll(nodes => nodes.map(node => {
+    const r = node.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    return { label: node.textContent?.trim(), top: r.top, bottom: r.bottom,
+      visible: r.width > 0 && r.height > 0 && r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight && r.right <= innerWidth,
+      topmost: !!hit && (hit === node || node.contains(hit)) };
+  }));
+  if (controls.length < 13) report(`Standard primary controls missing: found ${controls.length}, expected at least 13`);
+  for (const control of controls) {
+    if (!control.visible || !control.topmost) report(`Standard control ${control.label} is clipped or covered before scrolling (top ${control.top}, bottom ${control.bottom})`);
+  }
+  return { controls };
 }
 
 /**

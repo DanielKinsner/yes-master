@@ -5881,6 +5881,17 @@ button.primary:disabled {
   padding: clamp(0.55rem, 1.25vh, 0.92rem) 1rem;
 }
 
+/* Reserve room for every intensity chip at the supported 740px height.
+   Compress the decorative waveform and knob spacing before controls. */
+@media (max-height: 800px) {
+  .std-wave-deck { min-height: 140px; }
+  .std-wave { height: 124px; }
+  .std-steps .std-pair .std-step-intensity .knob {
+    transform: none;
+    margin: 0.25rem 0;
+  }
+}
+
 /* ---- right rail (preview / delivery / export) ---- */
 .std-rail {
   /* gap MUST be the shared --std-col-gap: seam alignment derives Delivery's
