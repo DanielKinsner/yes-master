@@ -226,6 +226,10 @@ scrolling, no animation at rest, immediate cancellation when reduced motion
 is enabled, and visible content/working navigation when IntersectionObserver
 is unavailable. Photos and text never begin hidden.
 
+The 200% zoom pass also forces Arial fallback metrics. The beta/FAQ layout
+uses its actual container width so desktop font substitutions cannot force
+its columns beyond the page when CSS zoom leaves media queries unchanged.
+
 **Indexability follows release state.** While no verified release exists the
 page must carry `noindex` — indexing a page whose download is closed sends
 search traffic somewhere it cannot be served. The check fails in *both*

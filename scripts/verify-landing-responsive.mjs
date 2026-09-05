@@ -875,6 +875,17 @@ if (zoomState.horizontalOverflow) {
 if (!zoomState.ctaOnScreen) {
   failures.push("200% zoom: the acquisition CTA is pushed off screen");
 }
+// Exercise widely available fallback metrics even on Windows machines that
+// have Aptos installed. Linux CI exposed FAQ min-content overflow at 200%.
+const fallbackFont = await page.addStyleTag({ content: '.studio-site { --font-display: Arial, sans-serif; --font-sans: Arial, sans-serif; font-family: Arial, sans-serif; }' });
+const fallbackFontZoom = await page.evaluate(() => ({
+  scrollWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
+  clientWidth: document.documentElement.clientWidth,
+  faqColumns: getComputedStyle(document.querySelector('.studio-beta-grid')).gridTemplateColumns,
+}));
+if (fallbackFontZoom.scrollWidth > fallbackFontZoom.clientWidth + 1) failures.push(`200% fallback-font zoom: horizontal overflow (${fallbackFontZoom.scrollWidth} > ${fallbackFontZoom.clientWidth})`);
+await page.locator('#beta').screenshot({ path: path.join(outDir, '200-percent-fallback-font-faq.png'), style: 'nav { visibility: hidden!important; }' });
+await fallbackFont.evaluate(el => el.remove());
 await page.evaluate(() => {
   document.documentElement.style.zoom = "";
 });
@@ -987,6 +998,7 @@ const summary = {
   axe: axeRuns,
   keyboard,
   zoom200: zoomState,
+  fallbackFontZoom,
   smoke,
   linkChecks,
   matrix: records,

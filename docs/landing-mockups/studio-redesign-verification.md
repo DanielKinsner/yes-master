@@ -119,3 +119,9 @@ finite animation, no replay, stillness at rest, dynamic reduced motion and
 the missing-observer fallback. The full production browser lane is required
 before merging. Website publication is recorded by the merged pull request
 and Vercel's exact-commit deployment, without activating a native release.
+
+The first hosted Linux run found FAQ overflow at 200% zoom with fallback
+fonts. Reproduced locally with Arial (1510px scroll width in a 1440px window)
+and corrected with container-based stacking and shrinkable grid tracks.
+The same reproduction now measures 1440px with no overflowing elements.
+The existing zoom assertion remains and gains an explicit fallback-font case.

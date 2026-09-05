@@ -1059,9 +1059,12 @@ body {
   font-size: 10px;
   text-align: right;
 }
+.studio-beta {
+  container-type: inline-size;
+}
 .studio-beta-grid {
   display: grid;
-  grid-template-columns: 1fr 1.8fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr);
   gap: 80px;
 }
 .studio-beta .studio-section-heading {
@@ -1083,7 +1086,7 @@ body {
 }
 .studio-faq-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 35px;
 }
 .studio-faq-grid details {
@@ -1113,6 +1116,14 @@ body {
 .studio-faq-grid p {
   font-size: 14px;
   margin-top: 14px;
+}
+/* CSS zoom reduces available content width without changing media-query
+   breakpoints. Stack the deal and FAQ before fallback fonts become cramped. */
+@container (max-width: 850px) {
+  .studio-beta-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 35px;
+  }
 }
 .studio-closing {
   border-top: 1px solid var(--studio-line);
