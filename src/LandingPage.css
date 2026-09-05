@@ -165,6 +165,7 @@ body {
   --studio-amber: #f2b760;
   --studio-blue: #83b5ff;
   --studio-line: #273141;
+  --studio-ease: cubic-bezier(0.22, 1, 0.36, 1);
   background: #080b10;
 }
 .studio-site :is(h1, h2, h3) {
@@ -1822,11 +1823,88 @@ body {
     padding: 10px;
   }
 }
+/* A brief arrival, then stillness. Only decorative layers reveal on scroll;
+   text and actions are never hidden behind an observer or an animation. */
+@keyframes studio-arrive {
+  from {
+    opacity: 0.86;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes studio-photo-settle {
+  from {
+    opacity: 0.8;
+    transform: scale(1.012);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes studio-dialog-enter {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .studio-hero .studio-hero-copy {
+    animation: studio-arrive 650ms var(--studio-ease) backwards;
+  }
+  .studio-hero .studio-device {
+    animation: studio-arrive 700ms var(--studio-ease) 100ms backwards;
+  }
+  .studio-reveal-enter[data-studio-reveal="device"] {
+    animation: studio-arrive 600ms var(--studio-ease) backwards;
+  }
+  .studio-reveal-enter[data-studio-reveal="photo"] {
+    animation: studio-photo-settle 750ms var(--studio-ease) backwards;
+  }
+  .studio-lightbox[open],
+  .studio-lightbox[open]::backdrop {
+    animation: studio-dialog-enter 180ms var(--studio-ease);
+  }
+  .studio-faq-grid summary span {
+    transition: transform 180ms var(--studio-ease);
+  }
+  .studio-enlarge,
+  .studio-text-link > span {
+    transition: transform 180ms var(--studio-ease);
+  }
+}
+@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
+  .studio-site
+    :is(a, button):is(.btn-cta, .btn-ghost):not(:disabled):not(
+      [aria-disabled="true"]
+    ):hover {
+    transform: translateY(-1px);
+  }
+  .studio-site
+    :is(a, button):is(.btn-cta, .btn-ghost):not(:disabled):not(
+      [aria-disabled="true"]
+    ):active {
+    transform: translateY(0);
+  }
+  .studio-capture-button:hover .studio-enlarge {
+    transform: translate(1px, -1px);
+  }
+  .studio-text-link:hover > span {
+    transform: translateX(3px);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .studio-site *,
-  .studio-site *::before {
+  .studio-site *::before,
+  .studio-site *::after {
     scroll-behavior: auto !important;
     transition: none !important;
+    animation: none !important;
   }
 }
 @media (min-width: 1101px) {

@@ -36,6 +36,7 @@ export default function SoundCharacter() {
               height="1024"
               loading="lazy"
               alt="Amber light across a brushed metal tape reel and its rollers"
+              data-studio-reveal="photo"
             />
             <figcaption>CHARACTER YOU CAN FEEL.</figcaption>
           </figure>

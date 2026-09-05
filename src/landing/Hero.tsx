@@ -132,7 +132,7 @@ export default function Hero({
               </a>
             </div>
           </div>
-          <div className="studio-front-laptop">
+          <div className="studio-front-laptop" data-studio-reveal="device">
             <img
               className="studio-laptop-chassis"
               src={advancedChassis}

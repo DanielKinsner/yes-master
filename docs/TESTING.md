@@ -219,6 +219,13 @@ the CTA is still on screen.
 `prefers-reduced-motion: reduce`. Content that only exists after an animation
 is content some visitors never get.
 
+The studio motion check (`scripts/lib/landing-motion.mjs`, included in the
+landing lane) observes real animation events at 1440px and 390px. It requires
+two finite hero entrances and three one-time artwork reveals, no replay after
+scrolling, no animation at rest, immediate cancellation when reduced motion
+is enabled, and visible content/working navigation when IntersectionObserver
+is unavailable. Photos and text never begin hidden.
+
 **Indexability follows release state.** While no verified release exists the
 page must carry `noindex` — indexing a page whose download is closed sends
 search traffic somewhere it cannot be served. The check fails in *both*

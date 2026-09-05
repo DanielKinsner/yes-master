@@ -98,3 +98,24 @@ final CSS is verified by the later production web build and browser suite.
 Rust format, warning-denying clippy, library and full integration lanes passed.
 Native files, DSP, feature flags, gate configuration, domain, noindex and
 dependencies have no diff from the previous pass. No deployment or push.
+
+## Owner-approved motion and website publication
+
+The owner subsequently approved merging and publishing this marketing design,
+with a very subtle motion pass. This supersedes the earlier no-deploy request
+for the website only; installer/signup gates and native release work stay parked.
+
+Motion consists of two short hero entrances (6px maximum travel), one-time
+Advanced laptop and photographic reveals, lightbox fades, FAQ icon rotation,
+and small hover/press responses on enabled actions. There are no loops,
+scroll-driven effects, animated meters, hidden content or extra dependencies.
+The observer disconnects each image after its first entrance and responds to
+OS motion-preference changes. CSS disables all landing animation and transitions
+for reduced motion.
+
+Motion evidence: `test-output/studio-motion/`. The browser motion assertions
+are part of the normal landing gate at desktop and phone widths, covering
+finite animation, no replay, stillness at rest, dynamic reduced motion and
+the missing-observer fallback. The full production browser lane is required
+before merging. Website publication is recorded by the merged pull request
+and Vercel's exact-commit deployment, without activating a native release.

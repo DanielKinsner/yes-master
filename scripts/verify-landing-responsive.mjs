@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { launchHeadless, runtimeStamp } from "./lib/headless-browser.mjs";
+import { verifyStudioMotion } from "./lib/landing-motion.mjs";
 
 const require = createRequire(import.meta.url);
 // axe-core is injected as a script rather than driven through a wrapper: one
@@ -946,6 +947,7 @@ for (const [width, height] of [[1440, 900], [390, 844]]) {
   }
   studioInteractions.push({ width, inspected, faqKeyboard: true, demoUnavailable: true });
 }
+const studioMotion = await verifyStudioMotion(browser, url, outDir, failures);
 await browser.close();
 
 const relevantConsoleMessages = consoleMessages.filter(
@@ -981,6 +983,7 @@ const summary = {
   },
   browser: browserStamp,
   studioInteractions,
+  studioMotion,
   axe: axeRuns,
   keyboard,
   zoom200: zoomState,

@@ -21,6 +21,7 @@ export default function FinalCTA() {
           height="1024"
           alt="A musician listening at a warmly lit studio desk, headphones set beside the console"
           loading="lazy"
+          data-studio-reveal="photo"
         />
         <div className="studio-shell">
           <div className="studio-closing-copy">
