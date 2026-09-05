@@ -192,8 +192,10 @@ is now also permitted in the two hero bands by the owner's selected direction.
 
 The handoff Standard and Advanced captures remain unchanged image bytes;
 CSS viewports reveal details and keyboard/touch controls enlarge the full
-source. Album delivery and report fields are labelled illustrations, without
-invented measured results. The owner Album capture remains available under
+source. Album delivery remains a labelled illustration. On 2026-09-05 the owner
+replaced the illustrated report fields with an unchanged, expandable screenshot
+of an actual export receipt; its measurements describe that export only.
+The owner Album capture remains available under
 "Take a closer look". Source hashes and provenance live in the landing manifest.
 The diagrams do not imply one shared Standard/Advanced/Album export ceremony.
 
