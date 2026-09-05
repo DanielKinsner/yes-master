@@ -1,42 +1,53 @@
 import BetaSignup from "./BetaSignup";
 import BetaDownload from "./BetaDownload";
+import copy from "./page-copy.json";
+import { resolveRelease, INSTALL_GUIDE_URL } from "./release-config";
+import { Icon } from "./StudioElements";
 
 export default function FinalCTA() {
+  const c = copy.closing;
+  const release = resolveRelease();
   return (
-    <section
-      id="get-started"
-      className="relative border-t border-white/[0.06] bg-night px-5 py-24 text-center sm:px-8 sm:py-32"
-    >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_60%_at_50%_100%,rgba(79,134,247,0.12),transparent_65%)]"
-      />
-      <div className="mx-auto max-w-2xl">
-        <h2 className="font-display text-4xl font-black leading-[1.02] tracking-[-0.03em] sm:text-6xl">
-          Stop chasing the master.
+    <section id="get-started" className="studio-closing">
+      <div className="studio-shell">
+        <p className="eyebrow">{c.eyebrow}</p>
+        <h2>
+          {c.headline[0]}
+          <em>{c.headline[1]}</em>
         </h2>
-        <p className="mt-3 font-display text-xl font-bold text-brand-soft sm:text-2xl">
-          This is the one you stop on.
-        </p>
-
-        <BetaDownload />
-
-        <div className="mx-auto mt-10 flex max-w-md items-center gap-4 text-xs font-black uppercase tracking-wide text-soft" aria-hidden="true">
-          <span className="h-px flex-1 bg-line" />
-          Optional email updates
-          <span className="h-px flex-1 bg-line" />
+        <p className="studio-lead">{c.body}</p>
+        <div className="studio-actions">
+          <a href="#beta-availability" className="btn-cta">
+            {release.available ? c.primary_available : c.primary_unavailable}
+            <Icon kind="arrow" />
+          </a>
+          <a href="#how" className="btn-ghost">
+            {c.secondary}
+          </a>
         </div>
-
-        <BetaSignup />
-        {/* C-22 removed. "Beta testers keep $29 forever" is an entitlement
-            promise, not a price: R24 makes the founder window a time-limited
-            launch window whose duration and terms are undecided
-            (docs/OWNER_INPUT_QUEUE.md row 1). The $29 → $49 model itself is
-            settled canon and now lives once, in the beta terms section, rather
-            than being restated here as a closing nudge. */}
-        <p className="mt-4 text-xs font-semibold text-muted">
-          Free during the beta. Mac &amp; Windows.
-        </p>
+        <p className="studio-footnote">{c.micro}</p>
+        <div id="beta-availability" className="studio-availability">
+          <BetaDownload />
+          <div className="studio-signup">
+            <p className="studio-label">OPTIONAL EMAIL UPDATES</p>
+            <BetaSignup />
+          </div>
+        </div>
+        <footer className="studio-footer">
+          <a href="#top" className="studio-wordmark">
+            YES Master
+          </a>
+          <div>
+            <a href="#how">How it works</a>
+            <a href="#advanced">Advanced</a>
+            <a href="#album">Album</a>
+            <a href="#beta">Beta details</a>
+            <a href={INSTALL_GUIDE_URL} target="_blank" rel="noreferrer">
+              Install help
+            </a>
+          </div>
+          <p>Music sounds brighter here.</p>
+        </footer>
       </div>
     </section>
   );

@@ -169,3 +169,34 @@ an already-processed track as a rescue case.
   as *instant*, not *private*).
 - **Every claim on the page needs a row in `docs/CAPABILITY_EVIDENCE_MATRIX.md`.**
   A claim with no row is a defect, not an oversight.
+
+## Studio redesign (2026-09-04, separate branch)
+
+The owner-selected `YES_Master_Studio_Handoff` supersedes previous visual
+layout directions in this brief. Its `copy/PAGE_COPY.md` is the wording source;
+its approved theme defines the blue-and-amber studio composition. This is a
+marketing-only change, with release activity parked and no deployment.
+
+The first two bands use the supplied shared studio background and transparent
+Standard / Advanced laptop layers. HTML holds all headlines, navigation,
+body copy, buttons and icons. The second band reads "Advanced mode. Total
+control."; "Watch demo" is a labelled unavailable placeholder until media is
+supplied. It does not open an audio player or imply browser mastering.
+
+Page order: Standard hero, Advanced teaser, benefits, combined Standard
+workflow (`#how`, preserving `#standard`), Advanced controls (`#advanced`),
+measured export (`#export`), the preserved Sign-off photo, sound character,
+album/projects, beta FAQ, final action. The old separate Standard proof section
+is consolidated into the workflow. Sign-off is preserved; studio photography
+is now also permitted in the two hero bands by the owner's selected direction.
+
+The handoff Standard and Advanced captures remain unchanged image bytes;
+CSS viewports reveal details and keyboard/touch controls enlarge the full
+source. Album delivery and report fields are labelled illustrations, without
+invented measured results. The owner Album capture remains available under
+"Take a closer look". Source hashes and provenance live in the landing manifest.
+The diagrams do not imply one shared Standard/Advanced/Album export ceremony.
+
+The existing release resolver, download/signup components, current domain,
+noindex setting and native app remain unchanged. The final action retains
+availability details and optional signup status below the approved closing.

@@ -521,3 +521,23 @@ cargo test --test preset_fingerprint write_owner_fingerprint_report -- --ignored
   `src-tauri/target/release/bundle/` and should not leave
   `src-tauri/target/release/produce_dialog_smoke.exe` registered as an app
   binary.
+
+### Studio marketing verification (2026-09-04)
+
+The two hero bands now use separate, byte-bound studio background and laptop
+assets. Eager Standard artwork plus the background/icon stays under the existing
+1.5 MB budget; the Advanced laptop and flat proof images are lazy. This
+supersedes the retired 1280w/3840w single-photo hero description above. Intrinsic
+source sizes are declared even for CSS crops, so native lazy loading can see
+the image before it decodes (the Intensity crop previously had a zero-height
+image outside the visible viewport).
+
+The headless landing lane visits each visible lazy plate in order, and tests
+closed album details and screenshot dialogs through their opening controls.
+At desktop and phone widths it opens every screenshot with Enter, waits for
+full-resolution image decode, closes with Escape and verifies focus returns.
+It also checks FAQ keyboard toggles and the explicitly unavailable demo action.
+The old minimum hero height tied to a single 45vw image is replaced by a
+non-collapse bound for the approved two-band composition. Overflow, all-axis
+nav acquisition, metadata, closed release, contrast and reduced-motion checks
+remain enforced.

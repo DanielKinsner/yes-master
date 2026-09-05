@@ -1,140 +1,126 @@
-import standardImg from "../assets/landing/owner-standard-session.jpg";
-import standardImg1280 from "../assets/landing/owner-standard-session-1280.jpg";
-import advancedImg from "../assets/landing/owner-advanced-session.jpg";
-import advancedImg1280 from "../assets/landing/owner-advanced-session-1280.jpg";
+import advanced from "../assets/landing/studio/advanced-ui.png";
 
-// U6 / claim C-07. These numbers are hand-authored and always were. They were
-// previously rendered as if they were product output, with nothing marking
-// them as illustrative — plausible, but not a measurement of anything. Until
-// U7 sources them from a deterministic capture bound to a commit, the block
-// carries an explicit "Example" label. A fabricated measurement presented as a
-// real one is the exact failure the evidence matrix exists to catch.
-const receipt: Array<[string, string, boolean]> = [
-  ["Delivered LUFS", "-11.0 LUFS", false],
-  ["True Peak", "-0.8 dBTP", false],
-  ["Dynamic Range", "8.4 LU", false],
-  ["Quality Checks", "All good", true],
-  ["Status", "Ready to ship", true],
-];
+import copy from "./page-copy.json";
+import { Capture, DetailList, SectionHeading } from "./StudioElements";
 
-// Presentation (2026-08-18): the two captures get the room — framed like the
-// product, side by side — and the receipt reads as the printed slip it is.
-// Same claims, same "Example" label ordering (label before first number).
-//
-// 2026-09-01: both plates are OWNER captures of a real session ("The Machine
-// Restocks on Friday", meters live, Mastered selected, hand-shaped EQ). They
-// are bound in `manifest.json` under `ownerCaptures` (hash, size, import); the
-// deterministic captures remain the mechanical regression evidence.
 export default function ProofDeck() {
+  const c = copy.advanced;
+  const e = copy.export;
   return (
-    <section id="standard" className="relative bg-night px-5 py-20 sm:px-8 sm:py-28">
-      {/* The "Advanced" nav link points here too. The anchor is pinned to the
-          section's TOP EDGE: as an sr-only span in normal flow it sat inside
-          the top padding, so "Advanced" landed 112px deeper than every other
-          nav link and cut the heading off under the fixed bar (owner, 2026-09-01). */}
-      <span id="advanced" aria-hidden="true" className="absolute left-0 top-0 h-px w-px" />
-
-      <div className="mx-auto max-w-6xl">
-        <div className="max-w-2xl">
-          <p className="eyebrow">From fast finish to full control</p>
-          <h2 className="mt-4 font-display text-3xl font-black leading-[1.02] tracking-[-0.02em] sm:text-5xl">
-            One engine. Two rooms.
-          </h2>
-          <p className="mt-4 text-muted sm:text-lg">
-            Standard is one clean column and one button. Advanced is the whole
-            console. They are the same engine, and both hand you the same
-            receipt.
-          </p>
-        </div>
-
-        <div className="mt-12 grid gap-6 lg:grid-cols-2">
-          <article className="flex flex-col">
-            <p className="text-sm font-extrabold text-brand-soft">Standard — the hero</p>
-            <h3 className="mt-2 font-display text-2xl font-black tracking-[-0.01em]">
-              One click from finished to mastered.
-            </h3>
-            {/* C-07 note above applies to the receipt block; this paragraph is
-                claim C-05. "True-peak safe, every time" was an absolute
-                guarantee the product deliberately does not make — you are
-                allowed to overcook a track and get an advisory warning instead
-                of a refusal. Narrowed to the fixed format and the ceiling the
-                limiter targets, both of which are real. */}
-            <p className="mt-3 max-w-[52ch] text-[0.95rem] leading-relaxed text-muted">
-              Pick a style. Pick a loudness. Create Master. You get a fixed
-              44.1 kHz / 24-bit WAV with the limiter's ceiling set to −1 dBTP —
-              and a measurement of what actually came out.
-            </p>
-            {/* U7: below the fold, so lazy. Intrinsic size is declared to
-                reserve the box and avoid a layout shift when it arrives. */}
-            <div className="surface-frame mt-6 overflow-hidden rounded-xl p-1.5">
-              <img
-                src={standardImg}
-                srcSet={`${standardImg1280} 1280w, ${standardImg} 2048w`}
-                sizes="(min-width: 1024px) 50vw, 100vw"
-                alt="YES Master Standard view during a real session, meters live"
-                width={2048}
-                height={1147}
-                loading="lazy"
-                decoding="async"
-                className="block w-full rounded-[0.6rem]"
-              />
+    <>
+      <section id="advanced" className="studio-section">
+        <div className="studio-shell">
+          <p className="eyebrow">{c.eyebrow}</p>
+          <div className="studio-live-grid">
+            <div>
+              <h2>
+                {c.headline[0]}
+                <em>{c.headline[1]}</em>
+              </h2>
+              <p className="studio-lead">{c.body}</p>
+              <div className="studio-pills">
+                <span>Same-playhead A/B</span>
+                <span>Live metering</span>
+              </div>
             </div>
-          </article>
-
-          <article className="flex flex-col">
-            <p className="text-sm font-extrabold text-[#f0b35b]">Advanced — the proof</p>
-            <h3 className="mt-2 font-display text-2xl font-black tracking-[-0.01em]">
-              When you want the full room.
-            </h3>
-            <p className="mt-3 max-w-[52ch] text-[0.95rem] leading-relaxed text-muted">
-              A real session, meters live. Eight styles, a 7-band EQ,
-              compressor modes, width and warmth, live metering, and export
-              review with a measured receipt.
-            </p>
-            <div className="surface-frame mt-6 overflow-hidden rounded-xl p-1.5">
-              <img
-                src={advancedImg}
-                srcSet={`${advancedImg1280} 1280w, ${advancedImg} 2048w`}
-                sizes="(min-width: 1024px) 50vw, 100vw"
-                alt="YES Master Advanced view during a real session, meters live"
-                width={2048}
-                height={1151}
-                loading="lazy"
-                decoding="async"
-                className="block w-full rounded-[0.6rem]"
+            <div>
+              <Capture
+                src={advanced}
+                alt="YES Master Advanced playback and meters"
+                width={910}
+                height={332.09}
+                crop={[1402.32, 232.12, 43.14]}
+                caption="Hear the difference. Keep your place."
               />
+              <p className="studio-capture-note">
+                {c.ab_note} Volume Match is optional and off by default.
+              </p>
             </div>
-          </article>
+          </div>
+          <div className="studio-control-grid">
+            {c.details.map((d, i) => (
+              <article className="studio-shelf" key={d.title}>
+                <p className="studio-label">
+                  0{i + 1} / {i === 0 ? "TONE" : "DYNAMICS"}
+                </p>
+                <h3>{d.title}</h3>
+                <p>{d.body}</p>
+                <Capture
+                  src={advanced}
+                  alt={
+                    i === 0
+                      ? "Seven-band visual EQ"
+                      : "Preset, Manual and Off compressor modes"
+                  }
+                  width={i === 0 ? 712 : 319}
+                  height={i === 0 ? 280.72 : 190.31}
+                  crop={
+                    i === 0
+                      ? [2613.22, 1065.45, 1084.59]
+                      : [1856, 1531.56, 496.62]
+                  }
+                />
+              </article>
+            ))}
+          </div>
+          <div className="studio-pills studio-support">
+            {c.support.map((s) => (
+              <span key={s}>{s}</span>
+            ))}
+          </div>
         </div>
-
-        <article className="surface-card mt-6 grid gap-8 rounded-2xl p-6 sm:p-8 lg:grid-cols-[1fr_minmax(0,380px)] lg:items-center">
-          <div>
-            <p className="text-sm font-extrabold text-good">Technically checked</p>
-            <h3 className="mt-2 font-display text-2xl font-black tracking-[-0.01em]">
-              Honest results. You decide.
-            </h3>
-            <p className="mt-3 max-w-[52ch] text-[0.95rem] leading-relaxed text-muted">
-              Every master ships with a receipt: delivered LUFS, true peak,
-              dynamic range, and quality checks. No guesswork.
-            </p>
+      </section>
+      <section id="export" className="studio-section studio-export">
+        <div className="studio-shell">
+          <SectionHeading eyebrow={e.eyebrow} headline={e.headline} />
+          <div className="studio-export-grid">
+            <div>
+              <p className="studio-lead">{e.body}</p>
+              <DetailList items={e.details} />
+              <p>{e.source_note}</p>
+            </div>
+            <figure className="studio-receipt studio-shelf">
+              <p className="studio-label">
+                YES MASTER <span aria-hidden="true">↗</span>
+              </p>
+              <h3>Export receipt.</h3>
+              <figcaption>
+                Report fields, illustrated.
+                <br />
+                Actual measurements populate after rendering.
+              </figcaption>
+              <dl>
+                {[
+                  ["Delivered loudness", "LUFS"],
+                  ["True peak", "dBTP"],
+                  ["Loudness range", "LU"],
+                  ["Quality checks", "Measured result"],
+                ].map(([label, unit]) => (
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>{unit}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p>Your final file. The facts behind the sound.</p>
+            </figure>
           </div>
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-soft">
-              Example receipt
-            </p>
-            <dl className="mt-2 divide-y divide-white/[0.07] rounded-xl border border-line bg-night/60 px-4 shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]">
-              {receipt.map(([label, value, good]) => (
-                <div key={label} className="flex justify-between py-3 text-sm">
-                  <dt className="text-muted">{label}</dt>
-                  <dd className={`tabular-nums ${good ? "font-semibold text-good" : "text-ink"}`}>
-                    {value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+          <div className="studio-export-modes">
+            <div>
+              <h3>
+                <span>Standard</span> · A clean finish.
+              </h3>
+              <p>{e.standard}</p>
+            </div>
+            <div>
+              <h3>
+                <em>Advanced</em> · The detail behind it.
+              </h3>
+              <p>{e.advanced}</p>
+            </div>
           </div>
-        </article>
-      </div>
-    </section>
+        </div>
+      </section>
+    </>
   );
 }

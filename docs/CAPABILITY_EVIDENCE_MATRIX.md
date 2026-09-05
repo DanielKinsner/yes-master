@@ -112,3 +112,25 @@ one is a documentation reconciliation, **not** a new product decision.
 
 4. **Two beta documents, no stated precedence.** Fixed in U1 — see the
    authority note in `AGENTS.md`/`CLAUDE.md` Required Reading.
+
+## Studio handoff application — 2026-09-04
+
+This marketing-only revision applies the supplied `PAGE_COPY.md`, keeping the
+release closed. The following rows supersede the historical wording/surface
+locations above for the redesigned page; they do not add native capabilities.
+
+| ID | Current wording or visual | Surface | Status | Evidence source | Owning unit |
+|---|---|---|---|---|---|
+| S-01 | Standard: four styles, Intensity, Low/Medium/High; separate WAV; 44.1 kHz / 24-bit and −1 dBTP limiter setting | Workflow | Proved | C-28; PRODUCT.md Primary Workflow and Standard export ceremony; StandardView tests | Studio redesign |
+| S-02 | Advanced: seven-band EQ, eight styles, width/warmth, Preset/Manual/Off creative compression, custom formats | Hero teaser / ProofDeck | Proved | C-06; PRODUCT.md Compressor Canon; AdvancedPanel and VisualEqPanel tests. No active per-band adaptive claim. | Studio redesign |
+| S-03 | Same-playhead Original/Mastered; optional Volume Match, off by default, audition-only | ProofDeck | Proved | APP_BEHAVIOR.md Track Master; audio controller tests; C-02. No native timing benchmark claimed. | Studio redesign |
+| S-04 | Rendered-file measurements; Standard filename/loudness/Show file versus detailed Advanced Track Master review/receipt | ProofDeck | Proved | APP_BEHAVIOR.md Standard Create Master / Export Checks; ExportReceiptCard tests; C-04/C-28. Replaces the old claim that both modes give the same receipt. | Studio redesign |
+| S-05 | Report fields, illustrated: LUFS, dBTP, LU, quality checks; no numeric results or "all good" status | ProofDeck | Proved as illustration | Explicit figcaption; LandingCopy test rejects invented readings/statuses. This replaces C-07/C-08's old example receipt; no actual render evidence is claimed. | Studio redesign |
+| S-06 | Source analysis can ease selected boosts and compression density; already-processed tracks welcome | SoundCharacter | Proved | C-27; PRODUCT.md Adaptive Mastering, reduce-only Tier-1 restraint. Gated per-band/Phase-B logic is not marketed. | Studio redesign |
+| S-07 | Four existing character styles share loudness/safety stages; Intensity controls strength | SoundCharacter | Proved | C-29; existing preset artwork; preset_fingerprint.rs; supplied owner Intensity capture. Subjective character descriptions, no outcome guarantees. | Studio redesign |
+| S-08 | Album Follow/Override, own settings/target under common delivery format; individual/continuous WAVs, manifest, per-track receipts; no DDP/cue/ISRC/gapless guarantee | AlbumProof | Proved | C-30/C-31; PRODUCT.md Album Master; album export integration tests. Diagram explicitly labelled; actual Album capture expandable. | Studio redesign |
+| S-09 | Save/reopen projects referencing source audio on disk | AlbumProof | Proved | APP_BEHAVIOR.md Project, Settings and Help; project persistence tests. No portable embedded-audio archive claim. | Studio redesign |
+| S-10 | Free beta, no email gate/account; installed build keeps working; feedback optional, GitHub account to post | BetaTerms / FinalCTA | Proved | C-12/C-20/C-25/C-26/C-32/C-33; unchanged BetaDownload/BetaSignup and release tests | Studio redesign |
+| S-11 | Planned $29 founder / $49 standard purchase; founder dates/terms when confirmed | BetaTerms | Qualified business model | C-21/C-22/C-34; OWNER_INPUT_QUEUE. No dates, eligibility or entitlement promised. | Studio redesign |
+| S-12 | Studio/chassis artwork, with real owner Standard/Advanced displays, separate from HTML copy | Hero | Proved as artwork provenance | Supplied HERO_ASSETS.md; `manifest.json` studioArtwork hashes; standalone asset gate. Owner captures are snapshots, not proof of current native behavior. | Studio redesign |
+| S-13 | Watch demo shown as unavailable; Explore the beta routes to current closed state | Hero / FinalCTA | Proved | No video/audio URL or handler; aria-disabled and visible explanation; headless studio interaction checks. Release resolver and signup config unchanged. | Studio redesign |

@@ -218,15 +218,15 @@ for (const [width, height] of matrix) {
       bodyHasExpectedCopy: [
         "One-click mastering.",
         "Your Endgame Sound.",
-        "One engine",
-        "Stop chasing the master",
+        "Every move.",
+        "Finish this track.",
         // U6 replaced "Same engine, headed to iPhone & Android" (a schedule
         // the product never committed to) with the one permitted date-free
         // sentence. These four anchor the rewritten hierarchy.
-        "Finished mix in",
-        "It reads the track before it touches it",
-        "A record, not a folder of files",
-        "What you are actually agreeing to",
+        "Three decisions.",
+        "Find your sound.",
+        "One record.",
+        "A real tool.",
       ].every((text) => body.textContent?.includes(text)),
       // U8 — quality signals that no layout metric covers.
       quality: (() => {
@@ -421,10 +421,10 @@ for (const [width, height] of matrix) {
   if (!metrics.heroPresent) {
     failures.push(`${width}x${height}: missing #top hero section`);
   }
-  // The hero is a full-bleed band on desktop: 45vw tall, never past the
-  // viewport (2026-09-01, ultra-wide plate). On phones the copy column keeps
-  // it at least a viewport tall. Either way it may not collapse.
-  const heroFloor = (width >= 1024 ? Math.min(height, width * 0.45) : height) * 0.9;
+  // The approved studio composition has two consecutive hero bands. The first
+  // is bounded on wide screens; narrow screens stack copy and a full laptop.
+  // Guard against collapse without forcing the retired 45vw/100svh layout.
+  const heroFloor = width > 800 ? 600 : 650;
   if (typeof metrics.heroHeight !== "number" || metrics.heroHeight < heroFloor) {
     failures.push(`${width}x${height}: hero height is ${metrics.heroHeight}, expected at least ${Math.round(heroFloor)}`);
   }
@@ -602,14 +602,19 @@ for (const [width, height] of matrix) {
   // never resolves is a broken image with better manners, and the check above
   // deliberately cannot see it.
   if (width === 1440 || width === 390) {
-    await page.evaluate(() =>
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }),
-    );
+    // Visit every visible plate; jumping straight to the footer can skip a
+    // long page's middle entirely. Closed detail/dialog images load on demand
+    // and their actual opening path is exercised separately below.
+    const plates = page.locator('img[loading="lazy"]:not(dialog img):not(details:not([open]) img)');
+    for (let i = 0; i < await plates.count(); i += 1) {
+      await plates.nth(i).evaluate(image => (image.closest("figure") ?? image).scrollIntoView({ behavior: "instant", block: "center" }));
+      await plates.nth(i).evaluate(image => image.decode());
+    }
     const lazyState = await page
       .waitForFunction(
         () => {
           const lazy = Array.from(document.images).filter(
-            (image) => image.loading === "lazy",
+            (image) => image.loading === "lazy" && !image.closest("dialog, details:not([open])"),
           );
           return lazy.every((image) => image.complete && image.naturalWidth > 0)
             ? lazy.map((image) => ({
@@ -671,7 +676,12 @@ for (const [width, height] of [
       return true;
     }, href);
 
-    await page.waitForTimeout(80);
+    // Long-page smooth scrolling takes longer than 80ms. Check the destination
+    // after it arrives, not only a changed hash while still far off screen.
+    await page.waitForFunction(targetHref => {
+      const top = document.getElementById(targetHref.slice(1))?.getBoundingClientRect().top;
+      return top !== undefined && top >= -1 && top <= 100;
+    }, href, { timeout: 5000 });
     const anchorState = await page.evaluate((targetHref) => {
       const target = document.getElementById(targetHref.slice(1));
       const rect = target?.getBoundingClientRect();
@@ -820,10 +830,10 @@ const reducedPage = await reducedContext.newPage();
 await reducedPage.goto(url, { waitUntil: "networkidle" });
 const reducedText = await reducedPage.evaluate(() => document.body.innerText);
 for (const required of [
-  "Finished mix in",
-  "It reads the track before it touches it",
-  "A record, not a folder of files",
-  "What you are actually agreeing to",
+  "Three decisions.",
+  "Find your sound.",
+  "One record.",
+  "A real tool.",
   "The download is not open",
 ]) {
   if (!reducedText.includes(required)) {
@@ -902,6 +912,40 @@ if (smoke) {
 }
 
 const browserStamp = runtimeStamp(browser);
+// Studio interaction paths: the image itself is never a pretend audio player.
+// Inspect every crop, including the formerly blank lazy Intensity image, and
+// prove that dialog dismissal returns keyboard focus to the originating button.
+const studioInteractions = [];
+for (const [width, height] of [[1440, 900], [390, 844]]) {
+  await page.setViewportSize({ width, height });
+  await page.goto(url, { waitUntil: "networkidle" });
+  const demo = page.getByRole("button", { name: "Watch demo", exact: true });
+  if (await demo.getAttribute("aria-disabled") !== "true") failures.push(`${width}: demo must remain unavailable`);
+  const faq = page.locator('.studio-faq-grid summary').first();
+  await faq.focus();
+  await page.keyboard.press("Enter");
+  if (await faq.evaluate(el => el.parentElement.open)) failures.push(`${width}: FAQ did not collapse by keyboard`);
+  await page.keyboard.press("Enter");
+  if (!await faq.evaluate(el => el.parentElement.open)) failures.push(`${width}: FAQ did not expand by keyboard`);
+  await page.locator('.studio-album-capture summary').click();
+  const buttons = page.locator('.studio-capture-button');
+  let inspected = 0;
+  for (let i = 0; i < await buttons.count(); i += 1) {
+    const button = buttons.nth(i);
+    await button.scrollIntoViewIfNeeded();
+    await button.locator('img').evaluate(image => image.decode());
+    await button.focus();
+    await page.keyboard.press("Enter");
+    const dialog = page.locator('dialog[open]');
+    await dialog.waitFor({ state: "visible" });
+    await dialog.locator('img').evaluate(image => image.decode());
+    if (await dialog.locator('img').evaluate(image => image.naturalWidth) < 1000) failures.push(`${width}: enlarged image is not full resolution`);
+    await page.keyboard.press("Escape");
+    if (!await button.evaluate(el => document.activeElement === el)) failures.push(`${width}: screenshot dialog lost its return focus`);
+    inspected += 1;
+  }
+  studioInteractions.push({ width, inspected, faqKeyboard: true, demoUnavailable: true });
+}
 await browser.close();
 
 const relevantConsoleMessages = consoleMessages.filter(
@@ -936,6 +980,7 @@ const summary = {
       "NOT observed here — needs a real draft release; injected-state case lives in src/lib/release-readiness.test.ts, closed by U16",
   },
   browser: browserStamp,
+  studioInteractions,
   axe: axeRuns,
   keyboard,
   zoom200: zoomState,
