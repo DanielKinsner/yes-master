@@ -221,9 +221,9 @@ describe("required claims (U6)", () => {
     expect(text).toContain("−1 dBTP");
   });
 
-  it("labels the receipt illustration and invents no readings", () => {
-    expect(positionOf("Report fields, illustrated.")).toBeLessThan(positionOf("Delivered loudness"));
-    expect(text).toContain("Actual measurements populate after rendering.");
+  it("labels the real export capture and invents no readings in the copy", () => {
+    expect(text).toContain("An actual export receipt. Your final file, measured.");
+    expect(text).not.toContain("Report fields, illustrated.");
     expect(text).not.toMatch(/-11\.0 LUFS|All good|Ready to ship/);
     expect(text).toContain("Filename, delivered loudness, and a Show file action");
     expect(text).toContain("Warning-aware Track Master review");
