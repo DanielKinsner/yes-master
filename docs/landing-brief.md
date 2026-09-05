@@ -200,3 +200,15 @@ The diagrams do not imply one shared Standard/Advanced/Album export ceremony.
 The existing release resolver, download/signup components, current domain,
 noindex setting and native app remain unchanged. The final action retains
 availability details and optional signup status below the approved closing.
+
+### Follow-up atmosphere pass, 2026-09-04
+
+The owner requested a newly generated, more frontal Advanced laptop and more
+visual warmth throughout the marketing page after reviewing the first pass.
+That direction supersedes reuse of the angled Advanced chassis. The new blank
+laptop contains the original Advanced screenshot as a separate, unwarped HTML
+image. The sound section gains an editorial tape-machine photograph; the final
+invitation sits beside a musician listening in a studio. Neither scene is
+product proof or a testimonial. The original Sign-off image remains.
+Photos use responsive WebP variants and lazy loading. No product or gate changes.
+Prompts/provenance: `docs/landing-mockups/studio-refinement-artwork.md`.

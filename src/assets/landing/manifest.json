@@ -134,11 +134,39 @@
       "provenance": "YES_Master_Studio_Handoff/assets/hero/HERO_ASSETS.md. Supplied generated studio/chassis artwork; laptop screens are deterministic composites of owner screenshots."
     },
     {
-      "file": "src/assets/landing/studio/hero-device-advanced.webp",
-      "bytes": 746650,
-      "sha256": "e2ab5049486d3adee91aae71ca0f9f5b8bf09ff65f1f42558dfcbeb84a0dd8ca",
+      "file": "src/assets/landing/studio/advanced-laptop-front.webp",
+      "bytes": 91928,
+      "sha256": "737bf9de228d857067a500cc71ec22cbc63a88e43805fdb270a7c8da0ba3e799",
       "loading": "lazy",
-      "provenance": "YES_Master_Studio_Handoff/assets/hero/HERO_ASSETS.md. Supplied generated studio/chassis artwork; laptop screens are deterministic composites of owner screenshots."
+      "provenance": "Generated with built-in image_gen for the owner-requested atmosphere pass. Decorative photography or blank chassis only; no generated app UI. Prompts: docs/landing-mockups/studio-refinement-artwork.md."
+    },
+    {
+      "file": "src/assets/landing/studio/studio-listening.webp",
+      "bytes": 79646,
+      "sha256": "f2b9b902e8f84bbaa6f1ab1372e349b337d5b31bb9cdaa6a293f65f77de6c74e",
+      "loading": "lazy",
+      "provenance": "Generated with built-in image_gen for the owner-requested atmosphere pass. Decorative photography or blank chassis only; no generated app UI. Prompts: docs/landing-mockups/studio-refinement-artwork.md."
+    },
+    {
+      "file": "src/assets/landing/studio/studio-listening-768.webp",
+      "bytes": 28426,
+      "sha256": "64dfc0d43d482d21808d29d98c74ad1de6e96cbce265721a76a7d5c6156b03a9",
+      "loading": "lazy",
+      "provenance": "Generated with built-in image_gen for the owner-requested atmosphere pass. Decorative photography or blank chassis only; no generated app UI. Prompts: docs/landing-mockups/studio-refinement-artwork.md."
+    },
+    {
+      "file": "src/assets/landing/studio/studio-tape.webp",
+      "bytes": 98642,
+      "sha256": "4119651c25bc6cb18abdb70f8e9808cd2c9753cc334c89326b3d9c903bc0505c",
+      "loading": "lazy",
+      "provenance": "Generated with built-in image_gen for the owner-requested atmosphere pass. Decorative photography or blank chassis only; no generated app UI. Prompts: docs/landing-mockups/studio-refinement-artwork.md."
+    },
+    {
+      "file": "src/assets/landing/studio/studio-tape-768.webp",
+      "bytes": 35650,
+      "sha256": "c4f54015b360ccadb82a76b4828f8c73dfcacfa54e386b9fa58fbf1f5f339d8f",
+      "loading": "lazy",
+      "provenance": "Generated with built-in image_gen for the owner-requested atmosphere pass. Decorative photography or blank chassis only; no generated app UI. Prompts: docs/landing-mockups/studio-refinement-artwork.md."
     }
   ]
 }

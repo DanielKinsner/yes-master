@@ -1,7 +1,7 @@
 # Studio landing assets
 
 Received from the owner on 2026-09-04 in `YES_Master_Studio_Handoff`.
-The implementation copies these files byte-for-byte; it generates no new art.
+The original handoff files below are copied byte-for-byte.
 
 - `hero-bg-studio.webp`: generated blue-and-amber studio plate (1672 × 941).
 - `hero-device-standard.webp`, `hero-device-advanced.webp`: matching generated
@@ -22,3 +22,13 @@ they are not literal recovered layers of the flattened approved-theme image.
 Navigation, page copy, buttons, proof-point icons, report-field and delivery
 illustrations remain editable HTML/SVG. Text inside the actual app screenshots
 is part of the original capture. No private audio is included.
+
+## Owner-requested atmosphere refinement
+
+The follow-up adds `advanced-laptop-front.webp`, `studio-tape.webp` and
+`studio-listening.webp`, plus 768px photo variants. Built-in image generation
+created the new blank chassis and atmospheric photography. The frontal laptop
+uses the unchanged `advanced-ui.png` as a separate HTML image, without warping.
+The old `hero-device-advanced.webp` remains here but is no longer imported.
+Prompts, selected originals and encoding details:
+[`studio-refinement-artwork.md`](../../../../docs/landing-mockups/studio-refinement-artwork.md).

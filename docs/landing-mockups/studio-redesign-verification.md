@@ -63,3 +63,38 @@ configuration guard to fail. They were preserved in
 `test-output/studio-redesign/pre-existing/`, away from the config search path.
 The initial production browser run overlapped a Windows frontend rebuild;
 its transient 404 was discarded and the final lane is run after builds finish.
+
+## Follow-up: frontal Advanced hero and studio atmosphere
+
+The owner requested newly generated artwork and a more creative photographic
+pass. Inspected the current `https://yes-master.vercel.app/` in Chromium and
+compared the local design to the approved theme and attached Advanced detail.
+
+- Replaced the reused angled Advanced composite with a newly generated frontal
+  chassis. Its display is the unchanged source screenshot in a separate HTML
+  image. The old composite is no longer shipped.
+- Added a tactile tape-machine photo beside the sound introduction and a
+  musician listening at a studio desk behind the final invitation. Kept the
+  original Sign-off photograph. These are atmospheric illustrations, not app
+  proof, hardware-emulation claims or testimonials.
+- Preserved the supplied product copy and editable controls. Adapted the new
+  photo crops and typography for desktop, tablet and phone. The imagery ships
+  as lazy WebP with smaller responsive photo variants, totaling 334,292 bytes.
+- Fixed a narrow horizontal overflow caused by the full-width photo's margin,
+  and excess top spacing at the smallest breakpoint. Re-rendered at 1600,
+  1440, 1024, 768, 390 and 320px: every image loads and no horizontal overflow.
+
+Artwork prompts and selected originals: `studio-refinement-artwork.md`.
+Render evidence: `test-output/studio-refinement/renders/`; live-site inspection:
+`test-output/studio-refinement/live-site.png`. Built production browser evidence:
+`test-output/studio-refinement/headless/`.
+
+Follow-up checks: 82 frontend test files / 831 tests passed; production build,
+landing asset verification, 13-width landing browser suite (including axe,
+zoom, anchors, dialogs, FAQ and closed release/signup interactions) passed.
+The `/app` production browser suite also passed all 31 scenario/viewport checks.
+Windows MSI/NSIS build passed before the final CSS spacing correction; the
+final CSS is verified by the later production web build and browser suite.
+Rust format, warning-denying clippy, library and full integration lanes passed.
+Native files, DSP, feature flags, gate configuration, domain, noindex and
+dependencies have no diff from the previous pass. No deployment or push.

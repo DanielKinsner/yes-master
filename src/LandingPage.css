@@ -361,8 +361,8 @@ body {
   line-height: 1.8;
 }
 .studio-advanced-hero .studio-hero-inner {
-  height: 310px;
-  padding: 40px 0 30px;
+  height: clamp(365px, 30vw, 465px);
+  padding: 48px 0 30px;
 }
 .studio-advanced-hero .studio-backdrop {
   object-position: center 42%;
@@ -399,16 +399,49 @@ body {
   text-decoration: underline;
   padding-block: 7px;
 }
-.studio-advanced-hero .studio-device {
-  width: 65%;
-  top: -34px;
-  right: 8%;
+.studio-front-laptop {
+  position: absolute;
+  width: 67%;
+  right: -2%;
+  top: 12px;
+  aspect-ratio: 3 / 2;
+  z-index: 1;
+}
+.studio-laptop-chassis {
+  width: 100%;
+  height: auto;
+  /* Mask only the generated scenery. The real screenshot is a sibling layer. */
+  clip-path: polygon(
+    12.5% 3%,
+    87.5% 3%,
+    89.3% 4.8%,
+    89.3% 75.8%,
+    98.1% 89.3%,
+    98.1% 92%,
+    96% 93%,
+    4% 93%,
+    1.8% 92%,
+    1.8% 89.3%,
+    10.6% 75.8%,
+    10.6% 5.5%,
+    11.4% 3.8%
+  );
+}
+.studio-laptop-screen {
+  position: absolute;
+  left: 11.92%;
+  top: 6.35%;
+  width: 76.1%;
+  height: 66%;
+  object-fit: contain;
+  background: #000;
+  border-radius: 0.35%;
 }
 .studio-site .studio-side-note {
   position: absolute;
-  right: 0;
-  top: 75px;
-  font-size: 12px;
+  left: 0;
+  bottom: 34px;
+  font-size: 9px;
   line-height: 1.8;
   letter-spacing: 0.22em;
   color: #dda54e;
@@ -736,6 +769,60 @@ body {
   grid-template-columns: repeat(4, 1fr);
   gap: 18px;
 }
+.studio-sound {
+  padding-top: 0;
+  overflow: clip;
+}
+.studio-sound-editorial {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  align-items: center;
+  min-height: 440px;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+.studio-sound-intro {
+  position: relative;
+  z-index: 1;
+  padding-block: 60px;
+}
+.studio-sound-intro .studio-lead {
+  max-width: 480px;
+  margin-top: 24px;
+}
+.studio-site .studio-editorial-note {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  margin-top: 34px;
+}
+.studio-editorial-note span {
+  color: var(--studio-amber);
+  margin-right: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.studio-tape-scene {
+  position: relative;
+  align-self: stretch;
+  margin-right: min(-6vw, calc((1440px - 100vw) / 2));
+  overflow: clip;
+}
+.studio-tape-scene img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 72% center;
+  mask-image: linear-gradient(90deg, transparent, #000 25%);
+}
+.studio-tape-scene figcaption {
+  position: absolute;
+  bottom: 30px;
+  right: 7vw;
+  color: #f4d8a8;
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  text-shadow: 0 2px 6px #000;
+}
 .studio-style {
   position: relative;
   border: 1px solid var(--studio-line);
@@ -1028,11 +1115,51 @@ body {
 }
 .studio-closing {
   border-top: 1px solid var(--studio-line);
-  padding: 75px 0 25px;
+  padding: 0 0 25px;
   text-align: center;
   background:
     radial-gradient(ellipse at 75% 60%, #46301d22, transparent 70%),
     linear-gradient(#111b293d, #080b10);
+}
+.studio-closing-scene {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  text-align: left;
+}
+.studio-listening-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 48%;
+  z-index: -2;
+}
+.studio-closing-scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, #070c13d9, #070c1340 60%, transparent),
+    linear-gradient(0deg, #080b10, transparent 18%);
+}
+.studio-closing-copy {
+  width: 53%;
+  max-width: 730px;
+  padding-block: 90px 100px;
+}
+.studio-closing-copy .studio-lead {
+  max-width: 460px;
+  margin-block: 26px;
+}
+.studio-closing .studio-closing-copy .studio-actions {
+  justify-content: flex-start;
+}
+.studio-closing .studio-closing-copy .studio-footnote {
+  text-align: left;
+  max-width: 420px;
 }
 .studio-closing h2 {
   font-size: clamp(2.7rem, 4.8vw, 5rem);
@@ -1181,10 +1308,10 @@ body {
   .studio-advanced-hero .studio-hero-copy {
     width: 35%;
   }
-  .studio-advanced-hero .studio-device {
-    right: 0;
-    top: -5px;
-    width: 68%;
+  .studio-front-laptop {
+    right: -3%;
+    top: 35px;
+    width: 67%;
   }
   .studio-side-note {
     display: none;
@@ -1297,12 +1424,12 @@ body {
     max-width: 470px;
     font-size: 15px;
   }
-  .studio-advanced-hero .studio-device {
+  .studio-front-laptop {
     position: relative;
     width: 100%;
     right: auto;
     top: auto;
-    margin: -5px 0 -5%;
+    margin: 24px auto -3%;
   }
   .studio-advanced-hero .studio-backdrop {
     filter: brightness(0.4);
@@ -1316,6 +1443,43 @@ body {
   }
   .studio-section {
     padding-block: 60px;
+  }
+  .studio-sound {
+    padding-top: 0;
+  }
+  .studio-sound-editorial {
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-bottom: 30px;
+  }
+  .studio-sound-intro {
+    padding-block: 55px 25px;
+  }
+  .studio-tape-scene {
+    margin-inline: -5vw;
+    height: 280px;
+  }
+  .studio-tape-scene img {
+    object-position: center 60%;
+    mask-image: linear-gradient(#000, #000 85%, transparent);
+  }
+  .studio-tape-scene figcaption {
+    right: 5vw;
+  }
+  .studio-closing-copy {
+    width: 100%;
+    max-width: 600px;
+    padding-block: 65px 330px;
+  }
+  .studio-listening-image {
+    top: auto;
+    height: 100%;
+    object-position: 70% bottom;
+  }
+  .studio-closing-scene::after {
+    background:
+      linear-gradient(#080d15 5%, #080d15ef 36%, #080d1540 65%, transparent),
+      linear-gradient(0deg, #080b10, transparent 15%);
   }
   .studio-section-heading {
     grid-template-columns: 1fr;
@@ -1486,10 +1650,6 @@ body {
     width: 112%;
     margin-left: -8%;
   }
-  .studio-advanced-hero .studio-device {
-    width: 112%;
-    margin-left: -8%;
-  }
   .studio-advanced-hero .studio-hero-copy > p:not(.eyebrow) {
     font-size: 14px;
   }
@@ -1518,6 +1678,9 @@ body {
   }
   .studio-section {
     padding-block: 50px;
+  }
+  .studio-sound {
+    padding-top: 0;
   }
   .studio-workflow-grid .studio-detail-list {
     display: block;
@@ -1650,7 +1813,7 @@ body {
     font-size: 40px;
   }
   .studio-closing {
-    padding-top: 55px;
+    padding-top: 0;
   }
   .studio-footer > div {
     gap: 8px 18px;
@@ -1670,10 +1833,6 @@ body {
   .studio-hero .studio-device {
     width: 76%;
     right: -1%;
-  }
-  .studio-advanced-hero .studio-device {
-    width: 75%;
-    right: 12%;
   }
   .studio-hero-points {
     width: 100%;

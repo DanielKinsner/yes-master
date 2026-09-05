@@ -1,6 +1,7 @@
 import studio from "../assets/landing/studio/hero-bg-studio.webp";
 import standard from "../assets/landing/studio/hero-device-standard.webp";
-import advanced from "../assets/landing/studio/hero-device-advanced.webp";
+import advancedChassis from "../assets/landing/studio/advanced-laptop-front.webp";
+import advanced from "../assets/landing/studio/advanced-ui.png";
 import { resolveRelease, type ResolvedRelease } from "./release-config";
 import copy from "./page-copy.json";
 import { Icon } from "./StudioElements";
@@ -131,22 +132,27 @@ export default function Hero({
               </a>
             </div>
           </div>
-          <img
-            className="studio-device"
-            src={advanced}
-            width="1448"
-            height="1086"
-            alt="YES Master Advanced interface on the matching studio laptop"
-            loading="lazy"
-          />
+          <div className="studio-front-laptop">
+            <img
+              className="studio-laptop-chassis"
+              src={advancedChassis}
+              width="1536"
+              height="1024"
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+            />
+            <img
+              className="studio-laptop-screen"
+              src={advanced}
+              width="2048"
+              height="1129"
+              alt="YES Master Advanced interface, viewed head-on on a studio laptop"
+              loading="lazy"
+            />
+          </div>
           <p className="studio-side-note" aria-hidden="true">
-            SAME
-            <br />
-            SOUND.
-            <br />
-            MORE
-            <br />
-            POSSIBILITIES.
+            SAME SOUND. MORE POSSIBILITIES.
           </p>
         </div>
       </section>

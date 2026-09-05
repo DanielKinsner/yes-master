@@ -3,8 +3,10 @@ import clarity from "../assets/presets/clarity.png";
 import tape from "../assets/presets/tape.png";
 import oomph from "../assets/presets/oomph.png";
 import standard from "../assets/landing/studio/standard-ui.png";
+import tapeScene from "../assets/landing/studio/studio-tape.webp";
+import tapeSceneSmall from "../assets/landing/studio/studio-tape-768.webp";
 import copy from "./page-copy.json";
-import { Capture, SectionHeading } from "./StudioElements";
+import { Capture } from "./StudioElements";
 
 export default function SoundCharacter() {
   const c = copy.sound;
@@ -12,7 +14,32 @@ export default function SoundCharacter() {
   return (
     <section id="sound" className="studio-section studio-sound">
       <div className="studio-shell">
-        <SectionHeading {...c} />
+        <div className="studio-sound-editorial">
+          <div className="studio-sound-intro">
+            <p className="eyebrow">{c.eyebrow}</p>
+            <h2>
+              {c.headline[0]}
+              <em>{c.headline[1]}</em>
+            </h2>
+            <p className="studio-lead">{c.body}</p>
+            <p className="studio-editorial-note">
+              <span aria-hidden="true">01 — 04</span> A character for the sound
+              in your head.
+            </p>
+          </div>
+          <figure className="studio-tape-scene">
+            <img
+              src={tapeScene}
+              srcSet={`${tapeSceneSmall} 768w, ${tapeScene} 1536w`}
+              sizes="(max-width: 800px) 100vw, 55vw"
+              width="1536"
+              height="1024"
+              loading="lazy"
+              alt="Amber light across a brushed metal tape reel and its rollers"
+            />
+            <figcaption>CHARACTER YOU CAN FEEL.</figcaption>
+          </figure>
+        </div>
         <div className="studio-style-grid">
           {c.styles.map((style, i) => (
             <article
