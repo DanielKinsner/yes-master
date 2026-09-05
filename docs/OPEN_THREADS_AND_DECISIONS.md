@@ -489,3 +489,15 @@ cluster can mostly close in one sitting.**
 
 ### Branding (parked)
 22. **"Y.E.S. Master" / "Your Endgame Sound"** vs the current **"YES Master"** — a brand decision you parked. It cascades across PRODUCT.md, AGENTS.md/CLAUDE.md, README, and the landing copy. Until you call it, docs keep the current "YES Master" naming.
+
+### 2026-09-05 website analytics boundary
+
+- **OWNER DECISION:** Enable Vercel Web Analytics on the production
+  `yesdsp.com` marketing site.
+- This supersedes the earlier blanket landing-page prohibition on behavioral
+  analytics only for aggregate public-site page traffic. The desktop app's
+  no-telemetry promise remains unchanged.
+- The implementation must fail closed outside `https://yesdsp.com` and
+  `https://www.yesdsp.com`: no analytics in Tauri, `/app`, localhost, or Vercel
+  preview deployments. Initial scope is page analytics only, with no custom
+  product events or audio-derived data.

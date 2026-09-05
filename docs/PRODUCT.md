@@ -301,6 +301,13 @@ with an optional email signup beside it, *not* email-gated), and later the paid
 checkout. It is in scope for launch/agent work. See "Distribution & Business
 Model" below.
 
+**Website analytics boundary (owner-defined 2026-09-05):** the production
+`yesdsp.com` marketing surface may use Vercel Web Analytics for aggregate page
+traffic. Analytics is limited mechanically to the public HTTPS hostname: it is
+not loaded by the Tauri desktop app, the `/app` browser preview, localhost, or
+Vercel preview deployments. This does not change the product's no-telemetry
+contract; no installed-app behavior or audio leaves the machine.
+
 ## Distribution & Business Model
 
 - **Free public beta first.** YES Master launches as a free, time-boxed public

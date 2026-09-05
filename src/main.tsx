@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { isTauri } from "./lib/tauri-runtime";
+import { isPublicWebsiteAnalyticsUrl } from "./lib/web-analytics";
 
 function wantsAppShell(): boolean {
   if (isTauri()) return true;
@@ -22,10 +23,29 @@ async function boot() {
   }
 
   await import("./LandingPage.css");
+  const analyticsModule = isPublicWebsiteAnalyticsUrl(
+    new URL(window.location.href),
+  )
+    ? await import("@vercel/analytics/react")
+    : null;
   const { default: LandingPage } = await import("./LandingPage");
+  const Analytics = analyticsModule?.Analytics;
   root.render(
     <React.StrictMode>
       <LandingPage />
+      {Analytics ? (
+        <Analytics
+          beforeSend={(event) => {
+            try {
+              return isPublicWebsiteAnalyticsUrl(new URL(event.url))
+                ? event
+                : null;
+            } catch {
+              return null;
+            }
+          }}
+        />
+      ) : null}
     </React.StrictMode>,
   );
 }
