@@ -219,6 +219,17 @@ the CTA is still on screen.
 `prefers-reduced-motion: reduce`. Content that only exists after an animation
 is content some visitors never get.
 
+The studio motion check (`scripts/lib/landing-motion.mjs`, included in the
+landing lane) observes real animation events at 1440px and 390px. It requires
+two finite hero entrances and three one-time artwork reveals, no replay after
+scrolling, no animation at rest, immediate cancellation when reduced motion
+is enabled, and visible content/working navigation when IntersectionObserver
+is unavailable. Photos and text never begin hidden.
+
+The 200% zoom pass also forces Arial fallback metrics. The beta/FAQ layout
+uses its actual container width so desktop font substitutions cannot force
+its columns beyond the page when CSS zoom leaves media queries unchanged.
+
 **Indexability follows release state.** While no verified release exists the
 page must carry `noindex` — indexing a page whose download is closed sends
 search traffic somewhere it cannot be served. The check fails in *both*
@@ -521,3 +532,23 @@ cargo test --test preset_fingerprint write_owner_fingerprint_report -- --ignored
   `src-tauri/target/release/bundle/` and should not leave
   `src-tauri/target/release/produce_dialog_smoke.exe` registered as an app
   binary.
+
+### Studio marketing verification (2026-09-04)
+
+The two hero bands now use separate, byte-bound studio background and laptop
+assets. Eager Standard artwork plus the background/icon stays under the existing
+1.5 MB budget; the Advanced laptop and flat proof images are lazy. This
+supersedes the retired 1280w/3840w single-photo hero description above. Intrinsic
+source sizes are declared even for CSS crops, so native lazy loading can see
+the image before it decodes (the Intensity crop previously had a zero-height
+image outside the visible viewport).
+
+The headless landing lane visits each visible lazy plate in order, and tests
+closed album details and screenshot dialogs through their opening controls.
+At desktop and phone widths it opens every screenshot with Enter, waits for
+full-resolution image decode, closes with Escape and verifies focus returns.
+It also checks FAQ keyboard toggles and the explicitly unavailable demo action.
+The old minimum hero height tied to a single 45vw image is replaced by a
+non-collapse bound for the approved two-band composition. Overflow, all-axis
+nav acquisition, metadata, closed release, contrast and reduced-motion checks
+remain enforced.

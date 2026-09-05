@@ -50,12 +50,12 @@ describe("landing hierarchy (U6)", () => {
     // presence alone would let someone shuffle it back.
     const order = [
       "Your Endgame Sound.",
-      "Finished mix in. Finished master out.",
-      "One engine. Two rooms.",
-      "It reads the track before it touches it.",
-      "A record, not a folder of files.",
-      "What you are actually agreeing to.",
-      "Stop chasing the master.",
+      "Three decisions. One finished master.",
+      "Every move. While the music plays.",
+      "Find your sound. Keep your signature.",
+      "One record. Not just a folder of tracks.",
+      "A real tool. A straightforward deal.",
+      "Finish this track. Start the next.",
     ];
     const positions = order.map(positionOf);
     for (let i = 1; i < positions.length; i += 1) {
@@ -70,13 +70,13 @@ describe("landing hierarchy (U6)", () => {
     // Album-minded creators are inside the primary audience, not a second one.
     // Leading with a record-length workflow misrepresents what most visitors
     // came to do, which is finish one track.
-    expect(positionOf("A record, not a folder of files.")).toBeGreaterThan(
-      positionOf("One engine. Two rooms."),
+    expect(positionOf("One record. Not just a folder of tracks.")).toBeGreaterThan(
+      positionOf("Every move. While the music plays."),
     );
-    expect(positionOf("A record, not a folder of files.")).toBeGreaterThan(
-      positionOf("It reads the track before it touches it."),
+    expect(positionOf("One record. Not just a folder of tracks.")).toBeGreaterThan(
+      positionOf("Find your sound. Keep your signature."),
     );
-    expect(text).toContain("Album Master lives in Advanced");
+    expect(text).toContain("ALBUM MASTER / IN ADVANCED");
   });
 
   it("says nothing about mobile at all", () => {
@@ -160,29 +160,26 @@ describe("prohibited claims (U6)", () => {
 
 describe("required claims (U6)", () => {
   it("makes the adaptive-restraint pitch without an amateur-rescue frame", () => {
-    // Restraint, not rescue: plenty of tracks arrive already processed on
+    // Restraint, not rescue: plenty of tracks arrive Already-processed on
     // purpose, and the shipped Tier-1 guardrails are reduce-only.
-    expect(text).toContain("reads what your mix already has");
-    expect(text).toContain("eases its own moves");
-    expect(text).toContain("already processed");
-    expect(text).toMatch(/works with what is there rather than fighting it/i);
+    expect(text).toContain("Source analysis can ease selected boosts");
+    expect(text).toContain("compression density when your mix calls for restraint");
+    expect(text).toContain("Already-processed");
+    expect(text).toMatch(/Already-processed tracks are welcome/i);
     // "Rescue" framing would read as a verdict on the visitor's mix.
     expect(text).not.toMatch(/rescue|salvage|repair your/i);
   });
 
-  it("addresses the audiences in the settled order", () => {
-    const independent = positionOf("independent artists");
-    const emerging = positionOf("first few tracks");
-    const engineers = positionOf("engineers who want the whole console");
-    expect(emerging).toBeGreaterThan(independent);
-    expect(engineers).toBeGreaterThan(emerging);
+  it("keeps the single-track workflow before album depth", () => {
+    expect(positionOf("Choose a style.")).toBeLessThan(positionOf("One record."));
+    expect(text).toContain("finished mix");
   });
 
   it("presents styles as starting points under one safety system", () => {
-    expect(text).toContain("Styles are starting points, not lanes.");
-    expect(text).toMatch(/same loudness landing and the same safety stages/i);
+    expect(text).toContain("Start with a character, not a genre label.");
+    expect(text).toMatch(/same loudness and safety stages/i);
     expect(text).toMatch(
-      /Choosing a bolder character never means switching the checks off/i,
+      /Every style uses the same loudness and safety stages/i,
     );
     for (const style of ["Universal", "Clarity", "Tape", "Oomph"]) {
       expect(text).toContain(style);
@@ -191,28 +188,28 @@ describe("required claims (U6)", () => {
 
   it("states the beta arrangement, including the part people assume is worse", () => {
     // Voluntary feedback.
-    expect(text).toMatch(/Telling us things is optional/i);
-    expect(text).toMatch(/Nothing is held back from anyone who never does/i);
+    expect(text).toMatch(/Feedback is optional/i);
+    expect(text).toMatch(/No email gate/i);
 
     // Non-revoking end (R26/KTD13). "Beta over" normally means something worse
     // than what this actually does, so it is said plainly.
-    expect(text).toMatch(/a build you already installed keeps working/i);
+    expect(text).toMatch(/An installed beta build keeps working/i);
     expect(text).toMatch(/no kill switch/i);
-    expect(text).toMatch(/nothing expires on your machine/i);
+    expect(text).toMatch(/installers can be withdrawn/i);
 
     // Ungated download.
-    expect(text).toMatch(/not gated behind an email address/i);
+    expect(text).toMatch(/No email gate/i);
     expect(text).toMatch(/no YES Master account/i);
   });
 
   it("states the settled price model and stops there", () => {
     expect(text).toContain("$29");
     expect(text).toContain("$49");
-    expect(text).toMatch(/one-time purchase/i);
+    expect(text).toMatch(/one purchase/i);
     expect(text).toMatch(/not a subscription/i);
     // The window exists but its terms do not, so the page says exactly that.
     expect(text).toMatch(
-      /founder window's dates and terms are announced when they are decided/i,
+      /Founder-window dates and terms are announced when confirmed/i,
     );
     expect(text).not.toMatch(/\bbeta (?:testers|users) (?:get|keep)\b/i);
   });
@@ -224,13 +221,12 @@ describe("required claims (U6)", () => {
     expect(text).toContain("−1 dBTP");
   });
 
-  it("labels the illustrative receipt as an example", () => {
-    // C-07. These numbers are hand-authored. Rendering them unmarked, in a
-    // block that looks exactly like product output, is a fabricated
-    // measurement — the failure the evidence matrix exists to catch.
-    const label = positionOf("Example receipt");
-    const firstNumber = positionOf("-11.0 LUFS");
-    expect(label).toBeLessThan(firstNumber);
+  it("labels the receipt illustration and invents no readings", () => {
+    expect(positionOf("Report fields, illustrated.")).toBeLessThan(positionOf("Delivered loudness"));
+    expect(text).toContain("Actual measurements populate after rendering.");
+    expect(text).not.toMatch(/-11\.0 LUFS|All good|Ready to ship/);
+    expect(text).toContain("Filename, delivered loudness, and a Show file action");
+    expect(text).toContain("Warning-aware Track Master review");
   });
 });
 

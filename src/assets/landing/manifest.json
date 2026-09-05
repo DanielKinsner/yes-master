@@ -67,35 +67,39 @@
   "ownerCaptures": [
     {
       "id": "owner-standard-session",
-      "file": "src/assets/landing/owner-standard-session.jpg",
-      "phoneFile": "src/assets/landing/owner-standard-session-1280.jpg",
+      "file": "src/assets/landing/studio/standard-ui.png",
       "view": "standard",
-      "capturedAt": "2026-09-01",
+      "capturedAt": null,
       "session": "The Machine Restocks on Friday",
-      "bytes": 198055,
-      "sha256": "a2e1d274b28c90c7b63870081c29c1d78423f64b55b4583cfd8cccd88d6289cc",
+      "bytes": 1974679,
+      "sha256": "28878f678a4c34b5bf0030ff9f06ab1a0ca8a3e680d1cf2932d8d40cc32a800e",
       "dimensions": {
         "width": 2048,
-        "height": 1147
+        "height": 1153
       },
       "loading": "lazy",
-      "alt": "YES Master Standard view during a real session, meters live"
+      "alt": "YES Master Standard view during a real session, meters live",
+      "receivedAt": "2026-09-04",
+      "provenance": "Unchanged owner capture supplied in YES_Master_Studio_Handoff/assets. Snapshot, not a claim of current native output.",
+      "captureDateNote": "Capture date was not recorded in the supplied handoff; receivedAt records receipt, not capture."
     },
     {
       "id": "owner-advanced-session",
-      "file": "src/assets/landing/owner-advanced-session.jpg",
-      "phoneFile": "src/assets/landing/owner-advanced-session-1280.jpg",
+      "file": "src/assets/landing/studio/advanced-ui.png",
       "view": "advanced",
-      "capturedAt": "2026-09-01",
+      "capturedAt": null,
       "session": "The Machine Restocks on Friday",
-      "bytes": 283458,
-      "sha256": "0571fcba0241acf8f000a0da44da4fe528bef2897618478ccf7fad19bd53c230",
+      "bytes": 2011263,
+      "sha256": "3bb289bd47120b2058fe50b151c9a1e743338ed32bb8057160fbf88fb7e0e13e",
       "dimensions": {
         "width": 2048,
-        "height": 1151
+        "height": 1129
       },
       "loading": "lazy",
-      "alt": "YES Master Advanced view during a real session, meters live"
+      "alt": "YES Master Advanced view during a real session, meters live",
+      "receivedAt": "2026-09-04",
+      "provenance": "Unchanged owner capture supplied in YES_Master_Studio_Handoff/assets. Snapshot, not a claim of current native output.",
+      "captureDateNote": "Capture date was not recorded in the supplied handoff; receivedAt records receipt, not capture."
     },
     {
       "id": "owner-album-session",
@@ -112,6 +116,57 @@
       },
       "loading": "lazy",
       "alt": "YES Master Album Master view during a real session, meters live"
+    }
+  ],
+  "studioArtwork": [
+    {
+      "file": "src/assets/landing/studio/hero-bg-studio.webp",
+      "bytes": 98686,
+      "sha256": "1304a1b4444fbe3fe2d778772325da6aa2954a659e4b47e57f3651803893c32a",
+      "loading": "eager",
+      "provenance": "YES_Master_Studio_Handoff/assets/hero/HERO_ASSETS.md. Supplied generated studio/chassis artwork; laptop screens are deterministic composites of owner screenshots."
+    },
+    {
+      "file": "src/assets/landing/studio/hero-device-standard.webp",
+      "bytes": 687476,
+      "sha256": "e56e06b0a205c5d4bbf798fc6401b0c257eb000ac582f4e04f9370167c9e2601",
+      "loading": "eager",
+      "provenance": "YES_Master_Studio_Handoff/assets/hero/HERO_ASSETS.md. Supplied generated studio/chassis artwork; laptop screens are deterministic composites of owner screenshots."
+    },
+    {
+      "file": "src/assets/landing/studio/advanced-laptop-front.webp",
+      "bytes": 91928,
+      "sha256": "737bf9de228d857067a500cc71ec22cbc63a88e43805fdb270a7c8da0ba3e799",
+      "loading": "lazy",
+      "provenance": "Generated with built-in image_gen for the owner-requested atmosphere pass. Decorative photography or blank chassis only; no generated app UI. Prompts: docs/landing-mockups/studio-refinement-artwork.md."
+    },
+    {
+      "file": "src/assets/landing/studio/studio-listening.webp",
+      "bytes": 79646,
+      "sha256": "f2b9b902e8f84bbaa6f1ab1372e349b337d5b31bb9cdaa6a293f65f77de6c74e",
+      "loading": "lazy",
+      "provenance": "Generated with built-in image_gen for the owner-requested atmosphere pass. Decorative photography or blank chassis only; no generated app UI. Prompts: docs/landing-mockups/studio-refinement-artwork.md."
+    },
+    {
+      "file": "src/assets/landing/studio/studio-listening-768.webp",
+      "bytes": 28426,
+      "sha256": "64dfc0d43d482d21808d29d98c74ad1de6e96cbce265721a76a7d5c6156b03a9",
+      "loading": "lazy",
+      "provenance": "Generated with built-in image_gen for the owner-requested atmosphere pass. Decorative photography or blank chassis only; no generated app UI. Prompts: docs/landing-mockups/studio-refinement-artwork.md."
+    },
+    {
+      "file": "src/assets/landing/studio/studio-tape.webp",
+      "bytes": 98642,
+      "sha256": "4119651c25bc6cb18abdb70f8e9808cd2c9753cc334c89326b3d9c903bc0505c",
+      "loading": "lazy",
+      "provenance": "Generated with built-in image_gen for the owner-requested atmosphere pass. Decorative photography or blank chassis only; no generated app UI. Prompts: docs/landing-mockups/studio-refinement-artwork.md."
+    },
+    {
+      "file": "src/assets/landing/studio/studio-tape-768.webp",
+      "bytes": 35650,
+      "sha256": "c4f54015b360ccadb82a76b4828f8c73dfcacfa54e386b9fa58fbf1f5f339d8f",
+      "loading": "lazy",
+      "provenance": "Generated with built-in image_gen for the owner-requested atmosphere pass. Decorative photography or blank chassis only; no generated app UI. Prompts: docs/landing-mockups/studio-refinement-artwork.md."
     }
   ]
 }

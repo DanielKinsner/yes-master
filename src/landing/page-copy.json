@@ -1,0 +1,191 @@
+{
+  "hero": {
+    "eyebrow": "YES MASTER",
+    "headline": [
+      "One-click mastering.",
+      "Your Endgame Sound."
+    ],
+    "body": "Drop in your finished mix, choose a style, and hear the mastering chain as you shape it. Start simple, or open Advanced for deeper control—all running locally on your Mac or Windows PC.",
+    "primary_unavailable": "Explore the beta",
+    "primary_available": "Download the free beta",
+    "secondary": "See how it works",
+    "micro": "Real-time processing. No audio upload. No YES Master account."
+  },
+  "workflow": {
+    "eyebrow": "STANDARD / THE FAST WAY IN",
+    "headline": [
+      "Three decisions.",
+      "One finished master."
+    ],
+    "body": "Drop in your finished mix. Choose the character, set the intensity, and pick a loudness. Listen as you go.",
+    "steps": [
+      {
+        "title": "Choose a style.",
+        "body": "Universal, Clarity, Tape or Oomph. Four distinct starting points for the sound in your head."
+      },
+      {
+        "title": "Make it yours.",
+        "body": "Turn Intensity from a light touch to a stronger character. Hear the change while the track plays."
+      },
+      {
+        "title": "Set the loudness.",
+        "body": "Low, Medium or High. Then hit Create Master to write a separate WAV."
+      }
+    ],
+    "support_title": "Less setup. More listening.",
+    "support_body": "Standard keeps delivery simple. Custom formats live in Advanced.",
+    "specs": [
+      "44.1 kHz sample rate",
+      "24-bit WAV output",
+      "Limiter ceiling set to −1 dBTP"
+    ]
+  },
+  "advanced": {
+    "eyebrow": "ADVANCED / WHEN YOU WANT THE WHOLE CONSOLE",
+    "headline": [
+      "Every move.",
+      "While the music plays."
+    ],
+    "body": "Shape tone, dynamics, width and warmth without stopping the track. Flip between Original and Mastered at the same playhead.",
+    "ab_note": "Turn on Volume Match for a level-matched audition. It changes listening level, never the exported master.",
+    "details": [
+      {
+        "title": "Shape the curve. Hear the difference.",
+        "body": "A seven-band visual EQ and tone controls put the mix’s balance in your hands."
+      },
+      {
+        "title": "Let it breathe. Or lean into it.",
+        "body": "Use Preset compression, take over in Manual, or switch creative compression Off. Limiter and loudness stages stay in the path."
+      }
+    ],
+    "support": [
+      "Eight styles",
+      "Width and warmth",
+      "Custom delivery formats"
+    ]
+  },
+  "export": {
+    "eyebrow": "EXPORT / KNOW WHAT YOU MADE",
+    "headline": [
+      "Your ears decide.",
+      "The measurements explain."
+    ],
+    "body": "A target is a setting. A receipt describes the rendered file. YES Master checks the result so you can judge the sound with the facts in front of you.",
+    "details": [
+      {
+        "title": "Loudness, delivered.",
+        "body": "See the measured result, not just the target you selected."
+      },
+      {
+        "title": "Peak and dynamic range.",
+        "body": "Understand the headroom and movement in the rendered audio."
+      },
+      {
+        "title": "Checks with context.",
+        "body": "Advanced review makes quality warnings visible without treating every creative choice as a mistake."
+      }
+    ],
+    "source_note": "Your source stays untouched. Exports are written separately.",
+    "standard": "Filename, delivered loudness, and a Show file action. Genuine integrity problems remain visible.",
+    "advanced": "Warning-aware Track Master review and a detailed post-render receipt.",
+    "report_visual": "Use an actual export receipt capture. The board is a labelled field illustration, not a report or a completed test."
+  },
+  "sound": {
+    "eyebrow": "FOUR STANDARD STYLES / YOUR CALL",
+    "headline": [
+      "Find your sound.",
+      "Keep your signature."
+    ],
+    "body": "Start with a character, not a genre label. Every style uses the same loudness and safety stages. Intensity is how you make it yours.",
+    "styles": [
+      {
+        "name": "Universal",
+        "body": "A balanced starting point that keeps the focus on your mix."
+      },
+      {
+        "name": "Clarity",
+        "body": "An open character for more definition at the top and focus below."
+      },
+      {
+        "name": "Tape",
+        "body": "A warmer weight and a softer edge to the transients."
+      },
+      {
+        "name": "Oomph",
+        "body": "A bolder starting point with low-end weight and forward energy."
+      }
+    ],
+    "intensity_headline": [
+      "A little polish.",
+      "Or a lot of character."
+    ],
+    "intensity_body": "Choose a style, then shape how strongly it comes through. The full chain runs as you listen.",
+    "adaptive_heading": "It also knows when to do less.",
+    "adaptive_body": "Source analysis can ease selected boosts and compression density when your mix calls for restraint. Already-processed tracks are welcome.",
+    "advanced_note": "Advanced adds Spatial, Warmth, Punch and Loud."
+  },
+  "album": {
+    "eyebrow": "ALBUM MASTER / IN ADVANCED",
+    "headline": [
+      "One record.",
+      "Not just a folder of tracks."
+    ],
+    "body": "Set a shared direction for the album, then make room for the tracks that need their own treatment. One delivery format brings the exports together.",
+    "details": [
+      {
+        "title": "One delivery format.",
+        "body": "Mixed sample rates resolve to one album-wide rate and bit depth. Channel handling keeps the delivery consistent."
+      },
+      {
+        "title": "Keep an exception an exception.",
+        "body": "Override a track to use its own sound settings and loudness target while retaining the album’s delivery format."
+      },
+      {
+        "title": "See each result.",
+        "body": "Individual masters, a continuous WAV, a manifest and per-track receipts keep the record’s delivery inspectable."
+      }
+    ],
+    "limits": "Audio mastering and delivery—not DDP authoring. No cue sheets, ISRC metadata or guaranteed gapless playback.",
+    "project_title": "Pick up where you left off.",
+    "project_body": "Save and reopen your session. Project files reference the original audio on disk."
+  },
+  "beta": {
+    "eyebrow": "THE BETA / THE ARRANGEMENT",
+    "headline": [
+      "A real tool.",
+      "A straightforward deal."
+    ],
+    "body": "Free during the beta. No email gate. At paid launch, one purchase—not a subscription.",
+    "pricing": "Planned launch pricing: $29 founder / $49 standard. Founder-window dates and terms are announced when confirmed.",
+    "faq": [
+      {
+        "q": "Does it need an account?",
+        "a": "No YES Master account. Processing runs locally on your Mac or Windows PC; audio is not uploaded for mastering."
+      },
+      {
+        "q": "What does Standard export?",
+        "a": "A 44.1 kHz / 24-bit WAV, with the limiter ceiling set to −1 dBTP. Advanced adds custom delivery choices."
+      },
+      {
+        "q": "Does the beta expire on my computer?",
+        "a": "An installed beta build keeps working when the beta closes. The installers can be withdrawn; the build has no kill switch."
+      },
+      {
+        "q": "How do I send feedback?",
+        "a": "Feedback is optional. Structured reports go through GitHub, which requires a GitHub account to post."
+      }
+    ]
+  },
+  "closing": {
+    "eyebrow": "YOUR ENDGAME SOUND",
+    "headline": [
+      "Finish this track.",
+      "Start the next."
+    ],
+    "body": "From the first comparison to the final WAV. Less setup between you and the sound you want.",
+    "primary_unavailable": "Explore the beta",
+    "primary_available": "Download the free beta",
+    "secondary": "See the workflow",
+    "micro": "Mac and Windows. Runs locally. No YES Master account."
+  }
+}

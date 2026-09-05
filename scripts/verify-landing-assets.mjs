@@ -164,12 +164,25 @@ for (const capture of manifest.ownerCaptures ?? []) {
 // 4. HEAVY. The budget covers everything the browser fetches before the visitor
 //    does anything — captures plus the hero art that is not a capture.
 const EAGER_UNCAPTURED = [
-  "src/assets/landing/hero-control-room-studio.jpg",
-  "src/assets/landing/icon-realtime.png",
-  "src/assets/landing/icon-local-first.png",
-  "src/assets/landing/icon-release-ready.png",
+  "src/assets/landing/studio/hero-bg-studio.webp",
+  "src/assets/landing/studio/hero-device-standard.webp",
   "src/assets/landing/yes-master-icon.png",
 ];
+// Owner-approved studio artwork remains byte-bound too, including the lazy
+// Advanced laptop. This is provenance, not native UI or listening evidence.
+for (const asset of manifest.studioArtwork ?? []) {
+  try {
+    const bytes = read(asset.file);
+    if (sha256(bytes) !== asset.sha256 || bytes.length !== asset.bytes) {
+      failures.push(`${asset.file}: studio artwork differs from the approved bytes`);
+    }
+    if (!landingSources.includes(asset.file.replace(/^src\/assets\/landing\//, "../assets/landing/"))) {
+      failures.push(`${asset.file}: studio artwork is not imported by the landing page`);
+    }
+  } catch {
+    failures.push(`${asset.file}: approved studio artwork is missing`);
+  }
+}
 const eagerDetail = [];
 for (const file of EAGER_UNCAPTURED) {
   try {

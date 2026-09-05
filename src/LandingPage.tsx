@@ -7,39 +7,14 @@ import SoundCharacter from "./landing/SoundCharacter";
 import AlbumProof from "./landing/AlbumProof";
 import BetaTerms from "./landing/BetaTerms";
 import FinalCTA from "./landing/FinalCTA";
+import useStudioMotion from "./landing/useStudioMotion";
 
-/*
- * The YES Master landing page, top to bottom.
- *
- * Each line below is a section of the page. Open any one in src/landing/
- * to see (and edit) exactly what it shows. There is no hidden styling —
- * the look lives as Tailwind classes right inside each component, and the
- * brand colors/fonts are defined once in LandingPage.css.
- *
- * ORDER IS THE ARGUMENT (U6). One visitor hierarchy, in this sequence:
- *
- *   Hero            problem and outcome
- *   Workflow        what you actually do — three decisions
- *   ProofDeck       credible product proof, Standard as hero / Advanced as depth
- *   SignOff         the one photograph, full-bleed
- *   SoundCharacter  character controls and adaptive restraint
- *   AlbumProof      depth proof, deliberately LOW — not a second audience
- *   BetaTerms       what the arrangement is, before anyone downloads
- *   FinalCTA        the action
- *
- * There is no mobile section. It used to sit SECOND under the hero (six
- * present-tense feature cards for a product nobody could obtain), was cut
- * to one date-free sentence low on the page (U6), and on 2026-09-01 the
- * owner removed the sentence too: the page says nothing about mobile at
- * all. Do not bring it back in any size.
- */
+// Marketing only. Studio styles are scoped to this shell; native UI and its
+// stylesheet, feature flags, release configuration and signup stay independent.
 export default function LandingPage() {
+  const root = useStudioMotion();
   return (
-    <div className="min-h-svh bg-night text-ink">
-      {/* U8 — skip link. The nav is fixed and comes before everything, so a
-          keyboard or screen-reader visitor otherwise tabs the whole bar on
-          every page load. Visually hidden until focused, then it is the first
-          thing on screen rather than a phantom focus ring. */}
+    <div ref={root} className="studio-site min-h-svh bg-night text-ink">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:font-extrabold focus:text-night"
@@ -48,14 +23,14 @@ export default function LandingPage() {
       </a>
       <Nav />
       <main id="main">
-      <Hero />
-      <Workflow />
-      <ProofDeck />
-      <SignOff />
-      <SoundCharacter />
-      <AlbumProof />
-      <BetaTerms />
-      <FinalCTA />
+        <Hero />
+        <Workflow />
+        <ProofDeck />
+        <SignOff />
+        <SoundCharacter />
+        <AlbumProof />
+        <BetaTerms />
+        <FinalCTA />
       </main>
     </div>
   );

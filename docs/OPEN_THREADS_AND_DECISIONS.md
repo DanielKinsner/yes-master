@@ -7,6 +7,16 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **2026-09-04 — Studio marketing website publication AUTHORIZED.** The
+> owner approved the redesigned studio site and explicitly requested subtle
+> animation, push/merge to `main`, and publication as the new live website.
+> This supersedes the earlier no-deploy instruction for the marketing design.
+> The existing `yes-master.vercel.app` domain, noindex, closed installer and
+> signup gates remain unchanged. This is not authorization to activate the beta,
+> tag/publish installers, spend on release services, retune DSP or enable flags.
+> Native listening/release gates below remain open. Visual/artwork evidence:
+> `docs/landing-mockups/studio-redesign-verification.md`.
+
 > **2026-09-04 — Correctness work authorized; release activity parked.**
 > Owner requested implementation of the fresh solo audit findings, with
 > regression tests, and deferred listening to **one combined pass toward the

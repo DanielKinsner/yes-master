@@ -1,7 +1,7 @@
 import plate from "../assets/landing/plate-signoff.jpg";
 import plate1500 from "../assets/landing/plate-signoff-1500.jpg";
 
-// The one photograph on the page (owner-generated 2026-09-01), full-bleed
+// The original photograph (owner-generated 2026-09-01), full-bleed
 // between the proof and the character controls. Mood, not evidence: it shows
 // no UI and makes no claim. Fades into the page at the bottom so the section
 // hands off to the next one instead of ending on a hard edge.

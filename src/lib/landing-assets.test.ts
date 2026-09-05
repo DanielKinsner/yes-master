@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+import { createElement } from "react";
+import LandingPage from "../LandingPage";
 
 // ---------------------------------------------------------------------------
 // U7 — marketing proof contract.
@@ -74,51 +77,59 @@ describe("landing marketing proof (U7)", () => {
     const owners = manifest.ownerCaptures as Array<Record<string, unknown>>;
     expect(owners.length).toBe(3);
     for (const capture of owners) {
-      expect(capture.sha256, `${capture.id} has no hash`).toMatch(/^[a-f0-9]{64}$/);
-      expect(capture.capturedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(capture.sha256, `${capture.id} has no hash`).toMatch(
+        /^[a-f0-9]{64}$/,
+      );
+      expect(capture.capturedAt ?? capture.receivedAt).toMatch(
+        /^\d{4}-\d{2}-\d{2}$/,
+      );
       expect(capture.session, `${capture.id} names no session`).toBeTruthy();
       expect(capture.alt, `${capture.id} has no alt`).toBeTruthy();
     }
-    expect(manifest.ownerCapturesNote).toMatch(/nothing mechanical proves them current/i);
+    expect(manifest.ownerCapturesNote).toMatch(
+      /nothing mechanical proves them current/i,
+    );
   });
 
-  it("lazy-loads every below-fold plate and declares its intrinsic size", () => {
-    const proof = landingSource("ProofDeck.tsx") + landingSource("AlbumProof.tsx");
-    const imgTags = proof.match(/<img[\s\S]*?\/>/g) ?? [];
-    expect(imgTags.length).toBe(3);
-    const owners = manifest.ownerCaptures as Array<{
-      file: string;
-      dimensions: { width: number; height: number };
-    }>;
-    for (const tag of imgTags) {
-      expect(tag, "below-fold proof must be lazy").toContain('loading="lazy"');
-      expect(tag).toMatch(/alt="[^"]+"/);
-      // Without width/height the image has no reserved box and its arrival
-      // shoves the page around — the thing lazy loading is supposed to avoid
-      // making worse. The reserved box must be the file's real size.
-      const width = Number(tag.match(/width=\{(\d+)\}/)?.[1]);
-      const height = Number(tag.match(/height=\{(\d+)\}/)?.[1]);
-      expect(
-        owners.some((o) => o.dimensions.width === width && o.dimensions.height === height),
-        `no owner capture is ${width}x${height}`,
-      ).toBe(true);
-    }
-    // Nothing in the manifest is dead weight: every owner capture is on the page.
-    for (const capture of owners) {
-      expect(proof).toContain(capture.file.replace("src/assets/landing/", "../assets/landing/"));
+  it("lazy-loads the published proof with intrinsic sizes and alt text", () => {
+    const host = document.createElement("div");
+    host.innerHTML = renderToStaticMarkup(createElement(LandingPage));
+    const images = Array.from(
+      host.querySelectorAll<HTMLImageElement>(".studio-capture-button img"),
+    );
+    expect(images.length).toBeGreaterThanOrEqual(6);
+    for (const image of images) {
+      expect(image.getAttribute("loading")).toBe("lazy");
+      expect(image.alt.length).toBeGreaterThan(5);
+      expect(Number(image.getAttribute("width"))).toBeGreaterThan(0);
+      expect(Number(image.getAttribute("height"))).toBeGreaterThan(0);
     }
   });
 
-  it("serves a smaller hero to small screens", () => {
-    const hero = landingSource("Hero.tsx");
-    // Two variants: a 1280w one for phones and the full-width master. The
-    // master's width follows the source art (2560 for the original photo,
-    // 1672 for the 2026-08-18 console render), so assert the shape — a phone
-    // variant plus a strictly wider one — rather than a magic number.
-    expect(hero).toContain("srcSet");
-    expect(hero).toContain("1280w");
-    const widths = [...hero.matchAll(/(\d{3,4})w\b/g)].map((m) => Number(m[1]));
-    expect(Math.max(...widths)).toBeGreaterThan(1280);
+  it("uses separate studio and laptop layers within the eager image budget", () => {
+    const host = document.createElement("div");
+    host.innerHTML = renderToStaticMarkup(createElement(LandingPage));
+    const hero = host.querySelector("#top")!;
+    expect(hero.querySelectorAll("img")).toHaveLength(2);
+    expect(hero.querySelector("h1")?.textContent).toContain(
+      "One-click mastering.",
+    );
+    expect(
+      hero.querySelector("img.studio-device")?.getAttribute("src"),
+    ).toContain("hero-device-standard");
+    // A generated blank chassis must never replace the real product capture.
+    expect(
+      host.querySelector(".studio-laptop-chassis")?.getAttribute("src"),
+    ).toContain("advanced-laptop-front");
+    expect(
+      host.querySelector(".studio-laptop-screen")?.getAttribute("src"),
+    ).toContain("advanced-ui.png");
+    const eager = manifest.studioArtwork.filter(
+      (a: { loading: string }) => a.loading === "eager",
+    );
+    expect(
+      eager.reduce((total: number, a: { bytes: number }) => total + a.bytes, 0),
+    ).toBeLessThan(1_500_000);
   });
 
   it("keeps no mobile UI image on the desktop-beta page", () => {
