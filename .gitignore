@@ -95,3 +95,6 @@ Thumbs.db
 docs/READING_THE_METERS.md
 
 .vercel
+
+# Local studio design handoff; production assets are tracked in src/assets/landing/.
+/docs/landing-mockups/assets/YES_Master_Studio_Handoff/
