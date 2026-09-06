@@ -398,7 +398,7 @@ The owner requests **MP3** as a smaller-file, broadly playable choice within the
 Before implementation, write a bounded specification covering:
 
 1. Track versus Album availability, MP3 quality controls/default, and how format selection affects Standard's currently fixed delivery promise.
-2. Keep MP3 on the normal mastering export path, independent of the audition A/B side. Preserve 0% Intensity and delivery behavior; no Original-source export choice or new bypass semantics.
+2. Keep MP3 on the normal mastering export path, independent of the audition A/B side. Use the user's chosen preset, Intensity and controls just like WAV; selecting MP3 must not reset settings or select 0%. The owner's 0% example was only a hypothetical workaround, not a default or requirement. No Original-source export choice or new bypass semantics.
 3. Encoder choice and distribution on Windows/Mac, installation/offline behavior, and applicable packaging/redistribution requirements. Verify current primary documentation when choosing the dependency; this plan has not selected one.
 4. Extension/filter handling, supported channel/rate conversion, output destination safety, cancellation, failure cleanup, and persistent project/settings compatibility.
 5. What the receipt measures. MP3 can add padding/delay and change decoded peaks. Do not label pre-encode PCM figures as measurements of the delivered encoded file. Define and verify the delivered-file checks and user copy.

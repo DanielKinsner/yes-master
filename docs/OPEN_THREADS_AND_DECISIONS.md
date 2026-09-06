@@ -15,6 +15,10 @@ close rather than letting them rot in scattered docs.
 > Intensity; do not add bypass or special workaround explanations. Normal meters
 > and export claims remain truthful. Track/Album scope and quality defaults are
 > still pending; MP3 is not implemented by this decision.
+> **Explicit follow-up clarification:** 0% was only a hypothetical workaround,
+> not an MP3 default or requirement. MP3 uses the user's chosen preset, Intensity
+> and controls just like WAV. Selecting the encoding never resets mastering
+> settings or selects 0%.
 
 > **2026-09-05 — Album manifest presentation settled in owner interview.**
 > The owner accepted `metadata/manifest.json`, with the concern that users

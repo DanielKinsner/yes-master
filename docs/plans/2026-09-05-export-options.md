@@ -40,6 +40,10 @@ meters remain truthful. Proposed first scope: Standard and Advanced Track export
 320 kbps default with a quality selector. Track first versus Track and Album
 together, and quality/surface scope, still need an owner answer.
 
+The owner explicitly clarified that 0% was only an example of a possible user
+workaround. MP3 uses the chosen preset, Intensity and controls just like WAV;
+format selection must not reset mastering settings or select 0%.
+
 Encoder feasibility candidate: embedded LAME via a maintained Rust wrapper,
 bundled for offline use. No new dependency has been selected or installed.
 The [wrapper source and usage](https://github.com/DoumanAsh/mp3lame-encoder) and
