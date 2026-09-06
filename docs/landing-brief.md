@@ -11,21 +11,18 @@
 YES Master is a local-first desktop app that masters your finished track or
 album — and shows you exactly what it did.
 
-## Hero copy (pick or mix)
+## Hero copy — review pass, 2026-09-05
 
-**Live (2026-09-01):** One-click mastering. Your Endgame Sound.
-(Two beats, one line each, pinned so neither can rag. The name is the promise:
-Y.E.S. = Your Endgame Sound, carried by title case alone — a colour shift and a
-glow were both tried and both announced it.)
+Brand eyebrow: **Your Endgame Sound.**
+Headline: **Master your music. Hear every move.**
+Audience: **For artists, producers and anyone making music.**
+Supporting copy makes the style-led workflow and Mac/Windows local processing
+explicit. A quiet line introduces one-time purchase at paid launch; qualified
+planned pricing stays in Beta terms.
 
-**Previous primary:** Master your track in real time. Hear every move. Ship with proof.
-(Two beats since 2026-08-18; the em-dash form wrapped raggedly against the console hero.)
-
-**Supporting subheads:**
-- Not just louder. More legible.
-- Three decisions. One finished master.
-- The four Standard sounds. When you need more, the studio opens.
-- Real-time on your machine — instant, no upload, no account.
+The owner retains Your Endgame Sound as the brand. One-click use remains possible
+with preferred/default settings, but the page neither promises a literal
+single-click import-to-export workflow nor requires three decisions.
 
 ## The promise (what the page sells)
 
@@ -124,24 +121,23 @@ it exists because saying nothing at all about mobile would be *less* honest than
 saying "not yet" — a visitor who has seen the mobile screens should not be left
 guessing. Anything beyond one date-free sentence is out of bounds.
 
-## Page order (added 2026-07-25, U6)
+## Page order — review pass, 2026-09-05
 
-The sequence is the argument, not a layout preference. A visitor gets one
-hierarchy, and each section answers the question the previous one raises:
+1. **Hero** (#top) — outcome, audience, Standard laptop and brand.
+2. **Advanced hero** (#advanced) — optional depth, live audition and the
+   head-on laptop. This is the only Advanced explanation.
+3. **Standard workflow** (#how, #standard, #sound) — a quick start,
+   four characters and source-aware restraint. Full Standard capture and
+   technical delivery detail are available on expansion.
+4. **Export** (#export) — ears decide; the real receipt supports inspection.
+5. **Album** (#album) — a compact introduction and expandable actual capture.
+6. **Beta terms** (#beta) — full arrangement and planned, qualified pricing.
+7. **Final action** (#get-started) — studio atmosphere and the real closed
+   release state. No audio demo is being added in this pass.
 
-1. **Hero** (`#top`) — the problem and the outcome.
-2. **Workflow** (`#how`) — what you actually do: three decisions.
-3. **Proof deck** (`#standard` / `#advanced`) — Standard as the hero, Advanced
-   as the depth, a receipt as the evidence. Since 2026-09-01 the plates are the
-   owner's real-session captures ("The Machine Restocks on Friday").
-3b. **Sign-off** — the one photograph on the page (owner-generated 2026-09-01:
-   a desk at dusk, a hand about to sign a printed sheet). Full-bleed, no UI,
-   no claim. It is the page's single permitted mood image.
-4. **Sound character** (`#sound`) — the styles, and adaptive restraint.
-5. **Album** (`#album`) — proof that the depth is real. Deliberately low.
-6. **Beta terms** (`#beta`) — the arrangement, stated before anyone downloads.
-7. **Final action** (`#get-started`) — the download, rendered from real release
-   state (`src/landing/release-config.ts`, U5).
+The benefits strip, duplicate Advanced section, stand-alone style section,
+illustrated album folder and sign-off section are removed. This pass is on a
+review branch; publication requires the owner's review.
 
 **There is no Mobile section** (owner, 2026-09-01). It previously sat second,
 directly under the hero, with a phone screenshot and six present-tense feature

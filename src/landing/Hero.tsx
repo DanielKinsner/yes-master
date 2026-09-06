@@ -1,10 +1,10 @@
 import studio from "../assets/landing/studio/hero-bg-studio.webp";
 import standard from "../assets/landing/studio/hero-device-standard.webp";
 import advancedChassis from "../assets/landing/studio/advanced-laptop-front.webp";
-import advanced from "../assets/landing/studio/advanced-ui.png";
+import advanced from "../assets/landing/studio/advanced-doors-open.png";
 import { resolveRelease, type ResolvedRelease } from "./release-config";
 import copy from "./page-copy.json";
-import { Icon } from "./StudioElements";
+import { Capture, Icon } from "./StudioElements";
 
 export default function Hero({
   release = resolveRelease(),
@@ -52,42 +52,7 @@ export default function Hero({
                 See how it works <span aria-hidden="true">↗</span>
               </a>
             </p>
-            <ul className="studio-hero-points">
-              <li>
-                <Icon kind="bolt" />
-                <div>
-                  <strong>
-                    Real-time,
-                    <br />
-                    every tweak
-                  </strong>
-                  <p>The full chain runs as you listen.</p>
-                </div>
-              </li>
-              <li>
-                <Icon kind="sliders" />
-                <div>
-                  <strong>
-                    Simple by default,
-                    <br />
-                    deep when you want
-                  </strong>
-                  <p>Start with Standard. Open the full tools.</p>
-                </div>
-              </li>
-              <li>
-                <Icon kind="eye" />
-                <div>
-                  <strong>No black box</strong>
-                  <p>See loudness, true peak and dynamics.</p>
-                </div>
-              </li>
-            </ul>
-            <p className="studio-signature">
-              BETTER MIXES.
-              <br />
-              LOUDER STORIES.
-            </p>
+            <p className="studio-ownership">{copy.hero.micro}</p>
           </div>
           <img
             className="studio-device"
@@ -100,6 +65,7 @@ export default function Hero({
         </div>
       </section>
       <section
+        id="advanced"
         className="studio-advanced-hero"
         aria-labelledby="advanced-hero-title"
       >
@@ -119,16 +85,11 @@ export default function Hero({
               <br />
               Total control.
             </h2>
-            <p>
-              For those who want to dive deeper. Shape tone, dynamics, width and
-              warmth, with real-time feedback and custom delivery options.
-            </p>
+            <p>{copy.advanced.body}</p>
+            <p className="studio-advanced-note">{copy.advanced.ab_note}</p>
             <div className="studio-actions">
-              <a href="#advanced" className="btn-ghost">
-                Explore Advanced <Icon kind="arrow" />
-              </a>
               <a href="#export" className="studio-text-link">
-                Learn more <span aria-hidden="true">→</span>
+                Explore the export <span aria-hidden="true">→</span>
               </a>
             </div>
           </div>
@@ -142,50 +103,21 @@ export default function Hero({
               aria-hidden="true"
               loading="lazy"
             />
-            <img
-              className="studio-laptop-screen"
-              src={advanced}
-              width="2048"
-              height="1129"
-              alt="YES Master Advanced interface, viewed head-on on a studio laptop"
-              loading="lazy"
-            />
+            <div className="studio-laptop-screen">
+              <Capture
+                src={advanced}
+                width={1663}
+                height={946}
+                alt="YES Master Advanced WAV session, viewed head-on on a studio laptop"
+                caption="Advanced. Take a closer look."
+              />
+            </div>
           </div>
           <p className="studio-side-note" aria-hidden="true">
             SAME SOUND. MORE POSSIBILITIES.
           </p>
         </div>
       </section>
-      <div className="studio-benefits studio-shell">
-        <div>
-          <Icon kind="disc" />
-          <p>
-            <strong>Made for your music</strong>
-            <span>From the first comparison to the final WAV.</span>
-          </p>
-        </div>
-        <div>
-          <Icon kind="levels" />
-          <p>
-            <strong>Your sound, in focus</strong>
-            <span>Shape the character. Keep your signature.</span>
-          </p>
-        </div>
-        <div>
-          <Icon kind="screen" />
-          <p>
-            <strong>No upload. All local.</strong>
-            <span>Your audio stays on your machine.</span>
-          </p>
-        </div>
-        <div>
-          <Icon kind="sliders" />
-          <p>
-            <strong>Room to go deeper</strong>
-            <span>Track and album mastering in one place.</span>
-          </p>
-        </div>
-      </div>
     </>
   );
 }

@@ -217,15 +217,15 @@ for (const [width, height] of matrix) {
         .map((image) => image.getAttribute("src")),
       sections: required.map((id) => ({ id, present: Boolean(document.getElementById(id)) })),
       bodyHasExpectedCopy: [
-        "One-click mastering.",
+        "Master your music.",
         "Your Endgame Sound.",
-        "Every move.",
+        "Advanced mode.",
         "Finish this track.",
         // U6 replaced "Same engine, headed to iPhone & Android" (a schedule
         // the product never committed to) with the one permitted date-free
         // sentence. These four anchor the rewritten hierarchy.
-        "Three decisions.",
-        "Find your sound.",
+        "Start simple.",
+        "Your ears decide.",
         "One record.",
         "A real tool.",
       ].every((text) => body.textContent?.includes(text)),
@@ -432,7 +432,7 @@ for (const [width, height] of matrix) {
   if (metrics.imageFit !== "cover") {
     failures.push(`${width}x${height}: hero image fit is ${metrics.imageFit}, expected cover`);
   }
-  if (!metrics.heroHeadline?.includes("Your Endgame Sound")) {
+  if (!metrics.heroHeadline?.includes("Master your music.") || !metrics.heroHeadline?.includes("Hear every move.")) {
     failures.push(`${width}x${height}: hero headline missing expected copy`);
   }
   if (metrics.brokenImages.length > 0) {
@@ -831,8 +831,8 @@ const reducedPage = await reducedContext.newPage();
 await reducedPage.goto(url, { waitUntil: "networkidle" });
 const reducedText = await reducedPage.evaluate(() => document.body.innerText);
 for (const required of [
-  "Three decisions.",
-  "Find your sound.",
+  "Start simple.",
+  "Your ears decide.",
   "One record.",
   "A real tool.",
   "The download is not open",
@@ -939,7 +939,7 @@ for (const [width, height] of [[1440, 900], [390, 844]]) {
   if (await faq.evaluate(el => el.parentElement.open)) failures.push(`${width}: FAQ did not collapse by keyboard`);
   await page.keyboard.press("Enter");
   if (!await faq.evaluate(el => el.parentElement.open)) failures.push(`${width}: FAQ did not expand by keyboard`);
-  await page.locator('.studio-album-capture summary').click();
+  for (const summary of await page.locator('.studio-album-capture summary').all()) await summary.click();
   const buttons = page.locator('.studio-capture-button');
   let inspected = 0;
   for (let i = 0; i < await buttons.count(); i += 1) {

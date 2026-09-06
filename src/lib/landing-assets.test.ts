@@ -97,7 +97,7 @@ describe("landing marketing proof (U7)", () => {
     const images = Array.from(
       host.querySelectorAll<HTMLImageElement>(".studio-capture-button img"),
     );
-    expect(images.length).toBeGreaterThanOrEqual(6);
+    expect(images.length).toBeGreaterThanOrEqual(4);
     for (const image of images) {
       expect(image.getAttribute("loading")).toBe("lazy");
       expect(image.alt.length).toBeGreaterThan(5);
@@ -112,7 +112,7 @@ describe("landing marketing proof (U7)", () => {
     const hero = host.querySelector("#top")!;
     expect(hero.querySelectorAll("img")).toHaveLength(2);
     expect(hero.querySelector("h1")?.textContent).toContain(
-      "One-click mastering.",
+      "Master your music.",
     );
     expect(
       hero.querySelector("img.studio-device")?.getAttribute("src"),
@@ -122,8 +122,8 @@ describe("landing marketing proof (U7)", () => {
       host.querySelector(".studio-laptop-chassis")?.getAttribute("src"),
     ).toContain("advanced-laptop-front");
     expect(
-      host.querySelector(".studio-laptop-screen")?.getAttribute("src"),
-    ).toContain("advanced-ui.png");
+      host.querySelector(".studio-laptop-screen img")?.getAttribute("src"),
+    ).toContain("advanced-doors-open.png");
     const eager = manifest.studioArtwork.filter(
       (a: { loading: string }) => a.loading === "eager",
     );

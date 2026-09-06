@@ -41,3 +41,15 @@ illustration and opens at full size through the existing image viewer. The
 receipt records the Lay the Money on the Desk export, with its original numbers,
 filename, path and build footer. Its hash and provenance are in the manifest;
 these measurements apply to this export only. No screenshot content was generated.
+
+## Advanced WAV presentation — 2026-09-05 review pass
+
+The frontal laptop now uses `advanced-doors-open.png` (1663 × 946), a built-in
+image-generation edit of the owner's supplied WAV session. The selected title
+was shortened to Doors Open in the heading and sidebar at the owner's request.
+This is a generated presentation derivative, not an unchanged native capture.
+The historical `advanced-ui.png` remains archived here and is no longer imported.
+
+Original screenshot, exact edit prompt and provenance:
+[Review notes](../../../../docs/landing-mockups/tightening-review.md).
+The real export receipt remains unchanged.

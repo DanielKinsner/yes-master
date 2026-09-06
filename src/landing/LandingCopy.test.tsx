@@ -45,15 +45,15 @@ function positionOf(needle: string): number {
 
 describe("landing hierarchy (U6)", () => {
   it("orders the page as one visitor hierarchy", () => {
-    // Problem/outcome → what you do → proof → character → depth → the deal →
-    // platform reality → action. The order IS the argument; asserting section
+    // Outcome/audience → optional depth → simple workflow → supporting proof →
+    // album → the deal → action. The order IS the argument; asserting section
     // presence alone would let someone shuffle it back.
     const order = [
       "Your Endgame Sound.",
-      "Three decisions. One finished master.",
-      "Every move. While the music plays.",
-      "Find your sound. Keep your signature.",
-      "One record. Not just a folder of tracks.",
+      "Advanced mode. Total control.",
+      "Start simple. Make it yours.",
+      "Your ears decide. The measurements explain.",
+      "One record. One shared direction.",
       "A real tool. A straightforward deal.",
       "Finish this track. Start the next.",
     ];
@@ -70,11 +70,11 @@ describe("landing hierarchy (U6)", () => {
     // Album-minded creators are inside the primary audience, not a second one.
     // Leading with a record-length workflow misrepresents what most visitors
     // came to do, which is finish one track.
-    expect(positionOf("One record. Not just a folder of tracks.")).toBeGreaterThan(
-      positionOf("Every move. While the music plays."),
+    expect(positionOf("One record. One shared direction.")).toBeGreaterThan(
+      positionOf("Advanced mode. Total control."),
     );
-    expect(positionOf("One record. Not just a folder of tracks.")).toBeGreaterThan(
-      positionOf("Find your sound. Keep your signature."),
+    expect(positionOf("One record. One shared direction.")).toBeGreaterThan(
+      positionOf("Your ears decide. The measurements explain."),
     );
     expect(text).toContain("ALBUM MASTER / IN ADVANCED");
   });

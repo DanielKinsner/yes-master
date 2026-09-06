@@ -85,21 +85,23 @@
     },
     {
       "id": "owner-advanced-session",
-      "file": "src/assets/landing/studio/advanced-ui.png",
+      "file": "src/assets/landing/studio/advanced-doors-open.png",
       "view": "advanced",
       "capturedAt": null,
-      "session": "The Machine Restocks on Friday",
-      "bytes": 2011263,
-      "sha256": "3bb289bd47120b2058fe50b151c9a1e743338ed32bb8057160fbf88fb7e0e13e",
+      "session": "Doors Open",
+      "bytes": 1503485,
+      "sha256": "0755bf073321bb8db9204960f23d0676266c2f8a3e3fc5fd56a4b4747b1c3614",
       "dimensions": {
-        "width": 2048,
-        "height": 1129
+        "width": 1663,
+        "height": 946
       },
       "loading": "lazy",
-      "alt": "YES Master Advanced view during a real session, meters live",
-      "receivedAt": "2026-09-04",
-      "provenance": "Unchanged owner capture supplied in YES_Master_Studio_Handoff/assets. Snapshot, not a claim of current native output.",
-      "captureDateNote": "Capture date was not recorded in the supplied handoff; receivedAt records receipt, not capture."
+      "alt": "YES Master Advanced WAV session, with owner-requested track-title cleanup",
+      "receivedAt": "2026-09-05",
+      "provenance": "Presentation derivative generated with built-in imagegen from the owner-supplied WAV session. Selected title shortened to Doors Open in the heading and sidebar. Generative editing can change fine pixels; this is not an unchanged native capture or measurement evidence. Original and exact prompt: docs/landing-mockups/tightening-review.md.",
+      "captureDateNote": "Capture date was not recorded in the supplied handoff; receivedAt records receipt, not capture.",
+      "sourceFile": "docs/landing-mockups/assets/doors-open-source.png",
+      "sourceSha256": "81745b01e052dad059becb2ef42206208ffb7da5cecbcb943e95a077d7ae3971"
     },
     {
       "id": "owner-album-session",
