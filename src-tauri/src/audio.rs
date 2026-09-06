@@ -26,6 +26,9 @@ use std::collections::HashMap;
 use crate::decode::{clamp_waveform_target_pixels, decode_full, decode_to_peaks, DecodedPcm};
 use crate::sources::{LiveCoeffUpdate, MasteringSource, MeteredPcmSource};
 
+#[cfg(test)]
+#[path = "listening_bench.rs"]
+mod listening_bench;
 use crate::spectrum::{SpectrumAnalyzer, SpectrumRing};
 use rodio::cpal::traits::{DeviceTrait, HostTrait};
 
@@ -225,7 +228,7 @@ pub async fn prewarm_decode(
     player.set_prewarm_cache(DecodedCacheEntry {
         canonical_path: canonical,
         mtime,
-        pcm: decoded,
+        pcm: decoded.into(),
     })?;
     Ok(())
 }
@@ -832,13 +835,13 @@ impl AudioPlayer {
         let request_epoch = issue_play_request_epoch(&self.play_request_epoch);
         self.send(AudioCommand::Play {
             request_epoch,
-            track_id,
+            track_id: track_id.clone(),
             path: path.to_path_buf(),
             start_position_sec: start_position_sec.max(0.0),
             reply: reply_tx,
         })
         .map_err(CommandError::Other)?;
-        match reply_rx.recv_timeout(Self::PLAYBACK_REPLY_TIMEOUT) {
+        let outcome = match reply_rx.recv_timeout(Self::PLAYBACK_REPLY_TIMEOUT) {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(CommandError::Other(e)),
             Err(_) => {
@@ -848,7 +851,18 @@ impl AudioPlayer {
                     Self::PLAYBACK_REPLY_TIMEOUT.as_secs()
                 )))
             }
-        }
+        };
+        outcome.inspect_err(|error| {
+            self.log_playback_failure(
+                error,
+                &track_id,
+                path,
+                request_epoch,
+                "original",
+                false,
+                false,
+            )
+        })
     }
 
     pub fn play_master(
@@ -862,9 +876,10 @@ impl AudioPlayer {
     ) -> CommandResult<()> {
         let (reply_tx, reply_rx) = mpsc::channel();
         let request_epoch = issue_play_request_epoch(&self.play_request_epoch);
+        let volume_match = settings.volume_match;
         self.send(AudioCommand::PlayMaster {
             request_epoch,
-            track_id,
+            track_id: track_id.clone(),
             path: path.to_path_buf(),
             settings,
             start_position_sec: start_position_sec.max(0.0),
@@ -873,7 +888,7 @@ impl AudioPlayer {
             reply: reply_tx,
         })
         .map_err(CommandError::Other)?;
-        match reply_rx.recv_timeout(Self::PLAYBACK_REPLY_TIMEOUT) {
+        let outcome = match reply_rx.recv_timeout(Self::PLAYBACK_REPLY_TIMEOUT) {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(CommandError::Other(e)),
             Err(_) => {
@@ -883,7 +898,58 @@ impl AudioPlayer {
                     Self::PLAYBACK_REPLY_TIMEOUT.as_secs()
                 )))
             }
-        }
+        };
+        outcome.inspect_err(|error| {
+            self.log_playback_failure(
+                error,
+                &track_id,
+                path,
+                request_epoch,
+                "master",
+                volume_match,
+                preview_lufs_landing,
+            )
+        })
+    }
+
+    /// Called on the command caller, never on the audio callback/controller.
+    /// Preserve the original error after the UI toast clears or playback recovers.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn log_playback_failure(
+        &self,
+        error: &CommandError,
+        requested: &TrackId,
+        path: &Path,
+        epoch: u64,
+        mode: &str,
+        volume_match: bool,
+        preview_lufs: bool,
+    ) {
+        let format = crate::decode::probe_audio_format(path).ok();
+        let snapshot = self.snapshot().ok();
+        let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        let duration = self.prewarm_cache.try_lock().ok().and_then(|cache| {
+            cache
+                .as_ref()
+                .filter(|entry| entry.canonical_path == canonical)
+                .map(|entry| {
+                    entry.pcm.samples.len() as f64
+                        / entry.pcm.channels.max(1) as f64
+                        / entry.pcm.sample_rate as f64
+                })
+        });
+        let record = serde_json::json!({
+            "event": "playback_request_failed", "error": error.to_string(),
+            "cause": format!("{error:?}"), "requested_track": requested,
+            "requested_path": path, "request_epoch": epoch,
+            "latest_request_epoch": self.play_request_epoch.load(Ordering::SeqCst),
+            "source_rate": format.map(|f| f.sample_rate),
+            "source_channels": format.map(|f| f.channels),
+            "source_duration_seconds": duration,
+            "mode": mode, "volume_match": volume_match, "preview_lufs": preview_lufs,
+            "playback_snapshot": format!("{snapshot:?}"),
+        });
+        crate::diagnostics::error(record.to_string());
     }
 
     pub fn update_chain(
@@ -1170,7 +1236,26 @@ impl AudioThreadState {
 pub(crate) struct DecodedCacheEntry {
     pub(crate) canonical_path: PathBuf,
     pub(crate) mtime: Option<std::time::SystemTime>,
-    pub(crate) pcm: DecodedPcm,
+    pub(crate) pcm: PlaybackPcm,
+}
+
+/// Playback and measurement share immutable decoded samples. Cloning a cache
+/// hit must never copy an hour of PCM on the command thread (or under its lock).
+#[derive(Debug, Clone)]
+pub(crate) struct PlaybackPcm {
+    samples: Arc<Vec<f32>>,
+    sample_rate: u32,
+    channels: u16,
+}
+
+impl From<DecodedPcm> for PlaybackPcm {
+    fn from(pcm: DecodedPcm) -> Self {
+        Self {
+            samples: Arc::new(pcm.samples),
+            sample_rate: pcm.sample_rate,
+            channels: pcm.channels,
+        }
+    }
 }
 
 /// Returns the cached PCM if the entry's key matches the given canonical
@@ -1180,7 +1265,7 @@ fn decode_cache_lookup(
     cache: Option<&DecodedCacheEntry>,
     canonical: &Path,
     mtime: Option<std::time::SystemTime>,
-) -> Option<DecodedPcm> {
+) -> Option<PlaybackPcm> {
     cache
         .filter(|entry| entry.canonical_path == canonical && entry.mtime == mtime)
         .map(|entry| entry.pcm.clone())
@@ -1565,12 +1650,13 @@ fn try_spawn_lufs_preview_worker(
     let pcm = if request.landing_enabled {
         entry.pcm.clone()
     } else {
-        DecodedPcm {
+        PlaybackPcm {
             samples: crate::engine::volume_match_window(
                 &entry.pcm.samples,
                 entry.pcm.sample_rate,
                 entry.pcm.channels,
-            ),
+            )
+            .into(),
             sample_rate: entry.pcm.sample_rate,
             channels: entry.pcm.channels,
         }
@@ -1707,7 +1793,7 @@ fn resolve_pcm_with_caches(
     path: &Path,
     canonical: &Path,
     mtime: Option<std::time::SystemTime>,
-) -> Result<DecodedPcm, String> {
+) -> Result<PlaybackPcm, String> {
     // Tier 1: local same-track cache (no lock, fastest path).
     if let Some(p) = decode_cache_lookup(
         state.and_then(|s| s.decoded_cache.as_ref()),
@@ -1733,7 +1819,7 @@ fn resolve_pcm_with_caches(
     if decoded.samples.is_empty() {
         return Err("no samples decoded for playback".to_string());
     }
-    Ok(decoded)
+    Ok(decoded.into())
 }
 
 fn issue_play_request_epoch(epoch: &AtomicU64) -> u64 {
@@ -3243,7 +3329,7 @@ mod tests {
         assert_eq!(analyzer.sample_rate(), 96_000);
     }
 
-    fn settings_with_intensity(intensity: f32) -> MasteringSettings {
+    pub(super) fn settings_with_intensity(intensity: f32) -> MasteringSettings {
         // Phase A4: with the preset compressor wired in (engaged by
         // default at density 0.5), the live-coeff RMS jump test would
         // see the compressor eat part of the input-gain delta when
@@ -3441,7 +3527,8 @@ mod tests {
                     samples: vec![0.0, 0.0],
                     sample_rate: 48_000,
                     channels: 2,
-                },
+                }
+                .into(),
             })
             .unwrap();
         assert!(player.prewarm_cache_hit(&path, mtime).unwrap());
@@ -3462,7 +3549,8 @@ mod tests {
                     samples: vec![],
                     sample_rate: 48_000,
                     channels: 2,
-                },
+                }
+                .into(),
             })
             .unwrap();
         assert!(!player.prewarm_cache_hit(&path_b, mtime).unwrap());
@@ -3486,7 +3574,8 @@ mod tests {
                     samples: vec![],
                     sample_rate: 48_000,
                     channels: 2,
-                },
+                }
+                .into(),
             })
             .unwrap();
         assert!(!player.prewarm_cache_hit(&path, new_mtime).unwrap());
@@ -3508,7 +3597,8 @@ mod tests {
                     samples: vec![],
                     sample_rate: 48_000,
                     channels: 2,
-                },
+                }
+                .into(),
             })
             .unwrap();
         assert!(player.prewarm_cache_hit(&path_a, mtime).unwrap());
@@ -3520,7 +3610,8 @@ mod tests {
                     samples: vec![],
                     sample_rate: 48_000,
                     channels: 2,
-                },
+                }
+                .into(),
             })
             .unwrap();
         assert!(!player.prewarm_cache_hit(&path_a, mtime).unwrap());
@@ -3622,7 +3713,8 @@ mod tests {
                 samples: vec![0.0, 0.0],
                 sample_rate: 48_000,
                 channels: 2,
-            },
+            }
+            .into(),
         };
         assert_internal_state_poisoned(player.set_prewarm_cache(entry));
         assert_internal_state_poisoned(
@@ -3661,13 +3753,14 @@ mod tests {
                     samples: distinctive_samples.clone(),
                     sample_rate: 48_000,
                     channels: 2,
-                },
+                }
+                .into(),
             });
         }
         let result = resolve_pcm_with_caches(None, &prewarm, &path, &canonical, mtime)
             .expect("tier-2 hit must resolve without decode_full");
         assert_eq!(
-            result.samples, distinctive_samples,
+            *result.samples, distinctive_samples,
             "resolve must return the PREWARMED PCM, not a fresh decode"
         );
     }
@@ -4277,7 +4370,8 @@ mod tests {
                 samples,
                 sample_rate,
                 channels,
-            },
+            }
+            .into(),
         };
         for landing_enabled in [true, false] {
             let (tx, rx) = mpsc::channel::<AudioCommand>();
@@ -4701,7 +4795,8 @@ mod tests {
                 samples: vec![],
                 sample_rate: 48_000,
                 channels: 2,
-            },
+            }
+            .into(),
         };
         assert!(!should_invalidate_landing_cache(Some(&prior), &path, mtime));
     }
@@ -4719,7 +4814,8 @@ mod tests {
                 samples: vec![],
                 sample_rate: 48_000,
                 channels: 2,
-            },
+            }
+            .into(),
         };
         assert!(should_invalidate_landing_cache(
             Some(&prior),
@@ -4746,7 +4842,8 @@ mod tests {
                 samples: vec![],
                 sample_rate: 48_000,
                 channels: 2,
-            },
+            }
+            .into(),
         };
         assert!(
             should_invalidate_landing_cache(Some(&prior), &path, new_mtime),
@@ -4768,7 +4865,8 @@ mod tests {
                 samples: vec![],
                 sample_rate: 48_000,
                 channels: 2,
-            },
+            }
+            .into(),
         };
         assert!(should_invalidate_landing_cache(Some(&prior), &path, None));
     }
@@ -5210,7 +5308,7 @@ mod tests {
         let entry = DecodedCacheEntry {
             canonical_path: PathBuf::from("/fake/canonical/track.wav"),
             mtime,
-            pcm: pcm.clone(),
+            pcm: pcm.clone().into(),
         };
         let hit = decode_cache_lookup(
             Some(&entry),
@@ -5219,7 +5317,11 @@ mod tests {
         );
         assert!(hit.is_some());
         let got = hit.unwrap();
-        assert_eq!(got.samples, pcm.samples);
+        assert!(
+            Arc::ptr_eq(&got.samples, &entry.pcm.samples),
+            "warm cache lookup copied PCM"
+        );
+        assert_eq!(*got.samples, pcm.samples);
         assert_eq!(got.sample_rate, pcm.sample_rate);
         assert_eq!(got.channels, pcm.channels);
     }
@@ -5233,7 +5335,8 @@ mod tests {
                 samples: vec![0.0],
                 sample_rate: 44_100,
                 channels: 1,
-            },
+            }
+            .into(),
         };
         let miss = decode_cache_lookup(
             Some(&entry),
@@ -5252,7 +5355,8 @@ mod tests {
                 samples: vec![0.0],
                 sample_rate: 44_100,
                 channels: 1,
-            },
+            }
+            .into(),
         };
         // Same path, different mtime — file was modified, cache must invalidate.
         let later = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(60);

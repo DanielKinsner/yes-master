@@ -2291,6 +2291,16 @@ fn real_fixture_enabled() -> bool {
 }
 
 fn real_fixture_path() -> Option<PathBuf> {
+    // Reuse owner audio in place; an explicit missing input must fail, not skip.
+    if let Some(path) = std::env::var_os("AMS_REAL_FIXTURE_PATH") {
+        let path = PathBuf::from(path);
+        assert!(
+            path.is_file(),
+            "AMS_REAL_FIXTURE_PATH is not a file: {}",
+            path.display()
+        );
+        return Some(path);
+    }
     // Scan `private-audio-fixtures/` for any supported audio file rather than
     // hard-coding one specific filename. Tests can now run on whatever local
     // fixture Dan drops in — original name preserved, no renaming required.

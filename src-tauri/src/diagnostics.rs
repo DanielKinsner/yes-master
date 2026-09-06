@@ -282,6 +282,29 @@ mod tests {
         init(tmp.path().to_path_buf());
         info("hello from the smoke test");
         error("and an error line");
+        let source = tmp.path().join("switch-source.wav");
+        let mut wav = hound::WavWriter::create(
+            &source,
+            hound::WavSpec {
+                channels: 1,
+                sample_rate: 96_000,
+                bits_per_sample: 16,
+                sample_format: hound::SampleFormat::Int,
+            },
+        )
+        .unwrap();
+        wav.write_sample(0_i16).unwrap();
+        wav.finalize().unwrap();
+        let player = crate::audio::AudioPlayer::new();
+        player.log_playback_failure(
+            &CommandError::Other("injected switch failure: original cause".into()),
+            &crate::types::TrackId("requested-96k".into()),
+            &source,
+            42,
+            "master",
+            true,
+            false,
+        );
 
         let dir = log_dir().expect("initialized");
         let content = fs::read_to_string(dir.join(LOG_FILENAME)).unwrap_or_default();
@@ -290,6 +313,11 @@ mod tests {
             "got {content}"
         );
         assert!(content.contains("[ERROR] and an error line"));
+        assert!(content.contains("injected switch failure: original cause"));
+        assert!(content.contains("\"requested_track\":\"requested-96k\""));
+        assert!(content.contains("\"request_epoch\":42"));
+        assert!(content.contains("\"source_rate\":96000"));
+        assert!(content.contains("\"volume_match\":true"));
         // Every line starts with an ISO timestamp (rough shape check).
         assert!(content.starts_with("20"), "got {content}");
     }

@@ -14,6 +14,13 @@ close rather than letting them rot in scattered docs.
 > open. See the [checkpoint ledger](plans/2026-09-05-listening-follow-up.md#implementation-evidence).
 > Existing unrelated UI/capture work is preserved; no push or release authorized.
 
+> **Local performance checkpoint:** playback PCM sharing eliminates repeated
+> whole-source allocations; full-chain DSP still dominates Preview LUFS waits.
+> Failure context now persists in diagnostics. Ordinary Rust and four actual
+> existing-file contracts passed. See [stage evidence](listening/2026-09-05-follow-up-evidence.md)
+> and [concrete unresolved output options](plans/2026-09-05-export-options.md).
+> Callback/stress, source-change worker bounds and targeted new listening remain open.
+
 > **Landing design is parked.** Discussion reminders are in
 > [LANDING_DESIGN_NOTES.md](LANDING_DESIGN_NOTES.md); they are not a task list.
 > The owner is switching focus to software work.

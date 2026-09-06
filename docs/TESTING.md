@@ -422,9 +422,17 @@ Run from `src-tauri`:
 
 ```powershell
 $env:AMS_RUN_REAL_FIXTURE = "1"
+# Optional: use an existing file in place instead of the directory convention.
+# $env:AMS_REAL_FIXTURE_PATH = 'C:\path\to\existing-owner-fixture.wav'
 try { cargo test --target-dir target\codex-rc }
 finally { Remove-Item Env:\AMS_RUN_REAL_FIXTURE }
 ```
+
+`AMS_REAL_FIXTURE_PATH` selects the existing source for the four real-fixture
+contract tests. An explicitly missing file fails; it cannot silently skip.
+Without this override, the directory lookup remains compatible with prior runs.
+Record the selected file and actual test output; the environment flag alone does
+not prove private audio was found. Remove the path environment variable after use.
 
 Use this lane before merging changes to:
 

@@ -13,6 +13,32 @@ Prepared September 5, 2026. **Implementation in progress; local checkpoints belo
 - Regression now passes through pending and newly measured audio. Additional coverage includes 20 pending edits, stale cache insertions, invalid/boosted fallbacks; existing cold/off/A-B/source-generation tests remain. Strict Clippy all-targets passed. Full desktop Rust suite passed, including 450 library tests (2 ignored diagnostics) and all ordinary integration suites; no snapshot/tolerance changes.
 - Logs: `test-output/listening-vm-{red,green,clippy,rust}.log` (local/ignored). Native settings-edit/Focusrite listening, five-minute stress, fixture lane, and platform-specific evidence remain separate outstanding checks. This checkpoint corrects the demonstrated fallback, not a blanket performance or release pass.
 
+### Checkpoint 2 — shared playback PCM and durable failure context
+
+- Playback/prewarm caches, A/B sources and preview workers now share immutable
+  decoded PCM. The 60-minute/96 kHz buffer is 2.76 GB; three deep copies measured
+  1.987–2.212 seconds, versus below the diagnostic's microsecond display precision
+  for shared clones. Pointer-identity coverage proves the allocation change.
+- Playback reply failures preserve the original error and source/request/mode
+  context in the existing durable diagnostic log, on the command caller rather
+  than the audio callback. A persisted-log regression verifies the context.
+- Full Rust suite passed (450 library tests, 4 ignored diagnostics, all ordinary
+  integrations). The initial flagged run found no convention-folder private
+  fixture; it is not counted as private-audio evidence. The runner now accepts
+  `AMS_REAL_FIXTURE_PATH` so existing files can stay in place. All four real-fixture
+  contracts then passed on `TEST-3min-MONO-48khz.wav`, including import/analyze,
+  actual WAV render/reanalysis and metering snapshot (delivered -12.82 LUFS,
+  -1.10 dBTP). Logs: `listening-pcm-fixtures.log`, `listening-real-fixture-mono.log`.
+- Strict Clippy passed for the PCM/log change. These desktop-private source/cache
+  types do not change native bridge signatures or shared DSP behavior.
+- [Measured stages and limits](../listening/2026-09-05-follow-up-evidence.md)
+  distinguish reduced setup copies from the still dominant full-chain work.
+  Three bit-identical DSP experiments showed no speedup and were discarded.
+  Native mono import and VM edit control-state evidence is recorded separately;
+  hardware audio continuity, five-minute stress and global worker bounds remain open.
+- [Concrete export/loading options](2026-09-05-export-options.md) preserve the
+  unresolved owner choices. No codec, naming, manifest or loading behavior changed.
+
 ## Start here
 
 **First: reproduce and correct the brief Volume Match level jump. Then address high-rate/long-file responsiveness.** Follow with targeted Width/Loud checks, loop behavior, and the reported UI/export issues. Keep the import/loading product discussion and additional codecs separate from those corrections.

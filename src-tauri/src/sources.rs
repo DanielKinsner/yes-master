@@ -184,7 +184,7 @@ fn lufs_meter_input(frame: &[f32], channels: usize) -> (f32, f32) {
 /// LUFS, and spectrum meter path as Mastered playback. This keeps A/B metering
 /// honest without routing Original through any mastering DSP.
 pub(crate) struct MeteredPcmSource {
-    samples: Vec<f32>,
+    samples: Arc<Vec<f32>>,
     position: usize,
     channels: u16,
     sample_rate: u32,
@@ -206,7 +206,7 @@ pub(crate) struct MeteredPcmSource {
 impl MeteredPcmSource {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
-        samples: Vec<f32>,
+        samples: impl Into<Arc<Vec<f32>>>,
         channels: u16,
         sample_rate: u32,
         peak_linear: Arc<AtomicU32>,
@@ -218,7 +218,7 @@ impl MeteredPcmSource {
     ) -> Self {
         let channels_usize = channels.max(1) as usize;
         Self {
-            samples,
+            samples: samples.into(),
             position: 0,
             channels,
             sample_rate,
@@ -362,7 +362,7 @@ impl rodio::Source for MeteredPcmSource {
 /// new coefficients arrive, a `COEFFS_CROSSFADE_FRAMES`-long crossfade
 /// between the old and new chain hides filter-state transients.
 pub(crate) struct MasteringSource {
-    samples: Vec<f32>,
+    samples: Arc<Vec<f32>>,
     position: usize,
     channels: u16,
     sample_rate: u32,
@@ -410,7 +410,7 @@ pub(crate) struct MasteringSource {
 impl MasteringSource {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
-        samples: Vec<f32>,
+        samples: impl Into<Arc<Vec<f32>>>,
         channels: u16,
         sample_rate: u32,
         chain: crate::dsp::MasteringChain,
@@ -426,7 +426,7 @@ impl MasteringSource {
         let pending_chain =
             crate::dsp::MasteringChain::with_coeffs_inheriting_state(chain.coeffs, &chain);
         Self {
-            samples,
+            samples: samples.into(),
             position: 0,
             channels,
             sample_rate,
