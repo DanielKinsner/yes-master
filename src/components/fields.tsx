@@ -66,9 +66,11 @@ export function NumberField({
   format,
   autoLabel = "Auto",
   autoReadout,
+  autoUpdating = false,
   sliderAutoValue,
   showAutoReset = false,
   disabled = false,
+  sliderTooltip,
   onChange,
 }: {
   label: string;
@@ -79,6 +81,7 @@ export function NumberField({
   format: (v: number) => string;
   autoLabel?: string;
   autoReadout?: string;
+  autoUpdating?: boolean;
   // F10 (owner smoke): where the slider THUMB parks while value is null.
   // Without it the thumb sat at `min` on Auto — for Width that rendered as
   // "current width is 0", so dragging to 0.05 looked like a tiny increase
@@ -91,9 +94,13 @@ export function NumberField({
   // why "sliding back to 0" felt like the only way back (it isn't Auto).
   showAutoReset?: boolean;
   disabled?: boolean;
+  sliderTooltip?: string;
   onChange: (v: number | null) => void;
 }) {
   const effective = value ?? sliderAutoValue ?? min;
+  const tooltipId = sliderTooltip
+    ? `${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-slider-tooltip`
+    : undefined;
   // Same draft-while-editing pattern as Slider so the user can type "1." or
   // "-" mid-value without the parent re-formatting on every keystroke.
   const [draft, setDraft] = useState<string | null>(null);
@@ -143,29 +150,44 @@ export function NumberField({
         )}
       </span>
       <div className="adv-control">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={effective}
-          disabled={disabled}
-          // Always live: dragging an Auto slider engages it at the dragged
-          // value instead of staying greyed out. Double-click reverts to Auto.
-          onChange={(e) => onChange(parseFloat(e.target.value))}
-          onDoubleClick={() => onChange(null)}
-          aria-label={label}
-          title={
-            value === null
-              ? `Drag to engage. Double-click to leave it on ${autoLabel}.`
-              : `Drag or type a value. Double-click slider to reset to ${autoLabel}.`
-          }
-        />
+        <span
+          className={sliderTooltip ? "adv-slider-tooltip-anchor" : "adv-slider-plain"}
+          tabIndex={sliderTooltip && disabled ? 0 : undefined}
+          aria-describedby={sliderTooltip && disabled ? tooltipId : undefined}
+        >
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={effective}
+            disabled={disabled}
+            // Always live: dragging an Auto slider engages it at the dragged
+            // value instead of staying greyed out. Double-click reverts to Auto.
+            onChange={(e) => onChange(parseFloat(e.target.value))}
+            onDoubleClick={() => onChange(null)}
+            aria-label={label}
+            aria-describedby={tooltipId}
+            title={
+              sliderTooltip
+                ? undefined
+                : value === null
+                  ? `Drag to engage. Double-click to leave it on ${autoLabel}.`
+                  : `Drag or type a value. Double-click slider to reset to ${autoLabel}.`
+            }
+          />
+          {sliderTooltip && (
+            <span id={tooltipId} role="tooltip" className="adv-field-tooltip">
+              {sliderTooltip}
+            </span>
+          )}
+        </span>
         <span
           className="adv-value"
+          aria-busy={value === null && autoUpdating || undefined}
           title={
             value === null && autoReadout
-              ? `${autoLabel}: ${autoReadout}`
+              ? `${autoLabel}: ${autoReadout}${autoUpdating ? " (updating)" : ""}`
               : undefined
           }
         >
@@ -175,6 +197,7 @@ export function NumberField({
               {autoReadout && (
                 <span className="adv-auto-readout"> · {autoReadout}</span>
               )}
+              {autoUpdating && <span className="sr-only"> (updating)</span>}
             </>
           ) : (
             format(value)

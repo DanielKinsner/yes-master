@@ -225,6 +225,55 @@ Prepared September 5, 2026. **Implementation in progress; local checkpoints belo
   remain open. Logs and focused screenshots: ignored `test-output/listening-tools-*`.
   No push, release, private fixture regeneration or unrelated edits staged.
 
+### Checkpoint 8 — consistent rails and stable Width during mode changes
+
+- Reproduced the owner's Album horizontal scrollbar in the actual working UI:
+  hidden Adapt Strength tooltip, positioned relative to its narrow slider,
+  expanded a 279px-wide rail to 388px. It affected Album only. The tooltip now
+  anchors to the full control grid and fits its width, hidden, hovered or focused.
+  No `overflow-x: hidden` masking. The existing tooltip UI/test work is included
+  in this checkpoint because it directly owns the reproduced defect; unrelated
+  capture-script and studio-handoff work stays separate.
+- Track/Album use the same sections, spacing and footer. Matching Manual states
+  have identical section bounds and Export positions, at both top and bottom of
+  the scroll range, at 1360×740, 1440×900 and 1920×1080. Vertical scrolling is
+  intentional when expanded controls exceed the available height.
+- Width regression failed first: mode change produced a null display readout,
+  making NumberField fall back to its minimum (0). Retain the same track's last
+  backend Width while the new mode resolves; mark it pending without adding a
+  long visible suffix that would shift the layout. Hover text, screen-reader
+  text and `aria-busy` expose the pending status. It never feeds processing.
+  Different tracks and failed/null replies still clear; explicit Width settings
+  take precedence. Delayed mode replies and rapid reversal reject obsolete data.
+- Focused hook/component tests: 121 passed. Full frontend after capture refresh:
+  848 passed in both isolated and combined trees. The first full attempt correctly
+  failed only the stale-capture gate (847 passed); captures were regenerated,
+  not bypassed. Production build/typecheck passed in the capture/headless lanes.
+- New permanent `rail-mode-consistency` browser scenario covers three sizes,
+  repeated mode changes, tooltip hidden/hover/focus, rail scrollWidth and section/
+  footer geometry, plus DOM/frame sampling of Width. Focused run passed all three.
+  Negative control restoring the old tooltip CSS failed for hidden, hover and
+  focus: 388 > 279. Old coverage measured document overflow and settled frames,
+  which did not establish these nested-scroll/transition contracts.
+- Native Windows: exercised the existing debug app with live frontend updates,
+  the existing four-track session, selected TEST-10min-192khz (Album override),
+  Original selected and paused. Settled 1923×1111 window captures show Track and
+  Album rails aligned, Width Auto · 1.11 and no horizontal scrollbar. This is
+  native layout evidence at the existing window size, not sub-frame video,
+  subjective listening or a new packaged-build proof. A resize attempt selected
+  text instead of resizing; selection cleared and that attempt is not size evidence.
+  Smaller sizes and following-album state are covered by browser checks.
+- Full `verify:headless` passed in both trees: landing responsive checks and
+  all 34 app scenario/viewport checks each. Isolated evidence:
+  `test-output/listening-rail-check/test-output/headless/2026-09-06T04-37-05-709Z`;
+  combined: `test-output/headless/2026-09-06T04-36-21-648Z`.
+  Focused logs/screenshots and native captures: ignored `test-output/rail-*`.
+  Canonical captures use isolated inputs; unchanged studioArtwork metadata is
+  retained from HEAD because the baseline capture script omits that section.
+- No DSP, bridge, export-processing or preset voicing changes. No fixture
+  regeneration, push, deployment or release. Ceiling source-label interpretation,
+  return-to-start, drag improvements, loading and MP3 remain separate queue items.
+
 ## Start here
 
 **First: reproduce and correct the brief Volume Match level jump. Then address high-rate/long-file responsiveness.** Follow with targeted Width/Loud checks, loop behavior, and the reported UI/export issues. Keep the import/loading product discussion and additional codecs separate from those corrections.

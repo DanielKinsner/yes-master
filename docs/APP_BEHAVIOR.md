@@ -20,6 +20,13 @@ handoffs planned.
   Standard blocks reach their minimum and `overflow: hidden` trims the excess,
   no control is clipped). The dense Advanced view scrolls vertically on short
   viewports, as it already did at any height below ~1230 px.
+- Track and Album share the Advanced rail's section widths and pinned Export
+  position. The Album Adapt Strength explanation appears on hover or keyboard
+  focus within the rail's bounds. Controls scroll vertically when needed.
+- Auto Width keeps the same track's last resolved slider position during a mode
+  switch or settings update, until the backend returns its new value. Pending
+  status is exposed to assistive technology and in the value's hover text;
+  the retained display value never controls DSP or carries to another track.
 
 ## Track Master
 

@@ -479,7 +479,8 @@ function AdvancedControlsCard({
           min={0}
           max={2}
           format={(v) => v.toFixed(2)}
-          autoReadout={effectiveAutoWidth == null ? undefined : `${effectiveAutoWidth.toFixed(2)}${autoWidthReadout?.updating ? " (updating)" : ""}`}
+          autoReadout={effectiveAutoWidth == null ? undefined : effectiveAutoWidth.toFixed(2)}
+          autoUpdating={autoWidthReadout?.updating}
           sliderAutoValue={effectiveAutoWidth ?? undefined}
           showAutoReset
           onChange={(v) => update("width", v)}
@@ -512,6 +513,11 @@ function AdvancedControlsCard({
           max={1}
           format={(v) => (v <= 0.0001 ? "Off" : `${Math.round(v * 100)}%`)}
           disabled={albumMode}
+          sliderTooltip={
+            albumMode
+              ? "Adaptive applies to Track Master export, not Album renders."
+              : undefined
+          }
           onChange={(v) => update("adaptive_strength", v)}
         />
       </div>
@@ -520,13 +526,7 @@ function AdvancedControlsCard({
           axis's deadband, so a "-0%" reads as "source already in range"
           rather than looking broken. */}
       <div className="adaptive-block rail-card-body" style={{ paddingTop: "0.2rem" }}>
-        {albumMode ? (
-          <div
-            style={{ fontSize: "0.72rem", opacity: 0.7, padding: "0.3rem 0.1rem" }}
-          >
-            Adaptive applies to Track Master export, not Album renders.
-          </div>
-        ) : adaptiveReadout?.active && adaptiveReadoutEnabled() ? (
+        {!albumMode && adaptiveReadout?.active && adaptiveReadoutEnabled() ? (
           // Debug-gated (owner TODO 2026-06-08 / backlog P3): hidden by
           // default for release; the localStorage flag re-surfaces it for
           // guardrail calibration sessions.

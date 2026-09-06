@@ -1036,13 +1036,14 @@ export function useTrackMaster() {
   const guardrailReadoutReq = useRef(0);
   const widthSurface = `${selectedTrackId}:${mode}:${adaptiveCompressionGate}`;
   const [lastAutoWidth, setLastAutoWidth] = useState<{
-    surface: string; settings: MasteringSettings; value: number;
+    trackId: TrackId; surface: string; settings: MasteringSettings; value: number;
   } | null>(null);
-  // Only Width retains its last known position while recalculating. Processing
-  // indicators still clear immediately; old width is explicitly marked updating.
-  const autoWidthReadout = lastAutoWidth?.surface === widthSurface ? {
+  // Keep the same track's last position through mode changes as well as edits.
+  // It is presentation-only and explicitly pending; never use it for processing
+  // or carry it to a different track. The backend remains the value authority.
+  const autoWidthReadout = lastAutoWidth && lastAutoWidth.trackId === selectedTrackId ? {
     value: lastAutoWidth.value,
-    updating: lastAutoWidth.settings !== selectedSettings || guardrailReadout === null,
+    updating: lastAutoWidth.surface !== widthSurface || lastAutoWidth.settings !== selectedSettings || guardrailReadout === null,
   } : null;
   const compressionPlanSurface = useRef<string | null>(null);
 
@@ -1105,7 +1106,7 @@ export function useTrackMaster() {
         if (guardrailReadoutReq.current === reqId) {
           setGuardrailReadout(r ?? null);
           setLastAutoWidth(r && typeof r.effective_auto_width === "number" && Number.isFinite(r.effective_auto_width)
-            ? { surface: widthSurface, settings: selectedSettings, value: r.effective_auto_width }
+            ? { trackId: selectedTrackId, surface: widthSurface, settings: selectedSettings, value: r.effective_auto_width }
             : null);
         }
       })

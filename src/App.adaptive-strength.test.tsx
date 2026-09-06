@@ -62,6 +62,7 @@ async function renderPanel(
   s: MasteringSettings,
   onAdvanced = vi.fn(),
   readout: GuardrailReadout | null = null,
+  albumMode = false,
 ) {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -78,6 +79,7 @@ async function renderPanel(
         onDeliveryBitDepth={vi.fn()}
         onDeliverySampleRate={vi.fn()}
         adaptiveReadout={readout}
+        albumMode={albumMode}
       />,
     );
   });
@@ -110,6 +112,34 @@ describe("AdvancedPanel adaptive strength control", () => {
   it("shows Off when strength is 0 (preserves the explicit zero)", async () => {
     const { container, root } = await renderPanel(settings(0));
     expect(container.textContent ?? "").toContain("Off");
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("shows the Album limitation only as the Adapt strength slider tooltip", async () => {
+    const { container, root } = await renderPanel(settings(0.5), vi.fn(), null, true);
+    const slider = container.querySelector(
+      'input[type="range"][aria-label="Adapt strength"]',
+    );
+    if (!(slider instanceof HTMLInputElement)) {
+      throw new Error("Adapt strength slider not found");
+    }
+    const tooltipId = slider.getAttribute("aria-describedby");
+    expect(slider.disabled).toBe(true);
+    expect(tooltipId).toBeTruthy();
+    const tooltip = tooltipId ? document.getElementById(tooltipId) : null;
+    expect(tooltip?.getAttribute("role")).toBe("tooltip");
+    expect(tooltip?.classList.contains("adv-field-tooltip")).toBe(true);
+    expect(slider.title).toBe("");
+    expect(slider.parentElement?.tabIndex).toBe(0);
+    expect(slider.parentElement?.getAttribute("aria-describedby")).toBe(tooltipId);
+    expect(tooltip?.textContent).toContain(
+      "Adaptive applies to Track Master export, not Album renders.",
+    );
+    expect(container.querySelector(".adaptive-block")?.textContent ?? "").not.toContain(
+      "Adaptive applies",
+    );
     await act(async () => {
       root.unmount();
     });

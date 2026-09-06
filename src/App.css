@@ -7989,6 +7989,54 @@ input:focus-visible,
 .compressor-density-field .adv-control .adv-number { grid-area: box; width: 2.15rem; padding: 0.1rem 0.15rem; font-size: 0.66rem; }
 .rail-card-advanced .advanced-grid .adv-control input[type="range"],
 .compressor-density-field .adv-control input[type="range"] { grid-area: slider; height: 22px; }
+.adv-slider-plain { display: contents; }
+.rail-card-advanced .advanced-grid { position: relative; }
+.rail-card-advanced .advanced-grid .adv-slider-tooltip-anchor {
+  /* Anchor the explanation to the full grid, so a hidden or visible tooltip
+     on the right-hand field cannot enlarge the rail's horizontal scroll area. */
+  position: static;
+  grid-area: slider;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 22px;
+  border-radius: 4px;
+}
+.rail-card-advanced .advanced-grid .adv-slider-tooltip-anchor > input[type="range"] {
+  width: 100%;
+  height: 22px;
+}
+.adv-field-tooltip {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.3rem);
+  right: 0;
+  width: max-content;
+  max-width: min(15rem, 100%);
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg-1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.38);
+  color: var(--text-1);
+  font-size: 0.68rem;
+  line-height: 1.35;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-2px);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms;
+}
+.adv-slider-tooltip-anchor:hover .adv-field-tooltip,
+.adv-slider-tooltip-anchor:focus-within .adv-field-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.adv-slider-tooltip-anchor:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
 /* The Auto pill / ↺ AUTO chip live inside the label; keep them from
    pushing the label text out. */
 .rail-card-advanced .advanced-grid .adv-auto-pill,

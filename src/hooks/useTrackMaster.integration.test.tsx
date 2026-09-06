@@ -1795,6 +1795,38 @@ describe("useTrackMaster integration dispatches", () => {
     await act(async () => harness.root.unmount());
   });
 
+  it("holds Width through both mode switches while rejecting an obsolete mode reply", async () => {
+    const track = makeTrack("width-modes", "C:/audio/modes.wav");
+    const readout = { ...makeGuardrailReadout(true), effective_auto_width: 1.09 };
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.api.guardrailReadout.mockResolvedValue(readout);
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles([track.path]); });
+    await waitFor(() => expect(harness.current().autoWidthReadout?.value).toBe(1.09));
+
+    const album = deferred<GuardrailReadout>();
+    mocks.api.guardrailReadout.mockReturnValue(album.promise);
+    await act(async () => harness.current().setMode("album"));
+    expect(harness.current().guardrailReadout).toBeNull();
+    expect(harness.current().autoWidthReadout).toEqual({ value: 1.09, updating: true });
+    await act(async () => album.resolve({ ...readout, effective_auto_width: 1.2 }));
+    expect(harness.current().autoWidthReadout).toEqual({ value: 1.2, updating: false });
+
+    const back = deferred<GuardrailReadout>();
+    mocks.api.guardrailReadout.mockReturnValue(back.promise);
+    await act(async () => harness.current().setMode("track"));
+    expect(harness.current().autoWidthReadout).toEqual({ value: 1.2, updating: true });
+    const latest = deferred<GuardrailReadout>();
+    mocks.api.guardrailReadout.mockReturnValue(latest.promise);
+    await act(async () => harness.current().setMode("album"));
+    await act(async () => back.resolve({ ...readout, effective_auto_width: 0.8 }));
+    expect(harness.current().autoWidthReadout).toEqual({ value: 1.2, updating: true });
+    await act(async () => latest.resolve({ ...readout, effective_auto_width: 1.15 }));
+    expect(harness.current().autoWidthReadout).toEqual({ value: 1.15, updating: false });
+    await act(async () => harness.root.unmount());
+  });
+
   it("ignores obsolete Width replies and clears Width across track contexts", async () => {
     const a = makeTrack("width-a", "C:/audio/a.wav");
     const b = makeTrack("width-b", "C:/audio/b.wav");

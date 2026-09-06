@@ -88,6 +88,15 @@ const SETTLE_TIMEOUT_MS = 20_000;
  */
 const SCENARIOS = [
   {
+    name: "clean",
+    label: "rail-mode-consistency",
+    scenarioId: "S-F1",
+    purpose: "Track/Album rail geometry, tooltip bounds and repeated Width transitions.",
+    viewports: [LAPTOP, MIN_DESKTOP, [1920, 1080]],
+    settle: "ready",
+    beforeScreenshot: railModeConsistencyProbe,
+  },
+  {
     name: "empty",
     scenarioId: "S-D1",
     purpose:
@@ -806,6 +815,62 @@ async function receiptGeometryProbe(page, report, context) {
  * The returned payload lands in summary.json beside the screenshot taken in
  * the SAME frame, so the image and the measurements describe one state.
  */
+async function railModeConsistencyProbe(page, report) {
+  await page.waitForFunction(() => Number(document.querySelector('input[aria-label="Width"]')?.value) > 0);
+  // Observe every DOM update as well as painted frames: a settled screenshot
+  // alone cannot catch the brief zero fallback during asynchronous mode changes.
+  await page.evaluate(() => {
+    window.__railWidthSamples = [];
+    const sample = () => {
+      const width = document.querySelector('input[aria-label="Width"]');
+      if (width) window.__railWidthSamples.push(Number(width.value));
+    };
+    const observer = new MutationObserver(sample);
+    observer.observe(document.querySelector('.right-rail'), {subtree:true, attributes:true, childList:true, characterData:true});
+    let frame;
+    const tick = () => { sample(); frame = requestAnimationFrame(tick); };
+    tick();
+    window.__stopRailWidthSamples = () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  });
+  const states = [];
+  for (const mode of ['Track Master', 'Album Master', 'Track Master', 'Album Master']) {
+    await page.getByRole('button', {name:mode, exact:true}).click();
+    await page.getByRole('tab', {name:'Manual', exact:true}).click();
+    for (const interaction of mode === 'Album Master' ? ['hidden', 'hover', 'focus'] : ['hidden']) {
+      const anchor = page.locator('.adv-slider-tooltip-anchor');
+      if (interaction === 'hover') await anchor.hover();
+      if (interaction === 'focus') await anchor.focus();
+      if (interaction !== 'hidden') await page.waitForFunction(() => getComputedStyle(document.querySelector('.adv-field-tooltip')).opacity === '1');
+      const result = await page.evaluate(() => {
+        const rail = document.querySelector('.right-rail');
+        const tooltip = document.querySelector('.adv-field-tooltip');
+        const rect = (e) => { const r=e.getBoundingClientRect(); return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width}; };
+        rail.scrollTop = 0;
+        const top = rect(document.querySelector('.right-rail-export'));
+        rail.scrollTop = rail.scrollHeight;
+        const bottom = rect(document.querySelector('.right-rail-export'));
+        const sections = [...rail.querySelectorAll('.rail-section')].map(e => ({class:e.className,...rect(e)}));
+        const result = {rail:rect(rail), width:rail.clientWidth, scrollWidth:rail.scrollWidth, top, bottom, sections, tooltip:tooltip ? rect(tooltip) : null};
+        rail.scrollTop = 0;
+        return result;
+      });
+      states.push({mode,interaction,...result});
+      if (result.scrollWidth > result.width + 1) report(`${mode} (${interaction}) horizontal rail overflow: ${result.scrollWidth} > ${result.width}`);
+      if (result.sections.some(s => s.left < result.rail.left - 1 || s.right > result.rail.right + 1)) report(`${mode}: rail sections extend outside the rail`);
+      if (result.tooltip && (result.tooltip.left < result.rail.left || result.tooltip.right > result.rail.right)) report(`${mode}: tooltip extends outside the rail`);
+      const reference = states[0];
+      for (const key of ['left', 'right', 'bottom']) {
+        if (Math.abs(result.top[key] - reference.top[key]) > 1 || Math.abs(result.bottom[key] - reference.bottom[key]) > 1) report(`${mode} (${interaction}): Export ${key} differs between modes or scroll positions`);
+      }
+    }
+    await page.mouse.move(0, 0);
+    await page.locator('input[aria-label="Width"]').focus();
+  }
+  const samples = await page.evaluate(() => { window.__stopRailWidthSamples(); return window.__railWidthSamples; });
+  if (!samples.length || samples.some(v => !Number.isFinite(v) || v <= 0)) report(`Width dropped to an unresolved/zero position during mode switches: ${JSON.stringify([...new Set(samples)])}`);
+  return {states, widthSampleCount:samples.length, widthValues:[...new Set(samples)]};
+}
+
 async function exportOverlapProbe(page, report) {
   // Expanding Manual ensures this exercises real scroll overlap even after
   // removing the Tools row shortened the rail.

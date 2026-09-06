@@ -18,11 +18,16 @@ close rather than letting them rot in scattered docs.
 > proposed scope is both Track and Album. Existing drag handlers are Album-only;
 > native reliability is not established by their presence.
 >
-> **New owner screenshots — right rail and audit action require follow-up.**
-> Track/Album export buttons have different vertical placement; Album shows a
-> horizontal scrollbar and both have residual scrolling. These native screenshot
-> findings remain open despite prior synthetic headless passes; reproduce their
-> viewport/state and fix actual overflow, not simply hide the scrollbar. Ceiling
+> **Right-rail overflow and mode-switch Width flash — corrected locally.**
+> Reproduced Album's hidden Adapt Strength tooltip expanding a 279px scrollport
+> to 388px. Bound the tooltip to the shared control grid without hiding overflow.
+> Track/Album sections and Export now align in matching Manual states at
+> 1360×740, 1440×900 and 1920×1080, with hover/focus checked. Width retains the
+> same track's previous position while a mode change resolves, with pending
+> accessibility/hover status; obsolete replies remain rejected. New browser
+> coverage measures the rail itself and samples transitions. Native Windows
+> Track/Album captures also show matching rails and no horizontal scrollbar.
+> Vertical scrolling remains available where controls exceed window height. Ceiling
 > shows -1 Auto on Track versus -1 Custom on Album: current captions distinguish
 > unset automatic from explicit settings, not just equal displayed numbers;
 > confirm saved state and resolved DSP value before changing labels or settings.
@@ -31,7 +36,7 @@ close rather than letting them rot in scattered docs.
 > not an Album-plan proof. **Owner decision:** remove the entire Tools section
 > and audit-render action; ordinary Export is sufficient for checking a saved
 > file. Internal renderer/verification tools remain. UI removal is implemented
-> in the following local checkpoint; broader native rail findings remain open.
+> in checkpoint 7. Checkpoint 8 records the overflow/Width fix and evidence limits.
 
 > **2026-09-05 — MP3 purpose clarified in owner interview.** MP3 is a smaller-file,
 > broadly playable choice within the normal mastering export. The owner rejects

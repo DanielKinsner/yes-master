@@ -148,6 +148,12 @@ EQ setters in `useTrackMaster.ts`.
 The default repeatable browser check for anything that renders. One command,
 no prerequisites, no manually started server:
 
+The `rail-mode-consistency` case measures nested right-rail overflow, matching
+Track/Album section/footer bounds, and tooltip hover/focus at three sizes. It
+also samples Width during mode switches; hook tests supply delayed/obsolete
+backend replies. Page-level overflow and settled screenshots alone do not prove
+these contracts.
+
 ```powershell
 npm run verify:headless
 ```
