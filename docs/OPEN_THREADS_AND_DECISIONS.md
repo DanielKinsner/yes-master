@@ -7,6 +7,10 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **Landing design is parked.** Discussion reminders are in
+> [LANDING_DESIGN_NOTES.md](LANDING_DESIGN_NOTES.md); they are not a task list.
+> The owner is switching focus to software work.
+
 > **2026-09-05 — Agent operating rules revised with owner approval.** Read
 > task-relevant documentation, choose implementation details autonomously, and
 > explore DSP/performance alternatives within authorized work. Use focused tests
