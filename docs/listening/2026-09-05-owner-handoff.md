@@ -207,7 +207,7 @@ Mixed mono/stereo sources, Override retaining its sound/target with the common a
 
 ### Additional export formats
 
-The owner explicitly wants more output formats and finds WAV-only delivery too limiting. **MP3 is the named example.** **Clarified in the subsequent owner interview:** the earlier wording about importing WAV and exporting MP3 without mastering was not a request for a separate converter or bypass mode. MP3 should be a smaller-file, broadly playable choice within normal mastering export. Preserve existing processing at 0% Intensity; no special workaround explanation is wanted. This clarification supersedes the original conversion-without-mastering interpretation. Track/Album availability and quality defaults remain unresolved; keep this feature separate from defects in existing WAV export.
+The owner explicitly wants more output formats and finds WAV-only delivery too limiting. **MP3 is the named example.** **Clarified in the subsequent owner interview:** the earlier wording about importing WAV and exporting MP3 without mastering was not a request for a separate converter or bypass mode. MP3 should be a smaller-file, broadly playable choice within normal mastering export. Preserve existing processing at 0% Intensity; no special workaround explanation is wanted. This clarification supersedes the original conversion-without-mastering interpretation. Subsequent interview decisions: Standard and Advanced Track first, then Album after agent verification without further approval; MP3 quality 320 (default), 256, 192 and 128 kbps, with WAV remaining the default format; keep this feature separate from defects in existing WAV export.
 
 ## What is actually unresolved
 

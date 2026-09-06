@@ -13,8 +13,10 @@ close rather than letting them rot in scattered docs.
 > supersedes the earlier interpretation of the listening notes as requiring
 > conversion without mastering. Preserve existing DSP/delivery behavior at 0%
 > Intensity; do not add bypass or special workaround explanations. Normal meters
-> and export claims remain truthful. Quality defaults remain pending; MP3 is
-> not implemented by this decision.
+> and export claims remain truthful. **Quality choice settled:** 320, 256, 192
+> and 128 kbps, with 320 kbps selected by default in the same selector in Standard
+> and Advanced. WAV remains the default export format. MP3 is not implemented
+> by this decision.
 > **Explicit follow-up clarification:** 0% was only a hypothetical workaround,
 > not an MP3 default or requirement. MP3 uses the user's chosen preset, Intensity
 > and controls just like WAV. Selecting the encoding never resets mastering

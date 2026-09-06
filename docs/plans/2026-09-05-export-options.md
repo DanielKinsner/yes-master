@@ -1,9 +1,8 @@
 # Listening follow-up: concrete output choices
 
-Codec choices below remain unresolved; filename, manifest and loading
-decisions are recorded here. These are not implementation approval requests for the independent fixes.
-Existing output behavior remains until an answer is
-recorded; that is not a selected default. Old owner outputs are never deleted.
+The owner has settled the codec, filename, manifest and loading choices below.
+Implementation and verification remain to be completed; these decisions are not
+claims of shipped functionality. Old owner outputs are never deleted.
 
 ## Album names and manifest
 
@@ -39,8 +38,9 @@ earlier conversion-without-mastering interpretation. Ordinary export claims and
 meters remain truthful. **Owner scope decision:** Standard and Advanced Track
 export first; the implementing agent verifies the encoder and delivered-file
 contracts, then proceeds to Album batch/continuous export without another owner
-approval. Album still requires its own verification. Proposed quality is 320 kbps
-default with a selector; quality/defaults remain an owner choice.
+approval. Album still requires its own verification. **Owner quality decision:**
+320 kbps default, with 256, 192 and 128 kbps also available in the same selector
+in Standard and Advanced. WAV remains the default export format.
 
 The owner explicitly clarified that 0% was only an example of a possible user
 workaround. MP3 uses the chosen preset, Intensity and controls just like WAV;
