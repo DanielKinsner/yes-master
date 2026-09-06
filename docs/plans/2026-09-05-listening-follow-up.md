@@ -195,7 +195,7 @@ Priority describes the proposed implementation order, not a newly imposed beta g
 | 5A | Make Album export completion/receipt easy to find | Complete, readable receipt after export; preserved measurements and cancelled-export behavior. |
 | 5B | Correct label consistency and incidental rail scrolling | Truthful labels and viewport/keyboard verification, with intentional scrolling retained where needed. |
 | 5C | Settle Album file naming and manifest presentation | Small documented output-design choice before changing the file contract; non-overwrite coverage. |
-| 6 | Scope and then deliver the requested extra export format | Separate WAV + MP3/conversion specification and real encoded-file validation. |
+| 6 | Scope and then deliver the requested extra export format | WAV + MP3 mastering-export specification and real encoded-file validation. |
 | 7 | Close with focused verification and one short owner check | Evidence for changed behavior; original successful results retained; unresolved items named precisely. |
 
 The analysis/loading discussion can happen after **2A** supplies evidence. Steps 3–5 need not wait for an undecided new loading experience or codec design. If an intermittent bug stays unreproduced after the bounded checks below, record that limit and continue independent work; do not invent a fix or close the issue as passed.
@@ -391,19 +391,19 @@ Current implementation deliberately writes **`NN-<source-stem>.wav`** inside a c
 
 **Acceptance after a choice:** For `metadata/`, update the actual returned path, folder creation, manifest references, cleanup, and receipt links. For removal, stop emitting new JSON and remove the assumption of a mandatory manifest path throughout report types, completion logic, UI, tests, and affected bridges; keep the in-app report usable and make its persistence/reopen behavior explicit. Neither option deletes old owner outputs. In both cases, continuous-file assembly, cancellation/failure cleanup, and collision-safe non-overwrite behavior remain correct; legacy receipts/projects stay readable. Keep this independent of a DSP or codec change.
 
-## 6. Extra formats and conversion: a separate feature specification
+## 6. Extra export formats: a separate feature specification
 
-The owner clearly requests more output formats and explicitly names **MP3**, including **WAV → MP3 without mastering**. Preserve both requirements. The minimal proposed first increment is **retain WAV and add MP3**, not an unsolicited catalog of codecs.
+The owner requests **MP3** as a smaller-file, broadly playable choice within the normal mastering export. **The follow-up interview supersedes the earlier interpretation of WAV → MP3 without mastering:** no separate converter, Original-source selector or bypass mode is wanted. Preserve existing DSP/delivery behavior at 0% Intensity and do not add special workaround explanations. Retain WAV and add MP3; Track/Album scope and quality defaults remain unresolved.
 
 Before implementation, write a bounded specification covering:
 
 1. Track versus Album availability, MP3 quality controls/default, and how format selection affects Standard's currently fixed delivery promise.
-2. An explicit way to export/convert the **Original source** without the mastering chain. **Intensity 0 is not a reliable synonym for bypass:** other processing/limiting can remain active. The output-source choice must be unambiguous and must not silently depend on whichever A/B side happens to be playing.
+2. Keep MP3 on the normal mastering export path, independent of the audition A/B side. Preserve 0% Intensity and delivery behavior; no Original-source export choice or new bypass semantics.
 3. Encoder choice and distribution on Windows/Mac, installation/offline behavior, and applicable packaging/redistribution requirements. Verify current primary documentation when choosing the dependency; this plan has not selected one.
 4. Extension/filter handling, supported channel/rate conversion, output destination safety, cancellation, failure cleanup, and persistent project/settings compatibility.
 5. What the receipt measures. MP3 can add padding/delay and change decoded peaks. Do not label pre-encode PCM figures as measurements of the delivered encoded file. Define and verify the delivered-file checks and user copy.
 
-**Acceptance:** A real MP3 opens/decodes in an independent player; requested format/quality, duration accounting, channels/rate, and receipt semantics match the implementation. Source-conversion mode bypasses mastering as specified. Existing WAV exports, levels, receipts, and non-overwrite behavior remain correct. Test Track and Album only for the surfaces included in the agreed increment, and do not imply unavailable coverage.
+**Acceptance:** A real MP3 opens/decodes in an independent player; requested format/quality, duration accounting, channels/rate, and receipt semantics match the implementation. MP3 uses the normal mastering path with existing 0% behavior. Existing WAV exports, levels, receipts, and non-overwrite behavior remain correct. Test Track and Album only for the surfaces included in the agreed increment, and do not imply unavailable coverage.
 
 The extra-format request conflicts with current WAV-only/fixed-Standard product descriptions. When its scope is settled, update the corresponding internal `PRODUCT.md`/behavior/help documentation as part of that authorized decision; ask only about unresolved product choices. Public claims must match working, verified functionality and publication authorization. This feature need not delay the objective corrections in steps 1–5.
 
@@ -416,7 +416,7 @@ These are genuine product choices, not missing answers from the listening form. 
 | When imported tracks become usable — settled | Owner selected incremental readiness, progress for remaining tracks, and playback priority | Implementation must establish time to first usable track, total batch time, and playback/resource impact. |
 | Automatic Preview LUFS on import — settled | Owner selected automatic measurement for the ready selected track when already enabled, "Measuring" state, obsolete-work cancellation and playback protection | Implementation must verify resource contention, source/settings lifetime and cancellation; no whole-batch render queue. |
 | Album output naming/JSON presentation — settled | Owner selected **metadata/ subfolder** with a plain-language receipt explanation, Track `Song_mastered.wav` and Album `01-Song_mastered.wav` in left-rail order | Implement and verify ordering, default names, returned paths, links, cleanup and non-overwrite behavior. |
-| First codec/conversion scope | WAV + MP3, with an explicit Original/source conversion path | Short specification including Track/Album/Standard scope, actual encoder feasibility, receipt semantics, and product-doc consequences. |
+| First codec scope — purpose settled | WAV + MP3 in normal mastering export; no separate converter/bypass. Track/Album availability and quality defaults remain open | Short specification including Track/Album/Standard scope, actual encoder feasibility, receipt semantics, and product-doc consequences. |
 
 For routine bug-fix details, use engineering judgment within the authorized scope. Do not turn every test or small UI correction into an owner approval. For the analysis/loading workflow, the request to discuss before changes comes from the owner's written note, not an invented process gate.
 

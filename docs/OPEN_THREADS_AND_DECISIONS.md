@@ -7,6 +7,15 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **2026-09-05 — MP3 purpose clarified in owner interview.** MP3 is a smaller-file,
+> broadly playable choice within the normal mastering export. The owner rejects
+> a separate conversion workflow or Original-source export selector. This
+> supersedes the earlier interpretation of the listening notes as requiring
+> conversion without mastering. Preserve existing DSP/delivery behavior at 0%
+> Intensity; do not add bypass or special workaround explanations. Normal meters
+> and export claims remain truthful. Track/Album scope and quality defaults are
+> still pending; MP3 is not implemented by this decision.
+
 > **2026-09-05 — Album manifest presentation settled in owner interview.**
 > The owner accepted `metadata/manifest.json`, with the concern that users
 > should not receive an unexplained file. Keep audio files separate and explain

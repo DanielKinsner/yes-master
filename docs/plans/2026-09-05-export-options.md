@@ -31,12 +31,14 @@ Options considered in the interview:
 
 ## Proposed first extra-format increment
 
-Retain WAV and add MP3 to Standard and Advanced Track export. Present an explicit
-`Mastered` / `Original conversion` source choice independent of audition A/B.
-Original conversion decodes the source and bypasses the entire mastering chain;
-Intensity zero is not bypass. Proposed MP3 default: 320 kbps with a quality
-selector. The owner still needs to choose Track first versus Track and Album
-together, and confirm this quality/surface scope.
+**Owner clarification:** retain WAV and add MP3 as a smaller-file, broadly playable
+choice in the normal mastering export. No separate converter or `Original
+conversion` selector. Preserve existing DSP/delivery behavior at 0% Intensity;
+do not add bypass or special explanations for workarounds. This supersedes the
+earlier conversion-without-mastering interpretation. Ordinary export claims and
+meters remain truthful. Proposed first scope: Standard and Advanced Track export,
+320 kbps default with a quality selector. Track first versus Track and Album
+together, and quality/surface scope, still need an owner answer.
 
 Encoder feasibility candidate: embedded LAME via a maintained Rust wrapper,
 bundled for offline use. No new dependency has been selected or installed.
@@ -56,7 +58,7 @@ through to an unsupported MP3 configuration.
 Receipts must identify the delivered encoding and quality. Decode the completed
 MP3 and measure that delivered signal, with documented delay/padding handling;
 pre-encode PCM peaks are not delivered-file peaks. Acceptance includes an
-independent decoder/player, duration/rate/channel checks, mastering-bypass proof,
+independent decoder/player, duration/rate/channel checks, normal mastering-path verification,
 WAV regression and unchanged source/prior output bytes. Update Standard's fixed
 WAV promise, help and internal product docs with the implemented scope, without
 publishing unverified claims.
