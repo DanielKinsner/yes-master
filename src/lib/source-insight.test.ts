@@ -35,6 +35,13 @@ function analysis(overrides: Partial<AnalysisResult> = {}): AnalysisResult {
 }
 
 describe("sourceInsightRows", () => {
+  it("distinguishes one-channel sources from narrow and dual-mono stereo", () => {
+    const stereo = (channels?: number) => sourceInsightRows(analysis({ stereo_width: 0 }), channels).find(r => r.key === "stereo")!;
+    expect(stereo(1).value).toBe("Mono");
+    expect(stereo(1).note).toBe("One-channel source.");
+    expect(stereo(2).value).toBe("Narrow");
+    expect(stereo().value).toBe("Narrow");
+  });
   it("produces the five structured rows with values and readings", () => {
     const rows = sourceInsightRows(analysis());
     expect(rows.map((r) => r.key)).toEqual(["loudness", "dynamics", "spectrum", "stereo", "true-peak"]);

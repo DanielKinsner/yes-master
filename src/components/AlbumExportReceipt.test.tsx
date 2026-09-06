@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { AlbumExportReceipt } from "./AlbumExportReceipt";
+import { AlbumExportCompletion } from "./AlbumExportCompletion";
 import type { AlbumRenderReport } from "../lib/api";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean })
@@ -27,6 +28,29 @@ afterEach(() => {
 });
 
 describe("AlbumExportReceipt", () => {
+  it("opens a successful Album receipt without stealing focus, supports dismissal and reopening", async () => {
+    const report = { job_id: "complete", status: { status: "done" }, album_wav_path: "album.wav",
+      manifest_path: "manifest.json", requested_sample_rate: null, rendered_sample_rate: 48000,
+      source_sample_rates: [48000], bit_depth: 24, rendered_channels: 2, source_channels: [2], tracks: [],
+    } as AlbumRenderReport;
+    const before = document.createElement("button"); document.body.appendChild(before); before.focus();
+    const { container, root } = await renderNode(<AlbumExportCompletion report={report} />);
+    expect(document.body.querySelector('[aria-label="Album export receipt"]')).not.toBeNull();
+    expect(container.querySelector('.album-completion')).toBeNull();
+    expect(document.activeElement).toBe(before);
+    const close = document.body.querySelector<HTMLButtonElement>('[aria-label="Close Album receipt"]')!;
+    close.focus();
+    await act(async () => close.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(document.body.querySelector(".album-completion")).toBeNull();
+    const trigger = container.querySelector<HTMLButtonElement>('[aria-controls="album-completion"]')!;
+    expect(document.activeElement).toBe(trigger);
+    await act(async () => trigger.click());
+    expect(document.body.querySelector(".album-completion")).not.toBeNull();
+    await act(async () => root.render(<AlbumExportCompletion report={{ ...report, job_id: "cancel", status: { status: "cancelled" } }} />));
+    expect(container.textContent).not.toContain("Album exported");
+    expect(document.body.querySelector(".album-completion")).toBeNull();
+    await act(async () => root.unmount());
+  });
   it("shows delivered per-track loudness, target and peak without claiming a shortfall is failure", async () => {
     const report = {
       job_id: "details", status: { status: "done" }, album_wav_path: "album.wav", manifest_path: "manifest.json",

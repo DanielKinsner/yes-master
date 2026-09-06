@@ -1777,7 +1777,7 @@ describe("useTrackMaster integration dispatches", () => {
 
   it("does not display a previous processing readout while changed settings are pending", async () => {
     const track = makeTrack("readout-pending", "C:/audio/readout-pending.wav");
-    const readout = makeGuardrailReadout(true);
+    const readout = { ...makeGuardrailReadout(true), effective_auto_width: 1.09 };
     const pending = deferred<GuardrailReadout>();
     mocks.api.importTracks.mockResolvedValue([track]);
     mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
@@ -1788,8 +1788,35 @@ describe("useTrackMaster integration dispatches", () => {
     mocks.api.guardrailReadout.mockReturnValue(pending.promise);
     await act(async () => { harness.current().setIntensity(0.8); });
     expect(harness.current().guardrailReadout).toBeNull();
+    expect(harness.current().autoWidthReadout).toEqual({ value: readout.effective_auto_width, updating: true });
     await act(async () => { pending.resolve(readout); await pending.promise; });
     await waitFor(() => expect(harness.current().guardrailReadout).toEqual(readout));
+    expect(harness.current().autoWidthReadout).toEqual({ value: readout.effective_auto_width, updating: false });
+    await act(async () => harness.root.unmount());
+  });
+
+  it("ignores obsolete Width replies and clears Width across track contexts", async () => {
+    const a = makeTrack("width-a", "C:/audio/a.wav");
+    const b = makeTrack("width-b", "C:/audio/b.wav");
+    const old = deferred<GuardrailReadout>();
+    const latest = deferred<GuardrailReadout>();
+    const readout = { ...makeGuardrailReadout(true), effective_auto_width: 1.09 };
+    mocks.api.importTracks.mockResolvedValue([a, b]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(a.id), makeAnalysis(b.id)]);
+    mocks.api.guardrailReadout.mockResolvedValue(readout);
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles([a.path, b.path]); });
+    await waitFor(() => expect(harness.current().autoWidthReadout?.value).toBe(1.09));
+    mocks.api.guardrailReadout.mockReturnValue(old.promise);
+    await act(async () => harness.current().setIntensity(0.6));
+    mocks.api.guardrailReadout.mockReturnValue(latest.promise);
+    await act(async () => harness.current().setIntensity(0.7));
+    await act(async () => { latest.resolve({ ...readout, effective_auto_width: 1.15 }); });
+    await act(async () => { old.resolve({ ...readout, effective_auto_width: 0.8 }); });
+    expect(harness.current().autoWidthReadout).toEqual({ value: 1.15, updating: false });
+    mocks.api.guardrailReadout.mockReturnValue(new Promise(() => {}));
+    await act(async () => harness.current().selectTrack(b.id));
+    expect(harness.current().autoWidthReadout).toBeNull();
     await act(async () => harness.root.unmount());
   });
 

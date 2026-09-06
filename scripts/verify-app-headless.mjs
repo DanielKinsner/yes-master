@@ -563,15 +563,21 @@ async function driveAlbumExport(page) {
     "the album export receipt",
     documentText,
   );
-  await page.evaluate(() => {
-    document
-      .querySelector(".album-export-receipt")
-      ?.scrollIntoView({ block: "center", behavior: "instant" });
-  });
-  await page.locator(".album-receipt-tracks summary").click();
+  const completion = page.getByRole("region", { name: "Album export receipt", exact: true });
+  if (!(await completion.isVisible()) || (await page.locator(".album-receipt-tracks").getAttribute("open")) === null) {
+    throw new Error("Successful Album export did not expose its receipt and track measurements");
+  }
   if (await page.locator(".album-track-result").count() !== 4) {
     throw new Error("Album receipt omitted delivered track results");
   }
+  const exposed = await completion.evaluate(el => {
+    const r = el.getBoundingClientRect();
+    const points = [[r.left + 12, r.top + 12], [r.right - 12, r.top + 12],
+      [r.left + 12, r.bottom - 12], [r.right - 12, r.bottom - 12]];
+    return r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight
+      && points.every(([x, y]) => el.contains(document.elementFromPoint(x, y)));
+  });
+  if (!exposed) throw new Error("Album receipt is clipped or covered by the rail/viewport");
 }
 
 /**

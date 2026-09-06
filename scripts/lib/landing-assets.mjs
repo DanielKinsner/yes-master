@@ -50,6 +50,8 @@ export const CAPTURE_INPUTS = [
   // stops being covered — and a component that renders nothing visible costs
   // one line here and nothing at runtime.
   "src/components/AdvancedPanel.tsx",
+  "src/components/AlbumExportCompletion.tsx",
+  "src/components/AlbumExportCompletion.css",
   "src/components/AlbumExportReceipt.tsx",
   "src/components/AlbumPanel.tsx",
   "src/components/AnalysisOrb.tsx",

@@ -435,11 +435,12 @@ describe("StandardRightRail", () => {
     };
     const { container, root } = await render(
       <StandardView
-        tm={fakeTm({ selectedWaveform: waveform } as Partial<TM>)}
+        tm={fakeTm({ selectedWaveform: waveform, selectedRegion: { start_sec: 0.005, end_sec: 0.02 } } as Partial<TM>)}
         onEnterAdvanced={() => {}}
       />,
     );
     expect(container.textContent).not.toContain("Shift+drag");
+    expect(container.querySelector(".wf-region-group")).toBeNull();
     await act(async () => root.unmount());
   });
 

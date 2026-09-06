@@ -53,7 +53,7 @@ function TrackResult({ track }: { track: AlbumTrackRenderRecord }) {
   );
 }
 
-export function AlbumExportReceipt({ report }: { report: AlbumRenderReport }) {
+export function AlbumExportReceipt({ report, expanded = false }: { report: AlbumRenderReport; expanded?: boolean }) {
   const renderedRate = formatSampleRate(report.rendered_sample_rate);
   const exportCancelled = report.status.status === "cancelled";
   const requestedRate =
@@ -128,7 +128,7 @@ export function AlbumExportReceipt({ report }: { report: AlbumRenderReport }) {
         </span>
       )}
       {report.tracks.length > 0 && (
-        <details className="album-receipt-tracks">
+        <details className="album-receipt-tracks" open={expanded || undefined}>
           <summary>Track results ({report.tracks.length})</summary>
           <ol aria-label="Delivered track measurements">
             {report.tracks.map((track) => (

@@ -1034,6 +1034,16 @@ export function useTrackMaster() {
   const [compressionPlan, setCompressionPlan] = useState<CompressionPlan | null>(null);
   const [adaptiveCompressionGate, setAdaptiveCompressionGate] = useState(false);
   const guardrailReadoutReq = useRef(0);
+  const widthSurface = `${selectedTrackId}:${mode}:${adaptiveCompressionGate}`;
+  const [lastAutoWidth, setLastAutoWidth] = useState<{
+    surface: string; settings: MasteringSettings; value: number;
+  } | null>(null);
+  // Only Width retains its last known position while recalculating. Processing
+  // indicators still clear immediately; old width is explicitly marked updating.
+  const autoWidthReadout = lastAutoWidth?.surface === widthSurface ? {
+    value: lastAutoWidth.value,
+    updating: lastAutoWidth.settings !== selectedSettings || guardrailReadout === null,
+  } : null;
   const compressionPlanSurface = useRef<string | null>(null);
 
   useEffect(() => {
@@ -1076,6 +1086,7 @@ export function useTrackMaster() {
     const reqId = ++guardrailReadoutReq.current;
     if (!selectedTrackId) {
       setGuardrailReadout(null);
+      setLastAutoWidth(null);
       setCompressionPlan(null);
       compressionPlanSurface.current = null;
       return;
@@ -1093,11 +1104,15 @@ export function useTrackMaster() {
       .then((r) => {
         if (guardrailReadoutReq.current === reqId) {
           setGuardrailReadout(r ?? null);
+          setLastAutoWidth(r && typeof r.effective_auto_width === "number" && Number.isFinite(r.effective_auto_width)
+            ? { surface: widthSurface, settings: selectedSettings, value: r.effective_auto_width }
+            : null);
         }
       })
       .catch(() => {
         if (guardrailReadoutReq.current === reqId) {
           setGuardrailReadout(null);
+          setLastAutoWidth(null);
         }
       });
     Promise.resolve(
@@ -1122,6 +1137,7 @@ export function useTrackMaster() {
     selectedAnalysis,
     mode,
     adaptiveCompressionGate,
+    widthSurface,
   ]);
 
   const estimatedPlaybackPositionSec = useCallback(() => {
@@ -3049,6 +3065,7 @@ export function useTrackMaster() {
     exportAlbumPlan,
     updatePreview,
     guardrailReadout,
+    autoWidthReadout,
     compressionPlan,
     exportMaster,
     exportStandardMaster,

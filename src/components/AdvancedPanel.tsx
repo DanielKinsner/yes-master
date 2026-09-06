@@ -44,6 +44,7 @@ export function AdvancedPanel({
   showDeliveryFormat = true,
   albumDeliveryFormat,
   adaptiveReadout,
+  autoWidthReadout,
   compressionPlan,
   albumMode = false,
   onResetAll,
@@ -71,6 +72,7 @@ export function AdvancedPanel({
     onSampleRate: (sampleRate: number | null) => void;
   };
   adaptiveReadout?: GuardrailReadout | null;
+  autoWidthReadout?: { value: number; updating: boolean } | null;
   compressionPlan?: CompressionPlan | null;
   albumMode?: boolean;
   /// 2026-08-19 (owner): one global reset for the whole Advanced rail —
@@ -164,6 +166,7 @@ export function AdvancedPanel({
         onOutputGain={onOutputGain}
         onLoudnessTarget={onLoudnessTarget}
         adaptiveReadout={adaptiveReadout}
+        autoWidthReadout={autoWidthReadout}
         albumMode={albumMode}
       />
       <PerBandCompressorCard
@@ -333,6 +336,7 @@ function AdvancedControlsCard({
   onOutputGain,
   onLoudnessTarget,
   adaptiveReadout,
+  autoWidthReadout,
   albumMode = false,
 }: {
   settings: MasteringSettings;
@@ -345,6 +349,7 @@ function AdvancedControlsCard({
   onOutputGain: (db: number) => void;
   onLoudnessTarget: (targetLufs: number | null) => void;
   adaptiveReadout?: GuardrailReadout | null;
+  autoWidthReadout?: { value: number; updating: boolean } | null;
   albumMode?: boolean;
 }) {
   const a = settings.advanced;
@@ -355,7 +360,7 @@ function AdvancedControlsCard({
   // it matches the chain exactly. Drives the honest thumb position and the
   // "Auto · 1.11" readout; without it the Auto thumb sat at 0 and dragging
   // to 0.05 read as a tiny increase instead of near-mono.
-  const effectiveAutoWidth = adaptiveReadout?.effective_auto_width ?? null;
+  const effectiveAutoWidth = autoWidthReadout?.value ?? adaptiveReadout?.effective_auto_width ?? null;
   const resetAdvancedControls = () => {
     onInputGain(0);
     onOutputGain(0);
@@ -437,7 +442,7 @@ function AdvancedControlsCard({
               ? "Auto"
               : a.lufs_offset_db === null && settings.delivery_profile !== "custom"
                 ? "Profile"
-                : undefined
+                : "Custom"
           }
           onChange={onLoudnessTarget}
           onReset={() => onLoudnessTarget(null)}
@@ -458,7 +463,7 @@ function AdvancedControlsCard({
               ? "Auto"
               : a.ceiling_dbtp === null && settings.delivery_profile !== "custom"
                 ? "Profile"
-                : undefined
+                : "Custom"
           }
           onChange={(v) => update("ceiling_dbtp", v)}
           onReset={() => update("ceiling_dbtp", null)}
@@ -474,7 +479,7 @@ function AdvancedControlsCard({
           min={0}
           max={2}
           format={(v) => v.toFixed(2)}
-          autoReadout={effectiveAutoWidth?.toFixed(2)}
+          autoReadout={effectiveAutoWidth == null ? undefined : `${effectiveAutoWidth.toFixed(2)}${autoWidthReadout?.updating ? " (updating)" : ""}`}
           sliderAutoValue={effectiveAutoWidth ?? undefined}
           showAutoReset
           onChange={(v) => update("width", v)}

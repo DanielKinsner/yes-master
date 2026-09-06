@@ -11,6 +11,11 @@ listening or reproduction question. Do not repeat answers supplied in prose or
 turn the original export's generated warnings into new owner requests. The rows
 below concern real product choices, not an unperformed listening session.
 
+Concrete September 5 examples and the proposed WAV + MP3 / Original-conversion
+scope are now in [the output options](plans/2026-09-05-export-options.md).
+Questions were presented during implementation; no answer has been inferred.
+The objective VM, resource and UI fixes proceed independently.
+
 ## Why this file exists
 
 Record real unresolved owner choices so independent work can continue without

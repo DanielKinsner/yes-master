@@ -39,8 +39,6 @@ Prepared September 5, 2026. **Implementation in progress; local checkpoints belo
 - [Concrete export/loading options](2026-09-05-export-options.md) preserve the
   unresolved owner choices. No codec, naming, manifest or loading behavior changed.
 
-## Start here
-
 ### Checkpoint 3 — preview worker lifecycle
 
 - Confirmed: source epochs discarded obsolete results but detached old-source
@@ -67,6 +65,49 @@ Prepared September 5, 2026. **Implementation in progress; local checkpoints belo
   seen in the earlier dev binary. This identifies the compiled local dirty state;
   it is not exact-commit CI. Logs use the `listening-worker-*` and
   `listening-native-final-dev.log` names under ignored `test-output/`.
+
+### Checkpoint 4 — Width, inactive region, mono and Album completion UI
+
+- Width retains the last same-context resolved value/thumb during asynchronous
+  recalculation and labels it updating. Delayed/out-of-order replies and track
+  changes are covered. Manual width remains explicit. Numeric target/ceiling
+  overrides now say Custom; inherited values say Profile, genuinely unresolved
+  values Auto. No settings were changed to align labels.
+- Standard hides inactive loop shading, preserves remembered Advanced geometry,
+  and keeps looping disarmed. The intermittent native start-position anomaly
+  remains open: existing hook/controller loop regressions pass, but this is not
+  a completed 20-transition native reproduction attempt.
+- Known one-channel sources show Mono; stereo/unknown width buckets stay intact.
+  The supplied 3-minute mono file was verified in the native Insight panel.
+- Successful Album export opens its existing full receipt next to the export
+  workflow; dismissal/reopen and keyboard focus restoration work without focus
+  theft. Visual review caught rail clipping and corrected it using a body portal.
+  The headless check now probes visible receipt corners as well as all four
+  metrics/results. Cancelled exports never acquire a success heading.
+- Isolated UI checkout (baseline `9238a55` plus only this slice): 845 frontend
+  tests and all 31 headless scenario/viewport checks passed. Final evidence:
+  `test-output/listening-ui-check/test-output/headless/2026-09-06T02-23-52-495Z`.
+  Album completion and Track screenshots were visually reviewed at minimum and
+  laptop sizes. Canonical captures were regenerated through the existing pipeline;
+  its historical loss of untouched studioArtwork metadata was repaired by carrying
+  that original HEAD section forward, without changing generated hashes/digests.
+  The owner's independent capture-script fix and UI edits remain outside this commit.
+- Extra keyboard probes: Manual compressor + expanded Tools, Track/Album at
+  1360x740 and 1920x1080, reach the delivery controls with visible focus. At 1920x1080
+  the normal Track rail has zero overflow; fully expanded Manual needs 57 px
+  (Album 97 px in the isolated baseline). At minimum, intentional travel is
+  397/437 px. No few-pixel defect was demonstrated, so scrolling was not hidden.
+  At 200% equivalent layout (960x540 CSS viewport, device scale 2) the delivery
+  controls remain reachable. This is browser layout evidence, not native zoom;
+  compressed center A/B text at that effective width remains a separate limit.
+- Existing Width mono/identity/side/mid/clamp/full-chain and Loud golden,
+  compressor-link/asymmetry, finite-rate, metering and export invariants all passed
+  in the Rust checkpoint. No objective Width or Loud audio defect was found in
+  those named cases. This does not claim the entire proposed listening matrix.
+  Native Album export interaction and VM-off saved-file listening remain targeted
+  follow-up evidence; the already-passed original owner session is retained.
+
+## Start here
 
 **First: reproduce and correct the brief Volume Match level jump. Then address high-rate/long-file responsiveness.** Follow with targeted Width/Loud checks, loop behavior, and the reported UI/export issues. Keep the import/loading product discussion and additional codecs separate from those corrections.
 

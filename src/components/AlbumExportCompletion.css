@@ -1,0 +1,13 @@
+.album-completion-status { font-size: 12px; font-weight: 600; }
+.album-completion {
+  position: fixed; z-index: 45; right: 24px; bottom: 24px;
+  width: min(460px, calc(100vw - 48px)); max-height: min(640px, calc(100vh - 48px));
+  overflow: auto; padding: 20px; border: 1px solid var(--border, #444);
+  border-radius: 12px; background: var(--panel, #17191e); color: var(--text, #eee);
+  box-shadow: 0 12px 48px #0008;
+}
+.album-completion header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.album-completion h2 { font-size: 18px; margin: 0; }
+.album-completion .album-export-receipt { margin: 16px 0 0; }
+.album-completion .album-export-receipt-path { white-space: normal; overflow-wrap: anywhere; }
+.album-completion .album-export-receipt-meta { overflow-wrap: anywhere; }

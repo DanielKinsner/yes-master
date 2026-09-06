@@ -650,7 +650,7 @@ export function StandardView({
               analysisProgress={tm.analysisProgress}
               currentTimeSec={tm.transport.currentTimeSec}
               durationSec={tm.selectedTrack?.duration_seconds ?? 0}
-              region={tm.selectedRegion}
+              region={null}
               regionsEnabled={false}
               onSeek={tm.seek}
               onSetRegion={tm.setRegion}

@@ -52,6 +52,7 @@ const DEFAULT_SETTINGS: MasteringSettings = {
 async function renderPanel(opts?: {
   settings?: MasteringSettings;
   adaptiveReadout?: GuardrailReadout | null;
+  autoWidthReadout?: { value: number; updating: boolean } | null;
   onAdvanced?: (adv: MasteringSettings["advanced"]) => void;
   onResetAll?: () => void;
   canResetAll?: boolean;
@@ -73,6 +74,7 @@ async function renderPanel(opts?: {
         onDeliveryBitDepth={vi.fn()}
         onDeliverySampleRate={vi.fn()}
         adaptiveReadout={opts?.adaptiveReadout}
+        autoWidthReadout={opts?.autoWidthReadout}
         onResetAll={opts?.onResetAll}
         canResetAll={opts?.canResetAll}
         liveGr={opts?.liveGr}
@@ -99,6 +101,14 @@ function readoutWithAutoWidth(effectiveAutoWidth: number): GuardrailReadout {
 }
 
 describe("AdvancedPanel", () => {
+  it("keeps Auto Width's thumb and identifies the last value during recalculation", async () => {
+    const { container, root } = await renderPanel({
+      adaptiveReadout: null, autoWidthReadout: { value: 1.09, updating: true },
+    });
+    expect(container.querySelector<HTMLInputElement>('input[type="range"][aria-label="Width"]')?.value).toBe("1.09");
+    expect(container.textContent).toContain("Auto · 1.09 (updating)");
+    await act(async () => root.unmount());
+  });
   it("renders no rail header without a global reset; with one, Reset all is disabled until something is edited (owner 2026-08-19)", async () => {
     const bare = await renderPanel();
     expect(bare.container.querySelector(".rail-header")).toBeNull();

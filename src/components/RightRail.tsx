@@ -18,6 +18,7 @@ type RightRailProps = {
   /// them as a fragment so the rail just renders the slot in the right
   /// place, between Quality Check and the sticky Export group.
   advancedSlot?: ReactNode;
+  exportReceipt?: ReactNode;
   // Export action — promoted from the workspace into the right rail to
   // match the reference layout. Disabled until analysis exists and while
   // any render/export is in flight.
@@ -62,6 +63,7 @@ export function RightRail({
   analysis,
   lastChecks,
   advancedSlot,
+  exportReceipt,
   exportMode = "track",
   canExport,
   isExporting,
@@ -241,6 +243,7 @@ export function RightRail({
               {visibleRenderFeedback.message}
             </p>
           )}
+          {exportReceipt}
         </div>
       </div>
       {gateOpen && (

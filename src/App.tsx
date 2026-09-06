@@ -17,7 +17,7 @@ import { PresetIcon, PRESET_ACCENT, PRESET_TONE } from "./components/PresetIcon"
 import { RightRail, MasterOutPanel } from "./components/RightRail";
 import { VisualEqPanel } from "./components/VisualEqPanel";
 import { AlbumPanel } from "./components/AlbumPanel";
-import { AlbumExportReceipt } from "./components/AlbumExportReceipt";
+import { AlbumExportCompletion } from "./components/AlbumExportCompletion";
 import { Knob, intensityLabel } from "./components/Knob";
 import { SignalChain } from "./components/SignalChain";
 import { EmptyState } from "./components/EmptyState";
@@ -515,11 +515,6 @@ function App() {
             />
           ) : null
         }
-        albumReceipt={
-          tm.mode === "album" && tm.albumExportReport ? (
-            <AlbumExportReceipt report={tm.albumExportReport} />
-          ) : null
-        }
       />
       <main className="workspace">
         {tm.selectedTrack ? (
@@ -545,6 +540,8 @@ function App() {
         )}
       </main>
       <RightRail
+        exportReceipt={tm.mode === "album" && tm.albumExportReport
+          ? <AlbumExportCompletion report={tm.albumExportReport} /> : undefined}
         analysis={tm.selectedAnalysis}
         lastChecks={selectedExportChecks}
         exportButtonRef={exportButtonRef}
@@ -572,6 +569,7 @@ function App() {
                   : undefined
               }
               adaptiveReadout={tm.guardrailReadout}
+              autoWidthReadout={tm.autoWidthReadout}
               compressionPlan={tm.compressionPlan}
               albumMode={tm.mode === "album"}
               onResetAll={tm.resetToStandardManaged}
@@ -1760,6 +1758,7 @@ export function TrackHeader({
         {analysis ? (
           <SourceInsight
             analysis={analysis}
+            sourceChannels={track.channels ?? undefined}
             lastChecks={lastChecks}
             unreviewed={insightReview.isUnreviewed(analysis)}
             isAnalyzing={isAnalyzing}

@@ -64,8 +64,10 @@ describe("console layout CSS", () => {
     // Album identity + export receipt now render inside the sidebar.
     expect(appTsx).toContain("albumHeader={");
     expect(appTsx).toContain("<AlbumPanel");
-    expect(appTsx).toContain("albumReceipt={");
-    expect(appTsx).toContain("<AlbumExportReceipt");
+    // Listening follow-up: the receipt belongs beside Export, while the
+    // center waveform layout stays identical for Track and Album.
+    expect(appTsx).toContain("exportReceipt={");
+    expect(appTsx).toContain("<AlbumExportCompletion");
     // The flow cluster survives as a stacked grid at rail width.
     expect(block(".album-panel-controls")).toContain("display: grid");
     expect(appTsx).toContain('exportMode={tm.mode === "album" ? "album" : "track"}');

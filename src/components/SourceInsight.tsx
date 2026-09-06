@@ -26,6 +26,7 @@ import {
 
 export function SourceInsight({
   analysis,
+  sourceChannels,
   lastChecks,
   unreviewed,
   isAnalyzing = false,
@@ -33,6 +34,7 @@ export function SourceInsight({
   onReanalyze,
 }: {
   analysis: AnalysisResult;
+  sourceChannels?: number;
   /// Quality checks from the most recent export, if any.
   lastChecks?: QualityCheck[];
   unreviewed: boolean;
@@ -43,7 +45,7 @@ export function SourceInsight({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const panelId = useId();
-  const rows = sourceInsightRows(analysis);
+  const rows = sourceInsightRows(analysis, sourceChannels);
   const overall = insightOverallStatus(rows);
   const headline = insightHeadline(analysis);
   const exportRows = lastChecks && lastChecks.length > 0 ? lastChecks : null;

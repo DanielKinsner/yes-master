@@ -32,7 +32,7 @@ export interface InsightRow {
   status: InsightStatus;
 }
 
-export function sourceInsightRows(analysis: AnalysisResult): InsightRow[] {
+export function sourceInsightRows(analysis: AnalysisResult, sourceChannels?: number): InsightRow[] {
   const rows: InsightRow[] = [];
 
   const lufs = analysis.lufs_integrated;
@@ -91,7 +91,10 @@ export function sourceInsightRows(analysis: AnalysisResult): InsightRow[] {
   {
     let value: string;
     let note: string;
-    if (w > 0.7) {
+    if (sourceChannels === 1) {
+      value = "Mono";
+      note = "One-channel source.";
+    } else if (w > 0.7) {
       value = "Wide";
       note = "Wide stereo image.";
     } else if (w < 0.3) {
