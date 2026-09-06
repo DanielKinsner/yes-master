@@ -2,7 +2,6 @@ import Nav from "./landing/Nav";
 import Hero from "./landing/Hero";
 import Workflow from "./landing/Workflow";
 import ProofDeck from "./landing/ProofDeck";
-import SignOff from "./landing/SignOff";
 import SoundCharacter from "./landing/SoundCharacter";
 import AlbumProof from "./landing/AlbumProof";
 import BetaTerms from "./landing/BetaTerms";
@@ -26,7 +25,6 @@ export default function LandingPage() {
         <Hero />
         <Workflow />
         <ProofDeck />
-        <SignOff />
         <SoundCharacter />
         <AlbumProof />
         <BetaTerms />
