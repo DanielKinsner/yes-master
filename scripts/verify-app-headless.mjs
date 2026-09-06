@@ -1500,6 +1500,16 @@ for (const scenario of SCENARIOS) {
       const domText = await documentText(page);
       const controls = await controlNames(page);
 
+      // Accessibility text can exist while an old gradient's transparent text
+      // fill makes the new plain title invisible, including in native WebKit.
+      const unpaintedTitles = await page.locator('.track-identity h1').evaluateAll(nodes =>
+        nodes.filter(node => {
+          const style = getComputedStyle(node);
+          const fill = style.getPropertyValue('-webkit-text-fill-color');
+          return (fill === 'transparent' || fill === 'rgba(0, 0, 0, 0)') && style.backgroundImage === 'none';
+        }).map(node => node.textContent));
+      if (unpaintedTitles.length) report(`Track title has no visible text paint: ${unpaintedTitles.join(', ')}`);
+
       await page.screenshot({ path: screenshot, fullPage: false });
 
       const metrics = await page.evaluate(() => {
