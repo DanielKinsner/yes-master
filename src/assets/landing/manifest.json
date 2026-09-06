@@ -116,6 +116,23 @@
       },
       "loading": "lazy",
       "alt": "YES Master Album Master view during a real session, meters live"
+    },
+    {
+      "id": "owner-export-receipt",
+      "file": "src/assets/landing/studio/export-receipt.png",
+      "view": "export",
+      "capturedAt": "2026-09-05",
+      "receivedAt": "2026-09-05",
+      "session": "Lay the Money on the Desk",
+      "bytes": 1331609,
+      "sha256": "fb8b9b2c57290b6996a494f88be4991f665a606803df32e331850ed8b839c225",
+      "dimensions": {
+        "width": 1351,
+        "height": 1164
+      },
+      "loading": "lazy",
+      "alt": "YES Master export receipt for Lay the Money on the Desk, showing delivered measurements, export checks and WAV format",
+      "provenance": "Unchanged PNG supplied by the owner as export receipt.png for publication on the website. Capture footer identifies YES Master 0.9.2, build 7ae9fc2+, September 5, 2026. Measurements describe this individual export, not a guarantee for other tracks."
     }
   ],
   "studioArtwork": [

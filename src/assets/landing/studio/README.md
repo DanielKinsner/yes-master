@@ -19,7 +19,7 @@ listening approval. See `../manifest.json` for file hashes, dimensions, and
 provenance. The supplied compositions reconstruct the approved visual direction;
 they are not literal recovered layers of the flattened approved-theme image.
 
-Navigation, page copy, buttons, proof-point icons, report-field and delivery
+Navigation, page copy, buttons, proof-point icons and delivery
 illustrations remain editable HTML/SVG. Text inside the actual app screenshots
 is part of the original capture. No private audio is included.
 
@@ -32,3 +32,12 @@ uses the unchanged `advanced-ui.png` as a separate HTML image, without warping.
 The old `hero-device-advanced.webp` remains here but is no longer imported.
 Prompts, selected originals and encoding details:
 [`studio-refinement-artwork.md`](../../../../docs/landing-mockups/studio-refinement-artwork.md).
+
+## Owner export receipt — 2026-09-05
+
+`export-receipt.png` is the unchanged 1351 × 1164 PNG the owner supplied as
+`export receipt.png` for website publication. It replaces the HTML report-field
+illustration and opens at full size through the existing image viewer. The
+receipt records the Lay the Money on the Desk export, with its original numbers,
+filename, path and build footer. Its hash and provenance are in the manifest;
+these measurements apply to this export only. No screenshot content was generated.

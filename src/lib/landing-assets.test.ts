@@ -75,7 +75,7 @@ describe("landing marketing proof (U7)", () => {
     // They cannot be proven current by content, so they are bound by what can
     // be checked — and each one must be the one that was reviewed.
     const owners = manifest.ownerCaptures as Array<Record<string, unknown>>;
-    expect(owners.length).toBe(3);
+    expect(owners.length).toBe(4);
     for (const capture of owners) {
       expect(capture.sha256, `${capture.id} has no hash`).toMatch(
         /^[a-f0-9]{64}$/,

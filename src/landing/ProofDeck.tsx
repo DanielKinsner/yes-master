@@ -1,4 +1,5 @@
 import advanced from "../assets/landing/studio/advanced-ui.png";
+import exportReceipt from "../assets/landing/studio/export-receipt.png";
 
 import copy from "./page-copy.json";
 import { Capture, DetailList, SectionHeading } from "./StudioElements";
@@ -79,31 +80,13 @@ export default function ProofDeck() {
               <DetailList items={e.details} />
               <p>{e.source_note}</p>
             </div>
-            <figure className="studio-receipt studio-shelf">
-              <p className="studio-label">
-                YES MASTER <span aria-hidden="true">↗</span>
-              </p>
-              <h3>Export receipt.</h3>
-              <figcaption>
-                Report fields, illustrated.
-                <br />
-                Actual measurements populate after rendering.
-              </figcaption>
-              <dl>
-                {[
-                  ["Delivered loudness", "LUFS"],
-                  ["True peak", "dBTP"],
-                  ["Loudness range", "LU"],
-                  ["Quality checks", "Measured result"],
-                ].map(([label, unit]) => (
-                  <div key={label}>
-                    <dt>{label}</dt>
-                    <dd>{unit}</dd>
-                  </div>
-                ))}
-              </dl>
-              <p>Your final file. The facts behind the sound.</p>
-            </figure>
+            <Capture
+              src={exportReceipt}
+              alt="YES Master export receipt for Lay the Money on the Desk, showing delivered measurements, export checks and WAV format"
+              width={1351}
+              height={1164}
+              caption="An actual export receipt. Your final file, measured."
+            />
           </div>
           <div className="studio-export-modes">
             <div>

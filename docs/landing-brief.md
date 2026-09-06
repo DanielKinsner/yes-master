@@ -134,9 +134,6 @@ hierarchy, and each section answers the question the previous one raises:
 3. **Proof deck** (`#standard` / `#advanced`) — Standard as the hero, Advanced
    as the depth, a receipt as the evidence. Since 2026-09-01 the plates are the
    owner's real-session captures ("The Machine Restocks on Friday").
-3b. **Sign-off** — the one photograph on the page (owner-generated 2026-09-01:
-   a desk at dusk, a hand about to sign a printed sheet). Full-bleed, no UI,
-   no claim. It is the page's single permitted mood image.
 4. **Sound character** (`#sound`) — the styles, and adaptive restraint.
 5. **Album** (`#album`) — proof that the depth is real. Deliberately low.
 6. **Beta terms** (`#beta`) — the arrangement, stated before anyone downloads.
@@ -185,15 +182,17 @@ supplied. It does not open an audio player or imply browser mastering.
 
 Page order: Standard hero, Advanced teaser, benefits, combined Standard
 workflow (`#how`, preserving `#standard`), Advanced controls (`#advanced`),
-measured export (`#export`), the preserved Sign-off photo, sound character,
+measured export (`#export`), sound character,
 album/projects, beta FAQ, final action. The old separate Standard proof section
-is consolidated into the workflow. Sign-off is preserved; studio photography
+is consolidated into the workflow. Studio photography
 is now also permitted in the two hero bands by the owner's selected direction.
 
 The handoff Standard and Advanced captures remain unchanged image bytes;
 CSS viewports reveal details and keyboard/touch controls enlarge the full
-source. Album delivery and report fields are labelled illustrations, without
-invented measured results. The owner Album capture remains available under
+source. Album delivery remains a labelled illustration. On 2026-09-05 the owner
+replaced the illustrated report fields with an unchanged, expandable screenshot
+of an actual export receipt; its measurements describe that export only.
+The owner Album capture remains available under
 "Take a closer look". Source hashes and provenance live in the landing manifest.
 The diagrams do not imply one shared Standard/Advanced/Album export ceremony.
 
@@ -209,6 +208,12 @@ That direction supersedes reuse of the angled Advanced chassis. The new blank
 laptop contains the original Advanced screenshot as a separate, unwarped HTML
 image. The sound section gains an editorial tape-machine photograph; the final
 invitation sits beside a musician listening in a studio. Neither scene is
-product proof or a testimonial. The original Sign-off image remains.
+product proof or a testimonial.
 Photos use responsive WebP variants and lazy loading. No product or gate changes.
 Prompts/provenance: `docs/landing-mockups/studio-refinement-artwork.md`.
+
+## Owner removal — 2026-09-05
+
+The Sign-off photograph (pencil and blank sheet) and its caption are removed.
+Export now leads directly into sound character. The owner chose to retain the
+rest of the existing live layout; the broader consolidation experiment is parked.
