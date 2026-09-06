@@ -56,6 +56,9 @@ Track Master supports:
 - Explicit save destination for export.
 - Warning-aware export review.
 - Post-render export receipt/checks.
+- Track and Album expose Export without a separate Tools/audit-WAV action.
+  Live audition needs no preparatory render; users can export to check a file
+  in another player. Internal offline verification remains available to tests.
 - Baseline Settings and contextual Help dialogs.
 - Visible Save/Open Project feedback.
 - Live Master Out meters with plain Standard labels and technical Advanced

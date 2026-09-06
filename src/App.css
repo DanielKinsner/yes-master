@@ -4095,12 +4095,8 @@ button.primary:disabled {
   width: 100%;
 }
 
-/* Export cluster — Export Master CTA + the small Tools fold-out that
-   holds Render audit WAV. Keeps the audit action one click away from
-   Export while staying off the playback strip.
-   UI_LAYOUT_REVISION_1600x940 L3: position: sticky pins this group to
-   the bottom of the right rail, so Export stays reachable while the
-   rest of the rail's technical drawer scrolls. */
+/* Export stays reachable while the rail controls scroll. The owner removed
+   the redundant Tools/audit action; the remaining footer is fully opaque. */
 .right-rail-export-group {
   display: flex;
   flex-direction: column;
@@ -4108,72 +4104,9 @@ button.primary:disabled {
   position: sticky;
   bottom: 0;
   margin-top: auto;
-  /* Soft gradient mask above the sticky group so the panels that scroll
-     past behind it don't look abruptly clipped. Bottom padding (moved here
-     from .right-rail) keeps the Export button off the very edge while its
-     solid background covers the strip below it.
-
-     U10 follow-up — the old stops were 0% transparent -> 95% at 35%, and the
-     TOOLS row sits inside that first 35%. At 1440x900 there is little to
-     scroll and nothing showed; at the supported minimum 1360x740 the Delivery
-     Format card scrolled straight THROUGH it, rendering "DELIVERY FORMAT"
-     printed on top of "TOOLS". The comment above used to claim "no scrolled
-     content peeks through anymore" — true of the Export button, which has its
-     own solid fill, and never true of the row above it.
-     The mask now reaches full opacity by 18%, which is above the TOOLS row,
-     so the softening survives and the overlap does not. */
   padding: 0.6rem 0 0.75rem;
-  background:
-    linear-gradient(180deg, rgba(17, 21, 31, 0) 0%, var(--bg-1) 18%, var(--bg-1) 100%);
-  z-index: 2;
-}
-
-.right-rail-tools {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  /* Opaque, not 42%. Belt and braces with the mask above: this row is the one
-     thing between the scrolling rail and the sticky export cluster, so it must
-     not be see-through even if the gradient stops are ever retuned. */
   background: var(--bg-1);
-  overflow: hidden;
-}
-
-.right-rail-tools > summary {
-  padding: 0.45rem 0.75rem;
-  font-size: 0.74rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-2);
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.right-rail-tools > summary::-webkit-details-marker {
-  display: none;
-}
-
-.right-rail-tools > summary::after {
-  content: "⌄";
-  font-size: 1rem;
-  color: var(--text-2);
-  transform: translateY(-1px);
-  transition: transform 120ms ease;
-}
-
-.right-rail-tools[open] > summary::after {
-  transform: translateY(-1px) rotate(180deg);
-}
-
-.right-rail-tools > summary:hover {
-  color: var(--text-1);
-}
-
-.right-rail-audit {
-  margin: 0.1rem 0.75rem 0.55rem;
+  z-index: 2;
 }
 
 /* Track header — metadata chips. */
@@ -5155,7 +5088,7 @@ button.primary:disabled {
   }
 
   .right-rail-export-group {
-    background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-1) 100%);
+    background: var(--bg-1);
     border-top: 1px solid rgba(111, 163, 255, 0.12);
     box-shadow: 0 -16px 28px rgba(5, 8, 14, 0.92);
   }
@@ -5891,7 +5824,6 @@ button.primary:disabled {
   padding: clamp(0.55rem, 1.25vh, 0.92rem) 1rem;
 }
 
-
 /* Reserve room for every intensity chip at the supported 740px height.
    Compress the decorative waveform and knob spacing before controls. */
 @media (max-height: 800px) {
@@ -6619,7 +6551,6 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
 /* Inner boxes lose their drawn borders — tonal fill only, so a card never
    contains a second card. */
 .readout,
-.right-rail-tools,
 .compressor-preset-summary,
 .compressor-adaptive-band,
 .adaptive-readout {
@@ -6627,11 +6558,6 @@ button.primary.std-create-master:disabled { opacity: 0.5; cursor: not-allowed; b
   border: 1px solid transparent;
   border-radius: 9px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-}
-
-.right-rail-tools {
-  background: var(--bg-1);
-  border-color: var(--hairline);
 }
 
 .wf-card,
@@ -7655,35 +7581,12 @@ input:focus-visible,
   color: var(--text-2);
 }
 
-/* --- Tools + Export ---------------------------------------------------- */
+/* --- Export ---------------------------------------------------- */
 
 .right-rail-export-group {
   padding: 0.5rem 0 0.75rem;
   gap: 0.4rem;
 }
-.right-rail-tools {
-  border: 0;
-  border-radius: 0;
-  /* Audit U-01: this is the LAST unconditional .right-rail-tools rule, so it
-     wins the cascade. `transparent` here let the compressor readout paint
-     through the sticky TOOLS row at 1360x740 (proven by the headless
-     clean-tools-overlap probe). Opaque, like the earlier belt-and-braces rule
-     this block was accidentally overriding. */
-  background: var(--bg-1);
-  border-top: 1px solid var(--hairline);
-}
-.right-rail-tools > summary {
-  padding: 0.55rem 0 0.35rem;
-  font-size: 0.68rem;
-  letter-spacing: 0.16em;
-  font-weight: 650;
-  color: var(--text-2);
-  cursor: pointer;
-  list-style: none;
-}
-.right-rail-tools > summary::-webkit-details-marker { display: none; }
-.right-rail-tools > summary:hover { color: var(--text-1); }
-.right-rail-tools .right-rail-audit { margin: 0.1rem 0 0.4rem; }
 .right-rail-export { margin-top: 0.15rem; }
 
 /* --- Scrollbar: chrome, not a component -------------------------------- */
@@ -8116,9 +8019,8 @@ input:focus-visible,
 .rail-format-grid .adv-select { padding: 0.2rem 0.45rem; font-size: 0.8rem; }
 .rail-card-format .format-note { margin-top: 0.22rem; }
 
-/* Tools + export */
+/* Export */
 .right-rail-export-group { padding: 0.2rem 0 0.4rem; gap: 0.25rem; }
-.right-rail-tools > summary { padding: 0.25rem 0 0.15rem; }
 .right-rail-export { padding: 0.62rem 1rem; }
 
 /* Source Insight — empty state */

@@ -254,9 +254,6 @@ describe("RightRail source checks", () => {
         isExporting={false}
         isRendering={false}
         onExport={onExport}
-        previewStale={false}
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
 
@@ -281,9 +278,6 @@ describe("RightRail source checks", () => {
         isExporting={false}
         isRendering={false}
         onExport={onExport}
-        previewStale={false}
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
 
@@ -309,9 +303,6 @@ describe("RightRail source checks", () => {
         isExporting={false}
         isRendering={false}
         onExport={onExport}
-        previewStale={false}
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
 
@@ -356,9 +347,6 @@ describe("RightRail source checks", () => {
         isExporting={false}
         isRendering={false}
         onExport={onExport}
-        previewStale={false}
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
 
@@ -395,9 +383,6 @@ describe("RightRail source checks", () => {
         isExporting={false}
         isRendering={false}
         onExport={onExport}
-        previewStale={false}
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
 
@@ -419,9 +404,6 @@ describe("RightRail source checks", () => {
           isExporting={true}
           isRendering={false}
           onExport={onExport}
-          previewStale={false}
-          canRenderPreview
-          onUpdatePreview={vi.fn()}
         />,
       );
     });
@@ -450,9 +432,6 @@ describe("RightRail source checks", () => {
         isExporting={false}
         isRendering={false}
         onExport={onExport}
-        previewStale={false}
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
 
@@ -483,9 +462,6 @@ describe("RightRail source checks", () => {
         isExporting={false}
         isRendering={false}
         onExport={onExport}
-        previewStale={false}
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
 
@@ -519,9 +495,6 @@ describe("RightRail source checks", () => {
         renderProgress={{ job_id: "render-job-1", kind: "master", fraction: 0.42 }}
         onExport={vi.fn()}
         onCancelRender={onCancelRender}
-        previewStale={false}
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
 
@@ -546,33 +519,19 @@ describe("RightRail source checks", () => {
   // into Source Insight under the track title — see SourceInsight.test.tsx.
   // The pre-export gate above still derives its rows from the same analysis.
 
-  it("keeps audit WAV rendering disabled until analysis exists", async () => {
-    const onUpdatePreview = vi.fn();
+  it.each(["track", "album"] as const)("offers only export actions in %s mode", async (exportMode) => {
+    const onExport = vi.fn();
     const { container, root } = await renderNode(
-      <RightRail
-        analysis={undefined}
-        lastChecks={undefined}
-        canExport={false}
-        isExporting={false}
-        isRendering={false}
-        onExport={vi.fn()}
-        previewStale
-        canRenderPreview={false}
-        onUpdatePreview={onUpdatePreview}
-      />,
+      <RightRail analysis={CLEAN_SOURCE_ANALYSIS} lastChecks={undefined} exportMode={exportMode}
+        canExport isExporting={false} isRendering={false} onExport={onExport} />,
     );
-
-    const auditButton = container.querySelector<HTMLButtonElement>(".right-rail-audit")!;
-    expect(auditButton.disabled).toBe(true);
-    expect(auditButton.title).toBe("Analyze a track first.");
-    await act(async () => {
-      auditButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-    expect(onUpdatePreview).not.toHaveBeenCalled();
-
-    await act(async () => {
-      root.unmount();
-    });
+    expect(container.querySelector("details")).toBeNull();
+    expect(container.textContent).not.toMatch(/Tools|audit WAV/i);
+    const button = container.querySelector<HTMLButtonElement>(".right-rail-export")!;
+    expect(button.textContent).toBe(exportMode === "album" ? "Export Album" : "Export Master");
+    await act(async () => button.click());
+    expect(onExport).toHaveBeenCalledTimes(1);
+    await act(async () => root.unmount());
   });
 });
 
@@ -616,9 +575,6 @@ describe("RightRail export-in-progress tooltip (Q27)", () => {
         isExporting={true}
         isRendering={false}
         onExport={vi.fn()}
-        previewStale={false}
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
 

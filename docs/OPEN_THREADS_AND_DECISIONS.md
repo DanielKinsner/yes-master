@@ -28,8 +28,10 @@ close rather than letting them rot in scattered docs.
 > confirm saved state and resolved DSP value before changing labels or settings.
 > Owner asked why Render audit WAV is needed. It produces a temporary offline
 > track WAV using the shared renderer, not an improvement to live preview and
-> not an Album-plan proof. Removal from normal UI is a recommendation pending
-> owner decision; do not silently remove it during this discussion.
+> not an Album-plan proof. **Owner decision:** remove the entire Tools section
+> and audit-render action; ordinary Export is sufficient for checking a saved
+> file. Internal renderer/verification tools remain. UI removal is implemented
+> in the following local checkpoint; broader native rail findings remain open.
 
 > **2026-09-05 — MP3 purpose clarified in owner interview.** MP3 is a smaller-file,
 > broadly playable choice within the normal mastering export. The owner rejects

@@ -31,13 +31,6 @@ type RightRailProps = {
   cancelRenderPending?: boolean;
   onExport: () => void;
   onCancelRender?: () => void;
-  // UI restyle 2026-05-14: the secondary "Render audit WAV" action used
-  // to live in the main StaleBar. Moved here so the playback strip can
-  // become a quiet status indicator, while audit-WAV stays one click
-  // away from Export Master — its natural neighbor.
-  previewStale: boolean;
-  canRenderPreview: boolean;
-  onUpdatePreview: () => void;
   // Audit A-03: App holds this ref and hands it to ExportReceiptCard as the
   // focus-restoration target — the persistent Export button is where focus
   // returns when the receipt closes.
@@ -73,9 +66,6 @@ export function RightRail({
   cancelRenderPending = false,
   onExport,
   onCancelRender,
-  previewStale,
-  canRenderPreview,
-  onUpdatePreview,
   exportButtonRef,
 }: RightRailProps) {
   const qualityRows = qualityRowsFor(lastChecks, analysis);
@@ -83,23 +73,11 @@ export function RightRail({
   // U10 — disabled-action reasons computed once, then used for BOTH the
   // tooltip and the accessible description. Keeping them as one expression is
   // what stops the two drifting into saying different things.
-  const auditDisabled = !canRenderPreview || isRendering || isExporting;
-  const auditDisabledReason = isExporting
-    ? "Unavailable while an export is in progress — they share render state."
-    : isRendering
-      ? "Unavailable while a render is in progress — they share render state."
-      : !canRenderPreview
-        ? "Analyze a track first."
-        : undefined;
-  const auditTitle =
-    auditDisabledReason ??
-    "Render a temporary WAV with the current settings so you can audit it in another player or DAW. Not required for live audition — the Original/Mastered toggle plays through the chain in real time.";
-
   const exportDisabled = !canExport || isExporting || isRendering;
   const exportDisabledReason = isExporting
     ? "An export is already running — it finishes or fails before the next one starts."
     : isRendering
-      ? "Unavailable while a render-audit WAV is in progress — they share render state."
+      ? "Unavailable while a render is in progress."
       : !canExport
         ? exportMode === "album"
           ? "Import album tracks first."
@@ -180,22 +158,6 @@ export function RightRail({
             pre-export gate below still reads the same rows. */}
         {advancedSlot}
         <div className="right-rail-export-group">
-          <details className="right-rail-tools">
-            <summary>Tools</summary>
-            <button
-              type="button"
-              className="ghost-btn right-rail-audit"
-              onClick={onUpdatePreview}
-              disabled={auditDisabled}
-              title={auditTitle}
-              // U10: the reason existed but only on hover. A keyboard user met a
-              // dead button with no stated cause.
-              aria-describedby={auditDisabledReason ? "audit-disabled-reason" : undefined}
-            >
-              {previewStale ? "Render audit WAV" : "Re-render audit WAV"}
-            </button>
-            <DisabledReason id="audit-disabled-reason" reason={auditDisabledReason} />
-          </details>
           <button
             type="button"
             ref={exportButtonRef}

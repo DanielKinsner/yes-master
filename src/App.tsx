@@ -588,9 +588,6 @@ function App() {
         cancelRenderPending={
           !!tm.renderProgress && tm.cancelRequestedJobId === tm.renderProgress.job_id
         }
-        previewStale={tm.previewStale}
-        canRenderPreview={!!tm.selectedAnalysis}
-        onUpdatePreview={tm.updatePreview}
         onExport={tm.mode === "album" ? tm.exportAlbumPlan : tm.exportMaster}
         onCancelRender={tm.cancelActiveRender}
       />

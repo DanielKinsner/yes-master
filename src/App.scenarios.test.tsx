@@ -173,9 +173,6 @@ describe("S-D1 — source states never produce an impossible action", () => {
         isExporting={false}
         isRendering={false}
         onExport={vi.fn()}
-        previewStale
-        canRenderPreview={false}
-        onUpdatePreview={vi.fn()}
       />,
     );
     const exportButton = container.querySelector<HTMLButtonElement>(
@@ -239,9 +236,6 @@ describe("S-D1 — source states never produce an impossible action", () => {
         isExporting={false}
         isRendering={false}
         onExport={vi.fn()}
-        previewStale
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
     const exportButton = container.querySelector<HTMLButtonElement>(
@@ -269,9 +263,6 @@ describe("S-D1 — source states never produce an impossible action", () => {
           isExporting={false}
           isRendering={false}
           onExport={vi.fn()}
-          previewStale
-          canRenderPreview
-          onUpdatePreview={vi.fn()}
         />,
       );
       const exportButton = container.querySelector<HTMLButtonElement>(
@@ -335,9 +326,6 @@ describe("S-F1 — single-track workflow is named, announced, and readable", () 
         isExporting={false}
         isRendering={false}
         onExport={onExport}
-        previewStale
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
     const open = Array.from(container.querySelectorAll("button")).find(

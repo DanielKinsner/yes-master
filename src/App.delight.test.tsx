@@ -123,9 +123,6 @@ function rail(analysis: AnalysisResult, extra: Record<string, unknown> = {}) {
       isExporting={false}
       isRendering={false}
       onExport={vi.fn()}
-      previewStale
-      canRenderPreview
-      onUpdatePreview={vi.fn()}
       {...extra}
     />
   );
@@ -235,7 +232,7 @@ describe("U11 — effects acknowledge real changes only", () => {
     const { container, root } = await renderNode(rail(CLEAN));
     expect(label(container)).toBe("Export Master");
     await act(async () => {
-      root.render(rail(CLEAN, { previewStale: false }));
+      root.render(rail({ ...CLEAN }));
     });
     expect(label(container)).toBe("Export Master");
     await act(async () => {

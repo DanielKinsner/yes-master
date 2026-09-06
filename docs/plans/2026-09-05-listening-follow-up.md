@@ -188,6 +188,43 @@ Prepared September 5, 2026. **Implementation in progress; local checkpoints belo
   Bridge types/commands are unchanged; phones have no Album export surface.
   No private fixture regeneration, source edits, push, deployment or release.
 
+### Checkpoint 7 — remove the redundant Tools/audit action
+
+- Owner chose to remove the whole Tools section: normal Export already provides
+  a file for external checking. Removed the foldout, audit button, obsolete rail
+  props/copy and styles in Track and Album. Kept export review, disabled reasons,
+  progress, cancellation and receipts. Internal offline renderer/tests remain;
+  no DSP, backend command or export-file processing changed.
+- The remaining sticky export footer has a solid background. Replaced a
+  visually equivalent single-color gradient in one responsive rule as well,
+  giving both sizes an explicit opaque background-color contract.
+- Adapted the prior Tools-overlap probe to the actual export footer, expanding
+  Manual compressor controls to exercise genuine overlap. Retained the strict
+  overlap/opacity/topmost-pixel assertions and added absence of the removed UI.
+  Focused component/layout tests: 63 passed; both modes dispatch ordinary export
+  and contain no Tools/audit action. Full frontend: isolated 846, combined 847.
+- A focused browser probe on the combined build passed at 1360x740 and 1440x900:
+  actual rail overflow 327/166 px with Manual expanded; footer alpha 1.0 and
+  Export owned the sampled overlapping pixels at both sizes. Screenshots inspected.
+  This proves footer coverage/reachability, not removal of all native overflow.
+- Iteration evidence: first browser attempt was stopped after a probe used the
+  button role for the Manual tab. Corrected to its actual tab role. The focused
+  probe then caught the responsive gradient's transparent background-color;
+  normalized the equivalent fill before the final runs. Do not count that
+  stopped run as passing evidence.
+- Canonical captures regenerated separately from unrelated owner UI/capture work;
+  retained the unchanged studio-artwork manifest section omitted by the baseline
+  capture script. Combined captures regenerated using the owner's existing script.
+  Final full `verify:headless` passed in both trees: landing responsive checks
+  and all 31 app scenario/viewport checks each. Isolated evidence:
+  `test-output/listening-tools-check/test-output/headless/2026-09-06T04-23-00-754Z`;
+  combined evidence: `test-output/headless/2026-09-06T04-23-10-918Z`.
+- Scope: UI-only change, production build/typecheck and affected frontend/browser
+  lanes; prior DSP/fixture evidence remains applicable to unchanged backend code.
+  Native screenshot scrollbar/ceiling findings, return-to-start and drag work
+  remain open. Logs and focused screenshots: ignored `test-output/listening-tools-*`.
+  No push, release, private fixture regeneration or unrelated edits staged.
+
 ## Start here
 
 **First: reproduce and correct the brief Volume Match level jump. Then address high-rate/long-file responsiveness.** Follow with targeted Width/Loud checks, loop behavior, and the reported UI/export issues. Keep the import/loading product discussion and additional codecs separate from those corrections.
@@ -472,10 +509,11 @@ unset Auto value versus an explicit Custom value; inspect actual persisted and
 resolved settings before changing labels. Do not force settings to agree for
 cosmetic symmetry.
 
-Render audit WAV currently calls the offline Track preview renderer, saving in
-app-data previews without replacing live playback. It is not required for live
-preview and is not a full Album-plan render. The owner is discussing whether it
-belongs in the normal UI; no removal decision has been made.
+**Owner decision:** remove the entire Tools section and Render audit WAV action
+from normal Track/Album UI; ordinary Export serves external file checking. The
+internal offline Track preview renderer remains for verification. It does not
+replace live playback and is not a full Album-plan render. Removal is implemented
+in the next local checkpoint; transport/drag and native rail findings remain open.
 
 ### Earlier listening decisions — settled
 

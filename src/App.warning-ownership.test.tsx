@@ -191,9 +191,6 @@ describe("U10(a) DUP-1 — the pre-export review gate does not restate the panel
         isExporting={false}
         isRendering={false}
         onExport={vi.fn()}
-        previewStale
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
 
@@ -240,9 +237,6 @@ describe("U10(a) DUP-1 — the pre-export review gate does not restate the panel
         isExporting={false}
         isRendering={false}
         onExport={vi.fn()}
-        previewStale
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
     const exportButton = Array.from(container.querySelectorAll("button")).find(
@@ -280,9 +274,6 @@ describe("U10(a) DUP-1 — the pre-export review gate does not restate the panel
         isExporting={false}
         isRendering={false}
         onExport={onExport}
-        previewStale
-        canRenderPreview
-        onUpdatePreview={vi.fn()}
       />,
     );
     const exportButton = Array.from(container.querySelectorAll("button")).find(

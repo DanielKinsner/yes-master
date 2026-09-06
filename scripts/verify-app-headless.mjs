@@ -116,21 +116,18 @@ const SCENARIOS = [
     axe: true,
   },
   {
-    // Audit U-01. The static CSS test used to read the FIRST `.right-rail-tools`
-    // source block (opaque) while the LAST unconditional block won the cascade
-    // with `background: transparent` — a false green. Only the browser's
-    // computed style is authoritative, so this scenario proves opacity at the
-    // exact moment rail content genuinely sits behind the sticky surface.
+    // Retain the U-01 overlap guarantee on the export footer after removing
+    // Tools. Expanded Manual controls ensure there is real scrolling to test.
     name: "clean",
-    label: "clean-tools-overlap",
+    label: "clean-export-overlap",
     scenarioId: "S-F1",
     purpose:
-      "S-F1 (sticky TOOLS, audit U-01): with the rail scrolled so a section " +
-      "genuinely intersects the sticky TOOLS surface, its computed background " +
+      "S-F1 (sticky EXPORT, audit U-01): with the rail scrolled so a section " +
+      "genuinely intersects the sticky EXPORT surface, its computed background " +
       "must be fully opaque and own the overlapped pixels.",
     viewports: [LAPTOP, MIN_DESKTOP],
     settle: "ready",
-    beforeScreenshot: toolsOverlapProbe,
+    beforeScreenshot: exportOverlapProbe,
   },
   {
     // Audit T-01. Every seeded scenario resolves to Advanced (a prior session
@@ -774,7 +771,7 @@ async function receiptGeometryProbe(page, report, context) {
   if (geometry.scrollInvariance) {
     const { before, after } = geometry.scrollInvariance;
     // Phase-A review #7: a probe that could not scroll proved nothing —
-    // fail closed, like the tools-overlap probe's "no overlap = failure".
+    // fail closed, like the export-overlap probe's "no overlap = failure".
     // The warning receipt's body genuinely overflows at both supported
     // viewports, so zero travel means the fixture (or the shell) broke.
     if (after.scrolledTo <= 0) {
@@ -794,26 +791,32 @@ async function receiptGeometryProbe(page, report, context) {
 }
 
 /**
- * Audit U-01 — the sticky TOOLS surface, measured where it matters.
+ * Audit U-01 — the sticky EXPORT surface, measured where it matters.
  *
  * Never model CSS precedence as "last matching text block wins": specificity,
  * `!important`, media conditions, and source order all participate, so only
  * `getComputedStyle` on a live page is authoritative. This probe:
  *   1. walks the rail's scroll range until a `.rail-section` box genuinely
- *      intersects the `.right-rail-tools` box (no overlap = the probe proved
+ *      intersects the `.right-rail-export-group` box (no overlap = the probe proved
  *      nothing, which is itself a failure);
  *   2. requires the computed background alpha at that moment to be >= 0.999 —
  *      a merely translucent surface is not a pass;
  *   3. asks `elementFromPoint` at an actual intersection point and requires
- *      the topmost element to be TOOLS or a descendant of it.
+ *      the topmost element to be EXPORT or a descendant of it.
  * The returned payload lands in summary.json beside the screenshot taken in
  * the SAME frame, so the image and the measurements describe one state.
  */
-async function toolsOverlapProbe(page, report) {
+async function exportOverlapProbe(page, report) {
+  // Expanding Manual ensures this exercises real scroll overlap even after
+  // removing the Tools row shortened the rail.
+  await page.getByRole("tab", { name: "Manual", exact: true }).click();
+  if (await page.locator(".right-rail-tools, .right-rail-audit").count()) {
+    report("The removed Tools/audit action is still exposed");
+  }
   const result = await page.evaluate(() => {
     const rail = document.querySelector(".right-rail");
-    const tools = document.querySelector(".right-rail-tools");
-    if (!rail || !tools) return { found: false };
+    const footer = document.querySelector(".right-rail-export-group");
+    if (!rail || !footer) return { found: false };
 
     const sections = Array.from(
       document.querySelectorAll(".right-rail .rail-section"),
@@ -834,9 +837,9 @@ async function toolsOverlapProbe(page, report) {
     const maxScroll = rail.scrollHeight - rail.clientHeight;
     for (let scrollTop = 0; scrollTop <= maxScroll; scrollTop += 8) {
       rail.scrollTop = scrollTop;
-      const toolsRect = tools.getBoundingClientRect();
+      const footerRect = footer.getBoundingClientRect();
       const hits = sections
-        .map((section) => intersect(section.getBoundingClientRect(), toolsRect))
+        .map((section) => intersect(section.getBoundingClientRect(), footerRect))
         .filter(Boolean);
       if (hits.length > 0) {
         overlap = hits[0];
@@ -845,7 +848,7 @@ async function toolsOverlapProbe(page, report) {
       }
     }
 
-    const style = getComputedStyle(tools);
+    const style = getComputedStyle(footer);
     const backgroundColor = style.backgroundColor;
     // Computed colors normalize to rgb(...) (alpha 1) or rgba(..., a).
     const match = backgroundColor.match(/^rgba?\(([^)]+)\)$/);
@@ -854,7 +857,7 @@ async function toolsOverlapProbe(page, report) {
 
     let sampledPoint = null;
     let topmostElement = null;
-    let toolsTopmost = null;
+    let footerTopmost = null;
     if (overlap) {
       const x = (overlap.left + overlap.right) / 2;
       const y = (overlap.top + overlap.bottom) / 2;
@@ -863,7 +866,7 @@ async function toolsOverlapProbe(page, report) {
       topmostElement = topmost
         ? `${topmost.tagName}.${String(topmost.className).slice(0, 80)}`
         : "nothing";
-      toolsTopmost = !!topmost && (topmost === tools || tools.contains(topmost));
+      footerTopmost = !!topmost && (topmost === footer || footer.contains(topmost));
     }
 
     return {
@@ -875,32 +878,32 @@ async function toolsOverlapProbe(page, report) {
       alpha,
       sampledPoint,
       topmostElement,
-      toolsTopmost,
+      footerTopmost,
     };
   });
 
   if (!result.found) {
     report(
-      "tools overlap probe: .right-rail or .right-rail-tools not found — the rail did not render",
+      "footer overlap probe: .right-rail or .right-rail-export-group not found — the rail did not render",
     );
     return result;
   }
   if (result.overlapCount === 0) {
     report(
-      `no rail section ever intersected the sticky TOOLS surface across the full ` +
+      `no rail section ever intersected the sticky EXPORT surface across the full ` +
         `scroll range (max ${result.maxScroll}px) — the probe proved nothing at this viewport`,
     );
   }
   if (result.alpha < 0.999) {
     report(
-      `sticky TOOLS computed background is not opaque: ${result.backgroundColor} ` +
+      `sticky EXPORT computed background is not opaque: ${result.backgroundColor} ` +
         `(alpha ${result.alpha}) — scrolled rail content can paint through it`,
     );
   }
-  if (result.overlapCount > 0 && !result.toolsTopmost) {
+  if (result.overlapCount > 0 && !result.footerTopmost) {
     report(
       `at the sampled overlap point the topmost element is ${result.topmostElement}, ` +
-        `not the TOOLS surface — content paints or hits above it`,
+        `not the EXPORT surface — content paints or hits above it`,
     );
   }
   return result;
@@ -1269,7 +1272,7 @@ for (const scenario of SCENARIOS) {
 
       // General pre-screenshot hook: runs after settle/drive but BEFORE the
       // screenshot, so its measurements and the captured image describe the
-      // same frame (e.g. the U-01 tools-overlap probe leaves the rail
+      // same frame (e.g. the U-01 export-overlap probe leaves the rail
       // scrolled to the exact overlap it measured). Its serializable payload
       // travels into summary.json on this scenario's record. The legacy
       // window.__abRun payload for `assert` scenarios is kept until a

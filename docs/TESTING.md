@@ -308,7 +308,7 @@ the close target must be ≥24×24 px, and scrolling `.receipt-scroll-region`
 rows. The probe **fails closed** (phase-A review #7): all three named
 controls are required — no exemptions — and the scroll-invariance step must
 achieve real scroll travel; zero travel means the overflow fixture proved
-nothing and is itself a failure, mirroring the tools-overlap probe's
+nothing and is itself a failure, mirroring the export-footer overlap probe's
 "no overlap = failure" rule. The structural sibling-order half of this
 contract is pinned in `src/components/ExportReceiptCard.test.tsx`.
 
