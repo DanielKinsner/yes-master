@@ -7,6 +7,18 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **2026-09-05 — Agent operating rules revised with owner approval.** Read
+> task-relevant documentation, choose implementation details autonomously, and
+> explore DSP/performance alternatives within authorized work. Use focused tests
+> during iteration and affected integration lanes at coherent checkpoints; make
+> coherent commits and preserve concurrent work instead of blindly pulling.
+> Continue authorized work after progress reports, and update internal docs for
+> decisions already made without another approval request. These rules supersede
+> older generic full-reading, every-lane-per-commit, and stop-on-any-DSP rules.
+> Product contracts, intentional sonic choices, gated feature decisions, and
+> applicable publication/release authorization remain in force. See `AGENTS.md`
+> and [the verification scope matrix](TESTING.md#choose-verification-by-scope).
+
 > **2026-09-05 — Owner listening pass CONDUCTED; evidence and follow-up recorded.**
 > Daniel listened in the native Windows app via `npm run tauri dev`, with Focusrite
 > USB output/studio monitors, and reported build `e600a21` as verified. Read
@@ -411,7 +423,8 @@ cluster can mostly close in one sitting.**
 11. Is the **landing page / web build in-scope for agent work** (add `verify:landing` + `docs/landing-brief.md` to Required Reading), or hands-off like the Next.js storefront?
     **PARTIALLY ANSWERED 2026-07-03:** in scope for **security & verification**
     purposes (the beta-capture backend gets a security pass — hardening plan D3).
-    Whether it enters Required Reading for general feature work is still open.
+    The general-reading question was later resolved by the task-scoped reading
+    policy below.
     **Security pass executed 2026-07-03:** finding — there is **no capture
     backend yet** (`src/landing/signup-config.ts` ships `SIGNUP_ENDPOINT = ""`;
     the form is safe-disabled; MCP-verified no YES Master Supabase project
@@ -423,6 +436,8 @@ cluster can mostly close in one sitting.**
     **UPDATED 2026-07-20 (D16):** the landing page is in agent scope. The
     ungated GitHub Releases download is wired. Email capture remains optional
     and safe-disabled until a provider is chosen; it cannot block beta launch.
+    **UPDATED 2026-09-05:** read landing guidance for relevant landing work;
+    there is no blanket requirement to read it for unrelated engine tasks.
 12. Broaden the "Local desktop app for Mac and Windows" non-negotiable to acknowledge iPhone + Android (and web)? *(Recommended yes — the CI already runs the mobile lanes.)*
     **CLOSED 2026-07-07 (beta plan D8, edit G):** yes — CLAUDE.md/AGENTS.md first
     non-negotiable broadened to acknowledge the CI-tested iPhone/Android bridges
@@ -469,6 +484,10 @@ cluster can mostly close in one sitting.**
 19. Confirm the **parked items stay parked**: P2 one-pole/soft-knee hoist + P4 tauri-specta (on the do-not-do list) — leave alone?
     **CLOSED 2026-07-07 (beta plan D11):** confirmed parked — P2 + P4 stay on the
     do-not-touch list.
+    **UPDATED 2026-09-05:** the authorized performance investigation may reassess
+    P2's hoist if profiling supports it and correctness/sound contracts are
+    preserved. The historical deferral is not a ban on that investigation.
+    This does not activate unrelated P4/tauri-specta or other parked backlog.
 
 ### Low-risk doc-accuracy checks (I can do these on request)
 20. ~~`IPHONE_APP_OVERVIEW.md` preset vocabulary vs the shipped Standard 8-preset set~~ **CLOSED 2026-07-03 (verified, no drift):** the iPhone app deliberately ships a curated four-preset picker — `ContentView.swift:4-7` maps exactly Universal/Clarity/Tape/Oomph — and the doc describes that accurately. Not a drift from desktop's 8; a deliberate mobile subset.

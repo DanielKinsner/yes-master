@@ -1,18 +1,42 @@
 # Testing
 
+## Choose verification by scope
+
+**Owner-approved operating update, 2026-09-05:** use focused regressions and
+experiments while iterating, then affected suites at a coherent checkpoint.
+Run applicable full integration/platform gates before merge or release; those
+gates are not a ritual before every small local commit. A checkpoint is a
+complete behavioral change, not an arbitrary file or number of lines.
+
+| Change | Checkpoint evidence | Additional integration evidence |
+| --- | --- | --- |
+| Docs or comments | Links, factual consistency, whitespace; existing doc-contract tests if affected | No app build solely for prose |
+| Frontend logic/state | Focused regression, frontend tests and production build | Native evidence when the behavior depends on native APIs/audio |
+| Rendered UI | Frontend checks plus `npm run verify:headless` before declaring the slice complete; inspect relevant captures | Refresh affected deterministic assets/manifest; native accessibility/scaling where relevant |
+| Rust behavior | Focused regression, formatting, strict Clippy and applicable Rust suite | Native playback/output measurements for claims not proved by unit tests |
+| Shared types, commands, or behavior used by bridges | Relevant desktop/contract regressions | Affected iPhone check + tests and Android host tests + API-29 cross-check before integration |
+| DSP, export, or audition-trust behavior | Mechanical reference comparisons and focused native evidence | Slow fixture lane before merge; targeted listening when sound changes; exact platform evidence |
+| Packaging/native shell/configuration | Build and exercise the affected native surface | Installer/package build for affected platform; final desktop integration/release retains required package/platform checks |
+
+Explain the selected scope and any unavailable evidence. Reuse a passing run for
+unchanged code/configuration; repeat it when changes or findings invalidate it.
+Do not silently weaken acceptance criteria or call an unavailable check passed.
+Tests of numerical correctness, real audio deadlines, subjective sound, and
+installed behavior establish different things.
+
 ## Fast Lane
 
-This section is the desktop fast lane. `npm run verify:fast` is the umbrella
-all-lanes runner: frontend, desktop Rust, iPhone bridge, and Android bridge.
-Use `verify:frontend`, `verify:rust`, `verify:iphone`, or `verify:android` to
-run one lane directly.
+Commands below are a menu for the scope above, not a mandatory sequence for
+every edit. `npm run verify:fast` is a broad convenience runner covering
+frontend, desktop Rust, iPhone, and Android. Use the named lane wrappers or
+explicit commands when only one surface is affected. CI/release requirements
+remain defined by their workflows and the live release gate.
 
 Run from repo root:
 
 ```powershell
 npm test
 npm run build
-npm run build:windows
 ```
 
 Run from `src-tauri`:
@@ -20,11 +44,18 @@ Run from `src-tauri`:
 ```powershell
 cargo fmt --check
 cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings
-cargo test --lib --target-dir target\codex-rc
 cargo test --target-dir target\codex-rc
 ```
 
-Use this lane for normal UI, state, packaging-script, and backend contract work.
+`cargo test --lib --target-dir target\codex-rc` is useful for a focused library
+iteration. A subsequent full `cargo test` already includes library tests; do not
+require both back-to-back as separate proof. If the full suite is run with the
+fixture flag below, it also supplies the corresponding ordinary Rust test evidence.
+
+Run `npm run build:windows` (or the documented Mac packaging lane) for packaging
+changes and applicable final desktop integration/release checks. Installer
+generation is not required for each documentation, helper, or visual iteration.
+
 The explicit `target\codex-rc` directory avoids collisions with a running debug
 app that may lock the default target executable on Windows.
 
@@ -343,9 +374,9 @@ It must exit nonzero and name the scenario, route, viewport, and screenshot path
 
 ## iPhone Native Bridge Lane
 
-When changing shared Rust types, `yes_master_lib` behavior, adaptive/profile
-resolution, or `#[tauri::command]` signatures that the phone bridge may depend
-on, also run:
+Before integrating changes to shared Rust types, `yes_master_lib` behavior,
+adaptive/profile resolution, or `#[tauri::command]` signatures that the phone
+bridge depends on, also run:
 
 ```powershell
 cd apps/iphone-native/rust
@@ -358,8 +389,9 @@ drift here while all desktop checks stay green.
 
 ## Android Native Bridge Lane
 
-When changing shared Rust types, the iPhone facade crate, `yes_master_lib`
-behavior, adaptive/profile resolution, or the Android bridge crate, also run:
+Before integrating changes to shared Rust types, the iPhone facade crate,
+`yes_master_lib` behavior, adaptive/profile resolution, or the Android bridge
+crate that affect this bridge, also run:
 
 ```powershell
 cd apps/android-native/rust
@@ -375,18 +407,23 @@ JDK 17 on `JAVA_HOME`, SDK/NDK r27.2 via `local.properties` or
 
 ## Slow Fixture Lane
 
-Private audio must live under:
+The repository's fixture runners conventionally use a local manifest under:
 
 ```text
 private-audio-fixtures/
 ```
 
+This is a runner/storage convention, not a requirement to move or regenerate
+owner-supplied files. Reuse the documented [existing performance fixtures](listening/2026-09-05-performance-fixtures.md)
+in their supplied location. Keep private sources and rendered evidence out of
+git; resolve manifest/path inputs for the runner being used.
+
 Run from `src-tauri`:
 
 ```powershell
 $env:AMS_RUN_REAL_FIXTURE = "1"
-cargo test --target-dir target\codex-rc
-Remove-Item Env:\AMS_RUN_REAL_FIXTURE
+try { cargo test --target-dir target\codex-rc }
+finally { Remove-Item Env:\AMS_RUN_REAL_FIXTURE }
 ```
 
 Use this lane before merging changes to:
@@ -404,7 +441,15 @@ Use this lane before merging changes to:
 
 Automated tests cannot approve taste.
 
-Before calling Track Master private-solid, manually verify with audio playing:
+The owner already conducted the September 5 native Windows listening pass;
+[its reconciled results](listening/2026-09-05-owner-handoff.md) preserve the
+successful checks and specific remaining findings. Do not repeat the full
+questionnaire or treat this checklist as proof the session is missing. New
+sound-affecting work needs targeted evidence; the installed-candidate spot-check
+remains a separate release gate.
+
+Use the following as a coverage catalog for relevant changed behavior, not a
+fresh full-session requirement at every checkpoint:
 
 - Intensity sweeps.
 - EQ/tone sweeps.

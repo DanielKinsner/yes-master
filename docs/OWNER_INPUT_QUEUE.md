@@ -13,25 +13,28 @@ below concern real product choices, not an unperformed listening session.
 
 ## Why this file exists
 
-The quality program is long-horizon and meant to run unattended. Without this
-file an agent that hits an owner-shaped question has two bad options: stall the
-whole chunk, or invent an answer. This file gives it a third: **write the
-question down, ship the conservative default, and keep going.**
+Record real unresolved owner choices so independent work can continue without
+inventing an answer or repeatedly asking the same question. First check current
+instructions and recorded decisions: routine implementation choices and work
+already authorized do not belong here.
 
 ## Rules
 
-1. **Never block on an owner decision.** Add a row here, implement the
-   conservative default, finish everything in the unit that does not depend on
-   the answer.
-2. **The conservative default is always the one that under-promises** —
-   unavailable over available, off over on, qualified copy over confident copy,
-   placeholder over invented date, unproved over assumed-proved. A default that
-   makes a public claim is never conservative.
+1. **Never block on an owner decision unrelated to available independent work.**
+   Pause only dependent work. Add the unresolved choice here and continue
+   independent authorized work. Ask at the point the answer is needed; do not
+   stop an entire task for a decision unrelated to its next useful step.
+2. **Do not invent a default decision.** Preserve existing working behavior when
+   appropriate and keep unapproved new functionality unavailable. Do not disable
+   working features to appear conservative. Where the owner requires an explicit
+   choice (such as the album manifest), mark it pending without selecting an
+   option. Claims must remain accurate; no invented date, price, or approval.
 3. **This is not a decision log.** Once the owner answers, the decision moves to
    `docs/OPEN_THREADS_AND_DECISIONS.md` and the row here is struck through with
    a pointer to where the decision now lives.
-4. **A row is not a licence to guess later.** Until it is answered, the
-   conservative default stands even if it looks unfinished.
+4. **A row is not a reason to ask again after an answer.** Apply current user
+   authorization and record settled decisions in the log and affected internal
+   docs. No additional permission is needed just to document the answer.
 
 ## Schema
 

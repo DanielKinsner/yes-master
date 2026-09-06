@@ -15,6 +15,14 @@ This is an implementation plan, not an execution record. Creating it does not
 authorize DSP retuning, public deployment, release publication, updater
 activation, mobile expansion, or collection of private audio.
 
+> **Operating policy revised with owner approval, 2026-09-05:** use the concise
+> current `AGENTS.md`/`CLAUDE.md` and `docs/TESTING.md` scope matrix. Generic old
+> process requirements to reread all plans, pull before committing, run every
+> lane before each commit, or stop for any DSP/VM/limiter change are superseded.
+> Authorized correctness/performance work proceeds with evidence; unresolved
+> product/sonic choices and actual release gates still need their applicable
+> owner decision. The standing execution rules below reflect this policy.
+
 > **2026-09-05 resume update:** the owner conducted the native Windows listening
 > pass on owner-verified `e600a21`; read [the reconciled handoff](../listening/2026-09-05-owner-handoff.md)
 > and [the listening follow-up plan](2026-09-05-listening-follow-up.md) before
@@ -392,37 +400,43 @@ convenient; U7 and U8 genuinely cannot start until U10 and U11 are done.
 
 ### Standing rules for unattended execution
 
-These exist so a session never stalls waiting for the owner, and never invents
-an owner decision to avoid stalling.
+These rules support independent engineering judgment while preserving product
+contracts and actual owner choices. Current user authorization takes precedence
+over an older generic process restriction; check it before requesting permission.
 
-1. **Never block on an owner decision.** Record the question in the owner input
-   queue, implement the conservative default, and keep going. Finish everything
-   in the unit that does not depend on the answer.
-2. **The conservative default is always the one that under-promises**:
-   unavailable over available, off over on, qualified copy over confident copy,
-   placeholder over invented date, unproved over assumed-proved. A default that
-   makes a public claim is never conservative.
-3. **Do not weaken an acceptance criterion to make it pass.** If a criterion
-   cannot be met, record it as a finding with evidence, complete the rest of the
-   unit, and flag it in the chunk report. Silently lowering a bar is the one
-   failure mode this program cannot detect later.
-4. **Commit in small chunks** per repo convention, one coherent change per
-   commit, with the unit ID in the message (e.g. `feat(landing): U5 release
-   state model`). Run the verification lane for the touched surfaces from
-   `AGENTS.md` before each commit.
-5. **Pull before committing.** This repo regularly has more than one agent
-   session working in it.
-6. **Do not push to the public remote without asking**, per repo convention.
-7. **Hard stops** — halt and ask, regardless of chunk: publishing any
-   non-draft release; deploying the landing; enabling any owner-gated system
-   (Adaptive Compressor, Phase-B confidence, album character); changing any DSP
-   constant, preset calibration, limiter, loudness target, Volume Match, or
-   audition timing value; committing private audio; handling signing or updater
-   secrets; writing a concrete price, date, or founder-window term; announcing
-   anything.
-8. **Report at chunk boundaries, not unit boundaries.** One summary per chunk:
-   what landed, what the tests prove, what went into the owner input queue, what
-   was found and not fixed.
+1. **Choose the implementation.** Investigate across subsystem boundaries and
+   revise a plan's approach when evidence supports it. Preserve outcomes and
+   real dependencies, explain meaningful changes, and avoid unrelated expansion.
+2. **Pause only work that needs an unresolved owner answer.** Record that choice
+   and continue independent work. Existing behavior may remain while a choice
+   is pending; it is not the owner's selected default. Do not disable a working
+   feature or invent a business/product choice in the name of conservatism.
+3. **Keep acceptance honest.** Never hide failures or lower a bar just to pass.
+   If an assumption or criterion is demonstrably wrong, explain and record the
+   correction while preserving the intended requirement; ask if it changes the
+   owner's intended outcome. Record unavailable evidence accurately.
+4. **Commit coherent working changes.** Use a unit ID when it clarifies the work.
+   Run focused checks during iteration and affected suites at a complete-change
+   checkpoint. Follow `docs/TESTING.md` for full integration/platform gates;
+   installer builds and every lane are not required before every small commit.
+5. **Integrate deliberately.** Inspect status and remote divergence when needed;
+   coordinate concurrent edits or isolate the task. Do not blindly pull into a
+   dirty shared checkout, discard another task's work, or stage unrelated files.
+6. **Reuse publication authorization.** Public push, deployment, and release
+   publication require applicable user authorization and release evidence. If
+   already authorized for this scope, do not ask again. Internal preparation,
+   investigation, and corrections are not themselves publication.
+7. **Distinguish engineering from owner choices.** Authorized mechanical fixes
+   and optimizations to DSP, limiter, loudness landing, VM, or audition timing
+   do not need an extra approval merely because of the subsystem touched.
+   Intentional sonic/voicing tradeoffs, gated-feature activation, unapproved
+   private-audio commits, and unresolved business/signing/updater/release choices
+   still require the applicable decision. Prepare evidence/options first and
+   pause only dependent work. Document decisions already made without another
+   permission round; do not invent terms or expose credentials.
+8. **Continue after checkpoints.** Give concise progress and evidence summaries;
+   continue the authorized task instead of waiting for permission after each
+   small fix. Respect an explicit user stop, scope boundary, or release gate.
 
 ### Owner input queue
 

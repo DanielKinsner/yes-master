@@ -18,7 +18,7 @@ This plan, the reconciled handoff, the original owner exports, and the reusable 
 - The read-only planning inspection found local HEAD **`7ae9fc2ce60a7876b8fe3ca198dbe0f44445f8a9`**. The committed delta since the listening build concerns website analytics and related docs/dependencies; do not silently equate either commit with the exact running app plus its working-tree changes.
 - At the planning inspection, the working tree had other edits to `AdvancedPanel.tsx`, `fields.tsx`, `App.css`, an adaptive-strength test, the landing capture script/assets, and untracked guide/design files. The guide has since been included in this documentation integration; preserve the independent application/design work. The visible UI changes inspected here concern the Album Adaptive explanation/tooltip; they are not evidence that the listening issues have been fixed.
 - Static code findings below are leads and current behavior descriptions, not new native playback results. No tests, benchmarks, or app sessions were run for this plan.
-- Before implementation, re-read the repository's current `AGENTS.md` and required docs. The July 24 quality plan remains the forward queue, `beta-go-no-go.md` remains the release gate, and the September 4 audio-correctness ledger supplies the immediate history. Do not reopen shipped historical work simply because it appears in an old checklist.
+- Before implementation, read the current `AGENTS.md` and task-relevant sections of the live docs; reuse material already understood in this session. The July 24 quality plan remains the forward queue, `beta-go-no-go.md` remains the release gate, and the September 4 audio-correctness ledger supplies the immediate history. Do not reopen shipped historical work simply because it appears in an old checklist.
 - Implement in small, independently verifiable changes. When an objective problem is established, add a meaningful regression that fails before the correction. Do not change expected audio snapshots merely to hide a regression.
 
 ### Preserve the successful listening results
@@ -76,18 +76,18 @@ The analysis/loading discussion can happen after **2A** supplies evidence. Steps
 
 1. Reproduce a **warm matched state → uncached settings edit → new measurement** with a deterministic signal and settings that need meaningful attenuation. Observe both the applied gain transition and actual output audio.
 2. Test the owner's setting-change sequence in the native app. Contrast VM on / Preview LUFS off with Preview LUFS on, then VM off. Include isolated EQ, Intensity, and Density edits so the result is not tied to one slider.
-3. If the fallback is responsible, change the transition policy so recomputation does not temporarily remove the established attenuation. A same-source retained attenuation plus a smooth move to the new valid value is a candidate, not a pre-approved implementation. Handle prior boosts conservatively and never reuse another track's measurement.
+3. If the fallback is responsible, change the transition policy so recomputation does not temporarily remove the established attenuation. A same-source retained attenuation plus a smooth move to the new valid value is a working hypothesis; validate it and choose the best implementation within this task without an additional permission step. Handle prior boosts conservatively and never reuse another track's measurement.
 4. Cover first-ever VM measurement, turning VM off, rapid edits, stale worker results, same-source A/B, track changes, and device recreation. Keep cold measurement off the audio/command-critical path and preserve the existing source-epoch protection.
 
 ### Acceptance
 
 - A regression reproduces the **edit after a valid match** problem before the fix; it does not merely assert the chosen internal variable value.
-- The native sequence no longer produces the temporary unmatched blast. Record at least 20 representative setting edits across the contrasted modes, including the supplied Punch context when available. Distinguish intentional level/tone changes from a temporary compensation reset.
+- The native sequence no longer produces the temporary unmatched blast. Start with 20 representative setting edits across the contrasted modes, including the supplied Punch context when available; adjust the workload to cover the demonstrated failure and explain the evidence, rather than treating the count alone as proof. Distinguish intentional level/tone changes from a temporary compensation reset.
 - No new blocking measurement, playhead reset, or stale-track gain application occurs. Pending status remains truthful.
 - Ordinary A/B retains its successful behavior.
 - Toggling audition Volume Match does not change exported PCM or receipt levels. Keep the limiter and all existing export safety behavior intact.
 
-**Likely files:** `src-tauri/src/audio.rs`, relevant live coefficient application in `dsp.rs`, and existing audio-controller/preview tests. Change DSP code only if the measured transition requires it.
+**Likely files:** `src-tauri/src/audio.rs`, relevant live coefficient application in `dsp.rs`, and existing audio-controller/preview tests. Follow the measured cause across subsystem boundaries; this starting file list does not limit investigation or the necessary correction.
 
 ## 2. High-rate and long-file responsiveness
 
@@ -124,7 +124,7 @@ Record:
 - No-match mode, VM only, Preview LUFS only, and any combined state actually supported by the UI; test Original and Mastered.
 - Normal A/B cadence separately from deliberately rapid clicking; test quick track switches during analysis and preview measurement.
 
-**Current architecture to preserve:** Whole-track landing runs off-thread; VM returns its representative-window result first. Same-source work has one active worker and one latest pending edit. Source epochs reject stale results. Prewarming can avoid synchronous first-play decode, but the September 4 ledger explicitly records synchronous decode as a remaining fallback. These existing mechanisms do not prove callback deadlines or globally bounded work across repeated source changes.
+**Current implementation baseline, open to improvement:** Whole-track landing runs off-thread; VM returns its representative-window result first. Same-source work has one active worker and one latest pending edit. Source epochs reject stale results. Prewarming can avoid synchronous first-play decode, but the September 4 ledger explicitly records synchronous decode as a remaining fallback. Preserve responsive audition, correct loudness, stale-source isolation, and bounded work; the particular worker/cache structure may change. These existing mechanisms do not prove callback deadlines or globally bounded work across repeated source changes.
 
 **Deliverable:** A compact baseline report identifying which measured stage accounts for each symptom. Do not infer CPU behavior from a spinner or assume all old worker jobs stop merely because their results are ignored.
 
@@ -147,7 +147,7 @@ Choose changes from evidence, for example:
 ### Acceptance
 
 - Same-fixture before/after evidence identifies the improvement and shows that the work was not merely moved into another wait.
-- On the documented native reference setup, normal A/B and settings editing remain responsive during a minimum **five-minute** high-rate stress run, with no observed task-induced dropouts or callback deadline misses attributable to the corrected path. If this target is not met, report the remaining failure; do not call performance fixed.
+- On the documented native reference setup, normal A/B and settings editing remain responsive during a high-rate stress run (start with **five minutes**, then adjust to the observed failure window and explain coverage), with no observed task-induced dropouts or callback deadline misses attributable to the corrected path. If this target is not met, report the remaining failure; do not call performance fixed.
 - Extreme clicking has bounded work and converges to the last requested source/state without a stuck transport, stale playback, or an orphaned pending measurement. Record residual audible discontinuities rather than claiming perfection from “no crash.”
 - Source changes, cancellation/failure, and late results cannot poison the selected track or leave persistent error/pending UI after recovery. Distinguish valid recovery feedback from stale errors.
 - Add durable error capture before repeating the intermittent rapid switch into the 60-minute/96 kHz track. On the **next occurrence**, write the complete original error text/cause to the existing diagnostic log together with timestamp, selected/requested track identity, source rate/duration, playback/VM/Preview LUFS mode, and request/generation identifiers where available. Preserve the event after the toast clears and playback recovers. Test the logging with an injected error; do not require a reliable natural trigger before adding this evidence path, and do not claim the original message was recovered until an actual occurrence is captured.
@@ -204,7 +204,7 @@ Split the two reports.
 
 **A. Unreproduced start-position anomaly:** switch tracks → draw a loop region → Play → toggle Loop. The owner says playback did not begin at the region or beginning and could not reproduce it. Do not invent “no playback at all” as the exact symptom.
 
-Run a bounded sequence of **20 track/region/play transitions**, including while analysis/prewarm is unfinished, both source modes, near-end regions, and rapid selection changes. Inspect command ordering, stale play requests, pending loop region, and backend/source identity. Use native behavior as well as hook tests. If reproducible, isolate the smallest failure and add a regression. If still unreproduced, preserve the sequence and attempt count as an open observation without demanding that the owner reproduce it again before other work continues.
+Start with a bounded sequence of **20 track/region/play transitions**; adjust the sequence/count to evidence and record the actual coverage, including while analysis/prewarm is unfinished, both source modes, near-end regions, and rapid selection changes. Inspect command ordering, stale play requests, pending loop region, and backend/source identity. Use native behavior as well as hook tests. If reproducible, isolate the smallest failure and add a regression. If still unreproduced, preserve the sequence and attempt count as an open observation without demanding that the owner reproduce it again before other work continues.
 
 **B. Region remains visible in Standard:** Existing code intentionally disarms looping on entry to Standard while retaining per-track region memory for return to Advanced. Existing tests pin this. Standard passes that region to the waveform with region editing disabled.
 
@@ -259,7 +259,7 @@ Before implementation, write a bounded specification covering:
 
 **Acceptance:** A real MP3 opens/decodes in an independent player; requested format/quality, duration accounting, channels/rate, and receipt semantics match the implementation. Source-conversion mode bypasses mastering as specified. Existing WAV exports, levels, receipts, and non-overwrite behavior remain correct. Test Track and Album only for the surfaces included in the agreed increment, and do not imply unavailable coverage.
 
-The extra-format request conflicts with current WAV-only/fixed-Standard product descriptions. When its scope is settled, explicitly resolve the corresponding `PRODUCT.md`/behavior/help/public-copy updates with the owner as required by `AGENTS.md`; do not update public claims before the format actually works. This feature need not delay the objective corrections in steps 1–5.
+The extra-format request conflicts with current WAV-only/fixed-Standard product descriptions. When its scope is settled, update the corresponding internal `PRODUCT.md`/behavior/help documentation as part of that authorized decision; ask only about unresolved product choices. Public claims must match working, verified functionality and publication authorization. This feature need not delay the objective corrections in steps 1–5.
 
 ## Decisions that need an informed discussion
 
@@ -280,33 +280,13 @@ Do not run a full suite merely to mark this planning document done. During imple
 
 ### Required implementation lanes
 
-The repository's desktop fast lane is:
+Use the [verification scope matrix and commands](../TESTING.md#choose-verification-by-scope). Run focused regressions during iteration and affected suites at coherent checkpoints. Installer builds belong to packaging changes or final desktop integration; full Rust tests already include library tests. Do not rebuild every platform before every small commit.
 
-```powershell
-# Repository root
-npm test
-npm run build
-npm run build:windows
+For rendered UI changes, run **`npm run verify:headless`** before calling the UI slice complete. If a captured application surface changes, regenerate the affected deterministic landing assets/manifest through the existing pipeline so the source-digest gate remains honest. Preserve concurrent capture work; do not hand-edit hashes to silence the gate.
 
-# From src-tauri
-cargo fmt --check
-cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings
-cargo test --lib --target-dir target\codex-rc
-cargo test --target-dir target\codex-rc
-```
+Before merging DSP/export or audition-trust changes, run the documented slow fixture lane with available local fixtures. Reuse the supplied fixture set; do not regenerate or relocate it merely to match a storage convention.
 
-For rendered UI changes, also run **`npm run verify:headless`** from the root. If a captured application surface changes, regenerate the affected deterministic landing assets/manifest through the existing pipeline so the source-digest gate remains honest. Preserve concurrent capture work; do not hand-edit hashes to silence the gate.
-
-Before merging DSP/export or audition-trust changes, run the slow fixture lane with available local fixtures:
-
-```powershell
-# From src-tauri
-$env:AMS_RUN_REAL_FIXTURE = "1"
-try { cargo test --target-dir target\codex-rc }
-finally { Remove-Item Env:\AMS_RUN_REAL_FIXTURE }
-```
-
-When shared types, commands, or shared behavior affect the bridges, include the documented iPhone **check + tests** and Android **host tests + arm64 API-29 cross-check**. Desktop-green alone does not establish bridge compatibility. Required commands and prerequisites remain in `AGENTS.md`/`docs/TESTING.md`.
+When shared types, commands, or shared behavior affect the bridges, include the documented iPhone **check + tests** and Android **host tests + arm64 API-29 cross-check** before integration. Desktop-green alone does not establish bridge compatibility. Required commands and prerequisites remain in `docs/TESTING.md`.
 
 Passing tests are not evidence of native sound quality, low callback latency, or a real saved-file comparison. Record those separately. If local fixtures, a platform, or hardware evidence is unavailable, name that exact limit instead of marking the entire mission failed or the slice universally proven.
 
@@ -354,4 +334,4 @@ Line anchors reflect the inspected working tree and can move. Reconfirm function
 
 ## Next agent's first action
 
-Read this plan and the reconciled handoff, refresh the current repo instructions/state, and—when asked to implement—start with **steps 0 and 1 only**. Establish the warm Volume Match → settings edit reproduction and land the smallest verified correction before expanding into performance or UI work. Do not re-run the questionnaire, retune presets, or start the MP3 feature as part of that first fix.
+Read this plan and the reconciled handoff, refresh the relevant repo instructions/state, and—when asked to implement—start with **steps 0 and 1**. Establish the warm Volume Match → settings edit reproduction and land a coherent verified correction, then continue the authorized plan through checkpoints without waiting for routine permission. Respect any narrower scope or explicit stop in the initiating request. Pause only work dependent on unresolved owner choices; continue independent corrections. Do not re-run the questionnaire, retune presets, or start the MP3 feature before its scope is settled.
