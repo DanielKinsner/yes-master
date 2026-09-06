@@ -1,7 +1,7 @@
 # Listening follow-up: concrete output choices
 
-Output choices below remain unresolved; the loading choice is recorded at the
-end. These are not implementation approval requests for the independent fixes.
+Filename and codec choices below remain unresolved; manifest and loading
+decisions are recorded here. These are not implementation approval requests for the independent fixes.
 Existing output behavior remains until an answer is
 recorded; that is not a selected default. Old owner outputs are never deleted.
 
@@ -11,7 +11,12 @@ Proposed per-track filename: `01-Song__master.wav`, matching Track Master's
 existing suffix. Alternative: align both surfaces on `__mastered`. Preserve the
 collision-safe album folder and continuous audio in either case.
 
-Exactly two manifest choices:
+**Owner decision:** use `Album/metadata/manifest.json`. The owner accepted this
+recommendation but wants users to understand the extra file. Explain in the
+in-app receipt that the metadata folder contains supporting export details and
+is not needed to play or share the audio. Implementation remains pending.
+
+Options considered in the interview:
 
 1. `Album/metadata/manifest.json`. Keep portable machine-readable evidence with
    the audio, away from playable files. Update returned paths, receipt links,

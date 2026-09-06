@@ -7,6 +7,14 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **2026-09-05 — Album manifest presentation settled in owner interview.**
+> The owner accepted `metadata/manifest.json`, with the concern that users
+> should not receive an unexplained file. Keep audio files separate and explain
+> the supporting export details in the in-app receipt using plain language:
+> these files are not needed to play or share the audio. Update paths, links and
+> cleanup together; preserve existing exports. Implementation remains pending.
+> The exact master filename suffix remains a separate open choice.
+
 > **2026-09-05 — Loading workflow settled in owner follow-up interview.** Make
 > each imported track usable as soon as its analysis/profile is ready, show
 > progress for remaining tracks, and prioritize playback over background work.
