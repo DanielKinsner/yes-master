@@ -18,6 +18,16 @@ deepened: 2026-07-24
 
 # YES Master Public Beta Quality Program
 
+> **2026-09-06 audit checkpoint:** current local end-to-end and visual review is
+> in [the launch audit](../reviews/2026-09-06-launch-readiness.md). Computer Use
+> covered real Mac workflows; objective UI/recovery gaps were fixed and
+> regressions added. The report separates current automated/native proof from
+> still-required listening and exact-release evidence. Resume remaining work
+> from its ordered dependency table together with the live beta gate, not the
+> historical unchecked outline. The [HTML checklist](../reviews/2026-09-06-launch-readiness.html)
+> summarizes the owner's remaining actions without repeating the completed
+> September 5 questionnaire.
+
 This is an implementation plan, not an execution record. Creating it does not
 authorize DSP retuning, public deployment, release publication, updater
 activation, mobile expansion, or collection of private audio.

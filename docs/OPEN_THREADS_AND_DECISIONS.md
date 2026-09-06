@@ -1,5 +1,15 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **September 6 end-to-end launch audit:** native Mac import/audition, WAV/MP3,
+> Album cancellation/retry/order, project persistence and damaged-input recovery
+> were exercised with Computer Use. Export selectors/title branding, Standard
+> meter containment, stale Album retry receipts and direct access to Album files
+> were corrected. Independent measurements checked five delivered files.
+> See the [audit ledger](reviews/2026-09-06-launch-readiness.md) and
+> [owner checklist](reviews/2026-09-06-launch-readiness.html). Local checks do not
+> clear the replacement-candidate, exact installer/updater, MP3 distribution or
+> targeted listening gates. No publication or new owner decision is implied.
+
 > **September 5 follow-through implemented locally (verification continued September 6 UTC).**
 > Return to start/Home, pointer/keyboard reorder with insertion and edge scrolling,
 > stable Track/Album header/timeline geometry, incremental analysis/profile readiness,

@@ -1,5 +1,13 @@
 # YES Master — Beta Go / No-Go Checklist
 
+> **September 6 Mac audit evidence:** a local Apple Silicon app and DMG build
+> succeeded with MP3, strict ad hoc signature verification passed, and actual
+> Track/Album MP3 exports passed independent delivered-file checks. See the
+> [audit ledger](../reviews/2026-09-06-launch-readiness.md). This narrows the
+> earlier Mac-build unknown; it is not universal-Mac, exact-download installer,
+> Windows updater or distribution-materials proof. All candidate-specific
+> historical evidence below remains historical. Release stays NO-GO.
+
 > **MP3 release integration (September 5 follow-through):** desktop MP3 is locally
 > implemented and verified on Windows; no installer/release has been activated.
 > Before distributing a candidate containing it, verify the Mac build and the
