@@ -17,6 +17,9 @@ Read in this order:
 3. [Original Markdown export](2026-09-05-owner-report.md) and
    [filled HTML export](2026-09-05-owner-report.html) — unchanged source evidence.
    The HTML was saved slightly later; both contain the same written notes.
+4. [Performance fixtures and subsequent owner directions](2026-09-05-performance-fixtures.md)
+   — verified existing-file inventory, extreme-rate results, Mono labeling,
+   error logging, and the two-option manifest choice. No fixture regeneration.
 
 **The source exports' generated action lists and mission labels are not the
 current instructions.** They sometimes mark details as missing or checks as

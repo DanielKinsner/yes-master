@@ -25,6 +25,18 @@ close rather than letting them rot in scattered docs.
 > the plan and owner input queue. This documentation integration does not retune
 > presets, implement application fixes, or activate a release.
 
+> **2026-09-05 — Listening-plan additions and performance exploration.** The
+> owner supplied the existing load fixtures; [all 15 headers were verified](listening/2026-09-05-performance-fixtures.md).
+> Do not regenerate those files. Add 384/705.6/768 kHz lag-without-timeout cases,
+> capture the full intermittent switch error to the diagnostic log, and correct
+> true-mono Source Insight labeling. The plan explicitly permits investigation
+> and experiments with better DSP/measurement implementations for performance,
+> with measured results and preserved correctness/sound contracts. Intentional
+> sonic tradeoffs remain owner decisions; this is not a preset-retuning request.
+> The manifest question now has exactly two options: `metadata/` or remove JSON
+> and use the in-app receipt. No automatic keep default; answer pending in the
+> owner input queue. These additions update the plan, not application code.
+
 > **2026-09-04 — Studio marketing website publication AUTHORIZED.** The
 > owner approved the redesigned studio site and explicitly requested subtle
 > animation, push/merge to `main`, and publication as the new live website.

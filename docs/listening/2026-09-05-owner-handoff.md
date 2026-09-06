@@ -146,11 +146,12 @@ The owner distinguishes **audible parameter changes** from **completion of loudn
 
 - Longer files and **96–192 kHz** files produced noticeable A/B dropout and lag **with Volume Match, with the owner's “live/Preview LUFS” mode, and with neither enabled**. This answers the blank stutter/dropout question. The owner did not separately report crackle.
 - On a **10-minute, 192 kHz** file with quite a few settings active, rapid Original/Mastered switching produced substantial dropout and lag but **no timeout**, despite deliberate stress testing.
+- **Subsequent owner addition:** the 384, 705.6, and 768 kHz fixtures produced increased lag, **never a timeout**. These observations extend the original exports; see the [existing fixture inventory](2026-09-05-performance-fixtures.md).
 - On a couple of occasions, rapidly switching from another long track to the **60-minute, 96 kHz** track produced what the owner called a timeout and an error at the bottom right. The app then recovered and began playing. This was **not reliably reproducible**; the exact error text was not captured.
 - There was also an intermittent hiccup when clicking between files that had not finished analysis.
 - The owner felt the problem grew with file duration and sample-rate/data load, describing it as scaling linearly. Treat that as an impression to measure, not an established complexity or performance result. No bit-depth comparison was documented.
 
-No source paths for these long/high-rate examples were supplied. Their durations, rates, actions, and symptoms are sufficient starting conditions for a later investigation; the missing original names are not a reason to ask the owner to restate this entire test.
+The original exports did not supply these source paths. **The owner subsequently supplied the existing fixture set, and all 15 headers were verified locally**; see [the inventory and actual folder](2026-09-05-performance-fixtures.md). Reuse those files; do not regenerate them or ask the owner to restate the tests. The next occurrence of the transient 60-minute/96 kHz switch error must retain its full message in a durable log even if it remains intermittent.
 
 ## 7. Analysis scheduling and waiting experience: discussion requested before changes
 
@@ -189,6 +190,7 @@ Most of this mission's long note concerned performance, now recorded in sections
 - Album Master **did export**.
 - Unlike Track Master, the receipt was **not presented prominently after export**. The owner had to open a dropdown in the lower-left corner.
 - A **JSON file was also present in the album output folder**. The owner disliked this presentation/output clutter. This is not an instruction to delete the JSON file or remove structured receipt support.
+- **Subsequent owner direction:** choose between putting future manifests in `metadata/` or removing them and relying on the in-app Album receipt. Do not default to keeping JSON; ask the explicit two-option question. No removal/retention choice is inferred from the earlier complaint, and old exports are not to be deleted by this decision.
 - Exported track names reportedly lacked a **“mastered” suffix**.
 - The owner supplied **`E:\fghgfhjghjhg`** as the album output location and said its tracks could be analyzed for consistency if needed. This handoff does not inspect that folder or establish that it is available on another machine.
 
@@ -198,6 +200,7 @@ Mixed mono/stereo sources, Override retaining its sound/target with the common a
 
 ### Labels and layout
 
+- **Subsequent owner addition:** true one-channel audio must read **Mono**, not “Narrow — Mono-leaning stereo image.” The code currently buckets width without source channel count; the follow-up plan includes the metadata wiring and mono-versus-stereo regression.
 - Track Master shows **“Auto”** under the **LUFS target** and **ceiling** knobs; Album Master does not, creating a visible inconsistency.
 - With Advanced controls fully expanded, the right rail still needs a very small amount of vertical scrolling. The owner finds this unintentional and wants it fixed. No viewport dimensions were supplied.
 - Removing the “Track/Album Master exports WAV files” text was offered as a possible way to recover space, connected to the format request below. It was not selected as the final layout solution.
@@ -216,12 +219,17 @@ The remaining limits are specific:
 - The exported-file comparison does not establish that audition Volume Match was OFF.
 - The explicit album tests listed above were not performed, and album receipt field completeness was not established.
 - The loop-start anomaly and transient track-switch error were intermittent/unreproduced. Exact loop position behavior and error text are absent; their triggering sequences are supplied.
-- Some source paths, precise hardware/viewport details, and numerical export values are absent. Obtain them only if a later investigation actually needs them and cannot recover the necessary evidence itself.
+- The performance fixture paths and headers are now supplied. Some named music source paths, precise hardware/viewport details, and numerical export values remain absent. Obtain them only if a later investigation actually needs them and cannot recover the necessary evidence itself.
 - Analysis scheduling/loading UX needs the requested owner discussion before changes. Automatic preview measurement on import, automatic-value label consistency, and the full export-format scope remain questions or requests, not settled designs.
 
 The general sound assessment favors leaving taste alone. Ordinary A/B, normal musical contrast, and the observed Track Master export results should retain their successful status. Volume Match level jumps, stress-case performance, loop observations, and UI/output concerns remain separate findings. The owner's overall “Not ready / stopped here” selection remains recorded; this document grants no release approval or preset calibration signoff.
 
 ## Source and reconciliation record
+
+Later owner additions concerning fixtures, extreme rates, Mono labeling, error
+logging, and the manifest choice are explicitly marked above and preserved in
+[the follow-up fixture/direction note](2026-09-05-performance-fixtures.md). They
+do not change the archived bytes or imply those additions appeared in the original exports.
 
 - [Original Markdown export](2026-09-05-owner-report.md), exported **2026-09-05 22:55:59.924 UTC**.
 - [Filled HTML export](2026-09-05-owner-report.html), embedded session updated **2026-09-05 22:56:55.019 UTC**.

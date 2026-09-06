@@ -57,11 +57,11 @@ The analysis/loading discussion can happen after **2A** supplies evidence. Steps
 ## 0. Establish the baseline without repeating the interview
 
 1. Record the implementation-start commit, existing uncommitted changes, launch/build profile, audio device, output rate, and buffer settings where observable. Do not reset, stage, or incorporate another task's edits accidentally. Use an isolated checkout if that is needed to protect concurrent work, with the baseline stated explicitly.
-2. Use the named material when locally available:
+2. Use the existing material; **do not regenerate the step 2A fixtures**. All 15 files have been located and their headers verified; use the [fixture inventory and owner additions](../listening/2026-09-05-performance-fixtures.md). On this machine the folder is `C:\Users\Daniel Kinsner\OneDrive\Documents\Vera_save created documents here` (one directory named `Vera_save created documents here`, not a `Vera\_save...` pair). Resolve Documents on other machines and reuse the supplied files. Additional named listening material:
    - `doors open neon nights remix`: whole track, Punch 100% Intensity, Preset Density 0/50/100, Volume Match on; source reported around −3.7 dBTP.
    - `lay the money on the desk original (1)`: 0:35–2:00, Universal 100% Intensity, Preview LUFS on/off and Volume Match comparisons.
    - Album outputs: `E:\fghgfhjghjhg`, supplied by the owner for possible consistency analysis.
-3. Reuse existing synthetic fixtures for mechanical reproduction and generate only the additional local test material needed. The owner deliberately did not list every track. Ask for a specific private source only if a particular unresolved behavior needs it. Never put private source audio or private masters in git.
+3. The performance files share one looped/trimmed 48 kHz source; high-rate versions are soxr-upsampled per the owner. No source content above 24 kHz is expected, which is acceptable for this load comparison but does not prove behavior on native ultrasonic-rich content. Only `TEST-30min-loop.wav` is 16-bit; all others are 24-bit. MONO files are true one-channel. Reuse existing synthetic probes for additional mechanical edge cases; do not recreate this supplied set. Ask for a private source only when a specific unresolved behavior needs it. Never put private audio or masters in git.
 4. Note that the dev build is already optimized: the inspected Cargo profile uses `opt-level = 1` for the app and `3` for dependencies. Compare dev and release when profiling; do not dismiss the report as an entirely unoptimized debug build.
 
 **Done:** The next agent can reproduce against a named configuration and distinguish baseline behavior from existing edits. No sound or UI changes are required for this step.
@@ -95,6 +95,12 @@ The analysis/loading discussion can happen after **2A** supplies evidence. Steps
 
 The report contains both long **measurement waits** and real **dropout/lag**. EQ could already be audible while Preview LUFS was still measuring. Treat these as separate behaviors.
 
+**Starting hypothesis, with corrections:** the owner's timings imply about **1.57–1.96 million source frames/second**, suggesting a dominant per-frame cost. They do not establish that frame count is the only cost. Three minutes at 192 kHz is **34.56M frames**, versus **28.8M** for ten minutes at 48 kHz: comparable work, not identical (20% more frames). The [fixture note](../listening/2026-09-05-performance-fixtures.md) records the calculations.
+
+**Confirm the call path before instrumenting.** `audio.rs` does spawn background workers using `std::thread::Builder::new().spawn(...)`. Within the inspected landing request, `engine::preview_landing` calls `render_preview_landing_window`; `MasteringChain::process_interleaved` runs a serial `chunks_mut` frame loop, followed by optional sample-rate conversion and one ebur128 feed with `Mode::I | Mode::TRUE_PEAK`. No Rayon/parallel-chunk work was found in those application paths; inspect the chosen dependencies before extending that statement to the entire process.
+
+Time the **stateful chain and tail flush**, **copies/allocation**, **sample-rate conversion**, **K-weighting/filtering and block-energy accumulation**, **global gated integration**, and **true-peak analysis** separately. Source-rate frame throughput does not directly measure the integration throughput after delivery-rate resampling. Compressor/limiter/filter state prevents naive independent chunk rendering. Block-energy reduction is a candidate for parallel work, but the whole loudness pass is not automatically chunk-independent: preserve K-filter history, overlapping 400 ms blocks/100 ms hops, boundary/tail handling, and one global absolute/relative gate. Never average chunk LUFS values or reset the filters per chunk and call the result equivalent. True-peak interpolation also needs correct boundaries. Prove equivalence against the current reference before adopting a parallel measurement path.
+
 | Reproduction case | Owner baseline / purpose |
 | --- | --- |
 | 10 / 15 / 20 minutes at 48 kHz | Preview measurement approximately 17 / 22 / 35 seconds. |
@@ -102,8 +108,13 @@ The report contains both long **measurement waits** and real **dropout/lag**. EQ
 | 60 minutes at 96 kHz | Approximately 3 minutes 30 seconds measuring; rapid track switching occasionally produced a recoverable error. |
 | 3 minutes at 192 kHz | Approximately 22 seconds measuring after each settings edit; EQ could already be audible. |
 | 10 minutes at 192 kHz | Rapid A/B with many active settings produced substantial dropout/lag but no timeout. |
+| 2 minutes at 384 kHz | `TEST-2min-STEREO-384khz.wav`; owner reports increased lag, never a timeout. |
+| 1 minute at 705.6 kHz | `TEST-1min-STEREO-705khz.wav` (header confirms 705600 Hz); increased lag, never a timeout. |
+| 1 minute at 768 kHz | `TEST-1min-STEREO-768khz.wav`; increased lag, never a timeout. |
 
 Start with the **3-minute/192 kHz**, **10-minute/192 kHz**, and **60-minute/96 kHz** cases plus a short 48 kHz control. Use the other durations to characterize scaling if needed; do not run an enormous full cross-product before learning anything.
+
+Include the three extreme-rate fixtures as a separate stress extension. `decode.rs::validated_sample_rate` rejects zero but has no upper rate ceiling. That code fact and the owner's successful imports do not prove every downstream DSP/device configuration safe at arbitrary rates. Do not add an import ceiling as a substitute for diagnosing the reported lag; retain the successful imports while measuring resource use and checking downstream behavior.
 
 Record:
 
@@ -118,6 +129,10 @@ Record:
 **Deliverable:** A compact baseline report identifying which measured stage accounts for each symptom. Do not infer CPU behavior from a spinner or assume all old worker jobs stop merely because their results are ignored.
 
 ### 2B. Correct the demonstrated bottleneck, one change at a time
+
+**DSP exploration is explicitly in scope.** The agent may inspect the full preview/render/measurement path, compare alternative algorithms and data layouts, vectorize suitable arithmetic, improve limiter/compressor execution, eliminate redundant passes, and prototype bounded parallel work where dependencies permit it. This is not limited to caching or UI fixes. Tie experiments to a measured cost, compare before/after on the same fixtures, and land only the smallest proven improvement. Lower CPU use, memory use, and callback cost are all valid improvements.
+
+Optimize the implementation while preserving intended sound and numerical contracts. Preserve exact output where feasible; if operation ordering changes floating-point results, quantify the delta against existing tolerances, null/difference comparisons, and independent loudness/true-peak references. Do not silently lower precision, weaken peak protection, change release/knee behavior, discard whole-track evidence, or rewrite preset voicing for speed. A deliberate sonic tradeoff is a separate owner decision, not forbidden research: bring the measured benefit and audible/numerical tradeoff to the owner before adopting it. Known mechanical correctness repairs remain in scope with regressions and targeted listening where sound changes.
 
 Choose changes from evidence, for example:
 
@@ -135,6 +150,7 @@ Choose changes from evidence, for example:
 - On the documented native reference setup, normal A/B and settings editing remain responsive during a minimum **five-minute** high-rate stress run, with no observed task-induced dropouts or callback deadline misses attributable to the corrected path. If this target is not met, report the remaining failure; do not call performance fixed.
 - Extreme clicking has bounded work and converges to the last requested source/state without a stuck transport, stale playback, or an orphaned pending measurement. Record residual audible discontinuities rather than claiming perfection from “no crash.”
 - Source changes, cancellation/failure, and late results cannot poison the selected track or leave persistent error/pending UI after recovery. Distinguish valid recovery feedback from stale errors.
+- Add durable error capture before repeating the intermittent rapid switch into the 60-minute/96 kHz track. On the **next occurrence**, write the complete original error text/cause to the existing diagnostic log together with timestamp, selected/requested track identity, source rate/duration, playback/VM/Preview LUFS mode, and request/generation identifiers where available. Preserve the event after the toast clears and playback recovers. Test the logging with an injected error; do not require a reliable natural trigger before adding this evidence path, and do not claim the original message was recovered until an actual occurrence is captured.
 - Warm equivalent requests reuse correct work; settings that change the measured result still remeasure. Final settled Preview LUFS/export agreement remains within existing tested tolerances.
 - Keep wall-clock targets in native benchmark evidence rather than flaky CI assertions. Mechanical tests cover bounded work, state correctness, and cancellation. The stronger real-hardware requirement is not satisfied by an offline throughput example or browser mock.
 - If only one powerful Windows machine is available, state that scope. Validate on Mac and a more constrained setup when available before making broader responsiveness claims; do not request hardware specs the tools can observe.
@@ -210,6 +226,7 @@ The owner supplied `E:\fghgfhjghjhg` for inspection if useful. Read existing out
 
 ### 5B. Auto labels and tiny right-rail scroll
 
+- **True mono Source Insight:** `src/lib/source-insight.ts` currently buckets `analysis.stereo_width` without channel count, so a one-channel file can read “Narrow — Mono-leaning stereo image.” Branch on a known source channel count of **1** before the width buckets and show **“Mono”** with a truthful one-channel note. The backend PCM has channels, but current Rust/TypeScript `AnalysisResult` does **not** carry them; `ImportedTrack.channels` already does. Prefer wiring that matching track metadata through `SourceInsight`/`sourceInsightRows` rather than assuming `analysis.channels` exists or expanding a shared wire contract unnecessarily. Unknown channel count must not be inferred from low width or absent correlation; retain existing stereo classifications for two-channel files, including dual mono. Regression: `TEST-3min-MONO-48khz.wav` reports Mono; the other true mono fixture agrees; existing stereo fixtures and width buckets are unchanged. Use a focused unit regression plus real import/UI verification, not a private-audio-dependent CI test.
 - Align Track/Album LUFS target and ceiling presentation where their semantics agree; display actual effective values and distinguish inherited/automatic from explicit settings. Do not change settings just to make labels match.
 - Reproduce the small scroll with the current fully expanded Advanced rail after accounting for concurrent CSS/tooltip changes. Inspect real overflow causes before changing spacing.
 - At normal desktop sizes where the content can fit, remove incidental few-pixel overflow without hiding controls, shrinking text excessively, or using `overflow: hidden` as a concealment fix.
@@ -222,11 +239,11 @@ The owner supplied `E:\fghgfhjghjhg` for inspection if useful. Read existing out
 
 Current implementation deliberately writes **`NN-<source-stem>.wav`** inside a collision-safe album folder, plus continuous audio and **`manifest.json`**. The existing owner decision selected an album-titled subfolder. The lack of “mastered” is therefore a requested naming improvement, not proof that a suffix routine broke.
 
-**Proposals to settle:** visibly identify per-track masters using a suffix consistent with Track Master's naming; present the human receipt in the app and explain or relocate technical metadata without losing it. Track Master's inspected default currently uses `__master.wav`; do not assume “mastered” is already the exact shared convention.
+**Filename proposal to settle:** visibly identify per-track masters using a suffix consistent with Track Master's naming. Track Master's inspected default currently uses `__master.wav`; do not assume “mastered” is already the exact shared convention.
 
-Do not delete the owner's JSON output or remove machine-readable evidence based only on the complaint. Settle the filename convention and whether the manifest stays in place, moves into a metadata subfolder, or is otherwise exposed before changing that output contract.
+**Manifest decision — exactly two owner choices, with no automatic keep default:** (1) write the manifest in a **`metadata/` subfolder**; or (2) **stop writing it and rely on the in-app `AlbumExportReceipt`**. Do not retain the current root-level JSON as a third proposed outcome. Keeping portable structured evidence is a tradeoff to explain, not a veto over the owner's choice. No choice has been selected until the owner answers; planning leaves existing files untouched without treating existing behavior as the chosen design.
 
-**Acceptance after a choice:** Actual returned paths, manifest references, continuous-file assembly, cancellation cleanup, and receipt links agree. Repeated renders and sanitization/collision cases never overwrite sources or prior outputs. Legacy receipts/projects remain readable. Keep this independent of a DSP or codec change.
+**Acceptance after a choice:** For `metadata/`, update the actual returned path, folder creation, manifest references, cleanup, and receipt links. For removal, stop emitting new JSON and remove the assumption of a mandatory manifest path throughout report types, completion logic, UI, tests, and affected bridges; keep the in-app report usable and make its persistence/reopen behavior explicit. Neither option deletes old owner outputs. In both cases, continuous-file assembly, cancellation/failure cleanup, and collision-safe non-overwrite behavior remain correct; legacy receipts/projects stay readable. Keep this independent of a DSP or codec change.
 
 ## 6. Extra formats and conversion: a separate feature specification
 
@@ -252,7 +269,7 @@ These are genuine product choices, not missing answers from the listening form. 
 | --- | --- | --- |
 | When imported tracks become usable | Earlier usable tracks if remaining work can protect audition; otherwise an explicit preparation stage | 2A: time to first usable track, total batch time, and playback/resource impact. |
 | Automatic Preview LUFS on import | Only the relevant selected track/mode, with cancellation and bounded work | Same profiling and lifecycle evidence; explain the cost and pending behavior. |
-| Album output naming/JSON presentation | Consistent master naming plus a readable in-app receipt while preserving structured evidence | Existing contract/path usage and a concrete proposed output-folder example. |
+| Album output naming/JSON presentation | Settle the naming convention; choose **metadata/ subfolder** or **remove JSON/use in-app receipt**. No default to keeping JSON. | Concrete examples of the two outputs, portable-record tradeoff, and report/persistence/cleanup dependencies. |
 | First codec/conversion scope | WAV + MP3, with an explicit Original/source conversion path | Short specification including Track/Album/Standard scope, actual encoder feasibility, receipt semantics, and product-doc consequences. |
 
 For routine bug-fix details, use engineering judgment within the authorized scope. Do not turn every test or small UI correction into an owner approval. For the analysis/loading workflow, the request to discuss before changes comes from the owner's written note, not an invented process gate.
