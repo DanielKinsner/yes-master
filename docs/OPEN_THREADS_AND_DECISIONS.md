@@ -13,8 +13,15 @@ close rather than letting them rot in scattered docs.
 > The owner accepted this recommendation. Implementation must verify concurrent
 > analysis keeps audition responsive and measure first-ready/batch timing;
 > this decision is not evidence that the behavior is already implemented.
-> Later settings changes can still require Preview LUFS measurement. Automatic
-> selected-track Preview LUFS on import remains a separate pending choice.
+> Later settings changes can still require Preview LUFS measurement.
+>
+> **Automatic Preview LUFS also settled in the follow-up interview:** when
+> Preview LUFS is already enabled for the selected mode, start measurement as
+> soon as the selected track is ready. Show "Measuring," cancel obsolete work
+> when switching tracks, and protect playback with bounded background work.
+> Other imported tracks wait until selected; do not queue a full-track render
+> for every import. Implementation and resource/lifecycle verification remain
+> pending; this does not change the feature's enabled state or defaults.
 
 > **2026-09-05 — Listening follow-up implementation underway locally.** Warm VM
 > settings edits reproduced a 16.26 dB audio jump. Retaining applied same-source

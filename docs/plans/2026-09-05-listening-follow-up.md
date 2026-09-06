@@ -316,7 +316,7 @@ The choice is **when each completed track becomes usable and how remaining work 
 
 The requested discussion has settled this workflow. Measure time-to-first-usable-track, total batch time, and playback impact during implementation. Preserve per-track backend profile readiness, not just frontend analysis text. Later settings changes can still incur Preview LUFS waits.
 
-The related idea of starting Preview LUFS automatically on import also needs this resource/lifecycle decision. Scope any recommendation to the currently relevant track/mode with correct cancellation; do not automatically launch whole-track measurements for every imported file.
+**Automatic Preview LUFS owner decision (same follow-up interview):** If Preview LUFS is already enabled for the selected mode, start measurement when the selected track becomes ready. Show "Measuring," cancel obsolete work when switching tracks, and protect playback with bounded work. Other imported tracks wait until selected; do not queue whole-track measurements for the batch. Enabled state/defaults are unchanged. Verify resource contention, source/settings lifetime, and cancellation during implementation.
 
 ## 3. Width and Loud: separate display behavior from sound
 
@@ -414,7 +414,7 @@ These are genuine product choices, not missing answers from the listening form. 
 | Decision | Recommendation to bring to the owner | Evidence needed first |
 | --- | --- | --- |
 | When imported tracks become usable — settled | Owner selected incremental readiness, progress for remaining tracks, and playback priority | Implementation must establish time to first usable track, total batch time, and playback/resource impact. |
-| Automatic Preview LUFS on import | Only the relevant selected track/mode, with cancellation and bounded work | Same profiling and lifecycle evidence; explain the cost and pending behavior. |
+| Automatic Preview LUFS on import — settled | Owner selected automatic measurement for the ready selected track when already enabled, "Measuring" state, obsolete-work cancellation and playback protection | Implementation must verify resource contention, source/settings lifetime and cancellation; no whole-batch render queue. |
 | Album output naming/JSON presentation | Settle the naming convention; choose **metadata/ subfolder** or **remove JSON/use in-app receipt**. No default to keeping JSON. | Concrete examples of the two outputs, portable-record tradeoff, and report/persistence/cleanup dependencies. |
 | First codec/conversion scope | WAV + MP3, with an explicit Original/source conversion path | Short specification including Track/Album/Standard scope, actual encoder feasibility, receipt semantics, and product-doc consequences. |
 

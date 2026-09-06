@@ -64,6 +64,8 @@ removes later Preview LUFS costs. Measure time to first usable track, total batc
 time and concurrent playback impact during implementation. **Owner selected
 incremental readiness in the September 5 follow-up interview:** make each ready
 track usable, show progress for the rest, and give playback priority. Concurrent
-audition responsiveness still needs verification. Automatic Preview
-LUFS on import remains dependent on resource/cancellation policy; do not queue a
-whole-track render for every imported file by default.
+audition responsiveness still needs verification. **Owner also selected automatic
+Preview LUFS for the selected track when ready, if already enabled for the mode:**
+show "Measuring," cancel obsolete work on track switches, and protect playback
+with bounded work. Other imported tracks wait until selected. Enabled state and
+defaults stay unchanged; resource/lifecycle verification remains pending.
