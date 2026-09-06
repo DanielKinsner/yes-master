@@ -1,0 +1,340 @@
+# YES Master — listening follow-up implementation plan
+
+Prepared September 5, 2026. **Planning complete; implementation has not started under this plan.**
+
+## Start here
+
+**First: reproduce and correct the brief Volume Match level jump. Then address high-rate/long-file responsiveness.** Follow with targeted Width/Loud checks, loop behavior, and the reported UI/export issues. Keep the import/loading product discussion and additional codecs separate from those corrections.
+
+The owner broadly likes the sound and explicitly wants taste left alone unless there is an objective mechanical problem. This plan is not permission to re-voice presets, enable gated features, or activate a release.
+
+Read the [reconciled owner handoff](../listening/2026-09-05-owner-handoff.md) for the actual answers. Its observations supersede the original guide's generated warnings and broad mission labels. **Do not ask the owner to repeat details already recorded there.**
+
+This plan, the reconciled handoff, the original owner exports, and the reusable guide are now maintained in the repository; see the [listening records index](../listening/README.md). The September 5 owner pass is recorded in the live agent instructions and evidence ledgers. Planning and this documentation integration did not implement application fixes, retune sound, or authorize release activity.
+
+## Evidence and boundaries
+
+- The listening session names owner-verified build **`e600a21`**, running through `npm run tauri dev` on Windows with Focusrite USB output and studio monitors.
+- The read-only planning inspection found local HEAD **`7ae9fc2ce60a7876b8fe3ca198dbe0f44445f8a9`**. The committed delta since the listening build concerns website analytics and related docs/dependencies; do not silently equate either commit with the exact running app plus its working-tree changes.
+- At the planning inspection, the working tree had other edits to `AdvancedPanel.tsx`, `fields.tsx`, `App.css`, an adaptive-strength test, the landing capture script/assets, and untracked guide/design files. The guide has since been included in this documentation integration; preserve the independent application/design work. The visible UI changes inspected here concern the Album Adaptive explanation/tooltip; they are not evidence that the listening issues have been fixed.
+- Static code findings below are leads and current behavior descriptions, not new native playback results. No tests, benchmarks, or app sessions were run for this plan.
+- Before implementation, re-read the repository's current `AGENTS.md` and required docs. The July 24 quality plan remains the forward queue, `beta-go-no-go.md` remains the release gate, and the September 4 audio-correctness ledger supplies the immediate history. Do not reopen shipped historical work simply because it appears in an old checklist.
+- Implement in small, independently verifiable changes. When an objective problem is established, add a meaningful regression that fails before the correction. Do not change expected audio snapshots merely to hide a regression.
+
+### Preserve the successful listening results
+
+| Existing result | How to treat it |
+| --- | --- |
+| Normal A/B is seamless, preserves playhead, and gives a fair Volume Match comparison | Keep it passed for the tested conditions. Use it as a regression guard while fixing setting changes and stress cases. |
+| Quiet-to-loud contrast is natural at normal settings | Keep it passed. Compression near maximum Intensity is not automatically a defect. |
+| Intensity and Manual threshold/ratio sweeps felt smooth; compressor Off was auditioned | Preserve those successful checks. |
+| The saved Track Master file sounded right, had intact ends/correct format, and reanalysis matched its receipt | Preserve the observed export pass. Do not turn performance notes written in that section into an export corruption report. |
+| Center and sides were stable at normal settings | Preserve that limited positive result. Broader Width behavior still needs the requested mechanical review. |
+
+The owner still selected **“Not ready / stopped here.”** This plan does not replace that with signoff. Genuine remaining listening limits are the unestablished Volume-Match-OFF export-comparison condition and the explicitly untested Album cases; they do not erase the successful checks above.
+
+## Work order
+
+Priority describes the proposed implementation order, not a newly imposed beta gate.
+
+| Step | Deliverable | Completion evidence |
+| --- | --- | --- |
+| 0 | Identify the actual baseline and available reproduction material | Build/configuration recorded; existing edits protected; no blanket fixture request. |
+| 1 | Remove the Volume Match setting-change level jump | Failing regression corrected, measured/native transition check, unchanged export behavior. |
+| 2A | Explain high-rate/long-file cost with measurements | Separate timings for decoding, live playback, VM, whole-track landing, and analysis; baseline report. |
+| 2B | Fix proven playback/resource bottlenecks in small steps | Same-fixture before/after measurements and native stress evidence; no silent approximation of preview loudness. |
+| 3A | Stabilize the Width Auto readout | Delayed/out-of-order response regression and visible UI check. |
+| 3B | Mechanically check Width and Loud | Existing and targeted DSP/meter tests; explicit finding or “no defect found in this scope,” without retuning. |
+| 4 | Resolve loop/playback state and Standard's region presentation | Native reproduction or a precise unreproduced record; state/UI regressions for any correction. |
+| 5A | Make Album export completion/receipt easy to find | Complete, readable receipt after export; preserved measurements and cancelled-export behavior. |
+| 5B | Correct label consistency and incidental rail scrolling | Truthful labels and viewport/keyboard verification, with intentional scrolling retained where needed. |
+| 5C | Settle Album file naming and manifest presentation | Small documented output-design choice before changing the file contract; non-overwrite coverage. |
+| 6 | Scope and then deliver the requested extra export format | Separate WAV + MP3/conversion specification and real encoded-file validation. |
+| 7 | Close with focused verification and one short owner check | Evidence for changed behavior; original successful results retained; unresolved items named precisely. |
+
+The analysis/loading discussion can happen after **2A** supplies evidence. Steps 3–5 need not wait for an undecided new loading experience or codec design. If an intermittent bug stays unreproduced after the bounded checks below, record that limit and continue independent work; do not invent a fix or close the issue as passed.
+
+## 0. Establish the baseline without repeating the interview
+
+1. Record the implementation-start commit, existing uncommitted changes, launch/build profile, audio device, output rate, and buffer settings where observable. Do not reset, stage, or incorporate another task's edits accidentally. Use an isolated checkout if that is needed to protect concurrent work, with the baseline stated explicitly.
+2. Use the named material when locally available:
+   - `doors open neon nights remix`: whole track, Punch 100% Intensity, Preset Density 0/50/100, Volume Match on; source reported around −3.7 dBTP.
+   - `lay the money on the desk original (1)`: 0:35–2:00, Universal 100% Intensity, Preview LUFS on/off and Volume Match comparisons.
+   - Album outputs: `E:\fghgfhjghjhg`, supplied by the owner for possible consistency analysis.
+3. Reuse existing synthetic fixtures for mechanical reproduction and generate only the additional local test material needed. The owner deliberately did not list every track. Ask for a specific private source only if a particular unresolved behavior needs it. Never put private source audio or private masters in git.
+4. Note that the dev build is already optimized: the inspected Cargo profile uses `opt-level = 1` for the app and `3` for dependencies. Compare dev and release when profiling; do not dismiss the report as an entirely unoptimized debug build.
+
+**Done:** The next agent can reproduce against a named configuration and distinguish baseline behavior from existing edits. No sound or UI changes are required for this step.
+
+## 1. Volume Match setting-change level jump
+
+**Owner evidence:** Mastered + Volume Match, changing essentially any setting causes about **one-third of a second** at a much louder/unmatched level before returning to the matched level. The owner calls this a major preview problem and says it does not occur when Preview LUFS is enabled. The trigger is already known.
+
+**Code lead:** In `audio.rs`, `apply_preview_volume_match_gain_cached` uses **`1.0` on a cache miss**. `publish_preview_coeffs` publishes those coefficients before the background result arrives. This could produce the reported temporary loss of attenuation. It does not prove that compression/limiting actually bypassed. The current cold-lookup unit test explicitly expects the initial unity fallback, so retain its no-synchronous-work guarantee while distinguishing first measurement from an edit during an already-matched audition.
+
+### Bounded implementation
+
+1. Reproduce a **warm matched state → uncached settings edit → new measurement** with a deterministic signal and settings that need meaningful attenuation. Observe both the applied gain transition and actual output audio.
+2. Test the owner's setting-change sequence in the native app. Contrast VM on / Preview LUFS off with Preview LUFS on, then VM off. Include isolated EQ, Intensity, and Density edits so the result is not tied to one slider.
+3. If the fallback is responsible, change the transition policy so recomputation does not temporarily remove the established attenuation. A same-source retained attenuation plus a smooth move to the new valid value is a candidate, not a pre-approved implementation. Handle prior boosts conservatively and never reuse another track's measurement.
+4. Cover first-ever VM measurement, turning VM off, rapid edits, stale worker results, same-source A/B, track changes, and device recreation. Keep cold measurement off the audio/command-critical path and preserve the existing source-epoch protection.
+
+### Acceptance
+
+- A regression reproduces the **edit after a valid match** problem before the fix; it does not merely assert the chosen internal variable value.
+- The native sequence no longer produces the temporary unmatched blast. Record at least 20 representative setting edits across the contrasted modes, including the supplied Punch context when available. Distinguish intentional level/tone changes from a temporary compensation reset.
+- No new blocking measurement, playhead reset, or stale-track gain application occurs. Pending status remains truthful.
+- Ordinary A/B retains its successful behavior.
+- Toggling audition Volume Match does not change exported PCM or receipt levels. Keep the limiter and all existing export safety behavior intact.
+
+**Likely files:** `src-tauri/src/audio.rs`, relevant live coefficient application in `dsp.rs`, and existing audio-controller/preview tests. Change DSP code only if the measured transition requires it.
+
+## 2. High-rate and long-file responsiveness
+
+### 2A. Measure separate costs before selecting a fix
+
+The report contains both long **measurement waits** and real **dropout/lag**. EQ could already be audible while Preview LUFS was still measuring. Treat these as separate behaviors.
+
+| Reproduction case | Owner baseline / purpose |
+| --- | --- |
+| 10 / 15 / 20 minutes at 48 kHz | Preview measurement approximately 17 / 22 / 35 seconds. |
+| 30 minutes at 48 kHz WAV | Long wait, without a supplied numerical timing. |
+| 60 minutes at 96 kHz | Approximately 3 minutes 30 seconds measuring; rapid track switching occasionally produced a recoverable error. |
+| 3 minutes at 192 kHz | Approximately 22 seconds measuring after each settings edit; EQ could already be audible. |
+| 10 minutes at 192 kHz | Rapid A/B with many active settings produced substantial dropout/lag but no timeout. |
+
+Start with the **3-minute/192 kHz**, **10-minute/192 kHz**, and **60-minute/96 kHz** cases plus a short 48 kHz control. Use the other durations to characterize scaling if needed; do not run an enormous full cross-product before learning anything.
+
+Record:
+
+- Build profile, device rate/buffer, source duration/rate/channels, settings, cold/warm state.
+- Import/analysis completion, decode/prewarm time, first audible playback, audible response to settings, VM readiness, and whole-track Preview LUFS readiness separately.
+- Audio callback time relative to its actual buffer deadline, underruns/gaps, command latency, peak memory, and active/pending worker counts. Keep any diagnostic instrumentation temporary or dev-only.
+- No-match mode, VM only, Preview LUFS only, and any combined state actually supported by the UI; test Original and Mastered.
+- Normal A/B cadence separately from deliberately rapid clicking; test quick track switches during analysis and preview measurement.
+
+**Current architecture to preserve:** Whole-track landing runs off-thread; VM returns its representative-window result first. Same-source work has one active worker and one latest pending edit. Source epochs reject stale results. Prewarming can avoid synchronous first-play decode, but the September 4 ledger explicitly records synchronous decode as a remaining fallback. These existing mechanisms do not prove callback deadlines or globally bounded work across repeated source changes.
+
+**Deliverable:** A compact baseline report identifying which measured stage accounts for each symptom. Do not infer CPU behavior from a spinner or assume all old worker jobs stop merely because their results are ignored.
+
+### 2B. Correct the demonstrated bottleneck, one change at a time
+
+Choose changes from evidence, for example:
+
+- Eliminate avoidable decoding, buffer copies, or controller work on ordinary same-source A/B.
+- Keep obsolete source work from consuming resources indefinitely; bound/cancel/coalesce work where profiling demonstrates accumulation, with correct cleanup and source ownership.
+- Correct cache identity or unnecessary invalidation only when two requests are actually equivalent. Do not reuse a measurement for changed processing.
+- Protect playback against measured contention among analysis, decoding, preview measurement, and live DSP. A user-visible change to analysis scheduling/loading belongs to the discussion below; do not smuggle it into a performance patch.
+- Reduce measured full-chain or measurement cost while preserving the September 4 whole-track loudness contract and delivered-file measurement accuracy.
+
+**Do not:** restore synchronous VM computation, use a short excerpt as if it were exact whole-track Preview LUFS, hide a pending measurement, simply lengthen timeouts, enable gated processing, or retune presets to make a benchmark cheaper.
+
+### Acceptance
+
+- Same-fixture before/after evidence identifies the improvement and shows that the work was not merely moved into another wait.
+- On the documented native reference setup, normal A/B and settings editing remain responsive during a minimum **five-minute** high-rate stress run, with no observed task-induced dropouts or callback deadline misses attributable to the corrected path. If this target is not met, report the remaining failure; do not call performance fixed.
+- Extreme clicking has bounded work and converges to the last requested source/state without a stuck transport, stale playback, or an orphaned pending measurement. Record residual audible discontinuities rather than claiming perfection from “no crash.”
+- Source changes, cancellation/failure, and late results cannot poison the selected track or leave persistent error/pending UI after recovery. Distinguish valid recovery feedback from stale errors.
+- Warm equivalent requests reuse correct work; settings that change the measured result still remeasure. Final settled Preview LUFS/export agreement remains within existing tested tolerances.
+- Keep wall-clock targets in native benchmark evidence rather than flaky CI assertions. Mechanical tests cover bounded work, state correctness, and cancellation. The stronger real-hardware requirement is not satisfied by an offline throughput example or browser mock.
+- If only one powerful Windows machine is available, state that scope. Validate on Mac and a more constrained setup when available before making broader responsiveness claims; do not request hardware specs the tools can observe.
+
+### Analysis/loading decision after the baseline
+
+**Important finding:** `analyze_tracks_core_with_progress_sync` already loops through tracks sequentially **within one batch**. The command populates the profile store after the batch, and the frontend applies the returned results together. Multiple overlapping batches or other jobs may still run concurrently. Thus the observed “all analyzed at once” appearance does not prove a per-batch parallel analyzer.
+
+The choice is **when each completed track becomes usable and how remaining work shares resources**:
+
+| Option | Benefit | Cost / evidence needed |
+| --- | --- | --- |
+| Make completed tracks usable sooner, protect playback while the rest prepare | Earlier useful work | Requires incremental result/profile publication, truthful per-track progress, correct cancellation/failure handling, and proof that background work does not impair audition. |
+| Complete the batch before opening the editing experience | Clear preparation stage and predictable entry | A potentially long up-front wait; it does not remove later Preview LUFS costs after settings edits. |
+
+**Recommendation for discussion:** Prefer earlier usable tracks if profiling demonstrates responsive playback with remaining work. Otherwise present an explicit preparation state with real progress. Do not blur/block the entire app by default simply because the owner mentioned that possibility.
+
+The owner explicitly requested a discussion **before changing this experience**. Bring measured time-to-first-usable-track, total batch time, and playback impact to that discussion. Preserve per-track backend profile readiness, not just frontend analysis text, if incremental results are selected.
+
+The related idea of starting Preview LUFS automatically on import also needs this resource/lifecycle decision. Scope any recommendation to the currently relevant track/mode with correct cancellation; do not automatically launch whole-track measurements for every imported file.
+
+## 3. Width and Loud: separate display behavior from sound
+
+### 3A. Width Auto readout flicker
+
+**Owner evidence:** Other settings edits make Width alternate between “Auto” and “Auto · [resolved value].”
+
+**Code lead:** The guardrail-readout effect clears `guardrailReadout` for each settings dependency change, then restores it after an asynchronous reply. `AdvancedPanel` uses that readout for Width's resolved Auto value. This is a strong explanation for the display transition, not a reason to remove all invalidation: clearing stale processing readouts protects truthful signal-chain feedback.
+
+**Change scope:** Stabilize the Width presentation and slider position through recalculation without presenting an old value as the current resolved result. Keep any last-known value explicitly scoped/identified while updating; clear it on source/context changes. A delayed response must not roll a manual value back or replace a newer result. Avoid broad changes to all guardrail displays just to repair one readout.
+
+**Acceptance:** With slow and out-of-order mocked replies, repeated settings edits do not flash the Width control between incompatible states or jerk its thumb to a fallback minimum. Auto remains distinguishable from an explicit number. Track/Album/source changes cannot show another context's numeric result. Keyboard entry, drag, reset-to-Auto, and actual native readout behavior remain correct.
+
+**Consistency recommendation:** Keep useful resolved information for Width. Audit the meaning of the other controls before standardizing labels; do not add invented “Auto” values to controls whose neutral/default behavior is different. Record any broader presentation choice separately from the flicker fix.
+
+### 3B. Width processing and Loud compression/meter checks
+
+Reuse the existing Width unit tests and full-chain/fingerprint fixtures first. They already cover zero-to-mono, identity at 1, side amplification, pure-mid preservation, mono handling, clamping, and full-chain side preservation. Add only missing behavior-driven coverage.
+
+**Width matrix:** mono, centered stereo, side-rich stereo, anticorrelated material, and asymmetric left/right content; Auto → manual → Auto, representative widths including bounds, at 44.1/48/96/192 kHz as relevant to a finding. Check the control → resolved coefficients → live audio → saved output path. Respect the intended M/S behavior: width 0 intentionally removes side content. Separate source-dependent guardrails from a broken slider.
+
+**Loud matrix:** transient material, sustained/dense material, and asymmetric channels; approximately 50/90/100% Intensity; Preset versus Off creative compression; Preview LUFS/VM conditions relevant to the complaint. Check gain reduction, sample/true peak, actual L/R output envelopes, and what each live meter displays. Do not assume equal-looking meters prove channel collapse, or mistake peak hold/ballistics for a stopped audio engine.
+
+**Acceptance:** Tests either expose a specific violated DSP/meter contract and accompany its correction, or the agent records that no objective defect was found within the named cases. Existing bounds and tolerances remain intact. No speculative tuning is performed to make Loud less limited at extreme Intensity or Punch brighter at 0% Density.
+
+The Punch 0%/50% Density preference and Loud “breathes more lower down” observation remain valid taste notes. A correct, aggressive setting is allowed. Any proposed voicing change needs a later owner listening decision, not an automatic patch from this plan.
+
+## 4. Loop anomaly and Standard region presentation
+
+Split the two reports.
+
+**A. Unreproduced start-position anomaly:** switch tracks → draw a loop region → Play → toggle Loop. The owner says playback did not begin at the region or beginning and could not reproduce it. Do not invent “no playback at all” as the exact symptom.
+
+Run a bounded sequence of **20 track/region/play transitions**, including while analysis/prewarm is unfinished, both source modes, near-end regions, and rapid selection changes. Inspect command ordering, stale play requests, pending loop region, and backend/source identity. Use native behavior as well as hook tests. If reproducible, isolate the smallest failure and add a regression. If still unreproduced, preserve the sequence and attempt count as an open observation without demanding that the owner reproduce it again before other work continues.
+
+**B. Region remains visible in Standard:** Existing code intentionally disarms looping on entry to Standard while retaining per-track region memory for return to Advanced. Existing tests pin this. Standard passes that region to the waveform with region editing disabled.
+
+**Proposed correction if the visible residual selection is confirmed:** Hide/de-emphasize the inactive loop selection in Standard while preserving its remembered geometry for Advanced. Do not delete the region memory or enable hidden looping to reconcile the UI.
+
+**Acceptance:** Standard neither loops nor accepts the Advanced loop shortcut; its waveform does not suggest an active loop. Returning to Advanced restores the selection but requires explicit re-arming. Track changes cannot carry a previous source's loop or seek. Any change to start-position behavior follows an established transport contract, not a guess about the unreproduced event.
+
+## 5. Export presentation and small UI corrections
+
+### 5A. Album completion and receipt
+
+The receipt already has delivered loudness, true peak, target, and ceiling rendering; it is placed in the Sidebar and details are collapsed. The owner found the result hard to discover. **Improve the completion experience; do not rebuild a measurement feature that already exists.**
+
+Proposed behavior: after a successful Album export, present a clear completion summary and visible access to the per-track results beside the relevant export workflow, using the existing report. Give the destination a clear reveal/open action if supported. Keep one primary receipt location rather than duplicating an entire report in two places. Preserve receipt access after dismissal/navigation and avoid unnecessary focus theft.
+
+**Acceptance:** A successful native export exposes its result without hunting in a lower-left dropdown. All four per-track metrics remain truthful, including missing/legacy values and informational target shortfalls. Keyboard/screen-reader users can reach and dismiss the result. Cancelled or failed exports cannot show a success receipt. Verify against actual exported files when testing correctness, not mock receipt numbers alone.
+
+The owner supplied `E:\fghgfhjghjhg` for inspection if useful. Read existing outputs without altering them. Do not declare that the original album missed receipt fields unless inspection establishes that fact.
+
+### 5B. Auto labels and tiny right-rail scroll
+
+- Align Track/Album LUFS target and ceiling presentation where their semantics agree; display actual effective values and distinguish inherited/automatic from explicit settings. Do not change settings just to make labels match.
+- Reproduce the small scroll with the current fully expanded Advanced rail after accounting for concurrent CSS/tooltip changes. Inspect real overflow causes before changing spacing.
+- At normal desktop sizes where the content can fit, remove incidental few-pixel overflow without hiding controls, shrinking text excessively, or using `overflow: hidden` as a concealment fix.
+- At the supported **1360×740** minimum, shorter windows, and enlarged text/zoom, retain intentional scrolling whenever content actually needs it. The owner asked to remove accidental scrolling, not make an arbitrarily tall expanded panel fit every viewport.
+- Keep delivery-format copy accurate while WAV is the only implemented output. Removing or relocating repetitive copy can be a layout choice; do not imply MP3 already ships.
+
+**Acceptance:** Track and Album states with all relevant panels expanded have reachable controls, visible focus, no accidental clipping or nested scroll trap, and truthful values. Check 1360×740 plus a larger desktop viewport and 200% zoom. Use actual pointer/keyboard reachability and screenshots, not only DOM existence or auto-scrolling clicks.
+
+### 5C. Album names and manifest: define the intended output change
+
+Current implementation deliberately writes **`NN-<source-stem>.wav`** inside a collision-safe album folder, plus continuous audio and **`manifest.json`**. The existing owner decision selected an album-titled subfolder. The lack of “mastered” is therefore a requested naming improvement, not proof that a suffix routine broke.
+
+**Proposals to settle:** visibly identify per-track masters using a suffix consistent with Track Master's naming; present the human receipt in the app and explain or relocate technical metadata without losing it. Track Master's inspected default currently uses `__master.wav`; do not assume “mastered” is already the exact shared convention.
+
+Do not delete the owner's JSON output or remove machine-readable evidence based only on the complaint. Settle the filename convention and whether the manifest stays in place, moves into a metadata subfolder, or is otherwise exposed before changing that output contract.
+
+**Acceptance after a choice:** Actual returned paths, manifest references, continuous-file assembly, cancellation cleanup, and receipt links agree. Repeated renders and sanitization/collision cases never overwrite sources or prior outputs. Legacy receipts/projects remain readable. Keep this independent of a DSP or codec change.
+
+## 6. Extra formats and conversion: a separate feature specification
+
+The owner clearly requests more output formats and explicitly names **MP3**, including **WAV → MP3 without mastering**. Preserve both requirements. The minimal proposed first increment is **retain WAV and add MP3**, not an unsolicited catalog of codecs.
+
+Before implementation, write a bounded specification covering:
+
+1. Track versus Album availability, MP3 quality controls/default, and how format selection affects Standard's currently fixed delivery promise.
+2. An explicit way to export/convert the **Original source** without the mastering chain. **Intensity 0 is not a reliable synonym for bypass:** other processing/limiting can remain active. The output-source choice must be unambiguous and must not silently depend on whichever A/B side happens to be playing.
+3. Encoder choice and distribution on Windows/Mac, installation/offline behavior, and applicable packaging/redistribution requirements. Verify current primary documentation when choosing the dependency; this plan has not selected one.
+4. Extension/filter handling, supported channel/rate conversion, output destination safety, cancellation, failure cleanup, and persistent project/settings compatibility.
+5. What the receipt measures. MP3 can add padding/delay and change decoded peaks. Do not label pre-encode PCM figures as measurements of the delivered encoded file. Define and verify the delivered-file checks and user copy.
+
+**Acceptance:** A real MP3 opens/decodes in an independent player; requested format/quality, duration accounting, channels/rate, and receipt semantics match the implementation. Source-conversion mode bypasses mastering as specified. Existing WAV exports, levels, receipts, and non-overwrite behavior remain correct. Test Track and Album only for the surfaces included in the agreed increment, and do not imply unavailable coverage.
+
+The extra-format request conflicts with current WAV-only/fixed-Standard product descriptions. When its scope is settled, explicitly resolve the corresponding `PRODUCT.md`/behavior/help/public-copy updates with the owner as required by `AGENTS.md`; do not update public claims before the format actually works. This feature need not delay the objective corrections in steps 1–5.
+
+## Decisions that need an informed discussion
+
+These are genuine product choices, not missing answers from the listening form. They do not block reproducing the documented bugs.
+
+| Decision | Recommendation to bring to the owner | Evidence needed first |
+| --- | --- | --- |
+| When imported tracks become usable | Earlier usable tracks if remaining work can protect audition; otherwise an explicit preparation stage | 2A: time to first usable track, total batch time, and playback/resource impact. |
+| Automatic Preview LUFS on import | Only the relevant selected track/mode, with cancellation and bounded work | Same profiling and lifecycle evidence; explain the cost and pending behavior. |
+| Album output naming/JSON presentation | Consistent master naming plus a readable in-app receipt while preserving structured evidence | Existing contract/path usage and a concrete proposed output-folder example. |
+| First codec/conversion scope | WAV + MP3, with an explicit Original/source conversion path | Short specification including Track/Album/Standard scope, actual encoder feasibility, receipt semantics, and product-doc consequences. |
+
+For routine bug-fix details, use engineering judgment within the authorized scope. Do not turn every test or small UI correction into an owner approval. For the analysis/loading workflow, the request to discuss before changes comes from the owner's written note, not an invented process gate.
+
+## Verification and evidence contract
+
+Do not run a full suite merely to mark this planning document done. During implementation, use focused regressions to establish each defect and run the repository-required checks for the affected scope.
+
+### Required implementation lanes
+
+The repository's desktop fast lane is:
+
+```powershell
+# Repository root
+npm test
+npm run build
+npm run build:windows
+
+# From src-tauri
+cargo fmt --check
+cargo clippy --target-dir target\codex-rc --all-targets -- -D warnings
+cargo test --lib --target-dir target\codex-rc
+cargo test --target-dir target\codex-rc
+```
+
+For rendered UI changes, also run **`npm run verify:headless`** from the root. If a captured application surface changes, regenerate the affected deterministic landing assets/manifest through the existing pipeline so the source-digest gate remains honest. Preserve concurrent capture work; do not hand-edit hashes to silence the gate.
+
+Before merging DSP/export or audition-trust changes, run the slow fixture lane with available local fixtures:
+
+```powershell
+# From src-tauri
+$env:AMS_RUN_REAL_FIXTURE = "1"
+try { cargo test --target-dir target\codex-rc }
+finally { Remove-Item Env:\AMS_RUN_REAL_FIXTURE }
+```
+
+When shared types, commands, or shared behavior affect the bridges, include the documented iPhone **check + tests** and Android **host tests + arm64 API-29 cross-check**. Desktop-green alone does not establish bridge compatibility. Required commands and prerequisites remain in `AGENTS.md`/`docs/TESTING.md`.
+
+Passing tests are not evidence of native sound quality, low callback latency, or a real saved-file comparison. Record those separately. If local fixtures, a platform, or hardware evidence is unavailable, name that exact limit instead of marking the entire mission failed or the slice universally proven.
+
+### Per-change record
+
+Each implementation result should state:
+
+- Owner observation addressed and exact build/configuration.
+- Reproduced behavior or bounded unreproduced outcome; confirmed cause only when demonstrated.
+- Small change made and why it addresses that cause.
+- Regression failure before/fix pass after; required broader checks.
+- Native audio/UI or saved-file evidence where relevant, including before/after performance figures.
+- Remaining limits, related untouched preferences, and the next bounded action.
+
+When implementation begins, maintain the appropriate current queue/evidence documents in small commits. Distinguish **owner listening evidence**, **local mechanical evidence**, and **exact pushed-commit CI evidence**. Only claim remote CI for the SHA actually checked; no release tag or public activation follows automatically from this work.
+
+## 7. Final focused owner check
+
+After the objective changes are verified, batch any needed listening into one short session focused on changed behavior:
+
+- The Volume Match setting-change jump and ordinary A/B regression.
+- Long/high-rate responsiveness on the previously troublesome actions.
+- Width/Loud only where a mechanical correction changed sound or where the owner wants to judge the reviewed behavior.
+- A saved-file comparison with audition VM explicitly off if that remaining protocol is needed, plus the specific Album checks still untested if Album evidence is being closed.
+
+Do not make the owner re-answer the entire guide. Carry forward the September 5 passes as evidence for their original build and conditions; add targeted regression evidence for the new build rather than claiming old listening automatically approves new bytes.
+
+Leave preset taste changes, adaptive-compressor/Phase-B/album-character activation, mobile expansion, release activation, and promotional work outside this correction pass. The pre-existing small Custom-receipt target and 0.2 LU LRA questions remain in their current queue; they are not newly proven audio defects from this session.
+
+## Code map for the implementing agent
+
+Line anchors reflect the inspected working tree and can move. Reconfirm functions before editing.
+
+| Concern | Starting points |
+| --- | --- |
+| VM fallback and coefficient publication | [audio.rs](../../src-tauri/src/audio.rs#L1476) — `apply_preview_volume_match_gain_cached`, `publish_preview_coeffs`, worker/result handling. |
+| Preview worker lifecycle and full-track work | [audio.rs](../../src-tauri/src/audio.rs#L1539) — `PreviewWorkerGate`, `try_spawn_lufs_preview_worker`, source epochs, prewarm/play paths. |
+| Sequential batch analysis and result publication | [engine.rs](../../src-tauri/src/engine.rs#L86) and [useTrackMaster.ts](../../src/hooks/useTrackMaster.ts#L1383). |
+| Width readout lifecycle | [useTrackMaster.ts](../../src/hooks/useTrackMaster.ts#L1075), [AdvancedPanel.tsx](../../src/components/AdvancedPanel.tsx#L353), `fields.tsx`. |
+| Width/Loud DSP and existing probes | [dsp.rs](../../src-tauri/src/dsp.rs#L1454), `tests/audio_invariants.rs`, `tests/preset_fingerprint.rs`, `tests/realtime_meter.rs`. |
+| Loop disarm/selection presentation | [useTrackMaster.ts](../../src/hooks/useTrackMaster.ts#L2518), `App.tsx`, `StandardView.tsx`, `Waveform.tsx`; existing hook integration tests. |
+| Album receipt placement and fields | [App.tsx](../../src/App.tsx#L517), [AlbumExportReceipt.tsx](../../src/components/AlbumExportReceipt.tsx#L12), Sidebar and album export tests. |
+| Album naming/manifest and output safety | [album_render.rs](../../src-tauri/src/album_render.rs#L854), album-render/non-overwrite tests. |
+| Existing export promises and verification | `docs/PRODUCT.md`, `docs/APP_BEHAVIOR.md`, `docs/TESTING.md`, `docs/plans/2026-09-04-audio-correctness.md`. |
+
+## Next agent's first action
+
+Read this plan and the reconciled handoff, refresh the current repo instructions/state, and—when asked to implement—start with **steps 0 and 1 only**. Establish the warm Volume Match → settings edit reproduction and land the smallest verified correction before expanding into performance or UI work. Do not re-run the questionnaire, retune presets, or start the MP3 feature as part of that first fix.

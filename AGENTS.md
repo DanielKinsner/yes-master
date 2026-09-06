@@ -24,6 +24,9 @@ phase plans as active spec. Use the current code plus the docs listed below.
    concluding a decision was never made, and add to it instead of guessing.
 10. `docs/CAPABILITY_EVIDENCE_MATRIX.md` — every public claim bound to its
     evidence source
+11. `docs/listening/2026-09-05-owner-handoff.md` and
+    `docs/plans/2026-09-05-listening-follow-up.md` — completed owner listening
+    evidence and its follow-up plan; read before requesting listening or details.
 
 ### Which beta document is authoritative
 
@@ -73,9 +76,19 @@ decisions live in `docs/OPEN_THREADS_AND_DECISIONS.md`.
 whole-track preview landing, delivered-file metering, bounded live metering,
 and asynchronous Volume Match are implemented. The execution/evidence ledger is
 `docs/plans/2026-09-04-audio-correctness.md`. No preset calibration was retuned.
-A combined owner listening/native-playback pass remains open; the historical
-approval below does not approve these newer sound-affecting corrections.
-Release activity remains parked. Resume from the ledger on the latest `main`.
+**Owner listening pass conducted 2026-09-05:** native Windows via `npm run tauri dev`,
+Focusrite USB/studio monitors, owner-verified build `e600a21`. Results are in
+[the reconciled handoff](docs/listening/2026-09-05-owner-handoff.md); original
+reports are preserved in [the listening records](docs/listening/README.md).
+Normal A/B, normal musical transitions, and the observed Track Master export
+comparison passed. Volume Match level jumps, high-rate/long-file responsiveness,
+and the other documented findings need follow-up. **The owner session is complete;
+do not call it missing, restart the questionnaire, or ask for details already in
+the written notes.** Preserve the specific Width/VM-off/Album coverage limits and
+target checks to unresolved or subsequently changed behavior. This is not blanket
+release approval or a preset retuning decision. Resume from
+[the follow-up plan](docs/plans/2026-09-05-listening-follow-up.md); release activity
+remains parked.
 
 **Most recent preset calibration:** the 8 character presets were re-voiced to the
 "85% lean" (commit `659bea5`; `custom` untouched). Windows byte-identity

@@ -5,6 +5,13 @@ Owner authorized implementation on 2026-09-04 following the solo audit of
 for **one listening pass toward the end**, not individual approval stops.
 No preset retuning or activation of gated adaptive features is included.
 
+**2026-09-05 update:** the requested owner listening session was conducted in
+native Windows on owner-verified `e600a21`. Read
+[the reconciled owner answers](../listening/2026-09-05-owner-handoff.md) and
+[the follow-up plan](2026-09-05-listening-follow-up.md). Successful checks remain
+recorded; findings and narrow coverage gaps remain open. This is no longer a
+missing-owner-pass item and is not blanket release approval.
+
 ## Work ledger
 
 - [x] Regression tests: nonstationary preview, compressor transfer, limiter,
@@ -18,7 +25,11 @@ No preset retuning or activation of gated adaptive features is included.
 - [x] Album assembly: stream delivered PCM instead of retaining the whole album.
 - [x] Profile long/high-rate work and repair demonstrated bottlenecks; slower-device checks remain advisory.
 - [x] Full required local verification and documented remaining platform limits.
-- [ ] One combined owner listening pass (pending owner, after mechanical work).
+- [x] One combined owner listening session conducted 2026-09-05; results and
+      original exports recorded in [the handoff](../listening/2026-09-05-owner-handoff.md).
+- [ ] Resolve the recorded follow-up findings and targeted remaining checks under
+      [the September 5 plan](2026-09-05-listening-follow-up.md), without repeating
+      the full owner questionnaire or treating successful checks as failures.
 
 ## Regression contract
 
@@ -144,17 +155,23 @@ input. The full chain processed ten seconds of synthetic stereo at about 70x
 22x/7x/2.4x. These are indicative throughput measurements taken during other
 build activity, not guarantees of callback deadlines on slower devices.
 
-### Remaining owner batch and performance limits
+### September 5 listening results and remaining performance limits
 
-The mechanical follow-up queue above is implemented. One combined by-ear and
-native playback check remains, including cold Volume Match and rapid A/B on real
-hardware. Full-track landing still has a full-track measurement cost, and first
+The mechanical follow-up queue above is implemented. The owner conducted the
+combined by-ear/native Windows session September 5, including cold Volume Match
+and rapid A/B. Normal switching passed; setting-change level jumps and substantial
+high-rate/long-file dropout/lag were reported. The reconciled handoff distinguishes
+these from preferences and the genuinely untested conditions. Full-track landing
+still has a full-track measurement cost, and first
 playback may decode synchronously if prewarming has not completed. Slower-device
 profiling remains useful; no universal latency guarantee is claimed. Preset
 retuning, adaptive-compressor calibration, and other parked feature expansions
 remain outside this correction pass. Release activity remains parked.
 
 ## Combined listening checklist
+
+Historical session outline; the September 5 handoff now records what was tested
+and the results. Use its focused follow-up plan rather than restarting this list.
 
 Compare baseline and final processing on transient/dense tracks, wide stereo,
 quiet breakdowns into loud choruses, already-mastered audio, and high-rate
@@ -180,9 +197,10 @@ and evidence above remain valid records, not a request to repeat every lane.
   for a focused measurement comparison, not as proof of a ceiling failure.
 - The Custom receipt chip omits the numeric target. This is a minor copy follow-up,
   not an audio defect or a reason to expand the current merge.
-- Neither the screenshot nor those measurements closes the combined owner
-  listening/native-playback batch. Keep that batch open; no preset retuning,
-  release tagging, publication, or deployment is authorized by this merge.
+- At this September 4 handoff, the screenshot and measurements did not close the
+  owner listening batch. **Superseded by the September 5 conducted-session record
+  above:** retain its successful checks and follow up on its findings. This merge
+  did not authorize preset retuning, release tagging, publication, or deployment.
 - Private audio, test-output logs, local packages and screenshots are not in git
   and will not travel with the checkout. Do not infer that the other machine has
   the same fixtures. The synthetic regression suite needs no private audio.

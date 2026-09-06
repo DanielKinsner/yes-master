@@ -8,9 +8,15 @@ with `docs/PRODUCT.md` and `docs/APP_BEHAVIOR.md`.
 The 2026-09-04 solo-audit mechanical fixes and regression follow-up are
 implemented and integrated into `main` for a machine switch. See
 `docs/plans/2026-09-04-audio-correctness.md` for commits, test evidence and
-remaining limits. Owner listening/native playback remains one combined batch.
-Earlier preset listening approvals do not close that newer batch. Release
-activity is parked; merging these fixes does not activate the beta.
+remaining limits. **The owner conducted the combined native Windows listening
+session on 2026-09-05** (owner-verified `e600a21`). Read
+[the reconciled handoff](listening/2026-09-05-owner-handoff.md) and
+[the follow-up plan](plans/2026-09-05-listening-follow-up.md). Preserve the passed
+normal A/B, musical contrast, and observed Track Master export checks; investigate
+the recorded findings and only the specific coverage gaps. Do not restart the
+owner questionnaire or call the session missing. The overall verdict remains
+“Not ready / stopped here”; subsequent corrections need targeted verification.
+Release activity is parked; these records do not activate the beta.
 
 ## Implemented Stabilization Slices
 

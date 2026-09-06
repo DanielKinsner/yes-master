@@ -10,11 +10,15 @@
 > (see the plan's stop-and-ask triggers). This doc gets you to the point where
 > the owner can flip the switch — it does not flip it.
 
-> **2026-09-04 update:** audio-correctness work is integrated into `main` for
-> continued development, not beta activation. Local verification and the open
-> combined listening batch are recorded in
-> `docs/plans/2026-09-04-audio-correctness.md`. Historical candidate/signoff rows
-> below do not certify these new sound-affecting changes. Release work is parked.
+> **2026-09-05 update:** the owner conducted the combined native Windows listening
+> pass on owner-verified `e600a21`. Read [the reconciled results](../listening/2026-09-05-owner-handoff.md)
+> and [the follow-up plan](2026-09-05-listening-follow-up.md). Normal A/B, normal
+> musical contrast, and the observed Track Master export comparison passed;
+> findings and narrow coverage gaps remain. **Do not call the owner session
+> missing or restart the questionnaire.** The overall result remains “Not ready /
+> stopped here”; this dev session is not installed-candidate or release approval.
+> September 4 mechanical evidence remains in
+> `docs/plans/2026-09-04-audio-correctness.md`. Release work is parked.
 
 Legend — **Lane:** `agent` (mechanical code/release work) · `owner` (only the
 owner can do it, e.g. by ear, on real hardware, or by publishing). Paid signing
@@ -150,6 +154,14 @@ is post-beta advisory under D16.
 
 ## 5. Listening gate (owner lane)
 
+> **2026-09-05 (owner):** a native Windows listening pass was conducted and its
+> [actual answers are recorded](../listening/2026-09-05-owner-handoff.md). Preserve
+> the successful checks; follow up on the level jump, high-rate/long-file issues,
+> other recorded findings, and the specific Width/VM-off/Album coverage limits.
+> Subsequent sound-affecting corrections need targeted regression/listening
+> evidence. This is not another request for the full original listening pass.
+> The installed-candidate spot-check below remains a separate release step.
+
 > **2026-08-25 (owner):** the standing listening gates are **approved** — the
 > owner has done meaningful listening tests across sessions and signed off
 > (`docs/OPEN_THREADS_AND_DECISIONS.md`, 2026-08-25 block). What remains
@@ -221,6 +233,7 @@ is post-beta advisory under D16.
 
 | Date | Unit | Commit SHA | Platform / toolchain | Artifact / version | Command or procedure | Evidence layer | Result | Evidence location |
 |---|---|---|---|---|---|---|---|---|
+| 2026-09-05 | Audio-correctness owner listening follow-up / U15 evidence | `e600a21` (owner reported verified; dev working-tree identity not independently captured) | Windows / Focusrite USB / studio monitors | Native development app; no installer artifact attested | `npm run tauri dev`; normal and stress A/B/VM, dynamics/transitions/Width, high-rate/long files, saved-file comparison, Album export observations | owner-listening | **SESSION CONDUCTED; findings recorded.** Normal A/B, normal musical contrast, and the observed Track Master export comparison passed. VM level jumps, high-rate/long-file lag/dropouts, other observations and narrow coverage gaps need follow-up. Overall “Not ready / stopped here”; no blanket release signoff. Do not restart the questionnaire or request details already supplied in prose. | [Reconciled handoff](../listening/2026-09-05-owner-handoff.md), [original exports/provenance](../listening/README.md), [follow-up plan](2026-09-05-listening-follow-up.md) |
 | 2026-07-24 | U1 | `6b5db20` | Windows 11 / Node 24 | source `0.9.0` | `npm test` | frontend-unit | PASS — 62 files, 564 tests. 8 new canon invariants; byte-identity and mobile-claim gates each verified to FAIL on a forced regression before acceptance. | `src/lib/release-readiness.test.ts` |
 | 2026-07-24 | U2 | `fd25574` | Windows 11 / Node 24 | `package-lock.json` | `npm audit` | frontend-unit | PASS — **0 vulnerabilities**. Cleared `brace-expansion` GHSA-3jxr-9vmj-r5cp and `postcss` GHSA-r28c-9q8g-f849, both dev/build-path only, both by in-range transitive patch bump. Runtime dependency surface unchanged. | commit diff (`package-lock.json`, 3 entries) |
 | 2026-07-24 | U2 | `fd25574` | Windows 11 / Node 24 | `dist/` | `npm run build` | frontend-unit | PASS — every emitted asset content-hash **identical** to the pre-update build, so the postcss bump provably changed nothing in the Vite/Tailwind output. | build output |

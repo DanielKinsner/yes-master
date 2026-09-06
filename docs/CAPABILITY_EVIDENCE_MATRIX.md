@@ -5,6 +5,15 @@ Created by U1 of `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md`
 (KTD5, R5). Copy review alone cannot stop a current-looking but unproved claim
 from shipping; this table can.
 
+**2026-09-05 owner evidence supplement:** the native Windows listening session
+has been conducted; [the reconciled results](listening/2026-09-05-owner-handoff.md)
+record passed normal A/B, musical contrast, and observed Track Master export
+checks alongside level-jump/high-rate performance findings. This is actual
+owner-listening evidence, not a missing questionnaire. Existing mechanical
+capability proof is not proof of universal responsiveness; do not use it to
+erase these findings or claim the installed-candidate/platform gates closed.
+See [the targeted follow-up plan](plans/2026-09-05-listening-follow-up.md).
+
 ## How to use it
 
 - **Every visible public claim** — landing copy, platform statement, pricing

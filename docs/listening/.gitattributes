@@ -1,0 +1,4 @@
+# Preserve submitted evidence exactly, including original line endings/whitespace.
+# Whitespace lint belongs to authored docs, not immutable owner source exports.
+*-owner-report.md -text -whitespace
+*-owner-report.html -text -whitespace

@@ -7,6 +7,24 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **2026-09-05 — Owner listening pass CONDUCTED; evidence and follow-up recorded.**
+> Daniel listened in the native Windows app via `npm run tauri dev`, with Focusrite
+> USB output/studio monitors, and reported build `e600a21` as verified. Read
+> [the reconciled answers](listening/2026-09-05-owner-handoff.md) and
+> [the follow-up plan](plans/2026-09-05-listening-follow-up.md); unchanged source
+> exports and the reusable guide are linked from [the record index](listening/README.md).
+> Normal A/B/playhead continuity, normal musical contrast, and the observed Track
+> Master export comparison passed. The owner broadly likes the sound and wants
+> taste left alone; the overall selection remains “Not ready / stopped here.”
+> Remaining work is the recorded VM level jump, high-rate/long-file behavior,
+> Width/Loud mechanical checks, loop/UI/export findings, and narrow coverage gaps.
+> **Do not treat the listening session as pending owner, repeat the whole guide,
+> or request details already supplied in prose.** New fixes need targeted evidence,
+> not automatic approval from this earlier build. Analysis/loading UX must be
+> discussed with the owner before changes; other open product choices are in
+> the plan and owner input queue. This documentation integration does not retune
+> presets, implement application fixes, or activate a release.
+
 > **2026-09-04 — Studio marketing website publication AUTHORIZED.** The
 > owner approved the redesigned studio site and explicitly requested subtle
 > animation, push/merge to `main`, and publication as the new live website.
@@ -14,7 +32,8 @@ close rather than letting them rot in scattered docs.
 > The existing `yes-master.vercel.app` domain, noindex, closed installer and
 > signup gates remain unchanged. This is not authorization to activate the beta,
 > tag/publish installers, spend on release services, retune DSP or enable flags.
-> Native listening/release gates below remain open. Visual/artwork evidence:
+> Release gates remain open; the September 5 listening results are recorded above.
+> Visual/artwork evidence:
 > `docs/landing-mockups/studio-redesign-verification.md`.
 
 > **2026-09-04 — Correctness work authorized; release activity parked.**
@@ -23,13 +42,13 @@ close rather than letting them rot in scattered docs.
 > end**. No release spending, tagging, publication, or deployment is requested.
 > Work/evidence ledger: `docs/plans/2026-09-04-audio-correctness.md`, merged
 > to `main` for the owner's machine switch. Preset calibration and gated adaptive
-> features remain unchanged; sound-affecting mathematical corrections await
-> that combined listening pass. Existing historical listening approvals do
-> not constitute approval of these new corrections.
+> features remain unchanged. The requested combined listening session was
+> subsequently conducted September 5; its results and limits are recorded above.
+> Existing historical approvals do not approve subsequent fixes automatically.
 > Follow-up implementation now includes bounded live metering, faster high-rate
 > limiting, background cold Volume Match, worker reuse across A/B switches, and
 > per-track Album target/peak receipts. See the same ledger for regression and
-> local build evidence; the combined owner listening/hardware batch remains open.
+> local build evidence; September 5 follow-up findings now replace the missing-pass item.
 > Owner tests via `npm run tauri dev` and accepts the current meter presentation.
 > Minor follow-ups: explain the 0.2 LU independent LRA difference and include
 > the numeric target on Custom export receipts. Neither is a confirmed audio
