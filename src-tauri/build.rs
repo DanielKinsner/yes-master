@@ -21,8 +21,40 @@ fn main() {
     let now = chrono::Local::now().format("%Y-%m-%d %H:%M");
     let stamp = format!("{git_hash}{} · {now}", if dirty { "+" } else { "" });
     println!("cargo:rustc-env=YES_BUILD_STAMP={stamp}");
-    // Rebuild whenever HEAD moves so the hash never goes stale in-place.
-    println!("cargo:rerun-if-changed=../.git/HEAD");
+    // HEAD is usually a symbolic ref whose bytes do not change on commits.
+    // Resolve git paths for both ordinary checkouts and linked worktrees.
+    let mut git_paths = vec![
+        "HEAD".to_string(),
+        "index".to_string(),
+        "packed-refs".to_string(),
+    ];
+    if let Ok(reference) = std::process::Command::new("git")
+        .args(["symbolic-ref", "-q", "HEAD"])
+        .output()
+    {
+        if reference.status.success() {
+            git_paths.push(
+                String::from_utf8_lossy(&reference.stdout)
+                    .trim()
+                    .to_string(),
+            );
+        }
+    }
+    for path in git_paths {
+        if let Ok(resolved) = std::process::Command::new("git")
+            .args(["rev-parse", "--path-format=absolute", "--git-path", &path])
+            .output()
+        {
+            if resolved.status.success() {
+                println!(
+                    "cargo:rerun-if-changed={}",
+                    String::from_utf8_lossy(&resolved.stdout).trim()
+                );
+            }
+        }
+    }
+    println!("cargo:rerun-if-changed=src");
+    println!("cargo:rerun-if-changed=../src");
 
     tauri_build::build()
 }

@@ -19,7 +19,9 @@ close rather than letting them rot in scattered docs.
 > Failure context now persists in diagnostics. Ordinary Rust and four actual
 > existing-file contracts passed. See [stage evidence](listening/2026-09-05-follow-up-evidence.md)
 > and [concrete unresolved output options](plans/2026-09-05-export-options.md).
-> Callback/stress, source-change worker bounds and targeted new listening remain open.
+> A further local checkpoint bounds preview workers across source/device changes
+> and cancels obsolete renders between processing blocks; full fixture and bridge
+> checks pass. Callback/stress and targeted new listening remain open.
 
 > **Landing design is parked.** Discussion reminders are in
 > [LANDING_DESIGN_NOTES.md](LANDING_DESIGN_NOTES.md); they are not a task list.

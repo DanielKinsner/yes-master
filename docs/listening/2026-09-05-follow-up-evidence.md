@@ -66,9 +66,10 @@ cover the supplied 384/705.6/768 kHz stereo and 48 kHz mono fixtures.
 
 The slow fixture lane and UI integration results are recorded at their completed
 checkpoints in the follow-up plan. Callback deadlines, underruns, peak process
-memory, five-minute stressed audition, and globally bounded work across source
-changes remain unproven. Source epochs reject stale results but do not cancel
-detached workers. No loading-workflow change or automatic import measurement has
+memory and five-minute stressed audition remain unproven. Checkpoint 3 now bounds
+preview work across source changes with a shared permit and cooperative
+cancellation. This does not cover independent import/export worker pools. No
+loading-workflow change or automatic import measurement has
 been made on the strength of these offline timings.
 
 Width/Loud mechanical tests, saved-file comparison with VM off, and Album native

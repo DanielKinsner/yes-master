@@ -433,6 +433,19 @@ pub fn preview_landing(
     channels: u16,
     settings: &MasteringSettings,
 ) -> CommandResult<PreviewLanding> {
+    preview_landing_with_cancel(samples, sample_rate, channels, settings, None)
+}
+
+/// Desktop background work may stop between blocks when its source is obsolete.
+/// Cancellation never produces a measurement that can enter a preview cache.
+pub(crate) fn preview_landing_with_cancel(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<PreviewLanding> {
+    check_preview_cancel(cancel)?;
     let mut render_settings = settings.clone();
     render_settings.volume_match = false;
     let unity = PreviewLanding {
@@ -447,7 +460,7 @@ pub fn preview_landing(
     }
 
     let (rendered, rendered_sample_rate) =
-        render_preview_landing_window(samples, sample_rate, channels, &render_settings)?;
+        render_preview_landing_window(samples, sample_rate, channels, &render_settings, cancel)?;
 
     let channels_u32 = u32::from(channels.max(1));
     let mut ebu = EbuR128::new(
@@ -456,8 +469,11 @@ pub fn preview_landing(
         Mode::I | Mode::TRUE_PEAK,
     )
     .map_err(|e| CommandError::Render(format!("ebur128 init: {e}")))?;
-    ebu.add_frames_f32(&rendered)
-        .map_err(|e| CommandError::Render(format!("ebur128 feed: {e}")))?;
+    for block in rendered.chunks(8192 * channels_u32 as usize) {
+        check_preview_cancel(cancel)?;
+        ebu.add_frames_f32(block)
+            .map_err(|e| CommandError::Render(format!("ebur128 feed: {e}")))?;
+    }
     let measured = sanitize_lufs(
         ebu.loudness_global()
             .map_err(|e| CommandError::Render(format!("ebur128 global: {e}")))? as f32,
@@ -555,21 +571,37 @@ fn render_preview_landing_window(
     sample_rate: u32,
     channels: u16,
     settings: &MasteringSettings,
+    cancel: Option<&AtomicBool>,
 ) -> CommandResult<(Vec<f32>, u32)> {
     let channels_usize = channels.max(1) as usize;
     // A quiet middle window cannot bound peaks or loudness elsewhere. This
     // runs on the landing worker; mirror export's processing and tail flush.
-    let mut rendered = samples.to_vec();
+    let mut rendered = Vec::with_capacity(samples.len());
     let mut chain = crate::dsp::MasteringChain::new(sample_rate, channels_usize, settings);
-    chain.process_interleaved(&mut rendered, channels_usize);
+    for block in samples.chunks(8192 * channels_usize) {
+        check_preview_cancel(cancel)?;
+        let start = rendered.len();
+        rendered.extend_from_slice(block);
+        chain.process_interleaved(&mut rendered[start..], channels_usize);
+    }
+    check_preview_cancel(cancel)?;
     chain.flush_render_tail(&mut rendered, channels_usize);
 
     let rendered_sample_rate = settings.effective_sample_rate(sample_rate);
     if rendered_sample_rate != sample_rate {
+        check_preview_cancel(cancel)?;
         rendered = convert_interleaved(&rendered, sample_rate, rendered_sample_rate, channels)?;
     }
-
+    check_preview_cancel(cancel)?;
     Ok((rendered, rendered_sample_rate))
+}
+
+fn check_preview_cancel(cancel: Option<&AtomicBool>) -> CommandResult<()> {
+    if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
+        Err(CommandError::Render("preview measurement cancelled".into()))
+    } else {
+        Ok(())
+    }
 }
 
 #[tauri::command]
@@ -1575,10 +1607,32 @@ mod tests {
         };
 
         let (rendered, measured_rate) =
-            render_preview_landing_window(&samples, source_rate, channels, &settings)
+            render_preview_landing_window(&samples, source_rate, channels, &settings, None)
                 .expect("render preview landing window");
 
         assert_eq!(measured_rate, render_rate);
+        // The cancellation block boundaries must not reset any filter/limiter
+        // state or change tail/SRC output compared with the former whole slice.
+        let mut reference = samples.clone();
+        let mut reference_chain =
+            crate::dsp::MasteringChain::new(source_rate, channels as usize, &settings);
+        reference_chain.process_interleaved(&mut reference, channels as usize);
+        reference_chain.flush_render_tail(&mut reference, channels as usize);
+        let reference =
+            convert_interleaved(&reference, source_rate, render_rate, channels).unwrap();
+        assert_eq!(
+            rendered, reference,
+            "blocked render remains sample-identical"
+        );
+        let cancelled = AtomicBool::new(true);
+        assert!(preview_landing_with_cancel(
+            &samples,
+            source_rate,
+            channels,
+            &settings,
+            Some(&cancelled)
+        )
+        .is_err());
         let rendered_frames = rendered.len() / channels as usize;
         let expected_frames = render_rate as usize * 8;
         assert!(
@@ -1590,6 +1644,27 @@ mod tests {
             preview_landing(&samples, source_rate, channels, &settings).expect("preview landing");
         assert!(landing.gain_lin.is_finite());
         assert!(landing.mastered_lufs.is_finite());
+
+        // A real background cancellation interrupts a longer render; cancelled
+        // work must return no LUFS/gain that the controller could cache.
+        let long_source = samples.repeat(8);
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let trigger = cancelled.clone();
+        let cancel_thread = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(1));
+            trigger.store(true, Ordering::Relaxed);
+        });
+        let outcome = preview_landing_with_cancel(
+            &long_source,
+            source_rate,
+            channels,
+            &settings,
+            Some(&cancelled),
+        );
+        cancel_thread.join().unwrap();
+        assert!(
+            matches!(outcome, Err(CommandError::Render(message)) if message == "preview measurement cancelled")
+        );
     }
 
     // ========================================================================

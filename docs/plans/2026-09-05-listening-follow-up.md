@@ -41,6 +41,33 @@ Prepared September 5, 2026. **Implementation in progress; local checkpoints belo
 
 ## Start here
 
+### Checkpoint 3 — preview worker lifecycle
+
+- Confirmed: source epochs discarded obsolete results but detached old-source
+  renders continued. One process-wide preview permit now bounds heavy preview
+  work across source/device lifetimes. Busy requests retain one latest pending
+  request and retry on the existing controller tick; no waiting on the audio thread.
+- Source changes/device teardown cancel obsolete jobs. The same chain state
+  continues across 8192-frame blocks, with cancellation before blocks, tail and
+  SRC phases and during EBU feeds. A/B on the same source retains useful in-flight
+  work. The VM window allocation also moved entirely onto the worker.
+- Exact sample comparison with the former whole-slice chain/tail/SRC path passes;
+  asynchronous cancellation returns no gain; 20 source lifetimes cannot release
+  a still-running worker's permit. Full Rust suite with the existing 3-minute
+  192 kHz stereo fixture passed. Final library check: 451 passed, 4 ignored;
+  strict Clippy all-targets passed. iPhone check + tests passed (46 tests, 1 ignored);
+  Android host tests (26) and arm64 API-29 cross-check passed.
+- This bounds **preview** work, not overlapping imports/exports. VM's eight-second
+  calculation and an already-entered SRC call are still non-interruptible;
+  cancellation is cooperative, not an instantaneous command-latency guarantee.
+  No approximation, preset tuning, independent chunk filtering or chunk LUFS
+  averaging was introduced. Native dropout/callback deadline evidence remains open.
+- Fixed build stamping to watch the resolved branch ref, index and source paths;
+  the native restart now reports `1f2d4f6+` at 19:24 rather than the stale `7ae9fc2+`
+  seen in the earlier dev binary. This identifies the compiled local dirty state;
+  it is not exact-commit CI. Logs use the `listening-worker-*` and
+  `listening-native-final-dev.log` names under ignored `test-output/`.
+
 **First: reproduce and correct the brief Volume Match level jump. Then address high-rate/long-file responsiveness.** Follow with targeted Width/Loud checks, loop behavior, and the reported UI/export issues. Keep the import/loading product discussion and additional codecs separate from those corrections.
 
 The owner broadly likes the sound and explicitly wants taste left alone unless there is an objective mechanical problem. This plan is not permission to re-voice presets, enable gated features, or activate a release.

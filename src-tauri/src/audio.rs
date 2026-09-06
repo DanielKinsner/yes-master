@@ -1527,6 +1527,7 @@ fn settings_landing_hash(settings: &MasteringSettings) -> LandingSettingsHash {
     LandingSettingsHash::Stable(hasher.finish())
 }
 
+#[cfg(test)]
 fn export_landing_gain_lin_for_preview(
     samples: &[f32],
     sample_rate: u32,
@@ -1595,17 +1596,57 @@ struct PreviewWorkRequest {
 
 /// Source lifetime is independent of Original/Mastered playback generations.
 /// Reuse an in-flight measurement on the same PCM, with one latest pending edit.
-#[derive(Default)]
 struct PreviewWorkerGate {
     epoch: u64,
     in_flight: bool,
     pending: Option<PreviewWorkRequest>,
+    cancelled: Arc<AtomicBool>,
+    budget: Arc<AtomicBool>,
+}
+
+impl Default for PreviewWorkerGate {
+    fn default() -> Self {
+        // One heavy preview worker across source and output-device lifetimes.
+        static BUDGET: std::sync::OnceLock<Arc<AtomicBool>> = std::sync::OnceLock::new();
+        Self {
+            epoch: 0,
+            in_flight: false,
+            pending: None,
+            cancelled: Arc::new(AtomicBool::new(false)),
+            budget: BUDGET
+                .get_or_init(|| Arc::new(AtomicBool::new(false)))
+                .clone(),
+        }
+    }
+}
+
+impl Drop for PreviewWorkerGate {
+    fn drop(&mut self) {
+        self.cancelled.store(true, Ordering::Relaxed);
+    }
+}
+
+struct PreviewWorkerPermit(Arc<AtomicBool>);
+impl PreviewWorkerPermit {
+    fn acquire(budget: &Arc<AtomicBool>) -> Option<Self> {
+        budget
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .ok()
+            .map(|_| Self(budget.clone()))
+    }
+}
+impl Drop for PreviewWorkerPermit {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::Release);
+    }
 }
 
 impl PreviewWorkerGate {
     fn begin_playback(&mut self, source_changed: bool) {
         self.pending = None;
         if source_changed {
+            self.cancelled.store(true, Ordering::Relaxed);
+            self.cancelled = Arc::new(AtomicBool::new(false));
             // Device changes recreate AudioThreadState while detached workers
             // may still finish. Never reuse their source epoch in a new state.
             static NEXT_SOURCE_EPOCH: AtomicU64 = AtomicU64::new(1);
@@ -1643,34 +1684,40 @@ fn try_spawn_lufs_preview_worker(
     decoded_cache: Option<&DecodedCacheEntry>,
     request: PreviewWorkRequest,
     command_tx: &Sender<AudioCommand>,
+    budget: &Arc<AtomicBool>,
+    cancelled: Arc<AtomicBool>,
 ) -> bool {
     let Some(entry) = decoded_cache else {
         return false;
     };
-    let pcm = if request.landing_enabled {
-        entry.pcm.clone()
-    } else {
-        PlaybackPcm {
-            samples: crate::engine::volume_match_window(
-                &entry.pcm.samples,
-                entry.pcm.sample_rate,
-                entry.pcm.channels,
-            )
-            .into(),
-            sample_rate: entry.pcm.sample_rate,
-            channels: entry.pcm.channels,
-        }
+    let Some(permit) = PreviewWorkerPermit::acquire(budget) else {
+        return false;
     };
+    // Even the eight-second VM window belongs on the worker: at 768 kHz,
+    // copying it here would allocate 49 MB on the audio command thread.
+    let pcm = entry.pcm.clone();
     let command_tx = command_tx.clone();
     std::thread::Builder::new()
         .name("lufs-preview-landing".into())
         .spawn(move || {
+            let _permit = permit;
             let PreviewWorkRequest {
                 settings,
                 generation,
                 track_epoch,
                 landing_enabled,
             } = request;
+            if cancelled.load(Ordering::Relaxed) {
+                let _ = command_tx.send(AudioCommand::PreviewLandingReady {
+                    track_epoch,
+                    generation,
+                    settings,
+                    gain: None,
+                    vm_gain: None,
+                    finished: true,
+                });
+                return;
+            }
             let vm_gain = crate::engine::preview_volume_match_gain(
                 &pcm.samples,
                 pcm.sample_rate,
@@ -1683,22 +1730,24 @@ fn try_spawn_lufs_preview_worker(
                 generation,
                 settings: settings.clone(),
                 gain: None,
-                vm_gain: Some(vm_gain),
-                finished: !landing_enabled,
+                vm_gain: (!cancelled.load(Ordering::Relaxed)).then_some(vm_gain),
+                finished: !landing_enabled || cancelled.load(Ordering::Relaxed),
             });
-            if landing_enabled {
-                let gain = export_landing_gain_lin_for_preview(
+            if landing_enabled && !cancelled.load(Ordering::Relaxed) {
+                let gain = crate::engine::preview_landing_with_cancel(
                     &pcm.samples,
                     pcm.sample_rate,
                     pcm.channels,
                     &settings,
+                    Some(&cancelled),
                 )
-                .unwrap_or(1.0);
+                .ok()
+                .map(|result| result.gain_lin);
                 let _ = command_tx.send(AudioCommand::PreviewLandingReady {
                     track_epoch,
                     generation,
                     settings,
-                    gain: Some(gain),
+                    gain,
                     vm_gain: None,
                     finished: true,
                 });
@@ -1744,8 +1793,19 @@ fn queue_preview_work(
         s.preview_work.pending = None;
     } else if s.preview_work.in_flight {
         s.preview_work.pending = Some(request);
-    } else if try_spawn_lufs_preview_worker(s.decoded_cache.as_ref(), request, tx) {
+    } else if try_spawn_lufs_preview_worker(
+        s.decoded_cache.as_ref(),
+        request.clone(),
+        tx,
+        &s.preview_work.budget,
+        s.preview_work.cancelled.clone(),
+    ) {
         s.preview_work.in_flight = true;
+        s.preview_work.pending = None;
+    } else {
+        // A cancelled old-source worker may still be releasing its resources.
+        // Keep only the current request; the existing 50 ms tick retries it.
+        s.preview_work.pending = Some(request);
     }
 }
 
@@ -2290,6 +2350,14 @@ fn audio_thread(
 
         if shutdown_requested {
             break;
+        }
+
+        if let Some(s) = state.as_mut() {
+            if !s.preview_work.in_flight {
+                if let Some(request) = s.preview_work.pending.take() {
+                    queue_preview_work(s, request, &command_tx);
+                }
+            }
         }
 
         // Loop enforcement: an armed region confines the playhead. Crossing
@@ -2944,11 +3012,13 @@ mod tests {
         let mut gate = PreviewWorkerGate::default();
         gate.begin_playback(true);
         let source_epoch = gate.epoch;
+        let old_cancel = gate.cancelled.clone();
         gate.in_flight = true;
         for _ in 0..20 {
             gate.begin_playback(false);
             assert_eq!(gate.epoch, source_epoch, "A/B keeps the same PCM lifetime");
             assert!(gate.in_flight, "A/B must not allow a duplicate worker");
+            assert!(!old_cancel.load(Ordering::Relaxed));
         }
         gate.begin_playback(true);
         assert_ne!(
@@ -2957,6 +3027,33 @@ mod tests {
         );
         assert!(!gate.in_flight);
         assert!(gate.pending.is_none());
+        assert!(old_cancel.load(Ordering::Relaxed));
+        assert!(!gate.cancelled.load(Ordering::Relaxed));
+        let new_cancel = gate.cancelled.clone();
+        drop(gate);
+        assert!(
+            new_cancel.load(Ordering::Relaxed),
+            "device teardown cancels work"
+        );
+    }
+
+    #[test]
+    fn preview_budget_stays_held_until_the_cancelled_worker_exits() {
+        let budget = Arc::new(AtomicBool::new(false));
+        let active = PreviewWorkerPermit::acquire(&budget).unwrap();
+        for _ in 0..20 {
+            let mut source = PreviewWorkerGate::default();
+            source.budget = budget.clone();
+            source.begin_playback(true);
+            // Changing/dropping a source cannot free another worker's permit.
+            drop(source);
+            assert!(PreviewWorkerPermit::acquire(&budget).is_none());
+        }
+        drop(active);
+        let next = PreviewWorkerPermit::acquire(&budget).expect("next source can start after exit");
+        assert!(PreviewWorkerPermit::acquire(&budget).is_none());
+        drop(next);
+        assert!(!budget.load(Ordering::Acquire));
     }
 
     #[test]
@@ -4343,6 +4440,8 @@ mod tests {
                 landing_enabled: true,
             },
             &tx,
+            &Arc::new(AtomicBool::new(false)),
+            Arc::new(AtomicBool::new(false)),
         );
         assert!(!spawned, "spawn must report false when no PCM is cached");
         // No PreviewLandingReady should ever arrive on the channel.
@@ -4386,7 +4485,9 @@ mod tests {
                     track_epoch: 17,
                     landing_enabled,
                 },
-                &tx
+                &tx,
+                &Arc::new(AtomicBool::new(false)),
+                Arc::new(AtomicBool::new(false)),
             ));
             let count = if landing_enabled { 2 } else { 1 };
             for stage in 0..count {
