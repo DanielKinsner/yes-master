@@ -100,7 +100,7 @@ export function AlbumExportReceipt({ report, expanded = false }: { report: Album
       <code className="album-export-receipt-path">{report.album_wav_path}</code>
       <span className="album-export-receipt-meta">
         {trackCountLabel(report.tracks.length)} · rendered {renderedRate} /{" "}
-        {formatBitDepth(report.bit_depth)} /{" "}
+        {report.mp3_bitrate_kbps ? `MP3 ${report.mp3_bitrate_kbps} kbps` : `WAV ${formatBitDepth(report.bit_depth)}`} /{" "}
         {formatChannelCount(report.rendered_channels)} · requested {requestedRate}
         {requestedMismatch && `, got ${renderedRate}`}
       </span>

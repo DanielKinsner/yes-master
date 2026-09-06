@@ -57,11 +57,11 @@ export const SETTINGS_GROUPS: Array<{
 export const HELP_SECTIONS: Array<[string, string]> = [
   [
     "Standard view",
-    "Styles choose the character, Low / Medium / High sets loudness, and Create Master asks where to save a finished WAV — it never overwrites your source.",
+    "Styles choose the character, Low / Medium / High sets loudness, and Create Master asks where to save your WAV or MP3 master — it never overwrites your source.",
   ],
   [
     "Import / Analyze",
-    "Import audio files, then let analysis populate loudness, true peak, dynamics, waveform, and source checks before export.",
+    "Each track becomes ready as its analysis completes. The track list shows how many remain. Drag a track's grip to reorder it, or focus the grip and use Up/Down. Album export follows this order.",
   ],
   [
     "Original vs Mastered",
@@ -69,11 +69,11 @@ export const HELP_SECTIONS: Array<[string, string]> = [
   ],
   [
     "Volume Match / Preview LUFS",
-    "Volume Match is for auditioning only. Preview LUFS estimates export loudness during Mastered playback and does not change the source file.",
+    "Volume Match is for auditioning only. When Preview LUFS is enabled, the selected ready track starts measuring automatically. Measuring clears when its preview level is ready; your source file stays unchanged.",
   ],
   [
     "Delivery Profile / Format",
-    "Delivery Profile owns target LUFS, ceiling, bit depth, and sample rate. Custom lets you choose Source, 44.1 kHz, 48 kHz, or 96 kHz for Track Master export.",
+    "Delivery Profile sets the loudness target, ceiling and WAV format. WAV is the default. MP3 offers smaller files at 320, 256, 192 or 128 kbps and uses a compatible sample rate. Both formats use your chosen mastering settings.",
   ],
   [
     "Export Review",
@@ -81,7 +81,7 @@ export const HELP_SECTIONS: Array<[string, string]> = [
   ],
   [
     "Keyboard shortcuts",
-    "Space toggles playback. Left/Right seek 5 s (Shift: 30 s), Home jumps to the start, A flips Original/Mastered, L toggles the loop (Advanced only). Ctrl/Cmd+Z/Y undo and redo. Shift+drag loop region is Advanced only. Press ? any time for the full list.",
+    "Space toggles playback. Left/Right seek 5 s (Shift: 30 s). Home or Return to start jumps to zero, keeps playing or paused, and turns looping off while retaining the region. A flips Original/Mastered; L toggles the loop (Advanced only). Ctrl/Cmd+Z/Y undo and redo. Shift+drag defines a loop in Advanced. Press ? for the full list.",
   ],
   [
     "Glossary",

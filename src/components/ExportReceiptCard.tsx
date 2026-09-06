@@ -365,8 +365,8 @@ export function ExportReceiptCard({
             <div className="receipt-section-title">Audio format</div>
             <dl className="receipt-result-list">
               <div className="receipt-result-row">
-                <dt>Bit depth</dt>
-                <dd>{formatBitDepth(measurements.bit_depth)}</dd>
+                <dt>{measurements.mp3_bitrate_kbps ? "Bitrate" : "Bit depth"}</dt>
+                <dd>{measurements.mp3_bitrate_kbps ? `${measurements.mp3_bitrate_kbps} kbps` : formatBitDepth(measurements.bit_depth)}</dd>
               </div>
               <div className="receipt-result-row">
                 <dt>Sample rate</dt>

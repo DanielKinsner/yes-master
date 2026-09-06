@@ -1,6 +1,6 @@
 # YES Master — listening follow-up implementation plan
 
-Prepared September 5, 2026. **Implementation in progress; local checkpoints below.**
+Prepared September 5, 2026. **Authorized follow-through implemented locally; checkpoint 9 records verification and remaining listening/platform limits.**
 
 ## Implementation evidence
 
@@ -37,7 +37,7 @@ Prepared September 5, 2026. **Implementation in progress; local checkpoints belo
   Native mono import and VM edit control-state evidence is recorded separately;
   hardware audio continuity, five-minute stress and global worker bounds remain open.
 - [Concrete export/loading options](2026-09-05-export-options.md) preserve the
-  unresolved owner choices. No codec, naming, manifest or loading behavior changed.
+  unresolved owner choices. No codec, naming, manifest or loading behavior changed at checkpoint 2.
 
 ### Checkpoint 3 — preview worker lifecycle
 
@@ -274,7 +274,99 @@ Prepared September 5, 2026. **Implementation in progress; local checkpoints belo
   regeneration, push, deployment or release. Ceiling source-label interpretation,
   return-to-start, drag improvements, loading and MP3 remain separate queue items.
 
-## Start here
+### Checkpoint 9 — completed owner follow-through
+
+Implementation continued September 5 local / September 6 UTC on top of `17bf06e`.
+Backend/bridge checkpoint: `efb5f66`; the subsequent UI/docs commit completes this slice.
+The accepted product choices are implemented; no new owner decision was inferred.
+
+- **Transport and ordering:** Return to start beside Loop in Advanced, centered
+  under time in Standard; Home shares the action. It seeks to zero while retaining
+  playing/paused and processing state, disarms Loop while retaining its region,
+  and leaves a finished track paused. Pointer capture replaces native HTML drag
+  handlers. All views have a discoverable grip, insertion feedback, edge scrolling
+  and Up/Down keyboard ordering. Selection/settings remain attached to track ID;
+  Album filenames and processing order follow the resulting rail order.
+- **Layout:** header metadata reserves the Album follow/override control's height.
+  Track/Album header and waveform bounds now match across mode switches, in
+  addition to checkpoint 8's matching rails, pinned Export and stable Auto Width.
+  Tools/audit WAV stays removed. The ceiling caption describes the setting's
+  source: null is Auto, explicit -1 is Custom, and a named profile is Profile.
+  Read-only session inspection found both null and explicit -1 track settings;
+  equal displayed values are not evidence of equal stored settings. Both modes
+  render the same component and rules; no audio setting was changed to align copy.
+- **Actual incremental readiness:** the analyzer already processed each batch
+  sequentially, but its UI waited for the entire batch. The owner's observation
+  that clips all finished together was correct. Desktop now publishes each
+  analysis and authoritative profile before starting the next track, prepares
+  waveforms incrementally, and shows remaining count plus real per-track phase
+  progress. Removed the fallback timer that invented progress. Batch identity
+  rejects obsolete results; one desktop batch worker bounds overlapping imports.
+- **Native readiness evidence:** the existing 1-minute/768 kHz, 2-minute/384 kHz,
+  3-minute mono/48 kHz and 10-minute/192 kHz sources became ready at 20.141,
+  36.380, 37.799 and 69.989 seconds in one native run. Another run measured
+  21.357, 38.952, 40.370 and 74.537 seconds. A later native observation showed
+  three ready tracks while the fourth was still analyzing at 55%. This proves
+  incremental publication, not an algorithmic speedup: compiles were running
+  concurrently and these are not controlled performance comparisons.
+- **Automatic selected preview:** when Preview LUFS is already requested (also
+  Standard's implicit landing), prepare only the selected ready track. Show
+  Measuring, cancel obsolete requests, and share a single heavy-worker permit
+  with live preview measurement. A bounded result cache matches canonical source,
+  modification time and resolved processing settings. Preparation never starts
+  playback. Native selected 3-minute mono preparation completed in 1.395 seconds
+  while Original remained paused. Decode cancellation is checked after decode;
+  this is not a claim that every decoder can be interrupted mid-call.
+- **MP3:** WAV remains default. Standard, Track Advanced and Album offer CBR
+  320 kbps default plus 256/192/128 without changing chosen processing. Embedded
+  LAME 3.100 is desktop-only. Standard delivers 44.1 kHz; Advanced resolves to
+  44.1/48/32 kHz compatible rates. Tests first proved normal Track processing
+  and codec delivery, then the authorized Album implementation proceeded.
+  Continuous Album MP3 is encoded once from lossless staging, retaining order,
+  overrides and gaps. Temporary WAV staging is cleaned up. Source and prior
+  renders are protected; cancellation cleans only the current job's outputs.
+  Receipts measure a fresh gapless decode of delivered MP3 bytes and identify
+  bitrate. Codec peak excursions remain truthful warnings; presets/DSP were not
+  retuned to hide them. Naming and metadata use checkpoint 6's contracts.
+- **Encoded-file proof:** tests cover all four bitrates at 32/44.1/48 kHz in mono
+  and stereo, gapless duration, collision and cancellation. Track MP3 equals an
+  independent encode of the same fully processed float-WAV PCM. Album continuous
+  MP3 likewise equals encoding the reference lossless assembly, with reversed
+  track order, override and a 0.5-second gap. Native Track export created the
+  ignored `native-follow-through_mastered.mp3`: FFprobe reports 320 kbps,
+  48 kHz mono, 7,201,920 bytes and 180.024 seconds including MP3 frame padding;
+  FFmpeg decodes exactly 180 seconds and measures -14.0 LUFS / 2.4 LU LRA /
+  -0.9 dB true peak. It uses the selected 50% Universal mastering chain, not 0%.
+- **Frontend proof:** production build, 853 frontend tests and 37 headless
+  scenario/viewport checks passed. The finished-track regression also passed
+  with the full affected 110-test hook suite. Browser evidence:
+  `test-output/headless/2026-09-06T05-45-09-912Z`; it measures nested rail overflow,
+  header/waveform geometry at three sizes, transition Width, pointer/keyboard
+  order and edge scrolling, Return to start and the delivered MP3 receipt.
+  Canonical UI captures and input digest were refreshed. The existing capture
+  script change preserving `studioArtwork` provenance is retained with this
+  refresh; untracked studio-handoff artwork is preserved separately.
+- **Bridge/tooling proof:** strict Clippy all-targets and formatting passed;
+  iPhone host check + 46 tests passed (one existing ignored test), Android host
+  26 tests and arm64-v8a API-29 check passed. Wire golden updates only add the
+  optional MP3 bitrate field; no audio snapshot/tolerance was changed. Desktop
+  fixture integration passed 639 tests (9 existing opt-in tests ignored), including
+  all four existing private-fixture checks on `TEST-3min-192khz.wav`. Full details
+  are in [the evidence record](../listening/2026-09-05-follow-up-evidence.md).
+- **Limits:** native import/preparation/export and browser/hook checks are distinct
+  from ears-on sound approval and audio callback deadline proof. The final native
+  drag/Return retest was unavailable because computer-use reported that the
+  foreground window had no process ID; those new interactions have browser/hook
+  proof, not a claimed completed native gesture run. Existing targeted VM-off
+  saved-file comparison, Width/Loud and musical Album listening limits remain.
+  Mac MP3 build/installer and exact distribution license/source/relinking checks
+  remain release integration work; see `THIRD_PARTY_NOTICES.md` and the live gate.
+  The September 5 owner session is not repeated or reclassified as missing.
+- Logs and outputs are under ignored `test-output/follow-through-*` and
+  `test-output/native-follow-through-*`. Fixtures were reused, never regenerated,
+  modified or committed. No push, deployment, release activation or public claim.
+
+## Original implementation sequence (history)
 
 **First: reproduce and correct the brief Volume Match level jump. Then address high-rate/long-file responsiveness.** Follow with targeted Width/Loud checks, loop behavior, and the reported UI/export issues. Keep the import/loading product discussion and additional codecs separate from those corrections.
 
@@ -438,7 +530,7 @@ The choice is **when each completed track becomes usable and how remaining work 
 | Make completed tracks usable sooner, protect playback while the rest prepare | Earlier useful work | Requires incremental result/profile publication, truthful per-track progress, correct cancellation/failure handling, and proof that background work does not impair audition. |
 | Complete the batch before opening the editing experience | Clear preparation stage and predictable entry | A potentially long up-front wait; it does not remove later Preview LUFS costs after settings edits. |
 
-**Owner decision (2026-09-05 follow-up interview):** Make each completed track usable immediately after analysis/profile readiness, show progress for the remaining tracks, and prioritize playback over background work. The owner accepted this recommendation. Verify concurrent analysis keeps audition responsive; implementation and this evidence remain pending.
+**Owner decision (2026-09-05 follow-up interview):** Make each completed track usable immediately after analysis/profile readiness, show progress for the remaining tracks, and prioritize playback over background work. The owner accepted this recommendation. Verify concurrent analysis keeps audition responsive; implementation and evidence are recorded in checkpoint 9.
 
 The requested discussion has settled this workflow. Measure time-to-first-usable-track, total batch time, and playback impact during implementation. Preserve per-track backend profile readiness, not just frontend analysis text. Later settings changes can still incur Preview LUFS waits.
 
@@ -519,7 +611,7 @@ Current implementation deliberately writes **`NN-<source-stem>.wav`** inside a c
 
 ## 6. Extra export formats: a separate feature specification
 
-The owner requests **MP3** as a smaller-file, broadly playable choice within the normal mastering export. **The follow-up interview supersedes the earlier interpretation of WAV → MP3 without mastering:** no separate converter, Original-source selector or bypass mode is wanted. Preserve existing DSP/delivery behavior at 0% Intensity and do not add special workaround explanations. Retain WAV as the default format and add MP3. Scope and quality are settled below; implementation remains pending.
+The owner requests **MP3** as a smaller-file, broadly playable choice within the normal mastering export. **The follow-up interview supersedes the earlier interpretation of WAV → MP3 without mastering:** no separate converter, Original-source selector or bypass mode is wanted. Preserve existing DSP/delivery behavior at 0% Intensity and do not add special workaround explanations. Retain WAV as the default format and add MP3. Scope and quality are settled below; implementation is recorded in checkpoint 9.
 
 Before implementation, write a bounded specification covering:
 
@@ -637,4 +729,4 @@ Line anchors reflect the inspected working tree and can move. Reconfirm function
 
 ## Next agent's first action
 
-Read this plan and the reconciled handoff, refresh the relevant repo instructions/state, and—when asked to implement—start with **steps 0 and 1**. Establish the warm Volume Match → settings edit reproduction and land a coherent verified correction, then continue the authorized plan through checkpoints without waiting for routine permission. Respect any narrower scope or explicit stop in the initiating request. Pause only work dependent on unresolved owner choices; continue independent corrections. Do not re-run the questionnaire, retune presets, or start the MP3 feature before its scope is settled.
+Resume from checkpoint 9 and the evidence record; do not restart completed steps 0–6. The accepted implementation is local and verified within the recorded scope. Remaining work is the specifically named native gesture/listening and platform/release evidence, subject to the initiating request and existing release authorization limits. Preserve the reconciled owner answers and successful listening results. Do not re-run the questionnaire, retune presets or turn remaining evidence limits into new product decisions.

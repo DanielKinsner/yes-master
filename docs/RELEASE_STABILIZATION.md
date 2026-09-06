@@ -18,6 +18,12 @@ owner questionnaire or call the session missing. The overall verdict remains
 “Not ready / stopped here”; subsequent corrections need targeted verification.
 Release activity is parked; these records do not activate the beta.
 
+The accepted September 5 follow-through is implemented locally.
+[Checkpoint 9](plans/2026-09-05-listening-follow-up.md#checkpoint-9--completed-owner-follow-through)
+records incremental readiness, automatic selected preview preparation, transport/
+ordering/layout and desktop MP3 delivery, plus actual verification and remaining
+listening/platform limits. These results do not activate a release.
+
 ## Implemented Stabilization Slices
 
 ### Final Repo-Wide Review Implementation

@@ -78,3 +78,56 @@ Width/Loud mechanical tests and saved-file comparison with VM off remain distinc
 from UI mocks and the original owner's successful normal A/B/export observations.
 Checkpoint 5 adds an actual native Album export/receipt with independent FFmpeg
 measurement and source-hash preservation. Preset taste remains unchanged.
+
+## Completed owner follow-through (September 5 local / September 6 UTC)
+
+See checkpoint 9 in the follow-up plan for the implemented contracts and native
+observations. Final verification for this slice:
+
+| Evidence | Actual result |
+| --- | --- |
+| Full desktop Rust fixture lane | 639 passed, 0 failed, 9 ignored opt-in tests across 39 test executables/doc-test reports; library 453 passed / 4 ignored |
+| Existing private fixture | `TEST-3min-192khz.wav`, reused in place with `AMS_RUN_REAL_FIXTURE=1` and `AMS_REAL_FIXTURE_PATH`; decode, analyze, render and metering snapshot all ran and passed |
+| Rust formatting / strict Clippy | `cargo fmt --check`; all-targets Clippy with `-D warnings` passed |
+| Frontend | Full final 853 tests passed, including the finished-track case; the affected 110-test hook suite also passed separately |
+| Production / browser | Production build passed; 37 app scenarios/viewport checks and landing responsive suite passed at `headless/2026-09-06T05-45-09-912Z` |
+| iPhone bridge | Host check passed; 46 tests passed / 1 existing ignored |
+| Android bridge | 26 host tests passed; arm64-v8a API-29 `cargo ndk` check passed |
+| MP3 native output | Save dialog to ignored `native-follow-through_mastered.mp3`; 320 kbps / 48 kHz mono; FFmpeg gapless decode 180 s, -14.0 LUFS / 2.4 LU / -0.9 dB true peak |
+| Native analysis | First-ready 20.141 s versus final 69.989 s in one four-source run; another 21.357/74.537 s. Three READY while final track still at 55% observed |
+| Native selected preparation | Three-minute mono Preview LUFS preparation 1.395 s, with Original paused; no automatic playback |
+
+Primary ignored logs: `follow-through-rust-fixture-final.log`,
+`follow-through-clippy.log`, `follow-through-iphone.log`,
+`follow-through-android.log` (host tests), `follow-through-android-arm64.log`
+(successful cross-check retry), `follow-through-frontend-final.log`,
+`follow-through-transport-final.log`, `follow-through-headless-final.log`,
+`native-follow-through-mp3-decode.log`, and the durable native diagnostics log.
+
+The first full Rust run exposed the expected new optional report field missing
+from the old export-report golden. Reviewed the exact addition
+`mp3_bitrate_kbps: null`, updated that wire contract and reran without the golden
+update flag. No audio snapshots, fixture audio or measurement tolerances changed.
+
+Earlier integration attempts hit Windows disk exhaustion and damaged linker PDB
+outputs. Package-scoped Cargo cleanup removed generated YES Master build outputs;
+a fresh run after space was available passed. Those failed attempts are not
+counted as passing evidence. An independent Ubuntu I/O problem was diagnosed at
+the owner's request; its authorized restart exposed read-only disk fallback.
+The owner then said to leave it alone and restart the PC later. No Ubuntu disk
+repair, reset, unregister or filesystem edit was performed.
+
+Remaining limits are explicit: the new final native drag/Return gesture check was
+unavailable when computer-use could no longer identify the foreground process;
+browser pointer/keyboard/edge-scroll and hook loop/end contracts passed. Native
+export and analysis observations do not prove sample-level output continuity or
+callback deadlines. No new ears-on approval is inferred for Width/Loud, VM-off
+saved-file parity or musical Album checks. Prior successful listening results
+remain valid within their original coverage. Mac MP3 builds, installers and
+LGPL distribution/source/relinking materials remain release integration work.
+No push, deployment, release or private-audio commit occurred.
+
+Local integration: backend/bridge commit `efb5f66`, followed by the UI/docs/capture
+commit. Upstream license texts intentionally retain their original whitespace;
+source/docs changes otherwise pass the whitespace check. Existing studio-handoff
+artwork stays untracked and untouched.

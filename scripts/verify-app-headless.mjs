@@ -87,6 +87,9 @@ const SETTLE_TIMEOUT_MS = 20_000;
  * whitespace-collapsed innerText of <body>.
  */
 const SCENARIOS = [
+  { name:"clean", label:"transport-and-order", scenarioId:"S-F1", purpose:"Pointer and keyboard track order, selected identity and Return to start in both modes.", viewports:[MIN_DESKTOP,LAPTOP], settle:"ready", beforeScreenshot:transportAndOrderProbe },
+  { name:"export-success", label:"mp3-export", scenarioId:"S-E1", purpose:"MP3 format/bitrate selection and truthful delivered receipt.", viewports:[MIN_DESKTOP], settle:"ready", beforeScreenshot:mp3ExportProbe },
+
   {
     name: "clean",
     label: "rail-mode-consistency",
@@ -158,7 +161,7 @@ const SCENARIOS = [
       "Choose the character you want.",
       "Set how strong the effect is.",
       "Choose your target loudness.",
-      "Standard WAV",
+      "File format",
     ],
     mustHaveControls: ["Advanced", "Create Master", "Original", "Mastered"],
     mustReach: [
@@ -607,14 +610,14 @@ async function driveToLoadedStandard(page) {
   await page.waitForSelector(".standard-view", { timeout: SETTLE_TIMEOUT_MS });
 }
 
-async function exportClean(page, expectReceipt = true) {
+async function exportClean(page, expectReceipt = true, filename = "preview-master.wav") {
   await waitForControl(page, /^Export Master$/, "the clean export action");
   await page.locator("button", { hasText: /^Export Master$/ }).first().click();
   if (await page.locator("button", { hasText: /^Export Anyway$/ }).count()) {
     throw new Error("Clean export unexpectedly required review");
   }
   if (expectReceipt) {
-    await waitForText(page, text => text.includes("preview-master.wav"), "the completed export receipt", documentText);
+    await waitForText(page, text => text.includes(filename), "the completed export receipt", documentText);
   }
 }
 
@@ -815,6 +818,66 @@ async function receiptGeometryProbe(page, report, context) {
  * The returned payload lands in summary.json beside the screenshot taken in
  * the SAME frame, so the image and the measurements describe one state.
  */
+async function transportAndOrderProbe(page,report) {
+  await page.evaluate(()=>window.__previewDropAudio(["/preview/Reorder-two.wav","/preview/Reorder-three.wav"]));
+  await page.waitForFunction(()=>document.querySelectorAll('[data-reorder-id]').length===3);
+  const records=[];
+  for (const mode of ['Track Master','Album Master']) {
+    await page.getByRole('button',{name:mode,exact:true}).click();
+    const rows=page.locator('.track-list [data-reorder-id]');
+    const before=await rows.evaluateAll(rows=>rows.map(r=>r.dataset.reorderId));
+    const selected=await page.locator('.track-row.active').getAttribute('data-reorder-id');
+    const start=await rows.nth(0).locator('.track-drag-handle').boundingBox();
+    const end=await rows.nth(2).boundingBox();
+    await page.mouse.move(start.x+start.width/2,start.y+start.height/2);await page.mouse.down();
+    await page.mouse.move(start.x+start.width/2,end.y+end.height-3,{steps:12});
+    if (!await page.locator('.insert-after').count()) report(`${mode}: missing insertion indicator`);
+    await page.mouse.up();
+    const after=await rows.evaluateAll(rows=>rows.map(r=>r.dataset.reorderId));
+    if (JSON.stringify(after)!==JSON.stringify([before[1],before[2],before[0]])) report(`${mode}: drag did not reorder ${before} -> ${after}`);
+    if (await page.locator('.track-row.active').getAttribute('data-reorder-id')!==selected) report(`${mode}: reorder changed selection`);
+    const handle=rows.nth(2).locator('.track-drag-handle');await handle.focus();await handle.press('ArrowUp');
+    const keyboard=await rows.evaluateAll(rows=>rows.map(r=>r.dataset.reorderId));
+    if (keyboard[1]!==before[0]) report(`${mode}: keyboard reorder failed`);
+    await page.locator('.track-pick').first().click();
+    await page.waitForFunction(()=>document.querySelector('.wf-deck .play-btn'));
+    await page.locator('.wf-deck .play-btn').focus();await page.keyboard.press('ArrowRight');
+    await page.getByRole('button',{name:'Return to start',exact:true}).click();
+    if (!(await page.locator('.wf-deck-transport .time').innerText()).startsWith('0:00')) report(`${mode}: return-to-start did not reach zero`);
+    records.push({mode,before,after,keyboard});
+  }
+  await page.getByRole('button',{name:'Track Master',exact:true}).click();
+  await driveToLoadedStandard(page);
+  const standard=page.locator('.std-track-item');
+  const id=await standard.first().getAttribute('data-reorder-id');
+  await standard.first().locator('.track-drag-handle').press('ArrowDown');
+  if (await standard.nth(1).getAttribute('data-reorder-id')!==id) report('Standard: keyboard reorder failed');
+  await page.getByRole('button',{name:'Return to start',exact:true}).click();
+  await page.evaluate(()=>window.__previewDropAudio(Array.from({length:18},(_,i)=>`/preview/Scroll-${i}.wav`)));
+  await page.waitForFunction(()=>document.querySelectorAll('.std-track-item').length===21);
+  const list=page.locator('.std-tracks-list');
+  const listBox=await list.boundingBox();
+  const firstHandle=await standard.first().locator('.track-drag-handle').boundingBox();
+  await page.mouse.move(firstHandle.x+firstHandle.width/2,firstHandle.y+firstHandle.height/2);
+  await page.mouse.down();
+  await page.mouse.move(firstHandle.x+firstHandle.width/2,listBox.y+listBox.height-3,{steps:12});
+  await page.waitForFunction(()=>document.querySelector('.std-tracks-list').scrollTop>40);
+  await page.mouse.up();
+  records.push({standardEdgeScroll:await list.evaluate(el=>el.scrollTop)});
+  return records;
+}
+
+async function mp3ExportProbe(page,report) {
+  const intensity=await page.locator('[aria-label="Intensity"]').getAttribute('aria-valuenow');
+  await page.getByLabel('Export file format',{exact:true}).selectOption('mp3');
+  if (await page.getByLabel('MP3 bitrate',{exact:true}).inputValue()!=='320') report('MP3 default bitrate is not 320');
+  await page.getByLabel('MP3 bitrate',{exact:true}).selectOption('192');
+  if (await page.locator('[aria-label="Intensity"]').getAttribute('aria-valuenow')!==intensity) report('Changing format changed Intensity');
+  await exportClean(page,true,"preview-master.mp3");
+  if (!(await documentText(page)).includes('192 kbps')) report('MP3 receipt does not show delivered bitrate');
+  return {bitrate:192};
+}
+
 async function railModeConsistencyProbe(page, report) {
   await page.waitForFunction(() => Number(document.querySelector('input[aria-label="Width"]')?.value) > 0);
   // Observe every DOM update as well as painted frames: a settled screenshot
@@ -850,7 +913,7 @@ async function railModeConsistencyProbe(page, report) {
         rail.scrollTop = rail.scrollHeight;
         const bottom = rect(document.querySelector('.right-rail-export'));
         const sections = [...rail.querySelectorAll('.rail-section')].map(e => ({class:e.className,...rect(e)}));
-        const result = {rail:rect(rail), width:rail.clientWidth, scrollWidth:rail.scrollWidth, top, bottom, sections, tooltip:tooltip ? rect(tooltip) : null};
+        const result = {header:rect(document.querySelector(".track-header")), waveform:rect(document.querySelector(".wf-deck")), rail:rect(rail), width:rail.clientWidth, scrollWidth:rail.scrollWidth, top, bottom, sections, tooltip:tooltip ? rect(tooltip) : null};
         rail.scrollTop = 0;
         return result;
       });
@@ -859,6 +922,11 @@ async function railModeConsistencyProbe(page, report) {
       if (result.sections.some(s => s.left < result.rail.left - 1 || s.right > result.rail.right + 1)) report(`${mode}: rail sections extend outside the rail`);
       if (result.tooltip && (result.tooltip.left < result.rail.left || result.tooltip.right > result.rail.right)) report(`${mode}: tooltip extends outside the rail`);
       const reference = states[0];
+      for (const surface of ['header','waveform']) {
+        for (const key of ['top','bottom','left','right']) {
+          if (Math.abs(result[surface][key]-reference[surface][key])>1) report(`${mode}: ${surface} ${key} shifts by ${result[surface][key]-reference[surface][key]} pixels`);
+        }
+      }
       for (const key of ['left', 'right', 'bottom']) {
         if (Math.abs(result.top[key] - reference.top[key]) > 1 || Math.abs(result.bottom[key] - reference.bottom[key]) > 1) report(`${mode} (${interaction}): Export ${key} differs between modes or scroll positions`);
       }
@@ -1434,7 +1502,7 @@ for (const scenario of SCENARIOS) {
             .map((image) => image.currentSrc || image.src),
           // Album rows carry a two-digit position prefix in their label.
           albumRowCount: document.querySelectorAll(
-            '[aria-label="Album order controls"]',
+            '[aria-label="Track order controls"]',
           ).length,
           focusableCount: document.querySelectorAll(
             "button:not([disabled]), a[href], input, select, textarea",

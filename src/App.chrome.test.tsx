@@ -240,7 +240,9 @@ describe("top chrome", () => {
     expect(text).toContain("Keyboard shortcuts");
     expect(text).toContain("Space");
     expect(text).toContain("Ctrl/Cmd+Z/Y");
-    expect(text).toContain("Shift+drag loop region");
+    expect(text).toContain("Shift+drag defines a loop");
+    expect(text).toContain("Return to start");
+    expect(text).toContain("320, 256, 192 or 128 kbps");
     expect(text).toContain("Advanced only");
     expect(text).toContain("LUFS");
     expect(text).toContain("dBTP");

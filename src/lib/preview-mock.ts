@@ -481,11 +481,6 @@ export async function mockInvoke<T>(
         [0.65, "Reading tonal balance"],
         [0.8, "Building mastering context"],
       ];
-      for (const [fraction, label] of stages) {
-        emitAnalysisProgress(fraction, label);
-        await new Promise((resolve) => setTimeout(resolve, 800));
-      }
-      emitAnalysisProgress(1.0, "Building mastering context");
       const tracks =
         (args?.tracks as Array<{ id: TrackId; path: string }>) ?? [];
       const results: AnalysisResult[] = tracks.map((t) => ({
@@ -494,6 +489,13 @@ export async function mockInvoke<T>(
           ? 0.2 : PREVIEW_ANALYSIS.true_peak_dbtp,
         track_id: t.id,
       }));
+      for (const result of results) {
+        for (const [fraction,label] of stages) {
+          for (const handler of analysisProgressHandlers) handler({batch_id:args?.batchId,track_id:result.track_id,fraction,label});
+          await new Promise(resolve=>setTimeout(resolve,800/Math.max(1,results.length)));
+        }
+        for (const handler of analysisReadyHandlers) handler({batch_id:args?.batchId,result});
+      }
       return results as unknown as T;
     }
 
@@ -551,6 +553,8 @@ export async function mockInvoke<T>(
 
     case "set_loop_region":
     case "update_chain":
+    case "prepare_preview_level":
+    case "cancel_preview_preparation":
     case "prewarm_decode":
     case "open_output":
     case "delete_user_preset":
@@ -639,26 +643,32 @@ export async function mockInvoke<T>(
           override_album: Boolean(requested.override_album),
         };
       });
-      const renderedSampleRate = Math.max(
+      const requestedRate = Math.max(
         44_100,
         ...joined.map((t) => t.source_sample_rate),
       );
+      const mp3Bitrate = args?.mp3Bitrate as number | undefined;
+      const encoding = mp3Bitrate ? "mp3" : "wav";
+      const renderedSampleRate = mp3Bitrate
+        ? (requestedRate % 44_100 === 0 ? 44_100 : requestedRate === 32_000 ? 32_000 : 48_000)
+        : requestedRate;
       const renderedChannels = 2;
       return {
         job_id: nextPreviewId("mock-album-render"),
         status: { status: "done" },
-        album_wav_path: "/preview/album.wav",
+        album_wav_path: `/preview/album.${encoding}`,
         manifest_path: "/preview/metadata/manifest.json",
         requested_sample_rate: null,
         rendered_sample_rate: renderedSampleRate,
         source_sample_rates: joined.map((t) => t.source_sample_rate),
-        bit_depth: 24,
+        bit_depth: mp3Bitrate ? 0 : 24,
+        mp3_bitrate_kbps: mp3Bitrate ?? null,
         rendered_channels: renderedChannels,
         source_channels: joined.map((t) => t.source_channels),
         tracks: joined.map((t) => ({
           track_id: t.track_id,
           position: t.position,
-          output_path: `/preview/exports/${String(t.position).padStart(2, "0")}.wav`,
+          output_path: `/preview/exports/${String(t.position).padStart(2, "0")}.${encoding}`,
           measured_lufs: -14.0,
           target_lufs: -14.0,
           true_peak_dbtp: -1.05,
@@ -695,7 +705,8 @@ export async function mockInvoke<T>(
           true_peak_dbtp: activeScenario().exportChecks === "warning" ? 0.2 : -1.02,
           dynamic_range_lu: 7.4,
           sample_rate: 44_100,
-          bit_depth: 24,
+          bit_depth: args?.mp3Bitrate ? 0 : 24,
+          mp3_bitrate_kbps: args?.mp3Bitrate ?? null,
           effective_adaptive_strength: 0.5,
           source_profile_digest: null,
           confidence_digest: null,
@@ -895,11 +906,14 @@ export async function mockListen<T>(
     return () => renderProgressHandlers.delete(wrapped);
   }
   if (channel === "analysis:progress") {
-    const wrapped = (fraction: number, label: string) =>
-      handler({ payload: { fraction, label } as unknown as T });
-    analysisProgressHandlers.add(wrapped as (fraction: number, label: string) => void);
-    return () =>
-      analysisProgressHandlers.delete(wrapped as (fraction: number, label: string) => void);
+    const wrapped = (payload: unknown) => handler({payload:payload as T});
+    analysisProgressHandlers.add(wrapped);
+    return () => analysisProgressHandlers.delete(wrapped);
+  }
+  if (channel === "analysis:ready") {
+    const wrapped = (payload: unknown) => handler({payload:payload as T});
+    analysisReadyHandlers.add(wrapped);
+    return () => analysisReadyHandlers.delete(wrapped);
   }
   // Unknown channel — return a no-op unlisten.
   console.warn(`[preview-mock] unhandled listen channel: ${channel}`);
@@ -915,10 +929,8 @@ function emitLandingStatus(pending: boolean): void {
 
 // Real analysis-progress simulation: analyze_tracks emits the same staged
 // events the desktop engine sends (see mockInvoke).
-const analysisProgressHandlers = new Set<(fraction: number, label: string) => void>();
-function emitAnalysisProgress(fraction: number, label: string): void {
-  for (const h of analysisProgressHandlers) h(fraction, label);
-}
+const analysisProgressHandlers = new Set<(payload:unknown) => void>();
+const analysisReadyHandlers = new Set<(payload:unknown) => void>();
 
 // Render progress. The backend emits "render:progress" during preview, master,
 // and album renders; before U3 the preview left the channel unregistered, which

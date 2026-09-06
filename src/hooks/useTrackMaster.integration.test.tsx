@@ -55,6 +55,9 @@ const mocks = vi.hoisted(() => {
     playMaster: vi.fn(),
     updateChain: vi.fn(),
     prewarmDecode: vi.fn(),
+    preparePreviewLevel: vi.fn(),
+    cancelPreviewPreparation: vi.fn(),
+    onAnalysisReady: vi.fn(),
     pausePlayback: vi.fn(),
     resumePlayback: vi.fn(),
     stopPlayback: vi.fn(),
@@ -367,6 +370,9 @@ function resetApiMocks() {
     Promise.resolve(makeWaveform(trackId)),
   );
   mocks.api.prewarmDecode.mockResolvedValue(null);
+  mocks.api.preparePreviewLevel.mockResolvedValue(null);
+  mocks.api.cancelPreviewPreparation.mockResolvedValue(null);
+  mocks.api.onAnalysisReady.mockResolvedValue(() => {});
   mocks.api.setLoopRegion.mockResolvedValue(null);
   mocks.api.stopPlayback.mockResolvedValue(null);
   mocks.api.playMaster.mockResolvedValue(null);
@@ -4301,7 +4307,7 @@ describe("staged analysis progress", () => {
     const harness = await renderHookHarness();
     await waitFor(() => {
       expect(harness.current().isAnalyzing).toBe(true);
-      expect(harness.current().analysisProgress?.label).toBe("Analyzing audio");
+      expect(harness.current().analysisProgress?.label).toBe("Waiting to analyze");
     });
 
     await act(async () => {
@@ -4418,68 +4424,22 @@ describe("staged analysis progress", () => {
     });
   });
 
-  it("advances stages while analyzing, clamps at the last, then clears on completion", async () => {
-    const track = makeTrack("track-a", "/in/a.wav");
+  it("waits for real analysis progress instead of advancing stages on a timer", async () => {
+    const track=makeTrack("track-a","/in/a.wav");
     mocks.api.importTracks.mockResolvedValue([track]);
-    // Hold analysis pending so isAnalyzing stays true while we drive the
-    // staged-progress interval by hand.
-    let resolveAnalyze!: (value: AnalysisResult[]) => void;
-    mocks.api.analyzeTracks.mockReturnValue(
-      new Promise<AnalysisResult[]>((resolve) => {
-        resolveAnalyze = resolve;
-      }),
-    );
-
-    const harness = await renderHookHarness();
-    // Fake only the interval the staged progress uses; setTimeout, Date,
-    // microtasks, and act's own scheduling stay real so mount/import settle.
-    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
-    try {
-      let importDone!: Promise<void>;
-      await act(async () => {
-        importDone = harness.current().importFiles([track.path]);
-      });
-
-      // Analysis is active: the first stage shows immediately, and the
-      // render channel is independent (still empty).
-      expect(harness.current().isAnalyzing).toBe(true);
-      expect(harness.current().analysisProgress?.label).toBe("Analyzing audio");
-      expect(harness.current().renderProgress).toBeNull();
-
-      // Each 1400ms tick advances to the next stage, in order.
-      const laterStages = [
-        "Reading tonal balance",
-        "Checking dynamics",
-        "Evaluating stereo field",
-        "Building mastering context",
-        "Preparing preview",
-      ];
-      for (const label of laterStages) {
-        await act(async () => {
-          vi.advanceTimersByTime(1400);
-        });
-        expect(harness.current().analysisProgress?.label).toBe(label);
-      }
-
-      // Clamp: extra ticks do not advance past the final stage.
-      await act(async () => {
-        vi.advanceTimersByTime(1400 * 3);
-      });
-      expect(harness.current().analysisProgress?.label).toBe("Preparing preview");
-
-      // Completing analysis clears the staged progress.
-      await act(async () => {
-        resolveAnalyze([makeAnalysis(track.id)]);
-        await importDone;
-      });
-      expect(harness.current().isAnalyzing).toBe(false);
-      expect(harness.current().analysisProgress).toBeNull();
-    } finally {
-      vi.useRealTimers();
-      await act(async () => {
-        harness.root.unmount();
-      });
-    }
+    const pending=deferred<AnalysisResult[]>();
+    mocks.api.analyzeTracks.mockReturnValue(pending.promise);
+    const harness=await renderHookHarness();
+    let importDone!:Promise<void>;
+    await act(async()=>{importDone=harness.current().importFiles([track.path]);});
+    const batchId=mocks.api.analyzeTracks.mock.calls[0][1];
+    expect(harness.current().analysisProgress).toEqual({label:"Waiting to analyze",progress:0});
+    const progress=mocks.onAnalysisProgress.mock.calls[0][0];
+    await act(async()=>{progress({batch_id:batchId,track_id:track.id,label:"Reading tonal balance",fraction:0.4});});
+    expect(harness.current().analysisProgress).toMatchObject({label:"Reading tonal balance",progress:0.4});
+    await act(async()=>{pending.resolve([makeAnalysis(track.id)]);await importDone;});
+    expect(harness.current().analysisProgress).toBeNull();
+    await act(async()=>harness.root.unmount());
   });
 
   it("clears staged progress when analysis fails", async () => {
@@ -4499,7 +4459,7 @@ describe("staged analysis progress", () => {
         importDone = harness.current().importFiles([track.path]);
       });
       expect(harness.current().isAnalyzing).toBe(true);
-      expect(harness.current().analysisProgress?.label).toBe("Analyzing audio");
+      expect(harness.current().analysisProgress?.label).toBe("Waiting to analyze");
 
       await act(async () => {
         rejectAnalyze(new Error("analyze boom"));
@@ -4849,5 +4809,89 @@ describe("useTrackMaster analysis-complete autosave (Q29)", () => {
     await act(async () => {
       harness.root.unmount();
     });
+  });
+});
+
+describe("listening follow-through", () => {
+  it("returns a finished loaded track to zero without restarting playback", async () => {
+    const track = { ...makeTrack("finished", "/in/finished.wav"), duration_seconds: 120 };
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles([track.path]); });
+    const tick = mocks.onPlaybackTick.mock.calls[0][0];
+    await act(async () => tick({ track_id: track.id, is_loaded: true, is_playing: false,
+      position_sec: 120, peak_dbfs: -120, gr_low_db: -120, gr_mid_db: -120,
+      gr_high_db: -120, lufs_momentary: -120, lufs_integrated: -120, spectrum_db: [] }));
+    mocks.api.stopPlayback.mockClear();
+    mocks.api.playTrack.mockClear();
+    await act(async () => { await harness.current().returnToStart(); });
+    expect(mocks.api.stopPlayback).toHaveBeenCalledOnce();
+    expect(mocks.api.playTrack).not.toHaveBeenCalled();
+    expect(harness.current().transport).toMatchObject({ currentTimeSec: 0, isPlaying: false });
+    await act(async () => harness.root.unmount());
+  });
+
+  it("publishes the first ready track while the rest of its batch remains pending", async () => {
+    const tracks=[makeTrack("short","/in/short.wav"),makeTrack("long","/in/long.wav")];
+    mocks.api.importTracks.mockResolvedValue(tracks);
+    const pending=deferred<AnalysisResult[]>();
+    mocks.api.analyzeTracks.mockReturnValue(pending.promise);
+    const harness=await renderHookHarness();
+    let done!:Promise<void>;
+    await act(async()=>{done=harness.current().importFiles(tracks.map(t=>t.path));});
+    const batchId=mocks.api.analyzeTracks.mock.calls[0][1];
+    const ready=mocks.api.onAnalysisReady.mock.calls[0][0];
+    await act(async()=>{ready({batch_id:batchId,result:makeAnalysis(tracks[0].id)});});
+    expect(harness.current().analysisByTrackId[tracks[0].id]).toBeTruthy();
+    expect(harness.current().analyzingTrackIds).toEqual([tracks[1].id]);
+    expect(harness.current().selectedAnalysis).toBeTruthy();
+    await waitFor(()=>expect(mocks.api.prepareWaveform).toHaveBeenCalledWith(tracks[0].id,tracks[0].path,1200));
+    await act(async()=>{pending.resolve(tracks.map(t=>makeAnalysis(t.id)));await done;});
+    expect(harness.current().analyzingTrackIds).toEqual([]);
+    expect(mocks.api.prepareWaveform.mock.calls.filter(call=>call[0]===tracks[0].id)).toHaveLength(1);
+    await act(async()=>harness.root.unmount());
+  });
+
+  it.each([true,false])("returns to zero with an armed loop and preserves playing=%s", async (playing) => {
+    const track={...makeTrack("transport","/in/transport.wav"),duration_seconds:120};
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness=await renderHookHarness();
+    await act(async()=>{await harness.current().importFiles([track.path]);});
+    await act(async()=>{await harness.current().setRegion({start_sec:10,end_sec:20});});
+    await act(async()=>{await harness.current().toggleLoop();});
+    const tick=mocks.onPlaybackTick.mock.calls[0][0];
+    await act(async()=>tick({track_id:track.id,is_loaded:true,is_playing:playing,position_sec:15,peak_dbfs:-120,gr_low_db:-120,gr_mid_db:-120,gr_high_db:-120,lufs_momentary:-120,lufs_integrated:-120,spectrum_db:[]}));
+    const settings=harness.current().selectedSettings;
+    mocks.api.setLoopRegion.mockClear(); mocks.api.seekPlayback.mockClear();
+    await act(async()=>{await harness.current().returnToStart();});
+    expect(mocks.api.setLoopRegion).toHaveBeenCalledWith(null);
+    expect(mocks.api.seekPlayback).toHaveBeenCalledWith(0);
+    expect(mocks.api.setLoopRegion.mock.invocationCallOrder[0]).toBeLessThan(mocks.api.seekPlayback.mock.invocationCallOrder[0]);
+    expect(harness.current().transport).toMatchObject({currentTimeSec:0,isPlaying:playing,loop:false,playbackKind:"source"});
+    expect(harness.current().selectedSettings).toEqual(settings);
+    expect(harness.current().selectedRegion).toEqual({start_sec:10,end_sec:20});
+    await act(async()=>harness.root.unmount());
+  });
+
+  it("prepares only the selected ready track when Preview LUFS is enabled, cancelling obsolete work", async () => {
+    const tracks=[makeTrack("a","/in/a.wav"),makeTrack("b","/in/b.wav")];
+    mocks.api.importTracks.mockResolvedValue(tracks);
+    const pending=deferred<void>();mocks.api.preparePreviewLevel.mockReturnValue(pending.promise);
+    const harness=await renderHookHarness();
+    await act(async()=>{await harness.current().importFiles(tracks.map(t=>t.path));});
+    expect(mocks.api.preparePreviewLevel).not.toHaveBeenCalled();
+    await act(async()=>harness.current().setExportLufsPreview(true));
+    await waitFor(()=>expect(mocks.api.preparePreviewLevel).toHaveBeenCalledTimes(1));
+    const oldRequest=mocks.api.preparePreviewLevel.mock.calls[0][0];
+    expect(mocks.api.preparePreviewLevel.mock.calls[0][1]).toBe(tracks[0].id);
+    expect(harness.current().previewPreparing).toBe(true);
+    await act(async()=>harness.current().selectTrack(tracks[1].id));
+    expect(mocks.api.cancelPreviewPreparation).toHaveBeenCalledWith(oldRequest);
+    await waitFor(()=>expect(mocks.api.preparePreviewLevel).toHaveBeenCalledTimes(2));
+    expect(mocks.api.preparePreviewLevel.mock.calls[1][1]).toBe(tracks[1].id);
+    expect(mocks.api.playMaster).not.toHaveBeenCalled();
+    expect(mocks.api.playTrack).not.toHaveBeenCalled();
+    await act(async()=>{pending.resolve();});
+    await act(async()=>harness.root.unmount());
   });
 });

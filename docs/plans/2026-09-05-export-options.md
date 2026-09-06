@@ -1,8 +1,9 @@
 # Listening follow-up: concrete output choices
 
 The owner has settled the codec, filename, manifest and loading choices below.
-Implementation and verification remain to be completed; these decisions are not
-claims of shipped functionality. Old owner outputs are never deleted.
+Local implementation and verification are recorded in checkpoint 9 of the
+[follow-up plan](2026-09-05-listening-follow-up.md). These are not public release
+claims. Old owner outputs are never deleted.
 
 ## Album names and manifest
 
@@ -46,13 +47,17 @@ The owner explicitly clarified that 0% was only an example of a possible user
 workaround. MP3 uses the chosen preset, Intensity and controls just like WAV;
 format selection must not reset mastering settings or select 0%.
 
-Encoder feasibility candidate: embedded LAME via a maintained Rust wrapper,
-bundled for offline use. No new dependency has been selected or installed.
+Selected implementation: embedded LAME 3.100 through pinned `mp3lame-encoder`
+0.2.5 / `mp3lame-sys` 0.1.11, enabled only for desktop app-runner builds.
+Windows native export and independent FFmpeg decode passed. The exact dependency
+licenses are retained under `docs/third-party/`; see `THIRD_PARTY_NOTICES.md`.
+Mac compilation/packaging and the release artifact's notices/source/relinking
+arrangement still require release verification.
 The [wrapper source and usage](https://github.com/DoumanAsh/mp3lame-encoder) and
 [LAME upstream README](https://github.com/lameproject/lame/blob/master/README)
-are primary starting references. Before adoption, validate Windows/macOS builds,
-encoder flushing/delay metadata, applicable LGPL redistribution obligations and
-the actual pinned crate's license/build behavior. No external encoder installation
+are primary implementation references. Windows flushing/delay and decoder
+checks passed; the remaining Mac/package and redistribution checks are recorded
+in the release gate. No external encoder installation
 or network service should be necessary for the user's export.
 
 The feature must keep collision-safe destinations, source protection, temporary
@@ -73,7 +78,9 @@ publishing unverified claims.
 
 The offline stage report is linked from the implementation plan. Whole-track
 DSP, not the final LUFS gate, dominates the measured wait. Per-batch analysis is
-already sequential, while results are published at batch completion. Options are
+sequential; the old UI published results only at batch completion, explaining
+the owner's observation that all clips finished together. Checkpoint 9 changes
+publication to per-track readiness and real per-track progress. Original options were
 to publish each completed track/profile earlier while protecting audition, or
 keep a clear up-front preparation stage with real per-track progress. Neither
 removes later Preview LUFS costs. Measure time to first usable track, total batch
@@ -84,4 +91,7 @@ audition responsiveness still needs verification. **Owner also selected automati
 Preview LUFS for the selected track when ready, if already enabled for the mode:**
 show "Measuring," cancel obsolete work on track switches, and protect playback
 with bounded work. Other imported tracks wait until selected. Enabled state and
-defaults stay unchanged; resource/lifecycle verification remains pending.
+defaults stay unchanged. Preparation uses one heavy-worker permit shared with
+live measurements, cancellation, and a bounded last-result cache keyed by source
+metadata and resolved processing settings. Checkpoint 9 separates native readiness
+and control-state evidence from audio deadline proof.

@@ -1,3 +1,4 @@
+import { ExportEncodingControls, type ExportEncodingChoice } from "./ExportEncodingControls";
 import { useState } from "react";
 import { ChromeDialog } from "./ChromeDialog";
 import { Knob } from "./Knob";
@@ -42,6 +43,7 @@ export function AdvancedPanel({
   onDeliveryBitDepth,
   onDeliverySampleRate,
   showDeliveryFormat = true,
+  exportEncoding,
   albumDeliveryFormat,
   adaptiveReadout,
   autoWidthReadout,
@@ -65,6 +67,7 @@ export function AdvancedPanel({
   /// album-wide format values into the same rail card so the control stays in
   /// the same place across Advanced surfaces.
   showDeliveryFormat?: boolean;
+  exportEncoding?: ExportEncodingChoice;
   albumDeliveryFormat?: {
     bitDepth: number | null;
     sampleRate: number | null;
@@ -181,6 +184,7 @@ export function AdvancedPanel({
       />
       {showDeliveryFormat && (
         <DeliveryFormatCard
+          exportEncoding={exportEncoding}
           settings={settings}
           bitDepth={albumDeliveryFormat?.bitDepth}
           sampleRate={albumDeliveryFormat?.sampleRate}
@@ -1031,6 +1035,7 @@ function resetCompressorSettingsToCurrentMode(
 
 function DeliveryFormatCard({
   settings,
+  exportEncoding,
   bitDepth,
   sampleRate,
   onBitDepth,
@@ -1039,6 +1044,7 @@ function DeliveryFormatCard({
   note = "Track Master exports WAV files.",
 }: {
   settings: MasteringSettings;
+  exportEncoding?: ExportEncodingChoice;
   bitDepth?: number | null;
   sampleRate?: number | null;
   onBitDepth: (bitDepth: number | null) => void;
@@ -1055,7 +1061,8 @@ function DeliveryFormatCard({
       <header className="panel-head rail-section-head">
         <span className="panel-title">DELIVERY FORMAT</span>
       </header>
-      <div className="rail-card-body rail-format-grid">
+      {exportEncoding && <ExportEncodingControls choice={exportEncoding} />}
+      {exportEncoding?.format !== "mp3" && <div className="rail-card-body rail-format-grid">
         <SelectField
           label="Bit depth"
           value={effectiveBitDepthValue}
@@ -1079,7 +1086,8 @@ function DeliveryFormatCard({
           onChange={onSampleRate}
         />
       </div>
-      <p className="format-note">{note}</p>
+      }
+      <p className="format-note">{exportEncoding?.format === "mp3" ? "MP3 master · compatible sample rate · smaller file" : note}</p>
     </section>
   );
 }

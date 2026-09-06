@@ -59,6 +59,26 @@ generation is not required for each documentation, helper, or visual iteration.
 The explicit `target\codex-rc` directory avoids collisions with a running debug
 app that may lock the default target executable on Windows.
 
+## Listening follow-through regression coverage
+
+`src-tauri/tests/mp3_export.rs` verifies normal mastered-PCM encoding parity,
+source protection, incremental-ready callback order, Album rail order/override/
+gap assembly, single continuous encode, decoded measurements and cancellation.
+The `mp3` module tests all four bitrates at 32/44.1/48 kHz in mono and stereo,
+collision handling and cancellation. These encoder tests require desktop's
+`app-runner` feature; mobile bridges deliberately retain their prior WAV scope.
+Use an independent decoder on an actual native export as well as these tests.
+MP3 frame duration includes delay/padding; compare gapless decoded frames before
+calling duration drift a defect. Delivered peaks may exceed pre-encode peaks.
+
+The `transport-and-order` browser case drives actual pointer and keyboard rows,
+insertion feedback, selection preservation, Return to start and edge scrolling.
+The hook suite covers armed loops, playing/paused/end state and obsolete preview
+preparation. `rail-mode-consistency` also compares header and waveform bounds.
+`mp3-export` verifies encoding/bitrate controls do not reset Intensity and receipts
+show the delivered bitrate. These browser scenarios use the preview bridge;
+they do not establish native audio deadlines or sound quality.
+
 ## Audio correctness regressions
 
 `cargo test` includes `tests/audio_invariants.rs` without private fixtures or

@@ -1,4 +1,11 @@
 ---
+
+> **September 5 owner follow-through:** local UI, incremental readiness,
+> selected-track preview preparation and desktop MP3 delivery are implemented;
+> use [checkpoint 9](2026-09-05-listening-follow-up.md#checkpoint-9--completed-owner-follow-through)
+> for current evidence and precise remaining listening/platform limits.
+> This does not change beta disposition, publication authorization or the live gate.
+
 title: YES Master Public Beta Quality Program - Plan
 type: feat
 date: 2026-07-24

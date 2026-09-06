@@ -33,7 +33,7 @@ export function buildExportReport(args: {
     measured_dynamic_range_lu:
       m?.dynamic_range_lu ?? sourceAnalysis.dynamic_range_lu,
     source_format: sourceFormat,
-    destination_format: "wav",
+    destination_format: args.job.measurements?.mp3_bitrate_kbps ? "mp3" : "wav",
     sample_rate: m?.sample_rate ?? 44_100,
     bit_depth: m?.bit_depth ?? exportSettings.advanced.bit_depth ?? 24,
     // B5 — adaptive traceability, sourced from the backend render (which

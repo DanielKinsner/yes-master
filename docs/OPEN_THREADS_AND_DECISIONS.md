@@ -1,5 +1,16 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **September 5 follow-through implemented locally (verification continued September 6 UTC).**
+> Return to start/Home, pointer/keyboard reorder with insertion and edge scrolling,
+> stable Track/Album header/timeline geometry, incremental analysis/profile readiness,
+> selected-track automatic Preview LUFS, and WAV/MP3 mastering export are implemented.
+> This supersedes the implementation-pending annotations in the historical interview
+> entries below. WAV remains default; MP3 defaults to 320 kbps with 256/192/128.
+> Track/Standard encoder tests preceded Album batch/continuous implementation and
+> tests, as authorized. No settings reset, converter, preset retuning or release.
+> See [checkpoint 9](plans/2026-09-05-listening-follow-up.md#checkpoint-9--completed-owner-follow-through)
+> for actual evidence and the remaining platform/listening limits.
+
 The single place where **genuinely-open work** and **decisions only the owner can
 make** are logged so nothing gets silently dropped. Companion to
 **docs/CHANGELOG.md** (shipped history) and **docs/IDEAS_BACKLOG.md** (wishlist).
@@ -7,7 +18,7 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
-> **Transport follow-up — owner accepted interaction design; implementation pending.**
+> **Transport follow-up — accepted interaction contract, now implemented in checkpoint 9.**
 > Add Return to start beside Loop under Play/time (center it in Standard, where
 > Loop is absent). No end button for symmetry. Jump to 0:00 while preserving
 > playing/paused state; a finished track stays paused. Keep Original/Mastered
@@ -15,8 +26,8 @@ close rather than letting them rot in scattered docs.
 > region so it can be re-enabled. Keep Home consistent with the new action.
 > Improve row dragging with a discoverable handle, insertion feedback and edge
 > scrolling, preserving selection/settings/playback and keyboard reordering;
-> proposed scope is both Track and Album. Existing drag handlers are Album-only;
-> native reliability is not established by their presence.
+> implemented scope is Standard, Track and Album. Pointer capture replaces the
+> previous Album-only HTML drag path; verification is recorded in checkpoint 9.
 >
 > **Right-rail overflow and mode-switch Width flash — corrected locally.**
 > Reproduced Album's hidden Adapt Strength tooltip expanding a 279px scrollport
@@ -30,7 +41,8 @@ close rather than letting them rot in scattered docs.
 > Vertical scrolling remains available where controls exceed window height. Ceiling
 > shows -1 Auto on Track versus -1 Custom on Album: current captions distinguish
 > unset automatic from explicit settings, not just equal displayed numbers;
-> confirm saved state and resolved DSP value before changing labels or settings.
+> read-only session inspection confirmed both null and explicit -1 settings.
+> Both modes use the same caption rules; no sound setting is changed to align labels.
 > Owner asked why Render audit WAV is needed. It produces a temporary offline
 > track WAV using the shared renderer, not an improvement to live preview and
 > not an Album-plan proof. **Owner decision:** remove the entire Tools section

@@ -21,7 +21,9 @@ handoffs planned.
   no control is clipped). The dense Advanced view scrolls vertically on short
   viewports, as it already did at any height below ~1230 px.
 - Track and Album share the Advanced rail's section widths and pinned Export
-  position. The Album Adapt Strength explanation appears on hover or keyboard
+  position. Header metadata reserves the same height in both modes so the
+  timeline does not move when the Album follow/override control appears.
+  The Album Adapt Strength explanation appears on hover or keyboard
   focus within the rail's bounds. Controls scroll vertically when needed.
 - Auto Width keeps the same track's last resolved slider position during a mode
   switch or settings update, until the backend returns its new value. Pending
@@ -36,17 +38,28 @@ Track Master supports:
   at decode (common 5.1 order, LFE excluded) so analysis, audition, and
   export all process the same stereo signal the chain masters; header probes
   and album records still report the file's real channel count.
-- Source analysis.
+- Source analysis publishes each completed result and backend profile immediately.
+  One desktop analysis batch worker runs at a time; ready tracks can be selected
+  and played while later tracks finish. The list shows the remaining count.
 - Waveform display.
 - Original/Mastered audition at the same playhead.
-- Region selection and loop playback.
+- Region selection and loop playback. Return to start sits beside Loop; Standard
+  centers that single action below the time. It and Home seek to zero, preserve
+  playing/paused state, and disarm looping while retaining the region. Finished
+  playback stays paused. Track grips support pointer dragging with insertion
+  feedback and edge scrolling, plus Up/Down keyboard ordering in all views.
+  Selection and settings stay attached to track identity.
 - Presets and intensity.
 - Visual EQ/tone shaping.
 - Volume Match for audition only; a cold measurement runs in the background.
 - Preview LUFS matches whole-track export loudness. The LUFS target is an
   integrated target, not a momentary loudness cap. Since-play LUFS measures
   the current playback run; live peak is dBFS, separate from export true peak.
-- Export receipts report delivered PCM loudness/peak/LRA. Album receipts expand
+- When Preview LUFS is already requested, the selected ready track starts
+  premeasurement automatically, including Standard. Measuring is truthful pending
+  state; switching source/settings cancels obsolete work. Only the selected track
+  is prepared. Preparation and live measurements share one heavy-worker permit.
+- Export receipts report delivered decoded-audio loudness/peak/LRA. Album receipts expand
   to per-track delivered loudness, true peak, resolved target and ceiling.
   Target shortfalls are informational; warning-aware export remains advisory.
 - Delivery profile selection.
@@ -59,7 +72,13 @@ Track Master supports:
   matching the Visual EQ.
 - Explicit compressor modes.
 - Per-band compressor detail.
-- Delivery format selection.
+- WAV (default) or MP3 mastering export, with the same chosen processing. MP3
+  offers CBR 320 (default), 256, 192 and 128 kbps. Encoding choice never changes
+  preset, Intensity or controls. Standard MP3 is 44.1 kHz; Advanced maps delivery
+  rates in the 44.1 kHz family to 44.1 kHz, retains 32 kHz, and otherwise uses
+  48 kHz. WAV retains the existing format controls. Both Track and Album support
+  MP3; there is no separate conversion workflow. Lossy true-peak excursions are
+  measured from the completed MP3 and reported, not hidden by measuring its input.
 - Explicit save destination for export.
 - Warning-aware export review.
 - Post-render export receipt/checks.
@@ -108,10 +127,10 @@ Track Master supports:
   `docs/superpowers/specs/2026-06-11-analysis-orb-design.md`.
 - Real analysis progress: the backend emits `analysis:progress` events at
   the actual analyzer phase boundaries (decode → dynamics → stereo field →
-  tonal balance → deep scan), batch-rescaled across multi-track imports,
+  tonal balance → deep scan), identified by batch and track,
   and the deep scan itself reports sub-progress (0.80→0.98) as its windows
-  run. The UI's stage labels and bar track real work; the old paced timer
-  remains only as a pre-first-event fallback. "Analyzing" is per track
+  run. The UI's stage labels and bar track real work; queued tracks say
+  Waiting to analyze with no invented timer progress. "Analyzing" is per track
   (2026-08-19): the header pill, Insight card and waveform slot reflect
   the selected track's own batch, not any batch anywhere.
 - A clean Standard `Create Master` confirms itself: success card with file
@@ -123,8 +142,8 @@ Master exports:
 
 - Named profiles set their owned target LUFS, ceiling, bit depth, and sample
   rate together.
-- Custom Source keeps the source sample rate.
-- Custom format can request 44.1 kHz, 48 kHz, or 96 kHz.
+- For WAV, Custom Source keeps the source sample rate.
+- Custom WAV format can request 44.1 kHz, 48 kHz, or 96 kHz.
 - The rendered WAV, export receipt, and export checks report the effective
   rendered sample rate and bit depth.
 - A requested/rendered sample-rate mismatch is treated as a technical integrity
@@ -138,14 +157,17 @@ and sources above stereo fold down to stereo delivery. Mixed-rate and mixed
 channel-count albums therefore render one continuous file instead of failing.
 
 Album exports land in an `<AlbumTitle>/` subfolder of the chosen directory
-(Q25 option ii): the per-track WAVs, the continuous album, and `metadata/manifest.json`
+(Q25 option ii): the per-track WAVs or MP3s, the continuous album, and `metadata/manifest.json`
 stay together and never mix with a prior render. The title is sanitized for
 filesystem safety and an empty title falls back to `Album`; an existing
 subfolder is never overwritten (a fresh ` (2)` suffix is used instead).
 
 New Track export suggestions use `Song_mastered.wav`; Album per-track files use
 `01-Song_mastered.wav`, numbered in the final left-rail order. Existing outputs
-are not renamed. The Album receipt explains that the metadata folder contains
+are not renamed. MP3 uses the same names with `.mp3`. The continuous MP3 is
+encoded once from lossless album assembly, preserving rail order, gaps and
+overrides; it is never assembled from lossy track files. Temporary float WAVs
+are private staging and are cleaned up. The Album receipt explains that the metadata folder contains
 supporting export details, which are not needed to play or share the audio.
 
 Album-layer sound shaping (owner decisions 2026-07-03 D7/D9):

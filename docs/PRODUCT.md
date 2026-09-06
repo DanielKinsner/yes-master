@@ -52,7 +52,7 @@ is Standard's:
 3. Audition Original vs Mastered at the same playhead.
 4. Pick a Style (Universal / Clarity / Tape / Oomph) and a loudness
    (Low −14 / Medium −11 / High −9 LUFS); shape with Intensity.
-5. Create Master — fixed 44.1 kHz / 24-bit WAV at −1 dBTP, no blocking
+5. Create Master — 44.1 kHz / 24-bit WAV by default, or MP3, with a −1 dBTP processing ceiling and no blocking
    review (see "Standard view — export ceremony" below).
 
 The Advanced view extends this for users who want control:
@@ -140,7 +140,13 @@ view), the deliberate behavior is:
 - **Standard exports a fixed, known-safe default: 44.1 kHz / 24-bit WAV at a
   −1 dBTP ceiling**, with the Standard-chosen loudness (−14 / −11 / −9 LUFS).
   Sample rate / bit depth / ceiling are configurable only in Advanced. This
-  mirrors the iPhone app's fixed export.
+  mirrors the iPhone app's fixed WAV export. Desktop also offers MP3 at 44.1 kHz,
+  with CBR 320 kbps default and 256/192/128 choices. MP3 is the same mastering
+  workflow; selecting it never resets Intensity, preset or other controls.
+  Track Advanced and Album batch/continuous also support MP3 with compatible
+  delivery rates. Receipts measure the encoded file after decoding, including
+  lossy peak excursions; this does not alter the mastering sound to chase codec
+  peaks. WAV remains the default format. Mobile export scope is unchanged.
 
 ## Adaptive Mastering
 

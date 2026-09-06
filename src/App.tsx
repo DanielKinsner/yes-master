@@ -3,10 +3,10 @@ import {
   useEffect,
   useRef,
   useState,
-  type DragEvent as ReactDragEvent,
   type ReactNode,
 } from "react";
 import { useTrackMaster } from "./hooks/useTrackMaster";
+import { useTrackReorder } from "./hooks/useTrackReorder";
 import { useNavigationMachine } from "./hooks/useNavigationMachine";
 import { useFirstRunGuide } from "./hooks/useFirstRunGuide";
 import { StandardView } from "./components/StandardView";
@@ -28,7 +28,7 @@ import { AdvancedPanel } from "./components/AdvancedPanel";
 import { DisabledReason, PanelResetButton } from "./components/fields";
 import { ExportReceiptCard } from "./components/ExportReceiptCard";
 import { WaveformView } from "./components/Waveform";
-import { PlayPauseGlyph } from "./components/TransportGlyph";
+import { PlayPauseGlyph, ReturnToStartButton } from "./components/TransportGlyph";
 import { SourceInsight, SourceInsightEmpty } from "./components/SourceInsight";
 import { useInsightReview } from "./hooks/useInsightReview";
 import type {
@@ -494,6 +494,7 @@ function App() {
         <>
       <Sidebar
         tracks={tm.tracks}
+        analyzingTrackIds={tm.analyzingTrackIds}
         selectedId={tm.selectedTrackId}
         onSelect={tm.selectTrack}
         onRemove={tm.removeTrack}
@@ -558,6 +559,7 @@ function App() {
               onDeliveryBitDepth={tm.setDeliveryBitDepth}
               onDeliverySampleRate={tm.setDeliverySampleRate}
               showDeliveryFormat
+              exportEncoding={tm.exportEncoding}
               albumDeliveryFormat={
                 tm.mode === "album"
                   ? {
@@ -1278,6 +1280,7 @@ export function SequenceRowFacts({ row }: { row: SequenceRow }) {
 
 function Sidebar({
   tracks,
+  analyzingTrackIds = [],
   selectedId,
   onSelect,
   onRemove,
@@ -1289,6 +1292,7 @@ function Sidebar({
   sequenceRows = [],
 }: {
   tracks: ImportedTrack[];
+  analyzingTrackIds?: string[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
@@ -1303,43 +1307,7 @@ function Sidebar({
   /// U10 — per-track sequence facts for Album mode. Empty in Track mode.
   sequenceRows?: SequenceRow[];
 }) {
-  const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-
-  const albumReorderable = mode === "album";
-
-  const handleDragStart = (
-    e: ReactDragEvent<HTMLLIElement>,
-    index: number,
-  ) => {
-    if (!albumReorderable) return;
-    setDragFromIndex(index);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", String(index));
-  };
-
-  const handleDragOver = (
-    e: ReactDragEvent<HTMLLIElement>,
-    index: number,
-  ) => {
-    if (!albumReorderable || dragFromIndex === null) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    if (dragOverIndex !== index) setDragOverIndex(index);
-  };
-
-  const handleDrop = (e: ReactDragEvent<HTMLLIElement>, index: number) => {
-    if (!albumReorderable || dragFromIndex === null) return;
-    e.preventDefault();
-    onReorder(dragFromIndex, index);
-    setDragFromIndex(null);
-    setDragOverIndex(null);
-  };
-
-  const handleDragEnd = () => {
-    setDragFromIndex(null);
-    setDragOverIndex(null);
-  };
+  const reorder = useTrackReorder(tracks.map(t => t.id), onReorder);
 
   // Sum of every track's duration (seconds) — surfaces the album/queue total
   // alongside the count, the way the reference shows "9 tracks · 42:18".
@@ -1369,7 +1337,8 @@ function Sidebar({
         </div>
       )}
 
-      <ul className="track-list">
+      {analyzingTrackIds.length > 0 && <p className="analysis-remaining" role="status">{analyzingTrackIds.length} {analyzingTrackIds.length === 1 ? "track" : "tracks"} left to analyze</p>}
+      <ul className="track-list" data-reorder-list>
         {tracks.length === 0 && (
           <li className="track-empty">
             {mode === "album"
@@ -1380,23 +1349,17 @@ function Sidebar({
         {tracks.map((t, index) => {
           const classes = ["track-row"];
           if (t.id === selectedId) classes.push("active");
-          if (dragFromIndex === index) classes.push("dragging");
-          if (dragOverIndex === index && dragFromIndex !== index)
-            classes.push("drag-over");
+          if (reorder.dragging === t.id) classes.push("dragging");
+          if (reorder.insertion === index) classes.push("insert-before");
+          if (reorder.insertion === tracks.length && index === tracks.length - 1) classes.push("insert-after");
           return (
             <li
               key={t.id}
               className={classes.join(" ")}
-              draggable={albumReorderable}
-              onDragStart={(e) => handleDragStart(e, index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDrop={(e) => handleDrop(e, index)}
-              onDragEnd={handleDragEnd}
-              onDragLeave={() => setDragOverIndex(null)}
+              data-reorder-id={t.id}
             >
-              <span className="track-index" aria-hidden>
-                {(index + 1).toString().padStart(2, "0")}
-              </span>
+              <button className="track-drag-handle" type="button" {...reorder.handleProps(t.id)}
+                aria-label={`Reorder ${t.display_name}`} title="Drag to reorder. Up/Down arrows move this track.">⠿<span>{(index + 1).toString().padStart(2, "0")}</span></button>
               <button
                 type="button"
                 className="track-pick"
@@ -1423,8 +1386,7 @@ function Sidebar({
                   <SequenceRowFacts row={sequenceRows[index]} />
                 )}
               </button>
-              {albumReorderable && (
-                <div className="track-reorder-controls" aria-label="Album order controls">
+                <div className="track-reorder-controls" aria-label="Track order controls">
                   <button
                     type="button"
                     className="track-reorder-btn"
@@ -1446,7 +1408,6 @@ function Sidebar({
                     ↓
                   </button>
                 </div>
-              )}
               <button
                 type="button"
                 className="track-remove"
@@ -1531,6 +1492,7 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
             loopEnabled={!!tm.selectedRegion}
             onPlayPause={tm.togglePlay}
             onLoopToggle={tm.toggleLoop}
+            onReturnToStart={tm.returnToStart}
           />
           <WaveformView
             peaks={tm.selectedWaveform}
@@ -1555,9 +1517,9 @@ function TrackMaster({ tm }: { tm: ReturnType<typeof useTrackMaster> }) {
               lufsIntegrated={tm.transport.lufsIntegrated}
               meterMode="advanced"
               landingPending={
-                tm.landingPending &&
+                tm.previewPreparing || (tm.landingPending &&
                 tm.transport.playbackKind === "master" &&
-                tm.transport.isPlaying
+                tm.transport.isPlaying)
               }
             />
           </div>
@@ -1922,6 +1884,7 @@ function Transport({
   loopEnabled,
   onPlayPause,
   onLoopToggle,
+  onReturnToStart,
 }: {
   isPlaying: boolean;
   loop: boolean;
@@ -1930,6 +1893,7 @@ function Transport({
   loopEnabled: boolean;
   onPlayPause: () => void;
   onLoopToggle: () => void;
+  onReturnToStart: () => void;
 }) {
   return (
     <div className="wf-deck-transport">
@@ -1945,9 +1909,12 @@ function Transport({
         {formatTime(currentSec)}
         <span className="dim"> / {formatTime(durationSec)}</span>
       </span>
+      <div className="transport-secondary">
+      <ReturnToStartButton onClick={onReturnToStart} />
       <button
         type="button"
         className={"icon-btn " + (loop ? "on" : "")}
+        aria-label="Loop region"
         onClick={onLoopToggle}
         disabled={!loopEnabled}
         title={
@@ -1958,6 +1925,7 @@ function Transport({
       >
         ⟲
       </button>
+      </div>
     </div>
   );
 }

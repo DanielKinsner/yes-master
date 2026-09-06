@@ -101,7 +101,7 @@ describe("AlbumExportReceipt", () => {
     const { container } = await renderNode(<AlbumExportReceipt report={report} />);
 
     const receipt = container.querySelector(".album-export-receipt");
-    expect(receipt?.textContent).toContain("rendered 48 kHz / 24-bit / stereo");
+    expect(receipt?.textContent).toContain("rendered 48 kHz / WAV 24-bit / stereo");
     expect(receipt?.textContent).toContain("requested Auto");
     expect(receipt?.textContent).toContain("C:/Masters/metadata/manifest.json");
     expect(receipt?.textContent).toContain("not needed to play or share your audio");

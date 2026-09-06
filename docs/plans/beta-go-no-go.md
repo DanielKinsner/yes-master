@@ -1,5 +1,13 @@
 # YES Master — Beta Go / No-Go Checklist
 
+> **MP3 release integration (September 5 follow-through):** desktop MP3 is locally
+> implemented and verified on Windows; no installer/release has been activated.
+> Before distributing a candidate containing it, verify the Mac build and the
+> exact installer, include the pinned LGPL license notices, and supply the
+> required source/relinking materials for the statically linked dependencies.
+> Track this with [third-party notices](../../THIRD_PARTY_NOTICES.md) and checkpoint 9.
+> Prior packaged-artifact results do not prove this newly added native dependency.
+
 > The single gate list to clear before the free public beta goes live. Every
 > item is **blocking** unless marked *advisory*. Check a box only when its
 > **evidence** exists — not when it "should be fine." When every blocking box is

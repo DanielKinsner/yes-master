@@ -1,3 +1,4 @@
+import { ExportEncodingControls } from "./ExportEncodingControls";
 // src/components/StandardView.tsx
 //
 // Standard view — the default desktop face. Phase 2 layout: the 3-column
@@ -21,7 +22,8 @@ import { computeRailAlignment } from "../lib/rail-alignment";
 import type { useTrackMaster } from "../hooks/useTrackMaster";
 import { Knob, intensityLabel } from "./Knob";
 import { WaveformView } from "./Waveform";
-import { PlayPauseGlyph } from "./TransportGlyph";
+import { PlayPauseGlyph, ReturnToStartButton } from "./TransportGlyph";
+import { useTrackReorder } from "../hooks/useTrackReorder";
 import { PresetIcon, PRESET_ACCENT } from "./PresetIcon";
 import { effectiveLoudnessTarget } from "../lib/effective-settings";
 import { standardDeliverySpecLabel, standardExportNotes } from "../lib/standard-export";
@@ -134,15 +136,18 @@ export function LoudnessSegmented({
 }
 
 function TracksRail({ tm }: { tm: TM }) {
+  const reorder = useTrackReorder(tm.tracks.map(t => t.id), tm.reorderTracks);
   return (
     <aside className="std-tracks">
       <div className="std-tracks-head">TRACKS</div>
-      <div className="std-tracks-list">
+      {!!tm.analyzingTrackIds?.length && <p className="analysis-remaining" role="status">{tm.analyzingTrackIds.length} left to analyze</p>}
+      <div className="std-tracks-list" data-reorder-list>
         {tm.tracks.map((t, index) => (
           // Wrapper div, not a nested button: the remove × must be its own
           // interactive element beside the select row (parity with the
           // Advanced sidebar's remove control).
-          <div className="std-track-item" key={t.id}>
+          <div className={"std-track-item" + (reorder.dragging === t.id ? " dragging" : "") + (reorder.insertion === index ? " insert-before" : "") + (reorder.insertion === tm.tracks.length && index === tm.tracks.length - 1 ? " insert-after" : "")} key={t.id} data-reorder-id={t.id}>
+            <button type="button" className="track-drag-handle" {...reorder.handleProps(t.id)} aria-label={`Reorder ${t.display_name}`} title="Drag to reorder. Up/Down arrows move this track.">⠿</button>
             <button
               type="button"
               className={
@@ -429,9 +434,9 @@ function StandardRightRail({
           lufsIntegrated={tm.transport.lufsIntegrated}
           meterMode="standard"
           landingPending={
-            tm.landingPending &&
+            tm.previewPreparing || (tm.landingPending &&
             tm.transport.playbackKind === "master" &&
-            tm.transport.isPlaying
+            tm.transport.isPlaying)
           }
         />
       </section>
@@ -440,9 +445,9 @@ function StandardRightRail({
         <div className="std-rail-title">DELIVERY FORMAT</div>
         {/* State-free name: the recipe is fixed (standardExportSettings), and
             "Streaming" would read as a live profile next to a −9 LUFS target. */}
-        <div className="std-delivery-name">Standard WAV</div>
-        <div className="std-delivery-spec">{standardDeliverySpecLabel()}</div>
-        <div className="std-delivery-note">Create Master writes a WAV file.</div>
+        {tm.exportEncoding && <ExportEncodingControls choice={tm.exportEncoding} />}
+        <div className="std-delivery-spec">{tm.exportEncoding?.format === "mp3" ? `MP3 · ${tm.exportEncoding.bitrate} kbps · 44.1 kHz` : standardDeliverySpecLabel()}</div>
+        <div className="std-delivery-note">{tm.exportEncoding?.format === "mp3" ? "Create Master writes an MP3 file." : "Create Master writes a WAV file."}</div>
         <button type="button" className="ghost-btn std-delivery-change" onClick={onEnterAdvanced}>
           Change
         </button>
@@ -638,6 +643,7 @@ export function StandardView({
             <span className="std-time">
               {formatDuration(tm.transport.currentTimeSec)} / {formatDuration(tm.selectedTrack?.duration_seconds)}
             </span>
+            <ReturnToStartButton onClick={tm.returnToStart} />
           </div>
           <div className="std-wave">
             {/* WaveformView owns the no-peaks branch internally (loading

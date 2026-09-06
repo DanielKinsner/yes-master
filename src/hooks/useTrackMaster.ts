@@ -336,15 +336,6 @@ function nextAnalysisBatchId(): string {
   return `analysis-${Date.now()}-${analysisBatchSeq}`;
 }
 
-const ANALYSIS_PROGRESS_STAGES = [
-  { label: "Analyzing audio", progress: 0.14 },
-  { label: "Reading tonal balance", progress: 0.32 },
-  { label: "Checking dynamics", progress: 0.5 },
-  { label: "Evaluating stereo field", progress: 0.66 },
-  { label: "Building mastering context", progress: 0.82 },
-  { label: "Preparing preview", progress: 0.94 },
-] as const;
-
 export function useTrackMaster() {
   const [tracks, setTracks] = useState<ImportedTrack[]>([]);
   const [selectedTrackId, setSelectedTrackId] = useState<TrackId | null>(null);
@@ -360,7 +351,6 @@ export function useTrackMaster() {
   // waveform slot follow ITS batch; another track's batch does not light
   // them over a finished result.
   const [analyzingTrackIds, setAnalyzingTrackIds] = useState<TrackId[]>([]);
-  const [analysisStageIndex, setAnalysisStageIndex] = useState(0);
   const [isLoadingWaveform, setIsLoadingWaveform] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -451,13 +441,16 @@ export function useTrackMaster() {
   );
   // Requested preview landing or Volume Match is being measured in the
   // background. Edge-triggered from the backend, including while paused.
+  const [exportFormat,setExportFormat] = useState<"wav" | "mp3">("wav");
+  const [mp3Bitrate,setMp3Bitrate] = useState(320);
   const [landingPending, setLandingPending] = useState(false);
   // Real analysis progress from the backend's "analysis:progress" events
-  // (actual phase boundaries). The paced-timer stages below remain only as
-  // a fallback for the moments before the first real event lands.
+  // (actual phase boundaries). Queued tracks wait at zero until their first
+  // event; no timer invents progress for work that has not started.
   const [realAnalysisProgress, setRealAnalysisProgress] = useState<{
     label: string;
     progress: number;
+    trackId?: TrackId;
   } | null>(null);
   const isAnyAnalyzing = analyzingTrackIds.length > 0;
   // Per-track (2026-08-19): true only while the SELECTED track is in an
@@ -466,7 +459,8 @@ export function useTrackMaster() {
   const isAnalyzing =
     selectedTrackId !== null && analyzingTrackIds.includes(selectedTrackId);
   const analysisProgress = isAnalyzing
-    ? (realAnalysisProgress ?? ANALYSIS_PROGRESS_STAGES[analysisStageIndex])
+    ? (realAnalysisProgress && (!realAnalysisProgress.trackId || realAnalysisProgress.trackId === selectedTrackId)
+      ? realAnalysisProgress : { label:"Waiting to analyze", progress:0 })
     : null;
   // Phase 7.4 undo/redo: snapshot-based history of the undoable state pieces.
   // Refs (not state) so commitToHistory mutations don't trigger re-renders by
@@ -546,6 +540,8 @@ export function useTrackMaster() {
   // with the loudness landing + limiter applied without ever mutating that
   // visible toggle; `effectivePreviewLanding()` ORs the two for the live chain.
   const forceWysiwygRef = useRef(false);
+  const [forceWysiwyg, setForceWysiwygState] = useState(false);
+  const [previewPreparing, setPreviewPreparing] = useState(false);
   useEffect(() => {
     volumeMatchRef.current = transport.volumeMatch;
   }, [transport.volumeMatch]);
@@ -572,6 +568,7 @@ export function useTrackMaster() {
     (trackIds: TrackId[]) => {
       const batchId = nextAnalysisBatchId();
       inFlightAnalysisBatchesRef.current.set(batchId, trackIds);
+      for (const id of trackIds) latestAnalysisBatch.current.set(id,batchId);
       publishAnalyzingTrackIds();
       return batchId;
     },
@@ -589,6 +586,13 @@ export function useTrackMaster() {
     },
     [publishAnalyzingTrackIds],
   );
+
+  const latestAnalysisBatch = useRef(new Map<TrackId,string>());
+  const analysisReadySubscription = useRef<Promise<void>>(Promise.resolve());
+  const tracksRef = useRef(tracks);
+  tracksRef.current = tracks;
+  const waveformQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const preparedWaveformBatch = useRef(new Map<TrackId,string>());
 
   // React-state glue around `applyChainDispatchOverrides` (Vitest-
   // tested). Pulls volumeMatchRef + analysisMap from the hook's
@@ -697,6 +701,25 @@ export function useTrackMaster() {
     let unlistenProgress: (() => void) | undefined;
     let unlistenLanding: (() => void) | undefined;
     let unlistenAnalysis: (() => void) | undefined;
+    let unlistenReady: (() => void) | undefined;
+    let analysisListenerActive = true;
+    analysisReadySubscription.current = Promise.resolve(api.onAnalysisReady?.(evt => {
+      const id=evt.result.track_id;
+      if (!analysisListenerActive || !inFlightAnalysisBatchesRef.current.has(evt.batch_id) || latestAnalysisBatch.current.get(id)!==evt.batch_id) return;
+      setAnalysisMap(prev => ({...prev,[id]:evt.result}));
+      const remaining=inFlightAnalysisBatchesRef.current.get(evt.batch_id) ?? [];
+      inFlightAnalysisBatchesRef.current.set(evt.batch_id,remaining.filter(t=>t!==id));
+      publishAnalyzingTrackIds();
+      waveformQueue.current = waveformQueue.current.catch(()=>{}).then(async () => {
+        const track=tracksRef.current.find(t=>t.id===id);
+        if (!track || latestAnalysisBatch.current.get(id)!==evt.batch_id) return;
+        const wf=await api.prepareWaveform(id,track.path,1200);
+        if (analysisListenerActive && tracksRef.current.some(t=>t.id===id) && latestAnalysisBatch.current.get(id)===evt.batch_id) {
+          preparedWaveformBatch.current.set(id,evt.batch_id);
+          setWaveformMap(prev=>({...prev,[id]:wf}));
+        }
+      }).catch(err => console.warn('Incremental waveform preparation failed',err));
+    })).then(fn => { if (analysisListenerActive) unlistenReady=fn; else fn?.(); });
     let renderProgressClearTimer: ReturnType<typeof setTimeout> | undefined;
     onLandingStatus((pending, event) => {
       const selectedId = selectedTrackIdRef.current;
@@ -709,7 +732,7 @@ export function useTrackMaster() {
     });
     onAnalysisProgress((evt) => {
       if (!inFlightAnalysisBatchesRef.current.has(evt.batch_id)) return;
-      setRealAnalysisProgress({ label: evt.label, progress: evt.fraction });
+      setRealAnalysisProgress({ label: evt.label, progress: evt.fraction, trackId:evt.track_id });
     }).then((fn) => {
       unlistenAnalysis = fn;
     });
@@ -811,25 +834,19 @@ export function useTrackMaster() {
       unlistenProgress?.();
       unlistenLanding?.();
       unlistenAnalysis?.();
+      analysisListenerActive=false;
+      unlistenReady?.();
       if (renderProgressClearTimer) clearTimeout(renderProgressClearTimer);
     };
   }, []);
 
   useEffect(() => {
     if (!isAnyAnalyzing) {
-      setAnalysisStageIndex(0);
       // A finished (or failed) analysis must not leak its last real event
       // into the next run's first frames.
       setRealAnalysisProgress(null);
       return;
     }
-    setAnalysisStageIndex(0);
-    const timer = window.setInterval(() => {
-      setAnalysisStageIndex((current) =>
-        Math.min(current + 1, ANALYSIS_PROGRESS_STAGES.length - 1),
-      );
-    }, 1400);
-    return () => window.clearInterval(timer);
   }, [isAnyAnalyzing]);
 
   // Phase 7.3: load user presets on mount; subsequent saves/deletes refresh
@@ -896,6 +913,7 @@ export function useTrackMaster() {
         }
         setViewByTrackId(session.view_by_track_id ?? {});
 
+        await analysisReadySubscription.current;
         // Best-effort re-analyze + re-waveform for restored tracks.
         if (restoredTracks.length > 0) {
           const batchId = beginAnalysis(restoredTracks.map((t) => t.id));
@@ -906,7 +924,7 @@ export function useTrackMaster() {
             );
             if (!cancelled) {
               const map: Record<TrackId, AnalysisResult> = {};
-              for (const r of results) map[r.track_id] = r;
+              for (const r of results) if (latestAnalysisBatch.current.get(r.track_id)===batchId) map[r.track_id] = r;
               setAnalysisMap((prev) => ({ ...prev, ...map }));
             }
           } catch (err) {
@@ -918,8 +936,10 @@ export function useTrackMaster() {
             // isAnalyzing sticks for the life of the session.
             finishAnalysis(batchId);
           }
+          await waveformQueue.current;
           for (const t of restoredTracks) {
             if (cancelled) break;
+            if (preparedWaveformBatch.current.get(t.id)===latestAnalysisBatch.current.get(t.id)) continue;
             try {
               const wf = await api.prepareWaveform(t.id, t.path, 1200);
               setWaveformMap((prev) => ({ ...prev, [t.id]: wf }));
@@ -1400,6 +1420,7 @@ export function useTrackMaster() {
   const analyzeKnownTracks = useCallback(
     async (targetTracks: ImportedTrack[]): Promise<AnalysisResult[]> => {
       if (targetTracks.length === 0) return [];
+      await analysisReadySubscription.current;
       const batchId = beginAnalysis(targetTracks.map((t) => t.id));
       try {
         const results = await api.analyzeTracks(
@@ -1408,7 +1429,7 @@ export function useTrackMaster() {
         );
         setAnalysisMap((prev) => {
           const next = { ...prev };
-          for (const r of results) next[r.track_id] = r;
+          for (const r of results) if (latestAnalysisBatch.current.get(r.track_id)===batchId) next[r.track_id] = r;
           return next;
         });
         return results;
@@ -1423,7 +1444,9 @@ export function useTrackMaster() {
     if (targetTracks.length === 0) return;
     setIsLoadingWaveform(true);
     try {
+      await waveformQueue.current;
       for (const track of targetTracks) {
+        if (preparedWaveformBatch.current.get(track.id)===latestAnalysisBatch.current.get(track.id)) continue;
         const wf = await api.prepareWaveform(track.id, track.path, 1200);
         setWaveformMap((prev) => ({ ...prev, [track.id]: wf }));
       }
@@ -1670,6 +1693,7 @@ export function useTrackMaster() {
 
   const removeTrack = useCallback(
     (id: TrackId) => {
+      latestAnalysisBatch.current.delete(id);
       setTracks((prev) => prev.filter((t) => t.id !== id));
       setAnalysisMap((prev) => {
         const next = { ...prev };
@@ -2000,7 +2024,7 @@ export function useTrackMaster() {
             override_album: isOverride,
           };
         });
-      const report = await api.renderAlbumPlan(plan, renderTracks, outputDir);
+      const report = await api.renderAlbumPlan(plan, renderTracks, outputDir, ...(exportFormat === "mp3" ? [mp3Bitrate] : []));
       setAlbumExportReport(report);
       if (isCancelledStatus(report.status)) {
         setRenderFeedback({
@@ -2016,6 +2040,7 @@ export function useTrackMaster() {
       setAlbumRendering(false);
     }
   }, [
+    exportFormat,mp3Bitrate,
     tracks,
     analysisMap,
     settingsMap,
@@ -2142,7 +2167,7 @@ export function useTrackMaster() {
         // app's guard, not the OS replace prompt's. Backend picks the first
         // free <name>.wav / <name>-2.wav / …; any failure (or no remembered
         // dir yet) falls back to the base suggestion unchanged.
-        const baseFilename = suggestedMasterFilename(selectedTrack);
+        const baseFilename = suggestedMasterFilename(selectedTrack).replace(/\.wav$/i,`.${exportFormat}`);
         const exportDir = lastExportDirectory(store, "track");
         const uniqueFilename = exportDir
           ? await Promise.resolve(
@@ -2153,10 +2178,10 @@ export function useTrackMaster() {
           : baseFilename;
         const chosenPath = await save({
           defaultPath: defaultExportPath(store, "track", uniqueFilename),
-          filters: [{ name: "WAV audio", extensions: ["wav"] }],
+          filters: [{ name: `${exportFormat.toUpperCase()} audio`, extensions: [exportFormat] }],
         });
         if (!chosenPath) return;
-        const chosenOutputPath = ensureWavExtension(chosenPath);
+        const chosenOutputPath = exportFormat === "wav" ? ensureWavExtension(chosenPath) : /\.mp3$/i.test(chosenPath) ? chosenPath : chosenPath.replace(/\.wav$/i, "") + ".mp3";
         rememberExportDirectory(store, "track", chosenOutputPath);
         setIsExporting(true);
         setRenderFeedback(null);
@@ -2168,6 +2193,7 @@ export function useTrackMaster() {
           selectedTrack.path,
           exportSettings,
           chosenOutputPath,
+          ...(exportFormat === "mp3" ? [mp3Bitrate] : []),
         );
         if (isCancelledStatus(job.status)) {
           setRenderFeedback({
@@ -2211,7 +2237,7 @@ export function useTrackMaster() {
         setIsExporting(false);
       }
     },
-    [selectedTrackId, selectedAnalysis, selectedTrack, clearIncompleteRenderProgress],
+    [selectedTrackId, selectedAnalysis, selectedTrack, clearIncompleteRenderProgress,exportFormat,mp3Bitrate],
   );
 
   const exportMaster = useCallback(
@@ -2457,6 +2483,28 @@ export function useTrackMaster() {
     [selectedTrack, loadedTrackId, transport.currentTimeSec, transport.isPlaying, transport.playbackKind, playWithKind],
   );
 
+  const returnToStart = useCallback(async () => {
+    if (!selectedTrack) return;
+    const id = selectedTrack.id;
+    try {
+      // Disarm first so the seek cannot be clamped back into the region.
+      // Keep the drawn region available for the next explicit Loop action.
+      if (transport.loop) await api.setLoopRegion(null);
+      if (selectedTrackIdRef.current !== id) return;
+      if (loadedTrackId === id) {
+        if (isPausedAtEffectiveEnd(transport.currentTimeSec, selectedTrack.duration_seconds ?? Infinity, transport.isPlaying)) {
+          await api.stopPlayback();
+          setLoadedTrackId(null);
+        } else {
+          await api.seekPlayback(0);
+        }
+      }
+      if (selectedTrackIdRef.current !== id) return;
+      lastPlaybackTickRef.current = { trackId:id, positionSec:0, isPlaying:transport.isPlaying, receivedAtMs:Date.now() };
+      setTransport(t => ({ ...t, currentTimeSec:0, loop:false }));
+    } catch (err) { setError(messageOf(err)); }
+  }, [selectedTrack, loadedTrackId, transport.currentTimeSec, transport.isPlaying, transport.loop]);
+
   const toggleLoop = useCallback(async () => {
     // Arming requires a drawn region — the same rule that disables the loop
     // button. Guarded here (not per caller) so the L shortcut can't arm an
@@ -2504,7 +2552,7 @@ export function useTrackMaster() {
       }
       if (key === "Home") {
         e.preventDefault();
-        void seek(0);
+        void returnToStart();
         return;
       }
       const lower = key.length === 1 ? key.toLowerCase() : key;
@@ -2527,6 +2575,7 @@ export function useTrackMaster() {
     selectedTrack,
     estimatedPlaybackPositionSec,
     seek,
+    returnToStart,
     setPlaybackKind,
     transport.playbackKind,
     toggleLoop,
@@ -2656,6 +2705,7 @@ export function useTrackMaster() {
   const setForceWysiwyg = useCallback(
     (on: boolean) => {
       forceWysiwygRef.current = on;
+      setForceWysiwygState(on);
       // Re-land the live chain if a master is currently auditioning, so
       // entering/leaving Standard mid-playback recomputes the landing.
       if (
@@ -2683,6 +2733,26 @@ export function useTrackMaster() {
       effectivePreviewLanding,
     ],
   );
+
+  useEffect(() => {
+    const enabled=transport.exportLufsPreview || (forceWysiwyg && !transport.volumeMatch);
+    if (!enabled || !selectedTrack || !selectedAnalysis || !api.preparePreviewLevel) {
+      setPreviewPreparing(false);
+      return;
+    }
+    let active=true;
+    const requestId=`preview-${Date.now()}-${Math.random()}`;
+    setPreviewPreparing(true);
+    const timer=setTimeout(() => {
+      void api.preparePreviewLevel(requestId,selectedTrack.id,selectedTrack.path,selectedSettings,mode === "album")
+        .catch(err => { if(active) console.warn("Preview level preparation failed",err); })
+        .finally(() => { if(active) setPreviewPreparing(false); });
+    },180);
+    return () => {
+      active=false; clearTimeout(timer);
+      void api.cancelPreviewPreparation?.(requestId).catch(() => {});
+    };
+  },[selectedTrack?.id,selectedTrack?.path,selectedAnalysis,selectedSettings,mode,transport.exportLufsPreview,transport.volumeMatch,forceWysiwyg]);
 
   const clearError = useCallback(() => setError(null), []);
   const clearProjectFeedback = useCallback(() => setProjectFeedback(null), []);
@@ -2918,15 +2988,20 @@ export function useTrackMaster() {
       // Best-effort re-analyze + re-waveform for the restored tracks so the
       // user lands in a working state without manually pressing Analyze.
       if (state.tracks && state.tracks.length > 0) {
+        await analysisReadySubscription.current;
         const batchId = beginAnalysis(state.tracks.map((t) => t.id));
         try {
           const results = await api.analyzeTracks(
             state.tracks.map((t) => ({ id: t.id, path: t.path })),
             batchId,
           );
-          const nextAnalysis: Record<TrackId, AnalysisResult> = {};
-          for (const r of results) nextAnalysis[r.track_id] = r;
-          setAnalysisMap(nextAnalysis);
+          setAnalysisMap(prev => {
+            const nextAnalysis = { ...prev };
+            for (const r of results) {
+              if (latestAnalysisBatch.current.get(r.track_id) === batchId) nextAnalysis[r.track_id] = r;
+            }
+            return nextAnalysis;
+          });
           missingAnalysis = missingAnalysisTracks(state.tracks, results);
         } catch (err) {
           analysisRecoveryFailed = true;
@@ -2934,7 +3009,9 @@ export function useTrackMaster() {
         } finally {
           finishAnalysis(batchId);
         }
+        await waveformQueue.current;
         for (const t of state.tracks) {
+          if (preparedWaveformBatch.current.get(t.id)===latestAnalysisBatch.current.get(t.id)) continue;
           try {
             const wf = await api.prepareWaveform(t.id, t.path, 1200);
             setWaveformMap((prev) => ({ ...prev, [t.id]: wf }));
@@ -3002,6 +3079,7 @@ export function useTrackMaster() {
     previewStale,
     isAnalyzing,
     isAnyAnalyzing,
+    analyzingTrackIds,
     analysisProgress,
     isLoadingWaveform,
     isRendering,
@@ -3014,7 +3092,8 @@ export function useTrackMaster() {
     renderProgress,
     renderFeedback,
     cancelRequestedJobId,
-    landingPending,
+    landingPending: landingPending || previewPreparing,
+    previewPreparing,
     hadPriorSession,
     undo,
     redo,
@@ -3064,6 +3143,7 @@ export function useTrackMaster() {
     setAlbumSampleRate,
     setAlbumBitDepth,
     exportAlbumPlan,
+    exportEncoding: {format:exportFormat,bitrate:mp3Bitrate,onFormat:setExportFormat,onBitrate:setMp3Bitrate},
     updatePreview,
     guardrailReadout,
     autoWidthReadout,
@@ -3073,6 +3153,7 @@ export function useTrackMaster() {
     cancelActiveRender,
     togglePlay,
     seek,
+    returnToStart,
     setPlaybackKind,
     toggleLoop,
     setVolumeMatch,
