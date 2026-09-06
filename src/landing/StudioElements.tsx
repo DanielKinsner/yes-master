@@ -1,4 +1,4 @@
-import { useRef, type CSSProperties } from "react";
+import { useRef, type CSSProperties, type RefObject } from "react";
 
 export function Icon({ kind }: { kind: string }) {
   const paths: Record<string, string> = {
@@ -12,6 +12,8 @@ export function Icon({ kind }: { kind: string }) {
     levels: "M4 16v5m5-12v12m6-17v17m6-21v21",
     disc: "M21 6c0 2-4 4-9 4S3 8 3 6s4-4 9-4 9 2 9 4ZM3 6v12c0 2 4 4 9 4s9-2 9-4V6M3 12c0 2 4 4 9 4s9-2 9-4",
     folder: "M3 7h7l2-3h9v17H3Z",
+    expand: "M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5",
+    chevron: "m6 9 6 6 6-6",
   };
   return (
     <svg
@@ -81,6 +83,9 @@ export function Capture({
   crop,
   sourceSize = [2048, 1129],
   fullSrc,
+  dialogRef,
+  dialogId,
+  expandLabel,
   caption = "Explore the interface",
 }: {
   src: string;
@@ -90,9 +95,13 @@ export function Capture({
   crop?: [number, number, number];
   sourceSize?: [number, number];
   fullSrc?: string;
+  dialogRef?: RefObject<HTMLDialogElement | null>;
+  dialogId?: string;
+  expandLabel?: string;
   caption?: string;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
+  const localDialog = useRef<HTMLDialogElement>(null);
+  const dialog = dialogRef ?? localDialog;
   const cropStyle = crop
     ? {
         width: `${(crop[0] / width) * 100}%`,
@@ -106,6 +115,8 @@ export function Capture({
         type="button"
         className="studio-capture-button"
         aria-label={`Enlarge ${alt}`}
+        aria-haspopup="dialog"
+        aria-controls={dialogId}
         onClick={() => dialog.current?.showModal()}
       >
         <span
@@ -121,8 +132,16 @@ export function Capture({
             loading="lazy"
           />
         </span>
-        <span className="studio-enlarge" aria-hidden="true">
-          ↗
+        <span
+          className={
+            expandLabel
+              ? "studio-enlarge studio-enlarge-label"
+              : "studio-enlarge"
+          }
+          aria-hidden="true"
+        >
+          {expandLabel && <span>{expandLabel}</span>}
+          <Icon kind="expand" />
         </span>
       </button>
       <figcaption>
@@ -130,6 +149,7 @@ export function Capture({
       </figcaption>
       <dialog
         ref={dialog}
+        id={dialogId}
         className="studio-lightbox"
         aria-label={alt}
         onClick={(e) => {

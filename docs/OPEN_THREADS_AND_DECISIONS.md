@@ -7,12 +7,15 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
-> **2026-09-05 — Marketing tightening pass: OWNER REVIEW BEFORE MERGE.**
+> **2026-09-05 — Marketing tightening pass APPROVED FOR PUBLICATION.**
 > The owner requested a shorter, audience-led page, retaining Your Endgame Sound
 > as the brand and the approved studio atmosphere. Audio examples stay deferred.
 > They authorized a generated title cleanup of their supplied Advanced WAV
-> screenshot. This new pass stays on `codex/landing-tightening` for review;
-> earlier publication authorization does not authorize merging this revision.
+> screenshot. After reviewing `codex/landing-tightening`, the owner approved
+> it as the new page and explicitly authorized push/merge to main and publication,
+> with clearer Standard/Advanced screenshot controls and tasteful interaction
+> polish first. Audio examples remain deferred; installer/signup gates, noindex,
+> native behavior and the current domains remain unchanged.
 > Scope and image provenance: `docs/landing-mockups/tightening-review.md`.
 
 > **2026-09-04 — Studio marketing website publication AUTHORIZED.** The

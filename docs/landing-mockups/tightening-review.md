@@ -48,3 +48,21 @@ Local evidence (ignored by git):
 Review URL on this machine: http://127.0.0.1:5175/.
 Branch: `codex/landing-tightening`, isolated from the owner's dirty native checkout.
 No push, production deployment or merge to main was performed.
+
+## Owner approval and interaction polish — 2026-09-05
+
+The owner reviewed the page, approved it as the replacement and authorized merge
+and publication after a tasteful bolder/animate pass. The preceding no-push and
+review-only statements record the original review checkpoint, not the current
+authorization.
+
+- Added a clear View Advanced screenshot button beside the Advanced copy. Both
+  this action and the laptop image open the same full-resolution viewer; Escape
+  restores focus to the actual trigger.
+- Made Standard's disclosure a visible blue outlined button with explicit
+  View/Hide wording and a directional chevron. Screenshot overlays now label
+  expansion on both modes. Minimum button height is 46px.
+- Added only interaction feedback: brief icon/colour transitions and a 220ms
+  opacity/4px opening transition for the Standard screenshot. Reduced motion
+  disables these; existing finite artwork entrances remain unchanged.
+- Retained the approved layout, artwork, editable copy and current release gates.

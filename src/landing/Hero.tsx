@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import studio from "../assets/landing/studio/hero-bg-studio.webp";
 import standard from "../assets/landing/studio/hero-device-standard.webp";
 import advancedChassis from "../assets/landing/studio/advanced-laptop-front.webp";
@@ -9,6 +10,7 @@ import { Capture, Icon } from "./StudioElements";
 export default function Hero({
   release = resolveRelease(),
 }: { release?: ResolvedRelease } = {}) {
+  const advancedDialog = useRef<HTMLDialogElement>(null);
   return (
     <>
       <section id="top" className="studio-hero">
@@ -88,6 +90,16 @@ export default function Hero({
             <p>{copy.advanced.body}</p>
             <p className="studio-advanced-note">{copy.advanced.ab_note}</p>
             <div className="studio-actions">
+              <button
+                className="studio-view-button"
+                type="button"
+                aria-haspopup="dialog"
+                aria-controls="advanced-screenshot-dialog"
+                onClick={() => advancedDialog.current?.showModal()}
+              >
+                <Icon kind="expand" />
+                View Advanced screenshot
+              </button>
               <a href="#export" className="studio-text-link">
                 Explore the export <span aria-hidden="true">→</span>
               </a>
@@ -110,12 +122,12 @@ export default function Hero({
                 height={946}
                 alt="YES Master Advanced WAV session, viewed head-on on a studio laptop"
                 caption="Advanced. Take a closer look."
+                dialogRef={advancedDialog}
+                dialogId="advanced-screenshot-dialog"
+                expandLabel="Expand"
               />
             </div>
           </div>
-          <p className="studio-side-note" aria-hidden="true">
-            SAME SOUND. MORE POSSIBILITIES.
-          </p>
         </div>
       </section>
     </>

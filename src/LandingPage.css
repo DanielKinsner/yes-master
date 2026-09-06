@@ -1445,3 +1445,124 @@ body {
     gap: 24px;
   }
 }
+
+/* Screenshot actions: visible at rest, with feedback only on interaction. */
+.studio-site .studio-view-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 46px;
+  padding: 12px 16px;
+  border: 1px solid #658cbd;
+  border-radius: 7px;
+  color: #e2edff;
+  background: #142339;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+  list-style: none;
+  box-shadow: inset 0 1px 0 #a6c7ff14;
+}
+.studio-view-button::-webkit-details-marker {
+  display: none;
+}
+.studio-view-button > svg,
+.studio-view-button .studio-disclosure-chevron svg {
+  width: 18px;
+  height: 18px;
+}
+.studio-site .studio-view-button:is(:hover, :focus-visible) {
+  color: #f1f6ff;
+  background: #203650;
+  border-color: #a1c5f5;
+}
+.studio-view-button:active {
+  background: #101d30;
+}
+.studio-disclosure-hide {
+  display: none;
+}
+.studio-standard-capture[open] .studio-disclosure-show {
+  display: none;
+}
+.studio-standard-capture[open] .studio-disclosure-hide {
+  display: inline;
+}
+.studio-disclosure-chevron {
+  display: inline-flex;
+  margin-left: 5px;
+}
+.studio-standard-capture[open] .studio-disclosure-chevron {
+  transform: rotate(180deg);
+}
+.studio-standard-capture[open] > p {
+  margin-top: 24px;
+}
+.studio-enlarge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.studio-site .studio-enlarge svg {
+  width: 15px;
+  height: 15px;
+}
+.studio-site .studio-enlarge-label {
+  width: auto;
+  height: auto;
+  min-height: 32px;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #e2edff;
+  border-color: #658cbd;
+  background: #142339f5;
+}
+.studio-capture-button:is(:hover, :focus-visible) .studio-enlarge {
+  background: #203650;
+  border-color: #a1c5f5;
+}
+.studio-advanced-hero .studio-actions {
+  gap: 10px 18px;
+}
+@media (min-width: 801px) {
+  .studio-advanced-hero .studio-hero-inner {
+    min-height: 420px;
+    height: auto;
+    padding-bottom: 42px;
+  }
+}
+@keyframes studio-disclosure-enter {
+  from {
+    opacity: 0.8;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .studio-view-button {
+    transition:
+      background-color 180ms var(--studio-ease),
+      border-color 180ms var(--studio-ease);
+  }
+  .studio-disclosure-chevron,
+  .studio-view-button > svg {
+    transition: transform 180ms var(--studio-ease);
+  }
+  .studio-standard-capture[open] > .studio-capture {
+    animation: studio-disclosure-enter 220ms var(--studio-ease);
+  }
+}
+@media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
+  button.studio-view-button:is(:hover, :focus-visible) > svg {
+    transform: scale(1.1);
+  }
+}

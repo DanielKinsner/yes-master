@@ -81,6 +81,17 @@ export async function verifyStudioMotion(browser, url, outDir, failures) {
         `motion ${width}: artwork replays or keeps animating at rest`,
       );
 
+    const standardView = page.locator(".studio-standard-capture summary");
+    await standardView.click();
+    const disclosureMotion = await page.locator(".studio-standard-capture > .studio-capture").evaluate(async el => {
+      const name = getComputedStyle(el).animationName;
+      const animations = el.getAnimations();
+      const finite = animations.every(a => a.effect.getTiming().iterations === 1);
+      await Promise.all(animations.map(a => a.finished));
+      return name === "studio-disclosure-enter" && finite;
+    });
+    if (!disclosureMotion) failures.push(`motion ${width}: Standard opening feedback is missing or loops`);
+
     // An OS preference change must also stop an animation already in flight.
     await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
     await page.reload({ waitUntil: "networkidle" });
@@ -119,6 +130,10 @@ export async function verifyStudioMotion(browser, url, outDir, failures) {
           `motion ${width}: ${selector} did not honor reduced motion`,
         );
       }
+    }
+    await standardView.click();
+    if (await page.locator(".studio-standard-capture > .studio-capture").evaluate(el => el.getAnimations().length > 0)) {
+      failures.push(`motion ${width}: Standard disclosure ignores reduced motion`);
     }
     await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
     await page.screenshot({

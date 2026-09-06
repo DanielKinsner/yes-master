@@ -1,6 +1,6 @@
 import standard from "../assets/landing/studio/standard-ui.png";
 import copy from "./page-copy.json";
-import { Capture, DetailList, SectionHeading } from "./StudioElements";
+import { Capture, DetailList, Icon, SectionHeading } from "./StudioElements";
 import SoundCharacter from "./SoundCharacter";
 
 export default function Workflow() {
@@ -20,8 +20,17 @@ export default function Workflow() {
           </div>
         </div>
         <details className="studio-standard-capture studio-album-capture">
-          <summary>
-            Take a closer look at Standard <span aria-hidden="true">↗</span>
+          <summary className="studio-view-button">
+            <Icon kind="screen" />
+            <span className="studio-disclosure-show">
+              View Standard screenshot
+            </span>
+            <span className="studio-disclosure-hide">
+              Hide Standard screenshot
+            </span>
+            <span className="studio-disclosure-chevron" aria-hidden="true">
+              <Icon kind="chevron" />
+            </span>
           </summary>
           <p>
             {copy.sound.body} Standard exports a 44.1 kHz / 24-bit WAV, with the
@@ -33,6 +42,7 @@ export default function Workflow() {
             width={2048}
             height={1153}
             caption="Style, Intensity and loudness. All in one view."
+            expandLabel="Expand screenshot"
           />
         </details>
       </div>
