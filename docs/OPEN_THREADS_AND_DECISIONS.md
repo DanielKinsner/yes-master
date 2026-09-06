@@ -7,6 +7,13 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **2026-09-05 — Listening follow-up implementation underway locally.** Warm VM
+> settings edits reproduced a 16.26 dB audio jump. Retaining applied same-source
+> attenuation corrects that regression; strict Clippy and the full ordinary Rust
+> suite pass. Native transition/stress and remaining fixture evidence are still
+> open. See the [checkpoint ledger](plans/2026-09-05-listening-follow-up.md#implementation-evidence).
+> Existing unrelated UI/capture work is preserved; no push or release authorized.
+
 > **Landing design is parked.** Discussion reminders are in
 > [LANDING_DESIGN_NOTES.md](LANDING_DESIGN_NOTES.md); they are not a task list.
 > The owner is switching focus to software work.

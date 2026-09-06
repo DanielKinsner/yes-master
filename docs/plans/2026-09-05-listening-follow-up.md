@@ -1,6 +1,17 @@
 # YES Master — listening follow-up implementation plan
 
-Prepared September 5, 2026. **Planning complete; implementation has not started under this plan.**
+Prepared September 5, 2026. **Implementation in progress; local checkpoints below.**
+
+## Implementation evidence
+
+### Checkpoint 1 — VM edit attenuation (September 5)
+
+- Start: `7a5d71c`, Windows, i9-13900K (24 cores), dev app opt-level 1 / dependencies 3. Focusrite USB Audio is present; no app was running at inspection. Device rate/buffer and native playback are not established by these offline tests.
+- Preserved pre-existing AdvancedPanel/fields/App.css/adaptive-strength and landing capture/assets/design edits. No private audio regenerated or staged; no push/release.
+- Baseline: 93 audio-controller tests and 842 frontend tests passed. Real `MasteringSource` output reproduced a **16.26 dB** warm-VM jump on an uncached 0.01 dB EQ edit (ignored local log `test-output/listening-vm-red.log`).
+- Cache misses now retain the last **applied same-source attenuation**, without inheriting a boost or an obsolete worker's result. VM OFF remains unity; source/cache changes and device recreation reset retention. Existing live coefficient crossfades handle the transition; export processing is untouched.
+- Regression now passes through pending and newly measured audio. Additional coverage includes 20 pending edits, stale cache insertions, invalid/boosted fallbacks; existing cold/off/A-B/source-generation tests remain. Strict Clippy all-targets passed. Full desktop Rust suite passed, including 450 library tests (2 ignored diagnostics) and all ordinary integration suites; no snapshot/tolerance changes.
+- Logs: `test-output/listening-vm-{red,green,clippy,rust}.log` (local/ignored). Native settings-edit/Focusrite listening, five-minute stress, fixture lane, and platform-specific evidence remain separate outstanding checks. This checkpoint corrects the demonstrated fallback, not a blanket performance or release pass.
 
 ## Start here
 

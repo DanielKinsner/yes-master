@@ -25,6 +25,7 @@ use std::collections::HashMap;
 
 use crate::decode::{clamp_waveform_target_pixels, decode_full, decode_to_peaks, DecodedPcm};
 use crate::sources::{LiveCoeffUpdate, MasteringSource, MeteredPcmSource};
+
 use crate::spectrum::{SpectrumAnalyzer, SpectrumRing};
 use rodio::cpal::traits::{DeviceTrait, HostTrait};
 
@@ -1063,6 +1064,8 @@ struct AudioThreadState {
     /// therefore the same struct) as `landing_gain_cache`; same lifecycle
     /// (cleared wherever the landing cache clears).
     vm_gain_cache: PreviewLandingCache,
+    /// Last applied same-source VM gain, independent of stale worker results.
+    live_vm_gain_lin: f32,
     /// Shared post-output-gain peak slot. `MasteringSource` writes via
     /// `fetch_max` per frame; the audio thread `swap`s to 0 each snapshot
     /// cycle to compute "peak since last tick." Bits are an f32 magnitude;
@@ -1142,6 +1145,7 @@ impl AudioThreadState {
             decoded_cache: None,
             landing_gain_cache: PreviewLandingCache::new(),
             vm_gain_cache: PreviewLandingCache::new(),
+            live_vm_gain_lin: 1.0,
             peak_linear: Arc::new(AtomicU32::new(0)),
             peak_left_linear: Arc::new(AtomicU32::new(0)),
             peak_right_linear: Arc::new(AtomicU32::new(0)),
@@ -1477,9 +1481,22 @@ fn apply_preview_volume_match_gain_cached(
     coeffs: &mut crate::dsp::ChainCoeffs,
     cache: &PreviewLandingCache,
     settings: &MasteringSettings,
+    remembered_gain: &mut f32,
 ) {
     if settings.volume_match {
-        coeffs.volume_match_gain_lin = cache.get(settings).unwrap_or(1.0);
+        // An edit must not remove established attenuation while its worker
+        // measures. Never carry a boost into unmeasured settings. The live
+        // source crossfades this coefficient update just like other edits.
+        coeffs.volume_match_gain_lin = cache.get(settings).unwrap_or_else(|| {
+            if remembered_gain.is_finite() && *remembered_gain > 0.0 {
+                remembered_gain.min(1.0)
+            } else {
+                1.0
+            }
+        });
+        *remembered_gain = coeffs.volume_match_gain_lin;
+    } else {
+        coeffs.volume_match_gain_lin = 1.0;
     }
 }
 
@@ -1606,7 +1623,12 @@ fn try_spawn_lufs_preview_worker(
 
 fn publish_preview_coeffs(s: &mut AudioThreadState, settings: &MasteringSettings, generation: u64) {
     let mut coeffs = crate::dsp::ChainCoeffs::from_settings(s.live_sample_rate, settings);
-    apply_preview_volume_match_gain_cached(&mut coeffs, &s.vm_gain_cache, settings);
+    apply_preview_volume_match_gain_cached(
+        &mut coeffs,
+        &s.vm_gain_cache,
+        settings,
+        &mut s.live_vm_gain_lin,
+    );
     let landing = update_chain_preview_landing_plan(
         &s.landing_gain_cache,
         settings,
@@ -2485,6 +2507,7 @@ fn handle_play(
         if let Some(s) = state.as_mut() {
             s.landing_gain_cache.clear();
             s.vm_gain_cache.clear();
+            s.live_vm_gain_lin = 1.0;
         }
     }
 
@@ -2652,6 +2675,7 @@ fn handle_play_master(
         if let Some(s) = state.as_mut() {
             s.landing_gain_cache.clear();
             s.vm_gain_cache.clear();
+            s.live_vm_gain_lin = 1.0;
         }
     }
 
@@ -2721,7 +2745,12 @@ fn handle_play_master(
     let landing_plan =
         play_master_preview_landing_plan(&s.landing_gain_cache, settings, preview_lufs_landing);
     chain.coeffs.export_landing_gain_lin = landing_plan.initial_gain;
-    apply_preview_volume_match_gain_cached(&mut chain.coeffs, &s.vm_gain_cache, settings);
+    apply_preview_volume_match_gain_cached(
+        &mut chain.coeffs,
+        &s.vm_gain_cache,
+        settings,
+        &mut s.live_vm_gain_lin,
+    );
     s.live_landing_gain_lin = chain.coeffs.export_landing_gain_lin;
     s.live_preview_lufs_landing = preview_lufs_landing;
     s.landing_pending = landing_plan.needs_measurement
@@ -3738,13 +3767,14 @@ mod tests {
 
     #[test]
     fn vm_cache_applies_measured_gain_only_when_enabled() {
+        let mut remembered = 1.0;
         let mut settings = settings_with_intensity(0.8);
         let mut cache = PreviewLandingCache::new();
         cache.insert(&settings, 0.4);
         for enabled in [true, false, true] {
             settings.volume_match = enabled;
             let mut coeffs = crate::dsp::ChainCoeffs::from_settings(48000, &settings);
-            apply_preview_volume_match_gain_cached(&mut coeffs, &cache, &settings);
+            apply_preview_volume_match_gain_cached(&mut coeffs, &cache, &settings, &mut remembered);
             assert_eq!(
                 coeffs.volume_match_gain_lin,
                 if enabled { 0.4 } else { 1.0 }
@@ -3962,11 +3992,12 @@ mod tests {
 
     #[test]
     fn cold_volume_match_lookup_defers_audio_work() {
+        let mut remembered = 1.0;
         let mut settings = settings_with_intensity(0.8);
         settings.volume_match = true;
         let cache = PreviewLandingCache::new();
         let mut coeffs = crate::dsp::ChainCoeffs::from_settings(48000, &settings);
-        apply_preview_volume_match_gain_cached(&mut coeffs, &cache, &settings);
+        apply_preview_volume_match_gain_cached(&mut coeffs, &cache, &settings, &mut remembered);
         assert_eq!(cache.len(), 0);
         assert_eq!(coeffs.volume_match_gain_lin, 1.0);
         assert!(preview_measurement_needed(
@@ -3975,6 +4006,107 @@ mod tests {
             &settings,
             false
         ));
+    }
+
+    #[test]
+    fn warm_vm_settings_edit_preserves_audible_attenuation() {
+        let mut remembered = 1.0;
+        let rate = 48_000;
+        let mut settings = settings_with_intensity(0.5);
+        settings.volume_match = true;
+        settings.input_gain_db = 12.0;
+        let samples: Vec<f32> = sine_signal(rate as usize * 2, rate, 2)
+            .into_iter()
+            .map(|s| s * 0.05)
+            .collect();
+        let gain = crate::engine::preview_volume_match_gain(&samples, rate, 2, &settings).unwrap();
+        assert!(gain < 0.5, "fixture needs significant attenuation: {gain}");
+        let mut cache = PreviewLandingCache::new();
+        cache.insert(&settings, gain);
+        let mut chain = MasteringChain::new(rate, 2, &settings);
+        apply_preview_volume_match_gain_cached(
+            &mut chain.coeffs,
+            &cache,
+            &settings,
+            &mut remembered,
+        );
+        let (tx, rx) = mpsc::channel();
+        let mut source = MasteringSource::new(
+            samples,
+            2,
+            rate,
+            chain,
+            rx,
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicI32::new(i32::MIN)),
+            Arc::new(AtomicI32::new(i32::MIN)),
+            Arc::new(SpectrumRing::new()),
+        );
+        let before: Vec<_> = source.by_ref().take(rate as usize).collect();
+        // An almost inaudible real EQ edit misses the measured-settings cache.
+        settings.eq_high_db = 0.01;
+        let mut coeffs = ChainCoeffs::from_settings(rate, &settings);
+        apply_preview_volume_match_gain_cached(&mut coeffs, &cache, &settings, &mut remembered);
+        tx.send(LiveCoeffUpdate {
+            generation: 1,
+            coeffs,
+        })
+        .unwrap();
+        let pending: Vec<_> = source.by_ref().take(rate as usize).collect();
+        let jump_db = 20.0 * (rms(&pending[8192..]) / rms(&before[8192..])).log10();
+        assert!(
+            jump_db.abs() < 0.1,
+            "uncached edit caused {jump_db:.2} dB audible jump"
+        );
+        let measured = crate::engine::preview_volume_match_gain(
+            &sine_signal(rate as usize * 2, rate, 2)
+                .into_iter()
+                .map(|s| s * 0.05)
+                .collect::<Vec<_>>(),
+            rate,
+            2,
+            &settings,
+        )
+        .unwrap();
+        cache.insert(&settings, measured);
+        let mut coeffs = ChainCoeffs::from_settings(rate, &settings);
+        apply_preview_volume_match_gain_cached(&mut coeffs, &cache, &settings, &mut remembered);
+        tx.send(LiveCoeffUpdate {
+            generation: 2,
+            coeffs,
+        })
+        .unwrap();
+        let settled: Vec<_> = source.by_ref().take(rate as usize).collect();
+        let settle_db = 20.0 * (rms(&settled[8192..]) / rms(&pending[8192..])).log10();
+        assert!(
+            settle_db.abs() < 0.1,
+            "settled VM changed by {settle_db:.2} dB"
+        );
+    }
+
+    #[test]
+    fn vm_pending_edits_ignore_stale_cache_results_and_never_retain_boosts() {
+        let mut settings = settings_with_intensity(0.5);
+        settings.volume_match = true;
+        let mut cache = PreviewLandingCache::new();
+        let mut remembered = 0.25;
+        let mut old_settings = settings.clone();
+        old_settings.intensity = 0.1;
+        cache.insert(&old_settings, 0.9); // obsolete worker; not applied live
+        for edit in 1..=20 {
+            settings.eq_high_db = edit as f32 * 0.1;
+            let mut coeffs = ChainCoeffs::from_settings(48_000, &settings);
+            apply_preview_volume_match_gain_cached(&mut coeffs, &cache, &settings, &mut remembered);
+            assert_eq!(coeffs.volume_match_gain_lin, 0.25);
+        }
+        for prior in [2.0, f32::NAN, f32::INFINITY, -0.5, 0.0, 1.0] {
+            remembered = prior;
+            let mut coeffs = ChainCoeffs::from_settings(48_000, &settings);
+            apply_preview_volume_match_gain_cached(&mut coeffs, &cache, &settings, &mut remembered);
+            assert_eq!(coeffs.volume_match_gain_lin, 1.0);
+        }
     }
 
     #[test]
