@@ -1,7 +1,8 @@
 # Listening follow-up: concrete output choices
 
-These are unresolved product choices, not implementation approval requests for
-the independent fixes. Existing output behavior remains until an answer is
+Output choices below remain unresolved; the loading choice is recorded at the
+end. These are not implementation approval requests for the independent fixes.
+Existing output behavior remains until an answer is
 recorded; that is not a selected default. Old owner outputs are never deleted.
 
 ## Album names and manifest
@@ -60,6 +61,9 @@ already sequential, while results are published at batch completion. Options are
 to publish each completed track/profile earlier while protecting audition, or
 keep a clear up-front preparation stage with real per-track progress. Neither
 removes later Preview LUFS costs. Measure time to first usable track, total batch
-time and concurrent playback impact before selecting either. Automatic Preview
+time and concurrent playback impact during implementation. **Owner selected
+incremental readiness in the September 5 follow-up interview:** make each ready
+track usable, show progress for the rest, and give playback priority. Concurrent
+audition responsiveness still needs verification. Automatic Preview
 LUFS on import remains dependent on resource/cancellation policy; do not queue a
 whole-track render for every imported file by default.

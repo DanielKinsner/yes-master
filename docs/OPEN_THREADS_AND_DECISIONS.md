@@ -7,6 +7,15 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **2026-09-05 — Loading workflow settled in owner follow-up interview.** Make
+> each imported track usable as soon as its analysis/profile is ready, show
+> progress for remaining tracks, and prioritize playback over background work.
+> The owner accepted this recommendation. Implementation must verify concurrent
+> analysis keeps audition responsive and measure first-ready/batch timing;
+> this decision is not evidence that the behavior is already implemented.
+> Later settings changes can still require Preview LUFS measurement. Automatic
+> selected-track Preview LUFS on import remains a separate pending choice.
+
 > **2026-09-05 — Listening follow-up implementation underway locally.** Warm VM
 > settings edits reproduced a 16.26 dB audio jump. Retaining applied same-source
 > attenuation corrects that regression; strict Clippy and the full ordinary Rust

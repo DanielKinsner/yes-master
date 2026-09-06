@@ -312,9 +312,9 @@ The choice is **when each completed track becomes usable and how remaining work 
 | Make completed tracks usable sooner, protect playback while the rest prepare | Earlier useful work | Requires incremental result/profile publication, truthful per-track progress, correct cancellation/failure handling, and proof that background work does not impair audition. |
 | Complete the batch before opening the editing experience | Clear preparation stage and predictable entry | A potentially long up-front wait; it does not remove later Preview LUFS costs after settings edits. |
 
-**Recommendation for discussion:** Prefer earlier usable tracks if profiling demonstrates responsive playback with remaining work. Otherwise present an explicit preparation state with real progress. Do not blur/block the entire app by default simply because the owner mentioned that possibility.
+**Owner decision (2026-09-05 follow-up interview):** Make each completed track usable immediately after analysis/profile readiness, show progress for the remaining tracks, and prioritize playback over background work. The owner accepted this recommendation. Verify concurrent analysis keeps audition responsive; implementation and this evidence remain pending.
 
-The owner explicitly requested a discussion **before changing this experience**. Bring measured time-to-first-usable-track, total batch time, and playback impact to that discussion. Preserve per-track backend profile readiness, not just frontend analysis text, if incremental results are selected.
+The requested discussion has settled this workflow. Measure time-to-first-usable-track, total batch time, and playback impact during implementation. Preserve per-track backend profile readiness, not just frontend analysis text. Later settings changes can still incur Preview LUFS waits.
 
 The related idea of starting Preview LUFS automatically on import also needs this resource/lifecycle decision. Scope any recommendation to the currently relevant track/mode with correct cancellation; do not automatically launch whole-track measurements for every imported file.
 
@@ -413,7 +413,7 @@ These are genuine product choices, not missing answers from the listening form. 
 
 | Decision | Recommendation to bring to the owner | Evidence needed first |
 | --- | --- | --- |
-| When imported tracks become usable | Earlier usable tracks if remaining work can protect audition; otherwise an explicit preparation stage | 2A: time to first usable track, total batch time, and playback/resource impact. |
+| When imported tracks become usable — settled | Owner selected incremental readiness, progress for remaining tracks, and playback priority | Implementation must establish time to first usable track, total batch time, and playback/resource impact. |
 | Automatic Preview LUFS on import | Only the relevant selected track/mode, with cancellation and bounded work | Same profiling and lifecycle evidence; explain the cost and pending behavior. |
 | Album output naming/JSON presentation | Settle the naming convention; choose **metadata/ subfolder** or **remove JSON/use in-app receipt**. No default to keeping JSON. | Concrete examples of the two outputs, portable-record tradeoff, and report/persistence/cleanup dependencies. |
 | First codec/conversion scope | WAV + MP3, with an explicit Original/source conversion path | Short specification including Track/Album/Standard scope, actual encoder feasibility, receipt semantics, and product-doc consequences. |

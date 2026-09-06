@@ -13,7 +13,8 @@ below concern real product choices, not an unperformed listening session.
 
 Concrete September 5 examples and the proposed WAV + MP3 / Original-conversion
 scope are now in [the output options](plans/2026-09-05-export-options.md).
-Questions were presented during implementation; no answer has been inferred.
+Loading readiness was answered in the follow-up interview and is recorded below;
+the remaining choices are pending. No unanswered choice has been inferred.
 The objective VM, resource and UI fixes proceed independently.
 
 ## Why this file exists
@@ -52,7 +53,7 @@ already authorized do not belong here.
 
 | Date | Unit | Question | Conservative default in place | What changes when answered |
 |---|---|---|---|---|
-| 2026-09-05 | Listening follow-up 2A/2B | **Import readiness/loading experience:** publish each completed track for use while remaining analysis runs, or complete preparation before opening editing? The owner explicitly requested discussion before changes. | Keep the current experience while measuring time to first usable track, total batch time, and playback contention. Per-batch analysis is already sequential; results are published together. | The measured tradeoffs determine incremental readiness/profile publication or an explicit preparation experience. |
+| ~~2026-09-05~~ | ~~Listening follow-up 2A/2B~~ | ~~Import readiness/loading experience~~ **ANSWERED:** make each completed track usable, show progress for remaining tracks, and prioritize playback over background analysis. See the loading decision in `docs/OPEN_THREADS_AND_DECISIONS.md`. | Implementation and concurrent-audition verification remain pending; the product choice is settled. | Publish per-track results and backend profiles incrementally; measure first-ready/batch timing and playback impact. |
 | 2026-09-05 | Listening follow-up 2 | **Start Preview LUFS automatically on import when the selected mode already requests it?** | Preserve current behavior; assess selected-track resource cost, cancellation, and source/settings lifetime first. Do not start whole-track work for every imported file by assumption. | A bounded selected-track premeasurement lifecycle can be specified with truthful pending state. |
 | 2026-09-05 | Listening follow-up 5C | **Album manifest — two choices only:** write it in `metadata/`, or remove it and rely on the in-app Album receipt. The owner explicitly rejects defaulting to keeping it. The exact master filename suffix is a separate naming choice. | **Decision pending; neither option selected.** No output files are changed during planning. Current behavior is not a chosen keep default. Explain the portable-record/persistence tradeoff and present these two options. | `metadata/`: update paths and cleanup. Removal: stop writing JSON and remove mandatory-manifest assumptions from reports/UI/contracts while retaining a usable in-app receipt and legacy readability. Neither choice deletes existing owner exports. |
 | 2026-09-05 | Listening follow-up 6 | **First extra-format scope:** MP3 is requested, including conversion without mastering; settle Track/Album/Standard scope, quality/defaults, output-source selection, and corresponding product-doc updates. | Existing WAV delivery stays truthful; no codec is advertised or implemented by the documentation update. Prepare the bounded specification from the supplied request rather than asking whether the owner wants MP3 again. | Deliver the agreed MP3/source-conversion increment and update product/behavior/help/public descriptions to match verified functionality. |
