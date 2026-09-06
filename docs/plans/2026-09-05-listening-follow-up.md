@@ -107,6 +107,47 @@ Prepared September 5, 2026. **Implementation in progress; local checkpoints belo
   Native Album export interaction and VM-off saved-file listening remain targeted
   follow-up evidence; the already-passed original owner session is retained.
 
+### Checkpoint 5 — combined tree and native saved-file evidence
+
+- Combined working tree (including the preserved independent UI edits): 846
+  frontend tests and all 31 headless checks passed. Evidence:
+  `test-output/headless/2026-09-06T02-33-13-657Z`. Current deterministic captures
+  were refreshed with the owner's existing capture script; pre-refresh bytes
+  remain in ignored `test-output/listening-original-captures/`. These combined
+  generated assets remain uncommitted with the independent work.
+- The rebuilt native app imported the existing `TEST-10min-192khz.wav`; READY
+  was observed at the first check 51 seconds later (not an exact completion time).
+  Over 313 seconds of native audition the playhead reached 5:11 and remained
+  playing. Coverage: 20 edits across Intensity/High/Density with VM on and Preview
+  LUFS off; 6 Intensity edits with Preview LUFS enabled; 6 High edits with both
+  level options off; 6 A/B switches at 1.5-second cadence plus 8 at 150 ms.
+  Sampled meters stayed finite and full-track Preview LUFS completed. No playback
+  error was observed. Native process working set was about 961–962 MiB after
+  settling; its lifetime peak was 2721 MiB, including import/measurement work.
+  This is transport/state evidence, not captured output audio or callback timing.
+- Actual native Album export of the four imported fixtures completed under
+  ignored `test-output/listening-native-album-2026-09-05/`, preserving the current
+  album title, Cinematic arc, flow amount and track settings. Its receipt opened
+  automatically and showed delivered LUFS, true peak, target and ceiling for all
+  four tracks. Native dismissal and reopen were verified. All source hashes were
+  unchanged; existing owner outputs were not modified.
+- Independent FFprobe/FFmpeg validation: all five WAVs (four tracks + continuous)
+  decode as 48 kHz / 24-bit / stereo. Track durations are 120, 60, 180 and 600 s;
+  continuous duration 961.6 s includes the two requested 0.8 s gaps. Per-track
+  FFmpeg integrated LUFS / true peak: -15.1/-6.4, -12.6/-4.5, -11.2/-1.7,
+  -14.2/-6.0. These match the receipt at FFmpeg's printed 0.1-unit precision.
+  No continuous-file loudness claim was invented for a receipt without that field.
+- Logs and artifacts: `listening-native-stress.json`, `listening-native-album-ui.txt`,
+  `listening-native-album-independent.json`, `listening-native-source-hashes-*.json`.
+  No audio or private outputs entered git. This closes the native Album completion
+  interaction/measurement check above; musical Album listening is still separate.
+- Remaining: targeted ears-on VM transition/dropout and VM-off Track saved-file
+  comparison; the intermittent loop-start sequence (including native region
+  drawing) and wider Width/Loud listening matrix; exact output buffer/deadline
+  instrumentation and further full-chain throughput work. Loading workflow,
+  automatic import measurement, manifest/suffix and MP3 scope remain unresolved
+  product choices in the owner queue. No release/push/deployment was activated.
+
 ## Start here
 
 **First: reproduce and correct the brief Volume Match level jump. Then address high-rate/long-file responsiveness.** Follow with targeted Width/Loud checks, loop behavior, and the reported UI/export issues. Keep the import/loading product discussion and additional codecs separate from those corrections.

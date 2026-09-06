@@ -66,12 +66,15 @@ cover the supplied 384/705.6/768 kHz stereo and 48 kHz mono fixtures.
 
 The slow fixture lane and UI integration results are recorded at their completed
 checkpoints in the follow-up plan. Callback deadlines, underruns, peak process
-memory and five-minute stressed audition remain unproven. Checkpoint 3 now bounds
+memory/callback deadlines remain incompletely characterized. Checkpoint 5 records
+a five-minute native transport/state stress check, without a recorded audio feed
+or an ears-on dropout verdict. Checkpoint 3 now bounds
 preview work across source changes with a shared permit and cooperative
 cancellation. This does not cover independent import/export worker pools. No
 loading-workflow change or automatic import measurement has
 been made on the strength of these offline timings.
 
-Width/Loud mechanical tests, saved-file comparison with VM off, and Album native
-receipt verification remain distinct from UI mocks and the original owner's
-successful normal A/B/export observations. Preset taste remains unchanged.
+Width/Loud mechanical tests and saved-file comparison with VM off remain distinct
+from UI mocks and the original owner's successful normal A/B/export observations.
+Checkpoint 5 adds an actual native Album export/receipt with independent FFmpeg
+measurement and source-hash preservation. Preset taste remains unchanged.

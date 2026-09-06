@@ -21,7 +21,15 @@ close rather than letting them rot in scattered docs.
 > and [concrete unresolved output options](plans/2026-09-05-export-options.md).
 > A further local checkpoint bounds preview workers across source/device changes
 > and cancels obsolete renders between processing blocks; full fixture and bridge
-> checks pass. Callback/stress and targeted new listening remain open.
+> checks pass. Callback deadlines, audible dropout and targeted new listening
+> remain open.
+
+> **Native/UI follow-through:** Width pending display, inactive Standard region,
+> mono Insight and automatically opened Album receipt are committed locally.
+> Combined frontend 846 tests and 31 headless checks pass. Five-minute native
+> high-rate transport/edit/A-B checks and an actual four-track Album export with
+> independent FFmpeg receipt validation are recorded in the checkpoint ledger.
+> This adds mechanical evidence, not owner musical signoff or a dropout verdict.
 
 > **Landing design is parked.** Discussion reminders are in
 > [LANDING_DESIGN_NOTES.md](LANDING_DESIGN_NOTES.md); they are not a task list.
