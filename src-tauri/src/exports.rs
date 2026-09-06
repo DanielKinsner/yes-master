@@ -231,7 +231,7 @@ pub async fn open_output(output_path: String) -> CommandResult<()> {
 }
 
 /// Owner finding 2026-07-08: Track Master pre-filled the SAME
-/// `<stem>__master.wav` suggestion on every export, so a second export of the
+/// `<stem>_mastered.wav` suggestion on every export, so a second export of the
 /// same track offered an overwrite and the only guard was the OS replace
 /// prompt. "Exports never overwrite prior renders by default" is the app's
 /// promise, not the OS's — so the suggestion itself must dodge collisions:
@@ -266,28 +266,28 @@ mod tests {
     fn export_name_suggestion_never_offers_an_existing_file() {
         let dir = tempfile::tempdir().expect("tempdir");
         let d = dir.path().to_string_lossy().to_string();
-        let name = "song__master.wav".to_string();
+        let name = "song_mastered.wav".to_string();
 
         // Empty dir (and a nonexistent dir): base name is free.
         assert_eq!(
             suggest_export_filename(d.clone(), name.clone()),
-            "song__master.wav"
+            "song_mastered.wav"
         );
         assert_eq!(
             suggest_export_filename(format!("{d}/nope"), name.clone()),
-            "song__master.wav"
+            "song_mastered.wav"
         );
 
         // First render exists -> suggest -2; then -3; extension preserved.
-        std::fs::write(dir.path().join("song__master.wav"), b"x").unwrap();
+        std::fs::write(dir.path().join("song_mastered.wav"), b"x").unwrap();
         assert_eq!(
             suggest_export_filename(d.clone(), name.clone()),
-            "song__master-2.wav"
+            "song_mastered-2.wav"
         );
-        std::fs::write(dir.path().join("song__master-2.wav"), b"x").unwrap();
+        std::fs::write(dir.path().join("song_mastered-2.wav"), b"x").unwrap();
         assert_eq!(
             suggest_export_filename(d.clone(), name),
-            "song__master-3.wav"
+            "song_mastered-3.wav"
         );
 
         // Extensionless names still get suffixed rather than clobbered.

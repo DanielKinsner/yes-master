@@ -102,9 +102,14 @@ export function AlbumExportReceipt({ report, expanded = false }: { report: Album
         {trackCountLabel(report.tracks.length)} · rendered {renderedRate} /{" "}
         {formatBitDepth(report.bit_depth)} /{" "}
         {formatChannelCount(report.rendered_channels)} · requested {requestedRate}
-        {requestedMismatch && `, got ${renderedRate}`} · manifest:{" "}
-        {report.manifest_path}
+        {requestedMismatch && `, got ${renderedRate}`}
       </span>
+      {report.manifest_path && (
+        <span className="album-export-receipt-meta">
+          Export details: <code>{report.manifest_path}</code>. These supporting
+          files are not needed to play or share your audio.
+        </span>
+      )}
       {upsampledRates.length > 0 && (
         <span className="album-export-receipt-advisory">
           Upsampled source {upsampledRates.map(formatSampleRate).join(", ")}

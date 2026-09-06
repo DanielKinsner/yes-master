@@ -34,7 +34,7 @@ close rather than letting them rot in scattered docs.
 > should not receive an unexplained file. Keep audio files separate and explain
 > the supporting export details in the in-app receipt using plain language:
 > these files are not needed to play or share the audio. Update paths, links and
-> cleanup together; preserve existing exports. Implementation remains pending.
+> cleanup together; preserve existing exports. Implemented in local checkpoint 6.
 > **Filename choice also settled:** Track uses `Song_mastered.wav`; Album uses
 > `01-Song_mastered.wav`, with one underscore. Album numbers follow the final
 > left-rail arrangement at export, not worker completion order. Code inspection
@@ -111,9 +111,9 @@ close rather than letting them rot in scattered docs.
 > Width/Loud mechanical checks, loop/UI/export findings, and narrow coverage gaps.
 > **Do not treat the listening session as pending owner, repeat the whole guide,
 > or request details already supplied in prose.** New fixes need targeted evidence,
-> not automatic approval from this earlier build. Analysis/loading UX must be
-> discussed with the owner before changes; other open product choices are in
-> the plan and owner input queue. This documentation integration does not retune
+> not automatic approval from this earlier build. The required analysis/loading discussion
+> and export choices were subsequently settled in the interview recorded above;
+> implementation and verification continue under those decisions. This documentation integration does not retune
 > presets, implement application fixes, or activate a release.
 
 > **2026-09-05 — Listening-plan additions and performance exploration.** The
@@ -124,9 +124,8 @@ close rather than letting them rot in scattered docs.
 > and experiments with better DSP/measurement implementations for performance,
 > with measured results and preserved correctness/sound contracts. Intentional
 > sonic tradeoffs remain owner decisions; this is not a preset-retuning request.
-> The manifest question now has exactly two options: `metadata/` or remove JSON
-> and use the in-app receipt. No automatic keep default; answer pending in the
-> owner input queue. These additions update the plan, not application code.
+> The manifest question offered exactly two options. The subsequent interview
+> selected `metadata/` with a plain-language receipt explanation (recorded above). These additions update the plan, not application code.
 
 > **2026-09-05 — Keep the live layout; remove only the Sign-off section.**
 > The owner preferred the existing live page over the consolidation experiment.

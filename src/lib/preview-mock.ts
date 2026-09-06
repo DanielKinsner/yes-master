@@ -648,7 +648,7 @@ export async function mockInvoke<T>(
         job_id: nextPreviewId("mock-album-render"),
         status: { status: "done" },
         album_wav_path: "/preview/album.wav",
-        manifest_path: "/preview/manifest.json",
+        manifest_path: "/preview/metadata/manifest.json",
         requested_sample_rate: null,
         rendered_sample_rate: renderedSampleRate,
         source_sample_rates: joined.map((t) => t.source_sample_rate),

@@ -3149,7 +3149,7 @@ describe("useTrackMaster integration dispatches", () => {
     });
 
     expect(mocks.save).toHaveBeenCalledWith({
-      defaultPath: "export-1__master.wav",
+      defaultPath: "export-1_mastered.wav",
       filters: [{ name: "WAV audio", extensions: ["wav"] }],
     });
     expect(mocks.api.renderTrackMaster).toHaveBeenCalledWith(
@@ -3222,7 +3222,7 @@ describe("useTrackMaster integration dispatches", () => {
     mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
     mocks.save.mockResolvedValue(null); // user cancels — we only care about the suggestion
     localStorage.setItem("yes-master:last-track-export-dir", "/Users/daniel/Desktop");
-    mocks.api.suggestExportFilename.mockResolvedValue("export-1__master-2.wav");
+    mocks.api.suggestExportFilename.mockResolvedValue("export-1_mastered-2.wav");
     const harness = await renderHookHarness();
 
     await act(async () => {
@@ -3237,10 +3237,10 @@ describe("useTrackMaster integration dispatches", () => {
 
     expect(mocks.api.suggestExportFilename).toHaveBeenCalledWith(
       "/Users/daniel/Desktop",
-      "export-1__master.wav",
+      "export-1_mastered.wav",
     );
     expect(mocks.save).toHaveBeenCalledWith({
-      defaultPath: "/Users/daniel/Desktop/export-1__master-2.wav",
+      defaultPath: "/Users/daniel/Desktop/export-1_mastered-2.wav",
       filters: [{ name: "WAV audio", extensions: ["wav"] }],
     });
 
@@ -3251,7 +3251,7 @@ describe("useTrackMaster integration dispatches", () => {
       await harness.current().exportMaster();
     });
     expect(mocks.save).toHaveBeenCalledWith({
-      defaultPath: "/Users/daniel/Desktop/export-1__master.wav",
+      defaultPath: "/Users/daniel/Desktop/export-1_mastered.wav",
       filters: [{ name: "WAV audio", extensions: ["wav"] }],
     });
 
@@ -3477,7 +3477,7 @@ describe("useTrackMaster integration dispatches", () => {
     });
 
     expect(mocks.save).toHaveBeenCalledWith({
-      defaultPath: "/Users/daniel/Desktop/export-repeat__master.wav",
+      defaultPath: "/Users/daniel/Desktop/export-repeat_mastered.wav",
       filters: [{ name: "WAV audio", extensions: ["wav"] }],
     });
     await act(async () => {
@@ -3506,13 +3506,13 @@ describe("useTrackMaster integration dispatches", () => {
         {
           track_id: first.id,
           position: 0,
-          output_path: `${outputDir}/album-1__master.wav`,
+          output_path: `${outputDir}/album-1_mastered.wav`,
           measured_lufs: -14,
         },
         {
           track_id: second.id,
           position: 1,
-          output_path: `${outputDir}/album-2__master.wav`,
+          output_path: `${outputDir}/album-2_mastered.wav`,
           measured_lufs: -14,
         },
       ],

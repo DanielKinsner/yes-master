@@ -128,10 +128,15 @@ and sources above stereo fold down to stereo delivery. Mixed-rate and mixed
 channel-count albums therefore render one continuous file instead of failing.
 
 Album exports land in an `<AlbumTitle>/` subfolder of the chosen directory
-(Q25 option ii): the per-track WAVs, the continuous album, and `manifest.json`
+(Q25 option ii): the per-track WAVs, the continuous album, and `metadata/manifest.json`
 stay together and never mix with a prior render. The title is sanitized for
 filesystem safety and an empty title falls back to `Album`; an existing
 subfolder is never overwritten (a fresh ` (2)` suffix is used instead).
+
+New Track export suggestions use `Song_mastered.wav`; Album per-track files use
+`01-Song_mastered.wav`, numbered in the final left-rail order. Existing outputs
+are not renamed. The Album receipt explains that the metadata folder contains
+supporting export details, which are not needed to play or share the audio.
 
 Album-layer sound shaping (owner decisions 2026-07-03 D7/D9):
 

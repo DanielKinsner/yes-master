@@ -76,7 +76,7 @@ describe("AlbumExportReceipt", () => {
       job_id: "album-render-job",
       status: { status: "done" },
       album_wav_path: "C:/Masters/album_continuous.wav",
-      manifest_path: "C:/Masters/manifest.json",
+      manifest_path: "C:/Masters/metadata/manifest.json",
       requested_sample_rate: null,
       rendered_sample_rate: 48_000,
       source_sample_rates: [44_100, 48_000],
@@ -103,6 +103,8 @@ describe("AlbumExportReceipt", () => {
     const receipt = container.querySelector(".album-export-receipt");
     expect(receipt?.textContent).toContain("rendered 48 kHz / 24-bit / stereo");
     expect(receipt?.textContent).toContain("requested Auto");
+    expect(receipt?.textContent).toContain("C:/Masters/metadata/manifest.json");
+    expect(receipt?.textContent).toContain("not needed to play or share your audio");
     expect(receipt?.textContent).toContain("Upsampled source 44.1 kHz");
     expect(receipt?.textContent).toContain("Upmixed source mono");
     expect(receipt?.textContent).toContain(

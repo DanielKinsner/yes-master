@@ -11,12 +11,12 @@ claims of shipped functionality. Old owner outputs are never deleted.
 left-rail arrangement at export. Current code preserves that ordering from rail
 tracks through analysis inputs, plan positions and output names. Change the
 default suffix; preserve existing exports, the collision-safe album folder and
-continuous audio. Implementation remains pending.
+continuous audio. Naming is implemented in the local export checkpoint recorded in the follow-up plan.
 
 **Owner decision:** use `Album/metadata/manifest.json`. The owner accepted this
 recommendation but wants users to understand the extra file. Explain in the
 in-app receipt that the metadata folder contains supporting export details and
-is not needed to play or share the audio. Implementation remains pending.
+is not needed to play or share the audio. The metadata path and receipt explanation are implemented in that local checkpoint.
 
 Options considered in the interview:
 

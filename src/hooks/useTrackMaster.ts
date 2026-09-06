@@ -169,7 +169,7 @@ function suggestedMasterFilename(track: ImportedTrack): string {
   const safeBase =
     withoutExtension.replace(/[^a-z0-9-_]+/gi, "_").replace(/^_+|_+$/g, "") ||
     "master";
-  return `${safeBase}__master.wav`;
+  return `${safeBase}_mastered.wav`;
 }
 
 function ensureWavExtension(path: string): string {

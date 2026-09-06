@@ -745,7 +745,7 @@ pub async fn render_track_master(
 //
 // Consumes an AlbumPlan + per-track settings + per-track source paths and
 // produces:
-//   1. NN per-track WAVs named NN-<sanitized SOURCE-FILE stem>.wav (no
+//   1. NN per-track WAVs named NN-<sanitized SOURCE-FILE stem>_mastered.wav (no
 //      per-track title field exists in the album model; the album title
 //      reaches only manifest.json — owner smoke F13, naming scheme decision
 //      tracked in docs/OPEN_THREADS_AND_DECISIONS.md Q25)

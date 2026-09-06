@@ -4,7 +4,7 @@
 //! sine) into a temp directory, runs `render_album_plan_impl` with a
 //! Cinematic arc, and verifies:
 //!
-//!   * The expected per-track files exist with the NN-<title>.wav naming.
+//!   * The expected per-track files exist with the NN-<title>_mastered.wav naming.
 //!   * A continuous album.wav exists.
 //!   * manifest.json exists and round-trips back to a structurally-correct
 //!     AlbumPlan via serde.
@@ -118,6 +118,18 @@ fn album_render_single_track_edge() {
     let out_dir = tmp.path().join("solo_out");
     let report = render_album_plan_impl(&request, &out_dir, None).expect("render");
     assert_eq!(report.tracks.len(), 1);
+    let album_dir = std::path::Path::new(&report.album_wav_path)
+        .parent()
+        .unwrap();
+    assert_eq!(
+        PathBuf::from(&report.tracks[0].output_path),
+        album_dir.join("01-solo_mastered.wav")
+    );
+    assert_eq!(
+        PathBuf::from(&report.manifest_path),
+        album_dir.join("metadata").join("manifest.json")
+    );
+    assert!(!album_dir.join("manifest.json").exists());
     let delivered = serde_json::to_value(&report.tracks[0]).unwrap();
     assert!(
         delivered["target_lufs"].is_number(),
@@ -140,6 +152,30 @@ fn album_render_single_track_edge() {
         "single-track album should be ≥ 1 s; got {} frames",
         duration_frames
     );
+
+    // Cancel after some render work and ensure the nested metadata directory
+    // does not keep a failed album folder alive. The previous export survives.
+    let cancel = std::sync::atomic::AtomicBool::new(false);
+    let on_progress = |fraction: f32| {
+        if fraction > 0.0 && fraction < 1.0 {
+            cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+    };
+    let cancelled_dir = tmp.path().join("cancelled_out");
+    let cancelled = yes_master_lib::album_render::render_album_plan_impl_with_cancel(
+        &request,
+        &cancelled_dir,
+        Some(&on_progress),
+        Some(&cancel),
+        None,
+    )
+    .expect("cancelled render");
+    assert!(matches!(
+        cancelled.status,
+        yes_master_lib::types::JobStatus::Cancelled
+    ));
+    assert_eq!(std::fs::read_dir(cancelled_dir).unwrap().count(), 0);
+    assert!(std::path::Path::new(&report.manifest_path).exists());
 }
 
 #[test]
@@ -564,15 +600,18 @@ fn album_render_three_tracks_smoke() {
     ];
     let request = AlbumPlanRenderRequest {
         plan: plan.clone(),
-        tracks: inputs,
+        // Source lookup order must not replace the intended album sequence.
+        tracks: inputs.into_iter().rev().collect(),
     };
 
     let out_dir = tmp.path().join("out");
     let report = render_album_plan_impl(&request, &out_dir, None).expect("render");
 
-    // Per-track WAVs with NN-<stem>.wav.
+    // Per-track WAVs with NN-<stem>_mastered.wav.
     assert_eq!(report.tracks.len(), 3);
-    for record in &report.tracks {
+    for (index, record) in report.tracks.iter().enumerate() {
+        assert_eq!(record.track_id, plan.tracks[index].track_id);
+        assert_eq!(record.position, (index + 1) as u32);
         assert!(
             std::path::Path::new(&record.output_path).exists(),
             "missing per-track output: {}",
@@ -588,6 +627,7 @@ fn album_render_three_tracks_smoke() {
             "per-track filename should be prefixed NN-: {}",
             fname
         );
+        assert!(fname.ends_with("_mastered.wav"), "{fname}");
     }
 
     // Album WAV exists and is at least 6 s (3 × 2 s) plus any gap silence.

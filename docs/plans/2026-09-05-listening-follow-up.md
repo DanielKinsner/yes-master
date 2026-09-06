@@ -145,8 +145,48 @@ Prepared September 5, 2026. **Implementation in progress; local checkpoints belo
   comparison; the intermittent loop-start sequence (including native region
   drawing) and wider Width/Loud listening matrix; exact output buffer/deadline
   instrumentation and further full-chain throughput work. Loading workflow,
-  automatic import measurement, manifest/suffix and MP3 scope remain unresolved
-  product choices in the owner queue. No release/push/deployment was activated.
+  automatic import measurement, manifest/suffix and MP3 scope were subsequently
+  settled in the follow-up interview; see the decisions table below. No release/push/deployment was activated.
+
+### Checkpoint 6 — owner decisions and export presentation
+
+- Follow-up interview settled incremental import readiness, selected-track automatic
+  Preview LUFS when already enabled, Album metadata presentation, filenames and
+  MP3 scope/quality. The decision table and output specification contain the
+  accepted answers. MP3 is normal mastering export with current settings, not a
+  converter or a 0% default. Track Standard/Advanced first, then Album after agent
+  verification without further approval; 320 default plus 256/192/128 kbps, WAV
+  remains the default format. Loading/measurement and MP3 implementation remain.
+- Implemented Track default `Song_mastered.wav` and Album `01-Song_mastered.wav`.
+  Album positions follow plan/left-rail order, including when source lookup inputs
+  arrive in another order. The actual manifest path is now
+  `<AlbumTitle>/metadata/manifest.json`; receipt copy explains supporting export
+  details are not needed to play or share audio. Existing paths remain readable.
+- Nested folder guards clean metadata before the album directory on failure or
+  cancellation. Manifest creation uses exclusive creation to avoid truncating a
+  competing writer's file. Existing collision/source protections remain intact.
+- Regression failed against the previous filename, then passed. Nineteen focused
+  Album tests cover actual rendered paths/manifest round-trip, cancellation and
+  failure cleanup, repeated-export byte preservation, delivered-file measurements,
+  continuous/per-track PCM parity and rates/channels. The focused frontend set
+  passed 109 tests, including Track save suggestions and receipt explanation.
+- Full Rust suite passed (451 library tests, 4 ignored diagnostics, all integration
+  suites), with `AMS_RUN_REAL_FIXTURE=1` and the existing `TEST-3min-192khz.wav`
+  in the documented fixture folder. All four real-fixture contracts ran; strict
+  Clippy/all-targets and formatting passed. No DSP or measurement code changed.
+- Isolated frontend: 845 tests and 31 headless scenario/viewport checks passed.
+  Evidence: `test-output/listening-export-check/test-output/headless/2026-09-06T03-48-33-912Z`.
+  Minimum-size Album receipt capture inspected; explanation fits, with the existing
+  contained scrolling. Captures were regenerated in that isolated checkout; the
+  unchanged studio-artwork manifest section was carried forward because the
+  baseline capture script omits it. Unrelated owner capture-script edits stay out
+  of this commit. Combined frontend tests passed 846 and all 31 browser checks
+  passed at `test-output/headless/2026-09-06T03-52-12-655Z`.
+- Logs are under ignored `test-output/listening-export-*`. This is actual Rust
+  filesystem/render evidence plus synthetic browser UI evidence; the newly named
+  export was not exercised through a rebuilt native dialog or installed app.
+  Bridge types/commands are unchanged; phones have no Album export surface.
+  No private fixture regeneration, source edits, push, deployment or release.
 
 ## Start here
 
@@ -387,7 +427,7 @@ Current implementation deliberately writes **`NN-<source-stem>.wav`** inside a c
 
 **Owner filename decision (follow-up interview):** Track `Song_mastered.wav`; Album `01-Song_mastered.wav`, with one underscore. Number Album files in final left-rail order at export. Code inspection confirms this ordering already flows through the track array, plan inputs, one-based positions and filenames. Implement the new default suffix with collision/source protection; do not rename existing exports.
 
-**Manifest owner decision (follow-up interview):** write the manifest in a **`metadata/` subfolder**. The owner accepted the recommendation, with a concern about users receiving a file they do not understand. Explain supporting export details in the in-app receipt, including that they are not needed to play or share the audio. The alternative of removing JSON and persisting only an in-app receipt was not selected. Implementation remains pending; existing owner exports are untouched.
+**Manifest owner decision (follow-up interview):** write the manifest in a **`metadata/` subfolder**. The owner accepted the recommendation, with a concern about users receiving a file they do not understand. Explain supporting export details in the in-app receipt, including that they are not needed to play or share the audio. The alternative of removing JSON and persisting only an in-app receipt was not selected. Implemented in checkpoint 6; existing owner exports are untouched.
 
 **Acceptance after a choice:** For `metadata/`, update the actual returned path, folder creation, manifest references, cleanup, and receipt links. For removal, stop emitting new JSON and remove the assumption of a mandatory manifest path throughout report types, completion logic, UI, tests, and affected bridges; keep the in-app report usable and make its persistence/reopen behavior explicit. Neither option deletes old owner outputs. In both cases, continuous-file assembly, cancellation/failure cleanup, and collision-safe non-overwrite behavior remain correct; legacy receipts/projects stay readable. Keep this independent of a DSP or codec change.
 

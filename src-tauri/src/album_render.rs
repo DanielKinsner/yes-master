@@ -13,6 +13,7 @@ use crate::wav_writer::{
     finalize_never_overwrite, unique_tmp_path, wav_spec, write_samples_into_writer, write_wav,
 };
 use serde::Serialize;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -628,6 +629,11 @@ pub fn render_album_plan_impl_with_cancel(
     // non-empty subfolder is kept.
     let _subdir_cleanup = EmptySubdirCleanup(album_out_dir.clone());
     let out_dir: &Path = &album_out_dir;
+    // Keep supporting export details separate from playable audio. Declare this
+    // guard after the album guard so it drops first on failure/cancellation.
+    let metadata_dir = out_dir.join("metadata");
+    std::fs::create_dir(&metadata_dir).map_err(|e| CommandError::Io(e.to_string()))?;
+    let _metadata_cleanup = EmptySubdirCleanup(metadata_dir.clone());
 
     let total_tracks = request.plan.tracks.len();
     if let Some(cb) = on_progress {
@@ -647,7 +653,7 @@ pub fn render_album_plan_impl_with_cancel(
 
     // Two passes:
     //   Pass 1 - decode + render each track into samples in memory, write
-    //   the per-track WAV named NN-<source-file-stem>.wav into the album's
+    //   the per-track WAV named NN-<source-file-stem>_mastered.wav into the album's
     //   <AlbumTitle>/ subfolder (Q25 option ii, decided 2026-07-07: the album
     //   title names the FOLDER, not the per-track filenames), measure
     //   post-render
@@ -851,14 +857,14 @@ pub fn render_album_plan_impl_with_cancel(
             )?;
             src_land_ms += t_src_land.elapsed().as_millis();
 
-            // Per-track WAV named NN-<sanitized SOURCE-FILE stem>.wav. There
+            // Per-track WAV named NN-<sanitized SOURCE-FILE stem>_mastered.wav. There
             // is no per-track title field anywhere in the album model, and
             // `plan.title` (the album title) reaches only manifest.json —
             // owner smoke F13; scheme decision tracked in
             // docs/OPEN_THREADS_AND_DECISIONS.md.
             let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("track");
             let safe = sanitize_for_filename(stem);
-            let per_track_name = format!("{:02}-{}.wav", entry.position, safe);
+            let per_track_name = format!("{:02}-{}_mastered.wav", entry.position, safe);
             let per_track_path =
                 unique_child_path_avoiding_sources(out_dir, &per_track_name, &source_paths)?;
             // write_wav diverts to a `__{n}` sibling if the chosen path
@@ -1003,7 +1009,7 @@ pub fn render_album_plan_impl_with_cancel(
         written_paths.push(album_path.clone());
 
         let manifest_path =
-            unique_child_path_avoiding_sources(out_dir, "manifest.json", &source_paths)?;
+            unique_child_path_avoiding_sources(&metadata_dir, "manifest.json", &source_paths)?;
         let manifest = AlbumManifest {
             plan: &request.plan,
             rendered_at_iso: now_iso(),
@@ -1015,8 +1021,16 @@ pub fn render_album_plan_impl_with_cancel(
         };
         let manifest_json = serde_json::to_string_pretty(&manifest)
             .map_err(|e| CommandError::Other(format!("manifest serde: {e}")))?;
+        // Claim the path before tracking it for cleanup; never truncate a file
+        // another writer created between path selection and opening.
+        let mut manifest_file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&manifest_path)
+            .map_err(|e| CommandError::Io(e.to_string()))?;
         written_paths.push(manifest_path.clone());
-        std::fs::write(&manifest_path, manifest_json)
+        manifest_file
+            .write_all(manifest_json.as_bytes())
             .map_err(|e| CommandError::Io(e.to_string()))?;
         if render_cancelled(cancel_flag) {
             return Err(CommandError::Other("album render cancelled".to_string()));
