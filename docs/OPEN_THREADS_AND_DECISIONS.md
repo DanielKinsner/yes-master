@@ -7,6 +7,14 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **2026-09-05 — Keep the live layout; remove only the Sign-off section.**
+> The owner preferred the existing live page over the consolidation experiment.
+> PR #31 was closed without merging; `codex/landing-tightening` remains parked.
+> The owner then identified the pencil/blank-sheet photograph and its Sign-off
+> caption on main for removal. This change removes that section and its unused
+> component only. The surrounding export and sound-character sections, other
+> studio imagery, native app and release/signup gates retain their live behavior.
+
 > **2026-09-04 — Studio marketing website publication AUTHORIZED.** The
 > owner approved the redesigned studio site and explicitly requested subtle
 > animation, push/merge to `main`, and publication as the new live website.
