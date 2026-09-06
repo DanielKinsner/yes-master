@@ -7,6 +7,30 @@ make** are logged so nothing gets silently dropped. Companion to
 Generated 2026-06-22 from the docs-hygiene recon. Update this file as threads
 close rather than letting them rot in scattered docs.
 
+> **Transport follow-up — owner accepted interaction design; implementation pending.**
+> Add Return to start beside Loop under Play/time (center it in Standard, where
+> Loop is absent). No end button for symmetry. Jump to 0:00 while preserving
+> playing/paused state; a finished track stays paused. Keep Original/Mastered
+> and processing settings. Disarm an active loop first, retaining its drawn
+> region so it can be re-enabled. Keep Home consistent with the new action.
+> Improve row dragging with a discoverable handle, insertion feedback and edge
+> scrolling, preserving selection/settings/playback and keyboard reordering;
+> proposed scope is both Track and Album. Existing drag handlers are Album-only;
+> native reliability is not established by their presence.
+>
+> **New owner screenshots — right rail and audit action require follow-up.**
+> Track/Album export buttons have different vertical placement; Album shows a
+> horizontal scrollbar and both have residual scrolling. These native screenshot
+> findings remain open despite prior synthetic headless passes; reproduce their
+> viewport/state and fix actual overflow, not simply hide the scrollbar. Ceiling
+> shows -1 Auto on Track versus -1 Custom on Album: current captions distinguish
+> unset automatic from explicit settings, not just equal displayed numbers;
+> confirm saved state and resolved DSP value before changing labels or settings.
+> Owner asked why Render audit WAV is needed. It produces a temporary offline
+> track WAV using the shared renderer, not an improvement to live preview and
+> not an Album-plan proof. Removal from normal UI is a recommendation pending
+> owner decision; do not silently remove it during this discussion.
+
 > **2026-09-05 — MP3 purpose clarified in owner interview.** MP3 is a smaller-file,
 > broadly playable choice within the normal mastering export. The owner rejects
 > a separate conversion workflow or Original-source export selector. This

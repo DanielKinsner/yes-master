@@ -449,6 +449,36 @@ The extra-format request conflicts with current WAV-only/fixed-Standard product 
 
 ## Decisions that need an informed discussion
 
+### Subsequent transport and rail follow-up
+
+The owner accepted Return to start beside Loop under Play/time, with a centered
+button in Standard and no End button solely for symmetry. Preserve playing or
+paused state (including paused at end), Original/Mastered and processing settings.
+Disarm looping before seeking to 0:00, but retain the drawn region. Align Home
+with this behavior. Current seek-at-end starts playback and active loops confine
+the playhead, so this requires a deliberate transport change and regression tests.
+
+Track dragging should be discoverable with a handle, insertion line and rail-edge
+scrolling; preserve selection, settings and ongoing playback, retaining keyboard
+reordering. Both Track and Album were recommended. Album has existing HTML drag
+handlers and arrow controls; native reliability needs testing, not an assumption
+that the presence of handlers proves the requested interaction works.
+
+New owner screenshots show unequal export-button heights, residual vertical
+scroll and Album horizontal overflow in the right rail. Reproduce and correct
+the overflow/layout while keeping controls reachable. Prior browser evidence
+does not close these native findings. Equal -1 ceiling readouts can represent an
+unset Auto value versus an explicit Custom value; inspect actual persisted and
+resolved settings before changing labels. Do not force settings to agree for
+cosmetic symmetry.
+
+Render audit WAV currently calls the offline Track preview renderer, saving in
+app-data previews without replacing live playback. It is not required for live
+preview and is not a full Album-plan render. The owner is discussing whether it
+belongs in the normal UI; no removal decision has been made.
+
+### Earlier listening decisions — settled
+
 These are genuine product choices, not missing answers from the listening form. They do not block reproducing the documented bugs.
 
 | Decision | Recommendation to bring to the owner | Evidence needed first |
