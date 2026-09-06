@@ -1,15 +1,18 @@
 # Listening follow-up: concrete output choices
 
-Filename and codec choices below remain unresolved; manifest and loading
+Codec choices below remain unresolved; filename, manifest and loading
 decisions are recorded here. These are not implementation approval requests for the independent fixes.
 Existing output behavior remains until an answer is
 recorded; that is not a selected default. Old owner outputs are never deleted.
 
 ## Album names and manifest
 
-Proposed per-track filename: `01-Song__master.wav`, matching Track Master's
-existing suffix. Alternative: align both surfaces on `__mastered`. Preserve the
-collision-safe album folder and continuous audio in either case.
+**Owner naming decision:** Track `Song_mastered.wav`; Album
+`01-Song_mastered.wav`, using one underscore. Album numbering follows the final
+left-rail arrangement at export. Current code preserves that ordering from rail
+tracks through analysis inputs, plan positions and output names. Change the
+default suffix; preserve existing exports, the collision-safe album folder and
+continuous audio. Implementation remains pending.
 
 **Owner decision:** use `Album/metadata/manifest.json`. The owner accepted this
 recommendation but wants users to understand the extra file. Explain in the

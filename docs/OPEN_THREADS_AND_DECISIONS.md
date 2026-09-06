@@ -13,7 +13,12 @@ close rather than letting them rot in scattered docs.
 > the supporting export details in the in-app receipt using plain language:
 > these files are not needed to play or share the audio. Update paths, links and
 > cleanup together; preserve existing exports. Implementation remains pending.
-> The exact master filename suffix remains a separate open choice.
+> **Filename choice also settled:** Track uses `Song_mastered.wav`; Album uses
+> `01-Song_mastered.wav`, with one underscore. Album numbers follow the final
+> left-rail arrangement at export, not worker completion order. Code inspection
+> confirms the current rail tracks feed the plan in order and the plan assigns
+> one-based positions used by export filenames. Apply the suffix to new default
+> names only; preserve existing exports and collision/source protection.
 
 > **2026-09-05 — Loading workflow settled in owner follow-up interview.** Make
 > each imported track usable as soon as its analysis/profile is ready, show

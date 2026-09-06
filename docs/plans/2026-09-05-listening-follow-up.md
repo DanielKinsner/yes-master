@@ -385,7 +385,7 @@ The owner supplied `E:\fghgfhjghjhg` for inspection if useful. Read existing out
 
 Current implementation deliberately writes **`NN-<source-stem>.wav`** inside a collision-safe album folder, plus continuous audio and **`manifest.json`**. The existing owner decision selected an album-titled subfolder. The lack of “mastered” is therefore a requested naming improvement, not proof that a suffix routine broke.
 
-**Filename proposal to settle:** visibly identify per-track masters using a suffix consistent with Track Master's naming. Track Master's inspected default currently uses `__master.wav`; do not assume “mastered” is already the exact shared convention.
+**Owner filename decision (follow-up interview):** Track `Song_mastered.wav`; Album `01-Song_mastered.wav`, with one underscore. Number Album files in final left-rail order at export. Code inspection confirms this ordering already flows through the track array, plan inputs, one-based positions and filenames. Implement the new default suffix with collision/source protection; do not rename existing exports.
 
 **Manifest owner decision (follow-up interview):** write the manifest in a **`metadata/` subfolder**. The owner accepted the recommendation, with a concern about users receiving a file they do not understand. Explain supporting export details in the in-app receipt, including that they are not needed to play or share the audio. The alternative of removing JSON and persisting only an in-app receipt was not selected. Implementation remains pending; existing owner exports are untouched.
 
@@ -415,7 +415,7 @@ These are genuine product choices, not missing answers from the listening form. 
 | --- | --- | --- |
 | When imported tracks become usable — settled | Owner selected incremental readiness, progress for remaining tracks, and playback priority | Implementation must establish time to first usable track, total batch time, and playback/resource impact. |
 | Automatic Preview LUFS on import — settled | Owner selected automatic measurement for the ready selected track when already enabled, "Measuring" state, obsolete-work cancellation and playback protection | Implementation must verify resource contention, source/settings lifetime and cancellation; no whole-batch render queue. |
-| Album output naming/JSON presentation — manifest settled | Owner selected **metadata/ subfolder**, with a plain-language receipt explanation; filename suffix remains open | Implement and verify returned paths, links, cleanup and non-overwrite behavior; settle suffix separately. |
+| Album output naming/JSON presentation — settled | Owner selected **metadata/ subfolder** with a plain-language receipt explanation, Track `Song_mastered.wav` and Album `01-Song_mastered.wav` in left-rail order | Implement and verify ordering, default names, returned paths, links, cleanup and non-overwrite behavior. |
 | First codec/conversion scope | WAV + MP3, with an explicit Original/source conversion path | Short specification including Track/Album/Standard scope, actual encoder feasibility, receipt semantics, and product-doc consequences. |
 
 For routine bug-fix details, use engineering judgment within the authorized scope. Do not turn every test or small UI correction into an owner approval. For the analysis/loading workflow, the request to discuss before changes comes from the owner's written note, not an invented process gate.
