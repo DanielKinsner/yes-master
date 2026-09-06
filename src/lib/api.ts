@@ -54,6 +54,7 @@ export interface AlbumTrackRenderRecord {
 }
 
 export interface AlbumRenderReport {
+  mp3_bitrate_kbps?: number | null;
   job_id: string;
   status: JobStatus;
   album_wav_path: string;
@@ -82,6 +83,8 @@ export interface AlbumTrackRenderInput {
 // rejects them with "missing required key <camelCaseName>". Phase 11.3 fix.
 
 export const api = {
+  onAnalysisReady: (handler: (event: { batch_id:string; result:AnalysisResult }) => void) =>
+    listen<{ batch_id:string; result:AnalysisResult }>("analysis:ready", event => handler(event.payload)),
   importTracks: (paths: string[]) =>
     invoke<ImportedTrack[]>("import_tracks", { paths }),
 
@@ -99,17 +102,22 @@ export const api = {
       settings,
     }),
 
+  preparePreviewLevel: (requestId: string, trackId: TrackId, trackPath: string, settings: MasteringSettings, album: boolean) => invoke<void>("prepare_preview_level", {requestId, trackId, trackPath, settings, album}),
+  cancelPreviewPreparation: (requestId: string) => invoke<void>("cancel_preview_preparation", {requestId}),
+
   renderTrackMaster: (
     trackId: TrackId,
     trackPath: string,
     settings: MasteringSettings,
     outputPath?: string,
+    mp3Bitrate?: number,
   ) =>
     invoke<RenderJob>("render_track_master", {
       trackId,
       trackPath,
       settings,
       outputPath: outputPath ?? null,
+      ...(mp3Bitrate === undefined ? {} : {mp3Bitrate}),
     }),
 
   prepareWaveform: (
@@ -329,10 +337,12 @@ export const api = {
     plan: AlbumPlan,
     tracks: AlbumTrackRenderInput[],
     outputDir?: string,
+    mp3Bitrate?: number,
   ) =>
     invoke<AlbumRenderReport>("render_album_plan", {
       request: { plan, tracks },
       outputDir: outputDir ?? null,
+      ...(mp3Bitrate === undefined ? {} : {mp3Bitrate}),
     }),
 
   cancelRender: (jobId: string) =>
@@ -374,7 +384,7 @@ export function onRenderProgress(
 /// inside the backend analyzer (decode → dynamics → stereo → tonal → deep
 /// scan), batch-rescaled to 0..1. Replaces the paced-timer stage display
 /// whenever events arrive.
-export type AnalysisProgressEvent = AnalysisProgress;
+export type AnalysisProgressEvent = AnalysisProgress & { track_id?: TrackId };
 
 export function onAnalysisProgress(
   handler: (event: AnalysisProgressEvent) => void,

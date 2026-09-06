@@ -71,6 +71,7 @@
     "bit_depth": 24,
     "job_id": "wire-album-job",
     "manifest_path": "out/album.manifest.json",
+    "mp3_bitrate_kbps": null,
     "rendered_channels": 2,
     "rendered_sample_rate": 48000,
     "requested_sample_rate": 48000,
@@ -754,6 +755,7 @@
       "dynamic_range_lu": 8.5,
       "effective_adaptive_strength": 0.75,
       "lufs_integrated": -13.5,
+      "mp3_bitrate_kbps": null,
       "sample_rate": 48000,
       "source_profile_digest": "bass +1.2 | air -0.4",
       "true_peak_dbtp": -1.25
@@ -777,6 +779,7 @@
     "dynamic_range_lu": 8.5,
     "effective_adaptive_strength": 0.75,
     "lufs_integrated": -13.5,
+    "mp3_bitrate_kbps": null,
     "sample_rate": 48000,
     "source_profile_digest": "bass +1.2 | air -0.4",
     "true_peak_dbtp": -1.25

@@ -475,6 +475,7 @@ export type JobStatus =
   | { status: "cancelled" };
 
 export interface RenderedMeasurements {
+  mp3_bitrate_kbps?: number | null;
   lufs_integrated: number;
   true_peak_dbtp: number;
   dynamic_range_lu: number;

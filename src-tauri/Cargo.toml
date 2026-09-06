@@ -61,15 +61,16 @@ rustfft = "6"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 rubato = "1.0.1"
 audioadapter-buffers = "2.0.0"
+mp3lame-encoder = { version = "0.2.5", optional = true }
+tempfile = "3"
 
 [dev-dependencies]
 sha2 = "0.10"
 tokio = { version = "1", features = ["macros", "rt"] }
-tempfile = "3"
 
 [features]
 default = ["app-runner", "custom-protocol"]
-app-runner = ["dep:tauri-plugin-updater", "dep:tauri-plugin-opener"]
+app-runner = ["dep:tauri-plugin-updater", "dep:tauri-plugin-opener", "dep:mp3lame-encoder"]
 custom-protocol = ["tauri/custom-protocol"]
 
 # Dev builds must keep the realtime DSP chain comfortably above 1x even at

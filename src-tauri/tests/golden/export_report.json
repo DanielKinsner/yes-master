@@ -93,6 +93,7 @@
     "dynamic_range_lu": 8.5,
     "effective_adaptive_strength": 0.75,
     "lufs_integrated": -13.5,
+    "mp3_bitrate_kbps": null,
     "sample_rate": 44100,
     "source_profile_digest": "bass +1.2 | air -0.4",
     "true_peak_dbtp": -1.25

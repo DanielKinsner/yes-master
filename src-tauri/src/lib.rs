@@ -14,6 +14,7 @@ pub mod exports;
 pub mod files;
 pub mod fixture_matrix;
 pub mod guardrails;
+pub mod mp3;
 pub mod profile_store;
 pub mod project;
 pub mod reference_tuning;
@@ -423,6 +424,8 @@ pub fn run() {
             audio::play_master,
             audio::update_chain,
             audio::prewarm_decode,
+            audio::prepare_preview_level,
+            audio::cancel_preview_preparation,
             audio::pause_playback,
             audio::resume_playback,
             audio::clear_device_lost,

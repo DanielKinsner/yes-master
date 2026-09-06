@@ -161,6 +161,7 @@ fn analysis_result_sample() -> AnalysisResult {
 
 fn rendered_measurements_sample() -> RenderedMeasurements {
     RenderedMeasurements {
+        mp3_bitrate_kbps: None,
         lufs_integrated: -13.5,
         true_peak_dbtp: -1.25,
         dynamic_range_lu: 8.5,
@@ -401,6 +402,7 @@ fn album_track_render_record_sample() -> AlbumTrackRenderRecord {
 
 fn album_render_report_sample() -> AlbumRenderReport {
     AlbumRenderReport {
+        mp3_bitrate_kbps: None,
         job_id: "wire-album-job".to_string(),
         status: JobStatus::Done,
         album_wav_path: "out/album.wav".to_string(),

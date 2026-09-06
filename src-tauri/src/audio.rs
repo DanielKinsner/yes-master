@@ -59,7 +59,13 @@ pub async fn prepare_waveform(
         )));
     }
     let pixels = clamp_waveform_target_pixels(target_pixels.unwrap_or(DEFAULT_TARGET_PIXELS));
-    let decoded = decode_to_peaks(path, pixels)?;
+    // Decode must not occupy a Tauri async executor thread while new ready
+    // tracks are becoming usable and playback commands are arriving.
+    let decoded = tauri::async_runtime::spawn_blocking(move || {
+        decode_to_peaks(Path::new(&track_path), pixels)
+    })
+    .await
+    .map_err(|e| CommandError::Other(format!("waveform task: {e}")))??;
     Ok(WaveformPeaks {
         track_id,
         channels: decoded.channels,
@@ -163,6 +169,179 @@ pub async fn update_chain(
 /// held for the decode duration and the audio thread is never
 /// touched — playback / knob tweaks remain responsive during a
 /// prewarm in flight.
+#[derive(Default)]
+struct PreparedPreview {
+    request: String,
+    cancelled: Arc<AtomicBool>,
+    result: Option<(
+        std::path::PathBuf,
+        Option<std::time::SystemTime>,
+        MasteringSettings,
+        f32,
+    )>,
+}
+
+fn prepared_preview() -> &'static Mutex<PreparedPreview> {
+    static CACHE: std::sync::OnceLock<Mutex<PreparedPreview>> = std::sync::OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(PreparedPreview::default()))
+}
+
+fn preview_worker_budget() -> Arc<AtomicBool> {
+    static BUDGET: std::sync::OnceLock<Arc<AtomicBool>> = std::sync::OnceLock::new();
+    BUDGET
+        .get_or_init(|| Arc::new(AtomicBool::new(false)))
+        .clone()
+}
+
+#[tauri::command]
+pub fn cancel_preview_preparation(request_id: String) {
+    if let Ok(cache) = prepared_preview().lock() {
+        if cache.request == request_id {
+            cache.cancelled.store(true, Ordering::Relaxed);
+        }
+    }
+}
+
+/// Prepare only the selected, analyzed track. Shares the live measurement
+/// budget, never loads a sink or changes playback, and drops obsolete results.
+#[tauri::command]
+pub async fn prepare_preview_level(
+    request_id: String,
+    track_id: TrackId,
+    track_path: String,
+    mut settings: MasteringSettings,
+    album: bool,
+    player: tauri::State<'_, Arc<AudioPlayer>>,
+    profile_store: tauri::State<'_, Arc<crate::profile_store::SourceProfileStore>>,
+) -> CommandResult<()> {
+    let path = std::path::PathBuf::from(&track_path);
+    if track_path.is_empty() || crate::files::has_parent_dir_component(&path) {
+        return Err(CommandError::InvalidPath(track_path));
+    }
+    let canonical = path
+        .canonicalize()
+        .map_err(|e| CommandError::Io(e.to_string()))?;
+    let mtime = std::fs::metadata(&canonical)
+        .ok()
+        .and_then(|m| m.modified().ok());
+    let deep = profile_store.get_deep(&track_id);
+    crate::profile_store::apply_resolved_profile(
+        &mut settings,
+        profile_store.get(&track_id),
+        album,
+    );
+    crate::profile_store::apply_resolved_confidence(&mut settings, deep.clone(), album);
+    crate::profile_store::apply_resolved_compression_guards(
+        &mut settings,
+        deep,
+        profile_store.get_stand_down(&track_id),
+        album,
+    );
+    let cancelled = Arc::new(AtomicBool::new(false));
+    {
+        let mut cache = prepared_preview()
+            .lock()
+            .map_err(|e| CommandError::Other(e.to_string()))?;
+        cache.cancelled.store(true, Ordering::Relaxed);
+        cache.cancelled = cancelled.clone();
+        cache.request = request_id.clone();
+        if let Some((cached_path, cached_mtime, cached_settings, _)) = &cache.result {
+            if *cached_path == canonical
+                && *cached_mtime == mtime
+                && matching_landing_settings(cached_settings, &settings)
+            {
+                return Ok(());
+            }
+        }
+    }
+    let prewarm = player.prewarm_cache.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let budget = preview_worker_budget();
+        let _permit = loop {
+            if cancelled.load(Ordering::Relaxed) {
+                return Ok(());
+            }
+            if let Some(permit) = PreviewWorkerPermit::acquire(&budget) {
+                break permit;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        };
+        // A live worker may have completed this same measurement while we
+        // waited for its permit. Reuse it rather than rendering the track twice.
+        if let Ok(cache) = prepared_preview().lock() {
+            if let Some((cached_path, cached_mtime, cached_settings, _)) = &cache.result {
+                if *cached_path == canonical
+                    && *cached_mtime == mtime
+                    && matching_landing_settings(cached_settings, &settings)
+                {
+                    return Ok(());
+                }
+            }
+        }
+        let started = std::time::Instant::now();
+        let cached = prewarm.lock().ok().and_then(|cache| {
+            cache
+                .as_ref()
+                .filter(|entry| entry.canonical_path == canonical && entry.mtime == mtime)
+                .map(|entry| entry.pcm.clone())
+        });
+        let pcm = match cached {
+            Some(pcm) => pcm,
+            None => decode_full(&canonical)?.into(),
+        };
+        if cancelled.load(Ordering::Relaxed) {
+            return Ok(());
+        }
+        let measured = crate::engine::preview_landing_with_cancel(
+            &pcm.samples,
+            pcm.sample_rate,
+            pcm.channels,
+            &settings,
+            Some(&cancelled),
+        );
+        if cancelled.load(Ordering::Relaxed) {
+            return Ok(());
+        }
+        let gain = measured?.gain_lin;
+        crate::diagnostics::info(format!(
+            "preview level prepared {} in {:.3}s",
+            track_id.as_str(),
+            started.elapsed().as_secs_f64()
+        ));
+        let mut cache = prepared_preview()
+            .lock()
+            .map_err(|e| CommandError::Other(e.to_string()))?;
+        if cache.request == request_id && !cancelled.load(Ordering::Relaxed) {
+            cache.result = Some((canonical, mtime, settings, gain));
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|e| CommandError::Other(format!("preview preparation: {e}")))?
+}
+
+fn matching_landing_settings(a: &MasteringSettings, b: &MasteringSettings) -> bool {
+    matches!((settings_landing_hash(a),settings_landing_hash(b)),(LandingSettingsHash::Stable(a),LandingSettingsHash::Stable(b)) if a==b)
+}
+
+fn seed_prepared_preview(s: &mut AudioThreadState, settings: &MasteringSettings) {
+    let Some(entry) = &s.decoded_cache else {
+        return;
+    };
+    // Never wait for a background cache lock on the command thread.
+    let Ok(cache) = prepared_preview().try_lock() else {
+        return;
+    };
+    if let Some((path, mtime, cached_settings, gain)) = &cache.result {
+        if *path == entry.canonical_path
+            && *mtime == entry.mtime
+            && matching_landing_settings(cached_settings, settings)
+        {
+            s.landing_gain_cache.insert(settings, *gain);
+        }
+    }
+}
+
 #[tauri::command]
 pub async fn prewarm_decode(
     track_path: String,
@@ -1607,15 +1786,12 @@ struct PreviewWorkerGate {
 impl Default for PreviewWorkerGate {
     fn default() -> Self {
         // One heavy preview worker across source and output-device lifetimes.
-        static BUDGET: std::sync::OnceLock<Arc<AtomicBool>> = std::sync::OnceLock::new();
         Self {
             epoch: 0,
             in_flight: false,
             pending: None,
             cancelled: Arc::new(AtomicBool::new(false)),
-            budget: BUDGET
-                .get_or_init(|| Arc::new(AtomicBool::new(false)))
-                .clone(),
+            budget: preview_worker_budget(),
         }
     }
 }
@@ -1696,6 +1872,8 @@ fn try_spawn_lufs_preview_worker(
     // Even the eight-second VM window belongs on the worker: at 768 kHz,
     // copying it here would allocate 49 MB on the audio command thread.
     let pcm = entry.pcm.clone();
+    let canonical_path = entry.canonical_path.clone();
+    let mtime = entry.mtime;
     let command_tx = command_tx.clone();
     std::thread::Builder::new()
         .name("lufs-preview-landing".into())
@@ -1743,6 +1921,13 @@ fn try_spawn_lufs_preview_worker(
                 )
                 .ok()
                 .map(|result| result.gain_lin);
+                if let Some(gain) = gain {
+                    if !cancelled.load(Ordering::Relaxed) {
+                        if let Ok(mut cache) = prepared_preview().lock() {
+                            cache.result = Some((canonical_path, mtime, settings.clone(), gain));
+                        }
+                    }
+                }
                 let _ = command_tx.send(AudioCommand::PreviewLandingReady {
                     track_epoch,
                     generation,
@@ -1784,6 +1969,7 @@ fn queue_preview_work(
     request: PreviewWorkRequest,
     tx: &Sender<AudioCommand>,
 ) {
+    seed_prepared_preview(s, &request.settings);
     if !preview_measurement_needed(
         &s.landing_gain_cache,
         &s.vm_gain_cache,
@@ -1791,6 +1977,7 @@ fn queue_preview_work(
         request.landing_enabled,
     ) {
         s.preview_work.pending = None;
+        publish_preview_coeffs(s, &request.settings, request.generation);
     } else if s.preview_work.in_flight {
         s.preview_work.pending = Some(request);
     } else if try_spawn_lufs_preview_worker(
@@ -2896,6 +3083,7 @@ fn handle_play_master(
     s.preview_work.begin_playback(cache_stale);
     let track_epoch = s.preview_work.epoch;
 
+    seed_prepared_preview(s, settings);
     let landing_plan =
         play_master_preview_landing_plan(&s.landing_gain_cache, settings, preview_lufs_landing);
     chain.coeffs.export_landing_gain_lin = landing_plan.initial_gain;

@@ -113,7 +113,7 @@ pub fn export_checks_for_report(
         });
     }
 
-    if report.bit_depth < 16 {
+    if report.destination_format != "mp3" && report.bit_depth < 16 {
         checks.push(QualityCheck {
             level: QualityLevel::Critical,
             code: "bit_depth_low".to_string(),
@@ -127,6 +127,11 @@ pub fn export_checks_for_report(
     if let Some(expected_sample_rate) =
         settings.and_then(MasteringSettings::requested_delivery_sample_rate)
     {
+        let expected_sample_rate = if report.destination_format == "mp3" {
+            crate::mp3::delivery_rate(expected_sample_rate)
+        } else {
+            expected_sample_rate
+        };
         if report.sample_rate != expected_sample_rate {
             checks.push(QualityCheck {
                 level: QualityLevel::Critical,

@@ -93,12 +93,23 @@ pub async fn analyze_tracks(
     let batch_id = batch_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let profile_store = profile_store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let result = analyze_tracks_core_with_progress_sync(tracks, |fraction, label| {
+        // One desktop analysis worker across overlapping imports/restores.
+        // Playback never acquires this lock. Publish each profile BEFORE ready.
+        static ANALYSIS_WORKER: Mutex<()> = Mutex::new(());
+        let _worker = ANALYSIS_WORKER.lock().unwrap_or_else(|e| e.into_inner());
+        let started = std::time::Instant::now();
+        crate::diagnostics::info(format!("analysis batch {batch_id} start: {} tracks", tracks.len()));
+        let result = analyze_tracks_incremental_sync(tracks, |_, _, track_id, fraction, label| {
             let _ = app.emit(
                 "analysis:progress",
-                analysis_progress_event(&batch_id, fraction, label),
+                serde_json::json!({"batch_id":batch_id,"track_id":track_id,"fraction":fraction,"label":label}),
             );
+        }, |result| {
+            populate_profile_store(&profile_store, std::slice::from_ref(result));
+            crate::diagnostics::info(format!("analysis batch {batch_id} ready {} at {:.3}s", result.track_id.as_str(), started.elapsed().as_secs_f64()));
+            let _ = app.emit("analysis:ready", serde_json::json!({"batch_id":batch_id,"result":result}));
         });
+        crate::diagnostics::info(format!("analysis batch {batch_id} finished at {:.3}s", started.elapsed().as_secs_f64()));
         match &result {
             Ok(results) => {
                 // B2: the backend is the SINGLE point that derives the adaptive source
@@ -155,19 +166,34 @@ pub fn analyze_tracks_core_with_progress_sync(
     tracks: Vec<AnalyzeRequest>,
     progress: impl Fn(f32, &str),
 ) -> CommandResult<Vec<AnalysisResult>> {
+    analyze_tracks_incremental_sync(
+        tracks,
+        |index, total, _, fraction, label| {
+            progress((index as f32 + fraction) / total.max(1) as f32, label);
+        },
+        |_| {},
+    )
+}
+
+pub fn analyze_tracks_incremental_sync(
+    tracks: Vec<AnalyzeRequest>,
+    progress: impl Fn(usize, usize, &TrackId, f32, &str),
+    ready: impl Fn(&AnalysisResult),
+) -> CommandResult<Vec<AnalysisResult>> {
     let total = tracks.len();
     let mut out = Vec::with_capacity(total);
     let mut failures: Vec<(TrackId, CommandError)> = Vec::new();
     for (index, req) in tracks.into_iter().enumerate() {
         let track_progress = |frac: f32, label: &'static str| {
             if total > 0 {
-                progress((index as f32 + frac) / total as f32, label);
+                progress(index, total, &req.id, frac, label);
             }
         };
         match analyze_one_with_progress(req.id.clone(), Path::new(&req.path), true, &track_progress)
         {
             Ok(mut result) => {
                 nudge_role_by_position(&mut result, index, total);
+                ready(&result);
                 out.push(result);
             }
             Err(e) => {
@@ -667,12 +693,15 @@ pub async fn render_track_preview(
     join_result.map_err(|e| CommandError::Other(format!("preview render task: {e}")))?
 }
 
+// Tauri injects three application states alongside the explicit export inputs.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn render_track_master(
     track_id: TrackId,
     track_path: String,
     mut settings: MasteringSettings,
     output_path: Option<String>,
+    mp3_bitrate: Option<u16>,
     app: tauri::AppHandle,
     profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
     render_jobs: tauri::State<'_, RenderJobRegistry>,
@@ -712,7 +741,7 @@ pub async fn render_track_master(
     };
     let job_id_for_render = job_id.clone();
     let join_result = tauri::async_runtime::spawn_blocking(move || {
-        mastering_render_with_cancel(
+        mastering_render_encoded_with_cancel(
             track_id,
             Path::new(&track_path),
             &settings,
@@ -724,6 +753,7 @@ pub async fn render_track_master(
                 job_id: Some(&job_id_for_render),
                 cancel_flag: Some(cancel_flag.as_ref()),
             },
+            mp3_bitrate,
         )
     })
     .await;
@@ -765,7 +795,7 @@ pub async fn render_track_master(
 // `Serialize` is added so the Rust↔TS wire-drift gate (tests/wire_shape.rs)
 // can emit a canonical sample of this album-render input; production only ever
 // deserializes it.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AlbumTrackRenderInput {
     pub track_id: TrackId,
     pub source_path: String,
@@ -780,7 +810,7 @@ pub struct AlbumTrackRenderInput {
     pub override_album: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct AlbumPlanRenderRequest {
     pub plan: AlbumPlan,
     pub tracks: Vec<AlbumTrackRenderInput>,
@@ -826,6 +856,7 @@ pub struct AlbumTrackRenderRecord {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct AlbumRenderReport {
+    pub mp3_bitrate_kbps: Option<u16>,
     pub job_id: String,
     pub status: JobStatus,
     pub album_wav_path: String,
@@ -874,6 +905,7 @@ pub async fn plan_album(request: PlanAlbumRequest) -> CommandResult<AlbumPlan> {
 pub async fn render_album_plan(
     request: AlbumPlanRenderRequest,
     output_dir: Option<String>,
+    mp3_bitrate: Option<u16>,
     app: tauri::AppHandle,
     render_jobs: tauri::State<'_, RenderJobRegistry>,
 ) -> CommandResult<AlbumRenderReport> {
@@ -898,12 +930,13 @@ pub async fn render_album_plan(
     };
     let job_id_for_render = job_id.clone();
     let join_result = tauri::async_runtime::spawn_blocking(move || {
-        crate::album_render::render_album_plan_impl_with_cancel(
+        crate::mp3::render_album(
             &request,
             &out_dir,
             Some(&on_progress),
             Some(cancel_flag.as_ref()),
             Some(&job_id_for_render),
+            mp3_bitrate,
         )
     })
     .await;
@@ -1040,6 +1073,29 @@ pub fn mastering_render_with_cancel(
     kind: RenderKind,
     options: RenderJobOptions<'_>,
 ) -> CommandResult<RenderJob> {
+    mastering_render_encoded_with_cancel(
+        track_id,
+        source_path,
+        settings,
+        out_dir,
+        kind,
+        options,
+        None,
+    )
+}
+
+pub fn mastering_render_encoded_with_cancel(
+    track_id: TrackId,
+    source_path: &Path,
+    settings: &MasteringSettings,
+    out_dir: &Path,
+    kind: RenderKind,
+    options: RenderJobOptions<'_>,
+    mp3_bitrate: Option<u16>,
+) -> CommandResult<RenderJob> {
+    if let Some(kbps) = mp3_bitrate {
+        crate::mp3::validate_bitrate(kbps)?;
+    }
     let job_id = options
         .job_id
         .map(ToOwned::to_owned)
@@ -1061,7 +1117,17 @@ pub fn mastering_render_with_cancel(
     }
     let out_path = match options.output_path {
         Some(path) => explicit_output_path(path, source_path)?,
-        None => unique_output_path(out_dir, source_path, &track_id, kind)?,
+        None => {
+            let path = unique_output_path(out_dir, source_path, &track_id, kind)?;
+            explicit_output_path(
+                &if mp3_bitrate.is_some() {
+                    path.with_extension("mp3")
+                } else {
+                    path
+                },
+                source_path,
+            )?
+        }
     };
 
     // Per-stage wall-clock markers, logged at the end of the render. F9/F11
@@ -1150,7 +1216,12 @@ pub fn mastering_render_with_cancel(
     let t_stage = std::time::Instant::now();
     chain.flush_render_tail(&mut samples, channels_max);
 
-    let rendered_sample_rate = render_settings.effective_sample_rate(pcm.sample_rate);
+    let requested_rate = render_settings.effective_sample_rate(pcm.sample_rate);
+    let rendered_sample_rate = if mp3_bitrate.is_some() {
+        crate::mp3::delivery_rate(requested_rate)
+    } else {
+        requested_rate
+    };
     if rendered_sample_rate != pcm.sample_rate {
         samples = convert_interleaved(
             &samples,
@@ -1244,7 +1315,8 @@ pub fn mastering_render_with_cancel(
         .map(|c| c.digest());
     let compression_digest =
         crate::guardrails::compression_plan_for_resolved_settings(&render_settings).digest;
-    let measurements = RenderedMeasurements {
+    let mut measurements = RenderedMeasurements {
+        mp3_bitrate_kbps: mp3_bitrate,
         lufs_integrated: sanitize_lufs(delivered_lufs),
         true_peak_dbtp: delivered_tp,
         dynamic_range_lu: if lra.is_finite() { lra } else { 0.0 },
@@ -1268,13 +1340,60 @@ pub fn mastering_render_with_cancel(
     // export), the write diverts to a `__{n}` sibling — report where the
     // render actually landed.
     let t_stage = std::time::Instant::now();
-    let actual_out_path = write_wav(
-        &out_path,
-        &samples,
-        rendered_sample_rate,
-        pcm.channels,
-        bit_depth,
-    )?;
+    let actual_out_path = if let Some(kbps) = mp3_bitrate {
+        crate::mp3::write(
+            &out_path,
+            samples.iter().copied().map(Ok),
+            rendered_sample_rate,
+            pcm.channels,
+            kbps,
+            options.cancel_flag,
+        )
+    } else {
+        write_wav(
+            &out_path,
+            &samples,
+            rendered_sample_rate,
+            pcm.channels,
+            bit_depth,
+        )
+    };
+    let actual_out_path = match actual_out_path {
+        Ok(path) => path,
+        Err(_) if render_cancelled(options.cancel_flag) => {
+            return Ok(cancelled_render_job(
+                job_id,
+                kind,
+                vec![track_id],
+                1.0,
+                started_at_iso,
+            ))
+        }
+        Err(error) => return Err(error),
+    };
+    if mp3_bitrate.is_some() {
+        match crate::mp3::measure(&actual_out_path, options.cancel_flag) {
+            Ok((lufs, tp, lra)) => {
+                measurements.lufs_integrated = lufs;
+                measurements.true_peak_dbtp = tp;
+                measurements.dynamic_range_lu = lra;
+                measurements.bit_depth = 0;
+            }
+            Err(error) => {
+                let _ = std::fs::remove_file(&actual_out_path);
+                if render_cancelled(options.cancel_flag) {
+                    return Ok(cancelled_render_job(
+                        job_id,
+                        kind,
+                        vec![track_id],
+                        1.0,
+                        started_at_iso,
+                    ));
+                }
+                return Err(error);
+            }
+        }
+    }
     let write_ms = stage_ms(t_stage);
     if render_cancelled(options.cancel_flag) {
         let _ = std::fs::remove_file(&actual_out_path);

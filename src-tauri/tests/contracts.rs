@@ -2161,6 +2161,7 @@ fn golden_receipt_triple() -> serde_json::Value {
     // Values chosen to be exact in binary (halves/quarters) so the f32→f64
     // widening through serde_json::Value stays clean in the committed JSON.
     let measurements = RenderedMeasurements {
+        mp3_bitrate_kbps: None,
         lufs_integrated: -13.5,
         true_peak_dbtp: -1.25,
         dynamic_range_lu: 8.5,

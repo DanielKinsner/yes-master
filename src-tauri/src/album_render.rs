@@ -253,7 +253,7 @@ fn album_subfolder_name(title: &str) -> String {
 /// ` (3)`, ... suffix. `out_dir` (the user-chosen directory) must already
 /// exist; `create_dir` is atomic, so two exports racing on the same name can't
 /// both land in one folder.
-fn unique_export_subdir(out_dir: &Path, title: &str) -> CommandResult<PathBuf> {
+pub(crate) fn unique_export_subdir(out_dir: &Path, title: &str) -> CommandResult<PathBuf> {
     let base = album_subfolder_name(title);
     for n in 1..1000 {
         let name = if n == 1 {
@@ -1076,6 +1076,7 @@ pub fn render_album_plan_impl_with_cancel(
     ));
 
     Ok(AlbumRenderReport {
+        mp3_bitrate_kbps: None,
         job_id,
         status: JobStatus::Done,
         album_wav_path: album_path.to_string_lossy().to_string(),
@@ -1100,6 +1101,7 @@ fn cancelled_album_report(
     source_channels: Vec<u16>,
 ) -> AlbumRenderReport {
     AlbumRenderReport {
+        mp3_bitrate_kbps: None,
         job_id,
         status: JobStatus::Cancelled,
         album_wav_path: String::new(),

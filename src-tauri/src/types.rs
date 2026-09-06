@@ -847,6 +847,8 @@ pub struct RenderJob {
 /// produced, not what the source looked like before the chain ran.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RenderedMeasurements {
+    #[serde(default)]
+    pub mp3_bitrate_kbps: Option<u16>,
     pub lufs_integrated: f32,
     pub true_peak_dbtp: f32,
     pub dynamic_range_lu: f32,

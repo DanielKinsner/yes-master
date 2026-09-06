@@ -514,6 +514,7 @@ mod tests {
             compression_mode: CompressionMode::Preset,
         };
         let render = RenderedMeasurements {
+            mp3_bitrate_kbps: None,
             lufs_integrated: -10.7,
             true_peak_dbtp: -0.2,
             dynamic_range_lu: 3.1,
