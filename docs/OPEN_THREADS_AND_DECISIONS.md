@@ -13,12 +13,19 @@ close rather than letting them rot in scattered docs.
 > supersedes the earlier interpretation of the listening notes as requiring
 > conversion without mastering. Preserve existing DSP/delivery behavior at 0%
 > Intensity; do not add bypass or special workaround explanations. Normal meters
-> and export claims remain truthful. Track/Album scope and quality defaults are
-> still pending; MP3 is not implemented by this decision.
+> and export claims remain truthful. Quality defaults remain pending; MP3 is
+> not implemented by this decision.
 > **Explicit follow-up clarification:** 0% was only a hypothetical workaround,
 > not an MP3 default or requirement. MP3 uses the user's chosen preset, Intensity
 > and controls just like WAV. Selecting the encoding never resets mastering
 > settings or selects 0%.
+> **Scope and sequencing settled:** implement Track Master MP3 in Standard and
+> Advanced first. The implementing agent tests the encoder, normal mastering
+> export and delivered-file contracts, then proceeds to Album batch/continuous
+> export once those pass. The owner explicitly authorizes that continuation;
+> no additional owner approval or owner testing is required for this dependency.
+> Verify Album's own cases as well. This does not authorize publication/release
+> or replace any separate listening/signoff requirement for sonic changes.
 
 > **2026-09-05 — Album manifest presentation settled in owner interview.**
 > The owner accepted `metadata/manifest.json`, with the concern that users

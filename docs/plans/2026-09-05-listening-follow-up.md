@@ -397,7 +397,7 @@ The owner requests **MP3** as a smaller-file, broadly playable choice within the
 
 Before implementation, write a bounded specification covering:
 
-1. Track versus Album availability, MP3 quality controls/default, and how format selection affects Standard's currently fixed delivery promise.
+1. **Owner-selected sequence:** Standard and Advanced Track export first. The implementing agent verifies the shared encoder/export and delivered-file contracts, then implements and verifies Album batch/continuous export. The owner explicitly authorized continuation once proven; do not request another approval for that step. Quality controls/default remain unresolved. Update Standard's currently fixed delivery promise to match the implemented formats.
 2. Keep MP3 on the normal mastering export path, independent of the audition A/B side. Use the user's chosen preset, Intensity and controls just like WAV; selecting MP3 must not reset settings or select 0%. The owner's 0% example was only a hypothetical workaround, not a default or requirement. No Original-source export choice or new bypass semantics.
 3. Encoder choice and distribution on Windows/Mac, installation/offline behavior, and applicable packaging/redistribution requirements. Verify current primary documentation when choosing the dependency; this plan has not selected one.
 4. Extension/filter handling, supported channel/rate conversion, output destination safety, cancellation, failure cleanup, and persistent project/settings compatibility.
@@ -416,7 +416,7 @@ These are genuine product choices, not missing answers from the listening form. 
 | When imported tracks become usable — settled | Owner selected incremental readiness, progress for remaining tracks, and playback priority | Implementation must establish time to first usable track, total batch time, and playback/resource impact. |
 | Automatic Preview LUFS on import — settled | Owner selected automatic measurement for the ready selected track when already enabled, "Measuring" state, obsolete-work cancellation and playback protection | Implementation must verify resource contention, source/settings lifetime and cancellation; no whole-batch render queue. |
 | Album output naming/JSON presentation — settled | Owner selected **metadata/ subfolder** with a plain-language receipt explanation, Track `Song_mastered.wav` and Album `01-Song_mastered.wav` in left-rail order | Implement and verify ordering, default names, returned paths, links, cleanup and non-overwrite behavior. |
-| First codec scope — purpose settled | WAV + MP3 in normal mastering export; no separate converter/bypass. Track/Album availability and quality defaults remain open | Short specification including Track/Album/Standard scope, actual encoder feasibility, receipt semantics, and product-doc consequences. |
+| First codec scope — sequence settled | Standard and Advanced Track first, then Album after agent verification; continuation already authorized. Normal mastering export, no converter/bypass. Quality/defaults remain open | Encoder feasibility, delivered-file checks, Album-specific validation and product-doc updates. |
 
 For routine bug-fix details, use engineering judgment within the authorized scope. Do not turn every test or small UI correction into an owner approval. For the analysis/loading workflow, the request to discuss before changes comes from the owner's written note, not an invented process gate.
 

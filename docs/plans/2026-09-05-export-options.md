@@ -36,9 +36,11 @@ choice in the normal mastering export. No separate converter or `Original
 conversion` selector. Preserve existing DSP/delivery behavior at 0% Intensity;
 do not add bypass or special explanations for workarounds. This supersedes the
 earlier conversion-without-mastering interpretation. Ordinary export claims and
-meters remain truthful. Proposed first scope: Standard and Advanced Track export,
-320 kbps default with a quality selector. Track first versus Track and Album
-together, and quality/surface scope, still need an owner answer.
+meters remain truthful. **Owner scope decision:** Standard and Advanced Track
+export first; the implementing agent verifies the encoder and delivered-file
+contracts, then proceeds to Album batch/continuous export without another owner
+approval. Album still requires its own verification. Proposed quality is 320 kbps
+default with a selector; quality/defaults remain an owner choice.
 
 The owner explicitly clarified that 0% was only an example of a possible user
 workaround. MP3 uses the chosen preset, Intensity and controls just like WAV;
