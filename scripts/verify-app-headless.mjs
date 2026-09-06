@@ -633,7 +633,20 @@ async function standardControlsGeometryProbe(page, report) {
   for (const control of controls) {
     if (!control.visible || !control.topmost) report(`Standard control ${control.label} is clipped or covered before scrolling (top ${control.top}, bottom ${control.bottom})`);
   }
-  return { controls };
+  // A visible export button alone can pass while the live Peak readout spills
+  // out of Preview and is covered by Delivery Format on a short window.
+  const preview = await page.locator('.std-rail-preview').evaluate(node => {
+    const outer = node.getBoundingClientRect();
+    const readouts = [...node.querySelectorAll('.readout, .landing-note')].map(child => {
+      const r = child.getBoundingClientRect();
+      return { label: child.textContent?.trim(), bottom: r.bottom };
+    });
+    return { bottom: outer.bottom, readouts };
+  });
+  for (const readout of preview.readouts) {
+    if (readout.bottom > preview.bottom + 1) report(`Standard Preview ${readout.label} overflows its card (${readout.bottom} > ${preview.bottom})`);
+  }
+  return { controls, preview };
 }
 
 /**

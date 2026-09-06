@@ -59,6 +59,7 @@ export const CAPTURE_INPUTS = [
   "src/components/EmptyState.tsx",
   "src/components/ExportReceiptCard.tsx",
   "src/components/ExportEncodingControls.tsx",
+  "src/components/TrackIdentity.tsx",
   "src/components/FirstRunOverlay.tsx",
   "src/components/HintChip.tsx",
   "src/components/Knob.tsx",

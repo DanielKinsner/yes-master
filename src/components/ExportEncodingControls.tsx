@@ -15,6 +15,7 @@ export function ExportEncodingControls({
       <label className="field">
         <span>File format</span>
         <select
+          className="export-encoding-select"
           aria-label="Export file format"
           value={choice.format}
           onChange={(e) => choice.onFormat(e.target.value as "wav" | "mp3")}
@@ -27,6 +28,7 @@ export function ExportEncodingControls({
         <label className="field">
           <span>Bitrate</span>
           <select
+            className="export-encoding-select"
             aria-label="MP3 bitrate"
             value={choice.bitrate}
             onChange={(e) => choice.onBitrate(Number(e.target.value))}

@@ -10,6 +10,7 @@ import { useTrackReorder } from "./hooks/useTrackReorder";
 import { useNavigationMachine } from "./hooks/useNavigationMachine";
 import { useFirstRunGuide } from "./hooks/useFirstRunGuide";
 import { StandardView } from "./components/StandardView";
+import { TrackIdentity } from "./components/TrackIdentity";
 import { FirstRunOverlay } from "./components/FirstRunOverlay";
 import { hasNonManagedEdits, isStandardPreset, needsStandardReturnReset } from "./lib/standard-managed";
 import { SHORTCUTS, isTextEntryTarget } from "./lib/shortcuts";
@@ -1678,7 +1679,7 @@ export function TrackHeader({
       <div className="track-header-main">
         <div className="track-header-primary">
           <div className="track-header-title-block">
-            <h1 className="track-title">{track.display_name}</h1>
+            <TrackIdentity name={track.display_name} />
             <div className="track-header-meta-row">
               {/* Slice 13c: identity facts as one quiet line, not boxed chips.
                   Analysis state is not repeated here — an unanalyzed track

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { AlbumRenderReport } from "../lib/api";
+import { api } from "../lib/api";
 import { AlbumExportReceipt } from "./AlbumExportReceipt";
 import "./AlbumExportCompletion.css";
 
@@ -9,9 +10,18 @@ import "./AlbumExportCompletion.css";
 export function AlbumExportCompletion({ report }: { report: AlbumRenderReport }) {
   const success = report.status.status === "done";
   const [open, setOpen] = useState(success);
+  const [revealError, setRevealError] = useState<string | null>(null);
   const panel = useRef<HTMLElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  useEffect(() => setOpen(success), [report.job_id, success]);
+  useEffect(() => { setOpen(success); setRevealError(null); }, [report.job_id, success]);
+  const showFiles = async () => {
+    setRevealError(null);
+    try {
+      await api.openOutput(report.album_wav_path);
+    } catch {
+      setRevealError("Couldn't open the export folder. Your saved file path is shown below.");
+    }
+  };
   const close = () => {
     if (panel.current?.contains(document.activeElement)) trigger.current?.focus();
     setOpen(false);
@@ -25,6 +35,10 @@ export function AlbumExportCompletion({ report }: { report: AlbumRenderReport })
       aria-label="Album export receipt" onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); close(); } }}>
       <header><h2>Album export complete</h2><button type="button" className="ghost-btn"
         onClick={close} aria-label="Close Album receipt">Close</button></header>
+      <div className="album-completion-actions">
+        <button type="button" className="ghost-btn" onClick={() => void showFiles()}>Show files</button>
+      </div>
+      {revealError && <p role="alert">{revealError}</p>}
       <AlbumExportReceipt key={report.job_id} report={report} expanded />
     </section>, document.body)}
   </>;

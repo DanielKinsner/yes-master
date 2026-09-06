@@ -1,4 +1,5 @@
 import { ExportEncodingControls } from "./ExportEncodingControls";
+import { TrackIdentity } from "./TrackIdentity";
 // src/components/StandardView.tsx
 //
 // Standard view — the default desktop face. Phase 2 layout: the 3-column
@@ -620,7 +621,7 @@ export function StandardView({
 
       <section className="std-center" ref={seamRefs.center}>
         <div className="std-hero-head">
-          <h1 className="std-title">{tm.selectedTrack?.display_name ?? "No track"}</h1>
+          <TrackIdentity name={tm.selectedTrack?.display_name ?? "No track"} standard />
           <p className="std-source">
             {sourceLufs != null
               ? sourceLufsCopy(sourceLufs, effectiveLoudnessTarget(s))

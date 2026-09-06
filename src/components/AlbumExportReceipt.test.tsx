@@ -1,11 +1,14 @@
 import { act } from "react";
 import type { ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AlbumExportReceipt } from "./AlbumExportReceipt";
 import { AlbumExportCompletion } from "./AlbumExportCompletion";
 import type { AlbumRenderReport } from "../lib/api";
+import { api } from "../lib/api";
+
+vi.mock("../lib/api", () => ({ api: { openOutput: vi.fn() } }));
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true;
@@ -28,6 +31,23 @@ afterEach(() => {
 });
 
 describe("AlbumExportReceipt", () => {
+  it("reveals the delivered album and provides recovery if the file manager cannot open", async () => {
+    const report = { job_id: "reveal", status: { status: "done" }, album_wav_path: "/masters/Album/album.mp3",
+      manifest_path: "", requested_sample_rate: null, rendered_sample_rate: 48000,
+      source_sample_rates: [48000], bit_depth: 0, mp3_bitrate_kbps: 320,
+      rendered_channels: 2, source_channels: [2], tracks: [],
+    } as AlbumRenderReport;
+    const { root } = await renderNode(<AlbumExportCompletion report={report} />);
+    const show = [...document.body.querySelectorAll("button")].find(button => button.textContent === "Show files")!;
+    vi.mocked(api.openOutput).mockResolvedValueOnce(null);
+    await act(async () => show.click());
+    expect(api.openOutput).toHaveBeenLastCalledWith(report.album_wav_path);
+    vi.mocked(api.openOutput).mockRejectedValueOnce(new Error("missing file"));
+    await act(async () => show.click());
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain("saved file path is shown below");
+    expect(document.body.textContent).toContain(report.album_wav_path);
+    await act(async () => root.unmount());
+  });
   it("opens a successful Album receipt without stealing focus, supports dismissal and reopening", async () => {
     const report = { job_id: "complete", status: { status: "done" }, album_wav_path: "album.wav",
       manifest_path: "manifest.json", requested_sample_rate: null, rendered_sample_rate: 48000,

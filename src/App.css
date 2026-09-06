@@ -5911,8 +5911,8 @@ button.primary:disabled {
    fill it and the LUFS readouts ride at the bottom of the card — instead of
    a fixed taller meter, the space Volume Match vacated (and any spare rail
    height above the export block) all goes to metering. */
-.std-rail-preview { flex: 1 1 auto; min-height: 0; }
-.std-rail-preview .master-out { flex: 1 1 auto; min-height: 0; }
+.std-rail-preview { flex: 1 1 auto; min-height: min-content; }
+.std-rail-preview .master-out { flex: 1 1 auto; min-height: min-content; }
 /* Seam alignment (2026-06-09): when the center column fits without
    scrolling, useRailSeamAlignment (StandardView.tsx) measures its card
    seams and the rail mirrors them — the Preview card's bottom lands on the
@@ -5955,6 +5955,13 @@ button.primary:disabled {
 }
 .std-rail .master-out .readout-value {
   justify-content: flex-end;
+}
+/* Short desktop windows keep the complete meter stack inside Preview. Extra
+   receipt/progress content can scroll the rail instead of covering readouts. */
+@media (max-height: 820px) {
+  .std-rail-card { padding: 0.75rem; }
+  .std-rail .master-out .readout { padding-block: 0.3rem; }
+  .std-rail .master-out .readout-number { font-size: 1.35rem; }
 }
 /* Compact pill beside the PREVIEW title (was a full-width row under the meters). */
 .std-rail-head {
@@ -8457,11 +8464,71 @@ button.chain-stage:hover .chain-stage-label { color: var(--text-0); }
 .gr-meter { grid-template-columns: 2.4rem 1fr 6.4rem; }
 .gr-meter-value { white-space: nowrap; }
 
-.export-encoding-controls {display:flex; gap:.65rem; min-width:0; margin-bottom:.5rem;}
-.export-encoding-controls .field {display:flex; flex:1; flex-direction:column; gap:.25rem; min-width:0;}
-.export-encoding-controls .field > span {font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted);}
-.export-encoding-controls select {width:100%; min-width:0;}
+.export-encoding-controls {
+  display: flex;
+  gap: 0.65rem;
+  min-width: 0;
+  margin-bottom: 0.5rem;
+}
+.export-encoding-controls .field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.export-encoding-controls .field > span {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+}
+.export-encoding-select {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0.35rem 1.8rem 0.35rem 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-0);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='m3 4.5 3 3 3-3' fill='none' stroke='%23aeb6cc' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  color: var(--text-0);
+  font-size: 0.8rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.export-encoding-select:hover { border-color: var(--accent); }
+
+.track-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+.track-identity-mark {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  color: var(--accent-bright);
+  padding-right: 0.55rem;
+  border-right: 1px solid var(--border-strong);
+}
+.track-identity .track-title,
+.track-identity .std-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+  color: var(--text-0);
+  background: none;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
 .std-track-item {display:flex; align-items:center;}
 .std-track-item > .std-track-row {min-width:0; flex:1;}
 
-.analysis-remaining { margin:.35rem 1rem; font-size:.7rem; color:var(--text-muted); }
+.analysis-remaining { margin:.35rem 1rem; font-size:.7rem; color:var(--text-2); }

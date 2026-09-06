@@ -1993,6 +1993,9 @@ export function useTrackMaster() {
       const durations = tracks.map((t) => t.duration_seconds ?? 0);
       const outputDir = await chooseAlbumExportFolder();
       if (!outputDir) return;
+      // A receipt describes the previous attempt. Keep it if the picker is
+      // dismissed, but never show its cancelled/success state during a new job.
+      setAlbumExportReport(null);
       const arc: import("../bindings").AlbumArc = {
         kind: "preset",
         preset: albumArcKind,

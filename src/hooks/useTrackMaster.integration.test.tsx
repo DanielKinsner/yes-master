@@ -3908,6 +3908,46 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("replaces a cancelled Album receipt when a new export actually starts", async () => {
+    const track = makeTrack("album-retry", "C:/audio/album retry.wav");
+    const cancelledReport = {
+      job_id: "cancelled-album",
+      status: { status: "cancelled" },
+      album_wav_path: "",
+      manifest_path: "",
+      tracks: [],
+    };
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.api.planAlbum.mockResolvedValue(makeAlbumPlan([track.id]));
+    mocks.open.mockResolvedValue("/exports");
+    mocks.api.renderAlbumPlan.mockResolvedValueOnce(cancelledReport);
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles([track.path]); });
+    await act(async () => { await harness.current().exportAlbumPlan(); });
+    expect(harness.current().albumExportReport?.status.status).toBe("cancelled");
+
+    // Dismissing the folder picker has not started a replacement export.
+    mocks.open.mockResolvedValueOnce(null);
+    await act(async () => { await harness.current().exportAlbumPlan(); });
+    expect(harness.current().albumExportReport?.status.status).toBe("cancelled");
+
+    let finish!: (report: typeof cancelledReport) => void;
+    mocks.api.renderAlbumPlan.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    let exporting!: Promise<void>;
+    await act(async () => { exporting = harness.current().exportAlbumPlan(); });
+    expect(harness.current().albumRendering).toBe(true);
+    expect(harness.current().albumExportReport).toBeNull();
+    expect(harness.current().renderFeedback).toBeNull();
+    await act(async () => {
+      finish({ ...cancelledReport, job_id: "finished-album", status: { status: "done" }, album_wav_path: "/exports/album.wav" });
+      await exporting;
+    });
+    expect(harness.current().albumExportReport?.status.status).toBe("done");
+    expect(harness.current().albumRendering).toBe(false);
+    await act(async () => { harness.root.unmount(); });
+  });
+
   it("does not render an album plan when the folder picker is cancelled", async () => {
     const first = makeTrack("album-cancel-1", "C:/audio/album cancel one.wav");
     const second = makeTrack("album-cancel-2", "C:/audio/album cancel two.wav");
