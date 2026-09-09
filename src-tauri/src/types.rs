@@ -826,6 +826,9 @@ pub enum JobStatus {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RenderJob {
+    /// File identity survives unavailable measurements. Absent in older jobs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delivered_format: Option<crate::export_format::DeliveredFormat>,
     pub id: String,
     pub job_id: String,
     pub kind: RenderKind,
@@ -891,6 +894,8 @@ pub struct QualityCheck {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ExportReport {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delivered_format: Option<crate::export_format::DeliveredFormat>,
     pub track_id: TrackId,
     pub output_path: String,
     pub measured_lufs: f32,

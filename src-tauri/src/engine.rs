@@ -856,6 +856,8 @@ pub struct AlbumTrackRenderRecord {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct AlbumRenderReport {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delivered_format: Option<crate::export_format::DeliveredFormat>,
     pub mp3_bitrate_kbps: Option<u16>,
     pub job_id: String,
     pub status: JobStatus,
@@ -1423,6 +1425,15 @@ pub fn mastering_render_encoded_with_cancel(
     ));
 
     Ok(RenderJob {
+        delivered_format: Some(
+            crate::export_format::ExportEncoding::resolve(None, mp3_bitrate)?.delivered(
+                rendered_sample_rate,
+                pcm.channels,
+                bit_depth,
+                settings.requested_delivery_sample_rate(),
+                settings.effective_bit_depth(),
+            ),
+        ),
         id: job_id.clone(),
         job_id,
         kind,
@@ -1447,6 +1458,7 @@ pub fn cancelled_render_job(
     started_at_iso: String,
 ) -> RenderJob {
     RenderJob {
+        delivered_format: None,
         id: job_id.clone(),
         job_id,
         kind,

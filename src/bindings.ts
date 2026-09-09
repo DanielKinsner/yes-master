@@ -495,6 +495,7 @@ export interface RenderedMeasurements {
 }
 
 export interface RenderJob {
+  delivered_format?: import("./lib/export-formats").DeliveredFormat | null;
   id: string;
   job_id: string;
   kind: RenderKind;
@@ -515,6 +516,7 @@ export interface QualityCheck {
 }
 
 export interface ExportReport {
+  delivered_format?: import("./lib/export-formats").DeliveredFormat | null;
   track_id: TrackId;
   output_path: string;
   measured_lufs: number;

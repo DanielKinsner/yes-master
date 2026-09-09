@@ -10,6 +10,7 @@ pub mod diagnostics;
 pub mod dsp;
 pub mod engine;
 pub(crate) mod evidence_lanes;
+pub mod export_format;
 pub mod exports;
 pub mod files;
 pub mod fixture_matrix;

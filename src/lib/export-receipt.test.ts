@@ -104,6 +104,20 @@ function build(measurements: RenderedMeasurements | null) {
 }
 
 describe("buildExportReport", () => {
+  it("retains delivered AAC identity when measurements are unavailable", () => {
+    const completed = job(null);
+    completed.delivered_format = {
+      encoding: { format: "m4a", bitrate_kbps: 256 }, codec: "aac_lc", container: "m4a",
+      sample_rate: 48_000, channels: 2, bit_depth: null,
+      requested_sample_rate: 96_000, requested_bit_depth: 24,
+    };
+    const report = buildExportReport({ trackId: "t1", outputPath: "master.m4a", job: completed,
+      sourceAnalysis: ANALYSIS, sourceFormat: "wav", exportSettings: SETTINGS });
+    expect(report.destination_format).toBe("m4a");
+    expect(report.sample_rate).toBe(48_000);
+    expect(report.delivered_format?.bit_depth).toBeNull();
+    expect(report.measurements_are_rendered).toBe(false);
+  });
   it("uses rendered measurements and marks measurements_are_rendered", () => {
     const report = build(MEASUREMENTS);
     expect(report.measurements_are_rendered).toBe(true);

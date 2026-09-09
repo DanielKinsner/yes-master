@@ -328,6 +328,7 @@ mod tests {
 
     fn report(measured_lufs: f32, measured_tp: f32, rendered: bool) -> ExportReport {
         ExportReport {
+            delivered_format: None,
             track_id: TrackId("t1".to_string()),
             output_path: "C:/out/master.wav".to_string(),
             measured_lufs,

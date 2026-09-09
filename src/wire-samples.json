@@ -69,6 +69,18 @@
   "album_render_report": {
     "album_wav_path": "out/album.wav",
     "bit_depth": 24,
+    "delivered_format": {
+      "bit_depth": 24,
+      "channels": 2,
+      "codec": "pcm_s24le",
+      "container": "wav",
+      "encoding": {
+        "format": "wav"
+      },
+      "requested_bit_depth": 24,
+      "requested_sample_rate": 48000,
+      "sample_rate": 48000
+    },
     "job_id": "wire-album-job",
     "manifest_path": "out/album.manifest.json",
     "mp3_bitrate_kbps": null,
@@ -353,6 +365,18 @@
     ],
     "compression_digest": "compression eased low 20%",
     "confidence_digest": "bass 0.9 | tilt 0.6",
+    "delivered_format": {
+      "bit_depth": 24,
+      "channels": 2,
+      "codec": "pcm_s24le",
+      "container": "wav",
+      "encoding": {
+        "format": "wav"
+      },
+      "requested_bit_depth": 24,
+      "requested_sample_rate": 48000,
+      "sample_rate": 48000
+    },
     "destination_format": "wav 24-bit 48 kHz",
     "effective_adaptive_strength": 0.5,
     "measured_dynamic_range_lu": 8.5,
@@ -745,6 +769,18 @@
     "view_by_track_id": {}
   },
   "render_job": {
+    "delivered_format": {
+      "bit_depth": 24,
+      "channels": 2,
+      "codec": "pcm_s24le",
+      "container": "wav",
+      "encoding": {
+        "format": "wav"
+      },
+      "requested_bit_depth": 24,
+      "requested_sample_rate": 48000,
+      "sample_rate": 48000
+    },
     "id": "wire-job",
     "job_id": "wire-job",
     "kind": "master",

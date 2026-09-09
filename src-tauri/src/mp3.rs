@@ -138,6 +138,15 @@ pub fn render_album(
         let (lufs, tp, lra) = measure(&saved, cancel)?;
         report.album_wav_path = saved.to_string_lossy().into_owned();
         report.mp3_bitrate_kbps = Some(kbps);
+        report.delivered_format = Some(
+            crate::export_format::ExportEncoding::Mp3 { bitrate_kbps: kbps }.delivered(
+                report.rendered_sample_rate,
+                report.rendered_channels,
+                32,
+                request.plan.delivery_sample_rate,
+                request.plan.delivery_bit_depth.unwrap_or(24),
+            ),
+        );
         report.bit_depth = 0;
         report.requested_sample_rate = request.plan.delivery_sample_rate;
         report.manifest_path = metadata

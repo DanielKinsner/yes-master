@@ -54,6 +54,7 @@ export interface AlbumTrackRenderRecord {
 }
 
 export interface AlbumRenderReport {
+  delivered_format?: import("./export-formats").DeliveredFormat | null;
   mp3_bitrate_kbps?: number | null;
   job_id: string;
   status: JobStatus;

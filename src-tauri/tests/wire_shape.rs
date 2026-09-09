@@ -233,6 +233,15 @@ fn landing_status_sample() -> LandingStatus {
 
 fn render_job_sample() -> RenderJob {
     RenderJob {
+        delivered_format: Some(
+            yes_master_lib::export_format::ExportEncoding::Wav.delivered(
+                48_000,
+                2,
+                24,
+                Some(48_000),
+                24,
+            ),
+        ),
         id: "wire-job".to_string(),
         job_id: "wire-job".to_string(),
         kind: RenderKind::Master,
@@ -355,6 +364,15 @@ fn quality_check_sample() -> QualityCheck {
 
 fn export_report_sample() -> ExportReport {
     ExportReport {
+        delivered_format: Some(
+            yes_master_lib::export_format::ExportEncoding::Wav.delivered(
+                48_000,
+                2,
+                24,
+                Some(48_000),
+                24,
+            ),
+        ),
         track_id: TrackId("wire-sample".to_string()),
         output_path: "out/wire-sample.master.wav".to_string(),
         measured_lufs: -13.5,
@@ -402,6 +420,15 @@ fn album_track_render_record_sample() -> AlbumTrackRenderRecord {
 
 fn album_render_report_sample() -> AlbumRenderReport {
     AlbumRenderReport {
+        delivered_format: Some(
+            yes_master_lib::export_format::ExportEncoding::Wav.delivered(
+                48_000,
+                2,
+                24,
+                Some(48_000),
+                24,
+            ),
+        ),
         mp3_bitrate_kbps: None,
         job_id: "wire-album-job".to_string(),
         status: JobStatus::Done,

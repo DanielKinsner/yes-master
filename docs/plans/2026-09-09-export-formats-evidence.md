@@ -7,7 +7,7 @@ none of the evidence below substitutes for a new installed package or Mac check.
 | Unit | Status | Evidence / remaining work |
 | --- | --- | --- |
 | U1 | Windows encoder checkpoint; cross-platform qualification open | Pinned source build, package integrity gate, independent codec matrix, app re-import, Tauri staging and qualification workflow implemented. Mac thin/universal execution and installed packaging still open. |
-| U2 | In progress | Explicit encoding and delivered identity contracts; compatibility checks in progress. |
+| U2 | Type/receipt checkpoint complete | Explicit encoding validation, delivered identity independent of metering, legacy WAV/MP3 compatibility, updated wire samples. Command dispatch is connected with the adapters in U3/U4. |
 | U3–U5 | Pending | Actual Track/Album adapters and UI are not yet implemented. Existing WAV/MP3 remain available. |
 | U6 | Pending; Mac access unavailable | Owner confirmed Mac checks must wait for a later login/session. Continue Windows work. |
 | U7 | Preparation | Encoder source/license archives retained; LAME relink permission/materials, exact candidate CI, installer hashes and signing evidence still required. |
@@ -49,3 +49,18 @@ Build outputs, sources and synthetic audio remain ignored under `test-output/`.
 They do not travel with git; the committed build scripts reproduce the package
 and the qualification workflow is prepared but **has not run on remote CI**.
 No private audio or `YES_Master_Video_Packet/` content is staged.
+
+## U2 contract checkpoint
+
+WAV and MP3 now report explicit delivered codec/container/rate/precision facts.
+Optional fields default when older jobs are read. Receipt identity no longer
+falls back to WAV when an explicitly identified job has no measurements;
+unavailable measurements retain the existing `measurements_are_rendered=false`
+marker. Invalid/contradictory encoding requests are rejected.
+
+- Frontend: **856 tests PASS**, production build PASS.
+- Rust: strict all-target Clippy PASS; format/quality validation tests PASS;
+  **54 contract + 3 existing MP3 + 1 wire-sample tests PASS**.
+- iPhone: all-target check PASS; **46 tests PASS, one existing ignored**.
+- Android: **26 host tests PASS**, API-29 arm64 NDK check PASS.
+- No rendered controls changed in this checkpoint. New-format UI remains hidden.

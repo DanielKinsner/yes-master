@@ -1076,6 +1076,13 @@ pub fn render_album_plan_impl_with_cancel(
     ));
 
     Ok(AlbumRenderReport {
+        delivered_format: Some(crate::export_format::ExportEncoding::Wav.delivered(
+            album_sample_rate,
+            album_channels,
+            bit_depth,
+            request.plan.delivery_sample_rate,
+            request.plan.delivery_bit_depth.unwrap_or(24),
+        )),
         mp3_bitrate_kbps: None,
         job_id,
         status: JobStatus::Done,
@@ -1101,6 +1108,7 @@ fn cancelled_album_report(
     source_channels: Vec<u16>,
 ) -> AlbumRenderReport {
     AlbumRenderReport {
+        delivered_format: None,
         mp3_bitrate_kbps: None,
         job_id,
         status: JobStatus::Cancelled,
