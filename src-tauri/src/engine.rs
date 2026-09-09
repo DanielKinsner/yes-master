@@ -910,9 +910,11 @@ pub async fn render_album_plan(
     request: AlbumPlanRenderRequest,
     output_dir: Option<String>,
     mp3_bitrate: Option<u16>,
+    encoding: Option<crate::export_format::ExportEncoding>,
     app: tauri::AppHandle,
     render_jobs: tauri::State<'_, RenderJobRegistry>,
 ) -> CommandResult<AlbumRenderReport> {
+    let encoding = crate::export_format::ExportEncoding::resolve(encoding, mp3_bitrate)?;
     let out_dir = match output_dir {
         Some(path) => explicit_output_dir(Path::new(&path))?,
         None => render_output_dir(&app, RenderKind::Album)?,
@@ -934,13 +936,13 @@ pub async fn render_album_plan(
     };
     let job_id_for_render = job_id.clone();
     let join_result = tauri::async_runtime::spawn_blocking(move || {
-        crate::mp3::render_album(
+        crate::album_encoding::render_album(
             &request,
             &out_dir,
             Some(&on_progress),
             Some(cancel_flag.as_ref()),
             Some(&job_id_for_render),
-            mp3_bitrate,
+            encoding,
         )
     })
     .await;
@@ -1118,6 +1120,11 @@ pub fn mastering_render_format_with_cancel(
     encoding: crate::export_format::ExportEncoding,
 ) -> CommandResult<RenderJob> {
     encoding.validate()?;
+    if encoding.needs_sidecar() && !matches!(settings.effective_bit_depth(), 16 | 24 | 32) {
+        return Err(CommandError::Render(
+            "Unsupported requested precision".into(),
+        ));
+    }
     let encoder = if encoding.needs_sidecar() {
         Some(crate::export_encoding::Encoder::packaged()?)
     } else {

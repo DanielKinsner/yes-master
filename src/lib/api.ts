@@ -341,11 +341,13 @@ export const api = {
     tracks: AlbumTrackRenderInput[],
     outputDir?: string,
     mp3Bitrate?: number,
+    encoding?: import("./export-formats").ExportEncoding,
   ) =>
     invoke<AlbumRenderReport>("render_album_plan", {
       request: { plan, tracks },
       outputDir: outputDir ?? null,
       ...(mp3Bitrate === undefined ? {} : {mp3Bitrate}),
+      ...(encoding === undefined ? {} : { encoding }),
     }),
 
   cancelRender: (jobId: string) =>

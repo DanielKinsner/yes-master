@@ -1081,7 +1081,7 @@ pub fn render_album_plan_impl_with_cancel(
             album_channels,
             bit_depth,
             request.plan.delivery_sample_rate,
-            request.plan.delivery_bit_depth.unwrap_or(24),
+            request.plan.delivery_bit_depth.unwrap_or(bit_depth),
         )),
         mp3_bitrate_kbps: None,
         job_id,

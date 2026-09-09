@@ -9,7 +9,8 @@ none of the evidence below substitutes for a new installed package or Mac check.
 | U1 | Windows encoder checkpoint; cross-platform qualification open | Pinned source build, package integrity gate, independent codec matrix, app re-import, Tauri staging and qualification workflow implemented. Mac thin/universal execution and installed packaging still open. |
 | U2 | Type/receipt checkpoint complete | Explicit encoding validation, delivered identity independent of metering, legacy WAV/MP3 compatibility, updated wire samples. Command dispatch is connected with the adapters in U3/U4. |
 | U3 | Windows backend checkpoint complete | Track encoding, read-back, precision/rate policy, cancellation and atomic no-clobber persistence verified below. UI exposure follows U4/U5; installed/fixture integration remains separate. |
-| U4–U5 | In progress / pending | Album adapter preparation underway; new controls not exposed yet. |
+| U4 | Windows backend checkpoint complete | All five new formats preserve order/overrides/gaps and single continuous encoding; cancellation and manifest-failure ownership verified. |
+| U5 | In progress | Shared selectors, receipt facts, import aliases and UI verification. |
 | U6 | Pending; Mac access unavailable | Owner confirmed Mac checks must wait for a later login/session. Continue Windows work. |
 | U7 | Preparation | Encoder source/license archives retained; LAME relink permission/materials, exact candidate CI, installer hashes and signing evidence still required. |
 | U8 | Not authorized / not started | No push, tag, publication, deployment or spending. |
@@ -107,3 +108,25 @@ are killed/reaped on cancellation.
 
 Slow private-fixture and affected final bridge/package checks remain integration
 gates after the Album/UI changes. Mac execution remains unavailable as recorded.
+
+## U4 Windows Album checkpoint
+
+New formats reuse the existing Album assembly at the resolved rate and precision,
+then encode each numbered track and the continuous programme separately. The
+continuous programme is encoded once. WAV/MP3 still dispatch through their prior
+paths. Requested Auto precision resolves from the first planned track as before;
+invalid new-format precision is rejected rather than silently converted.
+
+- New matrix PASS for FLAC, AIFF, M4A, AAC and Vorbis: three tracks in reversed
+  order, a per-track override, mixed 48/96 kHz and mono/stereo/quad sources,
+  0.25/0.5-second gaps, exact comparison to one encode of the reference assembly,
+  measured per-file values, actual manifest paths and precision facts.
+- Cancellation after a delivered track removes only that job's outputs and
+  preserves the earlier completed album for every new format.
+- Forced manifest collision PASS: all owned audio is removed; the foreign
+  manifest survives unchanged. The job returns an error, never partial success.
+- Existing regressions PASS: **6 Album render, 6 Album hostile, 5 Album rate,
+  3 MP3**. Strict all-target Clippy passed the new Album module before the small
+  Auto-precision follow-up; the final integration lane rechecks the combined code.
+- These are backend tests. Installed Album UI and final private-fixture evidence
+  remain separate U5/U6/integration checks.

@@ -144,7 +144,7 @@ pub fn render_album(
                 report.rendered_channels,
                 32,
                 request.plan.delivery_sample_rate,
-                request.plan.delivery_bit_depth.unwrap_or(24),
+                crate::album_encoding::requested_bit_depth(request),
             ),
         );
         report.bit_depth = 0;
