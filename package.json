@@ -26,7 +26,7 @@
     "verify:landing-smoke": "node scripts/verify-landing-responsive.mjs --smoke --url"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@vercel/analytics": "^2.0.1",
     "react": "^19.0.0",
