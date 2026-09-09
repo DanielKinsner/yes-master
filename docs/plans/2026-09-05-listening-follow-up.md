@@ -2,6 +2,13 @@
 
 Prepared September 5, 2026. **Authorized follow-through implemented locally; checkpoint 9 records verification and remaining listening/platform limits.**
 
+**September 9 closure:** the owner completed all five targeted checks on
+installed Windows 0.9.2 / `07021f1b` and reported all passed. The
+[installed record](../listening/2026-09-09-installed-check.md) supersedes the
+pending Windows listening/interaction annotations below within its named scope.
+Preserve historical evidence; new export formats and Mac/release verification
+remain separate work. Do not repeat this completed owner questionnaire.
+
 ## Implementation evidence
 
 ### Checkpoint 1 — VM edit attenuation (September 5)

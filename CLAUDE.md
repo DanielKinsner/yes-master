@@ -78,6 +78,14 @@ and evidence justify it; do not execute unrelated parked backlog by default.
 
 ## Listening already conducted
 
+**Latest: September 9 installed Windows baseline PASSED.** The owner completed
+all five checks on installed 0.9.2 / `07021f1b` and reported all passed. Read
+`docs/listening/2026-09-09-installed-check.md` for exact scope and artifact proof.
+This closes that Windows questionnaire. Continue the requested export-format
+expansion; test affected behavior without repeating unchanged listening gates.
+Future formats, Mac installers and release/updater activation require their own
+applicable evidence; this signoff does not publish a release.
+
 The owner completed the **2026-09-05 native Windows listening session** via
 `npm run tauri dev`, Focusrite USB/studio monitors, owner-verified `e600a21`.
 Read [the reconciled handoff](docs/listening/2026-09-05-owner-handoff.md),
@@ -86,9 +94,9 @@ Read [the reconciled handoff](docs/listening/2026-09-05-owner-handoff.md),
 
 Normal A/B, normal musical contrast, and the observed Track Master export comparison
 passed. Do not call the session missing, repeat the questionnaire, or ask for details
-already supplied in prose. Address the recorded findings and narrow Width/VM-off/Album
-coverage limits; target new checks to unresolved or changed behavior. Overall verdict:
-"Not ready / stopped here," not blanket release approval. Preset taste stays as-is.
+already supplied in prose. The September 5 verdict was "Not ready / stopped here";
+the later September 9 installed pass above supersedes it for the tested Windows
+baseline. Target new checks to unresolved or changed behavior. Preset taste stays as-is.
 September 4 implementation history is in `docs/plans/2026-09-04-audio-correctness.md`.
 Release activity remains parked.
 

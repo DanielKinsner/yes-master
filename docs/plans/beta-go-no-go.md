@@ -1,5 +1,14 @@
 # YES Master — Beta Go / No-Go Checklist
 
+> **2026-09-09 — Installed Windows baseline owner PASS.** The owner completed
+> all five targeted checks on installed 0.9.2 / `07021f1b` and reported all passed.
+> This covers the listed A/B, Volume Match settings edits, transport, heavier
+> import/playback and saved-file/Album checks. [Exact artifact and evidence](../listening/2026-09-09-installed-check.md).
+> The September 5 "Not ready / stopped here" verdict remains historical and
+> must not override this later pass. Broader export formats, Mac candidate
+> validation, distribution requirements and updater/publication gates remain
+> separate; a future launch artifact needs checks appropriate to its changes.
+
 > **MP3 release integration (September 5 follow-through):** desktop MP3 is locally
 > implemented and verified on Windows; no installer/release has been activated.
 > Before distributing a candidate containing it, verify the Mac build and the

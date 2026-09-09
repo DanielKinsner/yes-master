@@ -1,5 +1,11 @@
 # YES Master — Owner Input Queue
 
+**September 9 update:** the owner completed all five checks on installed Windows
+0.9.2 / `07021f1b` and reported all passed. See the
+[installed record](listening/2026-09-09-installed-check.md). Do not add another
+request for those same checks; preserve this pass while verifying subsequent
+export-format changes and the separate Mac/release requirements.
+
 The single place where **questions only the owner can answer** accumulate while
 an agent is executing a chunk of
 `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md`.

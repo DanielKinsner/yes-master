@@ -1,5 +1,26 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-09 — Installed Windows owner check PASSED, all five checks.**
+> Installed and launched 0.9.2 from exact `07021f1b` with a verified clean build
+> stamp; existing session preserved. 240 focused tests and 19 checks through the
+> real Windows audio output passed, plus independently decoded WAV/MP3 exports.
+> [Five simple owner checks and precise evidence limits](listening/2026-09-09-installed-check.md)
+> replace a broad repeat questionnaire for this sitting. The owner reported
+> "actually ran through all those tests. all 5 passed". The named Windows baseline
+> is approved; do not reopen that same questionnaire. Continue with broader
+> export support and launch preparation, testing the changed behavior. This
+> signoff does not certify a future format expansion or Mac release artifact.
+
+> **2026-09-09 — Owner clarified broader export-format intent.** MP3 was an
+> example of the desired range of delivery formats, not the complete request.
+> The intended product should export the major audio formats users need,
+> covering its supported import formats and additional useful delivery formats.
+> Current picker extensions are WAV, MP3, M4A, AAC, FLAC and OGG; implemented
+> desktop export choices are WAV and MP3. The September 5 MP3 checkpoint remains
+> completed evidence for that increment, not closure of this broader requirement.
+> See [the expanded export scope](plans/2026-09-05-export-options.md#broader-export-format-scope--owner-clarification-2026-09-09)
+> for the distinction between the owner's requirement and the proposed format set.
+
 > **September 5 follow-through implemented locally (verification continued September 6 UTC).**
 > Return to start/Home, pointer/keyboard reorder with insertion and edge scrolling,
 > stable Track/Album header/timeline geometry, incremental analysis/profile readiness,

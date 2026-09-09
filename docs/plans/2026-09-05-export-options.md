@@ -1,9 +1,44 @@
 # Listening follow-up: concrete output choices
 
-The owner has settled the codec, filename, manifest and loading choices below.
+The owner has settled the first MP3 increment, filename, manifest and loading choices below.
 Local implementation and verification are recorded in checkpoint 9 of the
 [follow-up plan](2026-09-05-listening-follow-up.md). These are not public release
 claims. Old owner outputs are never deleted.
+
+## Broader export-format scope — owner clarification 2026-09-09
+
+The owner clarified that MP3 was an example: the intended capability is a useful
+range of major audio export formats. Supported audio import formats should also
+be available for export, with additional useful delivery formats beyond that
+baseline. Do not interpret the completed WAV/MP3 increment as completion of this
+broader product requirement.
+
+**Verified current implementation:** the import picker accepts `.wav`, `.mp3`,
+`.m4a`, `.aac`, `.flac` and `.ogg` (`src/lib/supported-formats.ts`). Desktop export
+offers WAV and MP3 (`src/components/ExportEncodingControls.tsx`). This inventory
+describes the picker and implemented choices; an extension is not a promise to
+decode every codec that its container can hold.
+
+**Proposed format set, not an owner-approved exhaustive list:** retain WAV/MP3;
+add FLAC, AAC in M4A, standalone AAC and Ogg Vorbis to cover the current import
+families; also evaluate AIFF, Apple Lossless in M4A and Opus as useful additions.
+Make the distinction between AAC and Apple Lossless understandable even though
+both can use `.m4a`. Verify corresponding import support for added formats rather
+than assuming the existing decoder supports them.
+
+Keep this within normal mastering export across Standard, Advanced Track and
+Album batch/continuous output. Format selection preserves mastering settings.
+Each encoder must preserve the existing source/collision/cancellation protections
+and provide truthful delivered-file receipts, appropriate quality/rate controls,
+and independent decoding/duration checks. Lossless formats must preserve the
+intended rendered PCM at the selected precision. Encoders must work locally on
+Windows and macOS without a separate user installation; verify packaging and
+distribution requirements as part of the implementation.
+
+The clarification does not select an encoder dependency, settle every codec or
+quality option, or authorize publication. Launch timing for the full format set
+was not explicitly settled in this message. Current public capability claims
+continue to describe only implemented and verified formats.
 
 ## Album names and manifest
 
