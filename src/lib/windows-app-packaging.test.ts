@@ -30,7 +30,7 @@ describe("Windows app packaging", () => {
     const packageJson = readJson("package.json");
 
     expect(packageJson.scripts?.["build:windows"]).toBe(
-      "rimraf src-tauri/target/release/produce_dialog_smoke.exe && tauri build --bundles msi,nsis",
+      "node scripts/check-staged-encoder.mjs && rimraf src-tauri/target/release/produce_dialog_smoke.exe && tauri build --config src-tauri/tauri.encoder.conf.json --bundles msi,nsis",
     );
     expect(packageJson.devDependencies?.rimraf).toBeDefined();
   });

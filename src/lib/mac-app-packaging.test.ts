@@ -36,7 +36,7 @@ describe("macOS app packaging", () => {
     const packageJson = readJson("package.json");
 
     expect(packageJson.scripts?.["build:mac"]).toBe(
-      "rm -f src-tauri/target/release/produce_dialog_smoke && tauri build --bundles app,dmg",
+      "node scripts/check-staged-encoder.mjs && rimraf src-tauri/target/release/produce_dialog_smoke && tauri build --config src-tauri/tauri.encoder.conf.json --bundles app,dmg",
     );
   });
 

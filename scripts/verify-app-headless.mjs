@@ -87,6 +87,18 @@ const SETTLE_TIMEOUT_MS = 20_000;
  * whitespace-collapsed innerText of <body>.
  */
 const SCENARIOS = [
+  { name:"album-warning", label:"album-new-formats", scenarioId:"S-F2", purpose:"New-format Album controls, delivered identity and per-track paths.", viewports:[MIN_DESKTOP], settle:"album-ready", drive:async page => {
+    for (const [format,label] of [['flac','FLAC'],['m4a','AAC / M4A'],['aac','AAC (ADTS)'],['ogg','Ogg Vorbis'],['aiff','AIFF']]) {
+      const close = page.getByRole('button',{name:'Close Album receipt',exact:true});
+      if (await close.count()) await close.click();
+      await page.getByLabel('Export file format',{exact:true}).selectOption(format);
+      await driveAlbumExport(page);
+      const receipt = page.getByRole('region',{name:'Album export receipt',exact:true});
+      await waitForText(page, text=>text.includes(label),`${format} Album receipt`,()=>receipt.innerText());
+      const paths = await receipt.locator('.album-track-result strong').evaluateAll(nodes=>nodes.map(node=>node.title));
+      if (!paths.every(path=>path.endsWith(`.${format}`))) throw new Error(`${format} Album receipt has wrong file extensions`);
+    }
+  } },
   { name:"clean", label:"transport-and-order", scenarioId:"S-F1", purpose:"Pointer and keyboard track order, selected identity and Return to start in both modes.", viewports:[MIN_DESKTOP,LAPTOP], settle:"ready", beforeScreenshot:transportAndOrderProbe },
   { name:"export-success", label:"mp3-export", scenarioId:"S-E1", purpose:"MP3 format/bitrate selection and truthful delivered receipt.", viewports:[MIN_DESKTOP], settle:"ready", beforeScreenshot:mp3ExportProbe },
 
@@ -888,6 +900,7 @@ async function mp3ExportProbe(page,report) {
     if (!(await page.getByRole('dialog').innerText()).includes(label)) report(`${format} receipt missing delivered identity`);
     formats.push(format);
   }
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.receipt-backdrop')).opacity === '1' && getComputedStyle(document.querySelector('.receipt')).opacity === '1');
   return {bitrate:192, formats};
 }
 
