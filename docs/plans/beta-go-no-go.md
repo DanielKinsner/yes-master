@@ -1,5 +1,12 @@
 # YES Master — Beta Go / No-Go Checklist
 
+> **2026-09-09 — Export expansion underway.**
+> [Implementation evidence](2026-09-09-export-formats-evidence.md) records the
+> new Windows source-built encoder. This is not installed-candidate evidence.
+> Mac execution/installed checks are pending the owner's later Mac session.
+> Encoder redistribution and existing static LAME relink obligations remain
+> release requirements; no public transaction is authorized by this work.
+
 > **2026-09-09 — Installed Windows baseline owner PASS.** The owner completed
 > all five targeted checks on installed 0.9.2 / `07021f1b` and reported all passed.
 > This covers the listed A/B, Volume Match settings edits, transport, heavier

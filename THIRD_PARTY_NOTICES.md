@@ -1,5 +1,11 @@
 # Desktop MP3 dependencies
 
+New-format encoder preparation is documented in
+[Desktop audio encoder package](docs/third-party/audio-encoders.md). It retains
+exact FFmpeg/libogg/libvorbis sources and licenses beside each generated binary.
+The sidecar has not yet completed the installed release gates and does not
+replace the static LAME obligations below.
+
 The desktop `app-runner` feature embeds LAME for offline MP3 export. Mobile
 bridge builds do not enable this encoder. No external encoder installation or
 network service is used by export.

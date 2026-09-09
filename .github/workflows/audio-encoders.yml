@@ -1,0 +1,63 @@
+name: Audio encoder qualification
+on:
+  workflow_call:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-latest
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c
+        with:
+          toolchain: stable
+      - name: Windows build and independent decoder tools
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & C:/msys64/usr/bin/bash.exe -lc 'pacman -S --needed --noconfirm make diffutils mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-pkgconf'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          choco install ffmpeg --yes --no-progress
+      - name: Mac build and independent decoder tools
+        if: runner.os == 'macOS'
+        run: |
+          brew install pkg-config ffmpeg
+          if [ "${{ matrix.target }}" = x86_64-apple-darwin ] && [ "$(uname -m)" = arm64 ]; then
+            softwareupdate --install-rosetta --agree-to-license
+          fi
+      - name: Build Windows encoder from source
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/build-audio-encoders.ps1 -OutputDirectory test-output/encoder-package
+      - name: Build Mac encoder from source
+        if: runner.os == 'macOS'
+        run: bash scripts/build-audio-encoders.sh '${{ matrix.target }}' test-output/encoder-package
+      - name: Qualify package and independently decode files
+        shell: pwsh
+        run: |
+          node --test scripts/verify-audio-encoders.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-audio-encoders.mjs test-output/encoder-package '${{ matrix.target }}' (Get-Command ffmpeg).Source (Get-Command ffprobe).Source --seal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:YES_MASTER_ENCODER_QUALIFICATION = (Resolve-Path test-output/encoder-package/qualification).Path
+          cargo test --manifest-path src-tauri/Cargo.toml --test encoder_package -- --ignored
+      - name: Retain binary, source, licenses and qualification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: audio-encoder-${{ matrix.target }}
+          path: test-output/encoder-package
+          if-no-files-found: error

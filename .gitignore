@@ -96,5 +96,8 @@ docs/READING_THE_METERS.md
 
 .vercel
 
+# Generated, hash-verified encoder packages; rebuild from pinned sources.
+/src-tauri/binaries/
+
 # Local studio design handoff; production assets are tracked in src/assets/landing/.
 /docs/landing-mockups/assets/YES_Master_Studio_Handoff/

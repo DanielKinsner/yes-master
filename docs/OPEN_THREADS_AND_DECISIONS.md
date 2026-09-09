@@ -1,5 +1,13 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-09 — Export implementation started; Windows encoder qualified.**
+> [Live implementation evidence](plans/2026-09-09-export-formats-evidence.md)
+> records the pinned offline encoder, independent format tests and exact binary.
+> Track/Album integration is in progress; new choices are not yet advertised.
+> Owner confirmed Mac verification must wait for a later Mac session. Continue
+> Windows and independent release preparation. Existing installed Windows
+> `07021f1b` owner PASS remains valid for its named scope. No release activity authorized.
+
 > **2026-09-09 — Export and beta launch implementation plan written.**
 > [Export formats and public beta launch plan](plans/2026-09-09-0857-feat-export-formats-beta-launch-plan.md)
 > details encoder qualification, all desktop export flows, installed package checks,

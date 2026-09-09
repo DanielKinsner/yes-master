@@ -44,6 +44,7 @@ symphonia = { version = "0.5", features = [
     "isomp4",
     "flac",
     "wav",
+    "aiff",
     "pcm",
     "ogg",
     "vorbis",
