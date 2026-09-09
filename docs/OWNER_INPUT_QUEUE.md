@@ -27,6 +27,13 @@ The objective VM, resource and UI fixes proceed independently.
 
 ## Why this file exists
 
+September 9 export candidate prerequisites: Mac checks are deferred to the
+owner's next Mac session (answered; do not ask again now). Before redistribution,
+the owner must resolve the [specific LGPL relinking permission draft](third-party/lgpl-relink-exception-DRAFT.md).
+Exact source materials and a Windows candidate are being prepared first.
+Permanent updater key cross-machine backup/recovery and a beta end date still
+need their existing release evidence/decision; no date or approval is inferred.
+
 Record real unresolved owner choices so independent work can continue without
 inventing an answer or repeatedly asking the same question. First check current
 instructions and recorded decisions: routine implementation choices and work

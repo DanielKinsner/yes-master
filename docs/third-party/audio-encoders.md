@@ -77,6 +77,20 @@ license exception before public distribution. Do not silently change LICENSE.
 
 ## Evidence status
 
+`npm run build:windows` and `npm run build:mac` verify the staged hash and bundle
+the sidecar/license overlay. CI and release preparation consume the qualification
+workflow's exact packages and run the real engine matrices. Universal staging
+combines both qualified thin binaries, checks both architectures, signs ad hoc
+and embeds the same final hash in both Rust slices. Final Mac signing can affect
+executable bytes: the installed sibling's hash must still equal the embedded
+expected hash, and this remains an unexecuted Mac gate. Never bypass it.
+
+`scripts/prepare-redistribution.mjs` archives an exact git revision (excluding
+untracked/private files), verifies Cargo's LAME source archives against Cargo.lock,
+and retains the encoder's source/configuration/licenses. The draft release audit
+requires both source archives and all three encoder packages, with checksums;
+unresolved relink permission/rebuild evidence intentionally fails readiness.
+
 See [the live implementation ledger](../plans/2026-09-09-export-formats-evidence.md).
 The owner confirmed that Mac checks must wait for a later Mac session. No Mac
 build, emulated execution, universal assembly or installed result is claimed here.

@@ -13,6 +13,9 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  audio-encoders:
+    uses: ./.github/workflows/audio-encoders.yml
+
   snapshot-diagnostics:
     name: Snapshot diagnostics (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -115,6 +118,7 @@ jobs:
           if-no-files-found: warn
 
   windows:
+    needs: audio-encoders
     name: Windows desktop and host bridge lanes
     runs-on: windows-latest
 
@@ -156,7 +160,20 @@ jobs:
         run: npm run build
 
       - name: Windows package build
+        uses: actions/download-artifact@v4
+        with:
+          name: audio-encoder-x86_64-pc-windows-msvc
+          path: test-output/encoder-package
+
+      - name: Stage verified Windows encoder
+        run: node scripts/stage-audio-encoder.mjs test-output/encoder-package x86_64-pc-windows-msvc
+
+      - name: Build Windows installers with encoder
         run: npm run build:windows
+
+      - name: New-format Track and Album matrices
+        working-directory: src-tauri
+        run: cargo test --test export_formats --test album_export_formats -- --ignored
 
       - name: Rust format check
         working-directory: src-tauri
@@ -179,6 +196,7 @@ jobs:
         run: cargo test
 
   macos:
+    needs: audio-encoders
     name: macOS desktop and iPhone lanes
     runs-on: macos-latest
 
@@ -221,7 +239,20 @@ jobs:
         run: cargo test
 
       - name: macOS package build
+        uses: actions/download-artifact@v4
+        with:
+          name: audio-encoder-aarch64-apple-darwin
+          path: test-output/encoder-package
+
+      - name: Stage verified Mac encoder
+        run: chmod +x test-output/encoder-package/yes-master-encoder-aarch64-apple-darwin && node scripts/stage-audio-encoder.mjs test-output/encoder-package aarch64-apple-darwin
+
+      - name: Build Mac package with encoder
         run: npm run build:mac
+
+      - name: New-format Track and Album matrices
+        working-directory: src-tauri
+        run: cargo test --test export_formats --test album_export_formats -- --ignored
 
       - name: Install XcodeGen
         run: brew install xcodegen

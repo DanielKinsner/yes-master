@@ -55,6 +55,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:YES_MASTER_ENCODER_QUALIFICATION = (Resolve-Path test-output/encoder-package/qualification).Path
           cargo test --manifest-path src-tauri/Cargo.toml --test encoder_package -- --ignored
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/stage-audio-encoder.mjs test-output/encoder-package '${{ matrix.target }}'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup target add '${{ matrix.target }}'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --manifest-path src-tauri/Cargo.toml --target '${{ matrix.target }}' --test export_formats --test album_export_formats -- --ignored
       - name: Retain binary, source, licenses and qualification evidence
         uses: actions/upload-artifact@v4
         with:
