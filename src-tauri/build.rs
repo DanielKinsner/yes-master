@@ -38,13 +38,23 @@ fn main() {
         .filter(|o| o.status.success())
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
         .unwrap_or_else(|| "unknown".to_string());
-    let dirty = std::process::Command::new("git")
-        .args(["status", "--porcelain"])
+    // Tauri rewrites Cargo.toml with LF on Windows. `status --porcelain`
+    // can then report a stale stat/line-ending change with no content diff.
+    // Compare actual tracked content to HEAD and check untracked files
+    // separately; real edits (including staged changes) still mark the build.
+    let tracked_dirty = std::process::Command::new("git")
+        .args(["diff", "--quiet", "HEAD", "--"])
+        .status()
+        .map(|status| !status.success())
+        .unwrap_or(true);
+    let untracked_dirty = std::process::Command::new("git")
+        .args(["ls-files", "--others", "--exclude-standard"])
         .output()
         .ok()
         .filter(|o| o.status.success())
         .map(|o| !o.stdout.is_empty())
-        .unwrap_or(false);
+        .unwrap_or(true);
+    let dirty = tracked_dirty || untracked_dirty;
     let now = chrono::Local::now().format("%Y-%m-%d %H:%M");
     let stamp = format!("{git_hash}{} · {now}", if dirty { "+" } else { "" });
     println!("cargo:rustc-env=YES_BUILD_STAMP={stamp}");

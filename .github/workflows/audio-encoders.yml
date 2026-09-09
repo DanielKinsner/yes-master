@@ -47,6 +47,9 @@ jobs:
         if: runner.os == 'macOS'
         run: bash scripts/build-audio-encoders.sh '${{ matrix.target }}' test-output/encoder-package
       - name: Qualify package and independently decode files
+        run: npm ci && npm run build
+
+      - name: Run package and actual engine qualification
         shell: pwsh
         run: |
           node --test scripts/verify-audio-encoders.test.mjs

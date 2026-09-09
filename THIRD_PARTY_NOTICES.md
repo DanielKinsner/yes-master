@@ -26,6 +26,7 @@ installer has completed license integration. Before distributing a build with
 these statically linked libraries, include their applicable license/copyright
 notices and provide the source and application relinking materials required by
 their licenses, with reproducible instructions for the exact release build.
-The current local app was neither packaged nor released by this change. That
-distribution work and Mac encoder build verification are recorded in the
+The desktop encoder packaging overlay includes these retained license texts,
+this notice and the application license. Source/relink permissions and rebuild
+proof still gate public redistribution. That work and Mac verification are recorded in the
 [live release gate](docs/plans/beta-go-no-go.md).

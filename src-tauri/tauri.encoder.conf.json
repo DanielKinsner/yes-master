@@ -1,6 +1,12 @@
 {
   "bundle": {
     "externalBin": ["binaries/yes-master-encoder"],
-    "resources": ["binaries/licenses/*"]
+    "resources": [
+      "binaries/licenses/*",
+      "../THIRD_PARTY_NOTICES.md",
+      "../LICENSE",
+      "../docs/third-party/*.txt",
+      "../docs/third-party/audio-encoders.md"
+    ]
   }
 }
