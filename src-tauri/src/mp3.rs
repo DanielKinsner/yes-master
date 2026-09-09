@@ -309,13 +309,29 @@ pub fn write(
 /// Stream the delivered MP3 back through a separate decoder and BS.1770 meter.
 /// This remains bounded for continuous albums as well as individual tracks.
 pub fn measure(path: &Path, cancel: Option<&AtomicBool>) -> CommandResult<(f32, f32, f32)> {
+    Ok(measure_details(path, cancel)?.measurements)
+}
+
+pub struct DecodedMeasurements {
+    pub measurements: (f32, f32, f32),
+    pub sample_rate: u32,
+    pub channels: u32,
+    pub frames: u64,
+}
+
+pub fn measure_details(
+    path: &Path,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<DecodedMeasurements> {
     use symphonia::core::{
         audio::SampleBuffer, codecs::DecoderOptions, formats::FormatOptions, io::MediaSourceStream,
         meta::MetadataOptions, probe::Hint,
     };
     let file = std::fs::File::open(path).map_err(error)?;
     let mut hint = Hint::new();
-    hint.with_extension("mp3");
+    if let Some(extension) = path.extension().and_then(|value| value.to_str()) {
+        hint.with_extension(extension);
+    }
     let mut format = symphonia::default::get_probe()
         .format(
             &hint,
@@ -332,24 +348,11 @@ pub fn measure(path: &Path, cancel: Option<&AtomicBool>) -> CommandResult<(f32, 
         .default_track()
         .ok_or_else(|| error("no audio stream"))?;
     let id = track.id;
-    let rate = track
-        .codec_params
-        .sample_rate
-        .ok_or_else(|| error("missing sample rate"))?;
-    let channels = track
-        .codec_params
-        .channels
-        .ok_or_else(|| error("missing channels"))?
-        .count() as u32;
     let mut decoder = symphonia::default::get_codecs()
         .make(&track.codec_params, &DecoderOptions::default())
         .map_err(error)?;
-    let mut meter = ebur128::EbuR128::new(
-        channels,
-        rate,
-        ebur128::Mode::I | ebur128::Mode::LRA | ebur128::Mode::TRUE_PEAK,
-    )
-    .map_err(error)?;
+    let mut state: Option<(ebur128::EbuR128, u32, u32)> = None;
+    let mut frames = 0_u64;
     loop {
         check_cancel(cancel)?;
         let packet = match format.next_packet() {
@@ -365,10 +368,30 @@ pub fn measure(path: &Path, cancel: Option<&AtomicBool>) -> CommandResult<(f32, 
             continue;
         }
         let decoded = decoder.decode(&packet).map_err(error)?;
+        if state.is_none() {
+            let rate = decoded.spec().rate;
+            let channels = decoded.spec().channels.count() as u32;
+            let meter = ebur128::EbuR128::new(
+                channels,
+                rate,
+                ebur128::Mode::I | ebur128::Mode::LRA | ebur128::Mode::TRUE_PEAK,
+            )
+            .map_err(error)?;
+            state = Some((meter, rate, channels));
+        }
+        let (meter, rate, channels) = state.as_mut().ok_or_else(|| error("no decoded format"))?;
+        if decoded.spec().rate != *rate || decoded.spec().channels.count() as u32 != *channels {
+            return Err(error("delivered stream changes rate or channel count"));
+        }
         let mut samples = SampleBuffer::<f32>::new(decoded.capacity() as u64, *decoded.spec());
         samples.copy_interleaved_ref(decoded);
+        if samples.samples().iter().any(|s| !s.is_finite()) {
+            return Err(error("non-finite delivered sample"));
+        }
+        frames += samples.samples().len() as u64 / u64::from(*channels);
         meter.add_frames_f32(samples.samples()).map_err(error)?;
     }
+    let (meter, rate, channels) = state.ok_or_else(|| error("no delivered audio frames"))?;
     let lufs = crate::analysis::sanitize_lufs(meter.loudness_global().map_err(error)? as f32);
     let peak = (0..channels)
         .map(|ch| meter.true_peak(ch).map_err(error))
@@ -381,7 +404,15 @@ pub fn measure(path: &Path, cancel: Option<&AtomicBool>) -> CommandResult<(f32, 
         -60.0
     };
     let lra = meter.loudness_range().map_err(error)? as f32;
-    Ok((lufs, tp, if lra.is_finite() { lra } else { 0.0 }))
+    if frames == 0 {
+        return Err(error("no delivered audio frames"));
+    }
+    Ok(DecodedMeasurements {
+        measurements: (lufs, tp, if lra.is_finite() { lra } else { 0.0 }),
+        sample_rate: rate,
+        channels,
+        frames,
+    })
 }
 
 #[cfg(all(test, feature = "app-runner"))]

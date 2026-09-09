@@ -8,7 +8,8 @@ none of the evidence below substitutes for a new installed package or Mac check.
 | --- | --- | --- |
 | U1 | Windows encoder checkpoint; cross-platform qualification open | Pinned source build, package integrity gate, independent codec matrix, app re-import, Tauri staging and qualification workflow implemented. Mac thin/universal execution and installed packaging still open. |
 | U2 | Type/receipt checkpoint complete | Explicit encoding validation, delivered identity independent of metering, legacy WAV/MP3 compatibility, updated wire samples. Command dispatch is connected with the adapters in U3/U4. |
-| U3–U5 | Pending | Actual Track/Album adapters and UI are not yet implemented. Existing WAV/MP3 remain available. |
+| U3 | Windows backend checkpoint complete | Track encoding, read-back, precision/rate policy, cancellation and atomic no-clobber persistence verified below. UI exposure follows U4/U5; installed/fixture integration remains separate. |
+| U4–U5 | In progress / pending | Album adapter preparation underway; new controls not exposed yet. |
 | U6 | Pending; Mac access unavailable | Owner confirmed Mac checks must wait for a later login/session. Continue Windows work. |
 | U7 | Preparation | Encoder source/license archives retained; LAME relink permission/materials, exact candidate CI, installer hashes and signing evidence still required. |
 | U8 | Not authorized / not started | No push, tag, publication, deployment or spending. |
@@ -64,3 +65,45 @@ marker. Invalid/contradictory encoding requests are rejected.
 - iPhone: all-target check PASS; **46 tests PASS, one existing ignored**.
 - Android: **26 host tests PASS**, API-29 arm64 NDK check PASS.
 - No rendered controls changed in this checkpoint. New-format UI remains hidden.
+
+## U3 Windows Track checkpoint
+
+The desktop command accepts an explicit encoding request while preserving legacy
+WAV/MP3 entry points. It checks the packaged encoder's SHA-256 before rendering,
+quantizes new integer formats once through the existing WAV writer, and measures
+a fresh decode before collision-safe finalization. Release builds resolve only
+the encoder beside the app executable; debug builds may use the identical
+hash-bound staged package. No PATH encoder or frontend command execution exists.
+
+Two integration findings changed the initial approach:
+
+- Hound's mono float WAV channel mask is front-left; AAC requires explicit mono
+  layout. The adapter supplies the known mono/stereo input layout without mixing.
+- Symphonia 0.5 AAC read-back retained priming despite gapless mode. New formats
+  therefore use FFmpeg's container-aware decode into job-owned temporary float
+  WAV, measured in bounded chunks. This preserves the U1 delay/padding contract;
+  no programme samples are trimmed to satisfy tests. App re-import is separately
+  verified, and independent FFmpeg checks validate the actual engine files.
+
+The shared writer's `exists` + Unix rename could replace a racing file. It now
+uses `TempPath::persist_noclobber` with the existing sibling naming policy.
+WAV PCM snapshots remain unchanged. Temporary PCM writing now checks cancellation
+between bounded sample groups; encoder/decode children drain bounded stderr and
+are killed/reaped on cancellation.
+
+- **15 Track format/precision combinations PASS**, including reference mastered
+  PCM equivalence, Volume Match invariance, prior-file collisions and source bytes.
+- **108 direct edge cases PASS:** all new lossy quality choices at 44.1/48 kHz,
+  mono/stereo, short/silent audio; lossless 16/24-bit through 384 kHz.
+- **457 Rust library tests PASS, five ignored**, including concurrent writer and
+  started-child cancellation regressions. Strict all-target Clippy PASS.
+- Existing export suites: **9 hostile I/O + 1 Volume Match + 3 MP3 tests PASS**.
+- **Seven retained engine exports independently decoded/measured PASS** under
+  `test-output/export-formats-track-u3/`. External FFmpeg confirms actual codecs,
+  rates, channels and receipts (LUFS within 0.15, TP within 0.2 dB, LRA within 0.5 LU).
+  FLAC/AIFF decode to exactly the WAV master's PCM. `reports.json` records the
+  development build stamp; `independent-results.json` records each delivered hash.
+- Frontend typecheck PASS. No native UI or installed-candidate credit is claimed.
+
+Slow private-fixture and affected final bridge/package checks remain integration
+gates after the Album/UI changes. Mac execution remains unavailable as recorded.

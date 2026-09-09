@@ -1,4 +1,31 @@
 fn main() {
+    let target = std::env::var("TARGET").unwrap_or_default();
+    let encoder_name = format!(
+        "yes-master-encoder-{target}{}",
+        if target.contains("windows") {
+            ".exe"
+        } else {
+            ""
+        }
+    );
+    println!("cargo:rustc-env=YES_MASTER_ENCODER_FILENAME={encoder_name}");
+    let encoder_manifest = format!("binaries/manifest-{target}.json");
+    println!("cargo:rerun-if-changed={encoder_manifest}");
+    if let Ok(manifest) = std::fs::read_to_string(&encoder_manifest) {
+        let manifest: serde_json::Value =
+            serde_json::from_str(&manifest).expect("encoder manifest JSON");
+        assert_eq!(
+            manifest["target"].as_str(),
+            Some(target.as_str()),
+            "encoder architecture mismatch"
+        );
+        let hash = manifest["sha256"].as_str().expect("encoder SHA-256");
+        assert!(
+            hash.len() == 64 && hash.bytes().all(|c| c.is_ascii_hexdigit()),
+            "invalid encoder SHA-256"
+        );
+        println!("cargo:rustc-env=YES_MASTER_ENCODER_SHA256={hash}");
+    }
     // Owner finding 2026-07-08: every dev build reports "0.9.0", so during
     // hand-testing there is no way to tell WHICH build is installed — stale
     // builds have burned whole test sessions. Stamp each binary with the git

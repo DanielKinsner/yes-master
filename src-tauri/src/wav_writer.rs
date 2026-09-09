@@ -229,13 +229,24 @@ pub(crate) fn write_wav(
     channels: u16,
     bit_depth: u16,
 ) -> CommandResult<std::path::PathBuf> {
+    write_wav_with_cancel(path, samples, sample_rate, channels, bit_depth, None)
+}
+
+pub(crate) fn write_wav_with_cancel(
+    path: &Path,
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    bit_depth: u16,
+    cancel: Option<&std::sync::atomic::AtomicBool>,
+) -> CommandResult<std::path::PathBuf> {
     if let Some(index) = samples.iter().position(|sample| !sample.is_finite()) {
         return Err(CommandError::Render(format!(
             "rendered samples contain non-finite value at index {index}"
         )));
     }
     let tmp_path = unique_tmp_path(path)?;
-    let result = write_wav_direct(&tmp_path, samples, sample_rate, channels, bit_depth)
+    let result = write_wav_direct(&tmp_path, samples, sample_rate, channels, bit_depth, cancel)
         .and_then(|_| finalize_never_overwrite(&tmp_path, path));
     if result.is_err() {
         let _ = std::fs::remove_file(&tmp_path);
@@ -292,21 +303,23 @@ pub(crate) fn unique_sibling(path: &Path) -> CommandResult<std::path::PathBuf> {
 /// fallback), silently destroying a prior render and violating the
 /// "exports never overwrite by default" non-negotiable. Now the newcomer
 /// diverts to a `__{n}` sibling and the actual path is returned. The
-/// remaining exists→rename gap is microseconds (down from render
-/// duration); the retry loop absorbs even that.
+/// final persistence is atomic and refuses replacement on Windows and Unix.
 pub(crate) fn finalize_never_overwrite(
     tmp_path: &Path,
     final_path: &Path,
 ) -> CommandResult<std::path::PathBuf> {
     let mut target = final_path.to_path_buf();
+    let mut temporary = tempfile::TempPath::try_from_path(tmp_path.to_path_buf())
+        .map_err(|e| CommandError::Io(e.to_string()))?;
     for _ in 0..8 {
         if target.exists() {
             target = unique_sibling(&target)?;
             continue;
         }
-        return match std::fs::rename(tmp_path, &target) {
+        return match temporary.persist_noclobber(&target) {
             Ok(()) => Ok(target),
-            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
+            Err(err) if err.error.kind() == std::io::ErrorKind::AlreadyExists => {
+                temporary = err.path;
                 // Lost the microsecond race too — pick a fresh sibling.
                 target = unique_sibling(&target)?;
                 continue;
@@ -325,6 +338,7 @@ fn write_wav_direct(
     sample_rate: u32,
     channels: u16,
     bit_depth: u16,
+    cancel: Option<&std::sync::atomic::AtomicBool>,
 ) -> CommandResult<()> {
     let (bits, fmt) = match bit_depth {
         16 => (16u16, hound::SampleFormat::Int),
@@ -355,21 +369,36 @@ fn write_wav_direct(
     let mut rng = DitherRng::new(0x000A_11CE);
     match bit_depth {
         16 => {
-            for &s in samples {
+            for (index, &s) in samples.iter().enumerate() {
+                if index % 8192 == 0
+                    && cancel.is_some_and(|flag| flag.load(std::sync::atomic::Ordering::Relaxed))
+                {
+                    return Err(CommandError::Render("export cancelled".into()));
+                }
                 writer
                     .write_sample(quantize_16_tpdf(s, &mut rng))
                     .map_err(|e| CommandError::Io(e.to_string()))?;
             }
         }
         24 => {
-            for &s in samples {
+            for (index, &s) in samples.iter().enumerate() {
+                if index % 8192 == 0
+                    && cancel.is_some_and(|flag| flag.load(std::sync::atomic::Ordering::Relaxed))
+                {
+                    return Err(CommandError::Render("export cancelled".into()));
+                }
                 writer
                     .write_sample(quantize_24_tpdf(s, &mut rng))
                     .map_err(|e| CommandError::Io(e.to_string()))?;
             }
         }
         32 => {
-            for &s in samples {
+            for (index, &s) in samples.iter().enumerate() {
+                if index % 8192 == 0
+                    && cancel.is_some_and(|flag| flag.load(std::sync::atomic::Ordering::Relaxed))
+                {
+                    return Err(CommandError::Render("export cancelled".into()));
+                }
                 writer
                     .write_sample(s)
                     .map_err(|e| CommandError::Io(e.to_string()))?;
@@ -389,6 +418,36 @@ mod tests {
     use sha2::{Digest, Sha256};
     use std::collections::HashSet;
     use std::fs;
+
+    #[test]
+    fn simultaneous_finalization_never_replaces_another_writer() {
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("master.wav");
+        let barrier = std::sync::Barrier::new(4);
+        let results = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..4)
+                .map(|index| {
+                    let source = dir.path().join(format!("owned-{index}.tmp"));
+                    fs::write(&source, [index]).unwrap();
+                    let target = &target;
+                    let barrier = &barrier;
+                    scope.spawn(move || {
+                        barrier.wait();
+                        (index, finalize_never_overwrite(&source, target).unwrap())
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|handle| handle.join().unwrap())
+                .collect::<Vec<_>>()
+        });
+        let paths: HashSet<_> = results.iter().map(|(_, path)| path).collect();
+        assert_eq!(paths.len(), 4);
+        for (index, path) in results {
+            assert_eq!(fs::read(path).unwrap(), [index]);
+        }
+    }
 
     fn sha256_file(path: &Path) -> String {
         let bytes = fs::read(path).expect("read wav bytes");

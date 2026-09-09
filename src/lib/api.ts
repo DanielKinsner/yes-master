@@ -112,6 +112,7 @@ export const api = {
     settings: MasteringSettings,
     outputPath?: string,
     mp3Bitrate?: number,
+    encoding?: import("./export-formats").ExportEncoding,
   ) =>
     invoke<RenderJob>("render_track_master", {
       trackId,
@@ -119,6 +120,7 @@ export const api = {
       settings,
       outputPath: outputPath ?? null,
       ...(mp3Bitrate === undefined ? {} : {mp3Bitrate}),
+      ...(encoding === undefined ? {} : { encoding }),
     }),
 
   prepareWaveform: (

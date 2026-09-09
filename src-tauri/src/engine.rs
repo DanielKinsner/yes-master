@@ -702,10 +702,12 @@ pub async fn render_track_master(
     mut settings: MasteringSettings,
     output_path: Option<String>,
     mp3_bitrate: Option<u16>,
+    encoding: Option<crate::export_format::ExportEncoding>,
     app: tauri::AppHandle,
     profile_store: tauri::State<'_, std::sync::Arc<crate::profile_store::SourceProfileStore>>,
     render_jobs: tauri::State<'_, RenderJobRegistry>,
 ) -> CommandResult<RenderJob> {
+    let encoding = crate::export_format::ExportEncoding::resolve(encoding, mp3_bitrate)?;
     // B2: backend-owned profile (override > backend-derived cache; album = false
     // because album exports go through render_album_plan, which strips it).
     let cached_deep = profile_store.get_deep(&track_id);
@@ -741,7 +743,7 @@ pub async fn render_track_master(
     };
     let job_id_for_render = job_id.clone();
     let join_result = tauri::async_runtime::spawn_blocking(move || {
-        mastering_render_encoded_with_cancel(
+        mastering_render_format_with_cancel(
             track_id,
             Path::new(&track_path),
             &settings,
@@ -753,7 +755,7 @@ pub async fn render_track_master(
                 job_id: Some(&job_id_for_render),
                 cancel_flag: Some(cancel_flag.as_ref()),
             },
-            mp3_bitrate,
+            encoding,
         )
     })
     .await;
@@ -1095,9 +1097,36 @@ pub fn mastering_render_encoded_with_cancel(
     options: RenderJobOptions<'_>,
     mp3_bitrate: Option<u16>,
 ) -> CommandResult<RenderJob> {
-    if let Some(kbps) = mp3_bitrate {
-        crate::mp3::validate_bitrate(kbps)?;
-    }
+    mastering_render_format_with_cancel(
+        track_id,
+        source_path,
+        settings,
+        out_dir,
+        kind,
+        options,
+        crate::export_format::ExportEncoding::resolve(None, mp3_bitrate)?,
+    )
+}
+
+pub fn mastering_render_format_with_cancel(
+    track_id: TrackId,
+    source_path: &Path,
+    settings: &MasteringSettings,
+    out_dir: &Path,
+    kind: RenderKind,
+    options: RenderJobOptions<'_>,
+    encoding: crate::export_format::ExportEncoding,
+) -> CommandResult<RenderJob> {
+    encoding.validate()?;
+    let encoder = if encoding.needs_sidecar() {
+        Some(crate::export_encoding::Encoder::packaged()?)
+    } else {
+        None
+    };
+    let mp3_bitrate = match encoding {
+        crate::export_format::ExportEncoding::Mp3 { bitrate_kbps } => Some(bitrate_kbps),
+        _ => None,
+    };
     let job_id = options
         .job_id
         .map(ToOwned::to_owned)
@@ -1130,6 +1159,11 @@ pub fn mastering_render_encoded_with_cancel(
                 source_path,
             )?
         }
+    };
+    let out_path = if encoding.needs_sidecar() {
+        explicit_output_path(&out_path.with_extension(encoding.extension()), source_path)?
+    } else {
+        out_path
     };
 
     // Per-stage wall-clock markers, logged at the end of the render. F9/F11
@@ -1219,11 +1253,7 @@ pub fn mastering_render_encoded_with_cancel(
     chain.flush_render_tail(&mut samples, channels_max);
 
     let requested_rate = render_settings.effective_sample_rate(pcm.sample_rate);
-    let rendered_sample_rate = if mp3_bitrate.is_some() {
-        crate::mp3::delivery_rate(requested_rate)
-    } else {
-        requested_rate
-    };
+    let rendered_sample_rate = encoding.delivery_rate(requested_rate);
     if rendered_sample_rate != pcm.sample_rate {
         samples = convert_interleaved(
             &samples,
@@ -1284,7 +1314,7 @@ pub fn mastering_render_encoded_with_cancel(
         );
     }
 
-    let bit_depth = render_settings.effective_bit_depth();
+    let bit_depth = encoding.delivery_bits(render_settings.effective_bit_depth());
     let (delivered_lufs, delivered_tp, lra) = crate::wav_writer::measure_delivery(
         &samples,
         rendered_sample_rate,
@@ -1342,7 +1372,25 @@ pub fn mastering_render_encoded_with_cancel(
     // export), the write diverts to a `__{n}` sibling — report where the
     // render actually landed.
     let t_stage = std::time::Instant::now();
-    let actual_out_path = if let Some(kbps) = mp3_bitrate {
+    let actual_out_path = if let Some(encoder) = encoder.as_ref() {
+        crate::export_encoding::write(
+            encoder,
+            &out_path,
+            &samples,
+            rendered_sample_rate,
+            pcm.channels,
+            bit_depth,
+            encoding,
+            options.cancel_flag,
+        )
+        .map(|delivered| {
+            measurements.lufs_integrated = delivered.measurements.0;
+            measurements.true_peak_dbtp = delivered.measurements.1;
+            measurements.dynamic_range_lu = delivered.measurements.2;
+            measurements.bit_depth = if encoding.is_lossy() { 0 } else { bit_depth };
+            delivered.path
+        })
+    } else if let Some(kbps) = mp3_bitrate {
         crate::mp3::write(
             &out_path,
             samples.iter().copied().map(Ok),
@@ -1425,15 +1473,13 @@ pub fn mastering_render_encoded_with_cancel(
     ));
 
     Ok(RenderJob {
-        delivered_format: Some(
-            crate::export_format::ExportEncoding::resolve(None, mp3_bitrate)?.delivered(
-                rendered_sample_rate,
-                pcm.channels,
-                bit_depth,
-                settings.requested_delivery_sample_rate(),
-                settings.effective_bit_depth(),
-            ),
-        ),
+        delivered_format: Some(encoding.delivered(
+            rendered_sample_rate,
+            pcm.channels,
+            bit_depth,
+            settings.requested_delivery_sample_rate(),
+            settings.effective_bit_depth(),
+        )),
         id: job_id.clone(),
         job_id,
         kind,

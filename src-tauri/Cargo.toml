@@ -22,6 +22,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 # Build-stamp formatting only (build.rs); not a runtime dependency.
 chrono = "0.4"
+serde_json = "1"
 
 [dependencies]
 tauri = { version = "2", features = [] }
@@ -63,6 +64,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "std"
 rubato = "1.0.1"
 audioadapter-buffers = "2.0.0"
 mp3lame-encoder = { version = "0.2.5", optional = true }
+sha2 = { version = "0.10", optional = true }
 tempfile = "3"
 
 [dev-dependencies]
@@ -71,7 +73,7 @@ tokio = { version = "1", features = ["macros", "rt"] }
 
 [features]
 default = ["app-runner", "custom-protocol"]
-app-runner = ["dep:tauri-plugin-updater", "dep:tauri-plugin-opener", "dep:mp3lame-encoder"]
+app-runner = ["dep:tauri-plugin-updater", "dep:tauri-plugin-opener", "dep:mp3lame-encoder", "dep:sha2"]
 custom-protocol = ["tauri/custom-protocol"]
 
 # Dev builds must keep the realtime DSP chain comfortably above 1x even at
