@@ -3299,6 +3299,33 @@ describe("useTrackMaster integration dispatches", () => {
     });
   });
 
+  it("captures export encoding before the save dialog and preserves settings across choices", async () => {
+    const track = makeTrack("format-capture", "C:/audio/source.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    mocks.api.analyzeTracks.mockResolvedValue([makeAnalysis(track.id)]);
+    mocks.api.runExportChecks.mockResolvedValue([]);
+    let resolveSave!: (value: string) => void;
+    mocks.save.mockImplementation(() => new Promise<string>(resolve => { resolveSave = resolve; }));
+    mocks.api.renderTrackMaster.mockResolvedValue(makeRenderJob("C:/exports/master.m4a"));
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles([track.path]); });
+    await waitFor(() => { expect(harness.current().selectedTrackId).toBe(track.id); });
+    await act(async () => { harness.current().exportEncoding.onFormat("m4a"); });
+    await act(async () => { harness.current().exportEncoding.onBitrate(192); });
+    let exporting!: Promise<void>;
+    await act(async () => { exporting = harness.current().exportMaster(); });
+    await waitFor(() => { expect(mocks.save).toHaveBeenCalled(); });
+    await act(async () => { harness.current().exportEncoding.onFormat("flac"); });
+    await act(async () => { resolveSave("C:/exports/master.wav"); await exporting; });
+    expect(mocks.api.renderTrackMaster).toHaveBeenCalledWith(track.id, track.path, DEFAULT_SETTINGS,
+      "C:/exports/master.m4a", undefined, { format: "m4a", bitrate_kbps: 192 });
+    await act(async () => { harness.current().exportEncoding.onFormat("m4a"); });
+    expect(harness.current().exportEncoding.bitrate).toBe(192);
+    await act(async () => { harness.current().exportEncoding.onFormat("mp3"); });
+    expect(harness.current().exportEncoding.bitrate).toBe(320);
+    await act(async () => { harness.root.unmount(); });
+  });
+
   it("accepts an existing track master path returned by the save dialog", async () => {
     const track = makeTrack("export-overwrite", "C:/audio/export overwrite.wav");
     const outputPath = "/Users/daniel/Desktop/existing-master.wav";

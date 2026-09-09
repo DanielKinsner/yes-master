@@ -10,7 +10,7 @@ none of the evidence below substitutes for a new installed package or Mac check.
 | U2 | Type/receipt checkpoint complete | Explicit encoding validation, delivered identity independent of metering, legacy WAV/MP3 compatibility, updated wire samples. Command dispatch is connected with the adapters in U3/U4. |
 | U3 | Windows backend checkpoint complete | Track encoding, read-back, precision/rate policy, cancellation and atomic no-clobber persistence verified below. UI exposure follows U4/U5; installed/fixture integration remains separate. |
 | U4 | Windows backend checkpoint complete | All five new formats preserve order/overrides/gaps and single continuous encoding; cancellation and manifest-failure ownership verified. |
-| U5 | In progress | Shared selectors, receipt facts, import aliases and UI verification. |
+| U5 | UI checkpoint complete | Seven shared choices, captured quality/settings, actual receipts, AIFF aliases and documentation. 859 frontend tests across the suite plus post-capture asset rerun; headless 37 scenario/viewport checks passed. |
 | U6 | Pending; Mac access unavailable | Owner confirmed Mac checks must wait for a later login/session. Continue Windows work. |
 | U7 | Preparation | Encoder source/license archives retained; LAME relink permission/materials, exact candidate CI, installer hashes and signing evidence still required. |
 | U8 | Not authorized / not started | No push, tag, publication, deployment or spending. |
@@ -130,3 +130,27 @@ invalid new-format precision is rejected rather than silently converted.
   Auto-precision follow-up; the final integration lane rechecks the combined code.
 - These are backend tests. Installed Album UI and final private-fixture evidence
   remain separate U5/U6/integration checks.
+
+## U5 UI checkpoint
+
+Standard, Advanced and Album share all seven format choices and applicable
+quality controls. Lossy selection preserves underlying lossless settings;
+receipts retain delivered identity when measurements are unavailable. The hook
+regression changes format while the native-save promise is pending and proves
+the original request/extension is retained. AIFF/AIF import aliases now have
+small synthetic fixtures derived from the existing synthetic WAV (no private audio).
+
+- Frontend: 858 of 859 passed during capture; the only failure was the asset
+  gate observing the in-progress capture. All eight asset tests passed after
+  capture completed. Typecheck and production build passed.
+- `npm run verify:headless` PASS: landing and **37 app scenario/viewport checks**,
+  including all new Track formats/default qualities and receipt labels. Evidence:
+  `test-output/headless/2026-09-09T16-45-57-890Z/`. Synthetic browser evidence only.
+- Refreshed deterministic captures/manifest; inspected the Standard capture.
+  Owner photography and real-session landing images were preserved.
+- iPhone check + 46 tests PASS (one ignored); Android host tests and API-29
+  arm64 cross-check PASS after the shared changes.
+- Full Rust integration exposed the missing advertised AIFF fixtures (added),
+  then a Windows long-path regression in the new atomic finalizer. That fix is
+  being verified separately before candidate packaging; the full lane is not
+  yet marked passed.

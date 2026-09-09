@@ -24,9 +24,21 @@ import type {
   WaveformPeaks,
 } from "../bindings";
 import { EQ_BAND_DEFAULTS } from "../bindings";
+import { EXPORT_FORMATS, exportEncoding, type ExportEncoding, type DeliveredFormat } from "./export-formats";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 
 const PREVIEW_TRACK_ID = "preview-track-1";
+
+function previewDelivery(encoding: ExportEncoding, rate: number, bits: number, requestedRate: number | null): DeliveredFormat {
+  const lossy = EXPORT_FORMATS[encoding.format].lossy;
+  const sampleRate = lossy ? rate % 44100 === 0 ? 44100 : encoding.format === "mp3" && rate === 32000 ? 32000 : 48000 : rate;
+  const precision = lossy ? null : encoding.format === "wav" ? bits : Math.min(bits,24);
+  const codec = encoding.format === "wav" ? bits === 32 ? "pcm_f32le" : `pcm_s${bits}le`
+    : encoding.format === "aiff" ? `pcm_s${precision}be` : encoding.format === "m4a" || encoding.format === "aac" ? "aac_lc"
+    : encoding.format === "ogg" ? "vorbis" : encoding.format;
+  return { encoding, codec, container: encoding.format === "aac" ? "adts" : encoding.format,
+    sample_rate: sampleRate, channels:2, bit_depth:precision, requested_sample_rate:requestedRate,requested_bit_depth:bits };
+}
 const PREVIEW_DURATION = 245;
 let mockSelectedAudioOutput: string | null = null;
 
@@ -620,6 +632,7 @@ export async function mockInvoke<T>(
       // UI-to-render wiring cannot be masked by the seed. Delivery follows
       // the real engine's album policy: highest source rate, stereo fold.
       const albumRequest = (args?.request ?? {}) as {
+        plan?: { delivery_sample_rate?: number | null; delivery_bit_depth?: number | null };
         tracks?: Array<{
           track_id?: string;
           source_path?: string;
@@ -643,25 +656,26 @@ export async function mockInvoke<T>(
           override_album: Boolean(requested.override_album),
         };
       });
-      const requestedRate = Math.max(
+      const requestedRate = albumRequest.plan?.delivery_sample_rate ?? Math.max(
         44_100,
         ...joined.map((t) => t.source_sample_rate),
       );
       const mp3Bitrate = args?.mp3Bitrate as number | undefined;
-      const encoding = mp3Bitrate ? "mp3" : "wav";
-      const renderedSampleRate = mp3Bitrate
-        ? (requestedRate % 44_100 === 0 ? 44_100 : requestedRate === 32_000 ? 32_000 : 48_000)
-        : requestedRate;
+      const requestEncoding = args?.encoding as ExportEncoding | undefined ?? exportEncoding(mp3Bitrate ? "mp3" : "wav", mp3Bitrate);
+      const facts = previewDelivery(requestEncoding, requestedRate, albumRequest.plan?.delivery_bit_depth ?? 24, albumRequest.plan?.delivery_sample_rate ?? null);
+      const encoding = requestEncoding.format;
+      const renderedSampleRate = facts.sample_rate;
       const renderedChannels = 2;
       return {
+        delivered_format: facts,
         job_id: nextPreviewId("mock-album-render"),
         status: { status: "done" },
         album_wav_path: `/preview/album.${encoding}`,
         manifest_path: "/preview/metadata/manifest.json",
-        requested_sample_rate: null,
+        requested_sample_rate: facts.requested_sample_rate,
         rendered_sample_rate: renderedSampleRate,
         source_sample_rates: joined.map((t) => t.source_sample_rate),
-        bit_depth: mp3Bitrate ? 0 : 24,
+        bit_depth: facts.bit_depth ?? 0,
         mp3_bitrate_kbps: mp3Bitrate ?? null,
         rendered_channels: renderedChannels,
         source_channels: joined.map((t) => t.source_channels),
@@ -688,8 +702,13 @@ export async function mockInvoke<T>(
       const outputPath = (args?.outputPath as string | null | undefined) ?? "/preview/output.wav";
       const jobId = nextPreviewId("mock-render");
       const kind = cmd === "render_track_master" ? "master" : "preview";
+      const settings = args?.settings as MasteringSettings | undefined;
+      const mp3Bitrate = args?.mp3Bitrate as number | undefined;
+      const encoding = args?.encoding as ExportEncoding | undefined ?? exportEncoding(mp3Bitrate ? "mp3" : "wav", mp3Bitrate);
+      const facts = previewDelivery(encoding, settings?.advanced?.target_sample_rate ?? 44_100, settings?.advanced?.bit_depth ?? 24, settings?.advanced?.target_sample_rate ?? null);
       emitRenderProgress(jobId, trackId, kind);
       return {
+        delivered_format: facts,
         id: jobId,
         job_id: jobId,
         kind,
@@ -704,8 +723,8 @@ export async function mockInvoke<T>(
           lufs_integrated: activeScenario().exportChecks === "warning" ? -6.0 : -14.1,
           true_peak_dbtp: activeScenario().exportChecks === "warning" ? 0.2 : -1.02,
           dynamic_range_lu: 7.4,
-          sample_rate: 44_100,
-          bit_depth: args?.mp3Bitrate ? 0 : 24,
+          sample_rate: facts.sample_rate,
+          bit_depth: facts.bit_depth ?? 0,
           mp3_bitrate_kbps: args?.mp3Bitrate ?? null,
           effective_adaptive_strength: 0.5,
           source_profile_digest: null,

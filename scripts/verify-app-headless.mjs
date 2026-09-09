@@ -875,7 +875,20 @@ async function mp3ExportProbe(page,report) {
   if (await page.locator('[aria-label="Intensity"]').getAttribute('aria-valuenow')!==intensity) report('Changing format changed Intensity');
   await exportClean(page,true,"preview-master.mp3");
   if (!(await documentText(page)).includes('192 kbps')) report('MP3 receipt does not show delivered bitrate');
-  return {bitrate:192};
+  const formats = [];
+  for (const [format, label] of [['flac','FLAC'],['m4a','AAC / M4A'],['aac','AAC (ADTS)'],['ogg','Ogg Vorbis'],['aiff','AIFF']]) {
+    await page.getByRole('button', {name:'Close', exact:true}).click();
+    await page.getByLabel('Export file format',{exact:true}).selectOption(format);
+    if (format === 'm4a' || format === 'aac') {
+      if (await page.getByLabel('AAC target bitrate').inputValue() !== '256') report('AAC default bitrate is not 256');
+    }
+    if (format === 'ogg' && await page.getByLabel('Vorbis quality').inputValue() !== '6') report('Vorbis default quality is not 6');
+    if (await page.locator('[aria-label="Intensity"]').getAttribute('aria-valuenow') !== intensity) report(`${format} changed Intensity`);
+    await exportClean(page,true,`preview-master.${format}`);
+    if (!(await page.getByRole('dialog').innerText()).includes(label)) report(`${format} receipt missing delivered identity`);
+    formats.push(format);
+  }
+  return {bitrate:192, formats};
 }
 
 async function railModeConsistencyProbe(page, report) {

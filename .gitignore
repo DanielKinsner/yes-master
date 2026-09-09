@@ -98,6 +98,8 @@ docs/READING_THE_METERS.md
 
 # Generated, hash-verified encoder packages; rebuild from pinned sources.
 /src-tauri/binaries/
+!src-tauri/tests/fixtures/formats/synthetic-1s.aiff
+!src-tauri/tests/fixtures/formats/synthetic-1s.aif
 
 # Local studio design handoff; production assets are tracked in src/assets/landing/.
 /docs/landing-mockups/assets/YES_Master_Studio_Handoff/

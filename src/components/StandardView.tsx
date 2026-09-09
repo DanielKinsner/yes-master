@@ -1,4 +1,5 @@
 import { ExportEncodingControls } from "./ExportEncodingControls";
+import { EXPORT_FORMATS, encodingQuality, exportEncoding } from "../lib/export-formats";
 // src/components/StandardView.tsx
 //
 // Standard view — the default desktop face. Phase 2 layout: the 3-column
@@ -446,8 +447,13 @@ function StandardRightRail({
         {/* State-free name: the recipe is fixed (standardExportSettings), and
             "Streaming" would read as a live profile next to a −9 LUFS target. */}
         {tm.exportEncoding && <ExportEncodingControls choice={tm.exportEncoding} />}
-        <div className="std-delivery-spec">{tm.exportEncoding?.format === "mp3" ? `MP3 · ${tm.exportEncoding.bitrate} kbps · 44.1 kHz` : standardDeliverySpecLabel()}</div>
-        <div className="std-delivery-note">{tm.exportEncoding?.format === "mp3" ? "Create Master writes an MP3 file." : "Create Master writes a WAV file."}</div>
+        <div className="std-delivery-spec">{tm.exportEncoding && tm.exportEncoding.format !== "wav"
+          ? `${EXPORT_FORMATS[tm.exportEncoding.format].label} · ${encodingQuality(exportEncoding(tm.exportEncoding.format, tm.exportEncoding.bitrate, tm.exportEncoding.quality), 24)} · 44.1 kHz`
+          : standardDeliverySpecLabel()}</div>
+        <div className="std-delivery-note">{tm.exportEncoding?.format === "m4a" ? "AAC audio in an M4A file."
+          : tm.exportEncoding?.format === "aac" ? "Standalone AAC includes codec delay and padding."
+          : tm.exportEncoding?.format === "mp3" ? "Create Master writes an MP3 file."
+          : `Create Master writes a ${EXPORT_FORMATS[tm.exportEncoding?.format ?? "wav"].label} file.`}</div>
         <button type="button" className="ghost-btn std-delivery-change" onClick={onEnterAdvanced}>
           Change
         </button>

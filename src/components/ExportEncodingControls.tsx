@@ -1,8 +1,12 @@
+import { EXPORT_FORMATS, type ExportFormat } from "../lib/export-formats";
+
 export interface ExportEncodingChoice {
-  format: "wav" | "mp3";
+  format: ExportFormat;
   bitrate: number;
-  onFormat: (format: "wav" | "mp3") => void;
+  quality?: number;
+  onFormat: (format: ExportFormat) => void;
   onBitrate: (bitrate: number) => void;
+  onQuality?: (quality: number) => void;
 }
 
 export function ExportEncodingControls({
@@ -17,17 +21,16 @@ export function ExportEncodingControls({
         <select
           aria-label="Export file format"
           value={choice.format}
-          onChange={(e) => choice.onFormat(e.target.value as "wav" | "mp3")}
+          onChange={(e) => choice.onFormat(e.target.value as ExportFormat)}
         >
-          <option value="wav">WAV</option>
-          <option value="mp3">MP3</option>
+          {Object.entries(EXPORT_FORMATS).map(([value, item]) => <option key={value} value={value}>{item.label}</option>)}
         </select>
       </label>
-      {choice.format === "mp3" && (
+      {["mp3", "m4a", "aac"].includes(choice.format) && (
         <label className="field">
           <span>Bitrate</span>
           <select
-            aria-label="MP3 bitrate"
+            aria-label={choice.format === "mp3" ? "MP3 bitrate" : "AAC target bitrate"}
             value={choice.bitrate}
             onChange={(e) => choice.onBitrate(Number(e.target.value))}
           >
@@ -39,6 +42,11 @@ export function ExportEncodingControls({
           </select>
         </label>
       )}
+      {choice.format === "ogg" && <label className="field"><span>Quality</span>
+        <select aria-label="Vorbis quality" value={choice.quality ?? 6} onChange={(event) => choice.onQuality?.(Number(event.target.value))}>
+          {[4,6,8].map(quality => <option key={quality} value={quality}>VBR {quality}</option>)}
+        </select>
+      </label>}
     </div>
   );
 }

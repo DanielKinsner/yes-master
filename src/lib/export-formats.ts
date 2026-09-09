@@ -34,3 +34,18 @@ export function exportEncoding(format: ExportFormat, bitrate = format === "mp3" 
   }
   return { format };
 }
+
+export function exportApiArgs(encoding: ExportEncoding): [number?, ExportEncoding?] {
+  return encoding.format === "wav" ? [] : encoding.format === "mp3" ? [encoding.bitrate_kbps] : [undefined, encoding];
+}
+export function ensureExportExtension(path: string, format: ExportFormat): string {
+  return path.replace(/\.(wav|mp3|flac|m4a|aac|ogg|aif|aiff)$/i, "") + `.${EXPORT_FORMATS[format].extension}`;
+}
+export function encodingQuality(encoding: ExportEncoding, bits?: number | null): string {
+  if ("bitrate_kbps" in encoding) return `${encoding.bitrate_kbps} kbps`;
+  if ("quality" in encoding) return `VBR quality ${encoding.quality}`;
+  return bits ? `${bits}-bit${bits === 32 ? " float" : ""}` : "Lossless";
+}
+export function deliveredFormatLabel(facts: DeliveredFormat): string {
+  return `${EXPORT_FORMATS[facts.encoding.format].label} · ${encodingQuality(facts.encoding, facts.bit_depth)}`;
+}

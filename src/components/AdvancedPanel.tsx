@@ -1,4 +1,5 @@
 import { ExportEncodingControls, type ExportEncodingChoice } from "./ExportEncodingControls";
+import { EXPORT_FORMATS } from "../lib/export-formats";
 import { useState } from "react";
 import { ChromeDialog } from "./ChromeDialog";
 import { Knob } from "./Knob";
@@ -1056,13 +1057,18 @@ function DeliveryFormatCard({
     bitDepth === undefined ? effectiveBitDepth(settings) : bitDepth;
   const effectiveSampleRateValue =
     sampleRate === undefined ? effectiveSampleRate(settings) : sampleRate;
+  const format = exportEncoding?.format ?? "wav";
+  const lossy = EXPORT_FORMATS[format].lossy;
+  const integerConversion = (format === "flac" || format === "aiff") && effectiveBitDepthValue === 32;
+  const deliveredRate = effectiveSampleRateValue == null ? null
+    : effectiveSampleRateValue % 44_100 === 0 ? 44_100 : format === "mp3" && effectiveSampleRateValue === 32_000 ? 32_000 : 48_000;
   return (
     <section className="rail-section rail-card-format">
       <header className="panel-head rail-section-head">
         <span className="panel-title">DELIVERY FORMAT</span>
       </header>
       {exportEncoding && <ExportEncodingControls choice={exportEncoding} />}
-      {exportEncoding?.format !== "mp3" && <div className="rail-card-body rail-format-grid">
+      {!lossy && <div className="rail-card-body rail-format-grid">
         <SelectField
           label="Bit depth"
           value={effectiveBitDepthValue}
@@ -1070,7 +1076,7 @@ function DeliveryFormatCard({
             { value: null, label: "Auto" },
             { value: 16, label: "16-bit" },
             { value: 24, label: "24-bit" },
-            { value: 32, label: "32-bit float" },
+            { value: 32, label: format === "flac" || format === "aiff" ? "32-bit float → 24-bit" : "32-bit float" },
           ]}
           onChange={onBitDepth}
         />
@@ -1087,7 +1093,10 @@ function DeliveryFormatCard({
         />
       </div>
       }
-      <p className="format-note">{exportEncoding?.format === "mp3" ? "MP3 master · compatible sample rate · smaller file" : note}</p>
+      <p className="format-note">{lossy
+        ? `${EXPORT_FORMATS[format].label} · ${deliveredRate ? `${deliveredRate / 1000} kHz delivery` : "compatible delivery rate"}. Saved rate and precision settings are retained.${format === "aac" ? " Includes codec delay and padding." : ""}`
+        : integerConversion ? `${EXPORT_FORMATS[format].label} delivers 24-bit integer from your 32-bit float setting.`
+        : format === "wav" ? note : `${EXPORT_FORMATS[format].label} master · lossless integer delivery.`}</p>
     </section>
   );
 }

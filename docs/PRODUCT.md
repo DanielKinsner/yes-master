@@ -148,6 +148,18 @@ view), the deliberate behavior is:
   lossy peak excursions; this does not alter the mastering sound to chase codec
   peaks. WAV remains the default format. Mobile export scope is unchanged.
 
+Desktop's export-format candidate also offers FLAC and AIFF (16/24-bit integer),
+AAC-LC in M4A or ADTS AAC (256 kbps default; 320/192/128), and Ogg Vorbis
+(VBR quality 6 default; 4/8). All are available in Standard, Advanced and Album,
+including one continuous album encode. Standard uses 44.1 kHz and 24-bit for
+lossless; Advanced retains lossless rate/precision controls. Requested 32-bit
+float becomes 24-bit for FLAC/AIFF with an explicit receipt note. New lossy
+formats use 44.1 kHz for that rate family and otherwise 48 kHz; selecting one
+preserves the lossless settings for switching back. ADTS carries codec priming
+and padding; M4A supports gapless metadata. ALAC and Opus are deferred.
+This candidate is locally verified on Windows; Mac and installed release gates
+remain in the [live evidence ledger](plans/2026-09-09-export-formats-evidence.md).
+
 ## Adaptive Mastering
 
 What adapts per track today (all shipped, owner-listened 2026-06-11):

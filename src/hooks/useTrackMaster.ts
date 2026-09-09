@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open, save, getCurrentWebview } from "../lib/tauri-runtime";
 import { rememberView, rememberedView } from "../lib/view-by-track";
+import { EXPORT_FORMATS, ensureExportExtension, exportEncoding, exportApiArgs, type ExportFormat } from "../lib/export-formats";
 import {
   ADAPTIVE_COMPRESSION_GATE_EVENT,
   api,
@@ -170,10 +171,6 @@ function suggestedMasterFilename(track: ImportedTrack): string {
     withoutExtension.replace(/[^a-z0-9-_]+/gi, "_").replace(/^_+|_+$/g, "") ||
     "master";
   return `${safeBase}_mastered.wav`;
-}
-
-function ensureWavExtension(path: string): string {
-  return /\.wav$/i.test(path) ? path : `${path}.wav`;
 }
 
 function projectDisplayName(path: string): string {
@@ -441,8 +438,10 @@ export function useTrackMaster() {
   );
   // Requested preview landing or Volume Match is being measured in the
   // background. Edge-triggered from the backend, including while paused.
-  const [exportFormat,setExportFormat] = useState<"wav" | "mp3">("wav");
+  const [exportFormat,setExportFormat] = useState<ExportFormat>("wav");
   const [mp3Bitrate,setMp3Bitrate] = useState(320);
+  const [aacBitrate,setAacBitrate] = useState(256);
+  const [vorbisQuality,setVorbisQuality] = useState(6);
   const [landingPending, setLandingPending] = useState(false);
   // Real analysis progress from the backend's "analysis:progress" events
   // (actual phase boundaries). Queued tracks wait at zero until their first
@@ -2024,7 +2023,8 @@ export function useTrackMaster() {
             override_album: isOverride,
           };
         });
-      const report = await api.renderAlbumPlan(plan, renderTracks, outputDir, ...(exportFormat === "mp3" ? [mp3Bitrate] : []));
+      const report = await api.renderAlbumPlan(plan, renderTracks, outputDir,
+        ...exportApiArgs(exportEncoding(exportFormat, exportFormat === "mp3" ? mp3Bitrate : aacBitrate, vorbisQuality)));
       setAlbumExportReport(report);
       if (isCancelledStatus(report.status)) {
         setRenderFeedback({
@@ -2040,7 +2040,7 @@ export function useTrackMaster() {
       setAlbumRendering(false);
     }
   }, [
-    exportFormat,mp3Bitrate,
+    exportFormat,mp3Bitrate,aacBitrate,vorbisQuality,
     tracks,
     analysisMap,
     settingsMap,
@@ -2178,10 +2178,10 @@ export function useTrackMaster() {
           : baseFilename;
         const chosenPath = await save({
           defaultPath: defaultExportPath(store, "track", uniqueFilename),
-          filters: [{ name: `${exportFormat.toUpperCase()} audio`, extensions: [exportFormat] }],
+          filters: [{ name: `${EXPORT_FORMATS[exportFormat].label} audio`, extensions: [EXPORT_FORMATS[exportFormat].extension] }],
         });
         if (!chosenPath) return;
-        const chosenOutputPath = exportFormat === "wav" ? ensureWavExtension(chosenPath) : /\.mp3$/i.test(chosenPath) ? chosenPath : chosenPath.replace(/\.wav$/i, "") + ".mp3";
+        const chosenOutputPath = ensureExportExtension(chosenPath, exportFormat);
         rememberExportDirectory(store, "track", chosenOutputPath);
         setIsExporting(true);
         setRenderFeedback(null);
@@ -2193,7 +2193,7 @@ export function useTrackMaster() {
           selectedTrack.path,
           exportSettings,
           chosenOutputPath,
-          ...(exportFormat === "mp3" ? [mp3Bitrate] : []),
+          ...exportApiArgs(exportEncoding(exportFormat, exportFormat === "mp3" ? mp3Bitrate : aacBitrate, vorbisQuality)),
         );
         if (isCancelledStatus(job.status)) {
           setRenderFeedback({
@@ -2237,7 +2237,7 @@ export function useTrackMaster() {
         setIsExporting(false);
       }
     },
-    [selectedTrackId, selectedAnalysis, selectedTrack, clearIncompleteRenderProgress,exportFormat,mp3Bitrate],
+    [selectedTrackId, selectedAnalysis, selectedTrack, clearIncompleteRenderProgress,exportFormat,mp3Bitrate,aacBitrate,vorbisQuality],
   );
 
   const exportMaster = useCallback(
@@ -3143,7 +3143,7 @@ export function useTrackMaster() {
     setAlbumSampleRate,
     setAlbumBitDepth,
     exportAlbumPlan,
-    exportEncoding: {format:exportFormat,bitrate:mp3Bitrate,onFormat:setExportFormat,onBitrate:setMp3Bitrate},
+    exportEncoding: {format:exportFormat,bitrate:exportFormat === "mp3" ? mp3Bitrate : aacBitrate,quality:vorbisQuality,onFormat:setExportFormat,onBitrate:exportFormat === "mp3" ? setMp3Bitrate : setAacBitrate,onQuality:setVorbisQuality},
     updatePreview,
     guardrailReadout,
     autoWidthReadout,

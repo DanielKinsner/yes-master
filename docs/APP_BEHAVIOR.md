@@ -80,6 +80,15 @@ Track Master supports:
   MP3; there is no separate conversion workflow. Lossy true-peak excursions are
   measured from the completed MP3 and reported, not hidden by measuring its input.
 - Explicit save destination for export.
+- Desktop candidate formats additionally include FLAC, AIFF, AAC / M4A,
+  AAC (ADTS), and Ogg Vorbis in Track and Album. FLAC/AIFF use 16/24-bit
+  integer PCM; a requested 32-bit float export is delivered as 24-bit and
+  labeled accordingly. AAC targets 256 kbps by default (320/192/128 available);
+  Vorbis uses VBR quality 6 (4/8 available). Lossy controls hide inapplicable
+  PCM precision settings without discarding them. New lossy rates resolve to
+  44.1 kHz for that family, otherwise 48 kHz. File extensions and receipt facts
+  follow the captured export choice. ADTS priming/padding is disclosed.
+  AIFF/AIF are accepted imports. WAV/MP3 and mobile scope stay as above.
 - Warning-aware export review.
 - Post-render export receipt/checks.
 - Track and Album expose Export without a separate Tools/audit-WAV action.

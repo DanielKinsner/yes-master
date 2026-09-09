@@ -60,7 +60,8 @@ describe("EmptyState welcome hero", () => {
     const { container, root } = await render(<EmptyState onAdd={() => {}} />);
     const text = container.textContent ?? "";
     expect(text).toContain(`Supports ${SUPPORTED_FORMATS_COPY}.`);
-    expect(text).not.toMatch(/Opus|AIFF|AIF/i);
+    expect(text).toMatch(/AIFF/);
+    expect(text).not.toMatch(/Opus/i);
     await act(async () => root.unmount());
   });
 });

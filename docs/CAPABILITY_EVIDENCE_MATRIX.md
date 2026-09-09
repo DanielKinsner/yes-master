@@ -16,6 +16,14 @@ See [the targeted follow-up plan](plans/2026-09-05-listening-follow-up.md).
 
 ## How to use it
 
+**September 9 export candidate:** FLAC, AIFF, AAC-LC/M4A, ADTS AAC and Ogg Vorbis
+Track/Album engine exports are locally verified on Windows. See the
+[format evidence ledger](plans/2026-09-09-export-formats-evidence.md) for matrix,
+independent decode and packaging evidence. Status: **Qualify — unreleased**;
+Mac execution, final installed packages and publication remain gated. The
+[five-check Windows baseline PASS](listening/2026-09-09-installed-check.md) on
+`07021f1b` supersedes the earlier stopped-session verdict only for its tested scope.
+
 - **Every visible public claim** — landing copy, platform statement, pricing
   statement, beta promise, screenshot — needs a row here before it ships.
 - A claim's **Status** is one of:

@@ -79,6 +79,14 @@ preparation. `rail-mode-consistency` also compares header and waveform bounds.
 show the delivered bitrate. These browser scenarios use the preview bridge;
 they do not establish native audio deadlines or sound quality.
 
+The same browser probe also exports FLAC, M4A, ADTS AAC, Vorbis and AIFF,
+checks default quality and delivered receipt identity, and preserves Intensity.
+With a verified encoder staged, explicitly run `cargo test --test export_formats
+-- --ignored` and `cargo test --test album_export_formats -- --ignored` for the
+new-format engine matrices. These opt-in tests do not silently count as part of
+ordinary `cargo test`. Package and independent-file verification are documented
+in [the encoder source record](third-party/audio-encoders.md).
+
 ## Audio correctness regressions
 
 `cargo test` includes `tests/audio_invariants.rs` without private fixtures or

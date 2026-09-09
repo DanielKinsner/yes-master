@@ -1,4 +1,4 @@
-export const AUDIO_EXTENSIONS = ["wav", "mp3", "m4a", "aac", "flac", "ogg"] as const;
+export const AUDIO_EXTENSIONS = ["wav", "mp3", "m4a", "aac", "flac", "ogg", "aiff", "aif"] as const;
 
 export type AudioExtension = (typeof AUDIO_EXTENSIONS)[number];
 

@@ -3,6 +3,7 @@
 import { formatBitDepth, formatSampleRate } from "./ExportReceiptCard";
 import type { AlbumRenderReport, AlbumTrackRenderRecord } from "../lib/api";
 import { trackCountLabel } from "../lib/album-copy";
+import { deliveredFormatLabel } from "../lib/export-formats";
 
 function formatChannelCount(channels: number): string {
   if (channels === 1) return "mono";
@@ -100,7 +101,7 @@ export function AlbumExportReceipt({ report, expanded = false }: { report: Album
       <code className="album-export-receipt-path">{report.album_wav_path}</code>
       <span className="album-export-receipt-meta">
         {trackCountLabel(report.tracks.length)} · rendered {renderedRate} /{" "}
-        {report.mp3_bitrate_kbps ? `MP3 ${report.mp3_bitrate_kbps} kbps` : `WAV ${formatBitDepth(report.bit_depth)}`} /{" "}
+        {report.delivered_format ? deliveredFormatLabel(report.delivered_format) : report.mp3_bitrate_kbps ? `MP3 ${report.mp3_bitrate_kbps} kbps` : `WAV ${formatBitDepth(report.bit_depth)}`} /{" "}
         {formatChannelCount(report.rendered_channels)} · requested {requestedRate}
         {requestedMismatch && `, got ${renderedRate}`}
       </span>

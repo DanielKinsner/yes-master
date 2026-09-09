@@ -6,6 +6,7 @@ import {
   type RefObject,
 } from "react";
 import { api } from "../lib/api";
+import { EXPORT_FORMATS, encodingQuality } from "../lib/export-formats";
 import { formatDuration } from "../lib/time-format";
 import { presetCopy } from "../lib/preset-copy";
 import {
@@ -178,6 +179,7 @@ export function ExportReceiptCard({
   };
   const paths = receipt.job.output_paths;
   const measurements = receipt.job.measurements ?? null;
+  const delivered = receipt.job.delivered_format ?? null;
   const quality = exportQualitySummary(receipt.checks);
   const qualityRows = buildQualityRows(receipt.checks, analysis, measurements);
   // A Critical quality row means the saved file needs attention — don't present
@@ -360,23 +362,29 @@ export function ExportReceiptCard({
             ))}
           </ul>
         </section>
-        {measurements && (
+        {(measurements || delivered) && (
           <section className="receipt-format" aria-label="Audio format">
             <div className="receipt-section-title">Audio format</div>
             <dl className="receipt-result-list">
               <div className="receipt-result-row">
-                <dt>{measurements.mp3_bitrate_kbps ? "Bitrate" : "Bit depth"}</dt>
-                <dd>{measurements.mp3_bitrate_kbps ? `${measurements.mp3_bitrate_kbps} kbps` : formatBitDepth(measurements.bit_depth)}</dd>
+                <dt>{delivered ? ("quality" in delivered.encoding ? "Quality" : "bitrate_kbps" in delivered.encoding ? delivered.encoding.format === "mp3" ? "Bitrate" : "Target bitrate" : "Bit depth") : measurements?.mp3_bitrate_kbps ? "Bitrate" : "Bit depth"}</dt>
+                <dd>{delivered ? encodingQuality(delivered.encoding, delivered.bit_depth) : measurements?.mp3_bitrate_kbps ? `${measurements.mp3_bitrate_kbps} kbps` : formatBitDepth(measurements?.bit_depth ?? 24)}</dd>
               </div>
               <div className="receipt-result-row">
                 <dt>Sample rate</dt>
-                <dd>{formatSampleRate(measurements.sample_rate)}</dd>
+                <dd>{formatSampleRate(delivered?.sample_rate ?? measurements?.sample_rate ?? 44_100)}</dd>
               </div>
               <div className="receipt-result-row">
                 <dt>File type</dt>
-                <dd>{fileTypeFromPath(paths[0]) || "—"}</dd>
+                <dd>{delivered ? EXPORT_FORMATS[delivered.encoding.format].label : fileTypeFromPath(paths[0]) || "—"}</dd>
               </div>
+              {delivered?.requested_sample_rate != null && delivered.requested_sample_rate !== delivered.sample_rate && <div className="receipt-result-row">
+                <dt>Requested rate</dt><dd>{formatSampleRate(delivered.requested_sample_rate)}</dd>
+              </div>}
             </dl>
+            {!measurements && <p>Delivered measurements unavailable.</p>}
+            {delivered?.bit_depth != null && delivered.bit_depth !== delivered.requested_bit_depth && <p>Delivered at {delivered.bit_depth}-bit integer from the requested {delivered.requested_bit_depth}-bit setting.</p>}
+            {delivered?.encoding.format === "aac" && <p>Standalone AAC includes codec delay and padding.</p>}
           </section>
         )}
             </div>
