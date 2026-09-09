@@ -39,6 +39,33 @@ fn encodings() -> [ExportEncoding; 5] {
     ]
 }
 
+#[cfg(windows)]
+#[test]
+#[ignore = "requires the staged qualified encoder package"]
+fn new_formats_preserve_windows_long_destination_paths() {
+    let temp = tempfile::tempdir().unwrap();
+    let encoder = export_encoding::Encoder::packaged().unwrap();
+    let mut deep = temp.path().to_path_buf();
+    while deep.as_os_str().len() < 280 {
+        deep.push("long-export-folder-with-spaces-0123456789");
+    }
+    std::fs::create_dir_all(&deep).unwrap();
+    let samples: Vec<_> = (0..44100).map(|n| (n as f32 * 0.1).sin() * 0.2).collect();
+    for encoding in encodings() {
+        let path = deep.join("master").with_extension(encoding.extension());
+        let result =
+            export_encoding::write(&encoder, &path, &samples, 44100, 1, 24, encoding, None)
+                .unwrap();
+        assert!(result.path.exists());
+        let first = std::fs::read(&result.path).unwrap();
+        let repeat =
+            export_encoding::write(&encoder, &path, &samples, 44100, 1, 24, encoding, None)
+                .unwrap();
+        assert_ne!(result.path, repeat.path);
+        assert_eq!(std::fs::read(&result.path).unwrap(), first);
+    }
+}
+
 #[test]
 #[ignore = "requires the staged qualified encoder package"]
 fn track_matrix_preserves_mastering_quantization_and_measures_delivered_files() {

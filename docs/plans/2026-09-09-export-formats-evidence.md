@@ -154,3 +154,13 @@ small synthetic fixtures derived from the existing synthetic WAV (no private aud
   then a Windows long-path regression in the new atomic finalizer. That fix is
   being verified separately before candidate packaging; the full lane is not
   yet marked passed.
+
+### Integration correction: Windows long paths
+
+`tempfile` passes paths directly to Win32, unlike `std`'s long-path conversion.
+Canonicalizing only the existing temporary file/target parent supplies verbatim
+paths for atomic persistence while preserving the returned user path. The
+existing four portability tests now PASS. A new regression passes every added
+format into a >280-character destination twice and proves the first file survives.
+All four new-format Track tests and both Album tests PASS after the correction;
+strict all-target Clippy PASS. The complete fixture lane is rerun at this code.

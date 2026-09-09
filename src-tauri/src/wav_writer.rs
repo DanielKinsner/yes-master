@@ -309,6 +309,11 @@ pub(crate) fn finalize_never_overwrite(
     final_path: &Path,
 ) -> CommandResult<std::path::PathBuf> {
     let mut target = final_path.to_path_buf();
+    // tempfile calls Win32 directly without std's long-path conversion. Resolve
+    // existing parents to verbatim paths for persistence, keeping user-facing
+    // returned paths unchanged. The destination itself must not be created.
+    #[cfg(windows)]
+    let tmp_path = std::fs::canonicalize(tmp_path).map_err(|e| CommandError::Io(e.to_string()))?;
     let mut temporary = tempfile::TempPath::try_from_path(tmp_path.to_path_buf())
         .map_err(|e| CommandError::Io(e.to_string()))?;
     for _ in 0..8 {
@@ -316,7 +321,23 @@ pub(crate) fn finalize_never_overwrite(
             target = unique_sibling(&target)?;
             continue;
         }
-        return match temporary.persist_noclobber(&target) {
+        #[cfg(windows)]
+        let persistence_target = {
+            let parent = target
+                .parent()
+                .filter(|p| !p.as_os_str().is_empty())
+                .unwrap_or(Path::new("."));
+            std::fs::canonicalize(parent)
+                .map_err(|e| CommandError::Io(e.to_string()))?
+                .join(
+                    target
+                        .file_name()
+                        .ok_or_else(|| CommandError::Io("Missing output filename".into()))?,
+                )
+        };
+        #[cfg(not(windows))]
+        let persistence_target = target.clone();
+        return match temporary.persist_noclobber(&persistence_target) {
             Ok(()) => Ok(target),
             Err(err) if err.error.kind() == std::io::ErrorKind::AlreadyExists => {
                 temporary = err.path;
