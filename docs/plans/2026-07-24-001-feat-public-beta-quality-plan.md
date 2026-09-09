@@ -18,6 +18,15 @@ deepened: 2026-07-24
 
 # YES Master Public Beta Quality Program
 
+> **September 9 export implementation:** U2–U5 of the
+> [export plan](2026-09-09-0857-feat-export-formats-beta-launch-plan.md) are
+> implemented; [the live evidence ledger](2026-09-09-export-formats-evidence.md)
+> records the installed Windows `7cd36ab6` candidate and source/relink proof.
+> The owner passed all five baseline checks on `07021f1b`; preserve that evidence.
+> Mac access is deferred by the owner. Remaining installed accessibility,
+> affected listening/player/offline, one unexplained audition pause, exact CI and
+> release/updater requirements remain open. Do not restart historical queues.
+
 This is an implementation plan, not an execution record. Creating it does not
 authorize DSP retuning, public deployment, release publication, updater
 activation, mobile expansion, or collection of private audio.

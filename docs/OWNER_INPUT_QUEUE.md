@@ -30,7 +30,9 @@ The objective VM, resource and UI fixes proceed independently.
 September 9 export candidate prerequisites: Mac checks are deferred to the
 owner's next Mac session (answered; do not ask again now). Before redistribution,
 the owner must resolve the [specific LGPL relinking permission draft](third-party/lgpl-relink-exception-DRAFT.md).
-Exact source materials and a Windows candidate are being prepared first.
+The [exact Windows candidate](listening/2026-09-09-export-candidate.md) and source
+materials are now prepared. A full modified-LAME rebuild and real MP3 encode
+passed; the proposed permission remains an unresolved owner decision.
 Permanent updater key cross-machine backup/recovery and a beta end date still
 need their existing release evidence/decision; no date or approval is inferred.
 

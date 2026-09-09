@@ -17,10 +17,13 @@ See [the targeted follow-up plan](plans/2026-09-05-listening-follow-up.md).
 ## How to use it
 
 **September 9 export candidate:** FLAC, AIFF, AAC-LC/M4A, ADTS AAC and Ogg Vorbis
-Track/Album engine exports are locally verified on Windows. See the
+Track/Album exports are verified through the installed Windows `7cd36ab6` UI.
+Independent decoding covers all seven Track formats and 42 Album files. See the
 [format evidence ledger](plans/2026-09-09-export-formats-evidence.md) for matrix,
 independent decode and packaging evidence. Status: **Qualify — unreleased**;
-Mac execution, final installed packages and publication remain gated. The
+Mac execution, remaining installed/owner gates, final release artifacts and
+publication remain gated. One unexplained audition pause is retained alongside
+the later passing run; do not claim universal responsiveness. The
 [five-check Windows baseline PASS](listening/2026-09-09-installed-check.md) on
 `07021f1b` supersedes the earlier stopped-session verdict only for its tested scope.
 

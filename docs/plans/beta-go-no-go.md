@@ -1,11 +1,17 @@
 # YES Master — Beta Go / No-Go Checklist
 
-> **2026-09-09 — Export expansion underway.**
+> **2026-09-09 — Windows export candidate prepared; release remains NO-GO.**
 > [Implementation evidence](2026-09-09-export-formats-evidence.md) records the
-> new Windows source-built encoder. This is not installed-candidate evidence.
+> new Windows source-built encoder and completed desktop implementation.
+> [Installed candidate `7cd36ab6`](../listening/2026-09-09-export-candidate.md)
+> has native Track/Album output proof, exact installer hashes, updater-signature
+> verification and a modified-LAME source rebuild. The earlier beta.1 identity
+> below remains historical; it is not the current local implementation candidate.
 > Mac execution/installed checks are pending the owner's later Mac session.
-> Encoder redistribution and existing static LAME relink obligations remain
-> release requirements; no public transaction is authorized by this work.
+> Remaining Windows audition/offline/player/listening/accessibility evidence,
+> exact remote CI, relink permission and key recovery still prevent readiness.
+> [Concrete release checkpoint](2026-09-09-export-release-checkpoint.md): no
+> public transaction is authorized by this work.
 
 > **2026-09-09 — Installed Windows baseline owner PASS.** The owner completed
 > all five targeted checks on installed 0.9.2 / `07021f1b` and reported all passed.

@@ -2,17 +2,17 @@
 
 This ledger follows [the implementation plan](2026-09-09-0857-feat-export-formats-beta-launch-plan.md).
 The installed Windows `07021f1b` five-check owner PASS remains the baseline;
-none of the evidence below substitutes for a new installed package or Mac check.
+new-format Windows package evidence is recorded separately below. Mac remains open.
 
 | Unit | Status | Evidence / remaining work |
 | --- | --- | --- |
-| U1 | Windows encoder checkpoint; cross-platform qualification open | Pinned source build, package integrity gate, independent codec matrix, app re-import, Tauri staging and qualification workflow implemented. Mac thin/universal execution and installed packaging still open. |
+| U1 | Windows qualified and bundled; Mac open | Pinned source build, package integrity gate, independent codec matrix, app re-import and installed Windows sidecar verified. Mac thin/universal execution remains unavailable. |
 | U2 | Type/receipt checkpoint complete | Explicit encoding validation, delivered identity independent of metering, legacy WAV/MP3 compatibility, updated wire samples. Command dispatch is connected with the adapters in U3/U4. |
-| U3 | Windows backend checkpoint complete | Track encoding, read-back, precision/rate policy, cancellation and atomic no-clobber persistence verified below. UI exposure follows U4/U5; installed/fixture integration remains separate. |
+| U3 | Implementation complete; Windows verified | Track encoding, read-back, precision/rate policy, cancellation and atomic no-clobber persistence; full fixture lane and installed seven-format delivery verified. Mac qualification remains separate. |
 | U4 | Windows backend checkpoint complete | All five new formats preserve order/overrides/gaps and single continuous encoding; cancellation and manifest-failure ownership verified. |
-| U5 | UI checkpoint complete | Seven shared choices, captured quality/settings, actual receipts, AIFF aliases and documentation. 859 frontend tests across the suite plus post-capture asset rerun; headless 37 scenario/viewport checks passed. |
-| U6 | Pending; Mac access unavailable | Owner confirmed Mac checks must wait for a later login/session. Continue Windows work. |
-| U7 | Preparation | Encoder source/license archives retained; LAME relink permission/materials, exact candidate CI, installer hashes and signing evidence still required. |
+| U5 | Complete | Seven shared choices, captured settings, actual receipts, AIFF aliases and docs. Final single frontend run: 859 PASS. Headless: 38 scenario/viewport checks PASS, including Album formats. |
+| U6 | Windows candidate checked; remaining gates open | Installed `7cd36ab6`, independent Track/Album files, cancellation/retry and high-rate delivery verified. One unexplained audition pause, disconnected/player/owner/accessibility evidence and Mac remain open. |
+| U7 | Concrete Windows candidate prepared; not release-ready | Exact NSIS/MSI, hashes, verified updater signatures, source archives and modified-LAME rebuild proof retained. Mac, exact remote CI, relink permission, key recovery and owner release/date decisions remain open. |
 | U8 | Not authorized / not started | No push, tag, publication, deployment or spending. |
 
 ## U1 Windows source package
@@ -164,3 +164,86 @@ existing four portability tests now PASS. A new regression passes every added
 format into a >280-character destination twice and proves the first file survives.
 All four new-format Track tests and both Album tests PASS after the correction;
 strict all-target Clippy PASS. The complete fixture lane is rerun at this code.
+
+## Final integration verification
+
+- **859 frontend tests PASS in one final run**, `export-final-frontend-retry.log`.
+  The preceding run found two old exact packaging-command assertions; they now
+  require the encoder preflight and bundle overlay. Product behavior was not
+  changed to satisfy them. Production frontend builds/typecheck PASS.
+- **643 Rust tests PASS, 17 ignored, 42 suites** with `AMS_RUN_REAL_FIXTURE=1`
+  and the existing private fixture. All four private-fixture tests actually ran
+  and passed; existing WAV/MP3 snapshots and thresholds were preserved.
+  Log: `test-output/export-final-rust.log`.
+- Explicit new-format matrices: **4 Track + 2 Album PASS**, including the
+  long-path regression. Log: `export-final-format-matrices.log`. Independent
+  package qualification remains the separate 40-case U1 evidence.
+- Final formatting and strict all-target Clippy PASS,
+  `test-output/export-final-clippy.log`.
+- Shared bridges: iPhone check + **46 tests PASS, one ignored**; Android
+  **26 host tests PASS** and API-29 arm64 cross-check PASS. Logs:
+  `export-final-iphone.log`, `export-final-android.log`.
+- Final headless **PASS, 38 scenario/viewport checks plus landing**:
+  `test-output/headless/2026-09-09T17-00-32-355Z/`. This run reused the already
+  built, unchanged production UI via `--skip-build`. The new Album scenario
+  covers all five added formats and receipt identities.
+- Retain the failed prior headless run `2026-09-09T16-53-21-467Z`: the Album
+  test tried the next export without closing the previous receipt (test fixed).
+  The unchanged 1360px transport/order scenario also failed insertion/order/
+  keyboard checks. Its cause is unresolved; the later passing run is not a
+  causal explanation. A receipt screenshot now waits for settled opacity.
+
+## U6 installed Windows candidate
+
+See [the exact installed record](../listening/2026-09-09-export-candidate.md)
+for complete hashes, native actions and precise remaining limits.
+
+- Clean source **`7cd36ab641eb35fa737ded13a06b826d2b4cfdb7`**, version 0.9.2,
+  embedded **`7cd36ab6 · 2026-09-09 10:03`**. Fresh target and detached checkout.
+- NSIS installed successfully; original session survived installation. After
+  testing, the original six-track session/settings were restored and confirmed
+  after a normal relaunch. MSI was built/signed, not separately installed.
+- Actual installed Track UI exported all seven formats through native Save.
+  Independent decode/measurements PASS; FLAC/AIFF exactly equal WAV PCM.
+  Standard AAC/M4A and 192 kHz-source to 48 kHz AAC delivery also PASS.
+- Actual installed Album UI exported six tracks plus continuous output in WAV
+  and all five new formats. All **42 files** independently pass format, order,
+  programme-frame/padding and measurement checks; integer lossless PCM equals WAV.
+- Installed AAC Album encode cancellation cleaned only job outputs and left no
+  encoder process. Retry completed. Playback continued through cancellation;
+  the first retry paused at 0:53 without an identified cause. A subsequent full
+  export and an established high-rate Track audition/export passed. Preserve the
+  unexplained pause as an open finding, not a blanket audition PASS.
+- Mac access is explicitly deferred by the owner. Disconnected installed
+  operation, external player/by-ear and NVDA/VoiceOver evidence remain distinct.
+
+## U7 preparation and exact artifact boundary
+
+The local review candidate is **7cd36ab6**, not the later test/docs tip. Both
+installers, updater signatures, source archive and qualified encoder archive
+are in `test-output/candidate-7cd36ab6/delivery/`, with complete checksums/sizes.
+No public location has been created and these files are not committed.
+
+Both installer signatures verify against the permanent updater public key;
+one-byte tamper checks reject each artifact. The encrypted signing key and
+DPAPI-protected password were available, and repository secret names were
+checked read-only. Cross-machine backup/recovery remains unproven. No signing
+secret or private audio was written to git, logs or the candidate delivery.
+
+The source ZIP is an exact `git archive` of 7cd36ab6. LAME crates match its
+Cargo.lock checksums. FFmpeg/libogg/libvorbis source/configuration/licenses
+match the qualified package. A fresh build from the extracted archive, with
+both LAME crates supplied locally and the bundled LAME version changed only in
+the private rebuild tree, produced a complete application containing the new
+library marker. **Three existing MP3 tests plus one relink proof PASS**: real
+MP3 bytes carry `LAME3.101`, independently distinguishable from shipped 3.100,
+and decode to finite stereo audio. See [rebuild instructions](../third-party/rebuild-and-relink.md).
+This mechanical Windows proof does not grant recipient license permissions or
+replace Mac rebuild proof. The source package remains `releaseReady: false`.
+
+Prepared CI/release workflows consume exact qualification packages, run actual
+engine matrices, assemble the Mac universal sidecar, bundle notices, and require
+source/encoder archives in the asset audit. **No remote workflow has run for
+these commits.** Paid signing is not added as a requirement. Beta.1 history and
+artifacts remain untouched; proposed beta.2/version/date and the unresolved
+transaction are recorded in [the release checkpoint](2026-09-09-export-release-checkpoint.md).

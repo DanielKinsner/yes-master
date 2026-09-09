@@ -1,9 +1,13 @@
 # YES Master — Open Threads & Owner Decisions
 
-> **2026-09-09 — Export implementation started; Windows encoder qualified.**
+> **2026-09-09 — Export formats implemented; Windows candidate installed.**
 > [Live implementation evidence](plans/2026-09-09-export-formats-evidence.md)
-> records the pinned offline encoder, independent format tests and exact binary.
-> Track/Album integration is in progress; new choices are not yet advertised.
+> records U2–U5 completion, the qualified Windows encoder, 859 frontend and 643
+> Rust passes, 38 headless checks and independently verified native Track/Album
+> files. [Candidate `7cd36ab6`](listening/2026-09-09-export-candidate.md) has exact
+> NSIS/MSI hashes, verified updater signatures and source/relink rebuild proof.
+> U1 Mac and U6/U7 release gates remain open, including one unexplained audition
+> pause, disconnected/player/listening/accessibility and exact remote CI evidence.
 > Owner confirmed Mac verification must wait for a later Mac session. Continue
 > Windows and independent release preparation. Existing installed Windows
 > `07021f1b` owner PASS remains valid for its named scope. No release activity authorized.
