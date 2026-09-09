@@ -1,5 +1,12 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-09 — Export and beta launch implementation plan written.**
+> [Export formats and public beta launch plan](plans/2026-09-09-0857-feat-export-formats-beta-launch-plan.md)
+> details encoder qualification, all desktop export flows, installed package checks,
+> candidate preparation and activation. The proposed launch set adds FLAC, AAC/M4A,
+> standalone AAC, Ogg Vorbis and AIFF to WAV/MP3; ALAC/Opus are explicit follow-ups.
+> These are planning recommendations, not implemented capabilities or publication approval.
+
 > **2026-09-09 — Installed Windows owner check PASSED, all five checks.**
 > Installed and launched 0.9.2 from exact `07021f1b` with a verified clean build
 > stamp; existing session preserved. 240 focused tests and 19 checks through the

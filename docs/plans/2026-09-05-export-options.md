@@ -7,6 +7,11 @@ claims. Old owner outputs are never deleted.
 
 ## Broader export-format scope — owner clarification 2026-09-09
 
+Implementation sequencing and acceptance checks are now in the
+[export formats and public beta launch plan](2026-09-09-0857-feat-export-formats-beta-launch-plan.md).
+The owner requirement below remains the source of intent; the new plan labels
+its specific format defaults and launch split as recommendations.
+
 The owner clarified that MP3 was an example: the intended capability is a useful
 range of major audio export formats. Supported audio import formats should also
 be available for export, with additional useful delivery formats beyond that
