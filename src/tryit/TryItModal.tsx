@@ -7,16 +7,17 @@ import { auditionBuffer, ComparisonPlayer, type Side } from "./player";
 import "./tryit.css";
 
 const fmt = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
-/** Volume match: bring the ORIGINAL up to the master's loudness wherever its true-peak headroom
- *  allows (ceiling −1 dBTP), and only trim the master by whatever is left. The master keeps its impact;
- *  the comparison is still level-matched. Returns [originalGain, masteredGain]. */
+/** Volume match: both sides play at ONE fixed reference level that does not move with the
+ *  loudness target: the loudest the ORIGINAL can be lifted to without its true peak crossing
+ *  −1 dBTP. The original always gets that lift; the master is trimmed (or lifted, capped by its
+ *  own headroom) to meet it. Changing Low/Medium/High then changes the sound, not the volume.
+ *  Returns [originalGain, masteredGain]. */
 const level = (result: Rendered | null, match: boolean): [number, number] => {
   if (!match || !result || result.source.lufs <= -70 || result.output.lufs <= -70) return [1, 1];
-  const delta = result.output.lufs - result.source.lufs;
-  if (delta <= 0) return [Math.pow(10, delta / 20), 1];
-  const headroom = Math.max(0, -1 - result.source.tp);
-  const lift = Math.min(delta, headroom);
-  return [Math.pow(10, lift / 20), Math.pow(10, -(delta - lift) / 20)];
+  const liftDb = Math.max(0, -1 - result.source.tp);
+  const referenceLufs = result.source.lufs + liftDb;
+  const masterDb = Math.min(referenceLufs - result.output.lufs, Math.max(0, -1 - result.output.tp));
+  return [Math.pow(10, liftDb / 20), Math.pow(10, masterDb / 20)];
 };
 const describe = (result: Rendered) => {
   if (result.source.lufs <= -70 || result.output.lufs <= -70) return "Too little audible material for a meaningful loudness comparison.";
@@ -253,7 +254,7 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
               <button type="button" disabled={!ready} aria-pressed={side === "mastered"} onClick={() => setSide("mastered")}>Mastered</button>
             </div>
             <label className="tryit-check"><input type="checkbox" checked={match} disabled={!ready} onChange={event => setMatch(event.target.checked)} /><span>Volume match</span>
-              <Info label="About volume match">Use volume match to preview your original and master at the same volume and compare with more accuracy. The original is raised where it has headroom; the master is only trimmed by what’s left.</Info>
+              <Info label="About volume match">Use volume match to preview your original and master at the same volume and compare with more accuracy. Both play at one fixed level, so changing the loudness target changes the sound, not the volume.</Info>
             </label>
           </div>
         </div>
