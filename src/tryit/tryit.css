@@ -295,3 +295,5 @@ body.tryit-lock { overflow: hidden; }
 .tryit-readout { display: none }
 .tryit-check .tryit-info-pop { left: auto; right: 0 }
 .tryit-info-pop { max-width: calc(100vw - 32px) }
+.tryit-ring.is-updating .track { animation: tryit-pulse 700ms ease-in-out infinite alternate }
+@keyframes tryit-pulse { from { stroke: rgba(158, 176, 214, 0.18) } to { stroke: var(--accent-bright) } }

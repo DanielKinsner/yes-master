@@ -237,7 +237,7 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
         )}
 
         <div className="tryit-stage">
-          <button type="button" className={"tryit-ring" + (playing ? " is-playing" : "")} disabled={!ready} onClick={() => void togglePlay()} aria-keyshortcuts="Space">
+          <button type="button" className={"tryit-ring" + (playing ? " is-playing" : "") + (updating ? " is-updating" : "")} disabled={!ready} onClick={() => void togglePlay()} aria-keyshortcuts="Space">
             <svg viewBox="0 0 100 100" aria-hidden="true">
               <circle className="track" cx="50" cy="50" r={ringR} />
               <circle className="fill" cx="50" cy="50" r={ringR} strokeDasharray={ringC} strokeDashoffset={ringC * (1 - progress)} />
