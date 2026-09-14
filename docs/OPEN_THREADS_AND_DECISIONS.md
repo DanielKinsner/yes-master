@@ -1,5 +1,14 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-14 — Owner requests an evidence-led quality recommendation.**
+> The owner has limited test music and reports that the five A–E clips are too
+> subtle for a useful naked-ear choice. This is not a listening pass, preference
+> ranking or proof of equivalence. [The continuation prompt](prompts/2026-09-14-mastering-quality-continuation.md)
+> asks the next agent to acquire suitable additional material, run objective
+> mechanism/robustness tests, use LANDR as an empirical benchmark, and make a
+> reasoned recommendation. Do not stop at “it is subjective” or repeat the same
+> listening task as the next gate. Existing defaults and calibration gates remain.
+
 > **2026-09-14 — Research prepared for cross-machine continuation.**
 > [The transfer guide](reviews/2026-09-14-research-handoff.md) indexes the retained
 > pricing, competitor, control and DSP proposals and versioned measurement CSVs.

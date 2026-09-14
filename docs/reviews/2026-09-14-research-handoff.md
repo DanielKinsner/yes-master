@@ -3,6 +3,12 @@
 The live browser demo is on `main`. The pricing, DSP and control-design documents
 are decision material, not approved changes to prices, presets or controls.
 
+**Latest owner direction:** the five listening clips were too subtle to support
+a useful naked-ear choice, and the owner has limited music for further testing.
+Start with [the fresh-agent continuation prompt](../prompts/2026-09-14-mastering-quality-continuation.md).
+It replaces a listening-only resume point with an evidence-led investigation and
+a concrete recommendation. The owner does not need to repeat the same A–E task.
+
 ## What travels with Git
 
 Pull `main` to get the research, recorded decisions and proposals:
@@ -75,11 +81,11 @@ them by itself.
    Verification should report **147 verified files**. It copies only missing
    files, preserving the relative paths expected by the reports.
 
-4. Open `test-output/yes-stage-ablation-20260914/listening/README.md`, then listen
-   to A through E before opening `reveal-key.json`. All five excerpts measured
-   -16.0 LUFS and cover the same 195–215 second passage. No by-ear winner has
-   been selected. Different source material is still needed before generalizing
-   a preferred processing change.
+4. Confirm the files in `test-output/yes-stage-ablation-20260914/listening/` are
+   available for reference. A–E measured -16.0 LUFS and cover 195–215 seconds.
+   The owner found them too subtle for a useful choice; no winner or equivalence
+   verdict follows. Continue with the new investigation prompt instead of making
+   another ranking of these clips a prerequisite.
 
 Historical logs/JSON retain the original machine's absolute paths as provenance.
 Use archive-manifest relative paths and the report links on the new machine.
@@ -90,8 +96,10 @@ validated by the Windows measurements.
 
 ## Resume point
 
-The next discussion concerns the measured results and listening preferences.
-Do not implement a preset retune, combine controls, activate calibration gates,
-adopt a price, or resume the deferred desktop refactor merely because this packet
-is present. The latest state remains in [Open Threads](../OPEN_THREADS_AND_DECISIONS.md).
-No repeat owner export is needed to recover the completed On/Off comparison.
+The next session should expand the evaluation material, test specific processing
+hypotheses and reach a defensible engineering recommendation using the linked
+continuation prompt. Do not implement a preset retune, combine controls, activate
+calibration gates, adopt a price, or resume the deferred desktop refactor merely
+because this packet is present. The latest state remains in
+[Open Threads](../OPEN_THREADS_AND_DECISIONS.md). No repeat owner export is needed
+to recover the completed On/Off comparison.

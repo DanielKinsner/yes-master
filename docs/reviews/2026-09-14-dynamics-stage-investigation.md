@@ -8,6 +8,11 @@ For another machine, use the [research transfer guide](2026-09-14-research-hando
 The [compact render measurements](evidence/2026-09-14-dynamics.csv) travel with Git;
 the complete audio/evidence archive is stored separately on GitHub with owner authorization.
 
+**Owner follow-up:** A–E were reported too subtle for a useful naked-ear choice.
+No preference/equivalence verdict follows. [The next investigation brief](../prompts/2026-09-14-mastering-quality-continuation.md)
+requests broader suitable test material, objective mechanism/robustness evidence
+and a ranked recommendation, rather than another identical listening exercise.
+
 ## Result
 
 Both harness baselines reproduce the owner's Compressor On and Off WAVs **byte
