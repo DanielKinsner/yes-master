@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Knob } from "../components/Knob";
 import { PresetIcon, PRESET_ACCENT } from "../components/PresetIcon";
 import { STANDARD_LOUDNESS, STANDARD_STYLES, type StandardStyleId } from "../lib/standard-mapping";
 import { CLIP_SECONDS, PreviewWorker, type Loaded, type Rendered } from "./processing";
@@ -17,6 +16,17 @@ const describe = (result: Rendered) => {
   if (result.output.lufs > result.settings.target + 0.15) return "Measured loudness is above the selected target.";
   return "Target reached. Compare the sound, then make it yours.";
 };
+
+
+/** A small (i) that reveals text on hover or focus; the text is in the DOM for screen readers. */
+function Info({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <span className="tryit-info">
+      <button type="button" className="tryit-info-btn" aria-label={label}>i</button>
+      <span className="tryit-info-pop" role="tooltip">{children}</span>
+    </span>
+  );
+}
 
 export default function TryItModal({ onClose }: { onClose: () => void }) {
   const [track, setTrack] = useState<(Loaded & { name: string; sampleRate: number; channels: number }) | null>(null);
@@ -47,6 +57,15 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
   const activeStyle = STANDARD_STYLES.find(s => s.id === style)!;
   const ready = result !== null && !loading;
   const duration = player.current?.duration ?? 0;
+  const drag = useRef<{ on: boolean; grab: number }>({ on: false, grab: 0 });
+  const stripSeconds = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const r = event.currentTarget.getBoundingClientRect();
+    return ((event.clientX - r.left) / r.width) * (track?.duration ?? 0);
+  };
+  const moveStart = (seconds: number) => {
+    if (!track) return;
+    setStart(Math.max(0, Math.min(Math.max(0, track.duration - CLIP_SECONDS), seconds)));
+  };
 
   const loadFile = useCallback(async (file: File) => {
     const current = ++epoch.current;
@@ -123,7 +142,6 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
     const timer = setInterval(() => setPosition(player.current?.position ?? 0), 50);
     return () => clearInterval(timer);
   }, [playing]);
-  const seek = (value: number) => { player.current?.seek(value); setPosition(player.current?.position ?? 0); };
 
   useEffect(() => {
     const canvas = wave.current;
@@ -183,81 +201,96 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, togglePlay]);
 
+  const ringR = 44, ringC = 2 * Math.PI * ringR;
+  const progress = duration > 0 ? Math.min(1, position / duration) : 0;
+  const delta = result ? result.output.lufs - result.source.lufs : 0;
   return createPortal(<>
     <div className="tryit-scrim" aria-hidden="true" />
     <div className="tryit" role="dialog" aria-modal="true" aria-label="Try YES Master on your mix" onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
-      <div className="tryit-panel" ref={panel}>
+      <div className="tryit-panel tryit-card" ref={panel}>
         <header className="tryit-head">
           <div className="tryit-brand">YES Master <span>· Try it on your mix</span></div>
-          <span className="tryit-promise"><i />Local processing. No upload.</span>
           <button ref={closeButton} type="button" className="tryit-close" onClick={onClose} aria-label="Close">×</button>
         </header>
-        <div className="tryit-body">
-          <p className="tryit-scope">Try Standard’s core mastering chain on a 30-second section. The desktop app adds full-track source analysis and export.</p>
-          <main className="tryit-console">
-            <input ref={fileInput} type="file" hidden accept="audio/*,.wav,.mp3,.flac,.m4a,.aac,.ogg" onChange={event => {
-              const file = event.target.files?.[0]; event.target.value = ""; if (file) void loadFile(file);
-            }} />
-            {!track ? <button type="button" className={"tryit-drop" + (over ? " is-over" : "")} disabled={loading}
-              onClick={() => fileInput.current?.click()}
-              onDragOver={event => { event.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
-              onDrop={event => { event.preventDefault(); setOver(false); const file = event.dataTransfer.files[0]; if (file && !loading) void loadFile(file); }}>
-              <span className="tryit-glyph" aria-hidden="true">↓</span>
-              <strong>{loading ? "Preparing your track…" : "Choose a mix or drop it here"}</strong>
-              <span>WAV, MP3, FLAC or M4A · Your audio stays on this device.</span>
-              <small>We’ll prepare the comparison. You press Play.</small>
-            </button> : <section className="tryit-wave" aria-label="Track and excerpt">
-              <div className="tryit-file"><b title={track.name}>{track.name}</b><button type="button" className="tryit-link" onClick={() => fileInput.current?.click()}>Change track</button></div>
-              <div className="tryit-wave-head"><span>Selected section</span><b>{fmt(start)} – {fmt(Math.min(track.duration, start + CLIP_SECONDS))}</b></div>
-              <canvas ref={wave} width={1000} height={88} role="img" aria-label="Track waveform, selected excerpt and playback position" />
-              {track.duration > CLIP_SECONDS && <label className="tryit-section-picker">Move the 30-second section
-                <input type="range" min={0} max={track.duration - CLIP_SECONDS} step={0.1} value={start} aria-label="Section start" aria-valuetext={fmt(start)} onChange={event => setStart(Number(event.target.value))} />
-              </label>}
-              <div className="tryit-wave-hint">{fmt(track.duration)} total · Starts on the loudest section. Seek below to move within the preview.</div>
-            </section>}
-            <section className="tryit-transport" aria-label="Audition controls">
-              <div className="tryit-listen-row">
-                <button type="button" className="tryit-play" disabled={!ready} onClick={() => void togglePlay()} aria-keyshortcuts="Space">
-                  <span aria-hidden="true">{playing ? "Ⅱ" : "▶"}</span>{playing ? "Pause" : "Play"}
-                </button>
-                <div className="tryit-selector" role="group" aria-label="Original or mastered" aria-keyshortcuts="A">
-                  <button type="button" disabled={!ready} aria-pressed={side === "original"} onClick={() => setSide("original")}>Original</button>
-                  <button type="button" disabled={!ready} aria-pressed={side === "mastered"} onClick={() => setSide("mastered")}>Mastered</button>
-                </div>
-                <label className="tryit-switch"><input type="checkbox" checked={match} disabled={!ready} onChange={event => setMatch(event.target.checked)} /><span>Volume Match<small>Compare at similar listening levels.</small></span></label>
-              </div>
-              <div className="tryit-seek"><input type="range" aria-label="Preview position" aria-valuetext={`${fmt(position)} of ${fmt(duration)}`} min={0} max={duration || 1} step={0.05} value={position} disabled={!ready} onChange={event => seek(Number(event.target.value))} /><output aria-label="Playback time">{fmt(position)} / {fmt(duration)}</output></div>
-              <div className="tryit-playback-status" role="status">{loading ? "Reading your track locally…" : updating ? (ready ? "Updating preview… Previous comparison remains available." : "Preparing your comparison…") : ready ? (playing ? `Listening to ${side === "original" ? "Original" : "Mastered"}${match ? " · Volume Match on" : ""}` : position > 0 ? "Paused. Press Play to resume." : "Your comparison is ready. Press Play.") : "Choose a track to prepare your comparison."}</div>
-              <p className="tryit-hint"><kbd>Space</kbd> Play / pause · <kbd>A</kbd> Original / Mastered · Same playhead on both sides.</p>
-            </section>
-            {error && <div role="alert" className="tryit-error">{error} {track && <button type="button" className="tryit-link" onClick={() => setRetry(n => n + 1)}>Retry preview</button>}</div>}
-            <div className="std-steps">
-              <section className="std-step tryit-styles"><span className="std-step-label">1 · Style</span><span className="std-step-hint">Four characters. Make one yours.</span>
-                <div className="std-tiles" role="group" aria-label="Style">{STANDARD_STYLES.map(s => <button key={s.id} type="button" disabled={!track} className={"std-tile" + (style === s.id ? " is-active" : "")} style={{ ["--tile-accent" as string]: PRESET_ACCENT[s.preset.kind] }} aria-pressed={style === s.id} onClick={() => setStyle(s.id)}><span className="std-tile-icon"><PresetIcon kind={s.preset.kind} /></span><span className="std-tile-label">{s.label}</span></button>)}</div>
-              </section>
-              <section className="std-step std-step-intensity"><span className="std-step-label">2 · Intensity</span><span className="std-step-hint">A light touch or stronger character.</span>
-                <Knob label="" ariaLabel="Intensity" disabled={!track} size="lg" tone={activeStyle.tone} value={intensity} min={0} max={1} step={0.01} defaultValue={0.5} format={v => `${Math.round(v * 100)}%`} onChange={setIntensity} centerValue />
-                <input className="tryit-touch-range" type="range" min={0} max={100} disabled={!track} value={Math.round(intensity * 100)} aria-label="Intensity (slider)" onChange={event => setIntensity(Number(event.target.value) / 100)} />
-              </section>
-              <section className="std-step"><span className="std-step-label">3 · Loudness</span><span className="std-step-hint">Choose your target.</span>
-                <div className="std-seg" role="group" aria-label="Loudness">{STANDARD_LOUDNESS.map(l => <button key={l.id} type="button" disabled={!track} className={"std-seg-option" + (l.lufs === target ? " is-active" : "")} aria-pressed={l.lufs === target} onClick={() => setTarget(l.lufs)}><span className="std-seg-label">{l.label}</span><span className="std-seg-lufs">{l.lufs} LUFS</span></button>)}</div>
-                <p className="tryit-hint">The result may sit below your target to preserve peak headroom.</p>
-              </section>
+        <input ref={fileInput} type="file" hidden accept="audio/*,.wav,.mp3,.flac,.m4a,.aac,.ogg" onChange={event => {
+          const file = event.target.files?.[0]; event.target.value = ""; if (file) void loadFile(file);
+        }} />
+        {!track ? (
+          <button type="button" className={"tryit-drop" + (over ? " is-over" : "")} disabled={loading}
+            onClick={() => fileInput.current?.click()}
+            onDragOver={event => { event.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
+            onDrop={event => { event.preventDefault(); setOver(false); const file = event.dataTransfer.files[0]; if (file && !loading) void loadFile(file); }}>
+            <span className="tryit-glyph" aria-hidden="true">↓</span>
+            <strong>{loading ? "Preparing your track…" : "Drop your mix here"}</strong>
+            <span>WAV, MP3, FLAC or M4A</span>
+          </button>
+        ) : (
+          <div className="tryit-file"><b title={track.name}>{track.name}</b><button type="button" className="tryit-link" onClick={() => fileInput.current?.click()}>change</button></div>
+        )}
+
+        <div className="tryit-stage">
+          <button type="button" className={"tryit-ring" + (playing ? " is-playing" : "")} disabled={!ready} onClick={() => void togglePlay()} aria-keyshortcuts="Space">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <circle className="track" cx="50" cy="50" r={ringR} />
+              <circle className="fill" cx="50" cy="50" r={ringR} strokeDasharray={ringC} strokeDashoffset={ringC * (1 - progress)} />
+              {playing
+                ? <g className="glyph"><rect x="38" y="35" width="8" height="30" rx="2" /><rect x="54" y="35" width="8" height="30" rx="2" /></g>
+                : <path className="glyph" d="M41 33 L69 50 L41 67 Z" />}
+            </svg>
+            <span className="sr-only">{playing ? "Pause" : "Play"}</span>
+          </button>
+          <div className="tryit-stage-side">
+            <div className="tryit-selector" role="group" aria-label="Original or mastered" aria-keyshortcuts="A">
+              <button type="button" disabled={!ready} aria-pressed={side === "original"} onClick={() => setSide("original")}>Original</button>
+              <button type="button" disabled={!ready} aria-pressed={side === "mastered"} onClick={() => setSide("mastered")}>Mastered</button>
             </div>
-          </main>
-          <aside className="tryit-rail" aria-label="Preview measurements">
-            <div className="tryit-out"><span className="std-step-label">Your comparison</span><p className="tryit-hint">Measured over the preview section.</p>
-              <div className="tryit-ab">{(["original", "mastered"] as const).map(s => <div key={s} className={"tryit-side" + (s === side ? " is-live" : "")}>
-                <div className="tag">{s === "original" ? "Original" : "Mastered"}</div><div className="num">{result ? (s === "original" ? result.source : result.output).lufs.toFixed(1) : "—"}</div><div className="unit">LUFS integrated</div>
-                <div className="tp">True peak <b>{result ? (s === "original" ? result.source : result.output).tp.toFixed(1) : "—"}</b> dBTP</div>
-              </div>)}</div>
-              <p className={"tryit-verify" + (!result || updating ? " is-pending" : "")}>{result ? describe(result) : "Your measured result will appear here."}</p>
-              {result && <p className="tryit-hint">{result.settings.style} · {Math.round(result.settings.intensity * 100)}% · Target {result.settings.target} LUFS{updating ? " · Previous preview" : ""}</p>}
-              <details className="tryit-details"><summary>Details</summary><p>The browser previews Standard’s core chain without desktop source-aware adjustments. These excerpt measurements don’t predict the full-track export.</p><p>Volume Match changes listening level only. Brief fades soften excerpt loop boundaries; measurements use the unmodified result.</p>{result && <p>{result.version} · {result.sampleRate} Hz · {result.channels} ch · Processed in {result.seconds.toFixed(2)} s. Integrated loudness and true peak measured with BS.1770.</p>}</details>
-            </div>
-          </aside>
-          <footer className="tryit-foot"><span>Go further in the desktop app: Advanced controls, source analysis, album mastering and export.</span><a href="#get-started" onClick={onClose}>Explore the beta →</a></footer>
+            <label className="tryit-check"><input type="checkbox" checked={match} disabled={!ready} onChange={event => setMatch(event.target.checked)} /><span>Volume match</span>
+              <Info label="About volume match">Plays the master at the original’s loudness so “louder” can’t win the comparison. Listening level only; the result isn’t changed.</Info>
+            </label>
+            <div className="tryit-time" aria-live="off">{ready ? `${fmt(position)} / ${fmt(duration)}` : loading ? "Reading your track…" : updating ? "Preparing…" : "\u00a0"}</div>
+          </div>
         </div>
+
+        {track && (
+          <div className="tryit-strip">
+            <canvas ref={wave} width={1000} height={56} role="img" aria-label="Track waveform. Drag the lit window to choose your thirty seconds."
+              onPointerDown={event => { const x = stripSeconds(event); const inside = x >= start && x <= start + CLIP_SECONDS; drag.current = { on: true, grab: inside ? x - start : CLIP_SECONDS / 2 }; event.currentTarget.setPointerCapture(event.pointerId); moveStart(x - drag.current.grab); }}
+              onPointerMove={event => { if (drag.current.on) moveStart(stripSeconds(event) - drag.current.grab); }}
+              onPointerUp={() => { drag.current.on = false; }} onPointerCancel={() => { drag.current.on = false; }} />
+            <div className="tryit-strip-cap"><span>{fmt(start)} – {fmt(Math.min(track.duration, start + CLIP_SECONDS))}</span><span>drag the window to pick your 30 s</span></div>
+          </div>
+        )}
+
+        <div className="tryit-rows">
+          <div className="tryit-row">
+            <div className="tryit-row-label">Style <Info label="About styles"><b>Universal</b> a balanced starting point. <b>Clarity</b> open top, focused low end. <b>Tape</b> warmer weight, softer edges. <b>Oomph</b> low-end weight, forward energy.</Info></div>
+            <div className="std-tiles tryit-tiles-compact" role="group" aria-label="Style">{STANDARD_STYLES.map(s => <button key={s.id} type="button" disabled={!track} className={"std-tile" + (style === s.id ? " is-active" : "")} style={{ ["--tile-accent" as string]: PRESET_ACCENT[s.preset.kind] }} aria-pressed={style === s.id} onClick={() => setStyle(s.id)}><span className="std-tile-icon"><PresetIcon kind={s.preset.kind} /></span><span className="std-tile-label">{s.label}</span></button>)}</div>
+          </div>
+          <div className="tryit-row">
+            <div className="tryit-row-label">Intensity <Info label="About intensity">How strongly the style comes through, from a light touch to a stronger character. You hear it move while it plays.</Info></div>
+            <div className="tryit-slider"><input type="range" min={0} max={100} disabled={!track} value={Math.round(intensity * 100)} aria-label="Intensity" onChange={event => setIntensity(Number(event.target.value) / 100)} style={{ ["--pct" as string]: `${Math.round(intensity * 100)}%`, ["--tone" as string]: PRESET_ACCENT[activeStyle.preset.kind] }} /><output>{Math.round(intensity * 100)}%</output></div>
+          </div>
+          <div className="tryit-row">
+            <div className="tryit-row-label">Loudness <Info label="About loudness">Your target level: −14 LUFS for streaming, −11 medium, −9 hot. The master lands there unless the −1 dBTP ceiling holds it back.</Info></div>
+            <div className="tryit-pills" role="group" aria-label="Loudness">{STANDARD_LOUDNESS.map(l => <button key={l.id} type="button" disabled={!track} className={l.lufs === target ? "is-active" : ""} aria-pressed={l.lufs === target} onClick={() => setTarget(l.lufs)}>{l.label}</button>)}</div>
+          </div>
+        </div>
+
+        <div className={"tryit-readout" + (updating ? " is-pending" : "")}>
+          {result ? <>
+            <span className="tryit-readout-num"><small>Original</small>{result.source.lufs.toFixed(1)}</span>
+            <span className="tryit-readout-arrow" aria-hidden="true">→</span>
+            <span className="tryit-readout-num is-live"><small>Mastered</small>{result.output.lufs.toFixed(1)}</span>
+            <span className="tryit-readout-unit">LUFS</span>
+            <Info label="About these numbers">{describe(result)} {delta >= 0 ? "+" : ""}{delta.toFixed(1)} dB louder than your original. True peak {result.output.tp.toFixed(1)} dBTP{result.output.tp <= -0.95 ? ", under the −1 dBTP ceiling" : ""}. Measured with BS.1770 over the selected section, in this tab, in {result.seconds.toFixed(2)} s. This is Standard’s core chain on an excerpt; the desktop app adds full-track analysis.</Info>
+            <span className="sr-only">{result.settings.style} · {Math.round(result.settings.intensity * 100)}% · target {result.settings.target} LUFS</span>
+          </> : <span className="tryit-readout-unit">{error ? "" : "Drop a mix to hear it."}</span>}
+        </div>
+        {error && <div role="alert" className="tryit-error">{error} {track && <button type="button" className="tryit-link" onClick={() => setRetry(n => n + 1)}>Retry</button>}</div>}
+
+        <a href="#get-started" className="tryit-cta" onClick={onClose}>Get the free beta</a>
+        <p className="tryit-cta-sub">Export and Advanced live in the desktop app.</p>
+        <p className="tryit-privacy"><i />Processed locally in your browser. Your track is never uploaded.</p>
       </div>
     </div>
   </>, document.body);
