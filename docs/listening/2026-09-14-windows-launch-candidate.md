@@ -75,3 +75,43 @@ screen-reader evidence remains open, distinct from native UI Automation semantic
 
 The owner selected **eight weeks from actual launch**. Do not start the beta
 clock during candidate preparation or repeat the provisional October 31 question.
+
+## Resumed installed checks — September 14, 09:08–09:20 PDT
+
+The owner explicitly resumed Computer Use and requested the PC back promptly.
+Both test applications were closed at the end; no further desktop input follows
+this checkpoint. No network settings were changed and NVDA was not retried.
+
+- Launch and restoration passed: six tracks restored, Help displayed clean
+  `0.9.2 · build cf3ddcc9 · 2026-09-14 08:26`. The installed executable hash still
+  equals `0107c147aa96cc63f3c4763924383008b090ecd392c361fbe1a0fbc9fd10c9ab`.
+- Advanced M4A export completed with an accessible receipt reporting AAC/M4A
+  and -14.1 LUFS. Standard M4A export also wrote its separate output file.
+  Both used the native Save As workflow and preserved existing outputs.
+- Album render cancellation reported no written files, while audition continued.
+  Home deliberately reset the audition before retry so it would not reach the
+  source's end during observation. Retry completed with six numbered M4A tracks,
+  a continuous `album.m4a` and `metadata/manifest.json`.
+- The retained retry trace covers 16 observations from 16:17:40 through
+  16:18:08 UTC. Playhead advanced from 0:49 to 1:16, retained the Pause control
+  throughout 83–97% rendering and continued after completion at 1:13. No input
+  was sent during that observation loop. The earlier unexplained pause did not
+  recur; this does not establish its historical cause or a universal absence.
+- Media Player Classic opened `advanced-native.m4a`, reported Playing and
+  advanced to 00:07 of 02:19. This is external-player operation, not a by-ear
+  quality verdict or proof for every output format/player.
+- Keyboard evidence is focused: Help/receipt Escape dismissal, native format
+  selection and Save As entry/confirmation, Home, and Space pause. This does not
+  replace a complete keyboard focus/accessibility or screen-reader pass.
+
+Evidence: `test-output/launch-20260914/candidate-cf3ddcc9/native-checks.json`,
+the separate `advanced-native.m4a` and `standard-native.m4a`, and `No_Ceiling/`
+Album outputs. These private-audio-derived outputs remain ignored and were not
+added to the public review package or git.
+
+Observed follow-ups: the persistent "Opening Album Master in Advanced" notice
+overlapped the Export Album button until dismissed; Help still describes only
+WAV/MP3 despite the expanded format controls. Computer Use also encountered
+stale geometry/focus reporting around native dialogs; those helper failures are
+not attributed to the application. Installed disconnected export, full keyboard/
+screen-reader coverage, affected-output listening and Mac checks remain open.
