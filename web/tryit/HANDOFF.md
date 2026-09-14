@@ -50,6 +50,6 @@ Then the normal `npm run typecheck && npm run build`; Vite emits the `.wasm` as 
 - Standalone page and modal share the engine but not the UI code; treat the standalone as disposable.
 
 ## Where things are
-- Branch: `vera/web-tryit` (3 commits on top of `origin/main` as of Sept 14). Nothing merged.
+- Branch: `vera/web-tryit` (5 commits on top of `origin/main` as of Sept 14). Nothing merged.
 - Vercel previews for the `yes-master` project are behind Vercel authentication (302). Prod = merge to main.
 - Windows-side scratch build of the desktop engine used for the parity check: `C:\Users\Daniel Kinsner\AppData\Local\Temp\yesm-ab-build` (safe to delete).
