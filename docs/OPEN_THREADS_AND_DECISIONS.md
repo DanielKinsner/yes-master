@@ -1,5 +1,15 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-14 — Local crossover refactor verified; high-rate finding remains open.**
+> Branch `codex/dsp-crossover-equivalence` shares the existing LR4 filter sequence
+> between production and its test. Before/after output and crossover/envelope
+> state matched byte-for-byte in 96 cases. Final Rust/fixture suite: 643 passed;
+> strict Clippy and formatting passed. An additional flatness diagnostic failed
+> at 384/768 kHz and reproduced against original `a001db96`; its numerical cause
+> remains unresolved. The original 44.1 kHz assertion/tolerance is preserved;
+> no sonic correction or release activity is included. See
+> [scope, commands and evidence limits](reviews/2026-09-14-crossover-equivalence.md).
+
 > **2026-09-14 — Main integration authorized; local production files excluded.**
 > The owner requested all necessary launch changes on main and appropriate ignore
 > rules. The local `YES_Master_Video_Packet/` and private signing/recovery material

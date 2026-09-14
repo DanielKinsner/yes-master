@@ -1737,27 +1737,20 @@ pub struct LR4State {
     pub high_hp2: BiquadState,
 }
 
-/// Test-only entry point: splits a single sample at sample_rate = 44_100 with
-/// the LR4 crossovers fixed at 120 Hz and 4000 Hz. Production callers use
-/// `MasteringChain::process_frame_inplace`, which fetches the coefficients
-/// from `ChainCoeffs` (sample-rate-aware) and walks the same biquads in the
-/// same order.
-#[cfg(test)]
-pub(crate) fn split_lr4_into_bands(x: f32, state: &mut LR4State) -> (f32, f32, f32) {
-    let sr = 44_100.0f32;
-    let low_lp_c = BiquadCoeffs::butter_lp(sr, LR4_CROSSOVER_LOW_HZ, BUTTERWORTH_Q);
-    let mid_hp_c = BiquadCoeffs::butter_hp(sr, LR4_CROSSOVER_LOW_HZ, BUTTERWORTH_Q);
-    let mid_lp_c = BiquadCoeffs::butter_lp(sr, LR4_CROSSOVER_HIGH_HZ, BUTTERWORTH_Q);
-    let high_hp_c = BiquadCoeffs::butter_hp(sr, LR4_CROSSOVER_HIGH_HZ, BUTTERWORTH_Q);
-    let low_a = state.low_lp1.process(&low_lp_c, x);
-    let low = state.low_lp2.process(&low_lp_c, low_a);
-    let mid_after_hp1 = state.mid_hp1.process(&mid_hp_c, x);
-    let mid_after_hp2 = state.mid_hp2.process(&mid_hp_c, mid_after_hp1);
-    let mid_after_lp1 = state.mid_lp1.process(&mid_lp_c, mid_after_hp2);
-    let mid = state.mid_lp2.process(&mid_lp_c, mid_after_lp1);
-    let high_a = state.high_hp1.process(&high_hp_c, x);
-    let high = state.high_hp2.process(&high_hp_c, high_a);
-    (low, mid, high)
+impl LR4State {
+    /// Split one channel using the chain's precomputed, sample-rate-aware coefficients.
+    #[inline]
+    fn split(&mut self, x: f32, coeffs: &ChainCoeffs) -> [f32; 3] {
+        let low_a = self.low_lp1.process(&coeffs.comp_low_lp, x);
+        let low = self.low_lp2.process(&coeffs.comp_low_lp, low_a);
+        let mid_after_hp1 = self.mid_hp1.process(&coeffs.comp_mid_hp, x);
+        let mid_after_hp2 = self.mid_hp2.process(&coeffs.comp_mid_hp, mid_after_hp1);
+        let mid_after_lp1 = self.mid_lp1.process(&coeffs.comp_mid_lp, mid_after_hp2);
+        let mid = self.mid_lp2.process(&coeffs.comp_mid_lp, mid_after_lp1);
+        let high_a = self.high_hp1.process(&coeffs.comp_high_hp, x);
+        let high = self.high_hp2.process(&coeffs.comp_high_hp, high_a);
+        [low, mid, high]
+    }
 }
 
 #[inline]
@@ -2219,41 +2212,7 @@ impl MasteringChain {
         let mut bands: [[f32; 3]; 2] = [[0.0; 3]; 2];
         let ch_active = channels.min(2);
         for ch in 0..ch_active {
-            let state = &mut self.states[ch];
-            let x = frame[ch];
-            let low_a = state
-                .comp_split
-                .low_lp1
-                .process(&self.coeffs.comp_low_lp, x);
-            let low = state
-                .comp_split
-                .low_lp2
-                .process(&self.coeffs.comp_low_lp, low_a);
-            let m1 = state
-                .comp_split
-                .mid_hp1
-                .process(&self.coeffs.comp_mid_hp, x);
-            let m2 = state
-                .comp_split
-                .mid_hp2
-                .process(&self.coeffs.comp_mid_hp, m1);
-            let m3 = state
-                .comp_split
-                .mid_lp1
-                .process(&self.coeffs.comp_mid_lp, m2);
-            let mid = state
-                .comp_split
-                .mid_lp2
-                .process(&self.coeffs.comp_mid_lp, m3);
-            let h1 = state
-                .comp_split
-                .high_hp1
-                .process(&self.coeffs.comp_high_hp, x);
-            let high = state
-                .comp_split
-                .high_hp2
-                .process(&self.coeffs.comp_high_hp, h1);
-            bands[ch] = [low, mid, high];
+            bands[ch] = self.states[ch].comp_split.split(frame[ch], &self.coeffs);
         }
 
         let mut gain_lin: [[f32; 3]; 2] = [[1.0; 3]; 2];
@@ -4543,18 +4502,19 @@ mod tests {
         // pin the magnitude property by RMS equality: the energy of the
         // summed bands matches the energy of the input within ~0.1 dB.
         let sr = 44_100.0f32;
+        let coeffs = ChainCoeffs::from_settings(44_100, &default_master_settings());
         for &freq in &[60.0f32, 1_000.0, 8_000.0] {
             let mut state = LR4State::default();
             for n in 0..1024 {
                 let x = (n as f32 * 2.0 * std::f32::consts::PI * freq / sr).sin();
-                let _ = split_lr4_into_bands(x, &mut state);
+                let _ = state.split(x, &coeffs);
             }
             let mut sum_in_sq = 0.0f64;
             let mut sum_out_sq = 0.0f64;
             let measure_len: usize = 4096;
             for n in 1024..(1024 + measure_len) {
                 let x = (n as f32 * 2.0 * std::f32::consts::PI * freq / sr).sin();
-                let (l, m, h) = split_lr4_into_bands(x, &mut state);
+                let [l, m, h] = state.split(x, &coeffs);
                 sum_in_sq += (x as f64).powi(2);
                 sum_out_sq += ((l + m + h) as f64).powi(2);
             }
