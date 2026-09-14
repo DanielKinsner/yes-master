@@ -255,7 +255,6 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
             <label className="tryit-check"><input type="checkbox" checked={match} disabled={!ready} onChange={event => setMatch(event.target.checked)} /><span>Volume match</span>
               <Info label="About volume match">Use volume match to preview your original and master at the same volume and compare with more accuracy. The original is raised where it has headroom; the master is only trimmed by what’s left.</Info>
             </label>
-            <div className="tryit-time" aria-live="off">{ready ? `${fmt(position)} / ${fmt(duration)}` : loading ? "Reading your track…" : updating ? "Preparing…" : "\u00a0"}</div>
           </div>
         </div>
 
