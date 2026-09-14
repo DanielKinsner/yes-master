@@ -14,7 +14,7 @@ body.tryit-lock { overflow: hidden; }
 
 .tryit {
   --accent: #4d8bff; --accent-bright: #7aa6ff; --cta: #e2982f; --good: #6dd58f;
-  --text-0: #eef1f8; --text-1: #c5ccdd; --text-2: #8690ad;
+  --text-0: #eef1f8; --text-1: #c5ccdd; --text-2: #9da8c0;
   --bg-0: #07080c; --bg-1: #0d1017; --bg-2: #131720;
   --border: rgba(158, 176, 214, 0.12); --border-strong: rgba(158, 176, 214, 0.28); --hairline: rgba(158, 176, 214, 0.1);
   --surface-raised: #1a1f2c; --radius-card: 12px; --elev-2: 0 10px 30px rgba(0, 0, 0, 0.35);
@@ -28,7 +28,7 @@ body.tryit-lock { overflow: hidden; }
 @keyframes std-rise { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
 
 .tryit-panel {
-  width: min(1180px, 100%); max-height: calc(100svh - 40px); overflow: auto;
+  width: min(1200px, 100%); max-height: calc(100svh - 40px); overflow: auto;
   border: 1px solid var(--border-strong); border-radius: 18px;
   background: linear-gradient(180deg, #0f131c 0%, #090b11 100%);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.6);
@@ -43,15 +43,15 @@ body.tryit-lock { overflow: hidden; }
 .tryit-close { border: 1px solid var(--border); background: transparent; color: var(--text-1); border-radius: 10px; width: 38px; height: 38px; cursor: pointer; font-size: 18px; line-height: 1; display: grid; place-items: center }
 .tryit-close:hover { border-color: var(--border-strong); color: var(--text-0) }
 
-.tryit-body { padding: 18px 20px 22px; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px }
+.tryit-body { padding: 18px 20px 22px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px }
 @media (max-width: 960px) { .tryit-body { grid-template-columns: 1fr } .tryit-promise { display: none } }
 
 /* Drop zone */
-.tryit-drop { display: grid; place-items: center; text-align: center; gap: 6px; min-height: 240px; border: 2px dashed rgba(158, 176, 214, 0.28); border-radius: var(--radius-card); background: linear-gradient(180deg, rgba(18, 23, 34, 0.7), rgba(8, 11, 18, 0.9)); cursor: pointer; padding: 28px; transition: border-color 150ms, background 150ms }
+.tryit-drop { display: grid; place-items: center; text-align: center; gap: 6px; min-height: 164px; border: 2px dashed rgba(158, 176, 214, 0.28); border-radius: var(--radius-card); background: linear-gradient(180deg, rgba(18, 23, 34, 0.7), rgba(8, 11, 18, 0.9)); cursor: pointer; padding: 20px; width: 100%; color: var(--text-0); font: inherit; transition: border-color 150ms, background 150ms }
 .tryit-drop.is-over, .tryit-drop:hover { border-color: var(--accent-bright); background: linear-gradient(180deg, rgba(24, 32, 50, 0.85), rgba(8, 11, 18, 0.95)) }
 .tryit-drop input { display: none }
-.tryit-drop h3 { margin: 0; font-size: 22px; font-weight: 700 }
-.tryit-drop p { margin: 0; color: var(--text-2); font-size: 14px }
+.tryit-drop strong { margin: 0; font-size: 21px; font-weight: 700 }
+.tryit-drop > span:not(.tryit-glyph), .tryit-drop small { margin: 0; color: var(--text-2); font-size: 14px }
 .tryit-drop .tryit-glyph { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: radial-gradient(circle at 50% 30%, rgba(77, 139, 255, 0.35), transparent 70%), var(--bg-2); border: 1px solid var(--border-strong); color: var(--accent-bright); margin-bottom: 8px }
 .tryit-drop.is-error { border-color: #f87171 }
 
@@ -59,19 +59,19 @@ body.tryit-lock { overflow: hidden; }
 .tryit-wave { border: 1px solid var(--border); border-radius: var(--radius-card); background: linear-gradient(180deg, rgba(18, 23, 34, 0.78), rgba(8, 11, 18, 0.9)); padding: 10px 12px 8px }
 .tryit-wave-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-2); margin-bottom: 6px }
 .tryit-wave-head b { color: var(--text-0); letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; font-weight: 600 }
-.tryit-wave canvas { display: block; width: 100%; height: 76px; border-radius: 8px; cursor: ew-resize; touch-action: none }
+.tryit-wave canvas { display: block; width: 100%; height: 76px; border-radius: 8px }
 .tryit-wave-hint { font-size: 0.74rem; color: var(--text-2); margin-top: 6px }
 
 /* Standard steps (mirrors App.css .std-*) */
-.tryit .std-steps { display: flex; flex-direction: column; gap: var(--std-col-gap); margin-top: 12px }
+.tryit .std-steps { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--std-col-gap); margin-top: 12px }
 .tryit .std-step { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.7rem 1.1rem 0.85rem; border: 1px solid var(--border); border-radius: var(--radius-card); background: linear-gradient(180deg, rgba(18, 23, 34, 0.78), rgba(8, 11, 18, 0.9)); box-shadow: var(--elev-2); animation: std-rise 520ms cubic-bezier(.2, .8, .2, 1) both }
 .tryit .std-step-label { display: inline-flex; align-items: center; gap: 0.55rem; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; color: var(--text-1) }
 .tryit .std-step-label::before { content: ""; flex-shrink: 0; width: 3px; height: 13px; border-radius: 2px; background: var(--accent); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 65%, transparent) }
 .tryit .std-step-hint { font-size: 0.76rem; color: var(--text-2); margin: -0.16rem 0 0.04rem }
 .tryit .std-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem }
 @media (max-width: 560px) { .tryit .std-tiles { grid-template-columns: repeat(2, 1fr) } }
-.tryit .std-tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; text-align: center; min-height: 118px; padding: 0.6rem 0.7rem 0.55rem; border-radius: var(--radius-card); cursor: pointer; overflow: hidden; font: inherit; background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--tile-accent, var(--accent)) 24%, transparent), transparent 58%), linear-gradient(180deg, rgba(31, 37, 51, 0.84) 0%, rgba(13, 16, 24, 0.96) 100%); border: 1px solid color-mix(in srgb, var(--tile-accent, var(--accent)) 18%, var(--border)); color: var(--text-1); transition: transform 160ms cubic-bezier(.2, .8, .2, 1), border-color 160ms ease, box-shadow 160ms ease, background 160ms ease }
-.tryit .std-tile-icon { width: clamp(48px, 7vw, 84px); height: clamp(48px, 7vw, 84px); display: grid; place-items: center; margin-bottom: 0.12rem }
+.tryit .std-tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; text-align: center; min-height: 96px; padding: 0.6rem 0.7rem 0.55rem; border-radius: var(--radius-card); cursor: pointer; overflow: hidden; font: inherit; background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--tile-accent, var(--accent)) 24%, transparent), transparent 58%), linear-gradient(180deg, rgba(31, 37, 51, 0.84) 0%, rgba(13, 16, 24, 0.96) 100%); border: 1px solid color-mix(in srgb, var(--tile-accent, var(--accent)) 18%, var(--border)); color: var(--text-1); transition: transform 160ms cubic-bezier(.2, .8, .2, 1), border-color 160ms ease, box-shadow 160ms ease, background 160ms ease }
+.tryit .std-tile-icon { width: clamp(42px, 6vw, 64px); height: clamp(42px, 6vw, 64px); display: grid; place-items: center; margin-bottom: 0.12rem }
 .tryit .std-tile-icon img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: screen; transition: transform 160ms, filter 160ms }
 .tryit .std-tile-label { font-weight: 600; letter-spacing: 0.01em }
 .tryit .std-tile:hover { transform: translateY(-1px); border-color: var(--border-strong); background: radial-gradient(ellipse 80% 70% at 50% 32%, color-mix(in srgb, var(--tile-accent, var(--accent)) 27%, transparent), transparent 60%), linear-gradient(180deg, rgba(31, 37, 51, 0.9) 0%, rgba(13, 16, 24, 0.96) 100%); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14) }
@@ -116,16 +116,8 @@ body.tryit-lock { overflow: hidden; }
 .tryit-side .unit { font-size: 0.62rem; letter-spacing: 0.14em; color: var(--text-2) }
 .tryit-side .tp { margin-top: 6px; font-size: 0.78rem; color: var(--text-2); font-variant-numeric: tabular-nums }
 .tryit-side .tp b { color: var(--text-0); font-weight: 600 }
-.tryit-meter { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.06); overflow: hidden; margin-top: 8px }
-.tryit-meter i { display: block; height: 100%; width: 0; background: rgba(174, 182, 204, 0.55); transition: width 60ms linear }
-.tryit-side.is-live .tryit-meter i { background: linear-gradient(90deg, var(--accent), var(--accent-bright)) }
 .tryit-verify { margin-top: 10px; border-left: 3px solid var(--good); padding: 8px 10px; font-size: 0.86rem; color: var(--text-1); background: rgba(109, 213, 143, 0.05); border-radius: 0 8px 8px 0; min-height: 40px }
 .tryit-verify.is-pending { border-left-color: var(--border-strong); color: var(--text-2); background: transparent }
-.tryit-transport { display: grid; gap: 8px }
-.tryit-btn { border: 0; border-radius: 10px; padding: 12px 16px; font: inherit; font-weight: 700; cursor: pointer; color: #fff; background: linear-gradient(180deg, #5b93ff, #3f78ee); box-shadow: 0 8px 20px -8px rgba(77, 139, 255, 0.7) }
-.tryit-btn.is-cta { background: linear-gradient(180deg, #efb066, #cd7826); color: #1a1200; font-size: 16px; padding: 14px 16px; box-shadow: 0 10px 26px -10px rgba(226, 152, 47, 0.8) }
-.tryit-btn.is-ghost { background: transparent; border: 1px solid var(--border-strong); color: var(--text-0); box-shadow: none }
-.tryit-btn:disabled { opacity: 0.45; cursor: default }
 .tryit-switch { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; font-size: 0.9rem }
 .tryit-switch input { appearance: none; width: 40px; height: 24px; border-radius: 12px; background: #242a3c; position: relative; cursor: pointer; flex: none; transition: background 150ms; margin: 0 }
 .tryit-switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left 150ms }
@@ -134,7 +126,6 @@ body.tryit-lock { overflow: hidden; }
 .tryit-switch small { display: block; color: var(--text-2); font-size: 0.74rem }
 .tryit-hint { font-size: 0.76rem; color: var(--text-2) }
 .tryit-hint kbd { border: 1px solid var(--border-strong); border-radius: 5px; padding: 0 5px; font: 11px/1.5 ui-monospace, monospace; color: var(--text-0) }
-.tryit-status { font-size: 0.72rem; color: var(--text-2); min-height: 16px }
 .tryit-foot { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between; font-size: 0.8rem; color: var(--text-2) }
 .tryit-foot a { color: var(--accent-bright); font-weight: 600; text-decoration: none }
 .tryit-foot a:hover { text-decoration: underline }
@@ -149,15 +140,75 @@ body.tryit-lock { overflow: hidden; }
   .tryit-head .tryit-brand { font-size: 16px }
   .tryit-close { margin-left: auto }
   .tryit-body { padding: 12px 12px 18px; gap: 12px }
-  .tryit-drop { min-height: 200px; padding: 22px 16px }
-  .tryit-drop h3 { font-size: 19px }
-  .tryit .std-tile { min-height: 104px }
+  .tryit-drop { min-height: 160px; padding: 22px 16px }
+  .tryit-drop strong { font-size: 19px }
+  .tryit .std-tile { min-height: 84px }
   .tryit .std-step { padding: 0.6rem 0.8rem 0.7rem }
   .tryit-side .num { font-size: 30px }
   .tryit-foot { flex-direction: column; align-items: flex-start }
 }
 .tryit-panel { user-select: none; -webkit-user-select: none }
 .tryit-panel input, .tryit-panel .tryit-verify, .tryit-panel .tryit-status { user-select: text; -webkit-user-select: text }
-@media (hover: none) { .tryit-hint kbd { display: none } .tryit-hint::before { content: "Tap the big button to flip. " } }
 .tryit-touch-range { display: none; width: min(100%, 320px); accent-color: var(--accent); margin-top: 4px }
 @media (hover: none) { .tryit-touch-range { display: block } }
+
+.tryit-console { min-width: 0 }
+.tryit-scope { grid-column: 1 / -1; margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--text-1) }
+.tryit button:disabled { opacity: 0.48; cursor: default; transform: none }
+.tryit :is(button, input, a, summary):focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 3px }
+.tryit .knob:focus-within .knob-vis { outline: 2px solid var(--accent-bright); outline-offset: 3px }
+.tryit .tryit-styles { grid-column: 1 / -1 }
+.tryit .std-seg { grid-template-columns: repeat(3, 1fr); margin: auto 0 }
+.tryit .std-seg-option { padding: 12px 8px; min-height: 64px; justify-content: center }
+.tryit .std-step-intensity .knob { margin: auto }
+.tryit .std-step-intensity .knob-vis svg { width: 112px; height: 112px }
+.tryit .tryit-drop .tryit-glyph { font-size: 30px; width: 40px; height: 40px; margin: 0 }
+.tryit-file { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px }
+.tryit-file b { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.9rem }
+.tryit-link { font: inherit; font-size: 0.8rem; color: var(--accent-bright); background: transparent; border: 0; cursor: pointer; flex: none; padding: 8px 0; text-decoration: underline; text-underline-offset: 3px }
+.tryit-section-picker { display: flex; align-items: center; gap: 12px; font-size: 0.75rem; color: var(--text-1); margin-top: 8px }
+.tryit input[type=range] { accent-color: var(--accent-bright); min-width: 0; cursor: pointer; min-height: 24px }
+.tryit-section-picker input { flex: 1 }
+.tryit-transport { padding: 14px 0 4px; display: grid; gap: 10px }
+.tryit-listen-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap }
+.tryit-play { display: inline-flex; justify-content: center; align-items: center; gap: 12px; min-width: 132px; min-height: 54px; border: 1px solid #cde0ff; border-radius: 12px; background: linear-gradient(#86b5ff, #4f88ed); color: #071426; font: inherit; font-size: 17px; font-weight: 750; cursor: pointer; box-shadow: 0 4px 18px #386ed53a }
+.tryit-play > span { font-size: 22px; width: 24px }
+.tryit-selector { display: flex; border: 1px solid var(--border-strong); padding: 4px; border-radius: 12px; background: #070b13; gap: 4px }
+.tryit-selector button { padding: 12px 18px; min-height: 44px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-1); font: inherit; font-weight: 650; cursor: pointer }
+.tryit-selector button[aria-pressed=true] { color: #f5f8ff; border-color: #719cee; background: linear-gradient(#365d9f, #213c6b); box-shadow: 0 0 14px #4d8bff22 }
+.tryit-listen-row .tryit-switch { flex: 1; min-width: 185px; min-height: 44px }
+.tryit-seek { display: flex; align-items: center; gap: 12px }
+.tryit-seek input { flex: 1; margin: 0 }
+.tryit-seek output { font: 12px ui-monospace, monospace; color: var(--text-1); min-width: 90px; text-align: right }
+.tryit-playback-status { font-size: 0.8rem; color: var(--text-1); min-height: 20px }
+.tryit .tryit-hint { margin: 0; line-height: 1.5 }
+.tryit-out > .tryit-hint { margin: 0 0 12px }
+.tryit-details { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 12px; font-size: 0.78rem; color: var(--text-2); line-height: 1.55 }
+.tryit-details summary { color: var(--text-1); cursor: pointer; padding: 3px 0 }
+.tryit-details p:last-child { margin-bottom: 0 }
+.tryit-error { color: #ffb4b4; background: #461b244d; border: 1px solid #8a4251; border-radius: 8px; padding: 12px; font-size: 0.85rem }
+@media (max-width: 960px) {
+  .tryit-ab { grid-template-columns: 1fr 1fr }
+  .tryit-head { justify-content: space-between }
+}
+@media (max-width: 640px) {
+  .tryit-touch-range { display: block }
+  .tryit-listen-row { gap: 8px }
+  .tryit-play { min-width: 100px }
+  .tryit-selector { flex: 1 }
+  .tryit-selector button { flex: 1; padding: 12px 8px; font-size: 0.85rem }
+  .tryit-listen-row .tryit-switch { flex-basis: 100%; padding-top: 4px }
+  .tryit-section-picker { flex-direction: column; align-items: stretch; gap: 0 }
+  .tryit .std-step-hint { min-height: 32px }
+  .tryit .std-seg-option { padding: 9px 7px }
+  .tryit .std-seg { grid-template-columns: 1fr; margin-top: 8px }
+  .tryit .std-seg-option { flex-direction: row; justify-content: space-between; min-height: 40px }
+  .tryit .std-seg-label { font-size: 0.85rem }
+}
+@media (min-width: 390px) and (max-width: 640px) and (min-height: 740px) {
+  .tryit-transport { position: sticky; top: 63px; z-index: 1; background: #0b0f17; border-bottom: 1px solid var(--border); padding-bottom: 10px }
+  .tryit-console :is(button, input) { scroll-margin-top: 340px; scroll-margin-bottom: 20px }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tryit, .tryit *, .tryit-scrim { animation: none !important; transition: none !important }
+}

@@ -1,599 +1,264 @@
-// Try it on your mix — the Standard chain, compiled to WebAssembly, running
-// in the visitor's browser. Nothing here touches the network: the file is
-// decoded by the browser, mastered in the tab, and forgotten on close.
-//
-// Reuses the app's own Standard-view pieces (tiles + preset art, the
-// Intensity knob, the Low/Medium/High picker) so the modal looks like the
-// thing it demonstrates. Styles live in ./tryit.css, scoped under .tryit.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Knob } from "../components/Knob";
 import { PresetIcon, PRESET_ACCENT } from "../components/PresetIcon";
-import {
-  STANDARD_LOUDNESS,
-  STANDARD_STYLES,
-  type StandardStyleId,
-} from "../lib/standard-mapping";
-import initEngine, {
-  master_standard,
-  measure_loudness,
-  version as engineVersion,
-} from "./engine/yes_master_web.js";
-import wasmUrl from "./engine/yes_master_web_bg.wasm?url";
+import { STANDARD_LOUDNESS, STANDARD_STYLES, type StandardStyleId } from "../lib/standard-mapping";
+import { CLIP_SECONDS, PreviewWorker, type Loaded, type Rendered } from "./processing";
+import { auditionBuffer, ComparisonPlayer, type Side } from "./player";
 import "./tryit.css";
 
-const CLIP_SECONDS = 30;
-const CEILING_DBTP = -1.0;
-const CROSSFADE_S = 0.035;
-type Side = "A" | "B";
-type Measure = { lufs: number; tp: number; target?: number };
-
-let enginePromise: Promise<unknown> | null = null;
-function ensureEngine(): Promise<unknown> {
-  if (!enginePromise) enginePromise = initEngine({ module_or_path: wasmUrl });
-  return enginePromise;
-}
-
-const fmt = (s: number) =>
-  `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
-
-function loudestWindow(buffer: AudioBuffer): number {
-  const sr = buffer.sampleRate;
-  const n = buffer.length;
-  const win = Math.min(n, CLIP_SECONDS * sr);
-  if (win >= n) return 0;
-  const step = sr;
-  const secs = Math.ceil(n / step);
-  const energy = new Float64Array(secs);
-  for (let c = 0; c < buffer.numberOfChannels; c++) {
-    const d = buffer.getChannelData(c);
-    for (let i = 0; i < n; i++) energy[(i / step) | 0] += d[i] * d[i];
-  }
-  const w = Math.ceil(win / step);
-  let best = 0;
-  let bestE = -1;
-  let acc = 0;
-  for (let s = 0; s < secs; s++) {
-    acc += energy[s];
-    if (s >= w) acc -= energy[s - w];
-    if (s >= w - 1 && acc > bestE) {
-      bestE = acc;
-      best = s - w + 1;
-    }
-  }
-  return Math.max(0, Math.min(n - win, best * step));
-}
-
-function toInterleaved(buffer: AudioBuffer, start: number, len: number): Float32Array {
-  const ch = buffer.numberOfChannels;
-  const out = new Float32Array(len * ch);
-  for (let c = 0; c < ch; c++) {
-    const d = buffer.getChannelData(c);
-    for (let i = 0; i < len; i++) out[i * ch + c] = d[start + i];
-  }
-  return out;
-}
-
-function toBuffer(ctx: AudioContext, interleaved: Float32Array, ch: number, sr: number): AudioBuffer {
-  const frames = interleaved.length / ch;
-  const b = ctx.createBuffer(ch, frames, sr);
-  for (let c = 0; c < ch; c++) {
-    const d = b.getChannelData(c);
-    for (let i = 0; i < frames; i++) d[i] = interleaved[i * ch + c];
-  }
-  return b;
-}
-
-function buildPeaks(buffer: AudioBuffer, cols: number): Float32Array {
-  const n = buffer.length;
-  const per = n / cols;
-  const out = new Float32Array(cols);
-  for (let c = 0; c < buffer.numberOfChannels; c++) {
-    const d = buffer.getChannelData(c);
-    for (let x = 0; x < cols; x++) {
-      let m = 0;
-      const a = Math.floor(x * per);
-      const b = Math.min(n, Math.floor((x + 1) * per));
-      for (let i = a; i < b; i += 4) {
-        const v = Math.abs(d[i]);
-        if (v > m) m = v;
-      }
-      if (m > out[x]) out[x] = m;
-    }
-  }
-  return out;
-}
-
-function verifyText(a: Measure, b: Measure, targetNow: number, match: boolean): string {
-  const target = b.target ?? targetNow;
-  const hit = Math.abs(b.lufs - target) <= 0.15;
-  const under = b.tp <= CEILING_DBTP + 0.05;
-  const gain = b.lufs - a.lufs;
-  let s = `Landed at ${b.lufs.toFixed(1)} LUFS` +
-    (hit ? ` (target ${target})` : ` against a ${target} target, held back by the ${CEILING_DBTP} dBTP ceiling`) +
-    `, true peak ${b.tp.toFixed(1)} dBTP` + (under ? `, under the ${CEILING_DBTP} dBTP ceiling` : "") +
-    `. ${gain >= 0 ? "+" : ""}${gain.toFixed(1)} dB louder than your original`;
-  s += match
-    ? ", and you are hearing it at the original's level, so what changed is the tone and the density."
-    : ". Turn on Match loudness to hear the tone change without the level change.";
-  return s;
-}
-
-type Player = {
-  srcA: AudioBufferSourceNode; srcB: AudioBufferSourceNode;
-  gainA: GainNode; gainB: GainNode;
-  anA: AnalyserNode; anB: AnalyserNode;
-  startedAt: number;
+const fmt = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+const level = (result: Rendered | null, match: boolean) => match && result && result.source.lufs > -70 && result.output.lufs > -70
+  ? Math.pow(10, (result.source.lufs - result.output.lufs) / 20) : 1;
+const describe = (result: Rendered) => {
+  if (result.source.lufs <= -70 || result.output.lufs <= -70) return "Too little audible material for a meaningful loudness comparison.";
+  if (result.output.tp > -0.95) return "Measured peak is above the −1 dBTP ceiling. Review this result.";
+  if (result.output.lufs < result.settings.target - 0.15) return "Below target to preserve peak headroom.";
+  if (result.output.lufs > result.settings.target + 0.15) return "Measured loudness is above the selected target.";
+  return "Target reached. Compare the sound, then make it yours.";
 };
 
 export default function TryItModal({ onClose }: { onClose: () => void }) {
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [fileInfo, setFileInfo] = useState("");
-  const [over, setOver] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [track, setTrack] = useState<(Loaded & { name: string; sampleRate: number; channels: number }) | null>(null);
+  const [result, setResult] = useState<Rendered | null>(null);
   const [style, setStyle] = useState<StandardStyleId>("balanced");
   const [intensity, setIntensity] = useState(0.5);
   const [target, setTarget] = useState(-11);
+  const [start, setStart] = useState(0);
+  const [side, setSide] = useState<Side>("mastered");
   const [match, setMatch] = useState(false);
-  const [measA, setMeasA] = useState<Measure | null>(null);
-  const [measB, setMeasB] = useState<Measure | null>(null);
-  const [pending, setPending] = useState<string | null>(null);
-  const [status, setStatus] = useState("");
-  const [live, setLive] = useState<Side>("B");
   const [playing, setPlaying] = useState(false);
-  const [winLabel, setWinLabel] = useState("");
-
-  const ctxRef = useRef<AudioContext | null>(null);
-  const decodedRef = useRef<AudioBuffer | null>(null);
-  const peaksRef = useRef<Float32Array | null>(null);
-  const winRef = useRef({ start: 0, len: 0 });
-  const rawRef = useRef<{ inter: Float32Array; buf: AudioBuffer } | null>(null);
-  const masteredRef = useRef<AudioBuffer | null>(null);
-  const playerRef = useRef<Player | null>(null);
-  const tokenRef = useRef(0);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const meterA = useRef<HTMLElement | null>(null);
-  const meterB = useRef<HTMLElement | null>(null);
-  const liveRef = useRef<Side>("B");
-  const matchRef = useRef(false);
-  const measRef = useRef<{ a: Measure | null; b: Measure | null }>({ a: null, b: null });
-  const dragRef = useRef<{ on: boolean; off: number }>({ on: false, off: 0 });
-
-  liveRef.current = live;
-  matchRef.current = match;
-  measRef.current = { a: measA, b: measB };
-
-  const activeStyle = useMemo(() => STANDARD_STYLES.find((s) => s.id === style)!, [style]);
-  const matchGain = useCallback(() => {
-    const { a, b } = measRef.current;
-    return matchRef.current && a && b ? Math.pow(10, (a.lufs - b.lufs) / 20) : 1;
-  }, []);
-
-  const applyLive = useCallback((hard: boolean) => {
-    const p = playerRef.current;
-    const ctx = ctxRef.current;
-    if (!p || !ctx) return;
-    const t = ctx.currentTime;
-    const aTo = liveRef.current === "A" ? 1 : 0;
-    const bTo = liveRef.current === "B" ? matchGain() : 0;
-    p.gainA.gain.cancelScheduledValues(t);
-    p.gainB.gain.cancelScheduledValues(t);
-    if (hard) {
-      p.gainA.gain.setValueAtTime(aTo, t);
-      p.gainB.gain.setValueAtTime(bTo, t);
-      return;
-    }
-    // Equal-power crossfade over ~35 ms: the two sides are the same music at
-    // the same playhead, so a constant-power curve keeps the loudness flat
-    // through the switch instead of the dip-then-jump of a linear fade.
-    const N = 64;
-    const from = (g: GainNode) => g.gain.value;
-    const aFrom = from(p.gainA);
-    const bFrom = from(p.gainB);
-    const curveA = new Float32Array(N);
-    const curveB = new Float32Array(N);
-    for (let i = 0; i < N; i++) {
-      const x = i / (N - 1);
-      const up = Math.sin((x * Math.PI) / 2);
-      const down = Math.cos((x * Math.PI) / 2);
-      curveA[i] = aTo > aFrom ? aFrom + (aTo - aFrom) * up : aTo + (aFrom - aTo) * down;
-      curveB[i] = bTo > bFrom ? bFrom + (bTo - bFrom) * up : bTo + (bFrom - bTo) * down;
-    }
-    p.gainA.gain.setValueCurveAtTime(curveA, t, CROSSFADE_S);
-    p.gainB.gain.setValueCurveAtTime(curveB, t, CROSSFADE_S);
-  }, [matchGain]);
-
-  const stop = useCallback(() => {
-    const p = playerRef.current;
-    if (p) {
-      try { p.srcA.stop(); p.srcB.stop(); } catch { /* already stopped */ }
-      playerRef.current = null;
-    }
-    setPlaying(false);
-  }, []);
-
-  const play = useCallback((offset = 0) => {
-    const ctx = ctxRef.current;
-    const raw = rawRef.current;
-    const mastered = masteredRef.current;
-    if (!ctx || !raw || !mastered) return;
-    void ctx.resume();
-    const srcA = ctx.createBufferSource(); srcA.buffer = raw.buf; srcA.loop = true;
-    const srcB = ctx.createBufferSource(); srcB.buffer = mastered; srcB.loop = true;
-    const gainA = ctx.createGain(); const gainB = ctx.createGain();
-    const anA = ctx.createAnalyser(); const anB = ctx.createAnalyser();
-    anA.fftSize = anB.fftSize = 2048;
-    srcA.connect(anA).connect(gainA).connect(ctx.destination);
-    srcB.connect(anB).connect(gainB).connect(ctx.destination);
-    const t = ctx.currentTime + 0.05;
-    srcA.start(t, offset); srcB.start(t, offset);
-    playerRef.current = { srcA, srcB, gainA, gainB, anA, anB, startedAt: t - offset };
-    applyLive(true);
-    setPlaying(true);
-  }, [applyLive]);
-
-  // Live level meters (RMS of what is actually audible on each side).
-  useEffect(() => {
-    if (!playing) {
-      if (meterA.current) meterA.current.style.width = "0%";
-      if (meterB.current) meterB.current.style.width = "0%";
-      return;
-    }
-    const tmp = new Float32Array(2048);
-    const rms = (an: AnalyserNode, g: number) => {
-      an.getFloatTimeDomainData(tmp);
-      let s = 0;
-      for (let i = 0; i < tmp.length; i++) s += tmp[i] * tmp[i];
-      const db = 20 * Math.log10(Math.sqrt(s / tmp.length) * g + 1e-9);
-      return Math.max(0, Math.min(1, (db + 40) / 40));
-    };
-    let raf = 0;
-    const loop = () => {
-      const p = playerRef.current;
-      if (p) {
-        if (meterA.current) meterA.current.style.width = `${rms(p.anA, 1) * 100}%`;
-        if (meterB.current) meterB.current.style.width = `${rms(p.anB, matchGain()) * 100}%`;
-      }
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [playing, matchGain]);
-
-  const drawWave = useCallback(() => {
-    const cv = canvasRef.current;
-    const decoded = decodedRef.current;
-    const peaks = peaksRef.current;
-    if (!cv || !decoded || !peaks) return;
-    const g = cv.getContext("2d");
-    if (!g) return;
-    const W = cv.width; const H = cv.height;
-    g.clearRect(0, 0, W, H);
-    g.fillStyle = "#0b0e16"; g.fillRect(0, 0, W, H);
-    const { start, len } = winRef.current;
-    const x0 = (start / decoded.length) * W;
-    const x1 = ((start + len) / decoded.length) * W;
-    g.fillStyle = "rgba(79,134,247,0.16)"; g.fillRect(x0, 0, x1 - x0, H);
-    for (let x = 0; x < W; x++) {
-      const h = Math.max(2, peaks[x] * (H - 12));
-      g.fillStyle = x >= x0 && x <= x1 ? "#7aa6ff" : "#3a4159";
-      g.fillRect(x, (H - h) / 2, 1, h);
-    }
-    g.fillStyle = "#7aa6ff"; g.fillRect(x0 - 1, 0, 2, H); g.fillRect(x1 - 1, 0, 2, H);
-    setWinLabel(`${fmt(start / decoded.sampleRate)} – ${fmt((start + len) / decoded.sampleRate)}`);
-  }, []);
-
-  const render = useCallback(async () => {
-    const ctx = ctxRef.current;
-    const raw = rawRef.current;
-    if (!ctx || !raw) return;
-    const token = ++tokenRef.current;
-    setPending(`Mastering ${activeStyle.label} at ${Math.round(intensity * 100)}%, ${target} LUFS…`);
-    await new Promise((r) => setTimeout(r, 10));
-    const t0 = performance.now();
-    const out = master_standard(raw.inter, raw.buf.numberOfChannels, raw.buf.sampleRate, activeStyle.preset.kind, intensity, target);
-    if (token !== tokenRef.current) return;
-    const m = measure_loudness(out, raw.buf.numberOfChannels, raw.buf.sampleRate);
-    const b = { lufs: m[0], tp: m[1], target };
-    measRef.current.b = b;
-    setMeasB(b);
-    masteredRef.current = toBuffer(ctx, out, raw.buf.numberOfChannels, raw.buf.sampleRate);
-    setPending(null);
-    setStatus(`Mastered ${Math.round(raw.buf.duration)} s in ${((performance.now() - t0) / 1000).toFixed(2)} s on your machine · ${engineVersion()} · BS.1770 measured in the same engine.`);
-    const p = playerRef.current;
-    if (p) {
-      const pos = (ctx.currentTime - p.startedAt) % raw.buf.duration;
-      stop();
-      play(pos);
-    }
-  }, [activeStyle, intensity, target, stop, play]);
-
-  const sliceAndRender = useCallback(async () => {
-    const ctx = ctxRef.current;
-    const decoded = decodedRef.current;
-    if (!ctx || !decoded) return;
-    const { start, len } = winRef.current;
-    const inter = toInterleaved(decoded, start, len);
-    rawRef.current = { inter, buf: toBuffer(ctx, inter, decoded.numberOfChannels, decoded.sampleRate) };
-    const m = measure_loudness(inter, decoded.numberOfChannels, decoded.sampleRate);
-    const a = { lufs: m[0], tp: m[1] };
-    measRef.current.a = a;
-    setMeasA(a);
-    await render();
-  }, [render]);
-
-  // Re-master when a control changes (after the first load).
-  const firstRender = useRef(true);
-  useEffect(() => {
-    if (firstRender.current) { firstRender.current = false; return; }
-    if (rawRef.current) void render();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [style, intensity, target]);
-
-  useEffect(() => { applyLive(true); }, [live, match, applyLive]);
+  const [position, setPosition] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [over, setOver] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const worker = useRef<PreviewWorker | null>(null);
+  const player = useRef<ComparisonPlayer | null>(null);
+  const epoch = useRef(0);
+  const accepted = useRef<Rendered | null>(null);
+  const selection = useRef({ side, match });
+  selection.current = { side, match };
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  const panel = useRef<HTMLDivElement | null>(null);
+  const closeButton = useRef<HTMLButtonElement | null>(null);
+  const wave = useRef<HTMLCanvasElement | null>(null);
+  const activeStyle = STANDARD_STYLES.find(s => s.id === style)!;
+  const ready = result !== null && !loading;
+  const duration = player.current?.duration ?? 0;
 
   const loadFile = useCallback(async (file: File) => {
-    stop();
-    setError(null);
-    setStatus(`Decoding ${file.name}…`);
-    // Create + resume the context synchronously inside the user gesture:
-    // iOS Safari keeps a context created after an await suspended for good.
-    const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = ctxRef.current ?? new AC();
-    ctxRef.current = ctx;
-    void ctx.resume();
-    let decoded: AudioBuffer;
+    const current = ++epoch.current;
+    worker.current?.close();
+    worker.current = null;
+    player.current?.close();
+    player.current = null;
+    accepted.current = null;
+    setTrack(null); setResult(null); setPlaying(false); setPosition(0);
+    setError(null); setLoading(true); setUpdating(false);
     try {
-      decoded = await ctx.decodeAudioData(await file.arrayBuffer());
-    } catch {
-      setError("Couldn't decode that file. Try a WAV, MP3, FLAC or M4A.");
-      setStatus("");
-      return;
+      const ctx = new AudioContext();
+      const audio = new ComparisonPlayer(ctx);
+      player.current = audio;
+      const decoded = await ctx.decodeAudioData(await file.arrayBuffer());
+      if (current !== epoch.current) return;
+      if (decoded.numberOfChannels > 2) throw new Error("Please choose a mono or stereo mix.");
+      if (decoded.duration < 0.5) throw new Error("Please choose at least half a second of audio.");
+      const engine = new PreviewWorker(new Worker(new URL("./engine.worker.ts", import.meta.url), { type: "module" }));
+      worker.current = engine;
+      const reply = await engine.request({ kind: "load", sampleRate: decoded.sampleRate,
+        channels: Array.from({ length: decoded.numberOfChannels }, (_, c) => decoded.getChannelData(c).slice()) });
+      if (current !== epoch.current || reply?.kind !== "loaded") return;
+      setTrack({ ...reply, name: file.name, channels: decoded.numberOfChannels, sampleRate: decoded.sampleRate });
+      setStart(reply.start);
+    } catch (reason) {
+      if (current === epoch.current) {
+        worker.current?.close(); worker.current = null;
+        player.current?.close(); player.current = null;
+        setError(reason instanceof Error ? reason.message : "Couldn't read that file. Try a WAV, MP3, FLAC or M4A.");
+      }
+    } finally { if (current === epoch.current) setLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (!track || !worker.current) return;
+    const engine = worker.current;
+    const current = epoch.current;
+    let obsolete = false;
+    engine.invalidate();
+    setUpdating(true);
+    setError(null);
+    const timer = setTimeout(() => {
+      void engine.request({ kind: "render", start, style: activeStyle.preset.kind, intensity, target }).then(reply => {
+        if (obsolete || current !== epoch.current || reply?.kind !== "rendered" || !player.current) return;
+        const audio = player.current;
+        const reset = !accepted.current || accepted.current.settings.start !== reply.settings.start;
+        audio.setBuffers(auditionBuffer(audio.context, reply.original, reply.channels, reply.sampleRate),
+          auditionBuffer(audio.context, reply.mastered, reply.channels, reply.sampleRate), reset,
+          selection.current.side, level(reply, selection.current.match));
+        // The player owns the buffers; don't retain duplicate interleaved PCM in React state.
+        reply.original = new Float32Array(0); reply.mastered = new Float32Array(0);
+        accepted.current = reply;
+        setResult(reply); setUpdating(false); setPosition(audio.position);
+      }).catch(reason => {
+        if (!obsolete && current === epoch.current) { setError(String(reason.message ?? reason)); setUpdating(false); }
+      });
+    }, 160);
+    return () => { obsolete = true; clearTimeout(timer); engine.invalidate(); };
+  }, [track, start, activeStyle, intensity, target, retry]);
+
+  const togglePlay = useCallback(async () => {
+    const audio = player.current;
+    if (!audio || !accepted.current) return;
+    if (audio.playing) { audio.pause(); setPosition(audio.position); setPlaying(false); }
+    else {
+      try { await audio.play(); if (audio === player.current) setPlaying(audio.playing); }
+      catch { setError("Playback couldn't start. Press Play to try again."); }
     }
-    decodedRef.current = decoded;
-    winRef.current = { len: Math.min(decoded.length, CLIP_SECONDS * decoded.sampleRate), start: loudestWindow(decoded) };
-    setFileName(file.name);
-    setFileInfo(`${fmt(decoded.duration)} · ${decoded.sampleRate} Hz · ${decoded.numberOfChannels} ch · decoded in this tab`);
-    await ensureEngine();
-    requestAnimationFrame(() => {
-      const cv = canvasRef.current;
-      if (cv) { peaksRef.current = buildPeaks(decoded, cv.width); drawWave(); }
-    });
-    await sliceAndRender();
-    play();
-  }, [stop, drawWave, sliceAndRender, play]);
+  }, []);
+  useEffect(() => { player.current?.select(side, level(result, match)); }, [side, match, result]);
+  useEffect(() => {
+    if (!playing) return;
+    const timer = setInterval(() => setPosition(player.current?.position ?? 0), 50);
+    return () => clearInterval(timer);
+  }, [playing]);
+  const seek = (value: number) => { player.current?.seek(value); setPosition(player.current?.position ?? 0); };
 
-  // Window drag on the waveform.
-  const canvasX = (ev: React.PointerEvent<HTMLCanvasElement>) => {
-    const r = ev.currentTarget.getBoundingClientRect();
-    return ((ev.clientX - r.left) / r.width) * (decodedRef.current?.length ?? 0);
-  };
-  const moveWin = (start: number) => {
-    const decoded = decodedRef.current;
-    if (!decoded) return;
-    const { len } = winRef.current;
-    winRef.current.start = Math.round(Math.max(0, Math.min(decoded.length - len, start)));
-    drawWave();
-  };
+  useEffect(() => {
+    const canvas = wave.current;
+    if (!canvas || !track) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const { width, height } = canvas;
+    const x0 = start / track.duration * width;
+    const x1 = Math.min(track.duration, start + CLIP_SECONDS) / track.duration * width;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "#0b0e16"; ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = "#162c4f"; ctx.fillRect(x0, 0, x1 - x0, height);
+    for (let x = 0; x < width; x++) {
+      const h = Math.max(2, Math.min(1, track.peaks[Math.floor(x * track.peaks.length / width)]) * (height - 14));
+      ctx.fillStyle = x >= x0 && x <= x1 ? "#7aa6ff" : "#46516c";
+      ctx.fillRect(x, (height - h) / 2, 1, h);
+    }
+    ctx.fillStyle = "#7aa6ff"; ctx.fillRect(x0, 0, 2, height); ctx.fillRect(x1 - 2, 0, 2, height);
+    if (result) {
+      const x = (result.settings.start + position) / track.duration * width;
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(x, 0, 2, height);
+    }
+  }, [track, start, result, position]);
 
-  const flip = useCallback(() => setLive((l) => (l === "A" ? "B" : "A")), []);
-
-  // Escape closes; space flips while playing. Lock page scroll behind the modal.
-  const closeRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    closeRef.current?.focus();
-    return () => previous?.focus?.();
+    const site = document.querySelector<HTMLElement>(".studio-site");
+    const wasInert = site?.inert ?? false;
+    if (site) site.inert = true;
+    closeButton.current?.focus();
+    document.body.classList.add("tryit-lock");
+    return () => {
+      epoch.current++;
+      worker.current?.close(); player.current?.close();
+      document.body.classList.remove("tryit-lock");
+      if (site) site.inert = wasInert;
+      previous?.focus();
+    };
   }, []);
   useEffect(() => {
-    document.body.classList.add("tryit-lock");
-    const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === "Escape") onClose();
-      if (ev.code === "Space" && rawRef.current && !(ev.target instanceof HTMLInputElement)) {
-        ev.preventDefault();
-        if (playerRef.current) flip(); else play();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { onClose(); return; }
+      if (event.key === "Tab") {
+        const elements = Array.from(panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), summary, [tabindex="0"]') ?? [])
+          .filter(el => el.getClientRects().length > 0);
+        const first = elements[0], last = elements[elements.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        return;
       }
+      const element = event.target instanceof HTMLElement ? event.target : null;
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || element?.closest("input, textarea, select, [contenteditable=true]")) return;
+      if (event.code === "Space" && accepted.current) { event.preventDefault(); void togglePlay(); }
+      if (event.key.toLowerCase() === "a" && accepted.current) { event.preventDefault(); setSide(s => s === "original" ? "mastered" : "original"); }
     };
     window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.classList.remove("tryit-lock");
-    };
-  }, [onClose, flip, play]);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, togglePlay]);
 
-  // Tear down audio on close.
-  useEffect(() => () => {
-    const p = playerRef.current;
-    if (p) { try { p.srcA.stop(); p.srcB.stop(); } catch { /* noop */ } }
-    void ctxRef.current?.close();
-  }, []);
-
-  const loaded = fileName !== null;
-
-  return createPortal(
-    <>
-      <div className="tryit-scrim" onClick={onClose} aria-hidden="true" />
-      <div className="tryit" role="dialog" aria-modal="true" aria-label="Try YES Master on your mix">
-        <div className="tryit-panel">
-          <div className="tryit-head">
-            <div className="tryit-brand">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M4 6h2v12H4zM8 10h2v8H8zM12 4h2v16h-2zM16 8h2v10h-2zM20 12h2v6h-2z" fill="currentColor" />
-              </svg>
-              YES Master <span>· Try it on your mix</span>
-            </div>
-            <div className="tryit-promise"><i />Processed locally in your browser. Your track is never uploaded.</div>
-            <button ref={closeRef} type="button" className="tryit-close" onClick={onClose} aria-label="Close">×</button>
-          </div>
-
-          <div className="tryit-body">
-            <div>
-              {!loaded ? (
-                <label
-                  className={"tryit-drop" + (over ? " is-over" : "") + (error ? " is-error" : "")}
-                  onDragEnter={(e) => { e.preventDefault(); setOver(true); }}
-                  onDragOver={(e) => { e.preventDefault(); setOver(true); }}
-                  onDragLeave={(e) => { e.preventDefault(); setOver(false); }}
-                  onDrop={(e) => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files[0]; if (f) void loadFile(f); }}
-                >
-                  <input type="file" accept="audio/*,.wav,.mp3,.flac,.m4a,.aac,.ogg" onChange={(e) => { const f = e.target.files?.[0]; if (f) void loadFile(f); }} />
-                  <div className="tryit-glyph" aria-hidden="true">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg>
-                  </div>
-                  <h3>Drop your mix here</h3>
-                  <p>WAV, MP3, FLAC or M4A. Thirty seconds of it gets mastered in this tab.</p>
-                  {error && <p style={{ color: "#f87171" }}>{error}</p>}
-                  {status && !error && <p>{status}</p>}
-                </label>
-              ) : (
-                <div className="tryit-wave">
-                  <div className="tryit-wave-head">
-                    <span>{fileName} <b style={{ marginLeft: 8 }}>{winLabel}</b></span>
-                    <label style={{ cursor: "pointer", color: "var(--accent-bright)", letterSpacing: 0, textTransform: "none" }}>
-                      swap file<input type="file" accept="audio/*,.wav,.mp3,.flac,.m4a,.aac,.ogg" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) void loadFile(f); }} />
-                    </label>
-                  </div>
-                  <canvas
-                    ref={canvasRef}
-                    width={1800}
-                    height={152}
-                    aria-label="Waveform. Drag to choose your thirty seconds."
-                    onPointerDown={(ev) => {
-                      const x = canvasX(ev);
-                      const { start, len } = winRef.current;
-                      dragRef.current = { on: true, off: x >= start && x <= start + len ? x - start : len / 2 };
-                      ev.currentTarget.setPointerCapture(ev.pointerId);
-                      moveWin(x - dragRef.current.off);
-                    }}
-                    onPointerMove={(ev) => { if (dragRef.current.on) moveWin(canvasX(ev) - dragRef.current.off); }}
-                    onPointerUp={() => { if (!dragRef.current.on) return; dragRef.current.on = false; void sliceAndRender(); }}
-                  />
-                  <div className="tryit-wave-hint">{fileInfo}. Drag the window to the part you care about; it starts on the loudest section.</div>
-                </div>
-              )}
-
-              <div className="std-steps" aria-disabled={!loaded}>
-                <div className="std-step">
-                  <span className="std-step-label">1 · Style</span>
-                  <span className="std-step-hint">Four characters. One click each.</span>
-                  <div className="std-tiles" role="group" aria-label="Style">
-                    {STANDARD_STYLES.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        className={"std-tile" + (s.id === style ? " is-active" : "")}
-                        style={{ ["--tile-accent" as never]: PRESET_ACCENT[s.preset.kind] }}
-                        aria-pressed={s.id === style}
-                        onClick={() => setStyle(s.id)}
-                      >
-                        <span className="std-tile-icon"><PresetIcon kind={s.preset.kind} /></span>
-                        <span className="std-tile-label">{s.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="std-step std-step-intensity">
-                  <span className="std-step-label">2 · Intensity</span>
-                  <span className="std-step-hint">A light touch, or a stronger character. Hear it while it plays.</span>
-                  <Knob
-                    label=""
-                    ariaLabel="Intensity"
-                    size="lg"
-                    tone={activeStyle.tone}
-                    value={intensity}
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    defaultValue={0.5}
-                    format={(v) => `${Math.round(v * 100)}%`}
-                    onChange={(v) => setIntensity(Math.max(0, Math.min(1, v)))}
-                    centerValue
-                  />
-                  {/* Touch insurance: a plain slider under the knob on hover-less devices. */}
-                  <input
-                    className="tryit-touch-range"
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={Math.round(intensity * 100)}
-                    aria-label="Intensity (slider)"
-                    onChange={(e) => setIntensity(Number(e.target.value) / 100)}
-                  />
-                </div>
-                <div className="std-step">
-                  <span className="std-step-label">3 · Loudness</span>
-                  <span className="std-step-hint">Choose your target loudness.</span>
-                  <div className="std-seg" role="group" aria-label="Loudness">
-                    {STANDARD_LOUDNESS.map((l) => (
-                      <button
-                        key={l.id}
-                        type="button"
-                        className={"std-seg-option" + (l.lufs === target ? " is-active" : "")}
-                        aria-pressed={l.lufs === target}
-                        onClick={() => setTarget(l.lufs)}
-                      >
-                        <span className="std-seg-label">{l.label}</span>
-                        <span className="std-seg-lufs">{l.lufs} LUFS</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <aside className="tryit-rail">
-              <div className="tryit-out">
-                <span className="std-step-label">Master out</span>
-                <div className="tryit-ab">
-                  <div className={"tryit-side" + (live === "A" ? " is-live" : "")}>
-                    <div className="tag">Original</div>
-                    <div className="num">{measA ? measA.lufs.toFixed(1) : "—"}</div>
-                    <div className="unit">LUFS INTEGRATED</div>
-                    <div className="tp">True peak <b>{measA ? measA.tp.toFixed(1) : "—"}</b> dBTP</div>
-                    <div className="tryit-meter"><i ref={(el) => { meterA.current = el; }} /></div>
-                  </div>
-                  <div className={"tryit-side" + (live === "B" ? " is-live" : "")}>
-                    <div className="tag">YES Master</div>
-                    <div className="num">{measB ? measB.lufs.toFixed(1) : "—"}</div>
-                    <div className="unit">LUFS INTEGRATED</div>
-                    <div className="tp">True peak <b>{measB ? measB.tp.toFixed(1) : "—"}</b> dBTP</div>
-                    <div className="tryit-meter"><i ref={(el) => { meterB.current = el; }} /></div>
-                  </div>
-                </div>
-                <div className={"tryit-verify" + (pending || !measA || !measB ? " is-pending" : "")}>
-                  {pending ?? (measA && measB ? verifyText(measA, measB, target, match) : "Drop a mix to see the measured result.")}
-                </div>
-              </div>
-
-              <div className="tryit-out tryit-transport">
-                <button
-                  type="button"
-                  className="tryit-btn is-cta"
-                  disabled={!loaded || !!pending}
-                  onClick={() => (playerRef.current ? flip() : play())}
-                >
-                  {!playing ? "Play the comparison" : live === "B" ? "Hear the original" : "Hear the master"}
+  return createPortal(<>
+    <div className="tryit-scrim" aria-hidden="true" />
+    <div className="tryit" role="dialog" aria-modal="true" aria-label="Try YES Master on your mix" onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="tryit-panel" ref={panel}>
+        <header className="tryit-head">
+          <div className="tryit-brand">YES Master <span>· Try it on your mix</span></div>
+          <span className="tryit-promise"><i />Local processing. No upload.</span>
+          <button ref={closeButton} type="button" className="tryit-close" onClick={onClose} aria-label="Close">×</button>
+        </header>
+        <div className="tryit-body">
+          <p className="tryit-scope">Try Standard’s core mastering chain on a 30-second section. The desktop app adds full-track source analysis and export.</p>
+          <main className="tryit-console">
+            <input ref={fileInput} type="file" hidden accept="audio/*,.wav,.mp3,.flac,.m4a,.aac,.ogg" onChange={event => {
+              const file = event.target.files?.[0]; event.target.value = ""; if (file) void loadFile(file);
+            }} />
+            {!track ? <button type="button" className={"tryit-drop" + (over ? " is-over" : "")} disabled={loading}
+              onClick={() => fileInput.current?.click()}
+              onDragOver={event => { event.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
+              onDrop={event => { event.preventDefault(); setOver(false); const file = event.dataTransfer.files[0]; if (file && !loading) void loadFile(file); }}>
+              <span className="tryit-glyph" aria-hidden="true">↓</span>
+              <strong>{loading ? "Preparing your track…" : "Choose a mix or drop it here"}</strong>
+              <span>WAV, MP3, FLAC or M4A · Your audio stays on this device.</span>
+              <small>We’ll prepare the comparison. You press Play.</small>
+            </button> : <section className="tryit-wave" aria-label="Track and excerpt">
+              <div className="tryit-file"><b title={track.name}>{track.name}</b><button type="button" className="tryit-link" onClick={() => fileInput.current?.click()}>Change track</button></div>
+              <div className="tryit-wave-head"><span>Selected section</span><b>{fmt(start)} – {fmt(Math.min(track.duration, start + CLIP_SECONDS))}</b></div>
+              <canvas ref={wave} width={1000} height={88} role="img" aria-label="Track waveform, selected excerpt and playback position" />
+              {track.duration > CLIP_SECONDS && <label className="tryit-section-picker">Move the 30-second section
+                <input type="range" min={0} max={track.duration - CLIP_SECONDS} step={0.1} value={start} aria-label="Section start" aria-valuetext={fmt(start)} onChange={event => setStart(Number(event.target.value))} />
+              </label>}
+              <div className="tryit-wave-hint">{fmt(track.duration)} total · Starts on the loudest section. Seek below to move within the preview.</div>
+            </section>}
+            <section className="tryit-transport" aria-label="Audition controls">
+              <div className="tryit-listen-row">
+                <button type="button" className="tryit-play" disabled={!ready} onClick={() => void togglePlay()} aria-keyshortcuts="Space">
+                  <span aria-hidden="true">{playing ? "Ⅱ" : "▶"}</span>{playing ? "Pause" : "Play"}
                 </button>
-                <button type="button" className="tryit-btn is-ghost" disabled={!loaded} onClick={() => (playing ? stop() : play())}>
-                  {playing ? "Stop" : "Play"}
-                </button>
-                <label className="tryit-switch">
-                  <input type="checkbox" checked={match} onChange={(e) => setMatch(e.target.checked)} disabled={!loaded} />
-                  <span>Match loudness<small>Audition the master at the original's level, so louder can't cheat.</small></span>
-                </label>
-                <div className="tryit-hint">Press <kbd>space</kbd> to flip. Same playhead, no gap. Nothing to export here; that's the app.</div>
-                <div className="tryit-status">{loaded ? status : ""}</div>
+                <div className="tryit-selector" role="group" aria-label="Original or mastered" aria-keyshortcuts="A">
+                  <button type="button" disabled={!ready} aria-pressed={side === "original"} onClick={() => setSide("original")}>Original</button>
+                  <button type="button" disabled={!ready} aria-pressed={side === "mastered"} onClick={() => setSide("mastered")}>Mastered</button>
+                </div>
+                <label className="tryit-switch"><input type="checkbox" checked={match} disabled={!ready} onChange={event => setMatch(event.target.checked)} /><span>Volume Match<small>Compare at similar listening levels.</small></span></label>
               </div>
-            </aside>
-
-            <div className="tryit-foot">
-              <span>This is the Standard chain from the desktop app, compiled to run in your browser. The app adds Advanced mode, source analysis, album mastering and export.</span>
-              <a href="#get-started" onClick={onClose}>Get the free beta →</a>
+              <div className="tryit-seek"><input type="range" aria-label="Preview position" aria-valuetext={`${fmt(position)} of ${fmt(duration)}`} min={0} max={duration || 1} step={0.05} value={position} disabled={!ready} onChange={event => seek(Number(event.target.value))} /><output aria-label="Playback time">{fmt(position)} / {fmt(duration)}</output></div>
+              <div className="tryit-playback-status" role="status">{loading ? "Reading your track locally…" : updating ? (ready ? "Updating preview… Previous comparison remains available." : "Preparing your comparison…") : ready ? (playing ? `Listening to ${side === "original" ? "Original" : "Mastered"}${match ? " · Volume Match on" : ""}` : position > 0 ? "Paused. Press Play to resume." : "Your comparison is ready. Press Play.") : "Choose a track to prepare your comparison."}</div>
+              <p className="tryit-hint"><kbd>Space</kbd> Play / pause · <kbd>A</kbd> Original / Mastered · Same playhead on both sides.</p>
+            </section>
+            {error && <div role="alert" className="tryit-error">{error} {track && <button type="button" className="tryit-link" onClick={() => setRetry(n => n + 1)}>Retry preview</button>}</div>}
+            <div className="std-steps">
+              <section className="std-step tryit-styles"><span className="std-step-label">1 · Style</span><span className="std-step-hint">Four characters. Make one yours.</span>
+                <div className="std-tiles" role="group" aria-label="Style">{STANDARD_STYLES.map(s => <button key={s.id} type="button" disabled={!track} className={"std-tile" + (style === s.id ? " is-active" : "")} style={{ ["--tile-accent" as string]: PRESET_ACCENT[s.preset.kind] }} aria-pressed={style === s.id} onClick={() => setStyle(s.id)}><span className="std-tile-icon"><PresetIcon kind={s.preset.kind} /></span><span className="std-tile-label">{s.label}</span></button>)}</div>
+              </section>
+              <section className="std-step std-step-intensity"><span className="std-step-label">2 · Intensity</span><span className="std-step-hint">A light touch or stronger character.</span>
+                <Knob label="" ariaLabel="Intensity" disabled={!track} size="lg" tone={activeStyle.tone} value={intensity} min={0} max={1} step={0.01} defaultValue={0.5} format={v => `${Math.round(v * 100)}%`} onChange={setIntensity} centerValue />
+                <input className="tryit-touch-range" type="range" min={0} max={100} disabled={!track} value={Math.round(intensity * 100)} aria-label="Intensity (slider)" onChange={event => setIntensity(Number(event.target.value) / 100)} />
+              </section>
+              <section className="std-step"><span className="std-step-label">3 · Loudness</span><span className="std-step-hint">Choose your target.</span>
+                <div className="std-seg" role="group" aria-label="Loudness">{STANDARD_LOUDNESS.map(l => <button key={l.id} type="button" disabled={!track} className={"std-seg-option" + (l.lufs === target ? " is-active" : "")} aria-pressed={l.lufs === target} onClick={() => setTarget(l.lufs)}><span className="std-seg-label">{l.label}</span><span className="std-seg-lufs">{l.lufs} LUFS</span></button>)}</div>
+                <p className="tryit-hint">The result may sit below your target to preserve peak headroom.</p>
+              </section>
             </div>
-          </div>
+          </main>
+          <aside className="tryit-rail" aria-label="Preview measurements">
+            <div className="tryit-out"><span className="std-step-label">Your comparison</span><p className="tryit-hint">Measured over the preview section.</p>
+              <div className="tryit-ab">{(["original", "mastered"] as const).map(s => <div key={s} className={"tryit-side" + (s === side ? " is-live" : "")}>
+                <div className="tag">{s === "original" ? "Original" : "Mastered"}</div><div className="num">{result ? (s === "original" ? result.source : result.output).lufs.toFixed(1) : "—"}</div><div className="unit">LUFS integrated</div>
+                <div className="tp">True peak <b>{result ? (s === "original" ? result.source : result.output).tp.toFixed(1) : "—"}</b> dBTP</div>
+              </div>)}</div>
+              <p className={"tryit-verify" + (!result || updating ? " is-pending" : "")}>{result ? describe(result) : "Your measured result will appear here."}</p>
+              {result && <p className="tryit-hint">{result.settings.style} · {Math.round(result.settings.intensity * 100)}% · Target {result.settings.target} LUFS{updating ? " · Previous preview" : ""}</p>}
+              <details className="tryit-details"><summary>Details</summary><p>The browser previews Standard’s core chain without desktop source-aware adjustments. These excerpt measurements don’t predict the full-track export.</p><p>Volume Match changes listening level only. Brief fades soften excerpt loop boundaries; measurements use the unmodified result.</p>{result && <p>{result.version} · {result.sampleRate} Hz · {result.channels} ch · Processed in {result.seconds.toFixed(2)} s. Integrated loudness and true peak measured with BS.1770.</p>}</details>
+            </div>
+          </aside>
+          <footer className="tryit-foot"><span>Go further in the desktop app: Advanced controls, source analysis, album mastering and export.</span><a href="#get-started" onClick={onClose}>Explore the beta →</a></footer>
         </div>
       </div>
-    </>,
-    document.body,
-  );
+    </div>
+  </>, document.body);
 }

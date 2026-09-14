@@ -1,5 +1,13 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-14 — Website audition improvements authorized and implemented locally.**
+> On `vera/web-tryit`, loading now waits for Play; explicit Original/Mastered,
+> retained pause position, app shortcuts, excerpt/seek controls, compact layout
+> and worker-based preview updates implement the owner's requested follow-through.
+> Desktop DSP simplification stays deferred. The browser preview's source-analysis
+> limits are visible. [Changes and verification](reviews/2026-09-14-web-tryit-audition.md)
+> include a pre-existing beta-copy test mismatch; this does not activate a release.
+
 > **2026-09-14 — Main integration authorized; local production files excluded.**
 > The owner requested all necessary launch changes on main and appropriate ignore
 > rules. The local `YES_Master_Video_Packet/` and private signing/recovery material
