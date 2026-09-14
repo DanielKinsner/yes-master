@@ -24,6 +24,7 @@ import "./tryit.css";
 
 const CLIP_SECONDS = 30;
 const CEILING_DBTP = -1.0;
+const CROSSFADE_S = 0.035;
 type Side = "A" | "B";
 type Measure = { lufs: number; tp: number; target?: number };
 
@@ -173,11 +174,33 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
     const ctx = ctxRef.current;
     if (!p || !ctx) return;
     const t = ctx.currentTime;
-    const ramp = hard ? 0 : 0.008;
+    const aTo = liveRef.current === "A" ? 1 : 0;
+    const bTo = liveRef.current === "B" ? matchGain() : 0;
     p.gainA.gain.cancelScheduledValues(t);
     p.gainB.gain.cancelScheduledValues(t);
-    p.gainA.gain.setTargetAtTime(liveRef.current === "A" ? 1 : 0, t, ramp);
-    p.gainB.gain.setTargetAtTime(liveRef.current === "B" ? matchGain() : 0, t, ramp);
+    if (hard) {
+      p.gainA.gain.setValueAtTime(aTo, t);
+      p.gainB.gain.setValueAtTime(bTo, t);
+      return;
+    }
+    // Equal-power crossfade over ~35 ms: the two sides are the same music at
+    // the same playhead, so a constant-power curve keeps the loudness flat
+    // through the switch instead of the dip-then-jump of a linear fade.
+    const N = 64;
+    const from = (g: GainNode) => g.gain.value;
+    const aFrom = from(p.gainA);
+    const bFrom = from(p.gainB);
+    const curveA = new Float32Array(N);
+    const curveB = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      const x = i / (N - 1);
+      const up = Math.sin((x * Math.PI) / 2);
+      const down = Math.cos((x * Math.PI) / 2);
+      curveA[i] = aTo > aFrom ? aFrom + (aTo - aFrom) * up : aTo + (aFrom - aTo) * down;
+      curveB[i] = bTo > bFrom ? bFrom + (bTo - bFrom) * up : bTo + (bFrom - bTo) * down;
+    }
+    p.gainA.gain.setValueCurveAtTime(curveA, t, CROSSFADE_S);
+    p.gainB.gain.setValueCurveAtTime(curveB, t, CROSSFADE_S);
   }, [matchGain]);
 
   const stop = useCallback(() => {
@@ -313,8 +336,12 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
     stop();
     setError(null);
     setStatus(`Decoding ${file.name}…`);
-    const ctx = ctxRef.current ?? new AudioContext();
+    // Create + resume the context synchronously inside the user gesture:
+    // iOS Safari keeps a context created after an await suspended for good.
+    const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = ctxRef.current ?? new AC();
     ctxRef.current = ctx;
+    void ctx.resume();
     let decoded: AudioBuffer;
     try {
       decoded = await ctx.decodeAudioData(await file.arrayBuffer());
@@ -352,6 +379,12 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
   const flip = useCallback(() => setLive((l) => (l === "A" ? "B" : "A")), []);
 
   // Escape closes; space flips while playing. Lock page scroll behind the modal.
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    return () => previous?.focus?.();
+  }, []);
   useEffect(() => {
     document.body.classList.add("tryit-lock");
     const onKey = (ev: KeyboardEvent) => {
@@ -390,7 +423,7 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
               YES Master <span>· Try it on your mix</span>
             </div>
             <div className="tryit-promise"><i />Processed locally in your browser. Your track is never uploaded.</div>
-            <button type="button" className="tryit-close" onClick={onClose} aria-label="Close">×</button>
+            <button ref={closeRef} type="button" className="tryit-close" onClick={onClose} aria-label="Close">×</button>
           </div>
 
           <div className="tryit-body">
@@ -475,6 +508,16 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
                     format={(v) => `${Math.round(v * 100)}%`}
                     onChange={(v) => setIntensity(Math.max(0, Math.min(1, v)))}
                     centerValue
+                  />
+                  {/* Touch insurance: a plain slider under the knob on hover-less devices. */}
+                  <input
+                    className="tryit-touch-range"
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={Math.round(intensity * 100)}
+                    aria-label="Intensity (slider)"
+                    onChange={(e) => setIntensity(Number(e.target.value) / 100)}
                   />
                 </div>
                 <div className="std-step">

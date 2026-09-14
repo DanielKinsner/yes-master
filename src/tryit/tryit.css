@@ -138,3 +138,26 @@ body.tryit-lock { overflow: hidden; }
 .tryit-foot { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between; font-size: 0.8rem; color: var(--text-2) }
 .tryit-foot a { color: var(--accent-bright); font-weight: 600; text-decoration: none }
 .tryit-foot a:hover { text-decoration: underline }
+
+/* Phone: edge to edge, one column, no wrapping header */
+.tryit-brand { white-space: nowrap }
+@media (max-width: 640px) {
+  .tryit { padding: 0 }
+  .tryit-panel { max-height: 100svh; height: 100svh; border-radius: 0; border-left: 0; border-right: 0; width: 100% }
+  .tryit-head { padding: 12px 14px; gap: 10px }
+  .tryit-head .tryit-brand span { display: none }
+  .tryit-head .tryit-brand { font-size: 16px }
+  .tryit-close { margin-left: auto }
+  .tryit-body { padding: 12px 12px 18px; gap: 12px }
+  .tryit-drop { min-height: 200px; padding: 22px 16px }
+  .tryit-drop h3 { font-size: 19px }
+  .tryit .std-tile { min-height: 104px }
+  .tryit .std-step { padding: 0.6rem 0.8rem 0.7rem }
+  .tryit-side .num { font-size: 30px }
+  .tryit-foot { flex-direction: column; align-items: flex-start }
+}
+.tryit-panel { user-select: none; -webkit-user-select: none }
+.tryit-panel input, .tryit-panel .tryit-verify, .tryit-panel .tryit-status { user-select: text; -webkit-user-select: text }
+@media (hover: none) { .tryit-hint kbd { display: none } .tryit-hint::before { content: "Tap the big button to flip. " } }
+.tryit-touch-range { display: none; width: min(100%, 320px); accent-color: var(--accent); margin-top: 4px }
+@media (hover: none) { .tryit-touch-range { display: block } }

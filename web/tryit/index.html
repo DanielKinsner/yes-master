@@ -183,6 +183,7 @@ async function loadFile(file) {
   stop();
   setStatus('Decoding ' + file.name + '…');
   ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+  ctx.resume();
   const ab = await file.arrayBuffer();
   try { decoded = await ctx.decodeAudioData(ab); } catch (e) { setStatus('Could not decode that file. Try a WAV or MP3.'); return; }
   sampleRate = decoded.sampleRate; channels = decoded.numberOfChannels;
@@ -256,10 +257,13 @@ function applyLive(hard) {
   $('sideA').classList.toggle('live', live === 'A'); $('sideB').classList.toggle('live', live === 'B');
   $('flip').textContent = live === 'B' ? 'Hear the original' : 'Hear the master';
   if (!gainA) return;
-  const t = ctx.currentTime, ramp = hard ? 0 : 0.008;
+  const t = ctx.currentTime, aTo = live === 'A' ? 1 : 0, bTo = live === 'B' ? matchGain() : 0;
   gainA.gain.cancelScheduledValues(t); gainB.gain.cancelScheduledValues(t);
-  gainA.gain.setTargetAtTime(live === 'A' ? 1 : 0, t, ramp);
-  gainB.gain.setTargetAtTime(live === 'B' ? matchGain() : 0, t, ramp);
+  if (hard) { gainA.gain.setValueAtTime(aTo, t); gainB.gain.setValueAtTime(bTo, t); return; }
+  const N = 64, aFrom = gainA.gain.value, bFrom = gainB.gain.value, cA = new Float32Array(N), cB = new Float32Array(N);
+  for (let i = 0; i < N; i++) { const x = i / (N - 1), up = Math.sin(x * Math.PI / 2), down = Math.cos(x * Math.PI / 2);
+    cA[i] = aTo > aFrom ? aFrom + (aTo - aFrom) * up : aTo + (aFrom - aTo) * down; cB[i] = bTo > bFrom ? bFrom + (bTo - bFrom) * up : bTo + (bFrom - bTo) * down; }
+  gainA.gain.setValueCurveAtTime(cA, t, 0.035); gainB.gain.setValueCurveAtTime(cB, t, 0.035);
 }
 function flip() { live = live === 'A' ? 'B' : 'A'; applyLive(false); }
 
