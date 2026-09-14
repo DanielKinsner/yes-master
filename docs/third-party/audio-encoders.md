@@ -95,5 +95,8 @@ requires both source archives and all three encoder packages, with checksums;
 unresolved relink permission/rebuild evidence intentionally fails readiness.
 
 See [the live implementation ledger](../plans/2026-09-09-export-formats-evidence.md).
-The owner confirmed that Mac checks must wait for a later Mac session. No Mac
-build, emulated execution, universal assembly or installed result is claimed here.
+September 14: both Mac thin-encoder source builds, independent package decodes
+and real-engine format matrices passed at `cf3ddcc9` in CI run `34861723641`.
+Intel execution used Rosetta on an Apple Silicon runner. The newer archived-source
+rebuild lane is still pending. Universal assembly, final signed sibling-hash
+verification and installed Mac checks remain open for the owner's later Mac session.

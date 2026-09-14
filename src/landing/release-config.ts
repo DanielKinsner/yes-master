@@ -72,7 +72,7 @@ export interface ReleaseMetadata {
    * that predates publication verified a different build.
    */
   verifiedAt: string | null;
-  /** ISO date the beta window closes. Owner-blocked; see docs/OWNER_INPUT_QUEUE.md. */
+  /** ISO date the beta window closes: actual publication date plus 56 calendar days. */
   betaEndsAt: string | null;
   artifacts: {
     windowsExe: ReleaseArtifact | null;

@@ -1,5 +1,15 @@
 # YES Master — Beta Go / No-Go Checklist
 
+> **2026-09-14 follow-through — still NO-GO.** The demo link and encoder defects
+> are repaired on the launch branch. Windows candidate `cf3ddcc9` is built,
+> installed and signed, with exact-source modified-library rebuild proof.
+> Both Mac encoder qualification jobs passed in run `34861723641`; Windows,
+> downstream CI and the newer cross-platform source-rebuild run remain pending.
+> [Candidate identity and remaining checks](../listening/2026-09-14-windows-launch-candidate.md).
+> The beta duration is settled: actual publication date plus 56 calendar days.
+> Desktop input stopped after the owner's physical Escape; installed interaction
+> and accessibility checks remain open. No release or deployment was activated.
+
 > **2026-09-14 live refresh — NO-GO.** Exact-main CI at `af406855` completed
 > failure in both Mac encoder builds and Windows encoder qualification; desktop
 > integration jobs were skipped. GitHub still lists only the blocked beta.1 draft.

@@ -27,6 +27,12 @@ Local evidence: `test-output/launch-20260914/candidate-cf3ddcc9/`.
 Installers and signatures are in its `delivery/` directory. These ignored files
 do not travel with git. No private audio is included in that directory.
 
+The `review-package/` subdirectory contains the two installers/signatures,
+corresponding-source and qualified-encoder archives, a README and a SHA-256/size
+inventory. All seven payload files and archive boundaries were verified. It
+contains no signing secrets or private audio and remains `public: false` and
+`releaseReady: false`.
+
 ## Changed behavior and engineering evidence
 
 The M4A movie clock now matches the delivered audio rate. With independent

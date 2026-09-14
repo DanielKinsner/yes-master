@@ -151,9 +151,9 @@ partial state and no override.
 1. Publish the release (owner action — see the $0 release path above).
 2. Record the two artifact URLs, byte sizes, and SHA-256 digests from
    `SHA256SUMS.txt`.
-3. Set the beta end date. It is an owner decision and is tracked in
-   `docs/OWNER_INPUT_QUEUE.md`; until it is answered the download stays closed
-   even with a perfect release.
+3. Set the beta end date to the actual publication date plus 56 calendar days
+   (eight weeks, owner decision September 14). Candidate preparation does not
+   start the clock. Record the concrete ISO date in the release metadata.
 4. Populate `RELEASE_METADATA`, run `npm test` and `npm run verify:headless`,
    and confirm the landing lane now reports `verified-public`.
 5. Deploy (U17).

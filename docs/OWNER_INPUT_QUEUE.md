@@ -33,8 +33,9 @@ the owner must resolve the [specific LGPL relinking permission draft](third-part
 The [exact Windows candidate](listening/2026-09-09-export-candidate.md) and source
 materials are now prepared. A full modified-LAME rebuild and real MP3 encode
 passed; the proposed permission remains an unresolved owner decision.
-Permanent updater key cross-machine backup/recovery and a beta end date still
-need their existing release evidence/decision; no date or approval is inferred.
+Permanent updater key cross-machine backup/recovery still needs its release
+evidence. On September 14 the owner selected eight weeks from actual launch;
+the concrete end date will be publication date plus 56 calendar days.
 
 Record real unresolved owner choices so independent work can continue without
 inventing an answer or repeatedly asking the same question. First check current

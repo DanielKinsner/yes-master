@@ -1,13 +1,15 @@
 # Install the YES Master Public Beta
 
-YES Master is in a free public beta. The beta's update packages are
+This guide covers YES Master's free public beta when downloads are available.
+The beta's update packages are
 cryptographically signed and each release includes `SHA256SUMS.txt`, but the
 Mac and Windows installers do not yet use paid platform certificates. Your OS
 will therefore show an unfamiliar-developer warning.
 
 Only download YES Master from the official repository:
 
-<https://github.com/DanielKinsner/yes-master/releases/latest>
+[YES Master releases](https://github.com/DanielKinsner/yes-master/releases).
+If no public beta is listed, downloads have not opened yet.
 
 ## Windows
 

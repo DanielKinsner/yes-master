@@ -1,5 +1,17 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-14 — Launch fixes and replacement Windows review package prepared.**
+> Fixed M4A edit-list duration rounding and both Mac encoder configuration
+> failures. Both Mac architectures passed encoder/application-format qualification
+> in run `34861723641`; the overall CI run remains pending. New source-rebuild
+> coverage runs at `f5976299`. The installed Windows candidate remains exact
+> `cf3ddcc9`, with verified signatures and local modified-library rebuild proof.
+> See [the launch ledger](plans/2026-09-14-launch-readiness.md) and
+> [candidate record](listening/2026-09-14-windows-launch-candidate.md).
+> User Escape stopped desktop input. Preserve the September 9 baseline PASS;
+> the changed installed behavior, Mac hardware, recipient permission, key recovery
+> and actual release/updater transaction still need their applicable evidence.
+
 > **2026-09-14 — Beta duration settled.** The owner selected **eight weeks from
 > actual launch**. This supersedes the provisional October 31 end date. At the
 > verified public release transaction, set the public beta end date to the

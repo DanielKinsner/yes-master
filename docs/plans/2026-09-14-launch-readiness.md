@@ -63,7 +63,7 @@ assessment. The unrelated video packet is preserved.
 
 The owner subsequently authorized working through this checklist. Engineering
 fixes, verification and CI preparation proceed; the final candidate/public
-transaction, recipient permission and unresolved dates still need their specific
+transaction and recipient permission still need their specific
 evidence/decisions. The planned launch remains Mac + Windows unless changed.
 
 ### Encoder corrections
@@ -103,3 +103,24 @@ with a deliberately modified LAME marker; three existing MP3 tests and the real
 modified-library encode/decode proof passed. A reusable script now prepares and
 records that mechanical proof, with CI coverage for all three desktop targets.
 It deliberately leaves recipient-permission and release gates unresolved.
+
+### Remote progress and review package
+
+At source `cf3ddcc9`, [CI run 34861723641](https://github.com/DanielKinsner/yes-master/actions/runs/34861723641)
+has completed successful Mac ARM64 and Intel encoder qualification. The Intel
+binary executes on the Apple Silicon runner through Rosetta; this is not an
+Intel-hardware or installed universal-app pass. Each target passed 40 independent
+package decodes, application reimport, two Album tests and four Track tests,
+including the new exact-duration M4A regression. Windows and downstream CI were
+still running at this checkpoint; the overall run is not recorded as green.
+
+[Run 34863302370](https://github.com/DanielKinsner/yes-master/actions/runs/34863302370)
+at `f5976299` additionally runs the archived-source modified-library rebuild on
+all three targets. It is still running; local Windows rebuild proof does not
+pre-approve the Mac results.
+
+The local candidate's `review-package/` now has installers/signatures, source
+and encoder archives, README and verified SHA-256/size inventory. No private
+audio or signing secrets are included. The install guide now routes to the
+releases index while public downloads are unavailable; the beta guide records
+the eight-week duration, actual update traffic and current display-fit behavior.

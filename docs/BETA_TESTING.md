@@ -13,13 +13,14 @@ YES Master is a **local-first desktop mastering app**. It analyses your track,
 runs it through a real-time chain you can audition against the original, and
 exports a technically checked master. It never modifies your source file.
 
-- **Free, and time-boxed.** The beta runs for a limited period; the end date is
-  announced on the landing page when the beta opens.
+- **Free for eight weeks from launch.** The exact end date is announced on the
+  landing page when the beta opens. Your installed build keeps working afterward.
 - **Mac and Windows.** Both ship together. Mobile is not part of this beta and
   there is no mobile download.
-- **Nothing leaves your machine.** No telemetry, no accounts, no upload. The
-  only data that ever moves is a diagnostics report you choose to save and
-  attach yourself.
+- **Your audio stays on your machine.** No telemetry, no accounts, no audio
+  upload. The app contacts GitHub to check for updates and downloads an update
+  only when you choose to install it. Diagnostics reports are saved locally;
+  you choose whether to share them.
 
 ## What happens when the beta ends
 
@@ -76,10 +77,10 @@ them is worse than described.
   signed off. Character notes are still welcome: a future tuning pass only
   opens on new listening notes, and yours are exactly what would justify one.
 - **Minimum window size is 1360×740.** Smaller is not supported yet.
-- **High display scaling is tight.** The minimum window is 1360×740 logical
-  pixels, so on a 1080p display at 150 % scaling the app opens maximized and
-  zooms slightly to fit; at 200 % or above the right rail may not fit. Lower
-  the display scale for that session if you hit it.
+- **Small screens and high display scaling can be tight.** The app maximizes
+  and adjusts its zoom to fit the available space, with a minimum zoom of 80%.
+  Advanced panels scroll vertically. If controls still fall outside the window,
+  report your screen resolution and display scale; a lower display scale may help.
 
 ## Diagnostics
 
