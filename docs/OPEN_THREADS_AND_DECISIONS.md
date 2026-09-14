@@ -1,5 +1,13 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-14 — Density Auto thumb question added to the continuation.**
+> The owner asks whether Auto should display the preset's default and how that
+> should interact with Adapt strength. [The UI follow-up](prompts/2026-09-14-mastering-quality-continuation.md#additional-owner-question-where-should-density-auto-place-the-thumb)
+> recommends a thumb tied to requested density (preset default while Auto), with
+> source-adaptive processing shown separately. Adapt must not move the requested
+> value. Preserve null Auto state and current sound; wording/implementation remain
+> pending. No UI or DSP change was made in this handoff update.
+
 > **2026-09-14 — Owner requests an evidence-led quality recommendation.**
 > The owner has limited test music and reports that the five A–E clips are too
 > subtle for a useful naked-ear choice. This is not a listening pass, preference

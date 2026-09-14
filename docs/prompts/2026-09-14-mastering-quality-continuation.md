@@ -161,6 +161,49 @@ change; do not treat a diagnostic bypass as a production feature.
 
 ## Technical handrails for the receiving agent
 
+### Additional owner question: where should Density Auto place the thumb?
+
+The owner asked whether Auto should sit at the preset's actual default, and
+whether raising Density and Adapt together would make the thumb move confusingly.
+They requested that this be carried forward because they were leaving the PC.
+This is a UI recommendation to evaluate, not an implemented or adopted redesign.
+
+Recommended contract: **the editable thumb represents requested density before
+adaptation**. In Auto, place it at the preset's requested default; after a drag,
+place it at the user's explicit requested value. Adapt strength may change the
+resolved processing but must not move that thumb or overwrite the requested value.
+For example, increasing requested density to 75% leaves the thumb at 75%, even
+if higher Adapt strength then eases the actual processing for this source.
+
+Current named presets default to 0.50; Custom defaults to 0. Different named
+presets still have different threshold/ratio/timing calibrations at that same
+macro position. Density percentage is neither wet/dry mix nor measured gain
+reduction. Do not invent different default positions based on how aggressive a
+preset sounds.
+
+Implementation/review checklist for a separate, bounded UI slice:
+
+- Keep null/unset as Auto in saved settings; displaying 50% must not silently
+  save an explicit 0.50. An explicit density value remains in Preset compressor
+  mode; do not confuse it with switching to Manual per-band mode.
+- Consider an `Auto — preset default 50%` readout and visible return-to-Auto
+  action. Actual wording is still open. Returning to Auto restores null.
+- Show any source-adaptive easing separately, using backend-resolved values or
+  an accurate short explanation. Live gain-reduction meters describe signal
+  behavior; they are not another value for the editable density thumb.
+- Verify Auto, drag/keyboard edits, reset, preset changes, save/reopen, analysis
+  arriving late, Adapt changes, and Preset/Manual/Off transitions. Preserve
+  current audio and defaults; run the applicable UI/headless checks if implemented.
+- `AdvancedPanel.tsx` currently supplies no `sliderAutoValue` for Density, so
+  `NumberField` parks a null value at its minimum. It already supports a supplied
+  Auto position. **Do not globally change all NumberField Auto semantics:** Width
+  intentionally has a separately resolved Auto-value contract.
+- Preserve the original sound-quality investigation as the primary task. This
+  small presentation question must not become a reason to rewrite DSP or delay
+  the independent evidence work.
+
+### Diagnostic harness and evidence
+
 - Restored harness: `test-output/yes-stage-ablation-20260914/`. `prepare.py`
   records production hashes and creates private guardrail/confidence copies that
   exclude only desktop IPC wrappers. The first attempt to use the browser crate
