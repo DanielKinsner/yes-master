@@ -1,5 +1,15 @@
 # YES Master — Beta Go / No-Go Checklist
 
+> **2026-09-14 main integration checkpoint — NO-GO for release.** The owner
+> authorized main integration and repository hygiene. All three encoder and
+> source-relink jobs passed at `f5976299`; downstream decoder-environment and
+> beta-date doc-contract failures are corrected for the next run. Intel Mac
+> strict Album PCM equality failed intermittently at `cf1ddc21`; no tolerance
+> was relaxed and diagnosis remains open. The resumed installed Windows pass
+> completed Track/Album M4A and live cancellation/retry plus external playback.
+> Full keyboard/screen-reader, offline, by-ear, Mac installed and final release
+> evidence remain open. See the [launch ledger](2026-09-14-launch-readiness.md).
+
 > **2026-09-14 follow-through — still NO-GO.** The demo link and encoder defects
 > are repaired on the launch branch. Windows candidate `cf3ddcc9` is built,
 > installed and signed, with exact-source modified-library rebuild proof.

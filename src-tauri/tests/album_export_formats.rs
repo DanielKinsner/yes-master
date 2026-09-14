@@ -151,10 +151,39 @@ fn album_matrix_preserves_order_overrides_gaps_and_one_continuous_encode() {
                 None,
             )
             .unwrap();
-            assert_eq!(
-                decode::decode_full(Path::new(delivered)).unwrap().samples,
-                decode::decode_full(&expected.path).unwrap().samples
-            );
+            let actual_pcm = decode::decode_full(Path::new(delivered)).unwrap();
+            let expected_pcm = decode::decode_full(&expected.path).unwrap();
+            if actual_pcm.samples != expected_pcm.samples {
+                // Preserve the strict PCM contract. Dumping two full vectors
+                // exhausted the CI log limit without identifying the format or
+                // retaining the synthetic files needed to diagnose the mismatch.
+                let first_difference = actual_pcm
+                    .samples
+                    .iter()
+                    .zip(&expected_pcm.samples)
+                    .position(|(actual, expected)| actual != expected);
+                if let Some(directory) = std::env::var_os("YES_MASTER_ENCODER_QUALIFICATION") {
+                    let directory = std::path::PathBuf::from(directory).join("album-mismatch");
+                    std::fs::create_dir_all(&directory).unwrap();
+                    for (source, name) in [
+                        (
+                            Path::new(delivered),
+                            format!("actual.{}", encoding.extension()),
+                        ),
+                        (
+                            expected.path.as_path(),
+                            format!("expected.{}", encoding.extension()),
+                        ),
+                        (Path::new(staged), "reference.wav".into()),
+                    ] {
+                        std::fs::copy(source, directory.join(name)).unwrap();
+                    }
+                }
+                panic!(
+                    "Album PCM mismatch for {encoding:?}, {delivered}: actual {} samples, expected {}, first difference {first_difference:?}",
+                    actual_pcm.samples.len(), expected_pcm.samples.len()
+                );
+            }
         }
         let manifest: serde_json::Value =
             serde_json::from_slice(&std::fs::read(&report.manifest_path).unwrap()).unwrap();

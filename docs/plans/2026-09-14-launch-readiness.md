@@ -124,3 +124,28 @@ and encoder archives, README and verified SHA-256/size inventory. No private
 audio or signing secrets are included. The install guide now routes to the
 releases index while public downloads are unavailable; the beta guide records
 the eight-week duration, actual update traffic and current display-fit behavior.
+
+### Main integration and completed CI findings
+
+The owner authorized pushing the launch changes to main and ignoring local
+production material. `YES_Master_Video_Packet/` remains local; source, launch
+docs, regression tests and build recipes remain tracked. Signing/recovery
+material is excluded without ignoring public updater signatures or keys in config.
+
+Completed run `34863302370` at `f5976299` passed all three encoder qualification
+and archived-source rebuild jobs. Its downstream Windows/Mac lanes failed because
+they did not supply `YES_MASTER_INDEPENDENT_FFMPEG`; Windows also exposed the
+beta-end-date row label contract. Decoder installation/environment and the row
+label are corrected while preserving the owner's answered eight-week duration.
+The 36 release-readiness/doc-contract tests pass locally after that repair.
+The five real-encoder Track tests and two Album tests also pass locally with
+the independent FFmpeg 9.0.1 decoder; workflow YAML and ignore rules were checked.
+
+Run `34864394286` at `cf1ddc21` failed strict Album PCM equality on Intel Mac,
+despite the same matrix passing in the prior run. The original large-vector
+assertion exhausted the log limit. No cause or tolerance waiver is inferred:
+the test now retains actual/expected synthetic exports and reference WAV in
+the qualification artifact and reports format, lengths and first difference.
+The same exact-equality condition still fails the lane. This remains an open
+release concern even if another run passes. Main integration is not a release
+readiness or publication decision.

@@ -38,6 +38,8 @@ __pycache__/
 *.pyc
 
 # Private audio and generated renders
+# Machine-local production packet: private audio, footage, renders and tool caches.
+/YES_Master_Video_Packet/
 private-audio-fixtures/
 tests for presets/
 outputs/
@@ -86,6 +88,12 @@ graphify-out/graph.html
 # Local/editor
 .env
 .env.*
+# Private signing/recovery material (public updater key stays in tauri.conf.json).
+*.private.key
+yes-master-updater.key
+*.password.dpapi
+*.pfx
+*.p12
 .DS_Store
 Thumbs.db
 .idea/

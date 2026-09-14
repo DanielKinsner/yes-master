@@ -173,7 +173,12 @@ jobs:
 
       - name: New-format Track and Album matrices
         working-directory: src-tauri
-        run: cargo test --test export_formats --test album_export_formats -- --ignored
+        shell: pwsh
+        run: |
+          choco install ffmpeg --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:YES_MASTER_INDEPENDENT_FFMPEG = (Get-Command ffmpeg).Source
+          cargo test --test export_formats --test album_export_formats -- --ignored
 
       - name: Rust format check
         working-directory: src-tauri
@@ -252,7 +257,12 @@ jobs:
 
       - name: New-format Track and Album matrices
         working-directory: src-tauri
-        run: cargo test --test export_formats --test album_export_formats -- --ignored
+        shell: pwsh
+        run: |
+          brew install ffmpeg
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:YES_MASTER_INDEPENDENT_FFMPEG = (Get-Command ffmpeg).Source
+          cargo test --test export_formats --test album_export_formats -- --ignored
 
       - name: Install XcodeGen
         run: brew install xcodegen

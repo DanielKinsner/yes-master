@@ -1,5 +1,20 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-14 — Main integration authorized; local production files excluded.**
+> The owner requested all necessary launch changes on main and appropriate ignore
+> rules. The local `YES_Master_Video_Packet/` and private signing/recovery material
+> are ignored; the packet remains on disk. Resumed installed Windows checks passed
+> Standard/Advanced M4A export, Album cancellation/retry with advancing audition,
+> and external playback. The historical pause did not recur; its cause remains open.
+> [Exact installed evidence](listening/2026-09-14-windows-launch-candidate.md).
+> Completed CI at `f5976299` passed all three encoder and archived-source rebuild
+> jobs, but failed downstream on the missing independent-decoder environment and
+> renamed beta-date row. Both setup issues are corrected. Later `cf1ddc21` also
+> exposed an intermittent Intel Mac Album PCM comparison failure; strict equality
+> remains and failed synthetic files will now be retained for diagnosis. Overall
+> CI/release readiness is not green. This integration does not activate downloads
+> or publish a desktop release.
+
 > **2026-09-14 — Launch fixes and replacement Windows review package prepared.**
 > Fixed M4A edit-list duration rounding and both Mac encoder configuration
 > failures. Both Mac architectures passed encoder/application-format qualification
