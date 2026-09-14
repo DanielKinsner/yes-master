@@ -289,3 +289,7 @@ body.tryit-lock { overflow: hidden; }
   .tryit-row { grid-template-columns: 1fr; gap: 6px }
   .tryit-info-pop { left: auto; right: -8px; transform: none; width: min(260px, 80vw) }
 }
+
+.tryit-panel { overflow-x: hidden }
+.tryit-row-label .tryit-info-pop, .tryit-check .tryit-info-pop { left: 0; transform: none }
+.tryit-readout { display: none }

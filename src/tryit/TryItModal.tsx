@@ -7,8 +7,17 @@ import { auditionBuffer, ComparisonPlayer, type Side } from "./player";
 import "./tryit.css";
 
 const fmt = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
-const level = (result: Rendered | null, match: boolean) => match && result && result.source.lufs > -70 && result.output.lufs > -70
-  ? Math.pow(10, (result.source.lufs - result.output.lufs) / 20) : 1;
+/** Volume match: bring the ORIGINAL up to the master's loudness wherever its true-peak headroom
+ *  allows (ceiling −1 dBTP), and only trim the master by whatever is left. The master keeps its impact;
+ *  the comparison is still level-matched. Returns [originalGain, masteredGain]. */
+const level = (result: Rendered | null, match: boolean): [number, number] => {
+  if (!match || !result || result.source.lufs <= -70 || result.output.lufs <= -70) return [1, 1];
+  const delta = result.output.lufs - result.source.lufs;
+  if (delta <= 0) return [Math.pow(10, delta / 20), 1];
+  const headroom = Math.max(0, -1 - result.source.tp);
+  const lift = Math.min(delta, headroom);
+  return [Math.pow(10, lift / 20), Math.pow(10, -(delta - lift) / 20)];
+};
 const describe = (result: Rendered) => {
   if (result.source.lufs <= -70 || result.output.lufs <= -70) return "Too little audible material for a meaningful loudness comparison.";
   if (result.output.tp > -0.95) return "Measured peak is above the −1 dBTP ceiling. Review this result.";
@@ -203,7 +212,6 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
 
   const ringR = 44, ringC = 2 * Math.PI * ringR;
   const progress = duration > 0 ? Math.min(1, position / duration) : 0;
-  const delta = result ? result.output.lufs - result.source.lufs : 0;
   return createPortal(<>
     <div className="tryit-scrim" aria-hidden="true" />
     <div className="tryit" role="dialog" aria-modal="true" aria-label="Try YES Master on your mix" onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
@@ -245,7 +253,7 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
               <button type="button" disabled={!ready} aria-pressed={side === "mastered"} onClick={() => setSide("mastered")}>Mastered</button>
             </div>
             <label className="tryit-check"><input type="checkbox" checked={match} disabled={!ready} onChange={event => setMatch(event.target.checked)} /><span>Volume match</span>
-              <Info label="About volume match">Plays the master at the original’s loudness so “louder” can’t win the comparison. Listening level only; the result isn’t changed.</Info>
+              <Info label="About volume match">Use volume match to preview your original and master at the same volume and compare with more accuracy. The original is raised where it has headroom; the master is only trimmed by what’s left.</Info>
             </label>
             <div className="tryit-time" aria-live="off">{ready ? `${fmt(position)} / ${fmt(duration)}` : loading ? "Reading your track…" : updating ? "Preparing…" : "\u00a0"}</div>
           </div>
@@ -263,29 +271,20 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
 
         <div className="tryit-rows">
           <div className="tryit-row">
-            <div className="tryit-row-label">Style <Info label="About styles"><b>Universal</b> a balanced starting point. <b>Clarity</b> open top, focused low end. <b>Tape</b> warmer weight, softer edges. <b>Oomph</b> low-end weight, forward energy.</Info></div>
+            <div className="tryit-row-label">Style <Info label="About styles">Choose between 4 mastering styles, each with its own character and feel. <b>Universal:</b> balanced, keeps the focus on your mix. <b>Clarity:</b> open and defined on top, focused below. <b>Tape:</b> warmer weight with a softer edge. <b>Oomph:</b> low-end weight and forward energy.</Info></div>
             <div className="std-tiles tryit-tiles-compact" role="group" aria-label="Style">{STANDARD_STYLES.map(s => <button key={s.id} type="button" disabled={!track} className={"std-tile" + (style === s.id ? " is-active" : "")} style={{ ["--tile-accent" as string]: PRESET_ACCENT[s.preset.kind] }} aria-pressed={style === s.id} onClick={() => setStyle(s.id)}><span className="std-tile-icon"><PresetIcon kind={s.preset.kind} /></span><span className="std-tile-label">{s.label}</span></button>)}</div>
           </div>
           <div className="tryit-row">
-            <div className="tryit-row-label">Intensity <Info label="About intensity">How strongly the style comes through, from a light touch to a stronger character. You hear it move while it plays.</Info></div>
+            <div className="tryit-row-label">Intensity <Info label="About intensity">Set how strongly the style comes through, from a light touch to a stronger character. You hear it change while the track plays.</Info></div>
             <div className="tryit-slider"><input type="range" min={0} max={100} disabled={!track} value={Math.round(intensity * 100)} aria-label="Intensity" onChange={event => setIntensity(Number(event.target.value) / 100)} style={{ ["--pct" as string]: `${Math.round(intensity * 100)}%`, ["--tone" as string]: PRESET_ACCENT[activeStyle.preset.kind] }} /><output>{Math.round(intensity * 100)}%</output></div>
           </div>
           <div className="tryit-row">
-            <div className="tryit-row-label">Loudness <Info label="About loudness">Your target level: −14 LUFS for streaming, −11 medium, −9 hot. The master lands there unless the −1 dBTP ceiling holds it back.</Info></div>
+            <div className="tryit-row-label">Loudness <Info label="About loudness">Set your master’s loudness level. <b>Low</b> (−14 LUFS) matches streaming platforms. <b>Medium</b> (−11) is a modern, competitive level. <b>High</b> (−9) is hot and dense. A −1 dBTP ceiling keeps every level clean.</Info></div>
             <div className="tryit-pills" role="group" aria-label="Loudness">{STANDARD_LOUDNESS.map(l => <button key={l.id} type="button" disabled={!track} className={l.lufs === target ? "is-active" : ""} aria-pressed={l.lufs === target} onClick={() => setTarget(l.lufs)}>{l.label}</button>)}</div>
           </div>
         </div>
 
-        <div className={"tryit-readout" + (updating ? " is-pending" : "")}>
-          {result ? <>
-            <span className="tryit-readout-num"><small>Original</small>{result.source.lufs.toFixed(1)}</span>
-            <span className="tryit-readout-arrow" aria-hidden="true">→</span>
-            <span className="tryit-readout-num is-live"><small>Mastered</small>{result.output.lufs.toFixed(1)}</span>
-            <span className="tryit-readout-unit">LUFS</span>
-            <Info label="About these numbers">{describe(result)} {delta >= 0 ? "+" : ""}{delta.toFixed(1)} dB louder than your original. True peak {result.output.tp.toFixed(1)} dBTP{result.output.tp <= -0.95 ? ", under the −1 dBTP ceiling" : ""}. Measured with BS.1770 over the selected section, in this tab, in {result.seconds.toFixed(2)} s. This is Standard’s core chain on an excerpt; the desktop app adds full-track analysis.</Info>
-            <span className="sr-only">{result.settings.style} · {Math.round(result.settings.intensity * 100)}% · target {result.settings.target} LUFS</span>
-          </> : <span className="tryit-readout-unit">{error ? "" : "Drop a mix to hear it."}</span>}
-        </div>
+        {result && <span className="sr-only" role="status">{result.settings.style} · {Math.round(result.settings.intensity * 100)}% · target {result.settings.target} LUFS · {describe(result)}</span>}
         {error && <div role="alert" className="tryit-error">{error} {track && <button type="button" className="tryit-link" onClick={() => setRetry(n => n + 1)}>Retry</button>}</div>}
 
         <a href="#get-started" className="tryit-cta" onClick={onClose}>Get the free beta</a>

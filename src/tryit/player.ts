@@ -1,4 +1,7 @@
 export type Side = "original" | "mastered";
+/** A single number gains the mastered side only (legacy); a pair gains [original, mastered]. */
+export type MatchGain = number | [number, number];
+const toGains = (g: MatchGain): [number, number] => (typeof g === "number" ? [1, g] : g);
 const FADE = 0.02;
 type Ramp = { from: number; to: number; start: number; end: number };
 type Fader = { node: GainNode; ramp: Ramp };
@@ -34,7 +37,7 @@ export class ComparisonPlayer {
   private voices: Voices | null = null;
   private offset = 0;
   private side: Side = "mastered";
-  private matchGain = 1;
+  private gains: [number, number] = [1, 1];
   private generation = 0;
   constructor(readonly context: AudioContext) {}
   get playing() { return this.voices !== null; }
@@ -42,11 +45,11 @@ export class ComparisonPlayer {
   get position() {
     return this.voices ? (this.voices.offset + Math.max(0, this.context.currentTime - this.voices.started)) % this.duration : this.offset;
   }
-  setBuffers(original: AudioBuffer, mastered: AudioBuffer, reset: boolean, side: Side, matchGain: number) {
+  setBuffers(original: AudioBuffer, mastered: AudioBuffer, reset: boolean, side: Side, matchGain: MatchGain) {
     const position = reset ? 0 : this.position;
     this.buffers = [original, mastered];
     this.side = side;
-    this.matchGain = matchGain;
+    this.gains = toGains(matchGain);
     this.offset = position;
     if (this.playing) this.start(position, !reset);
   }
@@ -66,12 +69,12 @@ export class ComparisonPlayer {
     this.offset = Math.max(0, Math.min(Math.max(0, this.duration - 0.001), seconds));
     if (this.playing) this.start(this.offset);
   }
-  select(side: Side, matchGain: number) {
+  select(side: Side, matchGain: MatchGain) {
     this.side = side;
-    this.matchGain = matchGain;
+    this.gains = toGains(matchGain);
     this.voices?.sides.forEach((fader, i) => fade(fader, this.level(i), this.context.currentTime));
   }
-  private level(index: number) { return index === 0 ? (this.side === "original" ? 1 : 0) : (this.side === "mastered" ? this.matchGain : 0); }
+  private level(index: number) { return index === 0 ? (this.side === "original" ? this.gains[0] : 0) : (this.side === "mastered" ? this.gains[1] : 0); }
   private fader(value: number): Fader {
     const node = this.context.createGain();
     node.gain.value = value;
