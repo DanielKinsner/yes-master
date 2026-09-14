@@ -8,7 +8,8 @@ import { Icon } from "./StudioElements";
 
 export default function Hero({
   release = resolveRelease(),
-}: { release?: ResolvedRelease } = {}) {
+  onTryIt,
+}: { release?: ResolvedRelease; onTryIt?: () => void } = {}) {
   return (
     <>
       <section id="top" className="studio-hero">
@@ -36,6 +37,16 @@ export default function Hero({
                   ? copy.hero.primary_available
                   : copy.hero.primary_unavailable}
               </a>
+              {onTryIt && (
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={onTryIt}
+                  data-testid="hero-try-it"
+                >
+                  Try it on your mix <Icon kind="arrow" />
+                </button>
+              )}
             </div>
             <ul className="studio-hero-points">
               <li>
