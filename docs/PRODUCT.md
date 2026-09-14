@@ -332,8 +332,12 @@ contract; no installed-app behavior or audio leaves the machine.
   beta on Mac + Windows together (eight weeks from actual launch, per the
   September 14 owner decision; a concrete flip date is announced on
   the landing page at beta launch). Beta users lock in the founder price.
-- **One paid SKU after the flip.** A single perpetual license, **$29 founder →
-  $49** standard, one-time purchase (no subscription). 1.0 is the paid flip.
+- **One paid SKU after the flip.** A single perpetual license, one-time purchase
+  (no subscription). 1.0 is the paid flip. **Pricing reopened September 14:**
+  the owner explicitly clarified that the former **$29 founder / $49 standard**
+  figures are not fixed. Final prices and purchase terms remain open; the
+  [competitive assessment](reviews/2026-09-14-pricing-assessment.md) is a
+  recommendation, not newly adopted pricing.
 - **Permanent export-locked demo.** After the flip the free build keeps the full
   real-time chain and the full receipt visible; only render/export is gated.
 - **Sold direct** via Lemon Squeezy (merchant-of-record; handles global tax).

@@ -1,5 +1,39 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-14 — Research prepared for cross-machine continuation.**
+> [The transfer guide](reviews/2026-09-14-research-handoff.md) indexes the retained
+> pricing, competitor, control and DSP proposals and versioned measurement CSVs.
+> The owner explicitly authorized GitHub transport of the preset audio/evidence.
+> A separate research draft holds the verified archive; ordinary Git clones keep
+> audio/build outputs ignored. This is evidence transport, not preset approval
+> or application release activation. Follow the guide to download and restore.
+
+> **2026-09-14 — Dynamics stages investigated with exact export reproduction.**
+> [Native diagnostic research](reviews/2026-09-14-dynamics-stage-investigation.md)
+> reproduces both owner On/Off WAVs byte for byte. Eighteen local renders isolate
+> compressor/saturation/limiter combinations, density/adaptation settings and
+> input trim. Saturation and limiting contribute more to reduced peak contrast
+> than the compressor switch on this fixture; Adapt demonstrably eases compressor
+> gain reduction. Source/target-aware drive and saturation mapping are the next
+> research priorities. Five anonymous equal-volume clips are ready locally.
+> No DSP/default/gate/UI changes or listening verdict; no repeat owner export needed.
+
+> **2026-09-14 — Density/adaptation integration proposed.**
+> In response to the owner's design question, [the recommendation](reviews/2026-09-14-yes-export-vs-landr.md#proposed-integration-of-density-and-adaptation)
+> keeps compression amount in Advanced and presents global “Adapt to track”
+> primarily as automatic behavior, with strength in expanded controls. Preserve
+> current defaults/saved values, fix the Auto thumb, and show backend-resolved
+> effects. This is a proposal, not an adopted redesign or a DSP change.
+
+> **2026-09-14 — Owner Compressor On/Off comparison completed.**
+> [Measured pair](reviews/2026-09-14-yes-export-vs-landr.md#completed-owner-comparison-compressor-preset-versus-off)
+> holds Universal 75 / Adapt 50% per owner instructions. Both measure -9.0 LUFS;
+> Off raises LRA from 3.1 to 3.6 LU and crest from 8.95 to 9.42 dB. On exactly
+> matches the earlier YES export. Compressor mode contributes to the density,
+> but most source/LANDR peak-contrast difference remains with it Off. Remaining
+> stage attribution is unresolved. These files need not be requested again.
+> No DSP, preset or gate changes; all source files remain unchanged.
+
 > **2026-09-14 — Density/adaptation controls reviewed after export comparison.**
 > [The follow-up](reviews/2026-09-14-yes-export-vs-landr.md#follow-up-preset-density-and-adapt-strength)
 > confirms named-preset density defaults to 0.50, while Adapt strength (default
