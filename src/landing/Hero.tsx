@@ -9,7 +9,8 @@ import { Icon } from "./StudioElements";
 export default function Hero({
   release = resolveRelease(),
   onTryIt,
-}: { release?: ResolvedRelease; onTryIt?: () => void } = {}) {
+  onTryItIntent,
+}: { release?: ResolvedRelease; onTryIt?: () => void; onTryItIntent?: () => void } = {}) {
   return (
     <>
       <section id="top" className="studio-hero">
@@ -42,6 +43,8 @@ export default function Hero({
                   type="button"
                   className="btn-ghost"
                   onClick={onTryIt}
+                  onPointerEnter={onTryItIntent}
+                  onFocus={onTryItIntent}
                   data-testid="hero-try-it"
                 >
                   Try it on your mix <Icon kind="arrow" />

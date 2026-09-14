@@ -27,13 +27,13 @@ describe("browser comparison transport", () => {
   it("loads silently, pauses at the playhead, and selects a side without starting audio", async () => {
     const { ctx, audio, sources } = context();
     const player = new ComparisonPlayer(audio);
-    player.setBuffers(buffer, buffer, true, "mastered", 1);
+    player.setBuffers(buffer, buffer, true, "mastered", [1, 1]);
     expect(sources).toHaveLength(0);
     await player.play();
     ctx.currentTime = 5.26;
     player.pause();
     expect(player.position).toBe(5.25);
-    player.select("original", 1);
+    player.select("original", [1, 1]);
     expect(sources).toHaveLength(2);
     expect(player.playing).toBe(false);
     await player.play();
@@ -43,12 +43,12 @@ describe("browser comparison transport", () => {
   it("ramps rapid A/B changes from their current levels without restarting or summing above unity", async () => {
     const { ctx, audio, gains, sources } = context();
     const player = new ComparisonPlayer(audio);
-    player.setBuffers(buffer, buffer, true, "mastered", 1);
+    player.setBuffers(buffer, buffer, true, "mastered", [1, 1]);
     await player.play();
     ctx.currentTime = 1;
-    player.select("original", 1);
+    player.select("original", [1, 1]);
     ctx.currentTime = 1.01;
-    player.select("mastered", 1);
+    player.select("mastered", [1, 1]);
     const a = gains[1].gain.setValueAtTime.mock.lastCall![0];
     const b = gains[2].gain.setValueAtTime.mock.lastCall![0];
     expect(a).toBeCloseTo(0.5);
@@ -61,13 +61,13 @@ describe("browser comparison transport", () => {
   it("crossfades updated previews at the current position and resets only for a new section", async () => {
     const { ctx, audio, sources } = context();
     const player = new ComparisonPlayer(audio);
-    player.setBuffers(buffer, buffer, true, "mastered", 1);
+    player.setBuffers(buffer, buffer, true, "mastered", [1, 1]);
     await player.play();
     ctx.currentTime = 12;
-    player.setBuffers(buffer, buffer, false, "mastered", 0.5);
+    player.setBuffers(buffer, buffer, false, "mastered", [1, 0.5]);
     expect(sources[0].stop.mock.lastCall![0]).toBeCloseTo(12.03);
     expect(sources[2].start).toHaveBeenCalledWith(12.01, 12);
-    player.setBuffers(buffer, buffer, true, "original", 1);
+    player.setBuffers(buffer, buffer, true, "original", [1, 1]);
     expect(sources[4].start).toHaveBeenCalledWith(12.01, 0);
   });
   it("doesn't start after close while AudioContext.resume is pending", async () => {
@@ -75,7 +75,7 @@ describe("browser comparison transport", () => {
     let resume!: () => void;
     ctx.resume.mockImplementation(() => new Promise<void>(resolve => { resume = resolve; }));
     const player = new ComparisonPlayer(audio);
-    player.setBuffers(buffer, buffer, true, "mastered", 1);
+    player.setBuffers(buffer, buffer, true, "mastered", [1, 1]);
     const playing = player.play();
     player.close(); resume(); await playing;
     expect(sources).toHaveLength(0);

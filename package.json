@@ -21,6 +21,7 @@
     "verify:android": "powershell -ExecutionPolicy Bypass -File scripts/verify-fast.ps1 -Lane android",
     "verify:headless": "node scripts/verify-headless.mjs",
     "capture:landing": "node scripts/capture-landing-assets.mjs",
+    "build:tryit-wasm": "node scripts/build-tryit-wasm.mjs",
     "verify:landing-assets": "node scripts/verify-landing-assets.mjs",
     "optimize:landing-art": "node scripts/optimize-landing-art.mjs",
     "verify:landing-smoke": "node scripts/verify-landing-responsive.mjs --smoke --url"

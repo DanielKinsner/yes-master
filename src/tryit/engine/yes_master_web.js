@@ -1,48 +1,298 @@
 /* @ts-self-types="./yes_master_web.d.ts" */
 
 /**
- * Master interleaved f32 audio with a Standard style, intensity 0..1 and a
- * LUFS target (-14 / -11 / -9 in Standard). Returns the mastered samples,
- * same length and layout, already landed on the target under a -1 dBTP ceiling.
+ * One mastered excerpt plus the measurement of what was delivered. The
+ * landing stage already measured the chain output once; the post-landing
+ * numbers are that measurement shifted by the applied gain, so the caller
+ * never needs a second loudness pass.
+ */
+export class Render {
+    static __wrap(ptr) {
+        const obj = Object.create(Render.prototype);
+        obj.__wbg_ptr = ptr;
+        RenderFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        RenderFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_render_free(ptr, 0);
+    }
+    /**
+     * @returns {number}
+     */
+    get lufs() {
+        const ret = wasm.render_lufs(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * Take the samples out (consumes the object).
+     * @returns {Float32Array}
+     */
+    samples() {
+        try {
+            const ptr = this.__destroy_into_raw();
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.render_samples(retptr, ptr);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var v1 = getArrayF32FromWasm0(r0, r1).slice();
+            wasm.__wbindgen_export2(r0, r1 * 4, 4);
+            return v1;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * @returns {number}
+     */
+    get tp() {
+        const ret = wasm.render_tp(this.__wbg_ptr);
+        return ret;
+    }
+}
+if (Symbol.dispose) Render.prototype[Symbol.dispose] = Render.prototype.free;
+
+/**
+ * Stage 2 — dynamics. P95−P10 of 100 ms RMS blocks in dB; `NaN` when the
+ * signal is too short or silent (the desktop's "no DR trigger" case).
+ * @param {Float32Array} samples
+ * @param {number} channels
+ * @param {number} sample_rate
+ * @returns {number}
+ */
+export function analyze_dynamics(samples, channels, sample_rate) {
+    const ptr0 = passArrayF32ToWasm0(samples, wasm.__wbindgen_export);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.analyze_dynamics(ptr0, len0, channels, sample_rate);
+    return ret;
+}
+
+/**
+ * Stage 1 — loudness. Returns `[integrated LUFS, true peak dBTP, LRA LU]`.
+ * @param {Float32Array} samples
+ * @param {number} channels
+ * @param {number} sample_rate
+ * @returns {Float32Array}
+ */
+export function analyze_loudness(samples, channels, sample_rate) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArrayF32ToWasm0(samples, wasm.__wbindgen_export);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.analyze_loudness(retptr, ptr0, len0, channels, sample_rate);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+        if (r3) {
+            throw takeObject(r2);
+        }
+        var v2 = getArrayF32FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_export2(r0, r1 * 4, 4);
+        return v2;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * Stage 3 — stereo field. Returns `[L/R correlation or NaN for mono, side-energy width]`.
+ * @param {Float32Array} samples
+ * @param {number} channels
+ * @returns {Float32Array}
+ */
+export function analyze_stereo(samples, channels) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArrayF32ToWasm0(samples, wasm.__wbindgen_export);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.analyze_stereo(retptr, ptr0, len0, channels);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var v2 = getArrayF32FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_export2(r0, r1 * 4, 4);
+        return v2;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * Stage 4 — tonal balance. Whole-track 6-band energy shares as JSON, or an
+ * empty string when the track is too short for a spectral read.
+ * @param {Float32Array} samples
+ * @param {number} channels
+ * @param {number} sample_rate
+ * @returns {string}
+ */
+export function analyze_tonal(samples, channels, sample_rate) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArrayF32ToWasm0(samples, wasm.__wbindgen_export);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.analyze_tonal(retptr, ptr0, len0, channels, sample_rate);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+        var ptr2 = r0;
+        var len2 = r1;
+        if (r3) {
+            ptr2 = 0; len2 = 0;
+            throw takeObject(r2);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+        wasm.__wbindgen_export2(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * Stage 5 — build the mastering context: the desktop's `SourceProfile`, via
+ * the same constructor `SourceProfile::from_analysis` uses. Empty string when
+ * no profile can be derived (the chain then runs exactly as the app's own
+ * "no analysis" path).
+ * @param {string} tonal_json
+ * @param {number} dynamics_db
+ * @param {number} lra_lu
+ * @param {number} correlation
+ * @param {number} width
+ * @returns {string}
+ */
+export function build_profile(tonal_json, dynamics_db, lra_lu, correlation, width) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(tonal_json, wasm.__wbindgen_export, wasm.__wbindgen_export3);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.build_profile(retptr, ptr0, len0, dynamics_db, lra_lu, correlation, width);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+        var ptr2 = r0;
+        var len2 = r1;
+        if (r3) {
+            ptr2 = 0; len2 = 0;
+            throw takeObject(r2);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+        wasm.__wbindgen_export2(deferred3_0, deferred3_1, 1);
+    }
+}
+
+/**
+ * Master interleaved f32 audio with a Standard style, intensity 0..1 and an
+ * absolute LUFS target (−14 / −11 / −9 in Standard), landed under the −1 dBTP
+ * ceiling. `source_lufs` is the WHOLE-TRACK integrated loudness from
+ * `analyze_loudness` (the desktop injects the same value); `profile_json` is
+ * the `build_profile` output, or empty for the app's no-analysis path.
  * @param {Float32Array} samples
  * @param {number} channels
  * @param {number} sample_rate
  * @param {string} style
  * @param {number} intensity
  * @param {number} target_lufs
- * @returns {Float32Array}
+ * @param {number} source_lufs
+ * @param {string} profile_json
+ * @returns {Render}
  */
-export function master_standard(samples, channels, sample_rate, style, intensity, target_lufs) {
-    const ptr0 = passArrayF32ToWasm0(samples, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(style, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.master_standard(ptr0, len0, channels, sample_rate, ptr1, len1, intensity, target_lufs);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
+export function master_standard(samples, channels, sample_rate, style, intensity, target_lufs, source_lufs, profile_json) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArrayF32ToWasm0(samples, wasm.__wbindgen_export);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(style, wasm.__wbindgen_export, wasm.__wbindgen_export3);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(profile_json, wasm.__wbindgen_export, wasm.__wbindgen_export3);
+        const len2 = WASM_VECTOR_LEN;
+        wasm.master_standard(retptr, ptr0, len0, channels, sample_rate, ptr1, len1, intensity, target_lufs, source_lufs, ptr2, len2);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return Render.__wrap(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
     }
-    var v3 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
-    return v3;
 }
 
 /**
- * Measure integrated LUFS + true peak of interleaved f32 audio. Returns [lufs, tp].
+ * Integrated LUFS + true peak of interleaved f32 audio. Returns `[lufs, tp]`.
  * @param {Float32Array} samples
  * @param {number} channels
  * @param {number} sample_rate
  * @returns {Float32Array}
  */
 export function measure_loudness(samples, channels, sample_rate) {
-    const ptr0 = passArrayF32ToWasm0(samples, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.measure_loudness(ptr0, len0, channels, sample_rate);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArrayF32ToWasm0(samples, wasm.__wbindgen_export);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.measure_loudness(retptr, ptr0, len0, channels, sample_rate);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+        if (r3) {
+            throw takeObject(r2);
+        }
+        var v2 = getArrayF32FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_export2(r0, r1 * 4, 4);
+        return v2;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
     }
-    var v2 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
-    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
-    return v2;
+}
+
+/**
+ * Plain-language digest of a profile for the UI ("bright 0.31 / low 0.28 / …").
+ * @param {string} profile_json
+ * @returns {string}
+ */
+export function profile_digest(profile_json) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passStringToWasm0(profile_json, wasm.__wbindgen_export, wasm.__wbindgen_export3);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.profile_digest(retptr, ptr0, len0);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+        var ptr2 = r0;
+        var len2 = r1;
+        if (r3) {
+            ptr2 = 0; len2 = 0;
+            throw takeObject(r2);
+        }
+        deferred3_0 = ptr2;
+        deferred3_1 = len2;
+        return getStringFromWasm0(ptr2, len2);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+        wasm.__wbindgen_export2(deferred3_0, deferred3_1, 1);
+    }
 }
 
 /**
@@ -52,12 +302,16 @@ export function version() {
     let deferred1_0;
     let deferred1_1;
     try {
-        const ret = wasm.version();
-        deferred1_0 = ret[0];
-        deferred1_1 = ret[1];
-        return getStringFromWasm0(ret[0], ret[1]);
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.version(retptr);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        deferred1_0 = r0;
+        deferred1_1 = r1;
+        return getStringFromWasm0(r0, r1);
     } finally {
-        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        wasm.__wbindgen_add_to_stack_pointer(16);
+        wasm.__wbindgen_export2(deferred1_0, deferred1_1, 1);
     }
 }
 function __wbg_get_imports() {
@@ -69,16 +323,7 @@ function __wbg_get_imports() {
         __wbindgen_generic_0000000000000001: function(arg0, arg1) {
             // Cast intrinsic for `Ref(String) -> Externref`.
             const ret = getStringFromWasm0(arg0, arg1);
-            return ret;
-        },
-        __wbindgen_init_externref_table: function() {
-            const table = wasm.__wbindgen_externrefs;
-            const offset = table.grow(4);
-            table.set(0, undefined);
-            table.set(offset + 0, undefined);
-            table.set(offset + 1, null);
-            table.set(offset + 2, true);
-            table.set(offset + 3, false);
+            return addHeapObject(ret);
         },
     };
     return {
@@ -87,9 +332,36 @@ function __wbg_get_imports() {
     };
 }
 
+const RenderFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_render_free(ptr, 1));
+
+function addHeapObject(obj) {
+    if (heap_next === heap.length) heap.push(heap.length + 1);
+    const idx = heap_next;
+    heap_next = heap[idx];
+
+    heap[idx] = obj;
+    return idx;
+}
+
+function dropObject(idx) {
+    if (idx < 1028) return;
+    heap[idx] = heap_next;
+    heap_next = idx;
+}
+
 function getArrayF32FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return getFloat32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
+}
+
+let cachedDataViewMemory0 = null;
+function getDataViewMemory0() {
+    if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer.detached === true || (cachedDataViewMemory0.buffer.detached === undefined && cachedDataViewMemory0.buffer !== wasm.memory.buffer)) {
+        cachedDataViewMemory0 = new DataView(wasm.memory.buffer);
+    }
+    return cachedDataViewMemory0;
 }
 
 let cachedFloat32ArrayMemory0 = null;
@@ -111,6 +383,13 @@ function getUint8ArrayMemory0() {
     }
     return cachedUint8ArrayMemory0;
 }
+
+function getObject(idx) { return heap[idx]; }
+
+let heap = new Array(1024).fill(undefined);
+heap.push(undefined, null, true, false);
+
+let heap_next = heap.length;
 
 function passArrayF32ToWasm0(arg, malloc) {
     const ptr = malloc(arg.length * 4, 4) >>> 0;
@@ -156,10 +435,10 @@ function passStringToWasm0(arg, malloc, realloc) {
     return ptr;
 }
 
-function takeFromExternrefTable0(idx) {
-    const value = wasm.__wbindgen_externrefs.get(idx);
-    wasm.__externref_table_dealloc(idx);
-    return value;
+function takeObject(idx) {
+    const ret = getObject(idx);
+    dropObject(idx);
+    return ret;
 }
 
 let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
@@ -196,9 +475,9 @@ function __wbg_finalize_init(instance, module) {
     wasmInstance = instance;
     wasm = instance.exports;
     wasmModule = module;
+    cachedDataViewMemory0 = null;
     cachedFloat32ArrayMemory0 = null;
     cachedUint8ArrayMemory0 = null;
-    wasm.__wbindgen_start();
     return wasm;
 }
 

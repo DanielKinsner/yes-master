@@ -1,7 +1,6 @@
 export type Side = "original" | "mastered";
-/** A single number gains the mastered side only (legacy); a pair gains [original, mastered]. */
-export type MatchGain = number | [number, number];
-const toGains = (g: MatchGain): [number, number] => (typeof g === "number" ? [1, g] : g);
+/** Linear gains for [original, mastered]; Volume Match sets both, otherwise [1, 1]. */
+export type MatchGain = [number, number];
 const FADE = 0.02;
 type Ramp = { from: number; to: number; start: number; end: number };
 type Fader = { node: GainNode; ramp: Ramp };
@@ -49,7 +48,7 @@ export class ComparisonPlayer {
     const position = reset ? 0 : this.position;
     this.buffers = [original, mastered];
     this.side = side;
-    this.gains = toGains(matchGain);
+    this.gains = matchGain;
     this.offset = position;
     if (this.playing) this.start(position, !reset);
   }
@@ -71,7 +70,7 @@ export class ComparisonPlayer {
   }
   select(side: Side, matchGain: MatchGain) {
     this.side = side;
-    this.gains = toGains(matchGain);
+    this.gains = matchGain;
     this.voices?.sides.forEach((fader, i) => fade(fader, this.level(i), this.context.currentTime));
   }
   private level(index: number) { return index === 0 ? (this.side === "original" ? this.gains[0] : 0) : (this.side === "mastered" ? this.gains[1] : 0); }
