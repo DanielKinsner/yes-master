@@ -210,6 +210,27 @@ npx playwright install --with-deps chromium
 **A missing browser fails the lane.** This is a gate; a gate that skips itself
 when a dependency is absent reports green and is worse than nothing.
 
+## Try-it Engine Lane (website demo WASM)
+
+The landing page's "Try it on your mix" demo runs the desktop's DSP and source
+analysis compiled to WebAssembly (`web/tryit/wasm`, output checked in under
+`src/tryit/engine/`). The binary is built by hand, so drift is guarded by a test:
+
+```bash
+npm test -- src/tryit            # 31 tests incl. engine-stamp.test.ts
+npm run build:tryit-wasm         # rebuild + restamp after touching any tracked source
+```
+
+`engine-stamp.test.ts` recomputes a hash of the tracked desktop sources
+(`types.rs`, `dsp.rs`, `export_format.rs`, `analysis.rs`, `deep_analysis.rs`,
+`confidence.rs`, `guardrails.rs`, plus the crate's own files) and fails, naming
+the drifted files, until the engine is rebuilt and `src/tryit/engine/` is
+committed. Needs `rustup target add wasm32-unknown-unknown` and
+`cargo install wasm-bindgen-cli --version 0.2.128 --locked`. The desktop crate
+is unaffected by the engine; changing DSP without rebuilding only makes this
+test red, never the app. Browser behavior evidence lives in
+`docs/reviews/2026-09-14-web-tryit-rebuild.md`.
+
 ## RustSec Gate (audit S-01/S-02)
 
 CI runs `cargo audit --deny unsound --ignore RUSTSEC-2024-0429 --file <lock>`

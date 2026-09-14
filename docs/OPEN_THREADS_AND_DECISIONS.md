@@ -1,5 +1,59 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-14 — Density/adaptation controls reviewed after export comparison.**
+> [The follow-up](reviews/2026-09-14-yes-export-vs-landr.md#follow-up-preset-density-and-adapt-strength)
+> confirms named-preset density defaults to 0.50, while Adapt strength (default
+> 50%) reduces eligible preset processing. Intensity is separate. Code review
+> found an Auto density thumb parked at zero and an idle “Effective compression”
+> summary that omits adaptive trims; these presentation issues remain unmodified.
+> 24 existing frontend tests passed. The export does not identify which dynamics
+> stage caused its lower peak contrast; no DSP or preset changes were made.
+
+> **2026-09-14 — Actual YES export compared with LANDR references.**
+> [Independent measurements](reviews/2026-09-14-yes-export-vs-landr.md) of the
+> owner's Universal Intensity 75 file show -9.0 LUFS / 3.1 LU LRA / -2.6 dBTP,
+> versus LANDR High at -9.4 to -9.5 LUFS / 3.8 to 3.9 LU / -0.3 dBTP. YES has
+> lower peak contrast and more relative side/upper-treble energy on this source.
+> Exact build and other export settings remain unspecified; no listening winner
+> or general ranking is claimed. DSP and source audio are unchanged.
+
+> **2026-09-14 — LANDR/Waves DSP research and reference measurements refreshed.**
+> The owner supplied the existing reference folder and asked whether competitor
+> analysis time suggests missing processing. [The assessment](reviews/2026-09-14-landr-waves-dsp-assessment.md)
+> remeasures the source plus seven saved masters, checks native source adaptation,
+> and separates vendor disclosures from proprietary unknowns. It recommends a
+> fair current-engine benchmark, then calibrated per-band dynamics and bounded
+> corrective tonal balancing. No fresh YES/Waves render or listening verdict is
+> claimed; DSP, preset voicing and calibration gates remain unchanged.
+
+> **2026-09-14 — Desktop-plus-phone bundle proposed in pricing discussion.**
+> The owner proposed one desktop and one mobile experience for one purchase price,
+> and asked about mechanical competitor audio tests and the perception of $49.
+> [The pricing follow-up](reviews/2026-09-14-pricing-assessment.md#follow-up-mechanical-comparison-a-phone-bundle-and-the-meaning-of-49)
+> records the existing reference runner, a fair benchmark approach and the bundle's
+> value. Final price, purchase/restore terms and availability remain unsettled;
+> this discussion does not certify mobile releases or impose a device-count limit.
+
+> **2026-09-14 — Pricing reopened for competitive assessment.** The owner
+> explicitly said the former $29 founder / $49 standard figures are not fixed.
+> [The product and market assessment](reviews/2026-09-14-pricing-assessment.md)
+> recommends testing $49 introductory / $79 standard for a qualified paid 1.0;
+> that is agent judgment, not an adopted price. The existing free-beta duration
+> is unchanged. Final prices and purchase terms remain open.
+
+> **2026-09-14 (afternoon) — Website try-it rebuilt with the desktop's source analysis.**
+> On `vera/web-tryit`: the browser engine now compiles the desktop's `analysis.rs`,
+> `guardrails.rs` and `confidence.rs` by path, so the demo adapts each style to the
+> whole track exactly as Track Master does (confidence and Adaptive Compressor stay
+> off, as on the desktop). Worker pool + render cache + neighbour prefetch make
+> style/loudness switches ~30 ms once warm; decode is at the file's own rate; seek
+> and keyboard control added; no verdict/warning text anywhere; scratch page and
+> duplicate binaries deleted; `npm test` now fails if the checked-in WASM drifts
+> from the desktop sources (`npm run build:tryit-wasm` fixes it). Six Tauri
+> commands are `cfg`-gated for the wasm target; no desktop behavior changed.
+> Volume Match stays in the card, off by default (owner decision, same day).
+> [Evidence](reviews/2026-09-14-web-tryit-rebuild.md). Not a deployment.
+
 > **2026-09-14 — Website audition improvements authorized and implemented locally.**
 > On `vera/web-tryit`, loading now waits for Play; explicit Original/Mastered,
 > retained pause position, app shortcuts, excerpt/seek controls, compact layout
