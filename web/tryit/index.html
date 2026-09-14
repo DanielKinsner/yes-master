@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>YES Master — try it in your browser</title>
-<meta name="description" content="Drop a mix. Hear thirty seconds of it mastered by YES Master, in your browser. Nothing uploads.">
+<meta name="description" content="Drop a mix. Hear thirty seconds of it mastered by YES Master, processed locally in your browser. Your track is never uploaded.">
 <style>
   :root{--bg:#07080c;--panel:#0f1118;--line:#1c2030;--ink:#eef1f8;--muted:#aeb6cc;--brand:#4f86f7;--brand-soft:#7aa6ff;--cta:#e2982f;--good:#6dd58f}
   *{box-sizing:border-box}
@@ -12,7 +12,7 @@
   main{max-width:960px;margin:0 auto;padding:48px 20px 96px}
   h1{font-size:clamp(34px,6vw,64px);line-height:1;letter-spacing:-.03em;margin:0 0 10px;font-weight:800}
   h1 em{font-style:normal;color:var(--cta)}
-  .lede{color:var(--muted);font-size:18px;max-width:640px;margin:0 0 28px}
+  .lede{color:var(--muted);font-size:18px;max-width:640px;margin:0 0 22px}
   .promise{display:inline-flex;gap:10px;align-items:center;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 14px;color:var(--muted);font-size:14px;margin-bottom:28px}
   .promise b{color:var(--good);font-weight:700}
   .drop{display:block;border:2px dashed #2a3148;border-radius:16px;padding:44px 24px;text-align:center;background:var(--panel);cursor:pointer;transition:border-color .15s,background .15s}
@@ -20,37 +20,53 @@
   .drop h2{margin:0 0 6px;font-size:22px;font-weight:700}
   .drop p{margin:0;color:var(--muted)}
   .drop input{display:none}
-  .stage{display:none;margin-top:28px}
+  .stage{display:none;margin-top:20px}
   .stage.on{display:block}
-  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}
+  .wave{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:12px 14px 10px}
+  .wave label{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .wave label span{letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums}
+  .wave canvas{display:block;width:100%;height:84px;border-radius:8px;cursor:ew-resize;touch-action:none}
+  .wave .hint{margin-top:8px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:stretch;margin-top:12px}
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 0}
   .tile{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:14px 12px;cursor:pointer;text-align:left;color:var(--ink);font:inherit}
   .tile small{display:block;color:var(--muted);font-size:12px;margin-top:4px}
   .tile.on{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset, 0 0 24px rgba(79,134,247,.18)}
   .tile[data-style=universal].on{--acc:#7aa6ff}.tile[data-style=clarity].on{--acc:#67e8f9}.tile[data-style=tape].on{--acc:#e2982f}.tile[data-style=oomph].on{--acc:#f87171}
   .tile.on b{color:var(--acc)}
-  .ctl{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:14px 16px;flex:1;min-width:220px}
+  .ctl{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:14px 16px;flex:1;min-width:200px}
   .ctl label{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
   input[type=range]{width:100%;accent-color:var(--brand)}
   .seg{display:flex;gap:6px}
   .seg button{flex:1;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:8px 0;cursor:pointer;font:inherit}
   .seg button.on{background:var(--brand);border-color:var(--brand);color:#fff}
-  .ab{margin-top:22px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .ctl label.switch{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;padding-top:4px;text-transform:none;letter-spacing:0;font-size:15px;margin:0}
+  .switch input{appearance:none;width:44px;height:26px;border-radius:13px;background:#242a3c;position:relative;cursor:pointer;flex:none;transition:background .15s}
+  .switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+  .switch input:checked{background:var(--good)}
+  .switch input:checked::after{left:21px}
+  .switch b{display:block;font-size:15px}
+  .switch small{display:block;color:var(--muted);font-size:12px}
+  .ab{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .side{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:18px 18px 16px;position:relative;overflow:hidden}
   .side.live{border-color:var(--brand)}
   .side .tag{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
   .side.live .tag{color:var(--brand-soft)}
   .side .num{font-size:clamp(40px,8vw,72px);font-weight:800;letter-spacing:-.04em;line-height:1;margin:8px 0 2px;font-variant-numeric:tabular-nums}
   .side .unit{color:var(--muted);font-size:13px;letter-spacing:.14em}
-  .bar{height:10px;border-radius:5px;background:rgba(255,255,255,.06);margin-top:14px;overflow:hidden}
+  .side .tp{margin-top:10px;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+  .side .tp b{color:var(--ink);font-weight:600}
+  .bar{height:10px;border-radius:5px;background:rgba(255,255,255,.06);margin-top:12px;overflow:hidden}
   .bar i{display:block;height:100%;width:0;background:rgba(174,182,204,.6);transition:width .06s linear}
   .side.live .bar i{background:linear-gradient(90deg,var(--brand),var(--brand-soft))}
+  .verify{margin-top:12px;border:1px solid var(--line);border-left:3px solid var(--good);background:var(--panel);border-radius:10px;padding:12px 16px;color:var(--ink);font-size:15px;min-height:46px}
+  .verify.pending{border-left-color:var(--line);color:var(--muted)}
   .transport{margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .btn{border:0;border-radius:10px;padding:12px 18px;font:inherit;font-weight:700;cursor:pointer;color:#fff;background:var(--brand)}
   .btn.big{background:var(--cta);color:#1a1200;padding:14px 22px;font-size:17px}
   .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
   .hint{color:var(--muted);font-size:14px}
-  .status{margin-top:12px;color:var(--muted);font-size:14px;min-height:20px}
+  .status{margin-top:12px;color:var(--muted);font-size:13px;min-height:18px}
   .foot{margin-top:56px;border-top:1px solid var(--line);padding-top:22px;color:var(--muted);font-size:14px}
   .foot a{color:var(--brand-soft)}
   kbd{border:1px solid var(--line);border-radius:6px;padding:1px 6px;font:12px/1.4 ui-monospace,monospace;color:var(--ink)}
@@ -60,16 +76,22 @@
 <body>
 <main>
   <h1>Your mix is done.<br><em>Hear it mastered.</em></h1>
-  <p class="lede">Drop a mix. YES Master takes thirty seconds of it, masters it with the Standard chain, and lets you flip between the original and the master at the same playhead.</p>
-  <div class="promise"><b>●</b> Runs in your browser. Your song never leaves this tab.</div>
+  <p class="lede">Drop a mix, pick thirty seconds of it, and hear that section through the YES Master Standard chain. Flip between original and master at the same playhead, loudness-matched if you want the honest version.</p>
+  <div class="promise"><b>●</b> Processed locally in your browser. Your track is never uploaded.</div>
 
   <label class="drop" id="drop">
     <input type="file" id="file" accept="audio/*,.wav,.mp3,.flac,.m4a,.aac,.ogg">
     <h2>Drop your mix here</h2>
-    <p>WAV, MP3, FLAC, M4A. Nothing is uploaded, ever.</p>
+    <p>WAV, MP3, FLAC, M4A. It stays in this tab.</p>
   </label>
 
   <section class="stage" id="stage">
+    <div class="wave">
+      <label>Your thirty seconds <span id="winlabel">—</span></label>
+      <canvas id="wave" width="1800" height="168"></canvas>
+      <div class="hint">Drag the highlighted window to the part you care about. It starts on the loudest section.</div>
+    </div>
+
     <div class="tiles" id="tiles">
       <button class="tile on" data-style="universal"><b>Universal</b><small>A balanced starting point.</small></button>
       <button class="tile" data-style="clarity"><b>Clarity</b><small>Open top, focused low end.</small></button>
@@ -79,42 +101,44 @@
     <div class="row">
       <div class="ctl"><label>Intensity · <span id="intv">50</span>%</label><input type="range" id="intensity" min="0" max="100" value="50"></div>
       <div class="ctl"><label>Loudness</label><div class="seg" id="loud"><button data-lufs="-14">Low</button><button data-lufs="-11" class="on">Medium</button><button data-lufs="-9">High</button></div></div>
+      <div class="ctl"><label>Comparison</label><label class="switch"><input type="checkbox" id="match"><span><b>Match loudness</b><small>Audition the master at the original's level, so louder can't cheat.</small></span></label></div>
     </div>
 
     <div class="ab">
-      <div class="side" id="sideA"><div class="tag">Original</div><div class="num" id="numA">—</div><div class="unit">LUFS INTEGRATED</div><div class="bar"><i id="barA"></i></div></div>
-      <div class="side live" id="sideB"><div class="tag">YES Master</div><div class="num" id="numB">—</div><div class="unit">LUFS INTEGRATED</div><div class="bar"><i id="barB"></i></div></div>
+      <div class="side" id="sideA"><div class="tag">Original</div><div class="num" id="numA">—</div><div class="unit">LUFS INTEGRATED</div><div class="tp">True peak <b id="tpA">—</b> dBTP</div><div class="bar"><i id="barA"></i></div></div>
+      <div class="side live" id="sideB"><div class="tag">YES Master</div><div class="num" id="numB">—</div><div class="unit">LUFS INTEGRATED</div><div class="tp">True peak <b id="tpB">—</b> dBTP</div><div class="bar"><i id="barB"></i></div></div>
     </div>
+    <div class="verify pending" id="verify">Mastering…</div>
 
     <div class="transport">
       <button class="btn big" id="flip">Hear the master</button>
       <button class="btn ghost" id="play">Play</button>
-      <span class="hint">Press <kbd>space</kbd> to flip while it plays. Same playhead, no gap.</span>
+      <span class="hint">Press <kbd>space</kbd> to flip while it plays. Same playhead, no gap. Nothing to export here; that's the app.</span>
     </div>
     <div class="status" id="status"></div>
   </section>
 
-  <div class="foot">This is the Standard chain from the desktop app, compiled to run here. The app adds Advanced mode, source analysis, album mastering and export. <a href="https://www.yesdsp.com/">Get the free beta →</a></div>
+  <div class="foot">This is the Standard chain from the desktop app, compiled to run in your browser. The app adds Advanced mode, source analysis, album mastering and export. <a href="https://www.yesdsp.com/">Get the free beta →</a></div>
 </main>
 
 <script type="module">
 import init, {master_standard, measure_loudness, version} from './pkg/yes_master_web.js';
 
 const $ = (id) => document.getElementById(id);
-const CLIP_SECONDS = 30;
-let ctx, raw, mastered, srcA, srcB, gainA, gainB, analyserA, analyserB, playing = false, live = 'B', startedAt = 0;
-let sampleRate = 48000, channels = 2, interleavedRaw = null;
-let style = 'universal', intensity = 0.5, target = -11;
-let renderToken = 0, wasmReady = init();
+const CLIP_SECONDS = 30, CEILING_DBTP = -1.0;
+let ctx, decoded, raw, mastered, srcA, srcB, gainA, gainB, analyserA, analyserB, playing = false, live = 'B', startedAt = 0;
+let sampleRate = 48000, channels = 2, interleavedRaw = null, winStart = 0, winLen = 0;
+let style = 'universal', intensity = 0.5, target = -11, match = false;
+let measA = null, measB = null, renderToken = 0, wasmReady = init();
+let peaks = null;
 
 const setStatus = (t) => { $('status').textContent = t; };
+const fmt = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 
-function pickWindow(buffer) {
-  // The loudest 30 s window by RMS, on 1 s steps, so the demo lands on the chorus and not the intro.
+function loudestWindow(buffer) {
   const sr = buffer.sampleRate, n = buffer.length, win = Math.min(n, CLIP_SECONDS * sr);
   if (win >= n) return 0;
-  const step = sr, ch = buffer.numberOfChannels;
-  const secs = Math.ceil(n / step), energy = new Float64Array(secs);
+  const step = sr, ch = buffer.numberOfChannels, secs = Math.ceil(n / step), energy = new Float64Array(secs);
   for (let c = 0; c < ch; c++) { const d = buffer.getChannelData(c); for (let i = 0; i < n; i++) energy[(i / step) | 0] += d[i] * d[i]; }
   const w = Math.ceil(win / step); let best = 0, bestE = -1, acc = 0;
   for (let s = 0; s < secs; s++) { acc += energy[s]; if (s >= w) acc -= energy[s - w]; if (s >= w - 1 && acc > bestE) { bestE = acc; best = s - w + 1; } }
@@ -126,50 +150,92 @@ function toInterleaved(buffer, start, len) {
   for (let c = 0; c < ch; c++) { const d = buffer.getChannelData(c); for (let i = 0; i < len; i++) out[i * ch + c] = d[start + i]; }
   return out;
 }
-
 function toBuffer(interleaved, ch, sr) {
   const frames = interleaved.length / ch, b = ctx.createBuffer(ch, frames, sr);
   for (let c = 0; c < ch; c++) { const d = b.getChannelData(c); for (let i = 0; i < frames; i++) d[i] = interleaved[i * ch + c]; }
   return b;
 }
 
+// ---- waveform overview + draggable window ----
+function buildPeaks(buffer, cols) {
+  const n = buffer.length, ch = buffer.numberOfChannels, per = n / cols, out = new Float32Array(cols);
+  for (let c = 0; c < ch; c++) { const d = buffer.getChannelData(c); for (let x = 0; x < cols; x++) { let m = 0; const a = Math.floor(x * per), b = Math.min(n, Math.floor((x + 1) * per)); for (let i = a; i < b; i += 4) { const v = Math.abs(d[i]); if (v > m) m = v; } if (m > out[x]) out[x] = m; } }
+  return out;
+}
+function drawWave() {
+  const cv = $('wave'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  g.clearRect(0, 0, W, H); g.fillStyle = '#0b0e16'; g.fillRect(0, 0, W, H);
+  if (!peaks) return;
+  const x0 = (winStart / decoded.length) * W, x1 = ((winStart + winLen) / decoded.length) * W;
+  g.fillStyle = 'rgba(79,134,247,0.16)'; g.fillRect(x0, 0, x1 - x0, H);
+  for (let x = 0; x < W; x++) { const h = Math.max(2, peaks[x] * (H - 12)); const inWin = x >= x0 && x <= x1; g.fillStyle = inWin ? '#7aa6ff' : '#3a4159'; g.fillRect(x, (H - h) / 2, 1, h); }
+  g.fillStyle = '#7aa6ff'; g.fillRect(x0 - 1, 0, 2, H); g.fillRect(x1 - 1, 0, 2, H);
+  $('winlabel').textContent = fmt(winStart / sampleRate) + ' – ' + fmt((winStart + winLen) / sampleRate);
+}
+let dragging = false, dragOff = 0;
+function canvasX(ev) { const r = $('wave').getBoundingClientRect(); return ((ev.clientX - r.left) / r.width) * decoded.length; }
+$('wave').addEventListener('pointerdown', ev => { if (!decoded) return; dragging = true; $('wave').setPointerCapture(ev.pointerId); const x = canvasX(ev); dragOff = (x >= winStart && x <= winStart + winLen) ? x - winStart : winLen / 2; moveWin(x - dragOff); });
+$('wave').addEventListener('pointermove', ev => { if (dragging) moveWin(canvasX(ev) - dragOff); });
+$('wave').addEventListener('pointerup', () => { if (!dragging) return; dragging = false; sliceAndRender(); });
+function moveWin(start) { winStart = Math.round(Math.max(0, Math.min(decoded.length - winLen, start))); drawWave(); }
+
 async function loadFile(file) {
   stop();
   setStatus('Decoding ' + file.name + '…');
   ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
   const ab = await file.arrayBuffer();
-  let decoded;
   try { decoded = await ctx.decodeAudioData(ab); } catch (e) { setStatus('Could not decode that file. Try a WAV or MP3.'); return; }
   sampleRate = decoded.sampleRate; channels = decoded.numberOfChannels;
-  const start = pickWindow(decoded), len = Math.min(decoded.length - start, CLIP_SECONDS * sampleRate);
-  interleavedRaw = toInterleaved(decoded, start, len);
-  raw = toBuffer(interleavedRaw, channels, sampleRate);
-  await wasmReady;
-  const m = measure_loudness(interleavedRaw, channels, sampleRate);
-  $('numA').textContent = m[0].toFixed(1);
+  winLen = Math.min(decoded.length, CLIP_SECONDS * sampleRate);
+  winStart = loudestWindow(decoded);
+  peaks = buildPeaks(decoded, $('wave').width);
   $('stage').classList.add('on');
   $('drop').querySelector('h2').textContent = file.name;
-  $('drop').querySelector('p').textContent = 'Using the loudest ' + Math.round(len / sampleRate) + ' seconds (from ' + fmt(start / sampleRate) + '). Drop another file to swap.';
-  await render();
+  $('drop').querySelector('p').textContent = fmt(decoded.duration) + ' · ' + sampleRate + ' Hz · ' + channels + ' ch · decoded in this tab. Drop another file to swap.';
+  drawWave();
+  await wasmReady;
+  await sliceAndRender();
   play();
 }
 
-const fmt = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+async function sliceAndRender() {
+  interleavedRaw = toInterleaved(decoded, winStart, winLen);
+  raw = toBuffer(interleavedRaw, channels, sampleRate);
+  const m = measure_loudness(interleavedRaw, channels, sampleRate);
+  measA = {lufs: m[0], tp: m[1]};
+  $('numA').textContent = measA.lufs.toFixed(1); $('tpA').textContent = measA.tp.toFixed(1);
+  await render();
+}
+
+function verifyLine() {
+  if (!measA || !measB) return;
+  const v = $('verify'); v.classList.remove('pending');
+  const under = measB.tp <= CEILING_DBTP + 0.05;
+  const hit = Math.abs(measB.lufs - target) <= 0.15;
+  const gain = (measB.lufs - measA.lufs).toFixed(1);
+  let s = 'Landed at ' + measB.lufs.toFixed(1) + ' LUFS' + (hit ? ' (target ' + target + ')' : ' against a ' + target + ' target, held back by the ' + CEILING_DBTP + ' dBTP ceiling') + ', true peak ' + measB.tp.toFixed(1) + ' dBTP' + (under ? ', under the ' + CEILING_DBTP + ' dBTP ceiling' : '') + '. ' + (gain >= 0 ? '+' : '') + gain + ' dB louder than your original';
+  s += match ? ', and you are hearing it at the original\'s level, so what changed is the tone and the density.' : '. Turn on Match loudness to hear the tone change without the level change.';
+  v.textContent = s;
+}
 
 async function render() {
   if (!interleavedRaw) return;
   const token = ++renderToken;
-  setStatus('Mastering… ' + style + ' at ' + Math.round(intensity * 100) + '%, ' + target + ' LUFS');
+  $('verify').classList.add('pending'); $('verify').textContent = 'Mastering ' + style + ' at ' + Math.round(intensity * 100) + '%, ' + target + ' LUFS…';
   await new Promise(r => setTimeout(r, 10));
   const t0 = performance.now();
   const out = master_standard(interleavedRaw, channels, sampleRate, style, intensity, target);
   if (token !== renderToken) return;
   const m = measure_loudness(out, channels, sampleRate);
-  $('numB').textContent = m[0].toFixed(1);
+  measB = {lufs: m[0], tp: m[1]};
+  $('numB').textContent = measB.lufs.toFixed(1); $('tpB').textContent = measB.tp.toFixed(1);
   mastered = toBuffer(out, channels, sampleRate);
-  setStatus('Mastered in ' + ((performance.now() - t0) / 1000).toFixed(2) + ' s on your machine. ' + version());
-  if (playing) { const pos = (ctx.currentTime - startedAt) % raw.duration; stop(); play(pos); }
+  setStatus('Mastered ' + Math.round(winLen / sampleRate) + ' s in ' + ((performance.now() - t0) / 1000).toFixed(2) + ' s on your machine · ' + version() + ' · measured with BS.1770 in the same engine.');
+  verifyLine();
+  if (playing) { const pos = (ctx.currentTime - startedAt) % raw.duration; stop(); play(pos); } else if (gainB) applyLive(true);
 }
+
+function matchGain() { return (match && measA && measB) ? Math.pow(10, (measA.lufs - measB.lufs) / 20) : 1; }
 
 function play(offset = 0) {
   if (!raw || !mastered) return;
@@ -184,24 +250,22 @@ function play(offset = 0) {
   const t = ctx.currentTime + 0.05; srcA.start(t, offset); srcB.start(t, offset); startedAt = t - offset;
   playing = true; $('play').textContent = 'Stop'; meterLoop();
 }
-
 function stop() { if (!playing) return; try { srcA.stop(); srcB.stop(); } catch {} playing = false; $('play').textContent = 'Play'; }
 
 function applyLive(hard) {
+  $('sideA').classList.toggle('live', live === 'A'); $('sideB').classList.toggle('live', live === 'B');
+  $('flip').textContent = live === 'B' ? 'Hear the original' : 'Hear the master';
   if (!gainA) return;
   const t = ctx.currentTime, ramp = hard ? 0 : 0.008;
   gainA.gain.cancelScheduledValues(t); gainB.gain.cancelScheduledValues(t);
   gainA.gain.setTargetAtTime(live === 'A' ? 1 : 0, t, ramp);
-  gainB.gain.setTargetAtTime(live === 'B' ? 1 : 0, t, ramp);
-  $('sideA').classList.toggle('live', live === 'A'); $('sideB').classList.toggle('live', live === 'B');
-  $('flip').textContent = live === 'B' ? 'Hear the original' : 'Hear the master';
+  gainB.gain.setTargetAtTime(live === 'B' ? matchGain() : 0, t, ramp);
 }
-
 function flip() { live = live === 'A' ? 'B' : 'A'; applyLive(false); }
 
 const tmp = new Float32Array(2048);
-function rms(an) { an.getFloatTimeDomainData(tmp); let s = 0; for (let i = 0; i < tmp.length; i++) s += tmp[i] * tmp[i]; const db = 20 * Math.log10(Math.sqrt(s / tmp.length) + 1e-9); return Math.max(0, Math.min(1, (db + 40) / 40)); }
-function meterLoop() { if (!playing) { $('barA').style.width = $('barB').style.width = '0%'; return; } $('barA').style.width = (rms(analyserA) * 100) + '%'; $('barB').style.width = (rms(analyserB) * 100) + '%'; requestAnimationFrame(meterLoop); }
+function rms(an, g) { an.getFloatTimeDomainData(tmp); let s = 0; for (let i = 0; i < tmp.length; i++) s += tmp[i] * tmp[i]; const db = 20 * Math.log10(Math.sqrt(s / tmp.length) * g + 1e-9); return Math.max(0, Math.min(1, (db + 40) / 40)); }
+function meterLoop() { if (!playing) { $('barA').style.width = $('barB').style.width = '0%'; return; } $('barA').style.width = (rms(analyserA, 1) * 100) + '%'; $('barB').style.width = (rms(analyserB, matchGain()) * 100) + '%'; requestAnimationFrame(meterLoop); }
 
 // ---- wiring ----
 const drop = $('drop');
@@ -213,10 +277,11 @@ $('tiles').addEventListener('click', ev => { const b = ev.target.closest('.tile'
 $('intensity').addEventListener('input', ev => { intensity = ev.target.value / 100; $('intv').textContent = ev.target.value; });
 $('intensity').addEventListener('change', () => render());
 $('loud').addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; [...$('loud').children].forEach(x => x.classList.toggle('on', x === b)); target = Number(b.dataset.lufs); render(); });
+$('match').addEventListener('change', ev => { match = ev.target.checked; applyLive(true); verifyLine(); });
 $('flip').addEventListener('click', () => { if (!playing) play(); else flip(); });
 $('play').addEventListener('click', () => playing ? stop() : play());
-window.addEventListener('keydown', ev => { if (ev.code === 'Space' && $('stage').classList.contains('on')) { ev.preventDefault(); playing ? flip() : play(); } });
-window.__tryit = { get state() { return {style, intensity, target, playing, live, a: $('numA').textContent, b: $('numB').textContent}; }, loadFile, render };
+window.addEventListener('keydown', ev => { if (ev.code === 'Space' && $('stage').classList.contains('on') && ev.target.tagName !== 'INPUT') { ev.preventDefault(); playing ? flip() : play(); } });
+window.__tryit = { get state() { return {style, intensity, target, match, playing, live, winStart: winStart / sampleRate, a: measA, b: measB, verify: $('verify').textContent}; }, loadFile, render, moveWin: (s) => { moveWin(s * sampleRate); return sliceAndRender(); } };
 </script>
 </body>
 </html>
