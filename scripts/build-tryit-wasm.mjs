@@ -19,7 +19,8 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const crate = join(repo, "web", "tryit", "wasm");
 const outDir = join(repo, "src", "tryit", "engine");
 
-/** Keep in lockstep with `SOURCES` in web/tryit/wasm/build.rs. */
+/** Keep in lockstep with `SOURCES` in web/tryit/wasm/build.rs and `TRACKED_SOURCES` in
+ *  src/tryit/engine-stamp.ts (the test's copy; Vercel's checkout drops scripts/). */
 export const TRACKED_SOURCES = [
   "src-tauri/src/types.rs",
   "src-tauri/src/dsp.rs",
