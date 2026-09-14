@@ -280,7 +280,7 @@ pub(crate) fn sanitize_lufs(v: f32) -> f32 {
     }
 }
 
-fn compute_stereo_width(samples: &[f32], channels: usize) -> f32 {
+pub(crate) fn compute_stereo_width(samples: &[f32], channels: usize) -> f32 {
     if channels < 2 {
         return 0.0;
     }
@@ -556,7 +556,7 @@ pub(crate) fn compute_spectral_balance_31band(
 }
 
 /// Pearson correlation between L and R channels. `None` for mono.
-fn compute_stereo_correlation(samples: &[f32], channels: usize) -> Option<f32> {
+pub(crate) fn compute_stereo_correlation(samples: &[f32], channels: usize) -> Option<f32> {
     if channels < 2 || samples.is_empty() {
         return None;
     }

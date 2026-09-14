@@ -14,7 +14,9 @@
 //! no pre-normalization pass is needed before comparison.
 
 use crate::confidence::Confidence;
-use crate::types::{MasteringSettings, SourceProfile, TrackId};
+use crate::types::{MasteringSettings, SourceProfile};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::types::TrackId;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -96,11 +98,13 @@ pub fn init_adaptive_compression_from_env() {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[tauri::command]
 pub fn set_adaptive_compression(enabled: bool) -> bool {
     set_adaptive_compression_enabled(enabled)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[tauri::command]
 pub fn adaptive_compression_enabled() -> bool {
     is_adaptive_compression_enabled()
@@ -804,6 +808,7 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
 /// `track_id`) so the readout reflects the SAME profile the chain will apply;
 /// album mode is non-adaptive. An FE-supplied profile on `settings` is honored as
 /// an override, matching every other chain entry point.
+#[cfg(not(target_arch = "wasm32"))]
 #[tauri::command]
 pub fn guardrail_readout(
     mut settings: MasteringSettings,
@@ -828,6 +833,7 @@ pub fn guardrail_readout(
     readout_for(&settings)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[tauri::command]
 pub fn resolve_compression_plan(
     mut settings: MasteringSettings,

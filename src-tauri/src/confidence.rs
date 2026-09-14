@@ -64,12 +64,14 @@ pub fn init_confidence_gating_from_env() {
 
 /// Tauri command: enable/disable Phase B confidence gating at runtime (owner A/B
 /// calibration — no rebuild). Returns the previous value.
+#[cfg(not(target_arch = "wasm32"))]
 #[tauri::command]
 pub fn set_confidence_gating(enabled: bool) -> bool {
     set_confidence_gating_enabled(enabled)
 }
 
 /// Tauri command: read whether Phase B confidence gating is currently enabled.
+#[cfg(not(target_arch = "wasm32"))]
 #[tauri::command]
 pub fn confidence_gating_enabled() -> bool {
     is_confidence_gating_enabled()
