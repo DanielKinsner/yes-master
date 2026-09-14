@@ -634,7 +634,7 @@ The headless landing lane visits each visible lazy plate in order, and tests
 closed album details and screenshot dialogs through their opening controls.
 At desktop and phone widths it opens every screenshot with Enter, waits for
 full-resolution image decode, closes with Escape and verifies focus returns.
-It also checks FAQ keyboard toggles and the explicitly unavailable demo action.
+It also checks FAQ keyboard toggles and absence of the removed demo placeholder.
 The old minimum hero height tied to a single 45vw image is replaced by a
 non-collapse bound for the approved two-band composition. Overflow, all-axis
 nav acquisition, metadata, closed release, contrast and reduced-motion checks

@@ -1,5 +1,17 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-14 — Launch readiness refreshed; demo removal prepared locally.**
+> The owner asked to get YES Master launched without a demo video. Removed the
+> inactive hero demo button and unavailable-video note; release metadata remains
+> closed. Live GitHub main is `af406855`; its CI run `34402480068` completed
+> **failure**, not merely pending: both Mac encoder builds stop at
+> `configure_host[@]: unbound variable`, and Windows encoder qualification reports
+> an M4A frame count of 88332/88337. Desktop/bridge jobs were skipped by dependency.
+> These are observed failures; the Windows decoder/encoder cause is not established.
+> GitHub still has only the frozen beta.1 draft. The production site's HTTP entry
+> point returns 200, which does not prove release availability or browser behavior.
+> See the [current launch assessment](plans/2026-09-14-launch-readiness.md).
+
 > **2026-09-09 — Export formats implemented; Windows candidate installed.**
 > [Live implementation evidence](plans/2026-09-09-export-formats-evidence.md)
 > records U2–U5 completion, the qualified Windows encoder, 859 frontend and 643

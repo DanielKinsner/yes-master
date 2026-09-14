@@ -36,22 +36,7 @@ export default function Hero({
                   ? copy.hero.primary_available
                   : copy.hero.primary_unavailable}
               </a>
-              <button
-                className="btn-ghost studio-demo"
-                type="button"
-                aria-disabled="true"
-                aria-describedby="demo-note"
-              >
-                <Icon kind="play" />
-                Watch demo
-              </button>
             </div>
-            <p id="demo-note" className="studio-demo-note">
-              Demo video not available yet.{" "}
-              <a href="#how">
-                See how it works <span aria-hidden="true">↗</span>
-              </a>
-            </p>
             <ul className="studio-hero-points">
               <li>
                 <Icon kind="bolt" />

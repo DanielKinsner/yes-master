@@ -313,18 +313,6 @@ body {
   top: 60px;
   z-index: 1;
 }
-.studio-site .studio-demo {
-  cursor: not-allowed;
-}
-.studio-site .studio-demo-note {
-  font-size: 11px;
-  margin-top: 9px;
-  color: #bac4d3;
-}
-.studio-demo-note a {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
 .studio-hero-points {
   display: grid;
   grid-template-columns: 1fr 1.16fr 1fr;
@@ -1631,13 +1619,6 @@ body {
     padding: 11px 14px;
     font-size: 12px;
     gap: 8px;
-  }
-  .studio-site .studio-demo-note {
-    font-size: 10px;
-  }
-  .studio-demo-note a {
-    display: inline-block;
-    padding-block: 5px;
   }
   .studio-hero-points {
     gap: 12px;

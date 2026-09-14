@@ -18,6 +18,12 @@ deepened: 2026-07-24
 
 # YES Master Public Beta Quality Program
 
+> **September 14 launch assessment:** [current findings](2026-09-14-launch-readiness.md)
+> replace the pending-CI assumption with verified failures at remote main
+> `af406855` (Mac encoder shell error and Windows M4A frame check). Demo placeholder
+> removal is prepared locally and passes `verify:headless`, including 38 app
+> checks. Release remains NO-GO; existing owner listening passes stay intact.
+
 > **September 9 export implementation:** U2–U5 of the
 > [export plan](2026-09-09-0857-feat-export-formats-beta-launch-plan.md) are
 > implemented; [the live evidence ledger](2026-09-09-export-formats-evidence.md)

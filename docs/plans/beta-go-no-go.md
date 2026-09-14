@@ -1,5 +1,11 @@
 # YES Master — Beta Go / No-Go Checklist
 
+> **2026-09-14 live refresh — NO-GO.** Exact-main CI at `af406855` completed
+> failure in both Mac encoder builds and Windows encoder qualification; desktop
+> integration jobs were skipped. GitHub still lists only the blocked beta.1 draft.
+> The owner requested launch preparation without a demo. See the
+> [current findings and launch sequence](2026-09-14-launch-readiness.md).
+
 > **2026-09-09 — Windows export candidate prepared; release remains NO-GO.**
 > [Implementation evidence](2026-09-09-export-formats-evidence.md) records the
 > new Windows source-built encoder and completed desktop implementation.
