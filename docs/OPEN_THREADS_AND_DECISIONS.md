@@ -1,6 +1,7 @@
 # YES Master — Open Threads & Owner Decisions
 
 > **2026-09-14 — Local crossover refactor verified; high-rate finding remains open.**
+> Owner deferred this work until after launch; retain it on its local branch.
 > Branch `codex/dsp-crossover-equivalence` shares the existing LR4 filter sequence
 > between production and its test. Before/after output and crossover/envelope
 > state matched byte-for-byte in 96 cases. Final Rust/fixture suite: 643 passed;

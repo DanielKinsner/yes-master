@@ -2,6 +2,9 @@
 
 Branch: `codex/dsp-crossover-equivalence`, based on `a001db96`.
 
+Owner decision, 2026-09-14: defer this refactor until after launch. Keep it on
+this local branch; it is not part of launch integration.
+
 The production compressor and the existing crossover test now call one private
 `LR4State::split` routine. The eight filter calls, coefficients, arithmetic order,
 state layout and processing position are unchanged. No preset or timing constants
