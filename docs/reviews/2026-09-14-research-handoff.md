@@ -33,7 +33,10 @@ stored as assets of the **Research transfer — September 14, 2026** draft, sepa
 from the application beta draft. Sign in with the repository-owner account or an
 authorized collaborator account to access this draft:
 
-[Open the research transfer](https://github.com/DanielKinsner/yes-master/releases/tag/untagged-1b3af7ddc864a8673898)
+[Open GitHub Releases and select the research transfer draft](https://github.com/DanielKinsner/yes-master/releases)
+
+The Releases list is used here because GitHub can change a draft's temporary
+`untagged-*` URL when its target changes. The CLI tag identifier below is stable.
 
 Release tag identifier: `research-transfer-2026-09-14`.
 Archive: `YES-Master-private-research-2026-09-14.zip`.
