@@ -129,7 +129,10 @@ function qualify(dir, target, decoder, probe, seal) {
         padded.writeUInt32LE(padded.length - 8, 4); padded.writeUInt32LE(padded.length - 44, 40);
         encoderInput = `${input}.adts-input.wav`; writeFileSync(encoderInput, padded);
       }
-      run(pkg.exe, ['-v', 'error', '-nostdin', '-y', '-i', encoderInput, '-map', '0:a:0', ...format.args, output], true);
+      // Match the application's sample-accurate M4A edit-list duration. The
+      // default millisecond movie clock can trim samples in gapless decoders.
+      const containerArgs = format.ext === 'm4a' ? ['-movie_timescale', String(rate)] : [];
+      run(pkg.exe, ['-v', 'error', '-nostdin', '-y', '-i', encoderInput, '-map', '0:a:0', ...format.args, ...containerArgs, output], true);
       const info = JSON.parse(run(probe, ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', output]).toString());
       assert.equal(info.streams.length, 1);
       assert.equal(info.streams[0].codec_name, format.codec);

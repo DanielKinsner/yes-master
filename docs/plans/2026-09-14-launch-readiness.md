@@ -57,3 +57,28 @@ accessibility checks, and 38 app scenario/viewport checks. Evidence directory:
 also visually inspected. This is local browser evidence, not native or remote CI
 proof. No push, deploy, tag or release publication was performed during this
 assessment. The unrelated video packet is preserved.
+
+## Implementation follow-through
+
+The owner subsequently authorized working through this checklist. Engineering
+fixes, verification and CI preparation proceed; the final candidate/public
+transaction, recipient permission and unresolved dates still need their specific
+evidence/decisions. The planned launch remains Mac + Windows unless changed.
+
+### Encoder corrections
+
+- Reproduced the exact Windows CI failure locally with independent FFmpeg 9.0.1:
+  an 88337-frame M4A decoded as 88332 frames. With the same encoder and source,
+  setting the MOV movie timescale to the output sample rate yields 88337 frames.
+  This corrects sample rounding in edit-list duration; no audio samples or
+  verification tolerance are removed. Applied in the real desktop encoder and
+  the package qualification matrix. [FFmpeg's movie_timescale option](https://www.ffmpeg.org/ffmpeg-formats.html)
+  documents the container clock control.
+- A new real-encoder regression failed before the application fix and passed
+  after it. Five Track tests and two Album tests pass, including eight independent
+  gapless M4A decodes. All 40 package format cases pass with FFmpeg 9.0.1.
+- Mac configure arguments now always contain the common flags. This avoids
+  expanding an empty array under macOS Bash 3.2 with `set -u`. Shell syntax passes;
+  actual Mac source builds remain the remote CI proof.
+- CI now supplies the independent decoder to the real-engine regression and
+  retains qualification/build evidence on failures as well as successes.

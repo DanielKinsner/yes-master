@@ -87,6 +87,13 @@ new-format engine matrices. These opt-in tests do not silently count as part of
 ordinary `cargo test`. Package and independent-file verification are documented
 in [the encoder source record](third-party/audio-encoders.md).
 
+Set `YES_MASTER_INDEPENDENT_FFMPEG` to an independent FFmpeg 9+ executable for
+the explicit Track matrix. Its M4A regression decodes the actual application
+encoder's files and requires exact frame counts at 44.1/48 kHz, mono/stereo,
+and short/non-round programme lengths. Older decoders can ignore edit-list tail
+trimming and conceal a millisecond-duration rounding defect; do not substitute
+one to make this regression pass.
+
 ## Audio correctness regressions
 
 `cargo test` includes `tests/audio_invariants.rs` without private fixtures or

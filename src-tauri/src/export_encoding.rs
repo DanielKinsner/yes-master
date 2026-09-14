@@ -76,10 +76,8 @@ impl Encoder {
     ) -> CommandResult<()> {
         encoding.validate()?;
         check_cancel(cancel)?;
-        let channels = hound::WavReader::open(input)
-            .map_err(error)?
-            .spec()
-            .channels;
+        let spec = hound::WavReader::open(input).map_err(error)?.spec();
+        let channels = spec.channels;
         let layout = match channels {
             1 => "mono",
             2 => "stereo",
@@ -111,6 +109,13 @@ impl Encoder {
                 command
                     .args(["-c:a", "aac", "-profile:a", "aac_low", "-b:a"])
                     .arg(format!("{bitrate_kbps}k"));
+                if matches!(encoding, ExportEncoding::M4a { .. }) {
+                    // MOV's millisecond movie clock rounds edit-list duration,
+                    // truncating valid tail samples in gapless players.
+                    command
+                        .arg("-movie_timescale")
+                        .arg(spec.sample_rate.to_string());
+                }
             }
             ExportEncoding::Ogg { quality } => {
                 command

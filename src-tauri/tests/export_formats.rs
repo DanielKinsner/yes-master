@@ -39,6 +39,51 @@ fn encodings() -> [ExportEncoding; 5] {
     ]
 }
 
+#[test]
+#[ignore = "requires staged encoder and YES_MASTER_INDEPENDENT_FFMPEG (FFmpeg 9 or later)"]
+fn m4a_preserves_every_frame_in_an_independent_gapless_decoder() {
+    let decoder = std::env::var_os("YES_MASTER_INDEPENDENT_FFMPEG")
+        .expect("set YES_MASTER_INDEPENDENT_FFMPEG to the independent FFmpeg executable");
+    let temp = tempfile::tempdir().unwrap();
+    let encoder = export_encoding::Encoder::packaged().unwrap();
+    for rate in [44_100, 48_000] {
+        for channels in [1_u16, 2] {
+            for frames in [257, rate * 2 + 137] {
+                let input = temp.path().join("source.wav");
+                source(&input, rate, channels, frames);
+                let output = temp.path().join(format!("{rate}-{channels}-{frames}.m4a"));
+                encoder
+                    .encode_staged(
+                        &input,
+                        &output,
+                        ExportEncoding::M4a { bitrate_kbps: 256 },
+                        24,
+                        None,
+                    )
+                    .unwrap();
+                let mut command = std::process::Command::new(&decoder);
+                command
+                    .args(["-v", "error", "-nostdin", "-i"])
+                    .arg(&output)
+                    .args(["-f", "f32le", "-c:a", "pcm_f32le", "-"]);
+                #[cfg(windows)]
+                {
+                    use std::os::windows::process::CommandExt;
+                    command.creation_flags(0x08000000);
+                }
+                let decoded = command.output().unwrap();
+                assert!(
+                    decoded.status.success(),
+                    "{}",
+                    String::from_utf8_lossy(&decoded.stderr)
+                );
+                assert_eq!(decoded.stdout.len(), frames as usize * channels as usize * 4,
+                    "M4A must preserve the exact programme length: {rate} Hz, {channels} channels, {frames} frames");
+            }
+        }
+    }
+}
+
 #[cfg(windows)]
 #[test]
 #[ignore = "requires the staged qualified encoder package"]

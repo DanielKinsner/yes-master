@@ -39,21 +39,22 @@ fetch libvorbis-1.3.7 https://downloads.xiph.org/releases/vorbis/libvorbis-1.3.7
 prefix="$work/prefix"
 export PKG_CONFIG_PATH="$prefix/lib/pkgconfig"
 export PKG_CONFIG_LIBDIR="$prefix/lib/pkgconfig"
-configure_host=()
+configure_args=("--prefix=$prefix" --disable-shared --enable-static)
 ff_target=()
 if [ "$os" = darwin ]; then
   export CC=clang CFLAGS="-O2 -arch $arch -mmacosx-version-min=11.0" LDFLAGS="-arch $arch -mmacosx-version-min=11.0"
   ff_target=(--cc=clang "--extra-cflags=$CFLAGS" "--extra-ldflags=$LDFLAGS")
 else
   export CC=gcc CFLAGS=-O2 LDFLAGS=-static
-  configure_host=("--host=$host")
+  configure_args+=("--host=$host")
   ff_target=(--cc=gcc --extra-ldflags=-static)
 fi
 jobs=${ENCODER_BUILD_JOBS:-4}
 for lib in libogg-1.3.5 libvorbis-1.3.7; do
   (
     cd "$work/$lib"
-    ./configure --prefix="$prefix" --disable-shared --enable-static "${configure_host[@]}" >"$out/build/$lib-configure.log" 2>&1
+    # macOS ships Bash 3.2, where even a declared empty array is unbound under -u.
+    ./configure "${configure_args[@]}" >"$out/build/$lib-configure.log" 2>&1
     make -j"$jobs" >"$out/build/$lib-make.log" 2>&1
     make install >"$out/build/$lib-install.log" 2>&1
     cp COPYING "$out/licenses/$lib-COPYING"
