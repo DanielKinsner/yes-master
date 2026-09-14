@@ -293,3 +293,5 @@ body.tryit-lock { overflow: hidden; }
 .tryit-panel { overflow-x: hidden }
 .tryit-row-label .tryit-info-pop, .tryit-check .tryit-info-pop { left: 0; transform: none }
 .tryit-readout { display: none }
+.tryit-check .tryit-info-pop { left: auto; right: 0 }
+.tryit-info-pop { max-width: calc(100vw - 32px) }
