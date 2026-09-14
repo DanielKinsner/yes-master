@@ -66,7 +66,10 @@ their upstream BSD notices. Upstream [FFmpeg distribution guidance](https://ffmp
 and the actual retained license texts govern distribution. FFmpeg source
 archive authenticity was checked against upstream's published release key
 `FCF986EA15E6E293A5644F10B4322F04D67658D8`; hashes are pinned in the build and
-verification scripts. No source patches are currently applied.
+verification scripts. The Mac build recipe removes libvorbis 1.3.7's obsolete
+`-force_cpusubtype_ALL` flag from its extracted configure script for current
+Xcode compatibility. The recipe is retained and hashed in each encoder package;
+the pinned upstream archives are unchanged.
 
 The existing in-process LAME Rust wrappers have a separate LGPL v3 source/relink
 obligation. Shipping this sidecar does not close it. The repository's current

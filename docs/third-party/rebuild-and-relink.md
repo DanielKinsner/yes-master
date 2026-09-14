@@ -1,5 +1,27 @@
 # Windows source rebuild and LAME relink proof
 
+## Automated verification (September 14)
+
+After preparing exact source materials, run:
+
+```text
+node scripts/verify-redistribution-relink.mjs MATERIALS ENCODER_PACKAGE TARGET NEW_WORK_DIRECTORY
+```
+
+The runner verifies the archived material hashes, extracts a fresh application
+tree, patches only the private LAME version marker, rebuilds the full application,
+and runs the existing MP3 tests plus a real modified-library encode/decode test.
+It retains logs and source/application/output hashes in `MATERIALS/relink-proof/`.
+It never installs the modified application, changes the original archives or
+grants license permission. `releaseReady` remains false pending owner/release
+gates. CI exercises the runner on Windows and both Mac architectures.
+
+This complements the historical manual proof below; CI results must be read
+before claiming a platform passed. A first build needs npm/Cargo dependency
+access. This is not an offline dependency-vendoring proof.
+
+## September 9 manual proof
+
 This describes mechanical reproducibility, not a grant of distribution rights.
 The [permission draft](lgpl-relink-exception-DRAFT.md) remains unapproved.
 

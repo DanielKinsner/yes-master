@@ -329,7 +329,8 @@ contract; no installed-app behavior or audio leaves the machine.
 ## Distribution & Business Model
 
 - **Free public beta first.** YES Master launches as a free, time-boxed public
-  beta on Mac + Windows together (~8 weeks; a concrete flip date is announced on
+  beta on Mac + Windows together (eight weeks from actual launch, per the
+  September 14 owner decision; a concrete flip date is announced on
   the landing page at beta launch). Beta users lock in the founder price.
 - **One paid SKU after the flip.** A single perpetual license, **$29 founder →
   $49** standard, one-time purchase (no subscription). 1.0 is the paid flip.

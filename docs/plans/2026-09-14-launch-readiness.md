@@ -87,3 +87,19 @@ evidence/decisions. The planned launch remains Mac + Windows unless changed.
   obsolete `-force_cpusubtype_ALL` linker flag. The retained build script now
   removes only that flag from the extracted configure script on Mac; pinned
   upstream archives remain unchanged. The next CI run supplies execution proof.
+
+### Fresh Windows candidate and verification limits
+
+[Candidate cf3ddcc9](../listening/2026-09-14-windows-launch-candidate.md) is built
+and installed with hashes, permanent-key signature/tamper checks and preserved
+session state. The full local Rust/fixture lane passed 643 tests; strict Clippy
+passed. Desktop control was stopped with Escape before the new-candidate launch,
+so its installed playback/export/keyboard checks remain open. Automatic approval
+review separately blocked portable NVDA creation. No desktop input followed
+the stop and no NVDA workaround was attempted.
+
+The exact cf3ddcc9 source archive also rebuilt into a complete Windows application
+with a deliberately modified LAME marker; three existing MP3 tests and the real
+modified-library encode/decode proof passed. A reusable script now prepares and
+records that mechanical proof, with CI coverage for all three desktop targets.
+It deliberately leaves recipient-permission and release gates unresolved.

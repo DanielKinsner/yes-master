@@ -65,6 +65,22 @@ jobs:
           rustup target add '${{ matrix.target }}'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo test --manifest-path src-tauri/Cargo.toml --target '${{ matrix.target }}' --test export_formats --test album_export_formats -- --ignored
+      - name: Rebuild archived application with a modified library
+        shell: pwsh
+        run: |
+          $revision = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/prepare-redistribution.mjs $revision test-output/encoder-package '${{ matrix.target }}' test-output/relink-materials
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-redistribution-relink.mjs test-output/relink-materials test-output/encoder-package '${{ matrix.target }}' test-output/relink-work
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Retain archived-source rebuild evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-relink-${{ matrix.target }}
+          path: test-output/relink-materials
+          if-no-files-found: warn
       - name: Retain binary, source, licenses and qualification evidence
         if: always()
         uses: actions/upload-artifact@v4
