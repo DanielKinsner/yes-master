@@ -53,6 +53,12 @@ jobs=${ENCODER_BUILD_JOBS:-4}
 for lib in libogg-1.3.5 libvorbis-1.3.7; do
   (
     cd "$work/$lib"
+    if [ "$os" = darwin ] && [ "$lib" = libvorbis-1.3.7 ]; then
+      # Upstream's 2020 configure adds a retired Darwin linker flag. Keep
+      # all other flags, including our explicit architecture/deployment target.
+      sed 's/ -force_cpusubtype_ALL//g' configure > configure.compat
+      cat configure.compat > configure
+    fi
     # macOS ships Bash 3.2, where even a declared empty array is unbound under -u.
     ./configure "${configure_args[@]}" >"$out/build/$lib-configure.log" 2>&1
     make -j"$jobs" >"$out/build/$lib-make.log" 2>&1

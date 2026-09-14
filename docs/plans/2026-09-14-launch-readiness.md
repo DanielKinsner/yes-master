@@ -38,7 +38,8 @@ The owner requested launch preparation and suggested removing the demo link.
    Mac assets as well. It would not waive the remaining Windows gates.
 4. Resolve the existing relinking-permission draft, finish final source packages,
    and prove permanent updater-key backup/recovery. Confirm the beta end date;
-   October 31 was provisional, not a final publication decision.
+   **Resolved September 14:** the owner selected eight weeks from actual launch
+   (publication date plus 56 calendar days), superseding provisional October 31.
 5. Approve the exact replacement candidate and public transaction. Verify final
    installer bytes and the actual updater install/relaunch, then activate real
    landing download metadata and verify the deployed site before announcing.
@@ -82,3 +83,7 @@ evidence/decisions. The planned launch remains Mac + Windows unless changed.
   actual Mac source builds remain the remote CI proof.
 - CI now supplies the independent decoder to the real-engine regression and
   retains qualification/build evidence on failures as well as successes.
+- The first Mac retry passed configuration, then exposed libvorbis 1.3.7's
+  obsolete `-force_cpusubtype_ALL` linker flag. The retained build script now
+  removes only that flag from the extracted configure script on Mac; pinned
+  upstream archives remain unchanged. The next CI run supplies execution proof.

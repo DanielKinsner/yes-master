@@ -1,5 +1,11 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-14 — Beta duration settled.** The owner selected **eight weeks from
+> actual launch**. This supersedes the provisional October 31 end date. At the
+> verified public release transaction, set the public beta end date to the
+> actual publication date plus 56 calendar days; do not start the clock during
+> candidate preparation. Engineering/CI follow-through is authorized.
+
 > **2026-09-14 — Launch readiness refreshed; demo removal prepared locally.**
 > The owner asked to get YES Master launched without a demo video. Removed the
 > inactive hero demo button and unavailable-video note; release metadata remains
