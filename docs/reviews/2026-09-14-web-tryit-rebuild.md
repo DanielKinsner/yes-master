@@ -45,7 +45,11 @@ in the card, off by default. No deployment or release activation.
   excerpt extraction with its own source measurement, render.
 - `decode.ts`: container sample-rate sniff for WAV/RF64, AIFF, FLAC, MP3,
   Ogg Vorbis/Opus, M4A; decode on an `OfflineAudioContext` at that rate.
-- `TryItModal.tsx`: analysis-stage checklist while preparing; "Analyzed" chip
+- `TryItModal.tsx`: the app's `AnalysisOrb` (particle sphere) in the waveform
+  slot while preparing, with the real stage label and bar, morphing into the
+  waveform on load (owner follow-up, same day; verified in Chrome: orb drawn
+  at 435×128 CSS px during analysis, morph overlay present then gone after
+  `MORPH_MS`, no console errors); "Analyzed" chip
   with an (i) holding the profile digest and rate; seek by click inside the
   window; ←/→, Home, Shift+←/→ and a focusable waveform; discrete controls
   render immediately, continuous ones debounce 120 ms; verdict/status text

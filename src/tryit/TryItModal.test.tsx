@@ -82,11 +82,15 @@ it("shows the real analysis stages while preparing, then the analyzed file line"
   const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
   Object.defineProperty(input, "files", { configurable: true, value: [{ name: "song.wav", arrayBuffer: async () => new ArrayBuffer(8) }] });
   await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
-  expect(document.body.textContent).toContain("Preparing your track");
-  expect(document.querySelector(".tryit-prep-list .is-active")?.textContent).toBe("Checking dynamics");
-  expect(document.querySelectorAll(".tryit-prep-list .is-done").length).toBe(3);
+  expect(document.body.textContent).toContain("Preparing");
+  expect(document.querySelector(".tryit-prep-label")?.textContent).toBe("Checking dynamics");
+  expect(document.querySelector(".tryit-strip.is-analyzing .tryit-strip-cap")?.textContent).toContain("3 of 7");
+  expect(document.querySelector(".tryit-strip.is-analyzing canvas.wf-orb")).not.toBeNull(); // the app's analysis orb
   await act(async () => { mocks.loads.forEach(done => done()); });
   expect(document.querySelector(".tryit-chip")?.textContent).toBe("Analyzed");
+  expect(document.querySelector(".tryit-strip.is-morphing canvas.wf-orb.is-morph")).not.toBeNull(); // orb flies into the waveform
+  await act(async () => vi.advanceTimersByTimeAsync(1500));
+  expect(document.querySelector("canvas.wf-orb")).toBeNull();
   expect(document.body.textContent).toContain("bright 0.30 / low 0.28");
   expect(document.body.textContent).toContain("44.1 kHz");
 });

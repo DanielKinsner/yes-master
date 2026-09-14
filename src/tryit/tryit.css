@@ -51,19 +51,9 @@ body.tryit-lock { overflow: hidden; }
 .tryit-drop strong { font-size: 18px; font-weight: 700 }
 .tryit-drop span { color: var(--text-2); font-size: 13px }
 .tryit-glyph { font-size: 30px; width: 40px; height: 40px; display: grid; place-items: center; color: var(--accent-bright) }
-.tryit-prep { min-height: 150px; padding: 16px 18px; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface-card); display: flex; flex-direction: column; gap: 10px }
-.tryit-prep-title { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px; font-weight: 600 }
-.tryit-prep-title span { color: var(--text-2); font-weight: 500; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-.tryit-prep-bar { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden }
+.tryit-prep-bar { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; margin-top: 6px }
 .tryit-prep-bar i { display: block; height: 100%; width: var(--pct, 0%); background: linear-gradient(90deg, var(--accent-deep), var(--accent-bright)); transition: width 200ms var(--ease-out) }
-.tryit-prep-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; font-size: 12px; color: var(--text-2) }
-.tryit-prep-list li { display: flex; align-items: center; gap: 7px; transition: color 150ms }
-.tryit-prep-list li::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: rgba(158, 176, 214, 0.25); flex: none }
-.tryit-prep-list li.is-active { color: var(--text-0) }
-.tryit-prep-list li.is-active::before { background: var(--accent-bright); box-shadow: 0 0 8px var(--accent-bright); animation: tryit-blink 900ms ease-in-out infinite alternate }
-.tryit-prep-list li.is-done { color: var(--text-1) }
-.tryit-prep-list li.is-done::before { background: var(--good) }
-@keyframes tryit-blink { from { opacity: 0.5 } to { opacity: 1 } }
+.tryit-prep-label { color: var(--text-1) }
 
 .tryit-file { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); min-width: 0 }
 .tryit-file b { color: var(--text-0); font-weight: 600; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
@@ -91,8 +81,16 @@ body.tryit-lock { overflow: hidden; }
 .tryit-check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-1); cursor: pointer }
 .tryit-check input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0 }
 
-/* Waveform strip: drag the lit window, click inside it to seek */
-.tryit-strip canvas { display: block; width: 100%; height: 44px; border-radius: 6px; cursor: ew-resize; touch-action: none }
+/* Waveform strip: drag the lit window, click inside it to seek. While the
+   track analyzes the same slot holds the app's particle orb (AnalysisOrb,
+   App.css .wf-orb), which then flies into the waveform for MORPH_MS. */
+.tryit-strip.is-analyzing.has-orb { min-height: 158px; display: flex; flex-direction: column; justify-content: flex-end }
+.tryit-strip .wf-orb { display: block; width: 100%; height: 128px; flex: none }
+.tryit-strip-wave { position: relative }
+.tryit-strip-wave canvas[role="img"] { display: block; width: 100%; height: 72px; border-radius: 6px; cursor: ew-resize; touch-action: none }
+.tryit-strip.is-morphing canvas[role="img"] { animation: tryit-wave-in 1400ms ease both }
+@keyframes tryit-wave-in { from { opacity: 0 } 60% { opacity: 0.35 } to { opacity: 1 } }
+.tryit-strip-wave .wf-orb.is-morph { position: absolute; inset: 0; height: 100%; pointer-events: none }
 .tryit-strip-cap { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; color: var(--text-2); margin-top: 4px; font-variant-numeric: tabular-nums }
 .tryit-strip-cap kbd { font: 10px/1 ui-monospace, monospace; border: 1px solid var(--border-strong); border-radius: 4px; padding: 1px 4px; color: var(--text-1) }
 
@@ -147,7 +145,6 @@ body.tryit-lock { overflow: hidden; }
   .tryit-stage { grid-template-columns: 96px 1fr; gap: 14px }
   .tryit-ring { width: 96px; height: 96px }
   .tryit-row { grid-template-columns: 1fr; gap: 6px }
-  .tryit-prep-list { grid-template-columns: 1fr }
   .tryit-strip-cap kbd { display: none }
 }
 @media (prefers-reduced-motion: reduce) {

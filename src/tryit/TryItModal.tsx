@@ -6,6 +6,9 @@ import { CLIP_SECONDS, neighbours, PreviewEngine, type Analysis, type Excerpt, t
 import { auditionBuffer, ComparisonPlayer, type Side } from "./player";
 import { decodeAtSourceRate, playbackContext } from "./decode";
 import { minutesBucket, trackTryIt } from "./analytics";
+import { AnalysisOrb } from "../components/AnalysisOrb";
+import { MORPH_MS } from "../lib/analysis-orb";
+import { prefersReducedMotion } from "../lib/motion";
 import "./tryit.css";
 
 /** The worker's analysis stages, in order, for the preparation checklist. */
@@ -39,15 +42,17 @@ function Info({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-function Preparing({ name, stage }: { name: string; stage: Stage | null }) {
-  const index = stage ? (stage.label === "Ready" ? STAGES.length : STAGES.indexOf(stage.label)) : 0;
+/** The app's analysis wait: the particle orb with the real stage label and bar
+ *  underneath (Waveform.tsx shows exactly this while a track analyzes). Sits in
+ *  the waveform strip's slot so the orb can fly into the waveform when done. */
+function Preparing({ stage, motion }: { stage: Stage | null; motion: boolean }) {
+  const label = stage?.label && stage.label !== "Ready" ? stage.label : STAGES[0];
+  const done = stage ? (stage.label === "Ready" ? STAGES.length : Math.max(0, STAGES.indexOf(stage.label))) : 0;
   return (
-    <div className="tryit-prep" role="status" aria-live="polite">
-      <div className="tryit-prep-title">Preparing your track <span title={name}>{name}</span></div>
+    <div className={"tryit-strip is-analyzing" + (motion ? " has-orb" : "")} role="status" aria-live="polite">
+      {motion && <AnalysisOrb phase="orb" />}
       <div className="tryit-prep-bar" aria-hidden="true"><i style={{ ["--pct" as string]: `${Math.round((stage?.fraction ?? 0) * 100)}%` }} /></div>
-      <ul className="tryit-prep-list">
-        {STAGES.map((label, i) => <li key={label} className={i < index ? "is-done" : i === index ? "is-active" : ""}>{label}</li>)}
-      </ul>
+      <div className="tryit-strip-cap"><span className="tryit-prep-label">{label}</span><span>{done} of {STAGES.length}</span></div>
     </div>
   );
 }
@@ -73,6 +78,8 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [over, setOver] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [morphing, setMorphing] = useState(false);
+  const motion = useRef(!prefersReducedMotion());
   const engine = useRef<PreviewEngine | null>(null);
   const player = useRef<ComparisonPlayer | null>(null);
   const epoch = useRef(0);
@@ -132,6 +139,7 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
       const loaded = await preview.load(Array.from({ length: decoded.numberOfChannels }, (_, c) => decoded.getChannelData(c).slice()), decodedRate);
       if (current !== epoch.current) return;
       setTrack({ name: file.name, duration: loaded.duration, peaks: loaded.peaks, sampleRate: decodedRate, fileRate, channels: decoded.numberOfChannels, analysis: loaded.analysis, workers: preview.workerCount });
+      setMorphing(motion.current);
       continuous.current = false;
       setStart(loaded.start);
       trackTryIt("loaded", { format: file.name.split(".").pop()?.toLowerCase() ?? "", length: minutesBucket(loaded.duration), rate: decodedRate, channels: decoded.numberOfChannels, analysis_s: Math.round(loaded.seconds * 10) / 10, total_s: Math.round((performance.now() - started) / 100) / 10, workers: preview.workerCount });
@@ -191,6 +199,17 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
     }
   }, []);
   useEffect(() => { player.current?.select(side, level(result?.source ?? null, result?.output ?? null, match)); }, [side, match, result]);
+  useEffect(() => {
+    // Presentation only, like the app: the orb's particles fly into the real
+    // waveform for one short window; any interaction cuts it early.
+    if (!morphing) return;
+    const cut = () => setMorphing(false);
+    const timer = setTimeout(cut, MORPH_MS);
+    window.addEventListener("pointerdown", cut);
+    window.addEventListener("keydown", cut);
+    return () => { clearTimeout(timer); window.removeEventListener("pointerdown", cut); window.removeEventListener("keydown", cut); };
+  }, [morphing]);
+  const morphPeaks = React.useMemo(() => (track && morphing ? Array.from(track.peaks) : null), [track, morphing]);
   useEffect(() => {
     if (!playing) return;
     const timer = setInterval(() => setPosition(player.current?.position ?? 0), 50);
@@ -277,7 +296,7 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
         <input ref={fileInput} type="file" hidden accept="audio/*,.wav,.mp3,.flac,.m4a,.aac,.ogg,.aif,.aiff" onChange={event => {
           const file = event.target.files?.[0]; event.target.value = ""; if (file) void loadFile(file);
         }} />
-        {!track ? (loading ? <Preparing name={fileName} stage={stage} /> : (
+        {!track && !loading ? (
           <button type="button" className={"tryit-drop" + (over ? " is-over" : "")}
             onClick={() => fileInput.current?.click()}
             onDragOver={event => { event.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
@@ -286,7 +305,9 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
             <strong>Drop your mix here</strong>
             <span>WAV, AIFF, FLAC, MP3 or M4A</span>
           </button>
-        )) : (
+        ) : !track ? (
+          <div className="tryit-file"><span>Preparing</span><b title={fileName}>{fileName}</b></div>
+        ) : (
           <div className="tryit-file">
             <b title={track.name}>{track.name}</b>
             <span className="tryit-chip">Analyzed</span>
@@ -321,9 +342,11 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
+        {loading && !track && <Preparing stage={stage} motion={motion.current} />}
         {track && (
-          <div className="tryit-strip">
-            <canvas ref={wave} width={1000} height={56} role="img" tabIndex={0}
+          <div className={"tryit-strip" + (morphing ? " is-morphing" : "")}>
+            <div className="tryit-strip-wave">
+            <canvas ref={wave} width={1000} height={72} role="img" tabIndex={0}
               aria-label="Track waveform. Drag the lit window to choose your thirty seconds; click inside it to move the playhead. Arrow keys nudge the window."
               onKeyDown={event => {
                 if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); event.stopPropagation(); moveStart(start + (event.key === "ArrowLeft" ? -SEEK_STEP : SEEK_STEP)); }
@@ -350,6 +373,8 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
                 else seekTo(stripSeconds(event) - start);
               }}
               onPointerCancel={() => { drag.current.on = false; }} />
+            {morphPeaks && <AnalysisOrb phase="morph" peaks={morphPeaks} />}
+            </div>
             <div className="tryit-strip-cap"><span>{fmt(start)} – {fmt(Math.min(track.duration, start + CLIP_SECONDS))}</span><span>drag to pick your 30 s · click inside to seek <kbd>←</kbd><kbd>→</kbd></span></div>
           </div>
         )}

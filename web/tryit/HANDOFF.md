@@ -33,9 +33,12 @@ build (root `vercel.json`, `dist/`); there is no second deploy target.
 
 ## How it behaves
 
-- **Load**: drop or pick a file. The card shows the desktop's analysis stages
-  as they really happen (loudness, dynamics, stereo field, tonal balance,
-  mastering context) plus "Choosing your 30 seconds". Loading finishes paused.
+- **Load**: drop or pick a file. The waveform slot shows the app's analysis
+  orb (`components/AnalysisOrb.tsx`, the same ~2.6k-particle sphere the app
+  draws while analyzing) with the desktop's real stage label and progress bar
+  under it; when the track lands, the orb's particles fly into the waveform
+  for `MORPH_MS`, cut early by any click or key. Reduced-motion users get the
+  label and bar only. Loading finishes paused.
 - **Analysis is the app's**: whole-track `SourceProfile` via
   `SourceProfile::from_measurements`, adaptive strength 0.5, confidence and
   compression guards `None` — exactly what desktop Track Master resolves while
