@@ -3,11 +3,13 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AdvancedPanel } from "./App";
+import samples from "./wire-samples.json";
 import { ADAPTIVE_STRENGTH_DEFAULT } from "./bindings";
 import type {
   AdvancedSettings,
   AnalysisResult,
   CompressionPlan,
+  GuardrailReadout,
   MasteringSettings,
   Preset,
 } from "./bindings";
@@ -73,6 +75,7 @@ async function renderAdvancedPanel(props: {
   onDeliveryBitDepth?: (bitDepth: number | null) => void;
   onDeliverySampleRate?: (sampleRate: number | null) => void;
   compressionPlan?: CompressionPlan | null;
+  adaptiveReadout?: GuardrailReadout | null;
 }): Promise<{ container: HTMLDivElement; root: Root }> {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -90,6 +93,7 @@ async function renderAdvancedPanel(props: {
         onDeliveryBitDepth={props.onDeliveryBitDepth ?? vi.fn()}
         onDeliverySampleRate={props.onDeliverySampleRate ?? vi.fn()}
         compressionPlan={props.compressionPlan ?? null}
+        adaptiveReadout={props.adaptiveReadout ?? null}
       />,
     );
   });
@@ -182,6 +186,42 @@ afterEach(() => {
 });
 
 describe("AdvancedPanel compressor mode", () => {
+  it("shows guarded backend bands and timings without changing Manual seed values", async () => {
+    const onAdvanced = vi.fn();
+    const band = { threshold_db: -7.2, ratio: 1.1, attack_ms: 18.25, release_ms: 241.2, makeup_db: 0.4 };
+    const readout: GuardrailReadout = { ...samples.guardrail_readout,
+      compression: { active: true, low: band, mid: { ...band, threshold_db: -8.4 }, high: { ...band, threshold_db: -6.1 } } };
+    const { container, root } = await renderAdvancedPanel({
+      settings: makeSettings(), adaptiveReadout: readout, onAdvanced,
+    });
+    expect(container.querySelector(".compressor-preset-summary")?.textContent).toContain("Resolved compression after Adapt");
+    expect(Array.from(container.querySelectorAll(".gr-meter-value"), node => node.textContent))
+      .toEqual(["-7.2 dB · 1.1:1", "-8.4 dB · 1.1:1", "-6.1 dB · 1.1:1"]);
+    expect(container.querySelector(".gr-meter")?.getAttribute("title"))
+      .toContain("attack 18.3 ms, release 241.2 ms, makeup 0.4 dB");
+    expect(container.querySelector<HTMLInputElement>('input[type="range"][aria-label="Preset density"]')?.value).toBe("0.5");
+    expect(onAdvanced).not.toHaveBeenCalled();
+    await act(async () => buttonNamed(container, "Manual").click());
+    expect(onAdvanced).toHaveBeenCalledWith(expect.objectContaining({
+      compression_mode: "manual", compression_low_threshold_db: -12.5,
+      compression_low_ratio: 1.45, compression_low_attack_ms: 15, compression_low_release_ms: 250,
+    }));
+    await act(async () => root.unmount());
+  });
+
+  it("labels missing resolved values as pre-Adapt and respects resolved bypass", async () => {
+    const missing = await renderAdvancedPanel({ settings: makeSettings() });
+    expect(missing.container.querySelector(".compressor-preset-summary")?.textContent).toContain("before Adapt");
+    expect(missing.container.querySelector(".gr-meter")?.getAttribute("title")).toContain("resolved values unavailable");
+    await act(async () => missing.root.unmount());
+    const readout: GuardrailReadout = { ...samples.guardrail_readout,
+      compression: { ...samples.guardrail_readout.compression, active: false } };
+    const inactive = await renderAdvancedPanel({ settings: makeSettings(), adaptiveReadout: readout });
+    expect(inactive.container.querySelector(".compressor-preset-summary")?.textContent).toBe("Resolved compression: inactive.");
+    expect(Array.from(inactive.container.querySelectorAll(".gr-meter-value"), node => node.textContent)).toEqual(["inactive", "inactive", "inactive"]);
+    await act(async () => inactive.root.unmount());
+  });
+
   it("does not show a reset button on delivery profile", async () => {
     const { container, root } = await renderAdvancedPanel({
       settings: makeSettings(),

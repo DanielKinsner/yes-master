@@ -394,6 +394,30 @@
     "bright_deadband": 0.0625,
     "bright_trim": 0.25,
     "brightness_share": 0.25,
+    "compression": {
+      "active": true,
+      "high": {
+        "attack_ms": 4.999973773956299,
+        "makeup_db": 6.0,
+        "ratio": 2.5,
+        "release_ms": 90.00383758544922,
+        "threshold_db": -20.0
+      },
+      "low": {
+        "attack_ms": 10.000042915344238,
+        "makeup_db": 6.0,
+        "ratio": 2.0,
+        "release_ms": 120.01889038085938,
+        "threshold_db": -24.0
+      },
+      "mid": {
+        "attack_ms": 7.9999680519104,
+        "makeup_db": 5.5,
+        "ratio": 2.0,
+        "release_ms": 110.00699615478516,
+        "threshold_db": -22.0
+      }
+    },
     "confidence": {
       "bright": {
         "confidence": 1.0,

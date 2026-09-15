@@ -278,10 +278,15 @@ The app has an explicit compressor mode field:
 `Off` does not bypass the limiter, ceiling protection, LUFS landing, metering,
 or export warnings.
 
-The per-band compressor card labels preset fallback values as `Preset`, not
-track-aware `Auto`. If a low-dynamic-range source is loaded while `Preset` mode
-is active, the card gives local guidance to lower density or switch Off if
-movement collapses.
+Density Auto keeps its requested null value: the thumb shows 0.50 for named
+presets and 0.00 for Custom. Adapt/source changes do not move that requested
+thumb. Idle band readouts use backend-resolved compression after source guards;
+their tooltips include resolved attack, release and makeup. Until a matching
+source/settings/analysis response arrives, fallback values are labeled before
+Adapt. This display never seeds Manual values: entering Manual retains the
+existing requested preset/density defaults and explicit overrides. If a
+low-dynamic-range source is loaded while `Preset` mode is active, the card gives
+local guidance to compare compression Off by ear.
 
 ## Private Fixture And Reference Lanes
 

@@ -14,9 +14,11 @@ Important frontend helpers:
 
 - `src/lib/settings-transitions.ts` injects source LUFS and handles profile /
   loudness-setting transitions.
-- `src/lib/compressor-auto.ts` computes preset/density compressor readouts for
-  the `Preset` compressor UI. The filename is historical; the user-facing
-  behavior is not track-aware auto-analysis.
+- `src/lib/compressor-auto.ts` computes requested preset/density defaults for
+  Manual initialization and accurately labeled pre-Adapt fallback display.
+  Current band readouts come from `guardrails::readout_for`'s actual resolved
+  `ChainCoeffs`; the hook associates each response with source, settings,
+  analysis and mode/gate identity. Missing or stale values cannot appear resolved.
 - `src/lib/export-location.ts` tracks last-used export folders and path helpers.
 - `src/lib/shortcuts.ts` is the one keyboard-shortcut catalogue (handlers,
   the `?` overlay and Help all read it).

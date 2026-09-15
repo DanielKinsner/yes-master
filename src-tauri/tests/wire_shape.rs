@@ -256,6 +256,8 @@ fn render_job_sample() -> RenderJob {
 
 fn guardrail_readout_sample() -> GuardrailReadout {
     GuardrailReadout {
+        compression: yes_master_lib::guardrails::readout_for(&mastering_settings_sample())
+            .compression,
         signal_chain: Some(yes_master_lib::guardrails::SignalChainReadout {
             eq_active: true,
             warmth_active: false,

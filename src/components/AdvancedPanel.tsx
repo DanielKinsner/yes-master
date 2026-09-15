@@ -12,6 +12,7 @@ import type {
   GuardrailReadout,
   MasteringSettings,
   Preset,
+  ResolvedCompressionReadout,
 } from "../bindings";
 import {
   ADAPTIVE_STRENGTH_DEFAULT,
@@ -180,6 +181,7 @@ export function AdvancedPanel({
         onAdvanced={onAdvanced}
         onUpdate={update}
         compressionPlan={compressionPlan}
+        resolvedCompression={adaptiveReadout?.compression}
         liveGr={liveGr}
         isPlayingMaster={isPlayingMaster}
       />
@@ -549,6 +551,7 @@ function PerBandCompressorCard({
   onAdvanced,
   onUpdate,
   compressionPlan,
+  resolvedCompression,
   liveGr,
   isPlayingMaster,
 }: {
@@ -561,13 +564,18 @@ function PerBandCompressorCard({
     value: number | boolean | null,
   ) => void;
   compressionPlan?: CompressionPlan | null;
+  resolvedCompression?: ResolvedCompressionReadout | null;
   liveGr: { low: number; mid: number; high: number } | null;
   isPlayingMaster: boolean;
 }) {
   type Band = "low" | "mid" | "high";
   const [active, setActive] = useState<Band>("low");
   const autoReadouts = compressorAutoReadouts(settings);
-  const presetSummary = presetCompressionSummary(settings, autoReadouts.low);
+  const presetSummary = resolvedCompression
+    ? resolvedCompression.active
+      ? "Resolved compression after Adapt. Band values include source adjustments."
+      : "Resolved compression: inactive."
+    : presetCompressionSummary(settings, autoReadouts.low);
   const compressorMode: CompressionMode = a.compression_mode ?? "preset";
   const manualEnabled = compressorMode === "manual";
   const adaptivePlan =
@@ -684,18 +692,18 @@ function PerBandCompressorCard({
             // to live gain reduction while the master plays.
             const manualThreshold = bandFields[band].threshold;
             const manualRatio = bandFields[band].ratio;
-            const thresholdDb =
+            const thresholdDb = resolvedCompression?.[band].threshold_db ?? (
               manualEnabled && manualThreshold != null
                 ? manualThreshold
-                : autoReadouts[band].thresholdDb;
-            const ratio =
-              manualEnabled && manualRatio != null ? manualRatio : autoReadouts[band].ratio;
+                : autoReadouts[band].thresholdDb);
+            const ratio = resolvedCompression?.[band].ratio ?? (
+              manualEnabled && manualRatio != null ? manualRatio : autoReadouts[band].ratio);
             // Density 0 in Preset mode = the preset compressor is inactive;
             // identity values ("0.0 dB · 1.0:1") would read as real settings.
-            const presetInactive =
+            const presetInactive = resolvedCompression ? !resolvedCompression.active : (
               !manualEnabled &&
               (settings.advanced.compression_density ??
-                (settings.preset.kind === "custom" ? 0 : 0.5)) <= 0.001;
+                (settings.preset.kind === "custom" ? 0 : 0.5)) <= 0.001);
             const idleText = presetInactive
               ? "inactive"
               : `${thresholdDb.toFixed(1)} dB · ${ratio.toFixed(1)}:1`;
@@ -706,7 +714,9 @@ function PerBandCompressorCard({
                 title={
                   isPlayingMaster
                     ? `${bandLabel(band)} gain reduction (live)`
-                    : `${bandLabel(band)} threshold · ratio — live gain reduction shows here while Mastered plays`
+                    : resolvedCompression
+                      ? `${bandLabel(band)} resolved threshold · ratio; attack ${resolvedCompression[band].attack_ms.toFixed(1)} ms, release ${resolvedCompression[band].release_ms.toFixed(1)} ms, makeup ${resolvedCompression[band].makeup_db.toFixed(1)} dB. Live gain reduction shows here while Mastered plays.`
+                      : `${bandLabel(band)} ${manualEnabled ? "requested Manual" : "preset before Adapt"} threshold · ratio; resolved values unavailable. Live gain reduction shows here while Mastered plays.`
                 }
               >
                 <span className="gr-meter-label">{bandLabel(band)}</span>

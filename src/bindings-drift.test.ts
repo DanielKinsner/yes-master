@@ -36,6 +36,8 @@ import type {
   ExportReport,
   GuardrailReadout,
   SignalChainReadout,
+  ResolvedCompressionReadout,
+  ResolvedCompressionBand,
   LandingStatus,
   MasteringSettings,
   PlaybackTick,
@@ -116,6 +118,19 @@ export type Drift_GuardrailReadout_TsOnly = AssertNever<
 
 export type Drift_SignalChainReadout_RustOnly = AssertNever<
   RustOnly<typeof samples.guardrail_readout.signal_chain, SignalChainReadout>
+>;
+
+export type Drift_ResolvedCompressionReadout_RustOnly = AssertNever<
+  RustOnly<typeof samples.guardrail_readout.compression, ResolvedCompressionReadout>
+>;
+export type Drift_ResolvedCompressionReadout_TsOnly = AssertNever<
+  TsOnly<typeof samples.guardrail_readout.compression, ResolvedCompressionReadout>
+>;
+export type Drift_ResolvedCompressionBand_RustOnly = AssertNever<
+  RustOnly<typeof samples.guardrail_readout.compression.low, ResolvedCompressionBand>
+>;
+export type Drift_ResolvedCompressionBand_TsOnly = AssertNever<
+  TsOnly<typeof samples.guardrail_readout.compression.low, ResolvedCompressionBand>
 >;
 export type Drift_SignalChainReadout_TsOnly = AssertNever<
   TsOnly<typeof samples.guardrail_readout.signal_chain, SignalChainReadout>
