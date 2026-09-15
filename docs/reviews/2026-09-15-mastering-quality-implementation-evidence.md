@@ -15,7 +15,7 @@ No push, main integration, publication, spending or private-audio commit is auth
 | D2 | Implemented; checkpoint verification passed | Actual guarded coefficients, request-associated source/settings/analysis identity, accurate fallback, unchanged Manual seeding. 972 settings configurations / 2,916 band comparisons; 33 guardrail tests; 894 frontend tests, build/headless, wire golden and bridges pass. |
 | C0 | Complete as an initial feasibility checkpoint | Sixty owner/Funk/Aphelion deliveries pass both preserved whole-file references; source-relative single render versus bounded search, three-trial short/typical/long reuse costs, native callback/lifecycle and passage-state limits are recorded. Recommendations below; no sonic policy adopted. |
 | B2 | Qualified library core implemented | Combined finite-sinc interval and measured SOXR response pass 481 explicit finite-zero-extension cases and six whole-file witnesses. Real FFTs reduce owner/long verifier cost about 39% in three isolated trials. The replayable library core matches all 487 standalone results exactly; its exact-dither reader matches written PCM16/24/float. Reference-scope discrepancies are retained and independently explained. |
-| B3 | In progress | Qualified finalizer is used by Track/rendered preview, background preview planning and album per-track PCM. All five original exports pass independent finite SOXR16/64 checks; owner On/Off hashes remain exact. Whole-file residual reuse passes 1,095 independent checks, with fresh-meter fallback for excessive uncertainty. Desktop library/integration/private-fixture suite passes. Album programme joins and device-rate/live-toggle contracts remain open. |
+| B3 | In progress | Qualified finalizer is used by Track/rendered preview, background preview planning and album per-track PCM. All five original exports pass independent finite SOXR16/64 checks; owner On/Off hashes remain exact. Whole-file residual reuse passes 1,095 independent checks, with fresh-meter fallback for excessive uncertainty. Desktop library/integration/private-fixture suite passes for the first finalizer slice. Album programme correction and affected-route verification pass below; device-rate/live-toggle contracts remain open. |
 | B4, C1–C3, E | Pending | Existing revised dependencies and adoption/calibration gates remain. |
 
 The subsequent desktop library/integration run (`d2-rust-fixtures.log`) also
@@ -31,6 +31,54 @@ four existing private-fixture tests actually run. The first run retained an
 obsolete receipt-to-ebur128 equality failure; the corrected tests use the declared
 meter on saved PCM, retain their original tolerances, and do not replace the
 independent reconstruction checks. No new listening/installed/Mac verdict.
+
+### B3 album programme correction
+
+The new application-route regression establishes a boundary failure, rather than
+assuming one: two individually protected one-frame tracks, sourced from +0.95
+and -0.95 at 48 kHz, deliver PCM16 `[0.8868103, -0.8868408]`. Their concatenation
+reads -0.236029 dBTP under the qualified finite reconstruction model against a
+-1 request. `b3-album-join-before-v1.log` retains the original failure.
+
+Album export now stages exact component PCM and retained pre-quantization float
+masters in a private temporary directory. It measures the complete assembled
+programme through a bounded-buffer, random-access WAV provider before finalizing
+either form. If necessary, one common downward gain is applied to the retained
+float masters, with the existing deterministic quantization seed. Components are
+remeasured, the programme is assembled from those exact components and checked
+again. Exhaustion fails the render and cleans staged/owned outputs. No independent
+continuous-file trim, repeated quantized attenuation or lossy transcode is used.
+
+For a current qualified upper bound U, error norm K, quantizer error q and gain
+rounding r, the correction is bounded by
+`g <= (ceiling / 10^(0.0501/20) - K*(2q+r)) / U`.
+The extra ratio follows from the qualified estimator's maximum interval width;
+it is not a universal audio headroom margin. The common gain also satisfies each
+component's own bound. Programme ceiling is the highest (least restrictive) of
+the resolved component ceilings; every component retains its own stricter limit,
+target and override. This avoids silently replacing a deliberate per-track
+ceiling with another track's setting. Gap dither and existing frame-flooring
+semantics are preserved.
+
+`b3-album-suite-v3.log` passes all seven album tests, including nine actual
+PCM16/24/float programme cases with butt joins and one/seven-frame gaps. Exact
+PCM parity, cleanup and fresh direct cardinal-sinc sums at 16384 points/sample
+pass. The corrected butt-join upper bounds are -1.052775/-1.050120/-1.050103 dBTP;
+independent sums read -1.094412/-1.091756/-1.091740. The file provider's random
+reads match the quantizer exactly for mono/stereo, all three formats and forward/
+backward boundary-crossing reads (`b3-file-pcm-v1.log`).
+
+The earlier expanded gap test v2 failed because `7/48000` in f32 multiplied back
+to just below seven and the established transition conversion floors it. The
+test now specifies a quarter-frame offset within the intended integer bucket;
+no production duration contract or PCM-parity assertion was relaxed. Final mixed-ceiling/cancellation-aware verification (`b3-album-routes-v5.log`)
+passes seven album, eleven audio-invariant and three MP3-route tests, including
+single continuous encode, order, gaps, overrides and cleanup. Strict all-target
+Clippy passes (`b3-album-clippy-v2.log`). The two opt-in new-codec album tests were
+explicitly ignored in this command; B4 must run their qualified-encoder lane.
+Staging adds temporary disk I/O and storage; album cost is not yet benchmarked.
+Memory holds one decoded/rendered track, not the whole album. Realtime/native
+device playback and listening are not established by these offline tests.
 
 ### First verification details
 

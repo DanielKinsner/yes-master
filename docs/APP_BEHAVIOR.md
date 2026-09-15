@@ -67,8 +67,12 @@ Track Master supports:
   Exact deterministic delivery samples are verified before writing. Peak readings
   include finite edges and a measured reconstruction uncertainty, with estimator
   version recorded in diagnostics; live dBFS meters remain a separate reading.
-  Album programme joins and device-rate audition are tracked separately in the
-  active mastering-quality implementation ledger.
+  Album export verifies the whole assembled programme before finalizing either
+  form. A necessary boundary correction applies the same downward gain to all
+  retained float tracks, preserving relative levels and exact component/album
+  PCM parity. Each track keeps its own ceiling; the programme ceiling is the
+  least restrictive resolved track ceiling. Device-rate audition remains tracked
+  separately in the active mastering-quality implementation ledger.
 - Delivery profile selection.
 - Advanced controls. The Advanced rail carries a global **Reset all**
   (2026-08-19; it confirms first — a misclick must not wipe a tuning) that returns every non-managed control — gains, EQ gains and

@@ -21,7 +21,9 @@
 > reader. All five original exports pass independent finite SOXR16/64 checks;
 > owner On/Off hashes remain exact and the desktop/private-fixture suite passes.
 > Whole-file residual reuse is qualified; overly wide intervals use a fresh pass.
-> Album programme joins, device-rate/live-toggle contracts and B4 remain open.
+> A newly reproduced album join failure now has staged programme verification
+> and a common-gain correction preserving component PCM parity; album, audio
+> invariant and MP3-route checks pass. Device-rate/live-toggle contracts and B4 remain open.
 > Automatic sonic policy is still pending the focused owner choice, with local
 > level-matched review audio prepared. No new listening verdict is inferred.
 

@@ -15,6 +15,8 @@ pub struct ProtectedPcm {
     pub lra: f32,
     /// Conservative qualified reconstruction reading for exact delivery PCM.
     pub true_peak_dbtp: f32,
+    /// Full precision bound for subsequent programme-level gain planning.
+    pub peak_upper: f64,
     pub interval_db: f64,
     pub used_fresh_meter: bool,
 }
@@ -205,6 +207,7 @@ pub fn finalize(
         },
         interval_db,
         used_fresh_meter,
+        peak_upper: upper,
     })
 }
 
