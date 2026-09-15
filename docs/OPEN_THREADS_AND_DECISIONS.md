@@ -10,8 +10,14 @@
 > 894 frontend tests and affected bridges pass. Fresh application exports preserve
 > the owner On/Off WAV hashes; the historical hot-start CD defect is corrected.
 > Independent Funk/50 ms checks still expose the existing peak meter's underread.
-> C0 preparation/quality/experience experiments and B2 qualification continue;
-> B3 integration and sonic-policy adoption remain open.
+> C0 is complete as an initial feasibility checkpoint: 60 checked deliveries,
+> controlled short/typical/long reuse timings and native lifecycle/callback proof.
+> Matching raw reuse makes target edits substantially faster; broad preset
+> precomputation is not supported. B2's standalone combined estimator passes 481
+> finite-zero-extension cases and six whole-file witnesses with preserved reference
+> limitations; performance work and production B3 integration remain open.
+> Automatic sonic policy is still pending the focused owner choice, with local
+> level-matched review audio prepared. No new listening verdict is inferred.
 
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
 > Dan accepts longer initial analysis/preparation for demonstrated audio quality,

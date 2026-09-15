@@ -28,6 +28,32 @@ Additional probes added during C0:
   does not bound finite-window truncation error. Retain failed cases; no production
   peak estimator has been selected from these probes.
 
+## B2 finite reconstruction experiments
+
+Read the [qualification record](../../../docs/reviews/2026-09-15-peak-reconstruction-qualification.md)
+before interpreting results. The application detector has not been replaced.
+
+- `qualify_sinc_bound.py` / `sinc_tail_moments.py` independently evaluate finite
+  cardinal-sinc intervals, omitted-tail bounds and optional signed-tail refinement.
+- Build `mastering_quality_peak_probe` and run its four unit tests. Its optional
+  third argument is the numeric `kernel.f64le` file from `extract_soxr_kernel.py`.
+  The driver compares the native candidate with ebur128 0.1.10 at three chunk sizes.
+- `qualify_peak_probe.py` creates fresh synthetic inputs and retains comparisons
+  against the historical direct references, including failures.
+- `extract_soxr_kernel.py` records an interior impulse response with exact generator
+  provenance and independently varied length/position checks. The numeric data
+  stays under ignored output until production selection.
+- `check_reconstruction_edges.py` establishes the direct/padded SOXR distinction
+  and independently evaluates long alternating signals without FFT or moment trees.
+- `qualify_hybrid_peak.py` retains the combined Python experiment and every old-
+  reference discrepancy. `check_native_peak_bounds.py` adds explicitly zero-extended
+  16/32/64× SOXR checks alongside the retained old references.
+- `ebu_phase_signals.py` separately synthesizes Tech 3341 cases 15–23. The earlier
+  `ebu20plus` stress cases are preserved and do not establish EBU compliance.
+
+All sources/outputs and copied binaries are local evidence. Use new output names
+when changing a runner. These probes are not installed-app or listening proof.
+
 ## Current application witnesses
 
 From `src-tauri`, build `mastering_quality_witness` with

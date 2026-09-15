@@ -8,6 +8,8 @@ import argparse
 import importlib.util
 import json
 from pathlib import Path
+import re
+import subprocess
 import time
 import numpy as np
 import soundfile as sf
@@ -24,6 +26,18 @@ def module(name, path):
 
 ref = module('checked_reference', 'scripts/research/final-review-20260915/verify.py')
 shape = module('shape', 'scripts/research/mastering-quality-20260915/analyze_music.py')
+
+
+def channel_peaks(x, path, rate):
+    fft = [ref.peak_reference(x[:,i:i+1],factor=16) for i in range(x.shape[1])]
+    filt = f'aformat=sample_fmts=dbl,aresample={rate*16}:resampler=soxr:precision=33:osf=dbl,astats=metadata=0:reset=0'
+    run = subprocess.run(['ffmpeg','-hide_banner','-nostats','-i',str(path),'-af',filt,
+                          '-c:a','pcm_f64le','-f','null','-'],capture_output=True,text=True,check=True)
+    values = [float(v) for v in re.findall(r'Peak level dB: (-inf|[-\d.]+)',run.stderr)]
+    assert len(values) == x.shape[1]+1
+    soxr = [max(-300.,v) for v in values[:-1]]
+    sample = [ref.db(np.max(np.abs(x[:,i]))) for i in range(x.shape[1])]
+    return {'fft_dbtp':fft,'soxr_dbtp':soxr,'sample_dbfs':sample}
 
 
 def main():
@@ -49,7 +63,7 @@ def main():
     sections = source['sections10_rms_db']
     active = [i for i, value in enumerate(sections) if value > -40]
     lo, hi = min(active, key=lambda i: sections[i]), max(active, key=lambda i: sections[i])
-    result = {'version': 'c0-checked-v1', 'source_sha256': report['source_sha256'],
+    result = {'version': 'c0-checked-v2', 'source_sha256': report['source_sha256'],
               'reference_controls_passed': len(controls), 'source': source,
               'section_indices': [lo, hi], 'source_section_contrast_db': sections[hi]-sections[lo],
               'peak_scope': 'FFT16 periodic finite blocks with 8192-frame overlap and zero file edges; float64 SOXR16 precision33; original samples included',
@@ -60,9 +74,9 @@ def main():
         x, rate = sf.read(raw_path, dtype='float32', always_2d=True)
         expected = (source['frames'] * rate + source['rate'] - 1) // source['rate']
         assert len(x) == expected and x.shape[1] == source['channels'] and np.isfinite(x).all()
-        fft = ref.peak_reference(x, factor=16)
-        soxr = ref.float_soxr(raw_path, rate)
-        raw_peak = max(fft, soxr, ref.db(np.max(np.abs(x))))
+        raw_channels = channel_peaks(x,raw_path,rate)
+        fft, soxr = max(raw_channels['fft_dbtp']),max(raw_channels['soxr_dbtp'])
+        raw_peak = max(fft, soxr, max(raw_channels['sample_dbfs']))
         raw_lufs = c['metrics']['raw_lufs']
         targets = [-14., -9.] if c['id'] == 'control' else [c['target']]
         raw_checked_s = time.perf_counter() - start
@@ -72,9 +86,9 @@ def main():
             delivered = (x * np.float32(10**(gain/20))).astype(np.float32)
             path = args.output / (c['id'] + f'-{abs(target):g}.wav')
             sf.write(path, delivered, rate, subtype='FLOAT')
-            final_fft = ref.peak_reference(delivered, factor=16)
-            final_soxr = ref.float_soxr(path, rate)
-            final_peak = max(final_fft, final_soxr, ref.db(np.max(np.abs(delivered))))
+            final_channels = channel_peaks(delivered,path,rate)
+            final_fft,final_soxr = max(final_channels['fft_dbtp']),max(final_channels['soxr_dbtp'])
+            final_peak = max(final_fft, final_soxr, max(final_channels['sample_dbfs']))
             final_check_s = time.perf_counter() - start
             m = shape.metric(path, path.stem, source['transient_times'])
             m['section_contrast_db'] = m['sections10_rms_db'][hi]-m['sections10_rms_db'][lo]
@@ -84,6 +98,7 @@ def main():
             row = {'id': c['id'], 'policy': c.get('policy','control'), 'target': target,
                    'extra_drive_db': c['metrics']['extra_drive_db'], 'landing_gain_db': gain,
                    'raw_fft_dbtp': fft, 'raw_soxr_dbtp': soxr,
+                   'raw_channels':raw_channels,'final_channels':final_channels,
                    'final_fft_dbtp': final_fft, 'final_soxr_dbtp': final_soxr,
                    'peak_pass': final_peak <= -1.0 + .002,
                    'target_error_lu': m['lufs']-target,

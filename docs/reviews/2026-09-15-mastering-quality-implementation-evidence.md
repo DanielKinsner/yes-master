@@ -13,8 +13,8 @@ No push, main integration, publication, spending or private-audio commit is auth
 | B1 | Complete locally | Shared optional-LUFS decision and raw measurement availability; 12 no-target/short-audio PCM16/24/float regressions and historical Funk/50 ms witnesses pass. Current detector still underreads independent peaks: B2/B3 remain open. |
 | D1 | Complete | Named Auto 0.50 / Custom 0.00, saved null unchanged; summary identifies pre-Adapt values. Build, all 38 app headless checks, landing checks and 892 frontend tests passed. Fresh Advanced capture inspected: thumb/readout/summary visible without overlap. |
 | D2 | Implemented; checkpoint verification passed | Actual guarded coefficients, request-associated source/settings/analysis identity, accurate fallback, unchanged Manual seeding. 972 settings configurations / 2,916 band comparisons; 33 guardrail tests; 894 frontend tests, build/headless, wire golden and bridges pass. |
-| C0 | Experiment running | Twenty owner-source candidate deliveries pass both checked whole-file peak references. Native callback and full AudioPlayer lifecycle probes passed with limits below. Three-trial short/typical/long preparation comparisons are being consolidated. No sonic policy adopted. |
-| B2 | Qualification in progress | Five Hann-sinc candidates failed declared FFT-reference edge cases; none adopted. See below. |
+| C0 | Complete as an initial feasibility checkpoint | Sixty owner/Funk/Aphelion deliveries pass both preserved whole-file references; source-relative single render versus bounded search, three-trial short/typical/long reuse costs, native callback/lifecycle and passage-state limits are recorded. Recommendations below; no sonic policy adopted. |
+| B2 | Candidate qualification passed; performance/integration pending | Combined finite-sinc interval and measured SOXR response pass 481 explicit finite-zero-extension cases and six whole-file witnesses. Historical reference-scope discrepancies are retained and independently explained. Standalone experiments only; production still uses the previous detector. |
 | B3–B4, C1–C3, E | Pending | Existing revised dependencies and adoption/calibration gates remain. |
 
 The subsequent desktop library/integration run (`d2-rust-fixtures.log`) also
@@ -228,6 +228,66 @@ not an unbounded production allocation policy. New EQ/Density/Adapt/preset
 settings still require nonlinear processing; source preparation does not erase
 that cost. Use the single-rule candidate as the low-cost quality baseline and
 retain bounded full-song search for difficult target/preservation tradeoffs.
+
+### C0 completion and initial C1 budget
+
+The completed `c0-funk-checked-v2/` and `c0-aphelion-checked-v2/` comparisons each
+add 20 independently checked deliveries, including per-channel FFT/SOXR/sample
+maxima. Together with the owner comparison, all 60 retained outputs pass the
+preserved requested-ceiling check. No new unseen holdout was used.
+
+At −14 LUFS the single rule reaches the target on all three sources; source-
+anchored contrast changes are −0.18/−0.48/−0.59 dB for owner/Funk/Aphelion versus
+−1.53/−1.05/−2.18 dB for current processing. At −9 it reaches the target on owner
+and Aphelion, but Funk delivers −12.4 LUFS. No initial bounded-grid Funk candidate
+reaches −9; the highest drive delivers −11.1 LUFS with −4.23 dB contrast change.
+This is a preserved infeasibility/character tradeoff, not grounds to widen the
+grid automatically until any target is reached. The Aphelion single rule at −9
+also loses more contrast (−2.43 dB) than its −14 result. Broader C1/C2 regression
+cases and explicit preservation criteria remain necessary.
+
+Raw rendering/old-meter costs for all 19 candidates were 123/81/181 seconds for
+owner/Funk/Aphelion; individual single candidates took about 4.9–5.4/3.8–4.0/
+8.4–9.3 seconds. These quality-run timings overlapped other experiments and are
+descriptive, not the controlled comparison above. The independent references
+add substantial whole-file analysis cost. A production candidate budget must be
+remeasured with B2's verifier; a search count alone is not a responsiveness budget.
+
+Proceed to C1 with a single-rule baseline, a maximum eight-point initial grid
+and at most two refinements, full-song finalist checks and explicit infeasibility.
+Do not adopt passage screening yet: preceding context improves local agreement,
+but ranking/missed-case qualification remains open. Source facts and a byte-capped
+matching raw cache are the recommended preparation work. First-result preparation
+can move useful work upfront; broad preset precomputation is not supported.
+
+The owner was asked the focused automatic-dynamics direction with concrete
+owner-track evidence; no answer is recorded yet. Equal-loudness local review
+files under `c0-owner-level-matched-v1/` compare current processing and the lower-
+drive candidate at −14.0 LUFS. No listening verdict or sonic adoption is inferred.
+Continue independent output protection and both offline tradeoff measurements.
+
+### B2 subsequent qualification
+
+See [peak reconstruction qualification](2026-09-15-peak-reconstruction-qualification.md)
+for the exact finite-file models, failures, independent direct-sum/zero-padding
+witnesses and current result. The combined standalone native candidate passes
+481/481 finite-zero-extension cases and 6/6 owner/export witnesses against SOXR
+at 16/32/64×, retaining old direct FFT/SOXR differences separately. The full-band
+interval widths on the six witnesses are 0.042–0.049 dB. Nine separately synthesized
+Tech 3341 phase/burst cases 15–23 also pass their published response tolerances.
+
+The official EBU v5 download returned HTTP 403; no official sequences were acquired
+and no full official-test-set compliance claim is made. The earlier four exploratory
+`ebu20plus` signals inserted their amplitude change at nonzero phase; those remain
+valid stress inputs but are not the new zero-crossing EBU-like construction.
+
+Actual raw witness peaks still fail the requested −1 ceiling under the new meter:
+Funk approximately −0.669 and 50 ms approximately −0.748 dB. This is expected while
+B3 is unimplemented, and supplies specific protection regressions. The current
+standalone meter costs 24–37 seconds on owner material including its FIR response
+under concurrent research load. Optimize and isolate its preparation/per-file cost
+before production integration; no realtime callback change is authorized by a
+numerical qualification result alone.
 
 ### Native playback and cancellation
 
