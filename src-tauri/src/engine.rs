@@ -1243,12 +1243,24 @@ pub fn mastering_render_format_with_cancel(
     // Measure before landing to choose a ceiling-bounded gain. The receipt
     // gets a separate measurement of final delivery PCM: quantization and
     // absolute-gate changes cannot be represented by shifting these values.
-    let measured = measure_landing(
+    let measured = match measure_landing(
         &samples,
         rendered_sample_rate,
         pcm.channels,
         options.cancel_flag,
-    )?;
+    ) {
+        Ok(measured) => measured,
+        Err(_) if render_cancelled(options.cancel_flag) => {
+            return Ok(cancelled_render_job(
+                job_id,
+                kind,
+                vec![track_id],
+                1.0,
+                started_at_iso,
+            ));
+        }
+        Err(error) => return Err(error),
+    };
     let measure_ms = stage_ms(t_stage);
 
     // Peak protection applies even without a loudness target or usable LUFS.
