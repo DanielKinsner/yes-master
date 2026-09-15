@@ -194,6 +194,16 @@ fn mastering_quality_native_lifecycle_bench() {
 #[test]
 #[ignore = "requires local output device and restored private source; writes timing JSON only"]
 fn mastering_quality_native_callback_bench() {
+    callback_bench(false);
+}
+
+#[test]
+#[ignore = "muted native streaming SRC candidate; requires restored private source and output device"]
+fn mastering_quality_streaming_callback_bench() {
+    callback_bench(true);
+}
+
+fn callback_bench(streaming_src: bool) {
     let path = std::env::var("YES_MASTER_BENCH_FILE").expect("source path");
     let out = PathBuf::from(std::env::var("YES_MASTER_CALLBACK_REPORT").expect("fresh JSON path"));
     assert!(!out.exists());
@@ -217,10 +227,13 @@ fn mastering_quality_native_callback_bench() {
     config.buffer_size = cpal::BufferSize::Fixed(256);
     let rate = config.sample_rate.0;
     let start = Instant::now();
-    let playback = Arc::new(
+    let playback = Arc::new(if streaming_src {
+        pcm.samples.clone()
+    } else {
         crate::sample_rate::convert_interleaved(&pcm.samples, pcm.sample_rate, rate, pcm.channels)
-            .unwrap(),
-    );
+            .unwrap()
+    });
+    let chain_rate = if streaming_src { pcm.sample_rate } else { rate };
     let playback_src_s = start.elapsed().as_secs_f64();
     let mut settings = tests::settings_with_intensity(0.75);
     settings.advanced = AdvancedSettings::default();
@@ -234,11 +247,11 @@ fn mastering_quality_native_callback_bench() {
     let integrated = Arc::new(AtomicI32::new(i32::MIN));
     let ring = Arc::new(SpectrumRing::new());
     let (tx, rx) = mpsc::channel();
-    let mut source = MasteringSource::new(
+    let source = MasteringSource::new(
         playback,
         pcm.channels,
-        rate,
-        crate::dsp::MasteringChain::new(rate, pcm.channels as usize, &settings),
+        chain_rate,
+        crate::dsp::MasteringChain::new(chain_rate, pcm.channels as usize, &settings),
         rx,
         peak.clone(),
         Arc::new(AtomicU32::new(0)),
@@ -247,6 +260,17 @@ fn mastering_quality_native_callback_bench() {
         integrated,
         ring.clone(),
     );
+    let construct_start = Instant::now();
+    let (mut source, stream_error): (Box<dyn Iterator<Item = f32> + Send>, _) = if streaming_src {
+        let converted =
+            crate::quality_source::QualitySource::new(source.with_render_alignment(), rate)
+                .unwrap();
+        let slot = converted.error_slot();
+        (Box::new(converted), Some(slot))
+    } else {
+        (Box::new(source), None)
+    };
+    let streaming_construction_s = construct_start.elapsed().as_secs_f64();
     // Fixed allocation before the callback; atomic slots avoid callback locks.
     let slots: Arc<Vec<[AtomicU64; 3]>> = Arc::new(
         (0..16_384)
@@ -326,7 +350,7 @@ fn mastering_quality_native_callback_bench() {
         }
         done_tx.send(rows).unwrap();
     });
-    let mut spectrum = SpectrumAnalyzer::new(rate);
+    let mut spectrum = SpectrumAnalyzer::new(chain_rate);
     let mut snapshots = 0;
     let mut lufs_updates = 0;
     let mut previous_lufs = i32::MIN;
@@ -335,7 +359,7 @@ fn mastering_quality_native_callback_bench() {
         settings.eq_high_db = if generation % 2 == 0 { 1.0 } else { -1.0 };
         tx.send(LiveCoeffUpdate {
             generation,
-            coeffs: crate::dsp::ChainCoeffs::from_settings(rate, &settings),
+            coeffs: crate::dsp::ChainCoeffs::from_settings(chain_rate, &settings),
         })
         .unwrap();
         std::hint::black_box(spectrum.compute(&ring));
@@ -363,7 +387,9 @@ fn mastering_quality_native_callback_bench() {
         .iter()
         .filter(|r| r[0] as f64 > r[1] as f64 / rate as f64 * 1e9)
         .count();
-    let report = json!({"scope":"muted production MasteringSource on CPAL callback, concurrent preview landing and coefficient edits; not installed UI/lifecycle proof",
+    let report = json!({"scope":"muted MasteringSource on CPAL callback, concurrent preview landing and coefficient edits; optional test-only post-chain streaming SRC; meters remain pre-SRC diagnostics; not installed UI/lifecycle proof",
+        "streaming_src_candidate":streaming_src,"source_rate":pcm.sample_rate,"chain_rate":chain_rate,
+        "streaming_construction_s":streaming_construction_s,"streaming_error_code":stream_error.as_ref().map(|slot|slot.load(Ordering::Acquire)),
         "initial_settings":initial_settings,"coefficient_edits":120,
         "device":device.name().unwrap_or_default(),"sample_rate":rate,"channels":channels,
         "requested_frames":256,"granted_frames_min":rows.iter().map(|r|r[1]).min(),"granted_frames_max":rows.iter().map(|r|r[1]).max(),
@@ -376,6 +402,9 @@ fn mastering_quality_native_callback_bench() {
     assert!(count > 0 && count <= slots.len());
     assert_eq!(errors.load(Ordering::Relaxed), 0);
     assert_eq!(exhausted.load(Ordering::Relaxed), 0);
+    assert!(stream_error
+        .as_ref()
+        .is_none_or(|slot| slot.load(Ordering::Acquire) == 0));
     // Retain timing misses, rather than converting a noisy machine into a fake
     // invariant test failure or silently claiming the requested block was granted.
     println!("native callback report: {}", out.display());

@@ -22,6 +22,8 @@ pub mod output_protection;
 pub mod peak_meter;
 pub mod profile_store;
 pub mod project;
+#[cfg(test)]
+mod quality_source;
 pub mod reference_tuning;
 pub mod sample_rate;
 pub mod settings;

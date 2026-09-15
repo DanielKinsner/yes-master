@@ -5,6 +5,8 @@ use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
+#[cfg(test)]
+mod delivery_rate_probe;
 mod preparation_cache;
 
 /// Sentinel dBFS value reported when the peak window saw no signal. JSON can't

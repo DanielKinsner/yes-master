@@ -2,6 +2,11 @@
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
 use yes_master_lib::dsp::IntegratedLufs;
+use yes_master_lib::types;
+#[path = "../src/quality_source.rs"]
+mod quality_source;
+#[path = "../src/sample_rate.rs"]
+mod sample_rate;
 
 struct TrackingAllocator;
 thread_local! {
@@ -31,6 +36,46 @@ unsafe impl GlobalAlloc for TrackingAllocator {
 }
 #[global_allocator]
 static ALLOCATOR: TrackingAllocator = TrackingAllocator;
+
+#[test]
+fn streaming_conversion_initial_fill_seek_and_drain_allocate_nothing() {
+    use rodio::{buffer::SamplesBuffer, Source};
+    use std::time::{Duration, Instant};
+    for (from, to) in [
+        (44100, 48000),
+        (96000, 44100),
+        (96000, 48000),
+        (48000, 48000),
+    ] {
+        let input: Vec<f32> = (0..from * 6)
+            .map(|n| 0.2 * (n as f32 * 0.31).sin())
+            .collect();
+        let mut source =
+            quality_source::QualitySource::new(SamplesBuffer::new(2, from, input), to).unwrap();
+        let error = source.error_slot();
+        ALLOCATIONS.with(|count| count.set(0));
+        TRACKING.with(|tracking| tracking.set(true));
+        let start = Instant::now();
+        let first = source.next();
+        let initial = start.elapsed();
+        let seek = source.try_seek(Duration::from_millis(250));
+        let mut emitted = 0;
+        for sample in source.by_ref() {
+            std::hint::black_box(sample);
+            emitted += 1;
+        }
+        TRACKING.with(|tracking| tracking.set(false));
+        assert!(first.is_some() && seek.is_ok());
+        assert_eq!(error.load(std::sync::atomic::Ordering::Acquire), 0);
+        assert!(emitted > 0);
+        assert_eq!(
+            ALLOCATIONS.with(Cell::get),
+            0,
+            "{from}->{to}: SRC allocated during callback work"
+        );
+        println!("{from}->{to}: first output {initial:?}; initial fill, seek and {emitted} samples allocate zero times");
+    }
+}
 
 #[test]
 fn live_meter_and_reset_allocate_nothing_during_a_long_listen() {

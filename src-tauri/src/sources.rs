@@ -380,6 +380,9 @@ pub(crate) struct MasteringSource {
     frame_main: Vec<f32>,
     frame_pending: Vec<f32>,
     frame_out_pos: usize,
+    render_aligned: bool,
+    prime_samples_left: usize,
+    tail_frames_left: usize,
     /// Shared post-output-gain peak slot. Per-frame max of |frame_main[i]| is
     /// atomic-max'd into this slot. The audio thread consumes it via swap.
     peak_linear: Arc<AtomicU32>,
@@ -444,6 +447,9 @@ impl MasteringSource {
             // Setting to `channels_usize` triggers the fetch on the first
             // `next()` call rather than requiring a separate "primed" flag.
             frame_out_pos: channels_usize,
+            render_aligned: false,
+            prime_samples_left: 0,
+            tail_frames_left: 0,
             peak_linear,
             peak_left_linear,
             peak_right_linear,
@@ -462,23 +468,43 @@ impl MasteringSource {
         self.fade = fade;
         self
     }
-}
 
-impl Iterator for MasteringSource {
-    type Item = f32;
+    /// Qualify finite playback against the file renderer before enabling this
+    /// in production. Remove lookahead once and drain the same number of frames.
+    #[cfg(test)]
+    pub(crate) fn with_render_alignment(mut self) -> Self {
+        self.render_aligned = true;
+        self.reset_render_alignment();
+        self
+    }
 
-    fn next(&mut self) -> Option<f32> {
+    fn reset_render_alignment(&mut self) {
+        if self.render_aligned {
+            self.tail_frames_left = self.chain.latency_frames();
+            self.prime_samples_left = self.tail_frames_left * self.channels.max(1) as usize;
+        }
+    }
+
+    fn next_unaligned(&mut self) -> Option<f32> {
         let channels = self.channels.max(1) as usize;
         if self.frame_out_pos >= channels {
             // Time to fetch + process the next input frame.
             if self.position >= self.samples.len() {
-                return None;
+                if self.tail_frames_left == 0 {
+                    return None;
+                }
+                self.tail_frames_left -= 1;
             }
             // L10 — advance the swap fade once per frame. `End` means a triggered
             // fade-out finished, so the source ends and its detached sink drains.
-            let fade_gain = match self.fade.advance_frame() {
-                FrameFade::End => return None,
-                FrameFade::Gain(g) => g,
+            let fade_gain = if self.prime_samples_left > 0 {
+                // Discarded lookahead must not consume the audible swap fade.
+                1.0
+            } else {
+                match self.fade.advance_frame() {
+                    FrameFade::End => return None,
+                    FrameFade::Gain(g) => g,
+                }
             };
 
             // Pull one frame out of the source PCM. If we're short at the end
@@ -577,49 +603,51 @@ impl Iterator for MasteringSource {
             // per-sample: cheaper, and the meter only needs ~50 ms resolution
             // (the snapshot loop's tick rate). NaN/inf are filtered so a DSP
             // bug can't poison the atomic with a non-finite value.
-            let mut frame_peak = 0.0f32;
-            for i in 0..channels {
-                let v = self.frame_main[i].abs();
-                if v.is_finite() && v > frame_peak {
-                    frame_peak = v;
+            if self.prime_samples_left == 0 {
+                let mut frame_peak = 0.0f32;
+                for i in 0..channels {
+                    let v = self.frame_main[i].abs();
+                    if v.is_finite() && v > frame_peak {
+                        frame_peak = v;
+                    }
                 }
-            }
-            // Bits comparison is safe here because we only ever store
-            // non-negative finite f32, where IEEE 754 ordering matches numeric.
-            self.peak_linear
-                .fetch_max(frame_peak.to_bits(), Ordering::Relaxed);
+                // Bits comparison is safe here because we only ever store
+                // non-negative finite f32, where IEEE 754 ordering matches numeric.
+                self.peak_linear
+                    .fetch_max(frame_peak.to_bits(), Ordering::Relaxed);
 
-            // Live BS.1770 LUFS meters — feed the post-output stereo frame
-            // into both the momentary (400 ms K-weighted window) and the
-            // integrated (whole-listen-through with BS.1770-4 gating) meters.
-            // Mono input gets duplicated so the meters see a stereo pair
-            // (matches BS.1770's stereo channel summation).
-            let l = self.frame_main.first().copied().unwrap_or(0.0);
-            let r = if channels >= 2 { self.frame_main[1] } else { l };
-            fold_channel_peak(&self.peak_left_linear, l);
-            fold_channel_peak(&self.peak_right_linear, r);
-            let to_x100 = |lufs: f32| -> i32 {
-                if lufs.is_finite() && lufs > -120.0 {
-                    (lufs * 100.0) as i32
-                } else {
-                    i32::MIN
+                // Live BS.1770 LUFS meters — feed the post-output stereo frame
+                // into both the momentary (400 ms K-weighted window) and the
+                // integrated (whole-listen-through with BS.1770-4 gating) meters.
+                // Mono input gets duplicated so the meters see a stereo pair
+                // (matches BS.1770's stereo channel summation).
+                let l = self.frame_main.first().copied().unwrap_or(0.0);
+                let r = if channels >= 2 { self.frame_main[1] } else { l };
+                fold_channel_peak(&self.peak_left_linear, l);
+                fold_channel_peak(&self.peak_right_linear, r);
+                let to_x100 = |lufs: f32| -> i32 {
+                    if lufs.is_finite() && lufs > -120.0 {
+                        (lufs * 100.0) as i32
+                    } else {
+                        i32::MIN
+                    }
+                };
+                // Mono must feed the BS.1770 meters as a single channel, not a
+                // duplicated pair, or loudness reads +3.01 LU hot (master review §2).
+                let (meter_l, meter_r) = lufs_meter_input(&self.frame_main, channels);
+                let momentary = self.lufs_meter.process_frame(meter_l, meter_r);
+                self.lufs_x100.store(to_x100(momentary), Ordering::Relaxed);
+                let integrated = self.integrated_lufs_meter.process_frame(meter_l, meter_r);
+                self.integrated_lufs_x100
+                    .store(to_x100(integrated), Ordering::Relaxed);
+
+                // L4b — push post-chain mono mix into the spectrum ring.
+                // Lock-free atomic store; the snapshot tick FFTs the latest
+                // 2048 samples to drive the EQ panel's live bars.
+                let mono = (l + r) * 0.5;
+                if mono.is_finite() {
+                    self.spectrum_ring.push(mono);
                 }
-            };
-            // Mono must feed the BS.1770 meters as a single channel, not a
-            // duplicated pair, or loudness reads +3.01 LU hot (master review §2).
-            let (meter_l, meter_r) = lufs_meter_input(&self.frame_main, channels);
-            let momentary = self.lufs_meter.process_frame(meter_l, meter_r);
-            self.lufs_x100.store(to_x100(momentary), Ordering::Relaxed);
-            let integrated = self.integrated_lufs_meter.process_frame(meter_l, meter_r);
-            self.integrated_lufs_x100
-                .store(to_x100(integrated), Ordering::Relaxed);
-
-            // L4b — push post-chain mono mix into the spectrum ring.
-            // Lock-free atomic store; the snapshot tick FFTs the latest
-            // 2048 samples to drive the EQ panel's live bars.
-            let mono = (l + r) * 0.5;
-            if mono.is_finite() {
-                self.spectrum_ring.push(mono);
             }
 
             self.frame_out_pos = 0;
@@ -628,6 +656,18 @@ impl Iterator for MasteringSource {
         let out = self.frame_main[self.frame_out_pos];
         self.frame_out_pos += 1;
         Some(out)
+    }
+}
+
+impl Iterator for MasteringSource {
+    type Item = f32;
+
+    fn next(&mut self) -> Option<f32> {
+        while self.prime_samples_left > 0 {
+            self.next_unaligned()?;
+            self.prime_samples_left -= 1;
+        }
+        self.next_unaligned()
     }
 }
 
@@ -674,6 +714,7 @@ impl rodio::Source for MasteringSource {
         // Drop accumulated biquad/limiter state to avoid clicks across
         // discontinuities. Also force a frame re-fetch on the next yield.
         self.chain.reset_states();
+        self.reset_render_alignment();
         self.crossfade_remaining = 0;
         self.crossfade_total = 0;
         // Restart both meters exactly like MeteredPcmSource::try_seek —
@@ -683,6 +724,84 @@ impl rodio::Source for MasteringSource {
         self.integrated_lufs_meter.reset();
         self.frame_out_pos = channels;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod render_alignment_tests {
+    use super::*;
+    use crate::{dsp::MasteringChain, types::MasteringSettings};
+    use rodio::Source;
+
+    fn settings() -> MasteringSettings {
+        serde_json::from_value(serde_json::json!({
+            "preset":{"kind":"universal"},"intensity":0.75,"volume_match":false,
+            "eq_low_db":0.,"eq_mid_db":0.,"eq_high_db":0.,
+            "delivery_profile":"custom","advanced":{"warmth":0.6}
+        }))
+        .unwrap()
+    }
+
+    fn source(samples: Vec<f32>, channels: u16, rate: u32) -> MasteringSource {
+        let (_, rx) = mpsc::channel();
+        MasteringSource::new(
+            samples,
+            channels,
+            rate,
+            MasteringChain::new(rate, usize::from(channels), &settings()),
+            rx,
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicU32::new(0)),
+            Arc::new(AtomicI32::new(i32::MIN)),
+            Arc::new(AtomicI32::new(i32::MIN)),
+            Arc::new(SpectrumRing::new()),
+        )
+        .with_render_alignment()
+    }
+
+    #[test]
+    fn finite_source_including_short_tail_matches_file_renderer_exactly() {
+        for rate in [32000, 44100, 48000, 96000] {
+            for channels in [1, 2] {
+                for frames in [0, 1, 17, 127, 128, 129, 257, 2049] {
+                    let input: Vec<f32> = (0..frames * usize::from(channels))
+                        .map(|i| 0.7 * ((i * 31 % 113) as f32 / 56. - 1.))
+                        .collect();
+                    let mut expected = input.clone();
+                    let mut chain = MasteringChain::new(rate, usize::from(channels), &settings());
+                    chain.process_interleaved(&mut expected, usize::from(channels));
+                    chain.flush_render_tail(&mut expected, usize::from(channels));
+                    let actual: Vec<f32> = source(input, channels, rate).collect();
+                    assert_eq!(actual, expected, "{rate}, {channels}ch, {frames}frames");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn seek_restarts_alignment_and_priming_does_not_consume_swap_fade() {
+        let input = vec![0.2; 48000];
+        let mut actual = source(input.clone(), 2, 48000);
+        for _ in 0..997 {
+            actual.next().unwrap();
+        }
+        actual.try_seek(Duration::from_millis(250)).unwrap();
+        let expected: Vec<f32> = source(input[24000..].to_vec(), 2, 48000).collect();
+        assert_eq!(actual.collect::<Vec<_>>(), expected);
+
+        let reference: Vec<f32> = source(input.clone(), 2, 48000).take(5).collect();
+        let mut faded = source(input, 2, 48000).with_swap_fade(FadeEnvelope::new(
+            2,
+            4,
+            4,
+            Arc::new(AtomicBool::new(false)),
+        ));
+        assert_eq!(faded.by_ref().take(4).collect::<Vec<_>>(), vec![0.; 4]);
+        assert_eq!(faded.fade.emitted_frames, 2);
+        assert_eq!(faded.peak_linear.load(Ordering::Relaxed), 0);
+        assert_eq!(faded.next().unwrap(), reference[4] * 0.25);
+        assert_eq!(faded.fade.emitted_frames, 3);
     }
 }
 

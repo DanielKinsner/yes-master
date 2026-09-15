@@ -33,6 +33,18 @@
 > correction experiments do not justify automatic adoption. Desktop fixtures,
 > bridges, Clippy, 895 frontend tests and 38 headless checks pass. Device-rate/
 > live-toggle contracts and the remaining offline C development remain open.
+> A new offline native-source rate matrix exposes a serious settled-preview
+> mismatch: linear device conversion can alias content removed by export SRC,
+> then apply an unsuitable export-derived boost. No stress audio was played.
+> [Live-rate evidence](reviews/2026-09-15-live-rate-verification.md) tracks the
+> unintegrated streaming-converter candidate and remaining native/meter gates.
+> Its 168 streaming/64 finite-source comparisons, zero-allocation checks and muted
+> native callback probe now pass. Actual-device gain capping closes the retained
+> stress witness offline; device planning and output metering still need production
+> integration. C1's full-song prototype is locally committed; all 60 Funk deliveries
+> survived/recovered after the restart. Expanded Coat/Piano finalists and controls
+> pass 25 independent whole-file checks, with target/character conflicts and Loud
+> fallbacks retained. Remaining original sources, quiet copies and holdout are open.
 > Automatic sonic policy is still pending the focused owner choice, with local
 > level-matched review audio prepared. No new listening verdict is inferred.
 
