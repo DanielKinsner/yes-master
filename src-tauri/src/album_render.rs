@@ -849,11 +849,13 @@ pub fn render_album_plan_impl_with_cancel(
             // the raw album-intent target - preserving the album-arc story.
             // The B6 ceiling-bounded math is shared with the track-export
             // and album-simple paths via the helper.
-            measure_and_apply_ceiling_bounded_landing(
+            let protected = measure_and_apply_ceiling_bounded_landing(
                 &mut samples,
                 album_sample_rate,
                 rendered_channel_count,
                 &shadowed,
+                bit_depth,
+                cancel_flag,
             )?;
             src_land_ms += t_src_land.elapsed().as_millis();
 
@@ -884,12 +886,7 @@ pub fn render_album_plan_impl_with_cancel(
                 return Err(CommandError::Other("album render cancelled".to_string()));
             }
 
-            let (delivered_lufs, delivered_tp, _) = crate::wav_writer::measure_delivery(
-                &samples,
-                album_sample_rate,
-                rendered_channel_count,
-                bit_depth,
-            )?;
+            let (delivered_lufs, delivered_tp) = (protected.lufs, protected.true_peak_dbtp);
             let measured_lufs = sanitize_lufs(delivered_lufs);
             track_records.push(AlbumTrackRenderRecord {
                 track_id: entry.track_id.clone(),

@@ -24,6 +24,7 @@ spec.loader.exec_module(ref)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--qualified', action='store_true', help='Require B3 finite-zero-extension ceiling checks')
     args = parser.parse_args()
     out = args.output.resolve()
     assert not out.exists(), 'preserve evidence'
@@ -70,6 +71,12 @@ def main():
              'soxr16_dbtp':ref.float_soxr(dest/'delivered.wav',rate)}
         # B1 validates removal of the bypass; estimator qualification is B2.
         assert row['measurements']['true_peak_dbtp']<=-1+1e-3,row
+        if args.qualified:
+            from check_native_peak_bounds import soxr
+            padded=dest/'zero-extended-reference.wav'
+            sf.write(padded,np.pad(x,((2048,2048),(0,0))),rate,subtype='DOUBLE')
+            row['finite_references']={f'soxr{factor}':soxr(padded,rate,factor,x.shape[1]) for factor in [16,64]}
+            assert all(peak<=-1+1e-5 for values in row['finite_references'].values() for peak in values),row
         rows.append(row)
         (out/'comparison.json').write_text(json.dumps({'binary_sha256':ref.sha(binary),'rows':rows},indent=2)+'\n')
         print(name,'frames',len(x),'residual',row['max_reference_residual'],

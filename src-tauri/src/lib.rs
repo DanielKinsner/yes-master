@@ -18,6 +18,7 @@ pub mod files;
 pub mod fixture_matrix;
 pub mod guardrails;
 pub mod mp3;
+pub mod output_protection;
 pub mod peak_meter;
 pub mod profile_store;
 pub mod project;

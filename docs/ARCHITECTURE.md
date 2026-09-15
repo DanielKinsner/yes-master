@@ -31,6 +31,13 @@ Important frontend helpers:
   filters, compressor behavior, saturation, width, limiter, and metering.
 - `src-tauri/src/engine.rs` handles analysis, rendering, LUFS landing, output
   measurements, and album render entry points.
+- `src-tauri/src/peak_meter/` supplies offline finite-signal reconstruction
+  intervals and replayable bounded PCM reads. `output_protection.rs` applies
+  optional loudness landing with a format-specific rounding/dither reserve,
+  scans exact delivery PCM, and remeasures final loudness. A retained peak result
+  may be reused only under a uniform gain plus a verified whole-file residual;
+  wide intervals require fresh reconstruction. These modules never run in the
+  audio callback. See the September 15 peak/reuse qualification records.
 - `src-tauri/src/exports.rs` runs export quality checks.
 - `src-tauri/src/demo.rs` synthesises the empty state's demo track once into
   app-data (`prepare_demo_track`); swap the generator for a bundled file

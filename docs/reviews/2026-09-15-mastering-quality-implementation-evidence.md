@@ -10,17 +10,27 @@ No push, main integration, publication, spending or private-audio commit is auth
 | --- | --- | --- |
 | A1 | Complete locally | Same Rubato FFT filter, explicit partial input/draining, checked integer frame counts. 1,690 rate/length conditions pass; finite-tail and fixed-phase stale-frame checks pass. Strict Clippy and desktop library/integration/fixture suite pass. |
 | A2 | Complete locally | Synthetic and historical private hot-start CD exports pass exact counts and continuous-reference checks. Corrected frame 955 differs only by expected PCM16 dither. Desktop fixtures and affected bridge lanes pass. |
-| B1 | Complete locally | Shared optional-LUFS decision and raw measurement availability; 12 no-target/short-audio PCM16/24/float regressions and historical Funk/50 ms witnesses pass. Current detector still underreads independent peaks: B2/B3 remain open. |
+| B1 | Complete locally | Shared optional-LUFS decision and raw measurement availability; 12 no-target/short-audio PCM16/24/float regressions pass. The subsequent B3 finalizer also closes the independent Funk/50 ms peak failures. |
 | D1 | Complete | Named Auto 0.50 / Custom 0.00, saved null unchanged; summary identifies pre-Adapt values. Build, all 38 app headless checks, landing checks and 892 frontend tests passed. Fresh Advanced capture inspected: thumb/readout/summary visible without overlap. |
 | D2 | Implemented; checkpoint verification passed | Actual guarded coefficients, request-associated source/settings/analysis identity, accurate fallback, unchanged Manual seeding. 972 settings configurations / 2,916 band comparisons; 33 guardrail tests; 894 frontend tests, build/headless, wire golden and bridges pass. |
 | C0 | Complete as an initial feasibility checkpoint | Sixty owner/Funk/Aphelion deliveries pass both preserved whole-file references; source-relative single render versus bounded search, three-trial short/typical/long reuse costs, native callback/lifecycle and passage-state limits are recorded. Recommendations below; no sonic policy adopted. |
-| B2 | Qualified library core implemented; route integration remains B3 | Combined finite-sinc interval and measured SOXR response pass 481 explicit finite-zero-extension cases and six whole-file witnesses. Real FFTs reduce owner/long verifier cost about 39% in three isolated trials. The replayable library core matches all 487 standalone results exactly; its exact-dither reader matches written PCM16/24/float. Reference-scope discrepancies are retained and independently explained. Export/preview still use the previous detector until B3. |
-| B3–B4, C1–C3, E | Pending | Existing revised dependencies and adoption/calibration gates remain. |
+| B2 | Qualified library core implemented | Combined finite-sinc interval and measured SOXR response pass 481 explicit finite-zero-extension cases and six whole-file witnesses. Real FFTs reduce owner/long verifier cost about 39% in three isolated trials. The replayable library core matches all 487 standalone results exactly; its exact-dither reader matches written PCM16/24/float. Reference-scope discrepancies are retained and independently explained. |
+| B3 | In progress | Qualified finalizer is used by Track/rendered preview, background preview planning and album per-track PCM. All five original exports pass independent finite SOXR16/64 checks; owner On/Off hashes remain exact. Whole-file residual reuse passes 1,095 independent checks, with fresh-meter fallback for excessive uncertainty. Desktop library/integration/private-fixture suite passes. Album programme joins and device-rate/live-toggle contracts remain open. |
+| B4, C1–C3, E | Pending | Existing revised dependencies and adoption/calibration gates remain. |
 
 The subsequent desktop library/integration run (`d2-rust-fixtures.log`) also
 passed with all four restored private-fixture tests enabled. Strict all-target
 Clippy passed (`d2-clippy.log`). The opt-in native callback probe is excluded
 from ordinary test counts and needs its own reported run.
+
+The current B3 mathematical reuse proof, exact-output checks, format-specific
+reserve and limitations are recorded in
+[linear peak verification](2026-09-15-linear-peak-verification.md).
+`b3-rust-fixtures-v2.log` passes the desktop library/integration suite with all
+four existing private-fixture tests actually run. The first run retained an
+obsolete receipt-to-ebur128 equality failure; the corrected tests use the declared
+meter on saved PCM, retain their original tolerances, and do not replace the
+independent reconstruction checks. No new listening/installed/Mac verdict.
 
 ### First verification details
 
@@ -92,7 +102,8 @@ the accurate pre-Adapt fallback where the preview backend has no resolved data.
 Hann-windowed, per-phase DC-normalized sinc filters on 478 synthetic cases.
 Support/factor pairs were 48/4, 64/8, 128/16, 512/16 and 2048/16. Support is in
 **input samples** (FIR length = support × factor + 1), not the existing library's
-48 total taps. The existing ebur128 0.1.10 filter has not been replaced.
+48 total taps. This initial experiment did not replace the ebur128 0.1.10 filter;
+the later qualified B3 finalizer is recorded above.
 
 Every candidate underread some finite alternating/near-Nyquist cases. Even
 2048/16 was 2.05275 dB below the checked FFT32 reference on alternating-4095
@@ -283,7 +294,8 @@ valid stress inputs but are not the new zero-crossing EBU-like construction.
 
 Actual raw witness peaks still fail the requested −1 ceiling under the new meter:
 Funk approximately −0.669 and 50 ms approximately −0.748 dB. This is expected while
-B3 is unimplemented, and supplies specific protection regressions. The current
+B3 was unimplemented at that checkpoint, supplying specific protection regressions.
+Those final-PCM witnesses are now fixed by the B3 work above. The then-current
 standalone meter costs 24–37 seconds on owner material including its FIR response
 under concurrent research load. Optimize and isolate its preparation/per-file cost
 before production integration; no realtime callback change is authorized by a

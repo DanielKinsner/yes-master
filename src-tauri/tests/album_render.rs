@@ -316,7 +316,17 @@ fn album_receipt_measures_delivery_and_continuous_pcm_matches_track_files() {
         meter.add_frames_f32(&track.samples).unwrap();
         let actual = meter.loudness_global().unwrap() as f32;
         let delivered = serde_json::to_value(&report.tracks[0]).unwrap();
-        let expected_tp = 20.0 * meter.true_peak(0).unwrap().log10();
+        // Receipt uses the qualified finite-signal meter. The old ebur128
+        // estimate underreads this waveform; independent reconstruction
+        // qualification is retained in the B2/B3 evidence suite.
+        let expected_tp = yes_master_lib::peak_meter::measure(
+            &track.samples,
+            usize::from(track.channels),
+            || false,
+        )
+        .unwrap()
+        .upper_dbtp()
+        .unwrap();
         let reported_tp = delivered["true_peak_dbtp"]
             .as_f64()
             .expect("delivered true peak missing");

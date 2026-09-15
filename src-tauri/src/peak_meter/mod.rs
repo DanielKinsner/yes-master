@@ -20,6 +20,36 @@ const GRID_DENOMINATOR: f64 = 1. - PI * PI / (8. * 16. * 16.);
 // f64 FFT error envelope. This is amplitude-relative, not a fixed dB margin.
 const FIR_NUMERICAL_GAIN: f64 = 1e-10;
 
+fn lowpass_filter() -> &'static reconstruction_fir::ReconstructionFir {
+    static FIR: OnceLock<reconstruction_fir::ReconstructionFir> = OnceLock::new();
+    FIR.get_or_init(|| {
+        let bytes = include_bytes!("soxr16.f64le");
+        let kernel: Vec<_> = bytes
+            .chunks_exact(8)
+            .map(|chunk| f64::from_le_bytes(chunk.try_into().expect("fixed coefficient width")))
+            .collect();
+        reconstruction_fir::ReconstructionFir::new(&kernel)
+    })
+}
+
+/// Bound either reconstruction's change from a maximum per-sample error.
+/// For finite sinc: at most two terms at distance k-1/2 from the nearest
+/// integer; bound their harmonic sum by its first term plus an integral.
+/// For the lowpass response: maximum polyphase L1 norm and the qualified
+/// between-grid/numerical envelope. This is amplitude-domain, not a dB margin.
+pub fn reconstruction_error_gain(frames: usize) -> f64 {
+    if frames == 0 {
+        return 0.;
+    }
+    let sinc = if frames == 1 {
+        1.
+    } else {
+        1. + 2. / PI * (2. + (2. * frames as f64 - 1.).ln())
+    };
+    sinc.max((lowpass_filter().maximum_l1 + FIR_NUMERICAL_GAIN) / GRID_DENOMINATOR)
+        * (1. + 16. * f64::EPSILON)
+}
+
 fn allocated<T: Clone + Default>(len: usize) -> Result<Vec<T>, &'static str> {
     let mut result = Vec::new();
     result
@@ -93,16 +123,7 @@ pub fn measure_source(
     if cancelled() {
         return Err("cancelled");
     }
-    static FIR: OnceLock<reconstruction_fir::ReconstructionFir> = OnceLock::new();
-    let fir = FIR.get_or_init(|| {
-        let bytes = include_bytes!("soxr16.f64le");
-        let kernel: Vec<_> = bytes
-            .chunks_exact(8)
-            .map(|chunk| f64::from_le_bytes(chunk.try_into().expect("fixed coefficient width")))
-            .collect();
-        reconstruction_fir::ReconstructionFir::new(&kernel)
-    });
-    let lowpass = fir.measure(source, &cancelled)?;
+    let lowpass = lowpass_filter().measure(source, &cancelled)?;
     let mut channels = Vec::new();
     channels
         .try_reserve_exact(finite.len())

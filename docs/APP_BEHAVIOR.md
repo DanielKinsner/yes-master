@@ -62,6 +62,13 @@ Track Master supports:
 - Export receipts report delivered decoded-audio loudness/peak/LRA. Album receipts expand
   to per-track delivered loudness, true peak, resolved target and ceiling.
   Target shortfalls are informational; warning-aware export remains advisory.
+- Final-rate Track/rendered-preview and album per-track PCM receive qualified
+  peak protection even without a loudness target or usable integrated loudness.
+  Exact deterministic delivery samples are verified before writing. Peak readings
+  include finite edges and a measured reconstruction uncertainty, with estimator
+  version recorded in diagnostics; live dBFS meters remain a separate reading.
+  Album programme joins and device-rate audition are tracked separately in the
+  active mastering-quality implementation ledger.
 - Delivery profile selection.
 - Advanced controls. The Advanced rail carries a global **Reset all**
   (2026-08-19; it confirms first — a misclick must not wipe a tuning) that returns every non-managed control — gains, EQ gains and

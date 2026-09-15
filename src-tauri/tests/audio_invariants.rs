@@ -45,6 +45,19 @@ fn measure(samples: &[f32], sr: u32, channels: u32) -> (f64, f64) {
     (ebu.loudness_global().unwrap(), 20.0 * peak.log10())
 }
 
+// Receipt contract: fresh read of delivered samples with the declared meter.
+// Independent finite reconstruction/ceiling tests remain in the qualification
+// suite. Keep the preexisting limiter-specific library checks separate.
+fn measure_delivery(samples: &[f32], sr: u32, channels: u32) -> (f64, f64) {
+    (
+        measure(samples, sr, channels).0,
+        peak_meter::measure(samples, channels as usize, || false)
+            .unwrap()
+            .upper_dbtp()
+            .unwrap_or(-60.),
+    )
+}
+
 fn analyze(path: &Path) -> AnalysisResult {
     analyze_tracks_core_with_progress_sync(
         vec![AnalyzeRequest {
@@ -92,9 +105,7 @@ fn short_and_no_target_exports_still_apply_known_peak_protection() {
                 .unwrap();
                 let output = decode::decode_full(Path::new(&job.output_paths[0])).unwrap();
                 assert_eq!(output.samples.len(), samples.len());
-                let (lufs, peak) = measure(&output.samples, 48_000, 2);
-                // B1 uses the existing estimator. Independent estimator and
-                // delivered-PCM numeric qualification are B2/B3, separately.
+                let (lufs, peak) = measure_delivery(&output.samples, 48_000, 2);
                 assert!(
                     peak <= f64::from(settings.effective_ceiling_dbtp()) + 0.002,
                     "B1 measured peak {peak}, bits {bits}"
@@ -316,7 +327,7 @@ fn no_target_float_export_uses_scalar_protection_and_receipt_matches_saved_file(
         .iter()
         .zip(&output.samples)
         .all(|(before, after)| (*before * gain - after).abs() < 2e-7));
-    let actual = measure(&output.samples, output.sample_rate, 2);
+    let actual = measure_delivery(&output.samples, output.sample_rate, 2);
     let receipt = job.measurements.unwrap();
     assert!(actual.1 <= f64::from(settings.effective_ceiling_dbtp()) + 0.002);
     assert!((actual.0 - receipt.lufs_integrated as f64).abs() < 0.02);
@@ -364,7 +375,7 @@ fn integer_export_receipt_measures_the_quantized_delivered_signal() {
         )
         .unwrap();
         let decoded = decode::decode_full(Path::new(&job.output_paths[0])).unwrap();
-        let actual = measure(&decoded.samples, decoded.sample_rate, 2);
+        let actual = measure_delivery(&decoded.samples, decoded.sample_rate, 2);
         let reported = job.measurements.unwrap();
         assert!(
             (actual.0 - reported.lufs_integrated as f64).abs() < 0.02,

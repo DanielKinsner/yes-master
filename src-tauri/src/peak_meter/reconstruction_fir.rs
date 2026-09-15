@@ -15,6 +15,7 @@ pub struct ReconstructionFir {
     forward: Arc<dyn RealToComplex<f64>>,
     inverse: Arc<dyn ComplexToReal<f64>>,
     filters: Vec<Vec<Complex<f64>>>,
+    pub maximum_l1: f64,
 }
 
 impl ReconstructionFir {
@@ -43,6 +44,16 @@ impl ReconstructionFir {
             forward,
             inverse,
             filters,
+            maximum_l1: (0..FACTOR)
+                .map(|phase| {
+                    kernel
+                        .iter()
+                        .skip(phase)
+                        .step_by(FACTOR)
+                        .map(|v| v.abs())
+                        .sum::<f64>()
+                })
+                .fold(0_f64, f64::max),
         }
     }
 

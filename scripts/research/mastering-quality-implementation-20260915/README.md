@@ -31,7 +31,8 @@ Additional probes added during C0:
 ## B2 finite reconstruction experiments
 
 Read the [qualification record](../../../docs/reviews/2026-09-15-peak-reconstruction-qualification.md)
-before interpreting results. The application detector has not been replaced.
+before interpreting results. Early rejected candidates are retained; the later
+qualified library core now supports the application's final-PCM verification.
 
 - `qualify_sinc_bound.py` / `sinc_tail_moments.py` independently evaluate finite
   cardinal-sinc intervals, omitted-tail bounds and optional signed-tail refinement.
@@ -57,8 +58,14 @@ before interpreting results. The application detector has not been replaced.
   candidate/FIR measurement times. Run timing after other task-owned CPU work ends.
 - `mastering_quality_meter_probe` runs the replayable library core against an
   existing input list. Its two arguments are `<inputs.json> <fresh-output.json>`;
-  use the same parity script and retained independent references. The application
-  render/preview routes have not switched to this library meter yet.
+  use the same parity script and retained independent references.
+- `mastering_quality_linear_probe <inputs.json> <fresh-directory>` compares
+  whole-file residual verification with fresh reconstruction. Inputs may specify
+  `gains`, `bits` and `write: true` to retain exact delivery samples.
+  `check_linear_reuse.py --run <directory> --output <fresh-directory>` supplies
+  separate finite SOXR16/64 and short direct-sinc checks. Read the
+  [reuse proof and limitations](../../../docs/reviews/2026-09-15-linear-peak-verification.md);
+  an interval that is safe but too wide still needs fresh measurement.
 
 All sources/outputs and copied binaries are local evidence. Use new output names
 when changing a runner. These probes are not installed-app or listening proof.
@@ -78,6 +85,8 @@ checks the restored Funk hash, recreates the pruned hot-start variant with the
 recorded recipe, loads historical settings, renders through the current engine,
 and retains independent meter results. A1/B1 success does not qualify the old
 peak meter: remaining independent ceiling failures stay visible.
+Use `--qualified` for the B3 witness run: it additionally requires both finite
+zero-extended SOXR16/64 references to meet the requested -1 dBTP ceiling.
 
 ## C0
 

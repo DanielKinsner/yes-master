@@ -5364,6 +5364,7 @@ dependencies = [
  "chrono",
  "ebur128",
  "hound",
+ "realfft",
  "rodio",
  "rubato",
  "rustfft",

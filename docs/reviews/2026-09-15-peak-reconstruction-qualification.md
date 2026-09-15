@@ -158,8 +158,9 @@ results within 1.34e-15 amplitude of the retained complex-FFT implementation.
 `b2-realfft-parity-v1/` retains both comparisons and verifies the same source
 hashes, channels/frame counts, independent reference envelope and interval
 criterion. Four direct-sum/edge/stereo/cancellation tests and strict all-target
-Clippy pass. B3 integration remains pending; the application still uses its
-existing detector.
+Clippy pass. The subsequent B3 finalizer now uses the qualified core for final
+PCM; [integration evidence and remaining routes](2026-09-15-linear-peak-verification.md)
+remain separate from this estimator qualification.
 
 ### Controlled real-FFT cost comparison
 
@@ -188,7 +189,7 @@ uncached interaction, reinforcing the measured C0 reuse requirement.
 `src-tauri/src/peak_meter/` exposes the qualified reconstruction intervals, their
 width and version `finite-sinc20-soxr16-4591255f-realfft-1`. It accepts borrowed
 float PCM or bounded channel reads from an immutable, replayable provider. The
-app export/preview routes have not switched to it yet. Four additional native
+subsequent B3 finalizer uses this core for application final PCM. Four additional native
 tests establish reset/cancellation/invalid-input handling and exact delivery
 replay. `b2-provider-parity-v2/` records **bit-identical 481 + 6** reconstruction
 results against the standalone real-FFT implementation, retaining all independent

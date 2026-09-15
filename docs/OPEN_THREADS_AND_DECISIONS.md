@@ -17,7 +17,11 @@
 > finite-zero-extension cases and six whole-file witnesses with preserved reference
 > limitations. Its replayable library core matches all 487 results exactly; real
 > FFTs cut owner/long verifier cost about 39%. Production B3 route integration
-> remains open; an exact-dither reader supports bounded-memory delivery checks.
+> remains in progress: final PCM now uses the qualified meter and exact-dither
+> reader. All five original exports pass independent finite SOXR16/64 checks;
+> owner On/Off hashes remain exact and the desktop/private-fixture suite passes.
+> Whole-file residual reuse is qualified; overly wide intervals use a fresh pass.
+> Album programme joins, device-rate/live-toggle contracts and B4 remain open.
 > Automatic sonic policy is still pending the focused owner choice, with local
 > level-matched review audio prepared. No new listening verdict is inferred.
 
