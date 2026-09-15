@@ -1,9 +1,10 @@
 //! Experimental offline peak bound. No production callers.
 //!
-//! Matches qualify_sinc_bound.py using complex rustfft instead of SciPy's real
+//! Matches qualify_sinc_bound.py using realfft/rustfft instead of SciPy's real
 //! FFT. Local finite sinc convolution, Abel bounds on omitted alternating
 //! prefix sums, and a Bernstein between-grid bound. See the B2 research record.
-use rustfft::{num_complex::Complex, Fft, FftPlanner};
+use realfft::{ComplexToReal, RealFftPlanner, RealToComplex};
+use rustfft::num_complex::Complex;
 use serde::Serialize;
 use std::f64::consts::PI;
 use std::sync::{Arc, OnceLock};
@@ -15,11 +16,11 @@ const GUARD: usize = 4096;
 const SIZE: usize = CORE + 2 * GUARD;
 const FFT_SIZE: usize = (2 * SIZE - 1).next_power_of_two();
 const FACTOR: usize = 16;
-pub const VERSION: &str = "finite-cardinal-bound-experiment-2";
+pub const VERSION: &str = "finite-cardinal-bound-experiment-3-realfft";
 
 struct Kernels {
-    forward: Arc<dyn Fft<f64>>,
-    inverse: Arc<dyn Fft<f64>>,
+    forward: Arc<dyn RealToComplex<f64>>,
+    inverse: Arc<dyn ComplexToReal<f64>>,
     spectra: Vec<Vec<Complex<f64>>>,
 }
 
@@ -27,6 +28,8 @@ struct Workspace<'a> {
     samples: &'a [f32],
     channels: usize,
     bank: &'static Kernels,
+    input: Vec<f64>,
+    output: Vec<f64>,
     spectrum: Vec<Complex<f64>>,
     product: Vec<Complex<f64>>,
     scratch: Vec<Complex<f64>>,
@@ -44,20 +47,21 @@ impl Workspace<'_> {
         let lo = start - GUARD as i64;
         let a = lo.clamp(0, frames as i64) as usize;
         let b = (start + (CORE + GUARD) as i64).clamp(0, frames as i64) as usize;
-        self.spectrum.fill(Complex::default());
+        self.input.fill(0.0);
         for frame in a..b {
-            self.spectrum[(frame as i64 - lo) as usize].re =
+            self.input[(frame as i64 - lo) as usize] =
                 f64::from(self.samples[frame * self.channels + channel]);
         }
-        let mut local = self.spectrum[GUARD..GUARD + CORE]
+        let mut local = self.input[GUARD..GUARD + CORE]
             .iter()
-            .fold(0.0_f64, |m, v| m.max(v.re.abs()));
+            .fold(0.0_f64, |m, v| m.max(v.abs()));
         if b == a && polynomial.is_none() {
             return Ok((local, a, b));
         }
         self.bank
             .forward
-            .process_with_scratch(&mut self.spectrum, &mut self.scratch);
+            .process_with_scratch(&mut self.input, &mut self.spectrum, &mut self.scratch)
+            .map_err(|_| "FFT input transform failed")?;
         for (phase, filter) in self.bank.spectra.iter().enumerate() {
             if cancelled() {
                 return Err("cancelled");
@@ -67,11 +71,12 @@ impl Workspace<'_> {
             }
             self.bank
                 .inverse
-                .process_with_scratch(&mut self.product, &mut self.scratch);
+                .process_with_scratch(&mut self.product, &mut self.output, &mut self.scratch)
+                .map_err(|_| "FFT output transform failed")?;
             let fraction = (phase + 1) as f64 / FACTOR as f64;
             let sin_phase = (PI * fraction).sin() / PI;
-            for (i, v) in self.product[GUARD..GUARD + CORE].iter().enumerate() {
-                let mut value = v.re / FFT_SIZE as f64;
+            for (i, v) in self.output[GUARD..GUARD + CORE].iter().enumerate() {
+                let mut value = v / FFT_SIZE as f64;
                 if let Some(poly) = polynomial {
                     let at = (i as f64 + fraction - CORE as f64 / 2.) / (CORE as f64 / 2.);
                     let sign = if (start + i as i64) % 2 == 0 { 1. } else { -1. };
@@ -87,20 +92,23 @@ impl Workspace<'_> {
 fn kernels() -> &'static Kernels {
     static KERNELS: OnceLock<Kernels> = OnceLock::new();
     KERNELS.get_or_init(|| {
-        let mut planner = FftPlanner::new();
+        let mut planner = RealFftPlanner::new();
         let forward = planner.plan_fft_forward(FFT_SIZE);
         let inverse = planner.plan_fft_inverse(FFT_SIZE);
         let mut spectra = Vec::new();
         for phase in 1..FACTOR {
             let p = phase as f64 / FACTOR as f64;
-            let mut kernel = vec![Complex::default(); FFT_SIZE];
+            let mut kernel = forward.make_input_vec();
             for j in -(SIZE as i64 - 1)..SIZE as i64 {
                 let sign = if j % 2 == 0 { 1.0 } else { -1.0 };
-                kernel[j.rem_euclid(FFT_SIZE as i64) as usize].re =
+                kernel[j.rem_euclid(FFT_SIZE as i64) as usize] =
                     sign * (PI * p).sin() / (PI * (j as f64 + p));
             }
-            forward.process(&mut kernel);
-            spectra.push(kernel);
+            let mut spectrum = forward.make_output_vec();
+            forward
+                .process(&mut kernel, &mut spectrum)
+                .expect("fixed kernel geometry");
+            spectra.push(spectrum);
         }
         Kernels {
             forward,
@@ -237,14 +245,16 @@ pub fn measure(
     let bank = kernels();
     let scratch_len = bank
         .forward
-        .get_inplace_scratch_len()
-        .max(bank.inverse.get_inplace_scratch_len());
+        .get_scratch_len()
+        .max(bank.inverse.get_scratch_len());
     let mut workspace = Workspace {
         samples,
         channels,
         bank,
-        spectrum: vec![Complex::default(); FFT_SIZE],
-        product: vec![Complex::default(); FFT_SIZE],
+        input: bank.forward.make_input_vec(),
+        output: bank.inverse.make_output_vec(),
+        spectrum: bank.forward.make_output_vec(),
+        product: bank.inverse.make_input_vec(),
         scratch: vec![Complex::default(); scratch_len],
     };
     let mut result = Vec::with_capacity(channels);

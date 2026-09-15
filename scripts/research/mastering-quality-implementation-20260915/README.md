@@ -50,6 +50,11 @@ before interpreting results. The application detector has not been replaced.
   16/32/64× SOXR checks alongside the retained old references.
 - `ebu_phase_signals.py` separately synthesizes Tech 3341 cases 15–23. The earlier
   `ebu20plus` stress cases are preserved and do not establish EBU compliance.
+- `compare_peak_implementation.py` checks an optimized implementation against a
+  retained native run and its independent reference results, after asserting
+  source identity and layout. `peak_cost.py` rotates three before/after trials
+  using copied executables and reports process CPU/working set separately from
+  candidate/FIR measurement times. Run timing after other task-owned CPU work ends.
 
 All sources/outputs and copied binaries are local evidence. Use new output names
 when changing a runner. These probes are not installed-app or listening proof.

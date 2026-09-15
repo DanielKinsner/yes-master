@@ -143,6 +143,38 @@ edges, long coherent refinement, non-core-aligned zero-prefix invariance, stereo
 isolation, silence, invalid input and cancellation during preparation/interpolation.
 Strict all-target Clippy passes (`b2-experiments-clippy-v3.log`).
 
-Whole-file native music/delivery-witness checks and final performance/resource
-qualification are running. These conditions are not all satisfied yet. B3
-integration remains pending; the application still uses its existing detector.
+Whole-file native music/delivery-witness checks now pass **6/6** independent
+finite-zero-extension reference and interval-width checks
+(`b2-music-qualified-v1/comparison.json`). The cases include owner On/Off/lower
+drive, no-target Funk, hot-start CD and the 50 ms witness. This measures the
+existing output; it does not make the remaining over-ceiling witnesses safe.
+
+The real-input FFT optimization preserves all **481 synthetic + 6 whole-file**
+results within 1.34e-15 amplitude of the retained complex-FFT implementation.
+`b2-realfft-parity-v1/` retains both comparisons and verifies the same source
+hashes, channels/frame counts, independent reference envelope and interval
+criterion. Four direct-sum/edge/stereo/cancellation tests and strict all-target
+Clippy pass. B3 integration remains pending; the application still uses its
+existing detector.
+
+### Controlled real-FFT cost comparison
+
+`b2-realfft-cost-v1/report.json` records three rotating before/after trials of
+copied executables, with other task-owned builds/measurements stopped. Both use
+the same optimized dev profile and input files; normal OS/thermal variation
+remains. Seconds below are medians, with full-band and lowpass work separate:
+
+| Source | Complex full-band / FIR | Real full-band / FIR |
+| --- | ---: | ---: |
+| 60 s hot-start CD | 4.498 / 1.707 | 2.266 / 0.609 |
+| 244.56 s owner On | 23.572 / 6.415 | 14.349 / 3.924 |
+| 422.25 s Aphelion | 37.018 / 9.910 | 22.632 / 6.140 |
+
+The owner/long summed median verifier costs drop about 39%. FIR kernel setup
+falls from 1.85 to 1.21 ms (prepared once per process). Full-band first-call setup
+is included in the first short-input reading. The complete three-source process,
+including decode/hash and three library comparison passes, drops from median
+87.98 to 54.38 s. Peak working set drops from roughly 300 to 295 MiB; these totals
+include decoded programme audio and are not standalone meter allocation counts.
+The real-FFT optimization is retained. This remains too costly for repeated
+uncached interaction, reinforcing the measured C0 reuse requirement.
