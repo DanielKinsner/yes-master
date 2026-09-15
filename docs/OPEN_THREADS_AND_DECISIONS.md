@@ -1,5 +1,12 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-15 — Independent review prepared at the owner's request.**
+> A separate source/audio workspace and [neutral question-led prompt](prompts/2026-09-15-independent-mastering-audit.md)
+> support a fresh Claude Fable assessment without earlier findings or experiment
+> tooling. [Coordinator instructions](reviews/2026-09-15-independent-audit-setup.md)
+> explain context isolation, sealing results and later reconciliation. The review
+> itself has not been launched; no independent verdict or production change is claimed.
+
 > **2026-09-15 UTC / September 14 Pacific — Mastering-quality recommendation completed.**
 > [The expanded investigation](reviews/2026-09-15-mastering-quality-recommendation.md)
 > retains byte-identical owner exports and adds seven licensed pieces, 192 pilot
