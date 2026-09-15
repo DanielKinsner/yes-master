@@ -5,11 +5,13 @@
 > in the existing checkout. Branch `codex/mastering-quality` starts at local
 > `7534f612`; no push/main merge/release/deployment/spend or private-audio commit.
 > [Checkpoint evidence](reviews/2026-09-15-mastering-quality-implementation-evidence.md)
-> records SRC and no-target/short-input protection, Density Auto and early C0
-> preparation experiments. D1's build, 38 headless checks and 892 frontend tests
-> pass; refreshed captures were inspected. Fresh application exports reproduce
-> the historical owner On/Off WAV hashes exactly. A/B1 integration verification
-> and C0 comparisons are running; B2/B3 and sonic-policy adoption remain open.
+> records completed local SRC and no-target/short-input protection, Density Auto,
+> and backend-resolved compressor display. D2's build, 38 headless checks,
+> 894 frontend tests and affected bridges pass. Fresh application exports preserve
+> the owner On/Off WAV hashes; the historical hot-start CD defect is corrected.
+> Independent Funk/50 ms checks still expose the existing peak meter's underread.
+> C0 preparation/quality/experience experiments and B2 qualification continue;
+> B3 integration and sonic-policy adoption remain open.
 
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
 > Dan accepts longer initial analysis/preparation for demonstrated audio quality,
