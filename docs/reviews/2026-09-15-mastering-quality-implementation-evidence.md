@@ -8,8 +8,9 @@ No push, main integration, publication, spending or private-audio commit is auth
 
 | Checkpoint | Status | Evidence and limits |
 | --- | --- | --- |
-| A | Implemented; integration verification running | Same Rubato FFT filter, explicit partial input/draining, checked integer frame counts. 1,690 rate/length conditions pass; finite-tail and fixed-phase stale-frame checks pass. Actual export and fixture lanes pending. |
-| B1 | Implemented; regressions running | Shared optional-LUFS decision and raw measurement availability; no-target/short-audio protection. Current detector only, not B2/B3 qualification. |
+| A1 | Complete locally | Same Rubato FFT filter, explicit partial input/draining, checked integer frame counts. 1,690 rate/length conditions pass; finite-tail and fixed-phase stale-frame checks pass. Strict Clippy and desktop library/integration/fixture suite pass. |
+| A2 | Integration proof in progress | Synthetic hot-start CD exports pass exact count/start/tail checks; historical private hot-start witness comparison pending. Bridge lanes running. |
+| B1 | Implemented and automated regressions pass | Shared optional-LUFS decision and raw measurement availability; 12 no-target/short-audio PCM16/24/float cases pass, with final-file receipts. Current detector only, not B2/B3 qualification. Historical Funk witness comparison pending. |
 | D1 | Complete | Named Auto 0.50 / Custom 0.00, saved null unchanged; summary identifies pre-Adapt values. Build, all 38 app headless checks, landing checks and 892 frontend tests passed. Fresh Advanced capture inspected: thumb/readout/summary visible without overlap. |
 | C0 | Experiment started | Protocol below; results pending. |
 | B2–B4, C1–C3, D2, E | Pending | Existing revised dependencies and adoption/calibration gates remain. |
@@ -29,6 +30,11 @@ No push, main integration, publication, spending or private-audio commit is auth
   Cargo attempted to relink the running C0 example. The library/integration
   suite is rerunning separately; future probes will run a copied executable.
   This is a harness/build conflict, not an audio result.
+- `cargo test --target-dir target/codex-rc --lib --tests` passed with
+  `AMS_RUN_REAL_FIXTURE=1` and the original owner source selected explicitly;
+  all four private-fixture contracts ran. See `rust-fixtures-tests.log`.
+  Strict all-target Clippy passed after the A/B1 changes. No exact-commit CI,
+  installed-app or new listening verdict is implied.
 - Rust 1.98 formatting reordered two guardrails imports. That mechanical change
   triggered the existing demo stamp; the real WASM rebuild passed. No DSP
   coefficient or gate changed. It remains separate from browser/native proof.
