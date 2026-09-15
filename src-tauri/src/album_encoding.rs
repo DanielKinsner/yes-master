@@ -139,6 +139,14 @@ pub fn render_album(
         )?;
         written.push(delivered.path.clone());
         report.album_wav_path = delivered.path.to_string_lossy().into_owned();
+        report.continuous_peak = Some(crate::engine::AlbumPeakResult {
+            true_peak_dbtp: delivered.measurements.1,
+            ceiling_dbtp: report
+                .tracks
+                .iter()
+                .map(|t| t.ceiling_dbtp)
+                .fold(f32::NEG_INFINITY, f32::max),
+        });
         report.delivered_format = Some(encoding.delivered(
             report.rendered_sample_rate,
             report.rendered_channels,
@@ -168,6 +176,8 @@ pub fn render_album(
         manifest["album_wav_path"] = serde_json::json!(report.album_wav_path);
         manifest["album_measurements"] = serde_json::json!({"lufs_integrated": delivered.measurements.0,
             "true_peak_dbtp": delivered.measurements.1, "dynamic_range_lu": delivered.measurements.2});
+        manifest["continuous_peak"] =
+            serde_json::to_value(&report.continuous_peak).map_err(error)?;
         manifest["tracks"] = serde_json::to_value(&report.tracks).map_err(error)?;
         let mut file = std::fs::OpenOptions::new()
             .create_new(true)

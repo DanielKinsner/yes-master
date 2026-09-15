@@ -61,6 +61,11 @@ Track Master supports:
   is prepared. Preparation and live measurements share one heavy-worker permit.
 - Export receipts report delivered decoded-audio loudness/peak/LRA. Album receipts expand
   to per-track delivered loudness, true peak, resolved target and ceiling.
+  The continuous album file has its own measured peak and programme ceiling.
+  Decoded lossy ceiling excesses remain visible advisories, including small misses;
+  lossless FLAC/AIFF must preserve the protected PCM exactly. No automatic lossy
+  headroom or extra corrective encode is applied. MP3 receipt readback preserves
+  decoded samples above full scale; general MP3 import/playback remains separate.
   Target shortfalls are informational; warning-aware export remains advisory.
 - Final-rate Track/rendered-preview and album per-track PCM receive qualified
   peak protection even without a loudness target or usable integrated loudness.

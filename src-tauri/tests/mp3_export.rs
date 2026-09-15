@@ -206,6 +206,17 @@ fn album_mp3_preserves_sequence_overrides_gaps_and_uses_one_encode_for_continuou
         serde_json::from_slice(&std::fs::read(&report.manifest_path).unwrap()).unwrap();
     assert_eq!(manifest["mp3_bitrate_kbps"], 256);
     assert!(manifest["album_measurements"]["true_peak_dbtp"].is_number());
+    let continuous = report.continuous_peak.as_ref().unwrap();
+    assert_eq!(
+        continuous.true_peak_dbtp,
+        mp3::measure(Path::new(&report.album_wav_path), None)
+            .unwrap()
+            .1
+    );
+    assert_eq!(
+        manifest["continuous_peak"],
+        serde_json::to_value(continuous).unwrap()
+    );
     for track in &report.tracks {
         let m = mp3::measure(Path::new(&track.output_path), None).unwrap();
         assert_eq!(track.measured_lufs, m.0);

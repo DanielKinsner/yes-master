@@ -16,7 +16,7 @@ No push, main integration, publication, spending or private-audio commit is auth
 | C0 | Complete as an initial feasibility checkpoint | Sixty owner/Funk/Aphelion deliveries pass both preserved whole-file references; source-relative single render versus bounded search, three-trial short/typical/long reuse costs, native callback/lifecycle and passage-state limits are recorded. Recommendations below; no sonic policy adopted. |
 | B2 | Qualified library core implemented | Combined finite-sinc interval and measured SOXR response pass 481 explicit finite-zero-extension cases and six whole-file witnesses. Real FFTs reduce owner/long verifier cost about 39% in three isolated trials. The replayable library core matches all 487 standalone results exactly; its exact-dither reader matches written PCM16/24/float. Reference-scope discrepancies are retained and independently explained. |
 | B3 | In progress | Qualified finalizer is used by Track/rendered preview, background preview planning and album per-track PCM. All five original exports pass independent finite SOXR16/64 checks; owner On/Off hashes remain exact. Whole-file residual reuse passes 1,095 independent checks, with fresh-meter fallback for excessive uncertainty. Desktop library/integration/private-fixture suite passes for the first finalizer slice. Album programme correction and affected-route verification pass below; device-rate/live-toggle contracts remain open. |
-| B4 | In progress | Qualified decoded metering and exact lossless parity implemented; Track/Album format tests pass. Full codec characterization and independent readback are in progress. |
+| B4 | Complete locally with advisory lossy scope | [Encoded verification](2026-09-15-encoded-peak-verification.md): 316/316 independent technical checks on retained actual encoded files after fixing MP3 decoder clamping; exact FLAC/AIFF PCM parity. Lossy ceiling misses remain explicit. Headroom/two-correction experiments do not justify automatic adoption. Continuous Album peaks and small excesses are reported. Affected formats, desktop/private fixtures, bridges, Clippy, 895 frontend tests and 38 headless checks pass. |
 | C1 | Development specification started | [Measurement protocol](2026-09-15-drive-prototype-protocol.md) fixes controls and individual metrics; initial numeric candidates use completed C0 results. No new holdout audio opened or shipping policy enabled. |
 | C2–C3, E | Pending | Existing revised dependencies and adoption/calibration gates remain. |
 
@@ -33,6 +33,40 @@ four existing private-fixture tests actually run. The first run retained an
 obsolete receipt-to-ebur128 equality failure; the corrected tests use the declared
 meter on saved PCM, retain their original tolerances, and do not replace the
 independent reconstruction checks. No new listening/installed/Mac verdict.
+
+### B4 verification details
+
+`b4-rust-fixtures-v1.log` passes the complete desktop library/integration suite
+(478 library passes, nine opt-in tests ignored), including all four restored
+owner-fixture checks actually run. Source selection was the existing
+`tests for presets/*coat-original-test.wav`; no new private fixture was requested.
+`b4-formats-v1.log` explicitly runs all five Track and both Album opt-in format
+tests; `b4-album-formats-v2.log` reruns both Album cases after adding the continuous
+result. `b4-continuous-routes-v2.log` passes five rate/channel routes, and the
+current MP3 integration suite passes all three tests. The exact-lossless negative
+test and MP3 above-full-scale regression pass separately.
+
+`b4-wire-v2.log` regenerates the intentional four-line nested wire field from
+Rust; `b4-clippy-v4.log` passes strict all-target Clippy. The decoder's MSRV bump
+exposed old `map_or`/`repeat().take()` suggestions; equivalent predicates/iterators
+were updated without relaxing warnings. `b4-iphone-v1.log` records check plus
+46 tests; `b4-android-v1.log` records 26 host tests plus API-29 arm64 check.
+Both bridge lockfiles include the scoped readback decoder. These are bridge
+checks on Windows, not physical mobile or Mac validation.
+
+`b4-headless-v3.log` passes landing checks and all 38 app scenario/viewport
+checks. The 1360x740 Album capture was inspected with the continuous result
+visible, unobscured and scrollable track details. `b4-frontend-v4.log` passes
+895 tests. The landing screenshots/manifest were recaptured after the preview
+mock changed. The WASM artifact was rebuilt with source stamp `3983fbb592cc`;
+the frontend stamp checks pass. A separate attempted host `cargo test` in the
+WASM-only crate failed on its existing non-WASM Tauri wrappers and is not counted
+as a passed lane; the actual WASM build is the applicable result.
+
+Earlier failed checks remain in ignored evidence: intentional wire drift,
+headless v1 before golden regeneration, v2 with a new assertion against the old
+built mock, Clippy suggestions after the MSRV change, and stale landing capture
+input digest. No ceiling/technical tolerance or assertion was weakened.
 
 ### B3 album programme correction
 

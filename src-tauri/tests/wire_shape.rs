@@ -422,6 +422,10 @@ fn album_track_render_record_sample() -> AlbumTrackRenderRecord {
 
 fn album_render_report_sample() -> AlbumRenderReport {
     AlbumRenderReport {
+        continuous_peak: Some(yes_master_lib::engine::AlbumPeakResult {
+            true_peak_dbtp: -1.25,
+            ceiling_dbtp: -1.0,
+        }),
         delivered_format: Some(
             yes_master_lib::export_format::ExportEncoding::Wav.delivered(
                 48_000,

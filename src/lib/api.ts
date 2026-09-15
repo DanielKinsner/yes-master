@@ -54,6 +54,8 @@ export interface AlbumTrackRenderRecord {
 }
 
 export interface AlbumRenderReport {
+  /** Actual continuous-file measurement; absent in older receipts. */
+  continuous_peak?: { true_peak_dbtp: number; ceiling_dbtp: number } | null;
   delivered_format?: import("./export-formats").DeliveredFormat | null;
   mp3_bitrate_kbps?: number | null;
   job_id: string;

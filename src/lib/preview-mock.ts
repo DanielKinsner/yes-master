@@ -672,6 +672,7 @@ export async function mockInvoke<T>(
         status: { status: "done" },
         album_wav_path: `/preview/album.${encoding}`,
         manifest_path: "/preview/metadata/manifest.json",
+        continuous_peak: { true_peak_dbtp: -1.05, ceiling_dbtp: -1.0 },
         requested_sample_rate: facts.requested_sample_rate,
         rendered_sample_rate: renderedSampleRate,
         source_sample_rates: joined.map((t) => t.source_sample_rate),

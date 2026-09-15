@@ -833,7 +833,15 @@ pub struct AlbumTrackRenderRecord {
 }
 
 #[derive(Debug, Serialize, Clone)]
+pub struct AlbumPeakResult {
+    pub true_peak_dbtp: f32,
+    pub ceiling_dbtp: f32,
+}
+
+#[derive(Debug, Serialize, Clone)]
 pub struct AlbumRenderReport {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub continuous_peak: Option<AlbumPeakResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delivered_format: Option<crate::export_format::DeliveredFormat>,
     pub mp3_bitrate_kbps: Option<u16>,

@@ -90,7 +90,7 @@ fn deep_nesting_bomb_errors_without_stack_overflow() {
     let tmp = TempDir::new().expect("tempdir");
     let mut bomb = Vec::with_capacity(200_012);
     bomb.extend_from_slice(br#"{"schema_version": "#);
-    bomb.extend(std::iter::repeat(b'[').take(100_000));
+    bomb.extend(std::iter::repeat_n(b'[', 100_000));
     let path = write_file(&tmp, "bomb.ams.json", &bomb);
     assert!(load(&path).is_err(), "nesting bomb must be a typed error");
 }

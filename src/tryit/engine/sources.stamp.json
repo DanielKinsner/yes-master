@@ -1,12 +1,12 @@
 {
-  "stamp": "9342f3f3b512",
+  "stamp": "3983fbb592cc",
   "sources": {
     "src-tauri/src/types.rs": "656e48f5a0359ba232e3780fc50322cb3cdad95ff35c4db551d3f1b06e59e3aa",
     "src-tauri/src/dsp.rs": "dc970a7d9b5860e207899921dcdc2d39506b5fd158e9e1e84903fdae98177c98",
     "src-tauri/src/export_format.rs": "b41a07e665ee0efe14bead53b10e9a1cbb71e64d5b9920216012555fd4113fc9",
     "src-tauri/src/analysis.rs": "a69845f9e164a7ab4a677036b4d1c27fcc85df686b448772cffed68ecb504b9a",
     "src-tauri/src/deep_analysis.rs": "188315205a08c04efafc134456099f8f26e6e415a3c113d2c410aed8c1f75adb",
-    "src-tauri/src/confidence.rs": "671aec0e96678cec422488b285caf20045939938ccb76f15c6bd310b08ec61ac",
+    "src-tauri/src/confidence.rs": "d64b043bf4d19abdbecbb1bb2cb336b9c6dcd42daa028244cc4e49dfe668c94d",
     "src-tauri/src/guardrails.rs": "1a6388ca9a8f9a056162ea26cc0da031ff2ee6f757ef4333799e80af19a13294",
     "web/tryit/wasm/src/lib.rs": "f37ec32bbfff74f09ee4abd0c5f93f094d42d1c97e7acd313d31a69829dd19d8",
     "web/tryit/wasm/src/stubs.rs": "af887c5c5a5ffd0e75e2247ac8024228df27969b56bce044593215bcd50ccdf7",

@@ -70,6 +70,13 @@ collision handling and cancellation. These encoder tests require desktop's
 Use an independent decoder on an actual native export as well as these tests.
 MP3 frame duration includes delay/padding; compare gapless decoded frames before
 calling duration drift a defect. Delivered peaks may exceed pre-encode peaks.
+MP3 receipt decoding must preserve samples above full scale; the synthetic
+`receipt_decode_preserves_peaks_above_full_scale` regression detects decoder
+clamping separately from peak estimation. Continuous Album receipts carry their
+own decoded peak. The [B4 codec matrix](reviews/2026-09-15-encoded-peak-verification.md)
+records qualified-meter/independent comparisons, exact lossless parity, bounded
+correction failures and advisory scope. Run the opt-in lossless negative test with
+`cargo test --lib lossless_readback_rejects_changed_pcm_frames_and_channels -- --ignored`.
 
 The `transport-and-order` browser case drives actual pointer and keyboard rows,
 insertion feedback, selection preservation, Return to start and edge scrolling.

@@ -27,7 +27,12 @@
 > exact results: owner target edits fall from about 24 s to 0.60-0.66 s and the
 > measured five-step session from 98.67 to 54.15 s, with a longer first preparation
 > and additional memory. In-place tail flushing preserves samples while avoiding
-> vector capacity doubling. Device-rate/live-toggle contracts and B4 remain open.
+> vector capacity doubling. B4 now passes 316 independent encoded technical
+> checks, with exact lossless PCM and unclipped MP3 receipt readback. Continuous
+> Album peaks are visible; lossy misses remain advisory, and headroom/two-pass
+> correction experiments do not justify automatic adoption. Desktop fixtures,
+> bridges, Clippy, 895 frontend tests and 38 headless checks pass. Device-rate/
+> live-toggle contracts and the remaining offline C development remain open.
 > Automatic sonic policy is still pending the focused owner choice, with local
 > level-matched review audio prepared. No new listening verdict is inferred.
 
