@@ -1,0 +1,34 @@
+{
+  "factor": 16,
+  "input_support_each_side": 512,
+  "ffmpeg_sha256": "67abd24645ae7cf73e1fad8b092de73b064b62ae61819751fc31e79e91e842d3",
+  "ffmpeg_version": "ffmpeg version 2023-04-10-git-b18a9c2971-full_build-www.gyan.dev Copyright (c) 2000-2023 the FFmpeg developers\nbuilt with gcc 12.2.0 (Rev10, Built by MSYS2 project)\nconfiguration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-fontconfig --enable-iconv --enable-gnutls --enable-libxml2 --enable-gmp --enable-bzlib --enable-lzma --enable-libsnappy --enable-zlib --enable-librist --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-libbluray --enable-libcaca --enable-sdl2 --enable-libaribb24 --enable-libdav1d --enable-libdavs2 --enable-libuavs3d --enable-libzvbi --enable-librav1e --enable-libsvtav1 --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxavs2 --enable-libxvid --enable-libaom --enable-libjxl --enable-libopenjpeg --enable-libvpx --enable-mediafoundation --enable-libass --enable-frei0r --enable-libfreetype --enable-libfribidi --enable-liblensfun --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-ffnvcodec --enable-nvdec --enable-nvenc --enable-d3d11va --enable-dxva2 --enable-libvpl --enable-libshaderc --enable-vulkan --enable-libplacebo --enable-opencl --enable-libcdio --enable-libgme --enable-libmodplug --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libshine --enable-libtheora --enable-libtwolame --enable-libvo-amrwbenc --enable-libcodec2 --enable-libilbc --enable-libgsm --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-ladspa --enable-libbs2b --enable-libflite --enable-libmysofa --enable-librubberband --enable-libsoxr --enable-chromaprint\nlibavutil      58.  6.100 / 58.  6.100\nlibavcodec     60.  9.100 / 60.  9.100\nlibavformat    60.  4.101 / 60.  4.101\nlibavdevice    60.  2.100 / 60.  2.100\nlibavfilter     9.  5.100 /  9.  5.100\nlibswscale      7.  2.100 /  7.  2.100\nlibswresample   4. 11.100 /  4. 11.100\nlibpostproc    57.  2.100 / 57.  2.100\n",
+  "filter": "aformat=sample_fmts=dbl,aresample=768000:resampler=soxr:precision=33:osf=dbl",
+  "rows": [
+    {
+      "frames": 8192,
+      "position": 2048,
+      "peak_index": 32768,
+      "discarded_l1": 6.71573503601328e-14,
+      "kernel_max_error": 0.0,
+      "kernel_l1_error": 0.0
+    },
+    {
+      "frames": 16385,
+      "position": 8193,
+      "peak_index": 131088,
+      "discarded_l1": 5.5079069874356843e-14,
+      "kernel_max_error": 2.220446049250313e-16,
+      "kernel_l1_error": 1.0471279064258954e-13
+    },
+    {
+      "frames": 32768,
+      "position": 16384,
+      "peak_index": 262144,
+      "discarded_l1": 5.597201596192908e-14,
+      "kernel_max_error": 2.220446049250313e-16,
+      "kernel_l1_error": 9.441016607303405e-14
+    }
+  ],
+  "kernel_sha256": "4591255f9bcfaacddece4d70d0d81a4fb43f4bb96e915003f3bd718414e1c6c3"
+}

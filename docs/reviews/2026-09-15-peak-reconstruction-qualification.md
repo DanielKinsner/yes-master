@@ -92,10 +92,14 @@ FFmpeg binary hash, version/configuration, filter command and kernel hash.
 
 The standalone Rust polyphase-FIR experiment accepts this numeric kernel from
 the qualification driver. It carries complete context and finite ringout with
-fixed FFT workspace. It is a comparison response, with no production dependency,
-embedded production coefficient table, or delivered-audio filter change yet.
-Continuous interpolation allowance for this lowpass response and its finite
-numeric residual still need explicit validation before adoption.
+fixed FFT workspace. The library meter now embeds that exact numeric response
+with its generator/hash provenance; this table is measurement data, not private
+music or a processing filter. The lowpass continuous allowance is checked against
+the independently generated 16/32/64x finite-zero-extension references below.
+The numerical residual allowance is 1e-10 times source sample peak, covering the
+measured <2e-13 coefficient/truncation residual and fixed FFT error envelope.
+This is tested numerical qualification, not formal interval arithmetic or a
+universal DAC claim. No delivered-audio processing stage has changed in this slice.
 
 ## Acceptance specification before production integration
 
@@ -178,3 +182,30 @@ including decode/hash and three library comparison passes, drops from median
 include decoded programme audio and are not standalone meter allocation counts.
 The real-FFT optimization is retained. This remains too costly for repeated
 uncached interaction, reinforcing the measured C0 reuse requirement.
+
+### Replayable library core and exact delivery reader
+
+`src-tauri/src/peak_meter/` exposes the qualified reconstruction intervals, their
+width and version `finite-sinc20-soxr16-4591255f-realfft-1`. It accepts borrowed
+float PCM or bounded channel reads from an immutable, replayable provider. The
+app export/preview routes have not switched to it yet. Four additional native
+tests establish reset/cancellation/invalid-input handling and exact delivery
+replay. `b2-provider-parity-v2/` records **bit-identical 481 + 6** reconstruction
+results against the standalone real-FFT implementation, retaining all independent
+reference checks. Strict all-target Clippy passes (`b2-provider-clippy-v2.log`).
+
+`wav_writer::DeliveryPcm` stores four bytes of dither PRNG state per 4096 frames.
+It can replay the existing quantizer at arbitrary read boundaries without a
+second full-track PCM buffer. Mono/stereo, PCM16/24/float, 1/257/4096/8193-frame
+reads and actual written WAV decoding agree sample for sample. Metering this
+reader equals metering the separately decoded samples. The writer and its seed
+are unchanged, including their existing final saturation behavior; this reader
+alone does not establish that incoming PCM was protected from clipping.
+
+Filter plans are immutable process-wide data; per-call FFT arrays have fixed
+size. Prefix summaries, interval records and optional moment trees grow with
+the number of 4096-frame blocks, with fallible source-sized reservations. This
+is bounded small metadata per source block, not constant total memory. It never
+allocates 16x whole-programme audio. FFT planning still uses the dependency's
+ordinary fixed-size allocations. Cancellation is checked between source blocks,
+core/phase transforms and tree construction. All this work belongs on workers.

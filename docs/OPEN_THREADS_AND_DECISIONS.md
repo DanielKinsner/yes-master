@@ -15,7 +15,9 @@
 > Matching raw reuse makes target edits substantially faster; broad preset
 > precomputation is not supported. B2's standalone combined estimator passes 481
 > finite-zero-extension cases and six whole-file witnesses with preserved reference
-> limitations; performance work and production B3 integration remain open.
+> limitations. Its replayable library core matches all 487 results exactly; real
+> FFTs cut owner/long verifier cost about 39%. Production B3 route integration
+> remains open; an exact-dither reader supports bounded-memory delivery checks.
 > Automatic sonic policy is still pending the focused owner choice, with local
 > level-matched review audio prepared. No new listening verdict is inferred.
 

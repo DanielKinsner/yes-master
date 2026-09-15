@@ -55,6 +55,10 @@ before interpreting results. The application detector has not been replaced.
   source identity and layout. `peak_cost.py` rotates three before/after trials
   using copied executables and reports process CPU/working set separately from
   candidate/FIR measurement times. Run timing after other task-owned CPU work ends.
+- `mastering_quality_meter_probe` runs the replayable library core against an
+  existing input list. Its two arguments are `<inputs.json> <fresh-output.json>`;
+  use the same parity script and retained independent references. The application
+  render/preview routes have not switched to this library meter yet.
 
 All sources/outputs and copied binaries are local evidence. Use new output names
 when changing a runner. These probes are not installed-app or listening proof.
