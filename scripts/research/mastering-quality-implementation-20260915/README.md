@@ -1,0 +1,71 @@
+# Local implementation experiments
+
+These probes support the [checkpoint ledger](../../../docs/reviews/2026-09-15-mastering-quality-implementation-evidence.md).
+They do not select a shipping sonic policy. Private WAVs and full output logs
+stay under ignored `test-output/mastering-quality-implementation-20260915/`.
+Every runner refuses an existing output directory/file. Preserve frozen research
+and choose a new run name for changed experiments.
+
+## Current application witnesses
+
+From `src-tauri`, build `mastering_quality_witness` with
+`cargo build --target-dir target/codex-rc --example mastering_quality_witness`.
+From the repository root:
+
+```powershell
+python scripts/research/mastering-quality-implementation-20260915/check_witnesses.py --output test-output/mastering-quality-implementation-20260915/ab-witnesses-v2
+```
+
+The script copies the executable outside Cargo's output before using it. It
+checks the restored Funk hash, recreates the pruned hot-start variant with the
+recorded recipe, loads historical settings, renders through the current engine,
+and retains independent meter results. A1/B1 success does not qualify the old
+peak meter: remaining independent ceiling failures stay visible.
+
+## C0
+
+Build `mastering_quality_bench` with the same target directory, then copy the
+executable to the ignored evidence directory before running. Arguments:
+
+```text
+mastering_quality_bench.exe <source.wav> <fresh-output-directory> [--timing-only | --candidates-only] [--trials 3]
+```
+
+Version 2 reports the actual `engine::preview_landing` API separately from
+strategies that all add whole-file final verification. Trial ordering rotates
+the three preparation strategies. Source facts/ordered windows and a two-result
+raw-PCM cache are measured separately. Keys and finite active-passage thresholds
+are experimental; production identity/version/invalidation requirements remain
+in the plan. The original v1 timing run overlapped builds and cannot establish a
+repeatable speedup. Controlled trials must run after build activity stops.
+
+Candidate renders retain current coefficients except for a separate experimental
+input-drive multiplier. Check them with both references and descriptive metrics:
+
+```text
+python scripts/research/mastering-quality-implementation-20260915/check_candidates.py --source <source.wav> --run <candidate-directory> --output <fresh-checked-directory>
+```
+
+This checks every complete candidate waveform, applies a target/ceiling-bounded
+scalar, writes float PCM, and checks the complete delivered waveform again.
+The imported historical shape-measurement helper writes into the **new** output
+directory only. FFmpeg LUFS/LRA summaries are rounded to 0.1 LU. No composite
+fidelity score or preferred-sound claim is inferred from crest/contrast metrics.
+The optional two local search refinements remain to be evaluated.
+
+The opt-in `audio::native_callback_bench::mastering_quality_native_callback_bench`
+test uses `YES_MASTER_BENCH_FILE` and a fresh `YES_MASTER_CALLBACK_REPORT` path.
+It runs production MasteringSource and meters on a real CPAL callback, then
+mutes samples before the device. It measures concurrent whole-file preparation
+and rapid coefficient edits. Requested/granted frames and all timing misses are
+reported explicitly; this is not installed UI, listening, or complete
+AudioPlayer A/B/source/device-lifecycle evidence.
+
+## Peak qualification
+
+`qualify_fir.py --output <fresh.json>` records every candidate failure against
+the corrected FFT reference. Hann-sinc support is measured in input samples,
+not total oversampled FIR taps. No candidate from v1 qualified, including the
+longest filter. The finite-edge/bandwidth specification and independent library
+comparison remain open; increasing oversampling or adding an arbitrary margin
+is not adoption evidence.
