@@ -1,5 +1,27 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
+> Dan accepts longer initial analysis/preparation for demonstrated audio quality,
+> fidelity and subsequent interaction benefits. The [revised plan](plans/2026-09-15-mastering-quality-implementation-plan.md)
+> makes C0 an early preparation/quality/performance experiment alongside A/B1/D1;
+> offline C no longer waits for B2/B3 production integration. It compares a
+> single-render source-relative rule, attenuate-only processing and bounded
+> search, using checked research references before production adoption. Initial
+> wait, prediction-settling time and live audio responsiveness are separate
+> measures. Numeric sonic limits/control mapping remain open; the agent owns
+> candidate calibration and validation. This request updates the plan, with
+> production implementation and existing calibration gates unchanged.
+
+> **2026-09-15 — Mastering implementation planning draft prepared.**
+> The [code-grounded plan](plans/2026-09-15-mastering-quality-implementation-plan.md)
+> separates SRC correctness, qualified final-output protection, automatic-drive
+> prototyping, existing-control accuracy and saturation calibration. Receiving-
+> machine restoration verified 3,543 objects / 4,507 paths. A fresh locked Windows
+> harness build reproduced On/Off/257-frame WAVs byte for byte after diagnosing
+> source line-ending differences in an isolated copy. Current production is
+> unchanged. Automatic dynamics limits and control mapping remain proposals;
+> planning is not production adoption, new listening approval or release work.
+
 > **2026-09-15 — Final mastering research synthesis; next step is implementation planning.**
 > Claude's blind report and unblinded reconciliation are archived with original
 > seals, scripts/settings and raw measurements. The [authoritative synthesis](reviews/2026-09-15-mastering-quality-final-synthesis.md)

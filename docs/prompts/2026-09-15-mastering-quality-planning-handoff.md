@@ -1,5 +1,14 @@
 # Fresh-agent start: plan implementation from the completed mastering research
 
+> **Planning update, September 15:** the [revised implementation plan](../plans/2026-09-15-mastering-quality-implementation-plan.md)
+> now records Dan's preference for useful longer upfront preparation and the
+> reviewed implementation sequence. Read it with the live status before using
+> the original planning prompt below. C0 starts early alongside correctness
+> fixes; the offline C prototype can use checked research references and isolated
+> corrected SRC while the production meter is developed. Production adoption
+> still depends on integrated output protection. No production implementation
+> or new sonic calibration has been authorized by this planning update.
+
 Use this prompt after pulling `main` on the receiving machine. The investigation
 concluded September 15 UTC / September 14 evening Pacific. Start here rather
 than restarting the older continuation prompt or the blind review.
