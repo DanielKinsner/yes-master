@@ -13,7 +13,7 @@ No push, main integration, publication, spending or private-audio commit is auth
 | B1 | Complete locally | Shared optional-LUFS decision and raw measurement availability; 12 no-target/short-audio PCM16/24/float regressions and historical Funk/50 ms witnesses pass. Current detector still underreads independent peaks: B2/B3 remain open. |
 | D1 | Complete | Named Auto 0.50 / Custom 0.00, saved null unchanged; summary identifies pre-Adapt values. Build, all 38 app headless checks, landing checks and 892 frontend tests passed. Fresh Advanced capture inspected: thumb/readout/summary visible without overlap. |
 | D2 | Implemented; checkpoint verification passed | Actual guarded coefficients, request-associated source/settings/analysis identity, accurate fallback, unchanged Manual seeding. 972 settings configurations / 2,916 band comparisons; 33 guardrail tests; 894 frontend tests, build/headless, wire golden and bridges pass. |
-| C0 | Experiment running | Initial source/PCM reuse and candidate renders complete on owner source; independent final-output checks and expanded experience measurements running. Initial timings are confounded by background builds, not a claimed speedup. |
+| C0 | Experiment running | Twenty owner-source candidate deliveries pass both checked whole-file peak references. Native callback and full AudioPlayer lifecycle probes passed with limits below. Three-trial short/typical/long preparation comparisons are being consolidated. No sonic policy adopted. |
 | B2 | Qualification in progress | Five Hann-sinc candidates failed declared FFT-reference edge cases; none adopted. See below. |
 | B3–B4, C1–C3, E | Pending | Existing revised dependencies and adoption/calibration gates remain. |
 
@@ -156,3 +156,136 @@ An offline block-throughput probe cannot establish native callback deadlines.
 Native availability/results will be explicitly recorded, including requested
 versus granted device blocks, cancellation, source/device switches and A/B.
 No unseen holdout is opened in C0; C2 rules/limits must be frozen first.
+
+### C0 owner-source quality comparison
+
+`c0-coat-checked-v1/comparison.json` retains 20 final float deliveries, all finite,
+with exact frame/channel identity and both checked FFT16/float SOXR16 peaks at
+or below the requested −1 dBTP (0.002 dB numerical tolerance). The immutable
+application On/Off controls remain byte-identical. These experimental deliveries
+use a separate input multiplier and independent landing; no saved setting changes.
+
+| Candidate | Target / delivered LUFS | Crest dB | LRA LU | Source-anchored section contrast change dB |
+| --- | --- | --- | --- | --- |
+| Source | — / −12.3 | 12.72 | 4.1 | 0 |
+| Current processing | −14 / −14 | 8.95 | 3.1 | −1.53 |
+| Single source-relative render | −14 / −14 | 13.81 | 4.0 | −0.18 |
+| Attenuate-only | −14 / −14 | 14.06 | 4.1 | −0.17 |
+| Current processing | −9 / −9 | 8.95 | 3.1 | −1.53 |
+| Single source-relative render | −9 / −9 | 9.64 | 3.5 | −1.04 |
+| Bounded candidate, extra drive −4.16 dB | −9 / −10.5 | 12.04 | 4.0 | −0.30 |
+
+LUFS/LRA here are independent FFmpeg readings rounded to 0.1 LU. These numbers
+show a target/preservation tradeoff, not preferred sound. At −14 every initial
+grid point is feasible and its lowest-drive point lies on the search boundary;
+that is not an established optimum. Crest can exceed the source, so maximizing
+crest alone is not a fidelity objective. Broader cases and frozen C1/C2 limits
+remain necessary. The PNG/SVG under `c0-coat-figure-v1/` plots all retained points.
+
+### C0 controlled preparation/reuse timings
+
+`c0-timing-summary-v2.json` summarizes three sequential trials per strategy for
+60-second Funk hot-start, 244.56-second owner, and 422.25-second Aphelion. All
+builds and other research processes initiated by this task were stopped before
+the timing sequence. Strategy order rotates; OS scheduling/thermal variation
+remains visible. Aphelion is previously examined development evidence here,
+not a new unseen holdout. The summary asserts identical final simulation
+measurements for matching settings across strategies/trials.
+
+| Measurement (seconds, median unless stated) | 60 s | Owner 244.56 s | Aphelion 422.25 s |
+| --- | ---: | ---: | ---: |
+| Hash + decode + deep analysis (one preparation) | 0.98 | 3.73 | 6.64 |
+| Actual preview API first result | 0.96 | 4.34 | 7.25 |
+| Actual preview API target edit | 0.99 | 4.49 | 7.37 |
+| Re-render + final check target edit | 1.08 | 4.80 | 7.78 |
+| Matching raw cache + final check target edit | 0.088 | 0.366 | 0.659 |
+| Initial settings moved into preparation | 1.08 | 5.13 | 9.03 |
+| First final check after that preparation | 0.087 | 0.387 | 0.747 |
+| Session: re-render + final checks | 7.68 | 35.59 | 60.87 |
+| Session: raw cache + final checks | 6.86 | 33.39 | 58.53 |
+| Session: first result prepared upfront | 8.48 | 31.81 | 60.14 |
+| Maximum two-result raw cache, MiB | 43.95 | 179.12 | 309.27 |
+
+Session values include initial settings preparation and the ten-edit sequence;
+they exclude common source preparation. Existing scalar hits on return/replay
+are already nearly immediate and must not be credited as a new cache benefit.
+All strategies that add final checks retain that whole-file work. Their current
+library peak meter is provisional; B2's eventual qualified verifier changes the
+absolute budget. Detailed per-edit median/worst values are in the summary.
+
+The isolated child processes peaked at 121.33/447.98/768.09 MiB working set,
+including source, transient delivery allocations and cache. Whole-probe wall
+times 95.68/439.29/717.13 seconds include **all twelve sessions**, source analysis
+and two actual exports; they are not a user's one-session wait. Owner On/Off
+hashes again match the frozen controls in this separate run.
+
+**Recommendation for C1:** retain immutable source analysis/window descriptors,
+prepare the currently selected settings once, preserve existing scalar-result
+reuse, and evaluate a byte-capped cache of matching pre-landing audio. Target-only
+reuse is substantial; indiscriminate preset precomputation has no demonstrated
+benefit. Two full files cost 309 MiB on the long case and are an experiment size,
+not an unbounded production allocation policy. New EQ/Density/Adapt/preset
+settings still require nonlinear processing; source preparation does not erase
+that cost. Use the single-rule candidate as the low-cost quality baseline and
+retain bounded full-song search for difficult target/preservation tradeoffs.
+
+### Native playback and cancellation
+
+`native-callback-coat-v1.json` exercised real CPAL/production MasteringSource,
+meters and spectrum while a whole-song preview worker ran and 120 EQ changes
+arrived. Processing was muted only after DSP and meter work. The default Realtek
+stereo output ran at 48 kHz: requested 256 frames, **granted 480–1056**. Across
+608 callbacks, median/p95/max processing was 0.202/0.396/0.598 ms, with no observed
+processing-deadline overrun, device error or exhausted source. First peak update
+arrived after 10.35 ms; 111 of 120 snapshots had changed LUFS. The first worker
+result took 5.19 seconds; cancellation-to-join took 1.92 ms. An independent FFT
+research process was also active. This is evidence under concurrent load, not
+a fixed-256-block pass or a listening verdict.
+
+`native-lifecycle-coat-v3.json` then exercised the real AudioPlayer API and native
+output, with a test-only muted sink: source playback/first meter 255 ms; first
+master result 4.56 seconds while playhead advanced; ordinary settings changes
+4.32–6.39 seconds; returning to initial settings within the 60 ms observation
+interval; 30 rapid EQ changes settled after 9.29 seconds. Original/Mastered A/B
+took 18.4/19.7 ms and preserved position. Named-device/default-device reopening
+took 458/27 ms and stopped playback, as the existing product contract specifies.
+Switching to the restored Funk source took 85.7 ms; stopping pending preparation
+took 10.5 ms. These are snapshot-observed times, not exact worker-completion times.
+
+Failed lifecycle runs v1/v2 are retained. V1 incorrectly expected a loaded stream
+after device selection despite the documented unload/stop behavior. V2 could read
+an old snapshot as a ready master or fail a cache hit before observing playhead
+progress. The corrected probe waits for the new playback generation and actual
+progress. No production behavior or timing threshold was relaxed. The mute helper
+is compiled only for tests; it never changes OS volume or device preferences.
+No installed UI, Mac, listening or release proof is implied by either probe.
+
+### Context before selected passages
+
+`c0-passages-coat-v1/comparison.json` compares six source-selected passages across
+three candidate policies with 0, 2 and 10 seconds of preceding context: 54 cases.
+The source grid is aligned to the rational SRC phase, and retained continuous
+full-file raw outputs are the comparator. With zero context, maximum local
+sample error was 0.5357 even though integrated loudness errors were below 0.009 LU.
+Two seconds reduced the worst sample error to 0.000561; ten seconds to 0.000547.
+Neither established sample equivalence. The remaining state/SRC/block contribution
+is unresolved; provisional library peaks here compare state, not final protection.
+Passage ranking and missed-peak rates are not yet qualified. Keep full-song
+evaluation; an excerpt shortcut cannot be selected from small loudness errors.
+
+### B2 FFT reconstruction scope findings
+
+`b2-fft-exploration-v1.json` and `b2-fft-bound-v1.json` retain failed FFT candidates.
+Increasing overlap/factor changes finite-periodic reconstruction near file edges.
+The provisional 16×/262144-core/32768-guard variant included exterior ringout and
+a mathematical between-grid bound for each periodic FFT polynomial. It still
+read 1.3545 dB below the preserved reference on alternating-262143. The grid bound
+does not cover truncation or periodic-extension differences; no candidate is
+adopted and no fixed reserve is used to conceal this failure.
+
+A separately constructed direct finite cardinal-sinc sum also exposed reference
+scope differences: a two-frame random case peaks before the first sample, which
+the preserved reference's nominal-file crop excludes. Its 1.3761 dB direct peak
+compares with 0.9894 dB in that reference. Long coherent near-Nyquist cases need
+further independent reconstruction checks. Historical references/results remain
+unchanged and their limitations remain explicit.

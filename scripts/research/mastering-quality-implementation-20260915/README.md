@@ -6,6 +6,28 @@ stay under ignored `test-output/mastering-quality-implementation-20260915/`.
 Every runner refuses an existing output directory/file. Preserve frozen research
 and choose a new run name for changed experiments.
 
+Additional probes added during C0:
+
+- `run_bench.py` copies the native executable and measures only its child process
+  with Windows process CPU/peak-working-set counters. Use `--timing-only --trials 3`
+  for timing runs; stop competing builds/analysis before those runs.
+- `summarize_timing.py --runs <completed-run> ... --output <fresh.json>` verifies
+  matching final simulation measurements and separates source preparation,
+  settings preparation, each edit and whole-session work. Whole-probe process
+  time includes all trials/strategies and is not one editing session's cost.
+- `plot_candidates.py` produces shareable PNG/SVG plots from a checked comparison.
+- Build `mastering_quality_passages` in the same Cargo target directory, copy its
+  executable, then pass `<source> <existing-candidate-dir> <fresh-output-dir>`.
+  This compares contextual excerpts with continuous output; provisional library
+  readings are state diagnostics, not independent peak protection.
+- The opt-in ignored `audio::native_callback_bench::mastering_quality_native_lifecycle_bench`
+  exercises the full AudioPlayer API separately from the direct CPAL callback
+  probe. Read its required environment variables in the source. Both probes mute
+  after processing; neither establishes a listening or installed-UI verdict.
+- `qualify_fft_bound.py` explores a periodic-FFT between-grid bound. It explicitly
+  does not bound finite-window truncation error. Retain failed cases; no production
+  peak estimator has been selected from these probes.
+
 ## Current application witnesses
 
 From `src-tauri`, build `mastering_quality_witness` with
