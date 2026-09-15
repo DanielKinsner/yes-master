@@ -1,0 +1,131 @@
+{
+  "analysis": {
+    "deep_analysis_present": true,
+    "dynamic_range_lu": 0.35102659463882446,
+    "dynamic_range_p95_p10_db": 10.262533187866211,
+    "energy_density_score": 0.08892343193292618,
+    "inferred_character": "dark",
+    "inferred_role": "interlude",
+    "lufs_integrated": -28.19134521484375,
+    "lufs_short_term_max_3s": -27.867944717407227,
+    "source_profile_digest": "bright 0.04 / low 0.93 / DR 10.3dB / LRA 0.4LU / corr 1.00",
+    "spectral_balance_6band": {
+      "air": 0.01821182109415531,
+      "low": 0.24137654900550842,
+      "low_mid": 0.01307519432157278,
+      "mid": 0.020647792145609856,
+      "presence": 0.019141467288136482,
+      "sub": 0.6875471472740173
+    },
+    "stand_down": {
+      "hot_loudness": false,
+      "low_lra": false,
+      "near_ceiling": false,
+      "stand_down": 0.0,
+      "uniformly_low_psr": false
+    },
+    "stereo_correlation": 1.0,
+    "stereo_width": 0.0,
+    "transient_flux": 0.11172213405370712,
+    "true_peak_dbtp": -6.854060173034668
+  },
+  "checks": [
+    {
+      "code": "dynamic_range_low",
+      "level": "info",
+      "message": "Delivered loudness range (LRA) is 0.3 LU: little longer-term loudness variation. This does not measure transient dynamics."
+    },
+    {
+      "code": "comp_density_on_compressed_source",
+      "level": "info",
+      "message": "Source loudness range (LRA) is low. Compare with compression Off to judge transient movement by ear."
+    }
+  ],
+  "effective_bit_depth": 32,
+  "effective_ceiling_dbtp": -1.0,
+  "effective_target_lufs": null,
+  "elapsed_s": 0.819979,
+  "input": "C:\\Users\\Daniel Kinsner\\OneDrive\\Documents\\GitHub\\yes-master-independent-audit-20260915\\audit-output/synthetic/pink_boomy.wav",
+  "measurements": {
+    "bit_depth": 32,
+    "compression_digest": null,
+    "confidence_digest": null,
+    "dynamic_range_lu": 0.30247828364372253,
+    "effective_adaptive_strength": 0.5,
+    "lufs_integrated": -14.246724128723145,
+    "mp3_bitrate_kbps": null,
+    "sample_rate": 44100,
+    "source_profile_digest": "bright 0.04 / low 0.93 / DR 10.3dB / LRA 0.4LU / corr 1.00",
+    "true_peak_dbtp": -2.3515396118164062
+  },
+  "output": "C:\\Users\\Daniel Kinsner\\OneDrive\\Documents\\GitHub\\yes-master-independent-audit-20260915\\audit-output\\renders\\tones\\T_pink_boomy_loud.wav",
+  "requested_sample_rate": null,
+  "settings": {
+    "advanced": {
+      "adaptive_strength": null,
+      "bit_depth": 32,
+      "ceiling_dbtp": -1.0,
+      "compression_density": null,
+      "compression_high_attack_ms": null,
+      "compression_high_ratio": null,
+      "compression_high_release_ms": null,
+      "compression_high_threshold_db": null,
+      "compression_link_stereo": null,
+      "compression_low_attack_ms": null,
+      "compression_low_ratio": null,
+      "compression_low_release_ms": null,
+      "compression_low_threshold_db": null,
+      "compression_mid_attack_ms": null,
+      "compression_mid_ratio": null,
+      "compression_mid_release_ms": null,
+      "compression_mid_threshold_db": null,
+      "compression_mode": "preset",
+      "lufs_offset_db": null,
+      "presence_air": null,
+      "source_profile": {
+        "dynamic_range_lu": 0.35102659463882446,
+        "dynamic_range_p95_p10_db": 10.262533187866211,
+        "spectral_6": {
+          "air": 0.01821182109415531,
+          "low": 0.24137654900550842,
+          "low_mid": 0.01307519432157278,
+          "mid": 0.020647792145609856,
+          "presence": 0.019141467288136482,
+          "sub": 0.6875471472740173
+        },
+        "stereo_correlation": 1.0,
+        "stereo_width": 0.0
+      },
+      "target_sample_rate": null,
+      "warmth": null,
+      "width": null
+    },
+    "album": null,
+    "delivery_profile": "custom",
+    "eq_bands": {
+      "high_hz": 6000.0,
+      "high_mid_hz": 3500.0,
+      "low_hz": 200.0,
+      "low_mid_hz": 400.0,
+      "mid_hz": 1500.0,
+      "sparkle_hz": 12000.0,
+      "sub_hz": 80.0
+    },
+    "eq_high_db": 0.0,
+    "eq_high_mid_db": 0.0,
+    "eq_low_db": 0.0,
+    "eq_low_mid_db": 0.0,
+    "eq_mid_db": 0.0,
+    "eq_sparkle_db": 0.0,
+    "eq_sub_db": 0.0,
+    "input_gain_db": 0.0,
+    "intensity": 0.5,
+    "output_gain_db": 0.0,
+    "preset": {
+      "kind": "loud"
+    },
+    "source_lufs_integrated": -28.19134521484375,
+    "volume_match": false
+  },
+  "status": "Done"
+}

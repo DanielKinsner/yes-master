@@ -1,0 +1,22 @@
+[package]
+name = "yes-audit-harness"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Independent audit harness. Depends on the UNMODIFIED production crate by
+# path. default-features = false skips the desktop `app-runner` feature
+# (Tauri window/updater/LAME) and the `custom-protocol` asset embedding,
+# neither of which touches the DSP, analysis, SRC, landing or WAV writer.
+# This is the same feature configuration the mobile bridges compile.
+[dependencies]
+yes-master = { path = "../../src-tauri", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hound = "3"
+sha2 = "0.10"
+ebur128 = "0.1"
+
+[profile.release]
+opt-level = 3
+debug = false

@@ -1,0 +1,126 @@
+{
+  "analysis": {
+    "deep_analysis_present": true,
+    "dynamic_range_lu": 8.783639907836914,
+    "dynamic_range_p95_p10_db": 29.037565231323242,
+    "energy_density_score": 0.23021765053272247,
+    "inferred_character": "dark",
+    "inferred_role": "interlude",
+    "lufs_integrated": -16.68603515625,
+    "lufs_short_term_max_3s": -14.298772811889648,
+    "source_profile_digest": "bright 0.03 / low 0.88 / DR 29.0dB / LRA 8.8LU / corr 0.94",
+    "spectral_balance_6band": {
+      "air": 0.018525972962379456,
+      "low": 0.3895029127597809,
+      "low_mid": 0.06533290445804596,
+      "mid": 0.024458181113004684,
+      "presence": 0.006851995829492807,
+      "sub": 0.49532803893089294
+    },
+    "stand_down": {
+      "hot_loudness": false,
+      "low_lra": false,
+      "near_ceiling": true,
+      "stand_down": 0.0,
+      "uniformly_low_psr": false
+    },
+    "stereo_correlation": 0.9419901371002197,
+    "stereo_width": 0.02900521643459797,
+    "transient_flux": 0.20239518582820892,
+    "true_peak_dbtp": -0.6425543427467346
+  },
+  "checks": [
+    {
+      "code": "export_ok",
+      "level": "info",
+      "message": "No issues detected in measured values."
+    }
+  ],
+  "effective_bit_depth": 16,
+  "effective_ceiling_dbtp": -1.0,
+  "effective_target_lufs": -14.0,
+  "elapsed_s": 0.7122767,
+  "input": "C:/Users/Daniel Kinsner/OneDrive/Documents/GitHub/yes-master-independent-audit-20260915/audit-output/reconciliation-20260915/renders/hotstart_input04_48k_60-120s.wav",
+  "measurements": {
+    "bit_depth": 16,
+    "compression_digest": null,
+    "confidence_digest": null,
+    "dynamic_range_lu": 7.911127090454102,
+    "effective_adaptive_strength": 0.5,
+    "lufs_integrated": -13.999999046325684,
+    "mp3_bitrate_kbps": null,
+    "sample_rate": 44100,
+    "source_profile_digest": "bright 0.03 / low 0.88 / DR 29.0dB / LRA 8.8LU / corr 0.94",
+    "true_peak_dbtp": -3.6540439128875732
+  },
+  "output": "C:/Users/Daniel Kinsner/OneDrive/Documents/GitHub/yes-master-independent-audit-20260915/audit-output/reconciliation-20260915/renders/hotstart_input04_48k_60-120s_cd.wav",
+  "requested_sample_rate": 44100,
+  "settings": {
+    "advanced": {
+      "adaptive_strength": 0.5,
+      "bit_depth": null,
+      "ceiling_dbtp": null,
+      "compression_density": null,
+      "compression_high_attack_ms": null,
+      "compression_high_ratio": null,
+      "compression_high_release_ms": null,
+      "compression_high_threshold_db": null,
+      "compression_link_stereo": null,
+      "compression_low_attack_ms": null,
+      "compression_low_ratio": null,
+      "compression_low_release_ms": null,
+      "compression_low_threshold_db": null,
+      "compression_mid_attack_ms": null,
+      "compression_mid_ratio": null,
+      "compression_mid_release_ms": null,
+      "compression_mid_threshold_db": null,
+      "compression_mode": "preset",
+      "lufs_offset_db": null,
+      "presence_air": null,
+      "source_profile": {
+        "dynamic_range_lu": 8.783639907836914,
+        "dynamic_range_p95_p10_db": 29.037565231323242,
+        "spectral_6": {
+          "air": 0.018525972962379456,
+          "low": 0.3895029127597809,
+          "low_mid": 0.06533290445804596,
+          "mid": 0.024458181113004684,
+          "presence": 0.006851995829492807,
+          "sub": 0.49532803893089294
+        },
+        "stereo_correlation": 0.9419901371002197,
+        "stereo_width": 0.02900521643459797
+      },
+      "target_sample_rate": null,
+      "warmth": null,
+      "width": null
+    },
+    "album": null,
+    "delivery_profile": "cd",
+    "eq_bands": {
+      "high_hz": 6000.0,
+      "high_mid_hz": 3500.0,
+      "low_hz": 200.0,
+      "low_mid_hz": 400.0,
+      "mid_hz": 1500.0,
+      "sparkle_hz": 12000.0,
+      "sub_hz": 80.0
+    },
+    "eq_high_db": 0.0,
+    "eq_high_mid_db": 0.0,
+    "eq_low_db": 0.0,
+    "eq_low_mid_db": 0.0,
+    "eq_mid_db": 0.0,
+    "eq_sparkle_db": 0.0,
+    "eq_sub_db": 0.0,
+    "input_gain_db": 0.0,
+    "intensity": 0.75,
+    "output_gain_db": 0.0,
+    "preset": {
+      "kind": "universal"
+    },
+    "source_lufs_integrated": -16.68603515625,
+    "volume_match": false
+  },
+  "status": "Done"
+}

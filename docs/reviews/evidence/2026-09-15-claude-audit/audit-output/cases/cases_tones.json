@@ -1,0 +1,464 @@
+[
+ {
+  "id": "T_sine1k_-20dBFS_universal",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine1k_-20dBFS.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine1k_-20dBFS_loud",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine1k_-20dBFS.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine1k_-20dBFS_custom",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine1k_-20dBFS.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine1k_-6dBFS_universal",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine1k_-6dBFS.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine1k_-6dBFS_loud",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine1k_-6dBFS.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine1k_-6dBFS_custom",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine1k_-6dBFS.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine1k_-1dBFS_universal",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine1k_-1dBFS.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine1k_-1dBFS_loud",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine1k_-1dBFS.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine1k_-1dBFS_custom",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine1k_-1dBFS.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_imd_smpte_-6_universal",
+  "group": "tones",
+  "input": "audit-output/synthetic/imd_smpte_-6.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_imd_smpte_-6_loud",
+  "group": "tones",
+  "input": "audit-output/synthetic/imd_smpte_-6.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_imd_smpte_-6_custom",
+  "group": "tones",
+  "input": "audit-output/synthetic/imd_smpte_-6.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine15k_-6_universal",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine15k_-6.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine15k_-6_loud",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine15k_-6.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine15k_-6_custom",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine15k_-6.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine19k_-6_universal",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine19k_-6.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine19k_-6_loud",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine19k_-6.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_sine19k_-6_custom",
+  "group": "tones",
+  "input": "audit-output/synthetic/sine19k_-6.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_noise_-60_universal",
+  "group": "tones",
+  "input": "audit-output/synthetic/noise_-60.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_noise_-60_loud",
+  "group": "tones",
+  "input": "audit-output/synthetic/noise_-60.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_noise_-60_custom",
+  "group": "tones",
+  "input": "audit-output/synthetic/noise_-60.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_pink_-20_60s_universal",
+  "group": "tones",
+  "input": "audit-output/synthetic/pink_-20_60s.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_pink_-20_60s_loud",
+  "group": "tones",
+  "input": "audit-output/synthetic/pink_-20_60s.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_pink_-20_60s_custom",
+  "group": "tones",
+  "input": "audit-output/synthetic/pink_-20_60s.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_pink_bright_universal",
+  "group": "tones",
+  "input": "audit-output/synthetic/pink_bright.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_pink_bright_loud",
+  "group": "tones",
+  "input": "audit-output/synthetic/pink_bright.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_pink_bright_custom",
+  "group": "tones",
+  "input": "audit-output/synthetic/pink_bright.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_pink_boomy_universal",
+  "group": "tones",
+  "input": "audit-output/synthetic/pink_boomy.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_pink_boomy_loud",
+  "group": "tones",
+  "input": "audit-output/synthetic/pink_boomy.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_pink_boomy_custom",
+  "group": "tones",
+  "input": "audit-output/synthetic/pink_boomy.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_drums_60s_universal",
+  "group": "tones",
+  "input": "audit-output/synthetic/drums_60s.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_drums_60s_loud",
+  "group": "tones",
+  "input": "audit-output/synthetic/drums_60s.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ },
+ {
+  "id": "T_drums_60s_custom",
+  "group": "tones",
+  "input": "audit-output/synthetic/drums_60s.wav",
+  "spec": {
+   "preset": "custom",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32
+  },
+  "measure": "light"
+ }
+]

@@ -1,0 +1,835 @@
+[
+ {
+  "id": "S_prof_input02_apple-music",
+  "group": "profile",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "apple-music"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input02_cd",
+  "group": "profile",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "cd"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input02_vinyl-premaster",
+  "group": "profile",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "vinyl-premaster"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input02_loud-rock",
+  "group": "profile",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "loud-rock"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input02_broadcast-eu",
+  "group": "profile",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "broadcast-eu"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input02_broadcast-us",
+  "group": "profile",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "broadcast-us"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input02_custom-9",
+  "group": "profile",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": -9.0,
+   "ceiling_dbtp": -1.0,
+   "sample_rate": 48000,
+   "bit_depth": 24
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input02_custom-6",
+  "group": "profile",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": -6.0,
+   "ceiling_dbtp": -1.0,
+   "sample_rate": 48000,
+   "bit_depth": 24
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_int_input02_0.0",
+  "group": "intensity",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.0,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_int_input02_0.25",
+  "group": "intensity",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.25,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_int_input02_0.75",
+  "group": "intensity",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.75,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_int_input02_1.0",
+  "group": "intensity",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 1.0,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_comp_input02_off",
+  "group": "compression",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "compression_mode": "off"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_comp_input02_density1",
+  "group": "compression",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "compression_density": 1.0
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_comp_input02_density0",
+  "group": "compression",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "compression_density": 0.0
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_comp_input02_manual",
+  "group": "compression",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "compression_mode": "manual",
+   "manual_low_threshold_db": -24.0,
+   "manual_low_ratio": 3.0,
+   "manual_mid_threshold_db": -18.0,
+   "manual_mid_ratio": 2.0,
+   "manual_high_threshold_db": -20.0,
+   "manual_high_ratio": 2.5,
+   "manual_link_stereo": false
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_adapt_input02_0.0",
+  "group": "adapt",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "adapt_strength": 0.0
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_adapt_input02_1.0",
+  "group": "adapt",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "adapt_strength": 1.0
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_level_input02_-6dB",
+  "group": "level",
+  "input": "audit-output/variants/input02_-6dB.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_level_input02_-12dB",
+  "group": "level",
+  "input": "audit-output/variants/input02_-12dB.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_rate_input02_48k",
+  "group": "rate",
+  "input": "audit-output/variants/input02_48k.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_rate_input02_96k",
+  "group": "rate",
+  "input": "audit-output/variants/input02_96k.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_prof_input04_apple-music",
+  "group": "profile",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "apple-music"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input04_cd",
+  "group": "profile",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "cd"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input04_vinyl-premaster",
+  "group": "profile",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "vinyl-premaster"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input04_loud-rock",
+  "group": "profile",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "loud-rock"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input04_broadcast-eu",
+  "group": "profile",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "broadcast-eu"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input04_broadcast-us",
+  "group": "profile",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "broadcast-us"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input04_custom-9",
+  "group": "profile",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": -9.0,
+   "ceiling_dbtp": -1.0,
+   "sample_rate": 48000,
+   "bit_depth": 24
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input04_custom-6",
+  "group": "profile",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": -6.0,
+   "ceiling_dbtp": -1.0,
+   "sample_rate": 48000,
+   "bit_depth": 24
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_int_input04_0.0",
+  "group": "intensity",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.0,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_int_input04_0.25",
+  "group": "intensity",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.25,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_int_input04_0.75",
+  "group": "intensity",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.75,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_int_input04_1.0",
+  "group": "intensity",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 1.0,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_comp_input04_off",
+  "group": "compression",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "compression_mode": "off"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_comp_input04_density1",
+  "group": "compression",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "compression_density": 1.0
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_comp_input04_density0",
+  "group": "compression",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "compression_density": 0.0
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_comp_input04_manual",
+  "group": "compression",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "compression_mode": "manual",
+   "manual_low_threshold_db": -24.0,
+   "manual_low_ratio": 3.0,
+   "manual_mid_threshold_db": -18.0,
+   "manual_mid_ratio": 2.0,
+   "manual_high_threshold_db": -20.0,
+   "manual_high_ratio": 2.5,
+   "manual_link_stereo": false
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_adapt_input04_0.0",
+  "group": "adapt",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "adapt_strength": 0.0
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_adapt_input04_1.0",
+  "group": "adapt",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "adapt_strength": 1.0
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_level_input04_-6dB",
+  "group": "level",
+  "input": "audit-output/variants/input04_-6dB.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_level_input04_-12dB",
+  "group": "level",
+  "input": "audit-output/variants/input04_-12dB.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_rate_input04_48k",
+  "group": "rate",
+  "input": "audit-output/variants/input04_48k.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_rate_input04_96k",
+  "group": "rate",
+  "input": "audit-output/variants/input04_96k.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_prof_input06_apple-music",
+  "group": "profile",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "apple-music"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input06_cd",
+  "group": "profile",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "cd"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input06_vinyl-premaster",
+  "group": "profile",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "vinyl-premaster"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input06_loud-rock",
+  "group": "profile",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "loud-rock"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input06_broadcast-eu",
+  "group": "profile",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "broadcast-eu"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input06_broadcast-us",
+  "group": "profile",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "broadcast-us"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input06_custom-9",
+  "group": "profile",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": -9.0,
+   "ceiling_dbtp": -1.0,
+   "sample_rate": 48000,
+   "bit_depth": 24
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_prof_input06_custom-6",
+  "group": "profile",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "custom",
+   "lufs_target": -6.0,
+   "ceiling_dbtp": -1.0,
+   "sample_rate": 48000,
+   "bit_depth": 24
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_int_input06_0.0",
+  "group": "intensity",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.0,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_int_input06_0.25",
+  "group": "intensity",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.25,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_int_input06_0.75",
+  "group": "intensity",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.75,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_int_input06_1.0",
+  "group": "intensity",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 1.0,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_comp_input06_off",
+  "group": "compression",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "compression_mode": "off"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_comp_input06_density1",
+  "group": "compression",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "compression_density": 1.0
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_comp_input06_density0",
+  "group": "compression",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "compression_density": 0.0
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_comp_input06_manual",
+  "group": "compression",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "compression_mode": "manual",
+   "manual_low_threshold_db": -24.0,
+   "manual_low_ratio": 3.0,
+   "manual_mid_threshold_db": -18.0,
+   "manual_mid_ratio": 2.0,
+   "manual_high_threshold_db": -20.0,
+   "manual_high_ratio": 2.5,
+   "manual_link_stereo": false
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_adapt_input06_0.0",
+  "group": "adapt",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "adapt_strength": 0.0
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_adapt_input06_1.0",
+  "group": "adapt",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "adapt_strength": 1.0
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_level_input06_-6dB",
+  "group": "level",
+  "input": "audit-output/variants/input06_-6dB.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_level_input06_-12dB",
+  "group": "level",
+  "input": "audit-output/variants/input06_-12dB.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_rate_input06_48k",
+  "group": "rate",
+  "input": "audit-output/variants/input06_48k.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_rate_input06_96k",
+  "group": "rate",
+  "input": "audit-output/variants/input06_96k.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "full"
+ },
+ {
+  "id": "S_chan_input04_mono",
+  "group": "channels",
+  "input": "audit-output/variants/input04_mono.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_chan_input04_dualmono",
+  "group": "channels",
+  "input": "audit-output/variants/input04_dualmono.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "S_chan_input04_swapped",
+  "group": "channels",
+  "input": "audit-output/variants/input04_swapped.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "H_drums_-6dB_96k",
+  "group": "heldout",
+  "input": "audit-output/variants/heldout_drums_-6dB_96k.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ }
+]

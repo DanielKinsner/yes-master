@@ -1,0 +1,37 @@
+source/preset            var pregain    LUFS     TP  crest    psr    LRA p95p10 specdev notes
+heldout_drums/loud         0   +0.00  -16.34  -0.96  17.41  15.26   0.14  13.44    1.17 target_not_reached
+heldout_drums/loud         A   +0.00  -16.34  -0.96  17.41  15.26   0.14  13.44    1.17 target_not_reached
+heldout_drums/loud         B   +1.32  -15.69  -0.96  16.84  14.63   0.11  12.89    1.31 streaming_headroom_low,target_not_reached
+heldout_drums/universal    0   +0.00  -20.18  -0.95  20.72  19.15   0.11  14.51    0.44 streaming_headroom_low,target_not_reached
+heldout_drums/universal    A   +0.00  -20.18  -0.95  20.72  19.15   0.11  14.51    0.44 streaming_headroom_low,target_not_reached
+heldout_drums/universal    B   +6.00  -17.43  -0.96  18.43  16.36   0.18  14.02    0.42 streaming_headroom_low,target_not_reached
+input05/loud               0   +0.00  -14.00  -9.30   6.31   4.30   0.51   2.26    1.90 
+input05/loud               A   -8.67  -14.00  -5.17  10.29   7.94   0.90   3.40    1.39 
+input05/loud               B   -8.67  -14.00  -5.17  10.29   7.94   0.90   3.40    1.39 
+input05/universal          0   +0.00  -14.00  -8.21   7.06   5.19   0.80   3.00    0.94 
+input05/universal          A   -7.41  -14.00  -2.75  12.70  10.26   0.92   3.48    0.65 
+input05/universal          B   -7.41  -14.00  -2.75  12.70  10.26   0.92   3.48    0.65 
+input07/loud               0   +0.00  -15.01  -1.00  18.15   8.69   7.88  40.32    2.17 streaming_headroom_low,target_not_reached
+input07/loud               A   +0.00  -15.01  -1.00  18.15   8.69   7.88  40.32    2.17 streaming_headroom_low,target_not_reached
+input07/loud               B   +1.10  -14.31  -1.00  17.47   8.34   7.16  39.57    2.54 streaming_headroom_low,target_not_reached
+input07/universal          0   +0.00  -20.24  -1.00  23.27   9.26  11.60  44.27    0.64 target_not_reached
+input07/universal          A   +0.00  -20.24  -1.00  23.27   9.26  11.60  44.27    0.64 target_not_reached
+input07/universal          B   +6.00  -15.44  -1.01  18.47   5.91  11.02  43.90    0.87 target_not_reached
+
+== candidate A vs current, per case deltas (positive crest/psr/lra = more dynamics preserved; negative lufs_err = closer to target)
+  heldout_drums/loud       crest +0.00  psr +0.00  LRA +0.00  |LUFS err| +0.00  specdev +0.00  tp_ok True
+  heldout_drums/universal  crest +0.00  psr +0.00  LRA +0.00  |LUFS err| +0.00  specdev +0.00  tp_ok True
+  input05/loud             crest +3.98  psr +3.64  LRA +0.40  |LUFS err| +0.00  specdev -0.51  tp_ok True
+  input05/universal        crest +5.64  psr +5.07  LRA +0.12  |LUFS err| -0.00  specdev -0.28  tp_ok True
+  input07/loud             crest +0.00  psr +0.00  LRA +0.00  |LUFS err| +0.00  specdev +0.00  tp_ok True
+  input07/universal        crest +0.00  psr +0.00  LRA +0.00  |LUFS err| +0.00  specdev +0.00  tp_ok True
+  cases with crest preserved better: 2/6; closer to target: 0/6; further from target: 0/6; LRA higher: 2/6; spectral deviation lower: 2/6; TP ok: 6/6
+
+== candidate B vs current, per case deltas (positive crest/psr/lra = more dynamics preserved; negative lufs_err = closer to target)
+  heldout_drums/loud       crest -0.57  psr -0.63  LRA -0.03  |LUFS err| -0.65  specdev +0.14  tp_ok True
+  heldout_drums/universal  crest -2.29  psr -2.79  LRA +0.07  |LUFS err| -2.75  specdev -0.01  tp_ok True
+  input05/loud             crest +3.98  psr +3.64  LRA +0.40  |LUFS err| +0.00  specdev -0.51  tp_ok True
+  input05/universal        crest +5.64  psr +5.07  LRA +0.12  |LUFS err| -0.00  specdev -0.28  tp_ok True
+  input07/loud             crest -0.68  psr -0.35  LRA -0.72  |LUFS err| -0.69  specdev +0.37  tp_ok True
+  input07/universal        crest -4.80  psr -3.36  LRA -0.58  |LUFS err| -4.80  specdev +0.23  tp_ok True
+  cases with crest preserved better: 2/6; closer to target: 4/6; further from target: 0/6; LRA higher: 3/6; spectral deviation lower: 2/6; TP ok: 6/6

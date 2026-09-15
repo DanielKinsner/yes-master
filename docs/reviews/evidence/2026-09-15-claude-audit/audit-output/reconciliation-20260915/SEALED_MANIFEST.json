@@ -1,0 +1,32 @@
+{
+ "sealed_at_utc": "2026-09-15T06:20:02.898084+00:00",
+ "baseline_git_revision": "a4fb621d88a95b8af549467fb499943acb4274d5",
+ "original_blind_seal": {
+  "file": "audit-output/SEALED_MANIFEST.json",
+  "sha256": "f705f5804fd838c0945397daa41a552eb5f59ee6a0cc581fc6b00e51b1b90f8f",
+  "all_18_verified": true
+ },
+ "files": {
+  "audit-output/reconciliation-20260915/RECONCILIATION.md": "9ef59cb9481a485834b20ba01368837be01c00ffd871bb25a692de921c274673",
+  "audit-output/reconciliation-20260915/EVIDENCE_MANIFEST.json": "ad676090c2f45c006dc79ddb7b0d40c992d98a38fdd53dd00e0d002240134874",
+  "audit-output/reconciliation-20260915/harness/src/main.rs": "52dc89bbf14d26959669f19908ef0a6b76da4a22c9b3adf54de905c23b28423a",
+  "audit-output/reconciliation-20260915/harness/src/recon.rs": "436c3c396dc81ab91797a8a358618f09a897a0b95da5982e3dc0af712e7cb307",
+  "audit-output/reconciliation-20260915/harness/src/codex_src_fixed.rs": "ece0007a81c2e57dfc2de2cab0768196d328294d4204f96a5b3b4d27033d579e",
+  "audit-output/reconciliation-20260915/harness/Cargo.toml": "b45f8e0c76813286699121d189f872c2215b0135352b7c34a7471881f56cdd28",
+  "audit-output/reconciliation-20260915/harness/Cargo.lock": "2fe431b4922970b0a555e2efcdf6691912e6ced9f1120a3770e7263b2552e249",
+  "audit-output/reconciliation-20260915/scripts/inventory.py": "6f5cae1c654fe457b8ae252ba9f5f6765a36d60b6c5b047920b7fe787e8f8cfd",
+  "audit-output/reconciliation-20260915/scripts/policy_compare.py": "413d4dabbd549a46b11a7d2999f0d4a16ed27114d6382e91d152bd101dda9601",
+  "audit-output/reconciliation-20260915/scripts/policy_ms_check.py": "bca4a6f1c524fb70ffb46e78f618f38048004269c76dcec34c3d253cc5c71659",
+  "audit-output/reconciliation-20260915/scripts/policy_summary.py": "963896cdc940429f1b486e5424bc4d9e0636afbbf25ef56a74786623098d9f33",
+  "audit-output/reconciliation-20260915/scripts/prune.py": "d753c6431e38aa2acd83fff614d69dc2612f5eaf239f7f8a4dc5c4308b3287a6",
+  "audit-output/reconciliation-20260915/scripts/rubato_response.py": "37b923947138278a86023f2e92ae3ee3ade27a7cdc314251cad711d9606aa7c3",
+  "audit-output/reconciliation-20260915/scripts/rule_a_drums_iteration.py": "1affed4b59ffbf2dbc12d579b4c4a3aa0ecd7a155f857a74ee06084257420972",
+  "audit-output/reconciliation-20260915/scripts/sat_interaction.py": "55e3f86be0a4fbcfb350d14040eb24944ff6be294108bbf886d4bf09c770e4af",
+  "audit-output/reconciliation-20260915/scripts/sat_probe.py": "0df116b1b649978effeeae4049ea0463dccc862da791fd136c60b3501dac1fed",
+  "audit-output/reconciliation-20260915/scripts/seal_recon.py": "d314f9d5d302e5f78501d8c84012c64f8fe6ccab4fbccfa55bfff19e1376cfb5",
+  "audit-output/reconciliation-20260915/scripts/src_analysis.py": "bc129d74a3b484ba428a6683adcd1989948315d83af5dafbf548e3f54f4e2e94",
+  "audit-output/reconciliation-20260915/scripts/src_music_checks.py": "3add49673f041f278c74533e7c9c1fa70fa3c4d062b99ccfb13106b5e89e04c8",
+  "audit-output/reconciliation-20260915/scripts/tp_meters.py": "aef34a70fc5a425ca4c5f1c0df95b463a653b943e90f42a91d083f906a0f6e0c"
+ },
+ "note": "Reconciliation seal, separate from the blind seal. The 18 blind-phase files were not modified."
+}

@@ -1,0 +1,25 @@
+{
+ "sealed_at_utc": "2026-09-15T02:47:56.771757+00:00",
+ "baseline_git_revision": "a4fb621d88a95b8af549467fb499943acb4274d5",
+ "files": {
+  "audit-output/INDEPENDENT_REPORT.md": "8ee97d25fd592506e1b7149c3eff3321ee4d05a30caf39a6a482edd4e8df06f1",
+  "audit-output/PROTOCOL.md": "254df1f53ca618ec21257497338376a810d823449703dd1645412a49b5772d0a",
+  "audit-output/EVIDENCE_MANIFEST.json": "c92028a99d81579761f3201c7b34cd6988856ecb5ccadc62336557e7df58e3d5",
+  "audit-output/harness/src/main.rs": "14e0c633ca0e4004ac709a3d11d7f51a9b7cb0c0f183681f033998a88e083eca",
+  "audit-output/harness/Cargo.toml": "f0831fdabd61d5633aa65d19334dc31b42cf385002f605630870529c32a80747",
+  "audit-output/harness/Cargo.lock": "01276d81a37985a9209e9ee31e73ce836a18b262858d1b801d91d8cf4adb8ac5",
+  "audit-output/scripts/candidate_pregain.py": "af9757d45b2753c205ebcecb4b0550f442c791bba56d2b14e2e636c1dee51f19",
+  "audit-output/scripts/candidate_summary.py": "1bfcf0d3ec870fefb1202ef1b5cb9a70cefa7d27b304be342159647d33e121b2",
+  "audit-output/scripts/coeff_checks.py": "c4faedda3e758ab117ae9b4eb9c62fdfdda474db8c5868fb892c2dcd703fe3f9",
+  "audit-output/scripts/gen_synthetic.py": "8678773d5573539e9a2f2f4afa3b34b559d331416551b5b0d6839cdb9c17dd6a",
+  "audit-output/scripts/make_cases.py": "7046a65c6b49b861dc2ea17c39a52dfaa953f46ba9e7eb3105873fcdd1e6fcba",
+  "audit-output/scripts/make_variants.py": "31865656f1ffc8ea762cca6dde6535412a056ed5e6dc88d7567ec0ca112d92ed",
+  "audit-output/scripts/measure.py": "81bd96ff0c49383d89346d7de0856d12560406a792806fe3ac00207179a37ef0",
+  "audit-output/scripts/prune_renders.py": "439433eedf735d88648cecd0d2b92b50800691b5cc0f98149d200fa36a55a914",
+  "audit-output/scripts/run_matrix.py": "d56d122aeaf69f09aede9391eac83f9b0bfdd823670165575eb8fe3194dc2952",
+  "audit-output/scripts/seal.py": "7e419d92f797c87adcdbbe019ad0a888563f6c687d2febc7aa5cb501f33b5186",
+  "audit-output/scripts/stage_attribution.py": "3c7a9d9f90f5470bff876e1e4f072353877376150cb1ab357a7f985ec7552770",
+  "audit-output/scripts/summarize.py": "938565224efe34732553cd43bfb522d3affd2a7df710833ab42b7dded43e8838"
+ },
+ "note": "Any later reconciliation with other work is to be written as a separate addendum; these files are not to be edited after sealing."
+}

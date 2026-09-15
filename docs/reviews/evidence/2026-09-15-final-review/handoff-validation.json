@@ -1,0 +1,16 @@
+{
+  "archived_text_files_verified": 511,
+  "archived_files_verified_in_git_index": 511,
+  "seals_verified": {
+    "audit-output/SEALED_MANIFEST.json": 18,
+    "audit-output/reconciliation-20260915/SEALED_MANIFEST.json": 20
+  },
+  "application_diff_since_baseline": "",
+  "agent_instructions_identical": true,
+  "local_links_checked": 39,
+  "python_files_parsed": 32,
+  "secret_pattern_scan_files": 521,
+  "secret_pattern_matches": 0,
+  "research_only": true,
+  "new_production_build_or_listening_claim": false
+}

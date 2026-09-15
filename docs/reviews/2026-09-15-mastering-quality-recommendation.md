@@ -1,5 +1,12 @@
 # Mastering quality: recommendation after the expanded pilot
 
+> **Historical pilot report.** The [final synthesis](2026-09-15-mastering-quality-final-synthesis.md)
+> incorporates Claude's independent/unblinded results and the coordinator's last
+> checks. It supersedes this report's interpretation of SRC peak regrowth and
+> qualifies both investigations' reconstruction meters. The original measurements
+> remain evidence; use the [final transfer guide](2026-09-15-mastering-quality-transfer.md)
+> for the expanded frozen corpus and review artifacts on another machine.
+
 September 14 Pacific / September 15 UTC, 2026. Investigation on clean `main`
 `a4fb621d88a95b8af549467fb499943acb4274d5`. Production DSP, defaults, calibration
 gates and UI are unchanged. No application release or service upload occurred.

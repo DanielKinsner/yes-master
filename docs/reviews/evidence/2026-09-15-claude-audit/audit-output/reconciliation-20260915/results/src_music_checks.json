@@ -1,0 +1,61 @@
+{
+ "equivalence_input08": {
+  "render_frames": 15598577,
+  "prod_convert_frames": 15598577,
+  "corrected_frames": 15598577,
+  "render_bit_identical_to_prod_convert": true,
+  "render_vs_corrected_max_abs_diff": 0.0011424183612689376,
+  "diff_frame": 955,
+  "frames_differing_gt_1e-6": 1,
+  "delivered_frame955": [
+   0.0001770730596035719,
+   0.00016422616317868233
+  ],
+  "corrected_frame955": [
+   0.00016096510807983577,
+   0.00130664452444762
+  ],
+  "receipt": {
+   "sample_rate": 44100,
+   "bit_depth": 32,
+   "true_peak_dbtp": -0.46374955773353577,
+   "effective_target_lufs": null
+  },
+  "delivered_sample_peak_dbfs": -0.7967131733894348
+ },
+ "hotstart_cd_click": {
+  "clip": "hotstart_input04_48k_60-120s.wav (input04 resampled to 48 kHz by soxr in the blind phase, 60-120 s)",
+  "delivery": {
+   "sample_rate": 44100,
+   "bit_depth": 16,
+   "lufs": -13.999999046325684,
+   "true_peak_dbtp": -3.6540439128875732
+  },
+  "estimated_landing_gain_db": -3.007277783296347,
+  "max_abs_resid_delivered_vs_g_prod": 4.55721571971171e-05,
+  "delivered_frame955": [
+   -0.00830078125,
+   0.00909423828125
+  ],
+  "corrected_scaled_frame955": [
+   -0.02445108614996685,
+   -0.04807500552418731
+  ],
+  "click_error": [
+   0.01615030489996685,
+   0.05716924380543731
+  ],
+  "click_dbfs": -24.856751045795992,
+  "context_L_951_959": [
+   -0.1167,
+   -0.0882,
+   -0.0666,
+   -0.0495,
+   -0.0083,
+   0.0,
+   0.0056,
+   0.0164,
+   0.0217
+  ]
+ }
+}

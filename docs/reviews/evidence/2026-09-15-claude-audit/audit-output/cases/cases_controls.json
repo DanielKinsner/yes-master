@@ -1,0 +1,245 @@
+[
+ {
+  "id": "C3_identity_input01",
+  "group": "C3",
+  "input": "fixtures/inputs/input01.wav",
+  "spec": {
+   "preset": "custom",
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": 0.0,
+   "bit_depth": 32,
+   "compression_mode": "off",
+   "adapt_strength": 0.0
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C3_identity_input06",
+  "group": "C3",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "custom",
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": 0.0,
+   "bit_depth": 32,
+   "compression_mode": "off",
+   "adapt_strength": 0.0
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C3_identity_input07",
+  "group": "C3",
+  "input": "fixtures/inputs/input07.wav",
+  "spec": {
+   "preset": "custom",
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": 0.0,
+   "bit_depth": 32,
+   "compression_mode": "off",
+   "adapt_strength": 0.0
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C3_identity_input08",
+  "group": "C3",
+  "input": "fixtures/inputs/input08.wav",
+  "spec": {
+   "preset": "custom",
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": 0.0,
+   "bit_depth": 32,
+   "compression_mode": "off",
+   "adapt_strength": 0.0
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C3_identity_pink_-20_60s",
+  "group": "C3",
+  "input": "audit-output/synthetic/pink_-20_60s.wav",
+  "spec": {
+   "preset": "custom",
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": 0.0,
+   "bit_depth": 32,
+   "compression_mode": "off",
+   "adapt_strength": 0.0
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C3_identity_drums_60s",
+  "group": "C3",
+  "input": "audit-output/synthetic/drums_60s.wav",
+  "spec": {
+   "preset": "custom",
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": 0.0,
+   "bit_depth": 32,
+   "compression_mode": "off",
+   "adapt_strength": 0.0
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C3_identity_sine1k_-20dBFS",
+  "group": "C3",
+  "input": "audit-output/synthetic/sine1k_-20dBFS.wav",
+  "spec": {
+   "preset": "custom",
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": 0.0,
+   "bit_depth": 32,
+   "compression_mode": "off",
+   "adapt_strength": 0.0
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C3_identity24_input01",
+  "group": "C3",
+  "input": "fixtures/inputs/input01.wav",
+  "spec": {
+   "preset": "custom",
+   "delivery_profile": "custom",
+   "lufs_target": null,
+   "ceiling_dbtp": 0.0,
+   "bit_depth": 24,
+   "compression_mode": "off",
+   "adapt_strength": 0.0
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C4_gainonly_input01",
+  "group": "C4",
+  "input": "fixtures/inputs/input01.wav",
+  "spec": {
+   "preset": "custom",
+   "delivery_profile": "custom",
+   "lufs_target": -14.0,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32,
+   "compression_mode": "off",
+   "adapt_strength": 0.0
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C4_gainonly_input02",
+  "group": "C4",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "custom",
+   "delivery_profile": "custom",
+   "lufs_target": -14.0,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32,
+   "compression_mode": "off",
+   "adapt_strength": 0.0
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C4_gainonly_input06",
+  "group": "C4",
+  "input": "fixtures/inputs/input06.wav",
+  "spec": {
+   "preset": "custom",
+   "delivery_profile": "custom",
+   "lufs_target": -14.0,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32,
+   "compression_mode": "off",
+   "adapt_strength": 0.0
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C4_gainonly_input07",
+  "group": "C4",
+  "input": "fixtures/inputs/input07.wav",
+  "spec": {
+   "preset": "custom",
+   "delivery_profile": "custom",
+   "lufs_target": -14.0,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32,
+   "compression_mode": "off",
+   "adapt_strength": 0.0
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C4_gainonly_ceilingbound_input07",
+  "group": "C4",
+  "input": "fixtures/inputs/input07.wav",
+  "spec": {
+   "preset": "custom",
+   "delivery_profile": "custom",
+   "lufs_target": -9.0,
+   "ceiling_dbtp": -1.0,
+   "bit_depth": 32,
+   "compression_mode": "off",
+   "adapt_strength": 0.0
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C5_repeat_input02",
+  "group": "C5",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light",
+  "repeat": 2
+ },
+ {
+  "id": "R7_vm_on_input02",
+  "group": "R7",
+  "input": "fixtures/inputs/input02.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "volume_match": true
+  },
+  "measure": "light"
+ },
+ {
+  "id": "C5_repeat_input04",
+  "group": "C5",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light",
+  "repeat": 2
+ },
+ {
+  "id": "R7_vm_on_input04",
+  "group": "R7",
+  "input": "fixtures/inputs/input04.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal",
+   "volume_match": true
+  },
+  "measure": "light"
+ }
+]

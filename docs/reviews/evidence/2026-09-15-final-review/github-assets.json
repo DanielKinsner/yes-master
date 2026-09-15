@@ -1,0 +1,23 @@
+{
+  "tag": "research-transfer-2026-09-14",
+  "is_draft": true,
+  "checked_assets": [
+    {
+      "name": "YES-Master-research-2026-09-15-part01.zip",
+      "bytes": 1477454344,
+      "sha256": "eeba06f1dae01ddb5336ebd18b018d10376da129f91c6ee081747ecd00ff72c5"
+    },
+    {
+      "name": "YES-Master-research-2026-09-15-part02.zip",
+      "bytes": 1331471156,
+      "sha256": "cfee18ecdc2ab52d1c7b4f51c176df3871c8cc1b2b4db299f5e1e08b44575a20"
+    },
+    {
+      "name": "YES-Master-research-2026-09-15-part03.zip",
+      "bytes": 236246901,
+      "sha256": "26e005800c55d7ca3e8596826f95434483a31061af4c1990a762acf2d7d16cbd"
+    }
+  ],
+  "manifest_sha256": "ebc8b99be5a3373b92469f856959c233b6734f32fad834f5b0c5e5e26c194e93",
+  "original_owner_archive_digest_unchanged": true
+}

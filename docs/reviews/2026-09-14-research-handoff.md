@@ -1,5 +1,13 @@
 # September 14 research: continue on another machine
 
+> **Current entry point after Claude reconciliation:** read the
+> [final mastering synthesis](2026-09-15-mastering-quality-final-synthesis.md),
+> [fresh-agent planning prompt](../prompts/2026-09-15-mastering-quality-planning-handoff.md)
+> and [September 15 supplement transfer guide](2026-09-15-mastering-quality-transfer.md).
+> They supersede earlier resume instructions and add the frozen expanded corpus,
+> independent review and final corrections. The original archive/restore section
+> below remains valid. Pricing and browser work are outside this continuation.
+
 **September 15 UTC completion:** the continuation investigation is now complete.
 Read [the ranked recommendation](2026-09-15-mastering-quality-recommendation.md)
 and [portable reproduction package](../../scripts/research/mastering-quality-20260915/README.md)

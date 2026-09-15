@@ -1,0 +1,38 @@
+{
+ "44100->48000": {
+  "impulse_peak": 0.9933391809463501,
+  "impulse_index": 24000,
+  "ringing_sum_abs_over_peak": 3.551639027793997,
+  "passband_ripple_pp_db_20Hz_to_0.9nyq": 3.0320871680977746e-05,
+  "passband_max_db": 1.6574777130129448e-05,
+  "gain_at_0.95nyq_db": -3.1232622943377917e-06,
+  "gain_at_0.99nyq_db": -0.09806379317365653,
+  "gain_at_nyq_db": -123.02370083009782,
+  "stopband_max_db": -133.31798815776142,
+  "transition_max_db": 9.573105604676613e-06
+ },
+ "48000->44100": {
+  "impulse_peak": 0.5848574638366699,
+  "impulse_index": 22051,
+  "ringing_sum_abs_over_peak": 6.320643391352835,
+  "passband_ripple_pp_db_20Hz_to_0.9nyq": 3.23163592668152e-05,
+  "passband_max_db": 1.532419836069998e-05,
+  "gain_at_0.95nyq_db": -6.5620989179393515e-06,
+  "gain_at_0.99nyq_db": -0.3362125278237169,
+  "gain_at_nyq_db": -133.29247531810682,
+  "stopband_max_db": null,
+  "transition_max_db": 7.687113598331408e-06
+ },
+ "96000->48000": {
+  "impulse_peak": 0.4933183789253235,
+  "impulse_index": 24000,
+  "ringing_sum_abs_over_peak": 2.339574757065691,
+  "passband_ripple_pp_db_20Hz_to_0.9nyq": 2.1661304172582163e-05,
+  "passband_max_db": 1.0281263397970974e-05,
+  "gain_at_0.95nyq_db": 2.1062299950358463e-06,
+  "gain_at_0.99nyq_db": -17.64455632156649,
+  "gain_at_nyq_db": -147.4442211714471,
+  "stopband_max_db": null,
+  "transition_max_db": 3.5457393945392823e-06
+ }
+}

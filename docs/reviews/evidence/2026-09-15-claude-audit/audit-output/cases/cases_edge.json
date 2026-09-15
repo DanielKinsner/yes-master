@@ -1,0 +1,178 @@
+[
+ {
+  "id": "R12_silence_10s",
+  "group": "R12",
+  "input": "audit-output/synthetic/silence_10s.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_clip_50ms",
+  "group": "R12",
+  "input": "audit-output/synthetic/clip_50ms.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_clip_2p5s",
+  "group": "R12",
+  "input": "audit-output/synthetic/clip_2p5s.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_square100_0dBFS",
+  "group": "R12",
+  "input": "audit-output/synthetic/square100_0dBFS.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_isp_+3dBTP",
+  "group": "R12",
+  "input": "audit-output/synthetic/isp_+3dBTP.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_pink_dc0.2",
+  "group": "R12",
+  "input": "audit-output/synthetic/pink_dc0.2.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_noise_-60",
+  "group": "R12",
+  "input": "audit-output/synthetic/noise_-60.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_sine19k_-6",
+  "group": "R12",
+  "input": "audit-output/synthetic/sine19k_-6.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_burst1k_0dBFS",
+  "group": "R12",
+  "input": "audit-output/synthetic/burst1k_0dBFS.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_pink_wide_corr0",
+  "group": "R12",
+  "input": "audit-output/synthetic/pink_wide_corr0.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_input04_mono",
+  "group": "R12",
+  "input": "audit-output/variants/input04_mono.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_input04_6ch",
+  "group": "R12",
+  "input": "audit-output/variants/input04_6ch.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_drums_+6dB_overfs",
+  "group": "R12",
+  "input": "audit-output/variants/drums_+6dB_overfs.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "streaming-universal"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_drums_loud_loudrock",
+  "group": "R12",
+  "input": "audit-output/synthetic/drums_60s.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 1.0,
+   "delivery_profile": "loud-rock"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_square_loud_loudrock",
+  "group": "R12",
+  "input": "audit-output/synthetic/square100_0dBFS.wav",
+  "spec": {
+   "preset": "loud",
+   "intensity": 1.0,
+   "delivery_profile": "loud-rock"
+  },
+  "measure": "light"
+ },
+ {
+  "id": "R12_drums_cd",
+  "group": "R12",
+  "input": "audit-output/synthetic/drums_60s.wav",
+  "spec": {
+   "preset": "universal",
+   "intensity": 0.5,
+   "delivery_profile": "cd"
+  },
+  "measure": "light"
+ }
+]

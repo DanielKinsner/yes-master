@@ -18,6 +18,15 @@ deepened: 2026-07-24
 
 # YES Master Public Beta Quality Program
 
+> **September 15 final reconciliation:** [the final synthesis](../reviews/2026-09-15-mastering-quality-final-synthesis.md)
+> supersedes the pilot recommendation where they differ. Both sealed Claude
+> phases and raw evidence are preserved; the final pass corrects reference-meter
+> errors, source-count/residual overclaims and the explanation of the SRC peak
+> example. [Tomorrow's planning handoff](../prompts/2026-09-15-mastering-quality-planning-handoff.md)
+> defines small implementation slices and their acceptance evidence. Confirmed
+> SRC/ceiling corrections are proposed, not integrated. Defaults, calibration
+> gates, installed listening scope and release disposition remain unchanged.
+
 > **September 15 UTC mastering research:** [the completed pilot recommendation](../reviews/2026-09-15-mastering-quality-recommendation.md)
 > supports source/target-aware drive and retains separate Density/Adapt controls.
 > Native SRC buffer/short-input defects and independent peak-ceiling failures

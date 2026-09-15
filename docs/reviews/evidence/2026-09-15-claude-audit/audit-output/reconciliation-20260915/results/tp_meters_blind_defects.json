@@ -1,0 +1,58 @@
+[
+ {
+  "file": "renders/defect_input04_custom_notarget_24.wav",
+  "sample_rate": 48000,
+  "frames": 9669904,
+  "channels": 2,
+  "sample_peak_dbfs": 0.0,
+  "engine_tp": 0.0,
+  "engine_lufs": -10.789835671112634,
+  "bs1770_tp": 0.364263436889142,
+  "ffmpeg_tp": 0.5,
+  "ffmpeg_lufs": -10.8,
+  "soxr16_tp": 0.000265,
+  "fftexact16_tp": 0.7728362841428092
+ },
+ {
+  "file": "renders/defect_input04_custom_notarget_f32.wav",
+  "sample_rate": 48000,
+  "frames": 9669904,
+  "channels": 2,
+  "sample_peak_dbfs": 0.4854234801604173,
+  "engine_tp": 0.4854234801604173,
+  "engine_lufs": -10.789834284940165,
+  "bs1770_tp": 0.4461374180293775,
+  "ffmpeg_tp": 0.5,
+  "ffmpeg_lufs": -10.8,
+  "soxr16_tp": 0.000265,
+  "fftexact16_tp": 0.7728349755211865
+ },
+ {
+  "file": "renders/defect_clip50ms_streaming_24.wav",
+  "sample_rate": 48000,
+  "frames": 2400,
+  "channels": 2,
+  "sample_peak_dbfs": -0.9166181874464673,
+  "engine_tp": -0.7765256655404171,
+  "engine_lufs": null,
+  "bs1770_tp": -0.7540854125118988,
+  "ffmpeg_tp": -0.6,
+  "ffmpeg_lufs": -70.0,
+  "soxr16_tp": -0.565683,
+  "fftexact16_tp": -0.5677393377109017
+ },
+ {
+  "file": "renders/defect_clip50ms_streaming_f32.wav",
+  "sample_rate": 48000,
+  "frames": 2400,
+  "channels": 2,
+  "sample_peak_dbfs": -0.9166193381285344,
+  "engine_tp": -0.7765267978122881,
+  "engine_lufs": null,
+  "bs1770_tp": -0.7540856836483449,
+  "ffmpeg_tp": -0.6,
+  "ffmpeg_lufs": -70.0,
+  "soxr16_tp": -0.565683,
+  "fftexact16_tp": -0.5677397895805752
+ }
+]

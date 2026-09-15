@@ -1,0 +1,8 @@
+Limiter output (native rate, float, before SRC/landing; limiter target -1.10 dBTP by its own detector)
+file                                         sr  crate4x  ffmpeg     16x  samplePk
+drums_07_full.wav                         44100    -1.10    -0.1   -0.82     -1.10   LUFS -16.78
+input01_07_full.wav                       44100    -1.10    -1.0   -1.05     -1.10   LUFS -7.75
+input02_07_full.wav                       44100    -1.10    -1.1   -1.10     -1.10   LUFS -11.71
+input04_07_full.wav                       44100    -1.10    -0.1   -0.84     -1.10   LUFS -10.77
+input06_07_full.wav                       44100    -1.37    -1.4   -1.37     -1.38   LUFS -16.71
+margin_input08_ceil-1.5.wav               48000    -1.50    -1.2   -1.36     -1.50   LUFS -20.48

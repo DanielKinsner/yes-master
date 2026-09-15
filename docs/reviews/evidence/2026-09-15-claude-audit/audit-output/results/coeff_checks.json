@@ -1,0 +1,5017 @@
+{
+ "intensity": {
+  "universal": [
+   {
+    "input_gain_db": 0.48000018387377413,
+    "saturation_amount": 0.022,
+    "saturation_small_signal_gain_db": 2.538103008130128,
+    "transient_amount": 0.016,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.1440618258254987,
+    "eq_low_mid_400_db": -0.040003285324389314,
+    "eq_mid_1500_db": 0.13599899828807366,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.3059987275808611,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.11,
+    "comp_low_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554
+   },
+   {
+    "input_gain_db": 0.8400005035224145,
+    "saturation_amount": 0.038500004,
+    "saturation_small_signal_gain_db": 2.668889924750389,
+    "transient_amount": 0.028,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.252002625386133,
+    "eq_low_mid_400_db": -0.0699952992550716,
+    "eq_mid_1500_db": 0.23800401576316388,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.5355003924049586,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.11,
+    "comp_low_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554
+   },
+   {
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "transient_amount": 0.04,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.35998692008101785,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.11,
+    "comp_low_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554
+   },
+   {
+    "input_gain_db": 1.5599998314142764,
+    "saturation_amount": 0.0715,
+    "saturation_small_signal_gain_db": 2.9332780870037327,
+    "transient_amount": 0.052,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.4680215950830807,
+    "eq_low_mid_400_db": -0.12998743376289476,
+    "eq_mid_1500_db": 0.4420001319488588,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.9944998914170228,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.11,
+    "comp_low_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554
+   },
+   {
+    "input_gain_db": 1.9199997288545152,
+    "saturation_amount": 0.088,
+    "saturation_small_signal_gain_db": 3.066588393986147,
+    "transient_amount": 0.064,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.5759284910786343,
+    "eq_low_mid_400_db": -0.1600058255609239,
+    "eq_mid_1500_db": 0.54400035204057,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 1.224000111803829,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.11,
+    "comp_low_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554
+   }
+  ],
+  "clarity": [
+   {
+    "input_gain_db": 0.3199998311823925,
+    "saturation_amount": 0.010000001,
+    "saturation_small_signal_gain_db": 2.4436945929801936,
+    "transient_amount": 0.020000001,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.12001188066766333,
+    "eq_low_mid_400_db": -0.3999969247816969,
+    "eq_mid_1500_db": 0.119999850760969,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.45800066438799525,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.09,
+    "comp_low_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554
+   },
+   {
+    "input_gain_db": 0.5600002375313304,
+    "saturation_amount": 0.017500002,
+    "saturation_small_signal_gain_db": 2.5026256696675393,
+    "transient_amount": 0.035000004,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.2100049662283006,
+    "eq_low_mid_400_db": -0.7000039108702633,
+    "eq_mid_1500_db": 0.2099998201782075,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.8014996303331092,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.09,
+    "comp_low_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554
+   },
+   {
+    "input_gain_db": 0.8000002190921498,
+    "saturation_amount": 0.025,
+    "saturation_small_signal_gain_db": 2.5618020289278727,
+    "transient_amount": 0.05,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.30001655925967663,
+    "eq_low_mid_400_db": -0.9999832706948132,
+    "eq_mid_1500_db": 0.2999967005183884,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 1.144999418217101,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.09,
+    "comp_low_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554
+   },
+   {
+    "input_gain_db": 1.0400003688588464,
+    "saturation_amount": 0.032500003,
+    "saturation_small_signal_gain_db": 2.6212086979740876,
+    "transient_amount": 0.065000005,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.3900487841051848,
+    "eq_low_mid_400_db": -1.3000202800975265,
+    "eq_mid_1500_db": 0.39000045945666795,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 1.4885000803322466,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.09,
+    "comp_low_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554
+   },
+   {
+    "input_gain_db": 1.279999999944832,
+    "saturation_amount": 0.040000003,
+    "saturation_small_signal_gain_db": 2.680830908958999,
+    "transient_amount": 0.080000006,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.47999441813929905,
+    "eq_low_mid_400_db": -1.6000136160232505,
+    "eq_mid_1500_db": 0.4799997266281073,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 1.8320008433050516,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.09,
+    "comp_low_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554
+   }
+  ],
+  "tape": [
+   {
+    "input_gain_db": 0.5999995979394391,
+    "saturation_amount": 0.060000002,
+    "saturation_small_signal_gain_db": 2.8407685815794137,
+    "transient_amount": -0.012,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.0,
+    "eq_low_mid_400_db": 0.2880026697241469,
+    "eq_mid_1500_db": -0.5600012646297527,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.14199975489813643,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.93,
+    "comp_low_threshold_db": -16.0,
+    "comp_low_ratio": 1.65,
+    "comp_low_makeup_db": 3.151515
+   },
+   {
+    "input_gain_db": 1.0499999545700134,
+    "saturation_amount": 0.10500001,
+    "saturation_small_signal_gain_db": 3.2045250502187494,
+    "transient_amount": -0.021000002,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.0,
+    "eq_low_mid_400_db": 0.5039834960089905,
+    "eq_mid_1500_db": -0.9799991053909465,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.2484999143001249,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.93,
+    "comp_low_threshold_db": -16.0,
+    "comp_low_ratio": 1.65,
+    "comp_low_makeup_db": 3.151515
+   },
+   {
+    "input_gain_db": 1.4999997446509226,
+    "saturation_amount": 0.15,
+    "saturation_small_signal_gain_db": 3.5715117944463843,
+    "transient_amount": -0.03,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.0,
+    "eq_low_mid_400_db": 0.7199962067139686,
+    "eq_mid_1500_db": -1.400001483817891,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.35500062434540297,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.93,
+    "comp_low_threshold_db": -16.0,
+    "comp_low_ratio": 1.65,
+    "comp_low_makeup_db": 3.151515
+   },
+   {
+    "input_gain_db": 1.950000384372317,
+    "saturation_amount": 0.19500002,
+    "saturation_small_signal_gain_db": 3.9394012820657194,
+    "transient_amount": -0.039,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.0,
+    "eq_low_mid_400_db": 0.9360031171411319,
+    "eq_mid_1500_db": -1.819998669756335,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.46149990580023326,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.93,
+    "comp_low_threshold_db": -16.0,
+    "comp_low_ratio": 1.65,
+    "comp_low_makeup_db": 3.151515
+   },
+   {
+    "input_gain_db": 2.3999999818494313,
+    "saturation_amount": 0.24000001,
+    "saturation_small_signal_gain_db": 4.306228204721547,
+    "transient_amount": -0.048,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.0,
+    "eq_low_mid_400_db": 1.151988257338474,
+    "eq_mid_1500_db": -2.2400008344353326,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.5679989353397564,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.93,
+    "comp_low_threshold_db": -16.0,
+    "comp_low_ratio": 1.65,
+    "comp_low_makeup_db": 3.151515
+   }
+  ],
+  "spatial": [
+   {
+    "input_gain_db": 0.4000000838452499,
+    "saturation_amount": 0.016,
+    "saturation_small_signal_gain_db": 2.4908193365845985,
+    "transient_amount": 0.012,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.01999728293381468,
+    "eq_low_mid_400_db": -0.3199996902947725,
+    "eq_mid_1500_db": -0.11999902225808233,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.2599995026246615,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.45,
+    "comp_low_threshold_db": -16.0,
+    "comp_low_ratio": 1.8,
+    "comp_low_makeup_db": 3.5555553
+   },
+   {
+    "input_gain_db": 0.7000000168379229,
+    "saturation_amount": 0.028,
+    "saturation_small_signal_gain_db": 2.5855378912214695,
+    "transient_amount": 0.021000002,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.03502441691139026,
+    "eq_low_mid_400_db": -0.5600097572873246,
+    "eq_mid_1500_db": -0.20999899468432184,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.4550005937854876,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.45,
+    "comp_low_threshold_db": -16.0,
+    "comp_low_ratio": 1.8,
+    "comp_low_makeup_db": 3.5555553
+   },
+   {
+    "input_gain_db": 1.0000000166986343,
+    "saturation_amount": 0.04,
+    "saturation_small_signal_gain_db": 2.6808308792931927,
+    "transient_amount": 0.03,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.049999951328396644,
+    "eq_low_mid_400_db": -0.7999888771767356,
+    "eq_mid_1500_db": -0.29999622539088006,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.6499996673196897,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.45,
+    "comp_low_threshold_db": -16.0,
+    "comp_low_ratio": 1.8,
+    "comp_low_makeup_db": 3.5555553
+   },
+   {
+    "input_gain_db": 1.299999880850176,
+    "saturation_amount": 0.052,
+    "saturation_small_signal_gain_db": 2.7766389041188653,
+    "transient_amount": 0.039,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.06498588581506366,
+    "eq_low_mid_400_db": -1.039998322428435,
+    "eq_mid_1500_db": -0.39000063033873206,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.8449998770440964,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.45,
+    "comp_low_threshold_db": -16.0,
+    "comp_low_ratio": 1.8,
+    "comp_low_makeup_db": 3.5555553
+   },
+   {
+    "input_gain_db": 1.5999999531940745,
+    "saturation_amount": 0.064,
+    "saturation_small_signal_gain_db": 2.8729044824910943,
+    "transient_amount": 0.048,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.08001456858970739,
+    "eq_low_mid_400_db": -1.2799859052364029,
+    "eq_mid_1500_db": -0.479998688152235,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 1.0400001768529683,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.45,
+    "comp_low_threshold_db": -16.0,
+    "comp_low_ratio": 1.8,
+    "comp_low_makeup_db": 3.5555553
+   }
+  ],
+  "oomph": [
+   {
+    "input_gain_db": 0.7200003071940928,
+    "saturation_amount": 0.018000001,
+    "saturation_small_signal_gain_db": 2.506563290516991,
+    "transient_amount": 0.032,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 1.0600789016178078,
+    "eq_low_mid_400_db": -1.1999852476917596,
+    "eq_mid_1500_db": -1.0399979874749858,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": -0.4100005015076303,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.84,
+    "comp_low_threshold_db": -15.5,
+    "comp_low_ratio": 1.7,
+    "comp_low_makeup_db": 3.1911767
+   },
+   {
+    "input_gain_db": 1.2600005340136577,
+    "saturation_amount": 0.031500004,
+    "saturation_small_signal_gain_db": 2.613275051831774,
+    "transient_amount": 0.056,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 1.8550648164121852,
+    "eq_low_mid_400_db": -2.1000041643111733,
+    "eq_mid_1500_db": -1.819998669756335,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": -0.7175013918186361,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.84,
+    "comp_low_threshold_db": -15.5,
+    "comp_low_ratio": 1.7,
+    "comp_low_makeup_db": 3.1911767
+   },
+   {
+    "input_gain_db": 1.79999961874981,
+    "saturation_amount": 0.045,
+    "saturation_small_signal_gain_db": 2.720691659227227,
+    "transient_amount": 0.08,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 2.649602093421733,
+    "eq_low_mid_400_db": -3.0000092758916512,
+    "eq_mid_1500_db": -2.5999961831867155,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": -1.0249990890337326,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.84,
+    "comp_low_threshold_db": -15.5,
+    "comp_low_ratio": 1.7,
+    "comp_low_makeup_db": 3.1911767
+   },
+   {
+    "input_gain_db": 2.3400000373875023,
+    "saturation_amount": 0.058500007,
+    "saturation_small_signal_gain_db": 2.828729583604362,
+    "transient_amount": 0.104,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 3.444671954486314,
+    "eq_low_mid_400_db": -3.9000087693927843,
+    "eq_mid_1500_db": -3.379996181729762,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": -1.3325002794938026,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.84,
+    "comp_low_threshold_db": -15.5,
+    "comp_low_ratio": 1.7,
+    "comp_low_makeup_db": 3.1911767
+   },
+   {
+    "input_gain_db": 2.8799997752158717,
+    "saturation_amount": 0.072000004,
+    "saturation_small_signal_gain_db": 2.9373082615135493,
+    "transient_amount": 0.128,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 4.240026965484661,
+    "eq_low_mid_400_db": -4.799979532472493,
+    "eq_mid_1500_db": -4.160002547272921,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": -1.6400001048196031,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.84,
+    "comp_low_threshold_db": -15.5,
+    "comp_low_ratio": 1.7,
+    "comp_low_makeup_db": 3.1911767
+   }
+  ],
+  "warmth": [
+   {
+    "input_gain_db": 0.4000000838452499,
+    "saturation_amount": 0.051999997,
+    "saturation_small_signal_gain_db": 2.776638874302202,
+    "transient_amount": -0.020000001,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.3040471004597507,
+    "eq_low_mid_400_db": 0.4839857704574308,
+    "eq_mid_1500_db": -0.720002606488097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": -0.35599973181926836,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.98,
+    "comp_low_threshold_db": -19.0,
+    "comp_low_ratio": 2.0,
+    "comp_low_makeup_db": 4.75
+   },
+   {
+    "input_gain_db": 0.7000000168379229,
+    "saturation_amount": 0.091000006,
+    "saturation_small_signal_gain_db": 3.0908909109997533,
+    "transient_amount": -0.035000004,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.5319391818357668,
+    "eq_low_mid_400_db": 0.8470136917490216,
+    "eq_mid_1500_db": -1.260001856109172,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": -0.6230001770568364,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.98,
+    "comp_low_threshold_db": -19.0,
+    "comp_low_ratio": 2.0,
+    "comp_low_makeup_db": 4.75
+   },
+   {
+    "input_gain_db": 1.0000000166986343,
+    "saturation_amount": 0.13,
+    "saturation_small_signal_gain_db": 3.4081653391576925,
+    "transient_amount": -0.05,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.7600507075177183,
+    "eq_low_mid_400_db": 1.2099924987601534,
+    "eq_mid_1500_db": -1.8000005417539362,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": -0.8900001953517279,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.98,
+    "comp_low_threshold_db": -19.0,
+    "comp_low_ratio": 2.0,
+    "comp_low_makeup_db": 4.75
+   },
+   {
+    "input_gain_db": 1.299999880850176,
+    "saturation_amount": 0.169,
+    "saturation_small_signal_gain_db": 3.72685432423554,
+    "transient_amount": -0.065000005,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.9880788989453031,
+    "eq_low_mid_400_db": 1.5729990969260157,
+    "eq_mid_1500_db": -2.340002696902588,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": -1.1569998966357704,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.98,
+    "comp_low_threshold_db": -19.0,
+    "comp_low_ratio": 2.0,
+    "comp_low_makeup_db": 4.75
+   },
+   {
+    "input_gain_db": 1.5999999531940745,
+    "saturation_amount": 0.20799999,
+    "saturation_small_signal_gain_db": 4.045560374060548,
+    "transient_amount": -0.080000006,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 1.2159461866564856,
+    "eq_low_mid_400_db": 1.9360065569338356,
+    "eq_mid_1500_db": -2.879997589289177,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": -1.4239992504027796,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 0.98,
+    "comp_low_threshold_db": -19.0,
+    "comp_low_ratio": 2.0,
+    "comp_low_makeup_db": 4.75
+   }
+  ],
+  "punch": [
+   {
+    "input_gain_db": 0.6400002858952224,
+    "saturation_amount": 0.014,
+    "saturation_small_signal_gain_db": 2.475093041129684,
+    "transient_amount": 0.076,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.15998740936219766,
+    "eq_low_mid_400_db": -0.719997725193688,
+    "eq_mid_1500_db": 0.9280020404963729,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.16000019200967047,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.04,
+    "comp_low_threshold_db": -20.0,
+    "comp_low_ratio": 2.8,
+    "comp_low_makeup_db": 6.428571
+   },
+   {
+    "input_gain_db": 1.1199996806411414,
+    "saturation_amount": 0.024500001,
+    "saturation_small_signal_gain_db": 2.5578496153345,
+    "transient_amount": 0.133,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.27996567978556347,
+    "eq_low_mid_400_db": -1.259998284720799,
+    "eq_mid_1500_db": 1.624001042195323,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.27999961128866624,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.04,
+    "comp_low_threshold_db": -20.0,
+    "comp_low_ratio": 2.8,
+    "comp_low_makeup_db": 6.428571
+   },
+   {
+    "input_gain_db": 1.5999999531940745,
+    "saturation_amount": 0.035,
+    "saturation_small_signal_gain_db": 2.641059516232214,
+    "transient_amount": 0.19,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.39993836112794623,
+    "eq_low_mid_400_db": -1.8000004869242183,
+    "eq_mid_1500_db": 2.3199992560697966,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.40000027035870667,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.04,
+    "comp_low_threshold_db": -20.0,
+    "comp_low_ratio": 2.8,
+    "comp_low_makeup_db": 6.428571
+   },
+   {
+    "input_gain_db": 2.0799999156171016,
+    "saturation_amount": 0.045500003,
+    "saturation_small_signal_gain_db": 2.7246824973193955,
+    "transient_amount": 0.24700001,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.5199454046830956,
+    "eq_low_mid_400_db": -2.339997396047872,
+    "eq_mid_1500_db": 3.016003644934802,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.5200008505172744,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.04,
+    "comp_low_threshold_db": -20.0,
+    "comp_low_ratio": 2.8,
+    "comp_low_makeup_db": 6.428571
+   },
+   {
+    "input_gain_db": 2.560000080874923,
+    "saturation_amount": 0.056,
+    "saturation_small_signal_gain_db": 2.808679370767039,
+    "transient_amount": 0.25,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.6400393815809071,
+    "eq_low_mid_400_db": -2.8799835081329563,
+    "eq_mid_1500_db": 3.711998307438918,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.6399999166081061,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.04,
+    "comp_low_threshold_db": -20.0,
+    "comp_low_ratio": 2.8,
+    "comp_low_makeup_db": 6.428571
+   }
+  ],
+  "loud": [
+   {
+    "input_gain_db": 1.0000000166986343,
+    "saturation_amount": 0.022,
+    "saturation_small_signal_gain_db": 2.538103008130128,
+    "transient_amount": 0.048,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.08001456858970739,
+    "eq_low_mid_400_db": -0.6400129991690094,
+    "eq_mid_1500_db": 0.7200016845808335,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.24000007105524684,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.03,
+    "comp_low_threshold_db": -23.0,
+    "comp_low_ratio": 4.09,
+    "comp_low_makeup_db": 8.688264
+   },
+   {
+    "input_gain_db": 1.7499999792446124,
+    "saturation_amount": 0.038500004,
+    "saturation_small_signal_gain_db": 2.668889924750389,
+    "transient_amount": 0.08400001,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.13997861678798465,
+    "eq_low_mid_400_db": -1.1200023600833129,
+    "eq_mid_1500_db": 1.2600033929249463,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.4200000001817766,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.03,
+    "comp_low_threshold_db": -23.0,
+    "comp_low_ratio": 4.09,
+    "comp_low_makeup_db": 8.688264
+   },
+   {
+    "input_gain_db": 2.5000003462924143,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "transient_amount": 0.12,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.2000302855130912,
+    "eq_low_mid_400_db": -1.6000136160232505,
+    "eq_mid_1500_db": 1.7999997299321422,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.5999995978738333,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.03,
+    "comp_low_threshold_db": -23.0,
+    "comp_low_ratio": 4.09,
+    "comp_low_makeup_db": 8.688264
+   },
+   {
+    "input_gain_db": 3.2500004790621957,
+    "saturation_amount": 0.0715,
+    "saturation_small_signal_gain_db": 2.9332780870037327,
+    "transient_amount": 0.156,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.2599827521562633,
+    "eq_low_mid_400_db": -2.0800023560702736,
+    "eq_mid_1500_db": 2.3400009874333723,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7800000530879942,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.03,
+    "comp_low_threshold_db": -23.0,
+    "comp_low_ratio": 4.09,
+    "comp_low_makeup_db": 8.688264
+   },
+   {
+    "input_gain_db": 4.000000187224617,
+    "saturation_amount": 0.088,
+    "saturation_small_signal_gain_db": 3.066588393986147,
+    "transient_amount": 0.192,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.3199542447296154,
+    "eq_low_mid_400_db": -2.560008141180872,
+    "eq_mid_1500_db": 2.8799995229312585,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.9599998358070376,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.03,
+    "comp_low_threshold_db": -23.0,
+    "comp_low_ratio": 4.09,
+    "comp_low_makeup_db": 8.688264
+   }
+  ],
+  "custom": [
+   {
+    "input_gain_db": 0.5999995979394391,
+    "saturation_amount": 0.0,
+    "saturation_small_signal_gain_db": 0.0,
+    "transient_amount": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.0,
+    "eq_low_mid_400_db": 0.0,
+    "eq_mid_1500_db": 0.0,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.0,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.0,
+    "comp_low_threshold_db": -0.0,
+    "comp_low_ratio": 1.0,
+    "comp_low_makeup_db": 0.0
+   },
+   {
+    "input_gain_db": 1.0499999545700134,
+    "saturation_amount": 0.0,
+    "saturation_small_signal_gain_db": 0.0,
+    "transient_amount": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.0,
+    "eq_low_mid_400_db": 0.0,
+    "eq_mid_1500_db": 0.0,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.0,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.0,
+    "comp_low_threshold_db": -0.0,
+    "comp_low_ratio": 1.0,
+    "comp_low_makeup_db": 0.0
+   },
+   {
+    "input_gain_db": 1.4999997446509226,
+    "saturation_amount": 0.0,
+    "saturation_small_signal_gain_db": 0.0,
+    "transient_amount": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.0,
+    "eq_low_mid_400_db": 0.0,
+    "eq_mid_1500_db": 0.0,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.0,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.0,
+    "comp_low_threshold_db": -0.0,
+    "comp_low_ratio": 1.0,
+    "comp_low_makeup_db": 0.0
+   },
+   {
+    "input_gain_db": 1.950000384372317,
+    "saturation_amount": 0.0,
+    "saturation_small_signal_gain_db": 0.0,
+    "transient_amount": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.0,
+    "eq_low_mid_400_db": 0.0,
+    "eq_mid_1500_db": 0.0,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.0,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.0,
+    "comp_low_threshold_db": -0.0,
+    "comp_low_ratio": 1.0,
+    "comp_low_makeup_db": 0.0
+   },
+   {
+    "input_gain_db": 2.3999999818494313,
+    "saturation_amount": 0.0,
+    "saturation_small_signal_gain_db": 0.0,
+    "transient_amount": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.0,
+    "eq_low_mid_400_db": 0.0,
+    "eq_mid_1500_db": 0.0,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.0,
+    "eq_sparkle_12000_db": 0.0,
+    "width_side_scale": 1.0,
+    "comp_low_threshold_db": -0.0,
+    "comp_low_ratio": 1.0,
+    "comp_low_makeup_db": 0.0
+   }
+  ]
+ },
+ "adapt": {
+  "pink_-20_60s.wav": {
+   "0.0": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.11,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -12.5,
+    "comp_mid_threshold_db": -12.5,
+    "comp_high_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_mid_ratio": 1.45,
+    "comp_high_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554,
+    "comp_mid_makeup_db": 1.9396554,
+    "comp_high_makeup_db": 1.9396554,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.35998692008101785,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.031073315409504
+     ],
+     [
+      25.0,
+      -4.62603017532777
+     ],
+     [
+      30.0,
+      -2.272786662944086
+     ],
+     [
+      40.0,
+      -0.3564770057844682
+     ],
+     [
+      50.0,
+      0.2452287177821809
+     ],
+     [
+      63.0,
+      0.5001612638271922
+     ],
+     [
+      80.0,
+      0.5867440986068925
+     ],
+     [
+      100.0,
+      0.5891286084315126
+     ],
+     [
+      125.0,
+      0.5437501648512603
+     ],
+     [
+      160.0,
+      0.44831186104211995
+     ],
+     [
+      200.0,
+      0.3325759733088757
+     ],
+     [
+      250.0,
+      0.2098767611015762
+     ],
+     [
+      315.0,
+      0.1008294255705603
+     ],
+     [
+      400.0,
+      0.03665126812300375
+     ],
+     [
+      500.0,
+      0.03734420676462097
+     ],
+     [
+      630.0,
+      0.08105481409201597
+     ],
+     [
+      800.0,
+      0.15354607394656378
+     ],
+     [
+      1000.0,
+      0.24295312005117967
+     ],
+     [
+      1250.0,
+      0.33464604319621966
+     ],
+     [
+      1600.0,
+      0.37928689403309257
+     ],
+     [
+      2000.0,
+      0.3513102101412637
+     ],
+     [
+      2500.0,
+      0.31693680550267184
+     ],
+     [
+      3150.0,
+      0.3313849758516567
+     ],
+     [
+      4000.0,
+      0.42872171856377583
+     ],
+     [
+      5000.0,
+      0.6041113710197401
+     ],
+     [
+      6300.0,
+      0.8503895784086047
+     ],
+     [
+      8000.0,
+      1.1094517059587767
+     ],
+     [
+      10000.0,
+      1.2975422284372238
+     ],
+     [
+      12500.0,
+      1.4182517403357289
+     ],
+     [
+      16000.0,
+      1.4911240212050938
+     ],
+     [
+      20000.0,
+      1.5221047336082811
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.1354634761810303,
+      -1.0474216938018799,
+      0.3024199903011322,
+      -0.8467260003089905,
+      0.23718763887882233
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.0009117126464844,
+      -1.9569028615951538,
+      0.95669025182724,
+      -1.9569306373596191,
+      0.9575740694999695
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   },
+   "0.5": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.11,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -9.763036,
+    "comp_mid_threshold_db": -9.763036,
+    "comp_high_threshold_db": -9.763036,
+    "comp_low_ratio": 1.3514693,
+    "comp_mid_ratio": 1.3514693,
+    "comp_high_ratio": 1.3514693,
+    "comp_low_makeup_db": 1.2695097,
+    "comp_mid_makeup_db": 1.2695097,
+    "comp_high_makeup_db": 1.2695097,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.35998692008101785,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.031073315409504
+     ],
+     [
+      25.0,
+      -4.62603017532777
+     ],
+     [
+      30.0,
+      -2.272786662944086
+     ],
+     [
+      40.0,
+      -0.3564770057844682
+     ],
+     [
+      50.0,
+      0.2452287177821809
+     ],
+     [
+      63.0,
+      0.5001612638271922
+     ],
+     [
+      80.0,
+      0.5867440986068925
+     ],
+     [
+      100.0,
+      0.5891286084315126
+     ],
+     [
+      125.0,
+      0.5437501648512603
+     ],
+     [
+      160.0,
+      0.44831186104211995
+     ],
+     [
+      200.0,
+      0.3325759733088757
+     ],
+     [
+      250.0,
+      0.2098767611015762
+     ],
+     [
+      315.0,
+      0.1008294255705603
+     ],
+     [
+      400.0,
+      0.03665126812300375
+     ],
+     [
+      500.0,
+      0.03734420676462097
+     ],
+     [
+      630.0,
+      0.08105481409201597
+     ],
+     [
+      800.0,
+      0.15354607394656378
+     ],
+     [
+      1000.0,
+      0.24295312005117967
+     ],
+     [
+      1250.0,
+      0.33464604319621966
+     ],
+     [
+      1600.0,
+      0.37928689403309257
+     ],
+     [
+      2000.0,
+      0.3513102101412637
+     ],
+     [
+      2500.0,
+      0.31693680550267184
+     ],
+     [
+      3150.0,
+      0.3313849758516567
+     ],
+     [
+      4000.0,
+      0.42872171856377583
+     ],
+     [
+      5000.0,
+      0.6041113710197401
+     ],
+     [
+      6300.0,
+      0.8503895784086047
+     ],
+     [
+      8000.0,
+      1.1094517059587767
+     ],
+     [
+      10000.0,
+      1.2975422284372238
+     ],
+     [
+      12500.0,
+      1.4182517403357289
+     ],
+     [
+      16000.0,
+      1.4911240212050938
+     ],
+     [
+      20000.0,
+      1.5221047336082811
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.1354634761810303,
+      -1.0474216938018799,
+      0.3024199903011322,
+      -0.8467260003089905,
+      0.23718763887882233
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.0009117126464844,
+      -1.9569028615951538,
+      0.95669025182724,
+      -1.9569306373596191,
+      0.9575740694999695
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   },
+   "1.0": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.11,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -7.026072,
+    "comp_mid_threshold_db": -7.026072,
+    "comp_high_threshold_db": -7.026072,
+    "comp_low_ratio": 1.2529386,
+    "comp_mid_ratio": 1.2529386,
+    "comp_high_ratio": 1.2529386,
+    "comp_low_makeup_db": 0.70919865,
+    "comp_mid_makeup_db": 0.70919865,
+    "comp_high_makeup_db": 0.70919865,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.35998692008101785,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.031073315409504
+     ],
+     [
+      25.0,
+      -4.62603017532777
+     ],
+     [
+      30.0,
+      -2.272786662944086
+     ],
+     [
+      40.0,
+      -0.3564770057844682
+     ],
+     [
+      50.0,
+      0.2452287177821809
+     ],
+     [
+      63.0,
+      0.5001612638271922
+     ],
+     [
+      80.0,
+      0.5867440986068925
+     ],
+     [
+      100.0,
+      0.5891286084315126
+     ],
+     [
+      125.0,
+      0.5437501648512603
+     ],
+     [
+      160.0,
+      0.44831186104211995
+     ],
+     [
+      200.0,
+      0.3325759733088757
+     ],
+     [
+      250.0,
+      0.2098767611015762
+     ],
+     [
+      315.0,
+      0.1008294255705603
+     ],
+     [
+      400.0,
+      0.03665126812300375
+     ],
+     [
+      500.0,
+      0.03734420676462097
+     ],
+     [
+      630.0,
+      0.08105481409201597
+     ],
+     [
+      800.0,
+      0.15354607394656378
+     ],
+     [
+      1000.0,
+      0.24295312005117967
+     ],
+     [
+      1250.0,
+      0.33464604319621966
+     ],
+     [
+      1600.0,
+      0.37928689403309257
+     ],
+     [
+      2000.0,
+      0.3513102101412637
+     ],
+     [
+      2500.0,
+      0.31693680550267184
+     ],
+     [
+      3150.0,
+      0.3313849758516567
+     ],
+     [
+      4000.0,
+      0.42872171856377583
+     ],
+     [
+      5000.0,
+      0.6041113710197401
+     ],
+     [
+      6300.0,
+      0.8503895784086047
+     ],
+     [
+      8000.0,
+      1.1094517059587767
+     ],
+     [
+      10000.0,
+      1.2975422284372238
+     ],
+     [
+      12500.0,
+      1.4182517403357289
+     ],
+     [
+      16000.0,
+      1.4911240212050938
+     ],
+     [
+      20000.0,
+      1.5221047336082811
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.1354634761810303,
+      -1.0474216938018799,
+      0.3024199903011322,
+      -0.8467260003089905,
+      0.23718763887882233
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.0009117126464844,
+      -1.9569028615951538,
+      0.95669025182724,
+      -1.9569306373596191,
+      0.9575740694999695
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "pink_bright.wav": {
+   "0.0": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.11,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -12.5,
+    "comp_mid_threshold_db": -12.5,
+    "comp_high_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_mid_ratio": 1.45,
+    "comp_high_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554,
+    "comp_mid_makeup_db": 1.9396554,
+    "comp_high_makeup_db": 1.9396554,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.35998692008101785,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.031073315409504
+     ],
+     [
+      25.0,
+      -4.62603017532777
+     ],
+     [
+      30.0,
+      -2.272786662944086
+     ],
+     [
+      40.0,
+      -0.3564770057844682
+     ],
+     [
+      50.0,
+      0.2452287177821809
+     ],
+     [
+      63.0,
+      0.5001612638271922
+     ],
+     [
+      80.0,
+      0.5867440986068925
+     ],
+     [
+      100.0,
+      0.5891286084315126
+     ],
+     [
+      125.0,
+      0.5437501648512603
+     ],
+     [
+      160.0,
+      0.44831186104211995
+     ],
+     [
+      200.0,
+      0.3325759733088757
+     ],
+     [
+      250.0,
+      0.2098767611015762
+     ],
+     [
+      315.0,
+      0.1008294255705603
+     ],
+     [
+      400.0,
+      0.03665126812300375
+     ],
+     [
+      500.0,
+      0.03734420676462097
+     ],
+     [
+      630.0,
+      0.08105481409201597
+     ],
+     [
+      800.0,
+      0.15354607394656378
+     ],
+     [
+      1000.0,
+      0.24295312005117967
+     ],
+     [
+      1250.0,
+      0.33464604319621966
+     ],
+     [
+      1600.0,
+      0.37928689403309257
+     ],
+     [
+      2000.0,
+      0.3513102101412637
+     ],
+     [
+      2500.0,
+      0.31693680550267184
+     ],
+     [
+      3150.0,
+      0.3313849758516567
+     ],
+     [
+      4000.0,
+      0.42872171856377583
+     ],
+     [
+      5000.0,
+      0.6041113710197401
+     ],
+     [
+      6300.0,
+      0.8503895784086047
+     ],
+     [
+      8000.0,
+      1.1094517059587767
+     ],
+     [
+      10000.0,
+      1.2975422284372238
+     ],
+     [
+      12500.0,
+      1.4182517403357289
+     ],
+     [
+      16000.0,
+      1.4911240212050938
+     ],
+     [
+      20000.0,
+      1.5221047336082811
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.1354634761810303,
+      -1.0474216938018799,
+      0.3024199903011322,
+      -0.8467260003089905,
+      0.23718763887882233
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.0009117126464844,
+      -1.9569028615951538,
+      0.95669025182724,
+      -1.9569306373596191,
+      0.9575740694999695
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   },
+   "0.5": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.11,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -6.25,
+    "comp_mid_threshold_db": -6.25,
+    "comp_high_threshold_db": -6.25,
+    "comp_low_ratio": 1.225,
+    "comp_mid_ratio": 1.225,
+    "comp_high_ratio": 1.225,
+    "comp_low_makeup_db": 0.5739797,
+    "comp_mid_makeup_db": 0.5739797,
+    "comp_high_makeup_db": 0.5739797,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.35998692008101785,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.38250085609963513,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.031079602599188
+     ],
+     [
+      25.0,
+      -4.626038320995178
+     ],
+     [
+      30.0,
+      -2.272797080129043
+     ],
+     [
+      40.0,
+      -0.35649320523631883
+     ],
+     [
+      50.0,
+      0.2452050835183656
+     ],
+     [
+      63.0,
+      0.5001254931651695
+     ],
+     [
+      80.0,
+      0.5866882407309175
+     ],
+     [
+      100.0,
+      0.5890429968961275
+     ],
+     [
+      125.0,
+      0.5436180463430718
+     ],
+     [
+      160.0,
+      0.44809721957899346
+     ],
+     [
+      200.0,
+      0.3322420869568071
+     ],
+     [
+      250.0,
+      0.20935628533190836
+     ],
+     [
+      315.0,
+      0.10000369057626739
+     ],
+     [
+      400.0,
+      0.03531845929903158
+     ],
+     [
+      500.0,
+      0.035256137320934126
+     ],
+     [
+      630.0,
+      0.07772294202363257
+     ],
+     [
+      800.0,
+      0.1481262295097474
+     ],
+     [
+      1000.0,
+      0.23437501182370984
+     ],
+     [
+      1250.0,
+      0.320980929650549
+     ],
+     [
+      1600.0,
+      0.3561744524647034
+     ],
+     [
+      2000.0,
+      0.31370289148759734
+     ],
+     [
+      2500.0,
+      0.25503237886431607
+     ],
+     [
+      3150.0,
+      0.22693887203073215
+     ],
+     [
+      4000.0,
+      0.25127431069115636
+     ],
+     [
+      5000.0,
+      0.3247819499995116
+     ],
+     [
+      6300.0,
+      0.4389077430237303
+     ],
+     [
+      8000.0,
+      0.5627634497956518
+     ],
+     [
+      10000.0,
+      0.6534220264762811
+     ],
+     [
+      12500.0,
+      0.7115578625311935
+     ],
+     [
+      16000.0,
+      0.7464896304501432
+     ],
+     [
+      20000.0,
+      0.7612521200711179
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.0655871629714966,
+      -0.9632775187492371,
+      0.27612680196762085,
+      -0.8661143183708191,
+      0.24455076456069946
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.0009117126464844,
+      -1.9569028615951538,
+      0.95669025182724,
+      -1.9569306373596191,
+      0.9575740694999695
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   },
+   "1.0": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.11,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -4.9999995,
+    "comp_mid_threshold_db": -4.9999995,
+    "comp_high_threshold_db": -4.9999995,
+    "comp_low_ratio": 1.1800001,
+    "comp_mid_ratio": 1.1800001,
+    "comp_high_ratio": 1.1800001,
+    "comp_low_makeup_db": 0.381356,
+    "comp_mid_makeup_db": 0.381356,
+    "comp_high_makeup_db": 0.381356,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.35998692008101785,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.38250085609963513,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.031079602599188
+     ],
+     [
+      25.0,
+      -4.626038320995178
+     ],
+     [
+      30.0,
+      -2.272797080129043
+     ],
+     [
+      40.0,
+      -0.35649320523631883
+     ],
+     [
+      50.0,
+      0.2452050835183656
+     ],
+     [
+      63.0,
+      0.5001254931651695
+     ],
+     [
+      80.0,
+      0.5866882407309175
+     ],
+     [
+      100.0,
+      0.5890429968961275
+     ],
+     [
+      125.0,
+      0.5436180463430718
+     ],
+     [
+      160.0,
+      0.44809721957899346
+     ],
+     [
+      200.0,
+      0.3322420869568071
+     ],
+     [
+      250.0,
+      0.20935628533190836
+     ],
+     [
+      315.0,
+      0.10000369057626739
+     ],
+     [
+      400.0,
+      0.03531845929903158
+     ],
+     [
+      500.0,
+      0.035256137320934126
+     ],
+     [
+      630.0,
+      0.07772294202363257
+     ],
+     [
+      800.0,
+      0.1481262295097474
+     ],
+     [
+      1000.0,
+      0.23437501182370984
+     ],
+     [
+      1250.0,
+      0.320980929650549
+     ],
+     [
+      1600.0,
+      0.3561744524647034
+     ],
+     [
+      2000.0,
+      0.31370289148759734
+     ],
+     [
+      2500.0,
+      0.25503237886431607
+     ],
+     [
+      3150.0,
+      0.22693887203073215
+     ],
+     [
+      4000.0,
+      0.25127431069115636
+     ],
+     [
+      5000.0,
+      0.3247819499995116
+     ],
+     [
+      6300.0,
+      0.4389077430237303
+     ],
+     [
+      8000.0,
+      0.5627634497956518
+     ],
+     [
+      10000.0,
+      0.6534220264762811
+     ],
+     [
+      12500.0,
+      0.7115578625311935
+     ],
+     [
+      16000.0,
+      0.7464896304501432
+     ],
+     [
+      20000.0,
+      0.7612521200711179
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.0655871629714966,
+      -0.9632775187492371,
+      0.27612680196762085,
+      -0.8661143183708191,
+      0.24455076456069946
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.0009117126464844,
+      -1.9569028615951538,
+      0.95669025182724,
+      -1.9569306373596191,
+      0.9575740694999695
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "pink_boomy.wav": {
+   "0.0": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.11,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -12.5,
+    "comp_mid_threshold_db": -12.5,
+    "comp_high_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_mid_ratio": 1.45,
+    "comp_high_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554,
+    "comp_mid_makeup_db": 1.9396554,
+    "comp_high_makeup_db": 1.9396554,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.35998692008101785,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.031073315409504
+     ],
+     [
+      25.0,
+      -4.62603017532777
+     ],
+     [
+      30.0,
+      -2.272786662944086
+     ],
+     [
+      40.0,
+      -0.3564770057844682
+     ],
+     [
+      50.0,
+      0.2452287177821809
+     ],
+     [
+      63.0,
+      0.5001612638271922
+     ],
+     [
+      80.0,
+      0.5867440986068925
+     ],
+     [
+      100.0,
+      0.5891286084315126
+     ],
+     [
+      125.0,
+      0.5437501648512603
+     ],
+     [
+      160.0,
+      0.44831186104211995
+     ],
+     [
+      200.0,
+      0.3325759733088757
+     ],
+     [
+      250.0,
+      0.2098767611015762
+     ],
+     [
+      315.0,
+      0.1008294255705603
+     ],
+     [
+      400.0,
+      0.03665126812300375
+     ],
+     [
+      500.0,
+      0.03734420676462097
+     ],
+     [
+      630.0,
+      0.08105481409201597
+     ],
+     [
+      800.0,
+      0.15354607394656378
+     ],
+     [
+      1000.0,
+      0.24295312005117967
+     ],
+     [
+      1250.0,
+      0.33464604319621966
+     ],
+     [
+      1600.0,
+      0.37928689403309257
+     ],
+     [
+      2000.0,
+      0.3513102101412637
+     ],
+     [
+      2500.0,
+      0.31693680550267184
+     ],
+     [
+      3150.0,
+      0.3313849758516567
+     ],
+     [
+      4000.0,
+      0.42872171856377583
+     ],
+     [
+      5000.0,
+      0.6041113710197401
+     ],
+     [
+      6300.0,
+      0.8503895784086047
+     ],
+     [
+      8000.0,
+      1.1094517059587767
+     ],
+     [
+      10000.0,
+      1.2975422284372238
+     ],
+     [
+      12500.0,
+      1.4182517403357289
+     ],
+     [
+      16000.0,
+      1.4911240212050938
+     ],
+     [
+      20000.0,
+      1.5221047336082811
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.1354634761810303,
+      -1.0474216938018799,
+      0.3024199903011322,
+      -0.8467260003089905,
+      0.23718763887882233
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.0009117126464844,
+      -1.9569028615951538,
+      0.95669025182724,
+      -1.9569306373596191,
+      0.9575740694999695
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   },
+   "0.5": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.11,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -12.5,
+    "comp_mid_threshold_db": -12.5,
+    "comp_high_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_mid_ratio": 1.45,
+    "comp_high_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554,
+    "comp_mid_makeup_db": 1.9396554,
+    "comp_high_makeup_db": 1.9396554,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.24995048706014183,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.251428534111378
+     ],
+     [
+      25.0,
+      -4.845820796152891
+     ],
+     [
+      30.0,
+      -2.491876208110412
+     ],
+     [
+      40.0,
+      -0.5737300466680009
+     ],
+     [
+      50.0,
+      0.030437727212271566
+     ],
+     [
+      63.0,
+      0.2895990123740971
+     ],
+     [
+      80.0,
+      0.3836188542694363
+     ],
+     [
+      100.0,
+      0.3976038955896923
+     ],
+     [
+      125.0,
+      0.3705624914753766
+     ],
+     [
+      160.0,
+      0.30490678498054535
+     ],
+     [
+      200.0,
+      0.22253954028799974
+     ],
+     [
+      250.0,
+      0.13312589444072587
+     ],
+     [
+      315.0,
+      0.05204854645258478
+     ],
+     [
+      400.0,
+      0.007550173129616711
+     ],
+     [
+      500.0,
+      0.019635021549339833
+     ],
+     [
+      630.0,
+      0.0704346489118374
+     ],
+     [
+      800.0,
+      0.14722134544498358
+     ],
+     [
+      1000.0,
+      0.2390170535948613
+     ],
+     [
+      1250.0,
+      0.33217786316104003
+     ],
+     [
+      1600.0,
+      0.3778053193804003
+     ],
+     [
+      2000.0,
+      0.35037353026184376
+     ],
+     [
+      2500.0,
+      0.31634438014575084
+     ],
+     [
+      3150.0,
+      0.33101711682588747
+     ],
+     [
+      4000.0,
+      0.4284981806263555
+     ],
+     [
+      5000.0,
+      0.6039723274384647
+     ],
+     [
+      6300.0,
+      0.850305964699557
+     ],
+     [
+      8000.0,
+      1.1094037974277462
+     ],
+     [
+      10000.0,
+      1.2975151724542089
+     ],
+     [
+      12500.0,
+      1.4182378328508851
+     ],
+     [
+      16000.0,
+      1.4911188193328482
+     ],
+     [
+      20000.0,
+      1.5221037170654224
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.1354634761810303,
+      -1.0474216938018799,
+      0.3024199903011322,
+      -0.8467260003089905,
+      0.23718763887882233
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.000632882118225,
+      -1.9566422700881958,
+      0.956699550151825,
+      -1.9566614627838135,
+      0.957313060760498
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   },
+   "1.0": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.11,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -12.5,
+    "comp_mid_threshold_db": -12.5,
+    "comp_high_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_mid_ratio": 1.45,
+    "comp_high_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554,
+    "comp_mid_makeup_db": 1.9396554,
+    "comp_high_makeup_db": 1.9396554,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.24995048706014183,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.251428534111378
+     ],
+     [
+      25.0,
+      -4.845820796152891
+     ],
+     [
+      30.0,
+      -2.491876208110412
+     ],
+     [
+      40.0,
+      -0.5737300466680009
+     ],
+     [
+      50.0,
+      0.030437727212271566
+     ],
+     [
+      63.0,
+      0.2895990123740971
+     ],
+     [
+      80.0,
+      0.3836188542694363
+     ],
+     [
+      100.0,
+      0.3976038955896923
+     ],
+     [
+      125.0,
+      0.3705624914753766
+     ],
+     [
+      160.0,
+      0.30490678498054535
+     ],
+     [
+      200.0,
+      0.22253954028799974
+     ],
+     [
+      250.0,
+      0.13312589444072587
+     ],
+     [
+      315.0,
+      0.05204854645258478
+     ],
+     [
+      400.0,
+      0.007550173129616711
+     ],
+     [
+      500.0,
+      0.019635021549339833
+     ],
+     [
+      630.0,
+      0.0704346489118374
+     ],
+     [
+      800.0,
+      0.14722134544498358
+     ],
+     [
+      1000.0,
+      0.2390170535948613
+     ],
+     [
+      1250.0,
+      0.33217786316104003
+     ],
+     [
+      1600.0,
+      0.3778053193804003
+     ],
+     [
+      2000.0,
+      0.35037353026184376
+     ],
+     [
+      2500.0,
+      0.31634438014575084
+     ],
+     [
+      3150.0,
+      0.33101711682588747
+     ],
+     [
+      4000.0,
+      0.4284981806263555
+     ],
+     [
+      5000.0,
+      0.6039723274384647
+     ],
+     [
+      6300.0,
+      0.850305964699557
+     ],
+     [
+      8000.0,
+      1.1094037974277462
+     ],
+     [
+      10000.0,
+      1.2975151724542089
+     ],
+     [
+      12500.0,
+      1.4182378328508851
+     ],
+     [
+      16000.0,
+      1.4911188193328482
+     ],
+     [
+      20000.0,
+      1.5221037170654224
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.1354634761810303,
+      -1.0474216938018799,
+      0.3024199903011322,
+      -0.8467260003089905,
+      0.23718763887882233
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.000632882118225,
+      -1.9566422700881958,
+      0.956699550151825,
+      -1.9566614627838135,
+      0.957313060760498
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "pink_wide_corr0.wav": {
+   "0.0": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.11,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -12.5,
+    "comp_mid_threshold_db": -12.5,
+    "comp_high_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_mid_ratio": 1.45,
+    "comp_high_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554,
+    "comp_mid_makeup_db": 1.9396554,
+    "comp_high_makeup_db": 1.9396554,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.35998692008101785,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.031073315409504
+     ],
+     [
+      25.0,
+      -4.62603017532777
+     ],
+     [
+      30.0,
+      -2.272786662944086
+     ],
+     [
+      40.0,
+      -0.3564770057844682
+     ],
+     [
+      50.0,
+      0.2452287177821809
+     ],
+     [
+      63.0,
+      0.5001612638271922
+     ],
+     [
+      80.0,
+      0.5867440986068925
+     ],
+     [
+      100.0,
+      0.5891286084315126
+     ],
+     [
+      125.0,
+      0.5437501648512603
+     ],
+     [
+      160.0,
+      0.44831186104211995
+     ],
+     [
+      200.0,
+      0.3325759733088757
+     ],
+     [
+      250.0,
+      0.2098767611015762
+     ],
+     [
+      315.0,
+      0.1008294255705603
+     ],
+     [
+      400.0,
+      0.03665126812300375
+     ],
+     [
+      500.0,
+      0.03734420676462097
+     ],
+     [
+      630.0,
+      0.08105481409201597
+     ],
+     [
+      800.0,
+      0.15354607394656378
+     ],
+     [
+      1000.0,
+      0.24295312005117967
+     ],
+     [
+      1250.0,
+      0.33464604319621966
+     ],
+     [
+      1600.0,
+      0.37928689403309257
+     ],
+     [
+      2000.0,
+      0.3513102101412637
+     ],
+     [
+      2500.0,
+      0.31693680550267184
+     ],
+     [
+      3150.0,
+      0.3313849758516567
+     ],
+     [
+      4000.0,
+      0.42872171856377583
+     ],
+     [
+      5000.0,
+      0.6041113710197401
+     ],
+     [
+      6300.0,
+      0.8503895784086047
+     ],
+     [
+      8000.0,
+      1.1094517059587767
+     ],
+     [
+      10000.0,
+      1.2975422284372238
+     ],
+     [
+      12500.0,
+      1.4182517403357289
+     ],
+     [
+      16000.0,
+      1.4911240212050938
+     ],
+     [
+      20000.0,
+      1.5221047336082811
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.1354634761810303,
+      -1.0474216938018799,
+      0.3024199903011322,
+      -0.8467260003089905,
+      0.23718763887882233
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.0009117126464844,
+      -1.9569028615951538,
+      0.95669025182724,
+      -1.9569306373596191,
+      0.9575740694999695
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   },
+   "0.5": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.0550001,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -8.158491,
+    "comp_mid_threshold_db": -8.158491,
+    "comp_high_threshold_db": -8.158491,
+    "comp_low_ratio": 1.2937057,
+    "comp_mid_ratio": 1.2937057,
+    "comp_high_ratio": 1.2937057,
+    "comp_low_makeup_db": 0.9260977,
+    "comp_mid_makeup_db": 0.9260977,
+    "comp_high_makeup_db": 0.9260977,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.35998692008101785,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.031073315409504
+     ],
+     [
+      25.0,
+      -4.62603017532777
+     ],
+     [
+      30.0,
+      -2.272786662944086
+     ],
+     [
+      40.0,
+      -0.3564770057844682
+     ],
+     [
+      50.0,
+      0.2452287177821809
+     ],
+     [
+      63.0,
+      0.5001612638271922
+     ],
+     [
+      80.0,
+      0.5867440986068925
+     ],
+     [
+      100.0,
+      0.5891286084315126
+     ],
+     [
+      125.0,
+      0.5437501648512603
+     ],
+     [
+      160.0,
+      0.44831186104211995
+     ],
+     [
+      200.0,
+      0.3325759733088757
+     ],
+     [
+      250.0,
+      0.2098767611015762
+     ],
+     [
+      315.0,
+      0.1008294255705603
+     ],
+     [
+      400.0,
+      0.03665126812300375
+     ],
+     [
+      500.0,
+      0.03734420676462097
+     ],
+     [
+      630.0,
+      0.08105481409201597
+     ],
+     [
+      800.0,
+      0.15354607394656378
+     ],
+     [
+      1000.0,
+      0.24295312005117967
+     ],
+     [
+      1250.0,
+      0.33464604319621966
+     ],
+     [
+      1600.0,
+      0.37928689403309257
+     ],
+     [
+      2000.0,
+      0.3513102101412637
+     ],
+     [
+      2500.0,
+      0.31693680550267184
+     ],
+     [
+      3150.0,
+      0.3313849758516567
+     ],
+     [
+      4000.0,
+      0.42872171856377583
+     ],
+     [
+      5000.0,
+      0.6041113710197401
+     ],
+     [
+      6300.0,
+      0.8503895784086047
+     ],
+     [
+      8000.0,
+      1.1094517059587767
+     ],
+     [
+      10000.0,
+      1.2975422284372238
+     ],
+     [
+      12500.0,
+      1.4182517403357289
+     ],
+     [
+      16000.0,
+      1.4911240212050938
+     ],
+     [
+      20000.0,
+      1.5221047336082811
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.1354634761810303,
+      -1.0474216938018799,
+      0.3024199903011322,
+      -0.8467260003089905,
+      0.23718763887882233
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.0009117126464844,
+      -1.9569028615951538,
+      0.95669025182724,
+      -1.9569306373596191,
+      0.9575740694999695
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   },
+   "1.0": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.033,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -4.9999995,
+    "comp_mid_threshold_db": -4.9999995,
+    "comp_high_threshold_db": -4.9999995,
+    "comp_low_ratio": 1.1800001,
+    "comp_mid_ratio": 1.1800001,
+    "comp_high_ratio": 1.1800001,
+    "comp_low_makeup_db": 0.381356,
+    "comp_mid_makeup_db": 0.381356,
+    "comp_high_makeup_db": 0.381356,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.35998692008101785,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.031073315409504
+     ],
+     [
+      25.0,
+      -4.62603017532777
+     ],
+     [
+      30.0,
+      -2.272786662944086
+     ],
+     [
+      40.0,
+      -0.3564770057844682
+     ],
+     [
+      50.0,
+      0.2452287177821809
+     ],
+     [
+      63.0,
+      0.5001612638271922
+     ],
+     [
+      80.0,
+      0.5867440986068925
+     ],
+     [
+      100.0,
+      0.5891286084315126
+     ],
+     [
+      125.0,
+      0.5437501648512603
+     ],
+     [
+      160.0,
+      0.44831186104211995
+     ],
+     [
+      200.0,
+      0.3325759733088757
+     ],
+     [
+      250.0,
+      0.2098767611015762
+     ],
+     [
+      315.0,
+      0.1008294255705603
+     ],
+     [
+      400.0,
+      0.03665126812300375
+     ],
+     [
+      500.0,
+      0.03734420676462097
+     ],
+     [
+      630.0,
+      0.08105481409201597
+     ],
+     [
+      800.0,
+      0.15354607394656378
+     ],
+     [
+      1000.0,
+      0.24295312005117967
+     ],
+     [
+      1250.0,
+      0.33464604319621966
+     ],
+     [
+      1600.0,
+      0.37928689403309257
+     ],
+     [
+      2000.0,
+      0.3513102101412637
+     ],
+     [
+      2500.0,
+      0.31693680550267184
+     ],
+     [
+      3150.0,
+      0.3313849758516567
+     ],
+     [
+      4000.0,
+      0.42872171856377583
+     ],
+     [
+      5000.0,
+      0.6041113710197401
+     ],
+     [
+      6300.0,
+      0.8503895784086047
+     ],
+     [
+      8000.0,
+      1.1094517059587767
+     ],
+     [
+      10000.0,
+      1.2975422284372238
+     ],
+     [
+      12500.0,
+      1.4182517403357289
+     ],
+     [
+      16000.0,
+      1.4911240212050938
+     ],
+     [
+      20000.0,
+      1.5221047336082811
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.1354634761810303,
+      -1.0474216938018799,
+      0.3024199903011322,
+      -0.8467260003089905,
+      0.23718763887882233
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.0009117126464844,
+      -1.9569028615951538,
+      0.95669025182724,
+      -1.9569306373596191,
+      0.9575740694999695
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   }
+  },
+  "drums_60s.wav": {
+   "0.0": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.11,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -12.5,
+    "comp_mid_threshold_db": -12.5,
+    "comp_high_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_mid_ratio": 1.45,
+    "comp_high_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554,
+    "comp_mid_makeup_db": 1.9396554,
+    "comp_high_makeup_db": 1.9396554,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.35998692008101785,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.031073315409504
+     ],
+     [
+      25.0,
+      -4.62603017532777
+     ],
+     [
+      30.0,
+      -2.272786662944086
+     ],
+     [
+      40.0,
+      -0.3564770057844682
+     ],
+     [
+      50.0,
+      0.2452287177821809
+     ],
+     [
+      63.0,
+      0.5001612638271922
+     ],
+     [
+      80.0,
+      0.5867440986068925
+     ],
+     [
+      100.0,
+      0.5891286084315126
+     ],
+     [
+      125.0,
+      0.5437501648512603
+     ],
+     [
+      160.0,
+      0.44831186104211995
+     ],
+     [
+      200.0,
+      0.3325759733088757
+     ],
+     [
+      250.0,
+      0.2098767611015762
+     ],
+     [
+      315.0,
+      0.1008294255705603
+     ],
+     [
+      400.0,
+      0.03665126812300375
+     ],
+     [
+      500.0,
+      0.03734420676462097
+     ],
+     [
+      630.0,
+      0.08105481409201597
+     ],
+     [
+      800.0,
+      0.15354607394656378
+     ],
+     [
+      1000.0,
+      0.24295312005117967
+     ],
+     [
+      1250.0,
+      0.33464604319621966
+     ],
+     [
+      1600.0,
+      0.37928689403309257
+     ],
+     [
+      2000.0,
+      0.3513102101412637
+     ],
+     [
+      2500.0,
+      0.31693680550267184
+     ],
+     [
+      3150.0,
+      0.3313849758516567
+     ],
+     [
+      4000.0,
+      0.42872171856377583
+     ],
+     [
+      5000.0,
+      0.6041113710197401
+     ],
+     [
+      6300.0,
+      0.8503895784086047
+     ],
+     [
+      8000.0,
+      1.1094517059587767
+     ],
+     [
+      10000.0,
+      1.2975422284372238
+     ],
+     [
+      12500.0,
+      1.4182517403357289
+     ],
+     [
+      16000.0,
+      1.4911240212050938
+     ],
+     [
+      20000.0,
+      1.5221047336082811
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.1354634761810303,
+      -1.0474216938018799,
+      0.3024199903011322,
+      -0.8467260003089905,
+      0.23718763887882233
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.0009117126464844,
+      -1.9569028615951538,
+      0.95669025182724,
+      -1.9569306373596191,
+      0.9575740694999695
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   },
+   "0.5": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.11,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -12.5,
+    "comp_mid_threshold_db": -12.5,
+    "comp_high_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_mid_ratio": 1.45,
+    "comp_high_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554,
+    "comp_mid_makeup_db": 1.9396554,
+    "comp_high_makeup_db": 1.9396554,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.24995048706014183,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.251428534111378
+     ],
+     [
+      25.0,
+      -4.845820796152891
+     ],
+     [
+      30.0,
+      -2.491876208110412
+     ],
+     [
+      40.0,
+      -0.5737300466680009
+     ],
+     [
+      50.0,
+      0.030437727212271566
+     ],
+     [
+      63.0,
+      0.2895990123740971
+     ],
+     [
+      80.0,
+      0.3836188542694363
+     ],
+     [
+      100.0,
+      0.3976038955896923
+     ],
+     [
+      125.0,
+      0.3705624914753766
+     ],
+     [
+      160.0,
+      0.30490678498054535
+     ],
+     [
+      200.0,
+      0.22253954028799974
+     ],
+     [
+      250.0,
+      0.13312589444072587
+     ],
+     [
+      315.0,
+      0.05204854645258478
+     ],
+     [
+      400.0,
+      0.007550173129616711
+     ],
+     [
+      500.0,
+      0.019635021549339833
+     ],
+     [
+      630.0,
+      0.0704346489118374
+     ],
+     [
+      800.0,
+      0.14722134544498358
+     ],
+     [
+      1000.0,
+      0.2390170535948613
+     ],
+     [
+      1250.0,
+      0.33217786316104003
+     ],
+     [
+      1600.0,
+      0.3778053193804003
+     ],
+     [
+      2000.0,
+      0.35037353026184376
+     ],
+     [
+      2500.0,
+      0.31634438014575084
+     ],
+     [
+      3150.0,
+      0.33101711682588747
+     ],
+     [
+      4000.0,
+      0.4284981806263555
+     ],
+     [
+      5000.0,
+      0.6039723274384647
+     ],
+     [
+      6300.0,
+      0.850305964699557
+     ],
+     [
+      8000.0,
+      1.1094037974277462
+     ],
+     [
+      10000.0,
+      1.2975151724542089
+     ],
+     [
+      12500.0,
+      1.4182378328508851
+     ],
+     [
+      16000.0,
+      1.4911188193328482
+     ],
+     [
+      20000.0,
+      1.5221037170654224
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.1354634761810303,
+      -1.0474216938018799,
+      0.3024199903011322,
+      -0.8467260003089905,
+      0.23718763887882233
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.000632882118225,
+      -1.9566422700881958,
+      0.956699550151825,
+      -1.9566614627838135,
+      0.957313060760498
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   },
+   "1.0": {
+    "sample_rate": 48000,
+    "input_gain_db": 1.2000003115660818,
+    "saturation_amount": 0.055,
+    "saturation_small_signal_gain_db": 2.800664588635544,
+    "ceiling_dbfs": -1.0000002900227403,
+    "width_side_scale": 1.11,
+    "transient_amount": 0.04,
+    "compression_active": true,
+    "comp_low_threshold_db": -12.5,
+    "comp_mid_threshold_db": -12.5,
+    "comp_high_threshold_db": -12.5,
+    "comp_low_ratio": 1.45,
+    "comp_mid_ratio": 1.45,
+    "comp_high_ratio": 1.45,
+    "comp_low_makeup_db": 1.9396554,
+    "comp_mid_makeup_db": 1.9396554,
+    "comp_high_makeup_db": 1.9396554,
+    "comp_link_stereo": true,
+    "volume_match_gain_db": 0.0,
+    "user_output_gain_db": 0.0,
+    "eq_sub_80_db": 0.0,
+    "eq_low_200_db": 0.24995048706014183,
+    "eq_low_mid_400_db": -0.09999005645421943,
+    "eq_mid_1500_db": 0.3399965757870097,
+    "eq_high_mid_3500_db": 0.0,
+    "eq_high_6000_db": 0.7649988991929502,
+    "eq_sparkle_12000_db": 0.0,
+    "eq_warmth_300_db": 0.0,
+    "eq_presence_air_10000_db": 0.0,
+    "static_response_db": [
+     [
+      20.0,
+      -9.251428534111378
+     ],
+     [
+      25.0,
+      -4.845820796152891
+     ],
+     [
+      30.0,
+      -2.491876208110412
+     ],
+     [
+      40.0,
+      -0.5737300466680009
+     ],
+     [
+      50.0,
+      0.030437727212271566
+     ],
+     [
+      63.0,
+      0.2895990123740971
+     ],
+     [
+      80.0,
+      0.3836188542694363
+     ],
+     [
+      100.0,
+      0.3976038955896923
+     ],
+     [
+      125.0,
+      0.3705624914753766
+     ],
+     [
+      160.0,
+      0.30490678498054535
+     ],
+     [
+      200.0,
+      0.22253954028799974
+     ],
+     [
+      250.0,
+      0.13312589444072587
+     ],
+     [
+      315.0,
+      0.05204854645258478
+     ],
+     [
+      400.0,
+      0.007550173129616711
+     ],
+     [
+      500.0,
+      0.019635021549339833
+     ],
+     [
+      630.0,
+      0.0704346489118374
+     ],
+     [
+      800.0,
+      0.14722134544498358
+     ],
+     [
+      1000.0,
+      0.2390170535948613
+     ],
+     [
+      1250.0,
+      0.33217786316104003
+     ],
+     [
+      1600.0,
+      0.3778053193804003
+     ],
+     [
+      2000.0,
+      0.35037353026184376
+     ],
+     [
+      2500.0,
+      0.31634438014575084
+     ],
+     [
+      3150.0,
+      0.33101711682588747
+     ],
+     [
+      4000.0,
+      0.4284981806263555
+     ],
+     [
+      5000.0,
+      0.6039723274384647
+     ],
+     [
+      6300.0,
+      0.850305964699557
+     ],
+     [
+      8000.0,
+      1.1094037974277462
+     ],
+     [
+      10000.0,
+      1.2975151724542089
+     ],
+     [
+      12500.0,
+      1.4182378328508851
+     ],
+     [
+      16000.0,
+      1.4911188193328482
+     ],
+     [
+      20000.0,
+      1.5221037170654224
+     ]
+    ],
+    "biquads": {
+     "comp_low_lp": [
+      6.10131501161959e-05,
+      0.0001220263002323918,
+      6.10131501161959e-05,
+      -1.9777865409851074,
+      0.9780305624008179
+     ],
+     "high": [
+      1.1354634761810303,
+      -1.0474216938018799,
+      0.3024199903011322,
+      -0.8467260003089905,
+      0.23718763887882233
+     ],
+     "high_mid": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "low": [
+      1.000632882118225,
+      -1.9566422700881958,
+      0.956699550151825,
+      -1.9566614627838135,
+      0.957313060760498
+     ],
+     "low_mid": [
+      0.9996747970581055,
+      -1.94051194190979,
+      0.9435002207756042,
+      -1.94051194190979,
+      0.9431750178337097
+     ],
+     "mid": [
+      1.0042634010314941,
+      -1.7520776987075806,
+      0.7821395993232727,
+      -1.7520776987075806,
+      0.7864029407501221
+     ],
+     "presence_air": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sparkle": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "sub_highpass_1": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "sub_highpass_2": [
+      0.997780978679657,
+      -1.995561957359314,
+      0.997780978679657,
+      -1.9955570697784424,
+      0.9955669045448303
+     ],
+     "warmth": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
+   }
+  }
+ },
+ "ui": {
+  "universal_0.0": {
+   "engine_thr": -0.0,
+   "ui_thr": 0.0,
+   "engine_ratio": 1.0,
+   "ui_ratio": 1,
+   "active": false
+  },
+  "universal_0.25": {
+   "engine_thr": -6.25,
+   "ui_thr": -6.25,
+   "engine_ratio": 1.225,
+   "ui_ratio": 1.225,
+   "active": true
+  },
+  "universal_0.5": {
+   "engine_thr": -12.5,
+   "ui_thr": -12.5,
+   "engine_ratio": 1.45,
+   "ui_ratio": 1.45,
+   "active": true
+  },
+  "universal_0.75": {
+   "engine_thr": -14.0,
+   "ui_thr": -14.0,
+   "engine_ratio": 1.7,
+   "ui_ratio": 1.7,
+   "active": true
+  },
+  "universal_1.0": {
+   "engine_thr": -15.5,
+   "ui_thr": -15.5,
+   "engine_ratio": 1.95,
+   "ui_ratio": 1.95,
+   "active": true
+  },
+  "clarity_0.0": {
+   "engine_thr": -0.0,
+   "ui_thr": 0.0,
+   "engine_ratio": 1.0,
+   "ui_ratio": 1,
+   "active": false
+  },
+  "clarity_0.25": {
+   "engine_thr": -6.25,
+   "ui_thr": -6.25,
+   "engine_ratio": 1.225,
+   "ui_ratio": 1.225,
+   "active": true
+  },
+  "clarity_0.5": {
+   "engine_thr": -12.5,
+   "ui_thr": -12.5,
+   "engine_ratio": 1.45,
+   "ui_ratio": 1.45,
+   "active": true
+  },
+  "clarity_0.75": {
+   "engine_thr": -14.0,
+   "ui_thr": -14.0,
+   "engine_ratio": 1.7,
+   "ui_ratio": 1.7,
+   "active": true
+  },
+  "clarity_1.0": {
+   "engine_thr": -15.5,
+   "ui_thr": -15.5,
+   "engine_ratio": 1.95,
+   "ui_ratio": 1.95,
+   "active": true
+  },
+  "tape_0.0": {
+   "engine_thr": -0.0,
+   "ui_thr": 0.0,
+   "engine_ratio": 1.0,
+   "ui_ratio": 1,
+   "active": false
+  },
+  "tape_0.25": {
+   "engine_thr": -8.0,
+   "ui_thr": -8.0,
+   "engine_ratio": 1.325,
+   "ui_ratio": 1.325,
+   "active": true
+  },
+  "tape_0.5": {
+   "engine_thr": -16.0,
+   "ui_thr": -16.0,
+   "engine_ratio": 1.65,
+   "ui_ratio": 1.65,
+   "active": true
+  },
+  "tape_0.75": {
+   "engine_thr": -17.5,
+   "ui_thr": -17.5,
+   "engine_ratio": 1.9,
+   "ui_ratio": 1.9,
+   "active": true
+  },
+  "tape_1.0": {
+   "engine_thr": -19.0,
+   "ui_thr": -19.0,
+   "engine_ratio": 2.15,
+   "ui_ratio": 2.15,
+   "active": true
+  },
+  "spatial_0.0": {
+   "engine_thr": -0.0,
+   "ui_thr": 0.0,
+   "engine_ratio": 1.0,
+   "ui_ratio": 1,
+   "active": false
+  },
+  "spatial_0.25": {
+   "engine_thr": -8.0,
+   "ui_thr": -8.0,
+   "engine_ratio": 1.4,
+   "ui_ratio": 1.4,
+   "active": true
+  },
+  "spatial_0.5": {
+   "engine_thr": -16.0,
+   "ui_thr": -16.0,
+   "engine_ratio": 1.8,
+   "ui_ratio": 1.8,
+   "active": true
+  },
+  "spatial_0.75": {
+   "engine_thr": -17.5,
+   "ui_thr": -17.5,
+   "engine_ratio": 2.05,
+   "ui_ratio": 2.05,
+   "active": true
+  },
+  "spatial_1.0": {
+   "engine_thr": -19.0,
+   "ui_thr": -19.0,
+   "engine_ratio": 2.3,
+   "ui_ratio": 2.3,
+   "active": true
+  },
+  "oomph_0.0": {
+   "engine_thr": -0.0,
+   "ui_thr": 0.0,
+   "engine_ratio": 1.0,
+   "ui_ratio": 1,
+   "active": false
+  },
+  "oomph_0.25": {
+   "engine_thr": -7.75,
+   "ui_thr": -7.75,
+   "engine_ratio": 1.35,
+   "ui_ratio": 1.35,
+   "active": true
+  },
+  "oomph_0.5": {
+   "engine_thr": -15.5,
+   "ui_thr": -15.5,
+   "engine_ratio": 1.7,
+   "ui_ratio": 1.7,
+   "active": true
+  },
+  "oomph_0.75": {
+   "engine_thr": -17.0,
+   "ui_thr": -17.0,
+   "engine_ratio": 1.95,
+   "ui_ratio": 1.95,
+   "active": true
+  },
+  "oomph_1.0": {
+   "engine_thr": -18.5,
+   "ui_thr": -18.5,
+   "engine_ratio": 2.2,
+   "ui_ratio": 2.2,
+   "active": true
+  },
+  "warmth_0.0": {
+   "engine_thr": -0.0,
+   "ui_thr": 0.0,
+   "engine_ratio": 1.0,
+   "ui_ratio": 1,
+   "active": false
+  },
+  "warmth_0.25": {
+   "engine_thr": -9.5,
+   "ui_thr": -9.5,
+   "engine_ratio": 1.5,
+   "ui_ratio": 1.5,
+   "active": true
+  },
+  "warmth_0.5": {
+   "engine_thr": -19.0,
+   "ui_thr": -19.0,
+   "engine_ratio": 2.0,
+   "ui_ratio": 2.0,
+   "active": true
+  },
+  "warmth_0.75": {
+   "engine_thr": -20.5,
+   "ui_thr": -20.5,
+   "engine_ratio": 2.25,
+   "ui_ratio": 2.25,
+   "active": true
+  },
+  "warmth_1.0": {
+   "engine_thr": -22.0,
+   "ui_thr": -22.0,
+   "engine_ratio": 2.5,
+   "ui_ratio": 2.5,
+   "active": true
+  },
+  "punch_0.0": {
+   "engine_thr": -0.0,
+   "ui_thr": 0.0,
+   "engine_ratio": 1.0,
+   "ui_ratio": 1,
+   "active": false
+  },
+  "punch_0.25": {
+   "engine_thr": -10.0,
+   "ui_thr": -10.0,
+   "engine_ratio": 1.9,
+   "ui_ratio": 1.9,
+   "active": true
+  },
+  "punch_0.5": {
+   "engine_thr": -20.0,
+   "ui_thr": -20.0,
+   "engine_ratio": 2.8,
+   "ui_ratio": 2.8,
+   "active": true
+  },
+  "punch_0.75": {
+   "engine_thr": -21.5,
+   "ui_thr": -21.5,
+   "engine_ratio": 3.05,
+   "ui_ratio": 3.05,
+   "active": true
+  },
+  "punch_1.0": {
+   "engine_thr": -23.0,
+   "ui_thr": -23.0,
+   "engine_ratio": 3.3,
+   "ui_ratio": 3.3,
+   "active": true
+  },
+  "loud_0.0": {
+   "engine_thr": -0.0,
+   "ui_thr": 0.0,
+   "engine_ratio": 1.0,
+   "ui_ratio": 1,
+   "active": false
+  },
+  "loud_0.25": {
+   "engine_thr": -11.5,
+   "ui_thr": -11.5,
+   "engine_ratio": 2.545,
+   "ui_ratio": 2.545,
+   "active": true
+  },
+  "loud_0.5": {
+   "engine_thr": -23.0,
+   "ui_thr": -23.0,
+   "engine_ratio": 4.09,
+   "ui_ratio": 4.09,
+   "active": true
+  },
+  "loud_0.75": {
+   "engine_thr": -24.5,
+   "ui_thr": -24.5,
+   "engine_ratio": 4.34,
+   "ui_ratio": 4.34,
+   "active": true
+  },
+  "loud_1.0": {
+   "engine_thr": -26.0,
+   "ui_thr": -26.0,
+   "engine_ratio": 4.59,
+   "ui_ratio": 4.59,
+   "active": true
+  },
+  "custom_0.0": {
+   "engine_thr": -0.0,
+   "ui_thr": 0.0,
+   "engine_ratio": 1.0,
+   "ui_ratio": 1,
+   "active": false
+  },
+  "custom_0.25": {
+   "engine_thr": -8.0,
+   "ui_thr": -8.0,
+   "engine_ratio": 1.4,
+   "ui_ratio": 1.4,
+   "active": true
+  },
+  "custom_0.5": {
+   "engine_thr": -16.0,
+   "ui_thr": -16.0,
+   "engine_ratio": 1.8,
+   "ui_ratio": 1.8,
+   "active": true
+  },
+  "custom_0.75": {
+   "engine_thr": -17.5,
+   "ui_thr": -17.5,
+   "engine_ratio": 2.05,
+   "ui_ratio": 2.05,
+   "active": true
+  },
+  "custom_1.0": {
+   "engine_thr": -19.0,
+   "ui_thr": -19.0,
+   "engine_ratio": 2.3,
+   "ui_ratio": 2.3,
+   "active": true
+  }
+ },
+ "presets": {
+  "universal": {
+   "input_gain_db": 1.2000003115660818,
+   "saturation_amount": 0.055,
+   "saturation_small_signal_gain_db": 2.800664588635544,
+   "transient_amount": 0.04,
+   "eq_sub_80_db": 0.0,
+   "eq_low_200_db": 0.35998692008101785,
+   "eq_low_mid_400_db": -0.09999005645421943,
+   "eq_mid_1500_db": 0.3399965757870097,
+   "eq_high_mid_3500_db": 0.0,
+   "eq_high_6000_db": 0.7649988991929502,
+   "eq_sparkle_12000_db": 0.0,
+   "width_side_scale": 1.11,
+   "comp_low_threshold_db": -12.5,
+   "comp_low_ratio": 1.45,
+   "comp_low_makeup_db": 1.9396554
+  },
+  "clarity": {
+   "input_gain_db": 0.8000002190921498,
+   "saturation_amount": 0.025,
+   "saturation_small_signal_gain_db": 2.5618020289278727,
+   "transient_amount": 0.05,
+   "eq_sub_80_db": 0.0,
+   "eq_low_200_db": 0.30001655925967663,
+   "eq_low_mid_400_db": -0.9999832706948132,
+   "eq_mid_1500_db": 0.2999967005183884,
+   "eq_high_mid_3500_db": 0.0,
+   "eq_high_6000_db": 1.144999418217101,
+   "eq_sparkle_12000_db": 0.0,
+   "width_side_scale": 1.09,
+   "comp_low_threshold_db": -12.5,
+   "comp_low_ratio": 1.45,
+   "comp_low_makeup_db": 1.9396554
+  },
+  "tape": {
+   "input_gain_db": 1.4999997446509226,
+   "saturation_amount": 0.15,
+   "saturation_small_signal_gain_db": 3.5715117944463843,
+   "transient_amount": -0.03,
+   "eq_sub_80_db": 0.0,
+   "eq_low_200_db": 0.0,
+   "eq_low_mid_400_db": 0.7199962067139686,
+   "eq_mid_1500_db": -1.400001483817891,
+   "eq_high_mid_3500_db": 0.0,
+   "eq_high_6000_db": 0.35500062434540297,
+   "eq_sparkle_12000_db": 0.0,
+   "width_side_scale": 0.93,
+   "comp_low_threshold_db": -16.0,
+   "comp_low_ratio": 1.65,
+   "comp_low_makeup_db": 3.151515
+  },
+  "spatial": {
+   "input_gain_db": 1.0000000166986343,
+   "saturation_amount": 0.04,
+   "saturation_small_signal_gain_db": 2.6808308792931927,
+   "transient_amount": 0.03,
+   "eq_sub_80_db": 0.0,
+   "eq_low_200_db": 0.049999951328396644,
+   "eq_low_mid_400_db": -0.7999888771767356,
+   "eq_mid_1500_db": -0.29999622539088006,
+   "eq_high_mid_3500_db": 0.0,
+   "eq_high_6000_db": 0.6499996673196897,
+   "eq_sparkle_12000_db": 0.0,
+   "width_side_scale": 1.45,
+   "comp_low_threshold_db": -16.0,
+   "comp_low_ratio": 1.8,
+   "comp_low_makeup_db": 3.5555553
+  },
+  "oomph": {
+   "input_gain_db": 1.79999961874981,
+   "saturation_amount": 0.045,
+   "saturation_small_signal_gain_db": 2.720691659227227,
+   "transient_amount": 0.08,
+   "eq_sub_80_db": 0.0,
+   "eq_low_200_db": 2.649602093421733,
+   "eq_low_mid_400_db": -3.0000092758916512,
+   "eq_mid_1500_db": -2.5999961831867155,
+   "eq_high_mid_3500_db": 0.0,
+   "eq_high_6000_db": -1.0249990890337326,
+   "eq_sparkle_12000_db": 0.0,
+   "width_side_scale": 0.84,
+   "comp_low_threshold_db": -15.5,
+   "comp_low_ratio": 1.7,
+   "comp_low_makeup_db": 3.1911767
+  },
+  "warmth": {
+   "input_gain_db": 1.0000000166986343,
+   "saturation_amount": 0.13,
+   "saturation_small_signal_gain_db": 3.4081653391576925,
+   "transient_amount": -0.05,
+   "eq_sub_80_db": 0.0,
+   "eq_low_200_db": 0.7600507075177183,
+   "eq_low_mid_400_db": 1.2099924987601534,
+   "eq_mid_1500_db": -1.8000005417539362,
+   "eq_high_mid_3500_db": 0.0,
+   "eq_high_6000_db": -0.8900001953517279,
+   "eq_sparkle_12000_db": 0.0,
+   "width_side_scale": 0.98,
+   "comp_low_threshold_db": -19.0,
+   "comp_low_ratio": 2.0,
+   "comp_low_makeup_db": 4.75
+  },
+  "punch": {
+   "input_gain_db": 1.5999999531940745,
+   "saturation_amount": 0.035,
+   "saturation_small_signal_gain_db": 2.641059516232214,
+   "transient_amount": 0.19,
+   "eq_sub_80_db": 0.0,
+   "eq_low_200_db": 0.39993836112794623,
+   "eq_low_mid_400_db": -1.8000004869242183,
+   "eq_mid_1500_db": 2.3199992560697966,
+   "eq_high_mid_3500_db": 0.0,
+   "eq_high_6000_db": 0.40000027035870667,
+   "eq_sparkle_12000_db": 0.0,
+   "width_side_scale": 1.04,
+   "comp_low_threshold_db": -20.0,
+   "comp_low_ratio": 2.8,
+   "comp_low_makeup_db": 6.428571
+  },
+  "loud": {
+   "input_gain_db": 2.5000003462924143,
+   "saturation_amount": 0.055,
+   "saturation_small_signal_gain_db": 2.800664588635544,
+   "transient_amount": 0.12,
+   "eq_sub_80_db": 0.0,
+   "eq_low_200_db": 0.2000302855130912,
+   "eq_low_mid_400_db": -1.6000136160232505,
+   "eq_mid_1500_db": 1.7999997299321422,
+   "eq_high_mid_3500_db": 0.0,
+   "eq_high_6000_db": 0.5999995978738333,
+   "eq_sparkle_12000_db": 0.0,
+   "width_side_scale": 1.03,
+   "comp_low_threshold_db": -23.0,
+   "comp_low_ratio": 4.09,
+   "comp_low_makeup_db": 8.688264
+  },
+  "custom": {
+   "input_gain_db": 1.4999997446509226,
+   "saturation_amount": 0.0,
+   "saturation_small_signal_gain_db": 0.0,
+   "transient_amount": 0.0,
+   "eq_sub_80_db": 0.0,
+   "eq_low_200_db": 0.0,
+   "eq_low_mid_400_db": 0.0,
+   "eq_mid_1500_db": 0.0,
+   "eq_high_mid_3500_db": 0.0,
+   "eq_high_6000_db": 0.0,
+   "eq_sparkle_12000_db": 0.0,
+   "width_side_scale": 1.0,
+   "comp_low_threshold_db": -0.0,
+   "comp_low_ratio": 1.0,
+   "comp_low_makeup_db": 0.0
+  }
+ },
+ "eq_response_by_rate": {
+  "44100": {
+   "20": -9.061443039182052,
+   "25": -4.62225928375261,
+   "30": -2.2516644576878697,
+   "40": -0.3296722920845432,
+   "50": 0.2671254978968227,
+   "63": 0.5156335957387452,
+   "80": 0.5967966542653618,
+   "100": 0.5956642163013653,
+   "125": 0.548030508987434,
+   "160": 0.4511258511789816,
+   "200": 0.33460353919925684,
+   "250": 0.2113539124699405,
+   "315": 0.10185111491303071,
+   "400": 0.03728699993384689,
+   "500": 0.03768982129072892,
+   "630": 0.08114925659757273,
+   "800": 0.15340716054001913,
+   "1000": 0.24261860891678755,
+   "1250": 0.33413290478681534,
+   "1600": 0.3784026284608482,
+   "2000": 0.3496890904766077,
+   "2500": 0.3142513327331311,
+   "3150": 0.3274259694646977,
+   "4000": 0.4238577110471101,
+   "5000": 0.6002660721692119,
+   "6300": 0.8510231487315467,
+   "8000": 1.1167041348422102,
+   "10000": 1.3089070260287274,
+   "12500": 1.4301786913666679,
+   "16000": 1.5006323063029223,
+   "20000": 1.527153366208832
+  },
+  "48000": {
+   "20": -9.031073315409504,
+   "25": -4.62603017532777,
+   "30": -2.272786662944086,
+   "40": -0.3564770057844682,
+   "50": 0.2452287177821809,
+   "63": 0.5001612638271922,
+   "80": 0.5867440986068925,
+   "100": 0.5891286084315126,
+   "125": 0.5437501648512603,
+   "160": 0.44831186104211995,
+   "200": 0.3325759733088757,
+   "250": 0.2098767611015762,
+   "315": 0.1008294255705603,
+   "400": 0.03665126812300375,
+   "500": 0.03734420676462097,
+   "630": 0.08105481409201597,
+   "800": 0.15354607394656378,
+   "1000": 0.24295312005117967,
+   "1250": 0.33464604319621966,
+   "1600": 0.37928689403309257,
+   "2000": 0.3513102101412637,
+   "2500": 0.31693680550267184,
+   "3150": 0.3313849758516567,
+   "4000": 0.42872171856377583,
+   "5000": 0.6041113710197401,
+   "6300": 0.8503895784086047,
+   "8000": 1.1094517059587767,
+   "10000": 1.2975422284372238,
+   "12500": 1.4182517403357289,
+   "16000": 1.4911240212050938,
+   "20000": 1.5221047336082811
+  },
+  "96000": {
+   "20": -8.939019259241947,
+   "25": -4.665970758358904,
+   "30": -2.3782440543018177,
+   "40": -0.48172627737183366,
+   "50": 0.14023423479560254,
+   "63": 0.4216212406376349,
+   "80": 0.5315744806524093,
+   "100": 0.5507408770321862,
+   "125": 0.518194252569587,
+   "160": 0.4335300305323398,
+   "200": 0.32486803768742434,
+   "250": 0.20678304674972542,
+   "315": 0.10031285707651606,
+   "400": 0.03729357569929509,
+   "500": 0.03842781138167,
+   "630": 0.08243210947885443,
+   "800": 0.15529119349344533,
+   "1000": 0.2451166391101077,
+   "1250": 0.3372914156917569,
+   "1600": 0.38327484236478804,
+   "2000": 0.3581884287988383,
+   "2500": 0.3280388051048606,
+   "3150": 0.34746396745411734,
+   "4000": 0.44806712018492056,
+   "5000": 0.6191091052679889,
+   "6300": 0.848230844660797,
+   "8000": 1.0822667341650543,
+   "10000": 1.2532428227458992,
+   "12500": 1.368137554493907,
+   "16000": 1.444382072819053,
+   "20000": 1.48395252127166
+  }
+ }
+}

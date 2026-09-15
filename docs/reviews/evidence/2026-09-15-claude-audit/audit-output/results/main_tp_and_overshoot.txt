@@ -1,0 +1,93 @@
+== FFmpeg true peak minus receipt true peak (dB), and FFmpeg minus ceiling, main matrix
+  ff-receipt: mean +0.05 max +0.52 min -0.05 (n=72; FFmpeg summary is 0.1 dB resolution)
+  renders where FFmpeg reads ABOVE the ceiling:
+    M_input08_loud                 +0.50 dB
+    M_input08_punch                +0.40 dB
+    M_input08_universal            +0.30 dB
+    M_input08_tape                 +0.30 dB
+    M_input08_spatial              +0.30 dB
+    M_input08_clarity              +0.30 dB
+    M_input08_warmth               +0.20 dB
+
+== post-limiter attenuation: delivered TP vs the limiter's -1.1 dBTP operating point (only meaningful when limiter engaged)
+id                               srcL deliv TP  landing~  crest
+fixtures/inputs/input01.wav
+   clarity    src -12.33  landing  -5.70 dB  crest  9.83  turned DOWN after limiting
+   custom     src -12.33  landing  -3.15 dB  crest 12.10  turned DOWN after limiting
+   loud       src -12.33  landing  -7.85 dB  crest  8.05  turned DOWN after limiting
+   oomph      src -12.33  landing  -6.17 dB  crest  8.39  turned DOWN after limiting
+   punch      src -12.33  landing  -7.43 dB  crest  8.28  turned DOWN after limiting
+   spatial    src -12.33  landing  -6.49 dB  crest  9.02  turned DOWN after limiting
+   tape       src -12.33  landing  -6.66 dB  crest  8.62  turned DOWN after limiting
+   universal  src -12.33  landing  -6.15 dB  crest  9.25  turned DOWN after limiting
+   warmth     src -12.33  landing  -6.67 dB  crest  8.34  turned DOWN after limiting
+fixtures/inputs/input02.wav
+   clarity    src -17.06  landing  -1.38 dB  crest 13.94  turned DOWN after limiting
+   custom     src -17.06  landing  +0.10 dB  crest 16.98  
+   loud       src -17.06  landing  -3.60 dB  crest 11.45  turned DOWN after limiting
+   oomph      src -17.06  landing  -2.64 dB  crest 12.54  turned DOWN after limiting
+   punch      src -17.06  landing  -3.34 dB  crest 11.80  turned DOWN after limiting
+   spatial    src -17.06  landing  -2.71 dB  crest 12.55  turned DOWN after limiting
+   tape       src -17.06  landing  -3.01 dB  crest 12.24  turned DOWN after limiting
+   universal  src -17.06  landing  -2.28 dB  crest 13.03  turned DOWN after limiting
+   warmth     src -17.06  landing  -3.21 dB  crest 11.96  turned DOWN after limiting
+fixtures/inputs/input03.wav
+   clarity    src -14.05  landing  -3.88 dB  crest 10.50  turned DOWN after limiting
+   custom     src -14.05  landing  -1.23 dB  crest 13.06  turned DOWN after limiting
+   loud       src -14.05  landing  -4.55 dB  crest  9.98  turned DOWN after limiting
+   oomph      src -14.05  landing  -4.26 dB  crest  9.68  turned DOWN after limiting
+   punch      src -14.05  landing  -4.82 dB  crest  9.62  turned DOWN after limiting
+   spatial    src -14.05  landing  -4.73 dB  crest  9.63  turned DOWN after limiting
+   tape       src -14.05  landing  -4.61 dB  crest  9.67  turned DOWN after limiting
+   universal  src -14.05  landing  -4.44 dB  crest  9.90  turned DOWN after limiting
+   warmth     src -14.05  landing  -4.54 dB  crest  9.71  turned DOWN after limiting
+fixtures/inputs/input04.wav
+   clarity    src -16.07  landing  -1.03 dB  crest 13.84  turned DOWN after limiting
+   custom     src -16.07  landing  +0.10 dB  crest 15.33  
+   loud       src -16.07  landing  -1.52 dB  crest 13.70  turned DOWN after limiting
+   oomph      src -16.07  landing  -3.44 dB  crest 10.86  turned DOWN after limiting
+   punch      src -16.07  landing  -1.97 dB  crest 13.02  turned DOWN after limiting
+   spatial    src -16.07  landing  -1.36 dB  crest 13.60  turned DOWN after limiting
+   tape       src -16.07  landing  -2.06 dB  crest 12.68  turned DOWN after limiting
+   universal  src -16.07  landing  -1.62 dB  crest 13.13  turned DOWN after limiting
+   warmth     src -16.07  landing  -2.71 dB  crest 11.88  turned DOWN after limiting
+fixtures/inputs/input05.wav
+   clarity    src  -9.78  landing  -6.65 dB  crest  7.52  turned DOWN after limiting
+   custom     src  -9.78  landing  -4.81 dB  crest  9.46  turned DOWN after limiting
+   loud       src  -9.78  landing  -8.21 dB  crest  6.31  turned DOWN after limiting
+   oomph      src  -9.78  landing  -8.19 dB  crest  5.66  turned DOWN after limiting
+   punch      src  -9.78  landing  -7.82 dB  crest  6.49  turned DOWN after limiting
+   spatial    src  -9.78  landing  -7.08 dB  crest  7.20  turned DOWN after limiting
+   tape       src  -9.78  landing  -7.60 dB  crest  6.51  turned DOWN after limiting
+   universal  src  -9.78  landing  -7.09 dB  crest  7.06  turned DOWN after limiting
+   warmth     src  -9.78  landing  -7.88 dB  crest  6.19  turned DOWN after limiting
+fixtures/inputs/input06.wav
+   clarity    src -21.69  landing  +0.10 dB  crest 18.36  
+   custom     src -21.69  landing  +0.10 dB  crest 18.11  
+   loud       src -21.69  landing  -1.29 dB  crest 14.06  turned DOWN after limiting
+   oomph      src -21.69  landing  +0.10 dB  crest 17.22  
+   punch      src -21.69  landing  +0.10 dB  crest 15.90  
+   spatial    src -21.69  landing  +0.10 dB  crest 17.64  
+   tape       src -21.69  landing  +0.10 dB  crest 16.87  
+   universal  src -21.69  landing  +0.10 dB  crest 17.72  
+   warmth     src -21.69  landing  +0.10 dB  crest 16.50  
+fixtures/inputs/input07.wav
+   clarity    src -27.37  landing  +0.10 dB  crest 23.68  
+   custom     src -27.37  landing  +0.10 dB  crest 25.40  
+   loud       src -27.37  landing  +0.10 dB  crest 18.15  
+   oomph      src -27.37  landing  +0.10 dB  crest 22.25  
+   punch      src -27.37  landing  +0.10 dB  crest 19.74  
+   spatial    src -27.37  landing  +0.10 dB  crest 22.53  
+   tape       src -27.37  landing  +0.10 dB  crest 21.95  
+   universal  src -27.37  landing  +0.10 dB  crest 23.27  
+   warmth     src -27.37  landing  +0.10 dB  crest 20.68  
+fixtures/inputs/input08.wav
+   clarity    src -26.91  landing  +0.10 dB  crest 23.92  
+   custom     src -26.91  landing  +0.10 dB  crest 24.11  
+   loud       src -26.91  landing  +0.10 dB  crest 16.67  
+   oomph      src -26.91  landing  +0.10 dB  crest 22.31  
+   punch      src -26.91  landing  +0.10 dB  crest 18.79  
+   spatial    src -26.91  landing  +0.10 dB  crest 21.63  
+   tape       src -26.91  landing  +0.10 dB  crest 20.76  
+   universal  src -26.91  landing  +0.10 dB  crest 22.72  
+   warmth     src -26.91  landing  +0.10 dB  crest 19.31  

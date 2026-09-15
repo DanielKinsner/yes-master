@@ -1,0 +1,13 @@
+16x true peak (dBTP) on the 48 kHz-native renders vs receipt (ceiling -1.0):
+  M_input02_loud             receipt  -4.70  ffmpeg  -4.7  16x  -4.70
+  M_input04_clarity          receipt  -2.13  ffmpeg  -1.8  16x  -2.13
+  M_input04_loud             receipt  -2.62  ffmpeg  -2.1  16x  -2.50
+  M_input08_clarity          receipt  -1.00  ffmpeg  -0.7  16x  -0.91
+  M_input08_custom           receipt  -1.00  ffmpeg  -1.0  16x  -0.99
+  M_input08_loud             receipt  -1.00  ffmpeg  -0.5  16x  -0.89
+  M_input08_oomph            receipt  -1.00  ffmpeg  -1.0  16x  -0.96
+  M_input08_punch            receipt  -1.00  ffmpeg  -0.6  16x  -0.91
+  M_input08_spatial          receipt  -1.00  ffmpeg  -0.7  16x  -0.88
+  M_input08_tape             receipt  -1.00  ffmpeg  -0.7  16x  -0.86
+  M_input08_universal        receipt  -1.00  ffmpeg  -0.7  16x  -0.86
+  M_input08_warmth           receipt  -1.00  ffmpeg  -0.8  16x  -0.94

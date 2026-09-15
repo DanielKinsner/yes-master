@@ -1,0 +1,3 @@
+# Sealed research artifacts must retain their exact original bytes on every OS.
+docs/reviews/evidence/2026-09-15-claude-audit/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/reviews/evidence/2026-09-15-final-review/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

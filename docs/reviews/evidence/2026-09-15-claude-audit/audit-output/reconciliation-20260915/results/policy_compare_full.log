@@ -1,0 +1,321 @@
+grid: 221 chain+SRC+measure jobs
+  coat_0 trim -17.67: L= -23.75 TP=-10.64 (6.5s)
+  coat_0 trim -16.17: L= -22.26 TP= -9.21 (6.3s)
+  coat_0 trim -14.67: L= -20.77 TP= -7.80 (6.4s)
+  coat_0 trim -13.17: L= -19.28 TP= -6.43 (6.3s)
+  coat_0 trim -11.67: L= -17.80 TP= -5.12 (6.2s)
+  coat_0 trim -10.17: L= -16.32 TP= -3.87 (6.5s)
+  coat_0 trim  -8.67: L= -14.85 TP= -2.71 (6.5s)
+  coat_0 trim  -7.17: L= -13.40 TP= -1.65 (6.5s)
+  coat_0 trim  -5.67: L= -11.96 TP= -1.10 (6.1s)
+  coat_0 trim  -4.17: L= -10.56 TP= -1.05 (6.2s)
+  coat_0 trim  -2.67: L=  -9.24 TP= -1.04 (6.2s)
+  coat_0 trim  -1.17: L=  -8.10 TP= -1.02 (6.4s)
+  coat_0 trim  +0.00: L=  -7.37 TP= -0.99 (6.6s)
+  coat_0 trim  +0.33: L=  -7.19 TP= -0.98 (6.8s)
+  coat_-6 trim -11.67: L= -23.75 TP=-10.64 (6.2s)
+  coat_-6 trim -10.17: L= -22.26 TP= -9.21 (6.3s)
+  coat_-6 trim  -8.67: L= -20.77 TP= -7.80 (6.0s)
+  coat_-6 trim  -7.17: L= -19.28 TP= -6.43 (5.9s)
+  coat_-6 trim  -5.67: L= -17.80 TP= -5.12 (5.9s)
+  coat_-6 trim  -4.17: L= -16.32 TP= -3.87 (6.0s)
+  coat_-6 trim  -2.67: L= -14.85 TP= -2.71 (6.0s)
+  coat_-6 trim  -1.17: L= -13.40 TP= -1.65 (6.0s)
+  coat_-6 trim  +0.00: L= -12.28 TP= -1.10 (5.9s)
+  coat_-6 trim  +0.33: L= -11.96 TP= -1.10 (6.0s)
+  coat_-6 trim  +1.83: L= -10.56 TP= -1.05 (5.9s)
+  coat_-6 trim  +3.33: L=  -9.24 TP= -1.04 (6.0s)
+  coat_-6 trim  +4.83: L=  -8.10 TP= -1.02 (6.4s)
+  coat_-6 trim  +6.33: L=  -7.19 TP= -0.98 (6.8s)
+  coat_-12 trim  -5.67: L= -23.75 TP=-10.64 (6.1s)
+  coat_-12 trim  -4.17: L= -22.26 TP= -9.21 (6.0s)
+  coat_-12 trim  -2.67: L= -20.77 TP= -7.80 (6.1s)
+  coat_-12 trim  -1.17: L= -19.28 TP= -6.44 (5.9s)
+  coat_-12 trim  +0.00: L= -18.12 TP= -5.40 (6.1s)
+  coat_-12 trim  +0.33: L= -17.80 TP= -5.12 (6.0s)
+  coat_-12 trim  +1.83: L= -16.32 TP= -3.87 (6.0s)
+  coat_-12 trim  +3.33: L= -14.85 TP= -2.71 (6.0s)
+  coat_-12 trim  +4.83: L= -13.40 TP= -1.65 (6.3s)
+  coat_-12 trim  +6.33: L= -11.96 TP= -1.10 (6.1s)
+  coat_-12 trim  +7.83: L= -10.56 TP= -1.05 (6.2s)
+  coat_-12 trim  +9.33: L=  -9.24 TP= -1.04 (6.1s)
+  coat_-12 trim +10.83: L=  -8.10 TP= -1.02 (6.4s)
+  coat_-12 trim +12.33: L=  -7.19 TP= -0.98 (6.7s)
+  piano_0 trim -12.94: L= -23.05 TP= -5.88 (4.8s)
+  piano_0 trim -11.44: L= -21.57 TP= -4.61 (4.9s)
+  piano_0 trim  -9.94: L= -20.09 TP= -3.49 (5.0s)
+  piano_0 trim  -8.44: L= -18.62 TP= -2.51 (5.1s)
+  piano_0 trim  -6.94: L= -17.18 TP= -1.69 (5.1s)
+  piano_0 trim  -5.44: L= -15.78 TP= -1.10 (5.0s)
+  piano_0 trim  -3.94: L= -14.43 TP= -1.10 (4.9s)
+  piano_0 trim  -2.44: L= -13.16 TP= -1.10 (4.8s)
+  piano_0 trim  -0.94: L= -11.98 TP= -1.10 (5.0s)
+  piano_0 trim  +0.00: L= -11.29 TP= -1.10 (4.9s)
+  piano_0 trim  +0.56: L= -10.91 TP= -1.10 (5.1s)
+  piano_0 trim  +2.06: L=  -9.93 TP= -1.10 (5.2s)
+  piano_0 trim  +3.56: L=  -9.05 TP= -1.09 (5.1s)
+  piano_0 trim  +5.06: L=  -8.25 TP= -1.09 (5.1s)
+  piano_-6 trim  -6.94: L= -23.05 TP= -5.88 (4.7s)
+  piano_-6 trim  -5.44: L= -21.57 TP= -4.61 (4.7s)
+  piano_-6 trim  -3.94: L= -20.09 TP= -3.49 (4.8s)
+  piano_-6 trim  -2.44: L= -18.62 TP= -2.51 (4.8s)
+  piano_-6 trim  -0.94: L= -17.18 TP= -1.69 (4.9s)
+  piano_-6 trim  +0.00: L= -16.29 TP= -1.23 (4.8s)
+  piano_-6 trim  +0.56: L= -15.78 TP= -1.10 (4.9s)
+  piano_-6 trim  +2.06: L= -14.43 TP= -1.10 (4.8s)
+  piano_-6 trim  +3.56: L= -13.16 TP= -1.10 (4.8s)
+  piano_-6 trim  +5.06: L= -11.98 TP= -1.10 (4.9s)
+  piano_-6 trim  +6.56: L= -10.91 TP= -1.10 (4.9s)
+  piano_-6 trim  +8.06: L=  -9.93 TP= -1.10 (5.0s)
+  piano_-6 trim  +9.56: L=  -9.05 TP= -1.09 (5.1s)
+  piano_-6 trim +11.06: L=  -8.25 TP= -1.09 (5.1s)
+  piano_-12 trim  -0.94: L= -23.05 TP= -5.88 (4.8s)
+  piano_-12 trim  +0.00: L= -22.12 TP= -5.07 (4.8s)
+  piano_-12 trim  +0.56: L= -21.57 TP= -4.61 (4.7s)
+  piano_-12 trim  +2.06: L= -20.09 TP= -3.49 (4.7s)
+  piano_-12 trim  +3.56: L= -18.62 TP= -2.52 (4.9s)
+  piano_-12 trim  +5.06: L= -17.18 TP= -1.69 (4.8s)
+  piano_-12 trim  +6.56: L= -15.78 TP= -1.10 (4.8s)
+  piano_-12 trim  +8.06: L= -14.43 TP= -1.10 (4.9s)
+  piano_-12 trim  +9.56: L= -13.16 TP= -1.10 (4.9s)
+  piano_-12 trim +11.06: L= -11.98 TP= -1.10 (4.9s)
+  piano_-12 trim +12.56: L= -10.91 TP= -1.10 (4.9s)
+  piano_-12 trim +14.06: L=  -9.93 TP= -1.10 (4.9s)
+  piano_-12 trim +15.56: L=  -9.05 TP= -1.09 (5.1s)
+  piano_-12 trim +17.06: L=  -8.25 TP= -1.09 (5.2s)
+  rich_0 trim  -2.63: L= -22.94 TP= -2.99 (5.8s)
+  rich_0 trim  -1.13: L= -21.48 TP= -2.04 (5.9s)
+  rich_0 trim  +0.00: L= -20.39 TP= -1.43 (5.9s)
+  rich_0 trim  +0.37: L= -20.04 TP= -1.25 (5.8s)
+  rich_0 trim  +1.87: L= -18.64 TP= -1.10 (5.6s)
+  rich_0 trim  +3.37: L= -17.28 TP= -1.10 (5.6s)
+  rich_0 trim  +4.87: L= -15.97 TP= -1.10 (5.6s)
+  rich_0 trim  +6.37: L= -14.73 TP= -1.10 (5.6s)
+  rich_0 trim  +7.87: L= -13.53 TP= -1.10 (5.6s)
+  rich_0 trim  +9.37: L= -12.40 TP= -1.10 (5.7s)
+  rich_0 trim +10.87: L= -11.31 TP= -1.09 (5.8s)
+  rich_0 trim +12.37: L= -10.30 TP= -1.09 (5.8s)
+  rich_0 trim +13.87: L=  -9.33 TP= -1.09 (5.7s)
+  rich_0 trim +15.37: L=  -8.43 TP= -1.09 (5.8s)
+  rich_-6 trim  +0.00: L= -26.28 TP= -5.69 (5.6s)
+  rich_-6 trim  +3.37: L= -22.94 TP= -2.99 (5.6s)
+  rich_-6 trim  +4.87: L= -21.48 TP= -2.04 (5.7s)
+  rich_-6 trim  +6.37: L= -20.04 TP= -1.25 (5.5s)
+  rich_-6 trim  +7.87: L= -18.64 TP= -1.10 (5.7s)
+  rich_-6 trim  +9.37: L= -17.28 TP= -1.10 (5.7s)
+  rich_-6 trim +10.87: L= -15.97 TP= -1.10 (5.6s)
+  rich_-6 trim +12.37: L= -14.73 TP= -1.10 (5.6s)
+  rich_-6 trim +13.87: L= -13.53 TP= -1.10 (6.1s)
+  rich_-6 trim +15.37: L= -12.40 TP= -1.10 (6.0s)
+  rich_-6 trim +16.87: L= -11.31 TP= -1.09 (6.1s)
+  rich_-6 trim +18.37: L= -10.30 TP= -1.09 (6.1s)
+  rich_-6 trim +19.87: L=  -9.33 TP= -1.09 (6.2s)
+  rich_-6 trim +21.37: L=  -8.43 TP= -1.09 (6.4s)
+  rich_-12 trim  +0.00: L= -32.26 TP=-11.28 (6.1s)
+  rich_-12 trim  +9.36: L= -22.95 TP= -2.99 (6.1s)
+  rich_-12 trim +10.86: L= -21.48 TP= -2.04 (6.1s)
+  rich_-12 trim +12.36: L= -20.04 TP= -1.26 (6.0s)
+  rich_-12 trim +13.86: L= -18.64 TP= -1.10 (6.2s)
+  rich_-12 trim +15.36: L= -17.29 TP= -1.10 (6.0s)
+  rich_-12 trim +16.86: L= -15.98 TP= -1.10 (6.2s)
+  rich_-12 trim +18.36: L= -14.73 TP= -1.10 (6.1s)
+  rich_-12 trim +19.86: L= -13.54 TP= -1.10 (6.2s)
+  rich_-12 trim +21.36: L= -12.40 TP= -1.10 (6.3s)
+  rich_-12 trim +22.86: L= -11.32 TP= -1.09 (6.7s)
+  rich_-12 trim +24.00: L= -10.54 TP= -1.09 (6.8s)
+  imaginal_0 trim  -3.09: L= -23.03 TP= -1.10 (10.1s)
+  imaginal_0 trim  -1.59: L= -21.56 TP= -1.10 (10.0s)
+  imaginal_0 trim  -0.09: L= -20.10 TP= -1.10 (10.1s)
+  imaginal_0 trim  +0.00: L= -20.01 TP= -1.10 (10.0s)
+  imaginal_0 trim  +1.41: L= -18.65 TP= -1.10 (10.4s)
+  imaginal_0 trim  +2.91: L= -17.22 TP= -1.10 (10.1s)
+  imaginal_0 trim  +4.41: L= -15.80 TP= -1.10 (10.0s)
+  imaginal_0 trim  +5.91: L= -14.44 TP= -1.10 (10.3s)
+  imaginal_0 trim  +7.41: L= -13.14 TP= -1.10 (10.2s)
+  imaginal_0 trim  +8.91: L= -11.92 TP= -1.10 (10.3s)
+  imaginal_0 trim +10.41: L= -10.80 TP= -1.10 (10.4s)
+  imaginal_0 trim +11.91: L=  -9.78 TP= -1.10 (10.4s)
+  imaginal_0 trim +13.41: L=  -8.86 TP= -1.10 (10.5s)
+  imaginal_0 trim +14.91: L=  -8.04 TP= -1.10 (10.7s)
+  imaginal_-6 trim  +0.00: L= -25.92 TP= -2.60 (9.9s)
+  imaginal_-6 trim  +2.90: L= -23.04 TP= -1.10 (10.1s)
+  imaginal_-6 trim  +4.40: L= -21.56 TP= -1.10 (10.2s)
+  imaginal_-6 trim  +5.90: L= -20.10 TP= -1.10 (10.1s)
+  imaginal_-6 trim  +7.40: L= -18.65 TP= -1.10 (10.2s)
+  imaginal_-6 trim  +8.90: L= -17.22 TP= -1.10 (10.0s)
+  imaginal_-6 trim +10.40: L= -15.81 TP= -1.10 (10.0s)
+  imaginal_-6 trim +11.90: L= -14.44 TP= -1.10 (10.1s)
+  imaginal_-6 trim +13.40: L= -13.14 TP= -1.10 (9.7s)
+  imaginal_-6 trim +14.90: L= -11.92 TP= -1.10 (10.0s)
+  imaginal_-6 trim +16.40: L= -10.80 TP= -1.10 (9.9s)
+  imaginal_-6 trim +17.90: L=  -9.79 TP= -1.10 (10.0s)
+  imaginal_-6 trim +19.40: L=  -8.86 TP= -1.10 (10.1s)
+  imaginal_-6 trim +20.90: L=  -8.04 TP= -1.10 (10.1s)
+  imaginal_-12 trim  +0.00: L= -31.90 TP= -7.76 (9.5s)
+  imaginal_-12 trim  +8.89: L= -23.04 TP= -1.10 (9.8s)
+  imaginal_-12 trim +10.39: L= -21.57 TP= -1.10 (9.6s)
+  imaginal_-12 trim +11.89: L= -20.11 TP= -1.10 (9.6s)
+  imaginal_-12 trim +13.39: L= -18.66 TP= -1.10 (9.9s)
+  imaginal_-12 trim +14.89: L= -17.23 TP= -1.10 (9.8s)
+  imaginal_-12 trim +16.39: L= -15.82 TP= -1.10 (9.9s)
+  imaginal_-12 trim +17.89: L= -14.45 TP= -1.10 (10.0s)
+  imaginal_-12 trim +19.39: L= -13.15 TP= -1.10 (10.6s)
+  imaginal_-12 trim +20.89: L= -11.93 TP= -1.10 (11.3s)
+  imaginal_-12 trim +22.39: L= -10.81 TP= -1.10 (11.6s)
+  imaginal_-12 trim +23.89: L=  -9.79 TP= -1.10 (11.8s)
+  imaginal_-12 trim +24.00: L=  -9.73 TP= -1.10 (13.9s)
+  funk_0 trim -13.93: L= -22.93 TP= -7.30 (6.6s)
+  funk_0 trim -12.43: L= -21.45 TP= -5.93 (6.4s)
+  funk_0 trim -10.93: L= -19.97 TP= -4.62 (6.5s)
+  funk_0 trim  -9.43: L= -18.50 TP= -3.37 (6.4s)
+  funk_0 trim  -7.93: L= -17.05 TP= -2.22 (6.3s)
+  funk_0 trim  -6.43: L= -15.60 TP= -1.17 (5.8s)
+  funk_0 trim  -4.93: L= -14.19 TP= -0.92 (5.9s)
+  funk_0 trim  -3.43: L= -12.85 TP= -0.32 (6.0s)
+  funk_0 trim  -1.93: L= -11.69 TP=  0.20 (6.2s)
+  funk_0 trim  -0.43: L= -10.68 TP=  0.84 (6.2s)
+  funk_0 trim  +0.00: L= -10.42 TP=  1.04 (6.3s)
+  funk_0 trim  +1.07: L=  -9.82 TP=  1.56 (6.5s)
+  funk_0 trim  +2.57: L=  -9.13 TP=  2.30 (6.9s)
+  funk_0 trim  +4.07: L=  -8.55 TP=  2.49 (7.1s)
+  metal_0 trim -20.21: L= -24.35 TP= -8.68 (5.7s)
+  metal_0 trim -18.71: L= -22.86 TP= -7.29 (5.7s)
+  metal_0 trim -17.21: L= -21.37 TP= -5.93 (5.6s)
+  metal_0 trim -15.71: L= -19.88 TP= -4.64 (5.7s)
+  metal_0 trim -14.21: L= -18.40 TP= -3.42 (5.6s)
+  metal_0 trim -12.71: L= -16.92 TP= -2.29 (5.8s)
+  metal_0 trim -11.21: L= -15.45 TP= -1.29 (5.9s)
+  metal_0 trim  -9.71: L= -14.00 TP= -1.11 (5.9s)
+  metal_0 trim  -8.21: L= -12.57 TP= -1.06 (5.7s)
+  metal_0 trim  -6.71: L= -11.19 TP= -1.02 (5.8s)
+  metal_0 trim  -5.21: L=  -9.90 TP= -1.01 (5.8s)
+  metal_0 trim  -3.71: L=  -8.72 TP= -0.95 (5.9s)
+  metal_0 trim  -2.21: L=  -7.65 TP= -0.85 (5.9s)
+  metal_0 trim  +0.00: L=  -6.30 TP= -0.72 (6.9s)
+  aphelion_0 trim -15.95: L= -23.04 TP= -8.03 (14.7s)
+  aphelion_0 trim -14.45: L= -21.55 TP= -6.65 (14.7s)
+  aphelion_0 trim -12.95: L= -20.07 TP= -5.33 (14.6s)
+  aphelion_0 trim -11.45: L= -18.60 TP= -4.07 (14.8s)
+  aphelion_0 trim  -9.95: L= -17.14 TP= -2.89 (14.7s)
+  aphelion_0 trim  -8.45: L= -15.70 TP= -1.82 (14.5s)
+  aphelion_0 trim  -6.95: L= -14.28 TP= -1.09 (14.6s)
+  aphelion_0 trim  -5.45: L= -12.93 TP= -1.08 (13.9s)
+  aphelion_0 trim  -3.95: L= -11.70 TP= -1.08 (14.4s)
+  aphelion_0 trim  -2.45: L= -10.64 TP= -1.08 (14.5s)
+  aphelion_0 trim  -0.95: L=  -9.74 TP= -1.08 (14.9s)
+  aphelion_0 trim  +0.00: L=  -9.25 TP= -1.08 (15.2s)
+  aphelion_0 trim  +0.55: L=  -8.98 TP= -1.08 (15.3s)
+  aphelion_0 trim  +2.05: L=  -8.32 TP= -1.05 (15.5s)
+  baby_0 trim  -8.31: L= -24.39 TP= -7.66 (8.9s)
+  baby_0 trim  -6.81: L= -22.90 TP= -6.30 (8.4s)
+  baby_0 trim  -5.31: L= -21.41 TP= -4.98 (9.1s)
+  baby_0 trim  -3.81: L= -19.93 TP= -3.74 (9.2s)
+  baby_0 trim  -2.31: L= -18.45 TP= -2.59 (9.1s)
+  baby_0 trim  -0.81: L= -16.98 TP= -1.55 (9.1s)
+  baby_0 trim  +0.00: L= -16.19 TP= -1.10 (9.0s)
+  baby_0 trim  +0.69: L= -15.52 TP= -1.10 (9.4s)
+  baby_0 trim  +2.19: L= -14.08 TP= -1.05 (9.2s)
+  baby_0 trim  +3.69: L= -12.68 TP= -1.06 (8.9s)
+  baby_0 trim  +5.19: L= -11.37 TP= -1.00 (8.1s)
+  baby_0 trim  +6.69: L= -10.13 TP= -1.01 (8.0s)
+  baby_0 trim  +8.19: L=  -8.99 TP= -1.01 (8.0s)
+  baby_0 trim  +9.69: L=  -7.97 TP= -0.97 (8.3s)
+finalists: 96 production renders
+  coat_0dB_t9_P                    trim  +0.00 LUFS   -9.00 TPeng  -2.62 TPexact  -2.64 crest  8.95 LRA  3.1 lim 2.46/0.43
+  coat_0dB_t9_A                    trim  -1.63 LUFS   -9.00 TPeng  -1.59 TPexact  -1.62 crest  9.95 LRA  3.6 lim 2.09/0.14
+  coat_0dB_t9_C                    trim  -2.67 LUFS   -9.20 TPeng  -1.00 TPexact  -1.00 crest 10.76 LRA  3.9 lim 1.76/0.05
+  coat_0dB_t14_P                   trim  +0.00 LUFS  -14.00 TPeng  -7.62 TPexact  -7.64 crest  8.95 LRA  3.1 lim 2.46/0.43
+  coat_0dB_t14_A                   trim  -6.63 LUFS  -14.00 TPeng  -2.43 TPexact  -2.42 crest 14.06 LRA  4.1 lim 0.00/0.00
+  coat_0dB_t14_C                   trim -17.67 LUFS  -14.12 TPeng  -1.00 TPexact  -0.98 crest 15.55 LRA  4.1 lim 0.00/0.00
+  coat_-6dB_t9_P                   trim  +0.00 LUFS  -12.18 TPeng  -1.00 TPexact  -1.00 crest 13.71 LRA  4.0 lim 0.19/0.00
+  coat_-6dB_t9_A                   trim  +0.00 LUFS  -12.18 TPeng  -1.00 TPexact  -1.00 crest 13.71 LRA  4.0 lim 0.19/0.00
+  coat_-6dB_t9_C                   trim  +3.33 LUFS   -9.20 TPeng  -1.00 TPexact  -1.00 crest 10.76 LRA  3.9 lim 1.76/0.05
+  coat_-6dB_t14_P                  trim  +0.00 LUFS  -14.00 TPeng  -2.82 TPexact  -2.83 crest 13.71 LRA  4.0 lim 0.19/0.00
+  coat_-6dB_t14_A                  trim  -1.72 LUFS  -14.00 TPeng  -2.09 TPexact  -2.08 crest 14.38 LRA  4.1 lim 0.00/0.00
+  coat_-6dB_t14_C                  trim -11.67 LUFS  -14.12 TPeng  -1.00 TPexact  -0.98 crest 15.55 LRA  4.1 lim 0.00/0.00
+  coat_-12dB_t9_P                  trim  +0.00 LUFS  -13.72 TPeng  -1.00 TPexact  -0.99 crest 15.17 LRA  4.1 lim 0.00/0.00
+  coat_-12dB_t9_A                  trim  +0.00 LUFS  -13.72 TPeng  -1.00 TPexact  -0.99 crest 15.17 LRA  4.1 lim 0.00/0.00
+  coat_-12dB_t9_C                  trim  +9.33 LUFS   -9.20 TPeng  -1.00 TPexact  -1.00 crest 10.76 LRA  3.9 lim 1.76/0.05
+  coat_-12dB_t14_P                 trim  +0.00 LUFS  -14.00 TPeng  -1.28 TPexact  -1.27 crest 15.17 LRA  4.1 lim 0.00/0.00
+  coat_-12dB_t14_A                 trim  +0.00 LUFS  -14.00 TPeng  -1.28 TPexact  -1.27 crest 15.17 LRA  4.1 lim 0.00/0.00
+  coat_-12dB_t14_C                 trim  -5.67 LUFS  -14.12 TPeng  -1.00 TPexact  -0.98 crest 15.55 LRA  4.1 lim 0.00/0.00
+  piano_0dB_t9_P                   trim  +0.00 LUFS  -11.19 TPeng  -1.00 TPexact  -1.01 crest 12.59 LRA 10.3 lim 2.04/0.02
+  piano_0dB_t9_A                   trim  +0.00 LUFS  -11.19 TPeng  -1.00 TPexact  -1.01 crest 12.59 LRA 10.3 lim 2.04/0.02
+  piano_0dB_t9_C                   trim  +3.56 LUFS   -9.00 TPeng  -1.05 TPexact  -1.05 crest 10.29 LRA  8.4 lim 2.59/0.14
+  piano_0dB_t14_P                  trim  +0.00 LUFS  -14.00 TPeng  -3.81 TPexact  -3.81 crest 12.59 LRA 10.3 lim 2.04/0.02
+  piano_0dB_t14_A                  trim  -2.71 LUFS  -14.00 TPeng  -1.72 TPexact  -1.73 crest 14.72 LRA 11.3 lim 1.28/0.00
+  piano_0dB_t14_C                  trim  -2.44 LUFS  -14.00 TPeng  -1.93 TPexact  -1.94 crest 14.50 LRA 11.2 lim 1.38/0.01
+  piano_-6dB_t9_P                  trim  +0.00 LUFS  -16.06 TPeng  -1.00 TPexact  -1.01 crest 17.52 LRA 11.9 lim 0.00/0.00
+  piano_-6dB_t9_A                  trim  +0.00 LUFS  -16.06 TPeng  -1.00 TPexact  -1.01 crest 17.52 LRA 11.9 lim 0.00/0.00
+  piano_-6dB_t9_C                  trim  +9.56 LUFS   -9.00 TPeng  -1.05 TPexact  -1.05 crest 10.29 LRA  8.4 lim 2.59/0.14
+  piano_-6dB_t14_P                 trim  +0.00 LUFS  -16.06 TPeng  -1.00 TPexact  -1.01 crest 17.52 LRA 11.9 lim 0.00/0.00
+  piano_-6dB_t14_A                 trim  +0.00 LUFS  -16.06 TPeng  -1.00 TPexact  -1.01 crest 17.52 LRA 11.9 lim 0.00/0.00
+  piano_-6dB_t14_C                 trim  +3.56 LUFS  -14.00 TPeng  -1.93 TPexact  -1.94 crest 14.50 LRA 11.2 lim 1.38/0.01
+  piano_-12dB_t9_P                 trim  +0.00 LUFS  -18.05 TPeng  -1.00 TPexact  -1.01 crest 19.52 LRA 12.2 lim 0.00/0.00
+  piano_-12dB_t9_A                 trim  +0.00 LUFS  -18.05 TPeng  -1.00 TPexact  -1.01 crest 19.52 LRA 12.2 lim 0.00/0.00
+  piano_-12dB_t9_C                 trim +15.56 LUFS   -9.00 TPeng  -1.05 TPexact  -1.05 crest 10.29 LRA  8.4 lim 2.59/0.14
+  piano_-12dB_t14_P                trim  +0.00 LUFS  -18.05 TPeng  -1.00 TPexact  -1.01 crest 19.52 LRA 12.2 lim 0.00/0.00
+  piano_-12dB_t14_A                trim  +0.00 LUFS  -18.05 TPeng  -1.00 TPexact  -1.01 crest 19.52 LRA 12.2 lim 0.00/0.00
+  piano_-12dB_t14_C                trim  +9.56 LUFS  -14.00 TPeng  -1.93 TPexact  -1.94 crest 14.50 LRA 11.2 lim 1.38/0.01
+  rich_0dB_t9_P                    trim  +0.00 LUFS  -19.96 TPeng  -1.00 TPexact  -1.00 crest 22.99 LRA 11.5 lim 0.00/0.00
+  rich_0dB_t9_A                    trim  +0.00 LUFS  -19.96 TPeng  -1.00 TPexact  -1.00 crest 22.99 LRA 11.5 lim 0.00/0.00
+  rich_0dB_t9_C                    trim +15.37 LUFS   -9.00 TPeng  -1.66 TPexact  -1.66 crest 11.37 LRA  6.3 lim 2.84/0.20
+  rich_0dB_t14_P                   trim  +0.00 LUFS  -19.96 TPeng  -1.00 TPexact  -1.00 crest 22.99 LRA 11.5 lim 0.00/0.00
+  rich_0dB_t14_A                   trim  +0.00 LUFS  -19.96 TPeng  -1.00 TPexact  -1.00 crest 22.99 LRA 11.5 lim 0.00/0.00
+  rich_0dB_t14_C                   trim  +7.87 LUFS  -14.00 TPeng  -1.56 TPexact  -1.57 crest 16.47 LRA 10.3 lim 2.19/0.02
+  rich_-6dB_t9_P                   trim  +0.00 LUFS  -21.58 TPeng  -1.00 TPexact  -1.00 crest 24.63 LRA 11.6 lim 0.00/0.00
+  rich_-6dB_t9_A                   trim  +0.00 LUFS  -21.58 TPeng  -1.00 TPexact  -1.00 crest 24.63 LRA 11.6 lim 0.00/0.00
+  rich_-6dB_t9_C                   trim +21.37 LUFS   -9.00 TPeng  -1.66 TPexact  -1.66 crest 11.37 LRA  6.3 lim 2.84/0.20
+  rich_-6dB_t14_P                  trim  +0.00 LUFS  -21.58 TPeng  -1.00 TPexact  -1.00 crest 24.63 LRA 11.6 lim 0.00/0.00
+  rich_-6dB_t14_A                  trim  +0.00 LUFS  -21.58 TPeng  -1.00 TPexact  -1.00 crest 24.63 LRA 11.6 lim 0.00/0.00
+  rich_-6dB_t14_C                  trim +13.87 LUFS  -14.00 TPeng  -1.56 TPexact  -1.57 crest 16.47 LRA 10.3 lim 2.19/0.02
+  rich_-12dB_t9_P                  trim  +0.00 LUFS  -21.98 TPeng  -1.00 TPexact  -1.00 crest 25.02 LRA 11.6 lim 0.00/0.00
+  rich_-12dB_t9_A                  trim  +0.00 LUFS  -21.98 TPeng  -1.00 TPexact  -1.00 crest 25.02 LRA 11.6 lim 0.00/0.00
+  rich_-12dB_t9_C                  trim +24.00 LUFS  -10.45 TPeng  -1.00 TPexact  -1.00 crest 13.47 LRA  8.3 lim 2.69/0.08
+  rich_-12dB_t14_P                 trim  +0.00 LUFS  -21.98 TPeng  -1.00 TPexact  -1.00 crest 25.02 LRA 11.6 lim 0.00/0.00
+  rich_-12dB_t14_A                 trim  +0.00 LUFS  -21.98 TPeng  -1.00 TPexact  -1.00 crest 25.02 LRA 11.6 lim 0.00/0.00
+  rich_-12dB_t14_C                 trim +19.86 LUFS  -14.00 TPeng  -1.56 TPexact  -1.56 crest 16.47 LRA 10.3 lim 2.19/0.02
+  imaginal_0dB_t9_P                trim  +0.00 LUFS  -19.90 TPeng  -1.00 TPexact  -0.49 crest 22.16 LRA  6.9 lim 2.00/0.00
+  imaginal_0dB_t9_A                trim  +0.00 LUFS  -19.90 TPeng  -1.00 TPexact  -0.49 crest 22.16 LRA  6.9 lim 2.00/0.00
+  imaginal_0dB_t9_C                trim +13.41 LUFS   -9.00 TPeng  -1.24 TPexact  -0.11 crest 10.83 LRA  5.2 lim 6.10/0.22
+  imaginal_0dB_t14_P               trim  +0.00 LUFS  -19.90 TPeng  -1.00 TPexact  -0.49 crest 22.16 LRA  6.9 lim 2.00/0.00
+  imaginal_0dB_t14_A               trim  +0.00 LUFS  -19.90 TPeng  -1.00 TPexact  -0.49 crest 22.16 LRA  6.9 lim 2.00/0.00
+  imaginal_0dB_t14_C               trim  +7.41 LUFS  -14.00 TPeng  -1.96 TPexact  -1.14 crest 15.19 LRA  6.8 lim 4.69/0.06
+  imaginal_-6dB_t9_P               trim  +0.00 LUFS  -24.32 TPeng  -1.00 TPexact  -0.91 crest 26.36 LRA  7.0 lim 0.00/0.00
+  imaginal_-6dB_t9_A               trim  +0.00 LUFS  -24.32 TPeng  -1.00 TPexact  -0.91 crest 26.36 LRA  7.0 lim 0.00/0.00
+  imaginal_-6dB_t9_C               trim +19.40 LUFS   -9.00 TPeng  -1.24 TPexact  -0.10 crest 10.83 LRA  5.2 lim 6.10/0.22
+  imaginal_-6dB_t14_P              trim  +0.00 LUFS  -24.32 TPeng  -1.00 TPexact  -0.91 crest 26.36 LRA  7.0 lim 0.00/0.00
+  imaginal_-6dB_t14_A              trim  +0.00 LUFS  -24.32 TPeng  -1.00 TPexact  -0.91 crest 26.36 LRA  7.0 lim 0.00/0.00
+  imaginal_-6dB_t14_C              trim +13.40 LUFS  -14.00 TPeng  -1.96 TPexact  -1.14 crest 15.19 LRA  6.8 lim 4.69/0.06
+  imaginal_-12dB_t9_P              trim  +0.00 LUFS  -25.14 TPeng  -1.00 TPexact  -0.91 crest 27.21 LRA  7.0 lim 0.00/0.00
+  imaginal_-12dB_t9_A              trim  +0.00 LUFS  -25.14 TPeng  -1.00 TPexact  -0.91 crest 27.21 LRA  7.0 lim 0.00/0.00
+  imaginal_-12dB_t9_C              trim +24.00 LUFS   -9.63 TPeng  -1.00 TPexact   0.05 crest 11.71 LRA  5.7 lim 5.85/0.16
+  imaginal_-12dB_t14_P             trim  +0.00 LUFS  -25.14 TPeng  -1.00 TPexact  -0.91 crest 27.21 LRA  7.0 lim 0.00/0.00
+  imaginal_-12dB_t14_A             trim  +0.00 LUFS  -25.14 TPeng  -1.00 TPexact  -0.91 crest 27.21 LRA  7.0 lim 0.00/0.00
+  imaginal_-12dB_t14_C             trim +19.39 LUFS  -14.00 TPeng  -1.95 TPexact  -1.13 crest 15.20 LRA  6.8 lim 4.69/0.06
+  funk_0dB_t9_P                    trim  +0.00 LUFS  -12.47 TPeng  -1.00 TPexact  -0.95 crest 13.36 LRA  7.3 lim 2.77/0.20
+  funk_0dB_t9_A                    trim  +0.00 LUFS  -12.47 TPeng  -1.00 TPexact  -0.95 crest 13.36 LRA  7.3 lim 2.77/0.20
+  funk_0dB_t9_C                    trim  +4.07 LUFS  -12.04 TPeng  -1.00 TPexact  -1.00 crest 12.91 LRA  6.3 lim 4.81/0.72
+  funk_0dB_t14_P                   trim  +0.00 LUFS  -14.00 TPeng  -2.53 TPexact  -2.49 crest 13.36 LRA  7.3 lim 2.77/0.20
+  funk_0dB_t14_A                   trim  -3.58 LUFS  -14.00 TPeng  -1.35 TPexact  -1.29 crest 14.51 LRA  8.1 lim 1.32/0.01
+  funk_0dB_t14_C                   trim  -3.43 LUFS  -14.00 TPeng  -1.47 TPexact  -1.41 crest 14.38 LRA  8.0 lim 1.39/0.01
+  metal_0dB_t9_P                   trim  +0.00 LUFS   -9.00 TPeng  -3.43 TPexact  -3.38 crest  6.86 LRA  0.7 lim 3.44/0.79
+  metal_0dB_t9_A                   trim  -2.70 LUFS   -9.00 TPeng  -1.90 TPexact  -1.91 crest  8.41 LRA  0.9 lim 2.80/0.33
+  metal_0dB_t9_C                   trim  -3.71 LUFS   -9.00 TPeng  -1.22 TPexact  -1.25 crest  9.13 LRA  0.9 lim 2.58/0.21
+  metal_0dB_t14_P                  trim  +0.00 LUFS  -14.00 TPeng  -8.43 TPexact  -8.38 crest  6.86 LRA  0.7 lim 3.44/0.79
+  metal_0dB_t14_A                  trim  -7.70 LUFS  -14.00 TPeng  -2.94 TPexact  -2.97 crest 12.49 LRA  0.9 lim 1.59/0.01
+  metal_0dB_t14_C                  trim  -9.71 LUFS  -14.00 TPeng  -1.10 TPexact  -1.11 crest 14.35 LRA  1.0 lim 0.68/0.00
+  aphelion_0dB_t9_P                trim  +0.00 LUFS   -9.17 TPeng  -1.00 TPexact  -0.99 crest  9.62 LRA  8.8 lim 2.40/0.30
+  aphelion_0dB_t9_A                trim  +0.00 LUFS   -9.17 TPeng  -1.00 TPexact  -0.99 crest  9.62 LRA  8.8 lim 2.40/0.30
+  aphelion_0dB_t9_C                trim  +0.55 LUFS   -9.00 TPeng  -1.10 TPexact  -1.09 crest  9.35 LRA  8.5 lim 2.49/0.36
+  aphelion_0dB_t14_P               trim  +0.00 LUFS  -14.00 TPeng  -5.83 TPexact  -5.82 crest  9.62 LRA  8.8 lim 2.40/0.30
+  aphelion_0dB_t14_A               trim  -4.75 LUFS  -14.00 TPeng  -2.74 TPexact  -2.74 crest 12.72 LRA 10.9 lim 1.19/0.01
+  aphelion_0dB_t14_C               trim  -6.95 LUFS  -14.19 TPeng  -1.00 TPexact  -1.01 crest 14.66 LRA 11.2 lim 0.18/0.00
+  baby_0dB_t9_P                    trim  +0.00 LUFS  -16.08 TPeng  -1.00 TPexact  -1.00 crest 17.47 LRA  3.1 lim 0.07/0.00
+  baby_0dB_t9_A                    trim  +0.00 LUFS  -16.08 TPeng  -1.00 TPexact  -1.00 crest 17.47 LRA  3.1 lim 0.07/0.00
+  baby_0dB_t9_C                    trim  +8.19 LUFS   -9.00 TPeng  -1.02 TPexact  -1.01 crest 10.37 LRA  2.6 lim 2.72/0.24
+  baby_0dB_t14_P                   trim  +0.00 LUFS  -16.08 TPeng  -1.00 TPexact  -1.00 crest 17.47 LRA  3.1 lim 0.07/0.00
+  baby_0dB_t14_A                   trim  +0.00 LUFS  -16.08 TPeng  -1.00 TPexact  -1.00 crest 17.47 LRA  3.1 lim 0.07/0.00
+  baby_0dB_t14_C                   trim  +2.19 LUFS  -14.03 TPeng  -1.00 TPexact  -1.00 crest 15.40 LRA  3.0 lim 1.23/0.00
+A2 iterations: 0
+done {'grid_wall_s': 209.58842611312866, 'finalists_wall_s': 1966.9844572544098, 'total_wall_s': 2222.508446455002}

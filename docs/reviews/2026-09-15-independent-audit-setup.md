@@ -1,5 +1,12 @@
 # Coordinator notes: independent Claude review
 
+> **Final status:** both the blind assessment and unblinded replication are
+> complete. Read the [final synthesis](2026-09-15-mastering-quality-final-synthesis.md),
+> [byte-preserved report archive](evidence/2026-09-15-claude-audit/README.md), and
+> [portable transfer guide](2026-09-15-mastering-quality-transfer.md).
+> Instructions and “follow-up ready” status below describe the earlier setup,
+> not an outstanding review. No workspace deletion was performed in the final pass.
+
 The owner requested a question-led assessment that does not reveal the previous
 investigation's suspected causes or recommendations. This file is for the owner
 and coordinator, **not the independent reviewer**.

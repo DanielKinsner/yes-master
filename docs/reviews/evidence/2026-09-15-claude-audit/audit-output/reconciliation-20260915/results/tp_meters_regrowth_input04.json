@@ -1,0 +1,72 @@
+[
+ {
+  "file": "C:/Users/Daniel Kinsner/OneDrive/Documents/GitHub/yes-master-independent-audit-20260915/audit-output/reconciliation-20260915/renders/regrow_input04_chain441.f32.wav",
+  "sample_rate": 44100,
+  "frames": 8884224,
+  "channels": 2,
+  "sample_peak_dbfs": -1.103609452671019,
+  "engine_tp": -1.1027106592205473,
+  "engine_lufs": -10.402951740383074,
+  "bs1770_tp": -0.3682450211203022,
+  "ffmpeg_tp": -0.1,
+  "ffmpeg_lufs": -10.4,
+  "soxr16_tp": -0.042517,
+  "fftexact16_tp": 1.6618235728374389
+ },
+ {
+  "file": "C:/Users/Daniel Kinsner/OneDrive/Documents/GitHub/yes-master-independent-audit-20260915/audit-output/reconciliation-20260915/renders/regrow_input04_prod48.f32.wav",
+  "sample_rate": 48000,
+  "frames": 9669904,
+  "channels": 2,
+  "sample_peak_dbfs": 1.0429614164874144,
+  "engine_tp": 1.0429614164874144,
+  "engine_lufs": -10.423446890279699,
+  "bs1770_tp": 0.7538568908792844,
+  "ffmpeg_tp": 1.0,
+  "ffmpeg_lufs": -10.4,
+  "soxr16_tp": 0.000265,
+  "fftexact16_tp": 1.0910887422030415
+ },
+ {
+  "file": "C:/Users/Daniel Kinsner/OneDrive/Documents/GitHub/yes-master-independent-audit-20260915/audit-output/reconciliation-20260915/renders/regrow_input04_recon48.f32.wav",
+  "sample_rate": 48000,
+  "frames": 9669904,
+  "channels": 2,
+  "sample_peak_dbfs": 1.0429614164874144,
+  "engine_tp": 1.0429614164874144,
+  "engine_lufs": -10.423446890279699,
+  "bs1770_tp": 0.7538568908792844,
+  "ffmpeg_tp": 1.0,
+  "ffmpeg_lufs": -10.4,
+  "soxr16_tp": 0.000265,
+  "fftexact16_tp": 1.0910887422030415
+ },
+ {
+  "file": "C:/Users/Daniel Kinsner/OneDrive/Documents/GitHub/yes-master-independent-audit-20260915/audit-output/reconciliation-20260915/renders/regrow_input04_soxr48.f32.wav",
+  "sample_rate": 48000,
+  "frames": 9669904,
+  "channels": 2,
+  "sample_peak_dbfs": -0.21520042363108205,
+  "engine_tp": -0.21520042363108205,
+  "engine_lufs": -10.496610063356938,
+  "bs1770_tp": -0.07823442326509841,
+  "ffmpeg_tp": -0.2,
+  "ffmpeg_lufs": -10.5,
+  "soxr16_tp": -0.041718,
+  "fftexact16_tp": -0.04187602880196456
+ },
+ {
+  "file": "C:/Users/Daniel Kinsner/OneDrive/Documents/GitHub/yes-master-independent-audit-20260915/audit-output/reconciliation-20260915/renders/regrow_input04_swr48.f32.wav",
+  "sample_rate": 48000,
+  "frames": 9669904,
+  "channels": 2,
+  "sample_peak_dbfs": -0.14807454156468453,
+  "engine_tp": -0.14807454156468453,
+  "engine_lufs": -10.460561256215009,
+  "bs1770_tp": -0.1385481478140885,
+  "ffmpeg_tp": -0.1,
+  "ffmpeg_lufs": -10.5,
+  "soxr16_tp": -0.072403,
+  "fftexact16_tp": -0.0790463427935349
+ }
+]

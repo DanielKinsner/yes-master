@@ -1,5 +1,20 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-15 — Final mastering research synthesis; next step is implementation planning.**
+> Claude's blind report and unblinded reconciliation are archived with original
+> seals, scripts/settings and raw measurements. The [authoritative synthesis](reviews/2026-09-15-mastering-quality-final-synthesis.md)
+> resolves disagreements and corrects overclaims/reference-meter errors in both
+> investigations. Recommended order: SRC correctness; final-rate peak protection
+> independent of LUFS targeting; bounded source/target-aware drive; existing
+> Density/readout accuracy; separately calibrated saturation/antialiasing.
+> The [fresh-agent prompt](prompts/2026-09-15-mastering-quality-planning-handoff.md)
+> and [transfer guide](reviews/2026-09-15-mastering-quality-transfer.md) support
+> another machine. Fresh On reproduction and five pruned Claude witnesses match
+> their recorded WAV hashes. Preserve defaults, gates and prior listening verdicts.
+> This closes the requested research/reconciliation, not production implementation
+> or release activation. The independent sibling is a folder without Git; no
+> cleanup was performed by the final pass. Earlier entries below are history.
+
 > **2026-09-15 — Independent report received; targeted follow-up prepared.**
 > Claude Fable completed its report in the separate review workspace. All 18
 > sealed files match their recorded hashes. The report overlaps on excessive
