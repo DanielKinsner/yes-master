@@ -23,7 +23,11 @@
 > Whole-file residual reuse is qualified; overly wide intervals use a fresh pass.
 > A newly reproduced album join failure now has staged programme verification
 > and a common-gain correction preserving component PCM parity; album, audio
-> invariant and MP3-route checks pass. Device-rate/live-toggle contracts and B4 remain open.
+> invariant and MP3-route checks pass. A 192 MiB raw-response cache preserves
+> exact results: owner target edits fall from about 24 s to 0.60-0.66 s and the
+> measured five-step session from 98.67 to 54.15 s, with a longer first preparation
+> and additional memory. In-place tail flushing preserves samples while avoiding
+> vector capacity doubling. Device-rate/live-toggle contracts and B4 remain open.
 > Automatic sonic policy is still pending the focused owner choice, with local
 > level-matched review audio prepared. No new listening verdict is inferred.
 

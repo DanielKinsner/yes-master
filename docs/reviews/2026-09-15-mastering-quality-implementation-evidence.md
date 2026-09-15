@@ -80,6 +80,90 @@ Staging adds temporary disk I/O and storage; album cost is not yet benchmarked.
 Memory holds one decoded/rendered track, not the whole album. Realtime/native
 device playback and listening are not established by these offline tests.
 
+### B3 bounded preparation reuse
+
+The preview worker now retains up to two immutable post-chain/final-rate float
+responses and their whole-file peak/loudness facts, with a **192 MiB PCM limit**.
+The key includes the decoded source allocation/lifetime, channel/rate identity,
+resolved delivery rate and all resolved raw-chain coefficients, including backend
+source/guard inputs. Matching target/bit-depth/Volume Match changes can reuse raw
+facts; changed processing cannot. Both strategies retain existing scalar-result
+hits. There is no broad preset precomputation, persistent audio cache or callback
+analysis. Cache locks only hand off references; rendering, copies and verification
+run on the existing single permitted worker. Oversized responses bypass retention
+and finish in place. Returning to a cached scalar never claims a new cache benefit.
+
+`b3-preparation-cost-v1/` contains three rotating-order trials per strategy/source
+using the actual native preparation/finalizer. All returned gain and delivered-LUFS
+f32 bits match between strategies. The sequence is first result, targets -18/-11,
+EQ mid +1 dB and return to first settings. Every uncached target result still scans
+whole-file delivery and retains fresh-meter fallback. Median seconds:
+
+| Measurement | Short 60 s | Owner 244.56 s | Long 422.25 s |
+| --- | ---: | ---: | ---: |
+| First result, existing / reuse | 5.18 / 5.44 | 24.14 / 27.86 | 36.76 / 39.93 |
+| Target -18, existing / reuse | 5.06 / 0.150 | 24.08 / 0.656 | 37.80 / 1.016 |
+| Target -11, existing / reuse | 5.38 / 0.141 | 24.45 / 0.600 | 38.79 / 0.972 |
+| New EQ, existing / reuse | 5.36 / 5.30 | 25.63 / 24.91 | 38.87 / 36.97 |
+| Whole five-step session, existing / reuse | 21.15 / 11.05 | 98.67 / 54.15 | 152.67 / 78.86 |
+| Sampled session CPU, existing / reuse | 20.33 / 10.64 | 95.28 / 51.55 | 149.14 / 76.75 |
+| Largest retained PCM, MiB | 43.95 | 179.17 | 154.66 |
+| Largest sampled working set, existing / reuse, MiB | 61.06 / 105.0 | 269.48 / 368.51 | 454.41 / 624.09 |
+
+The long case retains one response under the byte cap; source and temporary working
+buffers are additional memory. Peak working set is sampled every 200 ms for the
+child only. CPU differences use interior samples, omitting up to one sample period
+at each boundary. Decode was 0.022/0.069/0.125 seconds, separately from these sessions;
+existing C0 source-analysis preparation was reused, not rescanned. All task-owned
+builds/heavy experiments were stopped during this run; thermal/OS variability
+remains visible. Worst edits and every trial are retained in `summary.json`.
+
+Probe binary SHA-256:
+`26b260dbd942abb37d9201708cf38913588a6d8249dc4072a024d2c9ea9972d4`.
+The 1,228-second process duration includes all eighteen sessions plus source
+hash/decode. It is not a one-session wait. This binary predates the subsequent
+obsolete-work cancellation and oversized-response no-copy branch; those do not
+change the measured under-budget raw/finalization computation. Their validation
+is recorded separately. These worker timings do not establish native deadlines.
+
+Tail flushing previously appended a small tail to a full vector, doubling its
+allocation. In-place movement now reproduces the original append/drain f32 bits
+while preserving allocation and length. The regression compares 36 combinations
+of rates/channels/short and latency-boundary lengths; `b3-tail-flush-v1.log` passes.
+The representative 24,001-float allocation falls from 192,008 to 96,004 bytes.
+This is a memory correction without a filter, preset or latency change.
+
+Full desktop library/integration/private-fixture checks passed after the cache/
+tail split (`b3-reuse-rust-fixtures-v1.log`, all four private fixtures actually run),
+as did strict Clippy, affected iPhone/Android bridges and the real WASM rebuild
+with stamp `9342f3f3b512`. After the additional cancellation change,
+`b3-cancellation-audio-v1.log` passes 99 audio tests, with five explicit opt-in
+probes ignored. New tests retain target-compatible work, cancel obsolete raw
+responses, preserve terminal-message ownership, and check byte-cap bypass parity.
+The updated native lifecycle passes on the original owner source
+(`b3-native-lifecycle-coat-v1.json`): cold Original/first meter 122 ms, first master
+20.26 s (command accepted in 7.8 ms), target edit 0.648 s, intensity/EQ/Density/
+Adapt/preset edits 17.94-29.93 s, return within the 60 ms snapshot interval, and
+30 rapid edits settling after 18.74 s. Playhead progress and current readiness
+assertions pass without changing the probe's 30 s guard. A/B takes 11.5/19.8 ms
+with position preserved; device reopen stops/unloads as documented (338/17 ms),
+source switch 81.8 ms, stopping pending preparation 10.4 ms. This is one native
+lifecycle trial; isolated worker medians above remain the repeated cost evidence.
+
+`b3-native-callback-coat-v1.json` records 606 actual CPAL callbacks at 48 kHz,
+requested 256 but granted 480-1056 frames. Median/p95/max processing is
+0.194/0.360/1.036 ms, with zero observed processing-deadline misses, device errors
+or exhausted samples during concurrent full-song qualified preparation. First
+peak arrives at 10.1 ms, 111/120 sampled LUFS values change, cancellation-to-join
+is 2.60 ms. This probe uses the uncached worker path and preconverts playback to
+device rate before the chain; it establishes callback load/cancellation behavior,
+not AudioPlayer device-SRC/export parity or a fixed-256-block pass. Its worker is
+cancelled after six seconds and does not claim a settled master. Both probes
+use test-only post-DSP muting, with binary SHA-256
+`33f6c7cfd0da00d8eb1aa6e93181339fe6ecd6f1119d34dae3c9ecfaa27ae045`.
+Device-rate/live-toggle behavior and B4 remain open. No new listening, installed
+application, Mac or sonic-policy adoption is implied.
+
 ### First verification details
 
 - D1: `test-output/mastering-quality-implementation-20260915/d1-headless-verified/`

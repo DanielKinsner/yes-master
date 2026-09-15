@@ -71,8 +71,10 @@ writing; cancellation does not return a successful reading.
 Track export/rendered preview, the live-preview background planning helper and
 album per-track delivery now use this shared finalizer. The exact writer seed
 and quantizers remain unchanged. The live callback/limiter is unchanged. Album
-programme joins, device-rate live audition and decoded-codec verification are
-separate remaining B3/B4 work; this is not a complete B3/B4 verdict.
+programme joins now have verified common-gain correction with exact component
+parity; see the [checkpoint ledger](2026-09-15-mastering-quality-implementation-evidence.md).
+Device-rate live audition and decoded-codec verification remain separate B3/B4
+work; this is not a complete B3/B4 verdict.
 
 The original five actual-export witnesses now pass their finite-zero-extension
 SOXR16/64 checks (`b3-witnesses-v1/`). No-target Funk and 50 ms PCM24/float outputs
@@ -88,4 +90,4 @@ Focused protection, engine, album receipt and audio invariant checks pass.
 The broader desktop library/integration suite also passes with all four private
 fixture tests actually run (`b3-rust-fixtures-v2.log`). Strict all-target Clippy
 passes. iPhone check/46 tests and Android 26 tests/arm64 API-29 check pass
-(`b3-iphone-v1.log`, `b3-android-v1.log`). Remaining native/album work is in progress.
+(`b3-iphone-v1.log`, `b3-android-v1.log`). Subsequent album correction is recorded in the ledger; native/device work remains open.
