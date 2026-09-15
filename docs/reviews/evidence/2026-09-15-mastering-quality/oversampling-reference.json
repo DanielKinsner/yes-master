@@ -1,0 +1,569 @@
+[
+  {
+    "sr": 44100,
+    "hz": 1000,
+    "level": -12,
+    "factor": 1,
+    "nonharmonic_dbc": -153.6863546850442
+  },
+  {
+    "sr": 44100,
+    "hz": 1000,
+    "level": -12,
+    "factor": 4,
+    "nonharmonic_dbc": -154.14148858162773
+  },
+  {
+    "sr": 44100,
+    "hz": 1000,
+    "level": -12,
+    "factor": 8,
+    "nonharmonic_dbc": -154.14142578557252
+  },
+  {
+    "sr": 44100,
+    "hz": 1000,
+    "level": -6,
+    "factor": 1,
+    "nonharmonic_dbc": -154.5019761503309
+  },
+  {
+    "sr": 44100,
+    "hz": 1000,
+    "level": -6,
+    "factor": 4,
+    "nonharmonic_dbc": -154.88225675641684
+  },
+  {
+    "sr": 44100,
+    "hz": 1000,
+    "level": -6,
+    "factor": 8,
+    "nonharmonic_dbc": -154.88220761067112
+  },
+  {
+    "sr": 44100,
+    "hz": 1000,
+    "level": 0,
+    "factor": 1,
+    "nonharmonic_dbc": -157.76558161613627
+  },
+  {
+    "sr": 44100,
+    "hz": 1000,
+    "level": 0,
+    "factor": 4,
+    "nonharmonic_dbc": -157.89874034343012
+  },
+  {
+    "sr": 44100,
+    "hz": 1000,
+    "level": 0,
+    "factor": 8,
+    "nonharmonic_dbc": -157.89877395842436
+  },
+  {
+    "sr": 44100,
+    "hz": 7000,
+    "level": -12,
+    "factor": 1,
+    "nonharmonic_dbc": -85.26281460153272
+  },
+  {
+    "sr": 44100,
+    "hz": 7000,
+    "level": -12,
+    "factor": 4,
+    "nonharmonic_dbc": -150.40364941710118
+  },
+  {
+    "sr": 44100,
+    "hz": 7000,
+    "level": -12,
+    "factor": 8,
+    "nonharmonic_dbc": -151.44284017881316
+  },
+  {
+    "sr": 44100,
+    "hz": 7000,
+    "level": -6,
+    "factor": 1,
+    "nonharmonic_dbc": -62.18436700374352
+  },
+  {
+    "sr": 44100,
+    "hz": 7000,
+    "level": -6,
+    "factor": 4,
+    "nonharmonic_dbc": -129.6489774553234
+  },
+  {
+    "sr": 44100,
+    "hz": 7000,
+    "level": -6,
+    "factor": 8,
+    "nonharmonic_dbc": -132.0242900725534
+  },
+  {
+    "sr": 44100,
+    "hz": 7000,
+    "level": 0,
+    "factor": 1,
+    "nonharmonic_dbc": -41.32338807965989
+  },
+  {
+    "sr": 44100,
+    "hz": 7000,
+    "level": 0,
+    "factor": 4,
+    "nonharmonic_dbc": -112.40554868830175
+  },
+  {
+    "sr": 44100,
+    "hz": 7000,
+    "level": 0,
+    "factor": 8,
+    "nonharmonic_dbc": -115.18972563079669
+  },
+  {
+    "sr": 44100,
+    "hz": 11000,
+    "level": -12,
+    "factor": 1,
+    "nonharmonic_dbc": -43.43843307156667
+  },
+  {
+    "sr": 44100,
+    "hz": 11000,
+    "level": -12,
+    "factor": 4,
+    "nonharmonic_dbc": -100.2122605791216
+  },
+  {
+    "sr": 44100,
+    "hz": 11000,
+    "level": -12,
+    "factor": 8,
+    "nonharmonic_dbc": -100.98729614900107
+  },
+  {
+    "sr": 44100,
+    "hz": 11000,
+    "level": -6,
+    "factor": 1,
+    "nonharmonic_dbc": -31.939303019772773
+  },
+  {
+    "sr": 44100,
+    "hz": 11000,
+    "level": -6,
+    "factor": 4,
+    "nonharmonic_dbc": -89.08194882724092
+  },
+  {
+    "sr": 44100,
+    "hz": 11000,
+    "level": -6,
+    "factor": 8,
+    "nonharmonic_dbc": -89.84188778337708
+  },
+  {
+    "sr": 44100,
+    "hz": 11000,
+    "level": 0,
+    "factor": 1,
+    "nonharmonic_dbc": -21.637796951443214
+  },
+  {
+    "sr": 44100,
+    "hz": 11000,
+    "level": 0,
+    "factor": 4,
+    "nonharmonic_dbc": -79.89013174293189
+  },
+  {
+    "sr": 44100,
+    "hz": 11000,
+    "level": 0,
+    "factor": 8,
+    "nonharmonic_dbc": -80.60061688806827
+  },
+  {
+    "sr": 48000,
+    "hz": 1000,
+    "level": -12,
+    "factor": 1,
+    "nonharmonic_dbc": -256.9169352814761
+  },
+  {
+    "sr": 48000,
+    "hz": 1000,
+    "level": -12,
+    "factor": 4,
+    "nonharmonic_dbc": -257.2006193392452
+  },
+  {
+    "sr": 48000,
+    "hz": 1000,
+    "level": -12,
+    "factor": 8,
+    "nonharmonic_dbc": -257.20059901703024
+  },
+  {
+    "sr": 48000,
+    "hz": 1000,
+    "level": -6,
+    "factor": 1,
+    "nonharmonic_dbc": -256.42516793716544
+  },
+  {
+    "sr": 48000,
+    "hz": 1000,
+    "level": -6,
+    "factor": 4,
+    "nonharmonic_dbc": -256.7211557690308
+  },
+  {
+    "sr": 48000,
+    "hz": 1000,
+    "level": -6,
+    "factor": 8,
+    "nonharmonic_dbc": -256.720990040245
+  },
+  {
+    "sr": 48000,
+    "hz": 1000,
+    "level": 0,
+    "factor": 1,
+    "nonharmonic_dbc": -254.83347965413753
+  },
+  {
+    "sr": 48000,
+    "hz": 1000,
+    "level": 0,
+    "factor": 4,
+    "nonharmonic_dbc": -255.17508069644953
+  },
+  {
+    "sr": 48000,
+    "hz": 1000,
+    "level": 0,
+    "factor": 8,
+    "nonharmonic_dbc": -255.1747928340249
+  },
+  {
+    "sr": 48000,
+    "hz": 7000,
+    "level": -12,
+    "factor": 1,
+    "nonharmonic_dbc": -85.26476853495119
+  },
+  {
+    "sr": 48000,
+    "hz": 7000,
+    "level": -12,
+    "factor": 4,
+    "nonharmonic_dbc": -141.54827071042303
+  },
+  {
+    "sr": 48000,
+    "hz": 7000,
+    "level": -12,
+    "factor": 8,
+    "nonharmonic_dbc": -142.49950842734924
+  },
+  {
+    "sr": 48000,
+    "hz": 7000,
+    "level": -6,
+    "factor": 1,
+    "nonharmonic_dbc": -62.18444201650614
+  },
+  {
+    "sr": 48000,
+    "hz": 7000,
+    "level": -6,
+    "factor": 4,
+    "nonharmonic_dbc": -119.62277173080565
+  },
+  {
+    "sr": 48000,
+    "hz": 7000,
+    "level": -6,
+    "factor": 8,
+    "nonharmonic_dbc": -120.65633518066196
+  },
+  {
+    "sr": 48000,
+    "hz": 7000,
+    "level": 0,
+    "factor": 1,
+    "nonharmonic_dbc": -41.32338295006673
+  },
+  {
+    "sr": 48000,
+    "hz": 7000,
+    "level": 0,
+    "factor": 4,
+    "nonharmonic_dbc": -100.47697252808507
+  },
+  {
+    "sr": 48000,
+    "hz": 7000,
+    "level": 0,
+    "factor": 8,
+    "nonharmonic_dbc": -101.4905282944742
+  },
+  {
+    "sr": 48000,
+    "hz": 11000,
+    "level": -12,
+    "factor": 1,
+    "nonharmonic_dbc": -43.438444160171144
+  },
+  {
+    "sr": 48000,
+    "hz": 11000,
+    "level": -12,
+    "factor": 4,
+    "nonharmonic_dbc": -97.11895732055055
+  },
+  {
+    "sr": 48000,
+    "hz": 11000,
+    "level": -12,
+    "factor": 8,
+    "nonharmonic_dbc": -97.10052482280125
+  },
+  {
+    "sr": 48000,
+    "hz": 11000,
+    "level": -6,
+    "factor": 1,
+    "nonharmonic_dbc": -31.93930553542701
+  },
+  {
+    "sr": 48000,
+    "hz": 11000,
+    "level": -6,
+    "factor": 4,
+    "nonharmonic_dbc": -85.86827784152717
+  },
+  {
+    "sr": 48000,
+    "hz": 11000,
+    "level": -6,
+    "factor": 8,
+    "nonharmonic_dbc": -85.84068898919442
+  },
+  {
+    "sr": 48000,
+    "hz": 11000,
+    "level": 0,
+    "factor": 1,
+    "nonharmonic_dbc": -21.637797195122932
+  },
+  {
+    "sr": 48000,
+    "hz": 11000,
+    "level": 0,
+    "factor": 4,
+    "nonharmonic_dbc": -76.27329979996689
+  },
+  {
+    "sr": 48000,
+    "hz": 11000,
+    "level": 0,
+    "factor": 8,
+    "nonharmonic_dbc": -76.2200118678838
+  },
+  {
+    "sr": 96000,
+    "hz": 1000,
+    "level": -12,
+    "factor": 1,
+    "nonharmonic_dbc": -259.92724607898975
+  },
+  {
+    "sr": 96000,
+    "hz": 1000,
+    "level": -12,
+    "factor": 4,
+    "nonharmonic_dbc": -260.2016300847145
+  },
+  {
+    "sr": 96000,
+    "hz": 1000,
+    "level": -12,
+    "factor": 8,
+    "nonharmonic_dbc": -260.20124284912663
+  },
+  {
+    "sr": 96000,
+    "hz": 1000,
+    "level": -6,
+    "factor": 1,
+    "nonharmonic_dbc": -259.43547670151247
+  },
+  {
+    "sr": 96000,
+    "hz": 1000,
+    "level": -6,
+    "factor": 4,
+    "nonharmonic_dbc": -259.7130591627461
+  },
+  {
+    "sr": 96000,
+    "hz": 1000,
+    "level": -6,
+    "factor": 8,
+    "nonharmonic_dbc": -259.71264538416784
+  },
+  {
+    "sr": 96000,
+    "hz": 1000,
+    "level": 0,
+    "factor": 1,
+    "nonharmonic_dbc": -257.8437845289425
+  },
+  {
+    "sr": 96000,
+    "hz": 1000,
+    "level": 0,
+    "factor": 4,
+    "nonharmonic_dbc": -258.1339861615167
+  },
+  {
+    "sr": 96000,
+    "hz": 1000,
+    "level": 0,
+    "factor": 8,
+    "nonharmonic_dbc": -258.13354141630396
+  },
+  {
+    "sr": 96000,
+    "hz": 7000,
+    "level": -12,
+    "factor": 1,
+    "nonharmonic_dbc": -126.90764306801782
+  },
+  {
+    "sr": 96000,
+    "hz": 7000,
+    "level": -12,
+    "factor": 4,
+    "nonharmonic_dbc": -135.03448190472542
+  },
+  {
+    "sr": 96000,
+    "hz": 7000,
+    "level": -12,
+    "factor": 8,
+    "nonharmonic_dbc": -135.03279124490444
+  },
+  {
+    "sr": 96000,
+    "hz": 7000,
+    "level": -6,
+    "factor": 1,
+    "nonharmonic_dbc": -92.31162595105067
+  },
+  {
+    "sr": 96000,
+    "hz": 7000,
+    "level": -6,
+    "factor": 4,
+    "nonharmonic_dbc": -100.50177753700835
+  },
+  {
+    "sr": 96000,
+    "hz": 7000,
+    "level": -6,
+    "factor": 8,
+    "nonharmonic_dbc": -100.50014654360977
+  },
+  {
+    "sr": 96000,
+    "hz": 7000,
+    "level": 0,
+    "factor": 1,
+    "nonharmonic_dbc": -60.852081451545914
+  },
+  {
+    "sr": 96000,
+    "hz": 7000,
+    "level": 0,
+    "factor": 4,
+    "nonharmonic_dbc": -69.0922511498691
+  },
+  {
+    "sr": 96000,
+    "hz": 7000,
+    "level": 0,
+    "factor": 8,
+    "nonharmonic_dbc": -69.09093150794794
+  },
+  {
+    "sr": 96000,
+    "hz": 11000,
+    "level": -12,
+    "factor": 1,
+    "nonharmonic_dbc": -85.26463097925799
+  },
+  {
+    "sr": 96000,
+    "hz": 11000,
+    "level": -12,
+    "factor": 4,
+    "nonharmonic_dbc": -125.91903738105626
+  },
+  {
+    "sr": 96000,
+    "hz": 11000,
+    "level": -12,
+    "factor": 8,
+    "nonharmonic_dbc": -126.01514842163175
+  },
+  {
+    "sr": 96000,
+    "hz": 11000,
+    "level": -6,
+    "factor": 1,
+    "nonharmonic_dbc": -62.184404869138525
+  },
+  {
+    "sr": 96000,
+    "hz": 11000,
+    "level": -6,
+    "factor": 4,
+    "nonharmonic_dbc": -102.80541525392955
+  },
+  {
+    "sr": 96000,
+    "hz": 11000,
+    "level": -6,
+    "factor": 8,
+    "nonharmonic_dbc": -102.89529283443166
+  },
+  {
+    "sr": 96000,
+    "hz": 11000,
+    "level": 0,
+    "factor": 1,
+    "nonharmonic_dbc": -41.323383095204946
+  },
+  {
+    "sr": 96000,
+    "hz": 11000,
+    "level": 0,
+    "factor": 4,
+    "nonharmonic_dbc": -82.0779237074474
+  },
+  {
+    "sr": 96000,
+    "hz": 11000,
+    "level": 0,
+    "factor": 8,
+    "nonharmonic_dbc": -82.15174431341394
+  }
+]

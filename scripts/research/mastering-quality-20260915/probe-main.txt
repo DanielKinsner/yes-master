@@ -1,0 +1,8 @@
+fn save(p:&std::path::Path,x:&[f32],sr:u32){let mut w=hound::WavWriter::create(p,hound::WavSpec{channels:2,sample_rate:sr,bits_per_sample:32,sample_format:hound::SampleFormat::Float}).unwrap();for s in x{w.write_sample(*s).unwrap();}w.finalize().unwrap();}
+fn main(){let args:Vec<String>=std::env::args().collect();let root=PathBuf::from(&args[1]);let out=root.join("peak-probe");std::fs::create_dir_all(&out).unwrap();
+ for id in ["funk","metal"]{let mut r=hound::WavReader::open(root.join(format!("sources/{id}.wav"))).unwrap();let sr=r.spec().sample_rate;let input:Vec<f32>=r.samples::<f32>().map(Result::unwrap).collect();
+ for variant in ["control","drive_12"]{let row:Value=serde_json::from_slice(&std::fs::read(root.join(format!("matrix/{id}/{variant}.json"))).unwrap()).unwrap();let s:MasteringSettings=serde_json::from_value(row["settings"].clone()).unwrap();let mut c=MasteringChain::new(sr,2,&s);let mut x=input.clone();c.process_interleaved(&mut x,2);c.flush_render_tail(&mut x,2);let pre=measure(&x,2,sr);let i=x.iter().enumerate().max_by(|a,b|a.1.abs().total_cmp(&b.1.abs())).unwrap().0;
+ save(&out.join(format!("{id}_{variant}_before_src.wav")),&x,sr);let y=sample_rate::convert_interleaved(&x,sr,48000,2).unwrap();let post=measure(&y,2,48000);let j=y.iter().enumerate().max_by(|a,b|a.1.abs().total_cmp(&b.1.abs())).unwrap().0;save(&out.join(format!("{id}_{variant}_after_src.wav")),&y,48000);
+ let result=json!({"source":id,"variant":variant,"pre_src":pre,"post_src":post,"pre_peak_time":i as f64/2.0/sr as f64,"post_peak_time":j as f64/2.0/48000.0});println!("{}",result);std::fs::write(out.join(format!("{id}_{variant}.json")),serde_json::to_vec_pretty(&result).unwrap()).unwrap();
+ }}
+}

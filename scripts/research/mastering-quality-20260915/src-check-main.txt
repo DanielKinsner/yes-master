@@ -1,0 +1,8 @@
+mod src_fixed;
+fn save(p:&std::path::Path,x:&[f32],sr:u32){let mut w=hound::WavWriter::create(p,hound::WavSpec{channels:2,sample_rate:sr,bits_per_sample:32,sample_format:hound::SampleFormat::Float}).unwrap();for s in x{w.write_sample(*s).unwrap();}w.finalize().unwrap();}
+fn main(){let a:Vec<String>=std::env::args().collect();let out=PathBuf::from(&a[1]);std::fs::create_dir_all(&out).unwrap();let mut rows=vec![];
+for (from,to) in [(44100u32,48000u32),(48000,44100),(96000,48000)]{for duration in [0.005f64,0.01,0.03,0.1,2.0]{for hz in [100u32,997,19000]{
+let frames=(from as f64*duration).round() as usize;let input:Vec<f32>=(0..frames).flat_map(|i|{let y=(0.5*(std::f64::consts::TAU*hz as f64*i as f64/from as f64).sin()) as f32;[y,y]}).collect();
+for mode in ["current","fixed"]{let y=if mode=="current"{sample_rate::convert_interleaved(&input,from,to,2).unwrap()}else{src_fixed::convert(&input,from,to,2)};let file=format!("{from}_{to}_{duration}_{hz}_{mode}.wav");save(&out.join(&file),&y,to);rows.push(json!({"from":from,"to":to,"duration":duration,"hz":hz,"mode":mode,"file":file,"frames":y.len()/2,"expected":(frames as f64*to as f64/from as f64).ceil() as usize}));}
+}}}
+std::fs::write(out.join("native.json"),serde_json::to_vec_pretty(&rows).unwrap()).unwrap();}

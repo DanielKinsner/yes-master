@@ -1,5 +1,19 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-15 UTC / September 14 Pacific — Mastering-quality recommendation completed.**
+> [The expanded investigation](reviews/2026-09-15-mastering-quality-recommendation.md)
+> retains byte-identical owner exports and adds seven licensed pieces, 192 pilot
+> delivery measurements, input-level robustness and 504 native mechanism cases.
+> It recommends source/target-aware drive ahead of global density/Adapt retuning;
+> exploratory -14 tests meet target and independent ceiling in all 12 tested
+> source/level conditions. -9 tradeoffs, input bounds and peak failures remain.
+> Separate SRC buffer/short-input defects and native-versus-independent peak
+> discrepancies are demonstrated; an isolated SRC correction passes 45 conditions.
+> Production adoption and its application/bridge/fixture checks remain separate.
+> Defaults, calibration gates and prior listening verdicts are unchanged. No new
+> owner questionnaire is needed. [Portable scripts](../scripts/research/mastering-quality-20260915/README.md)
+> accompany the recorded evidence; the older audio archive remains intact.
+
 > **2026-09-14 — Density Auto thumb question added to the continuation.**
 > The owner asks whether Auto should display the preset's default and how that
 > should interact with Adapt strength. [The UI follow-up](prompts/2026-09-14-mastering-quality-continuation.md#additional-owner-question-where-should-density-auto-place-the-thumb)

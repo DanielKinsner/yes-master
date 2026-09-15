@@ -1,0 +1,90 @@
+[
+  {
+    "id": "coat",
+    "split": "development",
+    "kind": "owner_source_mastering_history_unspecified",
+    "lufs": -12.3,
+    "crest": 12.715943177857326,
+    "lra": 4.1,
+    "tp": -1.9,
+    "duration": 244.55997732426303,
+    "sha256": "0b39d396856d38c0d927986e0bb45058e7a92c378dac4bcf27ddcf1552e651c9"
+  },
+  {
+    "id": "piano",
+    "split": "development",
+    "kind": "finished_mix",
+    "lufs": -17.1,
+    "crest": 18.54750262087367,
+    "lra": 12.1,
+    "tp": -1.0,
+    "duration": 199.5098866213152,
+    "sha256": "41400345e20b1577a4c14e55ee571bf3182b5be1dbf22a4af9f8286bc142ea2b"
+  },
+  {
+    "id": "aphelion",
+    "split": "holdout",
+    "kind": "finished_mix",
+    "lufs": -14.1,
+    "crest": 14.58373237894061,
+    "lra": 11.6,
+    "tp": -0.8,
+    "duration": 422.25,
+    "sha256": "ba25305aa489f07ba89795da82d02fc99476179176786c4cd50d64c16abe91df"
+  },
+  {
+    "id": "funk",
+    "split": "development",
+    "kind": "finished_mix",
+    "lufs": -16.1,
+    "crest": 17.7641207868002,
+    "lra": 8.4,
+    "tp": 0.1,
+    "duration": 201.45632653061224,
+    "sha256": "436970f5fc25c79989891e48243a00d6daa99ae03eeda6b27f767af9a78326a5"
+  },
+  {
+    "id": "metal",
+    "split": "development",
+    "kind": "finished_mix",
+    "lufs": -9.8,
+    "crest": 12.038451980839733,
+    "lra": 0.9,
+    "tp": 1.0,
+    "duration": 190.45877551020408,
+    "sha256": "f1f1bb3fe485397dca9ef364ef9d805b1433ae5e8701247a47bfd4a55dac48c6"
+  },
+  {
+    "id": "baby",
+    "split": "development",
+    "kind": "constructed_unmastered_stem_sum",
+    "lufs": -21.7,
+    "crest": 18.01384016836769,
+    "lra": 3.2,
+    "tp": -5.9,
+    "duration": 304.6922448979592,
+    "sha256": "9662eae234edf131d1538a13c7fdb3b1b505d8082dafbadbd773dd057339fd47"
+  },
+  {
+    "id": "rich",
+    "split": "holdout",
+    "kind": "constructed_unmastered_stem_sum",
+    "lufs": -27.4,
+    "crest": 25.390579351508297,
+    "lra": 11.7,
+    "tp": -6.0,
+    "duration": 237.6783446712018,
+    "sha256": "76dba53d89c6995960726c484bc4d23b3c6aa7fd44459ced4f02d3e2a61f92e3"
+  },
+  {
+    "id": "imaginal",
+    "split": "holdout",
+    "kind": "constructed_unmastered_stem_sum",
+    "lufs": -26.9,
+    "crest": 24.114756831873173,
+    "lra": 7.0,
+    "tp": -6.0,
+    "duration": 353.7092083333333,
+    "sha256": "c7f3a8db696e3b65246de493ef3dc5d6f8db3083a1239d73b588edf58030c591"
+  }
+]

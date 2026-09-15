@@ -1,0 +1,128 @@
+{
+  "blocks": [
+    {
+      "block": 64,
+      "file": "finalists/funk/continuous_drive_t14.wav",
+      "lufs": -14.000000031916727,
+      "tp": -1.0568693684586665
+    },
+    {
+      "block": 256,
+      "file": "finalists/funk/continuous_drive_t14.wav",
+      "lufs": -14.000000031916727,
+      "tp": -1.0568693684586665
+    },
+    {
+      "block": 1024,
+      "file": "finalists/funk/continuous_drive_t14.wav",
+      "lufs": -14.000000031916727,
+      "tp": -1.0568693684586665
+    },
+    {
+      "block": 4096,
+      "file": "finalists/funk/continuous_drive_t14.wav",
+      "lufs": -14.000000031916727,
+      "tp": -1.0568693684586665
+    },
+    {
+      "block": 9669904,
+      "file": "finalists/funk/continuous_drive_t14.wav",
+      "lufs": -14.000000031916727,
+      "tp": -1.0568693684586665
+    },
+    {
+      "block": 64,
+      "file": "finalists/imaginal/adapt0_t14.wav",
+      "lufs": -19.903140012553358,
+      "tp": -0.9999991282414125
+    },
+    {
+      "block": 256,
+      "file": "finalists/imaginal/adapt0_t14.wav",
+      "lufs": -19.903140012553358,
+      "tp": -0.9999991282414125
+    },
+    {
+      "block": 1024,
+      "file": "finalists/imaginal/adapt0_t14.wav",
+      "lufs": -19.903140012553358,
+      "tp": -0.9999991282414125
+    },
+    {
+      "block": 4096,
+      "file": "finalists/imaginal/adapt0_t14.wav",
+      "lufs": -19.903140012553358,
+      "tp": -0.9999991282414125
+    },
+    {
+      "block": 16978042,
+      "file": "finalists/imaginal/adapt0_t14.wav",
+      "lufs": -19.903140012553358,
+      "tp": -0.9999991282414125
+    }
+  ],
+  "soxr": [
+    {
+      "file": "finalists/funk/continuous_drive_t14.wav",
+      "rate": 192000,
+      "peak": -0.61562
+    },
+    {
+      "file": "finalists/funk/continuous_drive_t14.wav",
+      "rate": 768000,
+      "peak": -0.61562
+    },
+    {
+      "file": "finalists/imaginal/adapt0_t14.wav",
+      "rate": 192000,
+      "peak": -0.618466
+    },
+    {
+      "file": "finalists/imaginal/adapt0_t14.wav",
+      "rate": 768000,
+      "peak": -0.530672
+    },
+    {
+      "file": "finalists/imaginal/control_t14.wav",
+      "rate": 192000,
+      "peak": -0.618466
+    },
+    {
+      "file": "finalists/imaginal/control_t14.wav",
+      "rate": 768000,
+      "peak": -0.530672
+    }
+  ],
+  "repeat_precision33": [
+    {
+      "file": "finalists/funk/continuous_drive_t14.wav",
+      "rate": 192000,
+      "peak": -0.61562
+    },
+    {
+      "file": "finalists/funk/continuous_drive_t14.wav",
+      "rate": 768000,
+      "peak": -0.61562
+    },
+    {
+      "file": "finalists/imaginal/adapt0_t14.wav",
+      "rate": 192000,
+      "peak": -0.61932
+    },
+    {
+      "file": "finalists/imaginal/adapt0_t14.wav",
+      "rate": 768000,
+      "peak": -0.530954
+    },
+    {
+      "file": "finalists/imaginal/control_t14.wav",
+      "rate": 192000,
+      "peak": -0.61932
+    },
+    {
+      "file": "finalists/imaginal/control_t14.wav",
+      "rate": 768000,
+      "peak": -0.530954
+    }
+  ]
+}

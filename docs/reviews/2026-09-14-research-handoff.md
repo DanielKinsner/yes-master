@@ -1,5 +1,15 @@
 # September 14 research: continue on another machine
 
+**September 15 UTC completion:** the continuation investigation is now complete.
+Read [the ranked recommendation](2026-09-15-mastering-quality-recommendation.md)
+and [portable reproduction package](../../scripts/research/mastering-quality-20260915/README.md)
+before resuming. They add seven licensed pieces, complete frozen/holdout results,
+source-level tests, mechanism findings and an isolated SRC correction. Production
+defaults/gates remain unchanged. The original archive below is still the verified
+source of the owner audio; newly acquired audio was not uploaded. The package
+records download URLs/hashes and regenerates the expanded corpus on another
+Windows machine. Do not restart A–E listening or the completed recommendation.
+
 The live browser demo is on `main`. The pricing, DSP and control-design documents
 are decision material, not approved changes to prices, presets or controls.
 

@@ -18,6 +18,14 @@ deepened: 2026-07-24
 
 # YES Master Public Beta Quality Program
 
+> **September 15 UTC mastering research:** [the completed pilot recommendation](../reviews/2026-09-15-mastering-quality-recommendation.md)
+> supports source/target-aware drive and retains separate Density/Adapt controls.
+> Native SRC buffer/short-input defects and independent peak-ceiling failures
+> have reproducible isolated evidence. The SRC prototype is not integrated;
+> objective corrections need the affected application/bridge/fixture lanes.
+> Defaults/calibration gates, prior listening passes and release disposition are
+> unchanged. This closes the requested investigation, not production adoption.
+
 > **September 14 launch assessment:** [current findings](2026-09-14-launch-readiness.md)
 > replace the pending-CI assumption with verified failures at remote main
 > `af406855` (Mac encoder shell error and Windows M4A frame check). Demo placeholder

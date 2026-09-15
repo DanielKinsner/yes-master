@@ -1,0 +1,2522 @@
+[
+  {
+    "source": "coat",
+    "gain": 0,
+    "target": -9,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 8.949875943124662,
+      "frames": 11738879,
+      "lra": 3.1385011646474634,
+      "lufs": -7.374590607477136,
+      "rms_dbfs": -9.972611236125546,
+      "sample_peak_dbfs": -1.0227352930008846,
+      "true_peak_dbtp": -0.9903663344297593
+    },
+    "stats": {
+      "comp_active": [
+        431899,
+        511957,
+        0
+      ],
+      "comp_gr_max": [
+        1.2567870616912842,
+        0.34091973304748535,
+        0.0
+      ],
+      "comp_gr_sum": [
+        197111.50464721903,
+        148175.83608763842,
+        0.0
+      ],
+      "frames": 10785227,
+      "limiter_active": 7255009,
+      "limiter_gr_max": 2.4580039978027344,
+      "limiter_gr_sum": 4654254.8625992285,
+      "sat_in_peak": 1.6305387020111084,
+      "sat_in_power": 1487493.4121684756,
+      "sat_out_peak": 1.1687448024749756,
+      "sat_out_power": 2472978.311215589
+    },
+    "delivery": {
+      "landing_db": -1.6254096031188965,
+      "predicted_lufs": -9.0,
+      "predicted_tp": -2.6157760620117188,
+      "target": -9.0,
+      "target_error": 0.0
+    }
+  },
+  {
+    "source": "coat",
+    "gain": 0,
+    "target": -9,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_07",
+      "sat": "current",
+      "trim": -1.5
+    },
+    "measure": {
+      "crest_db": 9.865621837615825,
+      "frames": 11738879,
+      "lra": 3.6373887445868798,
+      "lufs": -8.333581681835097,
+      "rms_dbfs": -10.917446654630744,
+      "sample_peak_dbfs": -1.0518248170149194,
+      "true_peak_dbtp": -1.0114542901411618
+    },
+    "stats": {
+      "comp_active": [
+        123183,
+        12319,
+        0
+      ],
+      "comp_gr_max": [
+        0.9066061973571777,
+        0.1403420865535736,
+        0.0
+      ],
+      "comp_gr_sum": [
+        59755.5216265329,
+        19377.313074680034,
+        0.0
+      ],
+      "frames": 10785227,
+      "limiter_active": 3996870,
+      "limiter_gr_max": 2.122227668762207,
+      "limiter_gr_sum": 1715688.4762748147,
+      "sat_in_peak": 1.3727855682373047,
+      "sat_in_power": 1059361.968934149,
+      "sat_out_peak": 1.124426007270813,
+      "sat_out_power": 1838840.5865995022
+    },
+    "delivery": {
+      "landing_db": -0.6664180755615234,
+      "predicted_lufs": -9.0,
+      "predicted_tp": -1.6778724193572998,
+      "target": -9.0,
+      "target_error": 0.0
+    }
+  },
+  {
+    "source": "coat",
+    "gain": 0,
+    "target": -14,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 8.949875943124662,
+      "frames": 11738879,
+      "lra": 3.1385011646474634,
+      "lufs": -7.374590607477136,
+      "rms_dbfs": -9.972611236125546,
+      "sample_peak_dbfs": -1.0227352930008846,
+      "true_peak_dbtp": -0.9903663344297593
+    },
+    "stats": {
+      "comp_active": [
+        431899,
+        511957,
+        0
+      ],
+      "comp_gr_max": [
+        1.2567870616912842,
+        0.34091973304748535,
+        0.0
+      ],
+      "comp_gr_sum": [
+        197111.50464721903,
+        148175.83608763842,
+        0.0
+      ],
+      "frames": 10785227,
+      "limiter_active": 7255009,
+      "limiter_gr_max": 2.4580039978027344,
+      "limiter_gr_sum": 4654254.8625992285,
+      "sat_in_peak": 1.6305387020111084,
+      "sat_in_power": 1487493.4121684756,
+      "sat_out_peak": 1.1687448024749756,
+      "sat_out_power": 2472978.311215589
+    },
+    "delivery": {
+      "landing_db": -6.6254096031188965,
+      "predicted_lufs": -14.0,
+      "predicted_tp": -7.615776062011719,
+      "target": -14.0,
+      "target_error": 0.0
+    }
+  },
+  {
+    "source": "coat",
+    "gain": 0,
+    "target": -14,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_00",
+      "sat": "current",
+      "trim": -12.0
+    },
+    "measure": {
+      "crest_db": 15.168509907771242,
+      "frames": 11738879,
+      "lra": 4.1147542159051085,
+      "lufs": -18.123105380882986,
+      "rms_dbfs": -20.694602538417783,
+      "sample_peak_dbfs": -5.52609263064654,
+      "true_peak_dbtp": -5.404218159303145
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 10785227,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.40982723236083984,
+      "sat_in_power": 94713.65837959407,
+      "sat_out_peak": 0.5358355045318604,
+      "sat_out_power": 183819.24589047735
+    },
+    "delivery": {
+      "landing_db": 4.123106002807617,
+      "predicted_lufs": -14.0,
+      "predicted_tp": -1.2811121940612793,
+      "target": -14.0,
+      "target_error": 0.0
+    }
+  },
+  {
+    "source": "coat",
+    "gain": -6,
+    "target": -9,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 13.713011796657295,
+      "frames": 11738879,
+      "lra": 4.030670632415784,
+      "lufs": -12.275042962309106,
+      "rms_dbfs": -14.847848072724478,
+      "sample_peak_dbfs": -1.134836276067184,
+      "true_peak_dbtp": -1.0999960330050604
+    },
+    "stats": {
+      "comp_active": [
+        441,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.1103270947933197,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        1965.9289361226683,
+        0.0,
+        0.0
+      ],
+      "frames": 10785227,
+      "limiter_active": 1464,
+      "limiter_gr_max": 0.18931879103183746,
+      "limiter_gr_sum": 901.4752549001714,
+      "sat_in_peak": 0.817801833152771,
+      "sat_in_power": 377014.7717059747,
+      "sat_out_peak": 0.8986755609512329,
+      "sat_out_power": 706447.3409465756
+    },
+    "delivery": {
+      "landing_db": 0.09999608993530273,
+      "predicted_lufs": -12.175046920776367,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 3.175046443939209
+    }
+  },
+  {
+    "source": "coat",
+    "gain": -6,
+    "target": -9,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_11",
+      "sat": "current",
+      "trim": 4.5
+    },
+    "measure": {
+      "crest_db": 9.865612134256837,
+      "frames": 11738879,
+      "lra": 3.637382747450981,
+      "lufs": -8.333576285014436,
+      "rms_dbfs": -10.917438704372808,
+      "sample_peak_dbfs": -1.0518265701159717,
+      "true_peak_dbtp": -1.0114909346235113
+    },
+    "stats": {
+      "comp_active": [
+        123189,
+        12319,
+        0
+      ],
+      "comp_gr_max": [
+        0.9065422415733337,
+        0.14034248888492584,
+        0.0
+      ],
+      "comp_gr_sum": [
+        59754.73593293882,
+        19377.33927665735,
+        0.0
+      ],
+      "frames": 10785227,
+      "limiter_active": 3996810,
+      "limiter_gr_max": 2.1219823360443115,
+      "limiter_gr_sum": 1715660.9154629337,
+      "sat_in_peak": 1.372642993927002,
+      "sat_in_power": 1059363.1047080853,
+      "sat_out_peak": 1.124394178390503,
+      "sat_out_power": 1838842.514247315
+    },
+    "delivery": {
+      "landing_db": -0.6664237976074219,
+      "predicted_lufs": -9.0,
+      "predicted_tp": -1.6779147386550903,
+      "target": -9.0,
+      "target_error": 0.0
+    }
+  },
+  {
+    "source": "coat",
+    "gain": -6,
+    "target": -14,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 13.713011796657295,
+      "frames": 11738879,
+      "lra": 4.030670632415784,
+      "lufs": -12.275042962309106,
+      "rms_dbfs": -14.847848072724478,
+      "sample_peak_dbfs": -1.134836276067184,
+      "true_peak_dbtp": -1.0999960330050604
+    },
+    "stats": {
+      "comp_active": [
+        441,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.1103270947933197,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        1965.9289361226683,
+        0.0,
+        0.0
+      ],
+      "frames": 10785227,
+      "limiter_active": 1464,
+      "limiter_gr_max": 0.18931879103183746,
+      "limiter_gr_sum": 901.4752549001714,
+      "sat_in_peak": 0.817801833152771,
+      "sat_in_power": 377014.7717059747,
+      "sat_out_peak": 0.8986755609512329,
+      "sat_out_power": 706447.3409465756
+    },
+    "delivery": {
+      "landing_db": -1.7249574661254883,
+      "predicted_lufs": -14.0,
+      "predicted_tp": -2.824953556060791,
+      "target": -14.0,
+      "target_error": 0.0
+    }
+  },
+  {
+    "source": "coat",
+    "gain": -6,
+    "target": -14,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_00",
+      "sat": "current",
+      "trim": -12.0
+    },
+    "measure": {
+      "crest_db": 15.564252978504413,
+      "frames": 11738879,
+      "lra": 4.138961145038163,
+      "lufs": -24.083296862898603,
+      "rms_dbfs": -26.654663721128017,
+      "sample_peak_dbfs": -11.090410742623604,
+      "true_peak_dbtp": -10.954792188904353
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 10785227,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.20540685951709747,
+      "sat_in_power": 23790.982584807156,
+      "sat_out_peak": 0.2827484607696533,
+      "sat_out_power": 46599.88652280356
+    },
+    "delivery": {
+      "landing_db": 9.954792022705078,
+      "predicted_lufs": -14.12850570678711,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 0.12850570678710938
+    }
+  },
+  {
+    "source": "coat",
+    "gain": -12,
+    "target": -9,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 15.168617751558342,
+      "frames": 11738879,
+      "lra": 4.114767068392759,
+      "lufs": -18.123105343662782,
+      "rms_dbfs": -20.694600831714368,
+      "sample_peak_dbfs": -5.525983080156024,
+      "true_peak_dbtp": -5.404109170712225
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 10785227,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.4098331034183502,
+      "sat_in_power": 94713.69478843691,
+      "sat_out_peak": 0.5358421802520752,
+      "sat_out_power": 183819.31830141263
+    },
+    "delivery": {
+      "landing_db": 4.404109001159668,
+      "predicted_lufs": -13.71899700164795,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 4.718997001647949
+    }
+  },
+  {
+    "source": "coat",
+    "gain": -12,
+    "target": -9,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 13.713016478716433,
+      "frames": 11738879,
+      "lra": 4.0306782862459585,
+      "lufs": -12.275041880965114,
+      "rms_dbfs": -14.847847444978257,
+      "sample_peak_dbfs": -1.1348309662618243,
+      "true_peak_dbtp": -1.0999977958556755
+    },
+    "stats": {
+      "comp_active": [
+        441,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.11035167425870895,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        1965.7915957937955,
+        0.0,
+        0.0
+      ],
+      "frames": 10785227,
+      "limiter_active": 1461,
+      "limiter_gr_max": 0.1890198290348053,
+      "limiter_gr_sum": 902.4526607319713,
+      "sat_in_peak": 0.8177539706230164,
+      "sat_in_power": 377014.8640944896,
+      "sat_out_peak": 0.8986445069313049,
+      "sat_out_power": 706447.47266856
+    },
+    "delivery": {
+      "landing_db": 0.09999775886535645,
+      "predicted_lufs": -12.175044059753418,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 3.175043821334839
+    }
+  },
+  {
+    "source": "coat",
+    "gain": -12,
+    "target": -14,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 15.168617751558342,
+      "frames": 11738879,
+      "lra": 4.114767068392759,
+      "lufs": -18.123105343662782,
+      "rms_dbfs": -20.694600831714368,
+      "sample_peak_dbfs": -5.525983080156024,
+      "true_peak_dbtp": -5.404109170712225
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 10785227,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.4098331034183502,
+      "sat_in_power": 94713.69478843691,
+      "sat_out_peak": 0.5358421802520752,
+      "sat_out_power": 183819.31830141263
+    },
+    "delivery": {
+      "landing_db": 4.123106002807617,
+      "predicted_lufs": -14.0,
+      "predicted_tp": -1.2810029983520508,
+      "target": -14.0,
+      "target_error": 0.0
+    }
+  },
+  {
+    "source": "coat",
+    "gain": -12,
+    "target": -14,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_03",
+      "sat": "current",
+      "trim": -7.5
+    },
+    "measure": {
+      "crest_db": 15.60457415435769,
+      "frames": 11738879,
+      "lra": 4.141651964011835,
+      "lufs": -25.579356217126847,
+      "rms_dbfs": -28.150712726263805,
+      "sample_peak_dbfs": -12.546138571906116,
+      "true_peak_dbtp": -12.40909635039101
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 10785227,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.17282605171203613,
+      "sat_in_power": 16842.729486041597,
+      "sat_out_peak": 0.23915252089500427,
+      "sat_out_power": 33020.21967403727
+    },
+    "delivery": {
+      "landing_db": 11.409096717834473,
+      "predicted_lufs": -14.170260429382324,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 0.17026042938232422
+    }
+  },
+  {
+    "source": "piano",
+    "gain": 0,
+    "target": -9,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 12.594297214181855,
+      "frames": 9576475,
+      "lra": 10.210785693745793,
+      "lufs": -11.291962720646703,
+      "rms_dbfs": -13.698680326801,
+      "sample_peak_dbfs": -1.1043831126191448,
+      "true_peak_dbtp": -1.0971119009629944
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        3110084,
+        0
+      ],
+      "comp_gr_max": [
+        0.02476670779287815,
+        2.9885306358337402,
+        0.0
+      ],
+      "comp_gr_sum": [
+        172.67864913813773,
+        2175695.590262706,
+        0.0
+      ],
+      "frames": 8798518,
+      "limiter_active": 434380,
+      "limiter_gr_max": 2.0356979370117188,
+      "limiter_gr_sum": 213407.3616579709,
+      "sat_in_peak": 1.3212083578109741,
+      "sat_in_power": 433683.7465696566,
+      "sat_out_peak": 1.1122636795043945,
+      "sat_out_power": 766799.6776250567
+    },
+    "delivery": {
+      "landing_db": 0.09711194038391113,
+      "predicted_lufs": -11.19485092163086,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 2.1948506832122803
+    }
+  },
+  {
+    "source": "piano",
+    "gain": 0,
+    "target": -9,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_11",
+      "sat": "current",
+      "trim": 4.5
+    },
+    "measure": {
+      "crest_db": 9.766092874468477,
+      "frames": 9576475,
+      "lra": 7.819855399272938,
+      "lufs": -8.533141218406566,
+      "rms_dbfs": -10.868417945126144,
+      "sample_peak_dbfs": -1.102325070657665,
+      "true_peak_dbtp": -1.0947648808636823
+    },
+    "stats": {
+      "comp_active": [
+        137375,
+        5869473,
+        0
+      ],
+      "comp_gr_max": [
+        0.776296854019165,
+        4.385085582733154,
+        0.0
+      ],
+      "comp_gr_sum": [
+        51524.857777168596,
+        7590604.535613603,
+        0.0
+      ],
+      "frames": 8798518,
+      "limiter_active": 2303088,
+      "limiter_gr_max": 2.6784162521362305,
+      "limiter_gr_sum": 1678850.9351823402,
+      "sat_in_peak": 1.9417212009429932,
+      "sat_in_power": 993818.205770717,
+      "sat_out_peak": 1.1977295875549316,
+      "sat_out_power": 1597706.6507479355
+    },
+    "delivery": {
+      "landing_db": -0.4668588638305664,
+      "predicted_lufs": -9.0,
+      "predicted_tp": -1.5616236925125122,
+      "target": -9.0,
+      "target_error": 0.0
+    }
+  },
+  {
+    "source": "piano",
+    "gain": 0,
+    "target": -14,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 12.594297214181855,
+      "frames": 9576475,
+      "lra": 10.210785693745793,
+      "lufs": -11.291962720646703,
+      "rms_dbfs": -13.698680326801,
+      "sample_peak_dbfs": -1.1043831126191448,
+      "true_peak_dbtp": -1.0971119009629944
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        3110084,
+        0
+      ],
+      "comp_gr_max": [
+        0.02476670779287815,
+        2.9885306358337402,
+        0.0
+      ],
+      "comp_gr_sum": [
+        172.67864913813773,
+        2175695.590262706,
+        0.0
+      ],
+      "frames": 8798518,
+      "limiter_active": 434380,
+      "limiter_gr_max": 2.0356979370117188,
+      "limiter_gr_sum": 213407.3616579709,
+      "sat_in_peak": 1.3212083578109741,
+      "sat_in_power": 433683.7465696566,
+      "sat_out_peak": 1.1122636795043945,
+      "sat_out_power": 766799.6776250567
+    },
+    "delivery": {
+      "landing_db": -2.7080373764038086,
+      "predicted_lufs": -14.0,
+      "predicted_tp": -3.8051493167877197,
+      "target": -14.0,
+      "target_error": 0.0
+    }
+  },
+  {
+    "source": "piano",
+    "gain": 0,
+    "target": -14,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_06",
+      "sat": "current",
+      "trim": -3.0
+    },
+    "measure": {
+      "crest_db": 14.96463305305319,
+      "frames": 9576475,
+      "lra": 11.282939044031435,
+      "lufs": -13.621446027586025,
+      "rms_dbfs": -16.07101530223045,
+      "sample_peak_dbfs": -1.1063822491772635,
+      "true_peak_dbtp": -1.099323237812802
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        1310474,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        2.057497262954712,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        582260.6619968441,
+        0.0
+      ],
+      "frames": 8798518,
+      "limiter_active": 71340,
+      "limiter_gr_max": 1.1790080070495605,
+      "limiter_gr_sum": 31116.496126823185,
+      "sat_in_peak": 1.0167821645736694,
+      "sat_in_power": 237242.04019480827,
+      "sat_out_peak": 1.0077602863311768,
+      "sat_out_power": 436744.5834550686
+    },
+    "delivery": {
+      "landing_db": -0.3785543441772461,
+      "predicted_lufs": -14.0,
+      "predicted_tp": -1.4778776168823242,
+      "target": -14.0,
+      "target_error": 0.0
+    }
+  },
+  {
+    "source": "piano",
+    "gain": -6,
+    "target": -9,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 17.52215559079524,
+      "frames": 9576475,
+      "lra": 11.795816177658402,
+      "lufs": -16.290035041807176,
+      "rms_dbfs": -18.76087217083951,
+      "sample_peak_dbfs": -1.2387165800442708,
+      "true_peak_dbtp": -1.22990103575311
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        228277,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        1.1264622211456299,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        81549.54720261367,
+        0.0
+      ],
+      "frames": 8798518,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.7710526585578918,
+      "sat_in_power": 123669.5971834877,
+      "sat_out_peak": 0.8671298027038574,
+      "sat_out_power": 234068.5141572955
+    },
+    "delivery": {
+      "landing_db": 0.22990107536315918,
+      "predicted_lufs": -16.060134887695312,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 7.060133934020996
+    }
+  },
+  {
+    "source": "piano",
+    "gain": -6,
+    "target": -9,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 12.594295973606522,
+      "frames": 9576475,
+      "lra": 10.210745286972525,
+      "lufs": -11.291962647443539,
+      "rms_dbfs": -13.69868026205311,
+      "sample_peak_dbfs": -1.1043842884465866,
+      "true_peak_dbtp": -1.0971124883847418
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        3110082,
+        0
+      ],
+      "comp_gr_max": [
+        0.024756425991654396,
+        2.9885334968566895,
+        0.0
+      ],
+      "comp_gr_sum": [
+        172.7214441155977,
+        2175695.9453873388,
+        0.0
+      ],
+      "frames": 8798518,
+      "limiter_active": 434368,
+      "limiter_gr_max": 2.0354065895080566,
+      "limiter_gr_sum": 213411.33331670967,
+      "sat_in_peak": 1.3210586309432983,
+      "sat_in_power": 433683.9279606688,
+      "sat_out_peak": 1.1122264862060547,
+      "sat_out_power": 766799.9322737039
+    },
+    "delivery": {
+      "landing_db": 0.09711253643035889,
+      "predicted_lufs": -11.194849967956543,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 2.194849967956543
+    }
+  },
+  {
+    "source": "piano",
+    "gain": -6,
+    "target": -14,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 17.52215559079524,
+      "frames": 9576475,
+      "lra": 11.795816177658402,
+      "lufs": -16.290035041807176,
+      "rms_dbfs": -18.76087217083951,
+      "sample_peak_dbfs": -1.2387165800442708,
+      "true_peak_dbtp": -1.22990103575311
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        228277,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        1.1264622211456299,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        81549.54720261367,
+        0.0
+      ],
+      "frames": 8798518,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.7710526585578918,
+      "sat_in_power": 123669.5971834877,
+      "sat_out_peak": 0.8671298027038574,
+      "sat_out_power": 234068.5141572955
+    },
+    "delivery": {
+      "landing_db": 0.22990107536315918,
+      "predicted_lufs": -16.060134887695312,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 2.060134172439575
+    }
+  },
+  {
+    "source": "piano",
+    "gain": -6,
+    "target": -14,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_10",
+      "sat": "current",
+      "trim": 3.0
+    },
+    "measure": {
+      "crest_db": 14.96463868574115,
+      "frames": 9576475,
+      "lra": 11.282951929685336,
+      "lufs": -13.621452257444805,
+      "rms_dbfs": -16.071021522967442,
+      "sample_peak_dbfs": -1.1063828372262938,
+      "true_peak_dbtp": -1.0993250005268747
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        1310476,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        2.0575027465820312,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        582260.820064938,
+        0.0
+      ],
+      "frames": 8798518,
+      "limiter_active": 71360,
+      "limiter_gr_max": 1.178723931312561,
+      "limiter_gr_sum": 31126.382790927048,
+      "sat_in_peak": 1.0167090892791748,
+      "sat_in_power": 237241.9900182014,
+      "sat_out_peak": 1.007727026939392,
+      "sat_out_power": 436744.53993926494
+    },
+    "delivery": {
+      "landing_db": -0.37854766845703125,
+      "predicted_lufs": -14.0,
+      "predicted_tp": -1.477872610092163,
+      "target": -14.0,
+      "target_error": 0.0
+    }
+  },
+  {
+    "source": "piano",
+    "gain": -12,
+    "target": -9,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 19.521485931183477,
+      "frames": 9576475,
+      "lra": 12.005241403077072,
+      "lufs": -22.11753042316993,
+      "rms_dbfs": -24.598352097620378,
+      "sample_peak_dbfs": -5.076866166436906,
+      "true_peak_dbtp": -5.065966648787699
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.010254905559122562,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        13.855681869641204,
+        0.0
+      ],
+      "frames": 8798518,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.4290582537651062,
+      "sat_in_power": 31383.453853299594,
+      "sat_out_peak": 0.5574349761009216,
+      "sat_out_power": 61037.25667602154
+    },
+    "delivery": {
+      "landing_db": 4.065966606140137,
+      "predicted_lufs": -18.051563262939453,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 9.05156421661377
+    }
+  },
+  {
+    "source": "piano",
+    "gain": -12,
+    "target": -9,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 17.521269306141054,
+      "frames": 9576475,
+      "lra": 11.795812274147279,
+      "lufs": -16.29003497215454,
+      "rms_dbfs": -18.760872590580387,
+      "sample_peak_dbfs": -1.2396032844393334,
+      "true_peak_dbtp": -1.23078803368267
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        228273,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        1.126466989517212,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        81549.53783580323,
+        0.0
+      ],
+      "frames": 8798518,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.7709264755249023,
+      "sat_in_power": 123669.63530011523,
+      "sat_out_peak": 0.8670413494110107,
+      "sat_out_power": 234068.49188136501
+    },
+    "delivery": {
+      "landing_db": 0.230787992477417,
+      "predicted_lufs": -16.059247970581055,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 7.059247016906738
+    }
+  },
+  {
+    "source": "piano",
+    "gain": -12,
+    "target": -14,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 19.521485931183477,
+      "frames": 9576475,
+      "lra": 12.005241403077072,
+      "lufs": -22.11753042316993,
+      "rms_dbfs": -24.598352097620378,
+      "sample_peak_dbfs": -5.076866166436906,
+      "true_peak_dbtp": -5.065966648787699
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.010254905559122562,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        13.855681869641204,
+        0.0
+      ],
+      "frames": 8798518,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.4290582537651062,
+      "sat_in_power": 31383.453853299594,
+      "sat_out_peak": 0.5574349761009216,
+      "sat_out_power": 61037.25667602154
+    },
+    "delivery": {
+      "landing_db": 4.065966606140137,
+      "predicted_lufs": -18.051563262939453,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 4.0515642166137695
+    }
+  },
+  {
+    "source": "piano",
+    "gain": -12,
+    "target": -14,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 17.521269306141054,
+      "frames": 9576475,
+      "lra": 11.795812274147279,
+      "lufs": -16.29003497215454,
+      "rms_dbfs": -18.760872590580387,
+      "sample_peak_dbfs": -1.2396032844393334,
+      "true_peak_dbtp": -1.23078803368267
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        228273,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        1.126466989517212,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        81549.53783580323,
+        0.0
+      ],
+      "frames": 8798518,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.7709264755249023,
+      "sat_in_power": 123669.63530011523,
+      "sat_out_peak": 0.8670413494110107,
+      "sat_out_power": 234068.49188136501
+    },
+    "delivery": {
+      "landing_db": 0.230787992477417,
+      "predicted_lufs": -16.059247970581055,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 2.0592472553253174
+    }
+  },
+  {
+    "source": "rich",
+    "gain": 0,
+    "target": -9,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 22.994674274494567,
+      "frames": 11408561,
+      "lra": 11.357183656397716,
+      "lufs": -20.390667397564478,
+      "rms_dbfs": -24.435216515342347,
+      "sample_peak_dbfs": -1.440542240847784,
+      "true_peak_dbtp": -1.4321764672086252
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        69272,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.7361028790473938,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        23572.513889296006,
+        0.0
+      ],
+      "frames": 10481747,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.7438762784004211,
+      "sat_in_power": 39302.74308738715,
+      "sat_out_peak": 0.8476598858833313,
+      "sat_out_power": 75497.75347124747
+    },
+    "delivery": {
+      "landing_db": 0.43217647075653076,
+      "predicted_lufs": -19.9584903717041,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 10.958490371704102
+    }
+  },
+  {
+    "source": "rich",
+    "gain": 0,
+    "target": -9,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 17.96361424554409,
+      "frames": 11408561,
+      "lra": 10.636473601318343,
+      "lufs": -15.02761269213781,
+      "rms_dbfs": -19.066513002958207,
+      "sample_peak_dbfs": -1.1028987574141174,
+      "true_peak_dbtp": -1.097080180247635
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        717942,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        2.586725950241089,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        540051.8644484117,
+        0.0
+      ],
+      "frames": 10481747,
+      "limiter_active": 167536,
+      "limiter_gr_max": 1.7910112142562866,
+      "limiter_gr_sum": 80304.32534490235,
+      "sat_in_peak": 1.2135396003723145,
+      "sat_in_power": 142561.5041073684,
+      "sat_out_peak": 1.0822936296463013,
+      "sat_out_power": 263724.87713721796
+    },
+    "delivery": {
+      "landing_db": 0.09708023071289062,
+      "predicted_lufs": -14.930532455444336,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 5.930532455444336
+    }
+  },
+  {
+    "source": "rich",
+    "gain": 0,
+    "target": -14,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 22.994674274494567,
+      "frames": 11408561,
+      "lra": 11.357183656397716,
+      "lufs": -20.390667397564478,
+      "rms_dbfs": -24.435216515342347,
+      "sample_peak_dbfs": -1.440542240847784,
+      "true_peak_dbtp": -1.4321764672086252
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        69272,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.7361028790473938,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        23572.513889296006,
+        0.0
+      ],
+      "frames": 10481747,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.7438762784004211,
+      "sat_in_power": 39302.74308738715,
+      "sat_out_peak": 0.8476598858833313,
+      "sat_out_power": 75497.75347124747
+    },
+    "delivery": {
+      "landing_db": 0.43217647075653076,
+      "predicted_lufs": -19.9584903717041,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 5.958490371704102
+    }
+  },
+  {
+    "source": "rich",
+    "gain": 0,
+    "target": -14,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 17.96361424554409,
+      "frames": 11408561,
+      "lra": 10.636473601318343,
+      "lufs": -15.02761269213781,
+      "rms_dbfs": -19.066513002958207,
+      "sample_peak_dbfs": -1.1028987574141174,
+      "true_peak_dbtp": -1.097080180247635
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        717942,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        2.586725950241089,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        540051.8644484117,
+        0.0
+      ],
+      "frames": 10481747,
+      "limiter_active": 167536,
+      "limiter_gr_max": 1.7910112142562866,
+      "limiter_gr_sum": 80304.32534490235,
+      "sat_in_peak": 1.2135396003723145,
+      "sat_in_power": 142561.5041073684,
+      "sat_out_peak": 1.0822936296463013,
+      "sat_out_power": 263724.87713721796
+    },
+    "delivery": {
+      "landing_db": 0.09708023071289062,
+      "predicted_lufs": -14.930532455444336,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 0.9305324554443359
+    }
+  },
+  {
+    "source": "rich",
+    "gain": -6,
+    "target": -9,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 24.626855379897293,
+      "frames": 11408561,
+      "lra": 11.416881390429442,
+      "lufs": -26.276952658509654,
+      "rms_dbfs": -30.32987491680855,
+      "sample_peak_dbfs": -5.703019536911258,
+      "true_peak_dbtp": -5.6926168705747315
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 10481747,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.39514070749282837,
+      "sat_in_power": 9949.847111701863,
+      "sat_out_peak": 0.5190576910972595,
+      "sat_out_power": 19429.793680614886
+    },
+    "delivery": {
+      "landing_db": 4.692616939544678,
+      "predicted_lufs": -21.584335327148438,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 12.584335327148438
+    }
+  },
+  {
+    "source": "rich",
+    "gain": -6,
+    "target": -9,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 22.994953952471285,
+      "frames": 11408561,
+      "lra": 11.357180549658379,
+      "lufs": -20.39066714448711,
+      "rms_dbfs": -24.435216308074065,
+      "sample_peak_dbfs": -1.4402623556027792,
+      "true_peak_dbtp": -1.431896240894643
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        69271,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.7361010909080505,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        23572.514655435018,
+        0.0
+      ],
+      "frames": 10481747,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.7439132928848267,
+      "sat_in_power": 39302.74065757975,
+      "sat_out_peak": 0.8476869463920593,
+      "sat_out_power": 75497.75708129266
+    },
+    "delivery": {
+      "landing_db": 0.4318962097167969,
+      "predicted_lufs": -19.958770751953125,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 10.958770751953125
+    }
+  },
+  {
+    "source": "rich",
+    "gain": -6,
+    "target": -14,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 24.626855379897293,
+      "frames": 11408561,
+      "lra": 11.416881390429442,
+      "lufs": -26.276952658509654,
+      "rms_dbfs": -30.32987491680855,
+      "sample_peak_dbfs": -5.703019536911258,
+      "true_peak_dbtp": -5.6926168705747315
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 10481747,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.39514070749282837,
+      "sat_in_power": 9949.847111701863,
+      "sat_out_peak": 0.5190576910972595,
+      "sat_out_power": 19429.793680614886
+    },
+    "delivery": {
+      "landing_db": 4.692616939544678,
+      "predicted_lufs": -21.584335327148438,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 7.584335803985596
+    }
+  },
+  {
+    "source": "rich",
+    "gain": -6,
+    "target": -14,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 22.994953952471285,
+      "frames": 11408561,
+      "lra": 11.357180549658379,
+      "lufs": -20.39066714448711,
+      "rms_dbfs": -24.435216308074065,
+      "sample_peak_dbfs": -1.4402623556027792,
+      "true_peak_dbtp": -1.431896240894643
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        69271,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.7361010909080505,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        23572.514655435018,
+        0.0
+      ],
+      "frames": 10481747,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.7439132928848267,
+      "sat_in_power": 39302.74065757975,
+      "sat_out_peak": 0.8476869463920593,
+      "sat_out_power": 75497.75708129266
+    },
+    "delivery": {
+      "landing_db": 0.4318962097167969,
+      "predicted_lufs": -19.958770751953125,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 5.958770751953125
+    }
+  },
+  {
+    "source": "rich",
+    "gain": -12,
+    "target": -9,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 25.022555414873295,
+      "frames": 11408561,
+      "lra": 11.432176211436587,
+      "lufs": -32.25687216511161,
+      "rms_dbfs": -36.309911706737935,
+      "sample_peak_dbfs": -11.28735629186464,
+      "true_peak_dbtp": -11.276263427940801
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 10481747,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.19801685214042664,
+      "sat_in_power": 2499.2886024234726,
+      "sat_out_peak": 0.2729214131832123,
+      "sat_out_power": 4903.029550033464
+    },
+    "delivery": {
+      "landing_db": 10.276263236999512,
+      "predicted_lufs": -21.980606079101562,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 12.980607032775879
+    }
+  },
+  {
+    "source": "rich",
+    "gain": -12,
+    "target": -9,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 24.62636427233081,
+      "frames": 11408561,
+      "lra": 11.416880679595586,
+      "lufs": -26.27695192446971,
+      "rms_dbfs": -30.329873970671656,
+      "sample_peak_dbfs": -5.703509698340847,
+      "true_peak_dbtp": -5.693105448171511
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 10481747,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.3951154351234436,
+      "sat_in_power": 9949.848969707906,
+      "sat_out_peak": 0.5190285444259644,
+      "sat_out_power": 19429.79793547615
+    },
+    "delivery": {
+      "landing_db": 4.693105220794678,
+      "predicted_lufs": -21.583847045898438,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 12.583847045898438
+    }
+  },
+  {
+    "source": "rich",
+    "gain": -12,
+    "target": -14,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 25.022555414873295,
+      "frames": 11408561,
+      "lra": 11.432176211436587,
+      "lufs": -32.25687216511161,
+      "rms_dbfs": -36.309911706737935,
+      "sample_peak_dbfs": -11.28735629186464,
+      "true_peak_dbtp": -11.276263427940801
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 10481747,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.19801685214042664,
+      "sat_in_power": 2499.2886024234726,
+      "sat_out_peak": 0.2729214131832123,
+      "sat_out_power": 4903.029550033464
+    },
+    "delivery": {
+      "landing_db": 10.276263236999512,
+      "predicted_lufs": -21.980606079101562,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 7.980607032775879
+    }
+  },
+  {
+    "source": "rich",
+    "gain": -12,
+    "target": -14,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 24.62636427233081,
+      "frames": 11408561,
+      "lra": 11.416880679595586,
+      "lufs": -26.27695192446971,
+      "rms_dbfs": -30.329873970671656,
+      "sample_peak_dbfs": -5.703509698340847,
+      "true_peak_dbtp": -5.693105448171511
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 10481747,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.3951154351234436,
+      "sat_in_power": 9949.848969707906,
+      "sat_out_peak": 0.5190285444259644,
+      "sat_out_power": 19429.79793547615
+    },
+    "delivery": {
+      "landing_db": 4.693105220794678,
+      "predicted_lufs": -21.583847045898438,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 7.583847522735596
+    }
+  },
+  {
+    "source": "imaginal",
+    "gain": 0,
+    "target": -9,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 22.156468923588207,
+      "frames": 16978042,
+      "lra": 6.842156362686811,
+      "lufs": -20.006749309875154,
+      "rms_dbfs": -23.260078964120563,
+      "sample_peak_dbfs": -1.1036100405323563,
+      "true_peak_dbtp": -1.1036088648097215
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0073866997845470905,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        7.441184251937836,
+        0.0
+      ],
+      "frames": 16978186,
+      "limiter_active": 101787,
+      "limiter_gr_max": 2.0027856826782227,
+      "limiter_gr_sum": 58250.0721172535,
+      "sat_in_peak": 1.1771570444107056,
+      "sat_in_power": 83047.08438462023,
+      "sat_out_peak": 1.0705927610397339,
+      "sat_out_power": 160888.37939472948
+    },
+    "delivery": {
+      "landing_db": 0.10360884666442871,
+      "predicted_lufs": -19.903141021728516,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 10.903141021728516
+    }
+  },
+  {
+    "source": "imaginal",
+    "gain": 0,
+    "target": -9,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 16.430443768592674,
+      "frames": 16978042,
+      "lra": 6.98400444832709,
+      "lufs": -14.356877431687108,
+      "rms_dbfs": -17.534053221263694,
+      "sample_peak_dbfs": -1.103609452671019,
+      "true_peak_dbtp": -1.1035071654040534
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        853782,
+        40073
+      ],
+      "comp_gr_max": [
+        0.0,
+        1.0968791246414185,
+        0.7062980532646179
+      ],
+      "comp_gr_sum": [
+        0.0,
+        265834.6456674792,
+        12691.190878490093
+      ],
+      "frames": 16978186,
+      "limiter_active": 968211,
+      "limiter_gr_max": 4.395876884460449,
+      "limiter_gr_sum": 621381.2249137351,
+      "sat_in_peak": 2.3486955165863037,
+      "sat_in_power": 326622.9618427669,
+      "sat_out_peak": 1.214986801147461,
+      "sat_out_power": 611293.372611879
+    },
+    "delivery": {
+      "landing_db": 0.1035071611404419,
+      "predicted_lufs": -14.25337028503418,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 5.25337028503418
+    }
+  },
+  {
+    "source": "imaginal",
+    "gain": 0,
+    "target": -14,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 22.156468923588207,
+      "frames": 16978042,
+      "lra": 6.842156362686811,
+      "lufs": -20.006749309875154,
+      "rms_dbfs": -23.260078964120563,
+      "sample_peak_dbfs": -1.1036100405323563,
+      "true_peak_dbtp": -1.1036088648097215
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0073866997845470905,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        7.441184251937836,
+        0.0
+      ],
+      "frames": 16978186,
+      "limiter_active": 101787,
+      "limiter_gr_max": 2.0027856826782227,
+      "limiter_gr_sum": 58250.0721172535,
+      "sat_in_peak": 1.1771570444107056,
+      "sat_in_power": 83047.08438462023,
+      "sat_out_peak": 1.0705927610397339,
+      "sat_out_power": 160888.37939472948
+    },
+    "delivery": {
+      "landing_db": 0.10360884666442871,
+      "predicted_lufs": -19.903141021728516,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 5.903141021728516
+    }
+  },
+  {
+    "source": "imaginal",
+    "gain": 0,
+    "target": -14,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 16.430443768592674,
+      "frames": 16978042,
+      "lra": 6.98400444832709,
+      "lufs": -14.356877431687108,
+      "rms_dbfs": -17.534053221263694,
+      "sample_peak_dbfs": -1.103609452671019,
+      "true_peak_dbtp": -1.1035071654040534
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        853782,
+        40073
+      ],
+      "comp_gr_max": [
+        0.0,
+        1.0968791246414185,
+        0.7062980532646179
+      ],
+      "comp_gr_sum": [
+        0.0,
+        265834.6456674792,
+        12691.190878490093
+      ],
+      "frames": 16978186,
+      "limiter_active": 968211,
+      "limiter_gr_max": 4.395876884460449,
+      "limiter_gr_sum": 621381.2249137351,
+      "sat_in_peak": 2.3486955165863037,
+      "sat_in_power": 326622.9618427669,
+      "sat_out_peak": 1.214986801147461,
+      "sat_out_power": 611293.372611879
+    },
+    "delivery": {
+      "landing_db": 0.1035071611404419,
+      "predicted_lufs": -14.25337028503418,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 0.25337016582489014
+    }
+  },
+  {
+    "source": "imaginal",
+    "gain": -6,
+    "target": -9,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 26.35607997569702,
+      "frames": 16978042,
+      "lra": 6.930496561919572,
+      "lufs": -25.917003655162393,
+      "rms_dbfs": -29.198742498731605,
+      "sample_peak_dbfs": -2.842662523034583,
+      "true_peak_dbtp": -2.5953276986136893
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 16978186,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.5899724960327148,
+      "sat_in_power": 20860.500331726485,
+      "sat_out_peak": 0.7208864688873291,
+      "sat_out_power": 40836.01463582431
+    },
+    "delivery": {
+      "landing_db": 1.595327615737915,
+      "predicted_lufs": -24.32167625427246,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 15.321676254272461
+    }
+  },
+  {
+    "source": "imaginal",
+    "gain": -6,
+    "target": -9,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 22.156468104346175,
+      "frames": 16978042,
+      "lra": 6.8421537176151475,
+      "lufs": -20.006748395705035,
+      "rms_dbfs": -23.260078144878534,
+      "sample_peak_dbfs": -1.1036100405323563,
+      "true_peak_dbtp": -1.1036088648097215
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.007385988254100084,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        7.440154989405254,
+        0.0
+      ],
+      "frames": 16978186,
+      "limiter_active": 101784,
+      "limiter_gr_max": 2.0027830600738525,
+      "limiter_gr_sum": 58248.47508609184,
+      "sat_in_peak": 1.1771552562713623,
+      "sat_in_power": 83047.08964533602,
+      "sat_out_peak": 1.0705921649932861,
+      "sat_out_power": 160888.39088348873
+    },
+    "delivery": {
+      "landing_db": 0.10360884666442871,
+      "predicted_lufs": -19.903139114379883,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 10.903139114379883
+    }
+  },
+  {
+    "source": "imaginal",
+    "gain": -6,
+    "target": -14,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 26.35607997569702,
+      "frames": 16978042,
+      "lra": 6.930496561919572,
+      "lufs": -25.917003655162393,
+      "rms_dbfs": -29.198742498731605,
+      "sample_peak_dbfs": -2.842662523034583,
+      "true_peak_dbtp": -2.5953276986136893
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 16978186,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.5899724960327148,
+      "sat_in_power": 20860.500331726485,
+      "sat_out_peak": 0.7208864688873291,
+      "sat_out_power": 40836.01463582431
+    },
+    "delivery": {
+      "landing_db": 1.595327615737915,
+      "predicted_lufs": -24.32167625427246,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 10.321676254272461
+    }
+  },
+  {
+    "source": "imaginal",
+    "gain": -6,
+    "target": -14,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 22.156468104346175,
+      "frames": 16978042,
+      "lra": 6.8421537176151475,
+      "lufs": -20.006748395705035,
+      "rms_dbfs": -23.260078144878534,
+      "sample_peak_dbfs": -1.1036100405323563,
+      "true_peak_dbtp": -1.1036088648097215
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.007385988254100084,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        7.440154989405254,
+        0.0
+      ],
+      "frames": 16978186,
+      "limiter_active": 101784,
+      "limiter_gr_max": 2.0027830600738525,
+      "limiter_gr_sum": 58248.47508609184,
+      "sat_in_peak": 1.1771552562713623,
+      "sat_in_power": 83047.08964533602,
+      "sat_out_peak": 1.0705921649932861,
+      "sat_out_power": 160888.39088348873
+    },
+    "delivery": {
+      "landing_db": 0.10360884666442871,
+      "predicted_lufs": -19.903139114379883,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 5.903139114379883
+    }
+  },
+  {
+    "source": "imaginal",
+    "gain": -12,
+    "target": -9,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 27.21446333222914,
+      "frames": 16978042,
+      "lra": 6.939584257705089,
+      "lufs": -31.896107736983577,
+      "rms_dbfs": -35.18674683544897,
+      "sample_peak_dbfs": -7.972283503219834,
+      "true_peak_dbtp": -7.759967095337949
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 16978186,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.29568570852279663,
+      "sat_in_power": 5239.921160468299,
+      "sat_out_peak": 0.39937955141067505,
+      "sat_out_power": 10285.914668710071
+    },
+    "delivery": {
+      "landing_db": 6.75996732711792,
+      "predicted_lufs": -25.136140823364258,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 16.136140823364258
+    }
+  },
+  {
+    "source": "imaginal",
+    "gain": -12,
+    "target": -9,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 26.35625467696802,
+      "frames": 16978042,
+      "lra": 6.93049248479673,
+      "lufs": -25.917002574129416,
+      "rms_dbfs": -29.19874196817815,
+      "sample_peak_dbfs": -2.8424872912101256,
+      "true_peak_dbtp": -2.5951587821662407
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 16978186,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.5899883508682251,
+      "sat_in_power": 20860.502771177882,
+      "sat_out_peak": 0.7209010124206543,
+      "sat_out_power": 40836.01962454976
+    },
+    "delivery": {
+      "landing_db": 1.5951588153839111,
+      "predicted_lufs": -24.321842193603516,
+      "predicted_tp": -1.0,
+      "target": -9.0,
+      "target_error": 15.321843147277832
+    }
+  },
+  {
+    "source": "imaginal",
+    "gain": -12,
+    "target": -14,
+    "mode": "control",
+    "variant": {
+      "group": "isolated",
+      "name": "control"
+    },
+    "measure": {
+      "crest_db": 27.21446333222914,
+      "frames": 16978042,
+      "lra": 6.939584257705089,
+      "lufs": -31.896107736983577,
+      "rms_dbfs": -35.18674683544897,
+      "sample_peak_dbfs": -7.972283503219834,
+      "true_peak_dbtp": -7.759967095337949
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 16978186,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.29568570852279663,
+      "sat_in_power": 5239.921160468299,
+      "sat_out_peak": 0.39937955141067505,
+      "sat_out_power": 10285.914668710071
+    },
+    "delivery": {
+      "landing_db": 6.75996732711792,
+      "predicted_lufs": -25.136140823364258,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 11.136140823364258
+    }
+  },
+  {
+    "source": "imaginal",
+    "gain": -12,
+    "target": -14,
+    "mode": "drive",
+    "variant": {
+      "adapt": 0.5,
+      "group": "drive",
+      "name": "drive_12",
+      "sat": "current",
+      "trim": 6.0
+    },
+    "measure": {
+      "crest_db": 26.35625467696802,
+      "frames": 16978042,
+      "lra": 6.93049248479673,
+      "lufs": -25.917002574129416,
+      "rms_dbfs": -29.19874196817815,
+      "sample_peak_dbfs": -2.8424872912101256,
+      "true_peak_dbtp": -2.5951587821662407
+    },
+    "stats": {
+      "comp_active": [
+        0,
+        0,
+        0
+      ],
+      "comp_gr_max": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "comp_gr_sum": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "frames": 16978186,
+      "limiter_active": 0,
+      "limiter_gr_max": 0.0,
+      "limiter_gr_sum": 0.0,
+      "sat_in_peak": 0.5899883508682251,
+      "sat_in_power": 20860.502771177882,
+      "sat_out_peak": 0.7209010124206543,
+      "sat_out_power": 40836.01962454976
+    },
+    "delivery": {
+      "landing_db": 1.5951588153839111,
+      "predicted_lufs": -24.321842193603516,
+      "predicted_tp": -1.0,
+      "target": -14.0,
+      "target_error": 10.321843147277832
+    }
+  }
+]
