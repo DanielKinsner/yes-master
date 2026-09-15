@@ -122,6 +122,67 @@ adoption remains gated on C2 and the remaining B3/control requirements.
 
 ## Development, freeze and holdout
 
+The implemented development probe now separates normalized source PCM, its
+operating descriptor, automatic drive, preset push, deliberate input trim and
+final gain. Normalization uses the maximum absolute sample across all channels,
+then measures that normalized PCM's integrated loudness; it is not labeled as
+the original source's LUFS. Original-source analysis/guards remain the anchor
+for artificial -40/-80 dB copies. This tests the drive rule's consistency given
+that anchor, not gain-invariance of arbitrary fresh production analyses.
+Every frame's actual limiter reduction is observed, including the drained tail;
+the reported distribution aligns with delivered audio after removing warmup.
+
+Initial coarse offsets relative to the single rule are -9/-6/-3/0/+3/+6/+9/+12
+dB, the same eight-point C0 budget. Refine an unresolved target/character tradeoff
+with at most two local midpoints between the best character-qualified coarse
+candidate and its adjacent candidate toward the better target result. Reevaluate
+each midpoint; do not infer unsampled monotonicity or discard other candidates.
+These proposals refine the development comparison, not shipping bounds. If the
+single rule already meets target and every character constraint, the specified
+nearness tie-break necessarily selects it; the extra development grid can then
+quantify the cost of work an eventual implementation could avoid.
+
+The first owner Universal-75 full-song run has 20 protected float deliveries.
+At -14, the single rule meets target with -0.184 dB section-contrast change and
++0.282 dB paired attack-median change. At -9, the single rule meets target but
+loses 1.043 dB section contrast; the initial qualified grid choice instead lands
+at -10.5397 LUFS with -0.301 dB contrast change. Broader preset/source checks,
+midpoint refinements and independent finalist verification remain in progress.
+No new holdout has been opened. The numeric limits and owner direction remain
+development/adoption gates, not an inferred listening preference.
+
+The expanded complete Coat/Piano development runs add 100 deliveries and their
+source-anchored metrics. Coat Universal-50 also selects the single rule at -14;
+at -9 the coarse preserving choice misses by 1.646 LU. Piano Universal-75/50
+select -3 dB relative drive at -14, missing by 0.804/0.875 LU; at -9 the coarse
+choices miss by 6.706/6.778 LU. Every tested Loud-75 group on these two sources
+has no candidate satisfying all initial character constraints. The corrected
+control fallback is explicit and retains its character failures. These results
+reject a blanket claim that the simple rule or this grid satisfies every preset;
+they do not justify changing Loud's voicing or widening thresholds to hide misses.
+Independent whole-file finalist checks for these additional groups are running.
+
+The application restart interrupted Funk after 31 fully written deliveries.
+Those files/report are retained unchanged. The recovery-capable probe verifies
+the original job/source hashes, descriptor, estimator version, each retained
+WAV hash, typed settings and exact resolved coefficient string, then writes a
+new report and only missing deliveries to a fresh directory. The first recovery
+attempt exposed JSON f64 comparison rounding of a serialized f32; comparison now
+restores the typed settings before checking, with no numeric tolerance added.
+Recovery elapsed time is recorded separately; it cannot reconstruct the missing
+wall-clock duration of the interrupted session. The remaining five original
+sources continue from their existing jobs; no completed research is discarded.
+The resumed run has passed those checks and continued after the 31st case.
+A deliberately mismatched job hash is rejected before any delivery is written.
+The original report remains authoritative for its recorded numeric diagnostics;
+JSON parsing/reserialization in a combined recovery report can change an f64
+decimal by one rounding step. File hashes and exact coefficient identities are
+unchanged, and the original report hash is retained. Four metric regression
+tests and strict all-target Clippy pass (`c1-metric-regressions-recovery-v1.log`,
+`c1-b3-clippy-recovery-v1.log`). The read-only limiter accessor's rebuilt WASM
+source stamp is `46580659ee75`; its stamp test passes. No DSP processing was
+changed by this offline-prototype checkpoint.
+
 Develop on the original eight sources and their gain copies at -14/-9 LUFS,
 covering Universal 75, Universal 50 and the deliberately dense Loud preset.
 Retain the known piano/Rich/Imaginal/drum failures. C0's existing candidate grid
