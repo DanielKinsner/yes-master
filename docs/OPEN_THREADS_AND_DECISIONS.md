@@ -1,5 +1,18 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-15 — Independent report received; targeted follow-up prepared.**
+> Claude Fable completed its report in the separate review workspace. All 18
+> sealed files match their recorded hashes. The report overlaps on excessive
+> upstream processing and peak discrepancies, recommends an attenuate-only
+> policy, and reports additional no-target/short-input ceiling failures; these
+> are its findings, not yet a completed cross-investigation replication.
+> [The explicit unblinded follow-up](prompts/2026-09-15-mastering-quality-targeted-replication.md)
+> directs matched-condition tests and a separate reconciliation report. A verified
+> 74-file text/source checkpoint is retained under ignored `test-output/`; unique
+> rendered audio remains in the review workspace. Keep that workspace through
+> reconciliation and verified evidence preservation. Nothing was deleted or
+> changed in production; the targeted follow-up itself has not been run here.
+
 > **2026-09-15 — Independent review prepared at the owner's request.**
 > A separate source/audio workspace and [neutral question-led prompt](prompts/2026-09-15-independent-mastering-audit.md)
 > support a fresh Claude Fable assessment without earlier findings or experiment

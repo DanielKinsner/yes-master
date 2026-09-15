@@ -4,6 +4,35 @@ The owner requested a question-led assessment that does not reveal the previous
 investigation's suspected causes or recommendations. This file is for the owner
 and coordinator, **not the independent reviewer**.
 
+## Current status: independent report complete, unblinded follow-up ready
+
+The owner reported completion. Claude's `audit-output/INDEPENDENT_REPORT.md`
+and all 18 files listed in `SEALED_MANIFEST.json` match their recorded hashes
+(seal timestamp `2026-09-15T02:47:56.771757+00:00`). Integrity verification does
+not by itself reproduce its experimental claims.
+
+The [targeted replication prompt](../prompts/2026-09-15-mastering-quality-targeted-replication.md)
+is also copied to `FOLLOWUP_REVIEW.md` at the root of the separate workspace.
+For this next pass, explicitly authorize the reviewer to read that file and
+the named main-checkout evidence. This ends blinding for the follow-up while
+preserving the original sealed assessment. New findings belong in a separate
+reconciliation directory and report.
+
+Keep the review workspace for this pass. It is a folder without `.git`, not a
+second repository: at inspection, it held about 13.8 GiB including supplied
+fixtures; `audit-output/renders` accounted for 9.7 GiB and its build cache for
+1.5 GiB. These sizes can change during further work.
+
+A verified partial checkpoint is at
+`test-output/claude-independent-audit-20260915-text-checkpoint/` in the main
+checkout: 74 files / 2,388,313 bytes, covering the sealed report/protocol,
+manifests, reproduction source/locks/scripts, cases and measured text results.
+It excludes audio and build outputs. Its `CHECKPOINT_MANIFEST.json` records
+hashes and the explicit limitation; it is **not a complete evidence archive**.
+No files were deleted. After reconciliation, preserve the necessary unique
+audio and complete reproduction records, verify that archive, then remove
+disposable caches/duplicates or the temporary workspace as appropriate.
+
 ## Prepared locally
 
 - Separate workspace: sibling folder `yes-master-independent-audit-20260915/`.
