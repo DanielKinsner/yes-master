@@ -32,6 +32,15 @@ mod listening_bench;
 #[cfg(test)]
 #[path = "native_callback_bench.rs"]
 mod native_callback_bench;
+
+/// Local opt-in lifecycle diagnostics mute after source DSP/meters. This hook
+/// is absent from application builds and never changes a system device volume.
+#[cfg(test)]
+fn mute_diagnostic_sink(sink: &rodio::Sink) {
+    if std::env::var_os("YES_MASTER_BENCH_MUTE").is_some() {
+        sink.set_volume(0.0);
+    }
+}
 use crate::spectrum::{SpectrumAnalyzer, SpectrumRing};
 use rodio::cpal::traits::{DeviceTrait, HostTrait};
 
@@ -1376,6 +1385,8 @@ impl AudioThreadState {
     fn open(selected_device_name: Option<&str>, initial_sample_rate: u32) -> Result<Self, String> {
         let (stream, handle) = open_output_stream(selected_device_name)?;
         let sink = rodio::Sink::try_new(&handle).map_err(|e| e.to_string())?;
+        #[cfg(test)]
+        mute_diagnostic_sink(&sink);
         Ok(Self {
             _stream: stream,
             handle,
@@ -2923,6 +2934,8 @@ fn handle_play(
         s.loop_region.as_ref(),
     );
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
+    #[cfg(test)]
+    mute_diagnostic_sink(&new_sink);
     new_sink.append(source);
     play_sink_from_start_position(&new_sink, start_position_sec);
     // L10 — swap in the new sink. On a swap, detach the old one so Drop doesn't
@@ -3139,6 +3152,8 @@ fn handle_play_master(
         s.loop_region.as_ref(),
     );
     let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
+    #[cfg(test)]
+    mute_diagnostic_sink(&new_sink);
     new_sink.append(mastering_source);
     play_sink_from_start_position(&new_sink, start_position_sec);
     // L10 — swap in the new sink. On a swap, detach the old one so Drop doesn't

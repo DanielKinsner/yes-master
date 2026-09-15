@@ -1,10 +1,195 @@
 //! Opt-in, muted native callback evidence. Measures production MasteringSource
 //! and meter work on a real CPAL output callback during whole-song preparation.
-//! This does not certify installed UI, listening, or the AudioPlayer lifecycle.
+//! Separate probes cover callback timing and AudioPlayer lifecycle. Neither
+//! certifies installed UI or listening.
 use super::*;
 use rodio::cpal::{self, traits::StreamTrait};
 use serde_json::json;
 use std::time::Instant;
+
+#[test]
+#[ignore = "muted native AudioPlayer lifecycle diagnostic over two restored sources"]
+fn mastering_quality_native_lifecycle_bench() {
+    assert!(
+        std::env::var_os("YES_MASTER_BENCH_MUTE").is_some(),
+        "set the test-only sink mute"
+    );
+    let source = PathBuf::from(std::env::var("YES_MASTER_BENCH_FILE").unwrap());
+    let other = PathBuf::from(std::env::var("YES_MASTER_BENCH_OTHER_FILE").unwrap());
+    let output = PathBuf::from(std::env::var("YES_MASTER_LIFECYCLE_REPORT").unwrap());
+    assert!(!output.exists());
+    let saved: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(std::env::var("YES_MASTER_BENCH_PREPARATION").unwrap()).unwrap(),
+    )
+    .unwrap();
+    let settings: MasteringSettings = serde_json::from_value(saved["settings"].clone()).unwrap();
+    let mut rows = Vec::new();
+    let mut record = |row| {
+        rows.push(row);
+        std::fs::write(
+            &output,
+            serde_json::to_vec_pretty(&json!({
+                "status":"in_progress","source_sha256":saved["source_sha256"],"rows":rows,
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+    };
+    let player = AudioPlayer::new();
+    let track = TrackId("native-lifecycle-a".into());
+    let wait = |check: &dyn Fn(&PlaybackSnapshot) -> bool| {
+        let start = Instant::now();
+        loop {
+            let s = player.snapshot().unwrap();
+            if check(&s) {
+                return s;
+            }
+            assert!(
+                start.elapsed() < Duration::from_secs(30),
+                "native snapshot did not settle: {s:?}"
+            );
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    };
+    let start = Instant::now();
+    player.play_track(track.clone(), &source, 30.0).unwrap();
+    wait(&|s| s.is_playing && s.position_sec > 30.0 && s.peak_dbfs > SILENCE_DBFS);
+    record(
+        json!({"event":"cold_original_and_first_meter","seconds":start.elapsed().as_secs_f64()}),
+    );
+    let start = Instant::now();
+    let before_snapshot = player.snapshot().unwrap();
+    let before = before_snapshot.position_sec;
+    player
+        .play_master(
+            track.clone(),
+            &source,
+            settings.clone(),
+            before,
+            true,
+            false,
+        )
+        .unwrap();
+    let accepted = start.elapsed().as_secs_f64();
+    let after = wait(&|s| {
+        s.play_generation > before_snapshot.play_generation && s.is_playing && !s.landing_pending
+    });
+    record(
+        json!({"event":"first_master","accept_s":accepted,"settle_s":start.elapsed().as_secs_f64(),
+        "before_position":before,"after_position":after.position_sec,"device_lost":after.device_lost}),
+    );
+    let mut edits = Vec::new();
+    let mut s = settings.clone();
+    s.advanced.lufs_offset_db = Some(-14.0);
+    edits.push(("target", s));
+    let mut s = settings.clone();
+    s.intensity = 0.5;
+    edits.push(("intensity", s));
+    let mut s = settings.clone();
+    s.eq_high_db = 1.0;
+    edits.push(("eq", s));
+    let mut s = settings.clone();
+    s.advanced.compression_density = Some(0.2);
+    edits.push(("density", s));
+    let mut s = settings.clone();
+    s.advanced.adaptive_strength = Some(1.0);
+    edits.push(("adapt", s));
+    let mut s = settings.clone();
+    s.preset = Preset::Loud;
+    edits.push(("preset", s));
+    edits.push(("return_initial", settings.clone()));
+    for (event, s) in edits {
+        let start = Instant::now();
+        let before = player.snapshot().unwrap().position_sec;
+        player.update_chain(s, true, false).unwrap();
+        // Snapshot cadence bounds fast hits; do not call this an exact worker timestamp.
+        std::thread::sleep(Duration::from_millis(60));
+        let pending_observed = player.snapshot().unwrap().landing_pending;
+        // A fast cache hit can precede the next 50 ms transport snapshot.
+        // Require observed playback progress as well as level readiness.
+        let after = wait(&|s| !s.landing_pending && s.position_sec > before);
+        assert!(after.is_playing && !after.device_lost && after.position_sec > before);
+        record(
+            json!({"event":event,"observed_settle_s":start.elapsed().as_secs_f64(),
+            "pending_observed":pending_observed,"position_advanced_s":after.position_sec-before}),
+        );
+    }
+    let start = Instant::now();
+    for i in 0..30 {
+        let mut s = settings.clone();
+        s.eq_high_db = i as f32 * 0.1;
+        player.update_chain(s, true, false).unwrap();
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    std::thread::sleep(Duration::from_millis(60));
+    wait(&|s| !s.landing_pending);
+    record(json!({"event":"rapid_30_edits","settle_s":start.elapsed().as_secs_f64()}));
+    for kind in ["original", "mastered"] {
+        let before_snapshot = player.snapshot().unwrap();
+        let before = before_snapshot.position_sec;
+        let start = Instant::now();
+        if kind == "original" {
+            player.play_track(track.clone(), &source, before).unwrap();
+        } else {
+            player
+                .play_master(
+                    track.clone(),
+                    &source,
+                    settings.clone(),
+                    before,
+                    true,
+                    false,
+                )
+                .unwrap();
+        }
+        let after = wait(&|s| {
+            s.play_generation > before_snapshot.play_generation
+                && s.is_playing
+                && !s.landing_pending
+        });
+        assert!(after.position_sec >= before - 0.05 && !after.device_lost);
+        record(
+            json!({"event":kind,"seconds":start.elapsed().as_secs_f64(),"before":before,"after":after.position_sec}),
+        );
+    }
+    let device = player
+        .list_output_devices()
+        .unwrap()
+        .into_iter()
+        .find(|d| d.is_default)
+        .unwrap();
+    for id in [Some(device.id), None] {
+        let start = Instant::now();
+        player.set_output_device(id.clone()).unwrap();
+        // Existing device-selection contract closes current playback and opens
+        // an unloaded stream for the next audition (APP_BEHAVIOR.md).
+        let snapshot = wait(&|s| !s.is_loaded && !s.is_playing && !s.device_lost);
+        record(
+            json!({"event":"device_route_reopen","selection":id,"seconds":start.elapsed().as_secs_f64(),"playing":snapshot.is_playing}),
+        );
+    }
+    let start = Instant::now();
+    let other_id = TrackId("native-lifecycle-b".into());
+    player.play_track(other_id.clone(), &other, 30.0).unwrap();
+    wait(&|s| s.track_id.as_ref() == Some(&other_id) && s.is_playing && s.position_sec > 30.0);
+    record(json!({"event":"source_switch","seconds":start.elapsed().as_secs_f64()}));
+    player
+        .play_master(track, &source, settings.clone(), 30.0, true, false)
+        .unwrap();
+    let mut s = settings;
+    s.eq_high_db = 4.1;
+    player.update_chain(s, true, false).unwrap();
+    std::thread::sleep(Duration::from_millis(60));
+    let pending = player.snapshot().unwrap().landing_pending;
+    let start = Instant::now();
+    player.stop();
+    wait(&|s| !s.is_playing && !s.landing_pending);
+    record(
+        json!({"event":"stop_pending_preparation","pending_observed":pending,"seconds":start.elapsed().as_secs_f64()}),
+    );
+    std::fs::write(output,serde_json::to_vec_pretty(&json!({"scope":"muted real AudioPlayer API, native output; snapshot-observed settling, no installed UI or listening claim",
+        "source_sha256":saved["source_sha256"],"rows":rows})).unwrap()).unwrap();
+}
 
 #[test]
 #[ignore = "requires local output device and restored private source; writes timing JSON only"]
