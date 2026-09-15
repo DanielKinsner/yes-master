@@ -1,5 +1,16 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-15 — Mastering-quality implementation started locally.**
+> Dan authorized implementation, validation, internal docs and small local commits
+> in the existing checkout. Branch `codex/mastering-quality` starts at local
+> `7534f612`; no push/main merge/release/deployment/spend or private-audio commit.
+> [Checkpoint evidence](reviews/2026-09-15-mastering-quality-implementation-evidence.md)
+> records SRC and no-target/short-input protection, Density Auto and early C0
+> preparation experiments. D1's build, 38 headless checks and 892 frontend tests
+> pass; refreshed captures were inspected. Fresh application exports reproduce
+> the historical owner On/Off WAV hashes exactly. A/B1 integration verification
+> and C0 comparisons are running; B2/B3 and sonic-policy adoption remain open.
+
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
 > Dan accepts longer initial analysis/preparation for demonstrated audio quality,
 > fidelity and subsequent interaction benefits. The [revised plan](plans/2026-09-15-mastering-quality-implementation-plan.md)

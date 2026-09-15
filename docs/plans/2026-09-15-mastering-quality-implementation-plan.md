@@ -2,8 +2,11 @@
 
 Date: September 15, 2026. Reviewed checkout: `5426041c` on `main`.
 Revision 2, following plan review and Dan's upfront-analysis direction.
-Status: **revised implementation plan; production work and sonic calibration
-have not started.** This file replaces the earlier draft as the current plan.
+Status: **implementation in progress**, authorized September 15 on local
+`codex/mastering-quality` from `7534f612`. See the
+[checkpoint ledger](../reviews/2026-09-15-mastering-quality-implementation-evidence.md).
+Sonic-policy adoption and calibration remain gated. This file replaces the
+earlier draft as the current plan.
 
 ## In plain language
 
