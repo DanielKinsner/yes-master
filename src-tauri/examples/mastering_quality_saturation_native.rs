@@ -66,10 +66,22 @@ impl Ring {
     }
     fn dot(&self, coefficients: &[f64]) -> f64 {
         let length = self.data.len() / 2;
-        self.data[self.next..self.next + length]
+        let mut samples = self.data[self.next..self.next + length].chunks_exact(4);
+        let mut weights = coefficients.chunks_exact(4);
+        // Independent dependency chains allow instruction-level parallelism.
+        // The changed f64 addition order has a separate finite-output check.
+        let (mut a, mut b, mut c, mut d) = (0., 0., 0., 0.);
+        for (x, h) in samples.by_ref().zip(weights.by_ref()) {
+            a += x[0] * h[0];
+            b += x[1] * h[1];
+            c += x[2] * h[2];
+            d += x[3] * h[3];
+        }
+        samples
+            .remainder()
             .iter()
-            .zip(coefficients)
-            .fold(0., |sum, (x, c)| sum + x * c)
+            .zip(weights.remainder())
+            .fold((a + b) + (c + d), |sum, (x, h)| sum + x * h)
     }
 }
 struct Processor {

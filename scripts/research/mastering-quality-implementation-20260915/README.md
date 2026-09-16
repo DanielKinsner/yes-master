@@ -153,3 +153,24 @@ and a fresh output directory, then use `saturation_native_reference.py check
 complete causal output including ringout; timing is an isolated native prototype,
 not a production/device callback pass. Preserve the exact kernel/input/report
 hashes and the native protocol/results before changing filter design.
+
+`compare_saturation_native_cost.py --root EVIDENCE --output FRESH.json` joins
+the retained three alternating serial/four-accumulator pairs and qualified
+independent outputs. The serial example is pinned at `7e4a7327`; the subsequent
+example retains the arithmetic alternative, with its short-filter regression
+explicit. This is a research implementation, not a production saturation switch.
+
+`prepare_saturation_whole.py --output FRESH` generates an isolated source copy
+pinned to local `7e4a7327` (including the **serial** native filter). It asserts
+production DSP identity and binds generated files in `provenance.json`. Build
+that standalone manifest, copy its executable, then run `<job.json> <fresh-output>`.
+The retained `e-whole-job-v1.json` binds existing C1 cases/coefficients and kernels;
+it is local private-source evidence. Production source files are not edited.
+`check_completed_device_rows.py` can independently verify these completed PCM
+rows; its generic device-oriented filename does not make this an actual-device run.
+`evaluate_saturation_whole.py` takes `--report`, `--metrics-map`, and a fresh
+`--output` to retain original C1 anchors. After all 16 rows finish, run
+`summarize_saturation_whole.py --root EVIDENCE --output FRESH.json` to validate
+all joined hashes/checks and locate gain-removed whole-delivery differences.
+The protocol/results explicitly separate fixed-duration export tails, complete
+exterior native ringout, full-song protection and still-open adoption gates.

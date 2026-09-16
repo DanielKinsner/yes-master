@@ -50,10 +50,15 @@
 > match 24/24. No analysis policy, automatic sonic policy, control mapping or
 > unseen-holdout result is adopted.
 > [Saturation calibration](reviews/2026-09-15-saturation-calibration-results.md)
-> retains isolated continuity/antialias comparisons and eight independently
-> verified native finite-filter cases. The long filter has three isolated block
-> interval exceedances; whole-chain, actual-device, selected-C and listening
-> evidence remain open. Preset intent and gated constants are unchanged.
+> retains isolated continuity/antialias comparisons, eight independently verified
+> native finite-filter cases and **16 independently passing whole-song outputs**.
+> Four current controls are exact and four f64-only controls pass numerical
+> isolation. Filters redistribute limiter activity without resolving C1 character
+> failures. The serial long-filter chain costs 68-148 s on these songs; table reuse
+> is negligible. A separate accumulation trial improves long-filter processing
+> 8.12% but regresses the short filter 11.10%. Earlier block-interval exceedances,
+> actual-device/selected-C evidence and owner calibration/listening remain open.
+> Preset intent and gated constants are unchanged.
 > No installed/Mac/release verdict follows from this local implementation.
 
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**

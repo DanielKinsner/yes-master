@@ -129,3 +129,119 @@ remains separate from this finite-convolution traversal. Next, compare matched
 whole-chain outputs and limiter redistribution under the existing qualified
 finalizer, keeping the long filter as a fidelity reference. Actual callback,
 selected-C and owner calibration/listening gates remain open.
+
+## Native accumulation experiment
+
+The [predeclared accumulation experiment](2026-09-15-saturation-native-optimization-protocol.md)
+changes only the f64 dot-product addition order. The original serial implementation
+is preserved at `7e4a7327` and in `e-native-v1.exe`; the current research example
+retains the four-accumulator alternative. Neither is production saturation.
+
+All eight alternate outputs pass the unchanged independent **1e-10** limit;
+maximum error is **1.089e-14**. All **48/48** repeated output hashes match their
+respective qualified implementation, and each run retains chunk invariance.
+`e-native-opt-cost-v1.json` verifies the job, inputs, outputs and reference reports
+before aggregating three alternating pairs. Other whole-chain research was running.
+
+| Filter | Serial median complete processing | Four accumulators | Median paired change | Observed maximum block, serial / alternate |
+| --- | ---: | ---: | ---: | ---: |
+| Short 8x | 47.23 ms | 52.48 ms | **11.10% slower** | 0.851 / 1.047 ms |
+| Long 8x | 210.89 ms | 193.67 ms | **8.12% faster** | 3.563 / 3.274 ms |
+
+These are 32,768 stereo frames plus full ringout. The long filter improves in
+all 12 matched signal/pair comparisons (3.80-10.64%); the short one regresses in
+all 12 (3.58-15.23%). Kernel/state sizes and latency are unchanged. Median table
+preparation stays below 0.03 ms and state construction below 0.043 ms. None of
+the 4,644 short or 4,752 long blocks per implementation exceeds its nominal
+5.805 ms interval in these subsequent trials. That does **not** invalidate the
+three earlier exceedances, establish their cause, or certify actual callbacks.
+
+Recommendation: retain this as a measured long-filter optimization candidate;
+do not apply it indiscriminately to the shorter filter. The modest long-filter
+benefit does not remove its ongoing convolution cost or establish a production
+budget. Strict example Clippy/build pass. Alternate executable SHA-256:
+`5fd194f24f7c57312dc9ee0b04e3a6150b2523b5626cdaa8f1b0082dfc889ec0`.
+The whole-chain comparison below remains pinned to the **serial** implementation;
+its timings must not be credited to this alternative.
+
+## Whole-chain development comparison
+
+The [frozen whole-chain protocol](2026-09-15-saturation-whole-chain-protocol.md)
+uses the existing C1 single candidate on Coat/Piano/Imaginal at -14 and actual
+source-level current processing on Coat at -9. Each compares current f32 curve,
+f64 evaluation of that same curve, short 8x and long 8x. Production coefficients,
+settings and source/drive identities are asserted. The isolated source copy is
+pinned to `7e4a7327`; no production curve, preset, continuity knee or C selection
+is changed.
+
+All **four current controls reproduce fresh unmodified production PCM exactly**.
+F64-only raw differences are at most **3.577e-7**, passing the declared 1e-5
+isolation limit. All **16 complete 48 kHz float files** have independently correct
+frame counts and pass full-file SOXR16/64 peak and LUFS checks, with zero
+full-scale samples. All meet their respective -14/-9 target; the highest native
+qualified peak is -1.92428 dBTP against -1. Exact file hashes bind the native,
+independent and source-anchored metric reports in `e-whole-summary-v1.json`.
+
+The comparison flushes combined FIR/limiter latency and retains the original
+N-frame aligned interval. This verifies the fixed-duration export contract;
+complete exterior FIR ringout is covered separately by the finite native probe.
+Whole songs do not acquire extra duration. The source/matched metrics use the
+original frozen C1 section and attack anchors.
+
+### Quality indicators remain separate
+
+- Piano's section-contrast failure, Imaginal's paired-attack failures and Coat's
+  -9 section-contrast failure remain under the proposed C1 limits with **all four
+  variants**. Coat's -14 single candidate passes those descriptive limits. The
+  filters do not resolve the C1 character-policy problem.
+- Imaginal's maximum limiter reduction changes from **4.89892 dB** to **5.02631 /
+  4.91372 dB** with short/long filters; active fraction changes from **19.5334%**
+  to **19.5734 / 19.5598%**. Its delivered peak changes from -1.92428 to
+  **-2.50161 / -2.37714 dBTP** at the same target. Limiter activity is redistributed,
+  not uniformly reduced.
+- Relative to matched current processing, the largest whole-song tonal-band
+  change is **0.03132 dB**, side/mid change **0.00239 dB**, correlation change
+  **0.000155**, and fixed-section contrast change **0.00624 dB**. Small aggregate
+  changes do not prove sample equivalence or inaudibility.
+- The largest raw waveform changes are Imaginal's **0.32514 / 0.28812** for
+  short/long filters. Independent gain-removed delivery scans locate both at
+  **139.4446875 s**, away from file boundaries. Error RMS relative to current is
+  **-44.61 / -45.13 dB** there across the full song; Piano's is -104.04 / -109.05 dB.
+  These are changes from the current chain, not error versus an ideal whole-chain
+  reference. The isolated analytic alias tests cannot attribute every musical
+  waveform difference solely to removed aliasing or establish audible preference.
+
+### Preparation and recurring processing cost
+
+Both kernel files are read and phase tables prepared **once in 0.317 ms**, then
+reused across the complete comparison. The serial-filter whole-chain times below
+include limiter observation; they are single loaded traversals, not isolated CPU
+benchmarks or actual audio callback durations.
+
+| Case | Current chain | Short 8x chain | Long 8x chain | SRC range | Final verification/landing range |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Coat single, -14 | 2.884 s | 22.233 s | 93.191 s | 0.207-0.281 s | 12.066-16.249 s |
+| Piano single, -14 | 2.268 s | 17.954 s | 68.118 s | 0.168-0.193 s | 9.951-10.456 s |
+| Imaginal single, -14 | 4.262 s | 34.219 s | 148.475 s | 0.031-0.051 s | 17.339-20.377 s |
+| Coat current, -9 | 3.571 s | 23.047 s | 87.418 s | 0.208-0.366 s | 10.803-14.107 s |
+
+Ranges include all four variants, including the f64-only control. File writing,
+independent references and metric scans are separate research cost; these sums
+are not a measured user's total session. Table reuse saves almost no time relative
+to per-sample filtering. A cache may reuse a matching rendered result, but cannot
+remove nonlinear work after a relevant settings change.
+
+**Recommendation:** keep the long filter as a fidelity reference and evaluate a
+more efficient implementation against its full response before production use.
+The shorter filter's known legitimate-harmonic loss remains a rejection reason
+despite its lower cost. This run proves finite whole-chain integration and final
+output compliance on four development cases; it does not justify an unconditional
+filter migration. Broader rates/sources, actual callback and session budgets,
+the selected C policy, continuity-knee calibration and targeted owner listening
+remain open. Current intended preset voicing and gated constants remain unchanged.
+
+Evidence: `e-whole-job-v1.json`, `e-whole-source-v1/provenance.json`,
+`e-whole-v1/report.json`, `e-whole-independent-v1/comparison.json`,
+`e-whole-metrics-v1.json` and `e-whole-summary-v1.json`. Standalone Clippy/build
+pass. Copied whole-chain executable SHA-256:
+`f18e67324999681e7b41fceb733967515afa1a4bf6aa236ea47ef0ef8a0a4306`.
