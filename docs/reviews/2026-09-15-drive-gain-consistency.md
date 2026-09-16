@@ -211,3 +211,42 @@ above-gate inputs (`c1-independent-gating-native-v1.json`). Earlier Piano/Metal
 -80 failed reports remain; fresh v2 reference checks resume the completed audio
 without rerendering it. This does not turn unavailable target or character data
 into a feasible candidate.
+
+## Normalized selector reference: first seven-source result
+
+The [separately frozen development experiment](2026-09-15-drive-selector-reference-experiment.md)
+re-scores completed metrics against each input copy's own single normalized
+candidate for tone/stereo allowance. It leaves dynamics limits, slack, floor,
+search/tie-break and corrected-control fallback unchanged. No audio is rendered
+or remeasured; the old f32 numeric failures and original analysis anchors remain.
+The eight-source specification/manifest precede evaluation. Imaginal's remaining
+metrics were unavailable at this first checkpoint, so the seven-source result
+is explicitly separate (`c1-normalized-reference-seven-v1.json`).
+
+| Source | Old preserving consistency | Normalized-reference consistency |
+| --- | ---: | ---: |
+| Coat | 8/12 | 12/12 |
+| Piano | 12/12 | 12/12 |
+| Aphelion | 12/12 | 12/12 |
+| Funk | 8/12 | 12/12 |
+| Metal | 0/12 | 12/12 |
+| Baby | 10/12 | 12/12 |
+| Rich | 12/12 | 12/12 |
+| Total | **62/84** | **84/84** |
+
+These compare candidate identity/fallback at -40/-80 dB across three preset/
+intensity groups and two targets. Target-first stays 84/84 in both rules. The
+new reference changes 13 of 42 original preserving outcomes: fallbacks increase
+**16 to 17**, and target hits (including fallbacks) decrease **20 to 18**. Fifteen
+new-rule selections have explicit character failures (fallbacks), versus thirteen
+before. Thus input-level consistency improves without establishing a universally
+better master or a successful candidate for every preset. For example, Metal
+Universal-75 at -9 selects a qualified candidate landing about 2.164 LU below
+target, while Baby Universal-75 at -9 falls back about 7.124 LU below target.
+These misses are preserved rather than converted into passing quality claims.
+
+Recommendation: carry the normalized reference into corrected-chain development
+because it resolves the isolated reference dependence; retain both target-first
+and preserving comparisons. Resolve its fallback/character limitations, actual
+source-analysis behavior and measured budget before freezing any holdout rule.
+No production selector, preset calibration or owner preference is adopted.
