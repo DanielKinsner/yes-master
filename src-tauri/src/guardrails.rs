@@ -14,9 +14,9 @@
 //! no pre-normalization pass is needed before comparison.
 
 use crate::confidence::Confidence;
-use crate::types::{MasteringSettings, SourceProfile};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::types::TrackId;
+use crate::types::{MasteringSettings, SourceProfile};
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 
