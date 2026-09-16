@@ -19,6 +19,8 @@ def main():
     parser = argparse.ArgumentParser()
     for name in ('metrics', 'ffmpeg', 'output'):
         parser.add_argument('--'+name, type=Path, required=True)
+    parser.add_argument('--stream-padding', action='store_true',
+                        help='construct the identical finite zero extension in FFmpeg, without retaining another full-song WAV')
     a = parser.parse_args()
     assert not a.output.exists()
     a.output.mkdir(parents=True)
@@ -30,6 +32,7 @@ def main():
             if selection[mode]['selected'] is not None:
                 ids.add(selection[mode]['selected'])
     report = dict(metrics_sha256=sha(a.metrics), ffmpeg_sha256=sha(a.ffmpeg), rows=[],
+                  padding_method='ffmpeg-double-adelay-apad' if a.stream_padding else 'retained-double-wav',
                   reference='finite zero extension, 2048 input frames at both edges; SOXR16/64 precision33 plus sample peak; 0.002 dB independent numerical tolerance')
     for row in metrics['rows']:
         if row['id'] not in ids:
@@ -38,13 +41,15 @@ def main():
         assert sha(path) == row['native']['sha256']
         x, rate = sf.read(path, always_2d=True, dtype='float64')
         assert np.isfinite(x).all() and len(x) == row['metrics']['frames']
-        padded = a.output / (row['id'] + '-padded.wav')
-        sf.write(padded, np.pad(x, ((2048,2048),(0,0))), rate, subtype='DOUBLE')
+        padded = path if a.stream_padding else a.output / (row['id'] + '-padded.wav')
+        if not a.stream_padding:
+            sf.write(padded, np.pad(x, ((2048,2048),(0,0))), rate, subtype='DOUBLE')
+        padding_filter = 'adelay=2048S:all=1,apad=pad_len=2048,' if a.stream_padding else ''
         peaks = dict(samples=[float(20*np.log10(max(v,1e-30))) for v in np.max(np.abs(x),axis=0)])
         start = time.perf_counter()
         for factor in (16,64):
             process = subprocess.run([str(a.ffmpeg),'-hide_banner','-nostats','-i',str(padded),'-af',
-                f'aformat=sample_fmts=dbl,aresample={rate*factor}:resampler=soxr:precision=33:osf=dbl,astats=metadata=0:reset=0',
+                f'aformat=sample_fmts=dbl,{padding_filter}aresample={rate*factor}:resampler=soxr:precision=33:osf=dbl,astats=metadata=0:reset=0',
                 '-c:a','pcm_f64le','-f','null','-'], capture_output=True,text=True,check=True)
             values = [float(v) for v in re.findall(r'Peak level dB: (-inf|[-\d.]+)',process.stderr)]
             assert len(values) == x.shape[1]+1

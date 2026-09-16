@@ -160,7 +160,8 @@ has no candidate satisfying all initial character constraints. The corrected
 control fallback is explicit and retains its character failures. These results
 reject a blanket claim that the simple rule or this grid satisfies every preset;
 they do not justify changing Loud's voicing or widening thresholds to hide misses.
-Independent whole-file finalist checks for these additional groups are running.
+Independent whole-file finalist/control checks now pass 9/9 expanded Coat and
+16/16 Piano files. The refined comparisons also pass their applicable checks.
 
 The application restart interrupted Funk after 31 fully written deliveries.
 Those files/report are retained unchanged. The recovery-capable probe verifies
@@ -172,7 +173,8 @@ restores the typed settings before checking, with no numeric tolerance added.
 Recovery elapsed time is recorded separately; it cannot reconstruct the missing
 wall-clock duration of the interrupted session. The remaining five original
 sources continue from their existing jobs; no completed research is discarded.
-The resumed run has passed those checks and continued after the 31st case.
+The resumed Funk run completed all 60 cases, rendering only the missing 29.
+Recovery work took 779.864 seconds; the interrupted total remains unavailable.
 A deliberately mismatched job hash is rejected before any delivery is written.
 The original report remains authoritative for its recorded numeric diagnostics;
 JSON parsing/reserialization in a combined recovery report can change an f64
@@ -209,9 +211,11 @@ All five selected/control checks in `c1-coat-refined-independent-v1` pass; four
 recheck existing coarse outputs and one is the new selected refinement.
 
 Owner Universal-50's -0.75 dB refinement meets -9 and all current constraints,
-with -0.740 dB section contrast and -0.803 dB paired attack median. Its separate
-independent finalist check is queued. Piano refinements continue to expose
-section/target conflicts; they are retained even when target itself is met.
+with -0.740 dB section contrast and -0.803 dB paired attack median. Its expanded
+refined report passes all nine independent selected/control checks. Piano's
+refinements still cannot produce a character-qualified -14 hit; the best -9
+results miss by 6.027/6.100 LU for Universal-75/50. All 16 selected/control
+independent checks pass; target/character failures remain explicit.
 The completed Funk coarse run adds 60 deliveries and **15/15** independent
 selected/control checks. Universal-75/50's simple rule meets -14, while their
 preserving -9 choices miss by 4.635/4.695 LU. Loud-75's -14 preserving choice
@@ -223,8 +227,41 @@ development observations, not controlled interaction/session budgets. The old
 serial coordinator will stop at its existing-output guard after Aphelion because
 Metal is owned by a separate worker; that expected controller stop must not be
 mistaken for a failed DSP case or cause completed files to be rerendered. The
-other queues continue Metal→Baby and Rich→Imaginal. No new holdout is open,
+Metal and Baby have now completed; the remaining coarse queue is Imaginal.
+No new holdout is open,
 and neither the sonic direction nor shipping limits have been adopted.
+
+Funk's refinements improve the preserving Universal-75/50 -9 misses to
+4.527/4.402 LU, still far outside target tolerance. Loud-75 at -14 finds a
+qualified hit after one midpoint (-14.080 LUFS). Its refined selected/control
+report passes **15/15** independent checks. Metal needs no midpoint: at -14,
+Universal-75/50 select +3 dB relative to the simple rule because the single
+candidate fails the control-relative highest tonal-band constraint. Its -9
+groups and both Loud groups retain explicit control fallbacks. Metal's **14/14**
+independent checks pass. Aphelion's coarse **14/14** checks also pass, while its
+refinements and Rich/Baby metrics proceed. Passing protection is distinct from
+meeting character/target constraints.
+
+The original-source -40/-80 dB jobs now run with the same fixed coarse grid,
+three preset groups, original analysis/guards and source anchors. These are
+new gain-copy comparisons; no original evidence is replaced. A 25 GiB free-disk
+guard stops a queue before starting another job if storage becomes insufficient.
+
+### Independent reference storage
+
+`check_drive_finalists.py --stream-padding` builds the same 2,048-frame leading
+and trailing zeros in FFmpeg's double-precision filter graph instead of writing
+another padded full-song WAV. `verify_reference_padding.py` proves exact padding
+bytes and **10 bit-identical SOXR16/64 outputs** across mono/stereo short/edge
+signals and the retained two-second stress witness. Both versioned reports are
+retained in `reference-stream-padding-v1/v2/`.
+
+Five full owner-song checks also produce identical peak, loudness, file hash and
+pass fields to the earlier retained-WAV method (`c1-coat-stream-padding-v1`,
+`reference-stream-padding-v2/whole-song-parity.json`). This avoids **939,438,440
+bytes** of additional retained padding for that comparison. All old padded
+evidence remains intact. This establishes a storage saving, not a controlled
+runtime improvement, and keeps the full-file independent verification intact.
 
 Develop on the original eight sources and their gain copies at -14/-9 LUFS,
 covering Universal 75, Universal 50 and the deliberately dense Loud preset.
