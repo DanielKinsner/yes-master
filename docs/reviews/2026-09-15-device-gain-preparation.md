@@ -213,6 +213,13 @@ No comparison to unmeasured older memory/CPU is inferred.
 
 ## Remaining scope
 
+The subsequent [combined-gain transition correction](2026-09-15-combined-gain-transition.md)
+closes a separate 1.023 dB bump when device correction and Volume Match change
+inversely. The six corrected/interrupted cases stay within 6.472e-7 dB, with exact
+settled PCM, 507 library/full fixture passes and zero observed deadline misses
+across 655 rapid-gain and 606 EQ-edit native callbacks. Updated lifecycle and
+separate session resource observations are in that record.
+
 Dynamic settings transitions beyond the equal-output regression, seek/fade boundaries
 and the final-result UI contract remain distinct from steady-state whole-file
 protection. No blanket ceiling guarantee for every transient or hardware

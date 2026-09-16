@@ -443,16 +443,22 @@ fn mastering_quality_native_lifecycle_bench() {
 #[test]
 #[ignore = "requires local output device and restored private source; writes timing JSON only"]
 fn mastering_quality_native_callback_bench() {
-    callback_bench(false);
+    callback_bench(false, false);
 }
 
 #[test]
 #[ignore = "muted native streaming SRC candidate; requires restored private source and output device"]
 fn mastering_quality_streaming_callback_bench() {
-    callback_bench(true);
+    callback_bench(true, false);
 }
 
-fn callback_bench(streaming_src: bool) {
+#[test]
+#[ignore = "muted native interrupted gain ramps; requires restored private source and output device"]
+fn mastering_quality_gain_transition_callback_bench() {
+    callback_bench(true, true);
+}
+
+fn callback_bench(streaming_src: bool, gain_edits: bool) {
     let path = std::env::var("YES_MASTER_BENCH_FILE").expect("source path");
     let out = PathBuf::from(std::env::var("YES_MASTER_CALLBACK_REPORT").expect("fresh JSON path"));
     assert!(!out.exists());
@@ -619,19 +625,30 @@ fn callback_bench(streaming_src: bool) {
     let mut lufs_updates = 0;
     let mut previous_lufs = i32::MIN;
     let edit_start = Instant::now();
-    for generation in 1..=120 {
+    let edits = if gain_edits { 1200 } else { 120 };
+    for generation in 1..=edits {
         settings.eq_high_db = if generation % 2 == 0 { 1.0 } else { -1.0 };
         gains.publish(gain_stage::GainPlan {
             revision: generation + 1,
-            raw_revision: generation + 1,
-            landing: 1.,
-            volume_match: 1.,
+            raw_revision: if gain_edits { 1 } else { generation + 1 },
+            landing: if gain_edits && generation % 2 == 0 {
+                0.5
+            } else {
+                1.
+            },
+            volume_match: if gain_edits && generation % 2 != 0 {
+                0.5
+            } else {
+                1.
+            },
         });
-        tx.send(LiveCoeffUpdate {
-            generation: generation + 1,
-            coeffs: crate::dsp::ChainCoeffs::from_settings(chain_rate, &settings),
-        })
-        .unwrap();
+        if !gain_edits {
+            tx.send(LiveCoeffUpdate {
+                generation: generation + 1,
+                coeffs: crate::dsp::ChainCoeffs::from_settings(chain_rate, &settings),
+            })
+            .unwrap();
+        }
         std::hint::black_box(spectrum.compute(&ring));
         snapshots += 1;
         let current = lufs.load(Ordering::Relaxed);
@@ -639,7 +656,7 @@ fn callback_bench(streaming_src: bool) {
             lufs_updates += 1;
             previous_lufs = current;
         }
-        std::thread::sleep(Duration::from_millis(50));
+        std::thread::sleep(Duration::from_millis(if gain_edits { 5 } else { 50 }));
     }
     cancel.store(true, Ordering::SeqCst);
     let cancel_start = Instant::now();
@@ -661,7 +678,9 @@ fn callback_bench(streaming_src: bool) {
         "streaming_src_candidate":streaming_src,"source_rate":pcm.sample_rate,"chain_rate":chain_rate,
         "file_rate_override":std::env::var("YES_MASTER_CALLBACK_FILE_RATE").ok(),
         "streaming_construction_s":streaming_construction_s,"streaming_error_code":stream_error.as_ref().map(|slot|slot.load(Ordering::Acquire)),
-        "initial_settings":initial_settings,"coefficient_edits":120,
+        "initial_settings":initial_settings,"coefficient_edits":if gain_edits { 0 } else { edits },
+        "combined_gain_edits":if gain_edits { edits } else { 0 },
+        "gain_edit_interval_ms":if gain_edits { Some(5) } else { None },
         "device":device.name().unwrap_or_default(),"sample_rate":rate,"channels":channels,
         "requested_frames":256,"granted_frames_min":rows.iter().map(|r|r[1]).min(),"granted_frames_max":rows.iter().map(|r|r[1]).max(),
         "decode_s":decode_s,"playback_src_s":playback_src_s,"first_peak_meter_s":first_meter_s,

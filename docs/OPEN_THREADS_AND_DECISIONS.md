@@ -21,13 +21,17 @@
 > Full desktop/private fixtures (505 library tests), strict Clippy, both bridges
 > and 606 loaded native callbacks pass. All **16 corrected whole-source outputs**
 > now match their prepared PCM exactly and independently pass peak/LUFS checks.
+> A subsequent [combined-gain correction](reviews/2026-09-15-combined-gain-transition.md)
+> removes a 1.023 dB bump during inverse device-correction/Volume Match edits.
+> Six normal/interrupted cases now stay within 6.472e-7 dB; 507 library tests,
+> full private fixtures, 655 rapid-gain and 606 EQ-edit native callbacks pass.
 > Broader dynamic boundaries and the final-result UI contract remain open.
 >
-> Corrected actual-device preparation/application is **46.821/46.945 s** initially,
-> **2.083/2.266 s** for a new target, and **75/189 ms** for a cached target. Raw DSP
+> Latest actual-device preparation/application is **44.962/45.142 s** initially,
+> **2.010/2.244 s** for a new target, and **75/191 ms** for a cached target. Raw DSP
 > is reused; actual gain/SRC and whole-file delivery checks still run on new targets.
 > Source/file and device caches cap retained PCM at 288/192 MiB. The loaded native
-> session observes **50.840 s wall / 50.359 s CPU / 732 MiB peak working set**.
+> session observes **48.741 s wall / 47.516 s CPU / 722 MiB peak working set**.
 > Preparation, output application, callback responsiveness and session cost remain
 > separate; these are not isolated speed comparisons or new listening evidence.
 >

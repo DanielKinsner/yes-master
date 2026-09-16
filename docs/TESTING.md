@@ -110,6 +110,14 @@ cache reuse/invalidation and byte limits, concurrent gain-plan publication,
 raw/output revisions, small attenuation, seek and callback allocation behavior.
 The ordinary compensating-edit regression freezes a 0.01 dB maximum deviation
 from the previous crossfade in each 5 ms window across eight +/-12 dB cases.
+`compensating_device_and_volume_match_edits_preserve_combined_level` separately
+checks simultaneous inverse gain changes and interruptions at 44.1/48/96 kHz;
+the same 0.01 dB criterion retains its original failed 1.023 dB witness. Zero-gain
+ramps must remain finite, monotonic and allocation-free. The ignored
+`audio::native_callback_bench::mastering_quality_gain_transition_callback_bench`
+uses the existing callback source/report/file-rate environment and sends 1,200
+gain edits at 5 ms intervals with fixed DSP coefficients. Keep it distinct from
+the existing 120-EQ-edit probe; see the [combined-gain record](reviews/2026-09-15-combined-gain-transition.md).
 Additional tests compare actual source-gain/SRC PCM around the existing unity
 shortcut and require fresh reconstruction before gain planning when the full-file
 residual bound becomes inaccurate. These tests do not prove every dynamic
