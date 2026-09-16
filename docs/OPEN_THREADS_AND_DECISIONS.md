@@ -1,5 +1,105 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-16 — Owner review first; sound experiments paused.**
+> Dan wants to review the local correctness, playback, measurement, performance
+> and readout changes before any main integration, with possible beta inclusion.
+> The [review guide](reviews/2026-09-16-mastering-fixes-review.md) pins the current
+> code/research snapshot at `f88f042b` on `codex/mastering-quality`, based on local
+> main `7534f612`, and separates app changes from interleaved experiment tooling.
+> Pause new sound experiments and DSP variations. After the fixes are approved
+> and merged, pursue sound research on a separate branch from verified main.
+> The automatic sound-priority choice is deferred; do not ask for it during this
+> review. The LANDR comparison motivated investigation, and the owner now separates
+> demonstrated defects from broader mastering improvements. It does not establish
+> a fundamental architectural failure or the competitor's internal processing.
+> Preserve all frozen evidence and private fixtures. B3's remaining validation
+> limits and existing release gates remain explicit; unfinished C/E research is
+> not a new blanket beta requirement. No merge/push/release/deployment is authorized
+> now. The active next step is owner review, superseding the continuation below.
+
+> **2026-09-15 — Mastering-quality implementation active locally.**
+> Dan authorized implementation, testing, internal docs and small local commits
+> in the existing checkout. `codex/mastering-quality` starts at local `7534f612`;
+> no push/main merge/release/deployment/spend or private-audio commit is authorized.
+> The [checkpoint ledger](reviews/2026-09-15-mastering-quality-implementation-evidence.md)
+> records A1/A2, B1, D1/D2 and C0 complete locally; B2's qualified core is integrated
+> with explicit reference/official-sequence limits. Frozen evidence/fixtures remain intact.
+>
+> **B3 remains in progress.** Track, rendered preview and Album finalizers pass,
+> including programme joins and component PCM parity. Production Original/Mastered
+> conversion now uses the actual opened device configuration and the encoding's
+> pre-encode PCM rate. [Device preparation](reviews/2026-09-15-device-gain-preparation.md)
+> fixes the independently confirmed whole-Imaginal device-rate ceiling miss.
+> All 32 retained-output core checks and 16 first-placement original-source cases
+> pass whole-file independent verification. The first placement at `9ebd2f81`
+> subsequently exposed brief 9.37-12 dB transition dips. The corrected placement
+> preserves compensated DSP crossfades and verifies actual landed/SRC PCM using
+> cached raw facts; all eight equal-output transition cases now match exactly.
+> Full desktop/private fixtures (505 library tests), strict Clippy, both bridges
+> and 606 loaded native callbacks pass. All **16 corrected whole-source outputs**
+> now match their prepared PCM exactly and independently pass peak/LUFS checks.
+> A subsequent [combined-gain correction](reviews/2026-09-15-combined-gain-transition.md)
+> removes a 1.023 dB bump during inverse device-correction/Volume Match edits.
+> Six normal/interrupted cases now stay within 6.472e-7 dB; 507 library tests,
+> full private fixtures, 655 rapid-gain and 606 EQ-edit native callbacks pass.
+> Broader dynamic boundaries and the final-result UI contract remain open.
+>
+> Latest actual-device preparation/application is **44.962/45.142 s** initially,
+> **2.010/2.244 s** for a new target, and **75/191 ms** for a cached target. Raw DSP
+> is reused; actual gain/SRC and whole-file delivery checks still run on new targets.
+> Source/file and device caches cap retained PCM at 288/192 MiB. The loaded native
+> session observes **48.741 s wall / 47.516 s CPU / 722 MiB peak working set**.
+> Preparation, output application, callback responsiveness and session cost remain
+> separate; these are not isolated speed comparisons or new listening evidence.
+>
+> B4 has 316 independent encoded technical checks, exact FLAC/AIFF PCM parity and
+> unclipped MP3 receipt readback. Lossy ceiling misses remain explicit/advisory;
+> bounded headroom/re-encoding experiments do not justify automatic adoption.
+> [C1 development](reviews/2026-09-15-drive-prototype-protocol.md) has 517 original
+> coarse/refined deliveries plus 960 quiet-copy renders, complete metrics and
+> 243 independently passing quiet-copy selected/control files. The separate filter-precision
+> correction reduces tested normalized-copy differences to at most 5.96e-7 with
+> unchanged coefficients, at 19-29% extra chain CPU in loaded paired trials.
+> Its full validation and preserved old references are recorded in
+> [gain-copy diagnosis](reviews/2026-09-15-drive-gain-consistency.md).
+> A [normalized-reference selector experiment](reviews/2026-09-15-drive-selector-reference-experiment.md)
+> completes all eight sources: preserving candidate/fallback consistency improves
+> from 73/96 to 96/96, while original-group fallbacks increase from 18 to 21.
+> Character/fallback limits remain open. The [actual-analysis diagnostic](reviews/2026-09-15-source-analysis-gain-results.md)
+> completes 48 analyses: normalized-copy coefficients match 48/48, versus 33/48
+> with actual-level analysis. Original versus normalized-source coefficients
+> match 24/24. No analysis policy, automatic sonic policy, control mapping or
+> unseen-holdout result is adopted.
+> A [low-drive diagnostic](reviews/2026-09-15-drive-small-signal-results.md)
+> retains four exact controls and eight new independently protected outputs.
+> Lower drive clears Piano's contrast failure but lands at -18.7 for a -14
+> request; Imaginal's attacks recover with a large miss and changed tone.
+> All four low-drive pairs fail the frozen numerical convergence limit, so no
+> linear reference or revised selection rule is claimed.
+> The subsequent [fixed lower-drive grid](reviews/2026-09-15-drive-lower-grid-results.md)
+> adds three exact controls and nine freshly independently protected whole files.
+> With unchanged character limits, Coat/Piano/Imaginal select -14.000/-14.804/
+> -18.142 LUFS for a -14 request. The single rule suffices for Coat; its other
+> candidates cost 62.405 s of additional audio evaluation. Target-first retains
+> Piano/Imaginal dynamics failures. These are development findings; owner
+> direction, broader corrected-chain validation and C2/C3 remain open.
+> [Saturation calibration](reviews/2026-09-15-saturation-calibration-results.md)
+> retains isolated continuity/antialias comparisons, eight independently verified
+> native finite-filter cases and **16 independently passing whole-song outputs**.
+> Four current controls are exact and four f64-only controls pass numerical
+> isolation. Filters redistribute limiter activity without resolving C1 character
+> failures. The serial long-filter chain costs 68-148 s on these songs; table reuse
+> is negligible. A separate accumulation trial improves long-filter processing
+> 8.12% but regresses the short filter 11.10%.
+> A separate AVX experiment subsequently reduces paired short/long processing
+> cost 16.61/31.79% on this host, with all eight outputs exact against the prior
+> four-accumulator version and independently qualified. Its scalar fallback is
+> also exact; the existing whole-song timings remain serial-filter evidence.
+> Earlier block-interval exceedances,
+> actual-device/selected-C evidence and owner calibration/listening remain open.
+> Preset intent and gated constants are unchanged.
+> No installed/Mac/release verdict follows from this local implementation.
+
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
 > Dan accepts longer initial analysis/preparation for demonstrated audio quality,
 > fidelity and subsequent interaction benefits. The [revised plan](plans/2026-09-15-mastering-quality-implementation-plan.md)

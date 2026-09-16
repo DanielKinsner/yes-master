@@ -2,8 +2,20 @@
 
 Date: September 15, 2026. Reviewed checkout: `5426041c` on `main`.
 Revision 2, following plan review and Dan's upfront-analysis direction.
-Status: **revised implementation plan; production work and sonic calibration
-have not started.** This file replaces the earlier draft as the current plan.
+Status: **paused for owner review, September 16**. Implementation was authorized
+September 15 on local `codex/mastering-quality` from `7534f612`. See the
+[checkpoint ledger](../reviews/2026-09-15-mastering-quality-implementation-evidence.md).
+Sonic-policy adoption and calibration remain gated. This file replaces the
+earlier draft as the current plan.
+
+**Current owner sequencing supersedes the execution order below:** review the
+local fixes at `f88f042b` for possible main/beta inclusion first. No further sound
+experiments or DSP variations while that review is pending. After approval and
+main integration, resume sound-quality research on a separate branch from the
+verified main state. Preserve completed work; do not restart it or treat pending
+sound research as a new blanket beta gate. The sound-priority question is deferred,
+not answered. See the [review guide](../reviews/2026-09-16-mastering-fixes-review.md)
+for the exact snapshot, app/research distinction and remaining verification limits.
 
 ## In plain language
 
@@ -621,6 +633,10 @@ exact-commit CI only when actually run; no push/release/deployment is authorized
 by this planning request. Source files and previous exports remain protected.
 
 ## Decisions for discussion
+
+September 16: the owner deferred the C/E sound decisions until the local fixes
+are reviewed and approved for main integration. The proposals below are retained
+for later research; do not reopen the preference questionnaire during this pause.
 
 **Recorded direction — upfront preparation:** Dan considers current analysis
 very quick and accepts a longer initial analysis/preparation step when it yields

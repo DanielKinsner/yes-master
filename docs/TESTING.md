@@ -70,6 +70,13 @@ collision handling and cancellation. These encoder tests require desktop's
 Use an independent decoder on an actual native export as well as these tests.
 MP3 frame duration includes delay/padding; compare gapless decoded frames before
 calling duration drift a defect. Delivered peaks may exceed pre-encode peaks.
+MP3 receipt decoding must preserve samples above full scale; the synthetic
+`receipt_decode_preserves_peaks_above_full_scale` regression detects decoder
+clamping separately from peak estimation. Continuous Album receipts carry their
+own decoded peak. The [B4 codec matrix](reviews/2026-09-15-encoded-peak-verification.md)
+records qualified-meter/independent comparisons, exact lossless parity, bounded
+correction failures and advisory scope. Run the opt-in lossless negative test with
+`cargo test --lib lossless_readback_rejects_changed_pcm_frames_and_channels -- --ignored`.
 
 The `transport-and-order` browser case drives actual pointer and keyboard rows,
 insertion feedback, selection preservation, Return to start and edge scrolling.
@@ -94,6 +101,43 @@ and short/non-round programme lengths. Older decoders can ignore edit-list tail
 trimming and conceal a millisecond-duration rounding defect; do not substitute
 one to make this regression pass.
 
+## Device-rate gain preparation checks
+
+The [device preparation record](reviews/2026-09-15-device-gain-preparation.md)
+distinguishes protected file PCM from the device-derived gain. Focused desktop
+regressions cover compensated source landing, post-device correction, full-file
+cache reuse/invalidation and byte limits, concurrent gain-plan publication,
+raw/output revisions, small attenuation, seek and callback allocation behavior.
+The ordinary compensating-edit regression freezes a 0.01 dB maximum deviation
+from the previous crossfade in each 5 ms window across eight +/-12 dB cases.
+`compensating_device_and_volume_match_edits_preserve_combined_level` separately
+checks simultaneous inverse gain changes and interruptions at 44.1/48/96 kHz;
+the same 0.01 dB criterion retains its original failed 1.023 dB witness. Zero-gain
+ramps must remain finite, monotonic and allocation-free. The ignored
+`audio::native_callback_bench::mastering_quality_gain_transition_callback_bench`
+uses the existing callback source/report/file-rate environment and sends 1,200
+gain edits at 5 ms intervals with fixed DSP coefficients. Keep it distinct from
+the existing 120-EQ-edit probe; see the [combined-gain record](reviews/2026-09-15-combined-gain-transition.md).
+Additional tests compare actual source-gain/SRC PCM around the existing unity
+shortcut and require fresh reconstruction before gain planning when the full-file
+residual bound becomes inaccurate. These tests do not prove every dynamic
+transition or hardware reconstruction meets a ceiling.
+The new cancellable SRC entry rejects nonfinite PCM before the FFT backend and
+checks cancellation during validation and conversion without changing valid PCM.
+
+`audio::delivery_rate_probe::mastering_quality_protected_device_whole_files` is
+an opt-in complete-original-source production/offline PCM comparison. Supply a
+restored-source/settings manifest in `YES_MASTER_DEVICE_LIVE_INPUTS` and a fresh
+`YES_MASTER_DEVICE_LIVE_OUTPUT` directory. Independently verify the written
+complete WAVs with the frozen SOXR16/64 and LUFS checker; short synthetic route
+comparisons do not replace this lane. Existing native lifecycle and callback
+probes cover actual output response separately. The research helper
+`scripts/research/mastering-quality-implementation-20260915/observe-native-test.ps1`
+records a copied native test executable's hash, wall/CPU/memory observations and
+separate stdout/stderr without changing OS volume or opening a visible helper.
+These are process observations under the recorded workload, not DAC latency,
+subjective listening or installer evidence.
+
 ## Audio correctness regressions
 
 `cargo test` includes `tests/audio_invariants.rs` without private fixtures or
@@ -111,6 +155,37 @@ integration across loud, quiet, and silent sections at three sample rates.
 Audio controller tests exercise actual background Volume Match/landing worker
 messages, cache-only cold lookup, pending toggles, same-source A/B worker reuse,
 and source-epoch isolation when an output-device change recreates the controller.
+The B3 Original streaming path additionally uses ignored native tests
+`mastering_quality_original_native_lifecycle` and
+`mastering_quality_stream_failure_is_visible`. They require an output device;
+the lifecycle probe requires `YES_MASTER_BENCH_MUTE=1`, an existing source in
+`YES_MASTER_BENCH_FILE` and a fresh `YES_MASTER_LIFECYCLE_REPORT` path. The
+negative probe mutes its own sink and injects a conversion failure. See the
+[live-rate ledger](reviews/2026-09-15-live-rate-verification.md) for scope and results.
+The output-revision regressions require both converter buffers and FFT overlap
+to drain before acknowledging new settings, including the last mixed DSP frame
+and seek resets. The muted Mastered lifecycle probe separately records background
+measurement and emitted-output revisions, including a prepared paused cache hit.
+Do not report these observations as DAC/speaker latency or collapse them into
+one preparation timing.
+Mastered uses `canonical_mastered_route_matches_finite_offline_cascade` for
+sample-identical finite route comparisons and the ignored
+`mastering_quality_canonical_live_rates` matrix with a fresh
+`YES_MASTER_RATE_REPORT` JSON path. `mastering_quality_mastered_rate_lifecycle`
+uses the same mute/source/report environment as the Original lifecycle. The
+ignored `mastering_quality_streaming_callback_bench` accepts a fresh
+`YES_MASTER_CALLBACK_REPORT` and optional `YES_MASTER_CALLBACK_FILE_RATE` to
+load both converters. Its requested/granted block sizes remain separate facts.
+Run native probes and Cargo suites serially within one target directory on
+Windows; a build-stamp change while the test executable is open can block linking.
+`preview_codec_resolution_preserves_processing_and_requested_intent` checks
+672 format/profile/rate/precision combinations. The preparation-cache regression
+checks rate invalidation, precision-only reuse and direct whole-delivery parity.
+The ignored `mastering_quality_codec_native_routes` uses test-only mute
+(`YES_MASTER_BENCH_MUTE=1`) and a fresh `YES_MASTER_CODEC_REPORT` path to exercise
+all seven encodings through actual native play/update handlers. It qualifies
+pre-encode PCM routing, not lossy decoded fidelity. The Track hook regression
+covers encoding changes, obsolete prewarm cancellation and retained user settings.
 `cargo run --example limiter_bench` is a deterministic throughput diagnostic;
 wall-clock performance thresholds are deliberately not CI assertions.
 
@@ -118,6 +193,12 @@ Output snapshots remain a separate change detector. When a mathematical DSP
 correction intentionally changes them, keep existing tolerances, explain the
 delta, and record listening approval separately. Passing snapshots alone does
 not establish mathematical correctness or sound quality.
+`tests/filter_precision.rs` reproduces source-normalization sensitivity on
+synthetic low-frequency/noise inputs at 44.1/48/96 kHz, mono/stereo, and -40/-80
+dB. The 1e-5 processed-sample budget is a numerical regression, not an audibility
+threshold. Before the feedback precision correction all 12 cases failed; old
+preset references remain under `preset_byte_identity/f32-feedback-20260915/`,
+and the active reference tolerance stays 1e-6.
 
 Frontend regressions cover delivered versus source receipt values, LRA wording,
 resolved signal-chain activity, and removal of stale processing readouts. The

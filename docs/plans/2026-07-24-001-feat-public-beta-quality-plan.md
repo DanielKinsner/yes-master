@@ -18,6 +18,17 @@ deepened: 2026-07-24
 
 # YES Master Public Beta Quality Program
 
+> **September 16 owner sequencing:** local mastering correctness/playback/readout
+> changes are prepared for owner review at `f88f042b`; see the
+> [review guide](../reviews/2026-09-16-mastering-fixes-review.md) and
+> [implementation ledger](../reviews/2026-09-15-mastering-quality-implementation-evidence.md).
+> This supersedes the earlier statement that SRC/ceiling fixes are only proposed:
+> they are implemented locally, with stated verification limits, and remain
+> unmerged. Dan expects reviewed fixes may enter the beta. Sound experiments are
+> paused until approval and main integration, then continue on a separate branch.
+> Unfinished C/E research is not a new blanket beta requirement; the existing
+> release gate remains unchanged. No merge or publication is authorized now.
+
 > **September 15 final reconciliation:** [the final synthesis](../reviews/2026-09-15-mastering-quality-final-synthesis.md)
 > supersedes the pilot recommendation where they differ. Both sealed Claude
 > phases and raw evidence are preserved; the final pass corrects reference-meter
