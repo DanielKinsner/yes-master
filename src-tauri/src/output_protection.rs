@@ -232,8 +232,10 @@ pub(crate) fn finalize_prepared(
     }
     let mut upper = 0_f64;
     let mut lower = 0_f64;
+    let mut maximum_residual = 0_f64;
     for (c, original) in prepared.channels.iter().enumerate() {
         let residual = norm * (gain_errors[c] + quant_errors[c]);
+        maximum_residual = maximum_residual.max(residual);
         upper = upper.max(original.upper * f64::from(gain) + residual);
         lower = lower.max((original.lower * f64::from(gain) - residual).max(0.));
     }
@@ -244,7 +246,13 @@ pub(crate) fn finalize_prepared(
             20. * (hi / lo).log10()
         }
     };
-    let used_fresh_meter = width(lower, upper) > 0.0501;
+    // A valid protection interval can still report a noticeably inflated
+    // upper bound after integer quantization (the 50 ms PCM16 regression).
+    // Keep reconstruction uncertainty separate from newly added residual:
+    // refresh when that residual alone can add more than 0.001 dB. Whole-file
+    // PCM24/float reuse normally stays well below this reporting threshold.
+    let residual_reporting_db = width((upper - maximum_residual).max(0.), upper);
+    let used_fresh_meter = width(lower, upper) > 0.0501 || residual_reporting_db > 0.001;
     if used_fresh_meter {
         // Quiet/silent integer PCM may be dominated by dither. Reuse would be
         // safe but too imprecise; measure that delivered signal afresh.

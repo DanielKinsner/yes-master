@@ -17,7 +17,7 @@ No push, main integration, publication, spending or private-audio commit is auth
 | B2 | Qualified library core implemented | Combined finite-sinc interval and measured SOXR response pass 481 explicit finite-zero-extension cases and six whole-file witnesses. Real FFTs reduce owner/long verifier cost about 39% in three isolated trials. The replayable library core matches all 487 standalone results exactly; its exact-dither reader matches written PCM16/24/float. Reference-scope discrepancies are retained and independently explained. |
 | B3 | In progress | Qualified finalizer is used by Track/rendered preview, background preview planning and album per-track PCM. Original exports pass independent checks and retain owner hashes. Whole-file residual reuse passes 1,095 checks, with fresh-meter fallback; Album programme correction passes. Original and Mastered now use production bandlimited conversion, actual device configuration and output meters. Mastered preserves the export's intermediate PCM rate, including selected-encoding resolution, and fixes the independently checked aliasing witness. Muted native lifecycle/callback and full fixture checks pass. Broader device peak protection and applied-generation readiness remain open; see the [live-rate ledger](2026-09-15-live-rate-verification.md). |
 | B4 | Complete locally with advisory lossy scope | [Encoded verification](2026-09-15-encoded-peak-verification.md): 316/316 independent technical checks on retained actual encoded files after fixing MP3 decoder clamping; exact FLAC/AIFF PCM parity. Lossy ceiling misses remain explicit. Headroom/two-correction experiments do not justify automatic adoption. Continuous Album peaks and small excesses are reported. Affected formats, desktop/private fixtures, bridges, Clippy, 895 frontend tests and 38 headless checks pass. |
-| C1 | Offline prototype and broader development in progress | [Protocol/results](2026-09-15-drive-prototype-protocol.md) and native probe separate normalization/drive/manual intent, retain limiter histories and verify complete delivered PCM. Owner Universal-75, expanded Coat/Piano and recovered Funk coarse selected/control reports pass 5/25/15 independent checks. Two owner refinements improve the preserving -9 result to -9.2288 LUFS at intensity 75 and a qualified target hit at intensity 50. Target/character conflicts and Loud fallbacks remain explicit. Remaining original sources, gain copies, refinements, budgets and numeric freeze are open; no new holdout or shipping policy. |
+| C1 | Original development grid complete; correction and broader validation in progress | [Protocol/results](2026-09-15-drive-prototype-protocol.md): 480 original coarse plus 37 bounded refinements, all whole-file protected; 118 coarse/104 additional refined independent checks pass. Quiet copies expose separate numerical and selector-reference issues. [Wider filter arithmetic](2026-09-15-drive-gain-consistency.md) reduces tested copy differences to at most 5.96e-7, with unchanged coefficients, 19–29% extra chain CPU and ten independent output passes. Its local production correction passes 12 synthetic regressions, 607 native callbacks, full fixtures, bridges, Clippy and browser-engine checks. Gain-copy completion, consistent selector rules, budgets and numeric/holdout freeze remain open; no automatic sonic policy. |
 | C2–C3, E | Pending | Existing revised dependencies and adoption/calibration gates remain. |
 
 The subsequent desktop library/integration run (`d2-rust-fixtures.log`) also
@@ -45,6 +45,14 @@ readiness remain open. No new listening/installed/Mac verdict is inferred.
 The current B3 mathematical reuse proof, exact-output checks, format-specific
 reserve and limitations are recorded in
 [linear peak verification](2026-09-15-linear-peak-verification.md).
+The later filter-precision checkpoint adds a separate residual reporting limit:
+fresh measurement when added residual inflation exceeds 0.001 dB. It fixes a
+short PCM16 receipt discrepancy without changing the 0.002 dB comparison or
+the ceiling/gain/dither. `c1-filter-fixtures-v3.log` passes the full desktop and
+private-fixture suite; final Clippy/bridge checks pass. The corrected native
+96 kHz preparation/new-target/return observations are 39.74 s / 0.931 s / 75 ms,
+with 607 loaded callbacks and no deadline misses. See the linked precision
+record for the preserved before-failures, updated synthetic references and limits.
 `b3-rust-fixtures-v2.log` passes the desktop library/integration suite with all
 four existing private-fixture tests actually run. The first run retained an
 obsolete receipt-to-ebur128 equality failure; the corrected tests use the declared

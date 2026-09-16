@@ -263,6 +263,37 @@ Piano/Coat numerical failures and Coat's level-dependent selector limits.
 The original eight-source coarse grid is complete. Do not weaken the declared
 budgets or treat the fixed-reference diagnostic as an adopted selector.
 
+### Completed original-source development grid
+
+All eight original coarse runs and the bounded midpoint refinements are now
+complete: **480 coarse plus 37 refinement deliveries**. Coarse selected/control
+reports contain **118 independent checks**; the refined reports add **104**
+checks, with Metal's existing 14 reused because no midpoint was justified. All
+completed independent reports pass peaks, LUFS comparison and zero full-scale
+samples. This is output-protection evidence, separate from feasibility.
+
+Preserving selections have the following signed misses after refinements. A
+fallback remains explicitly labeled even when it happens to hit the target.
+
+| Source | Universal-75, -14 / -9 LUFS miss | Universal-50, -14 / -9 LUFS miss | Loud-75 outcome |
+| --- | --- | --- | --- |
+| Coat | 0 / -0.229 | 0 / 0 | Control fallback at both targets |
+| Piano | -0.804 / -6.027 | -0.875 / -6.100 | Control fallback at both targets |
+| Funk | 0 / -4.527 | 0 / -4.402 | -14 hit after refinement; -9 fallback |
+| Metal | 0 / fallback | 0 / fallback | Control fallback at both targets |
+| Aphelion | 0 / -2.664 | 0 / -2.693 | Control fallback at both targets |
+| Rich | -5.032 / fallback | -5.133 / fallback | Control fallback at both targets |
+| Baby | 0 / -3.042 | 0 / -3.063 | -14 hit at -3 offset; -9 fallback |
+| Imaginal | -2.913 / -7.469 | -2.255 / -7.446 | Control fallback at both targets |
+
+No extra grid expansion is justified merely by an unresolved target miss. The
+gain-copy work exposes a separate control-reference dependence on input level,
+and the [precision correction](2026-09-15-drive-gain-consistency.md) changes
+recursive arithmetic without changing coefficients. Original f32 results and
+copied executables remain frozen. Corrected-arithmetic selector validation and
+the eventual numeric/holdout freeze are still required; these historical C1
+tables do not certify a production automatic policy.
+
 ### Independent reference storage
 
 `check_drive_finalists.py --stream-padding` builds the same 2,048-frame leading

@@ -15,6 +15,26 @@ def sha(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
+def loudness_comparison(stderr, native_lufs):
+    summary = stderr.rsplit('Summary:', 1)[-1]
+    match = re.search(r'Integrated loudness:\s*I:\s*([-\d.]+) LUFS\s*Threshold:\s*([-\d.]+) LUFS', summary)
+    assert match, 'independent integrated summary is required'
+    integrated, threshold = map(float, match.groups())
+    # FFmpeg 9.0 initializes I=-70 and the relative threshold=0. Neither is
+    # updated until a 400 ms block enters the absolute gate. Do not interpret
+    # this pair as a measured -70 LUFS value. A real value rounded to -70 has
+    # an updated threshold and must still be compared numerically.
+    # Primary source: FFmpeg n9.0 libavfilter/f_ebur128.c (init, gate_update).
+    available = not (integrated == -70 and threshold == 0)
+    same_availability = available == (native_lufs is not None)
+    numeric_pass = abs(integrated-native_lufs) <= .11 if available and native_lufs is not None else None
+    return dict(independent_lufs_rounded_0_1=integrated,
+                independent_lufs_threshold=threshold, independent_lufs_available=available,
+                native_lufs=native_lufs, lufs_availability_pass=same_availability,
+                lufs_numeric_pass=numeric_pass,
+                lufs_pass=same_availability and (numeric_pass if available else True))
+
+
 def main():
     parser = argparse.ArgumentParser()
     for name in ('metrics', 'ffmpeg', 'output'):
@@ -56,19 +76,16 @@ def main():
             peaks[f'soxr{factor}'] = values[:-1]
         process = subprocess.run([str(a.ffmpeg),'-hide_banner','-nostats','-i',str(path),'-af',
                                   'ebur128=peak=true','-f','null','-'],capture_output=True,text=True,check=True)
-        summary = process.stderr.rsplit('Summary:',1)[-1]
-        integrated = float(re.search(r'I:\s*([-\d.]+) LUFS',summary)[1])
         peak_pass = max(v for values in peaks.values() for v in values) <= row['native']['ceiling']+.002
-        native_lufs = row['native']['delivery']['lufs']
-        lufs_pass = native_lufs is not None and abs(integrated-native_lufs) <= .11
+        loudness = loudness_comparison(process.stderr, row['native']['delivery']['lufs'])
         record = dict(id=row['id'],sha256=sha(path),reference=peaks,
-                      independent_lufs_rounded_0_1=integrated,native_lufs=native_lufs,
+                      **loudness,
                       fullscale_samples=int((np.abs(x)>=1).sum()),
-                      peak_pass=peak_pass,lufs_pass=lufs_pass,reference_s=time.perf_counter()-start)
+                      peak_pass=peak_pass,reference_s=time.perf_counter()-start)
         report['rows'].append(record)
         (a.output/'comparison.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
-        print('Checked',row['id'],'peak',peak_pass,'LUFS',lufs_pass,flush=True)
-        assert peak_pass and lufs_pass and record['fullscale_samples']==0
+        print('Checked',row['id'],'peak',peak_pass,'LUFS/availability',loudness['lufs_pass'],flush=True)
+        assert peak_pass and loudness['lufs_pass'] and record['fullscale_samples']==0
     report['status'] = 'complete'
     (a.output/'comparison.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
 

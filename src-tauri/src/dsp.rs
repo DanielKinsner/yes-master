@@ -287,16 +287,31 @@ fn flush_denormal(x: f32) -> f32 {
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct BiquadState {
-    z1: f32,
-    z2: f32,
+    z1: f64,
+    z2: f64,
 }
 
 impl BiquadState {
     pub fn process(&mut self, c: &BiquadCoeffs, x: f32) -> f32 {
-        let y = c.b0 * x + self.z1;
-        self.z1 = flush_denormal(c.b1 * x - c.a1 * y + self.z2);
-        self.z2 = flush_denormal(c.b2 * x - c.a2 * y);
-        y
+        // Low-frequency recursive filters amplify f32 feedback rounding.
+        // Retain the designed f32 coefficients and f32 output at each stage;
+        // only feedback arithmetic/state gets additional precision.
+        let x = f64::from(x);
+        let y = f64::from(c.b0) * x + self.z1;
+        let z1 = f64::from(c.b1) * x - f64::from(c.a1) * y + self.z2;
+        let z2 = f64::from(c.b2) * x - f64::from(c.a2) * y;
+        // Preserve the existing floor, including its exact f32 value.
+        self.z1 = if z1.abs() < f64::from(1.0e-20_f32) {
+            0.0
+        } else {
+            z1
+        };
+        self.z2 = if z2.abs() < f64::from(1.0e-20_f32) {
+            0.0
+        } else {
+            z2
+        };
+        y as f32
     }
 }
 

@@ -58,6 +58,19 @@ Do not quote the scan-only timing as the complete PCM16 delivery cost. Normal
 PCM24/float residuals are much smaller; actual per-export diagnostics record
 whether the fallback was needed.
 
+The subsequent filter-precision correction exposed a reporting limit on the
+50 ms PCM16 regression: the reused bound was safe and only 0.049908 dB wide,
+but its added quantization residual exceeded the existing 0.002 dB receipt-to-
+fresh-reading comparison. The finalizer now also refreshes when the residual
+envelope alone adds more than **0.001 dB** to its upper reading. This is a
+reporting-precision criterion, separate from the 0.0501 dB reconstruction-width
+criterion; the requested ceiling, output gain, dither and test tolerance are
+unchanged. It preserves normal PCM24/float reuse and forces a fresh pass for
+the affected short PCM16 output. All 12 short/no-target/profile/precision cases
+pass (`c1-filter-short-receipt-v1.log`); the prior failure remains in
+`c1-filter-fixtures-v2.log`. Wider fixture/cache validation is recorded in the
+implementation ledger.
+
 ## Application integration in progress
 
 `output_protection::finalize` prepares the final-rate float master, chooses an

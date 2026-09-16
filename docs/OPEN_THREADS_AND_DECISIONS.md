@@ -1,84 +1,47 @@
 # YES Master — Open Threads & Owner Decisions
 
-> **2026-09-15 — Mastering-quality implementation started locally.**
-> Dan authorized implementation, validation, internal docs and small local commits
-> in the existing checkout. Branch `codex/mastering-quality` starts at local
-> `7534f612`; no push/main merge/release/deployment/spend or private-audio commit.
-> [Checkpoint evidence](reviews/2026-09-15-mastering-quality-implementation-evidence.md)
-> records completed local SRC and no-target/short-input protection, Density Auto,
-> and backend-resolved compressor display. D2's build, 38 headless checks,
-> 894 frontend tests and affected bridges pass. Fresh application exports preserve
-> the owner On/Off WAV hashes; the historical hot-start CD defect is corrected.
-> Independent Funk/50 ms checks still expose the existing peak meter's underread.
-> C0 is complete as an initial feasibility checkpoint: 60 checked deliveries,
-> controlled short/typical/long reuse timings and native lifecycle/callback proof.
-> Matching raw reuse makes target edits substantially faster; broad preset
-> precomputation is not supported. B2's standalone combined estimator passes 481
-> finite-zero-extension cases and six whole-file witnesses with preserved reference
-> limitations. Its replayable library core matches all 487 results exactly; real
-> FFTs cut owner/long verifier cost about 39%. Production B3 route integration
-> remains in progress: final PCM now uses the qualified meter and exact-dither
-> reader. All five original exports pass independent finite SOXR16/64 checks;
-> owner On/Off hashes remain exact and the desktop/private-fixture suite passes.
-> Whole-file residual reuse is qualified; overly wide intervals use a fresh pass.
-> A newly reproduced album join failure now has staged programme verification
-> and a common-gain correction preserving component PCM parity; album, audio
-> invariant and MP3-route checks pass. A 192 MiB raw-response cache preserves
-> exact results: owner target edits fall from about 24 s to 0.60-0.66 s and the
-> measured five-step session from 98.67 to 54.15 s, with a longer first preparation
-> and additional memory. In-place tail flushing preserves samples while avoiding
-> vector capacity doubling. B4 now passes 316 independent encoded technical
-> checks, with exact lossless PCM and unclipped MP3 receipt readback. Continuous
-> Album peaks are visible; lossy misses remain advisory, and headroom/two-pass
-> correction experiments do not justify automatic adoption. Desktop fixtures,
-> bridges, Clippy, 895 frontend tests and 38 headless checks pass. Device-rate/
-> live-toggle contracts and the remaining offline C development remain open.
-> A new offline native-source rate matrix exposes a serious settled-preview
-> mismatch: linear device conversion can alias content removed by export SRC,
-> then apply an unsuitable export-derived boost. No stress audio was played.
-> [Live-rate evidence](reviews/2026-09-15-live-rate-verification.md) tracks the
-> unintegrated streaming-converter candidate and remaining native/meter gates.
-> Its 168 streaming/64 finite-source comparisons, zero-allocation checks and muted
-> native callback probe now pass. Actual-device gain capping closes the retained
-> stress witness offline; device planning and output metering still need production
-> integration. C1's full-song prototype is locally committed; all 60 Funk deliveries
-> survived/recovered after the restart. Expanded Coat/Piano finalists and controls
-> pass 25 independent whole-file checks, with target/character conflicts and Loud
-> fallbacks retained. Remaining original sources, quiet copies and holdout are open.
-> Shared playback meters now reuse their storage on seek. The post-conversion
-> candidate passes complete-pipeline allocation checks and 609 muted native
-> callbacks with no deadline misses; the full desktop/private-fixture suite passes.
-> A canonical file-rate stage also removes the retained direct-rate mismatch
-> without extra attenuation in the eight tested cases. Production route integration
-> remains open. Two bounded owner-track refinements improve the preserving
-> Universal-75 result to -9.2288 LUFS (still outside 0.2 LU research tolerance),
-> while Universal-50 finds a -9 LUFS hit; other source/preset failures remain explicit.
-> Automatic sonic policy is still pending the focused owner choice, with local
-> level-matched review audio prepared. No new listening verdict is inferred.
-> Native stream opening now retains the actual successful configuration even
-> after format/device fallback. It keeps Rodio's mixer/sinks and fallback order;
-> 102 affected audio tests, strict Clippy and muted native seek/resume pass.
-> Original's streaming converter/output meters are now integrated, with visible
-> processing failures and retry. Actual muted Original playback/seek/swap/device
-> reopening pass, as do desktop/private fixtures, bridges, 896 frontend tests and
-> 38 headless checks. Mastered's matching file-rate/gain route remains open.
-> All eight original-source coarse C1 runs are complete. The first quiet-copy
-> checks expose two distinct issues: recursive filter numerical sensitivity and
-> control-relative selector limits that vary with input level. The
-> [gain-copy diagnosis](reviews/2026-09-15-drive-gain-consistency.md) reproduces
-> retained Piano outputs exactly and isolates wider-state filter arithmetic as
-> a correction experiment. No criterion is relaxed or sonic policy adopted.
-> Mastered now converts through requested file rate and actual device rate, with
-> finite alignment, output meters/fade and shared conversion-error reporting.
-> Its retained aliasing witness is fixed and independently checked. Muted native
-> A/B, playing/paused rate changes and 608 loaded callback checks pass. Codec
-> resolution, broader device protection and applied-generation readiness remain
-> open; see the live-rate ledger for the exact scope and preparation timings.
-> Selected export encoding now resolves the preview's pre-encode PCM rate and
-> precision without changing saved intent. All seven muted native routes, 672
-> settings combinations, cache parity, strict Clippy, the full desktop/private
-> fixture suite, 897 frontend tests and 38 headless checks pass. This does not
-> simulate lossy decoding; broader device protection/readiness remain open.
+> **2026-09-15 — Mastering-quality implementation active locally.**
+> Dan authorized implementation, testing, internal docs and small local commits
+> in the existing checkout. `codex/mastering-quality` starts at local `7534f612`;
+> no push/main merge/release/deployment/spend or private-audio commit is authorized.
+> The [checkpoint ledger](reviews/2026-09-15-mastering-quality-implementation-evidence.md)
+> records A1/A2, B1, D1/D2 and C0 complete locally; B2's qualified core is integrated.
+> Original frozen evidence/private fixtures remain intact. B3's Track, rendered
+> preview and Album finalizer checks pass, including programme joins and common
+> correction preserving component PCM parity. Matching raw reuse reduces the
+> measured earlier owner five-step session from 98.67 to 54.15 s and target edits
+> from about 24 s to 0.60–0.66 s, with a longer first preparation and more memory.
+> These timings precede the filter-precision correction below.
+> B4 has 316 independent encoded technical checks, exact FLAC/AIFF PCM parity and
+> unclipped MP3 receipt readback. Lossy ceiling misses remain explicit/advisory;
+> bounded headroom/re-encoding experiments do not justify automatic adoption.
+> [Production live conversion](reviews/2026-09-15-live-rate-verification.md) now
+> retains the actual opened device format, uses qualified Original SRC and a
+> source/file/device Mastered route, and meters/fades after conversion. The
+> retained aliasing witness is fixed independently. Paused/playing rate edits,
+> A/B, processing-error/retry and loaded native callbacks pass. Selected encoding
+> resolves the same pre-encode PCM rate/precision as export without changing saved
+> intent; its 672 combinations, seven muted native routes, cache parity, full
+> fixtures, 897 frontend tests and 38 headless checks pass. It does not simulate
+> lossy decoding. Broader device protection remains open: a full Imaginal file
+> reaches about -0.775 dBTP after 48-to-44.1 kHz conversion. Applied-generation
+> readiness also remains open.
+> [C1 development](reviews/2026-09-15-drive-prototype-protocol.md) has completed
+> all eight original coarse runs and bounded refinements: 517 complete deliveries.
+> Target/character conflicts and explicit control fallbacks remain; very quiet
+> copies and independent reference queues continue from retained completed files.
+> [Gain-copy diagnosis](reviews/2026-09-15-drive-gain-consistency.md) separates
+> numerical filter sensitivity from input-level-dependent selector limits. A
+> full-chain wider-state experiment improves all ten tested copy comparisons to
+> at most 0.000000596 sample difference, with 19–29% extra chain CPU in loaded
+> alternating trials. The corresponding local production correction passes all
+> 12 synthetic regressions and 607 native callbacks without deadline misses.
+> Preset coefficients/gates remain unchanged; old synthetic references are archived
+> and test tolerances retained. Final desktop/private fixtures, bridges, Clippy,
+> rebuilt WASM, frontend and muted lifecycle checks pass, including the short PCM16
+> receipt follow-up. Corrected-chain preparation/new-target/cached-target settling
+> is 39.74 s / 0.931 s / 75 ms in the loaded native probe. No new holdout or automatic
+> sonic policy has been adopted, and no new installed/Mac/listening verdict follows.
 
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
 > Dan accepts longer initial analysis/preparation for demonstrated audio quality,

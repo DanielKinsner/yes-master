@@ -84,6 +84,12 @@ frontend preset tables.
 
 ## Signal-Chain Direction
 
+Recursive biquad feedback uses f64 state/arithmetic with the designed f32
+coefficients and f32 output at each filter boundary. This corrects amplification
+of tiny input-rounding differences; it does not retune filter coefficients or
+preset calibration. The [full-chain comparison](reviews/2026-09-15-drive-gain-consistency.md)
+records numerical improvements, preserved baseline references and callback cost.
+
 The mastering chain, as implemented in `MasteringChain::process_frame_inplace`
 (`src-tauri/src/dsp.rs`), is:
 

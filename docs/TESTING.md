@@ -150,6 +150,12 @@ Output snapshots remain a separate change detector. When a mathematical DSP
 correction intentionally changes them, keep existing tolerances, explain the
 delta, and record listening approval separately. Passing snapshots alone does
 not establish mathematical correctness or sound quality.
+`tests/filter_precision.rs` reproduces source-normalization sensitivity on
+synthetic low-frequency/noise inputs at 44.1/48/96 kHz, mono/stereo, and -40/-80
+dB. The 1e-5 processed-sample budget is a numerical regression, not an audibility
+threshold. Before the feedback precision correction all 12 cases failed; old
+preset references remain under `preset_byte_identity/f32-feedback-20260915/`,
+and the active reference tolerance stays 1e-6.
 
 Frontend regressions cover delivered versus source receipt values, LRA wording,
 resolved signal-chain activity, and removal of stale processing readouts. The

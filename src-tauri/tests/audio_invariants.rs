@@ -112,7 +112,11 @@ fn short_and_no_target_exports_still_apply_known_peak_protection() {
                 );
                 assert!(output.samples.iter().all(|x| x.abs() < 1.0));
                 let receipt = job.measurements.unwrap();
-                assert!((f64::from(receipt.true_peak_dbtp) - peak).abs() < 0.002);
+                assert!(
+                    (f64::from(receipt.true_peak_dbtp) - peak).abs() < 0.002,
+                    "receipt {} versus fresh {peak}; {duration_ms} ms, {profile:?}, PCM{bits}",
+                    receipt.true_peak_dbtp
+                );
                 if lufs.is_finite() {
                     assert!((f64::from(receipt.lufs_integrated) - lufs).abs() < 0.002);
                 }

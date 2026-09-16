@@ -10,6 +10,21 @@ from evaluate_drive import select
 
 
 class DriveMeasurements(unittest.TestCase):
+    def test_independent_loudness_distinguishes_empty_gate_from_rounded_minus_70(self):
+        from check_drive_finalists import loudness_comparison
+        def summary(value, threshold):
+            return f'Summary:\nIntegrated loudness:\n I: {value} LUFS\n Threshold: {threshold} LUFS\n'
+        empty = loudness_comparison(summary(-70, 0), None)
+        self.assertTrue(empty['lufs_availability_pass'])
+        self.assertIsNone(empty['lufs_numeric_pass'])
+        self.assertTrue(empty['lufs_pass'])
+        self.assertFalse(loudness_comparison(summary(-70, 0), -70)['lufs_pass'])
+        self.assertFalse(loudness_comparison(summary(-70, -80), None)['lufs_pass'])
+        self.assertTrue(loudness_comparison(summary(-70, -80), -69.98)['lufs_numeric_pass'])
+        self.assertFalse(loudness_comparison(summary(-69.8, -79.8), -70)['lufs_numeric_pass'])
+        with self.assertRaises(AssertionError):
+            loudness_comparison('missing independent summary', None)
+
     def test_common_gain_retains_original_windows_and_character(self):
         rate = 48000
         x = np.random.default_rng(761).normal(size=(rate * 30, 2)) * .025
