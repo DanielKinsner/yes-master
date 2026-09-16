@@ -21,6 +21,45 @@ pub struct ProtectedPcm {
     pub used_fresh_meter: bool,
 }
 
+/// Facts about one immutable post-chain, final-rate float buffer. The preview
+/// cache owns the buffer together with these facts; neither is independently
+/// replaceable. No delivery target or integer quantizer is baked in here.
+pub(crate) struct PreparedMeasurements {
+    peak: peak_meter::PeakMeasurement,
+    raw_lufs: f32,
+    frames: usize,
+    rate: u32,
+    channels: u16,
+}
+
+pub(crate) fn prepare(
+    samples: &[f32],
+    rate: u32,
+    channels: u16,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<PreparedMeasurements> {
+    let count = usize::from(channels);
+    if count == 0 || rate == 0 || samples.len() % count != 0 {
+        return Err(error("invalid preparation PCM format"));
+    }
+    let peak = peak_meter::measure(samples, count, || {
+        cancel.is_some_and(|f| f.load(Ordering::Relaxed))
+    })
+    .map_err(error)?;
+    let mut meter = EbuR128::new(u32::from(channels), rate, Mode::I).map_err(error)?;
+    for chunk in samples.chunks(4096 * count) {
+        check_cancel(cancel)?;
+        meter.add_frames_f32(chunk).map_err(error)?;
+    }
+    Ok(PreparedMeasurements {
+        peak,
+        raw_lufs: finite_loudness(&meter)?,
+        frames: samples.len() / count,
+        rate,
+        channels,
+    })
+}
+
 fn error(message: impl ToString) -> CommandError {
     CommandError::Render(message.to_string())
 }
@@ -52,8 +91,43 @@ pub fn finalize(
     ceiling_dbtp: f32,
     cancel: Option<&AtomicBool>,
 ) -> CommandResult<ProtectedPcm> {
+    // Reject malformed delivery requests before the expensive preparation.
+    if !matches!(bits, 16 | 24 | 32) {
+        return Err(error("invalid delivery PCM format"));
+    }
+    let ceiling = 10_f64.powf(f64::from(ceiling_dbtp) / 20.);
+    if !ceiling_dbtp.is_finite() || !ceiling.is_finite() || ceiling <= 0. {
+        return Err(error("invalid peak ceiling"));
+    }
+    check_cancel(cancel)?;
+    let measurements = prepare(samples, rate, channels, cancel)?;
+    finalize_prepared(
+        samples,
+        &measurements,
+        bits,
+        target_lufs,
+        ceiling_dbtp,
+        cancel,
+    )
+}
+
+pub(crate) fn finalize_prepared(
+    samples: &mut [f32],
+    measurements: &PreparedMeasurements,
+    bits: u16,
+    target_lufs: Option<f32>,
+    ceiling_dbtp: f32,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<ProtectedPcm> {
+    let rate = measurements.rate;
+    let channels = measurements.channels;
     let count = usize::from(channels);
-    if count == 0 || rate == 0 || samples.len() % count != 0 || !matches!(bits, 16 | 24 | 32) {
+    if count == 0
+        || rate == 0
+        || samples.len() % count != 0
+        || samples.len() / count != measurements.frames
+        || !matches!(bits, 16 | 24 | 32)
+    {
         return Err(error("invalid delivery PCM format"));
     }
     let ceiling = 10_f64.powf(f64::from(ceiling_dbtp) / 20.);
@@ -62,13 +136,8 @@ pub fn finalize(
     }
     let cancelled = || cancel.is_some_and(|flag| flag.load(Ordering::Relaxed));
     check_cancel(cancel)?;
-    let prepared = peak_meter::measure(samples, count, cancelled).map_err(error)?;
-    let mut raw_meter = EbuR128::new(u32::from(channels), rate, Mode::I).map_err(error)?;
-    for chunk in samples.chunks(4096 * count) {
-        check_cancel(cancel)?;
-        raw_meter.add_frames_f32(chunk).map_err(error)?;
-    }
-    let raw_lufs = finite_loudness(&raw_meter)?;
+    let prepared = &measurements.peak;
+    let raw_lufs = measurements.raw_lufs;
     let delta = crate::engine::ceiling_bounded_landing_delta_db(
         raw_lufs.is_finite().then_some(raw_lufs),
         prepared.upper_dbtp().map(|v| v as f32),

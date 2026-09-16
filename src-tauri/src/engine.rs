@@ -398,6 +398,80 @@ pub struct PreviewLanding {
     pub mastered_lufs: f32,
 }
 
+/// Owned raw response plus whole-file facts. Construction and delivery are
+/// worker-only; the audio thread receives only the resulting scalar plan.
+pub(crate) struct PreparedPreviewAudio {
+    samples: Vec<f32>,
+    measurements: crate::output_protection::PreparedMeasurements,
+}
+
+impl PreparedPreviewAudio {
+    pub(crate) fn pcm_bytes(&self) -> usize {
+        self.samples.capacity() * std::mem::size_of::<f32>()
+    }
+
+    pub(crate) fn finish(
+        &self,
+        settings: &MasteringSettings,
+        cancel: Option<&AtomicBool>,
+    ) -> CommandResult<PreviewLanding> {
+        check_preview_cancel(cancel)?;
+        // Keep the cached raw response immutable. The copy and every delivery
+        // scan stay on the background worker, outside any cache lock.
+        let mut delivered = self.samples.clone();
+        let result = crate::output_protection::finalize_prepared(
+            &mut delivered,
+            &self.measurements,
+            settings.effective_bit_depth(),
+            settings.effective_target_lufs(),
+            settings.effective_ceiling_dbtp(),
+            cancel,
+        )?;
+        Ok(PreviewLanding {
+            gain_lin: result.gain_lin,
+            mastered_lufs: result.lufs,
+        })
+    }
+
+    pub(crate) fn finish_owned(
+        mut self,
+        settings: &MasteringSettings,
+        cancel: Option<&AtomicBool>,
+    ) -> CommandResult<PreviewLanding> {
+        let result = crate::output_protection::finalize_prepared(
+            &mut self.samples,
+            &self.measurements,
+            settings.effective_bit_depth(),
+            settings.effective_target_lufs(),
+            settings.effective_ceiling_dbtp(),
+            cancel,
+        )?;
+        Ok(PreviewLanding {
+            gain_lin: result.gain_lin,
+            mastered_lufs: result.lufs,
+        })
+    }
+}
+
+pub(crate) fn prepare_preview_audio(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<PreparedPreviewAudio> {
+    check_preview_cancel(cancel)?;
+    let mut render_settings = settings.clone();
+    render_settings.volume_match = false;
+    let (samples, rate) =
+        render_preview_landing_window(samples, sample_rate, channels, &render_settings, cancel)?;
+    let measurements = crate::output_protection::prepare(&samples, rate, channels, cancel)?;
+    Ok(PreparedPreviewAudio {
+        samples,
+        measurements,
+    })
+}
+
 /// Compute the background preview's PCM delivery plan: process the whole track
 /// and use the same qualified finalizer as WAV export. Its requested rate/bits
 /// are those of the settings; device/codec-rate differences require separate

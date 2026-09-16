@@ -5,6 +5,8 @@ use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
+mod preparation_cache;
+
 /// Sentinel dBFS value reported when the peak window saw no signal. JSON can't
 /// round-trip -inf, so we use a finite "well below audible" floor instead.
 pub const SILENCE_DBFS: f32 = -120.0;
@@ -304,13 +306,7 @@ pub async fn prepare_preview_level(
         if cancelled.load(Ordering::Relaxed) {
             return Ok(());
         }
-        let measured = crate::engine::preview_landing_with_cancel(
-            &pcm.samples,
-            pcm.sample_rate,
-            pcm.channels,
-            &settings,
-            Some(&cancelled),
-        );
+        let measured = preparation_cache::measure(&pcm, &settings, &cancelled);
         if cancelled.load(Ordering::Relaxed) {
             return Ok(());
         }
@@ -1792,6 +1788,7 @@ struct PreviewWorkRequest {
 struct PreviewWorkerGate {
     epoch: u64,
     in_flight: bool,
+    active: Option<PreviewWorkRequest>,
     pending: Option<PreviewWorkRequest>,
     cancelled: Arc<AtomicBool>,
     budget: Arc<AtomicBool>,
@@ -1803,6 +1800,7 @@ impl Default for PreviewWorkerGate {
         Self {
             epoch: 0,
             in_flight: false,
+            active: None,
             pending: None,
             cancelled: Arc::new(AtomicBool::new(false)),
             budget: preview_worker_budget(),
@@ -1842,6 +1840,17 @@ impl PreviewWorkerGate {
             static NEXT_SOURCE_EPOCH: AtomicU64 = AtomicU64::new(1);
             self.epoch = NEXT_SOURCE_EPOCH.fetch_add(1, Ordering::Relaxed);
             self.in_flight = false;
+            self.active = None;
+        }
+    }
+}
+
+impl PreviewWorkerGate {
+    fn cancel_obsolete_response(&self, rate: u32, requested: &MasteringSettings) {
+        if self.active.as_ref().is_some_and(|active| {
+            !preparation_cache::same_response(rate, &active.settings, requested)
+        }) {
+            self.cancelled.store(true, Ordering::Relaxed);
         }
     }
 }
@@ -1923,18 +1932,15 @@ fn try_spawn_lufs_preview_worker(
                 settings: settings.clone(),
                 gain: None,
                 vm_gain: (!cancelled.load(Ordering::Relaxed)).then_some(vm_gain),
-                finished: !landing_enabled || cancelled.load(Ordering::Relaxed),
+                finished: !landing_enabled,
             });
+            if !landing_enabled {
+                return;
+            }
             if landing_enabled && !cancelled.load(Ordering::Relaxed) {
-                let gain = crate::engine::preview_landing_with_cancel(
-                    &pcm.samples,
-                    pcm.sample_rate,
-                    pcm.channels,
-                    &settings,
-                    Some(&cancelled),
-                )
-                .ok()
-                .map(|result| result.gain_lin);
+                let gain = preparation_cache::measure(&pcm, &settings, &cancelled)
+                    .ok()
+                    .map(|result| result.gain_lin);
                 if let Some(gain) = gain {
                     if !cancelled.load(Ordering::Relaxed) {
                         if let Ok(mut cache) = prepared_preview().lock() {
@@ -1946,7 +1952,18 @@ fn try_spawn_lufs_preview_worker(
                     track_epoch,
                     generation,
                     settings,
-                    gain,
+                    gain: gain.filter(|_| !cancelled.load(Ordering::Relaxed)),
+                    vm_gain: None,
+                    finished: true,
+                });
+            } else {
+                // Cancellation can arrive immediately after the early VM
+                // message. Always release the logical job as well as its permit.
+                let _ = command_tx.send(AudioCommand::PreviewLandingReady {
+                    track_epoch,
+                    generation,
+                    settings,
+                    gain: None,
                     vm_gain: None,
                     finished: true,
                 });
@@ -1984,6 +2001,8 @@ fn queue_preview_work(
     tx: &Sender<AudioCommand>,
 ) {
     seed_prepared_preview(s, &request.settings);
+    s.preview_work
+        .cancel_obsolete_response(s.live_sample_rate, &request.settings);
     if !preview_measurement_needed(
         &s.landing_gain_cache,
         &s.vm_gain_cache,
@@ -2002,6 +2021,7 @@ fn queue_preview_work(
         s.preview_work.cancelled.clone(),
     ) {
         s.preview_work.in_flight = true;
+        s.preview_work.active = Some(request);
         s.preview_work.pending = None;
     } else {
         // A cancelled old-source worker may still be releasing its resources.
@@ -2355,6 +2375,8 @@ fn process_audio_command(
                     }
                     if finished {
                         s.preview_work.in_flight = false;
+                        s.preview_work.active = None;
+                        s.preview_work.cancelled = Arc::new(AtomicBool::new(false));
                         if let Some(pending) = s.preview_work.pending.take() {
                             if drain_clears_landing_pending(
                                 pending.generation,
@@ -3240,6 +3262,32 @@ mod tests {
         assert!(
             new_cancel.load(Ordering::Relaxed),
             "device teardown cancels work"
+        );
+    }
+
+    #[test]
+    fn new_processing_cancels_obsolete_preparation_but_target_edits_keep_reusable_work() {
+        let mut gate = PreviewWorkerGate::default();
+        let settings = settings_with_intensity(0.7);
+        gate.active = Some(PreviewWorkRequest {
+            settings: settings.clone(),
+            generation: 1,
+            track_epoch: gate.epoch,
+            landing_enabled: true,
+        });
+        let mut next = settings.clone();
+        next.advanced.lufs_offset_db = Some(-23.);
+        gate.cancel_obsolete_response(48000, &next);
+        assert!(!gate.cancelled.load(Ordering::Relaxed));
+        next.volume_match = true;
+        gate.cancel_obsolete_response(48000, &next);
+        assert!(!gate.cancelled.load(Ordering::Relaxed));
+        next.eq_high_db = 2.;
+        gate.cancel_obsolete_response(48000, &next);
+        assert!(gate.cancelled.load(Ordering::Relaxed));
+        assert!(
+            gate.active.is_some(),
+            "terminal worker message still owns completion"
         );
     }
 
