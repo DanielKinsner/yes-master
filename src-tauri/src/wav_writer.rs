@@ -237,7 +237,7 @@ pub(crate) fn wav_spec(
 /// Meter the exact deterministic PCM representation the writer delivers.
 /// Integer dither/clipping and the loudness absolute gate invalidate simply
 /// shifting pre-landing measurements. Scratch space is bounded, not track-sized.
-pub(crate) fn measure_delivery(
+pub fn measure_delivery(
     samples: &[f32],
     sample_rate: u32,
     channels: u16,
@@ -245,12 +245,8 @@ pub(crate) fn measure_delivery(
 ) -> CommandResult<(f32, f32, f32)> {
     use ebur128::{EbuR128, Mode};
     wav_spec(channels, sample_rate, bit_depth)?;
-    let mut ebu = EbuR128::new(
-        u32::from(channels),
-        sample_rate,
-        Mode::I | Mode::LRA | Mode::TRUE_PEAK,
-    )
-    .map_err(|e| CommandError::Render(e.to_string()))?;
+    let mut ebu = EbuR128::new(u32::from(channels), sample_rate, Mode::I | Mode::LRA)
+        .map_err(|e| CommandError::Render(e.to_string()))?;
     if bit_depth == 32 {
         ebu.add_frames_f32(samples)
             .map_err(|e| CommandError::Render(e.to_string()))?;
@@ -276,13 +272,10 @@ pub(crate) fn measure_delivery(
     let lra = ebu
         .loudness_range()
         .map_err(|e| CommandError::Render(e.to_string()))? as f32;
-    let mut peak = 0.0_f64;
-    for channel in 0..u32::from(channels) {
-        peak = peak.max(
-            ebu.true_peak(channel)
-                .map_err(|e| CommandError::Render(e.to_string()))?,
-        );
-    }
+    let source = DeliveryPcm::new(samples, channels, bit_depth, || false)?;
+    let peak = crate::peak_meter::measure_source(&source, || false)
+        .map_err(|e| CommandError::Render(e.into()))?
+        .upper();
     Ok((
         lufs,
         if peak > 0.0 {
