@@ -149,7 +149,18 @@ impl<S: Source<Item = f32>> Iterator for GainSource<S> {
                     let t =
                         (self.ramp_frames - self.ramp_left + 1) as f32 / self.ramp_frames as f32;
                     self.landing = self.ramp_from.0 + (self.ramp_to.0 - self.ramp_from.0) * t;
-                    self.volume_match = self.ramp_from.1 + (self.ramp_to.1 - self.ramp_from.1) * t;
+                    // Interpolate the audible total gain. Ramping both factors
+                    // independently creates a bump when they compensate each
+                    // other. Keep a valid factor pair for interruptions/pending
+                    // attenuation, and preserve the settled f32 multiply order.
+                    let from = f64::from(self.ramp_from.0) * f64::from(self.ramp_from.1);
+                    let to = f64::from(self.ramp_to.0) * f64::from(self.ramp_to.1);
+                    let total = from + (to - from) * f64::from(t);
+                    self.volume_match = if self.landing > 0. {
+                        ((total / f64::from(self.landing)) as f32).clamp(0., 1.)
+                    } else {
+                        self.ramp_to.1
+                    };
                 }
                 self.ramp_left -= 1;
             }
@@ -200,6 +211,109 @@ impl<S: Source<Item = f32>> Source for GainSource<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compensating_device_and_volume_match_edits_preserve_combined_level() {
+        let mut rows = Vec::new();
+        for rate in [44100, 48000, 96000] {
+            for interrupt in [false, true] {
+                let mailbox = GainMailbox::new(GainPlan {
+                    revision: 1,
+                    raw_revision: 1,
+                    landing: 0.5,
+                    volume_match: 1.,
+                });
+                let mut source = GainSource::new(
+                    rodio::buffer::SamplesBuffer::new(2, rate, vec![0.2; rate as usize]),
+                    Arc::new(AtomicU64::new(1)),
+                    mailbox.clone(),
+                );
+                assert_eq!(source.next(), Some(0.1));
+                assert_eq!(source.next(), Some(0.1));
+                mailbox.publish(GainPlan {
+                    revision: 2,
+                    raw_revision: 1,
+                    landing: 1.,
+                    volume_match: 0.5,
+                });
+                let mut maximum_delta_db = 0_f64;
+                for frame in 0..source.ramp_frames * 2 {
+                    if interrupt && frame == source.ramp_frames / 4 {
+                        mailbox.publish(GainPlan {
+                            revision: 3,
+                            raw_revision: 1,
+                            landing: 0.625,
+                            volume_match: 0.8,
+                        });
+                    }
+                    let left = source.next().unwrap();
+                    assert_eq!(source.next(), Some(left));
+                    let delta = (20. * (f64::from(left) / f64::from(0.1_f32)).log10()).abs();
+                    maximum_delta_db = maximum_delta_db.max(delta);
+                }
+                assert_eq!(
+                    source.revision_slot().load(Ordering::Acquire),
+                    if interrupt { 3 } else { 2 }
+                );
+                rows.push((rate, interrupt, maximum_delta_db));
+            }
+        }
+        eprintln!(
+            "Equal combined-gain transitions (rate, interrupted, maximum dB delta): {rows:?}"
+        );
+        assert!(
+            rows.iter().all(|row| row.2 <= 0.01),
+            "equal endpoints must retain the existing 0.01 dB transition budget: {rows:?}"
+        );
+    }
+
+    #[test]
+    fn gain_ramps_through_zero_remain_finite_monotonic_and_allocation_free() {
+        for (from, to) in [
+            ((0., 1.), (1., 0.5)),
+            ((1., 0.), (0.5, 1.)),
+            ((1., 0.5), (0., 1.)),
+            ((0.5, 1.), (1., 0.)),
+        ] {
+            let mailbox = GainMailbox::new(GainPlan {
+                revision: 1,
+                raw_revision: 1,
+                landing: from.0,
+                volume_match: from.1,
+            });
+            let mut source = GainSource::new(
+                rodio::buffer::SamplesBuffer::new(2, 48000, vec![0.2; 4096]),
+                Arc::new(AtomicU64::new(1)),
+                mailbox.clone(),
+            );
+            let mut previous = source.next().unwrap();
+            assert_eq!(source.next(), Some(previous));
+            mailbox.publish(GainPlan {
+                revision: 2,
+                raw_revision: 1,
+                landing: to.0,
+                volume_match: to.1,
+            });
+            let final_value = (0.2 * to.0) * to.1;
+            let increasing = final_value > previous;
+            let (allocations, ()) = crate::test_allocations::count(|| {
+                for _ in 0..source.ramp_frames {
+                    let value = source.next().unwrap();
+                    assert!(value.is_finite());
+                    assert_eq!(source.next(), Some(value));
+                    if increasing {
+                        assert!(value >= previous && value <= final_value);
+                    } else {
+                        assert!(value <= previous && value >= final_value);
+                    }
+                    previous = value;
+                }
+                assert_eq!(previous, final_value);
+                assert_eq!(source.revision_slot().load(Ordering::Acquire), 2);
+            });
+            assert_eq!(allocations, 0);
+        }
+    }
 
     #[test]
     fn concurrent_publication_never_pairs_different_gains_or_raw_revisions() {
