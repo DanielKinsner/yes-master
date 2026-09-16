@@ -348,3 +348,27 @@ This qualifies **pre-encode PCM**, not the decoded lossy waveform. The B4
 advisory lossy-peak scope remains. Wider full-song/device peak protection and
 actual applied-generation readiness are still open; no installed/listening/Mac
 claim is made.
+
+### Whole-file device-rate witness
+
+`mastering_quality_device_probe` converts **16 retained protected file outputs**
+(control and single candidate for all eight original sources) from 48 kHz to
+44.1/96 kHz through the actual production `QualitySource`: **32 complete files**.
+Manifest/input/output hashes, exact ceil frame counts, converter errors, finite
+PCM, full-scale counts, LUFS and qualified peaks are retained in
+`b3-device-whole-v1/report.json`. No DSP is rerendered; these are the original
+C1 controls from before the later filter-precision correction.
+
+The Imaginal control at 44.1 kHz reaches **-0.775274 dBTP** in the qualified
+meter. Independent complete-file SOXR16/64 with the frozen finite padding gives
+**-0.815114 dBTP**, above its requested **-1 dBTP** ceiling, with **zero samples
+at full scale** and a passing LUFS comparison. This is an inter-sample peak miss,
+not PCM clipping. `b3-device-imaginal-independent-v1/comparison.json` retains
+the failed ceiling result; it is not waived by the passing earlier short matrix.
+The complete matrix's independent checker continues in its own retained report.
+
+This is a supported simulated output rate through production conversion, not
+an opened 44.1 kHz native device or a listening result. It establishes the need
+for device-specific whole-file planning; it does not establish a universal
+margin, scalar commutation, or an implemented device cap. Protected delivered
+files remain unchanged. The probe's build and strict all-target Clippy passed.
