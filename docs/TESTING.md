@@ -101,6 +101,29 @@ and short/non-round programme lengths. Older decoders can ignore edit-list tail
 trimming and conceal a millisecond-duration rounding defect; do not substitute
 one to make this regression pass.
 
+## Device-rate gain preparation checks
+
+The [device preparation record](reviews/2026-09-15-device-gain-preparation.md)
+distinguishes protected file PCM from the device-derived gain. Focused desktop
+regressions cover exact post-device gain placement, full-file cache reuse and
+invalidation, oversized owned-buffer fallback, concurrent gain-plan publication,
+raw/output revisions, small attenuation, seek and callback allocation behavior.
+The new cancellable SRC entry rejects nonfinite PCM before the FFT backend and
+checks cancellation during validation and conversion without changing valid PCM.
+
+`audio::delivery_rate_probe::mastering_quality_protected_device_whole_files` is
+an opt-in complete-original-source production/offline PCM comparison. Supply a
+restored-source/settings manifest in `YES_MASTER_DEVICE_LIVE_INPUTS` and a fresh
+`YES_MASTER_DEVICE_LIVE_OUTPUT` directory. Independently verify the written
+complete WAVs with the frozen SOXR16/64 and LUFS checker; short synthetic route
+comparisons do not replace this lane. Existing native lifecycle and callback
+probes cover actual output response separately. The research helper
+`scripts/research/mastering-quality-implementation-20260915/observe-native-test.ps1`
+records a copied native test executable's hash, wall/CPU/memory observations and
+separate stdout/stderr without changing OS volume or opening a visible helper.
+These are process observations under the recorded workload, not DAC latency,
+subjective listening or installer evidence.
+
 ## Audio correctness regressions
 
 `cargo test` includes `tests/audio_invariants.rs` without private fixtures or

@@ -30,7 +30,16 @@
 > new-target measurement/application is 0.767/0.951 s, cached target 0.075/0.189 s
 > in the muted native probe. Paused edits wait for resume before acknowledging
 > output. Full desktop/private fixtures, Clippy and 607 loaded callbacks pass.
-> Device protection and the final-result UI contract remain open.
+> The subsequent [device-gain implementation](reviews/2026-09-15-device-gain-preparation.md)
+> applies a separately verified scalar after both converters, reusing bounded
+> whole-file device facts across target edits. All 32 retained-output core cases
+> pass the qualified ceiling; independent checks continue. The complete current
+> Imaginal 44.1 kHz production route has zero PCM differences from its measured
+> plan and independently passes at -1.039866 dBTP. Full desktop/private fixtures,
+> Clippy, bridges and muted native checks pass. First preparation/application is
+> 49.779/49.834 s; new target 1.154/1.220 s; cached target 75 ms. The loaded callback
+> run has 608 callbacks and no deadline misses/errors. The broader full-original-
+> source matrix, dynamic boundary coverage and final-result UI contract remain open.
 > [C1 development](reviews/2026-09-15-drive-prototype-protocol.md) has completed
 > all eight original coarse runs and bounded refinements: 517 complete deliveries.
 > Target/character conflicts and explicit control fallbacks remain; very quiet

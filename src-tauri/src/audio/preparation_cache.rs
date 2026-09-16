@@ -3,6 +3,7 @@
 //! never runs on an audio callback or copies PCM under a lock.
 use super::{settings_landing_values_are_finite, PlaybackPcm};
 use crate::{
+    device_preparation::PreparedDevicePcm,
     dsp::ChainCoeffs,
     engine::{PreparedPreviewAudio, PreviewLanding},
     types::*,
@@ -31,11 +32,13 @@ pub(super) fn same_response(rate: u32, a: &MasteringSettings, b: &MasteringSetti
         && ChainCoeffs::from_settings(rate, &a) == ChainCoeffs::from_settings(rate, &b)
 }
 
+#[derive(Clone)]
 struct Key {
     source: Weak<Vec<f32>>,
     source_rate: u32,
     channels: u16,
     delivery_rate: u32,
+    device_rate: Option<u32>,
     coeffs: ChainCoeffs,
 }
 
@@ -51,6 +54,7 @@ impl Key {
             source_rate: pcm.sample_rate,
             channels: pcm.channels,
             delivery_rate: settings.effective_sample_rate(pcm.sample_rate),
+            device_rate: None,
             coeffs: ChainCoeffs::from_settings(pcm.sample_rate, &raw_settings),
         })
     }
@@ -60,21 +64,36 @@ impl Key {
             && self.source_rate == other.source_rate
             && self.channels == other.channels
             && self.delivery_rate == other.delivery_rate
+            && self.device_rate == other.device_rate
             && self.coeffs == other.coeffs
     }
 }
 
-struct Entry {
-    key: Key,
-    prepared: Arc<PreparedPreviewAudio>,
+trait PcmBytes {
+    fn pcm_bytes(&self) -> usize;
 }
-struct Cache {
-    entries: VecDeque<Entry>,
+impl PcmBytes for PreparedPreviewAudio {
+    fn pcm_bytes(&self) -> usize {
+        self.pcm_bytes()
+    }
+}
+impl PcmBytes for PreparedDevicePcm {
+    fn pcm_bytes(&self) -> usize {
+        self.pcm_bytes()
+    }
+}
+
+struct Entry<T> {
+    key: Key,
+    prepared: Arc<T>,
+}
+struct Cache<T = PreparedPreviewAudio> {
+    entries: VecDeque<Entry<T>>,
     bytes: usize,
     budget: usize,
 }
 
-impl Cache {
+impl<T: PcmBytes> Cache<T> {
     fn new(budget: usize) -> Self {
         Self {
             entries: VecDeque::new(),
@@ -91,7 +110,7 @@ impl Cache {
             .map(|entry| entry.prepared.pcm_bytes())
             .sum();
     }
-    fn get(&mut self, key: &Key) -> Option<Arc<PreparedPreviewAudio>> {
+    fn get(&mut self, key: &Key) -> Option<Arc<T>> {
         self.prune();
         let index = self
             .entries
@@ -102,7 +121,7 @@ impl Cache {
         self.entries.push_back(entry);
         Some(result)
     }
-    fn insert(&mut self, key: Key, prepared: Arc<PreparedPreviewAudio>) {
+    fn insert(&mut self, key: Key, prepared: Arc<T>) {
         self.prune();
         let size = prepared.pcm_bytes();
         if size > self.budget {
@@ -129,6 +148,147 @@ pub(super) fn measure(
     cancel: &AtomicBool,
 ) -> CommandResult<PreviewLanding> {
     measure_with_cache(cache(), pcm, settings, cancel)
+}
+
+pub(super) struct DeviceLanding {
+    pub file_gain: f32,
+    pub device_gain: f32,
+}
+
+pub(super) fn measure_for_device(
+    pcm: &PlaybackPcm,
+    settings: &MasteringSettings,
+    device_rate: u32,
+    cancel: &AtomicBool,
+) -> CommandResult<DeviceLanding> {
+    static DEVICE_CACHE: OnceLock<Mutex<Cache<PreparedDevicePcm>>> = OnceLock::new();
+    measure_device_with_cache(
+        cache(),
+        DEVICE_CACHE.get_or_init(|| Mutex::new(Cache::new(PCM_BUDGET))),
+        pcm,
+        settings,
+        device_rate,
+        cancel,
+    )
+}
+
+fn measure_device_with_cache(
+    file_cache: &Mutex<Cache>,
+    device_cache: &Mutex<Cache<PreparedDevicePcm>>,
+    pcm: &PlaybackPcm,
+    settings: &MasteringSettings,
+    device_rate: u32,
+    cancel: &AtomicBool,
+) -> CommandResult<DeviceLanding> {
+    if cancel.load(Ordering::Relaxed) {
+        return Err(CommandError::Render("device preparation cancelled".into()));
+    }
+    let key = Key::new(pcm, settings)
+        .ok_or_else(|| CommandError::Render("invalid device preparation settings".into()))?;
+    let mut device_key = key.clone();
+    device_key.device_rate = Some(device_rate);
+    let started = Instant::now();
+    let (file, file_budget) = {
+        let mut cache = file_cache
+            .lock()
+            .map_err(|e| CommandError::Other(e.to_string()))?;
+        (cache.get(&key), cache.budget)
+    };
+    let file_hit = file.is_some();
+    let file = match file {
+        Some(file) => file,
+        None => Arc::new(crate::engine::prepare_preview_audio(
+            &pcm.samples,
+            pcm.sample_rate,
+            pcm.channels,
+            settings,
+            Some(cancel),
+        )?),
+    };
+    let file_prepare_ms = started.elapsed().as_secs_f64() * 1000.;
+    let started = Instant::now();
+    let (device, device_budget) = {
+        let mut cache = device_cache
+            .lock()
+            .map_err(|e| CommandError::Other(e.to_string()))?;
+        (cache.get(&device_key), cache.budget)
+    };
+    let device_hit = device.is_some();
+    let device = match device {
+        Some(device) => device,
+        None => Arc::new(PreparedDevicePcm::new(
+            file.raw_pcm(),
+            key.delivery_rate,
+            pcm.channels,
+            device_rate,
+            Some(cancel),
+        )?),
+    };
+    let device_prepare_ms = started.elapsed().as_secs_f64() * 1000.;
+    let started = Instant::now();
+    // Oversized buffers have never been shared or retained. Finish them in place
+    // instead of allocating an additional copy merely to bypass the cache.
+    let (file_result, retain_file) = if file.pcm_bytes() > file_budget {
+        let owned = Arc::try_unwrap(file).map_err(|_| {
+            CommandError::Other("oversized file response unexpectedly shared".into())
+        })?;
+        (owned.finish_owned(settings, Some(cancel))?, None)
+    } else {
+        (file.finish(settings, Some(cancel))?, Some(file))
+    };
+    let file_verify_ms = started.elapsed().as_secs_f64() * 1000.;
+    let started = Instant::now();
+    let (device_result, retain_device) = if device.pcm_bytes() > device_budget {
+        let owned = Arc::try_unwrap(device).map_err(|_| {
+            CommandError::Other("oversized device response unexpectedly shared".into())
+        })?;
+        (
+            owned.finish_owned(
+                file_result.gain_lin,
+                settings.effective_ceiling_dbtp(),
+                Some(cancel),
+            )?,
+            None,
+        )
+    } else {
+        (
+            device.finish(
+                file_result.gain_lin,
+                settings.effective_ceiling_dbtp(),
+                Some(cancel),
+            )?,
+            Some(device),
+        )
+    };
+    let device_verify_ms = started.elapsed().as_secs_f64() * 1000.;
+    if cancel.load(Ordering::Relaxed) {
+        return Err(CommandError::Render("device preparation cancelled".into()));
+    }
+    let result = DeviceLanding {
+        file_gain: file_result.gain_lin,
+        device_gain: device_result.protection.gain_lin,
+    };
+    drop(device_result);
+    let file_bytes = {
+        let mut cache = file_cache
+            .lock()
+            .map_err(|e| CommandError::Other(e.to_string()))?;
+        if let Some(file) = retain_file.filter(|_| !file_hit) {
+            cache.insert(key, file);
+        }
+        cache.bytes
+    };
+    let device_bytes = {
+        let mut cache = device_cache
+            .lock()
+            .map_err(|e| CommandError::Other(e.to_string()))?;
+        if let Some(device) = retain_device.filter(|_| !device_hit) {
+            cache.insert(device_key, device);
+        }
+        cache.bytes
+    };
+    crate::diagnostics::info(format!("Device preparation: file_hit={file_hit} device_hit={device_hit} file_pcm_bytes={file_bytes} device_pcm_bytes={device_bytes} file_prepare_ms={file_prepare_ms:.3} device_prepare_ms={device_prepare_ms:.3} file_verify_ms={file_verify_ms:.3} device_verify_ms={device_verify_ms:.3} file_gain={} device_gain={}", result.file_gain, result.device_gain));
+    Ok(result)
 }
 
 fn measure_with_cache(
@@ -221,6 +381,92 @@ mod tests {
         settings.advanced.lufs_offset_db = Some(-14.);
         settings.advanced.bit_depth = Some(24);
         settings
+    }
+
+    #[test]
+    fn device_reuse_preserves_delivery_and_separates_rates_source_lifetime_and_byte_limits() {
+        let pcm = pcm();
+        let cancel = AtomicBool::new(false);
+        let files = Mutex::new(Cache::new(PCM_BUDGET));
+        let devices = Mutex::new(Cache::new(PCM_BUDGET));
+        let mut settings = settings();
+        settings.advanced.target_sample_rate = Some(96000);
+        let mut file_pointer = None;
+        let mut device_pointer = None;
+        for (rate, target, bits) in [
+            (44100, -14., 24),
+            (44100, -23., 16),
+            (44100, -9., 32),
+            (48000, -14., 24),
+        ] {
+            settings.advanced.lufs_offset_db = Some(target);
+            settings.advanced.bit_depth = Some(bits);
+            let actual =
+                measure_device_with_cache(&files, &devices, &pcm, &settings, rate, &cancel)
+                    .unwrap();
+            let raw = crate::engine::prepare_preview_audio(
+                &pcm.samples,
+                pcm.sample_rate,
+                pcm.channels,
+                &settings,
+                None,
+            )
+            .unwrap();
+            let file = raw.finish(&settings, None).unwrap();
+            let device =
+                PreparedDevicePcm::new(raw.raw_pcm(), 96000, pcm.channels, rate, None).unwrap();
+            let direct = device
+                .finish(file.gain_lin, settings.effective_ceiling_dbtp(), None)
+                .unwrap();
+            assert_eq!(actual.file_gain.to_bits(), file.gain_lin.to_bits());
+            assert_eq!(
+                actual.device_gain.to_bits(),
+                direct.protection.gain_lin.to_bits()
+            );
+            let file_cache = files.lock().unwrap();
+            assert_eq!(file_cache.entries.len(), 1);
+            let pointer = Arc::as_ptr(&file_cache.entries[0].prepared);
+            assert_eq!(*file_pointer.get_or_insert(pointer), pointer);
+            drop(file_cache);
+            if rate == 44100 {
+                let cache = devices.lock().unwrap();
+                assert_eq!(cache.entries.len(), 1);
+                let pointer = Arc::as_ptr(&cache.entries[0].prepared);
+                assert_eq!(*device_pointer.get_or_insert(pointer), pointer);
+            }
+            let bypass_files = Mutex::new(Cache::new(1));
+            let bypass_devices = Mutex::new(Cache::new(1));
+            let bypass = measure_device_with_cache(
+                &bypass_files,
+                &bypass_devices,
+                &pcm,
+                &settings,
+                rate,
+                &cancel,
+            )
+            .unwrap();
+            assert_eq!(bypass.file_gain, actual.file_gain);
+            assert_eq!(bypass.device_gain, actual.device_gain);
+            assert!(bypass_files.lock().unwrap().entries.is_empty());
+            assert!(bypass_devices.lock().unwrap().entries.is_empty());
+        }
+        assert_eq!(devices.lock().unwrap().entries.len(), 2);
+        let other = PlaybackPcm {
+            samples: Arc::new((*pcm.samples).clone()),
+            ..pcm.clone()
+        };
+        measure_device_with_cache(&files, &devices, &other, &settings, 48000, &cancel).unwrap();
+        assert_eq!(files.lock().unwrap().entries.len(), 2);
+        cancel.store(true, Ordering::Relaxed);
+        assert!(
+            measure_device_with_cache(&files, &devices, &pcm, &settings, 44100, &cancel).is_err()
+        );
+        drop(pcm);
+        drop(other);
+        files.lock().unwrap().prune();
+        devices.lock().unwrap().prune();
+        assert_eq!(files.lock().unwrap().bytes, 0);
+        assert_eq!(devices.lock().unwrap().bytes, 0);
     }
 
     #[test]

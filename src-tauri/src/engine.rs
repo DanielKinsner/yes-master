@@ -406,6 +406,10 @@ pub(crate) struct PreparedPreviewAudio {
 }
 
 impl PreparedPreviewAudio {
+    pub(crate) fn raw_pcm(&self) -> &[f32] {
+        &self.samples
+    }
+
     pub(crate) fn pcm_bytes(&self) -> usize {
         self.samples.capacity() * std::mem::size_of::<f32>()
     }

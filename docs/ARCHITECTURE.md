@@ -71,14 +71,23 @@ the backend resolves its pre-encode PCM rate and precision with the export
 encoder's own rules. A transient settings copy preserves the effective target,
 ceiling and exact processing coefficients; requested/saved settings stay intact.
 Matching PCM responses share preparation even across formats, while changed
-rates invalidate it. This does not simulate lossy decoding. Additional device
-protection remains open. Conversion failure carries a unique
+rates invalidate it. This does not simulate lossy decoding. Device planning
+measures the full raw response at the opened rate and caps the file-derived gain.
+Landing and attenuation-only Volume Match run after both converters, before
+meters/fade. File and device responses have separate two-entry, 192 MiB LRU
+caches; target/precision edits reverify complete delivery while reusing raw facts.
+Oversized responses finish once in place. File-only prewarm results never count
+as device-qualified. See [device preparation](reviews/2026-09-15-device-gain-preparation.md)
+for verification scope and outstanding transition/seek limits. Conversion or
+matching device-preparation failure carries a unique
 failed-source epoch to the existing UI error surface; replay reconstructs the
 source rather than resuming an exhausted iterator.
 Preview measurement readiness and output application are distinct. Each
 coefficient publication receives a revision separate from the logical settings
-generation. The DSP crossfade, both converters' overlap/buffers and final fade
-propagate the revision only as PCM is emitted. `PlaybackSnapshot` exposes the
+generation. Raw-processing revisions are separate: target/VM-only edits reuse
+the raw response and do not restart its DSP transition. The DSP crossfade and
+both converters propagate raw revisions as PCM is emitted; the post-device gain
+stage acknowledges the matching plan after its ramp, followed by the final fade. `PlaybackSnapshot` exposes the
 requested/applied tokens for diagnostics; a paused edit may be prepared without
 being emitted. This is application-output readiness, not DAC/speaker latency.
 `audio/output_route.rs` opens CPAL directly and retains the successful stream

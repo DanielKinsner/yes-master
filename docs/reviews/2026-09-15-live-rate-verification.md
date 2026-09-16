@@ -419,3 +419,15 @@ Callback v1 accidentally used the default file rate because the environment
 variable name was wrong; retain its evidence without claiming the 96 kHz path.
 This desktop-only slice changes no bridge/shared DSP/WASM/markup. No installed,
 Mac or listening result follows. Device-specific peak protection remains open.
+
+### Device gain and reusable preparation continuation
+
+The [device preparation record](2026-09-15-device-gain-preparation.md) documents
+the subsequent production gain placement, bounded file/device caches, full-file
+core correction, current-original-source witness, complete desktop/private and
+bridge checks, and separate native preparation/application/resource observations.
+The corrected current Imaginal 44.1 kHz production output matches its measured
+plan exactly and passes independent SOXR16/64 at -1.039866 dBTP. The earlier
+failed files remain unchanged. The broader original-source matrix is still
+running; dynamic boundary and final-result UI coverage remain open. No installed,
+Mac or new listening verdict follows.

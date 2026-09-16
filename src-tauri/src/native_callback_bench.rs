@@ -509,6 +509,13 @@ fn callback_bench(streaming_src: bool) {
         integrated,
         ring.clone(),
     );
+    let source = source.with_initial_revision(1);
+    let gains = gain_stage::GainMailbox::new(gain_stage::GainPlan {
+        revision: 1,
+        raw_revision: 1,
+        landing: 1.,
+        volume_match: 1.,
+    });
     let construct_start = Instant::now();
     let (mut source, stream_error): (Box<dyn Iterator<Item = f32> + Send>, _) = if streaming_src {
         let file_rate = std::env::var("YES_MASTER_CALLBACK_FILE_RATE")
@@ -520,6 +527,7 @@ fn callback_bench(streaming_src: bool) {
             file_rate,
             rate,
             crate::sources::FadeEnvelope::inactive(),
+            gains.clone(),
         )
         .unwrap();
         (Box::new(metered), Some(slot))
@@ -613,8 +621,14 @@ fn callback_bench(streaming_src: bool) {
     let edit_start = Instant::now();
     for generation in 1..=120 {
         settings.eq_high_db = if generation % 2 == 0 { 1.0 } else { -1.0 };
+        gains.publish(gain_stage::GainPlan {
+            revision: generation + 1,
+            raw_revision: generation + 1,
+            landing: 1.,
+            volume_match: 1.,
+        });
         tx.send(LiveCoeffUpdate {
-            generation,
+            generation: generation + 1,
             coeffs: crate::dsp::ChainCoeffs::from_settings(chain_rate, &settings),
         })
         .unwrap();
