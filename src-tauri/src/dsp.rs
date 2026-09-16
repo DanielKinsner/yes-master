@@ -1534,6 +1534,12 @@ pub struct Limiter {
 }
 
 impl Limiter {
+    /// Current applied reduction for offline diagnostics. Reading this does
+    /// not advance the limiter or change its envelope.
+    pub fn gain_reduction_db(&self) -> f32 {
+        -20.0 * self.gain.max(f32::MIN_POSITIVE).log10()
+    }
+
     pub fn new(
         sample_rate: u32,
         channels: usize,
