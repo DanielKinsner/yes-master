@@ -20,6 +20,8 @@ def main():
     parser.add_argument("--metrics-map", type=Path, required=True)
     parser.add_argument("--baseline-metrics", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--lower-grid", action="store_true",
+                        help="Separate fixed three-case 0/-3/-6/-12 experiment; no convergence claim")
     args = parser.parse_args()
     assert not args.output.exists()
     mapping = read(args.metrics_map)
@@ -36,6 +38,9 @@ def main():
                   baseline_metrics_sha256=sha(args.baseline_metrics), metrics_map_sha256=sha(args.metrics_map),
                   script_sha256=sha(Path(__file__)), source_metrics={case: sha(Path(path)) for case, path in mapping.items()},
                   scope="Fixed source and matched-current C1 metrics; existing limits descriptive; no small-signal convergence or sonic adoption inferred solely from limiter inactivity")
+    if args.lower_grid:
+        result.update(experiment="bounded-lower-drive-v1",
+                      scope="Fixed corrected-chain lower-drive grid with original C1 anchors and limits; no adoption")
     checked, lower = {}, {}
     while True:
         try:
@@ -44,6 +49,10 @@ def main():
             time.sleep(5)
             continue
         for row in native["rows"]:
+            if args.lower_grid:
+                assert native["experiment"] == "bounded-lower-drive-v1"
+                assert row["case"] in {"coat-single-t14", "piano-single-t14", "imaginal-single-t14"}
+                assert row["offset_db"] in {0., -3., -6., -12.}
             path = Path(row["path"])
             if str(path) in checked:
                 assert checked[str(path)] == row["sha256"]
@@ -72,7 +81,10 @@ def main():
             args.output.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n", encoding="utf-8")
             print("Measured", row["case"], row["offset_db"], flush=True)
         if native["status"] == "complete":
-            assert len(result["rows"]) == 12 and len(native["convergence"]) == 4
+            assert len(result["rows"]) == 12
+            assert len(native["convergence"]) == (0 if args.lower_grid else 4)
+            if args.lower_grid:
+                assert len({(row["case"], row["offset_db"]) for row in result["rows"]}) == 12
             result.update(status="complete", native_sha256=sha(args.report), convergence=native["convergence"])
             args.output.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n", encoding="utf-8")
             return

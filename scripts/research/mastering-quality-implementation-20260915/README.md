@@ -193,3 +193,21 @@ unchanged qualification scope; each reused row requires complete passing checks,
 identical WAV hash/format/frames/ceiling/native LUFS, and records original report
 provenance. Reuse is labeled and never reported as fresh independent measurement.
 See the separate low-drive protocol/results; this does not widen the C1 grid.
+
+`prepare_lower_drive.py --prior-job JOB --specification SPEC --output FRESH.json`
+binds a **separate** corrected-chain development grid to the retained three
+single-rule cases. The same `mastering_quality_small_signal` example recognizes
+its `bounded-lower-drive-v1` job, enforces 0/-3/-6/-12 dB and reproduces the three
+exact controls before retaining nine new outputs. Default diagnostic jobs still
+run the original 0/-24/-48 sequence. Use `evaluate_small_signal.py --lower-grid`
+with the same metrics-map/baseline arguments, and the whole-output checker with
+12 expected rows and explicit same-scope control reuse. Only after all reports
+complete, `summarize_lower_drive.py --root EVIDENCE --output FRESH.json` joins
+hashes and independent checks and reports both fixed hypothetical selections.
+Read `docs/reviews/2026-09-15-drive-lower-grid-protocol.md` first. This comparison
+does not freeze production limits, expand into holdout material or select the
+owner's automatic sound-priority choice.
+Build/copy the executable before preparing the job, then repeat the output-byte
+reserve check immediately before launch: an earlier preflight does not reserve
+space against build or unrelated host writes. The completed lower-grid results
+record that limitation and the separate candidate-cost/selection findings.

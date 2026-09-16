@@ -6,6 +6,15 @@ No push, main integration, publication, spending or private-audio commit is auth
 
 ## Checkpoint ledger
 
+Latest C1 follow-up: the [corrected-chain lower grid](2026-09-15-drive-lower-grid-results.md)
+completes three exact reused controls and nine fresh independently protected
+whole outputs. The fixed preserving rule selects Coat/Piano/Imaginal at
+-14.000/-14.804/-18.142 LUFS for a -14 request; target-first retains Piano/Imaginal
+character failures. Coat's passing single candidate makes 62.405 s of additional
+observed audio evaluation unnecessary for that rule. Broader C1, owner direction,
+numeric/budget/control freeze and C2/C3 remain open. This is a research-only
+checkpoint; the resource preflight's intervening-build limitation is recorded.
+
 | Checkpoint | Status | Evidence and limits |
 | --- | --- | --- |
 | A1 | Complete locally | Same Rubato FFT filter, explicit partial input/draining, checked integer frame counts. 1,690 rate/length conditions pass; finite-tail and fixed-phase stale-frame checks pass. Strict Clippy and desktop library/integration/fixture suite pass. |

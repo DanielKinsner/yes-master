@@ -1,4 +1,4 @@
-//! Low-drive response diagnostic using retained settings; no selector or preset change.
+//! Whole-song drive response experiments using retained settings; no production policy.
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{path::Path, sync::atomic::Ordering, time::Instant};
@@ -84,6 +84,15 @@ fn main() {
     let output = Path::new(&args[2]);
     assert!(!output.exists());
     let job = read(job_path);
+    let lower_grid = job["experiment"] == "bounded-lower-drive-v1";
+    assert!(lower_grid || job["experiment"].is_null());
+    let offsets: &[f32] = if lower_grid {
+        assert_eq!(job["offsets_db"], json!([0., -3., -6., -12.]));
+        assert_eq!(job["cases"].as_array().unwrap().len(), 3);
+        &[0., -3., -6., -12.]
+    } else {
+        &[0., -24., -48.]
+    };
     assert_eq!(
         sha(Path::new(job["specification"].as_str().unwrap())),
         job["specification_sha256"].as_str().unwrap()
@@ -99,6 +108,14 @@ fn main() {
     let mut report = json!({"status":"running","job_sha256":sha(job_path),"rows":[],"convergence":[],
         "maximum_allowed_low_drive_difference":1e-5,
         "scope":"Low-drive response diagnostic, compensated after unchanged production chain; no expanded C grid or sonic adoption"});
+    if lower_grid {
+        report["experiment"] = json!("bounded-lower-drive-v1");
+        report["scope"] = json!("Fixed corrected-chain lower-drive development comparison; no production policy or convergence claim");
+        report
+            .as_object_mut()
+            .unwrap()
+            .remove("maximum_allowed_low_drive_difference");
+    }
     for case in job["cases"].as_array().unwrap() {
         let prior_path = Path::new(case["report"].as_str().unwrap());
         assert_eq!(sha(prior_path), case["report_sha256"].as_str().unwrap());
@@ -134,7 +151,7 @@ fn main() {
             .find(|row| row["case"] == case["id"] && row["variant"] == "current")
             .unwrap();
         let mut lower: Option<Vec<f32>> = None;
-        for offset in [0., -24., -48.] {
+        for &offset in offsets {
             let (raw, render) = render(
                 &input,
                 pcm.sample_rate,

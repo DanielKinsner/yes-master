@@ -59,6 +59,13 @@
 > request; Imaginal's attacks recover with a large miss and changed tone.
 > All four low-drive pairs fail the frozen numerical convergence limit, so no
 > linear reference or revised selection rule is claimed.
+> The subsequent [fixed lower-drive grid](reviews/2026-09-15-drive-lower-grid-results.md)
+> adds three exact controls and nine freshly independently protected whole files.
+> With unchanged character limits, Coat/Piano/Imaginal select -14.000/-14.804/
+> -18.142 LUFS for a -14 request. The single rule suffices for Coat; its other
+> candidates cost 62.405 s of additional audio evaluation. Target-first retains
+> Piano/Imaginal dynamics failures. These are development findings; owner
+> direction, broader corrected-chain validation and C2/C3 remain open.
 > [Saturation calibration](reviews/2026-09-15-saturation-calibration-results.md)
 > retains isolated continuity/antialias comparisons, eight independently verified
 > native finite-filter cases and **16 independently passing whole-song outputs**.
