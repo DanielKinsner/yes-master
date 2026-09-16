@@ -131,3 +131,20 @@ regressions and unseen licensed holdout. Reuse completed research. Do not relax
 Metal's frozen limit retroactively or open holdout outcomes before the next
 contract is fixed. C1's final numerical/runtime/control contract, C2 and C3 remain
 open. B3 dynamic-boundary/final-result UI work and release gates remain distinct.
+
+### Follow-through: current-control eligibility verified
+
+The [new frozen selector](2026-09-16-control-inclusive-selector-protocol.md),
+implemented at `c04a6d53`, passes 11 focused regressions and reselects the same
+verified whole files without rendering new audio. Its immutable internal result
+records source/intent context, algorithm, file/drive identity, actual delivery,
+character qualification, target feasibility and rejection/fallback reasons.
+
+The [selection evidence](evidence/2026-09-16-dynamics-research/selector-v1.json)
+chooses the passing single candidates for Funk/Aphelion/Baby, current processing
+for Rich (character qualified, target shortfall), and current processing for
+Metal as an explicit character fallback. A fallback that reaches the target is
+not mislabeled as a dynamics/tone pass. Over-ceiling/unverified results, unavailable
+character data and mixed contexts are covered. Candidate order cannot alter the
+result. This closes the known Rich selection regression; it does not solve
+Metal's sonic tradeoff, validate other preset/target combinations or complete C2.

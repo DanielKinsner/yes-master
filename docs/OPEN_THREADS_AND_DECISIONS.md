@@ -12,7 +12,10 @@
 > frozen single-candidate character/target limits; Metal and Rich retain tradeoffs.
 > Extra search costs 74.707 s of evaluation without a clear replacement for their
 > current processing under those limits. Include the corrected control among
-> eligible results in the next frozen selector. C1 contract/regression work,
+> eligible results in the next frozen selector. That [selector](reviews/2026-09-16-control-inclusive-selector-protocol.md)
+> is now implemented and verified by 11 regressions plus existing whole-file
+> reselection: Rich keeps current processing; Metal remains an explicit character
+> fallback; the three qualifying singles remain selected. C1 contract/regression work,
 > C2 holdout and C3 adoption remain open. The power-outage recovery verified all
 > saved report hashes; no completed audio experiment needs restarting.
 

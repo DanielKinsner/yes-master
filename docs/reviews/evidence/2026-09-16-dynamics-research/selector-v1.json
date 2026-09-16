@@ -1,0 +1,129 @@
+{
+  "status": "complete",
+  "algorithm": "control-inclusive-preserving-v1",
+  "evidence_sha256": "99a49b8313ee931ae34c79f42405bf97c64fd0251113b443c74d45c449060e2d",
+  "specification_sha256": "0a9b8c5cbebd4a486ffe4e2f19778b417ac8a320feb4c0627bcd989458fb6197",
+  "selector_sha256": "9f45a4dda92defde6fcce3f6e6eee682b8f8378095ef7712af41c067a05b0805",
+  "script_sha256": "ea2e4deccd7541b57b910b17be043c82089b3c9e015a5c0831c00e8b3d58ff17",
+  "cases": [
+    {
+      "case": "funk",
+      "context": "eb0aacc9ef32a4cf7106fef346bcf7026406394c1e2df696c2f3fb8ad085c1f4",
+      "algorithm": "control-inclusive-preserving-v1",
+      "selected": {
+        "context": "eb0aacc9ef32a4cf7106fef346bcf7026406394c1e2df696c2f3fb8ad085c1f4",
+        "id": "funk-single",
+        "sha256": "1191490b94e3500710fd133595d2cded6f6b36c26e0d879d3773892b44bbfb53",
+        "policy": "single",
+        "offset_db": 0.0,
+        "lufs": -14.0,
+        "target_lufs": -14.0,
+        "peak": -1.5932170152664185,
+        "ceiling": -1.0,
+        "character_failures": [],
+        "technical_failures": []
+      },
+      "reason": "qualified_target",
+      "character_qualified": true,
+      "target_feasible": true,
+      "needs_more_search": false,
+      "rejected": []
+    },
+    {
+      "case": "metal",
+      "context": "b25a896135093c50ca5dd21e984eb19bef752a868d603d79142b9fe05a729d33",
+      "algorithm": "control-inclusive-preserving-v1",
+      "selected": {
+        "context": "b25a896135093c50ca5dd21e984eb19bef752a868d603d79142b9fe05a729d33",
+        "id": "metal-control",
+        "sha256": "4bd138319e1db7bfac5e11d39a9f88d3c91d704f03aca232e3e1d4b5a20286d1",
+        "policy": "control",
+        "offset_db": 0.0,
+        "lufs": -14.0,
+        "target_lufs": -14.0,
+        "peak": -8.334551811218262,
+        "ceiling": -1.0,
+        "character_failures": [
+          "attack_median_delta_db",
+          "attack_p10_delta_db"
+        ],
+        "technical_failures": []
+      },
+      "reason": "character_fallback",
+      "character_qualified": false,
+      "target_feasible": true,
+      "needs_more_search": true,
+      "rejected": []
+    },
+    {
+      "case": "aphelion",
+      "context": "49f98c0513a4e55c8744245829bc7172f31549d1d36c54b64b720c33ca771174",
+      "algorithm": "control-inclusive-preserving-v1",
+      "selected": {
+        "context": "49f98c0513a4e55c8744245829bc7172f31549d1d36c54b64b720c33ca771174",
+        "id": "aphelion-single",
+        "sha256": "4b3282d0e7207e431d27bf605339af7f7fd53ee03252946109458b7a6541aa8f",
+        "policy": "single",
+        "offset_db": 0.0,
+        "lufs": -14.0,
+        "target_lufs": -14.0,
+        "peak": -2.945648670196533,
+        "ceiling": -1.0,
+        "character_failures": [],
+        "technical_failures": []
+      },
+      "reason": "qualified_target",
+      "character_qualified": true,
+      "target_feasible": true,
+      "needs_more_search": false,
+      "rejected": []
+    },
+    {
+      "case": "rich",
+      "context": "edd5c73f8eb091befbbbc0563e283d4e31e21abfe922da8c09bd88d811e9fb60",
+      "algorithm": "control-inclusive-preserving-v1",
+      "selected": {
+        "context": "edd5c73f8eb091befbbbc0563e283d4e31e21abfe922da8c09bd88d811e9fb60",
+        "id": "rich-control",
+        "sha256": "ba6184812ce5b4d229f52d7411ef8844e2d7cd7bb54ba1236cf625cd1692ad89",
+        "policy": "control",
+        "offset_db": 0.0,
+        "lufs": -19.99799156188965,
+        "target_lufs": -14.0,
+        "peak": -1.0000104904174805,
+        "ceiling": -1.0,
+        "character_failures": [],
+        "technical_failures": []
+      },
+      "reason": "qualified_character_target_shortfall",
+      "character_qualified": true,
+      "target_feasible": false,
+      "needs_more_search": true,
+      "rejected": []
+    },
+    {
+      "case": "baby",
+      "context": "ac41efcb181f6123767778f4434495d3fb7fb29010e99ebd39a1a953857151b9",
+      "algorithm": "control-inclusive-preserving-v1",
+      "selected": {
+        "context": "ac41efcb181f6123767778f4434495d3fb7fb29010e99ebd39a1a953857151b9",
+        "id": "baby-single",
+        "sha256": "da703f8f0a8a1c7c54c5c00c53855da638d5bbbf9024e316f12aa8f30c45d05a",
+        "policy": "single",
+        "offset_db": 0.0,
+        "lufs": -13.999999046325684,
+        "target_lufs": -14.0,
+        "peak": -1.8739806413650513,
+        "ceiling": -1.0,
+        "character_failures": [],
+        "technical_failures": []
+      },
+      "reason": "qualified_target",
+      "character_qualified": true,
+      "target_feasible": true,
+      "needs_more_search": false,
+      "rejected": []
+    }
+  ],
+  "scope": "Reselection of verified known development files only; no new audio, speedup or production-policy claim"
+}
