@@ -624,6 +624,10 @@ fn floor_boost(preset_db: f32, mult: f32) -> f32 {
 pub struct GuardrailReadout {
     #[serde(default)]
     pub signal_chain: Option<SignalChainReadout>,
+    /// Actual coefficients after source/profile guards, independent of the
+    /// separately gated Adaptive Compressor diagnostic plan.
+    #[serde(default)]
+    pub compression: Option<ResolvedCompressionReadout>,
     pub active: bool,
     pub strength: f32,
     pub bright_trim: f32,
@@ -665,6 +669,63 @@ pub struct GuardrailReadout {
     pub effective_auto_width: Option<f32>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub struct ResolvedCompressionBand {
+    pub threshold_db: f32,
+    pub ratio: f32,
+    pub attack_ms: f32,
+    pub release_ms: f32,
+    pub makeup_db: f32,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub struct ResolvedCompressionReadout {
+    pub active: bool,
+    pub low: ResolvedCompressionBand,
+    pub mid: ResolvedCompressionBand,
+    pub high: ResolvedCompressionBand,
+}
+
+impl ResolvedCompressionReadout {
+    fn from_coeffs(c: &crate::dsp::ChainCoeffs) -> Self {
+        // Invert the actual canonical-rate envelope coefficient for display.
+        // This is presentation precision only; never feed it back into DSP or
+        // Manual initialization. No duplicate preset/guardrail resolver lives here.
+        let time_ms = |alpha: f32| -1000.0 / (48_000.0 * f64::from(alpha).ln()) as f32;
+        let band = |threshold_db, ratio, attack, release, makeup_db| ResolvedCompressionBand {
+            threshold_db,
+            ratio,
+            attack_ms: time_ms(attack),
+            release_ms: time_ms(release),
+            makeup_db,
+        };
+        Self {
+            active: c.compression_active,
+            low: band(
+                c.comp_low_threshold_db,
+                c.comp_low_ratio,
+                c.comp_low_attack_alpha,
+                c.comp_low_release_alpha,
+                c.comp_low_makeup_db,
+            ),
+            mid: band(
+                c.comp_mid_threshold_db,
+                c.comp_mid_ratio,
+                c.comp_mid_attack_alpha,
+                c.comp_mid_release_alpha,
+                c.comp_mid_makeup_db,
+            ),
+            high: band(
+                c.comp_high_threshold_db,
+                c.comp_high_ratio,
+                c.comp_high_attack_alpha,
+                c.comp_high_release_alpha,
+                c.comp_high_makeup_db,
+            ),
+        }
+    }
+}
+
 /// Presentation derived from actual chain coefficients, not a frontend preset
 /// table. The canonical rate affects filter shape, not whether a stage is active.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
@@ -678,9 +739,8 @@ pub struct SignalChainReadout {
 }
 
 impl SignalChainReadout {
-    fn for_settings(settings: &MasteringSettings) -> Self {
-        use crate::dsp::{BiquadCoeffs, ChainCoeffs};
-        let coeffs = ChainCoeffs::from_settings(48_000, settings);
+    fn from_coeffs(coeffs: &crate::dsp::ChainCoeffs) -> Self {
+        use crate::dsp::BiquadCoeffs;
         let active = |b: &BiquadCoeffs| *b != BiquadCoeffs::identity();
         let eq_active = [
             &coeffs.sub_highpass,
@@ -732,7 +792,9 @@ fn realized_eq_trim(bands: &[f32], preset_scale: f32, trim: impl Fn(f32) -> f32)
 /// floor, computed against the actual preset bands); density/width are floor-free
 /// and exact.
 pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
-    let signal_chain = Some(SignalChainReadout::for_settings(settings));
+    let coeffs = crate::dsp::ChainCoeffs::from_settings(48_000, settings);
+    let signal_chain = Some(SignalChainReadout::from_coeffs(&coeffs));
+    let compression = Some(ResolvedCompressionReadout::from_coeffs(&coeffs));
     let strength = settings
         .advanced
         .adaptive_strength
@@ -754,6 +816,7 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
             let preset_scale = 0.4 + 1.2 * settings.intensity.clamp(0.0, 1.0);
             GuardrailReadout {
                 signal_chain,
+                compression,
                 active: true,
                 strength,
                 bright_trim: realized_eq_trim(
@@ -783,6 +846,7 @@ pub fn readout_for(settings: &MasteringSettings) -> GuardrailReadout {
         }
         None => GuardrailReadout {
             signal_chain,
+            compression,
             active: false,
             strength,
             bright_trim: 0.0,
@@ -1395,6 +1459,115 @@ mod tests {
         assert_eq!(r.bright_deadband, BRIGHT_DEADBAND);
         assert_eq!(r.low_deadband, LOW_DEADBAND);
         assert_eq!(r.width_corr_deadband, WIDTH_CORR_DEADBAND);
+    }
+
+    #[test]
+    fn resolved_compression_matches_all_bands_after_guards_and_roundtrips() {
+        use crate::{
+            dsp::ChainCoeffs,
+            types::{CompressionMode, Preset},
+        };
+        for preset in [
+            Preset::Universal,
+            Preset::Loud,
+            Preset::Warmth,
+            Preset::Punch,
+            Preset::Clarity,
+            Preset::Oomph,
+            Preset::Tape,
+            Preset::Spatial,
+            Preset::Custom {
+                id: "readout".into(),
+            },
+        ] {
+            for density in [None, Some(0.0), Some(0.5), Some(1.0)] {
+                for adapt in [0.0, 0.5, 1.0] {
+                    for intensity in [0.0, 0.5, 1.0] {
+                        for mode in [
+                            CompressionMode::Preset,
+                            CompressionMode::Manual,
+                            CompressionMode::Off,
+                        ] {
+                            let mut s = settings_with(
+                                Some(profile(0.25, 0.20, 0.08, 0.22, 2.0, 2.0, Some(0.1))),
+                                Some(adapt),
+                            );
+                            s.preset = preset.clone();
+                            s.intensity = intensity;
+                            s.advanced.compression_mode = mode;
+                            s.advanced.compression_density = density;
+                            s.advanced.compression_mid_threshold_db = Some(-21.0);
+                            s.advanced.compression_mid_ratio = Some(3.1);
+                            s.advanced.compression_mid_attack_ms = Some(17.0);
+                            s.advanced.compression_mid_release_ms = Some(223.0);
+                            let before = serde_json::to_string(&s).unwrap();
+                            let c = ChainCoeffs::from_settings(48_000, &s);
+                            let r = readout_for(&s).compression.unwrap();
+                            assert_eq!(r.active, c.compression_active);
+                            for (band, threshold, ratio, attack, release, makeup) in [
+                                (
+                                    r.low,
+                                    c.comp_low_threshold_db,
+                                    c.comp_low_ratio,
+                                    c.comp_low_attack_alpha,
+                                    c.comp_low_release_alpha,
+                                    c.comp_low_makeup_db,
+                                ),
+                                (
+                                    r.mid,
+                                    c.comp_mid_threshold_db,
+                                    c.comp_mid_ratio,
+                                    c.comp_mid_attack_alpha,
+                                    c.comp_mid_release_alpha,
+                                    c.comp_mid_makeup_db,
+                                ),
+                                (
+                                    r.high,
+                                    c.comp_high_threshold_db,
+                                    c.comp_high_ratio,
+                                    c.comp_high_attack_alpha,
+                                    c.comp_high_release_alpha,
+                                    c.comp_high_makeup_db,
+                                ),
+                            ] {
+                                assert_eq!(band.threshold_db, threshold);
+                                assert_eq!(band.ratio, ratio);
+                                assert_eq!(band.makeup_db, makeup);
+                                for (ms, alpha) in
+                                    [(band.attack_ms, attack), (band.release_ms, release)]
+                                {
+                                    assert!(ms.is_finite() && ms > 0.0);
+                                    assert!(
+                                        ((-1.0 / (48.0 * ms)).exp() - alpha).abs() <= f32::EPSILON
+                                    );
+                                }
+                            }
+                            assert_eq!(
+                                serde_json::to_string(&s).unwrap(),
+                                before,
+                                "readout cannot change saved intent"
+                            );
+                            let restored = serde_json::from_str(&before).unwrap();
+                            assert_eq!(readout_for(&restored).compression, Some(r));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn resolved_compression_follows_source_changes_without_enabling_any_gate() {
+        let mut s = settings_with(None, Some(1.0));
+        let before = readout_for(&s).compression.unwrap();
+        s.advanced.source_profile = Some(profile(0.25, 0.20, 0.08, 0.22, 2.0, 2.0, Some(0.1)));
+        let after = readout_for(&s).compression.unwrap();
+        assert!(after.low.threshold_db > before.low.threshold_db);
+        assert!(after.low.ratio < before.low.ratio);
+        s.advanced.adaptive_strength = Some(0.0);
+        assert_eq!(readout_for(&s).compression, Some(before));
+        s.advanced = Default::default();
+        assert_eq!(readout_for(&s).compression, Some(before));
     }
 
     #[test]

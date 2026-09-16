@@ -1047,13 +1047,20 @@ export function useTrackMaster() {
   // non-adaptive. Recomputes on settings/analysis/mode change with a latest-wins
   // guard; depends on selectedAnalysis so a late-arriving analysis refetches.
   // Optional-chained so it is inert wherever the command isn't available (tests).
-  const [guardrailReadout, setGuardrailReadout] = useState<GuardrailReadout | null>(
-    null,
-  );
+  const [resolvedReadout, setResolvedReadout] = useState<{
+    value: GuardrailReadout; settings: MasteringSettings;
+    analysis: typeof selectedAnalysis; surface: string;
+  } | null>(null);
   const [compressionPlan, setCompressionPlan] = useState<CompressionPlan | null>(null);
   const [adaptiveCompressionGate, setAdaptiveCompressionGate] = useState(false);
   const guardrailReadoutReq = useRef(0);
   const widthSurface = `${selectedTrackId}:${mode}:${adaptiveCompressionGate}`;
+  // Reject stale values during render, including the render before an effect
+  // can clear them. The request's source/settings/analysis identity is retained
+  // with its response; a pending or unavailable response is never "resolved".
+  const guardrailReadout = resolvedReadout?.surface === widthSurface &&
+    resolvedReadout.settings === selectedSettings && resolvedReadout.analysis === selectedAnalysis
+    ? resolvedReadout.value : null;
   const [lastAutoWidth, setLastAutoWidth] = useState<{
     trackId: TrackId; surface: string; settings: MasteringSettings; value: number;
   } | null>(null);
@@ -1105,13 +1112,13 @@ export function useTrackMaster() {
   useEffect(() => {
     const reqId = ++guardrailReadoutReq.current;
     if (!selectedTrackId) {
-      setGuardrailReadout(null);
+      setResolvedReadout(null);
       setLastAutoWidth(null);
       setCompressionPlan(null);
       compressionPlanSurface.current = null;
       return;
     }
-    setGuardrailReadout(null);
+    setResolvedReadout(null);
     void selectedAnalysis; // dep: refetch when analysis lands so the store is ready
     const album = mode === "album";
     const surface = `${selectedTrackId}:${album}:${adaptiveCompressionGate}`;
@@ -1123,7 +1130,9 @@ export function useTrackMaster() {
     )
       .then((r) => {
         if (guardrailReadoutReq.current === reqId) {
-          setGuardrailReadout(r ?? null);
+          setResolvedReadout(r ? {
+            value: r, settings: selectedSettings, analysis: selectedAnalysis, surface: widthSurface,
+          } : null);
           setLastAutoWidth(r && typeof r.effective_auto_width === "number" && Number.isFinite(r.effective_auto_width)
             ? { trackId: selectedTrackId, surface: widthSurface, settings: selectedSettings, value: r.effective_auto_width }
             : null);
@@ -1131,7 +1140,7 @@ export function useTrackMaster() {
       })
       .catch(() => {
         if (guardrailReadoutReq.current === reqId) {
-          setGuardrailReadout(null);
+          setResolvedReadout(null);
           setLastAutoWidth(null);
         }
       });

@@ -1,5 +1,5 @@
 {
-  "stamp": "99adfae63d90",
+  "stamp": "edcf6b8290cb",
   "sources": {
     "src-tauri/src/types.rs": "656e48f5a0359ba232e3780fc50322cb3cdad95ff35c4db551d3f1b06e59e3aa",
     "src-tauri/src/dsp.rs": "f32e2675a5574be563d8636443fc3fde9df06fdd7ccb80255b0f18dc0d83005c",
@@ -7,7 +7,7 @@
     "src-tauri/src/analysis.rs": "a69845f9e164a7ab4a677036b4d1c27fcc85df686b448772cffed68ecb504b9a",
     "src-tauri/src/deep_analysis.rs": "188315205a08c04efafc134456099f8f26e6e415a3c113d2c410aed8c1f75adb",
     "src-tauri/src/confidence.rs": "671aec0e96678cec422488b285caf20045939938ccb76f15c6bd310b08ec61ac",
-    "src-tauri/src/guardrails.rs": "04f2b1e06f3fed633eac0ad7a814d32ab95b757d4f2e9693565cdb1c75e563f5",
+    "src-tauri/src/guardrails.rs": "1a6388ca9a8f9a056162ea26cc0da031ff2ee6f757ef4333799e80af19a13294",
     "web/tryit/wasm/src/lib.rs": "f37ec32bbfff74f09ee4abd0c5f93f094d42d1c97e7acd313d31a69829dd19d8",
     "web/tryit/wasm/src/stubs.rs": "af887c5c5a5ffd0e75e2247ac8024228df27969b56bce044593215bcd50ccdf7",
     "web/tryit/wasm/Cargo.toml": "d300587add9177e995fd70078f8c6212cca0d65d45270148de9f235470b38f65"
