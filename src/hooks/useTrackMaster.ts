@@ -352,6 +352,7 @@ export function useTrackMaster() {
   const [isRendering, setIsRendering] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const reportedPlaybackFailure = useRef<string | null>(null);
   const [projectFeedback, setProjectFeedback] = useState<ProjectFeedback | null>(null);
   const [transport, setTransport] = useState({
     isPlaying: false,
@@ -736,12 +737,26 @@ export function useTrackMaster() {
       unlistenAnalysis = fn;
     });
     onPlaybackTick((tick) => {
-      setLoadedTrackId(tick.is_loaded ? tick.track_id : null);
       const selectedId = selectedTrackIdRef.current;
+      if (tick.playback_error && selectedId && tick.track_id !== selectedId) {
+        return;
+      }
+      setLoadedTrackId(tick.is_loaded ? tick.track_id : null);
       if (tick.is_loaded && selectedId && tick.track_id !== selectedId) {
         return;
       }
       const deviceLost = tick.device_lost ?? false;
+      const playbackFailure = tick.playback_error;
+      if (playbackFailure) {
+        const key = JSON.stringify([tick.track_id, playbackFailure.generation, playbackFailure.message]);
+        if (reportedPlaybackFailure.current !== key) {
+          reportedPlaybackFailure.current = key;
+          setError(playbackFailure.message);
+        }
+        setLandingPending(false);
+      } else {
+        reportedPlaybackFailure.current = null;
+      }
       if (deviceLost) {
         setPlaybackDeviceLost({
           track_id: tick.track_id,
@@ -753,13 +768,13 @@ export function useTrackMaster() {
       lastPlaybackTickRef.current = {
         trackId: tick.track_id,
         positionSec: tick.position_sec,
-        isPlaying: tick.is_playing && !deviceLost,
+        isPlaying: tick.is_playing && !deviceLost && !playbackFailure,
         receivedAtMs: Date.now(),
       };
       setTransport((t) => ({
         ...t,
         currentTimeSec: tick.position_sec,
-        isPlaying: tick.is_playing && !deviceLost,
+        isPlaying: tick.is_playing && !deviceLost && !playbackFailure,
         deviceLost,
         peakDbfs: tick.peak_dbfs,
         peakLeftDbfs: tick.peak_left_dbfs ?? tick.peak_dbfs,

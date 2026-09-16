@@ -1108,6 +1108,13 @@ pub struct PlaybackDeviceLost {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PlaybackError {
+    /// Unique failed-source epoch, including retries and recreated devices.
+    pub generation: u64,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PlaybackTick {
     pub track_id: Option<TrackId>,
     pub position_sec: f64,
@@ -1115,6 +1122,8 @@ pub struct PlaybackTick {
     pub is_loaded: bool,
     #[serde(default)]
     pub device_lost: bool,
+    #[serde(default)]
+    pub playback_error: Option<PlaybackError>,
     /// Post-output-gain peak across all channels since the last tick, in dBFS.
     /// `-120.0` is the silence sentinel (no signal in the window). Values
     /// above `-0.1` indicate clipping risk; values above `0.0` are clipping.

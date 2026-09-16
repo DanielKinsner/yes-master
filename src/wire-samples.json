@@ -572,6 +572,10 @@
     "peak_dbfs": -6.0,
     "peak_left_dbfs": -6.5,
     "peak_right_dbfs": -6.25,
+    "playback_error": {
+      "generation": 2,
+      "message": "Playback stopped while processing audio."
+    },
     "position_sec": 1.5,
     "spectrum_db": [
       -30.0,

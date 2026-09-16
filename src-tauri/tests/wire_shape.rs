@@ -289,6 +289,10 @@ fn guardrail_readout_sample() -> GuardrailReadout {
 
 fn playback_tick_sample() -> PlaybackTick {
     PlaybackTick {
+        playback_error: Some(yes_master_lib::types::PlaybackError {
+            generation: 2,
+            message: "Playback stopped while processing audio.".into(),
+        }),
         track_id: Some(TrackId("wire-sample".to_string())),
         position_sec: 1.5,
         is_playing: true,

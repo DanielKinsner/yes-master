@@ -4840,6 +4840,36 @@ describe("useTrackMaster analysis-complete autosave (Q29)", () => {
 });
 
 describe("listening follow-through", () => {
+  it("reports a conversion failure once per playback attempt and ignores another track", async () => {
+    const track = makeTrack("conversion", "/in/conversion.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness = await renderHookHarness();
+    await act(async () => { await harness.current().importFiles([track.path]); });
+    const tick = mocks.onPlaybackTick.mock.calls[0][0];
+    const failed = { track_id: track.id, is_loaded: false, is_playing: false,
+      position_sec: 12, peak_dbfs: -120, gr_low_db: -120, gr_mid_db: -120,
+      gr_high_db: -120, lufs_momentary: -120, lufs_integrated: -120, spectrum_db: [],
+      playback_error: { generation: 3, message: "Playback stopped while processing audio." } };
+    await act(async () => tick({ ...failed, track_id: "old-track" }));
+    expect(harness.current().error).toBeNull();
+    await act(async () => tick(failed));
+    expect(harness.current().error).toBe(failed.playback_error.message);
+    expect(harness.current().transport.isPlaying).toBe(false);
+    expect(harness.current().playbackDeviceLost).toBeNull();
+    await act(async () => harness.current().clearError());
+    await act(async () => tick(failed));
+    expect(harness.current().error).toBeNull();
+    await act(async () => tick({ ...failed,
+      playback_error: { ...failed.playback_error, generation: 4 } }));
+    expect(harness.current().error).toBe(failed.playback_error.message);
+    mocks.api.resumePlayback.mockClear();
+    mocks.api.playTrack.mockClear();
+    await act(async () => { await harness.current().togglePlay(); });
+    expect(mocks.api.resumePlayback).not.toHaveBeenCalled();
+    expect(mocks.api.playTrack).toHaveBeenCalled();
+    await act(async () => harness.root.unmount());
+  });
+
   it("returns a finished loaded track to zero without restarting playback", async () => {
     const track = { ...makeTrack("finished", "/in/finished.wav"), duration_seconds: 120 };
     mocks.api.importTracks.mockResolvedValue([track]);
