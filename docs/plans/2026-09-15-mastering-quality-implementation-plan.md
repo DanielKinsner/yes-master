@@ -2,7 +2,7 @@
 
 Date: September 15, 2026. Reviewed checkout: `5426041c` on `main`.
 Revision 2, following plan review and Dan's upfront-analysis direction.
-Status: **selective local fixes integration authorized, September 16**. Implementation was authorized
+Status: **fixes integrated locally; separate C1 research resumed, September 16**. Implementation was authorized
 September 15 on local `codex/mastering-quality` from `7534f612`. See the
 [checkpoint ledger](../reviews/2026-09-15-mastering-quality-implementation-evidence.md).
 Sonic-policy adoption and calibration remain gated. This file replaces the
@@ -17,6 +17,11 @@ the snapshot and limits. Preserve completed work rather than restarting research
 Unfinished sonic experiments are not a new blanket beta gate. The sound-priority
 choice remains unresolved; local merge approval does not adopt a sonic policy or
 authorize push, release, deployment, spending or private-audio commits.
+
+Local main is now `ab420654`. Research continues on
+`codex/mastering-dynamics-research` with the
+[frozen single-first checkpoint](../reviews/2026-09-16-single-first-development-protocol.md).
+The existing branch/evidence at `03df038a` remain preserved.
 
 ## In plain language
 

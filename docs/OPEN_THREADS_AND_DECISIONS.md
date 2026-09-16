@@ -1,5 +1,15 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-16 — Local fixes merged; separate dynamics research resumed.**
+> Local main is `ab420654` after verified selective integration. No push occurred.
+> `codex/mastering-dynamics-research` starts at that exact main state; the original
+> `codex/mastering-quality` remains at `03df038a`. The next
+> [frozen development checkpoint](reviews/2026-09-16-single-first-development-protocol.md)
+> measures current processing and the existing single candidate on the remaining
+> five development sources, with two retained reproduction anchors. Existing
+> character limits remain experimental. Comparison-control cost is counted;
+> native response, offline evaluation and independent verification stay separate.
+
 > **2026-09-16 — Selective local integration authorized.** Dan approved preparing
 > and testing the fixes, merging the verified selection into local main, then
 > resuming dynamic-range/quality research on a separate branch. See the
