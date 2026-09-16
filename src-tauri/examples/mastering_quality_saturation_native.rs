@@ -26,11 +26,14 @@ struct Kernel {
     phases: Vec<Vec<f64>>,
     down: Vec<f64>,
     delay: usize,
+    dot: fn(&[f64], &[f64]) -> f64,
+    accumulator: &'static str,
 }
 impl Kernel {
     fn new(coefficients: &[f64]) -> Self {
         assert!(coefficients.len() > 8 && (coefficients.len() - 1) % 8 == 0);
         let width = coefficients.len().div_ceil(8);
+        let (dot, accumulator) = select_dot();
         let phases = (0..8)
             .map(|phase| {
                 (0..width)
@@ -43,6 +46,8 @@ impl Kernel {
             phases,
             down: coefficients.iter().rev().copied().collect(),
             delay: (coefficients.len() - 1) / 8,
+            dot,
+            accumulator,
         }
     }
 }
@@ -64,25 +69,59 @@ impl Ring {
         self.data[self.next + length] = value;
         self.next = (self.next + 1) % length;
     }
-    fn dot(&self, coefficients: &[f64]) -> f64 {
+    fn dot(&self, coefficients: &[f64], dot: fn(&[f64], &[f64]) -> f64) -> f64 {
         let length = self.data.len() / 2;
-        let mut samples = self.data[self.next..self.next + length].chunks_exact(4);
-        let mut weights = coefficients.chunks_exact(4);
-        // Independent dependency chains allow instruction-level parallelism.
-        // The changed f64 addition order has a separate finite-output check.
-        let (mut a, mut b, mut c, mut d) = (0., 0., 0., 0.);
-        for (x, h) in samples.by_ref().zip(weights.by_ref()) {
-            a += x[0] * h[0];
-            b += x[1] * h[1];
-            c += x[2] * h[2];
-            d += x[3] * h[3];
-        }
-        samples
-            .remainder()
-            .iter()
-            .zip(weights.remainder())
-            .fold((a + b) + (c + d), |sum, (x, h)| sum + x * h)
+        dot(&self.data[self.next..self.next + length], coefficients)
     }
+}
+
+type Dot = fn(&[f64], &[f64]) -> f64;
+
+fn select_dot() -> (Dot, &'static str) {
+    #[cfg(target_arch = "x86_64")]
+    if std::env::var_os("YES_MASTER_SATURATION_SCALAR").is_none()
+        && std::is_x86_feature_detected!("avx")
+    {
+        return (dot_avx_selected, "avx-four-f64");
+    }
+    (dot_serial, "serial-f64")
+}
+
+fn dot_serial(samples: &[f64], weights: &[f64]) -> f64 {
+    assert_eq!(samples.len(), weights.len());
+    samples
+        .iter()
+        .zip(weights)
+        .fold(0., |sum, (x, h)| sum + x * h)
+}
+
+#[cfg(target_arch = "x86_64")]
+fn dot_avx_selected(samples: &[f64], weights: &[f64]) -> f64 {
+    assert_eq!(samples.len(), weights.len());
+    // This private function is selected only after the kernel's AVX feature check.
+    unsafe { dot_avx(samples, weights) }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx")]
+unsafe fn dot_avx(samples: &[f64], weights: &[f64]) -> f64 {
+    use std::arch::x86_64::*;
+    let mut sum = _mm256_setzero_pd();
+    let mut index = 0;
+    while index + 4 <= samples.len() {
+        // Equal slice lengths were checked by the safe wrapper; unaligned loads
+        // consume four in-bounds elements. Separate mul/add preserves lane order.
+        let x = _mm256_loadu_pd(samples.as_ptr().add(index));
+        let h = _mm256_loadu_pd(weights.as_ptr().add(index));
+        sum = _mm256_add_pd(sum, _mm256_mul_pd(x, h));
+        index += 4;
+    }
+    let mut lanes = [0_f64; 4];
+    _mm256_storeu_pd(lanes.as_mut_ptr(), sum);
+    samples[index..].iter().zip(&weights[index..]).fold(
+        (lanes[0] + lanes[1]) + (lanes[2] + lanes[3]),
+        |sum, (x, h)| sum + x * h,
+    )
 }
 struct Processor {
     kernel: Arc<Kernel>,
@@ -109,10 +148,10 @@ impl Processor {
         for ch in 0..2 {
             self.up[ch].push(input[ch]);
             for phase in 0..8 {
-                let interpolated = self.up[ch].dot(&self.kernel.phases[phase]);
+                let interpolated = self.up[ch].dot(&self.kernel.phases[phase], self.kernel.dot);
                 self.down[ch].push((interpolated * self.drive).tanh() / self.denominator);
                 if phase == 0 {
-                    result[ch] = self.down[ch].dot(&self.kernel.down);
+                    result[ch] = self.down[ch].dot(&self.kernel.down, self.kernel.dot);
                 }
             }
         }
@@ -186,6 +225,7 @@ fn main() {
             report["rows"].as_array_mut().unwrap().push(json!({"filter":filter["id"],"signal":case["id"],
                 "path":path,"sha256":sha(&path),"frames_in":frames,"frames_out":input.len()/2,
                 "rate":44100,"channels":2,"delay_frames":kernel.delay,"preparation_s":preparation_s,
+                "accumulator":kernel.accumulator,
                 "kernel_bytes":8*(kernel.down.len()+kernel.phases.iter().map(Vec::len).sum::<usize>()),
                 "state_bytes":2*2*8*(kernel.phases[0].len()+kernel.down.len()),"trials":trials}));
             std::fs::write(

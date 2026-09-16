@@ -156,9 +156,15 @@ hashes and the native protocol/results before changing filter design.
 
 `compare_saturation_native_cost.py --root EVIDENCE --output FRESH.json` joins
 the retained three alternating serial/four-accumulator pairs and qualified
-independent outputs. The serial example is pinned at `7e4a7327`; the subsequent
-example retains the arithmetic alternative, with its short-filter regression
-explicit. This is a research implementation, not a production saturation switch.
+independent outputs. The serial example is pinned at `7e4a7327`; `a5d4ad56`
+retains four scalar accumulators and their short-filter regression. The current
+example selects AVX once per kernel where available, with the original serial
+fallback; `YES_MASTER_SATURATION_SCALAR=1` forces that fallback for diagnostics.
+This is a research implementation, not a production saturation switch.
+The cost summarizer's `--optimized-prefix` and `--baseline-trial-prefix` select
+fresh alternating runs; `--addition-order-anchor` compares the prior four-way
+output and `--scalar-fallback` verifies exact original serial output. Read the
+vector protocol before running another comparison and preserve all old reports.
 
 `prepare_saturation_whole.py --output FRESH` generates an isolated source copy
 pinned to local `7e4a7327` (including the **serial** native filter). It asserts

@@ -31,10 +31,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--optimized-prefix", default="e-native-opt")
+    parser.add_argument("--baseline-trial-prefix", default="e-native-base")
+    parser.add_argument("--addition-order-anchor", type=Path)
+    parser.add_argument("--scalar-fallback", type=Path)
     args = parser.parse_args()
     assert not args.output.exists()
     root = args.root
-    job_path = root / "e-native-opt-job-v1.json"
+    job_path = root / f"{args.optimized_prefix}-job-v1.json"
     job = read(job_path)
     original_job = read(root / "e-native-inputs-v1/job.json")
     for key in ("rate", "amount", "channels", "filters", "signals"):
@@ -43,11 +47,11 @@ def main():
         assert sha(Path(entry["path"])) == entry["sha256"]
 
     anchors = {"base": keyed(read(root / "e-native-v1/report.json")),
-               "opt": keyed(read(root / "e-native-opt-p1/report.json"))}
+               "opt": keyed(read(root / f"{args.optimized_prefix}-p1/report.json"))}
     references = {}
     for variant, name, report_name in (
         ("base", "e-native-comparison-v1.json", "e-native-v1/report.json"),
-        ("opt", "e-native-opt-comparison-v1.json", "e-native-opt-p1/report.json"),
+        ("opt", f"{args.optimized_prefix}-comparison-v1.json", f"{args.optimized_prefix}-p1/report.json"),
     ):
         reference = read(root / name)
         assert reference["status"] == "complete"
@@ -62,7 +66,9 @@ def main():
     reports = {}
     files = {}
     for name in order:
-        path = root / f"e-native-{name}/report.json"
+        variant, pair = name.split("-")
+        prefix = args.baseline_trial_prefix if variant == "base" else args.optimized_prefix
+        path = root / f"{prefix}-{pair}/report.json"
         report = read(path)
         assert report["job_sha256"] == sha(job_path)
         rows = keyed(report)
@@ -110,8 +116,22 @@ def main():
     result = {"status": "complete", "repeat_hashes_pass": 48, "order": order,
               "job_sha256": sha(job_path), "reports": files, "references": references,
               "script_sha256": sha(Path(__file__)), "filters": summary,
-              "executables": {name: sha(root / name) for name in ("e-native-v1.exe", "e-native-opt-v1.exe")},
+              "executables": {name: sha(root / name) for name in ("e-native-v1.exe", f"{args.optimized_prefix}-v1.exe")},
+              "optimized_prefix": args.optimized_prefix, "baseline_trial_prefix": args.baseline_trial_prefix,
               "scope": "Alternating loaded elapsed native prototype costs; no isolated CPU, production or actual-device deadline claim"}
+    for label, path, variant in (("addition_order", args.addition_order_anchor, "opt"),
+                                  ("scalar_fallback", args.scalar_fallback, "base")):
+        if path is not None:
+            rows = keyed(read(path))
+            assert rows.keys() == anchors[variant].keys()
+            for key, row in rows.items():
+                assert sha(Path(row["path"])) == row["sha256"]
+            matches = sum(row["sha256"] == anchors[variant][key]["sha256"] for key, row in rows.items())
+            result[label] = {"report": str(path), "report_sha256": sha(path), "exact_hash_matches": matches,
+                             "accumulators": sorted({row.get("accumulator", "unreported") for row in rows.values()})}
+            if label == "scalar_fallback":
+                assert matches == 8 and all(row["accumulator"] == "serial-f64" for row in rows.values())
+    result["optimized_accumulators"] = sorted({row.get("accumulator", "unreported") for row in anchors["opt"].values()})
     args.output.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     print(json.dumps(summary, indent=2))
 

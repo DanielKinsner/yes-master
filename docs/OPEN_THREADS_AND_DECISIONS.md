@@ -66,7 +66,12 @@
 > isolation. Filters redistribute limiter activity without resolving C1 character
 > failures. The serial long-filter chain costs 68-148 s on these songs; table reuse
 > is negligible. A separate accumulation trial improves long-filter processing
-> 8.12% but regresses the short filter 11.10%. Earlier block-interval exceedances,
+> 8.12% but regresses the short filter 11.10%.
+> A separate AVX experiment subsequently reduces paired short/long processing
+> cost 16.61/31.79% on this host, with all eight outputs exact against the prior
+> four-accumulator version and independently qualified. Its scalar fallback is
+> also exact; the existing whole-song timings remain serial-filter evidence.
+> Earlier block-interval exceedances,
 > actual-device/selected-C evidence and owner calibration/listening remain open.
 > Preset intent and gated constants are unchanged.
 > No installed/Mac/release verdict follows from this local implementation.

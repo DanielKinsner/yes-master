@@ -134,8 +134,8 @@ selected-C and owner calibration/listening gates remain open.
 
 The [predeclared accumulation experiment](2026-09-15-saturation-native-optimization-protocol.md)
 changes only the f64 dot-product addition order. The original serial implementation
-is preserved at `7e4a7327` and in `e-native-v1.exe`; the current research example
-retains the four-accumulator alternative. Neither is production saturation.
+is preserved at `7e4a7327` and in `e-native-v1.exe`; the four-accumulator version
+is preserved at `a5d4ad56`. Neither is production saturation.
 
 All eight alternate outputs pass the unchanged independent **1e-10** limit;
 maximum error is **1.089e-14**. All **48/48** repeated output hashes match their
@@ -245,3 +245,48 @@ Evidence: `e-whole-job-v1.json`, `e-whole-source-v1/provenance.json`,
 `e-whole-metrics-v1.json` and `e-whole-summary-v1.json`. Standalone Clippy/build
 pass. Copied whole-chain executable SHA-256:
 `f18e67324999681e7b41fceb733967515afa1a4bf6aa236ea47ef0ef8a0a4306`.
+
+## Vectorized native convolution
+
+The [separately frozen vector experiment](2026-09-15-saturation-vector-protocol.md)
+uses explicit AVX four-f64 multiply/add without FMA, selected once during kernel
+preparation. Other processors use the original serial fallback. This run uses
+an **Intel Core i9-12900K on Windows**; it does not establish ARM or other CPU cost.
+
+All **8/8** independently checked vector outputs pass the unchanged 1e-10 limit,
+with maximum error **1.089e-14**. All eight hashes exactly match the preceding
+four-accumulator output, confirming the preserved addition order for this matrix.
+All **48/48** alternating-trial output hashes match their implementation anchors.
+Forcing the serial fallback on the same host also reproduces **8/8** original
+serial outputs exactly. The report identifies `avx-four-f64` versus `serial-f64`;
+forcing the fallback is not a different-platform test.
+
+| Filter | Serial median processing | Vector median processing | Median paired reduction | Serial / vector block interval exceedances |
+| --- | ---: | ---: | ---: | ---: |
+| Short 8x | 46.820 ms | 38.840 ms | **16.61%** | 0/4,644 / 0/4,644 |
+| Long 8x | 211.058 ms | 143.203 ms | **31.79%** | 13/4,752 / 0/4,752 |
+
+Values cover the same 32,768 stereo frames plus complete tail. Long-filter block
+median/p95/max is **1.0656/1.2781/3.1474 ms** with vectors, versus
+**1.5710/1.8920/9.7891 ms** serial. The short vector maximum is 1.2576 ms versus
+1.0243 ms serial despite lower typical cost. Timing outliers and the thirteen
+new serial interval exceedances remain recorded; their scheduling/CPU cause is
+unresolved. These prototype timers do not certify actual callback deadlines.
+
+Vector table/function preparation takes a median **0.0150/0.0261 ms** for
+short/long; state construction **0.0058/0.0427 ms**. Exact coefficient and ring
+buffer sizes, curve and filter delay are unchanged; small dispatch metadata is
+additional. Preparation remains negligible beside per-sample processing.
+
+Recommendation: carry this runtime-selected vector implementation into subsequent
+whole-chain/native-device experiments with the long fidelity reference. It gives
+a demonstrated throughput benefit on this host while preserving the tested
+numerical response. It does not erase the short filter's harmonic-loss finding,
+prove the earlier whole-song timings improved by exactly these percentages, or
+authorize production saturation/preset adoption. The earlier whole-song comparison
+remains pinned to the serial implementation.
+
+Evidence: `e-native-avx-job-v1.json`, the six `e-native-avx-{base-pN,pN}/` runs,
+`e-native-avx-fallback-v1/`, `e-native-avx-comparison-v1.json` and
+`e-native-avx-cost-v1.json`. Strict example Clippy/build pass. Copied executable:
+`de155f55574122c0b4a7da2cb4c153fd48b97c00c3a78be04cc374afcbf757d8`.
