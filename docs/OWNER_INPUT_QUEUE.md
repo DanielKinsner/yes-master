@@ -1,5 +1,13 @@
 # YES Master — Owner Input Queue
 
+**September 16 mastering update:** the owner will review the local fixes before
+main integration and potential beta inclusion. Sound experiments and their
+preference questions are deferred until the approved fixes are merged; subsequent
+sound research belongs on a separate branch. Do not ask for a sound-priority
+answer to proceed with this review. See the [review guide](reviews/2026-09-16-mastering-fixes-review.md)
+and current decision in `docs/OPEN_THREADS_AND_DECISIONS.md`. No preference,
+merge approval or release approval is inferred from the pause.
+
 **September 9 update:** the owner completed all five checks on installed Windows
 0.9.2 / `07021f1b` and reported all passed. See the
 [installed record](listening/2026-09-09-installed-check.md). Do not add another

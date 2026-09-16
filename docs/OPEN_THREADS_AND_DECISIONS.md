@@ -1,5 +1,22 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-16 — Owner review first; sound experiments paused.**
+> Dan wants to review the local correctness, playback, measurement, performance
+> and readout changes before any main integration, with possible beta inclusion.
+> The [review guide](reviews/2026-09-16-mastering-fixes-review.md) pins the current
+> code/research snapshot at `f88f042b` on `codex/mastering-quality`, based on local
+> main `7534f612`, and separates app changes from interleaved experiment tooling.
+> Pause new sound experiments and DSP variations. After the fixes are approved
+> and merged, pursue sound research on a separate branch from verified main.
+> The automatic sound-priority choice is deferred; do not ask for it during this
+> review. The LANDR comparison motivated investigation, and the owner now separates
+> demonstrated defects from broader mastering improvements. It does not establish
+> a fundamental architectural failure or the competitor's internal processing.
+> Preserve all frozen evidence and private fixtures. B3's remaining validation
+> limits and existing release gates remain explicit; unfinished C/E research is
+> not a new blanket beta requirement. No merge/push/release/deployment is authorized
+> now. The active next step is owner review, superseding the continuation below.
+
 > **2026-09-15 — Mastering-quality implementation active locally.**
 > Dan authorized implementation, testing, internal docs and small local commits
 > in the existing checkout. `codex/mastering-quality` starts at local `7534f612`;

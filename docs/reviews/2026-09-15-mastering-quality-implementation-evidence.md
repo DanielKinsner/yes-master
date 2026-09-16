@@ -4,6 +4,14 @@ Started September 15, 2026 on local `codex/mastering-quality`, from `7534f612`.
 The starting checkout was clean and the revised plan matched that commit.
 No push, main integration, publication, spending or private-audio commit is authorized.
 
+**September 16 review freeze:** Dan paused sound experiments to review the local
+fixes first, with possible beta inclusion. The code/research snapshot is `f88f042b`;
+the [review guide](2026-09-16-mastering-fixes-review.md) distinguishes app changes,
+experimental tools, evidence and open limits. After approved main integration,
+sound research resumes on a separate branch. This defers the sound-priority
+question and further C/E work; it does not change the completion evidence below
+or authorize a merge, push or release.
+
 ## Checkpoint ledger
 
 Latest C1 follow-up: the [corrected-chain lower grid](2026-09-15-drive-lower-grid-results.md)
