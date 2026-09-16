@@ -1,5 +1,6 @@
 import { invoke, listen } from "./tauri-runtime";
 import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { ExportEncoding } from "./export-formats";
 import type {
   AlbumArc,
   AlbumPlan,
@@ -105,7 +106,7 @@ export const api = {
       settings,
     }),
 
-  preparePreviewLevel: (requestId: string, trackId: TrackId, trackPath: string, settings: MasteringSettings, album: boolean) => invoke<void>("prepare_preview_level", {requestId, trackId, trackPath, settings, album}),
+  preparePreviewLevel: (requestId: string, trackId: TrackId, trackPath: string, settings: MasteringSettings, album: boolean, encoding?: ExportEncoding) => invoke<void>("prepare_preview_level", {requestId, trackId, trackPath, settings, album, ...(encoding ? {encoding} : {})}),
   cancelPreviewPreparation: (requestId: string) => invoke<void>("cancel_preview_preparation", {requestId}),
 
   renderTrackMaster: (
@@ -247,6 +248,7 @@ export const api = {
     // B2: album mode is non-adaptive; the backend derives + injects the profile
     // and caches album-ness for the subsequent settings-only update_chain calls.
     album = false,
+    encoding?: ExportEncoding,
   ) =>
     invoke<null>("play_master", {
       trackId,
@@ -255,6 +257,7 @@ export const api = {
       startPositionSec: startPositionSec ?? null,
       previewLufsLanding,
       album,
+      ...(encoding ? {encoding} : {}),
     }),
 
   updateChain: (
@@ -264,8 +267,9 @@ export const api = {
     // edit so a Track<->Album switch mid-Mastered-audition resolves correctly
     // (album mode stays non-adaptive) without waiting for the next playMaster.
     album = false,
+    encoding?: ExportEncoding,
   ) =>
-    invoke<null>("update_chain", { settings, previewLufsLanding, album }),
+    invoke<null>("update_chain", { settings, previewLufsLanding, album, ...(encoding ? {encoding} : {}) }),
 
   /// Read-only per-axis adaptive-trim summary. B2: the backend resolves the
   /// profile from its store (keyed by trackId); album mode is non-adaptive. The

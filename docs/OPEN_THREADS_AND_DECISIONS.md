@@ -74,6 +74,11 @@
 > A/B, playing/paused rate changes and 608 loaded callback checks pass. Codec
 > resolution, broader device protection and applied-generation readiness remain
 > open; see the live-rate ledger for the exact scope and preparation timings.
+> Selected export encoding now resolves the preview's pre-encode PCM rate and
+> precision without changing saved intent. All seven muted native routes, 672
+> settings combinations, cache parity, strict Clippy, the full desktop/private
+> fixture suite, 897 frontend tests and 38 headless checks pass. This does not
+> simulate lossy decoding; broader device protection/readiness remain open.
 
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
 > Dan accepts longer initial analysis/preparation for demonstrated audio quality,

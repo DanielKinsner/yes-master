@@ -295,7 +295,7 @@ tests; it changes no shared bridge DTO, engine/DSP source, frontend rendering or
 WASM input. The preceding bridge/frontend/headless evidence retains its stated
 scope; no redundant packaging or listening lane is claimed.
 
-**Still open:** codec-specific rate/precision resolution, wider full-song/device
+**Still open at this checkpoint:** codec-specific rate/precision resolution, wider full-song/device
 peak planning, and readiness tied to the actual applied settings through buffered
 audio. Preparation-ready snapshots above do not time the last crossfade sample.
 The 144-case matrix does not prove arbitrary downstream conversion can never
@@ -306,3 +306,45 @@ finalizer.
 Evidence root: `test-output/mastering-quality-implementation-20260915/`.
 Preserve the v1/v2 failed logs, v3 report/copied executable, v4 comparison/witness,
 and the matching build logs. No installed, Mac or listening pass is implied.
+
+### Selected-encoding PCM preparation checkpoint
+
+Play, settings updates and prewarm now carry the selected export encoding. The
+backend uses `ExportEncoding::delivery_rate` and `delivery_bits`, exactly as
+export does, after the source rate is known. If those differ from the requested
+profile, a transient Custom copy retains its effective LUFS target, ceiling and
+unchanged chain coefficients. The user's requested/saved profile is untouched.
+Default omitted encoding stays WAV. Format changes cancel obsolete prewarm,
+update a loaded Mastered route and rebuild converters only when the resolved
+file rate changes. Prepared-cache identity includes resolved PCM settings;
+formats with matching raw PCM can share work, including precision-only changes.
+
+`b3-codec-plan-fixtures-v1.log` passes the complete desktop suite: **492 library
+tests**, 18 opt-in tests ignored and **all four restored private-fixture tests
+executed**. This includes **672** codec/profile/source-rate/precision combinations
+with exact coefficient and requested-JSON preservation, idempotent resolution,
+rate invalidation and direct/cached whole-delivery equality. Strict all-target
+Clippy passes (`b3-codec-plan-clippy-v2.log`). The first Clippy log retains an
+incorrect test Arc argument and flat-IPC argument-count lint, corrected in v2.
+
+`b3-codec-plan-native-v1.json` exercises actual native play/update handlers through
+all **seven formats**, using a synthetic 96 kHz file and test-only mute. On the
+actual 48 kHz device, MP3/M4A/ADTS AAC/Vorbis resolve to 48 kHz PCM; WAV/FLAC/AIFF
+retain 96 kHz. Route/meter observations complete in 0.001–9.83 ms; equal-rate
+updates can finish synchronously. These are acceptance observations under load,
+not settled-loudness or comparative timing measurements.
+
+`b3-codec-plan-frontend-v4.log` passes **897 tests**. The hook regression verifies
+format arguments for prewarm/play/live edits, old-prewarm cancellation and
+unchanged requested settings. Its first added assertion used the wrong mock
+playback-kind token/batched state setup; the corrected v3 focused run passes.
+`b3-codec-plan-headless-v1.log` passes the build, landing checks and **38 app
+checks**. The minimum-size format/export capture at
+`test-output/headless/2026-09-16T01-37-12-708Z/app/mp3-export-1360x740.png`
+was inspected: receipt text and action buttons remain unobscured. No markup,
+shared bridge DTO/DSP input or WASM source changed in this slice.
+
+This qualifies **pre-encode PCM**, not the decoded lossy waveform. The B4
+advisory lossy-peak scope remains. Wider full-song/device peak protection and
+actual applied-generation readiness are still open; no installed/listening/Mac
+claim is made.

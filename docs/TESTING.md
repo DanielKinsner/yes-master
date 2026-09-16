@@ -135,6 +135,14 @@ ignored `mastering_quality_streaming_callback_bench` accepts a fresh
 load both converters. Its requested/granted block sizes remain separate facts.
 Run native probes and Cargo suites serially within one target directory on
 Windows; a build-stamp change while the test executable is open can block linking.
+`preview_codec_resolution_preserves_processing_and_requested_intent` checks
+672 format/profile/rate/precision combinations. The preparation-cache regression
+checks rate invalidation, precision-only reuse and direct whole-delivery parity.
+The ignored `mastering_quality_codec_native_routes` uses test-only mute
+(`YES_MASTER_BENCH_MUTE=1`) and a fresh `YES_MASTER_CODEC_REPORT` path to exercise
+all seven encodings through actual native play/update handlers. It qualifies
+pre-encode PCM routing, not lossy decoded fidelity. The Track hook regression
+covers encoding changes, obsolete prewarm cancellation and retained user settings.
 `cargo run --example limiter_bench` is a deterministic throughput diagnostic;
 wall-clock performance thresholds are deliberately not CI assertions.
 

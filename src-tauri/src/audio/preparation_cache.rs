@@ -224,6 +224,56 @@ mod tests {
     }
 
     #[test]
+    fn codec_pcm_changes_invalidate_rates_but_reuse_identical_raw_responses() {
+        use super::super::output_route::preview_settings;
+        use crate::export_format::ExportEncoding;
+        let mut pcm = pcm();
+        pcm.sample_rate = 96000;
+        let mut requested = settings();
+        requested.advanced.bit_depth = Some(32);
+        requested.advanced.target_sample_rate = None;
+        let wav = preview_settings(&requested, pcm.sample_rate, ExportEncoding::Wav);
+        let mp3 = preview_settings(
+            &requested,
+            pcm.sample_rate,
+            ExportEncoding::Mp3 { bitrate_kbps: 320 },
+        );
+        let aac = preview_settings(
+            &requested,
+            pcm.sample_rate,
+            ExportEncoding::M4a { bitrate_kbps: 128 },
+        );
+        let flac = preview_settings(&requested, pcm.sample_rate, ExportEncoding::Flac);
+        assert!(!Key::new(&pcm, &wav)
+            .unwrap()
+            .matches(&Key::new(&pcm, &mp3).unwrap()));
+        assert!(Key::new(&pcm, &mp3)
+            .unwrap()
+            .matches(&Key::new(&pcm, &aac).unwrap()));
+        assert!(
+            Key::new(&pcm, &wav)
+                .unwrap()
+                .matches(&Key::new(&pcm, &flac).unwrap()),
+            "precision-only edits reuse raw PCM but finalize their own precision"
+        );
+        let cache = Mutex::new(Cache::new(PCM_BUDGET));
+        let cancel = AtomicBool::new(false);
+        for settings in [&mp3, &aac, &wav, &flac] {
+            let cached = measure_with_cache(&cache, &pcm, settings, &cancel).unwrap();
+            let direct = crate::engine::preview_landing(
+                &pcm.samples,
+                pcm.sample_rate,
+                pcm.channels,
+                settings,
+            )
+            .unwrap();
+            assert_eq!(cached.gain_lin, direct.gain_lin);
+            assert_eq!(cached.mastered_lufs, direct.mastered_lufs);
+        }
+        assert_eq!(cache.lock().unwrap().entries.len(), 2);
+    }
+
+    #[test]
     fn reuse_keeps_full_delivery_identical_and_invalidates_processing_and_source() {
         let pcm = pcm();
         let cache = Mutex::new(Cache::new(PCM_BUDGET));

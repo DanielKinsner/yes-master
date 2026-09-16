@@ -66,8 +66,13 @@ places meters and swap fades after conversion, at the opened device rate.
 Original converts directly; Mastered aligns/drains the finite DSP source, then
 converts through the requested file rate and the device rate. A live file-rate
 edit reconstructs these converters from cached source PCM while preserving
-playhead and pause state. Codec resolution and additional device protection
-remain open. Conversion failure carries a unique
+playhead and pause state. Preview commands also carry the selected encoding:
+the backend resolves its pre-encode PCM rate and precision with the export
+encoder's own rules. A transient settings copy preserves the effective target,
+ceiling and exact processing coefficients; requested/saved settings stay intact.
+Matching PCM responses share preparation even across formats, while changed
+rates invalidate it. This does not simulate lossy decoding. Additional device
+protection remains open. Conversion failure carries a unique
 failed-source epoch to the existing UI error surface; replay reconstructs the
 source rather than resuming an exhausted iterator.
 `audio/output_route.rs` opens CPAL directly and retains the successful stream
