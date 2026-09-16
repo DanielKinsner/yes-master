@@ -247,7 +247,7 @@ fn callback_bench(streaming_src: bool) {
     let integrated = Arc::new(AtomicI32::new(i32::MIN));
     let ring = Arc::new(SpectrumRing::new());
     let (tx, rx) = mpsc::channel();
-    let source = MasteringSource::new(
+    let mut source = MasteringSource::new(
         playback,
         pcm.channels,
         chain_rate,
@@ -262,11 +262,17 @@ fn callback_bench(streaming_src: bool) {
     );
     let construct_start = Instant::now();
     let (mut source, stream_error): (Box<dyn Iterator<Item = f32> + Send>, _) = if streaming_src {
+        let slots = source.take_meter_slots();
         let converted =
             crate::quality_source::QualitySource::new(source.with_render_alignment(), rate)
                 .unwrap();
         let slot = converted.error_slot();
-        (Box::new(converted), Some(slot))
+        let metered = crate::sources::MeteredSource::new(
+            converted,
+            slots,
+            crate::sources::FadeEnvelope::inactive(),
+        );
+        (Box::new(metered), Some(slot))
     } else {
         (Box::new(source), None)
     };
@@ -350,7 +356,7 @@ fn callback_bench(streaming_src: bool) {
         }
         done_tx.send(rows).unwrap();
     });
-    let mut spectrum = SpectrumAnalyzer::new(chain_rate);
+    let mut spectrum = SpectrumAnalyzer::new(rate);
     let mut snapshots = 0;
     let mut lufs_updates = 0;
     let mut previous_lufs = i32::MIN;
@@ -387,7 +393,7 @@ fn callback_bench(streaming_src: bool) {
         .iter()
         .filter(|r| r[0] as f64 > r[1] as f64 / rate as f64 * 1e9)
         .count();
-    let report = json!({"scope":"muted MasteringSource on CPAL callback, concurrent preview landing and coefficient edits; optional test-only post-chain streaming SRC; meters remain pre-SRC diagnostics; not installed UI/lifecycle proof",
+    let report = json!({"scope":"muted MasteringSource on CPAL callback, concurrent preview landing and coefficient edits; optional test-only post-chain streaming SRC with device-rate output meters; not installed UI/lifecycle proof",
         "streaming_src_candidate":streaming_src,"source_rate":pcm.sample_rate,"chain_rate":chain_rate,
         "streaming_construction_s":streaming_construction_s,"streaming_error_code":stream_error.as_ref().map(|slot|slot.load(Ordering::Acquire)),
         "initial_settings":initial_settings,"coefficient_edits":120,
