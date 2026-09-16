@@ -29,6 +29,9 @@ use crate::sources::{LiveCoeffUpdate, MasteringSource, MeteredPcmSource};
 #[cfg(test)]
 #[path = "listening_bench.rs"]
 mod listening_bench;
+#[cfg(test)]
+#[path = "native_callback_bench.rs"]
+mod native_callback_bench;
 use crate::spectrum::{SpectrumAnalyzer, SpectrumRing};
 use rodio::cpal::traits::{DeviceTrait, HostTrait};
 
