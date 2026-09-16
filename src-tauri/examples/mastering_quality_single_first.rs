@@ -65,17 +65,38 @@ fn main() {
     let output = Path::new(&args[2]);
     assert!(!output.exists());
     let job = read(job_path);
-    assert_eq!(job["experiment"], "single-first-development-v1");
+    let followup = job["experiment"] == "flagged-lower-drive-v1";
+    assert!(followup || job["experiment"] == "single-first-development-v1");
     assert_eq!(
         sha(Path::new(job["specification"].as_str().unwrap())),
         job["specification_sha256"]
     );
+    let baseline = if followup {
+        let path = Path::new(job["baseline_report"].as_str().unwrap());
+        assert_eq!(sha(path), job["baseline_report_sha256"]);
+        let baseline = read(path);
+        assert_eq!(baseline["status"], "complete");
+        assert_eq!(baseline["experiment"], "single-first-development-v1");
+        let check_path = Path::new(job["baseline_independent"].as_str().unwrap());
+        assert_eq!(sha(check_path), job["baseline_independent_sha256"]);
+        let checks = read(check_path);
+        assert_eq!(checks["status"], "complete");
+        assert_eq!(checks["all_pass"], true);
+        assert_eq!(checks["native_sha256"], sha(path));
+        Some(baseline)
+    } else {
+        None
+    };
     std::fs::create_dir_all(output).unwrap();
     let session = Instant::now();
     let mut report = json!({"status":"running","experiment":job["experiment"],
         "job_sha256":sha(job_path),"rows":[],"source_preparation":[],
         "scope":"known-source offline development; no production policy or app latency claim"});
     for case in job["cases"].as_array().unwrap() {
+        if followup {
+            assert!(matches!(case["id"].as_str().unwrap(), "metal" | "rich"));
+            assert_eq!(case["candidates"].as_array().unwrap().len(), 5);
+        }
         let prior_path = Path::new(case["report"].as_str().unwrap());
         assert_eq!(sha(prior_path), case["report_sha256"]);
         let prior = read(prior_path);
@@ -119,7 +140,54 @@ fn main() {
                 serde_json::from_value(retained["requested_settings"].clone()).unwrap();
             let drive = retained["operating_drive_db"].as_f64().unwrap() as f32;
             let offset = requested["offset_db"].as_f64().unwrap() as f32;
-            assert_eq!(offset, 0., "this checkpoint freezes single candidates only");
+            if followup {
+                assert!([0., -3., -6., -12.].contains(&offset));
+                assert!(policy == "single" || offset == 0.);
+            } else {
+                assert_eq!(offset, 0., "single-first freezes zero-offset candidates");
+            }
+            let id = if offset == 0. {
+                format!("{}-{policy}", case["id"].as_str().unwrap())
+            } else {
+                format!("{}-{policy}-m{}", case["id"].as_str().unwrap(), -offset)
+            };
+            assert!(!report["rows"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|row| row["id"] == id));
+            if let Some(reuse_id) = requested["reuse_row_id"].as_str() {
+                assert!(followup && offset == 0.);
+                assert_eq!(reuse_id, id);
+                let mut row = baseline.as_ref().unwrap()["rows"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|row| row["id"] == reuse_id)
+                    .unwrap()
+                    .clone();
+                assert_eq!(row["source_sha256"], prior["source_sha256"]);
+                assert_eq!(
+                    row["requested_settings"],
+                    serde_json::to_value(&settings).unwrap()
+                );
+                assert_eq!(
+                    row["render"]["base_coefficients"],
+                    retained["render"]["coefficients"]
+                );
+                assert_eq!(row["policy"], policy);
+                assert_eq!(row["drive_db"].as_f64().unwrap() as f32, drive);
+                assert_eq!(row["offset_db"], 0.);
+                assert_eq!(sha(Path::new(row["path"].as_str().unwrap())), row["sha256"]);
+                row["reused_validated_baseline"] = json!(true);
+                row["baseline_report_sha256"] = job["baseline_report_sha256"].clone();
+                report["rows"].as_array_mut().unwrap().push(row);
+                continue;
+            }
+            assert!(
+                !followup || offset != 0.,
+                "follow-up must reuse its verified zero-offset outputs"
+            );
             let (raw, metrics) = render(
                 input,
                 pcm.sample_rate,
@@ -168,7 +236,7 @@ fn main() {
                 );
                 path.to_owned()
             } else {
-                let path = output.join(format!("{}-{policy}.wav", case["id"].as_str().unwrap()));
+                let path = output.join(format!("{id}.wav"));
                 assert!(!path.exists());
                 let mut writer = hound::WavWriter::create(
                     &path,
@@ -186,21 +254,24 @@ fn main() {
                 writer.finalize().unwrap();
                 path
             };
-            report["rows"].as_array_mut().unwrap().push(json!({"id":format!("{}-{policy}",case["id"].as_str().unwrap()),
+            report["rows"].as_array_mut().unwrap().push(json!({"id":id,
                 "case":case["id"],"policy":policy,"path":path,"sha256":sha(&path),"source_sha256":prior["source_sha256"],
                 "source":source,"requested_settings":settings,"drive_db":drive,"offset_db":offset,
                 "render":metrics,"src_s":src_s,"finalize_s":finalize_s,"frames":delivered.len()/2,"rate":48000,"channels":2,
                 "lufs":protection.lufs,"peak":protection.true_peak_dbtp,"ceiling":settings.effective_ceiling_dbtp(),
-                "gain":protection.gain_lin,"reused_exact_anchor":reused.is_some()}));
+                "gain":protection.gain_lin,"reused_exact_anchor":reused.is_some(),"reused_validated_baseline":false}));
             std::fs::write(
                 output.join("report.json"),
                 serde_json::to_vec_pretty(&report).unwrap(),
             )
             .unwrap();
-            println!("Completed {} {policy}", case["id"]);
+            println!("Completed {id}");
         }
     }
-    assert_eq!(report["rows"].as_array().unwrap().len(), 12);
+    assert_eq!(
+        report["rows"].as_array().unwrap().len(),
+        if followup { 10 } else { 12 }
+    );
     report["status"] = json!("complete");
     report["total_wall_s"] = json!(session.elapsed().as_secs_f64());
     std::fs::write(
