@@ -8,6 +8,30 @@ use serde_json::json;
 use std::time::Instant;
 
 #[test]
+#[ignore = "diagnose native default/fallback configuration without changing device preferences; YES_MASTER_DEVICE_OPEN_REPORT"]
+fn mastering_quality_device_open_matrix() {
+    let path = PathBuf::from(std::env::var("YES_MASTER_DEVICE_OPEN_REPORT").unwrap());
+    assert!(!path.exists());
+    let host = cpal::default_host();
+    let default_name = host.default_output_device().unwrap().name().unwrap();
+    let mut rows = Vec::new();
+    for device in host.output_devices().unwrap() {
+        let name = device.name().unwrap();
+        let advertised = device.default_output_config().map(|c| format!("{c:?}"));
+        let opened = output_route::open_device(&device);
+        let result = match opened {
+            Ok(output) => json!({"opened":true,"actual":format!("{:?}",output.config)}),
+            Err(error) => json!({"opened":false,"error":error.to_string()}),
+        };
+        rows.push(json!({"device":name,"is_default":name==default_name,
+            "advertised":format!("{advertised:?}"),"result":result}));
+    }
+    std::fs::write(path, serde_json::to_vec_pretty(&json!({"status":"complete",
+        "scope":"empty production mixer opens and closes each route; no preference changes or listening proof",
+        "rows":rows})).unwrap()).unwrap();
+}
+
+#[test]
 #[ignore = "muted production Mastered cascade, playing/paused rate edits and A/B over restored source"]
 fn mastering_quality_mastered_rate_lifecycle() {
     use sha2::Digest;
@@ -466,7 +490,14 @@ fn callback_bench(streaming_src: bool, gain_edits: bool) {
     let pcm = decode_full(Path::new(&path)).unwrap();
     let decode_s = prepare.elapsed().as_secs_f64();
     let host = cpal::default_host();
-    let device = host.default_output_device().expect("native output device");
+    let device = match std::env::var("YES_MASTER_CALLBACK_DEVICE") {
+        Ok(name) => host
+            .output_devices()
+            .unwrap()
+            .find(|device| device.name().ok().as_deref() == Some(name.as_str()))
+            .expect("explicit callback probe device"),
+        Err(_) => host.default_output_device().expect("native output device"),
+    };
     let default = device.default_output_config().unwrap();
     assert_eq!(
         default.sample_format(),
@@ -479,7 +510,16 @@ fn callback_bench(streaming_src: bool, gain_edits: bool) {
         "do not silently introduce channel conversion"
     );
     let mut config: cpal::StreamConfig = default.into();
-    config.buffer_size = cpal::BufferSize::Fixed(256);
+    // Keep the requested-256 probe distinct. Some drivers reject that request
+    // while the production default-buffer route works. An explicitly selected
+    // default-buffer run records its own scope; it cannot earn a fixed-256 pass.
+    let default_buffer =
+        std::env::var("YES_MASTER_CALLBACK_DEFAULT_BUFFER").is_ok_and(|value| value == "1");
+    config.buffer_size = if default_buffer {
+        cpal::BufferSize::Default
+    } else {
+        cpal::BufferSize::Fixed(256)
+    };
     let rate = config.sample_rate.0;
     let start = Instant::now();
     let playback = Arc::new(if streaming_src {
@@ -682,7 +722,9 @@ fn callback_bench(streaming_src: bool, gain_edits: bool) {
         "combined_gain_edits":if gain_edits { edits } else { 0 },
         "gain_edit_interval_ms":if gain_edits { Some(5) } else { None },
         "device":device.name().unwrap_or_default(),"sample_rate":rate,"channels":channels,
-        "requested_frames":256,"granted_frames_min":rows.iter().map(|r|r[1]).min(),"granted_frames_max":rows.iter().map(|r|r[1]).max(),
+        "requested_buffer_policy":if default_buffer { "device_default" } else { "fixed" },
+        "requested_frames":if default_buffer { None } else { Some(256) },
+        "granted_frames_min":rows.iter().map(|r|r[1]).min(),"granted_frames_max":rows.iter().map(|r|r[1]).max(),
         "decode_s":decode_s,"playback_src_s":playback_src_s,"first_peak_meter_s":first_meter_s,
         "duration_s":edit_start.elapsed().as_secs_f64(),"snapshots":snapshots,"lufs_updates":lufs_updates,
         "worker":worker_rows,"join_after_cancel_s":join_after_cancel_s,"callbacks":count,
