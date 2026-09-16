@@ -462,6 +462,10 @@ fn finalize_prepared_impl(
 }
 
 #[cfg(test)]
+#[path = "output_protection_research.rs"]
+mod prepared_research;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

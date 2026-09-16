@@ -35,8 +35,15 @@ def main():
     times.restype = wintypes.BOOL
     started = time.perf_counter()
     peak, cpu = 0, 0.
+    arguments = [str(binary),str(args.job.resolve()),str(args.output.resolve())]
+    environment = os.environ.copy()
+    if job['experiment'] == 'prepared-measurement-reuse-v1':
+        arguments = [str(binary),'output_protection::prepared_research::prepared_measurement_reuse_benchmark',
+                     '--exact','--ignored','--nocapture','--test-threads=1']
+        environment['YES_MASTER_PREPARED_REUSE_JOB'] = str(args.job.resolve())
+        environment['YES_MASTER_PREPARED_REUSE_OUTPUT'] = str(args.output.resolve())
     with log.open('x',encoding='utf-8') as stream:
-        child = subprocess.Popen([str(binary),str(args.job.resolve()),str(args.output.resolve())],stdout=stream,stderr=subprocess.STDOUT)
+        child = subprocess.Popen(arguments,stdout=stream,stderr=subprocess.STDOUT,env=environment)
         handle = wintypes.HANDLE(int(child._handle))
         while True:
             counters = MemoryCounters()
