@@ -50,8 +50,10 @@
 > match 24/24. No analysis policy, automatic sonic policy, control mapping or
 > unseen-holdout result is adopted.
 > [Saturation calibration](reviews/2026-09-15-saturation-calibration-results.md)
-> retains isolated continuity/antialias comparisons; whole-chain/native/selected-C
-> and listening evidence remain open. Preset intent and gated constants are unchanged.
+> retains isolated continuity/antialias comparisons and eight independently
+> verified native finite-filter cases. The long filter has three isolated block
+> interval exceedances; whole-chain, actual-device, selected-C and listening
+> evidence remain open. Preset intent and gated constants are unchanged.
 > No installed/Mac/release verdict follows from this local implementation.
 
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**

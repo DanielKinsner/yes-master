@@ -86,3 +86,46 @@ that reference and preserve its passband/harmonic response. Both kernel tables
 are reusable; longer per-sample processing does not disappear because coefficient
 design happens once. These results do not authorize a preset/curve migration,
 and they do not establish whole-chain or audible improvement.
+
+## Native finite-filter and cost prototype
+
+The [native protocol](2026-09-15-saturation-native-protocol.md) reuses both exact
+8x coefficient tables. It implements causal f64 polyphase interpolation, the
+existing isolated positive f64 curve, and FIR decimation with bounded mirrored
+rings. Tables and the constant curve denominator are prepared once. Four finite
+stereo inputs include unequal-channel start/end impulses, a DC step, tone and
+high-frequency end burst, retaining above-full-scale input and complete ringout.
+
+All **8/8** complete native outputs match independent SciPy `upfirdn` traversal
+within **8.89e-16 maximum absolute error**, against the predeclared **1e-10** limit.
+Partitions of 1, 257 and 1,024 frames yield identical native samples. Output
+length is exactly N+2L, with combined filter delay L; no edge is cropped to pass.
+Evidence: `e-native-inputs-v1/`, `e-native-v1/` and `e-native-comparison-v1.json`.
+
+| Native prototype, stereo at 44.1 kHz | Short 8x / 1,025 taps | Long 8x / 4,097 taps |
+| --- | ---: | ---: |
+| Phase-table preparation | 0.0058 ms | 0.0252 ms |
+| Median processing of 32,768 frames plus complete tail | 46.78 ms | 209.54 ms |
+| Per-case median 256-frame processing | 0.340-0.382 ms | 1.536-1.584 ms |
+| Largest observed 256-frame processing | 0.942 ms | 11.367 ms |
+| Blocks exceeding the 5.805 ms audio interval | 0/1,548 | 3/1,584 |
+| Combined filter delay | 2.902 ms | 11.610 ms |
+| Retained kernel / stereo state bytes | 16,456 / 36,928 | 65,608 / 147,520 |
+
+Processing values summarize three fresh-state traversals per signal. Timers
+include collection/observation overhead and possible scheduling effects; these
+are elapsed native prototype measurements, not CPAL callbacks. The long filter's
+three interval exceedances remain a performance concern with cause unresolved.
+Neither a fixed-block native-device pass nor production f32 behavior is claimed.
+The short filter's previously measured legitimate-harmonic loss is not waived
+by its lower cost. Upfront table preparation is negligible; its reuse cannot
+remove the ongoing per-sample convolution cost.
+
+Strict example Clippy and build pass. Copied native executable SHA-256:
+`ee9dcb279a3d5458bc604f6de8049adea16873355521cc5411313208dafcbfba`.
+The native report binds its job hash; the independent comparison verifies every
+kernel/input/output hash. The existing analytic frequency/alias comparison
+remains separate from this finite-convolution traversal. Next, compare matched
+whole-chain outputs and limiter redistribution under the existing qualified
+finalizer, keeping the long filter as a fidelity reference. Actual callback,
+selected-C and owner calibration/listening gates remain open.

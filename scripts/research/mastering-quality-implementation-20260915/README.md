@@ -135,3 +135,21 @@ not total oversampled FIR taps. No candidate from v1 qualified, including the
 longest filter. The finite-edge/bandwidth specification and independent library
 comparison remain open; increasing oversampling or adding an arbitrary margin
 is not adoption evidence.
+
+### Subsequent source-analysis and native antialias diagnostics
+
+`mastering_quality_source_analysis` takes a verified original-source manifest,
+a specification path and a fresh output directory. It uses actual complete
+production analyses at 0/-40/-80 dB and on each normalized copy. The companion
+`compare_source_analysis.py` verifies complete inputs and compares profiles,
+coefficient identity and availability without rerendering. See the source-analysis
+protocol/results under `docs/reviews/2026-09-15-source-analysis-gain-*.md`.
+
+`saturation_native_reference.py prepare --output FRESH --protocol SPEC` reuses
+the retained 8x FIR tables and writes four finite synthetic inputs plus a job.
+Build the `mastering_quality_saturation_native` example, run it with that job
+and a fresh output directory, then use `saturation_native_reference.py check
+--job JOB --report REPORT --output FRESH.json`. The independent reference checks
+complete causal output including ringout; timing is an isolated native prototype,
+not a production/device callback pass. Preserve the exact kernel/input/report
+hashes and the native protocol/results before changing filter design.
