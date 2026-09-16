@@ -55,6 +55,10 @@
 > while Universal-50 finds a -9 LUFS hit; other source/preset failures remain explicit.
 > Automatic sonic policy is still pending the focused owner choice, with local
 > level-matched review audio prepared. No new listening verdict is inferred.
+> Native stream opening now retains the actual successful configuration even
+> after format/device fallback. It keeps Rodio's mixer/sinks and fallback order;
+> 102 affected audio tests, strict Clippy and muted native seek/resume pass.
+> The streaming audio/gain route remains the next B3 integration step.
 
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
 > Dan accepts longer initial analysis/preparation for demonstrated audio quality,

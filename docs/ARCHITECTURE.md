@@ -64,6 +64,10 @@ Original/Mastered sources share `OutputMeter`; seeking reuses both momentary
 and integrated meter storage. The [B3 device-rate candidate](reviews/2026-09-15-live-rate-verification.md)
 moves that meter after conversion, with complete-pipeline allocation/native
 checks. Its device-rate route remains test-only pending gain-plan integration.
+`audio/output_route.rs` opens CPAL directly and retains the successful stream
+configuration through format/device fallback, while retaining Rodio's mixer and
+sinks. Rodio's stream helper hides its internal format fallback. Callback errors
+set a flag handled by the existing device-loss path on the control thread.
 Signal-chain indicators use backend-resolved stage activity rather than copied
 frontend preset tables.
 

@@ -171,8 +171,31 @@ Wider rate/codec/seek tests, rate-change invalidation, live scalar placement and
 matching readiness generations remain integration work. This route decision is
 independent of the unresolved automatic-drive sonic policy.
 
-Before production integration: retain the actually opened device configuration
-(including fallback), route both audition kinds consistently, meter the actual
+### Actual output configuration checkpoint
+
+`audio/output_route.rs` now opens CPAL explicitly and connects the existing Rodio
+mixer and sinks. Inspection found that Rodio 0.20's `try_from_device_config`
+internally retries other supported formats without returning the successful
+configuration. Merely retaining its argument would be wrong on that path. The
+new adapter retains the configuration of the successful CPAL build and preserves
+Rodio's format heuristic/order, default-device alternatives and error precedence.
+It does not change user device preferences. Runtime device errors set an atomic
+flag; the control thread pauses playback, records the error and uses the existing
+device-loss state, with no formatting or log I/O in the callback.
+
+Three injected fallback regressions and **102 affected audio tests** pass
+(`b3-output-config-v3.log`, `b3-output-config-audio-v1.log`), as does strict
+all-target Clippy (`b3-output-config-clippy-v2.log`). The muted native v2 probe
+opens default and explicitly selected Realtek streams at **48 kHz, stereo F32**.
+Sink progress is observed after 37.49/33.06 ms; pause/seek/resume advances after
+53.87/54.15 ms, with no device errors. These are snapshot observations under
+concurrent research load. Actual hardware fallback was not forced; its ordering
+is covered by injected failures. The earlier v1 probe only tested successful
+default opening and did not qualify the hidden fallback. Retain both reports
+and the intermediate compile-error log. No DAC/listening/installed/Mac or new
+converter-route proof is implied.
+
+Before completing production integration: route both audition kinds consistently, meter the actual
 converted audio, reconcile requested/codec/device planning rates and obsolete
 settings, and measure initial fill, seek/A-B/edit latency and callback deadlines.
 The current test-only iterator also needs its processing-error state surfaced

@@ -7,6 +7,7 @@ use std::time::Duration;
 
 #[cfg(test)]
 mod delivery_rate_probe;
+mod output_route;
 mod preparation_cache;
 
 /// Sentinel dBFS value reported when the peak window saw no signal. JSON can't
@@ -844,15 +845,22 @@ fn output_devices_for_selection(
 
 fn open_output_stream(
     selected_device_name: Option<&str>,
-) -> Result<(rodio::OutputStream, rodio::OutputStreamHandle), String> {
+) -> Result<output_route::OpenedOutput, String> {
     match selected_device_name {
         Some(name) => {
             let device = output_device_by_name(name)?;
-            rodio::OutputStream::try_from_device(&device)
+            output_route::open_device(&device)
                 .map_err(|e| format!("audio output device unavailable ({name}): {e}"))
         }
         None => {
-            rodio::OutputStream::try_default().map_err(|e| format!("audio device unavailable: {e}"))
+            let host = rodio::cpal::default_host();
+            let device = host.default_output_device().ok_or_else(|| {
+                format!("audio device unavailable: {}", rodio::StreamError::NoDevice)
+            })?;
+            output_route::with_fallback(&device, output_route::open_device, || {
+                host.output_devices().ok()
+            })
+            .map_err(|e| format!("audio device unavailable: {e}"))
         }
     }
 }
@@ -1284,8 +1292,12 @@ impl Drop for AudioPlayer {
 }
 
 struct AudioThreadState {
-    _stream: rodio::OutputStream,
-    handle: rodio::OutputStreamHandle,
+    _stream: rodio::cpal::Stream,
+    /// Exactly the configuration passed to the successfully opened stream,
+    /// including fallback. Never infer device rate from a requested file rate.
+    _output_config: rodio::cpal::SupportedStreamConfig,
+    handle: output_route::OutputHandle,
+    stream_failed: Arc<AtomicBool>,
     sink: rodio::Sink,
     current_track: Option<TrackId>,
     /// L10 — fade-out trigger shared with the currently-playing source. On an
@@ -1381,13 +1393,20 @@ struct AudioThreadState {
 
 impl AudioThreadState {
     fn open(selected_device_name: Option<&str>, initial_sample_rate: u32) -> Result<Self, String> {
-        let (stream, handle) = open_output_stream(selected_device_name)?;
-        let sink = rodio::Sink::try_new(&handle).map_err(|e| e.to_string())?;
+        let output_route::OpenedOutput {
+            stream,
+            handle,
+            config,
+            failed,
+        } = open_output_stream(selected_device_name)?;
+        let sink = handle.sink();
         #[cfg(test)]
         mute_diagnostic_sink(&sink);
         Ok(Self {
             _stream: stream,
+            _output_config: config,
             handle,
+            stream_failed: failed,
             sink,
             current_track: None,
             live_fade_out: Arc::new(AtomicBool::new(false)),
@@ -2578,6 +2597,11 @@ fn audio_thread(
         }
 
         if let Some(s) = state.as_mut() {
+            if s.stream_failed.swap(false, Ordering::Acquire) {
+                s.sink.pause();
+                s.device_lost = true;
+                crate::diagnostics::error("Native output stream failed; playback paused");
+            }
             if !s.preview_work.in_flight {
                 if let Some(request) = s.preview_work.pending.take() {
                     queue_preview_work(s, request, &command_tx);
@@ -2957,7 +2981,7 @@ fn handle_play(
         s.sink.get_pos().as_secs_f64(),
         s.loop_region.as_ref(),
     );
-    let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
+    let new_sink = s.handle.sink();
     #[cfg(test)]
     mute_diagnostic_sink(&new_sink);
     new_sink.append(source);
@@ -3175,7 +3199,7 @@ fn handle_play_master(
         s.sink.get_pos().as_secs_f64(),
         s.loop_region.as_ref(),
     );
-    let new_sink = rodio::Sink::try_new(&s.handle).map_err(|e| e.to_string())?;
+    let new_sink = s.handle.sink();
     #[cfg(test)]
     mute_diagnostic_sink(&new_sink);
     new_sink.append(mastering_source);
