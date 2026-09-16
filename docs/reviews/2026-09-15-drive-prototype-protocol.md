@@ -183,6 +183,49 @@ tests and strict all-target Clippy pass (`c1-metric-regressions-recovery-v1.log`
 source stamp is `46580659ee75`; its stamp test passes. No DSP processing was
 changed by this offline-prototype checkpoint.
 
+## Bounded refinement checkpoint
+
+`refine_drive.py` retains the complete coarse evidence and performs at most two
+new midpoints per unresolved preset/target group. It stops for a qualified hit,
+no qualified anchor, or no adjacent measured candidate with better target error.
+Each new result is measured before choosing the next midpoint; no unsampled
+monotonicity is assumed. The combined report retains both selections, every
+candidate, native/metric hashes and the extra render/verification cost. The
+runner restricts itself to the existing automatic Track control scope and checks
+that each fresh control's exact coefficient string matches the coarse control.
+Six regression tests cover selection, unavailable data, source anchors and the
+adaptive midpoint decisions (`c1-refinement-regressions-v1.log`).
+
+For owner Universal-75 at -9, offsets -1.5 and -0.75 dB are the two refinements.
+The first gives **-9.2288 LUFS**, section-contrast change **-0.536 dB**, paired
+attack median **-0.477 dB**, and passes all character constraints. The second
+hits -9 but fails section contrast. The retained choice remains a research
+target miss outside **0.2 LU**; the separate **0.25 LU** product threshold is
+unchanged. Compared with the corrected control's -1.531 dB section/ -1.706 dB
+attack changes, the choice preserves more measured contrast. Limiter activity
+above 0.01 dB falls from 83.0% to 28.5% and p95 reduction from 1.261 to 0.317 dB;
+those are explanatory measurements, not a standalone sonic-quality verdict.
+All five selected/control checks in `c1-coat-refined-independent-v1` pass; four
+recheck existing coarse outputs and one is the new selected refinement.
+
+Owner Universal-50's -0.75 dB refinement meets -9 and all current constraints,
+with -0.740 dB section contrast and -0.803 dB paired attack median. Its separate
+independent finalist check is queued. Piano refinements continue to expose
+section/target conflicts; they are retained even when target itself is met.
+The completed Funk coarse run adds 60 deliveries and **15/15** independent
+selected/control checks. Universal-75/50's simple rule meets -14, while their
+preserving -9 choices miss by 4.635/4.695 LU. Loud-75's -14 preserving choice
+misses by 0.576 LU; its -9 group uses an explicit corrected-control fallback.
+
+Remaining original-source renders now use at most four concurrent render
+processes on this 16-core/128 GiB machine. Their timings remain loaded-machine
+development observations, not controlled interaction/session budgets. The old
+serial coordinator will stop at its existing-output guard after Aphelion because
+Metal is owned by a separate worker; that expected controller stop must not be
+mistaken for a failed DSP case or cause completed files to be rerendered. The
+other queues continue Metal→Baby and Rich→Imaginal. No new holdout is open,
+and neither the sonic direction nor shipping limits have been adopted.
+
 Develop on the original eight sources and their gain copies at -14/-9 LUFS,
 covering Universal 75, Universal 50 and the deliberately dense Loud preset.
 Retain the known piano/Rich/Imaginal/drum failures. C0's existing candidate grid

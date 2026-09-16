@@ -59,6 +59,27 @@ class DriveMeasurements(unittest.TestCase):
                      character_failures=[], offset_db=-6)]
         self.assertEqual(select(rows, True, rows[0])['selected'], 'near')
 
+    def test_refinement_rechecks_each_midpoint_without_assuming_feasibility(self):
+        from refine_drive import next_refinement
+        def row(offset, error, qualified):
+            return dict(id=str(offset), policy='bounded', technical_pass=True,
+                        offset_db=offset, target_error_lu=error,
+                        character_failures=[] if qualified else ['section'])
+        rows = [row(-6, -3, True), row(-3, -1.5, True), row(0, 0, False)]
+        self.assertEqual(next_refinement(rows), -1.5)
+        rows.append(row(-1.5, -.5, False))
+        self.assertEqual(next_refinement(rows), -2.25)
+        rows[-1] = row(-1.5, -.7, True)
+        self.assertEqual(next_refinement(rows), -.75)
+
+    def test_refinement_stops_for_a_qualified_hit_or_missing_feasible_anchor(self):
+        from refine_drive import next_refinement
+        row = dict(id='only', policy='single', technical_pass=True,
+                   offset_db=0, target_error_lu=0, character_failures=[])
+        self.assertIsNone(next_refinement([row]))
+        row['character_failures'] = ['section']
+        self.assertIsNone(next_refinement([row]))
+
 
 if __name__ == '__main__':
     unittest.main()
