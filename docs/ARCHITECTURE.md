@@ -72,20 +72,25 @@ encoder's own rules. A transient settings copy preserves the effective target,
 ceiling and exact processing coefficients; requested/saved settings stay intact.
 Matching PCM responses share preparation even across formats, while changed
 rates invalidate it. This does not simulate lossy decoding. Device planning
-measures the full raw response at the opened rate and caps the file-derived gain.
-Landing and attenuation-only Volume Match run after both converters, before
-meters/fade. File and device responses have separate two-entry, 192 MiB LRU
-caches; target/precision edits reverify complete delivery while reusing raw facts.
-Oversized responses finish once in place. File-only prewarm results never count
-as device-qualified. See [device preparation](reviews/2026-09-15-device-gain-preparation.md)
-for verification scope and outstanding transition/seek limits. Conversion or
+measures complete file/device PCM. File landing remains in the compensated DSP
+crossfade; device-specific correction and attenuation-only Volume Match run after
+both converters, before meters/fade. Source/file raw PCM shares a two-entry,
+288 MiB cache (one allocation at equal rates); a separate two-entry, 192 MiB cache
+holds device raw PCM. Target edits reuse nonlinear DSP and peak facts, recompute
+actual landed/SRC PCM, scan its entire residual against the cached response and
+verify complete delivery. Excess residual uncertainty triggers fresh measurement
+before planning correction. These 480 MiB retained caps exclude transient buffers.
+Oversized responses are not retained; device checking still needs temporary
+conversion/delivery buffers. File-only prewarm is never device-qualified. See
+[device preparation](reviews/2026-09-15-device-gain-preparation.md) for measured
+cost and verification scope. Conversion or
 matching device-preparation failure carries a unique
 failed-source epoch to the existing UI error surface; replay reconstructs the
 source rather than resuming an exhausted iterator.
 Preview measurement readiness and output application are distinct. Each
 coefficient publication receives a revision separate from the logical settings
-generation. Raw-processing revisions are separate: target/VM-only edits reuse
-the raw response and do not restart its DSP transition. The DSP crossfade and
+generation. Raw-processing revisions are separate: file-landing edits participate in the
+compensated DSP transition; VM-only edits can reuse the raw revision. The DSP crossfade and
 both converters propagate raw revisions as PCM is emitted; the post-device gain
 stage acknowledges the matching plan after its ramp, followed by the final fade. `PlaybackSnapshot` exposes the
 requested/applied tokens for diagnostics; a paused edit may be prepared without

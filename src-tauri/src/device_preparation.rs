@@ -88,6 +88,34 @@ impl PreparedDevicePcm {
             protection,
         })
     }
+
+    pub(crate) fn finish_converted_gain(
+        &self,
+        mut actual: Vec<f32>,
+        source_gain: f32,
+        desired_correction: f32,
+        ceiling_dbtp: f32,
+        cancel: Option<&AtomicBool>,
+    ) -> CommandResult<DeviceDelivery> {
+        let measured = output_protection::prepare_linear_transform(
+            &self.samples,
+            &actual,
+            &self.measurements,
+            source_gain,
+            cancel,
+        )?;
+        let protection = output_protection::finalize_prepared_device_gain(
+            &mut actual,
+            &measured,
+            desired_correction,
+            ceiling_dbtp,
+            cancel,
+        )?;
+        Ok(DeviceDelivery {
+            samples: actual,
+            protection,
+        })
+    }
 }
 
 fn check_cancel(cancel: Option<&AtomicBool>) -> CommandResult<()> {

@@ -422,12 +422,21 @@ Mac or listening result follows. Device-specific peak protection remains open.
 
 ### Device gain and reusable preparation continuation
 
-The [device preparation record](2026-09-15-device-gain-preparation.md) documents
-the subsequent production gain placement, bounded file/device caches, full-file
-core correction, current-original-source witness, complete desktop/private and
-bridge checks, and separate native preparation/application/resource observations.
-The corrected current Imaginal 44.1 kHz production output matches its measured
-plan exactly and passes independent SOXR16/64 at -1.039866 dBTP. The earlier
-failed files remain unchanged. The broader original-source matrix is still
-running; dynamic boundary and final-result UI coverage remain open. No installed,
-Mac or new listening verdict follows.
+The [device preparation record](2026-09-15-device-gain-preparation.md) contains
+32 independently passing retained-output core cases and 16 exact/independently
+passing original-source cases for the first placement. That placement later
+exposed a compensated-edit transition regression; all failed evidence remains.
+The correction retains source landing in the DSP crossfade and verifies actual
+landed/SRC PCM before applying only device-specific correction downstream.
+
+All eight equal-output transition cases now match the prior crossfade exactly.
+Full desktop/private fixtures (505 library tests), Clippy, bridges, actual muted
+lifecycle and 606 loaded callbacks pass. First preparation/application is
+46.821/46.945 s; new target 2.083/2.266 s; cached target 75/189 ms. Session wall,
+CPU and memory are separately recorded. These loaded measurements do not prove
+a controlled speedup, DAC latency or subjective sound quality.
+
+Fresh corrected full-original-source and independent matrices are complete:
+16/16 exact PCM matches and independent peak/LUFS passes, zero full-scale samples.
+Dynamic boundary and final-result UI coverage remain open. No installed, Mac or
+new listening verdict follows.

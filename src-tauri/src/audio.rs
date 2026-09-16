@@ -9,6 +9,8 @@ use std::time::Duration;
 #[cfg(test)]
 mod delivery_rate_probe;
 mod gain_stage;
+#[cfg(test)]
+mod gain_transition_probe;
 mod output_route;
 mod preparation_cache;
 
@@ -1394,6 +1396,7 @@ struct AudioThreadState {
     live_gain_mailbox: Option<Arc<gain_stage::GainMailbox>>,
     applied_coeff_revision: Option<Arc<AtomicU64>>,
     live_landing_gain_lin: f32,
+    live_device_correction_lin: f32,
     live_preview_lufs_landing: bool,
     live_sample_rate: u32,
     /// Fixed intermediate rate of the current Mastered source. A rate edit
@@ -1536,6 +1539,7 @@ impl AudioThreadState {
             live_gain_mailbox: None,
             applied_coeff_revision: None,
             live_landing_gain_lin: 1.0,
+            live_device_correction_lin: 1.0,
             live_preview_lufs_landing: false,
             live_sample_rate: initial_sample_rate,
             live_file_rate: initial_sample_rate,
@@ -2153,14 +2157,22 @@ fn publish_preview_coeffs(s: &mut AudioThreadState, settings: &MasteringSettings
         &mut s.live_vm_gain_lin,
     );
     let landing = update_chain_preview_landing_plan(
-        &s.device_gain_cache,
+        &s.landing_gain_cache,
         settings,
         s.live_preview_lufs_landing,
         s.live_landing_gain_lin,
     );
     coeffs.export_landing_gain_lin = landing.coeff_gain;
     s.live_landing_gain_lin = landing.remembered_gain;
+    let device = update_chain_preview_landing_plan(
+        &s.device_gain_cache,
+        settings,
+        s.live_preview_lufs_landing,
+        s.live_device_correction_lin,
+    );
+    s.live_device_correction_lin = device.remembered_gain;
     s.landing_pending = landing.needs_measurement
+        || device.needs_measurement
         || (settings.volume_match && s.vm_gain_cache.get(settings).is_none());
     if let Some(tx) = &s.live_coeffs_tx {
         debug_assert_eq!(generation, s.live_coeff_generation);
@@ -2168,9 +2180,7 @@ fn publish_preview_coeffs(s: &mut AudioThreadState, settings: &MasteringSettings
         // Distinct tokens prevent an earlier output from acknowledging the final
         // coefficients just because their logical settings generation matches.
         s.live_coeff_revision = s.live_coeff_revision.wrapping_add(1).max(1);
-        let (landing, volume_match) =
-            (coeffs.export_landing_gain_lin, coeffs.volume_match_gain_lin);
-        coeffs.export_landing_gain_lin = 1.;
+        let (landing, volume_match) = (device.coeff_gain, coeffs.volume_match_gain_lin);
         coeffs.volume_match_gain_lin = 1.;
         let raw_changed = s.live_raw_coeffs.as_ref() != Some(&coeffs);
         if raw_changed {
@@ -2207,7 +2217,8 @@ fn queue_preview_work(
         &s.vm_gain_cache,
         &request.settings,
         request.landing_enabled,
-    ) {
+    ) && !(request.landing_enabled && s.landing_gain_cache.get(&request.settings).is_none())
+    {
         s.preview_work.pending = None;
         publish_preview_coeffs(s, &request.settings, request.generation);
     } else if s.preview_work.in_flight {
@@ -3266,6 +3277,7 @@ fn handle_play(
     s.live_raw_coeffs = None;
     s.live_coeff_generation = s.live_coeff_generation.wrapping_add(1);
     s.live_landing_gain_lin = 1.0;
+    s.live_device_correction_lin = 1.0;
     // Original playback has no mastering chain — no landing to wait on.
     s.landing_pending = false;
     s.live_sample_rate = sample_rate;
@@ -3428,6 +3440,8 @@ fn handle_play_master(
 
     seed_prepared_preview(s, settings);
     let landing_plan =
+        play_master_preview_landing_plan(&s.landing_gain_cache, settings, preview_lufs_landing);
+    let device_plan =
         play_master_preview_landing_plan(&s.device_gain_cache, settings, preview_lufs_landing);
     chain.coeffs.export_landing_gain_lin = landing_plan.initial_gain;
     apply_preview_volume_match_gain_cached(
@@ -3437,8 +3451,10 @@ fn handle_play_master(
         &mut s.live_vm_gain_lin,
     );
     s.live_landing_gain_lin = chain.coeffs.export_landing_gain_lin;
+    s.live_device_correction_lin = device_plan.initial_gain;
     s.live_preview_lufs_landing = preview_lufs_landing;
     s.landing_pending = landing_plan.needs_measurement
+        || device_plan.needs_measurement
         || (settings.volume_match && s.vm_gain_cache.get(settings).is_none());
     // The old source may still be fading out. New-play preparation must not
     // publish into its coefficient channel.
@@ -3464,10 +3480,9 @@ fn handle_play_master(
     let gains = gain_stage::GainMailbox::new(gain_stage::GainPlan {
         revision: s.live_coeff_revision,
         raw_revision: s.live_raw_revision,
-        landing: chain.coeffs.export_landing_gain_lin,
+        landing: device_plan.initial_gain,
         volume_match: chain.coeffs.volume_match_gain_lin,
     });
-    chain.coeffs.export_landing_gain_lin = 1.;
     chain.coeffs.volume_match_gain_lin = 1.;
     s.live_raw_coeffs = Some(chain.coeffs);
     let mastering_source = MasteringSource::new(

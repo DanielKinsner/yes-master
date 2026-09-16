@@ -105,9 +105,15 @@ one to make this regression pass.
 
 The [device preparation record](reviews/2026-09-15-device-gain-preparation.md)
 distinguishes protected file PCM from the device-derived gain. Focused desktop
-regressions cover exact post-device gain placement, full-file cache reuse and
-invalidation, oversized owned-buffer fallback, concurrent gain-plan publication,
+regressions cover compensated source landing, post-device correction, full-file
+cache reuse/invalidation and byte limits, concurrent gain-plan publication,
 raw/output revisions, small attenuation, seek and callback allocation behavior.
+The ordinary compensating-edit regression freezes a 0.01 dB maximum deviation
+from the previous crossfade in each 5 ms window across eight +/-12 dB cases.
+Additional tests compare actual source-gain/SRC PCM around the existing unity
+shortcut and require fresh reconstruction before gain planning when the full-file
+residual bound becomes inaccurate. These tests do not prove every dynamic
+transition or hardware reconstruction meets a ceiling.
 The new cancellable SRC entry rejects nonfinite PCM before the FFT backend and
 checks cancellation during validation and conversion without changing valid PCM.
 

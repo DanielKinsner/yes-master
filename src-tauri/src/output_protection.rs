@@ -25,11 +25,34 @@ pub struct ProtectedPcm {
 /// cache owns the buffer together with these facts; neither is independently
 /// replaceable. No delivery target or integer quantizer is baked in here.
 pub(crate) struct PreparedMeasurements {
-    peak: peak_meter::PeakMeasurement,
+    peak: PreparedPeak,
     raw_lufs: f32,
     frames: usize,
     rate: u32,
     channels: u16,
+}
+
+struct PreparedChannelPeak {
+    lower: f64,
+    upper: f64,
+    sample_peak: f64,
+}
+
+struct PreparedPeak {
+    channels: Vec<PreparedChannelPeak>,
+}
+
+impl PreparedPeak {
+    fn upper(&self) -> f64 {
+        self.channels
+            .iter()
+            .map(|channel| channel.upper)
+            .fold(0., f64::max)
+    }
+    fn upper_dbtp(&self) -> Option<f64> {
+        let value = self.upper();
+        (value > 0.).then(|| 20. * value.log10())
+    }
 }
 
 pub(crate) fn prepare(
@@ -42,10 +65,21 @@ pub(crate) fn prepare(
     if count == 0 || rate == 0 || samples.len() % count != 0 {
         return Err(error("invalid preparation PCM format"));
     }
-    let peak = peak_meter::measure(samples, count, || {
+    let measured = peak_meter::measure(samples, count, || {
         cancel.is_some_and(|f| f.load(Ordering::Relaxed))
     })
     .map_err(error)?;
+    let peak = PreparedPeak {
+        channels: measured
+            .channels
+            .iter()
+            .map(|channel| PreparedChannelPeak {
+                lower: channel.lower,
+                upper: channel.upper,
+                sample_peak: channel.finite.sample_peak,
+            })
+            .collect(),
+    };
     let mut meter = EbuR128::new(u32::from(channels), rate, Mode::I).map_err(error)?;
     for chunk in samples.chunks(4096 * count) {
         check_cancel(cancel)?;
@@ -57,6 +91,94 @@ pub(crate) fn prepare(
         frames: samples.len() / count,
         rate,
         channels,
+    })
+}
+
+/// Reuse reconstruction only after comparing EVERY actual transformed sample
+/// against a scalar multiple of the immutable measured response. This covers
+/// actual converter rounding, rather than assuming f32 gain/SRC commutation.
+pub(crate) fn prepare_linear_transform(
+    reference: &[f32],
+    actual: &[f32],
+    original: &PreparedMeasurements,
+    scalar: f32,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<PreparedMeasurements> {
+    let count = usize::from(original.channels);
+    check_cancel(cancel)?;
+    if !scalar.is_finite()
+        || scalar < 0.
+        || reference.len() != actual.len()
+        || actual.len() != original.frames * count
+    {
+        return Err(error("invalid transformed preparation PCM"));
+    }
+    let mut residuals = vec![0_f64; count];
+    let mut sample_peaks = vec![0_f64; count];
+    let mut meter =
+        EbuR128::new(u32::from(original.channels), original.rate, Mode::I).map_err(error)?;
+    for (a, b) in reference
+        .chunks(4096 * count)
+        .zip(actual.chunks(4096 * count))
+    {
+        check_cancel(cancel)?;
+        for (index, (&reference, &actual)) in a.iter().zip(b).enumerate() {
+            if !reference.is_finite() || !actual.is_finite() {
+                return Err(error("nonfinite transformed preparation PCM"));
+            }
+            let channel = index % count;
+            residuals[channel] = residuals[channel]
+                .max((f64::from(actual) - f64::from(reference) * f64::from(scalar)).abs());
+            sample_peaks[channel] = sample_peaks[channel].max(f64::from(actual).abs());
+        }
+        meter.add_frames_f32(b).map_err(error)?;
+    }
+    let norm = peak_meter::reconstruction_error_gain(original.frames);
+    let channels: Vec<_> = original
+        .peak
+        .channels
+        .iter()
+        .enumerate()
+        .map(|(index, channel)| {
+            let error = norm * residuals[index];
+            PreparedChannelPeak {
+                lower: (channel.lower * f64::from(scalar) - error).max(sample_peaks[index]),
+                upper: channel.upper * f64::from(scalar) + error,
+                sample_peak: sample_peaks[index],
+            }
+        })
+        .collect();
+    // An imprecise residual must not create unnecessary attenuation before a
+    // fresh reading. Refresh the ACTUAL raw response before planning its gain.
+    let upper = channels
+        .iter()
+        .map(|channel| channel.upper)
+        .fold(0., f64::max);
+    let lower = channels
+        .iter()
+        .map(|channel| channel.lower)
+        .fold(0., f64::max);
+    let residual = residuals.iter().copied().fold(0., f64::max) * norm;
+    let interval_db = if upper == 0. {
+        0.
+    } else {
+        20. * (upper / lower).log10()
+    };
+    let residual_db = if upper == 0. {
+        0.
+    } else {
+        20. * (upper / (upper - residual).max(0.)).log10()
+    };
+    if interval_db > 0.0501 || residual_db > 0.001 {
+        crate::diagnostics::info(format!("Transformed peak preparation: fresh_meter=true interval_db={interval_db:.6} residual_db={residual_db:.6}"));
+        return prepare(actual, original.rate, original.channels, cancel);
+    }
+    Ok(PreparedMeasurements {
+        peak: PreparedPeak { channels },
+        raw_lufs: finite_loudness(&meter)?,
+        frames: original.frames,
+        rate: original.rate,
+        channels: original.channels,
     })
 }
 
@@ -210,7 +332,7 @@ fn finalize_prepared_impl(
     let maximum_sample = prepared
         .channels
         .iter()
-        .map(|c| c.finite.sample_peak)
+        .map(|c| c.sample_peak)
         .fold(0_f64, f64::max);
     let sample_limit = if bits == 32 {
         ceiling.min(f64::from(f32::MAX))
@@ -342,6 +464,58 @@ fn finalize_prepared_impl(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn transformed_residual_is_checked_and_large_errors_refresh_before_gain_planning() {
+        for channels in [1, 2] {
+            let count = usize::from(channels);
+            let reference: Vec<f32> = (0..8193 * count)
+                .map(|i| 0.9 * (i as f32 * 1.117).sin())
+                .collect();
+            let original = prepare(&reference, 48000, channels, None).unwrap();
+            for disturbance in [0., 0.4] {
+                let mut actual: Vec<f32> = reference.iter().map(|sample| sample * 1.73).collect();
+                actual[4097 * count] += disturbance;
+                let reused =
+                    prepare_linear_transform(&reference, &actual, &original, 1.73, None).unwrap();
+                let fresh = prepare(&actual, 48000, channels, None).unwrap();
+                assert!(reused.peak.upper() >= fresh.peak.upper() - 1e-12);
+                let mut direct = actual.clone();
+                let result =
+                    finalize_prepared_device_gain(&mut actual, &reused, 1., -1., None).unwrap();
+                let fresh_result =
+                    finalize_prepared_device_gain(&mut direct, &fresh, 1., -1., None).unwrap();
+                assert!(result.gain_lin <= fresh_result.gain_lin);
+                if disturbance != 0. {
+                    assert_eq!(result.gain_lin, fresh_result.gain_lin, "refresh must precede gain planning so a loose residual does not over-attenuate");
+                    assert_eq!(actual, direct);
+                }
+                assert!(
+                    peak_meter::measure(&actual, count, || false)
+                        .unwrap()
+                        .upper_dbtp()
+                        .unwrap()
+                        <= -1. + 1e-5
+                );
+            }
+            assert!(prepare_linear_transform(
+                &reference,
+                &reference[..reference.len() - 1],
+                &original,
+                1.,
+                None
+            )
+            .is_err());
+            assert!(prepare_linear_transform(
+                &reference,
+                &reference,
+                &original,
+                1.,
+                Some(&AtomicBool::new(true))
+            )
+            .is_err());
+        }
+    }
 
     #[test]
     fn no_target_short_silent_and_targeted_pcm_are_verified_after_quantization() {

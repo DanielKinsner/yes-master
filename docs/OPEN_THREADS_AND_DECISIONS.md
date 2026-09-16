@@ -5,61 +5,49 @@
 > in the existing checkout. `codex/mastering-quality` starts at local `7534f612`;
 > no push/main merge/release/deployment/spend or private-audio commit is authorized.
 > The [checkpoint ledger](reviews/2026-09-15-mastering-quality-implementation-evidence.md)
-> records A1/A2, B1, D1/D2 and C0 complete locally; B2's qualified core is integrated.
-> Original frozen evidence/private fixtures remain intact. B3's Track, rendered
-> preview and Album finalizer checks pass, including programme joins and common
-> correction preserving component PCM parity. Matching raw reuse reduces the
-> measured earlier owner five-step session from 98.67 to 54.15 s and target edits
-> from about 24 s to 0.60–0.66 s, with a longer first preparation and more memory.
-> These timings precede the filter-precision correction below.
+> records A1/A2, B1, D1/D2 and C0 complete locally; B2's qualified core is integrated
+> with explicit reference/official-sequence limits. Frozen evidence/fixtures remain intact.
+>
+> **B3 remains in progress.** Track, rendered preview and Album finalizers pass,
+> including programme joins and component PCM parity. Production Original/Mastered
+> conversion now uses the actual opened device configuration and the encoding's
+> pre-encode PCM rate. [Device preparation](reviews/2026-09-15-device-gain-preparation.md)
+> fixes the independently confirmed whole-Imaginal device-rate ceiling miss.
+> All 32 retained-output core checks and 16 first-placement original-source cases
+> pass whole-file independent verification. The first placement at `9ebd2f81`
+> subsequently exposed brief 9.37-12 dB transition dips. The corrected placement
+> preserves compensated DSP crossfades and verifies actual landed/SRC PCM using
+> cached raw facts; all eight equal-output transition cases now match exactly.
+> Full desktop/private fixtures (505 library tests), strict Clippy, both bridges
+> and 606 loaded native callbacks pass. All **16 corrected whole-source outputs**
+> now match their prepared PCM exactly and independently pass peak/LUFS checks.
+> Broader dynamic boundaries and the final-result UI contract remain open.
+>
+> Corrected actual-device preparation/application is **46.821/46.945 s** initially,
+> **2.083/2.266 s** for a new target, and **75/189 ms** for a cached target. Raw DSP
+> is reused; actual gain/SRC and whole-file delivery checks still run on new targets.
+> Source/file and device caches cap retained PCM at 288/192 MiB. The loaded native
+> session observes **50.840 s wall / 50.359 s CPU / 732 MiB peak working set**.
+> Preparation, output application, callback responsiveness and session cost remain
+> separate; these are not isolated speed comparisons or new listening evidence.
+>
 > B4 has 316 independent encoded technical checks, exact FLAC/AIFF PCM parity and
 > unclipped MP3 receipt readback. Lossy ceiling misses remain explicit/advisory;
 > bounded headroom/re-encoding experiments do not justify automatic adoption.
-> [Production live conversion](reviews/2026-09-15-live-rate-verification.md) now
-> retains the actual opened device format, uses qualified Original SRC and a
-> source/file/device Mastered route, and meters/fades after conversion. The
-> retained aliasing witness is fixed independently. Paused/playing rate edits,
-> A/B, processing-error/retry and loaded native callbacks pass. Selected encoding
-> resolves the same pre-encode PCM rate/precision as export without changing saved
-> intent; its 672 combinations, seven muted native routes, cache parity, full
-> fixtures, 897 frontend tests and 38 headless checks pass. It does not simulate
-> lossy decoding. Broader device protection remains open: a full Imaginal file
-> reaches about -0.775 dBTP after 48-to-44.1 kHz conversion; independent SOXR
-> confirms -0.815 dBTP. The full matrix has 31/32 peak passes and 32/32 LUFS passes.
-> Applied-revision tracking now follows the DSP crossfade and converter buffers:
-> new-target measurement/application is 0.767/0.951 s, cached target 0.075/0.189 s
-> in the muted native probe. Paused edits wait for resume before acknowledging
-> output. Full desktop/private fixtures, Clippy and 607 loaded callbacks pass.
-> The subsequent [device-gain implementation](reviews/2026-09-15-device-gain-preparation.md)
-> applies a separately verified scalar after both converters, reusing bounded
-> whole-file device facts across target edits. All 32 retained-output core cases
-> pass the qualified ceiling; independent checks continue. The complete current
-> Imaginal 44.1 kHz production route has zero PCM differences from its measured
-> plan and independently passes at -1.039866 dBTP. Full desktop/private fixtures,
-> Clippy, bridges and muted native checks pass. First preparation/application is
-> 49.779/49.834 s; new target 1.154/1.220 s; cached target 75 ms. The loaded callback
-> run has 608 callbacks and no deadline misses/errors. The broader full-original-
-> source matrix, dynamic boundary coverage and final-result UI contract remain open.
-> [C1 development](reviews/2026-09-15-drive-prototype-protocol.md) has completed
-> all eight original coarse runs and bounded refinements: 517 complete deliveries.
-> Target/character conflicts and explicit control fallbacks remain; very quiet
-> copies and independent reference queues continue from retained completed files.
-> [Gain-copy diagnosis](reviews/2026-09-15-drive-gain-consistency.md) separates
-> numerical filter sensitivity from input-level-dependent selector limits. A
-> full-chain wider-state experiment improves all ten tested copy comparisons to
-> at most 0.000000596 sample difference, with 19–29% extra chain CPU in loaded
-> alternating trials. The corresponding local production correction passes all
-> 12 synthetic regressions and 607 native callbacks without deadline misses.
-> Preset coefficients/gates remain unchanged; old synthetic references are archived
-> and test tolerances retained. Final desktop/private fixtures, bridges, Clippy,
-> rebuilt WASM, frontend and muted lifecycle checks pass, including the short PCM16
-> receipt follow-up. Corrected-chain preparation/new-target/cached-target settling
-> is 39.74 s / 0.931 s / 75 ms in the loaded native probe. No new holdout or automatic
-> sonic policy has been adopted, and no new installed/Mac/listening verdict follows.
+> [C1 development](reviews/2026-09-15-drive-prototype-protocol.md) has 517 original
+> coarse/refined deliveries and all 16 quiet-copy render runs complete. Remaining
+> quiet-copy metrics/independent checks continue. The separate filter-precision
+> correction reduces tested normalized-copy differences to at most 5.96e-7 with
+> unchanged coefficients, at 19-29% extra chain CPU in loaded paired trials.
+> Its full validation and preserved old references are recorded in
+> [gain-copy diagnosis](reviews/2026-09-15-drive-gain-consistency.md).
+> A [normalized-reference selector experiment](reviews/2026-09-15-drive-selector-reference-experiment.md)
+> is specified before re-scoring retained metrics; no automatic sonic policy,
+> control mapping or unseen-holdout result is adopted.
 > [Saturation calibration](reviews/2026-09-15-saturation-calibration-results.md)
-> is a separate offline experiment. Short antialias filters reduce folded energy
-> while losing too much high-frequency level; longer alternatives are evaluated
-> under frozen mechanism limits. No saturation/preset migration is adopted.
+> retains isolated continuity/antialias comparisons; whole-chain/native/selected-C
+> and listening evidence remain open. Preset intent and gated constants are unchanged.
+> No installed/Mac/release verdict follows from this local implementation.
 
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
 > Dan accepts longer initial analysis/preparation for demonstrated audio quality,

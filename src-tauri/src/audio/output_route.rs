@@ -46,8 +46,9 @@ pub(super) fn preview_settings(
 }
 
 /// Preserve the export's intermediate rate before conversion to the device.
-/// Input has unity landing/Volume Match scalars. Apply the revision-matched
-/// device plan after both converters, then meter/fade the final device signal.
+/// Input retains the compensated source-rate landing crossfade, with unity VM.
+/// Apply only the revision-matched device correction and VM after both
+/// converters, then meter/fade the final device signal.
 /// No full-file analysis occurs here.
 pub(super) fn mastered_source(
     mut source: MasteringSource,
