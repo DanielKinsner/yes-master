@@ -1,6 +1,7 @@
 //! Open CPAL explicitly while retaining Rodio's mixer, sink and fallback order.
 //! Rodio 0.20's try_from_device_config can silently fall back to another format;
 //! retaining its input configuration would misidentify the mixer rate.
+use super::gain_stage::{GainMailbox, GainSource};
 use crate::{
     export_format::ExportEncoding,
     quality_source::QualitySource,
@@ -17,7 +18,8 @@ use std::sync::{
     Arc,
 };
 
-pub(super) type MasteredRateSource = MeteredSource<QualitySource<QualitySource<MasteringSource>>>;
+pub(super) type MasteredRateSource =
+    MeteredSource<GainSource<QualitySource<QualitySource<MasteringSource>>>>;
 
 /// Resolve only the pre-encode PCM contract, using the encoder's own rules.
 /// This transient copy never replaces saved settings or simulates codec loss.
@@ -44,13 +46,15 @@ pub(super) fn preview_settings(
 }
 
 /// Preserve the export's intermediate rate before conversion to the device.
-/// Its antialias filter may remove content the export-derived gain would boost.
-/// Meter/fade only the final device signal. No full-file analysis occurs here.
+/// Input has unity landing/Volume Match scalars. Apply the revision-matched
+/// device plan after both converters, then meter/fade the final device signal.
+/// No full-file analysis occurs here.
 pub(super) fn mastered_source(
     mut source: MasteringSource,
     file_rate: u32,
     device_rate: u32,
     fade: FadeEnvelope,
+    gains: Arc<GainMailbox>,
 ) -> Result<(MasteredRateSource, Arc<AtomicU8>), String> {
     let slots = source.take_meter_slots();
     let revision = source.revision_slot();
@@ -61,6 +65,8 @@ pub(super) fn mastered_source(
     let device = QualitySource::new(file, device_rate)?
         .with_error_slot(failure.clone())
         .with_revision(revision);
+    let revision = device.revision_slot();
+    let device = GainSource::new(device, revision, gains);
     let revision = device.revision_slot();
     Ok((
         MeteredSource::new(device, slots, fade).with_revision(revision),
