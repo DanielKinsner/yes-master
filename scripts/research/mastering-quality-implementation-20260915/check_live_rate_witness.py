@@ -24,10 +24,15 @@ def main():
                   reference='2048-frame finite zero extension; sample max and SOXR16/64 precision33', rows=[])
     for row in report['rows']:
         witness = row.get('witnesses')
-        if not witness:
+        single = row.get('witness')
+        if not witness and not single:
             continue
-        hashes = {v for key, v in witness.items() if key.endswith('sha256')}
-        for path in sorted(Path(witness['folder']).glob('*.wav')):
+        if single:
+            hashes, paths = {single['sha256']}, [Path(single['path'])]
+        else:
+            hashes = {v for key, v in witness.items() if key.endswith('sha256')}
+            paths = sorted(Path(witness['folder']).glob('*.wav'))
+        for path in paths:
             digest = sha(path)
             assert digest in hashes
             x, rate = sf.read(path, dtype='float64', always_2d=True)

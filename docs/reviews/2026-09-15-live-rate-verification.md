@@ -1,6 +1,6 @@
 # B3 live device-rate verification
 
-Status: **Original conversion integrated and verified; Mastered correction remains open**.
+Status: **Original and Mastered file/device conversion integrated; remaining B3 scope below**.
 Keep B3 open. This does not reopen the owner's completed baseline questionnaire.
 
 ## Reproduction
@@ -233,12 +233,75 @@ rebuilt as **dc62b219e9f1** for the shared type source change. **896 frontend te
 build and **38 headless checks** pass; the minimum-size Standard capture is
 inspected at `test-output/headless/2026-09-16T00-46-07-872Z/app/`.
 
-Before completing production integration: route Mastered consistently, meter the actual
-converted audio, reconcile requested/codec/device planning rates and obsolete
-settings, and measure initial fill, seek/A-B/edit latency and callback deadlines.
-The current test-only iterator also needs its processing-error state surfaced
-appropriately before it can become a production source. No silent truncation or
-unqualified live-ceiling claim is an acceptable final correction.
+### Production Mastered file/device conversion checkpoint
+
+Mastered now uses `output_route::mastered_source`: finite source alignment and
+tail drain, requested-file-rate SRC, device-rate SRC, then the shared output
+meter and swap fade. Source DSP and its coefficient crossfade remain at the
+source rate. Landing/Volume Match gains currently remain inside their matched
+chain; linear SRC commutation is close numerically but is not claimed bit-equal
+to applying those scalars after conversion. A live file-rate edit reconstructs
+the converters from cached PCM and preserves the current playhead and pause
+state. The nested converters share one error latch, so an inner error cannot
+look like an ordinary outer end-of-file. Failed reconstruction uses the existing
+visible processing-error/retry route.
+
+`b3-mastered-cascade-unit-v2.log` compares the production constructor against
+explicit offline chain/tail/two-converter processing: **72 sample-identical
+rate/length cases**, including one-frame and partial-block files. The 144-case
+`b3-mastered-cascade-rates-v1.json` retains all measurements; **all 72 preview-on
+cases** meet the qualified -1 dBTP ceiling within the declared numerical
+tolerance. The earlier 96 kHz/38.4 kHz stress witness with requested 44.1 kHz and
+48 kHz device changes from legacy **+21.412 dBTP** to **-1.126912 dBTP**. Independent
+whole-file finite SOXR16/64 gives **-1.170551 dBTP**, zero full-scale samples
+(`b3-mastered-cascade-independent-v1/comparison.json`). The slight difference
+from the previous post-file-gain experiment is retained, not rounded into a
+bit-equivalence claim. Stress audio was never played audibly.
+
+`b3-mastered-native-v1.json` exercises actual AudioPlayer with the restored
+owner source and test-only sink mute. Cold Mastered request/first meter take
+**299/354 ms**. Playing rate edits are accepted in **5.5–11.0 ms**; paused edits
+preserve position and remain paused through the explicit additional 100 ms
+observation. Paused seek/resume is **64.9 ms**. Four Original/Mastered swaps take
+**9.8–10.6 ms** and preserve position. At requested **96 kHz**, first whole-file
+preparation/readiness takes **41.96 s**, a new target **1.02 s**, and returning
+to the cached target settles within the **75 ms** observation interval. Raw
+cache occupancy is 187,875,824 bytes. This lifecycle uses the existing test
+settings with density zero; the callback probe below exercises preset compression.
+
+`b3-mastered-callback-v1.json` uses the production constructor at
+**44.1 → 96 → 48 kHz**, preset compression, 120 coefficient edits and concurrent
+whole-file preparation. All **608 callbacks** finish within their granted
+deadlines, with zero device/converter errors or exhausted samples. Median/p95/max
+processing are **0.07255/1.06042/1.76270 ms**; construction **0.94 ms**, first
+peak **10.17 ms**. Requested 256 frames still grants **480–1,056**. The background
+measurement uses its recorded 48 kHz settings; the 96 kHz callback override
+deliberately loads both converters. This is a callback-cost probe, not a matching
+landing-gain proof. All timings are under concurrent research load.
+
+Strict all-target Clippy passes (`b3-mastered-cascade-clippy-v1.log`). The first
+matrix build had a routine missing boolean return and is retained as unit v1.
+The first full-suite attempt encountered Windows LNK1104 while the native test
+executable was still open after the research documentation commit changed the
+build stamp. That is a build-run collision; preserve the failed log and use a
+serial retry, rather than interpreting it as a passed fixture lane.
+
+The serial retry **passes the complete desktop suite**, including **490 library
+tests**, 17 opt-in tests ignored, and **all four restored private-fixture tests
+actually executed** (`b3-mastered-cascade-fixtures-v2.log`). It includes the nested
+converter failure regression and five allocation-free cascade paths through
+first fill, seek and drain. This slice changes desktop audio modules and their
+tests; it changes no shared bridge DTO, engine/DSP source, frontend rendering or
+WASM input. The preceding bridge/frontend/headless evidence retains its stated
+scope; no redundant packaging or listening lane is claimed.
+
+**Still open:** codec-specific rate/precision resolution, wider full-song/device
+peak planning, and readiness tied to the actual applied settings through buffered
+audio. Preparation-ready snapshots above do not time the last crossfade sample.
+The 144-case matrix does not prove arbitrary downstream conversion can never
+raise a peak; no universal live ceiling, installed, Mac or listening pass is
+claimed. Full delivered-file protection remains enforced by the separate qualified
+finalizer.
 
 Evidence root: `test-output/mastering-quality-implementation-20260915/`.
 Preserve the v1/v2 failed logs, v3 report/copied executable, v4 comparison/witness,

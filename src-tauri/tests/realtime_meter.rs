@@ -41,18 +41,22 @@ static ALLOCATOR: TrackingAllocator = TrackingAllocator;
 fn streaming_conversion_initial_fill_seek_and_drain_allocate_nothing() {
     use rodio::{buffer::SamplesBuffer, Source};
     use std::time::{Duration, Instant};
-    for (from, to) in [
-        (44100, 48000),
-        (96000, 44100),
-        (96000, 48000),
-        (48000, 48000),
+    for (from, file, to) in [
+        (44100, 48000, 48000),
+        (96000, 44100, 48000),
+        (96000, 48000, 44100),
+        (44100, 96000, 48000),
+        (48000, 48000, 48000),
     ] {
         let input: Vec<f32> = (0..from * 6)
             .map(|n| 0.2 * (n as f32 * 0.31).sin())
             .collect();
-        let mut source =
-            quality_source::QualitySource::new(SamplesBuffer::new(2, from, input), to).unwrap();
+        let source =
+            quality_source::QualitySource::new(SamplesBuffer::new(2, from, input), file).unwrap();
         let error = source.error_slot();
+        let mut source = quality_source::QualitySource::new(source, to)
+            .unwrap()
+            .with_error_slot(error.clone());
         ALLOCATIONS.with(|count| count.set(0));
         TRACKING.with(|tracking| tracking.set(true));
         let start = Instant::now();
@@ -71,9 +75,9 @@ fn streaming_conversion_initial_fill_seek_and_drain_allocate_nothing() {
         assert_eq!(
             ALLOCATIONS.with(Cell::get),
             0,
-            "{from}->{to}: SRC allocated during callback work"
+            "{from}->{file}->{to}: SRC allocated during callback work"
         );
-        println!("{from}->{to}: first output {initial:?}; initial fill, seek and {emitted} samples allocate zero times");
+        println!("{from}->{file}->{to}: first output {initial:?}; initial fill, seek and {emitted} samples allocate zero times");
     }
 }
 

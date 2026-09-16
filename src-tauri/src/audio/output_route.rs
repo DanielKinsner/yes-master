@@ -1,15 +1,37 @@
 //! Open CPAL explicitly while retaining Rodio's mixer, sink and fallback order.
 //! Rodio 0.20's try_from_device_config can silently fall back to another format;
 //! retaining its input configuration would misidentify the mixer rate.
+use crate::{
+    quality_source::QualitySource,
+    sources::{FadeEnvelope, MasteringSource, MeteredSource},
+};
 use rodio::cpal::{
     self,
     traits::{DeviceTrait, StreamTrait},
     Device, SupportedStreamConfig,
 };
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicU8, Ordering},
     Arc,
 };
+
+pub(super) type MasteredRateSource = MeteredSource<QualitySource<QualitySource<MasteringSource>>>;
+
+/// Preserve the export's intermediate rate before conversion to the device.
+/// Its antialias filter may remove content the export-derived gain would boost.
+/// Meter/fade only the final device signal. No full-file analysis occurs here.
+pub(super) fn mastered_source(
+    mut source: MasteringSource,
+    file_rate: u32,
+    device_rate: u32,
+    fade: FadeEnvelope,
+) -> Result<(MasteredRateSource, Arc<AtomicU8>), String> {
+    let slots = source.take_meter_slots();
+    let file = QualitySource::new(source.with_render_alignment(), file_rate)?;
+    let failure = file.error_slot();
+    let device = QualitySource::new(file, device_rate)?.with_error_slot(failure.clone());
+    Ok((MeteredSource::new(device, slots, fade), failure))
+}
 
 pub(super) struct OutputHandle(Arc<rodio::dynamic_mixer::DynamicMixerController<f32>>);
 

@@ -61,11 +61,13 @@ Live integrated metering uses bounded 0.1 LU histogram history and fixed batches
 feed/reset allocate nothing. Export receipts measure delivered PCM with exact
 history. Album assembly streams delivered tracks into the continuous WAV.
 Original/Mastered sources share `OutputMeter`; seeking reuses both momentary
-and integrated meter storage. The [B3 device-rate candidate](reviews/2026-09-15-live-rate-verification.md)
-moves that meter after conversion, with complete-pipeline allocation/native
-checks. Original now uses the qualified streaming converter at the opened
-device rate, followed by output metering and swap fade. Mastered's canonical
-file-rate/gain route remains in progress. Conversion failure carries a unique
+and integrated meter storage. The [B3 rate route](reviews/2026-09-15-live-rate-verification.md)
+places meters and swap fades after conversion, at the opened device rate.
+Original converts directly; Mastered aligns/drains the finite DSP source, then
+converts through the requested file rate and the device rate. A live file-rate
+edit reconstructs these converters from cached source PCM while preserving
+playhead and pause state. Codec resolution and additional device protection
+remain open. Conversion failure carries a unique
 failed-source epoch to the existing UI error surface; replay reconstructs the
 source rather than resuming an exhausted iterator.
 `audio/output_route.rs` opens CPAL directly and retains the successful stream

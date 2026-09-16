@@ -68,6 +68,12 @@
 > [gain-copy diagnosis](reviews/2026-09-15-drive-gain-consistency.md) reproduces
 > retained Piano outputs exactly and isolates wider-state filter arithmetic as
 > a correction experiment. No criterion is relaxed or sonic policy adopted.
+> Mastered now converts through requested file rate and actual device rate, with
+> finite alignment, output meters/fade and shared conversion-error reporting.
+> Its retained aliasing witness is fixed and independently checked. Muted native
+> A/B, playing/paused rate changes and 608 loaded callback checks pass. Codec
+> resolution, broader device protection and applied-generation readiness remain
+> open; see the live-rate ledger for the exact scope and preparation timings.
 
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
 > Dan accepts longer initial analysis/preparation for demonstrated audio quality,

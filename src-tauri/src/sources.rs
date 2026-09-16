@@ -494,7 +494,6 @@ pub(crate) struct MasteringSource {
 impl MasteringSource {
     /// Move meter ownership to a downstream device-rate stage. Called before
     /// playback, so the old rate's meter allocations are dropped off-callback.
-    #[cfg(test)]
     pub(crate) fn take_meter_slots(&mut self) -> MeterSlots {
         self.meter.take().expect("meter already moved").slots
     }
@@ -553,16 +552,16 @@ impl MasteringSource {
         }
     }
 
-    /// Install the L10 swap fade envelope. Only the live audio path calls this;
-    /// tests and other construction keep the inactive default from [`Self::new`].
+    /// Legacy source-rate fade for regression comparisons. Production applies
+    /// its fade after both conversions, at the actual device rate.
+    #[cfg(test)]
     pub(crate) fn with_swap_fade(mut self, fade: FadeEnvelope) -> Self {
         self.fade = fade;
         self
     }
 
-    /// Qualify finite playback against the file renderer before enabling this
-    /// in production. Remove lookahead once and drain the same number of frames.
-    #[cfg(test)]
+    /// Match the file renderer: remove lookahead once and drain the same number
+    /// of frames, including after a seek that reconstructs fresh filter state.
     pub(crate) fn with_render_alignment(mut self) -> Self {
         self.render_aligned = true;
         self.reset_render_alignment();

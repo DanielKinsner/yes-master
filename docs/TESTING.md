@@ -125,6 +125,16 @@ the lifecycle probe requires `YES_MASTER_BENCH_MUTE=1`, an existing source in
 `YES_MASTER_BENCH_FILE` and a fresh `YES_MASTER_LIFECYCLE_REPORT` path. The
 negative probe mutes its own sink and injects a conversion failure. See the
 [live-rate ledger](reviews/2026-09-15-live-rate-verification.md) for scope and results.
+Mastered uses `canonical_mastered_route_matches_finite_offline_cascade` for
+sample-identical finite route comparisons and the ignored
+`mastering_quality_canonical_live_rates` matrix with a fresh
+`YES_MASTER_RATE_REPORT` JSON path. `mastering_quality_mastered_rate_lifecycle`
+uses the same mute/source/report environment as the Original lifecycle. The
+ignored `mastering_quality_streaming_callback_bench` accepts a fresh
+`YES_MASTER_CALLBACK_REPORT` and optional `YES_MASTER_CALLBACK_FILE_RATE` to
+load both converters. Its requested/granted block sizes remain separate facts.
+Run native probes and Cargo suites serially within one target directory on
+Windows; a build-stamp change while the test executable is open can block linking.
 `cargo run --example limiter_bench` is a deterministic throughput diagnostic;
 wall-clock performance thresholds are deliberately not CI assertions.
 

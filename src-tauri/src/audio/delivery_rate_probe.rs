@@ -63,6 +63,109 @@ fn measured(x: &[f32], rate: u32) -> serde_json::Value {
 }
 
 #[test]
+fn canonical_mastered_route_matches_finite_offline_cascade() {
+    for rate in [44100, 48000, 96000] {
+        for file in [44100, 48000, 96000] {
+            for device in [44100, 48000] {
+                for frames in [1, 137, 2053, 48007] {
+                    let samples: Vec<f32> = (0..frames)
+                        .flat_map(|i| {
+                            let x = (i as f32 * 0.73).sin() * 0.4;
+                            [x, -x * 0.7]
+                        })
+                        .collect();
+                    let settings = tests::settings_with_intensity(0.75);
+                    let gain = 1.7;
+                    let mut raw = samples.clone();
+                    let mut chain = MasteringChain::new(rate, 2, &settings);
+                    chain.coeffs.export_landing_gain_lin = gain;
+                    chain.process_interleaved(&mut raw, 2);
+                    chain.flush_render_tail(&mut raw, 2);
+                    let file_pcm =
+                        crate::sample_rate::convert_interleaved(&raw, rate, file, 2).unwrap();
+                    let expected =
+                        crate::sample_rate::convert_interleaved(&file_pcm, file, device, 2)
+                            .unwrap();
+                    let (live, failure) = output_route::mastered_source(
+                        source(samples, rate, &settings, gain),
+                        file,
+                        device,
+                        crate::sources::FadeEnvelope::inactive(),
+                    )
+                    .unwrap();
+                    let actual: Vec<f32> = live.collect();
+                    assert_eq!(
+                        actual, expected,
+                        "{rate}->{file}->{device}, {frames} frames"
+                    );
+                    assert_eq!(failure.load(Ordering::Acquire), 0);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+#[ignore = "whole-file production cascade rate measurement; set YES_MASTER_RATE_REPORT"]
+fn mastering_quality_canonical_live_rates() {
+    let path = PathBuf::from(std::env::var("YES_MASTER_RATE_REPORT").unwrap());
+    assert!(!path.exists());
+    let mut rows = Vec::new();
+    for rate in [44100, 48000, 96000] {
+        for frequency in [997_f32, rate as f32 * 0.4] {
+            let samples: Vec<f32> = (0..rate * 2)
+                .flat_map(|i| {
+                    let x =
+                        (i as f32 * frequency * std::f32::consts::TAU / rate as f32).sin() * 0.4;
+                    [x, x * 0.8]
+                })
+                .collect();
+            for file in [44100, 48000, 96000] {
+                for target in [None, Some(-14.)] {
+                    let settings: MasteringSettings = serde_json::from_value(json!({
+                        "preset":{"kind":"custom","id":"canonical-rate-probe"},"intensity":0.,"volume_match":false,
+                        "eq_low_db":0.,"eq_mid_db":0.,"eq_high_db":0.,"delivery_profile":"custom",
+                        "advanced":{"lufs_offset_db":target,"ceiling_dbtp":-1.,"bit_depth":32,
+                            "compression_mode":"off","warmth":0.,"target_sample_rate":file}
+                    })).unwrap();
+                    let landing =
+                        crate::engine::preview_landing(&samples, rate, 2, &settings).unwrap();
+                    for device in [44100, 48000] {
+                        for enabled in [false, true] {
+                            let gain = if enabled { landing.gain_lin } else { 1. };
+                            let (live, failure) = output_route::mastered_source(
+                                source(samples.clone(), rate, &settings, gain),
+                                file,
+                                device,
+                                crate::sources::FadeEnvelope::inactive(),
+                            )
+                            .unwrap();
+                            let actual: Vec<f32> = live.collect();
+                            assert_eq!(failure.load(Ordering::Acquire), 0);
+                            let mut row = json!({"source_rate":rate,"frequency":frequency,"file_rate":file,"device_rate":device,
+                                "target":target,"preview_enabled":enabled,"gain":gain,"live":measured(&actual,device)});
+                            if rate == 96000
+                                && file == 44100
+                                && device == 48000
+                                && frequency > 30000.
+                                && enabled
+                                && target.is_some()
+                            {
+                                let witness = path.with_extension("wav");
+                                row["witness"] = json!({"path":witness,"sha256":write_witness(&witness,&actual,device)});
+                            }
+                            rows.push(row);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    std::fs::write(path,serde_json::to_vec_pretty(&json!({"status":"complete","peak_version":peak_meter::VERSION,
+        "scope":"actual production finite Mastered cascade, source-rate gain placement; no codec resolution or device-gain-cap claim","rows":rows})).unwrap()).unwrap();
+}
+
+#[test]
 #[ignore = "offline device/delivery-rate qualification; set YES_MASTER_RATE_REPORT"]
 fn mastering_quality_device_delivery_rates() {
     let path = PathBuf::from(std::env::var("YES_MASTER_RATE_REPORT").unwrap());

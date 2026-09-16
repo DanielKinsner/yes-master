@@ -106,6 +106,13 @@ impl<S: Source<Item = f32>> QualitySource<S> {
         self.error_slot.clone()
     }
 
+    /// Cascaded conversion stages share one failure latch. An inner failure
+    /// must not become an apparently normal end-of-file in the outer stage.
+    pub(crate) fn with_error_slot(mut self, slot: Arc<AtomicU8>) -> Self {
+        self.error_slot = slot;
+        self
+    }
+
     fn fail(&mut self, error: StreamFailure) {
         self.failed = true;
         self.error_slot.store(error as u8, Ordering::Release);
@@ -273,6 +280,26 @@ impl<S: Source<Item = f32>> Source for QualitySource<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cascade_retains_inner_processing_failure() {
+        let inner = QualitySource::new(
+            rodio::buffer::SamplesBuffer::new(1, 96000, vec![0.1, f32::NAN, 0.2]),
+            44100,
+        )
+        .unwrap();
+        let failure = inner.error_slot();
+        let mut outer = QualitySource::new(inner, 48000)
+            .unwrap()
+            .with_error_slot(failure.clone());
+        assert!(outer.next().is_none());
+        assert_eq!(
+            failure.load(Ordering::Acquire),
+            StreamFailure::NonFinite as u8
+        );
+        // An outer-stage seek must not revive a failed inner converter.
+        assert!(outer.try_seek(Duration::ZERO).is_err());
+    }
     use rodio::buffer::SamplesBuffer;
 
     #[test]

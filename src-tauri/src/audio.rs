@@ -1322,6 +1322,9 @@ struct AudioThreadState {
     live_landing_gain_lin: f32,
     live_preview_lufs_landing: bool,
     live_sample_rate: u32,
+    /// Fixed intermediate rate of the current Mastered source. A rate edit
+    /// reconstructs the converters while preserving the playhead/pause state.
+    live_file_rate: u32,
     preview_work: PreviewWorkerGate,
     /// Phase 12.1 decode cache — keyed by canonical path + mtime. Speeds up
     /// repeated `play_master` calls on the same file (e.g. Original/Mastered
@@ -1398,6 +1401,18 @@ struct AudioThreadState {
 }
 
 impl AudioThreadState {
+    fn fail_playback(&mut self, diagnostic: String) {
+        self.sink.pause();
+        self.landing_pending = false;
+        self.live_coeffs_tx = None;
+        self.preview_work.begin_playback(true);
+        crate::diagnostics::error(diagnostic);
+        self.playback_error = Some(PlaybackError {
+            generation: self.preview_work.epoch,
+            message: "Playback stopped while processing audio. Start playback again; if it fails again, re-import the source.".into(),
+        });
+    }
+
     fn observe_source_failure(&mut self) {
         let code = self
             .source_failure
@@ -1406,21 +1421,13 @@ impl AudioThreadState {
         if code == 0 || self.playback_error.is_some() {
             return;
         }
-        self.sink.pause();
-        self.landing_pending = false;
-        self.live_coeffs_tx = None;
         // Invalidate failed-source work and renew the cancellation token, so
         // a same-source retry cannot inherit an already-cancelled worker slot.
-        self.preview_work.begin_playback(true);
-        crate::diagnostics::error(format!(
+        self.fail_playback(format!(
             "Playback conversion failed (generation {}): {}",
             self.play_generation,
             crate::quality_source::failure_description(code)
         ));
-        self.playback_error = Some(PlaybackError {
-            generation: self.preview_work.epoch,
-            message: "Playback stopped while processing audio. Start playback again; if it fails again, re-import the source.".into(),
-        });
     }
 
     fn open(selected_device_name: Option<&str>, initial_sample_rate: u32) -> Result<Self, String> {
@@ -1450,6 +1457,7 @@ impl AudioThreadState {
             live_landing_gain_lin: 1.0,
             live_preview_lufs_landing: false,
             live_sample_rate: initial_sample_rate,
+            live_file_rate: initial_sample_rate,
             preview_work: PreviewWorkerGate::default(),
             decoded_cache: None,
             landing_gain_cache: PreviewLandingCache::new(),
@@ -2340,6 +2348,7 @@ fn process_audio_command(
                         start_position_sec,
                         preview_lufs_landing,
                         album,
+                        false,
                         selected_output_device_name,
                         prewarm_cache,
                         play_request_epoch,
@@ -2355,6 +2364,45 @@ fn process_audio_command(
             preview_lufs_landing,
             album,
         } => {
+            // Converters have a fixed rate. Rebuild from the cached PCM with
+            // the same playhead/fade rules; never briefly resume a paused edit.
+            let rate_edit = state.as_ref().and_then(|s| {
+                if s.live_coeffs_tx.is_none()
+                    || s.live_file_rate == settings.effective_sample_rate(s.live_sample_rate)
+                {
+                    return None;
+                }
+                Some((
+                    s.current_track.clone()?,
+                    s.decoded_cache.as_ref()?.canonical_path.clone(),
+                    s.sink.get_pos().as_secs_f64(),
+                    s.sink.is_paused(),
+                ))
+            });
+            if let Some((track, path, position, paused)) = rate_edit {
+                let epoch = play_request_epoch.load(Ordering::Acquire);
+                let outcome = handle_play_master(
+                    state,
+                    pending_loop_region,
+                    track,
+                    &path,
+                    &settings,
+                    position,
+                    preview_lufs_landing,
+                    album,
+                    paused,
+                    selected_output_device_name,
+                    prewarm_cache,
+                    play_request_epoch,
+                    epoch,
+                    command_tx,
+                    profile_store,
+                );
+                if let (Some(s), Err(error)) = (state.as_mut(), outcome) {
+                    s.fail_playback(format!("Playback rate change failed: {error}"));
+                }
+                return false;
+            }
             if let Some(s) = state.as_mut() {
                 // B2: the settings-only live path carries no track id, so resolve
                 // the backend-owned adaptive profile via the currently-loaded
@@ -3068,6 +3116,7 @@ fn handle_play_master(
     start_position_sec: f64,
     preview_lufs_landing: bool,
     album: bool,
+    paused: bool,
     selected_output_device_name: &Arc<RwLock<Option<String>>>,
     prewarm_cache: &SharedDecodedCache,
     play_request_epoch: &AtomicU64,
@@ -3156,7 +3205,11 @@ fn handle_play_master(
     if !loop_region_survives_play(s.current_track.as_ref(), &track_id) {
         s.loop_region = None;
     }
-    rebuild_spectrum_analyzer_for_playback(&mut s.spectrum_analyzer, pcm.sample_rate);
+    let device_rate = s._output_config.sample_rate().0;
+    let file_rate = settings.effective_sample_rate(pcm.sample_rate);
+    s.live_sample_rate = pcm.sample_rate;
+    s.live_file_rate = file_rate;
+    rebuild_spectrum_analyzer_for_playback(&mut s.spectrum_analyzer, device_rate);
 
     // Update the cache (replace any prior entry — single-slot LRU is fine
     // for the typical "one or two fixtures" Track Master workflow).
@@ -3222,7 +3275,7 @@ fn handle_play_master(
     // L10 — the incoming source carries its own fade-out trigger so the *next*
     // toggle can fade it out; on a swap it also fades in behind a silent lead-in.
     let new_fade_out = Arc::new(AtomicBool::new(false));
-    let fade = build_swap_fade(pcm.sample_rate, is_swap, new_fade_out.clone());
+    let fade = build_swap_fade(device_rate, is_swap, new_fade_out.clone());
     let mastering_source = MasteringSource::new(
         pcm.samples,
         pcm.channels,
@@ -3235,8 +3288,10 @@ fn handle_play_master(
         s.lufs_x100.clone(),
         s.integrated_lufs_x100.clone(),
         s.spectrum_ring.clone(),
-    )
-    .with_swap_fade(fade);
+    );
+    let (mastering_source, failure) =
+        output_route::mastered_source(mastering_source, file_rate, device_rate, fade)?;
+    s.source_failure = Some(failure);
 
     // F4 — same resolution as handle_play: the outgoing sink kept advancing
     // during this command (which can run long on a cold decode); the shared
@@ -3250,8 +3305,19 @@ fn handle_play_master(
     let new_sink = s.handle.sink();
     #[cfg(test)]
     mute_diagnostic_sink(&new_sink);
+    if paused {
+        new_sink.pause();
+    }
     new_sink.append(mastering_source);
-    play_sink_from_start_position(&new_sink, start_position_sec);
+    if paused {
+        if let Some(position) = seek_target(start_position_sec) {
+            new_sink
+                .try_seek(position)
+                .map_err(|e| format!("paused playback seek: {e}"))?;
+        }
+    } else {
+        play_sink_from_start_position(&new_sink, start_position_sec);
+    }
     // L10 — swap in the new sink. On a swap, detach the old one so Drop doesn't
     // hard-stop the outgoing source mid-fade; its triggered fade-out ends the
     // source, draining the detached sink. (Non-swap was already stopped above.)
@@ -3267,6 +3333,7 @@ fn handle_play_master(
     s.live_album = album;
     s.live_coeffs_tx = Some(coeffs_tx);
     s.live_sample_rate = pcm.sample_rate;
+    s.live_file_rate = file_rate;
     s.play_generation = s.play_generation.wrapping_add(1);
     #[cfg(any(feature = "app-runner", test))]
     {

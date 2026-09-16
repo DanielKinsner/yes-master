@@ -30,8 +30,14 @@ actual successful CPAL configuration through Rodio-equivalent fallback. Original
 streams through qualified SRC with device-rate meters/fades and visible processing
 failure/retry. The [live-rate ledger](2026-09-15-live-rate-verification.md) records
 muted production lifecycle evidence, the full desktop/private-fixture pass,
-affected bridges, 896 frontend tests and 38 headless checks. Mastered's matching
-file-rate/gain route is still open; the earlier stress failure is not called fixed.
+affected bridges, 896 frontend tests and 38 headless checks. The subsequent
+Mastered constructor now aligns/drains source DSP and converts through requested
+file and actual device rates before metering/fading. It passes 72 exact finite
+comparisons and a 144-case measured matrix; the retained aliasing witness now
+passes independent SOXR16/64. Muted production playing/paused rate edits and A/B
+preserve playhead; 608 loaded native callbacks have no deadline misses/errors.
+Codec resolution, broader device protection and applied-generation readiness
+remain open. No new listening/installed/Mac verdict is inferred.
 
 The current B3 mathematical reuse proof, exact-output checks, format-specific
 reserve and limitations are recorded in
