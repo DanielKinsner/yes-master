@@ -119,6 +119,55 @@ pub(crate) fn finalize_prepared(
     ceiling_dbtp: f32,
     cancel: Option<&AtomicBool>,
 ) -> CommandResult<ProtectedPcm> {
+    finalize_prepared_impl(
+        samples,
+        measurements,
+        bits,
+        target_lufs,
+        ceiling_dbtp,
+        None,
+        1,
+        cancel,
+    )
+}
+
+/// Device audition retains the verified file's desired gain, then constrains
+/// it at the actual device rate. No second loudness target is invented here.
+/// Reserve two float multiplications for landing and optional attenuation-only
+/// Volume Match, which is applied after the conversion and never affects export.
+pub(crate) fn finalize_prepared_device_gain(
+    samples: &mut [f32],
+    measurements: &PreparedMeasurements,
+    desired_gain: f32,
+    ceiling_dbtp: f32,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<ProtectedPcm> {
+    if !desired_gain.is_finite() || desired_gain < 0. {
+        return Err(error("invalid requested device gain"));
+    }
+    finalize_prepared_impl(
+        samples,
+        measurements,
+        32,
+        None,
+        ceiling_dbtp,
+        Some(desired_gain),
+        2,
+        cancel,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn finalize_prepared_impl(
+    samples: &mut [f32],
+    measurements: &PreparedMeasurements,
+    bits: u16,
+    target_lufs: Option<f32>,
+    ceiling_dbtp: f32,
+    desired_override: Option<f32>,
+    float_products: u32,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<ProtectedPcm> {
     let rate = measurements.rate;
     let channels = measurements.channels;
     let count = usize::from(channels);
@@ -144,11 +193,13 @@ pub(crate) fn finalize_prepared(
         target_lufs,
         ceiling_dbtp,
     );
-    let desired_gain = if delta == 0. {
-        1.
-    } else {
-        10_f32.powf(delta / 20.)
-    };
+    let desired_gain = desired_override.unwrap_or_else(|| {
+        if delta == 0. {
+            1.
+        } else {
+            10_f32.powf(delta / 20.)
+        }
+    });
     let frames = samples.len() / count;
     let norm = peak_meter::reconstruction_error_gain(frames);
     let lsb = match bits {
@@ -169,7 +220,7 @@ pub(crate) fn finalize_prepared(
     // TPDF <=1 LSB, rounding <=0.5 LSB; each f32 addition/multiplication
     // receives a full-relative-epsilon allowance. Actual errors are measured
     // below. This reserve is format-, length- and reconstruction-specific.
-    let round_reserve = f64::from(f32::EPSILON) * sample_limit;
+    let round_reserve = f64::from(float_products) * f64::from(f32::EPSILON) * sample_limit;
     let quant_reserve = if bits == 32 {
         0.
     } else {
