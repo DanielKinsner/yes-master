@@ -167,8 +167,13 @@ fn main() {
                     .unwrap()
                     .clone();
                 assert_eq!(row["source_sha256"], prior["source_sha256"]);
+                // Compare the exact typed settings consumed by DSP. Parsing a
+                // JSON f64 value and serializing an f32 field can differ in the
+                // last decimal digit while preserving every processing bit.
+                let baseline_settings: types::MasteringSettings =
+                    serde_json::from_value(row["requested_settings"].clone()).unwrap();
                 assert_eq!(
-                    row["requested_settings"],
+                    serde_json::to_value(&baseline_settings).unwrap(),
                     serde_json::to_value(&settings).unwrap()
                 );
                 assert_eq!(

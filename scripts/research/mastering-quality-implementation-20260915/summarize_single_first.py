@@ -11,13 +11,13 @@ def read(path):
     return json.loads(path.read_text(encoding='utf-8'))
 
 
-def checkpoint(root, mode):
+def checkpoint(root, mode, followup_version):
     followup = mode == 'flagged'
-    paths = dict(job=root/('flagged-job-v1.json' if followup else 'single-first-job-v1.json'),
-                 native=root/('flagged-v1/report.json' if followup else 'single-first-v1/report.json'),
-                 metrics=root/('flagged-metrics-v1.json' if followup else 'metrics-v1.json'),
-                 independent=root/('flagged-independent-v1/comparison.json' if followup else 'independent-v1/comparison.json'),
-                 process=root/('flagged-v1.process.json' if followup else 'single-first-v1.process.json'))
+    paths = dict(job=root/(f'flagged-job-{followup_version}.json' if followup else 'single-first-job-v1.json'),
+                 native=root/(f'flagged-{followup_version}/report.json' if followup else 'single-first-v1/report.json'),
+                 metrics=root/(f'flagged-metrics-{followup_version}.json' if followup else 'metrics-v1.json'),
+                 independent=root/(f'flagged-independent-{followup_version}/comparison.json' if followup else 'independent-v1/comparison.json'),
+                 process=root/(f'flagged-{followup_version}.process.json' if followup else 'single-first-v1.process.json'))
     data = {key: read(path) for key,path in paths.items()}
     job, native, metrics, checks, process = [data[key] for key in paths]
     assert all(data[key]['status'] == 'complete' for key in ('native','metrics','independent','process'))
@@ -78,9 +78,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--root',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--followup-version',default='v2')
     args = parser.parse_args()
     assert not args.output.exists()
-    first, followup = checkpoint(args.root,'single'), checkpoint(args.root,'flagged')
+    first, followup = checkpoint(args.root,'single',args.followup_version), checkpoint(args.root,'flagged',args.followup_version)
     followup_job = read(Path(followup['inputs']['job']['path']))
     for key, name in [('native','report'),('metrics','metrics'),('independent','independent'),('job','job')]:
         assert followup_job[f'baseline_{name}_sha256'] == first['inputs'][key]['sha256']
