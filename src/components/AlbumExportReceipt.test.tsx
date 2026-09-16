@@ -28,6 +28,29 @@ afterEach(() => {
 });
 
 describe("AlbumExportReceipt", () => {
+  it("reports the continuous file separately and reveals small component ceiling misses", async () => {
+    const report = {
+      job_id: "peaks", status: { status: "done" }, album_wav_path: "album.mp3", manifest_path: "manifest.json",
+      requested_sample_rate: null, rendered_sample_rate: 48000, source_sample_rates: [48000],
+      bit_depth: 0, rendered_channels: 2, source_channels: [2],
+      continuous_peak: { true_peak_dbtp: -0.97, ceiling_dbtp: -1 },
+      tracks: [{ track_id: "one", position: 1, output_path: "01-Song.mp3", measured_lufs: -14,
+        target_lufs: -13.7, true_peak_dbtp: -0.98, ceiling_dbtp: -1,
+        source_sample_rate: 48000, rendered_sample_rate: 48000, source_channels: 2, rendered_channels: 2,
+        override_album: false }],
+    } as AlbumRenderReport;
+    const { container, root } = await renderNode(<AlbumExportReceipt report={report} />);
+    expect(container.textContent).toContain("Continuous file true peak -0.97 dBTP");
+    expect(container.textContent).toContain("Continuous file exceeds its ceiling by 0.03 dB");
+    expect(container.textContent).toContain("Above ceiling by 0.02 dB");
+    expect(container.textContent).toContain("0.3 LU below target");
+    await act(async () => root.render(<AlbumExportReceipt report={{ ...report, continuous_peak: { true_peak_dbtp: -0.999, ceiling_dbtp: -1 } }} />));
+    expect(container.textContent).toContain("less than 0.01 dB");
+    await act(async () => root.render(<AlbumExportReceipt report={{ ...report, continuous_peak: undefined }} />));
+    expect(container.textContent).not.toContain("Continuous file");
+    await act(async () => root.unmount());
+  });
+
   it("opens a successful Album receipt without stealing focus, supports dismissal and reopening", async () => {
     const report = { job_id: "complete", status: { status: "done" }, album_wav_path: "album.wav",
       manifest_path: "manifest.json", requested_sample_rate: null, rendered_sample_rate: 48000,

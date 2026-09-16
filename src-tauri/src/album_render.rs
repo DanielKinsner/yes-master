@@ -4,8 +4,8 @@ use crate::analysis::{
 };
 use crate::engine::{
     comparable_existing_or_parent_path, measure_and_apply_ceiling_bounded_landing,
-    measure_integrated_lufs, render_cancelled, AlbumPlanRenderRequest, AlbumRenderReport,
-    AlbumTrackRenderInput, AlbumTrackRenderRecord,
+    measure_integrated_lufs, render_cancelled, AlbumPeakResult, AlbumPlanRenderRequest,
+    AlbumRenderReport, AlbumTrackRenderInput, AlbumTrackRenderRecord,
 };
 use crate::peak_meter::{
     self,
@@ -214,11 +214,11 @@ fn convert_channel_count(
     for frame in samples.chunks_exact(source_channels) {
         if target_channels > source_channels {
             if source_channels == 1 {
-                converted.extend(std::iter::repeat(frame[0]).take(target_channels));
+                converted.extend(std::iter::repeat_n(frame[0], target_channels));
             } else {
                 converted.extend_from_slice(frame);
                 let fill = *frame.last().unwrap_or(&0.0);
-                converted.extend(std::iter::repeat(fill).take(target_channels - source_channels));
+                converted.extend(std::iter::repeat_n(fill, target_channels - source_channels));
             }
         } else if target_channels == 2 && source_channels > 2 {
             converted.extend_from_slice(&downmix_frame_to_stereo(frame));
@@ -238,6 +238,7 @@ fn convert_channel_count(
 
 #[derive(Debug, Serialize)]
 struct AlbumManifest<'a> {
+    continuous_peak: &'a AlbumPeakResult,
     plan: &'a AlbumPlan,
     rendered_at_iso: String,
     sample_rate: u32,
@@ -1051,7 +1052,7 @@ pub fn render_album_plan_impl_with_cancel(
         ));
     }
     let t_pass2 = std::time::Instant::now();
-    let pass2_result = (|| -> CommandResult<(PathBuf, PathBuf)> {
+    let pass2_result = (|| -> CommandResult<(PathBuf, PathBuf, AlbumPeakResult)> {
         let album_path = unique_album_path(out_dir, &source_paths)?;
         let spec = wav_spec(album_channels, album_sample_rate, bit_depth)?;
         let mut album_tmp_path = staging.path().join("programme.wav");
@@ -1157,7 +1158,16 @@ pub fn render_album_plan_impl_with_cancel(
 
         let manifest_path =
             unique_child_path_avoiding_sources(&metadata_dir, "manifest.json", &source_paths)?;
+        let continuous_peak = AlbumPeakResult {
+            true_peak_dbtp: if programme_upper > 0. {
+                (20. * programme_upper.log10()) as f32
+            } else {
+                -120.
+            },
+            ceiling_dbtp: programme_ceiling,
+        };
         let manifest = AlbumManifest {
+            continuous_peak: &continuous_peak,
             plan: &request.plan,
             rendered_at_iso: now_iso(),
             sample_rate: album_sample_rate,
@@ -1182,9 +1192,9 @@ pub fn render_album_plan_impl_with_cancel(
         if render_cancelled(cancel_flag) {
             return Err(CommandError::Other("album render cancelled".to_string()));
         }
-        Ok((album_path, manifest_path))
+        Ok((album_path, manifest_path, continuous_peak))
     })();
-    let (album_path, manifest_path) = match pass2_result {
+    let (album_path, manifest_path, continuous_peak) = match pass2_result {
         Ok(paths) => paths,
         Err(err) => {
             for p in &written_paths {
@@ -1223,6 +1233,7 @@ pub fn render_album_plan_impl_with_cancel(
     ));
 
     Ok(AlbumRenderReport {
+        continuous_peak: Some(continuous_peak),
         delivered_format: Some(crate::export_format::ExportEncoding::Wav.delivered(
             album_sample_rate,
             album_channels,
@@ -1255,6 +1266,7 @@ fn cancelled_album_report(
     source_channels: Vec<u16>,
 ) -> AlbumRenderReport {
     AlbumRenderReport {
+        continuous_peak: None,
         delivered_format: None,
         mp3_bitrate_kbps: None,
         job_id,

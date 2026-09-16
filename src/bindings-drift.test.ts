@@ -296,6 +296,13 @@ export type Drift_AlbumRenderReport_TsOnly = AssertNever<
   TsOnly<typeof samples.album_render_report, AlbumRenderReport>
 >;
 
+export type Drift_AlbumContinuousPeak_RustOnly = AssertNever<
+  RustOnly<typeof samples.album_render_report.continuous_peak, NonNullable<AlbumRenderReport["continuous_peak"]>>
+>;
+export type Drift_AlbumContinuousPeak_TsOnly = AssertNever<
+  TsOnly<typeof samples.album_render_report.continuous_peak, NonNullable<AlbumRenderReport["continuous_peak"]>>
+>;
+
 export type Drift_AlbumTrackRenderRecord_RustOnly = AssertNever<
   RustOnly<typeof samples.album_render_report.tracks[number], AlbumTrackRenderRecord>
 >;

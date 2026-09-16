@@ -20,6 +20,19 @@ pub fn export_checks_for_report(
 ) -> Vec<QualityCheck> {
     let mut checks = Vec::new();
 
+    if report.measurements_are_rendered && report.measured_true_peak_dbtp.is_finite() {
+        if let Some(settings) = settings {
+            let ceiling = settings.effective_ceiling_dbtp();
+            if report.measured_true_peak_dbtp > ceiling + 1e-5 {
+                checks.push(QualityCheck {
+                    level: QualityLevel::Warning,
+                    code: "delivery_ceiling_exceeded".into(),
+                    message: format!("Delivered true peak is {:.2} dBTP, above the requested {ceiling:.2} dBTP ceiling by {:.2} dB. Review this export before delivery.", report.measured_true_peak_dbtp, report.measured_true_peak_dbtp - ceiling),
+                });
+            }
+        }
+    }
+
     if report.measured_true_peak_dbtp > -0.1 {
         checks.push(QualityCheck {
             level: QualityLevel::Warning,
@@ -32,18 +45,15 @@ pub fn export_checks_for_report(
     } else if report.measured_true_peak_dbtp > -1.0 {
         // Streaming-headroom advisory for the narrow gray zone between the
         // high-true-peak -0.1 dBTP threshold above (also advisory) and the
-        // typical -1.0 dBTP streaming ceiling below. Lossy codecs (AAC, MP3, Opus) can boost
-        // decoded peaks by up to ~1 dB relative to the source true peak due
-        // to quantization noise added inside the codec's spectral bands, so a
-        // master at e.g. -0.5 dBTP can clip after AAC encoding on dense
-        // pop/rock material. This is a headroom-based advisory, NOT an actual
-        // codec simulation; a real Phase 6.x-bis could add an encode/decode
-        // round-trip if codec QC ever needs to be more precise.
+        // typical -1.0 dBTP streaming ceiling below. This is a general
+        // subsequent-encoding advisory, distinct from the actual decoded
+        // delivery's requested-ceiling check above. There is no universal
+        // one-dB bound on lossy peak growth.
         checks.push(QualityCheck {
             level: QualityLevel::Warning,
             code: "streaming_headroom_low".to_string(),
             message: format!(
-                "True peak is {:.2} dBTP. Within safe digital range, but lossy delivery (AAC, MP3, Opus) can overshoot by up to ~1 dB after encoding. Consider lowering the ceiling for comfortable streaming masters.",
+                "True peak is {:.2} dBTP, leaving limited headroom for later lossy encoding. Peak growth depends on the audio and codec; consider a lower ceiling when further encoding is expected.",
                 report.measured_true_peak_dbtp
             ),
         });
@@ -75,18 +85,27 @@ pub fn export_checks_for_report(
                 let shortfall = target - report.measured_lufs;
                 if shortfall > 0.25 {
                     let ceiling = s.effective_ceiling_dbtp();
-                    let reason = if report.measured_true_peak_dbtp >= ceiling - 0.1 {
+                    let exceeded = report.measured_true_peak_dbtp > ceiling + 1e-5;
+                    let reason = if exceeded {
+                        "the delivered peak also exceeds the requested ceiling and needs review"
+                            .to_string()
+                    } else if report.measured_true_peak_dbtp >= ceiling - 0.1 {
                         format!(
                             "the {ceiling:.1} dBTP ceiling capped the loudness push (true peak is at the ceiling)"
                         )
                     } else {
                         "the loudness landing could not push further".to_string()
                     };
+                    let action = if exceeded {
+                        "Review the decoded export and consider lowering the ceiling before exporting again."
+                    } else {
+                        "Use a lower target or a higher ceiling if this master should be louder."
+                    };
                     checks.push(QualityCheck {
                         level: QualityLevel::Info,
                         code: "target_not_reached".to_string(),
                         message: format!(
-                            "Delivered {:.1} LUFS — {shortfall:.1} LU below the {target:.1} LUFS target; {reason}. Use a lower target or a higher ceiling if this master should be louder.",
+                            "Delivered {:.1} LUFS — {shortfall:.1} LU below the {target:.1} LUFS target; {reason}. {action}",
                             report.measured_lufs
                         ),
                     });
@@ -358,6 +377,30 @@ mod tests {
     }
 
     #[test]
+    fn requested_ceiling_misses_are_reported_below_the_generic_streaming_threshold() {
+        let delivered = report(-15., -1.8, true);
+        let settings = settings(Some(-14.), Some(-2.));
+        let checks = export_checks_for_report(&delivered, None, Some(&settings));
+        let peak = checks
+            .iter()
+            .find(|c| c.code == "delivery_ceiling_exceeded")
+            .unwrap();
+        assert!(matches!(peak.level, QualityLevel::Warning));
+        assert!(peak.message.contains("-2.00") && peak.message.contains("0.20"));
+        let target = checks
+            .iter()
+            .find(|c| c.code == "target_not_reached")
+            .unwrap();
+        assert!(!target.message.contains("at the ceiling"));
+        assert!(!target.message.contains("higher ceiling"));
+        let estimate = report(-15., -1.8, false);
+        assert!(
+            !codes(&export_checks_for_report(&estimate, None, Some(&settings)))
+                .contains(&"delivery_ceiling_exceeded")
+        );
+    }
+
+    #[test]
     fn low_lra_is_an_observation_not_a_compression_warning() {
         let mut measured = report(-14.0, -1.1, true);
         measured.measured_dynamic_range_lu = 0.0;
@@ -376,7 +419,7 @@ mod tests {
     #[test]
     fn landed_short_at_ceiling_fires_info_note() {
         let s = settings(Some(-9.0), Some(-1.0));
-        let checks = export_checks_for_report(&report(-10.26, -0.97, true), None, Some(&s));
+        let checks = export_checks_for_report(&report(-10.26, -1.0, true), None, Some(&s));
         let note = checks
             .iter()
             .find(|c| c.code == "target_not_reached")
@@ -390,6 +433,16 @@ mod tests {
             note.message
         );
         assert!(note.message.contains("ceiling capped"), "{}", note.message);
+        // The historical -0.97 fixture is an actual ceiling miss, even though
+        // its old wording called that reading "at" a -1 dBTP ceiling.
+        let over = export_checks_for_report(&report(-10.26, -0.97, true), None, Some(&s));
+        assert!(codes(&over).contains(&"delivery_ceiling_exceeded"));
+        let note = over
+            .iter()
+            .find(|c| c.code == "target_not_reached")
+            .unwrap();
+        assert!(note.message.contains("exceeds the requested ceiling"));
+        assert!(!note.message.contains("ceiling capped"));
     }
 
     /// Landing on target (within the 0.25 LU band) stays quiet.

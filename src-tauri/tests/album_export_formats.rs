@@ -189,6 +189,22 @@ fn album_matrix_preserves_order_overrides_gaps_and_one_continuous_encode() {
             serde_json::from_slice(&std::fs::read(&report.manifest_path).unwrap()).unwrap();
         assert_eq!(manifest["format"], encoding.extension());
         assert_eq!(manifest["album_wav_path"], report.album_wav_path);
+        let continuous = report.continuous_peak.as_ref().unwrap();
+        let measured =
+            export_encoding::measure(&encoder, Path::new(&report.album_wav_path), None).unwrap();
+        assert_eq!(continuous.true_peak_dbtp, measured.measurements.1);
+        assert_eq!(
+            continuous.ceiling_dbtp,
+            report
+                .tracks
+                .iter()
+                .map(|t| t.ceiling_dbtp)
+                .fold(f32::NEG_INFINITY, f32::max)
+        );
+        assert_eq!(
+            manifest["continuous_peak"],
+            serde_json::to_value(continuous).unwrap()
+        );
         assert_eq!(
             manifest["delivered_format"],
             serde_json::to_value(&report.delivered_format).unwrap()

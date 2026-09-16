@@ -591,6 +591,9 @@ async function driveAlbumExport(page) {
   if (await page.locator(".album-track-result").count() !== 4) {
     throw new Error("Album receipt omitted delivered track results");
   }
+  if (!(await completion.textContent()).includes("Continuous file true peak -1.05 dBTP")) {
+    throw new Error("Album receipt omitted the independently reported continuous-file peak");
+  }
   const exposed = await completion.evaluate(el => {
     const r = el.getBoundingClientRect();
     const points = [[r.left + 12, r.top + 12], [r.right - 12, r.top + 12],

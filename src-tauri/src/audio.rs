@@ -1627,7 +1627,7 @@ fn update_chain_preview_landing_plan(
 ///     so analysis updates (which inject this field) don't bust the
 ///     cache.
 fn option_f32_is_finite(value: Option<f32>) -> bool {
-    value.map_or(true, f32::is_finite)
+    value.is_none_or(f32::is_finite)
 }
 
 fn source_profile_is_finite(profile: SourceProfile) -> bool {
@@ -1674,7 +1674,7 @@ fn settings_landing_values_are_finite(settings: &MasteringSettings) -> bool {
     ]
     .into_iter()
     .all(f32::is_finite)
-        && settings.album.as_ref().map_or(true, album_plan_is_finite)
+        && settings.album.as_ref().is_none_or(album_plan_is_finite)
         && option_f32_is_finite(settings.advanced.lufs_offset_db)
         && option_f32_is_finite(settings.advanced.ceiling_dbtp)
         && option_f32_is_finite(settings.advanced.width)
@@ -1697,7 +1697,7 @@ fn settings_landing_values_are_finite(settings: &MasteringSettings) -> bool {
         && settings
             .advanced
             .source_profile
-            .map_or(true, source_profile_is_finite)
+            .is_none_or(source_profile_is_finite)
 }
 
 fn settings_landing_hash(settings: &MasteringSettings) -> LandingSettingsHash {

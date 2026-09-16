@@ -195,6 +195,16 @@ pub fn measure(
     input: &Path,
     cancel: Option<&AtomicBool>,
 ) -> CommandResult<crate::mp3::DecodedMeasurements> {
+    measure_against(encoder, input, cancel, None)
+}
+
+fn measure_against(
+    encoder: &Encoder,
+    input: &Path,
+    cancel: Option<&AtomicBool>,
+    expected_pcm: Option<&Path>,
+) -> CommandResult<crate::mp3::DecodedMeasurements> {
+    use crate::peak_meter::pcm::{PcmSource, WavPcm};
     let scratch = tempfile::tempdir().map_err(error)?;
     let decoded = scratch.path().join("readback.wav");
     let mut command = Command::new(&encoder.path);
@@ -209,11 +219,13 @@ pub fn measure(
     let mut meter = ebur128::EbuR128::new(
         u32::from(spec.channels),
         spec.sample_rate,
-        ebur128::Mode::I | ebur128::Mode::LRA | ebur128::Mode::TRUE_PEAK,
+        ebur128::Mode::I | ebur128::Mode::LRA,
     )
     .map_err(error)?;
     let mut source = reader.samples::<f32>();
     let mut buffer = Vec::with_capacity(4096 * usize::from(spec.channels));
+    let expected = expected_pcm.map(WavPcm::open).transpose().map_err(error)?;
+    let mut reference = vec![0_f64; 4096];
     let mut frames = 0;
     loop {
         check_cancel(cancel)?;
@@ -231,18 +243,46 @@ pub fn measure(
         if buffer.len() % usize::from(spec.channels) != 0 {
             return Err(error("Incomplete decoded frame"));
         }
-        frames += buffer.len() as u64 / u64::from(spec.channels);
+        let block_frames = buffer.len() / usize::from(spec.channels);
+        if let Some(expected) = &expected {
+            if expected.channels() != usize::from(spec.channels) {
+                return Err(error("Lossless decode changed channel count"));
+            }
+            for channel in 0..expected.channels() {
+                expected
+                    .read_channel(channel, frames as usize, &mut reference[..block_frames])
+                    .map_err(error)?;
+                if reference[..block_frames]
+                    .iter()
+                    .enumerate()
+                    .any(|(i, &value)| {
+                        value != f64::from(buffer[i * expected.channels() + channel])
+                    })
+                {
+                    return Err(error("Lossless decode changed delivered PCM"));
+                }
+            }
+        }
+        frames += block_frames as u64;
         meter.add_frames_f32(&buffer).map_err(error)?;
     }
     if frames == 0 {
         return Err(error("No delivered audio frames"));
     }
+    if expected
+        .as_ref()
+        .is_some_and(|source| source.frames() as u64 != frames)
+    {
+        return Err(error("Lossless decode changed frame count"));
+    }
     let lufs = crate::analysis::sanitize_lufs(meter.loudness_global().map_err(error)? as f32);
-    let peak = (0..u32::from(spec.channels))
-        .map(|channel| meter.true_peak(channel).map_err(error))
-        .collect::<CommandResult<Vec<_>>>()?
-        .into_iter()
-        .fold(0.0_f64, f64::max);
+    let source = WavPcm::open(&decoded).map_err(error)?;
+    let qualified = crate::peak_meter::measure_source(&source, || {
+        cancel.is_some_and(|flag| flag.load(Ordering::Relaxed))
+    })
+    .map_err(error)?;
+    let peak = qualified.upper();
+    crate::diagnostics::info(format!("Decoded export verified: estimator={} frames={frames} rate={} channels={} peak_dbtp={:?} lossless_pcm_parity={}", crate::peak_meter::VERSION, spec.sample_rate, spec.channels, qualified.upper_dbtp(), expected.is_some()));
     let lra = meter.loudness_range().map_err(error)? as f32;
     Ok(crate::mp3::DecodedMeasurements {
         measurements: (
@@ -327,7 +367,12 @@ pub fn deliver_staged(
         spec.bits_per_sample,
         cancel,
     )?;
-    let measured = measure(encoder, &encoded, cancel)?;
+    let measured = measure_against(
+        encoder,
+        &encoded,
+        cancel,
+        (!encoding.is_lossy()).then_some(input),
+    )?;
     if measured.sample_rate != spec.sample_rate || measured.channels != u32::from(spec.channels) {
         return Err(error(
             "Encoded file has an unexpected sample rate/channel count",
@@ -393,6 +438,57 @@ pub fn write(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    #[ignore = "requires staged encoder; proves exact lossless readback rejection"]
+    fn lossless_readback_rejects_changed_pcm_frames_and_channels() {
+        let dir = tempfile::tempdir().unwrap();
+        let encoder = Encoder::packaged().unwrap();
+        let write = |name: &str, channels, frames, changed| {
+            let path = dir.path().join(name);
+            let mut writer = hound::WavWriter::create(
+                &path,
+                hound::WavSpec {
+                    sample_rate: 48000,
+                    channels,
+                    bits_per_sample: 16,
+                    sample_format: hound::SampleFormat::Int,
+                },
+            )
+            .unwrap();
+            for i in 0..frames * u32::from(channels) {
+                writer
+                    .write_sample(if changed && i == 101 {
+                        12001_i16
+                    } else {
+                        12000_i16
+                    })
+                    .unwrap();
+            }
+            writer.finalize().unwrap();
+            path
+        };
+        let input = write("input.wav", 2, 24001, false);
+        let encoded = dir.path().join("encoded.flac");
+        encoder
+            .encode_staged(&input, &encoded, ExportEncoding::Flac, 16, None)
+            .unwrap();
+        assert!(measure_against(&encoder, &encoded, None, Some(&input)).is_ok());
+        for (name, channels, frames, changed) in [
+            ("changed.wav", 2, 24001, true),
+            ("short.wav", 2, 24000, false),
+            ("long.wav", 2, 24002, false),
+            ("mono.wav", 1, 24001, false),
+        ] {
+            let reference = write(name, channels, frames, changed);
+            assert!(
+                measure_against(&encoder, &encoded, None, Some(&reference)).is_err(),
+                "accepted {name}"
+            );
+        }
+        let cancelled = AtomicBool::new(true);
+        assert!(measure_against(&encoder, &encoded, Some(&cancelled), Some(&input)).is_err());
+    }
+
     #[test]
     #[ignore = "subprocess fixture invoked only by cancellation test"]
     fn encoder_child_probe() {

@@ -69,6 +69,10 @@
   "album_render_report": {
     "album_wav_path": "out/album.wav",
     "bit_depth": 24,
+    "continuous_peak": {
+      "ceiling_dbtp": -1.0,
+      "true_peak_dbtp": -1.25
+    },
     "delivered_format": {
       "bit_depth": 24,
       "channels": 2,
