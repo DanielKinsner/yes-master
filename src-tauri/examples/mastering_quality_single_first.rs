@@ -66,7 +66,8 @@ fn main() {
     assert!(!output.exists());
     let job = read(job_path);
     let followup = job["experiment"] == "flagged-lower-drive-v1";
-    assert!(followup || job["experiment"] == "single-first-development-v1");
+    let broader = job["experiment"] == "broader-first-v1";
+    assert!(followup || broader || job["experiment"] == "single-first-development-v1");
     assert_eq!(
         sha(Path::new(job["specification"].as_str().unwrap())),
         job["specification_sha256"]
@@ -93,6 +94,10 @@ fn main() {
         "job_sha256":sha(job_path),"rows":[],"source_preparation":[],
         "scope":"known-source offline development; no production policy or app latency claim"});
     for case in job["cases"].as_array().unwrap() {
+        if broader {
+            assert!(matches!(case["id"].as_str().unwrap(), "funk" | "rich"));
+            assert_eq!(case["candidates"].as_array().unwrap().len(), 8);
+        }
         if followup {
             assert!(matches!(case["id"].as_str().unwrap(), "metal" | "rich"));
             assert_eq!(case["candidates"].as_array().unwrap().len(), 5);
@@ -146,7 +151,14 @@ fn main() {
             } else {
                 assert_eq!(offset, 0., "single-first freezes zero-offset candidates");
             }
-            let id = if offset == 0. {
+            let id = if broader {
+                assert!(matches!(
+                    retained["preset_id"].as_str().unwrap(),
+                    "universal50" | "loud75"
+                ));
+                assert!([-14., -9.].contains(&settings.effective_target_lufs().unwrap()));
+                requested["output_id"].as_str().unwrap().to_owned()
+            } else if offset == 0. {
                 format!("{}-{policy}", case["id"].as_str().unwrap())
             } else {
                 format!("{}-{policy}-m{}", case["id"].as_str().unwrap(), -offset)
@@ -260,7 +272,8 @@ fn main() {
                 path
             };
             report["rows"].as_array_mut().unwrap().push(json!({"id":id,
-                "case":case["id"],"policy":policy,"path":path,"sha256":sha(&path),"source_sha256":prior["source_sha256"],
+                "case":case["id"],"policy":policy,"preset_id":retained["preset_id"],
+                "comparison_group":requested["comparison_group"],"path":path,"sha256":sha(&path),"source_sha256":prior["source_sha256"],
                 "source":source,"requested_settings":settings,"drive_db":drive,"offset_db":offset,
                 "render":metrics,"src_s":src_s,"finalize_s":finalize_s,"frames":delivered.len()/2,"rate":48000,"channels":2,
                 "lufs":protection.lufs,"peak":protection.true_peak_dbtp,"ceiling":settings.effective_ceiling_dbtp(),
@@ -275,7 +288,13 @@ fn main() {
     }
     assert_eq!(
         report["rows"].as_array().unwrap().len(),
-        if followup { 10 } else { 12 }
+        if followup {
+            10
+        } else if broader {
+            16
+        } else {
+            12
+        }
     );
     report["status"] = json!("complete");
     report["total_wall_s"] = json!(session.elapsed().as_secs_f64());
