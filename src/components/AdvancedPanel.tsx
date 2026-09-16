@@ -724,6 +724,8 @@ function PerBandCompressorCard({
           <NumberField
             label="Preset density"
             value={a.compression_density}
+            sliderAutoValue={settings.preset.kind === "custom" ? 0 : 0.5}
+            autoReadout={settings.preset.kind === "custom" ? "0.00" : "0.50"}
             step={0.05}
             min={0}
             max={1}
@@ -950,7 +952,7 @@ function presetCompressionSummary(
   if (density <= 0.001) {
     return `Preset compression inactive · Density ${density.toFixed(2)}`;
   }
-  return `Effective compression · ${readout.thresholdLabel} · ${readout.ratioLabel} · ${readout.attackLabel} · ${readout.releaseLabel}`;
+  return `Preset compression before Adapt · ${readout.thresholdLabel} · ${readout.ratioLabel} · ${readout.attackLabel} · ${readout.releaseLabel}`;
 }
 
 function materializeManualCompressor(

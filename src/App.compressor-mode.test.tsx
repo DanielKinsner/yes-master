@@ -328,7 +328,7 @@ describe("AdvancedPanel compressor mode", () => {
       "Preset values from Universal.",
     );
     expect(preset.container.textContent).toContain(
-      "Effective compression · -12.5 dB · 1.4:1 · 15 ms · 250 ms",
+      "Preset compression before Adapt · -12.5 dB · 1.4:1 · 15 ms · 250 ms",
     );
     expect(preset.container.textContent).not.toContain("LOWMIDHIGH");
     expect(compressionInputs(preset.container).every((input) => input.disabled)).toBe(
@@ -401,7 +401,7 @@ describe("AdvancedPanel compressor mode", () => {
       "Preset values from Universal.",
     );
     expect(universal.container.textContent).toContain(
-      "Effective compression · -12.5 dB · 1.4:1 · 15 ms · 250 ms",
+      "Preset compression before Adapt · -12.5 dB · 1.4:1 · 15 ms · 250 ms",
     );
     expect(universal.container.textContent).not.toContain("-22.0 dB");
     expect(universal.container.textContent).not.toContain("2.6:1");
@@ -414,11 +414,46 @@ describe("AdvancedPanel compressor mode", () => {
     });
     expect(tape.container.textContent).toContain("Preset values from Tape.");
     expect(tape.container.textContent).toContain(
-      "Effective compression · -16.0 dB · 1.6:1 · 30 ms · 400 ms",
+      "Preset compression before Adapt · -16.0 dB · 1.6:1 · 30 ms · 400 ms",
     );
     await act(async () => {
       tape.root.unmount();
     });
+  });
+
+  it("parks Density Auto at the requested preset default independently of Adapt", async () => {
+    for (const kind of ["universal", "tape", "custom"] as const) {
+      for (const strength of [0, 0.5, 1]) {
+        const settings = makeSettings(
+          { adaptive_strength: strength },
+          kind === "custom" ? { kind, id: "density-auto-test" } : { kind },
+        );
+        const onAdvanced = vi.fn();
+        const { container, root } = await renderAdvancedPanel({ settings, onAdvanced });
+        const slider = container.querySelector<HTMLInputElement>('input[type="range"][aria-label="Preset density"]')!;
+        expect(slider.value).toBe(kind === "custom" ? "0" : "0.5");
+        expect(settings.advanced.compression_density).toBeNull();
+        expect(onAdvanced).not.toHaveBeenCalled();
+        expect(container.querySelector(".compressor-density-field")?.textContent).toContain(
+          kind === "custom" ? "0.00" : "0.50",
+        );
+        await act(async () => { root.unmount(); });
+      }
+    }
+  });
+
+  it("preserves explicit Density, and resetting requests null without materializing Auto", async () => {
+    for (const density of [0, 0.8]) {
+      const settings = makeSettings({ compression_density: density });
+      const onAdvanced = vi.fn();
+      const { container, root } = await renderAdvancedPanel({ settings, onAdvanced });
+      const slider = container.querySelector<HTMLInputElement>('input[type="range"][aria-label="Preset density"]')!;
+      expect(slider.value).toBe(String(density));
+      await act(async () => { slider.dispatchEvent(new MouseEvent("dblclick", { bubbles: true })); });
+      expect(onAdvanced).toHaveBeenCalledWith({ ...settings.advanced, compression_density: null });
+      expect(settings.advanced.compression_density).toBe(density);
+      await act(async () => { root.unmount(); });
+    }
   });
 
   it("labels density-zero preset compression as inactive instead of showing identity values", async () => {
