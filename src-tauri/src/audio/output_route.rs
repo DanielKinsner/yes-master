@@ -53,10 +53,19 @@ pub(super) fn mastered_source(
     fade: FadeEnvelope,
 ) -> Result<(MasteredRateSource, Arc<AtomicU8>), String> {
     let slots = source.take_meter_slots();
-    let file = QualitySource::new(source.with_render_alignment(), file_rate)?;
+    let revision = source.revision_slot();
+    let file =
+        QualitySource::new(source.with_render_alignment(), file_rate)?.with_revision(revision);
     let failure = file.error_slot();
-    let device = QualitySource::new(file, device_rate)?.with_error_slot(failure.clone());
-    Ok((MeteredSource::new(device, slots, fade), failure))
+    let revision = file.revision_slot();
+    let device = QualitySource::new(file, device_rate)?
+        .with_error_slot(failure.clone())
+        .with_revision(revision);
+    let revision = device.revision_slot();
+    Ok((
+        MeteredSource::new(device, slots, fade).with_revision(revision),
+        failure,
+    ))
 }
 
 pub(super) struct OutputHandle(Arc<rodio::dynamic_mixer::DynamicMixerController<f32>>);

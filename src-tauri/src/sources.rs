@@ -15,7 +15,7 @@
 //! mono signal into a `SpectrumRing`; the audio thread's snapshot tick
 //! reads from those slots without ever blocking the audio loop.
 
-use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::time::Duration;
@@ -255,6 +255,8 @@ pub(crate) struct MeteredSource<S: rodio::Source<Item = f32>> {
     position: usize,
     meter: OutputMeter,
     fade: FadeEnvelope,
+    input_revision: Option<Arc<AtomicU64>>,
+    output_revision: Arc<AtomicU64>,
 }
 
 impl<S: rodio::Source<Item = f32>> MeteredSource<S> {
@@ -268,7 +270,18 @@ impl<S: rodio::Source<Item = f32>> MeteredSource<S> {
             position: channels,
             meter,
             fade,
+            input_revision: None,
+            output_revision: Arc::new(AtomicU64::new(0)),
         }
+    }
+
+    pub(crate) fn with_revision(mut self, upstream: Arc<AtomicU64>) -> Self {
+        self.input_revision = Some(upstream);
+        self
+    }
+
+    pub(crate) fn revision_slot(&self) -> Arc<AtomicU64> {
+        self.output_revision.clone()
     }
 }
 
@@ -284,6 +297,16 @@ impl<S: rodio::Source<Item = f32>> Iterator for MeteredSource<S> {
                 *value = self.source.next()? * gain;
             }
             self.meter.process(&self.frame);
+            let revision = if gain == 1.0 {
+                self.input_revision
+                    .as_ref()
+                    .map_or(0, |r| r.load(Ordering::Acquire))
+            } else {
+                0
+            };
+            if self.output_revision.load(Ordering::Relaxed) != revision {
+                self.output_revision.store(revision, Ordering::Release);
+            }
             self.position = 0;
         }
         let value = self.frame[self.position];
@@ -309,6 +332,7 @@ impl<S: rodio::Source<Item = f32>> rodio::Source for MeteredSource<S> {
         self.source.try_seek(pos)?;
         self.position = self.frame.len();
         self.meter.reset();
+        self.output_revision.store(0, Ordering::Release);
         Ok(())
     }
 }
@@ -477,6 +501,7 @@ pub(crate) struct MasteringSource {
     crossfade_total: usize,
     coeffs_rx: mpsc::Receiver<LiveCoeffUpdate>,
     coeffs_generation: u64,
+    output_revision: Arc<AtomicU64>,
     frames_since_check: usize,
     // Frame-level scratch buffers; preallocated to avoid heap traffic on the
     // audio thread.
@@ -492,6 +517,14 @@ pub(crate) struct MasteringSource {
 }
 
 impl MasteringSource {
+    pub(crate) fn with_initial_revision(mut self, revision: u64) -> Self {
+        self.coeffs_generation = revision;
+        self
+    }
+
+    pub(crate) fn revision_slot(&self) -> Arc<AtomicU64> {
+        self.output_revision.clone()
+    }
     /// Move meter ownership to a downstream device-rate stage. Called before
     /// playback, so the old rate's meter allocations are dropped off-callback.
     pub(crate) fn take_meter_slots(&mut self) -> MeterSlots {
@@ -527,6 +560,7 @@ impl MasteringSource {
             crossfade_total: 0,
             coeffs_rx,
             coeffs_generation: 0,
+            output_revision: Arc::new(AtomicU64::new(0)),
             frames_since_check: 0,
             frame_in: vec![0.0; channels_usize],
             frame_main: vec![0.0; channels_usize],
@@ -660,6 +694,9 @@ impl MasteringSource {
             self.chain
                 .process_frame_inplace(&mut self.frame_main[..channels]);
 
+            // The last crossfade frame still contains 1/512 of the old chain.
+            // It must not publish the new revision as fully applied.
+            let mixed_frame = self.pending_chain_active;
             // Process pending chain into frame_pending and mix.
             if self.pending_chain_active && self.crossfade_total > 0 {
                 for i in 0..channels {
@@ -695,6 +732,14 @@ impl MasteringSource {
             }
 
             self.frame_out_pos = 0;
+            let revision = if mixed_frame || self.prime_samples_left > 0 || fade_gain != 1.0 {
+                0
+            } else {
+                self.coeffs_generation
+            };
+            if self.output_revision.load(Ordering::Relaxed) != revision {
+                self.output_revision.store(revision, Ordering::Release);
+            }
         }
 
         let out = self.frame_main[self.frame_out_pos];
@@ -758,6 +803,7 @@ impl rodio::Source for MasteringSource {
         // Drop accumulated biquad/limiter state to avoid clicks across
         // discontinuities. Also force a frame re-fetch on the next yield.
         self.chain.reset_states();
+        self.output_revision.store(0, Ordering::Release);
         self.reset_render_alignment();
         self.crossfade_remaining = 0;
         self.crossfade_total = 0;
@@ -777,6 +823,42 @@ mod render_alignment_tests {
     use super::*;
     use crate::{dsp::MasteringChain, types::MasteringSettings};
     use rodio::Source;
+
+    #[test]
+    fn revision_waits_for_last_mixed_frame_and_is_reset_on_seek() {
+        let (send, receive) = mpsc::channel();
+        let mut source = source(vec![0.2; 48000], 1, 48000).with_initial_revision(1);
+        source.coeffs_rx = receive;
+        let revision = source.revision_slot();
+        assert_eq!(revision.load(Ordering::Acquire), 0);
+        source.next().unwrap();
+        assert_eq!(revision.load(Ordering::Acquire), 1);
+        let mut coeffs = source.chain.coeffs;
+        coeffs.user_output_gain_lin = 0.5;
+        send.send(LiveCoeffUpdate {
+            generation: 2,
+            coeffs,
+        })
+        .unwrap();
+        while !source.pending_chain_active {
+            source.next().unwrap();
+        }
+        assert_eq!(revision.load(Ordering::Acquire), 0);
+        while source.pending_chain_active {
+            source.next().unwrap();
+        }
+        assert_eq!(
+            revision.load(Ordering::Acquire),
+            0,
+            "last mixed frame cannot acknowledge the revision"
+        );
+        source.next().unwrap();
+        assert_eq!(revision.load(Ordering::Acquire), 2);
+        source.try_seek(Duration::from_millis(250)).unwrap();
+        assert_eq!(revision.load(Ordering::Acquire), 0);
+        source.next().unwrap();
+        assert_eq!(revision.load(Ordering::Acquire), 2);
+    }
 
     fn settings() -> MasteringSettings {
         serde_json::from_value(serde_json::json!({

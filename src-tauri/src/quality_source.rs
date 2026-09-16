@@ -7,7 +7,7 @@ use rodio::{source::SeekError, Source};
 use rubato::{Fft, FixedSync, Resampler};
 use std::{
     sync::{
-        atomic::{AtomicU8, Ordering},
+        atomic::{AtomicU64, AtomicU8, Ordering},
         Arc,
     },
     time::Duration,
@@ -53,6 +53,10 @@ pub(crate) struct QualitySource<S: Source<Item = f32>> {
     ended: bool,
     failed: bool,
     error_slot: Arc<AtomicU8>,
+    input_revision: Option<Arc<AtomicU64>>,
+    output_revision: Arc<AtomicU64>,
+    previous_input_revision: u64,
+    buffered_revision: u64,
 }
 
 impl<S: Source<Item = f32>> QualitySource<S> {
@@ -97,6 +101,10 @@ impl<S: Source<Item = f32>> QualitySource<S> {
             ended: false,
             failed: false,
             error_slot: Arc::new(AtomicU8::new(0)),
+            input_revision: None,
+            output_revision: Arc::new(AtomicU64::new(0)),
+            previous_input_revision: 0,
+            buffered_revision: 0,
         })
     }
 
@@ -113,12 +121,32 @@ impl<S: Source<Item = f32>> QualitySource<S> {
         self
     }
 
+    /// Track the revision of actually emitted PCM, independently of worker
+    /// completion. Zero means mixed/unknown. The upstream revision must only
+    /// change from next()/seek(), with nonzero revisions increasing on updates.
+    pub(crate) fn with_revision(mut self, upstream: Arc<AtomicU64>) -> Self {
+        self.input_revision = Some(upstream);
+        self
+    }
+
+    pub(crate) fn revision_slot(&self) -> Arc<AtomicU64> {
+        self.output_revision.clone()
+    }
+
+    fn upstream_revision(&self) -> u64 {
+        self.input_revision
+            .as_ref()
+            .map_or(0, |r| r.load(Ordering::Acquire))
+    }
+
     fn fail(&mut self, error: StreamFailure) {
         self.failed = true;
         self.error_slot.store(error as u8, Ordering::Release);
+        self.output_revision.store(0, Ordering::Release);
     }
 
     fn refill(&mut self) -> Result<bool, StreamFailure> {
+        let revision_before = self.upstream_revision();
         if self.resampler.is_none() {
             // Pull complete frames even at an unchanged rate. A sample-wise
             // passthrough leaves some Source implementations mid-channel when
@@ -133,6 +161,8 @@ impl<S: Source<Item = f32>> QualitySource<S> {
             }
             self.output_position = 0;
             self.output_length = self.channels;
+            // Identity consumes exactly one frame and has no filter history.
+            self.buffered_revision = self.upstream_revision();
             return Ok(true);
         }
         if self
@@ -202,6 +232,19 @@ impl<S: Source<Item = f32>> QualitySource<S> {
             + self.expected_samples.map_or(available, |expected| {
                 available.min(expected - self.emitted_samples)
             });
+        let after = self.upstream_revision();
+        let whole_input_revision = if revision_before == after { after } else { 0 };
+        // Locked Rubato 1.0.1 FixedSync::Both with one subchunk produces each
+        // FFT block from this block plus the preceding block's overlap only
+        // (synchro.rs::FftResampler::resample_unit). Require both complete
+        // input blocks to carry the same revision. Publish only on emission,
+        // never when a nested converter merely reads ahead into its buffers.
+        self.buffered_revision = if whole_input_revision == self.previous_input_revision {
+            whole_input_revision
+        } else {
+            0
+        };
+        self.previous_input_revision = whole_input_revision;
         Ok(true)
     }
 
@@ -235,6 +278,10 @@ impl<S: Source<Item = f32>> Iterator for QualitySource<S> {
         let sample = self.output[self.output_position];
         self.output_position += 1;
         self.emitted_samples += 1;
+        if self.output_revision.load(Ordering::Relaxed) != self.buffered_revision {
+            self.output_revision
+                .store(self.buffered_revision, Ordering::Release);
+        }
         Some(sample)
     }
 }
@@ -273,6 +320,9 @@ impl<S: Source<Item = f32>> Source for QualitySource<S> {
         self.ended = false;
         self.failed = false;
         self.error_slot.store(0, Ordering::Release);
+        self.previous_input_revision = 0;
+        self.buffered_revision = 0;
+        self.output_revision.store(0, Ordering::Release);
         Ok(())
     }
 }
@@ -280,6 +330,107 @@ impl<S: Source<Item = f32>> Source for QualitySource<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct RevisionStep {
+        position: usize,
+        rate: u32,
+        revision: Arc<AtomicU64>,
+    }
+    impl Iterator for RevisionStep {
+        type Item = f32;
+        fn next(&mut self) -> Option<f32> {
+            if self.position == self.rate as usize * 2 {
+                return None;
+            }
+            let revision = if self.position < 3101 {
+                1
+            } else if self.position < 4507 {
+                2
+            } else {
+                3
+            };
+            self.revision.store(revision, Ordering::Release);
+            self.position += 1;
+            // Any nonzero sample after revision 3 is stale buffered/history PCM.
+            Some(if revision < 3 { 0.5 } else { 0.0 })
+        }
+    }
+    impl Source for RevisionStep {
+        fn current_frame_len(&self) -> Option<usize> {
+            None
+        }
+        fn channels(&self) -> u16 {
+            1
+        }
+        fn sample_rate(&self) -> u32 {
+            self.rate
+        }
+        fn total_duration(&self) -> Option<Duration> {
+            Some(Duration::from_secs(2))
+        }
+        fn try_seek(&mut self, _: Duration) -> Result<(), SeekError> {
+            self.position = 0;
+            self.revision.store(0, Ordering::Release);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn revisions_follow_emitted_pcm_through_two_converter_buffers_and_seek() {
+        for source_rate in [32000, 44100, 48000, 96000] {
+            for file_rate in [44100, 48000, 96000] {
+                for device_rate in [44100, 48000, 96000] {
+                    let input_revision = Arc::new(AtomicU64::new(0));
+                    let input = RevisionStep {
+                        position: 0,
+                        rate: source_rate,
+                        revision: input_revision.clone(),
+                    };
+                    let file = QualitySource::new(input, file_rate)
+                        .unwrap()
+                        .with_revision(input_revision.clone());
+                    let file_revision = file.revision_slot();
+                    let mut output = QualitySource::new(file, device_rate)
+                        .unwrap()
+                        .with_revision(file_revision);
+                    let revision = output.revision_slot();
+                    for replay in 0..2 {
+                        assert_eq!(revision.load(Ordering::Acquire), 0);
+                        let mut first_input = None;
+                        let mut first_output = None;
+                        let mut count = 0;
+                        for sample in output.by_ref() {
+                            if input_revision.load(Ordering::Acquire) == 3 {
+                                first_input.get_or_insert(count);
+                            }
+                            if revision.load(Ordering::Acquire) == 3 {
+                                first_output.get_or_insert(count);
+                                assert_eq!(sample, 0., "stale PCM marked applied: {source_rate}/{file_rate}/{device_rate}, replay {replay}");
+                            } else {
+                                assert!(
+                                    first_output.is_none(),
+                                    "revision must not regress after stable output"
+                                );
+                            }
+                            count += 1;
+                        }
+                        assert_eq!(
+                            count,
+                            (source_rate as usize * 2 * file_rate as usize)
+                                .div_ceil(source_rate as usize)
+                                .saturating_mul(device_rate as usize)
+                                .div_ceil(file_rate as usize)
+                        );
+                        let gap = first_output.unwrap() - first_input.unwrap();
+                        if source_rate != file_rate || file_rate != device_rate {
+                            assert!(gap > 0);
+                        }
+                        output.try_seek(Duration::ZERO).unwrap();
+                    }
+                }
+            }
+        }
+    }
 
     #[test]
     fn cascade_retains_inner_processing_failure() {
