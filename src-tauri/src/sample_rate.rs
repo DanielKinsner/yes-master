@@ -11,6 +11,32 @@ pub(crate) fn convert_interleaved(
     target_sample_rate: u32,
     channels: u16,
 ) -> CommandResult<Vec<f32>> {
+    convert_interleaved_cancellable(
+        samples,
+        source_sample_rate,
+        target_sample_rate,
+        channels,
+        || false,
+    )
+}
+
+pub(crate) fn convert_interleaved_cancellable(
+    samples: &[f32],
+    source_sample_rate: u32,
+    target_sample_rate: u32,
+    channels: u16,
+    mut cancelled: impl FnMut() -> bool,
+) -> CommandResult<Vec<f32>> {
+    let mut check_cancel = || {
+        if cancelled() {
+            Err(CommandError::Render(
+                "sample-rate conversion cancelled".into(),
+            ))
+        } else {
+            Ok(())
+        }
+    };
+    check_cancel()?;
     if source_sample_rate == 0 || target_sample_rate == 0 {
         return Err(CommandError::Render(format!(
             "invalid sample-rate conversion: {source_sample_rate} Hz to {target_sample_rate} Hz"
@@ -29,11 +55,24 @@ pub(crate) fn convert_interleaved(
             channel_count
         )));
     }
+    // FFT backends may panic on NaN/Inf instead of returning a Rubato error.
+    // Reject malformed float PCM before either conversion or identity copying.
+    // Values above full scale remain valid; only nonfinite input is rejected.
+    for chunk in samples.chunks(4096 * channel_count) {
+        check_cancel()?;
+        if chunk.iter().any(|sample| !sample.is_finite()) {
+            return Err(CommandError::Render(
+                "SRC input contains nonfinite samples".into(),
+            ));
+        }
+    }
 
     // Validate identity conversions too. All production callers use decoded,
     // nonzero rates/channels; malformed layouts must not succeed only at unity.
     if source_sample_rate == target_sample_rate {
-        return Ok(samples.to_vec());
+        let output = samples.to_vec();
+        check_cancel()?;
+        return Ok(output);
     }
 
     let input_frames = samples.len() / channel_count;
@@ -80,6 +119,7 @@ pub(crate) fn convert_interleaved(
     // blocks and may stop before a short input's useful output emerges. Keep
     // its FFT filter, explicitly zero-pad/drain, then remove the delay ONCE.
     while written < needed {
+        check_cancel()?;
         let want = resampler.input_frames_next();
         let take = (input_frames - consumed).min(want);
         let indexing = Indexing {
@@ -108,6 +148,7 @@ pub(crate) fn convert_interleaved(
     // 48/96 -> 44.1 kHz. Fractional-delay compensation would change the filter.
     output_samples.copy_within(delay * channel_count..needed * channel_count, 0);
     output_samples.truncate(expected_frames * channel_count);
+    check_cancel()?;
     Ok(output_samples)
 }
 
@@ -159,6 +200,37 @@ mod tests {
         ] {
             assert!(convert_interleaved(samples, rate, rate, channels).is_err());
         }
+    }
+
+    #[test]
+    fn nonfinite_pcm_returns_an_error_before_the_fft_backend() {
+        for target in [44100, 48000, 96000] {
+            for sample in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+                let error = convert_interleaved(&[0.2, sample], 48000, target, 1).unwrap_err();
+                assert!(error.to_string().contains("nonfinite"));
+            }
+            // Above-full-scale floating audio is still accepted without clipping.
+            let output = convert_interleaved(&[1.4; 4096], 48000, target, 1).unwrap();
+            assert!(output.iter().any(|sample| *sample > 1.));
+        }
+    }
+
+    #[test]
+    fn cancellation_is_checked_during_conversion_without_changing_complete_pcm() {
+        let input = sine(48000, 1., 2);
+        for stop_at in [1, 3, 20] {
+            let mut polls = 0;
+            let result = convert_interleaved_cancellable(&input, 48000, 96000, 2, || {
+                polls += 1;
+                polls == stop_at
+            });
+            assert!(result.unwrap_err().to_string().contains("cancelled"));
+            assert_eq!(polls, stop_at);
+        }
+        assert_eq!(
+            convert_interleaved(&input, 48000, 44100, 2).unwrap(),
+            convert_interleaved_cancellable(&input, 48000, 44100, 2, || false).unwrap()
+        );
     }
 
     #[test]

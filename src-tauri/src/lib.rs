@@ -7,6 +7,7 @@ pub mod confidence;
 pub mod decode;
 pub mod deep_analysis;
 pub mod demo;
+pub mod device_preparation;
 pub mod diagnostics;
 pub mod dsp;
 pub mod engine;
