@@ -42,8 +42,13 @@
 > Its full validation and preserved old references are recorded in
 > [gain-copy diagnosis](reviews/2026-09-15-drive-gain-consistency.md).
 > A [normalized-reference selector experiment](reviews/2026-09-15-drive-selector-reference-experiment.md)
-> is specified before re-scoring retained metrics; no automatic sonic policy,
-> control mapping or unseen-holdout result is adopted.
+> completes all eight sources: preserving candidate/fallback consistency improves
+> from 73/96 to 96/96, while original-group fallbacks increase from 18 to 21.
+> Character/fallback limits remain open. The [actual-analysis diagnostic](reviews/2026-09-15-source-analysis-gain-results.md)
+> completes 48 analyses: normalized-copy coefficients match 48/48, versus 33/48
+> with actual-level analysis. Original versus normalized-source coefficients
+> match 24/24. No analysis policy, automatic sonic policy, control mapping or
+> unseen-holdout result is adopted.
 > [Saturation calibration](reviews/2026-09-15-saturation-calibration-results.md)
 > retains isolated continuity/antialias comparisons; whole-chain/native/selected-C
 > and listening evidence remain open. Preset intent and gated constants are unchanged.

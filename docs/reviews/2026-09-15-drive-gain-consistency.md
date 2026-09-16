@@ -250,3 +250,31 @@ because it resolves the isolated reference dependence; retain both target-first
 and preserving comparisons. Resolve its fallback/character limitations, actual
 source-analysis behavior and measured budget before freezing any holdout rule.
 No production selector, preset calibration or owner preference is adopted.
+
+### Completed eight-source selector result
+
+`c1-normalized-reference-v1.json` completes the same frozen rule on all eight
+sources and both quiet copies. Preserving candidate/fallback identity improves
+from **73/96 to 96/96**; target-first stays **96/96**. Across 48 original groups,
+fallbacks increase **18 to 21**, target hits including fallbacks decrease **20 to
+18**, and selected character failures increase **15 to 19**. Those failures are
+explicit fallback outcomes, not feasible preserving candidates. Imaginal adds
+large preserved misses: Universal-75's -9 fallback is **11.452 LU** below target.
+The full result therefore confirms reference consistency but does not close C1's
+character/fallback limits or authorize C2/C3 adoption.
+
+All **960 quiet-copy renders** and their complete metrics/consistency comparisons
+are now retained. All 16 original f32 copy runs fail the declared normalized-PCM
+numeric gate; the independently verified f64 production correction is separate
+and does not retroactively relabel these old files. Final Imaginal -80 independent
+checks are still running. Fresh production source-analysis and normalized-
+descriptor comparisons proceed under a separate specification; these earlier
+copy outcomes retain the original analysis/guards by design.
+
+The [actual production-analysis diagnostic](2026-09-15-source-analysis-gain-results.md)
+is now complete: 48 analyses of actual/normalized source copies. Actual-level
+analysis changes 15/48 resolved coefficient sets; normalized analysis preserves
+48/48 copy comparisons and 24/24 original-versus-normalized coefficient sets.
+This supports a separate reusable normalized source descriptor for the next
+corrected-chain experiment, while actual-source display/receipts remain intact.
+It does not resolve the selector's remaining character/fallback limitations.
