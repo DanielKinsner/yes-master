@@ -2,8 +2,10 @@
 //! Rodio 0.20's try_from_device_config can silently fall back to another format;
 //! retaining its input configuration would misidentify the mixer rate.
 use crate::{
+    export_format::ExportEncoding,
     quality_source::QualitySource,
     sources::{FadeEnvelope, MasteringSource, MeteredSource},
+    types::{DeliveryProfile, MasteringSettings},
 };
 use rodio::cpal::{
     self,
@@ -16,6 +18,30 @@ use std::sync::{
 };
 
 pub(super) type MasteredRateSource = MeteredSource<QualitySource<QualitySource<MasteringSource>>>;
+
+/// Resolve only the pre-encode PCM contract, using the encoder's own rules.
+/// This transient copy never replaces saved settings or simulates codec loss.
+pub(super) fn preview_settings(
+    settings: &MasteringSettings,
+    source_rate: u32,
+    encoding: ExportEncoding,
+) -> MasteringSettings {
+    let requested_rate = settings.effective_sample_rate(source_rate);
+    let requested_bits = settings.effective_bit_depth();
+    let rate = encoding.delivery_rate(requested_rate);
+    let bits = encoding.delivery_bits(requested_bits);
+    let mut resolved = settings.clone();
+    if rate != requested_rate || bits != requested_bits {
+        // A named profile shadows Advanced fields. Preserve its resolved target
+        // and ceiling before using a transient Custom PCM delivery description.
+        resolved.advanced.lufs_offset_db = settings.effective_target_lufs();
+        resolved.advanced.ceiling_dbtp = Some(settings.effective_ceiling_dbtp());
+        resolved.advanced.target_sample_rate = Some(rate);
+        resolved.advanced.bit_depth = Some(bits);
+        resolved.delivery_profile = DeliveryProfile::Custom;
+    }
+    resolved
+}
 
 /// Preserve the export's intermediate rate before conversion to the device.
 /// Its antialias filter may remove content the export-derived gain would boost.
@@ -167,6 +193,182 @@ pub(super) fn with_fallback<D, T, E, I: Iterator<Item = D>>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn preview_codec_resolution_preserves_processing_and_requested_intent() {
+        for encoding in [
+            ExportEncoding::Wav,
+            ExportEncoding::Mp3 { bitrate_kbps: 320 },
+            ExportEncoding::Flac,
+            ExportEncoding::M4a { bitrate_kbps: 256 },
+            ExportEncoding::Aac { bitrate_kbps: 192 },
+            ExportEncoding::Ogg { quality: 6 },
+            ExportEncoding::Aiff,
+        ] {
+            for source_rate in [32000, 44100, 48000, 96000] {
+                for profile in [
+                    DeliveryProfile::StreamingUniversal,
+                    DeliveryProfile::AppleMusic,
+                    DeliveryProfile::Cd,
+                    DeliveryProfile::VinylPremaster,
+                    DeliveryProfile::LoudRock,
+                    DeliveryProfile::BroadcastEu,
+                    DeliveryProfile::BroadcastUs,
+                    DeliveryProfile::Custom,
+                ] {
+                    for bits in [16, 24, 32] {
+                        let mut original = super::super::tests::settings_with_intensity(0.75);
+                        original.delivery_profile = profile;
+                        original.advanced.target_sample_rate = None;
+                        original.advanced.bit_depth = Some(bits);
+                        original.advanced.lufs_offset_db = None;
+                        let before = serde_json::to_value(&original).unwrap();
+                        let resolved = preview_settings(&original, source_rate, encoding);
+                        assert_eq!(
+                            resolved.effective_sample_rate(source_rate),
+                            encoding.delivery_rate(original.effective_sample_rate(source_rate))
+                        );
+                        assert_eq!(
+                            resolved.effective_bit_depth(),
+                            encoding.delivery_bits(original.effective_bit_depth())
+                        );
+                        assert_eq!(
+                            resolved.effective_target_lufs(),
+                            original.effective_target_lufs()
+                        );
+                        assert_eq!(
+                            resolved.effective_ceiling_dbtp(),
+                            original.effective_ceiling_dbtp()
+                        );
+                        assert_eq!(
+                            crate::dsp::ChainCoeffs::from_settings(source_rate, &resolved),
+                            crate::dsp::ChainCoeffs::from_settings(source_rate, &original)
+                        );
+                        assert_eq!(serde_json::to_value(&original).unwrap(), before);
+                        assert_eq!(
+                            serde_json::to_value(preview_settings(
+                                &resolved,
+                                source_rate,
+                                encoding
+                            ))
+                            .unwrap(),
+                            serde_json::to_value(resolved).unwrap(),
+                            "resolution must be idempotent on a rate rebuild"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    #[ignore = "muted native codec PCM route updates; set YES_MASTER_BENCH_MUTE and YES_MASTER_CODEC_REPORT"]
+    fn mastering_quality_codec_native_routes() {
+        use super::super::{
+            handle_play_master, process_audio_command, AudioCommand, AudioThreadState,
+        };
+        use std::sync::{atomic::AtomicU64, Mutex, RwLock};
+        assert!(std::env::var_os("YES_MASTER_BENCH_MUTE").is_some());
+        let report = std::path::PathBuf::from(std::env::var("YES_MASTER_CODEC_REPORT").unwrap());
+        assert!(!report.exists());
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("codec-route.wav");
+        let mut writer = hound::WavWriter::create(
+            &path,
+            hound::WavSpec {
+                channels: 2,
+                sample_rate: 96000,
+                bits_per_sample: 32,
+                sample_format: hound::SampleFormat::Float,
+            },
+        )
+        .unwrap();
+        for i in 0..96000 * 4 {
+            let sample = 0.05 * (i as f32 * 0.13).sin();
+            writer.write_sample(sample).unwrap();
+            writer.write_sample(-sample).unwrap();
+        }
+        writer.finalize().unwrap();
+        let selected = Arc::new(RwLock::new(None));
+        let prewarm = Arc::new(Mutex::new(None));
+        let epoch = Arc::new(AtomicU64::new(1));
+        let profiles = Arc::new(crate::profile_store::SourceProfileStore::default());
+        let (tx, _) = std::sync::mpsc::channel();
+        let mut state: Option<AudioThreadState> = None;
+        let mut loop_region = None;
+        let mut settings = super::super::tests::settings_with_intensity(0.75);
+        settings.delivery_profile = DeliveryProfile::Custom;
+        settings.advanced.target_sample_rate = Some(96000);
+        settings.advanced.bit_depth = Some(32);
+        handle_play_master(
+            &mut state,
+            &mut loop_region,
+            crate::types::TrackId("codec-route".into()),
+            &path,
+            &settings,
+            0.1,
+            false,
+            false,
+            false,
+            ExportEncoding::Wav,
+            &selected,
+            &prewarm,
+            &epoch,
+            1,
+            &tx,
+            &profiles,
+        )
+        .unwrap();
+        let mut rows = Vec::new();
+        for encoding in [
+            ExportEncoding::Mp3 { bitrate_kbps: 320 },
+            ExportEncoding::Flac,
+            ExportEncoding::M4a { bitrate_kbps: 256 },
+            ExportEncoding::Aac { bitrate_kbps: 192 },
+            ExportEncoding::Ogg { quality: 6 },
+            ExportEncoding::Aiff,
+            ExportEncoding::Wav,
+        ] {
+            let start = std::time::Instant::now();
+            assert!(!process_audio_command(
+                AudioCommand::UpdateChain {
+                    settings: settings.clone(),
+                    preview_lufs_landing: false,
+                    album: false,
+                    encoding
+                },
+                &mut state,
+                &mut loop_region,
+                &selected,
+                &prewarm,
+                &epoch,
+                &tx,
+                &profiles
+            ));
+            let state = state.as_ref().unwrap();
+            assert_eq!(state.live_file_rate, encoding.delivery_rate(96000));
+            assert!(!state.sink.is_paused());
+            assert!(state.playback_error.is_none());
+            while state.peak_linear.load(Ordering::Acquire) == 0 {
+                assert!(start.elapsed() < std::time::Duration::from_secs(2));
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+            assert!(!state.stream_failed.load(Ordering::Acquire));
+            assert_eq!(
+                state
+                    .source_failure
+                    .as_ref()
+                    .unwrap()
+                    .load(Ordering::Acquire),
+                0
+            );
+            rows.push(serde_json::json!({"encoding":encoding,"file_rate":state.live_file_rate,
+                "device_rate":state._output_config.sample_rate().0,"observed_s":start.elapsed().as_secs_f64()}));
+        }
+        state.as_ref().unwrap().sink.stop();
+        std::fs::write(report,serde_json::to_vec_pretty(&serde_json::json!({"status":"complete","rows":rows,
+            "scope":"actual native play/update handlers with synthetic 96 kHz source, test-only mute; pre-encode PCM rate selection, no codec-decode or listening proof"})).unwrap()).unwrap();
+    }
 
     #[test]
     fn format_fallback_records_the_successful_configuration() {

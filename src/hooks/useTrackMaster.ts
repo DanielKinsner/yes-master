@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open, save, getCurrentWebview } from "../lib/tauri-runtime";
 import { rememberView, rememberedView } from "../lib/view-by-track";
-import { EXPORT_FORMATS, ensureExportExtension, exportEncoding, exportApiArgs, type ExportFormat } from "../lib/export-formats";
+import { EXPORT_FORMATS, ensureExportExtension, exportEncoding, exportApiArgs, previewEncodingArgs, type ExportEncoding, type ExportFormat } from "../lib/export-formats";
 import {
   ADAPTIVE_COMPRESSION_GATE_EVENT,
   api,
@@ -443,6 +443,8 @@ export function useTrackMaster() {
   const [mp3Bitrate,setMp3Bitrate] = useState(320);
   const [aacBitrate,setAacBitrate] = useState(256);
   const [vorbisQuality,setVorbisQuality] = useState(6);
+  const previewEncoding = useMemo(() => exportEncoding(exportFormat, exportFormat === "mp3" ? mp3Bitrate : aacBitrate, vorbisQuality),
+    [exportFormat,mp3Bitrate,aacBitrate,vorbisQuality]);
   const [landingPending, setLandingPending] = useState(false);
   // Real analysis progress from the backend's "analysis:progress" events
   // (actual phase boundaries). Queued tracks wait at zero until their first
@@ -632,6 +634,7 @@ export function useTrackMaster() {
     settings: MasteringSettings;
     preview: boolean;
     album: boolean;
+    encoding: ExportEncoding;
   } | null>(null);
   const updateChainRafScheduled = useRef(false);
   const lastPlaybackTickRef = useRef<{
@@ -656,6 +659,7 @@ export function useTrackMaster() {
         settings,
         preview,
         album: mode === "album",
+        encoding: previewEncoding,
       };
       const drain = () => {
         const next = updateChainPending.current;
@@ -666,7 +670,7 @@ export function useTrackMaster() {
         updateChainPending.current = null;
         updateChainInFlight.current = true;
         api
-          .updateChain(next.settings, next.preview, next.album)
+          .updateChain(next.settings, next.preview, next.album, ...previewEncodingArgs(next.encoding))
           .then(() => {
             drain();
           })
@@ -692,7 +696,7 @@ export function useTrackMaster() {
         setTimeout(scheduleDrain, 16);
       }
     },
-    [mode],
+    [mode,previewEncoding],
   );
 
   useEffect(() => {
@@ -2312,6 +2316,7 @@ export function useTrackMaster() {
             // B2: album mode is non-adaptive. The backend caches this and reuses
             // it for the settings-only update_chain dispatches that follow.
             mode === "album",
+            ...previewEncodingArgs(previewEncoding),
           );
         } catch (err) {
           throw new Error(playbackErrorMessage(err, kind));
@@ -2329,6 +2334,7 @@ export function useTrackMaster() {
       withSourceLufs,
       mode,
       effectivePreviewLanding,
+      previewEncoding,
     ],
   );
 
@@ -2758,6 +2764,17 @@ export function useTrackMaster() {
     ],
   );
 
+  const previousPreviewEncoding = useRef(previewEncoding);
+  useEffect(() => {
+    if (previousPreviewEncoding.current === previewEncoding) return;
+    previousPreviewEncoding.current = previewEncoding;
+    if (shouldPushLiveChainForSettingsEdit({trackId:selectedTrackId,
+      editingAlbumIntent:mode === "album" && !selectedIsOverriding, loadedTrackId, loadedKindByTrack, overrideAlbum})) {
+      sendUpdateChain(withSourceLufs(selectedTrackId,selectedSettings),effectivePreviewLanding());
+    }
+  },[previewEncoding,selectedTrackId,mode,selectedIsOverriding,loadedTrackId,loadedKindByTrack,overrideAlbum,
+    sendUpdateChain,withSourceLufs,selectedSettings,effectivePreviewLanding]);
+
   useEffect(() => {
     const enabled=transport.exportLufsPreview || (forceWysiwyg && !transport.volumeMatch);
     if (!enabled || !selectedTrack || !selectedAnalysis || !api.preparePreviewLevel) {
@@ -2768,7 +2785,7 @@ export function useTrackMaster() {
     const requestId=`preview-${Date.now()}-${Math.random()}`;
     setPreviewPreparing(true);
     const timer=setTimeout(() => {
-      void api.preparePreviewLevel(requestId,selectedTrack.id,selectedTrack.path,selectedSettings,mode === "album")
+      void api.preparePreviewLevel(requestId,selectedTrack.id,selectedTrack.path,selectedSettings,mode === "album",...previewEncodingArgs(previewEncoding))
         .catch(err => { if(active) console.warn("Preview level preparation failed",err); })
         .finally(() => { if(active) setPreviewPreparing(false); });
     },180);
@@ -2776,7 +2793,7 @@ export function useTrackMaster() {
       active=false; clearTimeout(timer);
       void api.cancelPreviewPreparation?.(requestId).catch(() => {});
     };
-  },[selectedTrack?.id,selectedTrack?.path,selectedAnalysis,selectedSettings,mode,transport.exportLufsPreview,transport.volumeMatch,forceWysiwyg]);
+  },[selectedTrack?.id,selectedTrack?.path,selectedAnalysis,selectedSettings,mode,transport.exportLufsPreview,transport.volumeMatch,forceWysiwyg,previewEncoding]);
 
   const clearError = useCallback(() => setError(null), []);
   const clearProjectFeedback = useCallback(() => setProjectFeedback(null), []);

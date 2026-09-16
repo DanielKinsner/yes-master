@@ -38,6 +38,11 @@ export function exportEncoding(format: ExportFormat, bitrate = format === "mp3" 
 export function exportApiArgs(encoding: ExportEncoding): [number?, ExportEncoding?] {
   return encoding.format === "wav" ? [] : encoding.format === "mp3" ? [encoding.bitrate_kbps] : [undefined, encoding];
 }
+// Missing preview encoding remains WAV for existing callers. Pass the explicit
+// format for all other previews; the backend owns rate/precision resolution.
+export function previewEncodingArgs(encoding: ExportEncoding): [] | [ExportEncoding] {
+  return encoding.format === "wav" ? [] : [encoding];
+}
 export function ensureExportExtension(path: string, format: ExportFormat): string {
   return path.replace(/\.(wav|mp3|flac|m4a|aac|ogg|aif|aiff)$/i, "") + `.${EXPORT_FORMATS[format].extension}`;
 }

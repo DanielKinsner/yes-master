@@ -1,3 +1,4 @@
+use crate::export_format::ExportEncoding;
 use crate::types::*;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, AtomicU8, Ordering};
@@ -129,6 +130,7 @@ pub async fn set_audio_output_device(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // Keep the existing flat IPC arguments compatible.
 pub async fn play_master(
     track_id: TrackId,
     track_path: String,
@@ -136,6 +138,7 @@ pub async fn play_master(
     start_position_sec: Option<f64>,
     preview_lufs_landing: Option<bool>,
     album: Option<bool>,
+    encoding: Option<ExportEncoding>,
     player: tauri::State<'_, Arc<AudioPlayer>>,
 ) -> CommandResult<()> {
     if track_path.is_empty() {
@@ -147,7 +150,7 @@ pub async fn play_master(
             "path traversal not allowed: {track_path}"
         )));
     }
-    player.play_master(
+    player.play_master_encoded(
         track_id,
         path,
         settings,
@@ -155,6 +158,7 @@ pub async fn play_master(
         preview_lufs_landing.unwrap_or(true),
         // B2: album mode is non-adaptive; default false when the FE omits it.
         album.unwrap_or(false),
+        encoding.unwrap_or_default(),
     )
 }
 
@@ -163,12 +167,14 @@ pub async fn update_chain(
     settings: MasteringSettings,
     preview_lufs_landing: Option<bool>,
     album: Option<bool>,
+    encoding: Option<ExportEncoding>,
     player: tauri::State<'_, Arc<AudioPlayer>>,
 ) -> CommandResult<()> {
-    player.update_chain(
+    player.update_chain_encoded(
         settings,
         preview_lufs_landing.unwrap_or(true),
         album.unwrap_or(false),
+        encoding.unwrap_or_default(),
     )
 }
 
@@ -195,6 +201,7 @@ struct PreparedPreview {
         Option<std::time::SystemTime>,
         MasteringSettings,
         f32,
+        u32,
     )>,
 }
 
@@ -222,15 +229,19 @@ pub fn cancel_preview_preparation(request_id: String) {
 /// Prepare only the selected, analyzed track. Shares the live measurement
 /// budget, never loads a sink or changes playback, and drops obsolete results.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // Includes injected Tauri state and optional encoding.
 pub async fn prepare_preview_level(
     request_id: String,
     track_id: TrackId,
     track_path: String,
     mut settings: MasteringSettings,
     album: bool,
+    encoding: Option<ExportEncoding>,
     player: tauri::State<'_, Arc<AudioPlayer>>,
     profile_store: tauri::State<'_, Arc<crate::profile_store::SourceProfileStore>>,
 ) -> CommandResult<()> {
+    let encoding = encoding.unwrap_or_default();
+    encoding.validate()?;
     let path = std::path::PathBuf::from(&track_path);
     if track_path.is_empty() || crate::files::has_parent_dir_component(&path) {
         return Err(CommandError::InvalidPath(track_path));
@@ -262,10 +273,13 @@ pub async fn prepare_preview_level(
         cache.cancelled.store(true, Ordering::Relaxed);
         cache.cancelled = cancelled.clone();
         cache.request = request_id.clone();
-        if let Some((cached_path, cached_mtime, cached_settings, _)) = &cache.result {
+        if let Some((cached_path, cached_mtime, cached_settings, _, source_rate)) = &cache.result {
             if *cached_path == canonical
                 && *cached_mtime == mtime
-                && matching_landing_settings(cached_settings, &settings)
+                && matching_landing_settings(
+                    cached_settings,
+                    &output_route::preview_settings(&settings, *source_rate, encoding),
+                )
             {
                 return Ok(());
             }
@@ -286,10 +300,15 @@ pub async fn prepare_preview_level(
         // A live worker may have completed this same measurement while we
         // waited for its permit. Reuse it rather than rendering the track twice.
         if let Ok(cache) = prepared_preview().lock() {
-            if let Some((cached_path, cached_mtime, cached_settings, _)) = &cache.result {
+            if let Some((cached_path, cached_mtime, cached_settings, _, source_rate)) =
+                &cache.result
+            {
                 if *cached_path == canonical
                     && *cached_mtime == mtime
-                    && matching_landing_settings(cached_settings, &settings)
+                    && matching_landing_settings(
+                        cached_settings,
+                        &output_route::preview_settings(&settings, *source_rate, encoding),
+                    )
                 {
                     return Ok(());
                 }
@@ -309,6 +328,7 @@ pub async fn prepare_preview_level(
         if cancelled.load(Ordering::Relaxed) {
             return Ok(());
         }
+        let settings = output_route::preview_settings(&settings, pcm.sample_rate, encoding);
         let measured = preparation_cache::measure(&pcm, &settings, &cancelled);
         if cancelled.load(Ordering::Relaxed) {
             return Ok(());
@@ -323,7 +343,7 @@ pub async fn prepare_preview_level(
             .lock()
             .map_err(|e| CommandError::Other(e.to_string()))?;
         if cache.request == request_id && !cancelled.load(Ordering::Relaxed) {
-            cache.result = Some((canonical, mtime, settings, gain));
+            cache.result = Some((canonical, mtime, settings, gain, pcm.sample_rate));
         }
         Ok(())
     })
@@ -343,7 +363,7 @@ fn seed_prepared_preview(s: &mut AudioThreadState, settings: &MasteringSettings)
     let Ok(cache) = prepared_preview().try_lock() else {
         return;
     };
-    if let Some((path, mtime, cached_settings, gain)) = &cache.result {
+    if let Some((path, mtime, cached_settings, gain, _)) = &cache.result {
         if *path == entry.canonical_path
             && *mtime == entry.mtime
             && matching_landing_settings(cached_settings, settings)
@@ -514,6 +534,7 @@ enum AudioCommand {
         /// profile resolution and caches `live_album` for the subsequent
         /// settings-only `update_chain` dispatches.
         album: bool,
+        encoding: ExportEncoding,
         reply: Sender<Result<(), String>>,
     },
     UpdateChain {
@@ -524,6 +545,7 @@ enum AudioCommand {
         /// (album stays byte-flat / non-adaptive; track stays adaptive) instead
         /// of reusing the flag cached at the last `play_master`.
         album: bool,
+        encoding: ExportEncoding,
     },
     PreviewLandingReady {
         /// Captured at worker spawn time. Rejected by the audio thread if
@@ -1075,6 +1097,29 @@ impl AudioPlayer {
         preview_lufs_landing: bool,
         album: bool,
     ) -> CommandResult<()> {
+        self.play_master_encoded(
+            track_id,
+            path,
+            settings,
+            start_position_sec,
+            preview_lufs_landing,
+            album,
+            ExportEncoding::Wav,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn play_master_encoded(
+        &self,
+        track_id: TrackId,
+        path: &Path,
+        settings: MasteringSettings,
+        start_position_sec: f64,
+        preview_lufs_landing: bool,
+        album: bool,
+        encoding: ExportEncoding,
+    ) -> CommandResult<()> {
+        encoding.validate()?;
         let (reply_tx, reply_rx) = mpsc::channel();
         let request_epoch = issue_play_request_epoch(&self.play_request_epoch);
         let volume_match = settings.volume_match;
@@ -1086,6 +1131,7 @@ impl AudioPlayer {
             start_position_sec: start_position_sec.max(0.0),
             preview_lufs_landing,
             album,
+            encoding,
             reply: reply_tx,
         })
         .map_err(CommandError::Other)?;
@@ -1159,10 +1205,22 @@ impl AudioPlayer {
         preview_lufs_landing: bool,
         album: bool,
     ) -> CommandResult<()> {
+        self.update_chain_encoded(settings, preview_lufs_landing, album, ExportEncoding::Wav)
+    }
+
+    pub fn update_chain_encoded(
+        &self,
+        settings: MasteringSettings,
+        preview_lufs_landing: bool,
+        album: bool,
+        encoding: ExportEncoding,
+    ) -> CommandResult<()> {
+        encoding.validate()?;
         self.send(AudioCommand::UpdateChain {
             settings,
             preview_lufs_landing,
             album,
+            encoding,
         })
         .map_err(CommandError::Other)
     }
@@ -2006,7 +2064,13 @@ fn try_spawn_lufs_preview_worker(
                 if let Some(gain) = gain {
                     if !cancelled.load(Ordering::Relaxed) {
                         if let Ok(mut cache) = prepared_preview().lock() {
-                            cache.result = Some((canonical_path, mtime, settings.clone(), gain));
+                            cache.result = Some((
+                                canonical_path,
+                                mtime,
+                                settings.clone(),
+                                gain,
+                                pcm.sample_rate,
+                            ));
                         }
                     }
                 }
@@ -2335,6 +2399,7 @@ fn process_audio_command(
             start_position_sec,
             preview_lufs_landing,
             album,
+            encoding,
             reply,
         } => {
             let outcome =
@@ -2349,6 +2414,7 @@ fn process_audio_command(
                         preview_lufs_landing,
                         album,
                         false,
+                        encoding,
                         selected_output_device_name,
                         prewarm_cache,
                         play_request_epoch,
@@ -2363,7 +2429,11 @@ fn process_audio_command(
             mut settings,
             preview_lufs_landing,
             album,
+            encoding,
         } => {
+            if let Some(s) = state.as_ref() {
+                settings = output_route::preview_settings(&settings, s.live_sample_rate, encoding);
+            }
             // Converters have a fixed rate. Rebuild from the cached PCM with
             // the same playhead/fade rules; never briefly resume a paused edit.
             let rate_edit = state.as_ref().and_then(|s| {
@@ -2391,6 +2461,7 @@ fn process_audio_command(
                     preview_lufs_landing,
                     album,
                     paused,
+                    encoding,
                     selected_output_device_name,
                     prewarm_cache,
                     play_request_epoch,
@@ -3117,6 +3188,7 @@ fn handle_play_master(
     preview_lufs_landing: bool,
     album: bool,
     paused: bool,
+    encoding: ExportEncoding,
     selected_output_device_name: &Arc<RwLock<Option<String>>>,
     prewarm_cache: &SharedDecodedCache,
     play_request_epoch: &AtomicU64,
@@ -3158,6 +3230,9 @@ fn handle_play_master(
         .and_then(|m| m.modified().ok());
     let pcm = resolve_pcm_with_caches(state.as_ref(), prewarm_cache, path, &canonical, mtime)?;
     ensure_play_request_current(play_request_epoch, request_epoch)?;
+
+    let settings = output_route::preview_settings(settings, pcm.sample_rate, encoding);
+    let settings = &settings;
 
     // Cache invalidation: clear the landing-gain cache when canonical
     // path OR mtime differs from the prior decoded cache entry. Same-
@@ -4760,6 +4835,7 @@ mod tests {
             start_position_sec: 0.0,
             preview_lufs_landing: true,
             album: false,
+            encoding: ExportEncoding::Wav,
             reply,
         }
     }
@@ -4788,6 +4864,7 @@ mod tests {
             settings: settings_with_intensity(intensity),
             preview_lufs_landing: preview,
             album: false,
+            encoding: ExportEncoding::Wav,
         }
     }
 

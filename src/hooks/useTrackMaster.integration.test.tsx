@@ -4930,6 +4930,29 @@ describe("listening follow-through", () => {
     await act(async()=>harness.root.unmount());
   });
 
+  it("keeps requested settings while format changes replace preview preparation and update the loaded master", async () => {
+    const track=makeTrack("codec-preview","C:/audio/codec-preview.wav");
+    mocks.api.importTracks.mockResolvedValue([track]);
+    const harness=await renderHookHarness();
+    await act(async()=>{await harness.current().importFiles([track.path]);});
+    await act(async()=>harness.current().setExportLufsPreview(true));
+    await waitFor(()=>expect(mocks.api.preparePreviewLevel).toHaveBeenCalled());
+    const originalRequest=mocks.api.preparePreviewLevel.mock.calls.at(-1)![0];
+    const settingsBefore=JSON.stringify(harness.current().selectedSettings);
+    await act(async()=>harness.current().exportEncoding.onFormat("mp3"));
+    await waitFor(()=>expect(mocks.api.preparePreviewLevel.mock.calls.at(-1)?.[5]).toEqual({format:"mp3",bitrate_kbps:320}));
+    expect(mocks.api.cancelPreviewPreparation).toHaveBeenCalledWith(originalRequest);
+    await act(async()=>{await harness.current().setPlaybackKind("master");});
+    await act(async()=>{await harness.current().togglePlay();});
+    expect(mocks.api.playMaster.mock.calls.at(-1)?.[6]).toEqual({format:"mp3",bitrate_kbps:320});
+    mocks.api.updateChain.mockClear();
+    await act(async()=>harness.current().exportEncoding.onFormat("m4a"));
+    await waitFor(()=>expect(mocks.api.updateChain.mock.calls.at(-1)?.[3]).toEqual({format:"m4a",bitrate_kbps:256}));
+    expect(JSON.stringify(harness.current().selectedSettings)).toBe(settingsBefore);
+    expect(harness.current().exportEncoding.format).toBe("m4a");
+    await act(async()=>harness.root.unmount());
+  });
+
   it("prepares only the selected ready track when Preview LUFS is enabled, cancelling obsolete work", async () => {
     const tracks=[makeTrack("a","/in/a.wav"),makeTrack("b","/in/b.wav")];
     mocks.api.importTracks.mockResolvedValue(tracks);
