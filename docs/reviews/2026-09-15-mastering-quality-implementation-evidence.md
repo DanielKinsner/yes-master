@@ -1,8 +1,16 @@
 # Mastering quality implementation evidence
 
+> **September 16 follow-through:** owner approval supersedes the historical
+> review freeze below. The [selective integration](2026-09-16-mastering-fixes-integration.md)
+> verifies the production fixes for local main and records exact selected-source,
+> fresh whole-output, fixture, bridge, UI, native and package evidence. Experiments
+> resume on a separate branch after that integration. Sonic choices, broader B3
+> boundaries, current Realtek endpoint failure and release gates remain open.
+
 Started September 15, 2026 on local `codex/mastering-quality`, from `7534f612`.
 The starting checkout was clean and the revised plan matched that commit.
-No push, main integration, publication, spending or private-audio commit is authorized.
+At kickoff no push, main integration, publication, spending or private-audio commit
+was authorized; subsequent local integration approval is recorded above.
 
 **September 16 review freeze:** Dan paused sound experiments to review the local
 fixes first, with possible beta inclusion. The code/research snapshot is `f88f042b`;

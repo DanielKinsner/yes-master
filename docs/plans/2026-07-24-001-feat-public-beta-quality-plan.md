@@ -21,8 +21,9 @@ deepened: 2026-07-24
 > **September 16 integration follow-through:** owner review has authorized the
 > tested fixes to enter local main, followed by sound research on a separate
 > branch. The [integration record](../reviews/2026-09-16-mastering-fixes-integration.md)
-> is current; the pause below is historical. Verification is in progress, with
-> no release/publication authorization or sonic-policy adoption.
+> is current; the pause below is historical. The selected result passes local
+> integration checks, with Realtek-specific, broader B3 and release limits
+> explicitly retained. No release/publication or sonic-policy adoption follows.
 
 > **September 16 owner sequencing:** local mastering correctness/playback/readout
 > changes are prepared for owner review at `f88f042b`; see the

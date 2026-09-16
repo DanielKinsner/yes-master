@@ -1,0 +1,447 @@
+[
+  {
+    "source": "afaf0a41dd31a20bd0739a957d3553d78e8e7f5d",
+    "selected": "c9e1c24a822999f4b392648c16697bc8cfd659ce",
+    "paths": [
+      "src/lib/beta-feedback-contract.test.ts"
+    ]
+  },
+  {
+    "source": "1d71f13905878b1f7a38e4dde98a12aabd8d3a59",
+    "selected": "f092cdadf7619cfd996c3f778f3c7c221fb3aa1c",
+    "paths": [
+      "src/App.compressor-mode.test.tsx",
+      "src/assets/landing/desktop-advanced-ui.png",
+      "src/assets/landing/desktop-album-ui.png",
+      "src/assets/landing/desktop-standard-ui.png",
+      "src/assets/landing/manifest.json",
+      "src/components/AdvancedPanel.tsx"
+    ]
+  },
+  {
+    "source": "c3ddb67bd4fbb5201b3529952628ff260c0805f8",
+    "selected": "bd1a393d021d2faf098ca40881353b1b040e0f77",
+    "paths": [
+      "src-tauri/src/guardrails.rs",
+      "src-tauri/src/sample_rate.rs",
+      "src/tryit/engine/sources.stamp.json",
+      "src/tryit/engine/yes_master_web_bg.wasm"
+    ]
+  },
+  {
+    "source": "21f9543d0b6495b145df587c0e9467876c292b9f",
+    "selected": "1725d5ecc5dad582874cec15233a3446c16df122",
+    "paths": [
+      "src-tauri/src/engine.rs",
+      "src-tauri/tests/audio_invariants.rs"
+    ]
+  },
+  {
+    "source": "791dcd303bb1984b0fb7a623520b8df86abea24b",
+    "selected": "2154940721bb1a184cf5df4caedab66316a82d13",
+    "paths": [
+      "src-tauri/src/engine.rs"
+    ]
+  },
+  {
+    "source": "7135a6ff2c0372151215c377de77ffc11a9ad446",
+    "selected": "820c6ad196e3253150d36d07fe81ce26a3afe078",
+    "paths": [
+      "src-tauri/src/guardrails.rs",
+      "src-tauri/tests/wire_shape.rs",
+      "src/App.compressor-mode.test.tsx",
+      "src/assets/landing/desktop-advanced-ui.png",
+      "src/assets/landing/desktop-album-ui.png",
+      "src/assets/landing/desktop-standard-ui.png",
+      "src/assets/landing/manifest.json",
+      "src/bindings-drift.test.ts",
+      "src/bindings.ts",
+      "src/components/AdvancedPanel.tsx",
+      "src/hooks/useTrackMaster.ts",
+      "src/tryit/engine/sources.stamp.json",
+      "src/tryit/engine/yes_master_web_bg.wasm",
+      "src/wire-samples.json"
+    ]
+  },
+  {
+    "source": "2c6f95b9e6e2f2b7891fbdec9df8d125a6351d36",
+    "selected": "27a0cdd0bca95c4650723a839c1bfa12374415e2",
+    "paths": [
+      "scripts/research/mastering-quality-implementation-20260915/check_witnesses.py",
+      "src-tauri/examples/mastering_quality_witness.rs"
+    ]
+  },
+  {
+    "source": "ce4ee2f66683a6866d656c413191e4678e96a502",
+    "selected": "f77d5b6ad3d6027926d5c7f365d0749dd12a9ecc",
+    "paths": [
+      "src-tauri/src/audio.rs",
+      "src-tauri/src/native_callback_bench.rs"
+    ]
+  },
+  {
+    "source": "a35af90f403f0b6de8e30c5b469b780bb809e86b",
+    "selected": "42bc9a21c7411e139672f8fbb4a8c104b7342679",
+    "paths": [
+      "scripts/research/mastering-quality-implementation-20260915/qualify_fft.py",
+      "scripts/research/mastering-quality-implementation-20260915/qualify_fir.py"
+    ]
+  },
+  {
+    "source": "9ff9aaa889b375015afd488f6f268ac75fcb0b82",
+    "selected": "14fc9fe4cbeef565b9d8064b349624d886cef8d7",
+    "paths": [
+      "src-tauri/src/audio.rs",
+      "src-tauri/src/native_callback_bench.rs"
+    ]
+  },
+  {
+    "source": "747dd756d98bf2a6c6ef7e13a9049e664b893def",
+    "selected": "fd36f0388068f53992fc7977e98312e819381153",
+    "paths": [
+      "scripts/research/mastering-quality-implementation-20260915/qualify_fft_bound.py"
+    ]
+  },
+  {
+    "source": "8d585e548e977b514e6e2d411b700beb021e0d80",
+    "selected": "0927b4cd3b228271ac5fe92d3a8f9ce8684dc34f",
+    "paths": [
+      "scripts/research/mastering-quality-implementation-20260915/check_native_peak_bounds.py",
+      "scripts/research/mastering-quality-implementation-20260915/check_reconstruction_edges.py",
+      "scripts/research/mastering-quality-implementation-20260915/ebu_phase_signals.py",
+      "scripts/research/mastering-quality-implementation-20260915/extract_soxr_kernel.py",
+      "scripts/research/mastering-quality-implementation-20260915/qualify_hybrid_peak.py",
+      "scripts/research/mastering-quality-implementation-20260915/qualify_peak_probe.py",
+      "scripts/research/mastering-quality-implementation-20260915/qualify_sinc_bound.py",
+      "scripts/research/mastering-quality-implementation-20260915/sinc_tail_moments.py",
+      "src-tauri/examples/mastering_quality_peak_probe.rs",
+      "src-tauri/examples/research/finite_peak.rs",
+      "src-tauri/examples/research/reconstruction_fir.rs",
+      "src-tauri/examples/research/tail_moments.rs"
+    ]
+  },
+  {
+    "source": "7203bf0da3119e93dc470abce5ccc8454ee559e7",
+    "selected": "f2a42d2ae2658318a70410315ec7b61643f4d842",
+    "paths": [
+      "scripts/research/mastering-quality-implementation-20260915/compare_peak_implementation.py",
+      "scripts/research/mastering-quality-implementation-20260915/peak_cost.py",
+      "src-tauri/Cargo.lock",
+      "src-tauri/Cargo.toml",
+      "src-tauri/examples/research/finite_peak.rs",
+      "src-tauri/examples/research/reconstruction_fir.rs"
+    ]
+  },
+  {
+    "source": "8603ddf8c73fedee44bd5fcf53e8cbb1fba2dbb8",
+    "selected": "1b671b1d4a8a4bedfd3eeb93cf2c006421db3b2b",
+    "paths": [
+      "src-tauri/Cargo.toml",
+      "src-tauri/examples/mastering_quality_meter_probe.rs",
+      "src-tauri/src/lib.rs",
+      "src-tauri/src/peak_meter/finite_peak.rs",
+      "src-tauri/src/peak_meter/mod.rs",
+      "src-tauri/src/peak_meter/pcm.rs",
+      "src-tauri/src/peak_meter/reconstruction_fir.rs",
+      "src-tauri/src/peak_meter/soxr16-provenance.json",
+      "src-tauri/src/peak_meter/soxr16.f64le",
+      "src-tauri/src/peak_meter/tail_moments.rs",
+      "src-tauri/src/wav_writer.rs"
+    ]
+  },
+  {
+    "source": "2ffce604619f94d28f84e013372c7546a4cb5646",
+    "selected": "9433cd7761b16a9ee1b3b93eb6d7e3b7f0a61d7b",
+    "paths": [
+      "apps/android-native/rust/Cargo.lock",
+      "apps/iphone-native/rust/Cargo.lock",
+      "scripts/research/mastering-quality-implementation-20260915/check_linear_reuse.py",
+      "scripts/research/mastering-quality-implementation-20260915/check_witnesses.py",
+      "src-tauri/examples/mastering_quality_linear_probe.rs",
+      "src-tauri/src/album_render.rs",
+      "src-tauri/src/engine.rs",
+      "src-tauri/src/lib.rs",
+      "src-tauri/src/output_protection.rs",
+      "src-tauri/src/peak_meter/mod.rs",
+      "src-tauri/src/peak_meter/reconstruction_fir.rs",
+      "src-tauri/src/wav_writer.rs",
+      "src-tauri/tests/album_render.rs",
+      "src-tauri/tests/audio_invariants.rs"
+    ]
+  },
+  {
+    "source": "370bdc3f67d9334192ac825af1329fb5135b9eca",
+    "selected": "0b1157be09f60a009cf6411709839e71957158c5",
+    "paths": [
+      "src-tauri/src/album_render.rs",
+      "src-tauri/src/output_protection.rs",
+      "src-tauri/src/peak_meter/pcm.rs",
+      "src-tauri/src/wav_writer.rs",
+      "src-tauri/tests/album_render.rs"
+    ]
+  },
+  {
+    "source": "ff94f2c47aaf0f2f255282330047b109ac2fa7e2",
+    "selected": "a101f18368fc53b1d366e5d8d17fc2687ef37cb2",
+    "paths": [
+      "src-tauri/src/dsp.rs",
+      "src/tryit/engine/sources.stamp.json",
+      "src/tryit/engine/yes_master_web_bg.wasm"
+    ]
+  },
+  {
+    "source": "9026e2bbb7638ccdf844bd1322ad5fad82d9a102",
+    "selected": "43c7b03d2977a682aa848c6ea2d0815195dd835f",
+    "paths": [
+      "src-tauri/src/audio.rs",
+      "src-tauri/src/audio/preparation_cache.rs",
+      "src-tauri/src/engine.rs",
+      "src-tauri/src/output_protection.rs"
+    ]
+  },
+  {
+    "source": "7834f4fa31d8eaa097555e219bf44cda4d32aca3",
+    "selected": "ec9d7436e16785737932f4500b3ad9587fe7977e",
+    "paths": [
+      "apps/android-native/rust/Cargo.lock",
+      "apps/iphone-native/rust/Cargo.lock",
+      "scripts/verify-app-headless.mjs",
+      "src-tauri/Cargo.lock",
+      "src-tauri/Cargo.toml",
+      "src-tauri/src/album_encoding.rs",
+      "src-tauri/src/album_render.rs",
+      "src-tauri/src/audio.rs",
+      "src-tauri/src/confidence.rs",
+      "src-tauri/src/engine.rs",
+      "src-tauri/src/export_encoding.rs",
+      "src-tauri/src/exports.rs",
+      "src-tauri/src/mp3.rs",
+      "src-tauri/tests/album_export_formats.rs",
+      "src-tauri/tests/mp3_export.rs",
+      "src-tauri/tests/project_hostile.rs",
+      "src-tauri/tests/wire_shape.rs",
+      "src/assets/landing/desktop-advanced-ui.png",
+      "src/assets/landing/desktop-album-ui.png",
+      "src/assets/landing/desktop-standard-ui.png",
+      "src/assets/landing/manifest.json",
+      "src/bindings-drift.test.ts",
+      "src/components/AlbumExportReceipt.test.tsx",
+      "src/components/AlbumExportReceipt.tsx",
+      "src/lib/api.ts",
+      "src/lib/preview-mock.ts",
+      "src/tryit/engine/sources.stamp.json",
+      "src/tryit/engine/yes_master_web_bg.wasm",
+      "src/wire-samples.json"
+    ]
+  },
+  {
+    "source": "7c28fbac142ced65515f99b87327b11aa78d9e35",
+    "selected": "7830c138af445e93eb253696e80323121bea7bb5",
+    "paths": [
+      "scripts/research/mastering-quality-implementation-20260915/check_codec_matrix.py",
+      "scripts/research/mastering-quality-implementation-20260915/recheck_codec_readback.py",
+      "src-tauri/examples/mastering_quality_codec_matrix.rs",
+      "src-tauri/examples/mastering_quality_codec_readback.rs"
+    ]
+  },
+  {
+    "source": "d3caa44567079570fb90467466f722279e0475a1",
+    "selected": "9aaa05a2fbd51773bbdbe67bbc2706e2f6cf9ee6",
+    "paths": [
+      "src-tauri/src/dsp.rs",
+      "src/tryit/engine/sources.stamp.json",
+      "src/tryit/engine/yes_master_web_bg.wasm"
+    ]
+  },
+  {
+    "source": "dc9529ff7f24768eb3b590a082fbdc3f37482c27",
+    "selected": "c30eca8b0fa328e8449eb6f6dd7d25dec19171bc",
+    "paths": [
+      "scripts/research/mastering-quality-implementation-20260915/check_live_rate_witness.py",
+      "src-tauri/src/audio.rs",
+      "src-tauri/src/audio/delivery_rate_probe.rs",
+      "src-tauri/src/lib.rs",
+      "src-tauri/src/native_callback_bench.rs",
+      "src-tauri/src/quality_source.rs",
+      "src-tauri/src/sources.rs",
+      "src-tauri/tests/realtime_meter.rs"
+    ]
+  },
+  {
+    "source": "e78fb80b1c30e70af677a0f846506d38ef11f98b",
+    "selected": "7540037f3b297598709f2be593ad63ba926d69e2",
+    "paths": [
+      "src-tauri/src/audio/delivery_rate_probe.rs",
+      "src-tauri/src/lib.rs",
+      "src-tauri/src/native_callback_bench.rs",
+      "src-tauri/src/sources.rs",
+      "src-tauri/src/test_allocations.rs"
+    ]
+  },
+  {
+    "source": "e0e7bdefdb1426a2647946548b81fe2695d2578d",
+    "selected": "751a57de620f2a2da7de3effdf25b434876bdb7a",
+    "paths": [
+      "src-tauri/src/audio.rs",
+      "src-tauri/src/audio/output_route.rs"
+    ]
+  },
+  {
+    "source": "4d1f0334a76978ec2f206f533575f426a6c94a56",
+    "selected": "c23939f13d0837b81ab6f0049c3f717d71e0fc2e",
+    "paths": [
+      "scripts/research/mastering-quality-implementation-20260915/verify_reference_padding.py"
+    ]
+  },
+  {
+    "source": "38ac955e565bce3b2acdd2e2d1fe30a5fbaecb96",
+    "selected": "cca1f20f682e7f910b79a716b050c0f9fe24450b",
+    "paths": [
+      "src-tauri/src/audio.rs",
+      "src-tauri/src/audio/output_route.rs",
+      "src-tauri/src/lib.rs",
+      "src-tauri/src/native_callback_bench.rs",
+      "src-tauri/src/quality_source.rs",
+      "src-tauri/src/sources.rs",
+      "src-tauri/src/types.rs",
+      "src-tauri/tests/wire_shape.rs",
+      "src/bindings.ts",
+      "src/hooks/useTrackMaster.integration.test.tsx",
+      "src/hooks/useTrackMaster.ts",
+      "src/tryit/engine/sources.stamp.json",
+      "src/tryit/engine/yes_master_web_bg.wasm",
+      "src/wire-samples.json"
+    ]
+  },
+  {
+    "source": "60aa0f6b8e7828c3d66ec604fef63b40682fa2b4",
+    "selected": "a811ae54fbece686fe4d1a613bb6149bb8f4aaee",
+    "paths": [
+      "scripts/research/mastering-quality-implementation-20260915/check_live_rate_witness.py",
+      "src-tauri/src/audio.rs",
+      "src-tauri/src/audio/delivery_rate_probe.rs",
+      "src-tauri/src/audio/output_route.rs",
+      "src-tauri/src/native_callback_bench.rs",
+      "src-tauri/src/quality_source.rs",
+      "src-tauri/src/sources.rs",
+      "src-tauri/tests/realtime_meter.rs"
+    ]
+  },
+  {
+    "source": "3fecbbe96d8a85b4d879a9bf1394c644a1db59b0",
+    "selected": "a16739261402df1f14d62639c157cb21d5960b70",
+    "paths": [
+      "src-tauri/src/audio.rs",
+      "src-tauri/src/audio/output_route.rs",
+      "src-tauri/src/audio/preparation_cache.rs",
+      "src/hooks/useTrackMaster.integration.test.tsx",
+      "src/hooks/useTrackMaster.ts",
+      "src/lib/api.ts",
+      "src/lib/export-formats.ts"
+    ]
+  },
+  {
+    "source": "3f08d249d0d9e7b105ece70a6e1ba3bc19e0a282",
+    "selected": "d23b6d21a3826ae0f5f2f9912bb8694901a5bedf",
+    "paths": [
+      "scripts/research/mastering-quality-implementation-20260915/check_pcm_experiment.py",
+      "src-tauri/src/dsp.rs",
+      "src-tauri/src/output_protection.rs",
+      "src-tauri/tests/audio_invariants.rs",
+      "src-tauri/tests/filter_precision.rs",
+      "src-tauri/tests/golden/preset_byte_identity/clarity.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/f32-feedback-20260915/README.md",
+      "src-tauri/tests/golden/preset_byte_identity/f32-feedback-20260915/clarity.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/f32-feedback-20260915/custom.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/f32-feedback-20260915/loud.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/f32-feedback-20260915/oomph.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/f32-feedback-20260915/punch.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/f32-feedback-20260915/spatial.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/f32-feedback-20260915/tape.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/f32-feedback-20260915/universal.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/f32-feedback-20260915/warmth.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/loud.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/oomph.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/punch.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/spatial.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/tape.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/universal.f32le",
+      "src-tauri/tests/golden/preset_byte_identity/warmth.f32le",
+      "src/tryit/engine/sources.stamp.json",
+      "src/tryit/engine/yes_master_web_bg.wasm"
+    ]
+  },
+  {
+    "source": "a68b398b8fd924170c789b1c45f5b4a64674d767",
+    "selected": "001c0c59f7f1889de4686ed603f2b3bdf6f47582",
+    "paths": [
+      "src-tauri/examples/mastering_quality_device_probe.rs"
+    ]
+  },
+  {
+    "source": "6f6d20e692b5a056a0ac0f9d91020011e52d3718",
+    "selected": "747ca98a2c976b220a09eab22541ee8d47344a34",
+    "paths": [
+      "src-tauri/src/audio.rs",
+      "src-tauri/src/audio/output_route.rs",
+      "src-tauri/src/native_callback_bench.rs",
+      "src-tauri/src/quality_source.rs",
+      "src-tauri/src/sources.rs"
+    ]
+  },
+  {
+    "source": "9ad90a103a64138c7ccfa263595ddffad8998ea3",
+    "selected": "d438a1f73f12efe1c2a49df06df049d7df93e115",
+    "paths": [
+      "src-tauri/examples/mastering_quality_device_plan.rs",
+      "src-tauri/src/device_preparation.rs",
+      "src-tauri/src/lib.rs",
+      "src-tauri/src/output_protection.rs",
+      "src-tauri/src/sample_rate.rs"
+    ]
+  },
+  {
+    "source": "9ebd2f81daa8d4173ee69f367bbb1f9d178aa088",
+    "selected": "690bdf0b82e8ca506b0c20e126a48eee36a3989c",
+    "paths": [
+      "scripts/research/mastering-quality-implementation-20260915/observe-native-test.ps1",
+      "src-tauri/src/audio.rs",
+      "src-tauri/src/audio/delivery_rate_probe.rs",
+      "src-tauri/src/audio/gain_stage.rs",
+      "src-tauri/src/audio/output_route.rs",
+      "src-tauri/src/audio/preparation_cache.rs",
+      "src-tauri/src/engine.rs",
+      "src-tauri/src/native_callback_bench.rs"
+    ]
+  },
+  {
+    "source": "09740a65de390ca3a6a345fdcd3849c3af1b2a7c",
+    "selected": "72ba7af2566538016388667798dc4141d8b82e13",
+    "paths": [
+      "scripts/research/mastering-quality-implementation-20260915/check_completed_device_rows.py",
+      "src-tauri/src/audio.rs",
+      "src-tauri/src/audio/delivery_rate_probe.rs",
+      "src-tauri/src/audio/gain_transition_probe.rs",
+      "src-tauri/src/audio/output_route.rs",
+      "src-tauri/src/audio/preparation_cache.rs",
+      "src-tauri/src/device_preparation.rs",
+      "src-tauri/src/engine.rs",
+      "src-tauri/src/output_protection.rs"
+    ]
+  },
+  {
+    "source": "22a1aada54d7230d9216cd6f4c0a4afb4043900d",
+    "selected": "f14c07eb5a9c526d02896f082ad37964c075e063",
+    "paths": [
+      "src-tauri/src/audio/gain_stage.rs",
+      "src-tauri/src/native_callback_bench.rs"
+    ]
+  },
+  {
+    "source": "e63064ea9be22f7ea7fdb94a6daefd6ac2f2fd21",
+    "selected": "481ac139467357017c3e8455499ea9ac80f966f5",
+    "paths": [
+      "scripts/research/mastering-quality-implementation-20260915/check_completed_device_rows.py"
+    ]
+  }
+]

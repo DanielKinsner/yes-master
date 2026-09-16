@@ -4,8 +4,15 @@
 > and testing the fixes, merging the verified selection into local main, then
 > resuming dynamic-range/quality research on a separate branch. See the
 > [integration record](reviews/2026-09-16-mastering-fixes-integration.md).
-> Work is on `codex/mastering-fixes-integration`; the original research branch
-> and evidence are preserved. Tests are in progress. The review pause below is
+> The selected result on `codex/mastering-fixes-integration` is verified for local
+> main: 897 frontend tests, 716 desktop tests including four private-fixture
+> checks, headless UI, both bridges and Windows packaging pass. Four fresh
+> whole-song device outputs match prior WAVs exactly and pass independent checks.
+> Native lifecycle and callback checks pass on the working monitor fallback;
+> the current default Realtek endpoint refuses stream opening and its cause
+> remains unresolved. The original research branch and evidence are preserved.
+> Resume experiments on `codex/mastering-dynamics-research` after local integration.
+> The review pause below is
 > superseded. No push, release, deployment, spending, private-audio commit or
 > automatic sonic-policy adoption is authorized by this direction.
 
