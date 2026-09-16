@@ -95,6 +95,122 @@ fn quantize_24_tpdf(sample: f32, rng: &mut DitherRng) -> i32 {
     scaled.clamp(-INT24_SCALE, INT24_PEAK_POS) as i32
 }
 
+/// Replay the exact PCM written by `write_samples_into_writer`, including its
+/// deterministic dither. Four bytes of PRNG state per 4096 frames replace a
+/// second track-sized quantized buffer. The source remains borrowed/immutable.
+pub struct DeliveryPcm<'a> {
+    samples: &'a [f32],
+    channels: usize,
+    bit_depth: u16,
+    seeds: Vec<u32>,
+}
+
+impl<'a> DeliveryPcm<'a> {
+    pub fn new(
+        samples: &'a [f32],
+        channels: u16,
+        bit_depth: u16,
+        cancelled: impl Fn() -> bool,
+    ) -> CommandResult<Self> {
+        let channels = usize::from(channels);
+        if channels == 0 || samples.len() % channels != 0 {
+            return Err(CommandError::Render("invalid delivery PCM layout".into()));
+        }
+        if !matches!(bit_depth, 16 | 24 | 32) {
+            return Err(CommandError::Other(format!(
+                "unsupported bit depth: {bit_depth}"
+            )));
+        }
+        let mut seeds = Vec::new();
+        if bit_depth != 32 {
+            seeds
+                .try_reserve_exact((samples.len() / channels).div_ceil(4096))
+                .map_err(|_| CommandError::Render("dither checkpoint allocation failed".into()))?;
+        }
+        let mut rng = DitherRng::new(0x000A_11CE);
+        if cancelled() {
+            return Err(CommandError::Render(
+                "delivery measurement cancelled".into(),
+            ));
+        }
+        for chunk in samples.chunks(4096 * channels) {
+            if cancelled() {
+                return Err(CommandError::Render(
+                    "delivery measurement cancelled".into(),
+                ));
+            }
+            if bit_depth != 32 {
+                seeds.push(rng.state);
+            }
+            for &sample in chunk {
+                if !sample.is_finite() {
+                    return Err(CommandError::Render("non-finite delivery PCM".into()));
+                }
+                if bit_depth != 32 {
+                    rng.tpdf_lsb();
+                }
+            }
+        }
+        Ok(Self {
+            samples,
+            channels,
+            bit_depth,
+            seeds,
+        })
+    }
+
+    pub fn checkpoint_bytes(&self) -> usize {
+        self.seeds.len() * std::mem::size_of::<u32>()
+    }
+}
+
+impl crate::peak_meter::pcm::PcmSource for DeliveryPcm<'_> {
+    fn frames(&self) -> usize {
+        self.samples.len() / self.channels
+    }
+    fn channels(&self) -> usize {
+        self.channels
+    }
+    fn read_channel(
+        &self,
+        channel: usize,
+        start: usize,
+        out: &mut [f64],
+    ) -> Result<(), &'static str> {
+        if channel >= self.channels || start > self.frames() || out.len() > self.frames() - start {
+            return Err("delivery PCM read out of range");
+        }
+        if out.is_empty() {
+            return Ok(());
+        }
+        if self.bit_depth == 32 {
+            for (i, value) in out.iter_mut().enumerate() {
+                *value = f64::from(self.samples[(start + i) * self.channels + channel]);
+            }
+        } else {
+            let mut rng = DitherRng::new(self.seeds[start / 4096]);
+            for _ in 0..(start % 4096) * self.channels {
+                rng.tpdf_lsb();
+            }
+            for (i, value) in out.iter_mut().enumerate() {
+                for c in 0..self.channels {
+                    if c == channel {
+                        let sample = self.samples[(start + i) * self.channels + c];
+                        *value = if self.bit_depth == 16 {
+                            f64::from(quantize_16_tpdf(sample, &mut rng)) / f64::from(INT16_SCALE)
+                        } else {
+                            f64::from(quantize_24_tpdf(sample, &mut rng)) / f64::from(INT24_SCALE)
+                        };
+                    } else {
+                        rng.tpdf_lsb();
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 pub(crate) fn wav_spec(
     channels: u16,
     sample_rate: u32,
@@ -436,9 +552,89 @@ fn write_wav_direct(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::peak_meter::pcm::PcmSource;
     use sha2::{Digest, Sha256};
     use std::collections::HashSet;
     use std::fs;
+
+    #[test]
+    fn delivery_replay_matches_written_pcm_at_arbitrary_read_boundaries() {
+        for channels in [1, 2] {
+            for bits in [16, 24, 32] {
+                let samples: Vec<_> = (0..8193 * channels)
+                    .map(|i| {
+                        if i % 7 == 0 {
+                            1e-6
+                        } else {
+                            (i as f32 * 0.217).sin() * 1.4
+                        }
+                    })
+                    .collect();
+                let dir = tempfile::tempdir().unwrap();
+                let path = write_wav(
+                    &dir.path().join("exact.wav"),
+                    &samples,
+                    48_000,
+                    channels as u16,
+                    bits,
+                )
+                .unwrap();
+                let mut reader = hound::WavReader::open(path).unwrap();
+                let decoded: Vec<f64> = match bits {
+                    16 => reader
+                        .samples::<i16>()
+                        .map(|v| f64::from(v.unwrap()) / 32768.)
+                        .collect(),
+                    24 => reader
+                        .samples::<i32>()
+                        .map(|v| f64::from(v.unwrap()) / 8388608.)
+                        .collect(),
+                    _ => reader
+                        .samples::<f32>()
+                        .map(|v| f64::from(v.unwrap()))
+                        .collect(),
+                };
+                let source = DeliveryPcm::new(&samples, channels as u16, bits, || false).unwrap();
+                assert_eq!(source.checkpoint_bytes(), if bits == 32 { 0 } else { 12 });
+                for channel in 0..channels {
+                    for chunk_size in [1, 257, 4096, 8193] {
+                        let mut got = vec![0.; 8193];
+                        for (i, chunk) in got.chunks_mut(chunk_size).enumerate() {
+                            source.read_channel(channel, i * chunk_size, chunk).unwrap();
+                        }
+                        for (frame, value) in got.iter().enumerate() {
+                            assert_eq!(
+                                *value,
+                                decoded[frame * channels + channel],
+                                "bits={bits} channel={channel} frame={frame}"
+                            );
+                        }
+                    }
+                }
+                let decoded_float: Vec<_> = decoded.iter().map(|v| *v as f32).collect();
+                let measured = crate::peak_meter::measure_source(&source, || false).unwrap();
+                let direct =
+                    crate::peak_meter::measure(&decoded_float, channels, || false).unwrap();
+                assert_eq!(
+                    serde_json::to_value(measured).unwrap(),
+                    serde_json::to_value(direct).unwrap()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn delivery_replay_rejects_bad_layout_nonfinite_and_cancellation() {
+        assert!(DeliveryPcm::new(&[0.], 0, 16, || false).is_err());
+        assert!(DeliveryPcm::new(&[0.], 2, 16, || false).is_err());
+        assert!(DeliveryPcm::new(&[0.], 1, 8, || false).is_err());
+        assert!(DeliveryPcm::new(&[], 1, 16, || true).is_err());
+        for sample in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            for bits in [16, 24, 32] {
+                assert!(DeliveryPcm::new(&[sample], 1, bits, || false).is_err());
+            }
+        }
+    }
 
     #[test]
     fn simultaneous_finalization_never_replaces_another_writer() {
