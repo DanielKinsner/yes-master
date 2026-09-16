@@ -80,7 +80,8 @@ def main():
                 sha256=row['sha256'],metrics=metrics,source_delta=delta,character_failures=failures,
                 lufs=row['lufs'],target_error_lu=row['lufs']+14,peak=row['peak'],metric_s=metric_s,
                 limiter_max_db=row['render']['limiter_max_db'],reused_validated_baseline=reused,
-                evaluation_s=row['render']['chain_s']+row['src_s']+row['finalize_s'])
+                evaluation_s=retained[row['id']]['evaluation_s'] if reused else
+                    row['render']['chain_s']+row['src_s']+row['finalize_s'])
             result['rows'].append(evaluated)
             checked[row['id']] = row['sha256']
             args.output.write_text(json.dumps(result,indent=2,allow_nan=False)+'\n',encoding='utf-8')
