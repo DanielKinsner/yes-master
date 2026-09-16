@@ -174,3 +174,16 @@ rows; its generic device-oriented filename does not make this an actual-device r
 all joined hashes/checks and locate gain-removed whole-delivery differences.
 The protocol/results explicitly separate fixed-duration export tails, complete
 exterior native ringout, full-song protection and still-open adoption gates.
+
+`prepare_small_signal.py` freezes the retained E job/control report and the
+low-drive protocol, including a 25 GiB post-output disk reserve. Build/copy
+`mastering_quality_small_signal`, then run `<job.json> <fresh-directory>`. It
+reproduces and reuses four exact current controls, retains eight new low-drive
+whole songs, and reports all numerical-convergence failures. Use
+`evaluate_small_signal.py` with the native report, original E metrics map and E
+baseline metrics to retain fixed anchors and reuse exact control measurements.
+The completed-output checker accepts explicit `--reuse-comparison` files for
+unchanged qualification scope; each reused row requires complete passing checks,
+identical WAV hash/format/frames/ceiling/native LUFS, and records original report
+provenance. Reuse is labeled and never reported as fresh independent measurement.
+See the separate low-drive protocol/results; this does not widen the C1 grid.

@@ -53,6 +53,12 @@
 > with actual-level analysis. Original versus normalized-source coefficients
 > match 24/24. No analysis policy, automatic sonic policy, control mapping or
 > unseen-holdout result is adopted.
+> A [low-drive diagnostic](reviews/2026-09-15-drive-small-signal-results.md)
+> retains four exact controls and eight new independently protected outputs.
+> Lower drive clears Piano's contrast failure but lands at -18.7 for a -14
+> request; Imaginal's attacks recover with a large miss and changed tone.
+> All four low-drive pairs fail the frozen numerical convergence limit, so no
+> linear reference or revised selection rule is claimed.
 > [Saturation calibration](reviews/2026-09-15-saturation-calibration-results.md)
 > retains isolated continuity/antialias comparisons, eight independently verified
 > native finite-filter cases and **16 independently passing whole-song outputs**.
