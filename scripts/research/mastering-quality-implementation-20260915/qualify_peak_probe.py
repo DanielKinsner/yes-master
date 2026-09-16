@@ -14,7 +14,7 @@ import numpy as np
 import soundfile as sf
 from qualify_fir import signals, ref
 from qualify_fft import finite_sinc_peak
-from check_candidates import channel_peaks
+from verification_common import channel_peaks
 
 
 def main():

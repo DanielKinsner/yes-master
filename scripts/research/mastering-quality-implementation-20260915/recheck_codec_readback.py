@@ -3,7 +3,7 @@ import argparse
 import copy
 import json
 from pathlib import Path
-from make_codec_inputs import sha
+from verification_common import sha
 
 
 def main():

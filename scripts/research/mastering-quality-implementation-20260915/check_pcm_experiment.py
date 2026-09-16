@@ -8,7 +8,7 @@ import time
 
 import numpy as np
 import soundfile as sf
-from evaluate_drive import sha
+from verification_common import sha
 
 
 def main():

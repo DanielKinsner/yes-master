@@ -15,8 +15,15 @@ import shutil
 import statistics
 import subprocess
 import time
-from run_bench import MemoryCounters
 from qualify_fir import ref
+
+
+class MemoryCounters(ctypes.Structure):
+    # Same Windows layout as the frozen run_bench helper; no drive-runner import.
+    _fields_ = [('cb', wintypes.DWORD), ('PageFaultCount', wintypes.DWORD)] + [
+        (name, ctypes.c_size_t) for name in ['PeakWorkingSetSize', 'WorkingSetSize',
+        'QuotaPeakPagedPoolUsage', 'QuotaPagedPoolUsage', 'QuotaPeakNonPagedPoolUsage',
+        'QuotaNonPagedPoolUsage', 'PagefileUsage', 'PeakPagefileUsage']]
 
 
 def main():

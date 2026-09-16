@@ -8,7 +8,7 @@ import subprocess
 import numpy as np
 import soundfile as sf
 
-from check_drive_finalists import sha
+from verification_common import sha
 
 
 def main():
