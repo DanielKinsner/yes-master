@@ -19,6 +19,9 @@ use std::{
 
 const MAX_ENTRIES: usize = 2;
 const PCM_BUDGET: usize = 192 * 1024 * 1024;
+// Source-rate raw PCM is now retained alongside changed-file-rate PCM so an
+// actual gain/SRC edit can be verified without rerunning nonlinear DSP.
+const FILE_PCM_BUDGET: usize = 288 * 1024 * 1024;
 
 pub(super) fn same_response(rate: u32, a: &MasteringSettings, b: &MasteringSettings) -> bool {
     if !settings_landing_values_are_finite(a) || !settings_landing_values_are_finite(b) {
@@ -139,7 +142,7 @@ impl<T: PcmBytes> Cache<T> {
 
 fn cache() -> &'static Mutex<Cache> {
     static CACHE: OnceLock<Mutex<Cache>> = OnceLock::new();
-    CACHE.get_or_init(|| Mutex::new(Cache::new(PCM_BUDGET)))
+    CACHE.get_or_init(|| Mutex::new(Cache::new(FILE_PCM_BUDGET)))
 }
 
 pub(super) fn measure(
@@ -153,6 +156,16 @@ pub(super) fn measure(
 pub(super) struct DeviceLanding {
     pub file_gain: f32,
     pub device_gain: f32,
+}
+
+/// Match the existing DSP landing shortcut exactly; the post-device correction
+/// also recovers a requested attenuation that this shortcut would skip.
+pub(super) fn applied_source_landing(gain: f32) -> f32 {
+    if (gain - 1.).abs() > 1e-4 {
+        gain
+    } else {
+        1.
+    }
 }
 
 pub(super) fn measure_for_device(
@@ -226,40 +239,35 @@ fn measure_device_with_cache(
     };
     let device_prepare_ms = started.elapsed().as_secs_f64() * 1000.;
     let started = Instant::now();
-    // Oversized buffers have never been shared or retained. Finish them in place
-    // instead of allocating an additional copy merely to bypass the cache.
-    let (file_result, retain_file) = if file.pcm_bytes() > file_budget {
-        let owned = Arc::try_unwrap(file).map_err(|_| {
-            CommandError::Other("oversized file response unexpectedly shared".into())
-        })?;
-        (owned.finish_owned(settings, Some(cancel))?, None)
-    } else {
-        (file.finish(settings, Some(cancel))?, Some(file))
-    };
+    // Keep source PCM alive until the actual landed/SRC response is built.
+    // Delivery's temporary file copy is released before conversion begins.
+    let file_result = file.finish(settings, Some(cancel))?;
     let file_verify_ms = started.elapsed().as_secs_f64() * 1000.;
     let started = Instant::now();
-    let (device_result, retain_device) = if device.pcm_bytes() > device_budget {
-        let owned = Arc::try_unwrap(device).map_err(|_| {
-            CommandError::Other("oversized device response unexpectedly shared".into())
-        })?;
-        (
-            owned.finish_owned(
-                file_result.gain_lin,
-                settings.effective_ceiling_dbtp(),
-                Some(cancel),
-            )?,
-            None,
-        )
+    let source_gain = applied_source_landing(file_result.gain_lin);
+    let desired_correction = if source_gain == 0. {
+        1.
     } else {
-        (
-            device.finish(
-                file_result.gain_lin,
-                settings.effective_ceiling_dbtp(),
-                Some(cancel),
-            )?,
-            Some(device),
-        )
+        file_result.gain_lin / source_gain
     };
+    let device_result = if source_gain == 1. {
+        device.finish(
+            desired_correction,
+            settings.effective_ceiling_dbtp(),
+            Some(cancel),
+        )?
+    } else {
+        let actual = file.device_pcm_with_landing(source_gain, device_rate, Some(cancel))?;
+        device.finish_converted_gain(
+            actual,
+            source_gain,
+            desired_correction,
+            settings.effective_ceiling_dbtp(),
+            Some(cancel),
+        )?
+    };
+    let retain_file = (file.pcm_bytes() <= file_budget).then_some(file);
+    let retain_device = (device.pcm_bytes() <= device_budget).then_some(device);
     let device_verify_ms = started.elapsed().as_secs_f64() * 1000.;
     if cancel.load(Ordering::Relaxed) {
         return Err(CommandError::Render("device preparation cancelled".into()));
@@ -413,15 +421,28 @@ mod tests {
             )
             .unwrap();
             let file = raw.finish(&settings, None).unwrap();
-            let device =
-                PreparedDevicePcm::new(raw.raw_pcm(), 96000, pcm.channels, rate, None).unwrap();
-            let direct = device
-                .finish(file.gain_lin, settings.effective_ceiling_dbtp(), None)
-                .unwrap();
+            let applied = applied_source_landing(file.gain_lin);
+            let desired = if applied == 0. {
+                1.
+            } else {
+                file.gain_lin / applied
+            };
+            let mut direct_pcm = raw.device_pcm_with_landing(applied, rate, None).unwrap();
+            let fresh =
+                crate::output_protection::prepare(&direct_pcm, rate, pcm.channels, None).unwrap();
+            let direct = crate::output_protection::finalize_prepared_device_gain(
+                &mut direct_pcm,
+                &fresh,
+                desired,
+                settings.effective_ceiling_dbtp(),
+                None,
+            )
+            .unwrap();
             assert_eq!(actual.file_gain.to_bits(), file.gain_lin.to_bits());
-            assert_eq!(
-                actual.device_gain.to_bits(),
-                direct.protection.gain_lin.to_bits()
+            assert!(actual.device_gain <= direct.gain_lin);
+            assert!(
+                20. * (direct.gain_lin / actual.device_gain).log10() <= 0.0011,
+                "reuse must not add more attenuation than its 0.001 dB residual reporting limit"
             );
             let file_cache = files.lock().unwrap();
             assert_eq!(file_cache.entries.len(), 1);

@@ -401,7 +401,11 @@ pub struct PreviewLanding {
 /// Owned raw response plus whole-file facts. Construction and delivery are
 /// worker-only; the audio thread receives only the resulting scalar plan.
 pub(crate) struct PreparedPreviewAudio {
-    samples: Vec<f32>,
+    samples: Arc<Vec<f32>>,
+    source_samples: Arc<Vec<f32>>,
+    source_rate: u32,
+    file_rate: u32,
+    channels: u16,
     measurements: crate::output_protection::PreparedMeasurements,
 }
 
@@ -411,7 +415,46 @@ impl PreparedPreviewAudio {
     }
 
     pub(crate) fn pcm_bytes(&self) -> usize {
-        self.samples.capacity() * std::mem::size_of::<f32>()
+        let source_bytes = if Arc::ptr_eq(&self.samples, &self.source_samples) {
+            0
+        } else {
+            self.source_samples.capacity() * std::mem::size_of::<f32>()
+        };
+        source_bytes + self.samples.capacity() * std::mem::size_of::<f32>()
+    }
+
+    /// Apply the existing source-rate landing rule and run both actual SRCs.
+    /// Raw DSP is reused; converter rounding is subsequently verified in full.
+    pub(crate) fn device_pcm_with_landing(
+        &self,
+        gain: f32,
+        device_rate: u32,
+        cancel: Option<&AtomicBool>,
+    ) -> CommandResult<Vec<f32>> {
+        check_preview_cancel(cancel)?;
+        let mut samples = self.source_samples.as_ref().clone();
+        for chunk in samples.chunks_mut(8192 * usize::from(self.channels)) {
+            check_preview_cancel(cancel)?;
+            for value in chunk {
+                *value *= gain;
+            }
+        }
+        for (from, to) in [
+            (self.source_rate, self.file_rate),
+            (self.file_rate, device_rate),
+        ] {
+            if from != to {
+                samples = crate::sample_rate::convert_interleaved_cancellable(
+                    &samples,
+                    from,
+                    to,
+                    self.channels,
+                    || cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)),
+                )?;
+            }
+        }
+        check_preview_cancel(cancel)?;
+        Ok(samples)
     }
 
     pub(crate) fn finish(
@@ -422,7 +465,7 @@ impl PreparedPreviewAudio {
         check_preview_cancel(cancel)?;
         // Keep the cached raw response immutable. The copy and every delivery
         // scan stay on the background worker, outside any cache lock.
-        let mut delivered = self.samples.clone();
+        let mut delivered = self.samples.as_ref().clone();
         let result = crate::output_protection::finalize_prepared(
             &mut delivered,
             &self.measurements,
@@ -438,12 +481,15 @@ impl PreparedPreviewAudio {
     }
 
     pub(crate) fn finish_owned(
-        mut self,
+        self,
         settings: &MasteringSettings,
         cancel: Option<&AtomicBool>,
     ) -> CommandResult<PreviewLanding> {
+        drop(self.source_samples);
+        let mut samples =
+            Arc::try_unwrap(self.samples).unwrap_or_else(|shared| shared.as_ref().clone());
         let result = crate::output_protection::finalize_prepared(
-            &mut self.samples,
+            &mut samples,
             &self.measurements,
             settings.effective_bit_depth(),
             settings.effective_target_lufs(),
@@ -467,11 +513,32 @@ pub(crate) fn prepare_preview_audio(
     check_preview_cancel(cancel)?;
     let mut render_settings = settings.clone();
     render_settings.volume_match = false;
-    let (samples, rate) =
-        render_preview_landing_window(samples, sample_rate, channels, &render_settings, cancel)?;
+    let source_samples = Arc::new(render_preview_source(
+        samples,
+        sample_rate,
+        channels,
+        &render_settings,
+        cancel,
+    )?);
+    let rate = settings.effective_sample_rate(sample_rate);
+    let samples = if rate == sample_rate {
+        source_samples.clone()
+    } else {
+        Arc::new(crate::sample_rate::convert_interleaved_cancellable(
+            &source_samples,
+            sample_rate,
+            rate,
+            channels,
+            || cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)),
+        )?)
+    };
     let measurements = crate::output_protection::prepare(&samples, rate, channels, cancel)?;
     Ok(PreparedPreviewAudio {
         samples,
+        source_samples,
+        source_rate: sample_rate,
+        file_rate: rate,
+        channels,
         measurements,
     })
 }
@@ -579,6 +646,23 @@ fn render_preview_landing_window(
     settings: &MasteringSettings,
     cancel: Option<&AtomicBool>,
 ) -> CommandResult<(Vec<f32>, u32)> {
+    let mut rendered = render_preview_source(samples, sample_rate, channels, settings, cancel)?;
+    let rendered_sample_rate = settings.effective_sample_rate(sample_rate);
+    if rendered_sample_rate != sample_rate {
+        check_preview_cancel(cancel)?;
+        rendered = convert_interleaved(&rendered, sample_rate, rendered_sample_rate, channels)?;
+    }
+    check_preview_cancel(cancel)?;
+    Ok((rendered, rendered_sample_rate))
+}
+
+fn render_preview_source(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    settings: &MasteringSettings,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<Vec<f32>> {
     let channels_usize = channels.max(1) as usize;
     // A quiet middle window cannot bound peaks or loudness elsewhere. This
     // runs on the landing worker; mirror export's processing and tail flush.
@@ -593,13 +677,8 @@ fn render_preview_landing_window(
     check_preview_cancel(cancel)?;
     chain.flush_render_tail(&mut rendered, channels_usize);
 
-    let rendered_sample_rate = settings.effective_sample_rate(sample_rate);
-    if rendered_sample_rate != sample_rate {
-        check_preview_cancel(cancel)?;
-        rendered = convert_interleaved(&rendered, sample_rate, rendered_sample_rate, channels)?;
-    }
     check_preview_cancel(cancel)?;
-    Ok((rendered, rendered_sample_rate))
+    Ok(rendered)
 }
 
 fn check_preview_cancel(cancel: Option<&AtomicBool>) -> CommandResult<()> {

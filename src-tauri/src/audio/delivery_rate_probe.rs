@@ -88,7 +88,7 @@ fn canonical_mastered_route_matches_finite_offline_cascade() {
                     let gain = 1.7;
                     let mut raw = samples.clone();
                     let mut chain = MasteringChain::new(rate, 2, &settings);
-                    chain.coeffs.export_landing_gain_lin = 1.;
+                    chain.coeffs.export_landing_gain_lin = gain;
                     chain.coeffs.volume_match_gain_lin = 1.;
                     chain.process_interleaved(&mut raw, 2);
                     chain.flush_render_tail(&mut raw, 2);
@@ -98,15 +98,15 @@ fn canonical_mastered_route_matches_finite_offline_cascade() {
                         crate::sample_rate::convert_interleaved(&file_pcm, file, device, 2)
                             .unwrap();
                     for sample in &mut expected {
-                        *sample *= gain;
+                        *sample *= 0.73;
                         *sample *= 0.37;
                     }
                     let (live, failure) = output_route::mastered_source(
-                        source(samples, rate, &settings, 1.),
+                        source(samples, rate, &settings, gain),
                         file,
                         device,
                         crate::sources::FadeEnvelope::inactive(),
-                        gains(gain, 0.37),
+                        gains(0.73, 0.37),
                     )
                     .unwrap();
                     let actual: Vec<f32> = live.collect();
@@ -122,6 +122,40 @@ fn canonical_mastered_route_matches_finite_offline_cascade() {
 }
 
 #[test]
+fn prepared_source_gain_matches_streaming_pcm_at_the_existing_small_gain_shortcut() {
+    for (rate, file, device) in [(44100, 96000, 48000), (48000, 48000, 44100)] {
+        let samples: Vec<f32> = (0..8193 * 2)
+            .map(|i| 0.3 * (i as f32 * 0.47).sin())
+            .collect();
+        let mut settings = tests::settings_with_intensity(0.75);
+        settings.advanced.target_sample_rate = Some(file);
+        settings.delivery_profile = DeliveryProfile::Custom;
+        let prepared =
+            crate::engine::prepare_preview_audio(&samples, rate, 2, &settings, None).unwrap();
+        for gain in [0., 0.5, 0.9999, 0.99999, 1., 1.00001, 1.0001, 2.] {
+            let applied = preparation_cache::applied_source_landing(gain);
+            let expected = prepared
+                .device_pcm_with_landing(applied, device, None)
+                .unwrap();
+            let (stream, failure) = output_route::mastered_source(
+                source(samples.clone(), rate, &settings, gain),
+                file,
+                device,
+                crate::sources::FadeEnvelope::inactive(),
+                gains(1., 1.),
+            )
+            .unwrap();
+            assert_eq!(
+                stream.collect::<Vec<_>>(),
+                expected,
+                "source gain {gain}: {rate}->{file}->{device}"
+            );
+            assert_eq!(failure.load(Ordering::Acquire), 0);
+        }
+    }
+}
+
+#[test]
 #[ignore = "full restored-source PCM comparison and peak check through production post-device gain; fresh manifest/report required"]
 fn mastering_quality_protected_device_whole_files() {
     let manifest = PathBuf::from(std::env::var("YES_MASTER_DEVICE_LIVE_INPUTS").unwrap());
@@ -132,7 +166,7 @@ fn mastering_quality_protected_device_whole_files() {
         serde_json::from_slice(&std::fs::read(&manifest).unwrap()).unwrap();
     let mut report = json!({"status":"running", "rows":[], "estimator":peak_meter::VERSION,
         "manifest_sha256":format!("{:x}",Sha256::digest(std::fs::read(manifest).unwrap())),
-        "scope":"whole original source, current production DSP -> file SRC -> device SRC -> verified gain -> meter, exact PCM equality to independently traversed prepared buffer; no opened device or listening claim"});
+        "scope":"whole original source, current compensated DSP -> file SRC -> device SRC -> verified correction -> meter, exact PCM equality to independently traversed prepared buffer; no opened device or listening claim"});
     for entry in entries {
         let path = Path::new(entry["source"].as_str().unwrap());
         assert_eq!(
@@ -164,13 +198,33 @@ fn mastering_quality_protected_device_whole_files() {
                 None,
             )
             .unwrap();
+            let applied_gain = preparation_cache::applied_source_landing(file.gain_lin);
+            let desired_correction = if applied_gain == 0. {
+                1.
+            } else {
+                file.gain_lin / applied_gain
+            };
+            let actual = prepared
+                .device_pcm_with_landing(applied_gain, rate, None)
+                .unwrap();
             let delivered = device
-                .finish(file.gain_lin, settings.effective_ceiling_dbtp(), None)
+                .finish_converted_gain(
+                    actual,
+                    applied_gain,
+                    desired_correction,
+                    settings.effective_ceiling_dbtp(),
+                    None,
+                )
                 .unwrap();
             let device_prepare_s = started.elapsed().as_secs_f64();
             let started = std::time::Instant::now();
             let (live, failure) = output_route::mastered_source(
-                source(pcm.samples.clone(), pcm.sample_rate, &settings, 1.),
+                source(
+                    pcm.samples.clone(),
+                    pcm.sample_rate,
+                    &settings,
+                    file.gain_lin,
+                ),
                 settings.effective_sample_rate(pcm.sample_rate),
                 rate,
                 crate::sources::FadeEnvelope::inactive(),
