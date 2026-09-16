@@ -29,6 +29,8 @@ pub mod sample_rate;
 pub mod settings;
 pub mod sources;
 pub mod spectrum;
+#[cfg(test)]
+mod test_allocations;
 pub mod types;
 pub mod wav_writer;
 

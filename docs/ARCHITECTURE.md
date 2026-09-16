@@ -60,6 +60,10 @@ playback coefficient generations. Same-source A/B switching reuses in-flight wor
 Live integrated metering uses bounded 0.1 LU histogram history and fixed batches;
 feed/reset allocate nothing. Export receipts measure delivered PCM with exact
 history. Album assembly streams delivered tracks into the continuous WAV.
+Original/Mastered sources share `OutputMeter`; seeking reuses both momentary
+and integrated meter storage. The [B3 device-rate candidate](reviews/2026-09-15-live-rate-verification.md)
+moves that meter after conversion, with complete-pipeline allocation/native
+checks. Its device-rate route remains test-only pending gain-plan integration.
 Signal-chain indicators use backend-resolved stage activity rather than copied
 frontend preset tables.
 

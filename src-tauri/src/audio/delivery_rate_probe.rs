@@ -3,6 +3,7 @@
 use super::*;
 use crate::{dsp::MasteringChain, export_format::ExportEncoding, peak_meter};
 use rodio::source::UniformSourceIterator;
+use rodio::Source as _;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 
@@ -225,6 +226,43 @@ fn mastering_quality_finite_live_gain_stages() {
                 )
                 .unwrap();
                 assert!(cap.true_peak_dbtp <= -1. + 1e-5);
+                // Audition the requested file-rate signal, then convert that
+                // same signal to the device, as an external file player does.
+                // Compare this route independently of direct source->device.
+                let mut file_rate =
+                    crate::sample_rate::convert_interleaved(&raw, rate, requested, 2).unwrap();
+                for sample in &mut file_rate {
+                    *sample *= landing.gain_lin;
+                }
+                let cascade_reference =
+                    crate::sample_rate::convert_interleaved(&file_rate, requested, device, 2)
+                        .unwrap();
+                let file_stream = crate::quality_source::QualitySource::new(
+                    source(samples.clone(), rate, &settings, 1.).with_render_alignment(),
+                    requested,
+                )
+                .unwrap()
+                .amplify(landing.gain_lin);
+                let cascade: Vec<f32> =
+                    crate::quality_source::QualitySource::new(file_stream, device)
+                        .unwrap()
+                        .collect();
+                assert_eq!(
+                    cascade, cascade_reference,
+                    "file-rate cascade differs from the rendered signal"
+                );
+                let mut cascade_capped = cascade.clone();
+                let cascade_cap = crate::output_protection::finalize(
+                    &mut cascade_capped,
+                    device,
+                    2,
+                    32,
+                    None,
+                    -1.,
+                    None,
+                )
+                .unwrap();
+                assert!(cascade_cap.true_peak_dbtp <= -1. + 1e-5);
                 let mut witnesses = json!(null);
                 if rate == 96000 && requested == 44100 && device == 48000 {
                     let folder = path.with_extension("witness");
@@ -233,12 +271,16 @@ fn mastering_quality_finite_live_gain_stages() {
                     witnesses = json!({"folder":folder,
                         "pre_sha256":write_witness(&folder.join("aligned-pre.wav"), &pre, device),
                         "post_sha256":write_witness(&folder.join("aligned-post.wav"), &post, device),
-                        "cap_sha256":write_witness(&folder.join("aligned-capped.wav"), &protected, device)});
+                        "cap_sha256":write_witness(&folder.join("aligned-capped.wav"), &protected, device),
+                        "cascade_sha256":write_witness(&folder.join("file-rate-cascade.wav"), &cascade, device),
+                        "cascade_capped_sha256":write_witness(&folder.join("file-rate-cascade-capped.wav"), &cascade_capped, device)});
                 }
                 rows.push(json!({"source_rate":rate,"frequency":frequency,"requested_rate":requested,
                     "device_rate":device,"export_gain":landing.gain_lin,"pre_src_gain":measured(&pre,device),
                     "post_src_gain":measured(&post,device),"capped":measured(&protected,device),
-                    "additional_device_cap_gain":cap.gain_lin,"witnesses":witnesses}));
+                    "additional_device_cap_gain":cap.gain_lin,"file_rate_cascade":measured(&cascade,device),
+                    "file_rate_cascade_capped":measured(&cascade_capped,device),
+                    "cascade_additional_gain":cascade_cap.gain_lin,"witnesses":witnesses}));
             }
         }
     }

@@ -124,6 +124,53 @@ playback route, so earlier full private-fixture/bridge evidence is not relabeled
 as proof of this unintegrated candidate. Production adoption still needs the
 affected fixture, bridge and native checks.
 
+## Shared output meters and canonical file-rate route
+
+Original/Mastered now share the same `OutputMeter` implementation. Both active
+sources reset existing momentary/integrated meter storage on seek; the previous
+momentary-meter reconstruction allocated a replacement buffer. The shared code
+preserves their current source-rate readings and Mono's single-channel LUFS sum.
+The test-only pipeline can move the meter slots out of either source, then run
+`MeteredSource` after conversion. It meters the actual emitted frames without
+also calculating the discarded source-rate meters, and applies the swap fade at
+the emitted rate.
+
+The 16 source tests include exact converted PCM/per-channel peaks and independent
+EBU integrated-loudness comparisons on mono/stereo 997 Hz/38.4 kHz inputs. A
+thread-local tracking allocator confirms **zero allocations through the complete
+MasteringSource → converter → output-meter first fill, seek and drain**. The
+first attempt to compile that check in an external integration test could not
+access library-test-only allocation fingerprints; it now runs in the correct
+library test context. The failed log remains, with no weakened runtime assertion.
+
+`b3-output-meter-native-v1.json` repeats the muted native candidate with its
+meters after SRC: **609 callbacks, zero deadline misses/device errors**, median/
+p95/max **0.0297/1.02148/1.5871 ms**, 0.7121 ms construction and a 10.61 ms first
+observed peak update. The driver still grants **480–1,056 frames**. This is
+loaded-machine evidence, not an isolated speedup comparison or full AudioPlayer
+lifecycle proof. `b3-output-meter-fixtures-v1.log` passes the complete desktop
+suite, including **485 library tests** and all **four enabled private-fixture
+tests**. Strict all-target Clippy passes (`b3-output-meter-clippy-v2.log`), as do
+the latest 16 source checks (`b3-output-meter-v4.log`). The converter route remains
+test-only; shared bridge contracts and preset/DSP coefficients are unchanged.
+
+The eight-case `b3-finite-gain-v2.json` also tests the canonical file-rate route:
+process/align → requested file SRC → export gain → device SRC. This reproduces
+the signal an external player receives and matches the corresponding offline
+conversion **sample-for-sample**. The worst retained direct-route mismatch changes
+from +1.35481 dBTP to **-1.12691 dBTP**; independent SOXR16/64 gives **-1.170554
+dBTP**. None of these eight cases needs additional device attenuation. Preserve
+`b3-finite-gain-v2-independent/comparison.json` and its hashes. This small matrix
+does not prove that arbitrary downstream conversion can never increase a peak.
+
+**Engineering recommendation:** audition the requested file-rate signal before
+device conversion, retain the actually opened device configuration, and validate/
+cache any additional device cap against that same signal. Direct source→device
+conversion with a gain derived from another rate cannot represent the export.
+Wider rate/codec/seek tests, rate-change invalidation, live scalar placement and
+matching readiness generations remain integration work. This route decision is
+independent of the unresolved automatic-drive sonic policy.
+
 Before production integration: retain the actually opened device configuration
 (including fallback), route both audition kinds consistently, meter the actual
 converted audio, reconcile requested/codec/device planning rates and obsolete

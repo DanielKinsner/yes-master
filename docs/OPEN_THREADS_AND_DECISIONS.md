@@ -45,6 +45,14 @@
 > survived/recovered after the restart. Expanded Coat/Piano finalists and controls
 > pass 25 independent whole-file checks, with target/character conflicts and Loud
 > fallbacks retained. Remaining original sources, quiet copies and holdout are open.
+> Shared playback meters now reuse their storage on seek. The post-conversion
+> candidate passes complete-pipeline allocation checks and 609 muted native
+> callbacks with no deadline misses; the full desktop/private-fixture suite passes.
+> A canonical file-rate stage also removes the retained direct-rate mismatch
+> without extra attenuation in the eight tested cases. Production route integration
+> remains open. Two bounded owner-track refinements improve the preserving
+> Universal-75 result to -9.2288 LUFS (still outside 0.2 LU research tolerance),
+> while Universal-50 finds a -9 LUFS hit; other source/preset failures remain explicit.
 > Automatic sonic policy is still pending the focused owner choice, with local
 > level-matched review audio prepared. No new listening verdict is inferred.
 
