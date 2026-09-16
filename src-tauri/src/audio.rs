@@ -1,6 +1,6 @@
 use crate::types::*;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, AtomicU8, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
@@ -29,7 +29,7 @@ fn linear_to_dbfs(linear: f32) -> f32 {
 use std::collections::HashMap;
 
 use crate::decode::{clamp_waveform_target_pixels, decode_full, decode_to_peaks, DecodedPcm};
-use crate::sources::{LiveCoeffUpdate, MasteringSource, MeteredPcmSource};
+use crate::sources::{LiveCoeffUpdate, MasteringSource, MeteredPcmSource, MeteredSource};
 
 #[cfg(test)]
 #[path = "listening_bench.rs"]
@@ -606,6 +606,9 @@ pub struct PlaybackSnapshot {
     /// advancing while still reporting "playing". The audio thread pauses the
     /// loaded sink but keeps the track/playhead loaded for a retry.
     pub device_lost: bool,
+    /// Failed audio conversion ends the source; retain a visible error instead
+    /// of presenting a truncated stream as normal completion.
+    pub playback_error: Option<PlaybackError>,
     /// True while a loop region is active. The device-loss detector treats loop
     /// mode as intentionally discontinuous and will not infer a frozen device.
     pub loop_active: bool,
@@ -639,6 +642,7 @@ impl Default for PlaybackSnapshot {
             spectrum_db: SpectrumAnalyzer::silent(),
             landing_pending: false,
             device_lost: false,
+            playback_error: None,
             loop_active: false,
             play_generation: 0,
             device_loss_skips: 0,
@@ -1298,6 +1302,8 @@ struct AudioThreadState {
     _output_config: rodio::cpal::SupportedStreamConfig,
     handle: output_route::OutputHandle,
     stream_failed: Arc<AtomicBool>,
+    source_failure: Option<Arc<AtomicU8>>,
+    playback_error: Option<PlaybackError>,
     sink: rodio::Sink,
     current_track: Option<TrackId>,
     /// L10 — fade-out trigger shared with the currently-playing source. On an
@@ -1392,6 +1398,31 @@ struct AudioThreadState {
 }
 
 impl AudioThreadState {
+    fn observe_source_failure(&mut self) {
+        let code = self
+            .source_failure
+            .as_ref()
+            .map_or(0, |slot| slot.load(Ordering::Acquire));
+        if code == 0 || self.playback_error.is_some() {
+            return;
+        }
+        self.sink.pause();
+        self.landing_pending = false;
+        self.live_coeffs_tx = None;
+        // Invalidate failed-source work and renew the cancellation token, so
+        // a same-source retry cannot inherit an already-cancelled worker slot.
+        self.preview_work.begin_playback(true);
+        crate::diagnostics::error(format!(
+            "Playback conversion failed (generation {}): {}",
+            self.play_generation,
+            crate::quality_source::failure_description(code)
+        ));
+        self.playback_error = Some(PlaybackError {
+            generation: self.preview_work.epoch,
+            message: "Playback stopped while processing audio. Start playback again; if it fails again, re-import the source.".into(),
+        });
+    }
+
     fn open(selected_device_name: Option<&str>, initial_sample_rate: u32) -> Result<Self, String> {
         let output_route::OpenedOutput {
             stream,
@@ -1407,6 +1438,8 @@ impl AudioThreadState {
             _output_config: config,
             handle,
             stream_failed: failed,
+            source_failure: None,
+            playback_error: None,
             sink,
             current_track: None,
             live_fade_out: Arc::new(AtomicBool::new(false)),
@@ -1994,6 +2027,10 @@ fn try_spawn_lufs_preview_worker(
 }
 
 fn publish_preview_coeffs(s: &mut AudioThreadState, settings: &MasteringSettings, generation: u64) {
+    if s.playback_error.is_some() {
+        s.landing_pending = false;
+        return;
+    }
     let mut coeffs = crate::dsp::ChainCoeffs::from_settings(s.live_sample_rate, settings);
     apply_preview_volume_match_gain_cached(
         &mut coeffs,
@@ -2597,6 +2634,7 @@ fn audio_thread(
         }
 
         if let Some(s) = state.as_mut() {
+            s.observe_source_failure();
             if s.stream_failed.swap(false, Ordering::Acquire) {
                 s.sink.pause();
                 s.device_lost = true;
@@ -2618,7 +2656,9 @@ fn audio_thread(
         if let Some(s) = state.as_ref() {
             if let Some(region) = s.loop_region {
                 let pos = s.sink.get_pos().as_secs_f64();
-                if let Some(target_sec) = loop_seek_target(pos, &region) {
+                if let Some(target_sec) =
+                    loop_seek_target(pos, &region).filter(|_| s.playback_error.is_none())
+                {
                     let _ = s.sink.try_seek(Duration::from_secs_f64(target_sec));
                 }
             }
@@ -2680,7 +2720,7 @@ fn audio_thread(
                     track_id: s.current_track.clone(),
                     position_sec: s.sink.get_pos().as_secs_f64(),
                     is_playing,
-                    is_loaded: true,
+                    is_loaded: s.playback_error.is_none(),
                     peak_dbfs,
                     peak_left_dbfs,
                     peak_right_dbfs,
@@ -2692,6 +2732,7 @@ fn audio_thread(
                     spectrum_db,
                     landing_pending: s.landing_pending,
                     device_lost: s.device_lost,
+                    playback_error: s.playback_error.clone(),
                     loop_active: s.loop_region.is_some(),
                     play_generation: s.play_generation,
                     device_loss_skips: s.device_loss_skips,
@@ -2952,14 +2993,15 @@ fn handle_play(
     s.gr_high.store(0, Ordering::Relaxed);
     s.lufs_x100.store(i32::MIN, Ordering::Relaxed);
     s.integrated_lufs_x100.store(i32::MIN, Ordering::Relaxed);
-    rebuild_spectrum_analyzer_for_playback(&mut s.spectrum_analyzer, pcm.sample_rate);
+    let device_rate = s._output_config.sample_rate().0;
+    rebuild_spectrum_analyzer_for_playback(&mut s.spectrum_analyzer, device_rate);
 
     let sample_rate = pcm.sample_rate;
     // L10 — the incoming source carries its own fade-out trigger so the *next*
     // toggle can fade it out; on a swap it also fades in behind a silent lead-in.
     let new_fade_out = Arc::new(AtomicBool::new(false));
-    let fade = build_swap_fade(sample_rate, is_swap, new_fade_out.clone());
-    let source = MeteredPcmSource::new(
+    let fade = build_swap_fade(device_rate, is_swap, new_fade_out.clone());
+    let mut source = MeteredPcmSource::new(
         pcm.samples,
         pcm.channels,
         sample_rate,
@@ -2969,8 +3011,12 @@ fn handle_play(
         s.lufs_x100.clone(),
         s.integrated_lufs_x100.clone(),
         s.spectrum_ring.clone(),
-    )
-    .with_swap_fade(fade);
+    );
+    let meters = source.take_meter_slots();
+    let source = crate::quality_source::QualitySource::new(source, device_rate)?;
+    s.source_failure = Some(source.error_slot());
+    s.playback_error = None;
+    let source = MeteredSource::new(source, meters, fade);
 
     // F4 — the outgoing sink kept advancing while this command ran; resolve
     // the start through the shared decision point (swap floor + loop-wrap
@@ -3092,6 +3138,8 @@ fn handle_play_master(
         )?);
     }
     let s = state.as_mut().expect("state just inserted");
+    s.playback_error = None;
+    s.source_failure = None;
     // A loop armed before the first-ever play was buffered by SetLoop (the
     // thread state didn't exist yet); install it so Play honors the armed UI.
     install_pending_loop_region(&mut s.loop_region, pending_loop_region);

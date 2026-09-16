@@ -1,6 +1,7 @@
 //! Streaming counterpart of the qualified offline Rubato frame/drain loop.
-//! Construction allocates; steady iteration reuses fixed buffers. Not yet wired
-//! into desktop playback: rate-plan/meter integration and native budgets gate it.
+//! Construction allocates; steady iteration and seek reuse fixed buffers.
+//! Original playback uses it at the actual device rate. Mastered integration
+//! additionally needs matching file-rate/gain plans.
 use audioadapter_buffers::direct::InterleavedSlice;
 use rodio::{source::SeekError, Source};
 use rubato::{Fft, FixedSync, Resampler};
@@ -21,6 +22,19 @@ enum StreamFailure {
     Configuration = 4,
     Processing = 5,
     NoProgress = 6,
+}
+
+/// Control-thread diagnostic; never formats or allocates in the audio callback.
+pub(crate) fn failure_description(code: u8) -> &'static str {
+    match code {
+        1 => "nonfinite input",
+        2 => "incomplete channel frame",
+        3 => "frame-count overflow",
+        4 => "invalid converter configuration",
+        5 => "resampler processing error",
+        6 => "resampler made no progress",
+        _ => "unknown streaming conversion failure",
+    }
 }
 
 pub(crate) struct QualitySource<S: Source<Item = f32>> {
@@ -264,9 +278,17 @@ mod tests {
     #[test]
     fn conversion_and_identity_failures_are_visible_outside_the_source() {
         for rate in [44100, 48000] {
-            for (input, error) in [
-                (vec![0.1, f32::NAN], StreamFailure::NonFinite),
-                (vec![0.1, 0.2, 0.3], StreamFailure::PartialFrame),
+            for (input, error, description) in [
+                (
+                    vec![0.1, f32::NAN],
+                    StreamFailure::NonFinite,
+                    "nonfinite input",
+                ),
+                (
+                    vec![0.1, 0.2, 0.3],
+                    StreamFailure::PartialFrame,
+                    "incomplete channel frame",
+                ),
             ] {
                 let mut source =
                     QualitySource::new(SamplesBuffer::new(2, 44100, input), rate).unwrap();
@@ -275,6 +297,10 @@ mod tests {
                     assert!(sample.is_finite());
                 }
                 assert_eq!(slot.load(Ordering::Acquire), error as u8);
+                assert_eq!(
+                    failure_description(slot.load(Ordering::Acquire)),
+                    description
+                );
                 assert!(source.next().is_none());
                 assert!(source.try_seek(Duration::ZERO).is_err());
                 assert_eq!(slot.load(Ordering::Acquire), error as u8);

@@ -1,6 +1,6 @@
 # B3 live device-rate verification
 
-Status: **new correctness failure reproduced; candidate correction unintegrated**.
+Status: **Original conversion integrated and verified; Mastered correction remains open**.
 Keep B3 open. This does not reopen the owner's completed baseline questionnaire.
 
 ## Reproduction
@@ -195,7 +195,45 @@ default opening and did not qualify the hidden fallback. Retain both reports
 and the intermediate compile-error log. No DAC/listening/installed/Mac or new
 converter-route proof is implied.
 
-Before completing production integration: route both audition kinds consistently, meter the actual
+### Production Original conversion checkpoint
+
+Original now streams decoded PCM through the qualified finite Rubato adapter at
+the retained device rate. The shared output meter, spectrum rate and swap fade
+follow conversion. Same-rate data remains unchanged; mono keeps its single-channel
+LUFS contract. Mastered still needs its canonical file-rate/gain route, so this
+does not close the reproduced Mastered-preview failure.
+
+Runtime conversion failure retains an atomic reason outside the callback. The
+control thread pauses the failed source, invalidates pending work and reports a
+`playback_error` with a unique failed-source epoch. The frontend shows its existing
+error surface once per failed attempt. It treats the failed sink as unloaded so
+Play constructs a new source, while retaining playhead and requested controls.
+Old-track errors cannot replace the selected track's feedback. The muted negative
+probe (`b3-original-native-error-v2.log`) injects nonfinite input and verifies the
+error survives source exhaustion; it does not masquerade as normal end-of-file
+or device loss. The hook regression covers display, dismissal, retry and stale
+track handling.
+
+`b3-original-native-v1.json` exercises actual AudioPlayer Original playback on the
+restored owner source, with test-only sink mute. Cold request acceptance/first
+observed meter are **240/305 ms**; playing seek **62 ms**; paused seek/resume
+**64 ms**; same-source swap **11 ms**, preserving position. Named/default device
+reopening is **344/21 ms**, and playback restarts after each. These are snapshot
+observations under concurrent work, not a controlled speedup or callback deadline
+measurement. No Mastered/installed/listening/Mac claim follows from this probe.
+
+Strict all-target Clippy passes (`b3-original-clippy-v4.log`). Full desktop tests
+pass, with **488 library tests** and **all four restored private-fixture tests**
+actually run (`b3-original-fixtures-v1.log`). The standalone streaming, source,
+allocation and wire tests are included. The optional tick field is regenerated
+from Rust; affected iPhone check/46 tests and Android 26 tests/API-29 check pass
+(`b3-original-iphone-v1.log`, `b3-original-android-v1.log`). The later recovery
+changes are desktop-only; bridge DSP/FFI behavior is unchanged. The WASM stamp is
+rebuilt as **dc62b219e9f1** for the shared type source change. **896 frontend tests**,
+build and **38 headless checks** pass; the minimum-size Standard capture is
+inspected at `test-output/headless/2026-09-16T00-46-07-872Z/app/`.
+
+Before completing production integration: route Mastered consistently, meter the actual
 converted audio, reconcile requested/codec/device planning rates and obsolete
 settings, and measure initial fill, seek/A-B/edit latency and callback deadlines.
 The current test-only iterator also needs its processing-error state surfaced

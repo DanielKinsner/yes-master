@@ -615,6 +615,9 @@ export interface PlaybackTick {
   is_playing: boolean;
   is_loaded: boolean;
   device_lost?: boolean;
+  /// A conversion failure, retained until a new playback attempt. Optional for
+  /// older/mobile backends; generation distinguishes a failed retry.
+  playback_error?: { generation: number; message: string } | null;
   /// Post-output-gain peak across all channels since the last tick, in dBFS.
   /// `-120` is the silence sentinel (no signal seen in the window). Values
   /// above `-0.1` indicate clipping risk; values above `0` are clipping.

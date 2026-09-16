@@ -8,6 +8,83 @@ use serde_json::json;
 use std::time::Instant;
 
 #[test]
+#[ignore = "muted production Original playback, seek and device changes over a restored source"]
+fn mastering_quality_original_native_lifecycle() {
+    use sha2::Digest;
+    assert!(std::env::var_os("YES_MASTER_BENCH_MUTE").is_some());
+    let source = PathBuf::from(std::env::var("YES_MASTER_BENCH_FILE").unwrap());
+    let output = PathBuf::from(std::env::var("YES_MASTER_LIFECYCLE_REPORT").unwrap());
+    assert!(!output.exists());
+    let player = AudioPlayer::new();
+    let track = TrackId("native-original-conversion".into());
+    let wait = |check: &dyn Fn(&PlaybackSnapshot) -> bool| {
+        let start = Instant::now();
+        loop {
+            let snapshot = player.snapshot().unwrap();
+            assert!(
+                snapshot.playback_error.is_none() && !snapshot.device_lost,
+                "{snapshot:?}"
+            );
+            if check(&snapshot) {
+                return snapshot;
+            }
+            assert!(start.elapsed() < Duration::from_secs(3), "{snapshot:?}");
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    };
+    let mut rows = Vec::new();
+    let start = Instant::now();
+    player.play_track(track.clone(), &source, 30.).unwrap();
+    let accepted = start.elapsed().as_secs_f64();
+    wait(&|s| s.is_playing && s.position_sec > 30.03 && s.peak_dbfs > SILENCE_DBFS);
+    rows.push(json!({"event":"cold_original_and_meter","accepted_s":accepted,"observed_s":start.elapsed().as_secs_f64()}));
+    let start = Instant::now();
+    player.seek(65.).unwrap();
+    wait(&|s| s.is_playing && s.position_sec > 65.03 && s.peak_dbfs > SILENCE_DBFS);
+    rows.push(json!({"event":"playing_seek","observed_s":start.elapsed().as_secs_f64()}));
+    player.pause();
+    wait(&|s| !s.is_playing);
+    player.seek(90.).unwrap();
+    wait(&|s| !s.is_playing && (s.position_sec - 90.).abs() < 0.05);
+    let start = Instant::now();
+    player.resume();
+    wait(&|s| s.is_playing && s.position_sec > 90.03);
+    rows.push(json!({"event":"paused_seek_resume","observed_s":start.elapsed().as_secs_f64()}));
+    let before = player.snapshot().unwrap();
+    let start = Instant::now();
+    player
+        .play_track(track.clone(), &source, before.position_sec)
+        .unwrap();
+    let after = wait(&|s| s.play_generation > before.play_generation && s.is_playing);
+    assert!(after.position_sec >= before.position_sec - 0.05);
+    rows.push(
+        json!({"event":"same_source_swap","observed_s":start.elapsed().as_secs_f64(),
+        "before":before.position_sec,"after":after.position_sec}),
+    );
+    let device = player
+        .list_output_devices()
+        .unwrap()
+        .into_iter()
+        .find(|d| d.is_default)
+        .unwrap();
+    for selection in [Some(device.id), None] {
+        let start = Instant::now();
+        player.set_output_device(selection.clone()).unwrap();
+        wait(&|s| !s.is_loaded && !s.is_playing);
+        rows.push(json!({"event":"device_reopen","selection":selection,"observed_s":start.elapsed().as_secs_f64()}));
+        player.play_track(track.clone(), &source, 30.).unwrap();
+        wait(&|s| {
+            s.is_loaded && s.is_playing && s.position_sec > 30.03 && s.peak_dbfs > SILENCE_DBFS
+        });
+    }
+    player.stop();
+    wait(&|s| !s.is_loaded);
+    std::fs::write(output, serde_json::to_vec_pretty(&json!({"status":"complete",
+        "scope":"muted actual AudioPlayer Original route; snapshot-observed timings under research load; no Mastered/installed/listening proof",
+        "source_sha256":format!("{:x}", sha2::Sha256::digest(std::fs::read(source).unwrap())),"rows":rows})).unwrap()).unwrap();
+}
+
+#[test]
 #[ignore = "muted native AudioPlayer lifecycle diagnostic over two restored sources"]
 fn mastering_quality_native_lifecycle_bench() {
     assert!(

@@ -272,4 +272,61 @@ mod tests {
         std::fs::write(output, serde_json::to_vec_pretty(&serde_json::json!({"rows":rows,
                 "scope":"muted native opening and Rodio sink progress/pause/seek/resume; actual CPAL build configuration retained; no DAC/listening or new SRC claim"})).unwrap()).unwrap();
     }
+
+    #[test]
+    #[ignore = "muted native failure injection; verifies processing errors do not look like normal end-of-file"]
+    fn mastering_quality_stream_failure_is_visible() {
+        use crate::{
+            quality_source::QualitySource,
+            sources::{FadeEnvelope, MeteredPcmSource, MeteredSource},
+        };
+        let mut state = super::super::AudioThreadState::open(None, 44100).unwrap();
+        state.sink.set_volume(0.);
+        let mut source = MeteredPcmSource::new(
+            vec![0.1, 0.1, f32::NAN, 0.1],
+            2,
+            44100,
+            state.peak_linear.clone(),
+            state.peak_left_linear.clone(),
+            state.peak_right_linear.clone(),
+            state.lufs_x100.clone(),
+            state.integrated_lufs_x100.clone(),
+            state.spectrum_ring.clone(),
+        );
+        let slots = source.take_meter_slots();
+        let source = QualitySource::new(source, state._output_config.sample_rate().0).unwrap();
+        state.source_failure = Some(source.error_slot());
+        state.play_generation = 17;
+        state
+            .sink
+            .append(MeteredSource::new(source, slots, FadeEnvelope::inactive()));
+        let start = std::time::Instant::now();
+        while state
+            .source_failure
+            .as_ref()
+            .unwrap()
+            .load(Ordering::Acquire)
+            == 0
+        {
+            assert!(start.elapsed() < std::time::Duration::from_secs(2));
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        state.observe_source_failure();
+        let error = state.playback_error.as_ref().unwrap();
+        assert_eq!(error.generation, state.preview_work.epoch);
+        assert!(!state.preview_work.cancelled.load(Ordering::Relaxed));
+        assert!(error.message.contains("Playback stopped"));
+        assert!(state.sink.is_paused());
+        assert!(!state.device_lost);
+        assert!(!state.landing_pending);
+        assert_eq!(
+            state
+                .source_failure
+                .as_ref()
+                .unwrap()
+                .load(Ordering::Acquire),
+            1
+        );
+        assert!(state.sink.try_seek(std::time::Duration::ZERO).is_err() || state.sink.empty());
+    }
 }

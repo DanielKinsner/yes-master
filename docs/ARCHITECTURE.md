@@ -63,7 +63,11 @@ history. Album assembly streams delivered tracks into the continuous WAV.
 Original/Mastered sources share `OutputMeter`; seeking reuses both momentary
 and integrated meter storage. The [B3 device-rate candidate](reviews/2026-09-15-live-rate-verification.md)
 moves that meter after conversion, with complete-pipeline allocation/native
-checks. Its device-rate route remains test-only pending gain-plan integration.
+checks. Original now uses the qualified streaming converter at the opened
+device rate, followed by output metering and swap fade. Mastered's canonical
+file-rate/gain route remains in progress. Conversion failure carries a unique
+failed-source epoch to the existing UI error surface; replay reconstructs the
+source rather than resuming an exhausted iterator.
 `audio/output_route.rs` opens CPAL directly and retains the successful stream
 configuration through format/device fallback, while retaining Rodio's mixer and
 sinks. Rodio's stream helper hides its internal format fallback. Callback errors

@@ -25,6 +25,14 @@ passed with all four restored private-fixture tests enabled. Strict all-target
 Clippy passed (`d2-clippy.log`). The opt-in native callback probe is excluded
 from ordinary test counts and needs its own reported run.
 
+Subsequent B3 production progress: the native output adapter now retains the
+actual successful CPAL configuration through Rodio-equivalent fallback. Original
+streams through qualified SRC with device-rate meters/fades and visible processing
+failure/retry. The [live-rate ledger](2026-09-15-live-rate-verification.md) records
+muted production lifecycle evidence, the full desktop/private-fixture pass,
+affected bridges, 896 frontend tests and 38 headless checks. Mastered's matching
+file-rate/gain route is still open; the earlier stress failure is not called fixed.
+
 The current B3 mathematical reuse proof, exact-output checks, format-specific
 reserve and limitations are recorded in
 [linear peak verification](2026-09-15-linear-peak-verification.md).

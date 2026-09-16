@@ -22,7 +22,6 @@ pub mod output_protection;
 pub mod peak_meter;
 pub mod profile_store;
 pub mod project;
-#[cfg(test)]
 mod quality_source;
 pub mod reference_tuning;
 pub mod sample_rate;
@@ -383,7 +382,7 @@ pub fn run() {
                         }
                         audio::PlaybackDeviceLossDecision::SuppressStalledTick => continue,
                     }
-                    if !snap.is_loaded {
+                    if !snap.is_loaded && snap.playback_error.is_none() {
                         continue;
                     }
                     let tick = PlaybackTick {
@@ -393,6 +392,7 @@ pub fn run() {
                         is_loaded: snap.is_loaded,
                         peak_dbfs: snap.peak_dbfs,
                         device_lost: snap.device_lost,
+                        playback_error: snap.playback_error,
                         peak_left_dbfs: snap.peak_left_dbfs,
                         peak_right_dbfs: snap.peak_right_dbfs,
                         gr_low_db: snap.gr_low_db,

@@ -248,9 +248,7 @@ impl OutputMeter {
     }
 }
 
-/// Device-rate meter/fade stage. Qualified as a test-only wrapper before the
-/// live route is switched; it consumes the converter's actual emitted frames.
-#[cfg(test)]
+/// Device-rate meter/fade stage; consumes the converter's actual emitted frames.
 pub(crate) struct MeteredSource<S: rodio::Source<Item = f32>> {
     source: S,
     frame: Vec<f32>,
@@ -259,7 +257,6 @@ pub(crate) struct MeteredSource<S: rodio::Source<Item = f32>> {
     fade: FadeEnvelope,
 }
 
-#[cfg(test)]
 impl<S: rodio::Source<Item = f32>> MeteredSource<S> {
     pub(crate) fn new(source: S, slots: MeterSlots, fade: FadeEnvelope) -> Self {
         let channels = usize::from(source.channels());
@@ -275,7 +272,6 @@ impl<S: rodio::Source<Item = f32>> MeteredSource<S> {
     }
 }
 
-#[cfg(test)]
 impl<S: rodio::Source<Item = f32>> Iterator for MeteredSource<S> {
     type Item = f32;
     fn next(&mut self) -> Option<f32> {
@@ -296,7 +292,6 @@ impl<S: rodio::Source<Item = f32>> Iterator for MeteredSource<S> {
     }
 }
 
-#[cfg(test)]
 impl<S: rodio::Source<Item = f32>> rodio::Source for MeteredSource<S> {
     fn current_frame_len(&self) -> Option<usize> {
         None
@@ -335,7 +330,6 @@ pub(crate) struct MeteredPcmSource {
 }
 
 impl MeteredPcmSource {
-    #[cfg(test)]
     pub(crate) fn take_meter_slots(&mut self) -> MeterSlots {
         self.meter.take().expect("meter already moved").slots
     }
@@ -375,8 +369,9 @@ impl MeteredPcmSource {
         }
     }
 
-    /// Install the L10 swap fade envelope. Only the live audio path calls this;
-    /// tests and other construction keep the inactive default from [`Self::new`].
+    /// Legacy source-rate envelope used by regressions. Active Original playback
+    /// applies its fade in MeteredSource after device conversion.
+    #[cfg(test)]
     pub(crate) fn with_swap_fade(mut self, fade: FadeEnvelope) -> Self {
         self.fade = fade;
         self

@@ -58,7 +58,10 @@
 > Native stream opening now retains the actual successful configuration even
 > after format/device fallback. It keeps Rodio's mixer/sinks and fallback order;
 > 102 affected audio tests, strict Clippy and muted native seek/resume pass.
-> The streaming audio/gain route remains the next B3 integration step.
+> Original's streaming converter/output meters are now integrated, with visible
+> processing failures and retry. Actual muted Original playback/seek/swap/device
+> reopening pass, as do desktop/private fixtures, bridges, 896 frontend tests and
+> 38 headless checks. Mastered's matching file-rate/gain route remains open.
 
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
 > Dan accepts longer initial analysis/preparation for demonstrated audio quality,

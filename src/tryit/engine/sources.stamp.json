@@ -1,7 +1,7 @@
 {
-  "stamp": "46580659ee75",
+  "stamp": "dc62b219e9f1",
   "sources": {
-    "src-tauri/src/types.rs": "656e48f5a0359ba232e3780fc50322cb3cdad95ff35c4db551d3f1b06e59e3aa",
+    "src-tauri/src/types.rs": "5e5aa1e1ad58b4b4ae3f5f4e3c3bfcd0c1efd5713ef9e8da4bb2b522184661d1",
     "src-tauri/src/dsp.rs": "24a7c6d1730cc4a2c96c41bc120c0841a4d058d4e53c74bd1a102f5642b0f461",
     "src-tauri/src/export_format.rs": "b41a07e665ee0efe14bead53b10e9a1cbb71e64d5b9920216012555fd4113fc9",
     "src-tauri/src/analysis.rs": "a69845f9e164a7ab4a677036b4d1c27fcc85df686b448772cffed68ecb504b9a",

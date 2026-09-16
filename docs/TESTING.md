@@ -118,6 +118,13 @@ integration across loud, quiet, and silent sections at three sample rates.
 Audio controller tests exercise actual background Volume Match/landing worker
 messages, cache-only cold lookup, pending toggles, same-source A/B worker reuse,
 and source-epoch isolation when an output-device change recreates the controller.
+The B3 Original streaming path additionally uses ignored native tests
+`mastering_quality_original_native_lifecycle` and
+`mastering_quality_stream_failure_is_visible`. They require an output device;
+the lifecycle probe requires `YES_MASTER_BENCH_MUTE=1`, an existing source in
+`YES_MASTER_BENCH_FILE` and a fresh `YES_MASTER_LIFECYCLE_REPORT` path. The
+negative probe mutes its own sink and injects a conversion failure. See the
+[live-rate ledger](reviews/2026-09-15-live-rate-verification.md) for scope and results.
 `cargo run --example limiter_bench` is a deterministic throughput diagnostic;
 wall-clock performance thresholds are deliberately not CI assertions.
 
