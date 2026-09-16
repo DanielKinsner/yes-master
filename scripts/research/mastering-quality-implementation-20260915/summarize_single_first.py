@@ -101,6 +101,20 @@ def main():
                   cost_exclusions='Evaluation sums exclude original source analysis, decode/normalization, I/O/hash, metrics and references. '
                   'Native child process totals include decode/render/I/O/hash but exclude separate metrics/references. '
                   'Runs had overlapping work and do not prove app latency or an all-track-grid speedup.')
+    # Interpretation after the frozen experiment, not a retroactive winner edit:
+    # the candidate-only preserving selector can choose a quieter result even
+    # when current processing already satisfies every character constraint.
+    result['post_experiment_control_comparison'] = []
+    for case in followup['cases']:
+        control = next(row for row in followup['rows'] if row['id'] == case['case']+'-control')
+        chosen = next(row for row in followup['rows'] if row['id'] == case['preserving']['id'])
+        result['post_experiment_control_comparison'].append(dict(case=case['case'],
+            current_control_qualifies_character=not control['character_failures'],
+            preserving_choice=chosen['id'],
+            current_control_is_closer_to_target_and_character_qualified=(not control['character_failures']
+                and abs(control['target_error_lu']) < abs(chosen['target_error_lu'])),
+            current_control_lufs=control['lufs'],preserving_choice_lufs=chosen['lufs'],
+            note='Compare the corrected control as an eligible result in a future frozen selector; existing outcomes remain unchanged.'))
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(json.dumps(result,indent=2,allow_nan=False)+'\n',encoding='utf-8')
     print(json.dumps(dict(single=first['cases'],followup=followup['cases'],

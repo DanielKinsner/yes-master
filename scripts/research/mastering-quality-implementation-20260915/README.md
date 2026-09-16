@@ -21,3 +21,13 @@ It restores only the needed C1 measurement helpers and adds the separately froze
 single-first development checkpoint. Its protocol is
 `docs/reviews/2026-09-16-single-first-development-protocol.md`. These tools never
 run from normal mastering and do not adopt automatic sonic limits.
+
+The completed five-source comparison and two-source follow-up are recorded in
+`docs/reviews/2026-09-16-single-first-development-results.md`. `prepare_single_first.py`
+and `prepare_flagged_drive.py` bind inputs, specification and copied probe hashes
+and check disk space after the build. `run_single_first.py` records child-process
+cost; the two `evaluate_*` helpers apply the frozen source/control measurements.
+`check_completed_device_rows.py` independently verifies whole files and only
+reuses matching previously passing PCM. `summarize_single_first.py` requires
+complete hash-bound reports and recomputes all character constraints before
+joining the evidence. The failed follow-up v1 and successful v2 remain separate.

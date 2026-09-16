@@ -22,7 +22,15 @@ or authorize a merge, push or release.
 
 ## Checkpoint ledger
 
-Latest C1 follow-up: the [corrected-chain lower grid](2026-09-15-drive-lower-grid-results.md)
+Latest C1 follow-up: the [single-first comparison and conditional lower grid](2026-09-16-single-first-development-results.md)
+complete 12 + 10 independently passing whole-output rows, including 16 fresh
+files. Funk/Aphelion/Baby meet the frozen single-candidate limits. Metal/Rich
+retain tradeoffs after 74.707 s of additional audio evaluation. The next selector
+must consider the corrected control as an eligible result. Dan chose the
+dynamics-preserving research direction and a clean user experience; production
+adoption, final C1 contract, C2/C3 and the existing B3 limits remain open.
+
+Prior C1 follow-up: the [corrected-chain lower grid](2026-09-15-drive-lower-grid-results.md)
 completes three exact reused controls and nine fresh independently protected
 whole outputs. The fixed preserving rule selects Coat/Piano/Imaginal at
 -14.000/-14.804/-18.142 LUFS for a -14 request; target-first retains Piano/Imaginal

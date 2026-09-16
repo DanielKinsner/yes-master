@@ -1,5 +1,21 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-16 — Dynamics research checkpoint verified; experimental direction chosen.**
+> Dan chose the recommended dynamics-preserving direction for experiments when
+> reaching a target would flatten punch/section contrast. He wants a polished
+> result without routine explanatory caveats for users. Keep diagnostics in
+> research evidence, retain accurate meters/results and deliberate strong-processing
+> controls. This does not adopt shipping thresholds, a selector or a UI redesign.
+> The [new results](reviews/2026-09-16-single-first-development-results.md) record
+> 12 single-first and 10 follow-up rows passing complete independent output checks
+> (16 new WAVs, preserved/reused anchors). Funk, Aphelion and Baby satisfy the
+> frozen single-candidate character/target limits; Metal and Rich retain tradeoffs.
+> Extra search costs 74.707 s of evaluation without a clear replacement for their
+> current processing under those limits. Include the corrected control among
+> eligible results in the next frozen selector. C1 contract/regression work,
+> C2 holdout and C3 adoption remain open. The power-outage recovery verified all
+> saved report hashes; no completed audio experiment needs restarting.
+
 > **2026-09-16 — Local fixes merged; separate dynamics research resumed.**
 > Local main is `ab420654` after verified selective integration. No push occurred.
 > `codex/mastering-dynamics-research` starts at that exact main state; the original

@@ -1,5 +1,13 @@
 # YES Master — Owner Input Queue
 
+**September 16 experimental sound direction answered:** favor preserving punch
+and quiet-to-loud contrast when pursuing the target would flatten them. Dan chose
+this recommendation for experiments and wants polished results without routine
+user-facing caveats. Keep research explanations internal and measured results
+accurate. Do not ask this direction again. Specific shipping thresholds, preset
+voicing and selector adoption still require their evidence and applicable decision.
+See [the verified checkpoint and decision](reviews/2026-09-16-single-first-development-results.md).
+
 **September 16 follow-through:** Dan approved selective local fixes integration
 and subsequent sound research on a separate branch. Engineering verification
 continues without another routine approval. Sonic tradeoff/calibration decisions

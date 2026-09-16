@@ -15,13 +15,23 @@ The [integration record](../reviews/2026-09-16-mastering-fixes-integration.md) t
 that work; the [review guide](../reviews/2026-09-16-mastering-fixes-review.md) retains
 the snapshot and limits. Preserve completed work rather than restarting research.
 Unfinished sonic experiments are not a new blanket beta gate. The sound-priority
-choice remains unresolved; local merge approval does not adopt a sonic policy or
+choice was subsequently answered for experiments: prioritize punch and section
+contrast, with polished user experience and accurate results rather than routine
+explanatory caveats. Shipping numerical/calibration choices remain open. Local
+merge approval does not adopt a production sonic policy or
 authorize push, release, deployment, spending or private-audio commits.
 
 Local main is now `ab420654`. Research continues on
 `codex/mastering-dynamics-research` with the
 [frozen single-first checkpoint](../reviews/2026-09-16-single-first-development-protocol.md).
 The existing branch/evidence at `03df038a` remain preserved.
+
+The [single-first and bounded follow-up results](../reviews/2026-09-16-single-first-development-results.md)
+complete 22 independently checked rows using 16 new files and preserved anchors.
+Three of five single candidates meet frozen limits; extra search on the two
+flagged sources does not establish a clear replacement for their current control.
+Develop current-control eligibility before freezing the broader regression/holdout
+selector. C1's final contract, C2 and C3 remain open.
 
 ## In plain language
 
