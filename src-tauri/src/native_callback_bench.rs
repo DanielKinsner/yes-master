@@ -8,6 +8,137 @@ use serde_json::json;
 use std::time::Instant;
 
 #[test]
+#[ignore = "muted production Mastered cascade, playing/paused rate edits and A/B over restored source"]
+fn mastering_quality_mastered_rate_lifecycle() {
+    use sha2::Digest;
+    assert!(std::env::var_os("YES_MASTER_BENCH_MUTE").is_some());
+    let source = PathBuf::from(std::env::var("YES_MASTER_BENCH_FILE").unwrap());
+    let output = PathBuf::from(std::env::var("YES_MASTER_LIFECYCLE_REPORT").unwrap());
+    assert!(!output.exists());
+    let player = AudioPlayer::new();
+    let track = TrackId("native-mastered-conversion".into());
+    let wait = |check: &dyn Fn(&PlaybackSnapshot) -> bool, seconds| {
+        let start = Instant::now();
+        loop {
+            let snapshot = player.snapshot().unwrap();
+            assert!(
+                snapshot.playback_error.is_none() && !snapshot.device_lost,
+                "{snapshot:?}"
+            );
+            if check(&snapshot) {
+                return snapshot;
+            }
+            assert!(
+                start.elapsed() < Duration::from_secs(seconds),
+                "{snapshot:?}"
+            );
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    };
+    let mut rows = Vec::new();
+    let mut settings = tests::settings_with_intensity(0.75);
+    settings.delivery_profile = DeliveryProfile::Custom;
+    settings.advanced.target_sample_rate = Some(96000);
+    settings.advanced.lufs_offset_db = Some(-14.);
+    settings.advanced.bit_depth = Some(32);
+    let start = Instant::now();
+    player
+        .play_master(track.clone(), &source, settings.clone(), 30., false, false)
+        .unwrap();
+    let accepted = start.elapsed().as_secs_f64();
+    wait(
+        &|s| s.is_playing && s.position_sec > 30.03 && s.peak_dbfs > SILENCE_DBFS,
+        3,
+    );
+    rows.push(json!({"event":"cold_mastered_without_landing","accepted_s":accepted,"first_meter_s":start.elapsed().as_secs_f64()}));
+    for paused in [false, true] {
+        if paused {
+            player.pause();
+            wait(&|s| !s.is_playing, 3);
+        }
+        for file_rate in [44100, 48000, 96000] {
+            let before = player.snapshot().unwrap();
+            settings.advanced.target_sample_rate = Some(file_rate);
+            let start = Instant::now();
+            player.update_chain(settings.clone(), false, false).unwrap();
+            let after = wait(
+                &|s| s.play_generation > before.play_generation && s.is_playing != paused,
+                3,
+            );
+            assert!(after.position_sec >= before.position_sec - 0.01);
+            if paused {
+                assert!((after.position_sec - before.position_sec).abs() < 0.01);
+                std::thread::sleep(Duration::from_millis(100));
+                assert!(!player.snapshot().unwrap().is_playing);
+            }
+            rows.push(json!({"event":"rate_edit","rate":file_rate,"paused":paused,"observed_s":start.elapsed().as_secs_f64(),
+                "before":before.position_sec,"after":after.position_sec}));
+        }
+    }
+    player.seek(90.).unwrap();
+    wait(&|s| !s.is_playing && (s.position_sec - 90.).abs() < 0.01, 3);
+    let start = Instant::now();
+    player.resume();
+    wait(
+        &|s| s.is_playing && s.position_sec > 90.03 && s.peak_dbfs > SILENCE_DBFS,
+        3,
+    );
+    rows.push(json!({"event":"paused_seek_resume","observed_s":start.elapsed().as_secs_f64()}));
+    for mastered in [false, true, false, true] {
+        let before = player.snapshot().unwrap();
+        let start = Instant::now();
+        if mastered {
+            player
+                .play_master(
+                    track.clone(),
+                    &source,
+                    settings.clone(),
+                    before.position_sec,
+                    false,
+                    false,
+                )
+                .unwrap();
+        } else {
+            player
+                .play_track(track.clone(), &source, before.position_sec)
+                .unwrap();
+        }
+        let after = wait(
+            &|s| s.play_generation > before.play_generation && s.is_playing,
+            3,
+        );
+        assert!(after.position_sec >= before.position_sec - 0.01);
+        rows.push(
+            json!({"event":"ab","mastered":mastered,"observed_s":start.elapsed().as_secs_f64(),
+            "before":before.position_sec,"after":after.position_sec}),
+        );
+    }
+    let start = Instant::now();
+    player.update_chain(settings.clone(), true, false).unwrap();
+    wait(&|s| s.landing_pending, 3);
+    let first_pending = start.elapsed().as_secs_f64();
+    wait(&|s| !s.landing_pending && s.is_playing, 180);
+    rows.push(json!({"event":"first_landing_preparation","first_pending_s":first_pending,"settled_snapshot_s":start.elapsed().as_secs_f64()}));
+    for target in [-23., -14.] {
+        settings.advanced.lufs_offset_db = Some(target);
+        let start = Instant::now();
+        let before = player.snapshot().unwrap().position_sec;
+        player.update_chain(settings.clone(), true, false).unwrap();
+        std::thread::sleep(Duration::from_millis(75));
+        wait(
+            &|s| !s.landing_pending && s.is_playing && s.position_sec > before,
+            180,
+        );
+        rows.push(json!({"event":"target_edit","target":target,"settled_snapshot_s":start.elapsed().as_secs_f64()}));
+    }
+    player.stop();
+    wait(&|s| !s.is_loaded, 3);
+    std::fs::write(output,serde_json::to_vec_pretty(&json!({"status":"complete",
+        "scope":"muted actual Mastered production rate route; snapshot timings under research load, no codec/device-cap/installed/listening claim",
+        "source_sha256":format!("{:x}",sha2::Sha256::digest(std::fs::read(source).unwrap())),"rows":rows})).unwrap()).unwrap();
+}
+
+#[test]
 #[ignore = "muted production Original playback, seek and device changes over a restored source"]
 fn mastering_quality_original_native_lifecycle() {
     use sha2::Digest;
@@ -324,7 +455,7 @@ fn callback_bench(streaming_src: bool) {
     let integrated = Arc::new(AtomicI32::new(i32::MIN));
     let ring = Arc::new(SpectrumRing::new());
     let (tx, rx) = mpsc::channel();
-    let mut source = MasteringSource::new(
+    let source = MasteringSource::new(
         playback,
         pcm.channels,
         chain_rate,
@@ -339,16 +470,17 @@ fn callback_bench(streaming_src: bool) {
     );
     let construct_start = Instant::now();
     let (mut source, stream_error): (Box<dyn Iterator<Item = f32> + Send>, _) = if streaming_src {
-        let slots = source.take_meter_slots();
-        let converted =
-            crate::quality_source::QualitySource::new(source.with_render_alignment(), rate)
-                .unwrap();
-        let slot = converted.error_slot();
-        let metered = crate::sources::MeteredSource::new(
-            converted,
-            slots,
+        let file_rate = std::env::var("YES_MASTER_CALLBACK_FILE_RATE")
+            .ok()
+            .map(|rate| rate.parse().unwrap())
+            .unwrap_or(settings.effective_sample_rate(pcm.sample_rate));
+        let (metered, slot) = output_route::mastered_source(
+            source,
+            file_rate,
+            rate,
             crate::sources::FadeEnvelope::inactive(),
-        );
+        )
+        .unwrap();
         (Box::new(metered), Some(slot))
     } else {
         (Box::new(source), None)
@@ -470,8 +602,9 @@ fn callback_bench(streaming_src: bool) {
         .iter()
         .filter(|r| r[0] as f64 > r[1] as f64 / rate as f64 * 1e9)
         .count();
-    let report = json!({"scope":"muted MasteringSource on CPAL callback, concurrent preview landing and coefficient edits; optional test-only post-chain streaming SRC with device-rate output meters; not installed UI/lifecycle proof",
+    let report = json!({"scope":"muted MasteringSource on CPAL callback, concurrent preview landing and coefficient edits; production file/device streaming SRC when enabled; not installed UI/lifecycle proof",
         "streaming_src_candidate":streaming_src,"source_rate":pcm.sample_rate,"chain_rate":chain_rate,
+        "file_rate_override":std::env::var("YES_MASTER_CALLBACK_FILE_RATE").ok(),
         "streaming_construction_s":streaming_construction_s,"streaming_error_code":stream_error.as_ref().map(|slot|slot.load(Ordering::Acquire)),
         "initial_settings":initial_settings,"coefficient_edits":120,
         "device":device.name().unwrap_or_default(),"sample_rate":rate,"channels":channels,
