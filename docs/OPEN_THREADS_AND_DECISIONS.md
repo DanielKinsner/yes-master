@@ -24,8 +24,13 @@
 > intent; its 672 combinations, seven muted native routes, cache parity, full
 > fixtures, 897 frontend tests and 38 headless checks pass. It does not simulate
 > lossy decoding. Broader device protection remains open: a full Imaginal file
-> reaches about -0.775 dBTP after 48-to-44.1 kHz conversion. Applied-generation
-> readiness also remains open.
+> reaches about -0.775 dBTP after 48-to-44.1 kHz conversion; independent SOXR
+> confirms -0.815 dBTP. The full matrix has 31/32 peak passes and 32/32 LUFS passes.
+> Applied-revision tracking now follows the DSP crossfade and converter buffers:
+> new-target measurement/application is 0.767/0.951 s, cached target 0.075/0.189 s
+> in the muted native probe. Paused edits wait for resume before acknowledging
+> output. Full desktop/private fixtures, Clippy and 607 loaded callbacks pass.
+> Device protection and the final-result UI contract remain open.
 > [C1 development](reviews/2026-09-15-drive-prototype-protocol.md) has completed
 > all eight original coarse runs and bounded refinements: 517 complete deliveries.
 > Target/character conflicts and explicit control fallbacks remain; very quiet
@@ -42,6 +47,10 @@
 > receipt follow-up. Corrected-chain preparation/new-target/cached-target settling
 > is 39.74 s / 0.931 s / 75 ms in the loaded native probe. No new holdout or automatic
 > sonic policy has been adopted, and no new installed/Mac/listening verdict follows.
+> [Saturation calibration](reviews/2026-09-15-saturation-calibration-results.md)
+> is a separate offline experiment. Short antialias filters reduce folded energy
+> while losing too much high-frequency level; longer alternatives are evaluated
+> under frozen mechanism limits. No saturation/preset migration is adopted.
 
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
 > Dan accepts longer initial analysis/preparation for demonstrated audio quality,

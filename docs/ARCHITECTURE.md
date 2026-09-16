@@ -75,6 +75,12 @@ rates invalidate it. This does not simulate lossy decoding. Additional device
 protection remains open. Conversion failure carries a unique
 failed-source epoch to the existing UI error surface; replay reconstructs the
 source rather than resuming an exhausted iterator.
+Preview measurement readiness and output application are distinct. Each
+coefficient publication receives a revision separate from the logical settings
+generation. The DSP crossfade, both converters' overlap/buffers and final fade
+propagate the revision only as PCM is emitted. `PlaybackSnapshot` exposes the
+requested/applied tokens for diagnostics; a paused edit may be prepared without
+being emitted. This is application-output readiness, not DAC/speaker latency.
 `audio/output_route.rs` opens CPAL directly and retains the successful stream
 configuration through format/device fallback, while retaining Rodio's mixer and
 sinks. Rodio's stream helper hides its internal format fallback. Callback errors

@@ -125,6 +125,12 @@ the lifecycle probe requires `YES_MASTER_BENCH_MUTE=1`, an existing source in
 `YES_MASTER_BENCH_FILE` and a fresh `YES_MASTER_LIFECYCLE_REPORT` path. The
 negative probe mutes its own sink and injects a conversion failure. See the
 [live-rate ledger](reviews/2026-09-15-live-rate-verification.md) for scope and results.
+The output-revision regressions require both converter buffers and FFT overlap
+to drain before acknowledging new settings, including the last mixed DSP frame
+and seek resets. The muted Mastered lifecycle probe separately records background
+measurement and emitted-output revisions, including a prepared paused cache hit.
+Do not report these observations as DAC/speaker latency or collapse them into
+one preparation timing.
 Mastered uses `canonical_mastered_route_matches_finite_offline_cascade` for
 sample-identical finite route comparisons and the ignored
 `mastering_quality_canonical_live_rates` matrix with a fresh

@@ -365,10 +365,57 @@ meter. Independent complete-file SOXR16/64 with the frozen finite padding gives
 at full scale** and a passing LUFS comparison. This is an inter-sample peak miss,
 not PCM clipping. `b3-device-imaginal-independent-v1/comparison.json` retains
 the failed ceiling result; it is not waived by the passing earlier short matrix.
-The complete matrix's independent checker continues in its own retained report.
+The complete matrix's independent checker finished: **31/32 peak passes, 32/32
+LUFS passes, zero full-scale samples**. The sole independent ceiling failure is
+the same Imaginal 44.1 kHz case (`b3-device-whole-independent-v1/comparison.json`).
 
 This is a supported simulated output rate through production conversion, not
 an opened 44.1 kHz native device or a listening result. It establishes the need
 for device-specific whole-file planning; it does not establish a universal
 margin, scalar commutation, or an implemented device cap. Protected delivered
 files remain unchanged. The probe's build and strict all-target Clippy passed.
+
+### Applied output revision checkpoint
+
+Background preparation and emitted output now have separate diagnostic tokens.
+Each coefficient publication receives a distinct revision, including early VM
+and final landing within one logical settings generation. `MasteringSource`
+acknowledges only the first unmixed frame after its 512-frame crossfade. Each
+converter propagates revisions on emission, requiring current and preceding
+whole input blocks to agree for the locked FFT overlap. The final meter/fade
+stage waits until the incoming fade is unity. Seek resets every stage's token.
+This changes no sample calculations, filter, preset or UI measurement label.
+
+Two focused regressions pass, including **36 two-converter rate combinations,
+each replayed after seek**. The zero-valued suffix must contain no stale PCM
+whenever its final revision is acknowledged. The DSP regression retains the
+last mixed frame as pending. Strict all-target Clippy and the complete desktop
+suite pass: **494 library tests**, 18 opt-in tests ignored, all integration
+tests and **all four restored private-fixture tests executed**. Existing exact
+cascade, allocation-free, transport, gain-cache and coefficient tests pass.
+Logs: `b3-output-revision-unit-v1`, `-clippy-v1`, `-fixtures-v1`.
+
+Muted actual AudioPlayer evidence (`b3-output-revision-native-v1.json`) separates:
+
+| Operation | Preparation-ready observation | Matching revision emitted |
+| --- | ---: | ---: |
+| First 96 kHz preview preparation | 32.173 s | 32.351 s |
+| New target -23 LUFS | 0.767 s | 0.951 s |
+| Return to cached -14 LUFS | 0.075 s | 0.189 s |
+
+A paused cached edit requests revision 19 while emitted revision remains 17;
+resume reaches 19 after **184.6 ms**. Paused/playing rate edits, seek and A/B also
+pass. These are snapshots of application output under concurrent load, **not
+DAC/speaker latency or a controlled speed comparison**. The UI's measurement
+status still describes background measurement; these new fields establish the
+separate output-readiness observation, not a new final-result UI contract.
+
+`b3-output-revision-callback-v2.json` exercises **44.1 → 96 → 48 kHz** with preset
+compression, 120 coefficient edits and concurrent preparation: **607 callbacks,
+zero deadline misses/device/converter errors or exhausted samples**. Median/p95/
+max processing is **0.0617/1.1356/1.9633 ms**; first peak 10.31 ms, construction
+0.767 ms, cancellation join 8.10 ms. Requested 256 frames grants **480–1,056**.
+Callback v1 accidentally used the default file rate because the environment
+variable name was wrong; retain its evidence without claiming the 96 kHz path.
+This desktop-only slice changes no bridge/shared DSP/WASM/markup. No installed,
+Mac or listening result follows. Device-specific peak protection remains open.

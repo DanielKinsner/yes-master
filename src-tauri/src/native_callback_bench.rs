@@ -118,7 +118,17 @@ fn mastering_quality_mastered_rate_lifecycle() {
     wait(&|s| s.landing_pending, 3);
     let first_pending = start.elapsed().as_secs_f64();
     wait(&|s| !s.landing_pending && s.is_playing, 180);
-    rows.push(json!({"event":"first_landing_preparation","first_pending_s":first_pending,"settled_snapshot_s":start.elapsed().as_secs_f64()}));
+    let prepared_s = start.elapsed().as_secs_f64();
+    let applied = wait(
+        &|s| {
+            !s.landing_pending
+                && s.requested_output_revision != 0
+                && s.applied_output_revision == s.requested_output_revision
+        },
+        3,
+    );
+    rows.push(json!({"event":"first_landing_preparation","first_pending_s":first_pending,"settled_snapshot_s":prepared_s,
+        "output_applied_s":start.elapsed().as_secs_f64(),"revision":applied.applied_output_revision}));
     for target in [-23., -14.] {
         settings.advanced.lufs_offset_db = Some(target);
         let start = Instant::now();
@@ -129,12 +139,43 @@ fn mastering_quality_mastered_rate_lifecycle() {
             &|s| !s.landing_pending && s.is_playing && s.position_sec > before,
             180,
         );
-        rows.push(json!({"event":"target_edit","target":target,"settled_snapshot_s":start.elapsed().as_secs_f64()}));
+        let prepared_s = start.elapsed().as_secs_f64();
+        let applied = wait(
+            &|s| !s.landing_pending && s.applied_output_revision == s.requested_output_revision,
+            3,
+        );
+        rows.push(json!({"event":"target_edit","target":target,"settled_snapshot_s":prepared_s,
+            "output_applied_s":start.elapsed().as_secs_f64(),"revision":applied.applied_output_revision}));
     }
+    player.pause();
+    let before = wait(&|s| !s.is_playing, 3);
+    settings.advanced.lufs_offset_db = Some(-23.);
+    player.update_chain(settings.clone(), true, false).unwrap();
+    let paused = wait(
+        &|s| {
+            !s.is_playing
+                && !s.landing_pending
+                && s.requested_output_revision > before.requested_output_revision
+        },
+        3,
+    );
+    std::thread::sleep(Duration::from_millis(100));
+    assert_ne!(
+        paused.requested_output_revision, paused.applied_output_revision,
+        "a paused cache hit must not claim its samples have been emitted"
+    );
+    let start = Instant::now();
+    player.resume();
+    let applied = wait(
+        &|s| s.is_playing && s.applied_output_revision == paused.requested_output_revision,
+        3,
+    );
+    rows.push(json!({"event":"paused_cached_target_resume","paused_requested_revision":paused.requested_output_revision,
+        "paused_applied_revision":paused.applied_output_revision,"output_applied_s":start.elapsed().as_secs_f64(),"revision":applied.applied_output_revision}));
     player.stop();
     wait(&|s| !s.is_loaded, 3);
     std::fs::write(output,serde_json::to_vec_pretty(&json!({"status":"complete",
-        "scope":"muted actual Mastered production rate route; snapshot timings under research load, no codec/device-cap/installed/listening claim",
+        "scope":"muted actual Mastered production rate route; separate measurement/output-revision snapshots under research load; application output, not DAC latency; no device-cap/installed/listening claim",
         "source_sha256":format!("{:x}",sha2::Sha256::digest(std::fs::read(source).unwrap())),"rows":rows})).unwrap()).unwrap();
 }
 

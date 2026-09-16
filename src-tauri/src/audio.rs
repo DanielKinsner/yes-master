@@ -624,6 +624,12 @@ pub struct PlaybackSnapshot {
     /// Cached correction fades into the live chain when ready. Also valid while
     /// paused; drives the UI's "Measuring preview level…" status.
     pub landing_pending: bool,
+    /// Diagnostic publication tokens, independent of worker/settings generations.
+    /// Applied changes only after the DSP crossfade, converter overlap/buffers
+    /// and swap fade have emitted the revision. This is application output,
+    /// not a timestamp at the DAC or speaker. Zero is mixed/not yet emitted.
+    pub requested_output_revision: u64,
+    pub applied_output_revision: u64,
     /// True after the app-level stall detector decides a playing sink stopped
     /// advancing while still reporting "playing". The audio thread pauses the
     /// loaded sink but keeps the track/playhead loaded for a retry.
@@ -663,6 +669,8 @@ impl Default for PlaybackSnapshot {
             lufs_integrated: SILENCE_DBFS,
             spectrum_db: SpectrumAnalyzer::silent(),
             landing_pending: false,
+            requested_output_revision: 0,
+            applied_output_revision: 0,
             device_lost: false,
             playback_error: None,
             loop_active: false,
@@ -1377,6 +1385,8 @@ struct AudioThreadState {
     loop_region: Option<LoopRegion>,
     live_coeffs_tx: Option<Sender<LiveCoeffUpdate>>,
     live_coeff_generation: u64,
+    live_coeff_revision: u64,
+    applied_coeff_revision: Option<Arc<AtomicU64>>,
     live_landing_gain_lin: f32,
     live_preview_lufs_landing: bool,
     live_sample_rate: u32,
@@ -1512,6 +1522,8 @@ impl AudioThreadState {
             loop_region: None,
             live_coeffs_tx: None,
             live_coeff_generation: 0,
+            live_coeff_revision: 0,
+            applied_coeff_revision: None,
             live_landing_gain_lin: 1.0,
             live_preview_lufs_landing: false,
             live_sample_rate: initial_sample_rate,
@@ -2121,7 +2133,15 @@ fn publish_preview_coeffs(s: &mut AudioThreadState, settings: &MasteringSettings
     s.landing_pending = landing.needs_measurement
         || (settings.volume_match && s.vm_gain_cache.get(settings).is_none());
     if let Some(tx) = &s.live_coeffs_tx {
-        let _ = tx.send(LiveCoeffUpdate { generation, coeffs });
+        debug_assert_eq!(generation, s.live_coeff_generation);
+        // Early VM and final landing can publish within one settings generation.
+        // Distinct tokens prevent an earlier output from acknowledging the final
+        // coefficients just because their logical settings generation matches.
+        s.live_coeff_revision = s.live_coeff_revision.wrapping_add(1).max(1);
+        let _ = tx.send(LiveCoeffUpdate {
+            generation: s.live_coeff_revision,
+            coeffs,
+        });
     }
 }
 
@@ -2850,6 +2870,15 @@ fn audio_thread(
                     lufs_integrated,
                     spectrum_db,
                     landing_pending: s.landing_pending,
+                    requested_output_revision: if s.live_coeffs_tx.is_some() {
+                        s.live_coeff_revision
+                    } else {
+                        0
+                    },
+                    applied_output_revision: s
+                        .applied_coeff_revision
+                        .as_ref()
+                        .map_or(0, |r| r.load(Ordering::Acquire)),
                     device_lost: s.device_lost,
                     playback_error: s.playback_error.clone(),
                     loop_active: s.loop_region.is_some(),
@@ -3162,6 +3191,7 @@ fn handle_play(
     s.current_track = Some(track_id);
     s.device_lost = false;
     s.live_coeffs_tx = None;
+    s.applied_coeff_revision = None;
     s.live_coeff_generation = s.live_coeff_generation.wrapping_add(1);
     s.live_landing_gain_lin = 1.0;
     // Original playback has no mastering chain — no landing to wait on.
@@ -3337,6 +3367,9 @@ fn handle_play_master(
     s.live_preview_lufs_landing = preview_lufs_landing;
     s.landing_pending = landing_plan.needs_measurement
         || (settings.volume_match && s.vm_gain_cache.get(settings).is_none());
+    // The old source may still be fading out. New-play preparation must not
+    // publish into its coefficient channel.
+    s.live_coeffs_tx = None;
     queue_preview_work(
         s,
         PreviewWorkRequest {
@@ -3351,6 +3384,7 @@ fn handle_play_master(
     // toggle can fade it out; on a swap it also fades in behind a silent lead-in.
     let new_fade_out = Arc::new(AtomicBool::new(false));
     let fade = build_swap_fade(device_rate, is_swap, new_fade_out.clone());
+    s.live_coeff_revision = s.live_coeff_revision.wrapping_add(1).max(1);
     let mastering_source = MasteringSource::new(
         pcm.samples,
         pcm.channels,
@@ -3363,10 +3397,12 @@ fn handle_play_master(
         s.lufs_x100.clone(),
         s.integrated_lufs_x100.clone(),
         s.spectrum_ring.clone(),
-    );
+    )
+    .with_initial_revision(s.live_coeff_revision);
     let (mastering_source, failure) =
         output_route::mastered_source(mastering_source, file_rate, device_rate, fade)?;
     s.source_failure = Some(failure);
+    s.applied_coeff_revision = Some(mastering_source.revision_slot());
 
     // F4 — same resolution as handle_play: the outgoing sink kept advancing
     // during this command (which can run long on a cold decode); the shared

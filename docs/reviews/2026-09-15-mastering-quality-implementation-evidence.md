@@ -18,7 +18,8 @@ No push, main integration, publication, spending or private-audio commit is auth
 | B3 | In progress | Qualified finalizer is used by Track/rendered preview, background preview planning and album per-track PCM. Original exports pass independent checks and retain owner hashes. Whole-file residual reuse passes 1,095 checks, with fresh-meter fallback; Album programme correction passes. Original and Mastered now use production bandlimited conversion, actual device configuration and output meters. Mastered preserves the export's intermediate PCM rate, including selected-encoding resolution, and fixes the independently checked aliasing witness. Muted native lifecycle/callback and full fixture checks pass. Broader device peak protection and applied-generation readiness remain open; see the [live-rate ledger](2026-09-15-live-rate-verification.md). |
 | B4 | Complete locally with advisory lossy scope | [Encoded verification](2026-09-15-encoded-peak-verification.md): 316/316 independent technical checks on retained actual encoded files after fixing MP3 decoder clamping; exact FLAC/AIFF PCM parity. Lossy ceiling misses remain explicit. Headroom/two-correction experiments do not justify automatic adoption. Continuous Album peaks and small excesses are reported. Affected formats, desktop/private fixtures, bridges, Clippy, 895 frontend tests and 38 headless checks pass. |
 | C1 | Original development grid complete; correction and broader validation in progress | [Protocol/results](2026-09-15-drive-prototype-protocol.md): 480 original coarse plus 37 bounded refinements, all whole-file protected; 118 coarse/104 additional refined independent checks pass. Quiet copies expose separate numerical and selector-reference issues. [Wider filter arithmetic](2026-09-15-drive-gain-consistency.md) reduces tested copy differences to at most 5.96e-7, with unchanged coefficients, 19–29% extra chain CPU and ten independent output passes. Its local production correction passes 12 synthetic regressions, 607 native callbacks, full fixtures, bridges, Clippy and browser-engine checks. Gain-copy completion, consistent selector rules, budgets and numeric/holdout freeze remain open; no automatic sonic policy. |
-| C2–C3, E | Pending | Existing revised dependencies and adoption/calibration gates remain. |
+| C2–C3 | Pending | Existing revised dependencies and adoption/calibration gates remain. |
+| E | Isolated development experiments in progress | [Frozen comparisons](2026-09-15-saturation-calibration-protocol.md) and [results](2026-09-15-saturation-calibration-results.md) separate continuity from antialiasing, including short-filter passband loss. Whole-chain, native and owner calibration remain open. |
 
 The subsequent desktop library/integration run (`d2-rust-fixtures.log`) also
 passed with all four restored private-fixture tests enabled. Strict all-target
@@ -40,7 +41,14 @@ Selected-encoding PCM resolution subsequently passes 672 combinations, direct
 cache/delivery parity, all seven muted native routes, strict Clippy, the complete
 desktop suite (492 library tests and all four private-fixture tests), 897 frontend
 tests and 38 headless checks. Broader device protection and applied-generation
-readiness remain open. No new listening/installed/Mac verdict is inferred.
+readiness were open at that checkpoint. The later applied-revision implementation
+passes 36 repeated converter/seek combinations, the last-crossfade-frame test,
+494 library tests, the full restored fixture lane and 607 loaded native callbacks.
+Preparation and actual output application are now separately observed (new target
+0.767/0.951 s; cached target 0.075/0.189 s). Whole-file downstream conversion exposes
+an independently confirmed Imaginal 44.1 kHz peak miss: 31/32 independent peak
+passes, 32/32 LUFS passes. Device protection and final-result UI integration remain
+open. No new listening/installed/Mac verdict is inferred.
 
 The current B3 mathematical reuse proof, exact-output checks, format-specific
 reserve and limitations are recorded in
