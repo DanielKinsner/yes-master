@@ -35,8 +35,8 @@
 > unclipped MP3 receipt readback. Lossy ceiling misses remain explicit/advisory;
 > bounded headroom/re-encoding experiments do not justify automatic adoption.
 > [C1 development](reviews/2026-09-15-drive-prototype-protocol.md) has 517 original
-> coarse/refined deliveries and all 16 quiet-copy render runs complete. Remaining
-> quiet-copy metrics/independent checks continue. The separate filter-precision
+> coarse/refined deliveries plus 960 quiet-copy renders, complete metrics and
+> 243 independently passing quiet-copy selected/control files. The separate filter-precision
 > correction reduces tested normalized-copy differences to at most 5.96e-7 with
 > unchanged coefficients, at 19-29% extra chain CPU in loaded paired trials.
 > Its full validation and preserved old references are recorded in

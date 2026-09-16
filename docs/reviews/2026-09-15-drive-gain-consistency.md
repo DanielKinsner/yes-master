@@ -266,8 +266,11 @@ character/fallback limits or authorize C2/C3 adoption.
 All **960 quiet-copy renders** and their complete metrics/consistency comparisons
 are now retained. All 16 original f32 copy runs fail the declared normalized-PCM
 numeric gate; the independently verified f64 production correction is separate
-and does not retroactively relabel these old files. Final Imaginal -80 independent
-checks are still running. Fresh production source-analysis and normalized-
+and does not retroactively relabel these old files. The final independent queue is complete: **243/243 selected/control files**
+pass peak and LUFS/availability checks, with zero full-scale samples. Forty-eight
+below-gate controls correctly have no numeric LUFS comparison. The aggregate
+`c1-all-quiet-independent-summary-v1.json` verifies all 16 completed report hashes
+and each declared selected/control set; earlier failed reports remain intact. Fresh production source-analysis and normalized-
 descriptor comparisons proceed under a separate specification; these earlier
 copy outcomes retain the original analysis/guards by design.
 
