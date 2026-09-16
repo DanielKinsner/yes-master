@@ -247,6 +247,22 @@ three preset groups, original analysis/guards and source anchors. These are
 new gain-copy comparisons; no original evidence is replaced. A 25 GiB free-disk
 guard stops a queue before starting another job if storage becomes insufficient.
 
+Before evaluating copy outcomes, `compare_gain_copies.py` declares development
+numeric consistency budgets: 0.001 LU for raw/delivered loudness, 0.001 dB for
+automatic operating drive and normalization after removing copy attenuation,
+0.01 dB for anchored section/attack/band/side differences, 0.00001 correlation,
+and 0.0001 maximum absolute sample difference. These are reproducibility checks,
+not audibility standards or new sonic limits. Required missing metrics fail.
+Unnormalized control/attenuate-only responses are reported separately; they are
+not expected to be gain invariant. Selected candidate/fallback identity must
+also agree. This separates a consistent normalized DSP response from a selector
+that might change because its corrected-control comparison changes with level.
+
+The [first gain-copy diagnosis](2026-09-15-drive-gain-consistency.md) now records
+Piano/Coat numerical failures and Coat's level-dependent selector limits.
+The original eight-source coarse grid is complete. Do not weaken the declared
+budgets or treat the fixed-reference diagnostic as an adopted selector.
+
 ### Independent reference storage
 
 `check_drive_finalists.py --stream-padding` builds the same 2,048-frame leading

@@ -62,6 +62,12 @@
 > processing failures and retry. Actual muted Original playback/seek/swap/device
 > reopening pass, as do desktop/private fixtures, bridges, 896 frontend tests and
 > 38 headless checks. Mastered's matching file-rate/gain route remains open.
+> All eight original-source coarse C1 runs are complete. The first quiet-copy
+> checks expose two distinct issues: recursive filter numerical sensitivity and
+> control-relative selector limits that vary with input level. The
+> [gain-copy diagnosis](reviews/2026-09-15-drive-gain-consistency.md) reproduces
+> retained Piano outputs exactly and isolates wider-state filter arithmetic as
+> a correction experiment. No criterion is relaxed or sonic policy adopted.
 
 > **2026-09-15 — Revised mastering plan: useful upfront preparation is an owner priority.**
 > Dan accepts longer initial analysis/preparation for demonstrated audio quality,
