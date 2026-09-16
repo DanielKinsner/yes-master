@@ -1,0 +1,332 @@
+{
+  "status": "complete",
+  "scope": "Paired existing production APIs in an opt-in release unit probe; no app adoption or response claim",
+  "inputs": {
+    "job": {
+      "path": "test-output\\dynamics-research-20260916\\prepared-reuse-job-v1.json",
+      "sha256": "11cd790ff668c912c91df74e4562d41debdf8912b94c5f82e9a8823e963068f3"
+    },
+    "native": {
+      "path": "test-output\\dynamics-research-20260916\\prepared-reuse-v1\\report.json",
+      "sha256": "8c9f646dea2af17f4fcb73e694d4ed552585398729e9f22c760b2ba0d92d401e"
+    },
+    "process": {
+      "path": "test-output\\dynamics-research-20260916\\prepared-reuse-v1.process.json",
+      "sha256": "1cecf3f38a0ac84799507840cb0aa2e2226c1f02587044fa87e78b7cfcb1720d"
+    }
+  },
+  "specification_sha256": "fab8e00bea1941a17bd8ac3eba43db23f831a880dab19c8ffafefefff2057f7a",
+  "baseline_summary_sha256": "012a063eaa067752414ea08875535edaca2a14aa94ec655655593f0ba2a74ef5",
+  "script_sha256": "c892af08375aa49bab8678baec04e0ec066e052f63bdaeba43efe31a7b34e3f2",
+  "process": {
+    "status": "complete",
+    "exit_code": 0,
+    "wall_s": 99.9023975,
+    "cpu_s": 98.125,
+    "peak_working_set_bytes": 298471424,
+    "job_sha256": "11cd790ff668c912c91df74e4562d41debdf8912b94c5f82e9a8823e963068f3",
+    "binary_sha256": "8265b95460fe54e72829c132e7fdf4817f0e222540ea22d0aa7e77b3b27da68c",
+    "free_bytes_at_launch": 290119204864,
+    "scope": "this offline child only, including file I/O/hash/decode/render; excludes separate metric/reference processes and OS/driver work"
+  },
+  "rows": [
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "cd77f7c96c0d58cdbb7b530460813490e4f24e8384200efe1d589a851df37c26",
+      "finalization_s": 7.9763454,
+      "frames": 9669904,
+      "gain": 1.0812318325042725,
+      "id": "funk-universal50",
+      "lufs": -13.321623802185059,
+      "peak": -1.0000098943710327,
+      "rate": 48000,
+      "reused_measurements": false,
+      "round": 0
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "cd77f7c96c0d58cdbb7b530460813490e4f24e8384200efe1d589a851df37c26",
+      "finalization_s": 0.2759079,
+      "frames": 9669904,
+      "gain": 1.0812318325042725,
+      "id": "funk-universal50",
+      "lufs": -13.321623802185059,
+      "peak": -1.0000098943710327,
+      "rate": 48000,
+      "reused_measurements": true,
+      "round": 0
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "cd77f7c96c0d58cdbb7b530460813490e4f24e8384200efe1d589a851df37c26",
+      "finalization_s": 0.2501368,
+      "frames": 9669904,
+      "gain": 1.0812318325042725,
+      "id": "funk-universal50",
+      "lufs": -13.321623802185059,
+      "peak": -1.0000098943710327,
+      "rate": 48000,
+      "reused_measurements": true,
+      "round": 1
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "cd77f7c96c0d58cdbb7b530460813490e4f24e8384200efe1d589a851df37c26",
+      "finalization_s": 7.29578,
+      "frames": 9669904,
+      "gain": 1.0812318325042725,
+      "id": "funk-universal50",
+      "lufs": -13.321623802185059,
+      "peak": -1.0000098943710327,
+      "rate": 48000,
+      "reused_measurements": false,
+      "round": 1
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "145d301b614ebca0b85ecef66e328aba16fc7f2184f17c4a90a56b102af5b7eb",
+      "finalization_s": 7.9093822,
+      "frames": 9669904,
+      "gain": 1.0536184310913086,
+      "id": "funk-loud75",
+      "lufs": -13.546332359313965,
+      "peak": -1.0000102519989014,
+      "rate": 48000,
+      "reused_measurements": false,
+      "round": 0
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "145d301b614ebca0b85ecef66e328aba16fc7f2184f17c4a90a56b102af5b7eb",
+      "finalization_s": 0.2567444,
+      "frames": 9669904,
+      "gain": 1.0536184310913086,
+      "id": "funk-loud75",
+      "lufs": -13.546332359313965,
+      "peak": -1.0000102519989014,
+      "rate": 48000,
+      "reused_measurements": true,
+      "round": 0
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "145d301b614ebca0b85ecef66e328aba16fc7f2184f17c4a90a56b102af5b7eb",
+      "finalization_s": 0.2553055,
+      "frames": 9669904,
+      "gain": 1.0536184310913086,
+      "id": "funk-loud75",
+      "lufs": -13.546332359313965,
+      "peak": -1.0000102519989014,
+      "rate": 48000,
+      "reused_measurements": true,
+      "round": 1
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "145d301b614ebca0b85ecef66e328aba16fc7f2184f17c4a90a56b102af5b7eb",
+      "finalization_s": 7.9722815,
+      "frames": 9669904,
+      "gain": 1.0536184310913086,
+      "id": "funk-loud75",
+      "lufs": -13.546332359313965,
+      "peak": -1.0000102519989014,
+      "rate": 48000,
+      "reused_measurements": false,
+      "round": 1
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "0a2bd1e0a4eb1dd4bb95896f226a05515e8eced3d4063a71831dc00a9ccf8a72",
+      "finalization_s": 8.4457275,
+      "frames": 11408561,
+      "gain": 1.0,
+      "id": "rich-universal50",
+      "lufs": -20.276485443115234,
+      "peak": -1.000014066696167,
+      "rate": 48000,
+      "reused_measurements": false,
+      "round": 0
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "0a2bd1e0a4eb1dd4bb95896f226a05515e8eced3d4063a71831dc00a9ccf8a72",
+      "finalization_s": 0.2972748,
+      "frames": 11408561,
+      "gain": 1.0,
+      "id": "rich-universal50",
+      "lufs": -20.276485443115234,
+      "peak": -1.000014066696167,
+      "rate": 48000,
+      "reused_measurements": true,
+      "round": 0
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "0a2bd1e0a4eb1dd4bb95896f226a05515e8eced3d4063a71831dc00a9ccf8a72",
+      "finalization_s": 0.3339213,
+      "frames": 11408561,
+      "gain": 1.0,
+      "id": "rich-universal50",
+      "lufs": -20.276485443115234,
+      "peak": -1.000014066696167,
+      "rate": 48000,
+      "reused_measurements": true,
+      "round": 1
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "0a2bd1e0a4eb1dd4bb95896f226a05515e8eced3d4063a71831dc00a9ccf8a72",
+      "finalization_s": 8.0974373,
+      "frames": 11408561,
+      "gain": 1.0,
+      "id": "rich-universal50",
+      "lufs": -20.276485443115234,
+      "peak": -1.000014066696167,
+      "rate": 48000,
+      "reused_measurements": false,
+      "round": 1
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "defb18f68c56dfff9171d3cfefd27be78d6c0b84a73d8ea38d9f316d28f4064a",
+      "finalization_s": 8.1438236,
+      "frames": 11408561,
+      "gain": 1.0,
+      "id": "rich-loud75",
+      "lufs": -14.250592231750488,
+      "peak": -1.0000141859054565,
+      "rate": 48000,
+      "reused_measurements": false,
+      "round": 0
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "defb18f68c56dfff9171d3cfefd27be78d6c0b84a73d8ea38d9f316d28f4064a",
+      "finalization_s": 0.3442979,
+      "frames": 11408561,
+      "gain": 1.0,
+      "id": "rich-loud75",
+      "lufs": -14.250592231750488,
+      "peak": -1.0000141859054565,
+      "rate": 48000,
+      "reused_measurements": true,
+      "round": 0
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "defb18f68c56dfff9171d3cfefd27be78d6c0b84a73d8ea38d9f316d28f4064a",
+      "finalization_s": 0.2945893,
+      "frames": 11408561,
+      "gain": 1.0,
+      "id": "rich-loud75",
+      "lufs": -14.250592231750488,
+      "peak": -1.0000141859054565,
+      "rate": 48000,
+      "reused_measurements": true,
+      "round": 1
+    },
+    {
+      "channels": 2,
+      "exact_pcm": true,
+      "expected_sha256": "defb18f68c56dfff9171d3cfefd27be78d6c0b84a73d8ea38d9f316d28f4064a",
+      "finalization_s": 8.0726884,
+      "frames": 11408561,
+      "gain": 1.0,
+      "id": "rich-loud75",
+      "lufs": -14.250592231750488,
+      "peak": -1.0000141859054565,
+      "rate": 48000,
+      "reused_measurements": false,
+      "round": 1
+    }
+  ],
+  "cases": [
+    {
+      "id": "funk-universal50",
+      "decode_s": 0.0502575,
+      "prepare_s": 6.9436804,
+      "fresh_observations_s": [
+        7.9763454,
+        7.29578
+      ],
+      "reused_observations_s": [
+        0.2759079,
+        0.2501368
+      ],
+      "fresh_mean_s": 7.6360627,
+      "reused_mean_s": 0.26302234999999996,
+      "incremental_ratio": 29.031991767999948,
+      "two_fresh_evaluations_s": 15.2721254,
+      "prepare_plus_two_reused_evaluations_s": 7.4697251
+    },
+    {
+      "id": "funk-loud75",
+      "decode_s": 0.0699962,
+      "prepare_s": 7.0021766,
+      "fresh_observations_s": [
+        7.9093822,
+        7.9722815
+      ],
+      "reused_observations_s": [
+        0.2567444,
+        0.2553055
+      ],
+      "fresh_mean_s": 7.94083185,
+      "reused_mean_s": 0.25602495000000003,
+      "incremental_ratio": 31.015851580090143,
+      "two_fresh_evaluations_s": 15.8816637,
+      "prepare_plus_two_reused_evaluations_s": 7.5142265
+    },
+    {
+      "id": "rich-universal50",
+      "decode_s": 0.077627,
+      "prepare_s": 9.2901928,
+      "fresh_observations_s": [
+        8.4457275,
+        8.0974373
+      ],
+      "reused_observations_s": [
+        0.2972748,
+        0.3339213
+      ],
+      "fresh_mean_s": 8.2715824,
+      "reused_mean_s": 0.31559804999999996,
+      "incremental_ratio": 26.20923164766069,
+      "two_fresh_evaluations_s": 16.5431648,
+      "prepare_plus_two_reused_evaluations_s": 9.9213889
+    },
+    {
+      "id": "rich-loud75",
+      "decode_s": 0.0757065,
+      "prepare_s": 8.9071712,
+      "fresh_observations_s": [
+        8.1438236,
+        8.0726884
+      ],
+      "reused_observations_s": [
+        0.3442979,
+        0.2945893
+      ],
+      "fresh_mean_s": 8.108256,
+      "reused_mean_s": 0.3194436,
+      "incremental_ratio": 25.382433706607365,
+      "two_fresh_evaluations_s": 16.216512,
+      "prepare_plus_two_reused_evaluations_s": 9.5460584
+    }
+  ]
+}

@@ -22,6 +22,15 @@ or authorize a merge, push or release.
 
 ## Checkpoint ledger
 
+Newest C1/C0 follow-through: [broader presets and prepared-target reuse](2026-09-16-preset-and-target-reuse-results.md)
+complete 16 + 4 independently verified whole outputs. Only one of eight broader
+pairs meets every frozen character/target limit. The existing prepared-facts API
+then produces 16 exact-reference outputs with 25.4–31.0x faster incremental
+finalization; including preparation, two calls use 40.0–52.7% less observed work.
+This measures an offline stage, not app-wide response or a new production feature.
+C1's final contract, C2 and C3 remain open. A post-power recovery check now opens
+Realtek and passes its muted gain/EQ callbacks; historical failures remain intact.
+
 Latest C1 follow-up: the [single-first comparison and conditional lower grid](2026-09-16-single-first-development-results.md)
 complete 12 + 10 independently passing whole-output rows, including 16 fresh
 files. Funk/Aphelion/Baby meet the frozen single-candidate limits. Metal/Rich

@@ -31,3 +31,16 @@ cost; the two `evaluate_*` helpers apply the frozen source/control measurements.
 reuses matching previously passing PCM. `summarize_single_first.py` requires
 complete hash-bound reports and recomputes all character constraints before
 joining the evidence. The failed follow-up v1 and successful v2 remain separate.
+
+The subsequent `prepare/evaluate/summarize_broader_first.py` helpers bind and
+verify the two-preset/two-target extension. `prepare/evaluate/summarize_target_reuse.py`
+test the same prepared outputs under another delivery target. The deliberately
+ignored `output_protection::prepared_research::prepared_measurement_reuse_benchmark`
+compares existing fresh/prepared APIs at release optimization and requires all
+sixteen outputs to match four verified files bit for bit. Its module is guarded
+by `cfg(test)`; `prepare_measurement_reuse.py` copies the built executable before
+preflight, and `summarize_measurement_reuse.py` retains the initial preparation
+cost and both timing observations. These experiments do not alter normal app DSP.
+See `docs/reviews/2026-09-16-preset-and-target-reuse-results.md` for scope and
+remaining limitations. `summarize_recovery_native.py` records post-power Realtek
+opening/callback checks separately from historical failures.

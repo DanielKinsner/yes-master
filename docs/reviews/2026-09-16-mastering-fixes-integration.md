@@ -82,6 +82,19 @@ directory. No private audio is committed.
 
 ### Native device limitation diagnosed separately
 
+**Post-power-interruption update, September 16:** the same empty-production-stream
+probe now opens the default Realtek output. Fresh muted Realtek gain/EQ callback
+checks pass: 659 callbacks during 1,200 gain edits and 609 during 120 EQ edits,
+zero deadlines/device/converter errors or exhausted samples. Maximum callback
+work is 1.690/1.701 ms; granted device-default buffers are 480–1,056 frames.
+This uses the restored 48 kHz Imaginal source through 96 kHz file processing to
+48 kHz output. See the [recovery evidence](evidence/2026-09-16-dynamics-research/post-power-native-v1.json).
+No device preferences changed. The failure below remains historical with its
+underlying cause unresolved; it is no longer the current endpoint-open result.
+This update does not claim fixed-256, installed or by-ear validation. An initial
+incorrect exact test-name filter ran zero tests and was not counted; the corrected
+filter ran the expected single device diagnostic.
+
 The old timing probe's fixed-256 request fails twice on the current default
 `Speakers (Realtek(R) Audio)` with `0x887C003A`; an explicit default-buffer trial
 also fails. A new test-only empty-production-stream diagnostic confirms that this

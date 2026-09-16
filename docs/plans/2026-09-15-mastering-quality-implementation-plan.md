@@ -33,6 +33,15 @@ flagged sources does not establish a clear replacement for their current control
 Develop current-control eligibility before freezing the broader regression/holdout
 selector. C1's final contract, C2 and C3 remain open.
 
+The [broader preset and target-reuse follow-through](../reviews/2026-09-16-preset-and-target-reuse-results.md)
+adds 16 broader whole files and four prepared-target files, independently passing
+technical delivery checks. The paired existing prepared-measurement API produces
+16 bit-identical outputs at 0.256–0.319 s incremental finalization means versus
+7.636–8.272 s fresh; one-time preparation is counted separately. This supports
+separating the processing choice from final delivery gain and reusing valid
+buffer/facts. Broader character failures keep the source/preset contract in
+development; no C2 holdout or C3 adoption is marked complete.
+
 ## In plain language
 
 Fix the output and start testing smarter preparation alongside those fixes.

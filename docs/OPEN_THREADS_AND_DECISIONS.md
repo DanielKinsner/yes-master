@@ -1,5 +1,24 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-16 — Broader presets, target reuse and recovery verified.**
+> The [new results](reviews/2026-09-16-preset-and-target-reuse-results.md) complete
+> sixteen broader preset/target outputs and four prepared-target outputs, all
+> independently checked whole files. Only one of eight broader control/single
+> pairs meets both the frozen character and target limits; two retain qualified
+> character with a shortfall and five remain explicit character fallbacks.
+> Dense-preset intent is preserved; no universal shipping constraint is inferred.
+> Reusing prepared PCM preserves its character across a target change. Retaining
+> the existing prepared peak/loudness facts then cuts paired finalization means
+> from 7.636–8.272 s to 0.256–0.319 s with **16 bit-identical complete outputs**.
+> Including one-time preparation, two evaluations use 40.0–52.7% less observed work.
+> These are offline stage measurements, not an app-wide speedup. Develop processing
+> choice separately from delivery gain and retain valid buffer/facts; C1's final
+> source/preset contract, C2 and C3 remain open. No new shipping policy is enabled.
+> After the power interruption, Realtek opens and fresh muted callback checks
+> pass (659 gain / 609 EQ callbacks, zero misses/errors). Earlier endpoint-open
+> failures remain preserved with cause unresolved; fixed-256/listening proof is
+> not inferred. Local main stays `ab420654`, with experiments on the separate branch.
+
 > **2026-09-16 — Dynamics research checkpoint verified; experimental direction chosen.**
 > Dan chose the recommended dynamics-preserving direction for experiments when
 > reaching a target would flatten punch/section contrast. He wants a polished
