@@ -6103,6 +6103,7 @@ dependencies = [
  "ebur128",
  "hound",
  "mp3lame-encoder",
+ "realfft",
  "rodio",
  "rubato",
  "rustfft",
