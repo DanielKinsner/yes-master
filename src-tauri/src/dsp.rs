@@ -680,7 +680,7 @@ pub fn preset_calibration(preset: &Preset) -> PresetCalibration {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ChainCoeffs {
     /// Per-preset LR4 subsonic high-pass. One Butterworth stage is stored
     /// here and run through two state stages for a 24 dB/oct slope.
@@ -2411,7 +2411,7 @@ impl MasteringChain {
     ///
     /// Offline render paths only: the live audition path keeps its
     /// (inaudible) 3 ms lookahead latency, as any realtime processor must.
-    pub fn flush_render_tail(&mut self, samples: &mut Vec<f32>, channels: usize) {
+    pub fn flush_render_tail(&mut self, samples: &mut [f32], channels: usize) {
         if channels == 0 || self.states.is_empty() {
             return;
         }
@@ -2421,13 +2421,16 @@ impl MasteringChain {
         }
         let mut tail = vec![0.0_f32; tail_len];
         self.process_interleaved(&mut tail, channels);
-        samples.extend_from_slice(&tail);
-        // Post-extend the buffer holds `orig + tail_len` samples with the
-        // real audio at [tail_len, tail_len + orig): dropping exactly
-        // `tail_len` from the front restores the original length and
-        // sample-aligns the output with the source — including sources
-        // shorter than the lookahead window.
-        samples.drain(..tail_len);
+        // Equivalent to append(tail), then drain(..tail_len), without an
+        // allocation that can double the whole track's retained capacity.
+        // Short files contain their complete aligned output in the tail.
+        let len = samples.len();
+        if len <= tail_len {
+            samples.copy_from_slice(&tail[tail_len - len..]);
+        } else {
+            samples.copy_within(tail_len.., 0);
+            samples[len - tail_len..].copy_from_slice(&tail);
+        }
     }
 
     pub fn reset_states(&mut self) {
@@ -2459,6 +2462,40 @@ impl MasteringChain {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn in_place_tail_flush_matches_append_drain_without_growing_track_allocation() {
+        let settings = flush_test_settings();
+        for rate in [44100, 48000, 96000] {
+            for channels in [1, 2] {
+                let latency = MasteringChain::new(rate, channels, &settings).latency_frames();
+                for frames in [0, 1, latency - 1, latency, latency + 1, 24001] {
+                    let source: Vec<f32> = (0..frames * channels)
+                        .map(|i| (i as f32 * 0.47).sin() * 0.9)
+                        .collect();
+                    let mut expected = source.clone();
+                    let mut actual = source;
+                    let mut old_chain = MasteringChain::new(rate, channels, &settings);
+                    let mut new_chain = MasteringChain::new(rate, channels, &settings);
+                    old_chain.process_interleaved(&mut expected, channels);
+                    new_chain.process_interleaved(&mut actual, channels);
+                    let pointer = actual.as_ptr();
+                    let capacity = actual.capacity();
+                    let mut tail = vec![0.; latency * channels];
+                    old_chain.process_interleaved(&mut tail, channels);
+                    expected.extend_from_slice(&tail);
+                    expected.drain(..latency * channels);
+                    new_chain.flush_render_tail(&mut actual, channels);
+                    assert_eq!(
+                        actual.iter().map(|s| s.to_bits()).collect::<Vec<_>>(),
+                        expected.iter().map(|s| s.to_bits()).collect::<Vec<_>>()
+                    );
+                    assert_eq!(actual.capacity(), capacity);
+                    assert_eq!(actual.as_ptr(), pointer);
+                }
+            }
+        }
+    }
 
     fn approx_eq(a: f32, b: f32, tol: f32) -> bool {
         (a - b).abs() <= tol
