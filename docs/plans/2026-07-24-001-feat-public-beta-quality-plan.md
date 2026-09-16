@@ -18,6 +18,12 @@ deepened: 2026-07-24
 
 # YES Master Public Beta Quality Program
 
+> **September 16 integration follow-through:** owner review has authorized the
+> tested fixes to enter local main, followed by sound research on a separate
+> branch. The [integration record](../reviews/2026-09-16-mastering-fixes-integration.md)
+> is current; the pause below is historical. Verification is in progress, with
+> no release/publication authorization or sonic-policy adoption.
+
 > **September 16 owner sequencing:** local mastering correctness/playback/readout
 > changes are prepared for owner review at `f88f042b`; see the
 > [review guide](../reviews/2026-09-16-mastering-fixes-review.md) and

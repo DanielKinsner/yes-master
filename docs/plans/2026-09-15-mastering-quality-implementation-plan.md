@@ -2,20 +2,21 @@
 
 Date: September 15, 2026. Reviewed checkout: `5426041c` on `main`.
 Revision 2, following plan review and Dan's upfront-analysis direction.
-Status: **paused for owner review, September 16**. Implementation was authorized
+Status: **selective local fixes integration authorized, September 16**. Implementation was authorized
 September 15 on local `codex/mastering-quality` from `7534f612`. See the
 [checkpoint ledger](../reviews/2026-09-15-mastering-quality-implementation-evidence.md).
 Sonic-policy adoption and calibration remain gated. This file replaces the
 earlier draft as the current plan.
 
-**Current owner sequencing supersedes the execution order below:** review the
-local fixes at `f88f042b` for possible main/beta inclusion first. No further sound
-experiments or DSP variations while that review is pending. After approval and
-main integration, resume sound-quality research on a separate branch from the
-verified main state. Preserve completed work; do not restart it or treat pending
-sound research as a new blanket beta gate. The sound-priority question is deferred,
-not answered. See the [review guide](../reviews/2026-09-16-mastering-fixes-review.md)
-for the exact snapshot, app/research distinction and remaining verification limits.
+**Current owner sequencing supersedes the execution order below:** Dan approved
+preparing and testing the selected fixes, merging that verified result into local
+main, then resuming sound-quality research on a separate branch from verified main.
+The [integration record](../reviews/2026-09-16-mastering-fixes-integration.md) tracks
+that work; the [review guide](../reviews/2026-09-16-mastering-fixes-review.md) retains
+the snapshot and limits. Preserve completed work rather than restarting research.
+Unfinished sonic experiments are not a new blanket beta gate. The sound-priority
+choice remains unresolved; local merge approval does not adopt a sonic policy or
+authorize push, release, deployment, spending or private-audio commits.
 
 ## In plain language
 

@@ -1,5 +1,10 @@
 # Mastering fixes: owner review before integration
 
+> **Superseded sequencing:** Dan subsequently approved selective local integration
+> followed by a separate sound-research branch. The [integration record](2026-09-16-mastering-fixes-integration.md)
+> is current. This guide preserves the reviewed snapshot, findings and limits;
+> its original pause/no-merge instruction below is historical.
+
 ## Current direction
 
 Dan's September 16 instruction supersedes the earlier continuous implementation

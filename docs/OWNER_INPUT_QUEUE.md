@@ -1,5 +1,11 @@
 # YES Master — Owner Input Queue
 
+**September 16 follow-through:** Dan approved selective local fixes integration
+and subsequent sound research on a separate branch. Engineering verification
+continues without another routine approval. Sonic tradeoff/calibration decisions
+remain unresolved; the review pause below is historical. See the
+[integration record](reviews/2026-09-16-mastering-fixes-integration.md).
+
 **September 16 mastering update:** the owner will review the local fixes before
 main integration and potential beta inclusion. Sound experiments and their
 preference questions are deferred until the approved fixes are merged; subsequent

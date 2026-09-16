@@ -1,5 +1,14 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-16 — Selective local integration authorized.** Dan approved preparing
+> and testing the fixes, merging the verified selection into local main, then
+> resuming dynamic-range/quality research on a separate branch. See the
+> [integration record](reviews/2026-09-16-mastering-fixes-integration.md).
+> Work is on `codex/mastering-fixes-integration`; the original research branch
+> and evidence are preserved. Tests are in progress. The review pause below is
+> superseded. No push, release, deployment, spending, private-audio commit or
+> automatic sonic-policy adoption is authorized by this direction.
+
 > **2026-09-16 — Owner review first; sound experiments paused.**
 > Dan wants to review the local correctness, playback, measurement, performance
 > and readout changes before any main integration, with possible beta inclusion.
