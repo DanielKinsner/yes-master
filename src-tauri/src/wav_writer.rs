@@ -243,17 +243,36 @@ pub fn measure_delivery(
     channels: u16,
     bit_depth: u16,
 ) -> CommandResult<(f32, f32, f32)> {
+    measure_delivery_with_cancel(samples, sample_rate, channels, bit_depth, None)
+}
+
+pub fn measure_delivery_with_cancel(
+    samples: &[f32],
+    sample_rate: u32,
+    channels: u16,
+    bit_depth: u16,
+    cancel: Option<&std::sync::atomic::AtomicBool>,
+) -> CommandResult<(f32, f32, f32)> {
     use ebur128::{EbuR128, Mode};
+    let cancelled = || cancel.is_some_and(|f| f.load(std::sync::atomic::Ordering::Relaxed));
     wav_spec(channels, sample_rate, bit_depth)?;
     let mut ebu = EbuR128::new(u32::from(channels), sample_rate, Mode::I | Mode::LRA)
         .map_err(|e| CommandError::Render(e.to_string()))?;
     if bit_depth == 32 {
-        ebu.add_frames_f32(samples)
-            .map_err(|e| CommandError::Render(e.to_string()))?;
+        for chunk in samples.chunks(4096 * channels as usize) {
+            if cancelled() {
+                return Err(CommandError::Render("PCM measurement cancelled".into()));
+            }
+            ebu.add_frames_f32(chunk)
+                .map_err(|e| CommandError::Render(e.to_string()))?;
+        }
     } else {
         let mut rng = DitherRng::new(0x000A_11CE);
         let mut scratch = Vec::with_capacity(4096 * channels as usize);
         for chunk in samples.chunks(4096 * channels as usize) {
+            if cancelled() {
+                return Err(CommandError::Render("PCM measurement cancelled".into()));
+            }
             scratch.clear();
             scratch.extend(chunk.iter().map(|&sample| {
                 if bit_depth == 16 {
@@ -272,8 +291,8 @@ pub fn measure_delivery(
     let lra = ebu
         .loudness_range()
         .map_err(|e| CommandError::Render(e.to_string()))? as f32;
-    let source = DeliveryPcm::new(samples, channels, bit_depth, || false)?;
-    let peak = crate::peak_meter::measure_source(&source, || false)
+    let source = DeliveryPcm::new(samples, channels, bit_depth, cancelled)?;
+    let peak = crate::peak_meter::measure_source(&source, cancelled)
         .map_err(|e| CommandError::Render(e.into()))?
         .upper();
     Ok((
