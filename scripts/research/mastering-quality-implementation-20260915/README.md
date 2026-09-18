@@ -51,3 +51,9 @@ known sources at two targets (24 whole files), with the same DSP and acceptance
 limits. `join_universal50.py` requires fresh complete evidence plus exact
 revalidation of the retained Funk/Rich measurements and files before joining
 eight-source coverage. See `docs/reviews/2026-09-18-universal50-coverage-protocol.md`.
+
+`metal_positive.py prepare/summarize` binds two subsequent +3 dB reproductions
+to the retained historical lead and four independently verified corrected-chain
+control/single files. The fixed selector is not changed to accept those positive
+offsets. See `docs/reviews/2026-09-18-metal-positive-drive-protocol.md`; its outcome
+is a separate development observation, not a rewritten Universal 50 selection.

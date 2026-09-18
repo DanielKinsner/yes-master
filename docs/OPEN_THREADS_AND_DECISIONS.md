@@ -8,6 +8,10 @@
 > native rendering runs separately from character/reference measurement to
 > isolate offline cost. Main, shipping behavior and release status are unchanged;
 > results are pending, with source/preset contract, quiet copies and holdout open.
+> A separately [frozen two-render Metal follow-up](reviews/2026-09-18-metal-positive-drive-protocol.md)
+> will reproduce the existing historical +3 dB lead on the corrected chain after
+> the required retained controls pass whole-file verification. This extends the
+> evidence without relaxing thresholds or changing the fixed selector's grid.
 
 > **2026-09-16 — Broader presets, target reuse and recovery verified.**
 > The [new results](reviews/2026-09-16-preset-and-target-reuse-results.md) complete

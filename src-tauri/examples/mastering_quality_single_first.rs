@@ -66,9 +66,12 @@ fn main() {
     assert!(!output.exists());
     let job = read(job_path);
     let followup = job["experiment"] == "flagged-lower-drive-v1";
+    let metal_positive = job["experiment"] == "metal-positive-drive-v1";
     let remaining_universal = job["experiment"] == "broader-universal50-v1";
     let broader = job["experiment"] == "broader-first-v1" || remaining_universal;
-    assert!(followup || broader || job["experiment"] == "single-first-development-v1");
+    assert!(
+        followup || broader || metal_positive || job["experiment"] == "single-first-development-v1"
+    );
     assert_eq!(
         sha(Path::new(job["specification"].as_str().unwrap())),
         job["specification_sha256"]
@@ -95,6 +98,10 @@ fn main() {
         "job_sha256":sha(job_path),"rows":[],"source_preparation":[],
         "scope":"known-source offline development; no production policy or app latency claim"});
     for case in job["cases"].as_array().unwrap() {
+        if metal_positive {
+            assert_eq!(case["id"], "metal");
+            assert_eq!(case["candidates"].as_array().unwrap().len(), 2);
+        }
         if broader {
             if remaining_universal {
                 assert!(matches!(
@@ -154,20 +161,31 @@ fn main() {
                 serde_json::from_value(retained["requested_settings"].clone()).unwrap();
             let drive = retained["operating_drive_db"].as_f64().unwrap() as f32;
             let offset = requested["offset_db"].as_f64().unwrap() as f32;
-            if followup {
+            if metal_positive {
+                assert_eq!(policy, "single");
+                assert_eq!(offset, 3.);
+            } else if followup {
                 assert!([0., -3., -6., -12.].contains(&offset));
                 assert!(policy == "single" || offset == 0.);
             } else {
                 assert_eq!(offset, 0., "single-first freezes zero-offset candidates");
             }
-            let id = if broader {
+            let id = if broader || metal_positive {
                 if remaining_universal {
                     assert_eq!(retained["preset_id"], "universal50");
                 }
-                assert!(matches!(
-                    retained["preset_id"].as_str().unwrap(),
-                    "universal50" | "loud75"
-                ));
+                if metal_positive {
+                    assert!(matches!(
+                        retained["preset_id"].as_str().unwrap(),
+                        "universal50" | "universal75"
+                    ));
+                    assert_eq!(settings.effective_target_lufs(), Some(-14.));
+                } else {
+                    assert!(matches!(
+                        retained["preset_id"].as_str().unwrap(),
+                        "universal50" | "loud75"
+                    ));
+                }
                 assert!([-14., -9.].contains(&settings.effective_target_lufs().unwrap()));
                 requested["output_id"].as_str().unwrap().to_owned()
             } else if offset == 0. {
@@ -300,7 +318,9 @@ fn main() {
     }
     assert_eq!(
         report["rows"].as_array().unwrap().len(),
-        if followup {
+        if metal_positive {
+            2
+        } else if followup {
             10
         } else if remaining_universal {
             24
