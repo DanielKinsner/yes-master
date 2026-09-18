@@ -1,17 +1,22 @@
 # YES Master — Open Threads & Owner Decisions
 
-> **2026-09-18 — Evidence collection resumed, Universal 50 coverage frozen.**
-> Dan authorized continuing experiments. The [next checkpoint](reviews/2026-09-18-universal50-coverage-protocol.md)
-> adds the six remaining original sources at Universal 50, -14/-9, current/single
-> processing: 24 new whole files. Reuse Funk/Rich's completed evidence. Limits,
-> preset coefficients and the control-inclusive selector stay unchanged. New
-> native rendering runs separately from character/reference measurement to
-> isolate offline cost. Main, shipping behavior and release status are unchanged;
-> results are pending, with source/preset contract, quiet copies and holdout open.
-> A separately [frozen two-render Metal follow-up](reviews/2026-09-18-metal-positive-drive-protocol.md)
-> will reproduce the existing historical +3 dB lead on the corrected chain after
-> the required retained controls pass whole-file verification. This extends the
-> evidence without relaxing thresholds or changing the fixed selector's grid.
+> **2026-09-18 — Broader coverage and Metal follow-up verified.**
+> Dan authorized continuing evidence collection. The [completed results](reviews/2026-09-18-universal50-and-metal-results.md)
+> add 24 independently verified whole files and reuse eight Funk/Rich outputs,
+> completing original-level Universal 50 current/single pairs at -14/-9 across
+> all eight development sources. The fixed selector yields four qualified targets,
+> five character-qualified shortfalls and seven explicit character fallbacks.
+> All eight -9 singles fail a character limit. A separate two-file reproduction
+> of the retained Metal +3 dB lead passes every unchanged limit at Universal 50/75
+> and -14, preserving more attack than current processing while clearing the
+> zero-offset candidate's tone failure. Tone margins are narrow (0.031/0.028 dB).
+> This supports a future bounded search in both directions, with processing
+> choice separate from delivery gain. It does not rewrite the fixed selector
+> or adopt +3 as a shipping constant. Native evaluation costs, whole-file checks,
+> source/settings hashes and preflight corrections are recorded. C1's final
+> source/preset/control contract, quiet-copy coverage for the corrected policy,
+> runtime freeze, C2 holdout and C3 adoption remain open. Main stays `ab420654`;
+> normal app behavior, preset intent, gated features and release status are unchanged.
 
 > **2026-09-16 — Broader presets, target reuse and recovery verified.**
 > The [new results](reviews/2026-09-16-preset-and-target-reuse-results.md) complete

@@ -2,7 +2,7 @@
 
 Date: September 15, 2026. Reviewed checkout: `5426041c` on `main`.
 Revision 2, following plan review and Dan's upfront-analysis direction.
-Status: **fixes integrated locally; separate C1 research resumed, September 16**. Implementation was authorized
+Status: **fixes integrated locally; C1 coverage extended, September 18**. Implementation was authorized
 September 15 on local `codex/mastering-quality` from `7534f612`. See the
 [checkpoint ledger](../reviews/2026-09-15-mastering-quality-implementation-evidence.md).
 Sonic-policy adoption and calibration remain gated. This file replaces the
@@ -30,8 +30,8 @@ The [single-first and bounded follow-up results](../reviews/2026-09-16-single-fi
 complete 22 independently checked rows using 16 new files and preserved anchors.
 Three of five single candidates meet frozen limits; extra search on the two
 flagged sources does not establish a clear replacement for their current control.
-Develop current-control eligibility before freezing the broader regression/holdout
-selector. C1's final contract, C2 and C3 remain open.
+The implemented control-inclusive selector now retains qualified current
+processing as eligible. C1's final contract, C2 and C3 remain open.
 
 The [broader preset and target-reuse follow-through](../reviews/2026-09-16-preset-and-target-reuse-results.md)
 adds 16 broader whole files and four prepared-target files, independently passing
@@ -41,6 +41,18 @@ technical delivery checks. The paired existing prepared-measurement API produces
 separating the processing choice from final delivery gain and reusing valid
 buffer/facts. Broader character failures keep the source/preset contract in
 development; no C2 holdout or C3 adoption is marked complete.
+
+The [September 18 extension](../reviews/2026-09-18-universal50-and-metal-results.md)
+adds 24 independently verified outputs, joining retained Funk/Rich results into
+original-level Universal 50 current/single coverage across all eight sources at
+-14/-9. The fixed selector returns four qualified targets, five character-qualified
+shortfalls and seven character fallbacks. All eight -9 singles fail a character
+constraint. Two additional corrected-chain Metal +3 dB reproductions pass the
+unchanged character and target limits at Universal 50/75, with narrow tone
+margins. This supports testing bounded search in both directions, separately
+from delivery-gain reuse; it does not change the existing selector or adopt a
+drive constant. Full corrected-policy quiet-copy coverage, source/preset/control
+mapping, runtime/fallback freeze, holdout and production adoption remain open.
 
 ## In plain language
 

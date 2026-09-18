@@ -1,0 +1,119 @@
+{
+  "status": "complete",
+  "date": "2026-09-18",
+  "branch": "codex/mastering-dynamics-research",
+  "research_source_commit": "1cd342585906493cd699f23b0bd06e20458dfc23",
+  "unchanged_local_main": "ab42065495b8c998b696b7ae15e3792fc4d4eb7d",
+  "preserved_original_research": "03df038adc5b41be17b8829bcf0d1538c5ff19d0",
+  "revised_plan_commit_is_ancestor": true,
+  "fresh_whole_files": 26,
+  "reused_universal50_files": 8,
+  "new_audio_bytes": 2780790792,
+  "selector_outcomes": {
+    "qualified_target": 4,
+    "character_fallback": 7,
+    "qualified_character_target_shortfall": 5
+  },
+  "metal_positive_qualified": 2,
+  "artifacts": {
+    "universal50-v1": {
+      "path": "docs\\reviews\\evidence\\2026-09-18-dynamics-research\\universal50-v1.json",
+      "sha256": "54f7a7dc7a7e69349ff308de7ca65e0fc5b346ebdecb3d93b1ac1857fa090170"
+    },
+    "universal50-joined-v1": {
+      "path": "docs\\reviews\\evidence\\2026-09-18-dynamics-research\\universal50-joined-v1.json",
+      "sha256": "779343000c92c0bc457ebe59f18f326b1454f01f8ed2be75effb669387348c3d"
+    },
+    "metal-positive-v1": {
+      "path": "docs\\reviews\\evidence\\2026-09-18-dynamics-research\\metal-positive-v1.json",
+      "sha256": "01fb74384df9a3cb3679c0581d68b7e2473fd06d82f1837492caf6664b281ef9"
+    },
+    "universal50-job-v1.json": {
+      "path": "test-output\\dynamics-research-20260918\\universal50-job-v1.json",
+      "sha256": "2f1f8807ac1365a4ecdd70b11017fac233302fcb2cc64709efb22a1e3e0b9e3b"
+    },
+    "universal50-v1.process.json": {
+      "path": "test-output\\dynamics-research-20260918\\universal50-v1.process.json",
+      "sha256": "8a24287cacca3f23315c443a825ce55b89b27e3a4acc6144d31023a741212a9c"
+    },
+    "universal50-stage-timing-v1.json": {
+      "path": "test-output\\dynamics-research-20260918\\universal50-stage-timing-v1.json",
+      "sha256": "0f42a7725f40320f6b2c1122f72e8eac3ee0d4bce2341078f3d80e49790b2a28"
+    },
+    "universal50-clippy-v1.log": {
+      "path": "test-output\\dynamics-research-20260918\\universal50-clippy-v1.log",
+      "sha256": "5c4ec7916faa197d677a94b8101fdf97414923f9fb11d791f84c86172b892858"
+    },
+    "universal50-build-v1.log": {
+      "path": "test-output\\dynamics-research-20260918\\universal50-build-v1.log",
+      "sha256": "c5f236466adb9679c0490153b9d5df72bbc7e0819a25290a429e6b469b908ed1"
+    },
+    "metal-positive-job-v1.json": {
+      "path": "test-output\\dynamics-research-20260918\\metal-positive-job-v1.json",
+      "sha256": "3aab7420f1cadaa658d114c6ee46f5764db982faf9c9aaa2b276af3cce960d6e"
+    },
+    "metal-positive-v1.process.json": {
+      "path": "test-output\\dynamics-research-20260918\\metal-positive-v1.process.json",
+      "sha256": "c62a50516367077edda8f4e26df5435590d4b14e4c246cfd1dc378677f7f102a"
+    },
+    "metal-positive-stage-timing-v1.json": {
+      "path": "test-output\\dynamics-research-20260918\\metal-positive-stage-timing-v1.json",
+      "sha256": "f001ee72ea45e2cf5cb58069b510b1a6410c49a618b076be9d20206b29a4884b"
+    },
+    "metal-positive-clippy-v1.log": {
+      "path": "test-output\\dynamics-research-20260918\\metal-positive-clippy-v1.log",
+      "sha256": "20bcf751ba434609961f56a684af936d5658a04e8c2b03370c2c4598fee8be54"
+    },
+    "metal-positive-build-v1.log": {
+      "path": "test-output\\dynamics-research-20260918\\metal-positive-build-v1.log",
+      "sha256": "c13209d861b1375048c0d378a45541c102539a88e083345171d1aee05731eb88"
+    },
+    "2026-09-18-universal50-and-metal-results.md": {
+      "path": "docs\\reviews\\2026-09-18-universal50-and-metal-results.md",
+      "sha256": "f5791050a95d02b1e35634a2223916b75def4ea21747054fbebf81232d768914"
+    },
+    "2026-09-18-universal50-coverage-protocol.md": {
+      "path": "docs\\reviews\\2026-09-18-universal50-coverage-protocol.md",
+      "sha256": "932e241af2a0148b4fdfe9bac47d556528a89fcdbad5bdceb41965dd7e368e16"
+    },
+    "2026-09-18-metal-positive-drive-protocol.md": {
+      "path": "docs\\reviews\\2026-09-18-metal-positive-drive-protocol.md",
+      "sha256": "524b04e002af417244ebf7b6ea9db6d375f89e671b757ef719b0c66fd14df55d"
+    }
+  },
+  "stages": {
+    "universal50": {
+      "metrics_wall_s": 72.0089526,
+      "independent_wall_s": 905.8346136,
+      "scheduling": "Native rendering, then character metrics, then independent whole-file references; no research-stage overlap",
+      "metrics_exit_code": 0,
+      "independent_exit_code": 0
+    },
+    "metal-positive": {
+      "scheduling": "After all Universal 50 evidence joined: native rendering, then independent references, then character measurements and summary",
+      "summary_exit_code": 0,
+      "summary_wall_s": 4.6212769,
+      "independent_exit_code": 0,
+      "independent_wall_s": 49.5289273
+    }
+  },
+  "scheduling_note": "Both native render jobs ran separately from metric/reference work. Metal compilation overlapped the Universal 50 reference stage; reference costs are workload observations.",
+  "validation": {
+    "rust_format": "pass",
+    "strict_example_clippy": "pass for both copied probes",
+    "release_build": "pass for both copied probes",
+    "research_python_compilation": "pass",
+    "existing_preserving_selector_regressions": 11,
+    "whitespace": "pass",
+    "new_document_links": "pass",
+    "agents_claude_byte_identical": true,
+    "normal_app_source_changes_this_session": false
+  },
+  "limitations": [
+    "Development sources, not unseen holdout or listening preference",
+    "Original source levels; full corrected-policy quiet-copy coverage remains open",
+    "Positive offsets remain outside the unchanged preserving selector grid",
+    "No new native responsiveness, installed-app, bridge, UI, packaging or remote CI claim",
+    "No push, merge, release, deployment or private audio commit in this session"
+  ]
+}

@@ -5,7 +5,8 @@
 > verifies the production fixes for local main and records exact selected-source,
 > fresh whole-output, fixture, bridge, UI, native and package evidence. Experiments
 > resume on a separate branch after that integration. Sonic choices, broader B3
-> boundaries, current Realtek endpoint failure and release gates remain open.
+> boundaries and release gates remain open. The later Realtek recovery check
+> below supersedes the endpoint-open failure for its observed scope.
 
 Started September 15, 2026 on local `codex/mastering-quality`, from `7534f612`.
 The starting checkout was clean and the revised plan matched that commit.
@@ -22,7 +23,17 @@ or authorize a merge, push or release.
 
 ## Checkpoint ledger
 
-Newest C1/C0 follow-through: [broader presets and prepared-target reuse](2026-09-16-preset-and-target-reuse-results.md)
+Newest C1 evidence: [September 18 coverage and Metal follow-up](2026-09-18-universal50-and-metal-results.md)
+verify 26 new whole files with unchanged acceptance limits. Twenty-four extend
+Universal 50 to all original sources at -14/-9 (eight retained outputs reused):
+four qualified targets, five character-qualified shortfalls and seven explicit
+character fallbacks. The separate Metal +3 dB reproductions at Universal 50/75
+and -14 meet all character/target limits on the corrected chain, with narrow
+tone margins. The fixed selector is unchanged; a future search should consider
+both directions. C1 contract/runtime freeze, corrected-policy quiet copies,
+holdout and C3 integration remain open. App processing and local main are unchanged.
+
+Prior C1/C0 follow-through: [broader presets and prepared-target reuse](2026-09-16-preset-and-target-reuse-results.md)
 complete 16 + 4 independently verified whole outputs. Only one of eight broader
 pairs meets every frozen character/target limit. The existing prepared-facts API
 then produces 16 exact-reference outputs with 25.4–31.0x faster incremental
@@ -31,11 +42,11 @@ This measures an offline stage, not app-wide response or a new production featur
 C1's final contract, C2 and C3 remain open. A post-power recovery check now opens
 Realtek and passes its muted gain/EQ callbacks; historical failures remain intact.
 
-Latest C1 follow-up: the [single-first comparison and conditional lower grid](2026-09-16-single-first-development-results.md)
+Prior C1 follow-up: the [single-first comparison and conditional lower grid](2026-09-16-single-first-development-results.md)
 complete 12 + 10 independently passing whole-output rows, including 16 fresh
 files. Funk/Aphelion/Baby meet the frozen single-candidate limits. Metal/Rich
-retain tradeoffs after 74.707 s of additional audio evaluation. The next selector
-must consider the corrected control as an eligible result. Dan chose the
+retain tradeoffs after 74.707 s of additional audio evaluation. The subsequently
+implemented selector includes the corrected control as an eligible result. Dan chose the
 dynamics-preserving research direction and a clean user experience; production
 adoption, final C1 contract, C2/C3 and the existing B3 limits remain open.
 
