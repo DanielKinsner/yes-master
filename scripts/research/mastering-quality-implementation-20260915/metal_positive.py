@@ -70,7 +70,19 @@ def prepare(args):
     }.items():
         baselines[preset] = {key: bound(path) for key, path in paths.items()}
         verified = retained(baselines[preset], facts['source'], prior['source_sha256'])
-        assert all(row['native']['preset_id'] == preset for row in verified)
+        for row in verified:
+            native = row['native']
+            # The earlier single-first report predates the convenience label.
+            # Always verify the actual settings; never infer identity from a
+            # missing label or silently replace a contradictory one.
+            settings = native['requested_settings']
+            assert settings['preset'] == {'kind': 'universal'}
+            assert settings['intensity'] == {'universal50': .5, 'universal75': .75}[preset]
+            if 'preset_id' in native:
+                assert native['preset_id'] == preset
+            else:
+                assert preset == 'universal75'
+                assert read(Path(baselines[preset]['native']['path']))['experiment'] == 'single-first-development-v1'
         original_single = next(row for row in prior['rows'] if row['preset_id'] == preset and
                                row['target'] == -14 and row['source_gain_db'] == 0 and row['policy'] == 'single')
         zero = next(row['native'] for row in verified if row['native']['policy'] == 'single')

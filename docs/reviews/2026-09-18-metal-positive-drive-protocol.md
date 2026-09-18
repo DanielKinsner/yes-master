@@ -51,3 +51,11 @@ chain/SRC/finalization, process wall/CPU/memory, metrics and references separate
 Reuse original analysis and retained measurements without assigning them zero
 historical cost. No app latency, listening, unseen holdout, shipping policy,
 saturation-curve adoption or production behavior claim follows from this probe.
+
+Preflight compatibility correction: the first preparation attempt stopped on
+the older Universal 75 report's missing `preset_id` convenience label, before
+writing a job or rendering audio. Its failed log is retained. Verify the actual
+serialized Universal preset and exact 0.50/0.75 intensity in every retained row;
+accept a missing label only in the identified earlier single-first Universal 75
+report, and reject contradictory labels. Coefficients, settings, file hashes,
+acceptance limits and required independent checks remain unchanged.
