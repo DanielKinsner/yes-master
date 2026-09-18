@@ -7,6 +7,7 @@ from pathlib import Path
 from drive_metrics import LIMITS, compare, constraints
 from preserving_selector import Candidate, select, VERSION
 from verification_common import sha
+from prepare_broader_first import COVERAGES
 
 
 def read(path):
@@ -17,21 +18,25 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--root',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--coverage', choices=COVERAGES, default='initial')
     args = parser.parse_args()
+    coverage = COVERAGES[args.coverage]
+    prefix = coverage['prefix']
     assert not args.output.exists()
-    paths = dict(job=args.root/'broader-job-v1.json',native=args.root/'broader-v1/report.json',
-                 metrics=args.root/'broader-metrics-v1.json',independent=args.root/'broader-independent-v1/comparison.json',
-                 process=args.root/'broader-v1.process.json')
+    paths = dict(job=args.root/f'{prefix}-job-v1.json',native=args.root/f'{prefix}-v1/report.json',
+                 metrics=args.root/f'{prefix}-metrics-v1.json',independent=args.root/f'{prefix}-independent-v1/comparison.json',
+                 process=args.root/f'{prefix}-v1.process.json')
     data = {key:read(path) for key,path in paths.items()}
     job,native,metrics,independent,process = [data[key] for key in paths]
     assert all(data[key]['status'] == 'complete' for key in ('native','metrics','independent','process'))
-    assert job['experiment'] == native['experiment'] == metrics['experiment'] == 'broader-first-v1'
+    assert job['experiment'] == native['experiment'] == metrics['experiment'] == coverage['experiment']
+    assert {case['id'] for case in job['cases']} == set(coverage['sources'])
     assert independent['all_pass'] and process['exit_code'] == 0 and metrics['limits'] == LIMITS
     assert native['job_sha256'] == metrics['job_sha256'] == process['job_sha256'] == sha(paths['job'])
     assert independent['native_sha256'] == metrics['native_sha256'] == sha(paths['native'])
     assert process['binary_sha256'] == job['binary_sha256'] == sha(Path(job['binary']))
     assert sha(Path(job['specification'])) == job['specification_sha256']
-    assert len(native['rows']) == len(metrics['rows']) == len(independent['rows']) == 16
+    assert len(native['rows']) == len(metrics['rows']) == len(independent['rows']) == coverage['rows']
     source = {}
     for case in job['cases']:
         path = Path(case['source_metrics'])
@@ -43,7 +48,7 @@ def main():
     measured = {row['id']:row for row in metrics['rows']}
     checked = {str(Path(row['path']).resolve()):row for row in independent['rows']}
     controls = {row['comparison_group']:row['source_delta'] for row in metrics['rows'] if row['policy'] == 'control'}
-    assert len(measured) == len(checked) == 16 and len(controls) == 8
+    assert len(measured) == len(checked) == coverage['rows'] and len(controls) == coverage['rows']//2
     output,groups = [],{}
     for row in native['rows']:
         metric,check = measured[row['id']],checked[str(Path(row['path']).resolve())]
@@ -56,6 +61,7 @@ def main():
         assert row['lufs'] == metric['lufs'] == check['native_lufs']
         group = row['comparison_group']
         assert row['policy'] == metric['policy'] and row['preset_id'] == metric['preset_id']
+        assert row['preset_id'] in coverage['presets']
         assert group == metric['comparison_group'] and compare(source[row['case']],metric['metrics']) == metric['source_delta']
         assert constraints(source[row['case']],metric['source_delta'],controls[group]) == metric['character_failures']
         context = sha(paths['job'])+':'+group
@@ -69,7 +75,7 @@ def main():
             evaluation_s=metric['evaluation_s'],chain_s=row['render']['chain_s'],src_s=row['src_s'],finalize_s=row['finalize_s'],
             metric_s=metric['metric_s'],reference_s=check['reference_s']))
     selections = [dict(group=name,**asdict(select(rows,rows[0].context))) for name,rows in groups.items()]
-    result = dict(status='complete',scope='Two known sources, two presets and two targets; no full C2 or sonic adoption',
+    result = dict(status='complete',scope=f"{len(coverage['sources'])} known sources, {len(coverage['presets'])} presets and two targets; no full C2 or sonic adoption",
         algorithm=VERSION,selector_sha256=sha(Path(__file__).with_name('preserving_selector.py')),
         script_sha256=sha(Path(__file__)),specification_sha256=job['specification_sha256'],
         inputs={key:dict(path=str(path),sha256=sha(path)) for key,path in paths.items()},

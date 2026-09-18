@@ -1,5 +1,14 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-18 — Evidence collection resumed, Universal 50 coverage frozen.**
+> Dan authorized continuing experiments. The [next checkpoint](reviews/2026-09-18-universal50-coverage-protocol.md)
+> adds the six remaining original sources at Universal 50, -14/-9, current/single
+> processing: 24 new whole files. Reuse Funk/Rich's completed evidence. Limits,
+> preset coefficients and the control-inclusive selector stay unchanged. New
+> native rendering runs separately from character/reference measurement to
+> isolate offline cost. Main, shipping behavior and release status are unchanged;
+> results are pending, with source/preset contract, quiet copies and holdout open.
+
 > **2026-09-16 — Broader presets, target reuse and recovery verified.**
 > The [new results](reviews/2026-09-16-preset-and-target-reuse-results.md) complete
 > sixteen broader preset/target outputs and four prepared-target outputs, all

@@ -6,6 +6,7 @@ import time
 
 from drive_metrics import LIMITS, compare, constraints, measure
 from verification_common import sha
+from prepare_broader_first import COVERAGES
 
 
 def read(path):
@@ -20,7 +21,8 @@ def main():
     args = parser.parse_args()
     assert not args.output.exists()
     job = read(args.job)
-    assert job['experiment'] == 'broader-first-v1'
+    coverage = next(row for row in COVERAGES.values() if row['experiment'] == job['experiment'])
+    assert {case['id'] for case in job['cases']} == set(coverage['sources'])
     sources = {}
     for case in job['cases']:
         path = Path(case['source_metrics'])
@@ -63,7 +65,8 @@ def main():
             args.output.write_text(json.dumps(result,indent=2,allow_nan=False)+'\n',encoding='utf-8')
             print(row['id'],row['lufs'],failures,flush=True)
         if native['status'] == 'complete':
-            assert len(result['rows']) == len(native['rows']) == 16 and len(controls) == 8
+            assert len(result['rows']) == len(native['rows']) == coverage['rows']
+            assert len(controls) == coverage['rows']//2
             result.update(status='complete',native_sha256=sha(args.report),script_sha256=sha(Path(__file__)))
             args.output.write_text(json.dumps(result,indent=2,allow_nan=False)+'\n',encoding='utf-8')
             return

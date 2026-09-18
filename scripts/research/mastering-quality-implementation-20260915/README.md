@@ -44,3 +44,10 @@ cost and both timing observations. These experiments do not alter normal app DSP
 See `docs/reviews/2026-09-16-preset-and-target-reuse-results.md` for scope and
 remaining limitations. `summarize_recovery_native.py` records post-power Realtek
 opening/callback checks separately from historical failures.
+
+The September 18 Universal 50 extension uses `--coverage remaining-universal50`
+with the broader preparation/summary helpers. It adds only the six missing
+known sources at two targets (24 whole files), with the same DSP and acceptance
+limits. `join_universal50.py` requires fresh complete evidence plus exact
+revalidation of the retained Funk/Rich measurements and files before joining
+eight-source coverage. See `docs/reviews/2026-09-18-universal50-coverage-protocol.md`.

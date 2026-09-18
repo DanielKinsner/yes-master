@@ -66,7 +66,8 @@ fn main() {
     assert!(!output.exists());
     let job = read(job_path);
     let followup = job["experiment"] == "flagged-lower-drive-v1";
-    let broader = job["experiment"] == "broader-first-v1";
+    let remaining_universal = job["experiment"] == "broader-universal50-v1";
+    let broader = job["experiment"] == "broader-first-v1" || remaining_universal;
     assert!(followup || broader || job["experiment"] == "single-first-development-v1");
     assert_eq!(
         sha(Path::new(job["specification"].as_str().unwrap())),
@@ -95,8 +96,16 @@ fn main() {
         "scope":"known-source offline development; no production policy or app latency claim"});
     for case in job["cases"].as_array().unwrap() {
         if broader {
-            assert!(matches!(case["id"].as_str().unwrap(), "funk" | "rich"));
-            assert_eq!(case["candidates"].as_array().unwrap().len(), 8);
+            if remaining_universal {
+                assert!(matches!(
+                    case["id"].as_str().unwrap(),
+                    "coat" | "piano" | "imaginal" | "metal" | "aphelion" | "baby"
+                ));
+                assert_eq!(case["candidates"].as_array().unwrap().len(), 4);
+            } else {
+                assert!(matches!(case["id"].as_str().unwrap(), "funk" | "rich"));
+                assert_eq!(case["candidates"].as_array().unwrap().len(), 8);
+            }
         }
         if followup {
             assert!(matches!(case["id"].as_str().unwrap(), "metal" | "rich"));
@@ -152,6 +161,9 @@ fn main() {
                 assert_eq!(offset, 0., "single-first freezes zero-offset candidates");
             }
             let id = if broader {
+                if remaining_universal {
+                    assert_eq!(retained["preset_id"], "universal50");
+                }
                 assert!(matches!(
                     retained["preset_id"].as_str().unwrap(),
                     "universal50" | "loud75"
@@ -290,6 +302,8 @@ fn main() {
         report["rows"].as_array().unwrap().len(),
         if followup {
             10
+        } else if remaining_universal {
+            24
         } else if broader {
             16
         } else {

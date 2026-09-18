@@ -9,17 +9,31 @@ import soundfile as sf
 from verification_common import sha
 
 
+COVERAGES = {
+    'initial': dict(experiment='broader-first-v1', prefix='broader',
+                    sources=('funk', 'rich'), presets=('universal50', 'loud75'), rows=16),
+    'remaining-universal50': dict(experiment='broader-universal50-v1', prefix='universal50',
+                    sources=('coat', 'piano', 'imaginal', 'metal', 'aphelion', 'baby'),
+                    presets=('universal50',), rows=24),
+}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--root',type=Path,required=True)
     parser.add_argument('--specification',type=Path,required=True)
     parser.add_argument('--binary',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--coverage', choices=COVERAGES, default='initial')
     args = parser.parse_args()
+    coverage = COVERAGES[args.coverage]
     assert not args.output.exists() and args.binary.is_file()
     cases, estimate = [], 0
-    for name,run,metrics in [('funk','c1-funk-recovered-v3','c1-funk-metrics-v3'),
-                             ('rich','c1-rich-v2','c1-rich-metrics-v2')]:
+    for name in coverage['sources']:
+        version = 'v1' if name == 'coat' else 'v2'
+        run, metrics = f'c1-{name}-{version}', f'c1-{name}-metrics-{version}'
+        if name == 'funk':
+            run, metrics = 'c1-funk-recovered-v3', 'c1-funk-metrics-v3'
         path = args.root/run/'report.json'
         report = json.loads(path.read_text(encoding='utf-8'))
         metrics_path = args.root/metrics/'metrics.json'
@@ -31,7 +45,7 @@ def main():
         info = sf.info(source)
         assert info.channels == 2
         candidates = []
-        for preset in ('universal50','loud75'):
+        for preset in coverage['presets']:
             for target in (-14.,-9.):
                 group = f'{name}-{preset}-t{int(-target)}'
                 for policy in ('control','single'):
@@ -46,13 +60,14 @@ def main():
             source_metrics_sha256=sha(metrics_path),candidates=candidates))
     free, reserve = shutil.disk_usage(args.output.parent).free, 25*1024**3
     assert free >= reserve+estimate
-    job = dict(experiment='broader-first-v1',cases=cases,specification=str(args.specification.resolve()),
+    assert sum(len(case['candidates']) for case in cases) == coverage['rows']
+    job = dict(experiment=coverage['experiment'],cases=cases,specification=str(args.specification.resolve()),
         specification_sha256=sha(args.specification),binary=str(args.binary.resolve()),binary_sha256=sha(args.binary),
         preparation_script_sha256=sha(Path(__file__)),estimated_new_wav_bytes=estimate,
         minimum_free_reserve_bytes=reserve,observed_free_bytes=free,
         local_commit=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip())
     args.output.write_text(json.dumps(job,indent=2,allow_nan=False)+'\n',encoding='utf-8')
-    print(f'Frozen eight comparisons / sixteen new WAVs: {estimate} bytes; free {free}')
+    print(f"Frozen {coverage['rows']//2} comparisons / {coverage['rows']} new WAVs: {estimate} bytes; free {free}")
 
 
 if __name__ == '__main__':
