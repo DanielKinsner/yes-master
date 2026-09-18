@@ -19,8 +19,8 @@ Funk/Rich Universal 50 rows by exact evidence/file identity in the final joined
 table; do not render them again. Loud 75 evidence remains in its prior record.
 
 Bind the original C1 reports, source hashes, requested settings, operating drive,
-coefficient strings and source-anchored section/transient measurements. Use Coat
-v1 and the other five sources' v2 reports, as in the previous development probes.
+coefficient strings and source-anchored section/transient measurements. Use all
+six sources' v2 reports, which contain the required Universal 50 settings.
 Decode/peak-normalize once per source, shared across its four new outputs. This
 does not rerun source analysis or change the single-candidate formula.
 
@@ -70,3 +70,9 @@ new licensed holdout remain separate. If the simple rule fails, report where
 and recommend a bounded follow-up based on the observed failure rather than
 changing the limits to label it successful. Main and normal product behavior
 remain unchanged by this research checkpoint.
+
+Preflight correction before audio: the first manifest attempt rejected Coat v1
+because that historical report contains only Universal 75. No job or audio was
+produced. The correct existing Universal 50 report is Coat v2, with its matched
+v2 source metrics. The earlier protocol version is preserved in `1ce2dd9d`;
+this correction changes input provenance, not the matrix or acceptance rules.

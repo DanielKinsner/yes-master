@@ -30,7 +30,7 @@ def main():
     assert not args.output.exists() and args.binary.is_file()
     cases, estimate = [], 0
     for name in coverage['sources']:
-        version = 'v1' if name == 'coat' else 'v2'
+        version = 'v2'
         run, metrics = f'c1-{name}-{version}', f'c1-{name}-metrics-{version}'
         if name == 'funk':
             run, metrics = 'c1-funk-recovered-v3', 'c1-funk-metrics-v3'
