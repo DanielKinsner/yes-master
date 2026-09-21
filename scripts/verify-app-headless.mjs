@@ -18,6 +18,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { launchHeadless, runtimeStamp } from "./lib/headless-browser.mjs";
+import { advancedLabelProbe } from "./lib/advanced-label-probe.mjs";
 
 // Audit A-02: the committed axe-core build (pinned by the lockfile) is the
 // scanner — never a CDN copy, so the gate is reproducible offline.
@@ -908,6 +909,7 @@ async function mp3ExportProbe(page,report) {
 }
 
 async function railModeConsistencyProbe(page, report) {
+  const labels = await advancedLabelProbe(page, report);
   await page.waitForFunction(() => Number(document.querySelector('input[aria-label="Width"]')?.value) > 0);
   // Observe every DOM update as well as painted frames: a settled screenshot
   // alone cannot catch the brief zero fallback during asynchronous mode changes.
@@ -965,7 +967,7 @@ async function railModeConsistencyProbe(page, report) {
   }
   const samples = await page.evaluate(() => { window.__stopRailWidthSamples(); return window.__railWidthSamples; });
   if (!samples.length || samples.some(v => !Number.isFinite(v) || v <= 0)) report(`Width dropped to an unresolved/zero position during mode switches: ${JSON.stringify([...new Set(samples)])}`);
-  return {states, widthSampleCount:samples.length, widthValues:[...new Set(samples)]};
+  return {states, labels, widthSampleCount:samples.length, widthValues:[...new Set(samples)]};
 }
 
 async function exportOverlapProbe(page, report) {

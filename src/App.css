@@ -7972,14 +7972,13 @@ input:focus-visible,
 .compressor-density-field .adv-label {
   grid-area: label;
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem;
   min-width: 0;
   white-space: nowrap;
-  /* The label may run into the value column's empty space (the value is
-     end-aligned and short); the number box below is what sizes that column,
-     so clipping the label to it would truncate PRESENCE/AIR. */
-  overflow: visible;
+  /* Keep Auto/reset inside the label column. Engaged Presence/Air needs
+     a second line at narrow rail widths so the value stays unobstructed. */
 }
 .rail-card-advanced .advanced-grid .adv-control,
 .compressor-density-field .adv-control { display: contents; }
