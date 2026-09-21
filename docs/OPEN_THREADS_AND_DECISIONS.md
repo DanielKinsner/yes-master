@@ -11,8 +11,12 @@
 > stable Auto/mixed/edited layouts in Track/Album at 1360, 1440 and 1920 widths.
 > These focused checks and 32 affected component/behavior tests pass. Visual
 > captures include all three states at each width; evidence is under ignored
-> `test-output/text-overlap/` in the installation worktree. Run the full
-> `npm run verify:headless` gate before installing the revised package.
+> `test-output/text-overlap/` in the installation worktree. The full
+> `npm run verify:headless` gate passes (landing and 38 app scenarios).
+> Windows packages built at `b7eebf49`; the installed app/encoder were verified
+> and the app reopened with a responsive window. The previous autosaved session
+> was backed up locally. Enlarged browser captures establish the visual review;
+> native window responsiveness does not substitute for native visual inspection.
 > Work remains on `codex/fix-advanced-text-overlap`; no DSP change, main merge
 > or public push is included.
 
