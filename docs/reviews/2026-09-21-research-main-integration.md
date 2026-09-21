@@ -51,3 +51,11 @@ exact remote main SHA. New experiments continue locally on
 to the pushed SHA; its status is distinct from the passing local checks.
 No Vercel status was created in the initial post-push check; the branch guard
 is committed, and no deployment, tag or Release dispatch was requested.
+
+The post-push CI snapshot has completed Windows/macOS snapshot diagnostics and
+Web E2E successfully. Android setup again fails on missing SDK package `tools`.
+The advisory job reports `rustls 0.23.41`, `RUSTSEC-2026-0285`, recommending
+`>=0.23.45`. Encoder jobs are still running at this snapshot; their previous
+Album assertion failure is historical, not a claimed new result. Main CI is
+not green. These unrelated pre-existing failures are recorded for a separate
+repair; no assertion, security gate or dependency was changed to hide them.

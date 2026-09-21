@@ -1,0 +1,989 @@
+{
+  "status": "complete",
+  "observed_at": "2026-09-21T23:08:00.031402+00:00",
+  "branch": "codex/mastering-bidirectional-research",
+  "pushed_main": "b69277b8017b4c625c50ef7202650a0141252121",
+  "research_tooling_commit": "9dae5ce6",
+  "frozen_protocol_commit": "7c81c146",
+  "artifacts": {
+    "test-output\\dynamics-research-20260921\\job-v1.json": "c0ae5a541bb1a5e3b471cb3b8b855b236abb1b37d9ccbf50ae9df22230e659d4",
+    "test-output\\dynamics-research-20260921\\bidirectional-v1\\report.json": "fbd444eb94c6b530babd187ca1d0e8a8dff02376dd270447b1671918a2a03845",
+    "test-output\\dynamics-research-20260921\\metrics-v1.json": "2440600a4a635069f380e707899dfef2679db84b28b7163fb5189303705821b4",
+    "test-output\\dynamics-research-20260921\\independent-v1\\comparison.json": "d77b3e066e00dd9ace53bb27ea7b90c4ac89ed733c1fbc9371f04bf41a57b34c",
+    "test-output\\dynamics-research-20260921\\bidirectional-v1.process.json": "63f99918702bdd46efa3185c84682fa8ad46fd030db9b05a1ad1edf716d600fb",
+    "test-output\\dynamics-research-20260921\\stage-timing-v1.json": "e2a6d4e424cc2f201c075b8bb6d34359aeacdf0fb7d6e4bd9e2be84da7b4e986",
+    "test-output\\dynamics-research-20260921\\bidirectional-v1.exe": "fcf947e1182b1b87b7aa8afca01ba9a5aed200592fd18655d0e2d025aabd0120",
+    "docs\\reviews\\evidence\\2026-09-21-dynamics-research\\bidirectional-v1.json": "7960dad5377d5c5560c4a53560c0144b42dc1c6cfda955092bbcb1fda35b57d9",
+    "docs\\reviews\\2026-09-21-bidirectional-search-protocol.md": "bb90936d3c472f2d5dafb6531f5b9ffdbfa0dba7de5feaadd833ace7f7bfd6ed",
+    "docs\\reviews\\2026-09-21-bidirectional-search-results.md": "b81720390a69d298b75517853a8086764e6153fc855d64d952746841656c393d"
+  },
+  "stage_timing": {
+    "metrics_wall_s": 17.7914886,
+    "independent_wall_s": 234.4974219,
+    "scheduling": "Native rendering, then character metrics, then independent whole-file references; no local build or research overlap"
+  },
+  "validation": {
+    "new_whole_files": 7,
+    "retained_whole_files": 9,
+    "all_whole_file_checks": "pass",
+    "selector_regressions": 21,
+    "release_example_build": "pass",
+    "strict_example_clippy": "pass",
+    "rust_format": "pass",
+    "python_compile": "pass",
+    "new_document_links": "pass",
+    "agents_claude_byte_identical": true,
+    "production_source_changed": false
+  },
+  "remote_ci_snapshot": {
+    "conclusion": "",
+    "headSha": "b69277b8017b4c625c50ef7202650a0141252121",
+    "jobs": [
+      {
+        "completedAt": "2026-09-21T22:56:43Z",
+        "conclusion": "success",
+        "databaseId": 106548349614,
+        "name": "Snapshot diagnostics (windows-latest)",
+        "startedAt": "2026-09-21T22:52:58Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-09-21T22:53:01Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-21T22:53:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:08Z",
+            "conclusion": "success",
+            "name": "Checkout",
+            "number": 2,
+            "startedAt": "2026-09-21T22:53:01Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:16Z",
+            "conclusion": "success",
+            "name": "Set up Node",
+            "number": 3,
+            "startedAt": "2026-09-21T22:53:08Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:25Z",
+            "conclusion": "success",
+            "name": "Set up Rust",
+            "number": 4,
+            "startedAt": "2026-09-21T22:53:16Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:54:07Z",
+            "conclusion": "success",
+            "name": "Cache cargo",
+            "number": 5,
+            "startedAt": "2026-09-21T22:53:25Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:54:16Z",
+            "conclusion": "success",
+            "name": "Install frontend dependencies",
+            "number": 6,
+            "startedAt": "2026-09-21T22:54:07Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:54:32Z",
+            "conclusion": "success",
+            "name": "Frontend build",
+            "number": 7,
+            "startedAt": "2026-09-21T22:54:16Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:56:38Z",
+            "conclusion": "success",
+            "name": "Write snapshot diagnostics",
+            "number": 8,
+            "startedAt": "2026-09-21T22:54:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:56:39Z",
+            "conclusion": "success",
+            "name": "Upload snapshot diagnostics",
+            "number": 9,
+            "startedAt": "2026-09-21T22:56:38Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:56:39Z",
+            "conclusion": "success",
+            "name": "Post Cache cargo",
+            "number": 16,
+            "startedAt": "2026-09-21T22:56:39Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:56:39Z",
+            "conclusion": "success",
+            "name": "Post Set up Node",
+            "number": 17,
+            "startedAt": "2026-09-21T22:56:39Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:56:41Z",
+            "conclusion": "success",
+            "name": "Post Checkout",
+            "number": 18,
+            "startedAt": "2026-09-21T22:56:39Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:56:41Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 19,
+            "startedAt": "2026-09-21T22:56:41Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/DanielKinsner/yes-master/actions/runs/35664904063/job/106548349614"
+      },
+      {
+        "completedAt": "2026-09-21T22:53:33Z",
+        "conclusion": "failure",
+        "databaseId": 106548349711,
+        "name": "Android host JVM lane",
+        "startedAt": "2026-09-21T22:52:58Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-09-21T22:53:02Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-21T22:52:58Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:05Z",
+            "conclusion": "success",
+            "name": "Checkout",
+            "number": 2,
+            "startedAt": "2026-09-21T22:53:02Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:05Z",
+            "conclusion": "success",
+            "name": "Set up JDK",
+            "number": 3,
+            "startedAt": "2026-09-21T22:53:05Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:09Z",
+            "conclusion": "success",
+            "name": "Set up Rust",
+            "number": 4,
+            "startedAt": "2026-09-21T22:53:05Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:31Z",
+            "conclusion": "failure",
+            "name": "Set up Android SDK",
+            "number": 5,
+            "startedAt": "2026-09-21T22:53:09Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:31Z",
+            "conclusion": "skipped",
+            "name": "Install Android SDK packages",
+            "number": 6,
+            "startedAt": "2026-09-21T22:53:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:31Z",
+            "conclusion": "skipped",
+            "name": "Install cargo-ndk",
+            "number": 7,
+            "startedAt": "2026-09-21T22:53:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:31Z",
+            "conclusion": "skipped",
+            "name": "Remove local SDK override",
+            "number": 8,
+            "startedAt": "2026-09-21T22:53:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:31Z",
+            "conclusion": "skipped",
+            "name": "Set up Gradle",
+            "number": 9,
+            "startedAt": "2026-09-21T22:53:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:31Z",
+            "conclusion": "skipped",
+            "name": "Android JVM tests",
+            "number": 10,
+            "startedAt": "2026-09-21T22:53:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:31Z",
+            "conclusion": "skipped",
+            "name": "Android ARM64 Rust check",
+            "number": 11,
+            "startedAt": "2026-09-21T22:53:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:31Z",
+            "conclusion": "success",
+            "name": "Post Set up JDK",
+            "number": 21,
+            "startedAt": "2026-09-21T22:53:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:31Z",
+            "conclusion": "success",
+            "name": "Post Checkout",
+            "number": 22,
+            "startedAt": "2026-09-21T22:53:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:31Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 23,
+            "startedAt": "2026-09-21T22:53:31Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/DanielKinsner/yes-master/actions/runs/35664904063/job/106548349711"
+      },
+      {
+        "completedAt": "2026-09-21T22:55:46Z",
+        "conclusion": "failure",
+        "databaseId": 106548349779,
+        "name": "Dependency advisories (npm + RustSec)",
+        "startedAt": "2026-09-21T22:52:57Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-09-21T22:52:59Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-21T22:52:58Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:01Z",
+            "conclusion": "success",
+            "name": "Checkout",
+            "number": 2,
+            "startedAt": "2026-09-21T22:52:59Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:02Z",
+            "conclusion": "success",
+            "name": "Set up Node",
+            "number": 3,
+            "startedAt": "2026-09-21T22:53:01Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:03Z",
+            "conclusion": "success",
+            "name": "npm advisories (high+ fail)",
+            "number": 4,
+            "startedAt": "2026-09-21T22:53:02Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:04Z",
+            "conclusion": "success",
+            "name": "Set up Rust",
+            "number": 5,
+            "startedAt": "2026-09-21T22:53:03Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:55:40Z",
+            "conclusion": "success",
+            "name": "Install cargo-audit",
+            "number": 6,
+            "startedAt": "2026-09-21T22:53:04Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:55:44Z",
+            "conclusion": "failure",
+            "name": "RustSec advisories (desktop + iPhone + Android lockfiles)",
+            "number": 7,
+            "startedAt": "2026-09-21T22:55:40Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:55:44Z",
+            "conclusion": "skipped",
+            "name": "Post Set up Node",
+            "number": 13,
+            "startedAt": "2026-09-21T22:55:44Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:55:44Z",
+            "conclusion": "success",
+            "name": "Post Checkout",
+            "number": 14,
+            "startedAt": "2026-09-21T22:55:44Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:55:44Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 15,
+            "startedAt": "2026-09-21T22:55:44Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/DanielKinsner/yes-master/actions/runs/35664904063/job/106548349779"
+      },
+      {
+        "completedAt": "2026-09-21T22:57:33Z",
+        "conclusion": "success",
+        "databaseId": 106548349850,
+        "name": "Web E2E (headless Chromium)",
+        "startedAt": "2026-09-21T22:52:57Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-09-21T22:52:59Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-21T22:52:58Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:02Z",
+            "conclusion": "success",
+            "name": "Checkout",
+            "number": 2,
+            "startedAt": "2026-09-21T22:52:59Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:03Z",
+            "conclusion": "success",
+            "name": "Set up Node",
+            "number": 3,
+            "startedAt": "2026-09-21T22:53:02Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:07Z",
+            "conclusion": "success",
+            "name": "Install frontend dependencies",
+            "number": 4,
+            "startedAt": "2026-09-21T22:53:03Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:36Z",
+            "conclusion": "success",
+            "name": "Install pinned Chromium",
+            "number": 5,
+            "startedAt": "2026-09-21T22:53:07Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:36Z",
+            "conclusion": "success",
+            "name": "Landing marketing proof is current",
+            "number": 6,
+            "startedAt": "2026-09-21T22:53:36Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:57:29Z",
+            "conclusion": "success",
+            "name": "Headless landing and /app suites",
+            "number": 7,
+            "startedAt": "2026-09-21T22:53:36Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:57:32Z",
+            "conclusion": "success",
+            "name": "Upload headless evidence",
+            "number": 8,
+            "startedAt": "2026-09-21T22:57:29Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:57:32Z",
+            "conclusion": "success",
+            "name": "Post Set up Node",
+            "number": 15,
+            "startedAt": "2026-09-21T22:57:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:57:32Z",
+            "conclusion": "success",
+            "name": "Post Checkout",
+            "number": 16,
+            "startedAt": "2026-09-21T22:57:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:57:32Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 17,
+            "startedAt": "2026-09-21T22:57:32Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/DanielKinsner/yes-master/actions/runs/35664904063/job/106548349850"
+      },
+      {
+        "completedAt": "2026-09-21T22:56:05Z",
+        "conclusion": "success",
+        "databaseId": 106548349866,
+        "name": "Snapshot diagnostics (macos-latest)",
+        "startedAt": "2026-09-21T22:53:06Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-09-21T22:53:10Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-21T22:53:08Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:16Z",
+            "conclusion": "success",
+            "name": "Checkout",
+            "number": 2,
+            "startedAt": "2026-09-21T22:53:11Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:23Z",
+            "conclusion": "success",
+            "name": "Set up Node",
+            "number": 3,
+            "startedAt": "2026-09-21T22:53:16Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:26Z",
+            "conclusion": "success",
+            "name": "Set up Rust",
+            "number": 4,
+            "startedAt": "2026-09-21T22:53:23Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:54Z",
+            "conclusion": "success",
+            "name": "Cache cargo",
+            "number": 5,
+            "startedAt": "2026-09-21T22:53:26Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:54:00Z",
+            "conclusion": "success",
+            "name": "Install frontend dependencies",
+            "number": 6,
+            "startedAt": "2026-09-21T22:53:54Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:54:16Z",
+            "conclusion": "success",
+            "name": "Frontend build",
+            "number": 7,
+            "startedAt": "2026-09-21T22:54:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:55:54Z",
+            "conclusion": "success",
+            "name": "Write snapshot diagnostics",
+            "number": 8,
+            "startedAt": "2026-09-21T22:54:16Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:55:57Z",
+            "conclusion": "success",
+            "name": "Upload snapshot diagnostics",
+            "number": 9,
+            "startedAt": "2026-09-21T22:55:54Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:55:58Z",
+            "conclusion": "success",
+            "name": "Post Cache cargo",
+            "number": 16,
+            "startedAt": "2026-09-21T22:55:57Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:55:58Z",
+            "conclusion": "success",
+            "name": "Post Set up Node",
+            "number": 17,
+            "startedAt": "2026-09-21T22:55:58Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:55:59Z",
+            "conclusion": "success",
+            "name": "Post Checkout",
+            "number": 18,
+            "startedAt": "2026-09-21T22:55:58Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:56:01Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 19,
+            "startedAt": "2026-09-21T22:55:59Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/DanielKinsner/yes-master/actions/runs/35664904063/job/106548349866"
+      },
+      {
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "databaseId": 106548349908,
+        "name": "audio-encoders / qualify (macos-latest, x86_64-apple-darwin)",
+        "startedAt": "2026-09-21T22:53:03Z",
+        "status": "in_progress",
+        "steps": [
+          {
+            "completedAt": "2026-09-21T22:53:05Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-21T22:53:03Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:09Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 2,
+            "startedAt": "2026-09-21T22:53:05Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:10Z",
+            "conclusion": "success",
+            "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 3,
+            "startedAt": "2026-09-21T22:53:09Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:12Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c",
+            "number": 4,
+            "startedAt": "2026-09-21T22:53:10Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:12Z",
+            "conclusion": "skipped",
+            "name": "Windows build and independent decoder tools",
+            "number": 5,
+            "startedAt": "2026-09-21T22:53:12Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:23Z",
+            "conclusion": "success",
+            "name": "Mac build and independent decoder tools",
+            "number": 6,
+            "startedAt": "2026-09-21T22:53:12Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:23Z",
+            "conclusion": "skipped",
+            "name": "Build Windows encoder from source",
+            "number": 7,
+            "startedAt": "2026-09-21T22:53:23Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:55:07Z",
+            "conclusion": "success",
+            "name": "Build Mac encoder from source",
+            "number": 8,
+            "startedAt": "2026-09-21T22:53:23Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:55:24Z",
+            "conclusion": "success",
+            "name": "Qualify package and independently decode files",
+            "number": 9,
+            "startedAt": "2026-09-21T22:55:07Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Run package and actual engine qualification",
+            "number": 10,
+            "startedAt": "2026-09-21T22:55:24Z",
+            "status": "in_progress"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Rebuild archived application with a modified library",
+            "number": 11,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Retain archived-source rebuild evidence",
+            "number": 12,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Retain binary, source, licenses and qualification evidence",
+            "number": 13,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 25,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 26,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          }
+        ],
+        "url": "https://github.com/DanielKinsner/yes-master/actions/runs/35664904063/job/106548349908"
+      },
+      {
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "databaseId": 106548349943,
+        "name": "audio-encoders / qualify (macos-latest, aarch64-apple-darwin)",
+        "startedAt": "2026-09-21T22:53:04Z",
+        "status": "in_progress",
+        "steps": [
+          {
+            "completedAt": "2026-09-21T22:53:05Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-21T22:53:04Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:09Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 2,
+            "startedAt": "2026-09-21T22:53:05Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:11Z",
+            "conclusion": "success",
+            "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 3,
+            "startedAt": "2026-09-21T22:53:09Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:12Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c",
+            "number": 4,
+            "startedAt": "2026-09-21T22:53:11Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:12Z",
+            "conclusion": "skipped",
+            "name": "Windows build and independent decoder tools",
+            "number": 5,
+            "startedAt": "2026-09-21T22:53:12Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:19Z",
+            "conclusion": "success",
+            "name": "Mac build and independent decoder tools",
+            "number": 6,
+            "startedAt": "2026-09-21T22:53:12Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:19Z",
+            "conclusion": "skipped",
+            "name": "Build Windows encoder from source",
+            "number": 7,
+            "startedAt": "2026-09-21T22:53:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:54:58Z",
+            "conclusion": "success",
+            "name": "Build Mac encoder from source",
+            "number": 8,
+            "startedAt": "2026-09-21T22:53:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:55:15Z",
+            "conclusion": "success",
+            "name": "Qualify package and independently decode files",
+            "number": 9,
+            "startedAt": "2026-09-21T22:54:58Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Run package and actual engine qualification",
+            "number": 10,
+            "startedAt": "2026-09-21T22:55:15Z",
+            "status": "in_progress"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Rebuild archived application with a modified library",
+            "number": 11,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Retain archived-source rebuild evidence",
+            "number": 12,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Retain binary, source, licenses and qualification evidence",
+            "number": 13,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 25,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 26,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          }
+        ],
+        "url": "https://github.com/DanielKinsner/yes-master/actions/runs/35664904063/job/106548349943"
+      },
+      {
+        "completedAt": "0001-01-01T00:00:00Z",
+        "conclusion": "",
+        "databaseId": 106548349960,
+        "name": "audio-encoders / qualify (windows-latest, x86_64-pc-windows-msvc)",
+        "startedAt": "2026-09-21T22:52:58Z",
+        "status": "in_progress",
+        "steps": [
+          {
+            "completedAt": "2026-09-21T22:53:00Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-09-21T22:52:58Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:07Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 2,
+            "startedAt": "2026-09-21T22:53:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:13Z",
+            "conclusion": "success",
+            "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 3,
+            "startedAt": "2026-09-21T22:53:07Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:53:20Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c",
+            "number": 4,
+            "startedAt": "2026-09-21T22:53:13Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:54:19Z",
+            "conclusion": "success",
+            "name": "Windows build and independent decoder tools",
+            "number": 5,
+            "startedAt": "2026-09-21T22:53:20Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:54:19Z",
+            "conclusion": "skipped",
+            "name": "Mac build and independent decoder tools",
+            "number": 6,
+            "startedAt": "2026-09-21T22:54:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:58:44Z",
+            "conclusion": "success",
+            "name": "Build Windows encoder from source",
+            "number": 7,
+            "startedAt": "2026-09-21T22:54:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:58:44Z",
+            "conclusion": "skipped",
+            "name": "Build Mac encoder from source",
+            "number": 8,
+            "startedAt": "2026-09-21T22:58:44Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-09-21T22:59:08Z",
+            "conclusion": "success",
+            "name": "Qualify package and independently decode files",
+            "number": 9,
+            "startedAt": "2026-09-21T22:58:44Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Run package and actual engine qualification",
+            "number": 10,
+            "startedAt": "2026-09-21T22:59:08Z",
+            "status": "in_progress"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Rebuild archived application with a modified library",
+            "number": 11,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Retain archived-source rebuild evidence",
+            "number": 12,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Retain binary, source, licenses and qualification evidence",
+            "number": 13,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 25,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          },
+          {
+            "completedAt": "0001-01-01T00:00:00Z",
+            "conclusion": "",
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 26,
+            "startedAt": "0001-01-01T00:00:00Z",
+            "status": "pending"
+          }
+        ],
+        "url": "https://github.com/DanielKinsner/yes-master/actions/runs/35664904063/job/106548349960"
+      }
+    ],
+    "status": "in_progress",
+    "url": "https://github.com/DanielKinsner/yes-master/actions/runs/35664904063"
+  },
+  "limitations": [
+    "Known development sources only; no holdout or listening evidence",
+    "Three qualified-character target shortfalls remain",
+    "Original levels only; corrected-policy quiet-copy matrix remains open",
+    "No new native app response, bridge, UI, package or installed evidence",
+    "New research commits remain local; main CI snapshot is not green"
+  ]
+}

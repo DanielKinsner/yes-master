@@ -6,7 +6,14 @@ September 21 sequencing update: Dan authorized integrating/pushing the completed
 research checkpoint to main, then continuing new experiments on a separate local
 branch. See the [push integration record](../reviews/2026-09-21-research-main-integration.md).
 This supersedes the earlier no-push language below for that completed work only.
-Status: **fixes integrated locally; C1 coverage extended, September 18**. Implementation was authorized
+The [September 21 bounded search](../reviews/2026-09-21-bidirectional-search-results.md)
+is now verified locally: seven new whole files, nine retained outputs, one
+qualified target and three qualified-character shortfalls on the four unresolved
+Universal 50/-14 groups. Piano gains a qualified quieter alternative; Metal's
+retained +3 becomes eligible under the new frozen rule. Imaginal/Rich keep current
+processing. The two-offset and provisional cost/memory bounds pass. C1 contract
+and quiet-copy work, C2 holdout and C3 adoption remain open.
+Status: **completed checkpoint pushed; bounded C1 search verified locally, September 21**. Implementation was authorized
 September 15 on local `codex/mastering-quality` from `7534f612`. See the
 [checkpoint ledger](../reviews/2026-09-15-mastering-quality-implementation-evidence.md).
 Sonic-policy adoption and calibration remain gated. This file replaces the
@@ -25,7 +32,7 @@ explanatory caveats. Shipping numerical/calibration choices remain open. Local
 merge approval does not adopt a production sonic policy or
 authorize push, release, deployment, spending or private-audio commits.
 
-Local main is now `ab420654`. Research continues on
+At the September 16 checkpoint, local main was `ab420654`. Research continued on
 `codex/mastering-dynamics-research` with the
 [frozen single-first checkpoint](../reviews/2026-09-16-single-first-development-protocol.md).
 The existing branch/evidence at `03df038a` remain preserved.

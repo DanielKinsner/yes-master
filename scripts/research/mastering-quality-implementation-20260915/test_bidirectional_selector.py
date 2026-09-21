@@ -1,6 +1,8 @@
 """Grid, safety, deterministic selection and stopping-policy regressions."""
 from dataclasses import replace
 from itertools import permutations
+import json
+from pathlib import Path
 import unittest
 
 from bidirectional_selector import Candidate, select
@@ -72,6 +74,23 @@ class BidirectionalTests(unittest.TestCase):
         self.rows[2] = replace(self.rows[2], character_failures=('tone',))
         self.rows[3] = replace(self.rows[3], character_failures=('tone',))
         self.assertFalse(self.resolve(self.rows).needs_more_search)
+
+    def test_verified_development_results_preserve_shortfalls_and_controls(self):
+        path = Path(__file__).resolve().parents[3]/'docs/reviews/evidence/2026-09-21-dynamics-research/bidirectional-v1.json'
+        data = json.loads(path.read_text(encoding='utf-8'))
+        expected = {'piano': ('single', -3., False), 'imaginal': ('control', 0., False),
+                    'metal': ('single', 3., True), 'rich': ('control', 0., False)}
+        for name, result in expected.items():
+            rows = []
+            for item in data['rows']:
+                row = item['native']
+                if row['case'] == name:
+                    rows.append(Candidate(name, row['id'], row['sha256'], row['policy'], row['offset_db'],
+                        row['lufs'], -14., row['peak'], row['ceiling'], tuple(item['metric']['character_failures'])))
+            selected = select(rows, name)
+            self.assertTrue(selected.character_qualified)
+            self.assertEqual((selected.selected.policy, selected.selected.offset_db, selected.target_feasible), result)
+            self.assertFalse(selected.needs_more_search)
 
 
 if __name__ == '__main__':

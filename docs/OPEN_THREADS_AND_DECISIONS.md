@@ -1,5 +1,18 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-21 — Bounded bidirectional checkpoint verified locally.**
+> The [results](reviews/2026-09-21-bidirectional-search-results.md) add seven
+> independently verified whole WAVs and reuse nine unchanged complete outputs.
+> On four unresolved Universal 50/-14 sources, the frozen new selector chooses
+> Piano -3 at -14.875 LUFS, retained Metal +3 at -14, and the qualified current
+> controls for Imaginal/Rich. Two former character fallbacks gain qualified
+> alternatives; three target shortfalls remain explicit. All unchanged character
+> limits, the two-offset work bound and provisional cost/memory budgets hold.
+> Production behavior is unchanged. Main remains pushed at `b69277b8`; subsequent
+> experiment commits stay local on `codex/mastering-bidirectional-research`.
+> Next: source/preset/control contract and corrected-policy quiet-copy coverage,
+> before broader search or unseen C2 holdout. No sonic policy is adopted.
+
 > **2026-09-21 — Completed research main push authorized.** Dan requested
 > committing and pushing the completed checkpoint. The [integration record](reviews/2026-09-21-research-main-integration.md)
 > reviews the 16-commit research delta, verification and existing remote CI
