@@ -1,5 +1,16 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-21 — Advanced reset-label overlap corrected locally.** The installed
+> `ab420654` screenshot exposed Presence/Air's reset-to-Auto button overlapping
+> its numeric readout; browser reproduction also showed the value intercepting
+> reset clicks. The label now wraps its reset button inside its own column.
+> A geometry/click regression covers Width, Warmth, Presence/Air and Adapt
+> strength in Track and Album at 1360, 1440 and 1920 widths. The full
+> `npm run verify:headless` lane passes (landing plus 38 app checks), with
+> evidence in ignored `test-output/text-overlap/` in the installation worktree.
+> The fix is isolated on `codex/fix-advanced-text-overlap` from main; this is
+> browser layout evidence, with no DSP change, main merge or public push.
+
 > **2026-09-21 — Completed research main push authorized.** Dan requested
 > committing and pushing the completed checkpoint. The [integration record](reviews/2026-09-21-research-main-integration.md)
 > reviews the 16-commit research delta, verification and existing remote CI
