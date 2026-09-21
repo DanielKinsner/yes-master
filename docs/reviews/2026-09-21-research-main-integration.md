@@ -41,3 +41,13 @@ After the push, continue new research on a separate local `codex/` branch.
 The bounded bidirectional selector needs a new frozen version; it must preserve
 the old selector, failures, limits, controls and private evidence. No production
 sonic policy, preset retuning, gated calibration or holdout result is adopted.
+
+## Push result
+
+Fast-forward integration and non-force push succeeded at
+`b69277b8017b4c625c50ef7202650a0141252121`. A fresh `git ls-remote` confirms that
+exact remote main SHA. New experiments continue locally on
+`codex/mastering-bidirectional-research`. GitHub CI run `35664904063` belongs
+to the pushed SHA; its status is distinct from the passing local checks.
+No Vercel status was created in the initial post-push check; the branch guard
+is committed, and no deployment, tag or Release dispatch was requested.

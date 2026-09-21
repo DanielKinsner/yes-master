@@ -67,10 +67,15 @@ fn main() {
     let job = read(job_path);
     let followup = job["experiment"] == "flagged-lower-drive-v1";
     let metal_positive = job["experiment"] == "metal-positive-drive-v1";
+    let bidirectional = job["experiment"] == "bidirectional-development-v1";
     let remaining_universal = job["experiment"] == "broader-universal50-v1";
     let broader = job["experiment"] == "broader-first-v1" || remaining_universal;
     assert!(
-        followup || broader || metal_positive || job["experiment"] == "single-first-development-v1"
+        followup
+            || broader
+            || metal_positive
+            || bidirectional
+            || job["experiment"] == "single-first-development-v1"
     );
     assert_eq!(
         sha(Path::new(job["specification"].as_str().unwrap())),
@@ -98,6 +103,24 @@ fn main() {
         "job_sha256":sha(job_path),"rows":[],"source_preparation":[],
         "scope":"known-source offline development; no production policy or app latency claim"});
     for case in job["cases"].as_array().unwrap() {
+        if bidirectional {
+            let name = case["id"].as_str().unwrap();
+            assert!(matches!(name, "piano" | "imaginal" | "metal" | "rich"));
+            let offsets: Vec<_> = case["candidates"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|row| row["offset_db"].as_f64().unwrap())
+                .collect();
+            assert_eq!(
+                offsets,
+                if name == "metal" {
+                    vec![-3.]
+                } else {
+                    vec![-3., 3.]
+                }
+            );
+        }
         if metal_positive {
             assert_eq!(case["id"], "metal");
             assert_eq!(case["candidates"].as_array().unwrap().len(), 2);
@@ -161,7 +184,12 @@ fn main() {
                 serde_json::from_value(retained["requested_settings"].clone()).unwrap();
             let drive = retained["operating_drive_db"].as_f64().unwrap() as f32;
             let offset = requested["offset_db"].as_f64().unwrap() as f32;
-            if metal_positive {
+            if bidirectional {
+                assert_eq!(policy, "single");
+                assert!([-3., 3.].contains(&offset));
+                assert_eq!(retained["preset_id"], "universal50");
+                assert_eq!(settings.effective_target_lufs(), Some(-14.));
+            } else if metal_positive {
                 assert_eq!(policy, "single");
                 assert_eq!(offset, 3.);
             } else if followup {
@@ -170,7 +198,7 @@ fn main() {
             } else {
                 assert_eq!(offset, 0., "single-first freezes zero-offset candidates");
             }
-            let id = if broader || metal_positive {
+            let id = if broader || metal_positive || bidirectional {
                 if remaining_universal {
                     assert_eq!(retained["preset_id"], "universal50");
                 }
@@ -318,7 +346,9 @@ fn main() {
     }
     assert_eq!(
         report["rows"].as_array().unwrap().len(),
-        if metal_positive {
+        if bidirectional {
+            7
+        } else if metal_positive {
             2
         } else if followup {
             10

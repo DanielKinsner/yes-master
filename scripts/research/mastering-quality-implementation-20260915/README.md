@@ -57,3 +57,15 @@ to the retained historical lead and four independently verified corrected-chain
 control/single files. The fixed selector is not changed to accept those positive
 offsets. See `docs/reviews/2026-09-18-metal-positive-drive-protocol.md`; its outcome
 is a separate development observation, not a rewritten Universal 50 selection.
+
+The September 21 checkpoint uses `bidirectional_selector.py` and
+`bidirectional_research.py prepare/evaluate/summarize`. The separately frozen
+protocol is `docs/reviews/2026-09-21-bidirectional-search-protocol.md`. It reuses
+nine verified outputs and generates only seven missing directional candidates
+for four unresolved Universal 50/-14 groups. The old selector is unchanged.
+Run preparation with a freshly built/copied release probe, then
+`run_single_first.py`, then character evaluation and
+`check_completed_device_rows.py --expected-rows 7` serially. Summarization
+requires complete hash-bound native, metric, independent and process reports.
+Raw jobs/audio/logs belong in ignored `test-output/dynamics-research-20260921/`.
+No new experiment is pushed or enabled in the app by this checkpoint.

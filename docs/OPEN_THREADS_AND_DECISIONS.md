@@ -6,6 +6,8 @@
 > failures. A main-branch Vercel guard preserves the no-deployment boundary.
 > Subsequent experiments remain local on a separate research branch; no sonic
 > policy, release, private-audio commit or deployment is authorized.
+> Main push is verified at `b69277b8`; local continuation is
+> `codex/mastering-bidirectional-research`, with the [new frozen search](reviews/2026-09-21-bidirectional-search-protocol.md).
 
 > **2026-09-18 — Broader coverage and Metal follow-up verified.**
 > Dan authorized continuing evidence collection. The [completed results](reviews/2026-09-18-universal50-and-metal-results.md)
