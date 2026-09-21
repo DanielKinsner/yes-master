@@ -133,19 +133,21 @@ export function NumberField({
       }
     >
       <span className="adv-label">
-        {label}
+        <span className="adv-label-text">{label}</span>
         {value === null && (
           <span className="adv-auto-pill">{autoLabel.toUpperCase()}</span>
         )}
-        {showAutoReset && value !== null && !disabled && (
+        {showAutoReset && (
           <button
             type="button"
             className="adv-auto-reset"
             title={`Reset to ${autoLabel}`}
             aria-label={`Reset ${label} to ${autoLabel}`}
+            disabled={disabled || value === null}
             onClick={() => onChange(null)}
           >
-            ↺ {autoLabel.toUpperCase()}
+            <span aria-hidden="true">↺</span>
+            <span className="adv-auto-reset-text"> {autoLabel.toUpperCase()}</span>
           </button>
         )}
       </span>

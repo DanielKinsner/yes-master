@@ -7900,7 +7900,7 @@ input:focus-visible,
 }
 /* The feel-control labels carry an inline Auto pill; tighter tracking keeps
    "PRESENCE/AIR" on its line at rail width. */
-.rail-card-advanced .advanced-grid .adv-label { font-size: 0.62rem; letter-spacing: 0.015em; }
+.rail-card-advanced .advanced-grid .adv-label { font-size: 0.62rem; letter-spacing: 0; }
 
 /* --- T3 · values: tabular, white, one size -------------------------- */
 .adv-knob-grid .knob-value,
@@ -7954,9 +7954,8 @@ input:focus-visible,
 .compressor-knob-grid .knob-value,
 .adv-knob-grid .knob-caption { line-height: 1.15; }
 
-/* Rail sliders — the four feel controls AND Preset Density — share one
-   two-row layout: [label · value · box] over [slider]. */
-.rail-card-advanced .advanced-grid { gap: 0.6rem 1rem; padding-top: 0.55rem; }
+/* Rail sliders: label and readout above the slider and numeric entry. */
+.rail-card-advanced .advanced-grid { gap: 0.6rem 0.75rem; padding-top: 0.55rem; }
 .rail-card-advanced .advanced-grid .adv-field,
 .compressor-density-field .adv-field {
   display: grid;
@@ -7972,13 +7971,45 @@ input:focus-visible,
 .compressor-density-field .adv-label {
   grid-area: label;
   display: inline-flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem;
   min-width: 0;
   white-space: nowrap;
-  /* Keep Auto/reset inside the label column. Engaged Presence/Air needs
-     a second line at narrow rail widths so the value stays unobstructed. */
+}
+.rail-card-advanced .advanced-grid .adv-field {
+  grid-template-columns: 1rem minmax(0, 1fr) 2.3rem;
+  grid-template-areas:
+    "label label value"
+    "reset slider box";
+  grid-template-rows: 1rem 22px;
+  column-gap: 0.3rem;
+  row-gap: 0.3rem;
+}
+.rail-card-advanced .advanced-grid .adv-label { display: contents; }
+.rail-card-advanced .advanced-grid .adv-label-text {
+  grid-area: label;
+  align-self: center;
+  white-space: nowrap;
+}
+.rail-card-advanced .advanced-grid .adv-auto-reset {
+  grid-area: reset;
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.rail-card-advanced .advanced-grid .adv-auto-reset-text { display: none; }
+.rail-card-advanced .advanced-grid .adv-auto-reset:disabled {
+  opacity: 0.35;
+  cursor: default;
+  background: transparent;
 }
 .rail-card-advanced .advanced-grid .adv-control,
 .compressor-density-field .adv-control { display: contents; }
