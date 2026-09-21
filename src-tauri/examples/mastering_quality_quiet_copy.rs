@@ -152,9 +152,11 @@ fn main() {
                     .iter()
                     .find(|r| r["policy"] == policy && r["offset_db"] == offset)
                     .unwrap();
+                let reference_settings: types::MasteringSettings =
+                    serde_json::from_value(reference["requested_settings"].clone()).unwrap();
                 assert_eq!(
                     serde_json::to_value(&settings).unwrap(),
-                    reference["requested_settings"]
+                    serde_json::to_value(&reference_settings).unwrap()
                 );
                 let use_drive = if policy == "control" { 0. } else { drive };
                 let input = if policy == "control" {
