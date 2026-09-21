@@ -2,6 +2,10 @@
 
 Date: September 15, 2026. Reviewed checkout: `5426041c` on `main`.
 Revision 2, following plan review and Dan's upfront-analysis direction.
+September 21 sequencing update: Dan authorized integrating/pushing the completed
+research checkpoint to main, then continuing new experiments on a separate local
+branch. See the [push integration record](../reviews/2026-09-21-research-main-integration.md).
+This supersedes the earlier no-push language below for that completed work only.
 Status: **fixes integrated locally; C1 coverage extended, September 18**. Implementation was authorized
 September 15 on local `codex/mastering-quality` from `7534f612`. See the
 [checkpoint ledger](../reviews/2026-09-15-mastering-quality-implementation-evidence.md).

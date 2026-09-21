@@ -1,5 +1,12 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-21 — Completed research main push authorized.** Dan requested
+> committing and pushing the completed checkpoint. The [integration record](reviews/2026-09-21-research-main-integration.md)
+> reviews the 16-commit research delta, verification and existing remote CI
+> failures. A main-branch Vercel guard preserves the no-deployment boundary.
+> Subsequent experiments remain local on a separate research branch; no sonic
+> policy, release, private-audio commit or deployment is authorized.
+
 > **2026-09-18 — Broader coverage and Metal follow-up verified.**
 > Dan authorized continuing evidence collection. The [completed results](reviews/2026-09-18-universal50-and-metal-results.md)
 > add 24 independently verified whole files and reuse eight Funk/Rich outputs,
