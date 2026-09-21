@@ -1,15 +1,20 @@
 # YES Master — Open Threads & Owner Decisions
 
-> **2026-09-21 — Advanced reset-label overlap corrected locally.** The installed
-> `ab420654` screenshot exposed Presence/Air's reset-to-Auto button overlapping
-> its numeric readout; browser reproduction also showed the value intercepting
-> reset clicks. The label now wraps its reset button inside its own column.
-> A geometry/click regression covers Width, Warmth, Presence/Air and Adapt
-> strength in Track and Album at 1360, 1440 and 1920 widths. The full
-> `npm run verify:headless` lane passes (landing plus 38 app checks), with
-> evidence in ignored `test-output/text-overlap/` in the installation worktree.
-> The fix is isolated on `codex/fix-advanced-text-overlap` from main; this is
-> browser layout evidence, with no DSP change, main merge or public push.
+> **2026-09-21 — Advanced control alignment corrected after owner review.**
+> The original `ab420654` label/value collision also blocked reset clicks.
+> The first fix (`68983921`) passed collision checks but the owner rejected
+> its uneven wrapping. The revised two-row grid keeps every label/readout on
+> one line and puts compact reset icons in a fixed slot beside each slider.
+> Auto retains an inactive icon so editing cannot move the controls. Full
+> labels, numeric formats and reset-to-Auto semantics are preserved.
+> Browser checks now cover minimum header spacing, row/track alignment and
+> stable Auto/mixed/edited layouts in Track/Album at 1360, 1440 and 1920 widths.
+> These focused checks and 32 affected component/behavior tests pass. Visual
+> captures include all three states at each width; evidence is under ignored
+> `test-output/text-overlap/` in the installation worktree. Run the full
+> `npm run verify:headless` gate before installing the revised package.
+> Work remains on `codex/fix-advanced-text-overlap`; no DSP change, main merge
+> or public push is included.
 
 > **2026-09-21 — Completed research main push authorized.** Dan requested
 > committing and pushing the completed checkpoint. The [integration record](reviews/2026-09-21-research-main-integration.md)
