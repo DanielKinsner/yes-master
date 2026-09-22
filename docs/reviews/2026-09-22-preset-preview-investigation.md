@@ -208,7 +208,8 @@ encoded export receipts and Album measurement all use this path.
   passed, 0 failed. Strict Clippy, rustfmt, iPhone (46) and Android (26 plus
   arm64 check) bridge lanes pass.
 - Native callback bench (`mastering_quality_streaming_callback_bench`, muted,
-  96 kHz file rate, 45 s excerpt of the same fixture so whole preparations run
+  96 kHz live file-rate conversion, 48 kHz background preparation (scope
+  corrected by the Mac follow-up below), 45 s excerpt of the same fixture so whole preparations run
   inside its window, Realtek default device at 48 kHz with 480–1056-frame
   callbacks): three single-thread runs (`YES_MASTER_PEAK_WORKERS=1`) and three
   budgeted runs each had 0 deadline misses and 0 device errors across 605–606
@@ -225,3 +226,30 @@ this PC and remains a hand check. The bench measures preparation during
 playback; it does not apply the final gain, so the completion-boundary hiccup
 diagnostic above is unchanged and still open. Remaining serial time is mostly
 DSP (2.8 s) and final verification (about 1.8 s).
+
+## Mac follow-up: corrected benchmark scope
+
+The resumed September 22 M4 check found that `YES_MASTER_CALLBACK_FILE_RATE`
+changed only the live SRC route; the concurrent worker retained 48 kHz settings.
+The helper now applies that rate to both paths and records each worker's rate.
+This changes test instrumentation only, not application audio. The historical
+Windows timings above remain valid for their actual workload, but are not proof
+of 96 kHz background preparation or final gain handoff.
+
+Six fresh alternating single-worker/budgeted runs on the M4's actual 48 kHz
+speakers used requested and granted 256-frame callbacks, the same private 45 s
+excerpt and verified 96 kHz worker settings. All 7,244 callbacks had zero
+deadline misses, device errors or exhausted samples. Worst callback budget use
+was 16.3–16.5% single-worker and 16.4–24.0% budgeted. Budgeted workers completed
+two preparations per run (2.70–2.83 s each); the single-worker preparation was
+still running when the six-second probe cancelled it. Do not report those
+cancelled rows as completed preparation times or a measured speedup ratio.
+
+A separate muted, full-source Mastered lifecycle completed rate edits, seek,
+A/B, cold/new/cached landing and paused-cache resume. Its first 96 kHz whole-file
+landing settled at 17.70 s and appeared in the emitted-output revision at
+17.87 s; these are different events, neither DAC latency nor by-ear proof.
+The local source is 206.72 s (SHA-256 `80b6974095a9d0ff838854498dd63a69866b06c1d02a27a10e6f30c86b3e49ca`),
+not the 252.36 s Windows source. No controlled cross-machine speedup is claimed.
+Evidence remains ignored under `test-output/mac-resume-2026-09-22/`. The
+completion-boundary audible hiccup and Focusrite hardware checks remain open.

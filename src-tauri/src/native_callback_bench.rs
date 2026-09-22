@@ -534,7 +534,15 @@ fn callback_bench(streaming_src: bool, gain_edits: bool) {
     settings.advanced = AdvancedSettings::default();
     settings.delivery_profile = DeliveryProfile::Custom;
     settings.advanced.lufs_offset_db = Some(-9.0);
-    settings.advanced.target_sample_rate = Some(48_000);
+    // The background preparation must measure the same delivery rate as the
+    // live route. Previously the override changed only the callback's SRC,
+    // leaving its concurrent preparation at 48 kHz even in a 96 kHz probe.
+    settings.advanced.target_sample_rate = Some(
+        std::env::var("YES_MASTER_CALLBACK_FILE_RATE")
+            .ok()
+            .map(|rate| rate.parse().unwrap())
+            .unwrap_or(48_000),
+    );
     settings.advanced.ceiling_dbtp = Some(-1.0);
     let initial_settings = settings.clone();
     let peak = Arc::new(AtomicU32::new(0));
@@ -564,10 +572,7 @@ fn callback_bench(streaming_src: bool, gain_edits: bool) {
     });
     let construct_start = Instant::now();
     let (mut source, stream_error): (Box<dyn Iterator<Item = f32> + Send>, _) = if streaming_src {
-        let file_rate = std::env::var("YES_MASTER_CALLBACK_FILE_RATE")
-            .ok()
-            .map(|rate| rate.parse().unwrap())
-            .unwrap_or(settings.effective_sample_rate(pcm.sample_rate));
+        let file_rate = settings.effective_sample_rate(pcm.sample_rate);
         let (metered, slot) = output_route::mastered_source(
             source,
             file_rate,
@@ -652,7 +657,8 @@ fn callback_bench(streaming_src: bool, gain_edits: bool) {
                 &worker_settings,
                 Some(&worker_cancel),
             );
-            rows.push(json!({"target":target,"seconds":start.elapsed().as_secs_f64(),"ok":result.is_ok(),
+            rows.push(json!({"target":target,"file_rate":worker_settings.effective_sample_rate(worker_pcm.sample_rate),
+                "seconds":start.elapsed().as_secs_f64(),"ok":result.is_ok(),
                 "error":result.err().map(|e|e.to_string()),"cancel_requested":worker_cancel.load(Ordering::Relaxed)}));
             if worker_cancel.load(Ordering::Relaxed) {
                 break;

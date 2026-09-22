@@ -192,7 +192,12 @@ sample-identical finite route comparisons and the ignored
 uses the same mute/source/report environment as the Original lifecycle. The
 ignored `mastering_quality_streaming_callback_bench` accepts a fresh
 `YES_MASTER_CALLBACK_REPORT` and optional `YES_MASTER_CALLBACK_FILE_RATE` to
-load both converters. Its requested/granted block sizes remain separate facts.
+load both converters and the concurrent background preparation at the requested
+delivery rate. Each worker result records `file_rate`; verify it when comparing
+loads. Before the September 22 Mac follow-up, that override changed only the
+live converter while background preparation stayed at 48 kHz. Historical runs
+retain their measured callback results but do not establish a 96 kHz background
+load. Its requested/granted block sizes remain separate facts.
 Run native probes and Cargo suites serially within one target directory on
 Windows; a build-stamp change while the test executable is open can block linking.
 `preview_codec_resolution_preserves_processing_and_requested_intent` checks
