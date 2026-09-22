@@ -60,53 +60,63 @@ impl ReconstructionFir {
     pub fn measure(
         &self,
         source: &(impl PcmSource + ?Sized),
-        cancelled: impl Fn() -> bool,
+        workers: super::Workers,
+        cancelled: impl Fn() -> bool + Sync,
     ) -> Result<Vec<f64>, &'static str> {
         let frames = source.frames();
-        let mut input = allocated(FFT_SIZE)?;
-        let mut spectrum = allocated(FFT_SIZE / 2 + 1)?;
-        let mut product = allocated(FFT_SIZE / 2 + 1)?;
-        let mut output = allocated(FFT_SIZE)?;
-        let mut scratch = allocated(
-            self.forward
-                .get_scratch_len()
-                .max(self.inverse.get_scratch_len()),
-        )?;
+        let first = -(CORE as i64);
+        let last = (frames + SUPPORT).div_ceil(CORE) as i64 * CORE as i64;
+        let blocks = (last - first) as usize / CORE;
         let mut peaks: Vec<f64> = allocated(source.channels())?;
         for (channel, peak) in peaks.iter_mut().enumerate() {
-            for start in (-(CORE as i64)..(frames + SUPPORT).div_ceil(CORE) as i64 * CORE as i64)
-                .step_by(CORE)
-            {
-                if cancelled() {
-                    return Err("cancelled");
-                }
-                let lo = start - SUPPORT as i64;
-                let a = lo.clamp(0, frames as i64) as usize;
-                let b = (start + (CORE + SUPPORT) as i64).clamp(0, frames as i64) as usize;
-                if b == a {
-                    continue;
-                }
-                input.fill(0.0);
-                let offset = (a as i64 - lo) as usize;
-                source.read_channel(channel, a, &mut input[offset..offset + b - a])?;
-                self.forward
-                    .process_with_scratch(&mut input, &mut spectrum, &mut scratch)
-                    .map_err(|_| "FFT input transform failed")?;
-                for filter in &self.filters {
+            // Blocks are independent and merge by max, so worker threads may
+            // take contiguous ranges without changing the result.
+            let parts = super::for_block_ranges(source, blocks, workers, |reader, range| {
+                let mut input = allocated(FFT_SIZE)?;
+                let mut spectrum = allocated(FFT_SIZE / 2 + 1)?;
+                let mut product = allocated(FFT_SIZE / 2 + 1)?;
+                let mut output = allocated(FFT_SIZE)?;
+                let mut scratch = allocated(
+                    self.forward
+                        .get_scratch_len()
+                        .max(self.inverse.get_scratch_len()),
+                )?;
+                let mut local = 0_f64;
+                for index in range {
                     if cancelled() {
                         return Err("cancelled");
                     }
-                    for ((out, x), h) in product.iter_mut().zip(&spectrum).zip(filter) {
-                        *out = *x * *h;
+                    let start = first + (index * CORE) as i64;
+                    let lo = start - SUPPORT as i64;
+                    let a = lo.clamp(0, frames as i64) as usize;
+                    let b = (start + (CORE + SUPPORT) as i64).clamp(0, frames as i64) as usize;
+                    if b == a {
+                        continue;
                     }
-                    self.inverse
-                        .process_with_scratch(&mut product, &mut output, &mut scratch)
-                        .map_err(|_| "FFT output transform failed")?;
-                    *peak = output[SUPPORT..SUPPORT + CORE]
-                        .iter()
-                        .fold(*peak, |m, v| m.max(v.abs() / FFT_SIZE as f64));
+                    input.fill(0.0);
+                    let offset = (a as i64 - lo) as usize;
+                    reader.read_channel(channel, a, &mut input[offset..offset + b - a])?;
+                    self.forward
+                        .process_with_scratch(&mut input, &mut spectrum, &mut scratch)
+                        .map_err(|_| "FFT input transform failed")?;
+                    for filter in &self.filters {
+                        if cancelled() {
+                            return Err("cancelled");
+                        }
+                        for ((out, x), h) in product.iter_mut().zip(&spectrum).zip(filter) {
+                            *out = *x * *h;
+                        }
+                        self.inverse
+                            .process_with_scratch(&mut product, &mut output, &mut scratch)
+                            .map_err(|_| "FFT output transform failed")?;
+                        local = output[SUPPORT..SUPPORT + CORE]
+                            .iter()
+                            .fold(local, |m, v| m.max(v.abs() / FFT_SIZE as f64));
+                    }
                 }
-            }
+                Ok(local)
+            })?;
+            *peak = parts.into_iter().fold(*peak, f64::max);
         }
         Ok(peaks)
     }

@@ -12,6 +12,8 @@ mod reconstruction_fir;
 use pcm::{InterleavedPcm, PcmSource};
 use serde::Serialize;
 use std::f64::consts::PI;
+use std::ops::Range;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::OnceLock;
 
 pub const VERSION: &str = "finite-sinc20-soxr16-4591255f-realfft-1";
@@ -95,10 +97,135 @@ impl PeakMeasurement {
     }
 }
 
+/// Offline measurement shares the machine with realtime playback: leave these
+/// logical cores to the audio callback, the UI and the OS.
+const RESERVED_CORES: usize = 2;
+/// Measured gains flatten beyond this (2026-09-22 preview benchmark: 16 → 24
+/// threads saved a further 9%).
+const MAX_WORKERS: usize = 16;
+/// Below this many blocks per worker a thread is not worth starting, so short
+/// signals keep the calling thread only.
+const MIN_BLOCKS_PER_WORKER: usize = 16;
+
+/// How many threads may split a pass's independent blocks.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Workers {
+    /// A lease from the process-wide budget; the production default.
+    Budget,
+    /// Exactly this many (at most one per block), bypassing the budget. Tests
+    /// use it to compare thread counts on any machine.
+    #[cfg_attr(not(test), allow(dead_code))]
+    Exact(usize),
+}
+
+fn worker_budget() -> usize {
+    std::thread::available_parallelism()
+        .map_or(1, |n| n.get())
+        .saturating_sub(RESERVED_CORES)
+        .clamp(1, MAX_WORKERS)
+}
+
+static EXTRA_WORKERS_IN_USE: AtomicUsize = AtomicUsize::new(0);
+
+/// Extra threads borrowed from one process-wide pool of `budget - 1`, so
+/// concurrent measurements (a preview preparation during an export) share the
+/// budget instead of each claiming every core. The calling thread always
+/// works too, so acquiring never waits.
+struct WorkerLease<'a> {
+    in_use: &'a AtomicUsize,
+    extra: usize,
+}
+
+impl<'a> WorkerLease<'a> {
+    fn acquire_from(in_use: &'a AtomicUsize, wanted: usize, budget: usize) -> Self {
+        let pool = budget.saturating_sub(1);
+        let mut current = in_use.load(Ordering::Relaxed);
+        loop {
+            let extra = wanted.min(pool.saturating_sub(current));
+            if extra == 0 {
+                return Self { in_use, extra };
+            }
+            match in_use.compare_exchange_weak(
+                current,
+                current + extra,
+                Ordering::AcqRel,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => return Self { in_use, extra },
+                Err(actual) => current = actual,
+            }
+        }
+    }
+}
+
+impl Drop for WorkerLease<'_> {
+    fn drop(&mut self) {
+        if self.extra > 0 {
+            self.in_use.fetch_sub(self.extra, Ordering::AcqRel);
+        }
+    }
+}
+
+/// Run `work` over consecutive ranges of `blocks` independent blocks and return
+/// the results in block order. The first range runs on the calling thread with
+/// `source`; the others run on scoped threads with their own readers. Callers
+/// merge the ordered results exactly as their serial loop would, so the
+/// measurement is identical for any thread count.
+fn for_block_ranges<S, T>(
+    source: &S,
+    blocks: usize,
+    workers: Workers,
+    work: impl Fn(&dyn PcmSource, Range<usize>) -> Result<T, &'static str> + Sync,
+) -> Result<Vec<T>, &'static str>
+where
+    S: PcmSource + ?Sized,
+    T: Send,
+{
+    let (count, _lease) = match workers {
+        Workers::Exact(count) => (count.min(blocks).max(1), None),
+        Workers::Budget => {
+            let budget = worker_budget();
+            let wanted = budget.min(blocks / MIN_BLOCKS_PER_WORKER).max(1);
+            let lease = WorkerLease::acquire_from(&EXTRA_WORKERS_IN_USE, wanted - 1, budget);
+            (1 + lease.extra, Some(lease))
+        }
+    };
+    let readers: Option<Vec<_>> = (1..count).map(|_| source.worker_reader()).collect();
+    let Some(readers) = readers.filter(|_| count > 1) else {
+        return Ok(vec![work(&pcm::Borrowed(source), 0..blocks)?]);
+    };
+    let ranges: Vec<Range<usize>> = (0..count)
+        .map(|i| blocks * i / count..blocks * (i + 1) / count)
+        .collect();
+    let work = &work;
+    std::thread::scope(|scope| {
+        let mut pending = Vec::with_capacity(count - 1);
+        for (range, reader) in ranges[1..].iter().cloned().zip(readers) {
+            let fallback = range.clone();
+            let spawned = std::thread::Builder::new()
+                .name("peak-measure".into())
+                .spawn_scoped(scope, move || work(&*reader, range));
+            pending.push(spawned.map_err(|_| fallback));
+        }
+        let mut results = Vec::with_capacity(count);
+        results.push(work(&pcm::Borrowed(source), ranges[0].clone()));
+        for job in pending {
+            results.push(match job {
+                Ok(handle) => handle
+                    .join()
+                    .unwrap_or(Err("peak measurement worker failed")),
+                // No thread available: measure that range here instead.
+                Err(range) => work(&pcm::Borrowed(source), range),
+            });
+        }
+        results.into_iter().collect()
+    })
+}
+
 pub fn measure(
     samples: &[f32],
     channels: usize,
-    cancelled: impl Fn() -> bool,
+    cancelled: impl Fn() -> bool + Sync,
 ) -> Result<PeakMeasurement, &'static str> {
     measure_source(&InterleavedPcm::new(samples, channels)?, cancelled)
 }
@@ -106,9 +233,34 @@ pub fn measure(
 /// The provider can replay deterministic delivery PCM from bounded scratch.
 /// State is local to this call; only immutable filter plans are shared. Source
 /// facts/results are not cached here, so a second source cannot inherit a peak.
+/// Independent blocks may be measured on worker threads within the process
+/// budget; results are identical to a single-thread measurement.
 pub fn measure_source(
     source: &(impl PcmSource + ?Sized),
-    cancelled: impl Fn() -> bool,
+    cancelled: impl Fn() -> bool + Sync,
+) -> Result<PeakMeasurement, &'static str> {
+    measure_source_with_workers(source, default_workers(), cancelled)
+}
+
+#[cfg(not(test))]
+fn default_workers() -> Workers {
+    Workers::Budget
+}
+
+/// Test builds (including the native callback benches) can pin the worker
+/// count, e.g. `YES_MASTER_PEAK_WORKERS=1` for a single-thread comparison.
+#[cfg(test)]
+fn default_workers() -> Workers {
+    std::env::var("YES_MASTER_PEAK_WORKERS")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .map_or(Workers::Budget, Workers::Exact)
+}
+
+pub(crate) fn measure_source_with_workers(
+    source: &(impl PcmSource + ?Sized),
+    workers: Workers,
+    cancelled: impl Fn() -> bool + Sync,
 ) -> Result<PeakMeasurement, &'static str> {
     if source.channels() == 0
         || source.channels() > 32
@@ -119,11 +271,11 @@ pub fn measure_source(
     if cancelled() {
         return Err("cancelled");
     }
-    let finite = finite_peak::measure(source, &cancelled)?;
+    let finite = finite_peak::measure(source, workers, &cancelled)?;
     if cancelled() {
         return Err("cancelled");
     }
-    let lowpass = lowpass_filter().measure(source, &cancelled)?;
+    let lowpass = lowpass_filter().measure(source, workers, &cancelled)?;
     let mut channels = Vec::new();
     channels
         .try_reserve_exact(finite.len())
@@ -217,5 +369,167 @@ mod tests {
             );
             assert_eq!(calls.load(Ordering::Relaxed), limit + 1);
         }
+    }
+
+    fn measured(source: &(impl PcmSource + ?Sized), workers: Workers) -> serde_json::Value {
+        serde_json::to_value(measure_source_with_workers(source, workers, || false).unwrap())
+            .unwrap()
+    }
+
+    /// Stereo programme with full-scale near-Nyquist bursts (inter-sample
+    /// overs that force the refinement pass), a quiet tone, a slow decaying
+    /// sweep and a late isolated transient. The length leaves a partial block.
+    fn demanding_stereo(frames: usize) -> Vec<f32> {
+        let mut stereo = vec![0_f32; 2 * frames];
+        for n in 0..frames {
+            let t = n as f32;
+            stereo[2 * n] = if (n / 3000) % 2 == 0 {
+                if n % 2 == 0 {
+                    0.97
+                } else {
+                    -0.97
+                }
+            } else {
+                0.3 * (t * 0.013).sin()
+            };
+            stereo[2 * n + 1] =
+                0.8 * (t * 0.0007 * (1. + t / 90_000.)).sin() * (-t / 200_000.).exp();
+        }
+        stereo[2 * (frames - 7) + 1] = 1.2;
+        stereo
+    }
+
+    /// 2026-09-22: block passes may run on several threads. Each block's math
+    /// is unchanged and results merge in block order, so every reported field,
+    /// including refinement bookkeeping, must equal the serial measurement.
+    #[test]
+    fn worker_threads_reproduce_serial_results_exactly() {
+        let stereo = demanding_stereo(23 * 4096 + 1234);
+        let source = InterleavedPcm::new(&stereo, 2).unwrap();
+        let serial = measured(&source, Workers::Exact(1));
+        assert!(
+            serial["channels"][0]["finite"]["refined_blocks"]
+                .as_u64()
+                .unwrap()
+                > 0,
+            "the signal must exercise the order-dependent refinement pass"
+        );
+        // Uneven splits, more workers than blocks, and the default budget.
+        for workers in [
+            Workers::Exact(2),
+            Workers::Exact(3),
+            Workers::Exact(5),
+            Workers::Exact(64),
+            Workers::Budget,
+        ] {
+            assert_eq!(measured(&source, workers), serial, "{workers:?}");
+        }
+        let left: Vec<f32> = stereo.iter().step_by(2).copied().collect();
+        let mono = InterleavedPcm::new(&left, 1).unwrap();
+        assert_eq!(
+            measured(&mono, Workers::Exact(4)),
+            measured(&mono, Workers::Exact(1))
+        );
+        let silent_right: Vec<f32> = stereo.chunks(2).flat_map(|frame| [frame[0], 0.]).collect();
+        let silent = InterleavedPcm::new(&silent_right, 2).unwrap();
+        assert_eq!(
+            measured(&silent, Workers::Exact(4)),
+            measured(&silent, Workers::Exact(1))
+        );
+    }
+
+    /// Staged files are read through `RefCell` readers; each worker must open
+    /// its own and still see exactly the delivered samples, dither included.
+    #[test]
+    fn staged_file_and_dithered_delivery_workers_match_serial_reads() {
+        let dir = tempfile::tempdir().unwrap();
+        let stereo = demanding_stereo(19 * 4096 + 77);
+        for bits in [16, 24, 32] {
+            let path = crate::wav_writer::write_wav(
+                &dir.path().join(format!("staged-{bits}.wav")),
+                &stereo,
+                48_000,
+                2,
+                bits,
+            )
+            .unwrap();
+            let delivery = crate::wav_writer::DeliveryPcm::new(&stereo, 2, bits, || false).unwrap();
+            let serial = measured(&delivery, Workers::Exact(1));
+            assert_eq!(
+                measured(&delivery, Workers::Exact(4)),
+                serial,
+                "delivery {bits}"
+            );
+            let file = pcm::WavPcm::open(&path).unwrap();
+            assert_eq!(
+                measured(&file, Workers::Exact(4)),
+                serial,
+                "staged file {bits}"
+            );
+        }
+    }
+
+    /// The refinement pass's decisions depend on record order, so worker
+    /// results must come back as contiguous ranges in block order covering
+    /// every block exactly once, whatever the thread count.
+    #[test]
+    fn block_ranges_return_in_order_and_cover_every_block_once() {
+        let samples = vec![0.1_f32; 64];
+        let source = InterleavedPcm::new(&samples, 1).unwrap();
+        for blocks in [0, 1, 7, 100, 1_001] {
+            for workers in [1, 2, 3, 8, 2_000] {
+                let parts =
+                    for_block_ranges(&source, blocks, Workers::Exact(workers), |_, range| {
+                        Ok(range.collect::<Vec<_>>())
+                    })
+                    .unwrap();
+                assert_eq!(
+                    parts.len(),
+                    workers.min(blocks).max(1),
+                    "{blocks}/{workers}"
+                );
+                let flat: Vec<_> = parts.into_iter().flatten().collect();
+                assert_eq!(flat, (0..blocks).collect::<Vec<_>>(), "{blocks}/{workers}");
+            }
+        }
+        // A worker's error surfaces instead of a partial result.
+        let failed = for_block_ranges(&source, 100, Workers::Exact(4), |_, range| {
+            if range.contains(&60) {
+                Err("late block failed")
+            } else {
+                Ok(())
+            }
+        });
+        assert_eq!(failed.unwrap_err(), "late block failed");
+    }
+
+    #[test]
+    fn cancelling_worker_threads_never_returns_a_measurement() {
+        let source = vec![0.2_f32; 2 * 40 * 4096];
+        let pcm = InterleavedPcm::new(&source, 2).unwrap();
+        for limit in [0, 1, 5, 40, 300, 2_000] {
+            let calls = AtomicUsize::new(0);
+            let result = measure_source_with_workers(&pcm, Workers::Exact(4), || {
+                calls.fetch_add(1, Ordering::Relaxed) >= limit
+            });
+            assert_eq!(result.unwrap_err(), "cancelled", "limit {limit}");
+        }
+    }
+
+    #[test]
+    fn worker_leases_share_one_bounded_pool_and_return_it() {
+        let in_use = AtomicUsize::new(0);
+        let first = WorkerLease::acquire_from(&in_use, 10, 6);
+        assert_eq!(first.extra, 5, "a pool of budget - 1 extra threads");
+        let second = WorkerLease::acquire_from(&in_use, 10, 6);
+        assert_eq!(
+            second.extra, 0,
+            "a concurrent measurement runs on its own thread"
+        );
+        drop(first);
+        let third = WorkerLease::acquire_from(&in_use, 2, 6);
+        assert_eq!(third.extra, 2);
+        drop((second, third));
+        assert_eq!(in_use.load(Ordering::Relaxed), 0);
     }
 }

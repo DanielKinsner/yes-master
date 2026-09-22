@@ -171,6 +171,10 @@ impl crate::peak_meter::pcm::PcmSource for DeliveryPcm<'_> {
     fn channels(&self) -> usize {
         self.channels
     }
+    /// Dither replays from per-block seeds, so concurrent reads are exact.
+    fn worker_reader(&self) -> Option<Box<dyn crate::peak_meter::pcm::PcmSource + Send + '_>> {
+        Some(Box::new(crate::peak_meter::pcm::Shared(self)))
+    }
     fn read_channel(
         &self,
         channel: usize,

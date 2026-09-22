@@ -240,19 +240,13 @@ pub struct ChannelPeak {
     pub moment_tree_bytes: usize,
 }
 
-pub fn measure(
-    source: &(impl PcmSource + ?Sized),
-    cancelled: impl Fn() -> bool,
-) -> Result<Vec<ChannelPeak>, &'static str> {
-    if cancelled() {
-        return Err("cancelled");
-    }
+fn new_workspace<S: PcmSource + ?Sized>(source: &S) -> Result<Workspace<'_, S>, &'static str> {
     let bank = kernels();
     let scratch_len = bank
         .forward
         .get_scratch_len()
         .max(bank.inverse.get_scratch_len());
-    let mut workspace = Workspace {
+    Ok(Workspace {
         source,
         bank,
         input: allocated(FFT_SIZE)?,
@@ -260,7 +254,21 @@ pub fn measure(
         spectrum: allocated(FFT_SIZE / 2 + 1)?,
         product: allocated(FFT_SIZE / 2 + 1)?,
         scratch: allocated(scratch_len)?,
-    };
+    })
+}
+
+/// One block's grid estimate and omitted-tail uncertainty, in file order.
+type Record = (i64, f64, f64, usize, usize);
+
+pub fn measure(
+    source: &(impl PcmSource + ?Sized),
+    workers: super::Workers,
+    cancelled: impl Fn() -> bool + Sync,
+) -> Result<Vec<ChannelPeak>, &'static str> {
+    if cancelled() {
+        return Err("cancelled");
+    }
+    let mut workspace = new_workspace(source)?;
     let mut result = Vec::new();
     result
         .try_reserve_exact(source.channels())
@@ -290,27 +298,41 @@ pub fn measure(
         let extent = (summary.l1 / (PI * summary.sample_peak)).ceil() as usize + 1;
         let first = -((extent.div_ceil(CORE) * CORE) as i64);
         let last = (summary.frames + extent).div_ceil(CORE) * CORE;
+        let blocks = (last as i64 - first) as usize / CORE;
+        let allowance = peak.numerical_allowance;
+        // Blocks are independent; worker threads may take contiguous ranges.
+        let parts = super::for_block_ranges(source, blocks, workers, |reader, range| {
+            let mut workspace = new_workspace(reader)?;
+            let mut records: Vec<Record> = Vec::new();
+            records
+                .try_reserve_exact(range.len())
+                .map_err(|_| "peak interval allocation failed")?;
+            for index in range {
+                if cancelled() {
+                    return Err("cancelled");
+                }
+                let start = first + (index * CORE) as i64;
+                let stop = start + CORE as i64;
+                let (local, a, b) = workspace.grid(channel, start, None, &cancelled)?;
+                let left = if a > 0 {
+                    summary.tail(0, a, start as f64, true)
+                } else {
+                    0.0
+                };
+                let right = if b < summary.frames {
+                    summary.tail(b, summary.frames, stop as f64 - 1.0 / FACTOR as f64, false)
+                } else {
+                    0.0
+                };
+                records.push((start, local, left + right + allowance, a, b));
+            }
+            Ok(records)
+        })?;
         let mut records = Vec::new();
         records
-            .try_reserve_exact((last as i64 - first) as usize / CORE)
+            .try_reserve_exact(blocks)
             .map_err(|_| "peak interval allocation failed")?;
-        for start in (first..last as i64).step_by(CORE) {
-            if cancelled() {
-                return Err("cancelled");
-            }
-            let stop = start + CORE as i64;
-            let (local, a, b) = workspace.grid(channel, start, None, &cancelled)?;
-            let left = if a > 0 {
-                summary.tail(0, a, start as f64, true)
-            } else {
-                0.0
-            };
-            let right = if b < summary.frames {
-                summary.tail(b, summary.frames, stop as f64 - 1.0 / FACTOR as f64, false)
-            } else {
-                0.0
-            };
-            let uncertainty = left + right + peak.numerical_allowance;
+        for (start, local, uncertainty, a, b) in parts.into_iter().flatten() {
             peak.local_grid_estimate = peak.local_grid_estimate.max(local);
             peak.grid_lower = peak.grid_lower.max((local - uncertainty).max(0.0));
             peak.continuous_upper = peak.continuous_upper.max(local + uncertainty);

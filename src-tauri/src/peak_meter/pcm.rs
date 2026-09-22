@@ -13,6 +13,52 @@ pub trait PcmSource {
         start: usize,
         out: &mut [f64],
     ) -> Result<(), &'static str>;
+    /// An independent reader of the same immutable PCM for one more worker
+    /// thread; it must return exactly the samples this source returns. `None`
+    /// keeps the measurement on the calling thread.
+    fn worker_reader(&self) -> Option<Box<dyn PcmSource + Send + '_>> {
+        None
+    }
+}
+
+/// Shares a source whose reads are already thread-safe (plain memory).
+pub(crate) struct Shared<'a, T: ?Sized>(pub(crate) &'a T);
+
+impl<T: PcmSource + Sync + ?Sized> PcmSource for Shared<'_, T> {
+    fn frames(&self) -> usize {
+        self.0.frames()
+    }
+    fn channels(&self) -> usize {
+        self.0.channels()
+    }
+    fn read_channel(
+        &self,
+        channel: usize,
+        start: usize,
+        out: &mut [f64],
+    ) -> Result<(), &'static str> {
+        self.0.read_channel(channel, start, out)
+    }
+}
+
+/// The calling thread's own view of a source, as a sized reader.
+pub(crate) struct Borrowed<'a, T: ?Sized>(pub(crate) &'a T);
+
+impl<T: PcmSource + ?Sized> PcmSource for Borrowed<'_, T> {
+    fn frames(&self) -> usize {
+        self.0.frames()
+    }
+    fn channels(&self) -> usize {
+        self.0.channels()
+    }
+    fn read_channel(
+        &self,
+        channel: usize,
+        start: usize,
+        out: &mut [f64],
+    ) -> Result<(), &'static str> {
+        self.0.read_channel(channel, start, out)
+    }
 }
 
 /// Random-access exact PCM from a privately staged WAV. The caller owns the
@@ -22,6 +68,8 @@ pub struct WavPcm {
     reader: std::cell::RefCell<hound::WavReader<std::io::BufReader<std::fs::File>>>,
     frames: usize,
     spec: hound::WavSpec,
+    /// Worker threads open their own readers of the same immutable file.
+    path: std::path::PathBuf,
 }
 
 impl WavPcm {
@@ -43,6 +91,7 @@ impl WavPcm {
             frames: reader.duration() as usize,
             reader: std::cell::RefCell::new(reader),
             spec,
+            path: path.to_path_buf(),
         })
     }
 }
@@ -53,6 +102,11 @@ impl PcmSource for WavPcm {
     }
     fn channels(&self) -> usize {
         usize::from(self.spec.channels)
+    }
+    fn worker_reader(&self) -> Option<Box<dyn PcmSource + Send + '_>> {
+        let reader = Self::open(&self.path).ok()?;
+        (reader.frames == self.frames && reader.spec == self.spec)
+            .then(|| Box::new(reader) as Box<dyn PcmSource + Send>)
     }
     fn read_channel(
         &self,
@@ -134,6 +188,9 @@ impl PcmSource for InterleavedPcm<'_> {
     }
     fn channels(&self) -> usize {
         self.channels
+    }
+    fn worker_reader(&self) -> Option<Box<dyn PcmSource + Send + '_>> {
+        Some(Box::new(Shared(self)))
     }
     fn read_channel(
         &self,
