@@ -1,5 +1,19 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-21 — Quiet-copy checkpoint completed; policy failures preserved.**
+> The [results](reviews/2026-09-21-quiet-copy-results.md) complete all 32 planned
+> outputs and independent checks. All 24 normalized comparisons pass; selected
+> policy/offset matches only four of eight original groups. Metal's moving tone
+> bound changes selection, and two below-gate groups have no eligible fallback.
+> 31/32 files pass all independent checks; Metal -80 current fails the frozen
+> availability peak guard despite FFmpeg's no-blocks signature. This remains a
+> failed qualification, with logs and regression preserved. The timeout lost no
+> rendered audio; recovery resumed from all 32 hash-verified files. Next resolve
+> a reproducible reference and explicit availability/fallback contract under C1,
+> then the [control contract](reviews/2026-09-21-c1-control-contract.md), before C2.
+> Work stays local; limits, original evidence, production behavior and holdout
+> boundaries remain intact. No shipping policy is adopted.
+
 > **2026-09-21 — Bounded bidirectional checkpoint verified locally.**
 > The [results](reviews/2026-09-21-bidirectional-search-results.md) add seven
 > independently verified whole WAVs and reuse nine unchanged complete outputs.

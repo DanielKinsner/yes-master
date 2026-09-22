@@ -92,6 +92,50 @@ class BidirectionalTests(unittest.TestCase):
             self.assertEqual((selected.selected.policy, selected.selected.offset_db, selected.target_feasible), result)
             self.assertFalse(selected.needs_more_search)
 
+    def quiet_rows(self, name, gain, reference='character_failures'):
+        path = Path(__file__).resolve().parents[3]/'docs/reviews/evidence/2026-09-21-dynamics-research/quiet-copy-v2.json'
+        data = json.loads(path.read_text(encoding='utf-8'))
+        rows = []
+        for item in data['rows']:
+            row = item['native']
+            if (row['case'], row['source_gain_db']) != (name, gain):
+                continue
+            self.assertTrue(item['independent']['peak_pass'])
+            if row['policy'] == 'single':
+                self.assertTrue(item['metric']['numeric_consistency']['pass_all'])
+            available = row['lufs'] is not None
+            if available:
+                self.assertTrue(item['independent']['lufs_pass'])
+            technical = [] if available else ['unavailable_loudness_for_selector']
+            if not item['independent']['lufs_pass']:
+                technical.append('independent_loudness_failed')
+            rows.append(Candidate(name, row['id'], row['sha256'], row['policy'], row['offset_db'],
+                row['lufs'] if available else -float('inf'), -14., row['peak'], row['ceiling'],
+                tuple(item['metric'][reference]), tuple(technical)))
+        self.assertEqual(len(rows), 4)
+        return rows
+
+    def test_below_gate_controls_do_not_fabricate_selector_fallback(self):
+        for name in ('piano', 'imaginal', 'metal', 'rich'):
+            rows = self.quiet_rows(name, -80.)
+            result = select(rows, name)
+            control = next(r for r in rows if r.policy == 'control')
+            self.assertIn('unavailable_loudness_for_selector', dict(result.rejected)[control.id])
+            if name in ('imaginal', 'rich'):
+                self.assertIsNone(result.selected)
+                self.assertEqual(result.reason, 'no_verified_fallback')
+            else:
+                self.assertEqual(result.selected.policy, 'single')
+                self.assertTrue(result.character_qualified)
+
+    def test_verified_metal_reference_shift_changes_choice_despite_consistent_pcm(self):
+        for gain in (-40., -80.):
+            matched = select(self.quiet_rows('metal', gain), 'metal')
+            fixed = select(self.quiet_rows('metal', gain, 'fixed_original_reference_failures'), 'metal')
+            self.assertEqual(matched.selected.offset_db, 0.)
+            self.assertEqual(fixed.selected.offset_db, 3.)
+            self.assertTrue(matched.target_feasible and fixed.target_feasible)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,5 +1,6 @@
 """Qualify availability parsing with actual controlled FFmpeg meter results."""
 import math
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -36,6 +37,17 @@ class QuietReferenceTests(unittest.TestCase):
         self.assertFalse(loudness_agreement(-70.,-70.,0.,-90.)['lufs_pass'])
         self.assertFalse(loudness_agreement(None,-70.,0.,-.5)['lufs_pass'])
         self.assertFalse(loudness_agreement(-14.,-14.2,-24.,-1.)['lufs_pass'])
+
+    def test_retained_metal_copy_still_fails_frozen_peak_guard(self):
+        path=Path(__file__).resolve().parents[3]/'docs/reviews/evidence/2026-09-21-dynamics-research/quiet-copy-v2.json'
+        data=json.loads(path.read_text(encoding='utf-8'))
+        row=next(r['independent'] for r in data['rows'] if r['native']['id']=='metal-copy-80-control-offset0')
+        self.assertIsNone(row['native_lufs'])
+        self.assertEqual((row['ffmpeg_integrated_display'],row['ffmpeg_integrated_threshold']),(-70.,0.))
+        self.assertGreater(row['independent_peak'],-70.)
+        result=loudness_agreement(row['native_lufs'],row['ffmpeg_integrated_display'],
+                                  row['ffmpeg_integrated_threshold'],row['independent_peak'])
+        self.assertFalse(result['lufs_pass'])
 
 
 if __name__ == '__main__':

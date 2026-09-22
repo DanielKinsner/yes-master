@@ -69,3 +69,28 @@ Run preparation with a freshly built/copied release probe, then
 requires complete hash-bound native, metric, independent and process reports.
 Raw jobs/audio/logs belong in ignored `test-output/dynamics-research-20260921/`.
 No new experiment is pushed or enabled in the app by this checkpoint.
+
+The subsequent quiet-copy checkpoint is frozen in
+`docs/reviews/2026-09-21-quiet-copy-protocol.md`. Use the separate
+`mastering_quality_quiet_copy` release example with
+`quiet_copy_research.py prepare/evaluate/summarize`. It renders 32 complete
+-40/-80 dB copy outputs and retains 16 original-level references. Run native
+rendering via `run_single_first.py`, then character evaluation, then
+`quiet_reference.py`; the latter preserves finite-value tolerances and records
+below-gate availability separately. `test_quiet_reference.py` qualifies that
+extension with actual silent, quiet and finite FFmpeg probes. The comparison
+reports both copy-matched control limits and a fixed-original diagnostic, without
+changing the frozen selector. Output belongs in
+`test-output/dynamics-research-20260921/quiet-copy/`. The initial v1 settings
+serialization failure and empty output directory are preserved; v2 compares
+both settings through the actual production numeric types before processing.
+
+The completed results are in `docs/reviews/2026-09-21-quiet-copy-results.md`.
+Summarization archives failed reference checks explicitly, excludes them from
+eligible candidates and keeps independent qualification separate from numerical
+consistency and selection identity. Metal -80 current remains a failed frozen
+availability check; the -70 FFmpeg display is not a validated LUFS measurement.
+Run the selector/availability regression discovery commands from repository root
+because older evidence includes repository-relative artifact paths. Timeout
+recovery verified the 32 saved WAV hashes and resumed measurement without audio
+regeneration. No criterion or historical failed witness was rewritten.

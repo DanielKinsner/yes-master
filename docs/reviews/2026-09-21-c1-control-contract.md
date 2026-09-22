@@ -5,9 +5,9 @@ plan and existing owner decisions; they do not activate automatic processing.
 
 | Input or action | Required behavior | Current research coverage |
 | --- | --- | --- |
-| Source gain copy | Separate gain normalization from automatic nonlinear drive; require stable normalized response and inspect selection separately | Corrected arithmetic established; bidirectional quiet-copy checkpoint next |
+| Source gain copy | Separate gain normalization from automatic nonlinear drive; require stable normalized response and inspect selection separately | All 24 quiet-copy numerical comparisons pass; only 4/8 selection identities match; reference policy unresolved |
 | Current processing | Eligible when it meets the same technical/character/target conditions; failures and target misses remain explicit | Original-level four-source selection verified |
-| Actual source LUFS below gate | Keep unavailable; normalized operating descriptor is a separate fact | New quiet-copy availability check |
+| Actual source LUFS below gate | Keep unavailable; normalized operating descriptor is a separate fact | Four native current outputs unavailable; three independently qualified, Metal peak guard failed; fallback contract unresolved |
 | Named preset/intensity | Preserve calibration and deliberate dense character; candidate drive is not a preset retune | Universal 50/75 and limited Loud coverage; full policy unresolved |
 | User input gain | Compute automatic base independently, then preserve manual pre-chain gain's audible effect; never cancel or persist the automatic offset into it | Existing controls preserved; automatic/manual interaction not qualified |
 | Density or Adapt | Keep requested values and their existing meanings; null/Auto stays null and Adapt 0 stays 0 | No production changes; prototype compatibility qualification remains |

@@ -149,12 +149,15 @@ def summarize(args):
     assert all(r['status']=='complete' for r in (native,metrics,independent,process))
     assert native['job_sha256']==metrics['job_sha256']==process['job_sha256']==sha(args.job)
     assert metrics['native_sha256']==independent['native_sha256']==sha(args.report)
-    assert process['exit_code']==0 and independent['all_pass'] and metrics['limits']==LIMITS
+    assert process['exit_code']==0 and metrics['limits']==LIMITS
+    assert independent['ffmpeg_sha256']=='67abd24645ae7cf73e1fad8b092de73b064b62ae61819751fc31e79e91e842d3'
     assert sha(Path(job['binary']))==process['binary_sha256']==job['binary_sha256']
     assert sha(Path(job['specification']))==job['specification_sha256']
     assert sha(Path(job['baseline']['path']))==job['baseline']['sha256']
     baseline=read(job['baseline']['path'])
     assert len(native['rows'])==len(metrics['rows'])==len(independent['rows'])==32
+    assert independent['all_pass']==all(r['peak_pass'] and r['lufs_pass'] and
+                                       r['fullscale_samples']==0 for r in independent['rows'])
     rows=[]
     for row in native['rows']:
         metric=next(r for r in metrics['rows'] if r['id']==row['id'])
@@ -162,7 +165,6 @@ def summarize(args):
         assert row['sha256']==metric['sha256']==check['sha256']==sha(Path(row['path']))
         assert row['frames']==check['frames'] and row['rate']==check['rate']==48000
         assert row['channels']==check['channels']==2 and row['peak']<=row['ceiling']==check['ceiling']==-1.
-        assert check['peak_pass'] and check['lufs_pass'] and check['fullscale_samples']==0
         assert row['lufs']==check['native_lufs']
         rows.append(dict(native=row,metric=metric,independent=check))
     groups=[]
@@ -179,21 +181,41 @@ def summarize(args):
                 for item in group:
                     row=item['native']
                     available=row['lufs'] is not None
+                    check=item['independent']
+                    technical=[] if available else ['unavailable_loudness_for_selector']
+                    if not check['peak_pass']:
+                        technical.append('independent_peak_failed')
+                    if not check['lufs_pass']:
+                        technical.append('independent_loudness_failed')
+                    if check['fullscale_samples']:
+                        technical.append('fullscale_samples')
                     candidates.append(Candidate(context,row['id'],row['sha256'],row['policy'],row['offset_db'],
                         row['lufs'] if available else -float('inf'),-14.,row['peak'],-1.,tuple(item['metric'][key]),
-                        () if available else ('unavailable_loudness_for_selector',)))
+                        tuple(technical)))
                 selection=asdict(select(candidates,context))
                 results[label]=dict(selection=selection,identity_matches_original=identity(selection)==identity(original),
-                    outcome_matches_original=(selection['reason'],selection['target_feasible'])==(original['reason'],original['target_feasible']))
+                    outcome_matches_original=(selection['reason'],selection['target_feasible'])==(original['reason'],original['target_feasible']),
+                    selected_lufs_change_lu=None if selection['selected'] is None else
+                        selection['selected']['lufs']-original['selected']['lufs'],
+                    level_sensitive_control_selected=selection['selected'] is not None and selection['selected']['policy']=='control')
             groups.append(dict(case=name,source_gain_db=gain,original=original,**results))
     consistency=[r['metric']['numeric_consistency'] for r in rows if r['native']['policy']=='single']
     result=dict(status='complete',scope='Corrected known-source quiet copies; original analysis/guards retained; no sonic adoption',
+        independent_qualification='passed' if independent['all_pass'] else 'failed',
+        all_whole_file_checks_pass=independent['all_pass'],
+        independent_passes=sum(r['independent']['peak_pass'] and r['independent']['lufs_pass'] and
+                              r['independent']['fullscale_samples']==0 for r in rows),
+        independent_failures=[r['native']['id'] for r in rows if not (r['independent']['peak_pass'] and
+                              r['independent']['lufs_pass'] and r['independent']['fullscale_samples']==0)],
         inputs={k:bound(p) for k,p in paths.items()},specification_sha256=job['specification_sha256'],limits=LIMITS,
         script_sha256=sha(Path(__file__)),rows=rows,groups=groups,process=process,source_preparation=native['source_preparation'],
         normalized_comparisons=len(consistency),normalized_passes=sum(r['pass_all'] for r in consistency),
         matched_identity_passes=sum(g['matched_current']['identity_matches_original'] for g in groups),
         fixed_reference_identity_passes=sum(g['fixed_original_diagnostic']['identity_matches_original'] for g in groups),
         matched_outcomes=dict(Counter(g['matched_current']['selection']['reason'] for g in groups)),
+        fixed_reference_outcomes=dict(Counter(g['fixed_original_diagnostic']['selection']['reason'] for g in groups)),
+        matched_outcome_passes=sum(g['matched_current']['outcome_matches_original'] for g in groups),
+        fixed_reference_outcome_passes=sum(g['fixed_original_diagnostic']['outcome_matches_original'] for g in groups),
         unavailable_deliveries=sum(r['native']['lufs'] is None for r in rows),
         new_audio_bytes=sum(Path(r['native']['path']).stat().st_size for r in rows),
         memory_budget_pass=process['peak_working_set_bytes']<=2*1024**3,
@@ -202,7 +224,7 @@ def summarize(args):
         metric_work_s=sum(r['metric']['metric_s'] for r in rows),reference_work_s=sum(r['independent']['reference_s'] for r in rows))
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(json.dumps(result,indent=2,allow_nan=False)+'\n')
-    print(json.dumps({k:result[k] for k in ('normalized_comparisons','normalized_passes','matched_identity_passes',
+    print(json.dumps({k:result[k] for k in ('independent_qualification','independent_passes','independent_failures','normalized_comparisons','normalized_passes','matched_identity_passes',
         'fixed_reference_identity_passes','matched_outcomes','unavailable_deliveries','memory_budget_pass')},indent=2))
 
 

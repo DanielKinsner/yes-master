@@ -12,8 +12,16 @@ qualified target and three qualified-character shortfalls on the four unresolved
 Universal 50/-14 groups. Piano gains a qualified quieter alternative; Metal's
 retained +3 becomes eligible under the new frozen rule. Imaginal/Rich keep current
 processing. The two-offset and provisional cost/memory bounds pass. C1 contract
-and quiet-copy work, C2 holdout and C3 adoption remain open.
-Status: **completed checkpoint pushed; bounded C1 search verified locally, September 21**. Implementation was authorized
+work, C2 holdout and C3 adoption remain open.
+The subsequent [quiet-copy checkpoint](../reviews/2026-09-21-quiet-copy-results.md)
+completes its frozen 32 outputs: all 24 normalized-copy numerical comparisons
+pass, but only four of eight selections retain original policy/offset identity.
+Moving reference limits and unavailable current fallback remain unresolved.
+Independent checks pass 31/32; Metal -80 current fails the frozen availability
+peak guard. Preserve that failure while testing the availability classifier.
+Next resolve a reproducible comparison reference and explicit fallback contract
+before expanding the grid or opening unseen C2 material.
+Status: **C1 quiet-copy checkpoint complete locally with preserved failures, September 21**. Implementation was authorized
 September 15 on local `codex/mastering-quality` from `7534f612`. See the
 [checkpoint ledger](../reviews/2026-09-15-mastering-quality-implementation-evidence.md).
 Sonic-policy adoption and calibration remain gated. This file replaces the
