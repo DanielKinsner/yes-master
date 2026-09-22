@@ -1,5 +1,22 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-22 — Mac testing resumed and the postponed checks completed.**
+> Pulled `aec5f6e`, then exercised the actual installed M4 app, including
+> offline playback/project/export, preset changes during preparation, Album
+> cancellation/retry and Finder/external playback. Fixed a reproduced startup
+> centering race that opened the fitted window partly off-screen (`76122a4`).
+> Corrected the callback helper's background rate (`9379feb`); six actual
+> 256-frame/96 kHz-load runs have zero deadline misses or device errors.
+> Frontend (905 passed, 3 skipped), full Rust/fixture (716 passed), explicit
+> encoder matrices, 40 app browser cases, final window regressions and strict
+> checks pass. Clean ARM package `9379feb` is installed; two fresh launches and
+> offline playback pass. The owner's original session is restored, app closed.
+> Code is pushed to `main`; its [CI](https://github.com/DanielKinsner/yes-master/actions/runs/35791097861)
+> is running, while both prior main runs are fully green. See the
+> [resumed Mac report](reviews/2026-09-22-mac-resumed-verification.md) for hashes,
+> evidence boundaries and release gates. Final listening, Focusrite, the audible
+> completion hiccup and release authorization remain separate.
+
 > **2026-09-22 — Preview wait: peak measurement now uses multiple cores.**
 > Dan chose option (a). Qualified peak passes split independent blocks across a
 > bounded worker budget (logical cores minus two, at most 16) and merge in block
@@ -10,9 +27,11 @@
 > Exact-equality regressions, the slow fixture lane (721 passed), strict Clippy,
 > iPhone/Android bridge lanes and six muted native callback runs (0 deadline
 > misses, 0 device errors either way) pass. Open: owner hand check of preset
-> switching, a low-latency interface (Focusrite) check, Mac timing, the
+> switching, an external interface (Focusrite) check, the
 > completion-boundary hiccup and the other preview priorities. See the
 > [follow-up](reviews/2026-09-22-preset-preview-investigation.md#follow-up-multi-core-peak-measurement-implemented).
+> Mac timing and installed interaction are now recorded in the resumed report
+> above; they do not replace the owner's by-ear check.
 
 > **2026-09-22 — Whole-project review fixes (owner option A).** A read-only
 > review found no launch blocker. Dan approved three interface-only fixes, now
@@ -52,11 +71,13 @@
 > The owner explicitly postponed its final native recheck and offline journey
 > after the Mac locked, and authorized integrating/pushing the fixes and status
 > document to `main` for cross-machine handoff. See [the scoped evidence](reviews/2026-09-22-mac-launch-verification.md).
-> Those postponed checks remain unverified. Existing release gates remain;
+> Those postponed checks were subsequently completed in the resumed record
+> above. Existing release gates remain;
 > this authorization does not activate a release or website deployment.
 > **Main transfer completed:** `60c526a` is pushed and verified on GitHub. Its
 > [exact-main CI](https://github.com/DanielKinsner/yes-master/actions/runs/35744259967)
-> is running at handoff, separate from the passing local/candidate evidence.
+> was running at that handoff and has since passed all 11 jobs, separate from
+> the passing local/candidate evidence.
 
 > **2026-09-22 — Launch candidate prepared; public release remains NO-GO.** Dan requested all
 > applicable tests, end-to-end computer use and visual polish. The isolated

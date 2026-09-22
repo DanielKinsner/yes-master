@@ -18,10 +18,20 @@ deepened: 2026-07-24
 
 # YES Master Public Beta Quality Program
 
+> **September 22 resumed Mac completion:** pulled newer main before testing.
+> The previously postponed native/offline journeys now pass. Fixed an actual
+> off-screen startup race and verified clean installed ARM build `9379feb`
+> across two fresh launches. All affected local suites and six corrected
+> 96 kHz-load native callback runs pass. Code is pushed to main, original
+> session restored and app closed. New-code CI is running; prior main CI is
+> green. Use the [current Mac report](../reviews/2026-09-22-mac-resumed-verification.md)
+> for completed work and the precise remaining listening/hardware/release limits.
+
 > **September 22 preview speed:** multi-core qualified peak measurement
 > (`f34b80e7`) cut the owner fixture's cold preview preparation from about 30 s
 > to 8.5 s with identical results; fixture, bridge and native callback evidence
-> pass. Owner hand check and low-latency/Mac checks remain; see
+> pass. Owner hand check and external-interface checks remain; the resumed Mac
+> record above now supplies built-in-device timing and installed checks. See
 > [open threads](../OPEN_THREADS_AND_DECISIONS.md).
 
 > **September 22 review fixes:** three owner-approved interface fixes are on
@@ -35,8 +45,8 @@ deepened: 2026-07-24
 > automated checks and real-device timing. The corrected local ARM candidate is
 > installed with the owner's original session restored. The owner postponed the
 > named final UI/offline rechecks after the Mac locked and authorized pushing
-> the fixes/report to `main` for cross-machine handoff. Keep those checks open
-> for a later hands-on session and preserve the separate release gates;
+> the fixes/report to `main` for cross-machine handoff. Those checks were open
+> until the resumed session recorded above completed them. Preserve the separate release gates;
 > do not repeat the already completed Windows or Mac questionnaires.
 
 > **September 22 launch preparation:** the [current execution record](../reviews/2026-09-21-launch-preparation.md)

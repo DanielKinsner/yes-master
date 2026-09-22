@@ -1,5 +1,16 @@
 # YES Master — Beta Go / No-Go Checklist
 
+> **2026-09-22 — Resumed M4 checks complete; release remains NO-GO.**
+> [Current Mac evidence](../reviews/2026-09-22-mac-resumed-verification.md)
+> closes the postponed installed UI and offline journeys after pulling newer
+> main. A native startup centering defect is fixed; the clean `9379feb` ARM
+> package passes fresh launches and offline playback. Complete exports are
+> independently checked, and 256-frame real-device audio probes pass under
+> verified 96 kHz preparation load. Fixes are pushed to main; new-code CI is
+> running, separate from the two prior fully green main runs. Final candidate
+> listening, relink permission, updater-key recovery and authorized public
+> updater/publication remain gates. This checkpoint activates no release.
+
 > **2026-09-22 — Installed M4 evidence added; release remains NO-GO.** The exact
 > downloaded `e6db1f4` universal DMG passes actual installation, import, playback,
 > WAV/M4A export, Album cancellation/retry, project restoration and external
@@ -229,8 +240,12 @@ is post-beta advisory under D16.
 
 ## 4. Real-machine confirmation (owner lane)
 
-- [ ] **macOS build installs and runs on the M4** (closes the RC criterion in
-      `docs/PRODUCT.md`). *Owner.*
+- [x] **macOS build installs and runs on the M4** (closes the RC criterion in
+      `docs/PRODUCT.md`). Owner-authorized Computer Use, September 22: downloaded
+      universal `e6db1f4` and final locally packaged ARM `9379feb` installed and
+      exercised on the actual M4. [Current evidence](../reviews/2026-09-22-mac-resumed-verification.md).
+      This is scoped installation/runtime proof; a changed final release
+      artifact still needs its own applicable check, and listening remains below.
 - [ ] **Windows installer runs on the current box** (note SmartScreen behaviour
       until reputation accrues — expected, per `docs/RELEASE_SIGNING_SETUP.md`).
       *Owner.*

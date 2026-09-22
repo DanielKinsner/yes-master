@@ -1,6 +1,12 @@
 # Mac launch verification — September 22, 2026
 
-Status: downloaded universal candidate passed the installed Mac journeys below.
+**Later same-day update:** the owner resumed testing after pulling newer main.
+The postponed checks are now complete, and a newly reproduced off-screen
+startup defect is fixed. Use the [resumed verification and current status](2026-09-22-mac-resumed-verification.md)
+for the final installed package, offline results and main transfer. The account
+below records the earlier checkpoint and its then-current limits.
+
+Earlier status: downloaded universal candidate passed the installed Mac journeys below.
 The corrected local build passes automated/package checks. After the Mac locked,
 the owner explicitly postponed the remaining hands-on checks and authorized
 putting the fixes and this status report on remote `main` for another machine.
@@ -54,7 +60,9 @@ Computer Use exercised the actual downloaded universal app, not a browser mock:
   cancel an active Album render and retry. Successful output contains two
   numbered M4A tracks, a continuous M4A and explained `metadata/manifest.json`.
 - Save project, change its title, then reopen. Original title, two-track order
-  and selected M4A format return; analysis refreshes normally.
+  and processing settings return; analysis refreshes normally. M4A remains
+  selected within that session, but the project schema does not persist the
+  export encoding (confirmed during the resumed fresh-launch check).
 - Import an intentionally invalid WAV: recoverable error, two valid tracks and
   Album settings retained. No source audio is modified.
 - Settings lists the actual default speakers and Refresh succeeds. Tab and
