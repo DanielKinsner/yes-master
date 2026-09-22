@@ -1,0 +1,509 @@
+{
+  "status": "complete",
+  "observed_at": "2026-09-22T06:10:04.095727+00:00",
+  "protocol_commit": "2577b0da",
+  "analysis_tooling_commit": "951f8ff3",
+  "replay_protocol_commit": "60fd0310",
+  "replay_tooling_commit": "05244070",
+  "branch": "codex/mastering-bidirectional-research",
+  "artifacts": {
+    "test-output\\dynamics-research-20260921\\source-analysis-contract-v1\\coefficient-replay.exe": "90e10d5fd3a17725c270e8b85f6c6957e22fbfb939dd13cc5c8da06037347401",
+    "test-output\\dynamics-research-20260921\\source-analysis-contract-v1\\coefficient-replay.json": "4844ac887d727d3ef46c7b59be0a2060ee93bdbd81a62dda48982bbf64b95dcc",
+    "test-output\\dynamics-research-20260921\\source-analysis-contract-v1\\coefficient-replay.log": "2e1514687e7cbfdd81fb606b6eacc4e04bd9cc9a0ca8e38120d904bedfd37276",
+    "test-output\\dynamics-research-20260921\\source-analysis-contract-v1\\coefficient-replay.process.json": "554a2e143e05b1f27ea52313ccc9320a897e0bc30ef6a9fa71fb6c8bc73e2404",
+    "test-output\\dynamics-research-20260921\\source-analysis-contract-v1\\input-verification.json": "e7112a929684f4c106eb934e482a76903e8c2582e382e1c87a42005863c889cb",
+    "test-output\\dynamics-research-20260921\\source-analysis-contract-v1\\job.json": "2ef46d52e3a40ff31fd17e47acc70b451942128e5ce81b6bfc7e19dddf3e2c75",
+    "test-output\\dynamics-research-20260921\\source-analysis-contract-v1\\native.process.json": "652de419c1bbfeeb5691c81dde654b83d3bdad6c7da347aa3b8f5155e5601623",
+    "test-output\\dynamics-research-20260921\\source-analysis-contract-v1\\native.process.log": "275bc5ca0e3d18fa09af44cdc18029ef4a3ba8744e791df7d93755afed5f8dbf",
+    "test-output\\dynamics-research-20260921\\source-analysis-contract-v1\\probe.exe": "83cb51e0212f70c0192306a948f65994cdf76d22ae1266dc0741b5f001de92f0",
+    "test-output\\dynamics-research-20260921\\source-analysis-contract-v1\\result.json": "a220a7b7743ca6771199a6ceb83b6982a92374f4fbea9900dbc8e0b6e20d5174",
+    "test-output\\dynamics-research-20260921\\source-analysis-contract-v1\\retained-coefficient-comparison.json": "ce9376adb97abfa2b5c10b34ed21d472c69ce2b65a6431967db1317157fc87f7",
+    "test-output\\dynamics-research-20260921\\source-analysis-contract-v1\\native\\report.json": "41762d5972f38a67484e8f3e13be948a1bb05e29e58305fca7986b9df1d23377",
+    "docs\\reviews\\evidence\\2026-09-21-dynamics-research\\source-analysis-contract-v1.json": "a220a7b7743ca6771199a6ceb83b6982a92374f4fbea9900dbc8e0b6e20d5174",
+    "src-tauri\\src\\analysis.rs": "a69845f9e164a7ab4a677036b4d1c27fcc85df686b448772cffed68ecb504b9a",
+    "src-tauri\\src\\guardrails.rs": "4ab4c516e67e7578474306b8c6a38c8144f3c8c6438cd217db93b6cdc2f16f48",
+    "src-tauri\\src\\types.rs": "4fa65c3b0c16e59e559387644da794e0ced6335be157b6f1b4c44f58a6455bee",
+    "docs\\reviews\\2026-09-21-source-analysis-contract-protocol.md": "83b8e1523c1dec8adbdeb55037dbca897c992f9f2d0b4d149bafc359a60f2348",
+    "docs\\reviews\\2026-09-21-source-analysis-coefficient-replay-protocol.md": "fc33691153ab88da693b9efea319a38e43ed7f29b56edbd16902b06596b99f70",
+    "docs\\reviews\\2026-09-21-source-analysis-contract-results.md": "cd02a8b51a9f35270e1fb6a1934d94e31a3a981337ab4df6a55634ee7e76bf18",
+    "src-tauri\\examples\\source_analysis_contract.rs": "1ccf2fdc32088a1d51d8d6bb9a056230761f28a39c65a3379f46ddba99d603ad",
+    "src-tauri\\examples\\source_analysis_coefficient_replay.rs": "f96d6ebf907b08182389f883da2a0f9c76a27a4ec3082ce94644d69884793c51",
+    "scripts\\research\\mastering-quality-implementation-20260915\\source_analysis_contract.py": "bda4ec7713e1bcd8ef3bfe6a928974b98a9cb68c5eb54cee27b98b4c190d8243",
+    "scripts\\research\\mastering-quality-implementation-20260915\\test_source_analysis_contract.py": "02335dd2a3130b4fa6038eb4f767a7874c4d01414b03322e9bc6e60bc67bda11"
+  },
+  "prior_artifacts_verified": 287,
+  "all_prior_hashes_unchanged": true,
+  "process": {
+    "status": "complete",
+    "exit_code": 0,
+    "wall_s": 92.49662650000391,
+    "cpu_s": 90.9375,
+    "peak_working_set_bytes": 290676736,
+    "job_sha256": "2ef46d52e3a40ff31fd17e47acc70b451942128e5ce81b6bfc7e19dddf3e2c75",
+    "binary_sha256": "83cb51e0212f70c0192306a948f65994cdf76d22ae1266dc0741b5f001de92f0",
+    "free_bytes_at_launch": 219015544832,
+    "scope": "this offline child only, including file I/O/hash/decode/render; excludes separate metric/reference processes and OS/driver work"
+  },
+  "input_verification": {
+    "status": "complete",
+    "rows": [
+      {
+        "id": "piano-actual-copy0",
+        "file_sha256": "41400345e20b1577a4c14e55ee571bf3182b5be1dbf22a4af9f8286bc142ea2b",
+        "pcm_sha256": "a1fe569ed41625b97857aeacbb7fd253f3960936d5bcc74a17fd0a68f4bbdfb3",
+        "exact_independent_transform": true,
+        "frames": 8798386,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "piano-normalized-copy0",
+        "file_sha256": "5d1c401177b1f69a9ebfb9bb18ecced9ddcf420595fd356baf12155f28a1f60f",
+        "pcm_sha256": "f712c48b9bb57b8cf116fd8784a760e83a8fba338c79103e1cd8c6abc60c80e6",
+        "exact_independent_transform": true,
+        "frames": 8798386,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "piano-actual-copy-40",
+        "file_sha256": "880087da29165aa5d8a99e64aef6fcc8e5fa9e3eb57d3e6256f6541ac7a2aa5f",
+        "pcm_sha256": "5da89b053086ce9b008717be102dc9139938102b799f83f0657802a2bb8fc60a",
+        "exact_independent_transform": true,
+        "frames": 8798386,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "piano-normalized-copy-40",
+        "file_sha256": "346914464cd7b1c7613cd530b0553a19f0f484da92d3595e2ced3925db681e23",
+        "pcm_sha256": "5e9b7e619d995523d9152470049b6c48ca18b62f14d7918101f9f1d20b28ae48",
+        "exact_independent_transform": true,
+        "frames": 8798386,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "piano-actual-copy-80",
+        "file_sha256": "b3d919fe90b9c03f3742a08c5ebe13a9b813a50bb1f740eaf48eaf7829ad47aa",
+        "pcm_sha256": "a717971692de1d77990d3f3d0eeff0590336b2cbb02b2e60adb16c4e44e0feee",
+        "exact_independent_transform": true,
+        "frames": 8798386,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "piano-normalized-copy-80",
+        "file_sha256": "72dfc8488ee5c862c35d7eff64efa477fd9cc3403417de69bec96335d537e5ff",
+        "pcm_sha256": "90fa04b9e30bbeaf10df6747ba6d4930f3d01261eb5e3623897e83a85c003fe2",
+        "exact_independent_transform": true,
+        "frames": 8798386,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "imaginal-actual-copy0",
+        "file_sha256": "c7f3a8db696e3b65246de493ef3dc5d6f8db3083a1239d73b588edf58030c591",
+        "pcm_sha256": "99b13e3add2088d8c0c2f756eafa082d95b91a65c695a6ca720bc16bc74b14fa",
+        "exact_independent_transform": true,
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2
+      },
+      {
+        "id": "imaginal-normalized-copy0",
+        "file_sha256": "2faa415c3bc0b9f36fd458a21f9625bc229380929308a6c12af05f1893644e84",
+        "pcm_sha256": "47aa56c9164c4669fbdfe22d9229959d0218996a82f57fbb827dc0369662dab1",
+        "exact_independent_transform": true,
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2
+      },
+      {
+        "id": "imaginal-actual-copy-40",
+        "file_sha256": "d13b67a45a71290083491e674ebe5ac36b4e6035209e22481d8318e3cef508c4",
+        "pcm_sha256": "4239f5c66e3c8d851d38d478783bb13200f1f6949dead18889855ebd7a19a4ba",
+        "exact_independent_transform": true,
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2
+      },
+      {
+        "id": "imaginal-normalized-copy-40",
+        "file_sha256": "4b84691141748cab12a4f994139dcc8d99caa72f6a9601622ab20f169ac343db",
+        "pcm_sha256": "b6689af630b554fb8ac185b1ad2b79c1a0be1c97df2b6525a1e409e81609a148",
+        "exact_independent_transform": true,
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2
+      },
+      {
+        "id": "imaginal-actual-copy-80",
+        "file_sha256": "f2b3b535b7da22008ca3b68a0640d7031f518b2690933430c96678435d1622c9",
+        "pcm_sha256": "66e3e0cb4541038c42b8baa7141041ccf7729ea82c1a0dcd7c2a4a5e0a32670b",
+        "exact_independent_transform": true,
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2
+      },
+      {
+        "id": "imaginal-normalized-copy-80",
+        "file_sha256": "9040a3f4d9198355fb360bf615cad16b24f6068d802c9baaf422e6a73118bdfe",
+        "pcm_sha256": "5b014f09e4f29c4cee4deee9d286dcb3e58c8dabfbb9bfd12274473cbe16829f",
+        "exact_independent_transform": true,
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2
+      },
+      {
+        "id": "metal-actual-copy0",
+        "file_sha256": "f1f1bb3fe485397dca9ef364ef9d805b1433ae5e8701247a47bfd4a55dac48c6",
+        "pcm_sha256": "02b33dea6f777be8883b2a6858b82df640ddc559a484e3288a49adef85882f71",
+        "exact_independent_transform": true,
+        "frames": 8399232,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "metal-normalized-copy0",
+        "file_sha256": "81ddce7f4844ba877286410024740bb4fc3cd04a6b9826a556a52d40ea3e4ec4",
+        "pcm_sha256": "080a11c7cf964f908ad7e651dda5a1973187ea7e3c22e0954127de1218614919",
+        "exact_independent_transform": true,
+        "frames": 8399232,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "metal-actual-copy-40",
+        "file_sha256": "4fabcb4bd616b760dec564143293a45efe1ba3f901e0f23a820795c2d6db68b4",
+        "pcm_sha256": "83d42d1d7a0e4044003ac900f8eb50f70361c01c95e988bde126b5960360120a",
+        "exact_independent_transform": true,
+        "frames": 8399232,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "metal-normalized-copy-40",
+        "file_sha256": "4317bac782d96d9d7165cae3762acef8064a13d4a2b1be2a0e53204e1baeb187",
+        "pcm_sha256": "4fcce85b63c5ce514ee5d6f743eb167d110b83abc12155a00db8bcb829ad9411",
+        "exact_independent_transform": true,
+        "frames": 8399232,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "metal-actual-copy-80",
+        "file_sha256": "f10aeacf9eacc233394bc0b0be155d25d898d6ad00561f0f1cac0ca4ca2be1a8",
+        "pcm_sha256": "d10252ecb2e82b1858e410e77aee87cc428056abddcae15ce1ebb288076a97ef",
+        "exact_independent_transform": true,
+        "frames": 8399232,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "metal-normalized-copy-80",
+        "file_sha256": "84524af40cffa897777c1feb7166bd463e2c896f79a07bca732f7a3fe040a13d",
+        "pcm_sha256": "a7925c911c8e549b4ab702a20212cee8c99743fc83535dc9616c980cd5f010b5",
+        "exact_independent_transform": true,
+        "frames": 8399232,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "rich-actual-copy0",
+        "file_sha256": "76dba53d89c6995960726c484bc4d23b3c6aa7fd44459ced4f02d3e2a61f92e3",
+        "pcm_sha256": "113b8188e1fb6d29673685e0fcc3984d70664ea1c060d0cc250710cd8345beb3",
+        "exact_independent_transform": true,
+        "frames": 10481615,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "rich-normalized-copy0",
+        "file_sha256": "a183a15dad64ff212a70fa81de7f8cde7e73e1889749f35ec5101296f8386d98",
+        "pcm_sha256": "9a286712ab3fc77adb959d1e18685f12a216c7b75587b8c74cfd06084384b88e",
+        "exact_independent_transform": true,
+        "frames": 10481615,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "rich-actual-copy-40",
+        "file_sha256": "20c15cdff1a47b5ce4090c503c0915aa180b187194feb42436187d9d00aeb2ef",
+        "pcm_sha256": "0215ab852bbd57563838e3324f9e5a9536ea43ddd5d4ceba2c54fa7bf1b1c3f1",
+        "exact_independent_transform": true,
+        "frames": 10481615,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "rich-normalized-copy-40",
+        "file_sha256": "6042fb527d1a4cee75250b1e1fc3c2c412204af37978301816020782425fc559",
+        "pcm_sha256": "c576eeb0936febf6256ea0cf8fc2bfeaee09f346fe1faf121a07cf7078ed58b6",
+        "exact_independent_transform": true,
+        "frames": 10481615,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "rich-actual-copy-80",
+        "file_sha256": "7164f21df3ab60d478a0b1f4e4763d56e5f705b3e9932af461f27ebd9e4094e4",
+        "pcm_sha256": "3c536a7c04fc01e22d6af4226d94884840725c159e820c2f8ec3fc7b07b70f09",
+        "exact_independent_transform": true,
+        "frames": 10481615,
+        "rate": 44100,
+        "channels": 2
+      },
+      {
+        "id": "rich-normalized-copy-80",
+        "file_sha256": "7a6476edd85ac9620d51c05fe11fc64f0b1354729ad82caa37eb9017b5688528",
+        "pcm_sha256": "98d72e536e78d6fec91dc8a79e29b50516a5eec2b4d0ab6d2070b207e6fd0104",
+        "exact_independent_transform": true,
+        "frames": 10481615,
+        "rate": 44100,
+        "channels": 2
+      }
+    ],
+    "all_pass": true,
+    "wall_s": 8.123789700002817
+  },
+  "coefficient_replay": {
+    "analysis_sha256": "41762d5972f38a67484e8f3e13be948a1bb05e29e58305fca7986b9df1d23377",
+    "headroom_sha256": "2cb4b1f4d7e9e29e863f1649565cd047fecefa7c646c55f679ab2044a46d6dd1",
+    "job_sha256": "2ef46d52e3a40ff31fd17e47acc70b451942128e5ce81b6bfc7e19dddf3e2c75",
+    "lra_isolation": [
+      {
+        "actual_lra": 11.923247337341309,
+        "analysis_id": "piano-actual-copy-40",
+        "exact_original_match_after_lra_restore": true,
+        "observed_coefficients_changed": false,
+        "original_lra": 12.061389923095703,
+        "substituted_coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0007548, b1: -1.9528954, b2: 0.9529589, a1: -1.9529204, a2: 0.9536888 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 1.1481537, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.0691901, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }"
+      },
+      {
+        "actual_lra": 0.0,
+        "analysis_id": "piano-actual-copy-80",
+        "exact_original_match_after_lra_restore": true,
+        "observed_coefficients_changed": false,
+        "original_lra": 12.061389923095703,
+        "substituted_coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0007548, b1: -1.9528954, b2: 0.9529589, a1: -1.9529204, a2: 0.9536888 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 1.1481537, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.0691901, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }"
+      },
+      {
+        "actual_lra": 4.650179862976074,
+        "analysis_id": "imaginal-actual-copy-40",
+        "exact_original_match_after_lra_restore": true,
+        "observed_coefficients_changed": true,
+        "original_lra": 7.024445533752441,
+        "substituted_coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997781, b1: -1.995562, b2: 0.997781, a1: -1.9955571, a2: 0.9955669 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0009117, b1: -1.9569029, b2: 0.95669025, a1: -1.9569306, a2: 0.95757407 }, low_mid: BiquadCoeffs { b0: 0.9996748, b1: -1.940512, b2: 0.9435002, a1: -1.940512, a2: 0.943175 }, mid: BiquadCoeffs { b0: 1.0042634, b1: -1.7520777, b2: 0.7821396, a1: -1.7520777, a2: 0.78640294 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1354635, b1: -1.0474217, b2: 0.30242, a1: -0.846726, a2: 0.23718764 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.97938216, transient_fast_release_alpha: 0.99940497, transient_slow_attack_alpha: 0.99861205, transient_slow_release_alpha: 0.9998512, input_gain_lin: 1.1481537, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.11, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 6.101315e-5, b1: 0.0001220263, b2: 6.101315e-5, a1: -1.9777865, a2: 0.97803056 }, comp_mid_hp: BiquadCoeffs { b0: 0.98895425, b1: -1.9779085, b2: 0.98895425, a1: -1.9777865, a2: 0.97803056 }, comp_mid_lp: BiquadCoeffs { b0: 0.049489964, b1: 0.09897993, b2: 0.049489964, a1: -1.2796324, a2: 0.47759232 }, comp_high_hp: BiquadCoeffs { b0: 0.68930626, b1: -1.3786125, b2: 0.68930626, a1: -1.2796324, a2: 0.47759232 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99861205, comp_low_release_alpha: 0.9999167, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99861205, comp_mid_release_alpha: 0.9999167, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99861205, comp_high_release_alpha: 0.9999167, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }"
+      },
+      {
+        "actual_lra": 0.0,
+        "analysis_id": "imaginal-actual-copy-80",
+        "exact_original_match_after_lra_restore": true,
+        "observed_coefficients_changed": false,
+        "original_lra": 7.024445533752441,
+        "substituted_coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997781, b1: -1.995562, b2: 0.997781, a1: -1.9955571, a2: 0.9955669 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0009117, b1: -1.9569029, b2: 0.95669025, a1: -1.9569306, a2: 0.95757407 }, low_mid: BiquadCoeffs { b0: 0.9996748, b1: -1.940512, b2: 0.9435002, a1: -1.940512, a2: 0.943175 }, mid: BiquadCoeffs { b0: 1.0042634, b1: -1.7520777, b2: 0.7821396, a1: -1.7520777, a2: 0.78640294 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1354635, b1: -1.0474217, b2: 0.30242, a1: -0.846726, a2: 0.23718764 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.97938216, transient_fast_release_alpha: 0.99940497, transient_slow_attack_alpha: 0.99861205, transient_slow_release_alpha: 0.9998512, input_gain_lin: 1.1481537, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.11, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 6.101315e-5, b1: 0.0001220263, b2: 6.101315e-5, a1: -1.9777865, a2: 0.97803056 }, comp_mid_hp: BiquadCoeffs { b0: 0.98895425, b1: -1.9779085, b2: 0.98895425, a1: -1.9777865, a2: 0.97803056 }, comp_mid_lp: BiquadCoeffs { b0: 0.049489964, b1: 0.09897993, b2: 0.049489964, a1: -1.2796324, a2: 0.47759232 }, comp_high_hp: BiquadCoeffs { b0: 0.68930626, b1: -1.3786125, b2: 0.68930626, a1: -1.2796324, a2: 0.47759232 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99861205, comp_low_release_alpha: 0.9999167, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99861205, comp_mid_release_alpha: 0.9999167, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99861205, comp_high_release_alpha: 0.9999167, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }"
+      },
+      {
+        "actual_lra": 0.9719051122665404,
+        "analysis_id": "metal-actual-copy-40",
+        "exact_original_match_after_lra_restore": true,
+        "observed_coefficients_changed": false,
+        "original_lra": 0.9719051122665405,
+        "substituted_coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0006886, b1: -1.952833, b2: 0.95296097, a1: -1.952856, a2: 0.95362645 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 1.1481537, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.11, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -6.25, comp_low_ratio: 1.225, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 0.5739797, comp_low_makeup_lin: 1.0683142, comp_mid_threshold_db: -6.25, comp_mid_ratio: 1.225, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 0.5739797, comp_mid_makeup_lin: 1.0683142, comp_high_threshold_db: -6.25, comp_high_ratio: 1.225, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 0.5739797, comp_high_makeup_lin: 1.0683142, comp_knee_db: 6.0, comp_link_stereo: true }"
+      },
+      {
+        "actual_lra": 0.0,
+        "analysis_id": "metal-actual-copy-80",
+        "exact_original_match_after_lra_restore": true,
+        "observed_coefficients_changed": true,
+        "original_lra": 0.9719051122665405,
+        "substituted_coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0006886, b1: -1.952833, b2: 0.95296097, a1: -1.952856, a2: 0.95362645 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 1.1481537, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.11, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -6.25, comp_low_ratio: 1.225, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 0.5739797, comp_low_makeup_lin: 1.0683142, comp_mid_threshold_db: -6.25, comp_mid_ratio: 1.225, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 0.5739797, comp_mid_makeup_lin: 1.0683142, comp_high_threshold_db: -6.25, comp_high_ratio: 1.225, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 0.5739797, comp_high_makeup_lin: 1.0683142, comp_knee_db: 6.0, comp_link_stereo: true }"
+      },
+      {
+        "actual_lra": 10.985008239746094,
+        "analysis_id": "rich-actual-copy-40",
+        "exact_original_match_after_lra_restore": true,
+        "observed_coefficients_changed": false,
+        "original_lra": 11.50044059753418,
+        "substituted_coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0009917, b1: -1.9531155, b2: 0.95295066, a1: -1.9531482, a2: 0.95390946 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 1.1481537, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.0779713, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }"
+      },
+      {
+        "actual_lra": 0.0,
+        "analysis_id": "rich-actual-copy-80",
+        "exact_original_match_after_lra_restore": true,
+        "observed_coefficients_changed": false,
+        "original_lra": 11.50044059753418,
+        "substituted_coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0009917, b1: -1.9531155, b2: 0.95295066, a1: -1.9531482, a2: 0.95390946 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 1.1481537, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.0779713, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }"
+      }
+    ],
+    "replay": [
+      {
+        "analysis_id": "piano-normalized-copy0",
+        "coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0007548, b1: -1.9528954, b2: 0.9529589, a1: -1.9529204, a2: 0.9536888 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 0.41750732, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.0691901, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }",
+        "exact_coefficient_match": true,
+        "master_id": "piano-copy0-headroom",
+        "master_sha256": "88d1ab8a9ed225bb1d81b6378eb4fdf21432df206230b75a16b2c3a1effe1b5d",
+        "normalized_pcm_sha256": "f712c48b9bb57b8cf116fd8784a760e83a8fba338c79103e1cd8c6abc60c80e6"
+      },
+      {
+        "analysis_id": "piano-normalized-copy-40",
+        "coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0007548, b1: -1.9528954, b2: 0.9529589, a1: -1.9529204, a2: 0.9536888 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 0.41750732, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.0691901, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }",
+        "exact_coefficient_match": true,
+        "master_id": "piano-copy-40-headroom",
+        "master_sha256": "e7692cc7bffeae98cde393df906699240d2536563aef42e81d07ab019e5e631c",
+        "normalized_pcm_sha256": "5e9b7e619d995523d9152470049b6c48ca18b62f14d7918101f9f1d20b28ae48"
+      },
+      {
+        "analysis_id": "piano-normalized-copy-80",
+        "coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0007548, b1: -1.9528954, b2: 0.9529589, a1: -1.9529204, a2: 0.9536888 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 0.41750732, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.0691901, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }",
+        "exact_coefficient_match": true,
+        "master_id": "piano-copy-80-headroom",
+        "master_sha256": "5442a5674ccb19b872749e30f4e8efbe5fa85a11e93aa2eed843e878f4220e9f",
+        "normalized_pcm_sha256": "90fa04b9e30bbeaf10df6747ba6d4930f3d01261eb5e3623897e83a85c003fe2"
+      },
+      {
+        "analysis_id": "imaginal-normalized-copy0",
+        "coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997781, b1: -1.995562, b2: 0.997781, a1: -1.9955571, a2: 0.9955669 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0009117, b1: -1.9569029, b2: 0.95669025, a1: -1.9569306, a2: 0.95757407 }, low_mid: BiquadCoeffs { b0: 0.9996748, b1: -1.940512, b2: 0.9435002, a1: -1.940512, a2: 0.943175 }, mid: BiquadCoeffs { b0: 1.0042634, b1: -1.7520777, b2: 0.7821396, a1: -1.7520777, a2: 0.78640294 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1354635, b1: -1.0474217, b2: 0.30242, a1: -0.846726, a2: 0.23718764 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.97938216, transient_fast_release_alpha: 0.99940497, transient_slow_attack_alpha: 0.99861205, transient_slow_release_alpha: 0.9998512, input_gain_lin: 0.35479498, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.11, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 6.101315e-5, b1: 0.0001220263, b2: 6.101315e-5, a1: -1.9777865, a2: 0.97803056 }, comp_mid_hp: BiquadCoeffs { b0: 0.98895425, b1: -1.9779085, b2: 0.98895425, a1: -1.9777865, a2: 0.97803056 }, comp_mid_lp: BiquadCoeffs { b0: 0.049489964, b1: 0.09897993, b2: 0.049489964, a1: -1.2796324, a2: 0.47759232 }, comp_high_hp: BiquadCoeffs { b0: 0.68930626, b1: -1.3786125, b2: 0.68930626, a1: -1.2796324, a2: 0.47759232 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99861205, comp_low_release_alpha: 0.9999167, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99861205, comp_mid_release_alpha: 0.9999167, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99861205, comp_high_release_alpha: 0.9999167, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }",
+        "exact_coefficient_match": true,
+        "master_id": "imaginal-copy0-headroom",
+        "master_sha256": "4ea8dcadcba22c74f9f677dbd092f30b20ee345e31bde7a417c2dfc7d3bd6df5",
+        "normalized_pcm_sha256": "47aa56c9164c4669fbdfe22d9229959d0218996a82f57fbb827dc0369662dab1"
+      },
+      {
+        "analysis_id": "imaginal-normalized-copy-40",
+        "coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997781, b1: -1.995562, b2: 0.997781, a1: -1.9955571, a2: 0.9955669 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0009117, b1: -1.9569029, b2: 0.95669025, a1: -1.9569306, a2: 0.95757407 }, low_mid: BiquadCoeffs { b0: 0.9996748, b1: -1.940512, b2: 0.9435002, a1: -1.940512, a2: 0.943175 }, mid: BiquadCoeffs { b0: 1.0042634, b1: -1.7520777, b2: 0.7821396, a1: -1.7520777, a2: 0.78640294 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1354635, b1: -1.0474217, b2: 0.30242, a1: -0.846726, a2: 0.23718764 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.97938216, transient_fast_release_alpha: 0.99940497, transient_slow_attack_alpha: 0.99861205, transient_slow_release_alpha: 0.9998512, input_gain_lin: 0.35479498, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.11, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 6.101315e-5, b1: 0.0001220263, b2: 6.101315e-5, a1: -1.9777865, a2: 0.97803056 }, comp_mid_hp: BiquadCoeffs { b0: 0.98895425, b1: -1.9779085, b2: 0.98895425, a1: -1.9777865, a2: 0.97803056 }, comp_mid_lp: BiquadCoeffs { b0: 0.049489964, b1: 0.09897993, b2: 0.049489964, a1: -1.2796324, a2: 0.47759232 }, comp_high_hp: BiquadCoeffs { b0: 0.68930626, b1: -1.3786125, b2: 0.68930626, a1: -1.2796324, a2: 0.47759232 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99861205, comp_low_release_alpha: 0.9999167, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99861205, comp_mid_release_alpha: 0.9999167, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99861205, comp_high_release_alpha: 0.9999167, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }",
+        "exact_coefficient_match": true,
+        "master_id": "imaginal-copy-40-headroom",
+        "master_sha256": "f4eeacf60925976746f7329bd6197008e198b13ffb8d2c7cab0e6c5b63f04382",
+        "normalized_pcm_sha256": "b6689af630b554fb8ac185b1ad2b79c1a0be1c97df2b6525a1e409e81609a148"
+      },
+      {
+        "analysis_id": "imaginal-normalized-copy-80",
+        "coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997781, b1: -1.995562, b2: 0.997781, a1: -1.9955571, a2: 0.9955669 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0009117, b1: -1.9569029, b2: 0.95669025, a1: -1.9569306, a2: 0.95757407 }, low_mid: BiquadCoeffs { b0: 0.9996748, b1: -1.940512, b2: 0.9435002, a1: -1.940512, a2: 0.943175 }, mid: BiquadCoeffs { b0: 1.0042634, b1: -1.7520777, b2: 0.7821396, a1: -1.7520777, a2: 0.78640294 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1354635, b1: -1.0474217, b2: 0.30242, a1: -0.846726, a2: 0.23718764 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.97938216, transient_fast_release_alpha: 0.99940497, transient_slow_attack_alpha: 0.99861205, transient_slow_release_alpha: 0.9998512, input_gain_lin: 0.35479498, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.11, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 6.101315e-5, b1: 0.0001220263, b2: 6.101315e-5, a1: -1.9777865, a2: 0.97803056 }, comp_mid_hp: BiquadCoeffs { b0: 0.98895425, b1: -1.9779085, b2: 0.98895425, a1: -1.9777865, a2: 0.97803056 }, comp_mid_lp: BiquadCoeffs { b0: 0.049489964, b1: 0.09897993, b2: 0.049489964, a1: -1.2796324, a2: 0.47759232 }, comp_high_hp: BiquadCoeffs { b0: 0.68930626, b1: -1.3786125, b2: 0.68930626, a1: -1.2796324, a2: 0.47759232 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99861205, comp_low_release_alpha: 0.9999167, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99861205, comp_mid_release_alpha: 0.9999167, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99861205, comp_high_release_alpha: 0.9999167, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }",
+        "exact_coefficient_match": true,
+        "master_id": "imaginal-copy-80-headroom",
+        "master_sha256": "10dd0e7b8d27a5d619f1da46f16bbad93eff46d9787c404130bb68d41a394fa4",
+        "normalized_pcm_sha256": "5b014f09e4f29c4cee4deee9d286dcb3e58c8dabfbb9bfd12274473cbe16829f"
+      },
+      {
+        "analysis_id": "metal-normalized-copy0",
+        "coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0006886, b1: -1.952833, b2: 0.95296097, a1: -1.952856, a2: 0.95362645 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 0.33515146, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.11, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -6.25, comp_low_ratio: 1.225, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 0.5739797, comp_low_makeup_lin: 1.0683142, comp_mid_threshold_db: -6.25, comp_mid_ratio: 1.225, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 0.5739797, comp_mid_makeup_lin: 1.0683142, comp_high_threshold_db: -6.25, comp_high_ratio: 1.225, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 0.5739797, comp_high_makeup_lin: 1.0683142, comp_knee_db: 6.0, comp_link_stereo: true }",
+        "exact_coefficient_match": true,
+        "master_id": "metal-copy0-headroom",
+        "master_sha256": "889d9ed2c47363a941257b61af2d9a91d6c5516c6fa30bde7d1eaecc166dda86",
+        "normalized_pcm_sha256": "080a11c7cf964f908ad7e651dda5a1973187ea7e3c22e0954127de1218614919"
+      },
+      {
+        "analysis_id": "metal-normalized-copy-40",
+        "coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0006886, b1: -1.952833, b2: 0.95296097, a1: -1.952856, a2: 0.95362645 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 0.33515143, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.11, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -6.25, comp_low_ratio: 1.225, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 0.5739797, comp_low_makeup_lin: 1.0683142, comp_mid_threshold_db: -6.25, comp_mid_ratio: 1.225, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 0.5739797, comp_mid_makeup_lin: 1.0683142, comp_high_threshold_db: -6.25, comp_high_ratio: 1.225, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 0.5739797, comp_high_makeup_lin: 1.0683142, comp_knee_db: 6.0, comp_link_stereo: true }",
+        "exact_coefficient_match": true,
+        "master_id": "metal-copy-40-headroom",
+        "master_sha256": "2fc1f71a2e523f015e90e8d265a0c117f5e5ce9023a5e26e82df1e7965278c8c",
+        "normalized_pcm_sha256": "4fcce85b63c5ce514ee5d6f743eb167d110b83abc12155a00db8bcb829ad9411"
+      },
+      {
+        "analysis_id": "metal-normalized-copy-80",
+        "coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0006886, b1: -1.952833, b2: 0.95296097, a1: -1.952856, a2: 0.95362645 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 0.33515143, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.11, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -6.25, comp_low_ratio: 1.225, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 0.5739797, comp_low_makeup_lin: 1.0683142, comp_mid_threshold_db: -6.25, comp_mid_ratio: 1.225, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 0.5739797, comp_mid_makeup_lin: 1.0683142, comp_high_threshold_db: -6.25, comp_high_ratio: 1.225, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 0.5739797, comp_high_makeup_lin: 1.0683142, comp_knee_db: 6.0, comp_link_stereo: true }",
+        "exact_coefficient_match": true,
+        "master_id": "metal-copy-80-headroom",
+        "master_sha256": "26b273e3feabe4d24be1aa2d4ce5fe0edffc2963f101e62a2ffd3943903efcd0",
+        "normalized_pcm_sha256": "a7925c911c8e549b4ab702a20212cee8c99743fc83535dc9616c980cd5f010b5"
+      },
+      {
+        "analysis_id": "rich-normalized-copy0",
+        "coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0009917, b1: -1.9531155, b2: 0.95295066, a1: -1.9531482, a2: 0.95390946 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 0.5062338, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.0779713, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }",
+        "exact_coefficient_match": true,
+        "master_id": "rich-copy0-headroom",
+        "master_sha256": "4ed277bc46badbed7522d92dc1078c66644d941aeeaf3a9287108ce718a3ba56",
+        "normalized_pcm_sha256": "9a286712ab3fc77adb959d1e18685f12a216c7b75587b8c74cfd06084384b88e"
+      },
+      {
+        "analysis_id": "rich-normalized-copy-40",
+        "coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0009917, b1: -1.9531155, b2: 0.95295066, a1: -1.9531482, a2: 0.95390946 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 0.5062338, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.0779713, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }",
+        "exact_coefficient_match": true,
+        "master_id": "rich-copy-40-headroom",
+        "master_sha256": "1a1f7087416feacd3db6c9ed59de6db08a04ea7c8bf7dcb951a2af466b811d07",
+        "normalized_pcm_sha256": "c576eeb0936febf6256ea0cf8fc2bfeaee09f346fe1faf121a07cf7078ed58b6"
+      },
+      {
+        "analysis_id": "rich-normalized-copy-80",
+        "coefficients": "ChainCoeffs { sub_highpass: BiquadCoeffs { b0: 0.997585, b1: -1.99517, b2: 0.997585, a1: -1.9951642, a2: 0.9951759 }, sub: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, low: BiquadCoeffs { b0: 1.0009917, b1: -1.9531155, b2: 0.95295066, a1: -1.9531482, a2: 0.95390946 }, low_mid: BiquadCoeffs { b0: 0.99964696, b1: -1.9351628, b2: 0.93866277, a1: -1.9351628, a2: 0.9383097 }, mid: BiquadCoeffs { b0: 1.0045923, b1: -1.7296652, b2: 0.7653389, a1: -1.7296652, a2: 0.76993114 }, high_mid: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, high: BiquadCoeffs { b0: 1.1312891, b1: -0.9509569, b2: 0.26578873, a1: -0.7613461, a2: 0.20746718 }, sparkle: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, warmth: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, presence_air: BiquadCoeffs { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 }, transient_amount: 0.04, transient_fast_attack_alpha: 0.9775794, transient_fast_release_alpha: 0.99935234, transient_slow_attack_alpha: 0.99848944, transient_slow_release_alpha: 0.99983805, input_gain_lin: 0.5062338, saturation_amount: 0.055, ceiling_lin: 0.8912509, user_output_gain_lin: 1.0, volume_match_gain_lin: 1.0, export_landing_gain_lin: 1.0, width_side_scale: 1.0779713, compression_active: true, comp_low_lp: BiquadCoeffs { b0: 7.220245e-5, b1: 0.0001444049, b2: 7.220245e-5, a1: -1.9758222, a2: 0.976111 }, comp_mid_hp: BiquadCoeffs { b0: 0.9879833, b1: -1.9759666, b2: 0.9879833, a1: -1.9758222, a2: 0.976111 }, comp_mid_lp: BiquadCoeffs { b0: 0.05720037, b1: 0.11440074, b2: 0.05720037, a1: -1.2188795, a2: 0.44768092 }, comp_high_hp: BiquadCoeffs { b0: 0.66664004, b1: -1.3332801, b2: 0.66664004, a1: -1.2188795, a2: 0.44768092 }, comp_low_threshold_db: -12.5, comp_low_ratio: 1.45, comp_low_attack_alpha: 0.99848944, comp_low_release_alpha: 0.9999093, comp_low_makeup_db: 1.9396554, comp_low_makeup_lin: 1.2502095, comp_mid_threshold_db: -12.5, comp_mid_ratio: 1.45, comp_mid_attack_alpha: 0.99848944, comp_mid_release_alpha: 0.9999093, comp_mid_makeup_db: 1.9396554, comp_mid_makeup_lin: 1.2502095, comp_high_threshold_db: -12.5, comp_high_ratio: 1.45, comp_high_attack_alpha: 0.99848944, comp_high_release_alpha: 0.9999093, comp_high_makeup_db: 1.9396554, comp_high_makeup_lin: 1.2502095, comp_knee_db: 6.0, comp_link_stereo: true }",
+        "exact_coefficient_match": true,
+        "master_id": "rich-copy-80-headroom",
+        "master_sha256": "885509b54eea810148bb9d78fad3d5c928e0ec8b878499c4ae65141f43d73905",
+        "normalized_pcm_sha256": "98d72e536e78d6fec91dc8a79e29b50516a5eec2b4d0ab6d2070b207e6fd0104"
+      }
+    ],
+    "scope": "Recipe identity and post-hoc LRA isolation only; no new audio, analysis or shipping policy.",
+    "status": "complete"
+  },
+  "replay_process": {
+    "exit_code": 0,
+    "wall_s": 0.061487200000556186,
+    "binary_sha256": "90e10d5fd3a17725c270e8b85f6c6957e22fbfb939dd13cc5c8da06037347401"
+  },
+  "retained_base_coefficient_comparison": {
+    "status": "complete",
+    "rows": [
+      {
+        "case": "piano",
+        "differences": [
+          [
+            "input_gain_lin: 0.9186939",
+            "input_gain_lin: 1.1481537"
+          ]
+        ],
+        "only_automatic_drive_differs": true
+      },
+      {
+        "case": "imaginal",
+        "differences": [
+          [
+            "input_gain_lin: 1.6048276",
+            "input_gain_lin: 1.1481537"
+          ]
+        ],
+        "only_automatic_drive_differs": true
+      },
+      {
+        "case": "metal",
+        "differences": [
+          [
+            "input_gain_lin: 0.4898308",
+            "input_gain_lin: 1.1481537"
+          ]
+        ],
+        "only_automatic_drive_differs": true
+      },
+      {
+        "case": "rich",
+        "differences": [
+          [
+            "input_gain_lin: 1.6920192",
+            "input_gain_lin: 1.1481537"
+          ]
+        ],
+        "only_automatic_drive_differs": true
+      }
+    ]
+  },
+  "validation": {
+    "analyses": 24,
+    "derived_inputs": 20,
+    "normalized_input_identity_matches": 12,
+    "normalized_profiles_pass": 8,
+    "normalized_coefficient_identities": 8,
+    "headroom_recipe_matches": 12,
+    "lra_substitutions_restore_original": 8,
+    "affected_lra_coefficient_changes": 2,
+    "release_builds": true,
+    "strict_clippy": true,
+    "rust_format": true,
+    "focused_regressions_passed": 3,
+    "internal_links_checked": 8,
+    "production_sources_lockfiles_unchanged": true,
+    "agent_files_identical": true
+  },
+  "scope": "Production analysis and coefficient-only replay audit; no new masters, application integration, holdout or sonic adoption."
+}

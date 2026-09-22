@@ -123,3 +123,13 @@ All twelve outputs and eight copy checks pass; the separate normalized-pool
 diagnostic preserves choice identity on all copies but retains major target
 shortfalls. Results and raw paths are in the corresponding results document.
 The original selectors and current-reference qualification remain unchanged.
+
+`source_analysis_contract` includes the unchanged production analysis body.
+Use `source_analysis_contract.py` prepare/summarize with `run_single_first.py`;
+the completed 24 analyses and twenty derived inputs remain under ignored
+`source-analysis-contract-v1/`. The separate `source_analysis_coefficient_replay`
+example reuses existing reports for twelve normalized headroom recipe checks
+and eight LRA substitutions, without writing audio. All normalized profiles and
+headroom recipe identities pass, while actual-copy LRA exposes two coefficient
+changes. See `docs/reviews/2026-09-21-source-analysis-contract-results.md` for
+scope, raw evidence and the remaining C1 compatibility queue.

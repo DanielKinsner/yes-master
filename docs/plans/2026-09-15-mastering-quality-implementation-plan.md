@@ -21,7 +21,7 @@ Independent checks pass 31/32; Metal -80 current fails the frozen availability
 peak guard. Preserve that failure while testing the availability classifier.
 Next resolve a reproducible comparison reference and explicit fallback contract
 before expanding the grid or opening unseen C2 material.
-Status: **C1 reference-headroom checkpoint complete locally; fresh source-analysis audit next, September 21**. Implementation was authorized
+Status: **C1 fresh source-analysis audit complete locally; combined control/preset contract matrix next, September 21**. Implementation was authorized
 September 15 on local `codex/mastering-quality` from `7534f612`. See the
 [checkpoint ledger](../reviews/2026-09-15-mastering-quality-implementation-evidence.md).
 Sonic-policy adoption and calibration remain gated. This file replaces the
@@ -52,6 +52,17 @@ The old current-control eligibility/reference policy is unchanged. The next
 [fresh-analysis audit](../reviews/2026-09-21-source-analysis-contract-protocol.md)
 checks the source profiles that the earlier experiments held fixed. C1 remains
 open; no holdout or sonic adoption follows from this diagnostic success.
+
+The [fresh source-analysis audit](../reviews/2026-09-21-source-analysis-contract-results.md)
+completes 24 unchanged production analyses. Only one of eight actual-copy
+profiles passes; normalized profiles pass eight of eight with identical
+coefficients. LRA restoration isolates both observed actual-copy coefficient
+changes, and all twelve normalized headroom recipes close against the retained
+input/coefficient identities. Actual-file loudness and normalized descriptor
+availability remain separate. Next freeze the combined recipe's C1 manual,
+Density/Adapt, Off/override, dense-preset, no-target and Album compatibility
+matrix, preserving current processing and all previous reference/selector
+results as explicit comparisons. No unseen C2 source or C3 adoption yet.
 
 **Current owner sequencing supersedes the execution order below:** Dan approved
 preparing and testing the selected fixes, merging that verified result into local

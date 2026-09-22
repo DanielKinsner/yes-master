@@ -1,5 +1,17 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-21 — Fresh source-analysis contract audit verified locally.**
+> [Results](reviews/2026-09-21-source-analysis-contract-results.md) complete 24
+> production analyses and exact input checks. Seven of eight actual quiet-copy
+> profiles fail consistency; LRA alone explains the two coefficient changes.
+> All eight normalized-copy profiles pass with identical coefficients. All
+> twelve fresh normalized headroom recipes match the existing verified outputs'
+> input/coefficient identities. Actual below-gate loudness stays unavailable.
+> Continue C1 with the combined recipe's user-control/dense-preset/no-target/Album
+> contract matrix, then explicit current-control policy and preparation-cost
+> comparisons. Holdout and shipping adoption stay closed; this audit adds no
+> mastering outputs or production changes.
+>
 > **2026-09-21 — Reference-headroom checkpoint verified locally.**
 > [Results](reviews/2026-09-21-reference-headroom-results.md) pass all twelve
 > independent output checks and eight copy comparisons. Imaginal/Rich now have
