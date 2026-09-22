@@ -1,4 +1,5 @@
 import {
+  memo,
   useEffect,
   useId,
   useRef,
@@ -269,15 +270,7 @@ export function WaveformView({
             played sheet cut at the playhead — so the heard span lights up
             without duplicating the peak DOM or fighting CSS in a <use>
             shadow tree. */}
-        <clipPath id="wf-bars-clip">
-          {channel.map((v, i) => {
-            const x = (i / channel.length) * W;
-            const barW = (W / channel.length) * 0.85;
-            const barH = v * (H * 0.88);
-            const y = (H - barH) / 2;
-            return <rect key={i} x={x} y={y} width={barW} height={barH} rx={0.5} />;
-          })}
-        </clipPath>
+        <WaveformBarsClip id="wf-bars-clip" channel={channel} width={W} height={H} fill={0.88} />
         <rect
           className="wf-sheet wf-sheet-unplayed"
           x={0}
@@ -402,15 +395,7 @@ function WaveformOverview({
       aria-valuenow={currentTimeSec}
     >
       <WaveformDefs prefix="wfo" />
-      <clipPath id="wfo-bars-clip">
-        {channel.map((v, i) => {
-          const x = (i / channel.length) * W;
-          const barW = (W / channel.length) * 0.85;
-          const barH = v * (H * 0.92);
-          const y = (H - barH) / 2;
-          return <rect key={i} x={x} y={y} width={barW} height={barH} rx={0.5} />;
-        })}
-      </clipPath>
+      <WaveformBarsClip id="wfo-bars-clip" channel={channel} width={W} height={H} fill={0.92} />
       <rect
         className="wf-sheet wf-sheet-unplayed"
         x={0}
@@ -450,6 +435,36 @@ function WaveformOverview({
     </svg>
   );
 }
+
+// The peak bars as a clip mask, one rect per peak (~1,200 per waveform).
+// Memoized on the peak data: the bars never change during playback, so the
+// playhead's 20-per-second ticks must not rebuild them (2026-09-22 review).
+const WaveformBarsClip = memo(function WaveformBarsClip({
+  id,
+  channel,
+  width,
+  height,
+  fill,
+}: {
+  id: string;
+  channel: number[];
+  width: number;
+  height: number;
+  /// Tallest bar as a fraction of the height.
+  fill: number;
+}) {
+  return (
+    <clipPath id={id}>
+      {channel.map((v, i) => {
+        const x = (i / channel.length) * width;
+        const barW = (width / channel.length) * 0.85;
+        const barH = v * (height * fill);
+        const y = (height - barH) / 2;
+        return <rect key={i} x={x} y={y} width={barW} height={barH} rx={0.5} />;
+      })}
+    </clipPath>
+  );
+});
 
 // Shared gradient defs for the main waveform ("wf") and the overview ("wfo").
 // Both SVGs are always mounted together, so the ids must differ per prefix.
