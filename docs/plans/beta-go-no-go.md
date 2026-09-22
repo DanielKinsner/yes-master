@@ -1,5 +1,14 @@
 # YES Master — Beta Go / No-Go Checklist
 
+> **2026-09-21 — Launch preparation; not yet GO.** The owner requested readiness
+> for September 22. See the [current execution record](../reviews/2026-09-21-launch-preparation.md)
+> for repaired CI causes, passing local suites and current native/browser scope.
+> Preserve the prior Windows listening approval. Exact candidate packaging/CI,
+> Mac real-machine evidence and the public updater/release transaction remain
+> distinct. Pricing was reopened September 14: old $29/$49 figures below are
+> historical, not approved purchase terms. Beta duration is 56 days from actual
+> publication. The frozen beta.1 draft is not the prepared launch candidate.
+
 > **2026-09-14 main integration checkpoint — NO-GO for release.** The owner
 > authorized main integration and repository hygiene. All three encoder and
 > source-relink jobs passed at `f5976299`; downstream decoder-environment and

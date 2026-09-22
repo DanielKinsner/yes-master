@@ -25,13 +25,13 @@ export default function Workflow() {
           </div>
           <dl>
             <div>
-              <dt>Sample rate</dt>
+              <dt>Default sample rate</dt>
               <dd>
                 44.1 <small>kHz</small>
               </dd>
             </div>
             <div>
-              <dt>WAV output</dt>
+              <dt>Default WAV output</dt>
               <dd>24-bit</dd>
             </div>
             <div>

@@ -29,14 +29,14 @@
       },
       {
         "title": "Set the loudness.",
-        "body": "Low, Medium or High. Then hit Create Master to write a separate WAV."
+        "body": "Low, Medium or High. Then hit Create Master to save your finished master."
       }
     ],
     "support_title": "Less setup. More listening.",
-    "support_body": "Standard keeps delivery simple. Custom formats live in Advanced.",
+    "support_body": "WAV by default. Choose MP3, FLAC, AIFF, AAC/M4A, AAC or Ogg Vorbis in Standard or Advanced.",
     "specs": [
-      "44.1 kHz sample rate",
-      "24-bit WAV output",
+      "44.1 kHz default sample rate",
+      "24-bit default WAV output",
       "Limiter ceiling set to −1 dBTP"
     ]
   },
@@ -142,7 +142,7 @@
       },
       {
         "title": "See each result.",
-        "body": "Individual masters, a continuous WAV, a manifest and per-track receipts keep the record’s delivery inspectable."
+        "body": "Individual masters, one continuous master, delivery details and per-track receipts keep the record’s delivery inspectable. Choose one of seven formats for the whole album."
       }
     ],
     "limits": "Audio mastering and delivery—not DDP authoring. No cue sheets, ISRC metadata or guaranteed gapless playback.",
@@ -156,7 +156,7 @@
       "A straightforward deal."
     ],
     "body": "Free during the beta. No email gate. At paid launch, one purchase—not a subscription.",
-    "pricing": "Planned launch pricing: $29 founder / $49 standard. Founder-window dates and terms are announced when confirmed.",
+    "pricing": "Paid-launch pricing, founder-window dates and terms are announced when confirmed.",
     "faq": [
       {
         "q": "Does it need an account?",
@@ -164,7 +164,7 @@
       },
       {
         "q": "What does Standard export?",
-        "a": "A 44.1 kHz / 24-bit WAV, with the limiter ceiling set to −1 dBTP. Advanced adds custom delivery choices."
+        "a": "A 44.1 kHz / 24-bit WAV by default, with the limiter ceiling set to −1 dBTP. You can also choose MP3, FLAC, AIFF, AAC/M4A, AAC or Ogg Vorbis. Advanced adds custom sample rates and bit depths."
       },
       {
         "q": "Does the beta expire on my computer?",

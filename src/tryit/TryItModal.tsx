@@ -9,6 +9,7 @@ import { minutesBucket, trackTryIt } from "./analytics";
 import { AnalysisOrb } from "../components/AnalysisOrb";
 import { MORPH_MS } from "../lib/analysis-orb";
 import { prefersReducedMotion } from "../lib/motion";
+import { resolveRelease } from "../landing/release-config";
 import "./tryit.css";
 
 /** The worker's analysis stages, in order, for the preparation checklist. */
@@ -347,7 +348,9 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
           <div className={"tryit-strip" + (morphing ? " is-morphing" : "")}>
             <div className="tryit-strip-wave">
             <canvas ref={wave} width={1000} height={72} role="img" tabIndex={0}
-              aria-label="Track waveform. Drag the lit window to choose your thirty seconds; click inside it to move the playhead. Arrow keys nudge the window."
+              aria-label={track.duration > CLIP_SECONDS
+                ? "Track waveform. Drag the lit window to choose your thirty seconds; click inside it to move the playhead. Arrow keys nudge the window."
+                : "Full track waveform. Click to move the playhead."}
               onKeyDown={event => {
                 if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); event.stopPropagation(); moveStart(start + (event.key === "ArrowLeft" ? -SEEK_STEP : SEEK_STEP)); }
                 else if (event.key === "Home") { event.preventDefault(); event.stopPropagation(); moveStart(0); }
@@ -375,7 +378,7 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
               onPointerCancel={() => { drag.current.on = false; }} />
             {morphPeaks && <AnalysisOrb phase="morph" peaks={morphPeaks} />}
             </div>
-            <div className="tryit-strip-cap"><span>{fmt(start)} – {fmt(Math.min(track.duration, start + CLIP_SECONDS))}</span><span>drag to pick your 30 s · click inside to seek <kbd>←</kbd><kbd>→</kbd></span></div>
+            <div className="tryit-strip-cap"><span>{fmt(start)} – {fmt(Math.min(track.duration, start + CLIP_SECONDS))}</span><span>{track.duration > CLIP_SECONDS ? <>drag to pick your 30 s · click inside to seek <kbd>←</kbd><kbd>→</kbd></> : "full track · click to seek"}</span></div>
           </div>
         )}
 
@@ -389,14 +392,14 @@ export default function TryItModal({ onClose }: { onClose: () => void }) {
             <div className="tryit-slider"><input type="range" min={0} max={100} disabled={!track} value={Math.round(intensity * 100)} aria-label="Intensity" onChange={event => { continuous.current = true; setIntensity(Number(event.target.value) / 100); }} onPointerUp={() => trackTryIt("intensity", { value: Math.round(intensity * 100) })} style={{ ["--pct" as string]: `${Math.round(intensity * 100)}%`, ["--tone" as string]: PRESET_ACCENT[activeStyle.preset.kind] }} /><output>{Math.round(intensity * 100)}%</output></div>
           </div>
           <div className="tryit-row">
-            <div className="tryit-row-label">Loudness <Info label="About loudness">Set your master’s loudness level. <b>Low</b> (−14 LUFS) matches streaming platforms. <b>Medium</b> (−11) is a modern, competitive level. <b>High</b> (−9) is hot and dense. A −1 dBTP ceiling keeps every level clean.</Info></div>
+            <div className="tryit-row-label">Loudness <Info label="About loudness">Choose a loudness target: <b>Low</b> (−14 LUFS), <b>Medium</b> (−11) or <b>High</b> (−9). Higher targets can add density. The limiter ceiling is set to −1 dBTP.</Info></div>
             <div className="tryit-pills" role="group" aria-label="Loudness">{STANDARD_LOUDNESS.map(l => <button key={l.id} type="button" disabled={!track} className={l.lufs === target ? "is-active" : ""} aria-pressed={l.lufs === target} onClick={() => { setTarget(l.lufs); trackTryIt("loudness", { target: l.lufs }); }}>{l.label}</button>)}</div>
           </div>
         </div>
 
         {error && <div role="alert" className="tryit-error">{error} {track && <button type="button" className="tryit-link" onClick={() => setRetry(n => n + 1)}>Retry</button>}</div>}
 
-        <a href="#get-started" className="tryit-cta" onClick={() => { trackTryIt("cta"); onClose(); }}>Get the free beta</a>
+        <a href="#get-started" className="tryit-cta" onClick={() => { trackTryIt("cta"); onClose(); }}>{resolveRelease().available ? "Get the free beta" : "Explore the beta"}</a>
         <p className="tryit-cta-sub">Export and Advanced live in the desktop app.</p>
         <p className="tryit-privacy"><i />Processed locally in your browser. Your track is never uploaded.</p>
       </div>

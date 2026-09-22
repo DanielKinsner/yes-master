@@ -18,6 +18,11 @@ deepened: 2026-07-24
 
 # YES Master Public Beta Quality Program
 
+> **September 21 launch preparation:** the [current execution record](../reviews/2026-09-21-launch-preparation.md)
+> tracks the September 22 target, actual completed local tests and presentation
+> repairs. Packaging, remote platform CI and remaining real-machine/release
+> gates remain explicit. Resume from this record rather than the old outline.
+
 > **September 16 integration follow-through:** owner review has authorized the
 > tested fixes to enter local main, followed by sound research on a separate
 > branch. The [integration record](../reviews/2026-09-16-mastering-fixes-integration.md)

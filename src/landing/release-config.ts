@@ -131,7 +131,7 @@ export interface ResolvedRelease {
 // "Coming soon", dates, seasons, and version numbers are all out of bounds, so
 // these say what is true right now and stop.
 const REASON_NOT_OPEN =
-  "YES Master is in a free public beta. The download is not open.";
+  "The YES Master free public beta is being prepared. The download is not open.";
 const REASON_WITHDRAWN =
   "YES Master is in a free public beta. There is no build available to download right now.";
 const REASON_BETA_ENDED = "The YES Master public beta is closed.";

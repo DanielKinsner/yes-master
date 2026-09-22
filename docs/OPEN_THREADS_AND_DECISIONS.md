@@ -1,5 +1,14 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-21 — September 22 launch preparation active.** Dan requested all
+> applicable tests, end-to-end computer use and visual polish. The isolated
+> [launch preparation record](reviews/2026-09-21-launch-preparation.md) records
+> Advanced layout integration, dependency/CI repairs, current export copy,
+> responsive corrections and completed local suites. Candidate packaging and
+> exact-commit remote CI follow. Research policies remain unadopted. Real Mac,
+> final listening, relinking, key recovery and public updater evidence remain
+> separate; downloads are not activated by preparation.
+
 > **2026-09-21 — Advanced control alignment corrected after owner review.**
 > The original `ab420654` label/value collision also blocked reset clicks.
 > The first fix (`68983921`) passed collision checks but the owner rejected

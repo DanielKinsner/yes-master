@@ -202,9 +202,8 @@ describe("required claims (U6)", () => {
     expect(text).toMatch(/no YES Master account/i);
   });
 
-  it("states the settled price model and stops there", () => {
-    expect(text).toContain("$29");
-    expect(text).toContain("$49");
+  it("keeps the one-time model without advertising unapproved prices", () => {
+    expect(text).not.toMatch(/\$(?:29|49|79)\b/);
     expect(text).toMatch(/one purchase/i);
     expect(text).toMatch(/not a subscription/i);
     // The window exists but its terms do not, so the page says exactly that.
@@ -219,6 +218,10 @@ describe("required claims (U6)", () => {
     // the limiter targets are both real (docs/PRODUCT.md).
     expect(text).toContain("44.1 kHz / 24-bit WAV");
     expect(text).toContain("−1 dBTP");
+    for (const format of ["MP3", "FLAC", "AIFF", "AAC/M4A", "Ogg Vorbis"]) {
+      expect(text).toContain(format);
+    }
+    expect(text).not.toContain("Custom formats live in Advanced");
   });
 
   it("labels the real export capture and invents no readings in the copy", () => {

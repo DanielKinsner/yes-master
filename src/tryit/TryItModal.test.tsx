@@ -48,6 +48,7 @@ vi.mock("./decode", () => ({
   playbackContext: () => ({}),
 }));
 vi.mock("./analytics", () => ({ trackTryIt: (...args: unknown[]) => mocks.track(...args), minutesBucket: () => "<1m" }));
+vi.mock("../landing/release-config", () => ({ resolveRelease: () => ({ available: false }) }));
 import TryItModal from "./TryItModal";
 
 let root: Root;
@@ -64,6 +65,11 @@ afterEach(() => {
 function button(text: string) {
   return [...document.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent?.trim() === text)!;
 }
+it("does not offer a download before a verified public release exists", () => {
+  const cta = document.querySelector<HTMLAnchorElement>(".tryit-cta")!;
+  expect(cta.textContent).toBe("Explore the beta");
+  expect(cta.getAttribute("href")).toBe("#get-started");
+});
 async function load() {
   const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
   Object.defineProperty(input, "files", { configurable: true, value: [{ name: "test.wav", arrayBuffer: async () => new ArrayBuffer(8) }] });

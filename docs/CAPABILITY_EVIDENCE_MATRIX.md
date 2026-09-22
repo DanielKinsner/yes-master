@@ -1,5 +1,14 @@
 # YES Master — Capability & Evidence Matrix
 
+**September 21 launch-copy refresh:** Standard defaults remain 44.1 kHz / 24-bit
+WAV with a -1 dBTP limiter setting; file format is now selectable in Standard,
+Advanced and Album. WAV, MP3, FLAC, AIFF, AAC/M4A, ADTS AAC and Ogg Vorbis pass
+the fresh Track/Album engine matrices in the [launch record](reviews/2026-09-21-launch-preparation.md).
+This supersedes the fixed-WAV restrictions in historical C-05/C-28/S-01/S-08
+wording below. Unapproved $29/$49 proposals have been removed from the page;
+no replacement price or entitlement is adopted. Final Mac/installer evidence
+and publication remain distinct from local engine and browser checks.
+
 **One place where every public claim is bound to a named evidence source.**
 Created by U1 of `docs/plans/2026-07-24-001-feat-public-beta-quality-plan.md`
 (KTD5, R5). Copy review alone cannot stop a current-looking but unproved claim
