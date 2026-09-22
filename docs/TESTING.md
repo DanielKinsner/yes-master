@@ -59,6 +59,13 @@ generation is not required for each documentation, helper, or visual iteration.
 The explicit `target\codex-rc` directory avoids collisions with a running debug
 app that may lock the default target executable on Windows.
 
+For native window changes, cold-launch the installed package on the actual
+display and inspect the whole window before moving or zooming it. On the M4
+Mac, builder centering could move an already fitted 1512px-wide window 204px
+off-screen after setup returned. Startup placement now belongs to the display
+fit routine; its config regression prevents re-enabling that competing center
+operation. A passing config test does not replace the native launch check.
+
 ## Listening follow-through regression coverage
 
 `src-tauri/tests/mp3_export.rs` verifies normal mastered-PCM encoding parity,

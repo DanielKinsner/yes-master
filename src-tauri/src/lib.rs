@@ -145,6 +145,11 @@ fn fit_main_window_to_display(app: &tauri::AppHandle) {
         crate::diagnostics::info(format!(
             "window maximized: work area {work_w:.0}x{work_h:.0} logical < {DEFAULT_WINDOW_WIDTH:.0}x{DEFAULT_WINDOW_HEIGHT:.0}"
         ));
+    } else {
+        // Center only after native constraints have established the real size.
+        // Builder centering races the Mac's automatic fit of an oversized
+        // 1920px window, shifting its already-fitted frame off the screen.
+        let _ = window.center();
     }
 
     // `work_area` describes the maximized OUTER window. The layout lives in
@@ -185,6 +190,17 @@ mod window_fit_tests {
 
     fn maximize(work_w: f64, work_h: f64) -> bool {
         should_maximize_for_work_area(work_w, work_h, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+    }
+
+    #[test]
+    fn startup_centering_waits_for_the_display_fit() {
+        // Native Mac regression: queued builder centering used the requested
+        // 1920px width after macOS had already constrained the window to 1512px,
+        // moving the fitted window 204px off the left edge. Placement belongs
+        // to fit_main_window_to_display, after native size constraints apply.
+        let config: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        assert_ne!(config["app"]["windows"][0]["center"], true);
     }
 
     #[test]
