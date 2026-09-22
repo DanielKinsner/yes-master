@@ -1,5 +1,16 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-21 — Availability mechanism resolved in a separate diagnostic.**
+> [Complete-block results](reviews/2026-09-21-loudness-availability-results.md)
+> independently match all 32 retained quiet-copy files: 28 finite and four
+> unavailable. Twelve controlled signals give ten matching classifications and
+> two explicit unknowns. Metal's previous failure was a restrictive sample-peak
+> availability guard; the old 31/32 report remains unchanged. No selector or
+> production policy changed, so Imaginal/Rich fallback and moving-reference
+> failures remain open. Next C1 study: a reproducible tone/stereo reference that
+> retains the preset's EQ, LR4 recombination/makeup and width contributions.
+> Work remains local; C2 holdout stays closed.
+
 > **2026-09-21 — Quiet-copy checkpoint completed; policy failures preserved.**
 > The [results](reviews/2026-09-21-quiet-copy-results.md) complete all 32 planned
 > outputs and independent checks. All 24 normalized comparisons pass; selected

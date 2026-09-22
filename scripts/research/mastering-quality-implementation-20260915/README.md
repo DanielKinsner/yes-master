@@ -94,3 +94,14 @@ Run the selector/availability regression discovery commands from repository root
 because older evidence includes repository-relative artifact paths. Timeout
 recovery verified the 32 saved WAV hashes and resumed measurement without audio
 regeneration. No criterion or historical failed witness was rewritten.
+
+`block_availability.py` implements the separately frozen
+`complete-block-availability-v1` classifier. Build the meter-only
+`loudness_availability` release example, then run
+`block_availability_research.py --binary <copied-or-built-example> --output <new-directory>`.
+It qualifies twelve controlled signals before applying fresh native/FFmpeg
+metering to all 32 retained WAVs. Complete consecutive block logs distinguish
+unavailable, finite and unknown results without changing `quiet_reference.py`,
+the old 31/32 result or either selector. See
+`docs/reviews/2026-09-21-loudness-availability-results.md`. Raw output belongs in
+ignored `test-output/dynamics-research-20260921/block-availability-v1/`.

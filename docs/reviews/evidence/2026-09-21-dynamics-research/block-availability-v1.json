@@ -1,0 +1,2954 @@
+{
+  "status": "complete",
+  "classifier": "complete-block-availability-v1",
+  "protocol": {
+    "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\docs\\reviews\\2026-09-21-loudness-availability-protocol.md",
+    "sha256": "3030d7514306b79ff1a237bdae632eb9067677fa83957e856fe6a35f41d78760"
+  },
+  "baseline": {
+    "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\docs\\reviews\\evidence\\2026-09-21-dynamics-research\\quiet-copy-v2.json",
+    "sha256": "f279189d3bcf5d5c17cda5ed3d6601588c19d9e3621ab06ab697a13ea43c5c2f"
+  },
+  "binary": {
+    "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\meter-v1.exe",
+    "sha256": "bab50d1a6dc796cdfab5966536ddabe7f47977e24742baf07a0138e629e8d181"
+  },
+  "ffmpeg": {
+    "path": "C:\\Program Files (x86)\\Common Files\\AutoPod\\ffmpeg\\bin\\ffmpeg.exe",
+    "sha256": "67abd24645ae7cf73e1fad8b092de73b064b62ae61819751fc31e79e91e842d3"
+  },
+  "scripts": {
+    "block_availability.py": {
+      "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\scripts\\research\\mastering-quality-implementation-20260915\\block_availability.py",
+      "sha256": "05fd6060e622a8a896c003064705a1d00f97d559c6be2e7d41793a95b59b5c7d"
+    },
+    "block_availability_research.py": {
+      "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\scripts\\research\\mastering-quality-implementation-20260915\\block_availability_research.py",
+      "sha256": "00b256557519ef8699b458a5aaf9c8bb1df30b41479ec3ca68553e508bf175b0"
+    }
+  },
+  "controls": [
+    {
+      "id": "silence",
+      "file": {
+        "id": "silence",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\silence.wav",
+        "sha256": "328f6010f72740f43faa89162257f2ff4aa9f6c4b21046b6d44437af277d5f23",
+        "frames": 96000,
+        "amplitude": 0.0,
+        "active_interval": null,
+        "sample_peak_dbfs": null
+      },
+      "native": {
+        "channels": 2,
+        "frames": 96000,
+        "gating_block_count_and_energy": null,
+        "id": "silence",
+        "integrated_state": "unavailable",
+        "lufs": null,
+        "maximum_momentary_lufs": null,
+        "meter_s": 0.00303,
+        "rate": 48000,
+        "relative_threshold": -70.0,
+        "sha256": "328f6010f72740f43faa89162257f2ff4aa9f6c4b21046b6d44437af277d5f23"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "unavailable",
+        "lufs": null,
+        "reason": "complete_trace_below_absolute_gate",
+        "expected_readouts": 20,
+        "readouts": 20,
+        "maximum_displayed_momentary_lufs": -120.7,
+        "integrated_display": -70.0,
+        "integrated_threshold": 0.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\controls-00-lufs.log",
+        "sha256": "3d87504534bfc309e71d8ed3074b8a7886cb4a3ef8d7107e2d77b671037d9a8b"
+      },
+      "reference_s": 0.03995280000526691
+    },
+    {
+      "id": "quiet",
+      "file": {
+        "id": "quiet",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\quiet.wav",
+        "sha256": "6bc15adbe95b5a0d40831bce632ea37d3677577781d7b9e6726c87f4e3fb9e55",
+        "frames": 96000,
+        "amplitude": 3.1622776601683795e-05,
+        "active_interval": null,
+        "sample_peak_dbfs": -90.0
+      },
+      "native": {
+        "channels": 2,
+        "frames": 96000,
+        "gating_block_count_and_energy": null,
+        "id": "quiet",
+        "integrated_state": "unavailable",
+        "lufs": null,
+        "maximum_momentary_lufs": -89.993295569987,
+        "meter_s": 0.0030161,
+        "rate": 48000,
+        "relative_threshold": -70.0,
+        "sha256": "6bc15adbe95b5a0d40831bce632ea37d3677577781d7b9e6726c87f4e3fb9e55"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "unavailable",
+        "lufs": null,
+        "reason": "complete_trace_below_absolute_gate",
+        "expected_readouts": 20,
+        "readouts": 20,
+        "maximum_displayed_momentary_lufs": -90.0,
+        "integrated_display": -70.0,
+        "integrated_threshold": 0.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\controls-01-lufs.log",
+        "sha256": "bb2fd4b88a013058b13221ef6d53172fdfbbcbaf055e5e2831df8c28727fe13f"
+      },
+      "reference_s": 0.036552500001562294
+    },
+    {
+      "id": "burst_quiet",
+      "file": {
+        "id": "burst_quiet",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\burst_quiet.wav",
+        "sha256": "57c554b6589c0c5e25ab302ea1d442790f091fbd9e74e1abc5dc09faf1b77b62",
+        "frames": 96000,
+        "amplitude": 0.001,
+        "active_interval": [
+          38400,
+          38880
+        ],
+        "sample_peak_dbfs": -60.0
+      },
+      "native": {
+        "channels": 2,
+        "frames": 96000,
+        "gating_block_count_and_energy": null,
+        "id": "burst_quiet",
+        "integrated_state": "unavailable",
+        "lufs": null,
+        "maximum_momentary_lufs": -76.01642003737294,
+        "meter_s": 0.0029156,
+        "rate": 48000,
+        "relative_threshold": -70.0,
+        "sha256": "57c554b6589c0c5e25ab302ea1d442790f091fbd9e74e1abc5dc09faf1b77b62"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "unavailable",
+        "lufs": null,
+        "reason": "complete_trace_below_absolute_gate",
+        "expected_readouts": 20,
+        "readouts": 20,
+        "maximum_displayed_momentary_lufs": -76.0,
+        "integrated_display": -70.0,
+        "integrated_threshold": 0.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\controls-02-lufs.log",
+        "sha256": "c0f336176b504c2f8e9dadf6120fba4485397ba2eeb27515fa80288812b23d70"
+      },
+      "reference_s": 0.05167229999642586
+    },
+    {
+      "id": "burst_finite",
+      "file": {
+        "id": "burst_finite",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\burst_finite.wav",
+        "sha256": "b85a467195d057ebe03a4341d94e5d24c96eab93e28019d07251adce971f45d1",
+        "frames": 96000,
+        "amplitude": 0.01,
+        "active_interval": [
+          38400,
+          38880
+        ],
+        "sample_peak_dbfs": -40.0
+      },
+      "native": {
+        "channels": 2,
+        "frames": 96000,
+        "gating_block_count_and_energy": [
+          4,
+          1.1735942466855537e-05
+        ],
+        "id": "burst_finite",
+        "integrated_state": "finite",
+        "lufs": -56.01642019530603,
+        "maximum_momentary_lufs": -56.01642019530603,
+        "meter_s": 0.0029041,
+        "rate": 48000,
+        "relative_threshold": -66.01642019530604,
+        "sha256": "b85a467195d057ebe03a4341d94e5d24c96eab93e28019d07251adce971f45d1"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -56.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 20,
+        "readouts": 20,
+        "maximum_displayed_momentary_lufs": -56.0,
+        "integrated_display": -56.0,
+        "integrated_threshold": -66.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\controls-03-lufs.log",
+        "sha256": "3c377a42e34777b0ee6adee62b5dbf3098fb0b0115c70821c0ad4e5e7d23f3b2"
+      },
+      "reference_s": 0.05897559999721125
+    },
+    {
+      "id": "tone_-72.0",
+      "file": {
+        "id": "tone_-72.0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\tone_-72.0.wav",
+        "sha256": "83d2db1cf423a3736c9713d0069edd993a05eac7dbb82b162be160ebcc0a0568",
+        "frames": 96000,
+        "amplitude": 0.00025118864315095795,
+        "active_interval": null,
+        "sample_peak_dbfs": -72.0
+      },
+      "native": {
+        "channels": 2,
+        "frames": 96000,
+        "gating_block_count_and_energy": null,
+        "id": "tone_-72.0",
+        "integrated_state": "unavailable",
+        "lufs": null,
+        "maximum_momentary_lufs": -71.99329547216614,
+        "meter_s": 0.0030096,
+        "rate": 48000,
+        "relative_threshold": -70.0,
+        "sha256": "83d2db1cf423a3736c9713d0069edd993a05eac7dbb82b162be160ebcc0a0568"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "unavailable",
+        "lufs": null,
+        "reason": "complete_trace_below_absolute_gate",
+        "expected_readouts": 20,
+        "readouts": 20,
+        "maximum_displayed_momentary_lufs": -72.0,
+        "integrated_display": -70.0,
+        "integrated_threshold": 0.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\controls-04-lufs.log",
+        "sha256": "fbdae80665faa6c7ae4f8541c31aa08c2c010284812218b01625cfe480f64581"
+      },
+      "reference_s": 0.03854700000374578
+    },
+    {
+      "id": "tone_-70.2",
+      "file": {
+        "id": "tone_-70.2",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\tone_-70.2.wav",
+        "sha256": "9da68c2ce8857d7c1e926651e3d7b7211568ac88e887698760e0346c8cb3525a",
+        "frames": 96000,
+        "amplitude": 0.0003090295432513589,
+        "active_interval": null,
+        "sample_peak_dbfs": -70.19999694824219
+      },
+      "native": {
+        "channels": 2,
+        "frames": 96000,
+        "gating_block_count_and_energy": null,
+        "id": "tone_-70.2",
+        "integrated_state": "unavailable",
+        "lufs": null,
+        "maximum_momentary_lufs": -70.19329558006547,
+        "meter_s": 0.0027524,
+        "rate": 48000,
+        "relative_threshold": -70.0,
+        "sha256": "9da68c2ce8857d7c1e926651e3d7b7211568ac88e887698760e0346c8cb3525a"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "unavailable",
+        "lufs": null,
+        "reason": "complete_trace_below_absolute_gate",
+        "expected_readouts": 20,
+        "readouts": 20,
+        "maximum_displayed_momentary_lufs": -70.2,
+        "integrated_display": -70.0,
+        "integrated_threshold": 0.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\controls-05-lufs.log",
+        "sha256": "812c6182bd138291ab18b57f091cff007f2b97e4db4abb5260310a71aebb93d0"
+      },
+      "reference_s": 0.03845020000153454
+    },
+    {
+      "id": "tone_-70.04",
+      "file": {
+        "id": "tone_-70.04",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\tone_-70.04.wav",
+        "sha256": "cecd4d2a28c31b62379d74e94bf0972ccd86f9f4b91caf06da04ff353d26c755",
+        "frames": 96000,
+        "amplitude": 0.0003147748314101314,
+        "active_interval": null,
+        "sample_peak_dbfs": -70.04000091552734
+      },
+      "native": {
+        "channels": 2,
+        "frames": 96000,
+        "gating_block_count_and_energy": null,
+        "id": "tone_-70.04",
+        "integrated_state": "unavailable",
+        "lufs": null,
+        "maximum_momentary_lufs": -70.03329555681269,
+        "meter_s": 0.0027302,
+        "rate": 48000,
+        "relative_threshold": -70.0,
+        "sha256": "cecd4d2a28c31b62379d74e94bf0972ccd86f9f4b91caf06da04ff353d26c755"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "unknown",
+        "lufs": null,
+        "reason": "ambiguous_gate_boundary",
+        "expected_readouts": 20,
+        "readouts": 20,
+        "maximum_displayed_momentary_lufs": -70.0,
+        "integrated_display": -70.0,
+        "integrated_threshold": 0.0
+      },
+      "agreement": false,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\controls-06-lufs.log",
+        "sha256": "4307ba990c1e0bc1cf1cd8051c483862b0d354c775296c974f17ac3d603a30cc"
+      },
+      "reference_s": 0.039220800004841294
+    },
+    {
+      "id": "tone_-69.96",
+      "file": {
+        "id": "tone_-69.96",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\tone_-69.96.wav",
+        "sha256": "be37405e4351340382ce40d1f5e7378b17bce28a629c77d5417345310ab1ce62",
+        "frames": 96000,
+        "amplitude": 0.00031768740706497725,
+        "active_interval": null,
+        "sample_peak_dbfs": -69.95999908447266
+      },
+      "native": {
+        "channels": 2,
+        "frames": 96000,
+        "gating_block_count_and_energy": [
+          17,
+          2.0147334087501587e-06
+        ],
+        "id": "tone_-69.96",
+        "integrated_state": "finite",
+        "lufs": -69.95331333317219,
+        "maximum_momentary_lufs": -69.95329570371047,
+        "meter_s": 0.0026793,
+        "rate": 48000,
+        "relative_threshold": -79.95331333317219,
+        "sha256": "be37405e4351340382ce40d1f5e7378b17bce28a629c77d5417345310ab1ce62"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -70.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 20,
+        "readouts": 20,
+        "maximum_displayed_momentary_lufs": -70.0,
+        "integrated_display": -70.0,
+        "integrated_threshold": -80.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\controls-07-lufs.log",
+        "sha256": "e703447244e2140b6d27353ed7143f8f68e26ad09f1c98297395d2d2f05b3e5e"
+      },
+      "reference_s": 0.05710009999893373
+    },
+    {
+      "id": "tone_-69.8",
+      "file": {
+        "id": "tone_-69.8",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\tone_-69.8.wav",
+        "sha256": "784ff800844761de573a64ed0f295bdd0c55245ae1ab3b7041bfd00d1150cbcd",
+        "frames": 96000,
+        "amplitude": 0.00032359365692962843,
+        "active_interval": null,
+        "sample_peak_dbfs": -69.80000305175781
+      },
+      "native": {
+        "channels": 2,
+        "frames": 96000,
+        "gating_block_count_and_energy": [
+          17,
+          2.0903432015857204e-06
+        ],
+        "id": "tone_-69.8",
+        "integrated_state": "finite",
+        "lufs": -69.79331325067074,
+        "maximum_momentary_lufs": -69.7932956212093,
+        "meter_s": 0.002829,
+        "rate": 48000,
+        "relative_threshold": -79.79331325067074,
+        "sha256": "784ff800844761de573a64ed0f295bdd0c55245ae1ab3b7041bfd00d1150cbcd"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -69.8,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 20,
+        "readouts": 20,
+        "maximum_displayed_momentary_lufs": -69.8,
+        "integrated_display": -69.8,
+        "integrated_threshold": -79.8
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\controls-08-lufs.log",
+        "sha256": "6566b6a11908fec410dff107bf2891f3a01cab1395c1e5226da474aeb11b88a5"
+      },
+      "reference_s": 0.042690000002039596
+    },
+    {
+      "id": "tone_-68.0",
+      "file": {
+        "id": "tone_-68.0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\tone_-68.0.wav",
+        "sha256": "ac8ce5b2114c42ce5cf52d905cbd9733ae1962ac4af70386cd9bf179008017c5",
+        "frames": 96000,
+        "amplitude": 0.00039810717055349735,
+        "active_interval": null,
+        "sample_peak_dbfs": -68.0
+      },
+      "native": {
+        "channels": 2,
+        "frames": 96000,
+        "gating_block_count_and_energy": [
+          17,
+          3.1638624641401853e-06
+        ],
+        "id": "tone_-68.0",
+        "integrated_state": "finite",
+        "lufs": -67.9933132530208,
+        "maximum_momentary_lufs": -67.99329562355942,
+        "meter_s": 0.0028187,
+        "rate": 48000,
+        "relative_threshold": -77.9933132530208,
+        "sha256": "ac8ce5b2114c42ce5cf52d905cbd9733ae1962ac4af70386cd9bf179008017c5"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -68.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 20,
+        "readouts": 20,
+        "maximum_displayed_momentary_lufs": -68.0,
+        "integrated_display": -68.0,
+        "integrated_threshold": -78.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\controls-09-lufs.log",
+        "sha256": "6c9344bc40f1f22ac5553f08c73a64cab26ec8764f30756e3b1f84e7850fc41a"
+      },
+      "reference_s": 0.045169299999543
+    },
+    {
+      "id": "short",
+      "file": {
+        "id": "short",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\short.wav",
+        "sha256": "62308f6502a2c13b7d6a2256d52985d2a6e0cc8efcbec73bc68fd69f1032b758",
+        "frames": 14400,
+        "amplitude": 0.1,
+        "active_interval": null,
+        "sample_peak_dbfs": -20.0
+      },
+      "native": {
+        "channels": 2,
+        "frames": 14400,
+        "gating_block_count_and_energy": null,
+        "id": "short",
+        "integrated_state": "unavailable",
+        "lufs": null,
+        "maximum_momentary_lufs": -21.243082571381258,
+        "meter_s": 0.0005748,
+        "rate": 48000,
+        "relative_threshold": -70.0,
+        "sha256": "62308f6502a2c13b7d6a2256d52985d2a6e0cc8efcbec73bc68fd69f1032b758"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "unknown",
+        "lufs": null,
+        "reason": "unsupported_input"
+      },
+      "agreement": false,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\controls-10-lufs.log",
+        "sha256": "ad87f7424326d57297ac85d38cc22c1cfd0d2568734991ccb28a89e4797abaa6"
+      },
+      "reference_s": 0.04647159999876749
+    },
+    {
+      "id": "tail_burst",
+      "file": {
+        "id": "tail_burst",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\tail_burst.wav",
+        "sha256": "479e969081bdab89a4236443c501056578ac2f177a3c983fb3b76b337399e60a",
+        "frames": 96000,
+        "amplitude": 0.001,
+        "active_interval": [
+          95520,
+          96000
+        ],
+        "sample_peak_dbfs": -60.0
+      },
+      "native": {
+        "channels": 2,
+        "frames": 96000,
+        "gating_block_count_and_energy": null,
+        "id": "tail_burst",
+        "integrated_state": "unavailable",
+        "lufs": null,
+        "maximum_momentary_lufs": -76.02626201664631,
+        "meter_s": 0.0029353,
+        "rate": 48000,
+        "relative_threshold": -70.0,
+        "sha256": "479e969081bdab89a4236443c501056578ac2f177a3c983fb3b76b337399e60a"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "unavailable",
+        "lufs": null,
+        "reason": "complete_trace_below_absolute_gate",
+        "expected_readouts": 20,
+        "readouts": 20,
+        "maximum_displayed_momentary_lufs": -76.0,
+        "integrated_display": -70.0,
+        "integrated_threshold": 0.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\controls-11-lufs.log",
+        "sha256": "9a646dbacba44896f00e0790738256b8c2d16817ab50acd576f5aba893a81ddb"
+      },
+      "reference_s": 0.04175450000184355
+    }
+  ],
+  "control_unknowns": [
+    "tone_-70.04",
+    "short"
+  ],
+  "retained": [
+    {
+      "id": "piano-copy-40-control-offset0",
+      "file": {
+        "id": "piano-copy-40-control-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-40-control-offset0.wav",
+        "sha256": "195fd208af50a317461a00fa21abad15a39ba500a7c4cec0804b08c6e089af95",
+        "frames": 9576475
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9576475,
+        "gating_block_count_and_energy": [
+          1819,
+          29.014518676785208
+        ],
+        "id": "piano-copy-40-control-offset0",
+        "integrated_state": "finite",
+        "lufs": -18.663173286347604,
+        "maximum_momentary_lufs": -10.100608853908614,
+        "meter_s": 0.2928341,
+        "rate": 48000,
+        "relative_threshold": -29.01784472086903,
+        "sha256": "195fd208af50a317461a00fa21abad15a39ba500a7c4cec0804b08c6e089af95"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -18.7,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1995,
+        "readouts": 1995,
+        "maximum_displayed_momentary_lufs": -10.1,
+        "integrated_display": -18.7,
+        "integrated_threshold": -29.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-00-lufs.log",
+        "sha256": "dc0a1aa2e39f77a5e6c110106c5a9d38ac7e5061bc24f3210c1133eb8a82dc99"
+      },
+      "reference_s": 5.232708099996671,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-40-control-offset0.wav",
+        "sha256": "195fd208af50a317461a00fa21abad15a39ba500a7c4cec0804b08c6e089af95",
+        "frames": 9576475,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -1.3083441925085952,
+            -1.0454207634645214
+          ],
+          "soxr16": [
+            -1.301829,
+            -1.042749
+          ],
+          "soxr64": [
+            -1.301807,
+            -1.042749
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.042749,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -18.7,
+        "ffmpeg_integrated_threshold": -29.0,
+        "native_lufs": -18.66317367553711,
+        "independent_lufs": -18.7,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 25.976185599996825
+      }
+    },
+    {
+      "id": "piano-copy-40-single-offset0",
+      "file": {
+        "id": "piano-copy-40-single-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-40-single-offset0.wav",
+        "sha256": "5a476b0d7d6fe407da82b3fbe88e8bb362bf98b7be41ab64ea294273b127d156",
+        "frames": 9576475
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9576475,
+        "gating_block_count_and_energy": [
+          1840,
+          85.88509646966789
+        ],
+        "id": "piano-copy-40-single-offset0",
+        "integrated_state": "finite",
+        "lufs": -14.000000152031575,
+        "maximum_momentary_lufs": -7.663616962907947,
+        "meter_s": 0.2966319,
+        "rate": 48000,
+        "relative_threshold": -24.31635781400554,
+        "sha256": "5a476b0d7d6fe407da82b3fbe88e8bb362bf98b7be41ab64ea294273b127d156"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1995,
+        "readouts": 1995,
+        "maximum_displayed_momentary_lufs": -7.7,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.3
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-01-lufs.log",
+        "sha256": "a0fb1d48cda46dbe6352a13f7936844383ee2b3f339572369a5fc3bb986bd465"
+      },
+      "reference_s": 3.328213399996457,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-40-single-offset0.wav",
+        "sha256": "5a476b0d7d6fe407da82b3fbe88e8bb362bf98b7be41ab64ea294273b127d156",
+        "frames": 9576475,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -2.6715993505540747,
+            -2.674685549399614
+          ],
+          "soxr16": [
+            -2.671599,
+            -2.671974
+          ],
+          "soxr64": [
+            -2.671554,
+            -2.671934
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -2.671554,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.3,
+        "native_lufs": -14.0,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 26.15579979999893
+      }
+    },
+    {
+      "id": "piano-copy-40-single-offset-3",
+      "file": {
+        "id": "piano-copy-40-single-offset-3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-40-single-offset-3.wav",
+        "sha256": "737800554ac897053baba45f9323e4cab12e73e4fbc5902d09c818a200193070",
+        "frames": 9576475
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9576475,
+        "gating_block_count_and_energy": [
+          1828,
+          69.74981468924803
+        ],
+        "id": "piano-copy-40-single-offset-3",
+        "integrated_state": "finite",
+        "lufs": -14.875331332807644,
+        "maximum_momentary_lufs": -7.4980445794,
+        "meter_s": 0.3015919,
+        "rate": 48000,
+        "relative_threshold": -25.216300907088474,
+        "sha256": "737800554ac897053baba45f9323e4cab12e73e4fbc5902d09c818a200193070"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.9,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1995,
+        "readouts": 1995,
+        "maximum_displayed_momentary_lufs": -7.5,
+        "integrated_display": -14.9,
+        "integrated_threshold": -25.2
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-02-lufs.log",
+        "sha256": "47331b4550dc8183fc4b8446d5025800e8d2256e873702dc13a74fb488b30564"
+      },
+      "reference_s": 3.0872383000023547,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-40-single-offset-3.wav",
+        "sha256": "737800554ac897053baba45f9323e4cab12e73e4fbc5902d09c818a200193070",
+        "frames": 9576475,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -1.043272727566488,
+            -1.0460000475579696
+          ],
+          "soxr16": [
+            -1.042993,
+            -1.04588
+          ],
+          "soxr64": [
+            -1.042993,
+            -1.04588
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.042993,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.9,
+        "ffmpeg_integrated_threshold": -25.2,
+        "native_lufs": -14.875330924987793,
+        "independent_lufs": -14.9,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 27.326783800002886
+      }
+    },
+    {
+      "id": "piano-copy-40-single-offset3",
+      "file": {
+        "id": "piano-copy-40-single-offset3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-40-single-offset3.wav",
+        "sha256": "cdb3174c99dfb6fa0a5fff67eb1522a7693ff1d83bbd945c39b5c43ae4004e7e",
+        "frames": 9576475
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9576475,
+        "gating_block_count_and_energy": [
+          1857,
+          86.67861572087882
+        ],
+        "id": "piano-copy-40-single-offset3",
+        "integrated_state": "finite",
+        "lufs": -13.999999368278589,
+        "maximum_momentary_lufs": -8.67207677703726,
+        "meter_s": 0.3056844,
+        "rate": 48000,
+        "relative_threshold": -24.280927873382264,
+        "sha256": "cdb3174c99dfb6fa0a5fff67eb1522a7693ff1d83bbd945c39b5c43ae4004e7e"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1995,
+        "readouts": 1995,
+        "maximum_displayed_momentary_lufs": -8.7,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.3
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-03-lufs.log",
+        "sha256": "a75ddc7855bc15029cdec71e9f446214ddd48a1dac96d6e7b5b48d1429acd869"
+      },
+      "reference_s": 3.8397193999990122,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-40-single-offset3.wav",
+        "sha256": "cdb3174c99dfb6fa0a5fff67eb1522a7693ff1d83bbd945c39b5c43ae4004e7e",
+        "frames": 9576475,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -4.79486258368743,
+            -4.7958265379413305
+          ],
+          "soxr16": [
+            -4.794863,
+            -4.795291
+          ],
+          "soxr64": [
+            -4.794863,
+            -4.795227
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -4.79486258368743,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.3,
+        "native_lufs": -13.999999046325684,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 23.667990199995984
+      }
+    },
+    {
+      "id": "piano-copy-80-control-offset0",
+      "file": {
+        "id": "piano-copy-80-control-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-80-control-offset0.wav",
+        "sha256": "e2d09028adc1e1c024870642c3cc100061a398673ee7694e186ba913e763341a",
+        "frames": 9576475
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9576475,
+        "gating_block_count_and_energy": null,
+        "id": "piano-copy-80-control-offset0",
+        "integrated_state": "unavailable",
+        "lufs": null,
+        "maximum_momentary_lufs": -82.12876131416144,
+        "meter_s": 0.3116868,
+        "rate": 48000,
+        "relative_threshold": -70.0,
+        "sha256": "e2d09028adc1e1c024870642c3cc100061a398673ee7694e186ba913e763341a"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "unavailable",
+        "lufs": null,
+        "reason": "complete_trace_below_absolute_gate",
+        "expected_readouts": 1995,
+        "readouts": 1995,
+        "maximum_displayed_momentary_lufs": -82.1,
+        "integrated_display": -70.0,
+        "integrated_threshold": 0.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-04-lufs.log",
+        "sha256": "ae74aabb5d82838c1d0620b63f2631b8ac5ac8bcdfdfc6571a51159de0c6c0c7"
+      },
+      "reference_s": 4.57049669999833,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-80-control-offset0.wav",
+        "sha256": "e2d09028adc1e1c024870642c3cc100061a398673ee7694e186ba913e763341a",
+        "frames": 9576475,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -73.32905775770884,
+            -73.07852642565929
+          ],
+          "soxr16": [
+            -73.322861,
+            -73.076213
+          ],
+          "soxr64": [
+            -73.322853,
+            -73.076206
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -73.076206,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -70.0,
+        "ffmpeg_integrated_threshold": 0.0,
+        "native_lufs": null,
+        "independent_lufs": null,
+        "integrated_loudness_available": false,
+        "lufs_pass": true,
+        "loudness_comparison": "both_unavailable",
+        "reference_s": 24.696072499995353
+      }
+    },
+    {
+      "id": "piano-copy-80-single-offset0",
+      "file": {
+        "id": "piano-copy-80-single-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-80-single-offset0.wav",
+        "sha256": "b505438777cbc24d0fc78c31dd844a2562a3694174e1b75ba08eb1383e9415e0",
+        "frames": 9576475
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9576475,
+        "gating_block_count_and_energy": [
+          1840,
+          85.88510361724104
+        ],
+        "id": "piano-copy-80-single-offset0",
+        "integrated_state": "finite",
+        "lufs": -13.99999979060083,
+        "maximum_momentary_lufs": -7.66361640521014,
+        "meter_s": 0.2970156,
+        "rate": 48000,
+        "relative_threshold": -24.31635745260232,
+        "sha256": "b505438777cbc24d0fc78c31dd844a2562a3694174e1b75ba08eb1383e9415e0"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1995,
+        "readouts": 1995,
+        "maximum_displayed_momentary_lufs": -7.7,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.3
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-05-lufs.log",
+        "sha256": "c4970b36f5be0aeb885e3972e897ed947cbf8cc3101c508682ce5f8483496779"
+      },
+      "reference_s": 5.397313500005112,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-80-single-offset0.wav",
+        "sha256": "b505438777cbc24d0fc78c31dd844a2562a3694174e1b75ba08eb1383e9415e0",
+        "frames": 9576475,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -2.6715993505540747,
+            -2.6746869582300303
+          ],
+          "soxr16": [
+            -2.671599,
+            -2.671974
+          ],
+          "soxr64": [
+            -2.671554,
+            -2.671934
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -2.671554,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.3,
+        "native_lufs": -14.0,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 24.280074299997068
+      }
+    },
+    {
+      "id": "piano-copy-80-single-offset-3",
+      "file": {
+        "id": "piano-copy-80-single-offset-3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-80-single-offset-3.wav",
+        "sha256": "2e1d1fae5529d43fda2278887f6d45d365a1d2a539d8d705a5940f6a7ecb1371",
+        "frames": 9576475
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9576475,
+        "gating_block_count_and_energy": [
+          1828,
+          69.74979847649226
+        ],
+        "id": "piano-copy-80-single-offset-3",
+        "integrated_state": "finite",
+        "lufs": -14.875332342288631,
+        "maximum_momentary_lufs": -7.498045532972893,
+        "meter_s": 0.2965028,
+        "rate": 48000,
+        "relative_threshold": -25.216301916673856,
+        "sha256": "2e1d1fae5529d43fda2278887f6d45d365a1d2a539d8d705a5940f6a7ecb1371"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.9,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1995,
+        "readouts": 1995,
+        "maximum_displayed_momentary_lufs": -7.5,
+        "integrated_display": -14.9,
+        "integrated_threshold": -25.2
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-06-lufs.log",
+        "sha256": "c128d65295f3fd96c19da3f8f006342bef12f2ecd0fc02ce890d97fe5b05e313"
+      },
+      "reference_s": 5.236990900004457,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-80-single-offset-3.wav",
+        "sha256": "2e1d1fae5529d43fda2278887f6d45d365a1d2a539d8d705a5940f6a7ecb1371",
+        "frames": 9576475,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -1.043272727566488,
+            -1.0460006315332018
+          ],
+          "soxr16": [
+            -1.042993,
+            -1.045881
+          ],
+          "soxr64": [
+            -1.042993,
+            -1.045881
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.042993,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.9,
+        "ffmpeg_integrated_threshold": -25.2,
+        "native_lufs": -14.87533187866211,
+        "independent_lufs": -14.9,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 24.599293700004637
+      }
+    },
+    {
+      "id": "piano-copy-80-single-offset3",
+      "file": {
+        "id": "piano-copy-80-single-offset3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-80-single-offset3.wav",
+        "sha256": "2088fdf8016c64b5ec64a6b02bba57ca589946511a9153b6d51bee4fe1351a25",
+        "frames": 9576475
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9576475,
+        "gating_block_count_and_energy": [
+          1857,
+          86.67861142349494
+        ],
+        "id": "piano-copy-80-single-offset3",
+        "integrated_state": "finite",
+        "lufs": -13.99999958359469,
+        "maximum_momentary_lufs": -8.672076864635429,
+        "meter_s": 0.3175969,
+        "rate": 48000,
+        "relative_threshold": -24.28092808881868,
+        "sha256": "2088fdf8016c64b5ec64a6b02bba57ca589946511a9153b6d51bee4fe1351a25"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1995,
+        "readouts": 1995,
+        "maximum_displayed_momentary_lufs": -8.7,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.3
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-07-lufs.log",
+        "sha256": "c99bca56444fd7e8f7d6b6ec9bc0e4679b4e8050b3c680a6d26cec4066f4c9be"
+      },
+      "reference_s": 3.6711212000009255,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\piano-copy-80-single-offset3.wav",
+        "sha256": "2088fdf8016c64b5ec64a6b02bba57ca589946511a9153b6d51bee4fe1351a25",
+        "frames": 9576475,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -4.79486258368743,
+            -4.7958247394196025
+          ],
+          "soxr16": [
+            -4.794863,
+            -4.795293
+          ],
+          "soxr64": [
+            -4.794863,
+            -4.795229
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -4.79486258368743,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.3,
+        "native_lufs": -14.0,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 23.97363680000126
+      }
+    },
+    {
+      "id": "imaginal-copy-40-control-offset0",
+      "file": {
+        "id": "imaginal-copy-40-control-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-40-control-offset0.wav",
+        "sha256": "c42c77163851482f1550cf37d9fc933090fcdb57a2736b472be7211b84118f9f",
+        "frames": 16978042
+      },
+      "native": {
+        "channels": 2,
+        "frames": 16978042,
+        "gating_block_count_and_energy": [
+          3085,
+          10.60371935875705
+        ],
+        "id": "imaginal-copy-40-control-offset0",
+        "integrated_state": "finite",
+        "lufs": -25.328969433251853,
+        "maximum_momentary_lufs": -18.881266135722544,
+        "meter_s": 0.5341706,
+        "rate": 48000,
+        "relative_threshold": -35.911253227495365,
+        "sha256": "c42c77163851482f1550cf37d9fc933090fcdb57a2736b472be7211b84118f9f"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -25.3,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 3537,
+        "readouts": 3537,
+        "maximum_displayed_momentary_lufs": -18.9,
+        "integrated_display": -25.3,
+        "integrated_threshold": -35.9
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-08-lufs.log",
+        "sha256": "428554730056222cc75752a3792184b3d29d1bc65da09ce9ae8e43cc6638a371"
+      },
+      "reference_s": 3.663373199997295,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-40-control-offset0.wav",
+        "sha256": "c42c77163851482f1550cf37d9fc933090fcdb57a2736b472be7211b84118f9f",
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -1.2986821338812182,
+            -5.49438464634239
+          ],
+          "soxr16": [
+            -1.17519,
+            -5.411221
+          ],
+          "soxr64": [
+            -1.173666,
+            -5.409489
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.173666,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -25.3,
+        "ffmpeg_integrated_threshold": -35.9,
+        "native_lufs": -25.328969955444336,
+        "independent_lufs": -25.3,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 42.4791624999998
+      }
+    },
+    {
+      "id": "imaginal-copy-40-single-offset0",
+      "file": {
+        "id": "imaginal-copy-40-single-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-40-single-offset0.wav",
+        "sha256": "9d0b1b3f2cf4fdd622cb5b7ec82250ec8235ab30b2f47fc88ad265ab59f88a83",
+        "frames": 16978042
+      },
+      "native": {
+        "channels": 2,
+        "frames": 16978042,
+        "gating_block_count_and_energy": [
+          3099,
+          144.65104381068193
+        ],
+        "id": "imaginal-copy-40-single-offset0",
+        "integrated_state": "finite",
+        "lufs": -14.000000043487228,
+        "maximum_momentary_lufs": -8.482740533284622,
+        "meter_s": 0.550859,
+        "rate": 48000,
+        "relative_threshold": -24.56302767452439,
+        "sha256": "9d0b1b3f2cf4fdd622cb5b7ec82250ec8235ab30b2f47fc88ad265ab59f88a83"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 3537,
+        "readouts": 3537,
+        "maximum_displayed_momentary_lufs": -8.5,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.6
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-09-lufs.log",
+        "sha256": "42d6b51b235f4f5fff0f4277d8bac5b0ce9c4049230aa4459b350ee1337b6883"
+      },
+      "reference_s": 2.0200626000005286,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-40-single-offset0.wav",
+        "sha256": "9d0b1b3f2cf4fdd622cb5b7ec82250ec8235ab30b2f47fc88ad265ab59f88a83",
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -2.7153520945752154,
+            -2.7153520945752154
+          ],
+          "soxr16": [
+            -1.900191,
+            -2.290167
+          ],
+          "soxr64": [
+            -1.900191,
+            -2.286239
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.900191,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.6,
+        "native_lufs": -14.0,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 42.57866880000074
+      }
+    },
+    {
+      "id": "imaginal-copy-40-single-offset-3",
+      "file": {
+        "id": "imaginal-copy-40-single-offset-3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-40-single-offset-3.wav",
+        "sha256": "400454abc76b8160e8181614b51fa7fa2d3ca4b535d80653474ef930657797ba",
+        "frames": 16978042
+      },
+      "native": {
+        "channels": 2,
+        "frames": 16978042,
+        "gating_block_count_and_energy": [
+          3092,
+          99.20563990868801
+        ],
+        "id": "imaginal-copy-40-single-offset-3",
+        "integrated_state": "finite",
+        "lufs": -15.628031224510218,
+        "maximum_momentary_lufs": -9.674157449676484,
+        "meter_s": 0.523255,
+        "rate": 48000,
+        "relative_threshold": -26.200704525460992,
+        "sha256": "400454abc76b8160e8181614b51fa7fa2d3ca4b535d80653474ef930657797ba"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -15.6,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 3537,
+        "readouts": 3537,
+        "maximum_displayed_momentary_lufs": -9.7,
+        "integrated_display": -15.6,
+        "integrated_threshold": -26.2
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-10-lufs.log",
+        "sha256": "c5ca1d1dc2e5abc051ce6fa3c1d364448ff4b1bfaf0b58b7bf7cae3ecce83589"
+      },
+      "reference_s": 1.9542150999986916,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-40-single-offset-3.wav",
+        "sha256": "400454abc76b8160e8181614b51fa7fa2d3ca4b535d80653474ef930657797ba",
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -1.772372478140676,
+            -1.772372478140676
+          ],
+          "soxr16": [
+            -1.041975,
+            -1.528029
+          ],
+          "soxr64": [
+            -1.038,
+            -1.528029
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.038,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -15.6,
+        "ffmpeg_integrated_threshold": -26.2,
+        "native_lufs": -15.628030776977539,
+        "independent_lufs": -15.6,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 43.50549129999854
+      }
+    },
+    {
+      "id": "imaginal-copy-40-single-offset3",
+      "file": {
+        "id": "imaginal-copy-40-single-offset3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-40-single-offset3.wav",
+        "sha256": "da74987bbece1f6fdaf741fcc7e107920f7ddc49f1bde25e7f4339e13ef709b9",
+        "frames": 16978042
+      },
+      "native": {
+        "channels": 2,
+        "frames": 16978042,
+        "gating_block_count_and_energy": [
+          3112,
+          145.25783879401985
+        ],
+        "id": "imaginal-copy-40-single-offset3",
+        "integrated_state": "finite",
+        "lufs": -14.000000100564622,
+        "maximum_momentary_lufs": -8.828486538833832,
+        "meter_s": 0.5228538,
+        "rate": 48000,
+        "relative_threshold": -24.545250147903406,
+        "sha256": "da74987bbece1f6fdaf741fcc7e107920f7ddc49f1bde25e7f4339e13ef709b9"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 3537,
+        "readouts": 3537,
+        "maximum_displayed_momentary_lufs": -8.8,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.5
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-11-lufs.log",
+        "sha256": "0e142de1550ddfae1a1cb831426465fc4b136a14a3cf30da7e325975fe6d617b"
+      },
+      "reference_s": 1.5173431000002893,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-40-single-offset3.wav",
+        "sha256": "da74987bbece1f6fdaf741fcc7e107920f7ddc49f1bde25e7f4339e13ef709b9",
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -4.917867913192469,
+            -4.917868825177751
+          ],
+          "soxr16": [
+            -4.208873,
+            -4.451061
+          ],
+          "soxr64": [
+            -4.207398,
+            -4.449454
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -4.207398,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.5,
+        "native_lufs": -14.0,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 49.283984699999564
+      }
+    },
+    {
+      "id": "imaginal-copy-80-control-offset0",
+      "file": {
+        "id": "imaginal-copy-80-control-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-80-control-offset0.wav",
+        "sha256": "e5da76f415f6f54962c5bfa88d2bdd2077b1da888f38300b404ccd5c26d80402",
+        "frames": 16978042
+      },
+      "native": {
+        "channels": 2,
+        "frames": 16978042,
+        "gating_block_count_and_energy": null,
+        "id": "imaginal-copy-80-control-offset0",
+        "integrated_state": "unavailable",
+        "lufs": null,
+        "maximum_momentary_lufs": -94.2029086636498,
+        "meter_s": 0.5255055,
+        "rate": 48000,
+        "relative_threshold": -70.0,
+        "sha256": "e5da76f415f6f54962c5bfa88d2bdd2077b1da888f38300b404ccd5c26d80402"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "unavailable",
+        "lufs": null,
+        "reason": "complete_trace_below_absolute_gate",
+        "expected_readouts": 3537,
+        "readouts": 3537,
+        "maximum_displayed_momentary_lufs": -94.2,
+        "integrated_display": -70.0,
+        "integrated_threshold": 0.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-12-lufs.log",
+        "sha256": "173f7dacae647c3575d287f1967826de24082600f37f5077f71dbe59348d7110"
+      },
+      "reference_s": 1.3109298999988823,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-80-control-offset0.wav",
+        "sha256": "e5da76f415f6f54962c5bfa88d2bdd2077b1da888f38300b404ccd5c26d80402",
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -76.7397582698399,
+            -80.79406378073361
+          ],
+          "soxr16": [
+            -76.616985,
+            -80.705244
+          ],
+          "soxr64": [
+            -76.615518,
+            -80.704152
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -76.615518,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -70.0,
+        "ffmpeg_integrated_threshold": 0.0,
+        "native_lufs": null,
+        "independent_lufs": null,
+        "integrated_loudness_available": false,
+        "lufs_pass": true,
+        "loudness_comparison": "both_unavailable",
+        "reference_s": 41.77604560000327
+      }
+    },
+    {
+      "id": "imaginal-copy-80-single-offset0",
+      "file": {
+        "id": "imaginal-copy-80-single-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-80-single-offset0.wav",
+        "sha256": "4525e08aed9ea163222998dcd8fcb60b160cd49e3f886766daac64673aff4707",
+        "frames": 16978042
+      },
+      "native": {
+        "channels": 2,
+        "frames": 16978042,
+        "gating_block_count_and_energy": [
+          3099,
+          144.65103768350278
+        ],
+        "id": "imaginal-copy-80-single-offset0",
+        "integrated_state": "finite",
+        "lufs": -14.000000227447195,
+        "maximum_momentary_lufs": -8.482740743858807,
+        "meter_s": 0.5362295,
+        "rate": 48000,
+        "relative_threshold": -24.563027858562567,
+        "sha256": "4525e08aed9ea163222998dcd8fcb60b160cd49e3f886766daac64673aff4707"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 3537,
+        "readouts": 3537,
+        "maximum_displayed_momentary_lufs": -8.5,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.6
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-13-lufs.log",
+        "sha256": "a6c32a563becc9ec005ae91df16f13244c437946ea9c4790dec4be413224a63c"
+      },
+      "reference_s": 1.3020453999997699,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-80-single-offset0.wav",
+        "sha256": "4525e08aed9ea163222998dcd8fcb60b160cd49e3f886766daac64673aff4707",
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -2.7153520945752154,
+            -2.7153520945752154
+          ],
+          "soxr16": [
+            -1.900191,
+            -2.290167
+          ],
+          "soxr64": [
+            -1.900191,
+            -2.286239
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.900191,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.6,
+        "native_lufs": -14.0,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 42.50282639999932
+      }
+    },
+    {
+      "id": "imaginal-copy-80-single-offset-3",
+      "file": {
+        "id": "imaginal-copy-80-single-offset-3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-80-single-offset-3.wav",
+        "sha256": "5fcd6fb59d3577831fa5b24deed0be2d5fe58dc0d15693c8a8a550bd67308223",
+        "frames": 16978042
+      },
+      "native": {
+        "channels": 2,
+        "frames": 16978042,
+        "gating_block_count_and_energy": [
+          3092,
+          99.20565323010386
+        ],
+        "id": "imaginal-copy-80-single-offset-3",
+        "integrated_state": "finite",
+        "lufs": -15.628030641336014,
+        "maximum_momentary_lufs": -9.674156880903096,
+        "meter_s": 0.564236,
+        "rate": 48000,
+        "relative_threshold": -26.20070394231948,
+        "sha256": "5fcd6fb59d3577831fa5b24deed0be2d5fe58dc0d15693c8a8a550bd67308223"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -15.6,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 3537,
+        "readouts": 3537,
+        "maximum_displayed_momentary_lufs": -9.7,
+        "integrated_display": -15.6,
+        "integrated_threshold": -26.2
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-14-lufs.log",
+        "sha256": "104752e8b181403e8d01a10b58e63f0e642d04b36a9b85d83fafa94c81bfa1c8"
+      },
+      "reference_s": 1.2867225000009057,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-80-single-offset-3.wav",
+        "sha256": "5fcd6fb59d3577831fa5b24deed0be2d5fe58dc0d15693c8a8a550bd67308223",
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -1.772371843229431,
+            -1.772372478140676
+          ],
+          "soxr16": [
+            -1.041973,
+            -1.528029
+          ],
+          "soxr64": [
+            -1.037999,
+            -1.528029
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.037999,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -15.6,
+        "ffmpeg_integrated_threshold": -26.2,
+        "native_lufs": -15.628030776977539,
+        "independent_lufs": -15.6,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 42.13374959999783
+      }
+    },
+    {
+      "id": "imaginal-copy-80-single-offset3",
+      "file": {
+        "id": "imaginal-copy-80-single-offset3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-80-single-offset3.wav",
+        "sha256": "4b813c60092b932af1bafd4222ac385d10d7f9f7f31c00be08f6c0e6999a73fb",
+        "frames": 16978042
+      },
+      "native": {
+        "channels": 2,
+        "frames": 16978042,
+        "gating_block_count_and_energy": [
+          3112,
+          145.25783374931063
+        ],
+        "id": "imaginal-copy-80-single-offset3",
+        "integrated_state": "finite",
+        "lufs": -14.00000025139224,
+        "maximum_momentary_lufs": -8.828486588320645,
+        "meter_s": 0.5558704,
+        "rate": 48000,
+        "relative_threshold": -24.545250298837406,
+        "sha256": "4b813c60092b932af1bafd4222ac385d10d7f9f7f31c00be08f6c0e6999a73fb"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 3537,
+        "readouts": 3537,
+        "maximum_displayed_momentary_lufs": -8.8,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.5
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-15-lufs.log",
+        "sha256": "ad6d87dcc8113fa179b98600087b51e9de6c8972d36565711ecee02c18d25a09"
+      },
+      "reference_s": 1.2719476999991457,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\imaginal-copy-80-single-offset3.wav",
+        "sha256": "4b813c60092b932af1bafd4222ac385d10d7f9f7f31c00be08f6c0e6999a73fb",
+        "frames": 16978042,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -4.917867913192469,
+            -4.917868825177751
+          ],
+          "soxr16": [
+            -4.208873,
+            -4.451061
+          ],
+          "soxr64": [
+            -4.207398,
+            -4.449454
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -4.207398,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.5,
+        "native_lufs": -14.0,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 40.608686799998395
+      }
+    },
+    {
+      "id": "metal-copy-40-control-offset0",
+      "file": {
+        "id": "metal-copy-40-control-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-40-control-offset0.wav",
+        "sha256": "d6ad26b1a9524e0bff2c17de612becad215a12a879dfa42a7133852e492ee468",
+        "frames": 9142022
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9142022,
+        "gating_block_count_and_energy": [
+          1841,
+          45.3331920822354
+        ],
+        "id": "metal-copy-40-control-offset0",
+        "integrated_state": "finite",
+        "lufs": -16.777374880446647,
+        "maximum_momentary_lufs": -14.931150831003045,
+        "meter_s": 0.3298979,
+        "rate": 48000,
+        "relative_threshold": -26.854310854490567,
+        "sha256": "d6ad26b1a9524e0bff2c17de612becad215a12a879dfa42a7133852e492ee468"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -16.8,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1904,
+        "readouts": 1904,
+        "maximum_displayed_momentary_lufs": -14.9,
+        "integrated_display": -16.8,
+        "integrated_threshold": -26.9
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-16-lufs.log",
+        "sha256": "dd960caef26eeb54f3e07c22a8c18ff985e50cea87b8add6c2c9c59922694bca"
+      },
+      "reference_s": 0.7602206999945338,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-40-control-offset0.wav",
+        "sha256": "d6ad26b1a9524e0bff2c17de612becad215a12a879dfa42a7133852e492ee468",
+        "frames": 9142022,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -1.152402348736822,
+            -1.583572942083635
+          ],
+          "soxr16": [
+            -1.042798,
+            -1.479118
+          ],
+          "soxr64": [
+            -1.041058,
+            -1.477464
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.041058,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -16.8,
+        "ffmpeg_integrated_threshold": -26.9,
+        "native_lufs": -16.777374267578125,
+        "independent_lufs": -16.8,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 22.07757799999672
+      }
+    },
+    {
+      "id": "metal-copy-40-single-offset0",
+      "file": {
+        "id": "metal-copy-40-single-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-40-single-offset0.wav",
+        "sha256": "6093befe56c0d9a2de84e0dae0d1576d08995bce1aaa0741d725f548f874bd74",
+        "frames": 9142022
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9142022,
+        "gating_block_count_and_energy": [
+          1841,
+          85.93178474388448
+        ],
+        "id": "metal-copy-40-single-offset0",
+        "integrated_state": "finite",
+        "lufs": -13.999999566210992,
+        "maximum_momentary_lufs": -12.193169908635143,
+        "meter_s": 0.308951,
+        "rate": 48000,
+        "relative_threshold": -24.08849758220452,
+        "sha256": "6093befe56c0d9a2de84e0dae0d1576d08995bce1aaa0741d725f548f874bd74"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1904,
+        "readouts": 1904,
+        "maximum_displayed_momentary_lufs": -12.2,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.1
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-17-lufs.log",
+        "sha256": "cc879b7bd94528c4492d35c42ba1c4b8bd83d8c696341fbb830a5241570141ac"
+      },
+      "reference_s": 0.8043659999966621,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-40-single-offset0.wav",
+        "sha256": "6093befe56c0d9a2de84e0dae0d1576d08995bce1aaa0741d725f548f874bd74",
+        "frames": 9142022,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -2.0739833486415096,
+            -2.037891298601731
+          ],
+          "soxr16": [
+            -2.022082,
+            -2.022661
+          ],
+          "soxr64": [
+            -2.021305,
+            -2.022661
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -2.021305,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.1,
+        "native_lufs": -14.0,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 23.161945300002117
+      }
+    },
+    {
+      "id": "metal-copy-40-single-offset-3",
+      "file": {
+        "id": "metal-copy-40-single-offset-3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-40-single-offset-3.wav",
+        "sha256": "3cca1dab0fd313b20cb2145d4fa857b34431e36e9d6d45593f8799bff10039fb",
+        "frames": 9142022
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9142022,
+        "gating_block_count_and_energy": [
+          1841,
+          63.691189714337156
+        ],
+        "id": "metal-copy-40-single-offset-3",
+        "integrated_state": "finite",
+        "lufs": -15.300744271745485,
+        "maximum_momentary_lufs": -13.477441048400877,
+        "meter_s": 0.3043502,
+        "rate": 48000,
+        "relative_threshold": -25.386935337215153,
+        "sha256": "3cca1dab0fd313b20cb2145d4fa857b34431e36e9d6d45593f8799bff10039fb"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -15.3,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1904,
+        "readouts": 1904,
+        "maximum_displayed_momentary_lufs": -13.5,
+        "integrated_display": -15.3,
+        "integrated_threshold": -25.4
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-18-lufs.log",
+        "sha256": "5b75d8915af613da374423721987f4125357c107591cb96742533b3cb121c12f"
+      },
+      "reference_s": 0.809808800004248,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-40-single-offset-3.wav",
+        "sha256": "3cca1dab0fd313b20cb2145d4fa857b34431e36e9d6d45593f8799bff10039fb",
+        "frames": 9142022,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -1.118503925070128,
+            -1.4160540506744412
+          ],
+          "soxr16": [
+            -1.042818,
+            -1.336933
+          ],
+          "soxr64": [
+            -1.041563,
+            -1.335321
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.041563,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -15.3,
+        "ffmpeg_integrated_threshold": -25.4,
+        "native_lufs": -15.30074405670166,
+        "independent_lufs": -15.3,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 23.206854700001713
+      }
+    },
+    {
+      "id": "metal-copy-40-single-offset3",
+      "file": {
+        "id": "metal-copy-40-single-offset3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-40-single-offset3.wav",
+        "sha256": "3ff4ebabd6d762230496b9474f151b2863d3e70b15857fd30694eea29441e61b",
+        "frames": 9142022
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9142022,
+        "gating_block_count_and_energy": [
+          1841,
+          85.93177166553812
+        ],
+        "id": "metal-copy-40-single-offset3",
+        "integrated_state": "finite",
+        "lufs": -14.000000227183424,
+        "maximum_momentary_lufs": -12.231419724215906,
+        "meter_s": 0.3172247,
+        "rate": 48000,
+        "relative_threshold": -24.08848446815495,
+        "sha256": "3ff4ebabd6d762230496b9474f151b2863d3e70b15857fd30694eea29441e61b"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1904,
+        "readouts": 1904,
+        "maximum_displayed_momentary_lufs": -12.2,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.1
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-19-lufs.log",
+        "sha256": "f911911f277454ab3324a51195994959b842f9a7e0c6beee8b5204125c3b3e3c"
+      },
+      "reference_s": 0.8756805000011809,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-40-single-offset3.wav",
+        "sha256": "3ff4ebabd6d762230496b9474f151b2863d3e70b15857fd30694eea29441e61b",
+        "frames": 9142022,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -4.725857944617014,
+            -4.727275521571903
+          ],
+          "soxr16": [
+            -4.715097,
+            -4.722339
+          ],
+          "soxr64": [
+            -4.714514,
+            -4.722233
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -4.714514,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.1,
+        "native_lufs": -14.0,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 22.927317000001494
+      }
+    },
+    {
+      "id": "metal-copy-80-control-offset0",
+      "file": {
+        "id": "metal-copy-80-control-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-80-control-offset0.wav",
+        "sha256": "b687d1d70eb03a517d6cb9fabcb07cc4c92b9d850c675f0e7d78d5a9700c0e1c",
+        "frames": 9142022
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9142022,
+        "gating_block_count_and_energy": null,
+        "id": "metal-copy-80-control-offset0",
+        "integrated_state": "unavailable",
+        "lufs": null,
+        "maximum_momentary_lufs": -82.86401590583979,
+        "meter_s": 0.2929848,
+        "rate": 48000,
+        "relative_threshold": -70.0,
+        "sha256": "b687d1d70eb03a517d6cb9fabcb07cc4c92b9d850c675f0e7d78d5a9700c0e1c"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "unavailable",
+        "lufs": null,
+        "reason": "complete_trace_below_absolute_gate",
+        "expected_readouts": 1904,
+        "readouts": 1904,
+        "maximum_displayed_momentary_lufs": -82.9,
+        "integrated_display": -70.0,
+        "integrated_threshold": 0.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-20-lufs.log",
+        "sha256": "b5117bde4f5b5a6e1537cfc48800abc90a12d39335c2a3d2e6ec4dae2363afd3"
+      },
+      "reference_s": 0.7484920999995666,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-80-control-offset0.wav",
+        "sha256": "b687d1d70eb03a517d6cb9fabcb07cc4c92b9d850c675f0e7d78d5a9700c0e1c",
+        "frames": 9142022,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -69.1850535823616,
+            -69.69543916492344
+          ],
+          "soxr16": [
+            -69.072551,
+            -69.589101
+          ],
+          "soxr64": [
+            -69.071192,
+            -69.587079
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -69.071192,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -70.0,
+        "ffmpeg_integrated_threshold": 0.0,
+        "native_lufs": null,
+        "independent_lufs": -70.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": false,
+        "loudness_comparison": "availability_mismatch",
+        "reference_s": 23.424120600000606
+      }
+    },
+    {
+      "id": "metal-copy-80-single-offset0",
+      "file": {
+        "id": "metal-copy-80-single-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-80-single-offset0.wav",
+        "sha256": "a2941a56f54b3c93bf52fb05bde34858eabbe1ad185209bc4159d46af0a85e68",
+        "frames": 9142022
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9142022,
+        "gating_block_count_and_energy": [
+          1841,
+          85.93177829288743
+        ],
+        "id": "metal-copy-80-single-offset0",
+        "integrated_state": "finite",
+        "lufs": -13.999999892240824,
+        "maximum_momentary_lufs": -12.193170233548681,
+        "meter_s": 0.2935442,
+        "rate": 48000,
+        "relative_threshold": -24.08849790823398,
+        "sha256": "a2941a56f54b3c93bf52fb05bde34858eabbe1ad185209bc4159d46af0a85e68"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1904,
+        "readouts": 1904,
+        "maximum_displayed_momentary_lufs": -12.2,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.1
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-21-lufs.log",
+        "sha256": "ca07514205cbd4c79c2559be82294fee872dba61f430cbcbb5d2cc569e0f3d0f"
+      },
+      "reference_s": 0.7499352999948314,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-80-single-offset0.wav",
+        "sha256": "a2941a56f54b3c93bf52fb05bde34858eabbe1ad185209bc4159d46af0a85e68",
+        "frames": 9142022,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -2.0739833486415096,
+            -2.037890643982198
+          ],
+          "soxr16": [
+            -2.022081,
+            -2.02266
+          ],
+          "soxr64": [
+            -2.021304,
+            -2.02266
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -2.021304,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.1,
+        "native_lufs": -14.0,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 23.3482565000013
+      }
+    },
+    {
+      "id": "metal-copy-80-single-offset-3",
+      "file": {
+        "id": "metal-copy-80-single-offset-3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-80-single-offset-3.wav",
+        "sha256": "0a25f55c5910faeb019d0903e522e89a65af845ca542eb8580363d04b921d762",
+        "frames": 9142022
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9142022,
+        "gating_block_count_and_energy": [
+          1841,
+          63.691194698468536
+        ],
+        "id": "metal-copy-80-single-offset-3",
+        "integrated_state": "finite",
+        "lufs": -15.3007439318899,
+        "maximum_momentary_lufs": -13.477440711016987,
+        "meter_s": 0.5497317,
+        "rate": 48000,
+        "relative_threshold": -25.386934997367064,
+        "sha256": "0a25f55c5910faeb019d0903e522e89a65af845ca542eb8580363d04b921d762"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -15.3,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1904,
+        "readouts": 1904,
+        "maximum_displayed_momentary_lufs": -13.5,
+        "integrated_display": -15.3,
+        "integrated_threshold": -25.4
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-22-lufs.log",
+        "sha256": "80a94cf054f7c5151a75b901a77a80d6e5c47ca3675be0bb51034f9fed9ec24f"
+      },
+      "reference_s": 0.7999150999967242,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-80-single-offset-3.wav",
+        "sha256": "0a25f55c5910faeb019d0903e522e89a65af845ca542eb8580363d04b921d762",
+        "frames": 9142022,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -1.1185027473297264,
+            -1.4160540506744412
+          ],
+          "soxr16": [
+            -1.042818,
+            -1.336933
+          ],
+          "soxr64": [
+            -1.041563,
+            -1.335321
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.041563,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -15.3,
+        "ffmpeg_integrated_threshold": -25.4,
+        "native_lufs": -15.30074405670166,
+        "independent_lufs": -15.3,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 22.80677690000448
+      }
+    },
+    {
+      "id": "metal-copy-80-single-offset3",
+      "file": {
+        "id": "metal-copy-80-single-offset3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-80-single-offset3.wav",
+        "sha256": "d2a863c9c282702b4348287c17844049c41c7147eaba83b80db82f125fd2f4ec",
+        "frames": 9142022
+      },
+      "native": {
+        "channels": 2,
+        "frames": 9142022,
+        "gating_block_count_and_energy": [
+          1841,
+          85.93176581076258
+        ],
+        "id": "metal-copy-80-single-offset3",
+        "integrated_state": "finite",
+        "lufs": -14.000000523080592,
+        "maximum_momentary_lufs": -12.231420026552184,
+        "meter_s": 0.7616802,
+        "rate": 48000,
+        "relative_threshold": -24.088484764048072,
+        "sha256": "d2a863c9c282702b4348287c17844049c41c7147eaba83b80db82f125fd2f4ec"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 1904,
+        "readouts": 1904,
+        "maximum_displayed_momentary_lufs": -12.2,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.1
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-23-lufs.log",
+        "sha256": "e9fed56ada06b4471194b95dd8277c852b02c15069bec53707b26b329aa8deba"
+      },
+      "reference_s": 0.7903530000039609,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\metal-copy-80-single-offset3.wav",
+        "sha256": "d2a863c9c282702b4348287c17844049c41c7147eaba83b80db82f125fd2f4ec",
+        "frames": 9142022,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -4.725856160524958,
+            -4.727274629380231
+          ],
+          "soxr16": [
+            -4.715095,
+            -4.722338
+          ],
+          "soxr64": [
+            -4.714513,
+            -4.722233
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -4.714513,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.1,
+        "native_lufs": -14.000000953674316,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 22.6067303000018
+      }
+    },
+    {
+      "id": "rich-copy-40-control-offset0",
+      "file": {
+        "id": "rich-copy-40-control-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-40-control-offset0.wav",
+        "sha256": "d110930c715148cff9e7e3dc9b4c7d805ae01a618c05ff157bf5c574d12b922f",
+        "frames": 11408561
+      },
+      "native": {
+        "channels": 2,
+        "frames": 11408561,
+        "gating_block_count_and_energy": [
+          1933,
+          13.799163953717798
+        ],
+        "id": "rich-copy-40-control-offset0",
+        "integrated_state": "finite",
+        "lufs": -22.15479079314706,
+        "maximum_momentary_lufs": -9.982613299899935,
+        "meter_s": 0.9662339,
+        "rate": 48000,
+        "relative_threshold": -32.83030957557724,
+        "sha256": "d110930c715148cff9e7e3dc9b4c7d805ae01a618c05ff157bf5c574d12b922f"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -22.2,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 2376,
+        "readouts": 2376,
+        "maximum_displayed_momentary_lufs": -10.0,
+        "integrated_display": -22.2,
+        "integrated_threshold": -32.8
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-24-lufs.log",
+        "sha256": "9f799354adc791094603fa22aeee573977b8857dadbd452942ac891b291f5af8"
+      },
+      "reference_s": 1.1002545000010286,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-40-control-offset0.wav",
+        "sha256": "d110930c715148cff9e7e3dc9b4c7d805ae01a618c05ff157bf5c574d12b922f",
+        "frames": 11408561,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -1.9969687350653345,
+            -1.0500006149425984
+          ],
+          "soxr16": [
+            -1.968361,
+            -1.042709
+          ],
+          "soxr64": [
+            -1.968148,
+            -1.042709
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.042709,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -22.2,
+        "ffmpeg_integrated_threshold": -32.8,
+        "native_lufs": -22.1547908782959,
+        "independent_lufs": -22.2,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 28.507907000006526
+      }
+    },
+    {
+      "id": "rich-copy-40-single-offset0",
+      "file": {
+        "id": "rich-copy-40-single-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-40-single-offset0.wav",
+        "sha256": "280126231f2c6c00cb2d95deb00a83e70cb3c90f255c8c2b22e729373bb15ea4",
+        "frames": 11408561
+      },
+      "native": {
+        "channels": 2,
+        "frames": 11408561,
+        "gating_block_count_and_energy": [
+          1942,
+          90.64610900532661
+        ],
+        "id": "rich-copy-40-single-offset0",
+        "integrated_state": "finite",
+        "lufs": -14.000000588810376,
+        "maximum_momentary_lufs": -6.072455634259485,
+        "meter_s": 1.3634741,
+        "rate": 48000,
+        "relative_threshold": -24.868131508924314,
+        "sha256": "280126231f2c6c00cb2d95deb00a83e70cb3c90f255c8c2b22e729373bb15ea4"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 2376,
+        "readouts": 2376,
+        "maximum_displayed_momentary_lufs": -6.1,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.9
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-25-lufs.log",
+        "sha256": "53d173dd1a0e7f026fbb3368ff34ce2025fa4450becabfb459487b4213c3aeae"
+      },
+      "reference_s": 0.9168941999960225,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-40-single-offset0.wav",
+        "sha256": "280126231f2c6c00cb2d95deb00a83e70cb3c90f255c8c2b22e729373bb15ea4",
+        "frames": 11408561,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -2.2387572331527466,
+            -2.238922038576376
+          ],
+          "soxr16": [
+            -2.236814,
+            -2.236347
+          ],
+          "soxr64": [
+            -2.236814,
+            -2.236284
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -2.236284,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.9,
+        "native_lufs": -14.000000953674316,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 37.211686999995436
+      }
+    },
+    {
+      "id": "rich-copy-40-single-offset-3",
+      "file": {
+        "id": "rich-copy-40-single-offset-3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-40-single-offset-3.wav",
+        "sha256": "28a486e192773b8bb8a66fa53b97a728148da78f3a768663ba1ebe3fbc9f1e63",
+        "frames": 11408561
+      },
+      "native": {
+        "channels": 2,
+        "frames": 11408561,
+        "gating_block_count_and_energy": [
+          1940,
+          69.15063993912734
+        ],
+        "id": "rich-copy-40-single-offset-3",
+        "integrated_state": "finite",
+        "lufs": -15.171055263851748,
+        "maximum_momentary_lufs": -5.804341756596924,
+        "meter_s": 1.835572,
+        "rate": 48000,
+        "relative_threshold": -26.043630896364157,
+        "sha256": "28a486e192773b8bb8a66fa53b97a728148da78f3a768663ba1ebe3fbc9f1e63"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -15.2,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 2376,
+        "readouts": 2376,
+        "maximum_displayed_momentary_lufs": -5.8,
+        "integrated_display": -15.2,
+        "integrated_threshold": -26.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-26-lufs.log",
+        "sha256": "2ff2a2435939ad86f1009867c0dd174fc1da45a6e36d683d371852bacc0af077"
+      },
+      "reference_s": 0.9469893999994383,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-40-single-offset-3.wav",
+        "sha256": "28a486e192773b8bb8a66fa53b97a728148da78f3a768663ba1ebe3fbc9f1e63",
+        "frames": 11408561,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -1.0463994957881566,
+            -1.0437082472248294
+          ],
+          "soxr16": [
+            -1.043425,
+            -1.042866
+          ],
+          "soxr64": [
+            -1.043425,
+            -1.04265
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.04265,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -15.2,
+        "ffmpeg_integrated_threshold": -26.0,
+        "native_lufs": -15.17105484008789,
+        "independent_lufs": -15.2,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 30.17552290000458
+      }
+    },
+    {
+      "id": "rich-copy-40-single-offset3",
+      "file": {
+        "id": "rich-copy-40-single-offset3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-40-single-offset3.wav",
+        "sha256": "ae7d870350431fac2cab14d657c9301f00fa3667a403c905933979c684546dbf",
+        "frames": 11408561
+      },
+      "native": {
+        "channels": 2,
+        "frames": 11408561,
+        "gating_block_count_and_energy": [
+          1943,
+          90.69281138289617
+        ],
+        "id": "rich-copy-40-single-offset3",
+        "integrated_state": "finite",
+        "lufs": -13.99999935816056,
+        "maximum_momentary_lufs": -7.286467409818642,
+        "meter_s": 1.7250401,
+        "rate": 48000,
+        "relative_threshold": -24.86557537237196,
+        "sha256": "ae7d870350431fac2cab14d657c9301f00fa3667a403c905933979c684546dbf"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 2376,
+        "readouts": 2376,
+        "maximum_displayed_momentary_lufs": -7.3,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.9
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-27-lufs.log",
+        "sha256": "4a75f25292521496a30b4cd1e1a8acf75f82b4c5d379031f3df8a6a4b2026d1c"
+      },
+      "reference_s": 0.882383000003756,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-40-single-offset3.wav",
+        "sha256": "ae7d870350431fac2cab14d657c9301f00fa3667a403c905933979c684546dbf",
+        "frames": 11408561,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -4.377885149367278,
+            -4.376429202091428
+          ],
+          "soxr16": [
+            -4.36909,
+            -4.37058
+          ],
+          "soxr64": [
+            -4.36909,
+            -4.370446
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -4.36909,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.9,
+        "native_lufs": -13.999999046325684,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 29.944982400003937
+      }
+    },
+    {
+      "id": "rich-copy-80-control-offset0",
+      "file": {
+        "id": "rich-copy-80-control-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-80-control-offset0.wav",
+        "sha256": "2e59b8ea8f99ccc46fe7ed06f8b51f7ebbd852bdaf4aceee03c2f751f68cc6e3",
+        "frames": 11408561
+      },
+      "native": {
+        "channels": 2,
+        "frames": 11408561,
+        "gating_block_count_and_energy": null,
+        "id": "rich-copy-80-control-offset0",
+        "integrated_state": "unavailable",
+        "lufs": null,
+        "maximum_momentary_lufs": -88.75145121114781,
+        "meter_s": 1.5519433,
+        "rate": 48000,
+        "relative_threshold": -70.0,
+        "sha256": "2e59b8ea8f99ccc46fe7ed06f8b51f7ebbd852bdaf4aceee03c2f751f68cc6e3"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "unavailable",
+        "lufs": null,
+        "reason": "complete_trace_below_absolute_gate",
+        "expected_readouts": 2376,
+        "readouts": 2376,
+        "maximum_displayed_momentary_lufs": -88.8,
+        "integrated_display": -70.0,
+        "integrated_threshold": 0.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-28-lufs.log",
+        "sha256": "6dffc6628cd74593cfb1228e969cecae881e035ee9764e3df152affd51b25ba2"
+      },
+      "reference_s": 0.8794401999984984,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-80-control-offset0.wav",
+        "sha256": "2e59b8ea8f99ccc46fe7ed06f8b51f7ebbd852bdaf4aceee03c2f751f68cc6e3",
+        "frames": 11408561,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -80.78259763996329,
+            -79.85661682837758
+          ],
+          "soxr16": [
+            -80.760555,
+            -79.847913
+          ],
+          "soxr64": [
+            -80.760555,
+            -79.847833
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -79.847833,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -70.0,
+        "ffmpeg_integrated_threshold": 0.0,
+        "native_lufs": null,
+        "independent_lufs": null,
+        "integrated_loudness_available": false,
+        "lufs_pass": true,
+        "loudness_comparison": "both_unavailable",
+        "reference_s": 29.686715099996945
+      }
+    },
+    {
+      "id": "rich-copy-80-single-offset0",
+      "file": {
+        "id": "rich-copy-80-single-offset0",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-80-single-offset0.wav",
+        "sha256": "5f99a544a60f12a2371be20f21fbfadceaedc1c78a638d36739281aa1cc483e0",
+        "frames": 11408561
+      },
+      "native": {
+        "channels": 2,
+        "frames": 11408561,
+        "gating_block_count_and_energy": [
+          1942,
+          90.64612997156469
+        ],
+        "id": "rich-copy-80-single-offset0",
+        "integrated_state": "finite",
+        "lufs": -13.99999958429727,
+        "maximum_momentary_lufs": -6.072454484628424,
+        "meter_s": 1.6697894,
+        "rate": 48000,
+        "relative_threshold": -24.868130504420026,
+        "sha256": "5f99a544a60f12a2371be20f21fbfadceaedc1c78a638d36739281aa1cc483e0"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 2376,
+        "readouts": 2376,
+        "maximum_displayed_momentary_lufs": -6.1,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.9
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-29-lufs.log",
+        "sha256": "f469b8462ed2e8baf351931c0a4ecc1f9a623b8cf7ee6b8d8f992456de194d13"
+      },
+      "reference_s": 1.1053748000049382,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-80-single-offset0.wav",
+        "sha256": "5f99a544a60f12a2371be20f21fbfadceaedc1c78a638d36739281aa1cc483e0",
+        "frames": 11408561,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -2.2387558932840683,
+            -2.238920698682275
+          ],
+          "soxr16": [
+            -2.236811,
+            -2.236348
+          ],
+          "soxr64": [
+            -2.236811,
+            -2.236285
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -2.236285,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.9,
+        "native_lufs": -14.0,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 27.744755699997768
+      }
+    },
+    {
+      "id": "rich-copy-80-single-offset-3",
+      "file": {
+        "id": "rich-copy-80-single-offset-3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-80-single-offset-3.wav",
+        "sha256": "b79a8deab5541fb34aedbfb41d5f798fdb8673543b5e9a0ab8748b1fdb51c638",
+        "frames": 11408561
+      },
+      "native": {
+        "channels": 2,
+        "frames": 11408561,
+        "gating_block_count_and_energy": [
+          1940,
+          69.15063697782978
+        ],
+        "id": "rich-copy-80-single-offset-3",
+        "integrated_state": "finite",
+        "lufs": -15.171055449833426,
+        "maximum_momentary_lufs": -5.804341836639229,
+        "meter_s": 1.8587153,
+        "rate": 48000,
+        "relative_threshold": -26.04363108236632,
+        "sha256": "b79a8deab5541fb34aedbfb41d5f798fdb8673543b5e9a0ab8748b1fdb51c638"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -15.2,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 2376,
+        "readouts": 2376,
+        "maximum_displayed_momentary_lufs": -5.8,
+        "integrated_display": -15.2,
+        "integrated_threshold": -26.0
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-30-lufs.log",
+        "sha256": "e52f11537ac4f453c5b13bd622db837ce39036d6ed80e8f34b09837dd11f6e5a"
+      },
+      "reference_s": 0.9438915999999153,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-80-single-offset-3.wav",
+        "sha256": "b79a8deab5541fb34aedbfb41d5f798fdb8673543b5e9a0ab8748b1fdb51c638",
+        "frames": 11408561,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -1.046398911786107,
+            -1.0437070795826096
+          ],
+          "soxr16": [
+            -1.043424,
+            -1.042866
+          ],
+          "soxr64": [
+            -1.043424,
+            -1.04265
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -1.04265,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -15.2,
+        "ffmpeg_integrated_threshold": -26.0,
+        "native_lufs": -15.171055793762207,
+        "independent_lufs": -15.2,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 28.375868400005857
+      }
+    },
+    {
+      "id": "rich-copy-80-single-offset3",
+      "file": {
+        "id": "rich-copy-80-single-offset3",
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-80-single-offset3.wav",
+        "sha256": "b194b3d7c8532b63b7f20b9fd2fba171a8f2365084e2378940f5736340fee48f",
+        "frames": 11408561
+      },
+      "native": {
+        "channels": 2,
+        "frames": 11408561,
+        "gating_block_count_and_energy": [
+          1943,
+          90.69280850007301
+        ],
+        "id": "rich-copy-80-single-offset3",
+        "integrated_state": "finite",
+        "lufs": -13.999999496208348,
+        "maximum_momentary_lufs": -7.286467330791954,
+        "meter_s": 1.8940320000000002,
+        "rate": 48000,
+        "relative_threshold": -24.865575510464573,
+        "sha256": "b194b3d7c8532b63b7f20b9fd2fba171a8f2365084e2378940f5736340fee48f"
+      },
+      "independent": {
+        "version": "complete-block-availability-v1",
+        "state": "finite",
+        "lufs": -14.0,
+        "reason": "integrated_blocks_present",
+        "expected_readouts": 2376,
+        "readouts": 2376,
+        "maximum_displayed_momentary_lufs": -7.3,
+        "integrated_display": -14.0,
+        "integrated_threshold": -24.9
+      },
+      "agreement": true,
+      "log": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\block-availability-v1\\retained-31-lufs.log",
+        "sha256": "9dd556d2fcb6b87360a3aae081888d2d51ff1f0e7f98b82231a0cdf35b79cdf4"
+      },
+      "reference_s": 1.0938386999987415,
+      "retained_peak_format_evidence": {
+        "path": "C:\\Users\\SM - Dan\\Documents\\GitHub\\yes-master\\test-output\\dynamics-research-20260921\\quiet-copy\\native-v2\\rich-copy-80-single-offset3.wav",
+        "sha256": "b194b3d7c8532b63b7f20b9fd2fba171a8f2365084e2378940f5736340fee48f",
+        "frames": 11408561,
+        "rate": 48000,
+        "channels": 2,
+        "peaks": {
+          "samples": [
+            -4.377886006382804,
+            -4.37643091583528
+          ],
+          "soxr16": [
+            -4.369091,
+            -4.370582
+          ],
+          "soxr64": [
+            -4.369091,
+            -4.370448
+          ]
+        },
+        "ceiling": -1.0,
+        "independent_peak": -4.369091,
+        "peak_pass": true,
+        "fullscale_samples": 0,
+        "ffmpeg_integrated_display": -14.0,
+        "ffmpeg_integrated_threshold": -24.9,
+        "native_lufs": -13.999999046325684,
+        "independent_lufs": -14.0,
+        "integrated_loudness_available": true,
+        "lufs_pass": true,
+        "loudness_comparison": "finite_agreement",
+        "reference_s": 27.77150690000417
+      }
+    }
+  ],
+  "retained_agreements": 32,
+  "retained_unavailable": 4,
+  "retained_unknowns": [],
+  "control_native_wall_s": 0.10295790000236593,
+  "control_total_wall_s": 0.708024799998384,
+  "retained_native_wall_s": 23.487089900001592,
+  "retained_reference_work_s": 62.898278899992874,
+  "scope": "Additive availability diagnostic only; old qualification and selector unchanged"
+}

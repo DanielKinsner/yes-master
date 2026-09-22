@@ -27,6 +27,15 @@ September 15 on local `codex/mastering-quality` from `7534f612`. See the
 Sonic-policy adoption and calibration remain gated. This file replaces the
 earlier draft as the current plan.
 
+The subsequent [availability diagnostic](../reviews/2026-09-21-loudness-availability-results.md)
+resolves the meter question using complete gating-block logs: all 32 retained
+files agree, with four unavailable results; ten controlled signals classify
+correctly and two remain explicitly unknown. Historical failures and the sonic
+selector are unchanged. Continue C1 with a reproducible tone/stereo reference;
+retain the compressor's static crossover/makeup contribution when isolating
+time-varying processing. Freeze and qualify that reference before new scoring.
+Finite-loudness fallback eligibility, full control mapping, C2 and C3 remain open.
+
 **Current owner sequencing supersedes the execution order below:** Dan approved
 preparing and testing the selected fixes, merging that verified result into local
 main, then resuming sound-quality research on a separate branch from verified main.
