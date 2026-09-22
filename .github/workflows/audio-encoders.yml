@@ -52,7 +52,7 @@ jobs:
       - name: Run package and actual engine qualification
         shell: pwsh
         run: |
-          node --test scripts/verify-audio-encoders.test.mjs
+          node --test scripts/verify-audio-encoders.test.mjs scripts/check-staged-encoder.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/verify-audio-encoders.mjs test-output/encoder-package '${{ matrix.target }}' (Get-Command ffmpeg).Source (Get-Command ffprobe).Source --seal
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

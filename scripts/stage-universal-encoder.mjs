@@ -12,7 +12,8 @@ const packages = [armDir,intelDir].map((dir,i) => verifyPackage(resolve(dir), ta
 const dir = resolve(destination); mkdirSync(dir, {recursive:true});
 const output = join(dir,'yes-master-encoder-universal-apple-darwin');
 execFileSync('lipo', ['-create', ...packages.map(pkg=>pkg.exe), '-output', output]);
-execFileSync('lipo', ['-verify_arch', 'arm64', 'x86_64', output]);
+// -verify_arch consumes every following argument as an architecture name.
+execFileSync('lipo', [output, '-verify_arch', 'arm64', 'x86_64']);
 execFileSync('codesign', ['--force', '--sign', '-', output]);
 for (const architecture of ['arm64','x86_64']) execFileSync('arch', [`-${architecture}`, output, '-version']);
 const sha256 = createHash('sha256').update(readFileSync(output)).digest('hex');

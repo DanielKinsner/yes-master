@@ -205,6 +205,11 @@ single explicit Linux exception; no new ignore or lowered threshold is added.
 
 ## Remote qualification and remaining launch gates
 
+The full earlier CI run `35690437843` at `48810bf8` completes successfully,
+including all three encoder/source-rebuild jobs, Windows desktop/bridges,
+macOS desktop/iPhone Swift, Android, snapshots, headless and security lanes.
+Later candidates retain their own separate status.
+
 CI run `35693446694` is associated with head `2bc36054`; GitHub checks out its
 synthetic merge `56e92233`. Both have exactly the same Git tree
 `2e54d139a81ae56975e2310004fc137f48308a6c`. Downloaded ARM and Intel Mac
@@ -221,6 +226,22 @@ The local and direct-head Mac source ZIPs contain the same 1,425 files: 624
 are byte-identical and 801 UTF-8 text files differ only by CRLF versus LF.
 ZIP timestamps also differ by host timezone. No missing or other differing
 files were found; distinct archive SHA-256 values are retained as such.
+
+The `2bc36054` draft run then exposes a universal-Mac packaging defect:
+`lipo -verify_arch arm64 x86_64 OUTPUT` consumes the output path as an
+architecture name. Move the input path before the variadic verification option.
+Keep both-architecture verification, signing and execution checks intact.
+Regular Mac CI now assembles and executes the universal encoder, so this path
+is no longer exercised only during Release. Both CI and Release also compare
+the final bundled encoder against the same hashes embedded in the Rust build.
+A new mutation/missing-binary regression fails against the original checker
+and passes after extending it to verify a final bundled path. All three encoder
+script tests and all 903 frontend tests pass locally.
+
+This packaging correction requires a replacement candidate and remote build.
+The already-tested canonical-domain, Vitest and documentation follow-up is
+folded into that candidate. Earlier artifact identities above stay historical;
+they are not silently presented as the repaired universal-Mac release.
 
 The historical Intel Mac exact Album PCM failure in run `34864394286` remains
 unexplained. Its retained log ends at the equality assertion; it contains no

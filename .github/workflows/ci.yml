@@ -243,6 +243,20 @@ jobs:
         working-directory: src-tauri
         run: cargo test
 
+      - name: Download both qualified Mac architectures
+        uses: actions/download-artifact@v4
+        with:
+          pattern: audio-encoder-*-apple-darwin
+          path: test-output/universal-encoder-packages
+
+      - name: Verify universal encoder assembly and both execution routes
+        run: |
+          if ! arch -x86_64 /usr/bin/true; then
+            softwareupdate --install-rosetta --agree-to-license
+          fi
+          chmod +x test-output/universal-encoder-packages/audio-encoder-*/yes-master-encoder-*
+          node scripts/stage-universal-encoder.mjs test-output/universal-encoder-packages/audio-encoder-aarch64-apple-darwin test-output/universal-encoder-packages/audio-encoder-x86_64-apple-darwin test-output/universal-encoder-ci
+
       - name: macOS package build
         uses: actions/download-artifact@v4
         with:
@@ -254,6 +268,9 @@ jobs:
 
       - name: Build Mac package with encoder
         run: npm run build:mac
+
+      - name: Verify bundled Mac encoder still matches the runtime trust hash
+        run: node scripts/check-staged-encoder.mjs aarch64-apple-darwin 'src-tauri/target/release/bundle/macos/YES Master.app/Contents/MacOS/yes-master-encoder'
 
       - name: New-format Track and Album matrices
         working-directory: src-tauri
