@@ -249,8 +249,11 @@ signing mismatch before declaring its artifacts ready: the qualified thin
 encoder has CodeDirectory flags `0x2`, while the pinned Tauri CLI 2.11.1 signs
 executable sidecars with hardened runtime (`--options runtime`). Re-signing
 therefore changes bytes after Rust has embedded their SHA-256. Both thin and
-universal staging now apply that signing mode and a stable encoder identifier
-before recording the hash. Runtime hash enforcement remains exact.
+universal staging now apply that signing mode using the final packaged filename
+before recording the hash. Runtime hash enforcement remains exact. The pinned
+[Tauri signing implementation](https://github.com/tauri-apps/tauri/blob/tauri-cli-v2.11.1/crates/tauri-macos-sign/src/keychain.rs)
+and [Apple identifier derivation](https://github.com/apple-oss-distributions/Security/blob/main/OSX/libsecurity_codesigning/lib/signer.cpp)
+explain why both signing options and the filename must match.
 
 A small Mac-only regression compiles real ARM, Intel and universal executables,
 proves the old staging/signing sequence changes the hash, then checks that the
