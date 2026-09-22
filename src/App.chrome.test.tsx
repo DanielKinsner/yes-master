@@ -243,6 +243,7 @@ describe("top chrome", () => {
     expect(text).toContain("Shift+drag defines a loop");
     expect(text).toContain("Return to start");
     expect(text).toContain("320, 256, 192 or 128 kbps");
+    expect(text).toContain("WAV, MP3, FLAC, AIFF, AAC / M4A, AAC (ADTS) and Ogg Vorbis");
     expect(text).toContain("Advanced only");
     expect(text).toContain("LUFS");
     expect(text).toContain("dBTP");
