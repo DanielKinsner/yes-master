@@ -8,9 +8,11 @@
 > squeeze; 902 frontend tests, 711 desktop tests, explicit encoder matrices,
 > 40 app browser cases and actual device timing/lifecycle checks pass. Corrected
 > ARM build `fb89d63` is packaged and installed, with the original session restored.
-> Its final native recheck and offline journey await manual Mac unlock; Computer
-> Use cannot proceed while locked. See [the scoped evidence](reviews/2026-09-22-mac-launch-verification.md).
-> No remote push, release or deployment occurred. Existing release gates remain.
+> The owner explicitly postponed its final native recheck and offline journey
+> after the Mac locked, and authorized integrating/pushing the fixes and status
+> document to `main` for cross-machine handoff. See [the scoped evidence](reviews/2026-09-22-mac-launch-verification.md).
+> Those postponed checks remain unverified. Existing release gates remain;
+> this authorization does not activate a release or website deployment.
 
 > **2026-09-22 — Launch candidate prepared; public release remains NO-GO.** Dan requested all
 > applicable tests, end-to-end computer use and visual polish. The isolated

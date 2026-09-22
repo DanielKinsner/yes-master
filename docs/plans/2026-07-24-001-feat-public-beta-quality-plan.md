@@ -21,8 +21,10 @@ deepened: 2026-07-24
 > **September 22 Mac execution:** [the M4 verification record](../reviews/2026-09-22-mac-launch-verification.md)
 > now contains actual universal-installer/native journeys, independent outputs,
 > automated checks and real-device timing. The corrected local ARM candidate is
-> installed with the owner's original session restored. Resume only the named
-> final UI/offline rechecks after Mac unlock, then the separate release gates;
+> installed with the owner's original session restored. The owner postponed the
+> named final UI/offline rechecks after the Mac locked and authorized pushing
+> the fixes/report to `main` for cross-machine handoff. Keep those checks open
+> for a later hands-on session and preserve the separate release gates;
 > do not repeat the already completed Windows or Mac questionnaires.
 
 > **September 22 launch preparation:** the [current execution record](../reviews/2026-09-21-launch-preparation.md)

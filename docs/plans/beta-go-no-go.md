@@ -5,8 +5,9 @@
 > WAV/M4A export, Album cancellation/retry, project restoration and external
 > Mac playback. Signed encoder identity and independent outputs are verified.
 > [Mac evidence](../reviews/2026-09-22-mac-launch-verification.md) distinguishes
-> this candidate from the corrected local ARM `fb89d63` package. Its final UI
-> recheck awaits Mac unlock; offline interactive proof is not claimed. Final
+> this candidate from the corrected local ARM `fb89d63` package. The owner
+> postponed its final UI/offline rechecks after the Mac locked and authorized
+> pushing the fixes/report to `main`; interactive offline proof is not claimed. Final
 > listening, recipient permission, key recovery and public updater/publication
 > remain separate, and a changed final release artifact requires its own evidence.
 

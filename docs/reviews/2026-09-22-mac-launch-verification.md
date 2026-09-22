@@ -1,10 +1,10 @@
 # Mac launch verification — September 22, 2026
 
 Status: downloaded universal candidate passed the installed Mac journeys below.
-The corrected local build passes automated/package checks; its final native UI
-recheck is pending because Computer Use reported the Mac locked. Public release
-remains NO-GO until the separate release gates are satisfied. The owner authorized pulling main, preparing the Mac
-app and executing end-to-end checks, including Computer Use.
+The corrected local build passes automated/package checks. After the Mac locked,
+the owner explicitly postponed the remaining hands-on checks and authorized
+putting the fixes and this status report on remote `main` for another machine.
+Public release remains NO-GO until the separate release gates are satisfied.
 
 ## Source and artifact identity
 
@@ -13,7 +13,10 @@ app and executing end-to-end checks, including Computer Use.
   is retained on `codex/mac-before-main-sync-2026-09-22`.
 - Continued on `codex/mac-launch-readiness-20260922`, including the reviewed
   `origin/codex/launch-sept22` work (`ed492cd`, application revision `e6db1f4`).
-  No remote merge, push, tag, release publication or deployment was performed.
+  Combined application revision `fb89d63` contains the fixes tested below;
+  subsequent checkpoint commits update documentation only. Main integration
+  and push are owner-authorized. No tag, release publication or deployment is
+  part of this checkpoint; automatic main website deployment remains disabled.
 - Actual machine: Apple M4, 16 GiB RAM, macOS 26.6.2 (25G83). The exposed and
   tested output is MacBook Pro Speakers, stereo 48 kHz.
 - Downloaded the universal installer from unpublished draft
@@ -127,7 +130,7 @@ probes and measurement logs are retained with the Album manifest.
   159 ms. Those are distinct from audio callback timing and normal 48 kHz UI
   observations. They do not justify an unconditional instant-preview claim.
 
-## Corrected local package and pending native recheck
+## Corrected local package and postponed native recheck
 
 The clean combined code revision is `fb89d63`. `npm run build:mac` produces an
 Apple Silicon app and DMG, both locally verified and installed. This is separate
@@ -145,9 +148,11 @@ applications are preserved in ignored evidence. The original pre-test session is
 restored byte-for-byte and the app is left closed.
 
 Computer Use reported: "The Mac is locked and automatic unlock could not unlock
-it." The owner was asked to unlock it; no unlock/bypass was attempted. Remaining
-native work is specific: confirm `fb89d63` in Help, inspect the corrected labels,
-repeat Album cancel/retry and Show files, and verify offline playback/export.
+it." No unlock/bypass was attempted. The owner subsequently chose to postpone
+the affected hands-on testing. The postponed work is specific: confirm the
+corrected build in Help, inspect the corrected labels, repeat Album cancel/retry
+and Show files, and verify offline playback/export. These are not passed checks
+and do not require repeating the completed native journeys above.
 A per-process network-denial profile and a failing curl control are prepared;
 no interactive offline result is claimed. The isolated test process was stopped.
 The machine's network settings were not changed.
@@ -157,6 +162,20 @@ so commands used the bundled Node 24.19 runtime. The broken Homebrew FFmpeg was
 updated and the full FFmpeg variant installed for libvorbis fixture generation;
 these developer tools are never bundled into the app. The product encoder was
 built separately from the pinned recipe and signed/staged through its verifier.
+
+## Handoff to another machine
+
+Pull `main` to obtain the integrated fixes, this report and the updated live
+quality/release ledgers. The installed Mac app still identifies `fb89d63` because
+the subsequent changes are documentation only. A new build on another machine
+will identify its own checkout revision.
+
+Private audio, rendered test files, raw local evidence and the local ARM installer
+stay on this Mac; they are not repository contents. The report records their
+scope and artifact hashes so source availability cannot be mistaken for an
+installer transfer. Do not repeat passing suites without a relevant change.
+Exact-main GitHub CI is a separate integration check from the earlier candidate
+run linked above; its result must be recorded separately.
 
 ## Remaining release boundaries
 
