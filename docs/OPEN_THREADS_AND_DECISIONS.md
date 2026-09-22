@@ -13,6 +13,9 @@
 > document to `main` for cross-machine handoff. See [the scoped evidence](reviews/2026-09-22-mac-launch-verification.md).
 > Those postponed checks remain unverified. Existing release gates remain;
 > this authorization does not activate a release or website deployment.
+> **Main transfer completed:** `60c526a` is pushed and verified on GitHub. Its
+> [exact-main CI](https://github.com/DanielKinsner/yes-master/actions/runs/35744259967)
+> is running at handoff, separate from the passing local/candidate evidence.
 
 > **2026-09-22 — Launch candidate prepared; public release remains NO-GO.** Dan requested all
 > applicable tests, end-to-end computer use and visual polish. The isolated

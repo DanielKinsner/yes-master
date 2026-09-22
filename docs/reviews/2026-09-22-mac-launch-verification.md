@@ -165,6 +165,11 @@ built separately from the pinned recipe and signed/staged through its verifier.
 
 ## Handoff to another machine
 
+The integrated checkpoint `60c526a47203cf3e7e324842539fe9197b5632ef` was pushed
+to remote `main`; GitHub's branch readback and report-file API confirm it is
+available. The working checkout is on `main` with no uncommitted changes.
+The following documentation-only closeout records that completed transfer.
+
 Pull `main` to obtain the integrated fixes, this report and the updated live
 quality/release ledgers. The installed Mac app still identifies `fb89d63` because
 the subsequent changes are documentation only. A new build on another machine
@@ -174,8 +179,19 @@ Private audio, rendered test files, raw local evidence and the local ARM install
 stay on this Mac; they are not repository contents. The report records their
 scope and artifact hashes so source availability cannot be mistaken for an
 installer transfer. Do not repeat passing suites without a relevant change.
-Exact-main GitHub CI is a separate integration check from the earlier candidate
-run linked above; its result must be recorded separately.
+
+Exact-main [CI 35744259967](https://github.com/DanielKinsner/yes-master/actions/runs/35744259967)
+is running at `60c526a` at this handoff. Mac encoder signing stability has passed;
+the full run is not yet a passing result. This is separate from both the earlier
+candidate's green CI and the completed local tests above. The documentation-only
+closeout does not start another duplicate full qualification run.
+
+GitHub's dependency-alert refresh confirms both Vitest alerts are now fixed.
+Nine pre-existing Rust alerts remain: five Linux-only `glib` entries and four
+`serde_with` entries, including historical audit snapshots. Their applicability
+assessment remains in the [launch preparation record](2026-09-21-launch-preparation.md#website-and-repository-follow-through).
+No alert was dismissed and no security-test threshold was weakened. The zero npm
+advisories above must not be read as zero repository-wide dependency alerts.
 
 ## Remaining release boundaries
 
