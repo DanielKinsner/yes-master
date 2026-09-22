@@ -31,6 +31,12 @@ approval remains valid for its recorded scope, not for arbitrary future bytes.
   hide it with overflow clipping.
 - Native Help inspection found another old WAV/MP3-only description. Correct
   it for all seven delivered formats and retain the source-protection wording.
+- Native keyboard testing then reproduced Tab leaving Help for the obscured
+  interface. The shared Help/Settings/Shortcuts dialog now contains forward
+  and reverse focus, skips disabled/hidden controls, preserves focus during
+  content updates, and returns focus to the opener after closing. Five focused
+  regressions fail before the repair and pass afterward; real-browser Help and
+  Settings traversal is included in the full headless gate.
 
 ## Verified local evidence
 
@@ -38,7 +44,7 @@ Ignored logs and reports: `test-output/launch-20260921/` in this worktree.
 
 | Lane | Result |
 | --- | --- |
-| Frontend | 898 tests pass after copy and Try It changes |
+| Frontend | 903 tests pass, including five new native-dialog regressions |
 | Production build | TypeScript and Vite pass |
 | Rust format / strict all-target Clippy | Pass |
 | Desktop + private fixture | 716 tests pass; four opt-in real-fixture tests execute using the existing Doors Open source |
@@ -48,7 +54,7 @@ Ignored logs and reports: `test-output/launch-20260921/` in this worktree.
 | iPhone bridge | All-target check and 46 tests pass; one ignored test remains distinct |
 | Android bridge | 26 host tests and ARM64 API-29 cross-check pass |
 | Dependency security | npm high-severity gate and all three RustSec lockfile gates pass |
-| Browser app and landing | Full final headless run passes at `48810bf8`, including 38 app checks and 200% normal/fallback landing fonts |
+| Browser app and landing | Final dialog-repair headless gate passes: 40 app checks, including Help/Settings traversal, plus responsive/200% normal/fallback landing checks |
 | Android JVM | Exact-head remote lane passes; local Java loopback initialization fails before tests |
 | Encoder package script tests | Both corruption/architecture and missing-runtime dependency tests pass |
 | Try It Rust | Correct `wasm32-unknown-unknown` target check passes; frontend engine-stamp/runtime tests pass |
@@ -90,6 +96,9 @@ Computer use with existing owner-supplied short No Ceiling sources verifies:
 - Album M4A files independently decode to 34 and 18 seconds; continuous output
   is exactly 2,496,000 frames / 52 seconds, -11.1 LUFS, -1.3 dBTP. Manifest and
   receipt identify the override, rendered format and delivered measurements.
+- The 52-second continuous M4A also opens and advances to natural completion in
+  Windows Media Player Legacy. This establishes an external-player route, not
+  a by-ear judgment of the output.
 - Help, Settings and shortcut overlays render; Escape dismisses the dialogs,
   and the question-mark shortcut opens the keyboard reference.
 
@@ -107,10 +116,21 @@ verified separately. No dependency or cfg was weakened to force that command.
 
 ## Remaining launch gates
 
-The Help-only correction needs a refreshed package and focused native check;
-exact-commit cross-platform CI remains in progress. A real Mac install/import/export check, final candidate
+The Help-only candidate `3078c98f` is built, installed and checked natively;
+its seven-format text and footer identify that exact build. Both updater
+signatures verify and tamper controls fail as expected. Installed executable
+SHA-256: `d8df2775e7d9e4646c0514b3e1d049d2043da1b9749683586244b9e684f50da7`.
+All original session fields match the saved backup, excluding only its save
+timestamp; the eight tracks, selections and settings are preserved. WAV and
+Volume Match off are restored. The later keyboard repair needs its own focused
+installed check; the completed audio pass remains evidence for its unchanged
+engine/export paths, not a claim that the later package was exercised yet.
+
+Exact-commit cross-platform CI remains in progress. A real Mac install/import/export check, final candidate
 listening, LGPL relinking permission disposition, updater-key recovery evidence
 and the authorized public updater transaction remain separate requirements.
+Full screen-reader and physically disconnected operation remain unverified;
+automated semantics and local processing checks do not establish those layers.
 The beta lasts 56 calendar days from actual publication; if publication occurs
 September 22, its closing date is November 17, 2026. Do not activate that date
 or downloads until the actual publication is verified.

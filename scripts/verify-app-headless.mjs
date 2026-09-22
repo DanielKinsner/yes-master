@@ -88,6 +88,28 @@ const SETTLE_TIMEOUT_MS = 20_000;
  * whitespace-collapsed innerText of <body>.
  */
 const SCENARIOS = [
+  {
+    name: "clean", label: "chrome-dialog-keyboard", scenarioId: "S-F1",
+    purpose: "Help and Settings contain keyboard focus and restore their opener.",
+    viewports: [MIN_DESKTOP, LAPTOP], settle: "ready",
+    assert: async (page, report) => {
+      for (const title of ["Help", "Settings"]) {
+        const opener = page.getByRole("button", { name: title, exact: true });
+        await opener.click();
+        const dialog = page.getByRole("dialog", { name: title, exact: true });
+        await dialog.waitFor({ state: "visible" });
+        for (const key of ["Tab", "Tab", "Tab", "Tab", "Tab", "Tab", "Tab", "Shift+Tab", "Shift+Tab"]) {
+          await page.keyboard.press(key);
+          if (!await dialog.evaluate(el => el.contains(document.activeElement))) {
+            report(`${title}: ${key} escaped the dialog`);
+          }
+        }
+        await page.keyboard.press("Escape");
+        await dialog.waitFor({ state: "detached" });
+        await page.waitForFunction(label => document.activeElement?.getAttribute("aria-label") === label, title);
+      }
+    },
+  },
   { name:"album-warning", label:"album-new-formats", scenarioId:"S-F2", purpose:"New-format Album controls, delivered identity and per-track paths.", viewports:[MIN_DESKTOP], settle:"album-ready", drive:async page => {
     for (const [format,label] of [['flac','FLAC'],['m4a','AAC / M4A'],['aac','AAC (ADTS)'],['ogg','Ogg Vorbis'],['aiff','AIFF']]) {
       const close = page.getByRole('button',{name:'Close Album receipt',exact:true});
