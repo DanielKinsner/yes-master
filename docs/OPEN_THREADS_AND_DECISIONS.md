@@ -1,5 +1,20 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-22 — Whole-project review fixes (owner option A).** A read-only
+> review found no launch blocker. Dan approved three interface-only fixes, now
+> on `main`: global shortcuts stand down while an aria-modal dialog is open
+> (`c3f251de`; Space/A/arrows previously acted behind Help), unchanged playback
+> ticks no longer re-render the app (`dcc34025`) and waveform bars build once
+> per track (`6798cb0c`). New regressions fail on the previous code. 908 frontend
+> tests, typecheck and `npm run verify:headless` (landing plus 40 app checks)
+> pass; refreshed landing captures are pixel-identical to their predecessors.
+> Browser-preview measurements (development build, Advanced view): main-thread
+> work fell from about 620 to 43 ms/s while paused and to 392 ms/s while playing.
+> No DSP, preview-preparation, sound or export behavior changed; no native or
+> installed-build evidence is claimed. Remaining review items (preview-wait
+> parallelism, meter-only rendering, App.css consolidation, landing WebP) stay
+> open as owner-prioritized follow-ups.
+
 > **2026-09-22 — Preset preview delay and loudness-control investigation.**
 > The owner's supplied Coat source matches the installed Windows session's
 > frame counts. Three cold 96 kHz preview preparations total 30.6–32.8 seconds

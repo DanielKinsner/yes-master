@@ -18,6 +18,12 @@ deepened: 2026-07-24
 
 # YES Master Public Beta Quality Program
 
+> **September 22 review fixes:** three owner-approved interface fixes are on
+> `main` (`c3f251de`, `dcc34025`, `6798cb0c`): shortcuts no longer act behind
+> open dialogs, idle playback ticks no longer re-render the app and waveform
+> bars build once. Frontend, typecheck and headless lanes pass; see
+> [open threads](../OPEN_THREADS_AND_DECISIONS.md). No sound or export change.
+
 > **September 22 Mac execution:** [the M4 verification record](../reviews/2026-09-22-mac-launch-verification.md)
 > now contains actual universal-installer/native journeys, independent outputs,
 > automated checks and real-device timing. The corrected local ARM candidate is
