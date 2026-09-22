@@ -17,12 +17,15 @@ import type {
 import {
   ADAPTIVE_STRENGTH_DEFAULT,
   DELIVERY_PROFILE_DISPLAY,
+  DELIVERY_PROFILE_SHORT,
   DELIVERY_PROFILE_TARGET_LUFS,
 } from "../bindings";
 import {
   effectiveBitDepth,
   effectiveCeilingDbtp,
   effectiveSampleRate,
+  effectiveLoudnessTarget,
+  formatLoudnessTarget,
   loudnessTargetDisplay,
 } from "../lib/effective-settings";
 import { compressorAutoReadouts } from "../lib/compressor-auto";
@@ -224,20 +227,20 @@ function DeliveryProfileCard({
         id="delivery-profile-select"
         className="loudness-profile-select rail-card-select"
         aria-label="Delivery profile"
+        title="Sets the loudness target, peak ceiling and export format together. Loudness Target changes only the target."
         value={profile}
         onChange={(e) => onDeliveryProfile(e.target.value as DeliveryProfile)}
       >
         {(Object.keys(DELIVERY_PROFILE_DISPLAY) as DeliveryProfile[]).map(
           (p) => (
-            <option key={p} value={p}>
-              {DELIVERY_PROFILE_DISPLAY[p]}
-              {DELIVERY_PROFILE_TARGET_LUFS[p] !== null
-                ? ` · ${DELIVERY_PROFILE_TARGET_LUFS[p]} LUFS`
-                : ""}
+            <option key={p} value={p} title={DELIVERY_PROFILE_DISPLAY[p]}>
+              {DELIVERY_PROFILE_SHORT[p]} · {formatLoudnessTarget(p === "custom"
+                ? effectiveLoudnessTarget(settings) : DELIVERY_PROFILE_TARGET_LUFS[p])}
             </option>
           ),
         )}
       </select>
+      <p className="delivery-profile-note">Sets target, ceiling and export format.</p>
     </section>
   );
 }
@@ -1108,7 +1111,8 @@ function DeliveryFormatCard({
       <p className="format-note">{lossy
         ? `${EXPORT_FORMATS[format].label} · ${deliveredRate ? `${deliveredRate / 1000} kHz delivery` : "compatible delivery rate"}. Saved rate and precision settings are retained.${format === "aac" ? " Includes codec delay and padding." : ""}`
         : integerConversion ? `${EXPORT_FORMATS[format].label} delivers 24-bit integer from your 32-bit float setting.`
-        : format === "wav" ? note : `${EXPORT_FORMATS[format].label} master · lossless integer delivery.`}</p>
+        : format === "wav" ? note : `${EXPORT_FORMATS[format].label} master · lossless integer delivery.`}
+        {" "}Live preview follows the source rate.</p>
     </section>
   );
 }

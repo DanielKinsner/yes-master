@@ -24,6 +24,7 @@ pub struct ProtectedPcm {
 /// Facts about one immutable post-chain, final-rate float buffer. The preview
 /// cache owns the buffer together with these facts; neither is independently
 /// replaceable. No delivery target or integer quantizer is baked in here.
+#[derive(Clone)]
 pub(crate) struct PreparedMeasurements {
     peak: PreparedPeak,
     raw_lufs: f32,
@@ -32,12 +33,14 @@ pub(crate) struct PreparedMeasurements {
     channels: u16,
 }
 
+#[derive(Clone)]
 struct PreparedChannelPeak {
     lower: f64,
     upper: f64,
     sample_peak: f64,
 }
 
+#[derive(Clone)]
 struct PreparedPeak {
     channels: Vec<PreparedChannelPeak>,
 }
@@ -61,13 +64,37 @@ pub(crate) fn prepare(
     channels: u16,
     cancel: Option<&AtomicBool>,
 ) -> CommandResult<PreparedMeasurements> {
+    prepare_impl(samples, rate, channels, cancel, false)
+}
+
+pub(crate) fn prepare_preview(
+    samples: &[f32],
+    rate: u32,
+    channels: u16,
+    cancel: Option<&AtomicBool>,
+) -> CommandResult<PreparedMeasurements> {
+    prepare_impl(samples, rate, channels, cancel, true)
+}
+
+fn prepare_impl(
+    samples: &[f32],
+    rate: u32,
+    channels: u16,
+    cancel: Option<&AtomicBool>,
+    preview: bool,
+) -> CommandResult<PreparedMeasurements> {
+    #[cfg(test)]
+    preparation_probe::record();
     let count = usize::from(channels);
     if count == 0 || rate == 0 || samples.len() % count != 0 {
         return Err(error("invalid preparation PCM format"));
     }
-    let measured = peak_meter::measure(samples, count, || {
-        cancel.is_some_and(|f| f.load(Ordering::Relaxed))
-    })
+    let cancelled = || cancel.is_some_and(|f| f.load(Ordering::Relaxed));
+    let measured = if preview {
+        peak_meter::measure_preview(samples, count, cancelled)
+    } else {
+        peak_meter::measure(samples, count, cancelled)
+    }
     .map_err(error)?;
     let peak = PreparedPeak {
         channels: measured
@@ -92,6 +119,20 @@ pub(crate) fn prepare(
         rate,
         channels,
     })
+}
+
+#[cfg(test)]
+pub(crate) mod preparation_probe {
+    use std::cell::Cell;
+    thread_local! { static CALLS: Cell<Option<usize>> = const { Cell::new(None) }; }
+    pub(super) fn record() {
+        CALLS.with(|calls| calls.set(calls.get().map(|n| n + 1)));
+    }
+    pub(crate) fn count<T>(work: impl FnOnce() -> T) -> (usize, T) {
+        CALLS.with(|calls| calls.set(Some(0)));
+        let result = work();
+        (CALLS.with(|calls| calls.take().unwrap()), result)
+    }
 }
 
 /// Reuse reconstruction only after comparing EVERY actual transformed sample

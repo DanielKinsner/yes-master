@@ -229,7 +229,8 @@ fn measure_device_with_cache(
     let device_hit = device.is_some();
     let device = match device {
         Some(device) => device,
-        None => Arc::new(PreparedDevicePcm::new(
+        None if key.delivery_rate == device_rate => Arc::new(file.device_at_file_rate()),
+        None => Arc::new(PreparedDevicePcm::new_for_preview(
             file.raw_pcm(),
             key.delivery_rate,
             pcm.channels,
@@ -392,6 +393,29 @@ mod tests {
     }
 
     #[test]
+    fn matching_source_and_device_measure_the_immutable_response_only_once() {
+        let pcm = pcm();
+        let mut settings = settings();
+        settings.advanced.bit_depth = Some(32);
+        let (calls, actual) = crate::output_protection::preparation_probe::count(|| {
+            measure_device_with_cache(
+                &Mutex::new(Cache::new(PCM_BUDGET)),
+                &Mutex::new(Cache::new(PCM_BUDGET)),
+                &pcm,
+                &settings,
+                pcm.sample_rate,
+                &AtomicBool::new(false),
+            )
+            .unwrap()
+        });
+        assert!(actual.file_gain.is_finite() && actual.device_gain.is_finite());
+        assert_eq!(
+            calls, 1,
+            "identical source/device PCM must reuse qualified facts"
+        );
+    }
+
+    #[test]
     fn device_reuse_preserves_delivery_and_separates_rates_source_lifetime_and_byte_limits() {
         let pcm = pcm();
         let cancel = AtomicBool::new(false);
@@ -491,7 +515,7 @@ mod tests {
     }
 
     #[test]
-    fn codec_pcm_changes_invalidate_rates_but_reuse_identical_raw_responses() {
+    fn delivery_formats_share_the_same_live_response_and_gain() {
         use super::super::output_route::preview_settings;
         use crate::export_format::ExportEncoding;
         let mut pcm = pcm();
@@ -511,7 +535,7 @@ mod tests {
             ExportEncoding::M4a { bitrate_kbps: 128 },
         );
         let flac = preview_settings(&requested, pcm.sample_rate, ExportEncoding::Flac);
-        assert!(!Key::new(&pcm, &wav)
+        assert!(Key::new(&pcm, &wav)
             .unwrap()
             .matches(&Key::new(&pcm, &mp3).unwrap()));
         assert!(Key::new(&pcm, &mp3)
@@ -521,7 +545,7 @@ mod tests {
             Key::new(&pcm, &wav)
                 .unwrap()
                 .matches(&Key::new(&pcm, &flac).unwrap()),
-            "precision-only edits reuse raw PCM but finalize their own precision"
+            "delivery precision must not change live PCM"
         );
         let cache = Mutex::new(Cache::new(PCM_BUDGET));
         let cancel = AtomicBool::new(false);
@@ -537,7 +561,7 @@ mod tests {
             assert_eq!(cached.gain_lin, direct.gain_lin);
             assert_eq!(cached.mastered_lufs, direct.mastered_lufs);
         }
-        assert_eq!(cache.lock().unwrap().entries.len(), 2);
+        assert_eq!(cache.lock().unwrap().entries.len(), 1);
     }
 
     #[test]

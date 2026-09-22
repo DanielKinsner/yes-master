@@ -22,6 +22,7 @@ import {
   applyLoudnessTargetSelection,
   SHADOWED_ADVANCED_KEYS,
 } from "./settings-transitions";
+import { LOUDNESS_PROFILES, effectiveLoudnessTarget } from "./effective-settings";
 
 // Mechanical gates for B7 (auto-flip-to-Custom on shadowed-field
 // edit), delivery profile writes, and explicit loudness writes. Before this
@@ -322,6 +323,16 @@ describe("loudness target transitions", () => {
 });
 
 describe("applyChainDispatchOverrides (VM session-level + source_lufs injection)", () => {
+  it("all named loudness picks preserve the effective delivery ceiling and format", () => {
+    const before = makeSettings("broadcast-us");
+    for (const option of LOUDNESS_PROFILES) {
+      const next = applyLoudnessTargetSelection(before, option.id);
+      expect(effectiveLoudnessTarget(next)).toBe(option.lufs);
+      expect(next.advanced.ceiling_dbtp).toBe(DELIVERY_PROFILE_CEILING_DBTP["broadcast-us"]);
+      expect(next.advanced.bit_depth).toBe(DELIVERY_PROFILE_BIT_DEPTH["broadcast-us"]);
+      expect(next.advanced.target_sample_rate).toBe(DELIVERY_PROFILE_SAMPLE_RATE["broadcast-us"]);
+    }
+  });
   function stubAnalysis(lufs: number): AnalysisResult {
     return {
       track_id: "track-a" as TrackId,

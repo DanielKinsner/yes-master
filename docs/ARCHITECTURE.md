@@ -63,20 +63,25 @@ history. Album assembly streams delivered tracks into the continuous WAV.
 Original/Mastered sources share `OutputMeter`; seeking reuses both momentary
 and integrated meter storage. The [B3 rate route](reviews/2026-09-15-live-rate-verification.md)
 places meters and swap fades after conversion, at the opened device rate.
-Original converts directly; Mastered aligns/drains the finite DSP source, then
-converts through the requested file rate and the device rate. A live file-rate
-edit reconstructs these converters from cached source PCM while preserving
-playhead and pause state. Preview commands also carry the selected encoding:
-the backend resolves its pre-encode PCM rate and precision with the export
-encoder's own rules. A transient settings copy preserves the effective target,
-ceiling and exact processing coefficients; requested/saved settings stay intact.
-Matching PCM responses share preparation even across formats, while changed
-rates invalidate it. This does not simulate lossy decoding. Device planning
-measures complete file/device PCM. File landing remains in the compensated DSP
+Original converts directly; Mastered aligns/drains the finite DSP source and
+converts directly from source rate to the device. `preview_settings` materializes
+the effective target/ceiling, then normalizes delivery to source-rate 32-bit float
+in a transient Custom copy. Selected encoding stays in the command signature for
+compatibility but does not alter live routing. Requested/saved/export settings stay
+intact. The frontend keys prewarm by the same audible settings, excluding delivery
+rate/precision/encoding. Export-only edits neither cancel preparation nor recreate
+the playback source. This does not simulate quantization or lossy decoding.
+Device planning measures complete source/device PCM. Source landing remains in the compensated DSP
 crossfade; device-specific correction and attenuation-only Volume Match run after
 both converters, before meters/fade. Source/file raw PCM shares a two-entry,
 288 MiB cache (one allocation at equal rates); a separate two-entry, 192 MiB cache
-holds device raw PCM. Target edits reuse nonlinear DSP and peak facts, recompute
+holds device raw PCM. Matching source/device rates share the exact immutable PCM
+and its measurements instead of copying and measuring it twice; budget accounting
+is conservative across the two caches. Preview peak checks distribute unchanged
+channel/reconstruction calculations over at most four workers, limited to available
+parallelism minus one (minimum one); small inputs and one-core hosts stay serial.
+All workers join before cancellation releases the existing heavy-preview permit.
+Export retains serial measurement. Target edits reuse nonlinear DSP and peak facts, recompute
 actual landed/SRC PCM, scan its entire residual against the cached response and
 verify complete delivery. Excess residual uncertainty triggers fresh measurement
 before planning correction. These 480 MiB retained caps exclude transient buffers.

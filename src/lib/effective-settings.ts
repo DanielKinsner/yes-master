@@ -12,25 +12,39 @@
 // B7's write-direction auto-flip-to-Custom, this time in the read
 // direction. Extracting the rule lets it live alongside its tests.
 
-import type { MasteringSettings } from "../bindings";
+import type { DeliveryProfile, MasteringSettings } from "../bindings";
 import {
   DELIVERY_PROFILE_BIT_DEPTH,
   DELIVERY_PROFILE_CEILING_DBTP,
   DELIVERY_PROFILE_SAMPLE_RATE,
+  DELIVERY_PROFILE_SHORT,
   DELIVERY_PROFILE_TARGET_LUFS,
 } from "../bindings";
 
-/// The four quick-select options on the LoudnessTarget dropdown.
-/// Single source of truth for both the rendered options AND the
-/// profileId-lookup that drives the dropdown's selected value.
+export function formatLoudnessTarget(lufs: number | null): string {
+  return lufs === null ? "Off / Natural" : `${lufs.toFixed(1)} LUFS`;
+}
+
+function deliveryTargetOption(profile: DeliveryProfile, id = profile as string) {
+  const lufs = DELIVERY_PROFILE_TARGET_LUFS[profile];
+  return { id, lufs, label: `${DELIVERY_PROFILE_SHORT[profile]} · ${formatLoudnessTarget(lufs)}` };
+}
+
+/// The same targets and names as Delivery Profile, plus the established loud,
+/// hot and natural choices. IDs of existing quick choices remain stable.
 export const LOUDNESS_PROFILES: ReadonlyArray<{
   id: string;
   label: string;
   lufs: number | null;
 }> = [
-  { id: "streaming", label: "Streaming default (-14)", lufs: -14 },
-  { id: "loud-streaming", label: "Spotify Loud (-11)", lufs: -11 },
-  { id: "cd-master", label: "Hot master (-9)", lufs: -9 },
+  deliveryTargetOption("streaming-universal", "streaming"),
+  deliveryTargetOption("apple-music"),
+  deliveryTargetOption("vinyl-premaster"),
+  { id: "loud-streaming", label: `Loud · ${formatLoudnessTarget(-11)}`, lufs: -11 },
+  deliveryTargetOption("loud-rock"),
+  { id: "cd-master", label: `Hot master · ${formatLoudnessTarget(-9)}`, lufs: -9 },
+  deliveryTargetOption("broadcast-eu"),
+  deliveryTargetOption("broadcast-us"),
   { id: "off", label: "Off / Natural", lufs: null },
 ];
 
@@ -75,8 +89,25 @@ export function effectiveSampleRate(settings: MasteringSettings): number | null 
   return settings.advanced.target_sample_rate ?? null;
 }
 
+/// Transient live settings. Keep export format out of preparation identity,
+/// while preserving audible profile values. Rust resolves the actual source
+/// rate after decoding; null here means source, and 32 means unquantized float.
+export function livePreviewSettings(settings: MasteringSettings): MasteringSettings {
+  return {
+    ...settings,
+    delivery_profile: "custom",
+    advanced: {
+      ...settings.advanced,
+      lufs_offset_db: effectiveLoudnessTarget(settings),
+      ceiling_dbtp: effectiveCeilingDbtp(settings) ?? -1,
+      target_sample_rate: null,
+      bit_depth: 32,
+    },
+  };
+}
+
 /// Match a LUFS value to a quick-select dropdown option id. Returns
-/// the canonical id ("streaming", "loud-streaming", "cd-master", "off")
+/// the canonical id
 /// when the value matches a `LOUDNESS_PROFILES` entry within ±1e-3 LU,
 /// otherwise returns "custom" to indicate the value falls outside the
 /// quick-select set. Null maps to "off / natural."

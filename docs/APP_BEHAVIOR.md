@@ -52,9 +52,16 @@ Track Master supports:
 - Presets and intensity.
 - Visual EQ/tone shaping.
 - Volume Match for audition only; a cold measurement runs in the background.
-- Preview LUFS matches whole-track export loudness. The LUFS target is an
-  integrated target, not a momentary loudness cap. Since-play LUFS measures
-  the current playback run; live peak is dBFS, separate from export true peak.
+- Live preview processes source-rate float audio, converting directly to the
+  opened output-device rate when needed. Delivery sample rate, bit depth and
+  encoding affect export only; changing them does not restart playback or cancel
+  a matching preview preparation. Saved/export settings retain their full intent.
+- Preview LUFS applies the whole-track loudness target with qualified source/device
+  peak protection. Delivery conversion, quantization and codecs are verified
+  separately at export, so preview is not a decoded-format simulation. The target
+  is integrated loudness, not a momentary cap. Labeled Now LUFS measures the current
+  passage; Since play includes earlier presets in the same playback run; Peak dBFS
+  is live sample peak, separate from the dBTP ceiling and export true peak.
 - When Preview LUFS is already requested, the selected ready track starts
   premeasurement automatically, including Standard. Measuring is truthful pending
   state; switching source/settings cancels obsolete work. Only the selected track
@@ -78,7 +85,12 @@ Track Master supports:
   PCM parity. Each track keeps its own ceiling; the programme ceiling is the
   least restrictive resolved track ceiling. Device-rate audition remains tracked
   separately in the active mastering-quality implementation ledger.
-- Delivery profile selection.
+- Delivery Profile sets target, ceiling and export format together. Loudness
+  Target offers all distinct delivery-profile targets plus Loud (-11), Hot (-9)
+  and Off / Natural; its selection changes only target, materializing the previous
+  profile's ceiling/format when switching to Custom. Both controls share short
+  names and one-decimal LUFS formatting. Custom explicitly displays its effective
+  target, including Off / Natural. Existing delivery recipes are unchanged.
 - Advanced controls. The Advanced rail carries a global **Reset all**
   (2026-08-19; it confirms first — a misclick must not wipe a tuning) that returns every non-managed control — gains, EQ gains and
   band positions, feel controls, compressor, adaptive strength — to its

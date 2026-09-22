@@ -2302,6 +2302,7 @@ export function LoudnessTarget({
       <select
         className="loudness-profile-select"
         aria-label="Loudness target"
+        title="Whole-track loudness target. Live readings vary with the passage. Changing this keeps your ceiling and export format."
         value={profileId}
         onChange={(e) => handleProfileChange(e.target.value)}
       >
@@ -2309,7 +2310,7 @@ export function LoudnessTarget({
           <option key={p.id} value={p.id}>{p.label}</option>
         ))}
         {profileId === "custom" && (
-          <option value="custom">Custom ({displayText} LUFS)</option>
+          <option value="custom">Custom · {displayText} LUFS</option>
         )}
       </select>
     </div>

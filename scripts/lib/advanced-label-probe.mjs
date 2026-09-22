@@ -3,6 +3,25 @@ export async function advancedLabelProbe(page, report) {
   const results = [];
   for (const mode of ['Track Master', 'Album Master']) {
     await page.getByRole('button', { name: mode, exact: true }).click();
+    const meters = await page.locator('.wf-deck-meters .readout-label').evaluateAll(nodes => nodes.map(label => {
+      const bounds = label.closest('.readout').getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      const text = range.getBoundingClientRect();
+      const style = getComputedStyle(label);
+      return { label: label.textContent, visible: style.display !== 'none' && text.width > 0 && text.height > 0,
+        fits: text.left >= bounds.left - 1 && text.right <= bounds.right + 1 && text.bottom <= bounds.bottom + 1 };
+    }));
+    if (meters.length !== 3 || meters.some(m => !m.visible || !m.fits)) report(`${mode}: live meters need three visible, unclipped labels: ${JSON.stringify(meters)}`);
+    const targets = await page.getByLabel('Loudness target', {exact:true}).evaluate(select => {
+      const style = getComputedStyle(select);
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      context.font = style.font;
+      const available = select.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      return [...select.options].map(option => ({text: option.text, width: context.measureText(option.text).width, available}));
+    });
+    if (targets.some(t => t.width > t.available)) report(`${mode}: target choices clip their names/values: ${JSON.stringify(targets)}`);
     let automatic;
     for (const state of ['auto', 'mixed', 'manual']) {
       for (const [label, value] of [['Width', '1.2'], ['Warmth', '0.35'], ['Presence/Air', '0.4']]) {

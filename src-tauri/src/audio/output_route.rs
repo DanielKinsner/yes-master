@@ -21,31 +21,27 @@ use std::sync::{
 pub(super) type MasteredRateSource =
     MeteredSource<GainSource<QualitySource<QualitySource<MasteringSource>>>>;
 
-/// Resolve only the pre-encode PCM contract, using the encoder's own rules.
-/// This transient copy never replaces saved settings or simulates codec loss.
+/// Live audition processes source-rate float PCM. Delivery format belongs to
+/// export: normalize it out of live coefficients, preparation and cache keys.
+/// Preserve the profile's audible target/ceiling before removing its overrides.
+/// This transient copy never replaces the requested/saved export settings.
 pub(super) fn preview_settings(
     settings: &MasteringSettings,
     source_rate: u32,
-    encoding: ExportEncoding,
+    _encoding: ExportEncoding,
 ) -> MasteringSettings {
-    let requested_rate = settings.effective_sample_rate(source_rate);
-    let requested_bits = settings.effective_bit_depth();
-    let rate = encoding.delivery_rate(requested_rate);
-    let bits = encoding.delivery_bits(requested_bits);
     let mut resolved = settings.clone();
-    if rate != requested_rate || bits != requested_bits {
-        // A named profile shadows Advanced fields. Preserve its resolved target
-        // and ceiling before using a transient Custom PCM delivery description.
-        resolved.advanced.lufs_offset_db = settings.effective_target_lufs();
-        resolved.advanced.ceiling_dbtp = Some(settings.effective_ceiling_dbtp());
-        resolved.advanced.target_sample_rate = Some(rate);
-        resolved.advanced.bit_depth = Some(bits);
-        resolved.delivery_profile = DeliveryProfile::Custom;
-    }
+    resolved.advanced.lufs_offset_db = settings.effective_target_lufs();
+    resolved.advanced.ceiling_dbtp = Some(settings.effective_ceiling_dbtp());
+    resolved.advanced.target_sample_rate = Some(source_rate);
+    resolved.advanced.bit_depth = Some(32);
+    resolved.delivery_profile = DeliveryProfile::Custom;
     resolved
 }
 
-/// Preserve the export's intermediate rate before conversion to the device.
+/// Live callers pass the source rate as file_rate, so the first wrapper is an
+/// identity and conversion runs directly to the device. The explicit intermediate
+/// argument also supports the finite-cascade reference probes.
 /// Input retains the compensated source-rate landing crossfade, with unity VM.
 /// Apply only the revision-matched device correction and VM after both
 /// converters, then meter/fade the final device signal.
@@ -211,7 +207,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn preview_codec_resolution_preserves_processing_and_requested_intent() {
+    fn preview_uses_source_float_pcm_without_changing_export_or_processing() {
         for encoding in [
             ExportEncoding::Wav,
             ExportEncoding::Mp3 { bitrate_kbps: 320 },
@@ -242,11 +238,13 @@ mod tests {
                         let resolved = preview_settings(&original, source_rate, encoding);
                         assert_eq!(
                             resolved.effective_sample_rate(source_rate),
-                            encoding.delivery_rate(original.effective_sample_rate(source_rate))
+                            source_rate,
+                            "delivery settings must not resample live processing"
                         );
                         assert_eq!(
                             resolved.effective_bit_depth(),
-                            encoding.delivery_bits(original.effective_bit_depth())
+                            32,
+                            "live float PCM must not simulate export quantization"
                         );
                         assert_eq!(
                             resolved.effective_target_lufs(),
@@ -346,6 +344,7 @@ mod tests {
             ExportEncoding::Wav,
         ] {
             let start = std::time::Instant::now();
+            let generation = state.as_ref().unwrap().play_generation;
             assert!(!process_audio_command(
                 AudioCommand::UpdateChain {
                     settings: settings.clone(),
@@ -362,7 +361,11 @@ mod tests {
                 &profiles
             ));
             let state = state.as_ref().unwrap();
-            assert_eq!(state.live_file_rate, encoding.delivery_rate(96000));
+            assert_eq!(
+                state.play_generation, generation,
+                "export encoding must not rebuild preview"
+            );
+            assert_eq!(state.live_file_rate, 96000);
             assert!(!state.sink.is_paused());
             assert!(state.playback_error.is_none());
             while state.peak_linear.load(Ordering::Acquire) == 0 {

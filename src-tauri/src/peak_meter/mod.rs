@@ -103,6 +103,230 @@ pub fn measure(
     measure_source(&InterleavedPcm::new(samples, channels)?, cancelled)
 }
 
+/// Preview-only entry: the exact same qualified calculations, with bounded
+/// independent work. File-backed export providers retain the serial entry.
+pub(crate) fn measure_preview(
+    samples: &[f32],
+    channels: usize,
+    cancelled: impl Fn() -> bool + Sync,
+) -> Result<PeakMeasurement, &'static str> {
+    let workers =
+        std::thread::available_parallelism().map_or(1, |n| n.get().saturating_sub(1).clamp(1, 4));
+    measure_preview_source(
+        &InterleavedPcm::new(samples, channels)?,
+        &cancelled,
+        workers,
+    )
+}
+
+fn measure_preview_source(
+    source: &(impl PcmSource + Sync),
+    cancelled: &(impl Fn() -> bool + Sync),
+    workers: usize,
+) -> Result<PeakMeasurement, &'static str> {
+    if workers <= 1 || source.frames() < 32768 || source.channels() == 0 || source.channels() > 32 {
+        return measure_source(source, cancelled);
+    }
+    if source.frames() > (i64::MAX as usize / 8).min(usize::MAX / 8) {
+        return Err("invalid peak PCM geometry");
+    }
+    if cancelled() {
+        return Err("cancelled");
+    }
+    // Each lane reads one original channel with exactly the serial arithmetic.
+    // Separate providers keep file-backed, non-Sync export readers untouched.
+    struct Channel<'a, S>(&'a S, usize);
+    impl<S: PcmSource> PcmSource for Channel<'_, S> {
+        fn frames(&self) -> usize {
+            self.0.frames()
+        }
+        fn channels(&self) -> usize {
+            1
+        }
+        fn read_channel(
+            &self,
+            channel: usize,
+            start: usize,
+            out: &mut [f64],
+        ) -> Result<(), &'static str> {
+            if channel != 0 {
+                return Err("PCM channel out of range");
+            }
+            self.0.read_channel(self.1, start, out)
+        }
+    }
+    enum Part {
+        Finite(finite_peak::ChannelPeak),
+        Lowpass(f64),
+    }
+    let jobs = source.channels() * 2;
+    let workers = workers.clamp(1, 4).min(jobs);
+    let results = std::thread::scope(|scope| {
+        let mut handles = Vec::new();
+        for lane in 0..workers {
+            handles.push(
+                std::thread::Builder::new()
+                    .name(format!("preview-peak-{lane}"))
+                    .spawn_scoped(scope, move || {
+                        (lane..jobs)
+                            .step_by(workers)
+                            .map(|job| {
+                                let channel = Channel(source, job / 2);
+                                let result = if job % 2 == 0 {
+                                    finite_peak::measure(&channel, cancelled)
+                                        .map(|mut values| Part::Finite(values.remove(0)))
+                                } else {
+                                    lowpass_filter()
+                                        .measure(&channel, cancelled)
+                                        .map(|values| Part::Lowpass(values[0]))
+                                };
+                                (job / 2, result)
+                            })
+                            .collect::<Vec<_>>()
+                    }),
+            );
+        }
+        // Join every worker even on error/cancellation, before returning to the
+        // single preview-worker permit or releasing the immutable PCM.
+        handles
+            .into_iter()
+            .map(|handle| match handle {
+                Ok(handle) => handle.join().map_err(|_| "preview peak worker failed"),
+                Err(_) => Err("preview peak worker could not start"),
+            })
+            .collect::<Vec<_>>()
+    });
+    let mut finite: Vec<Option<finite_peak::ChannelPeak>> = std::iter::repeat_with(|| None)
+        .take(source.channels())
+        .collect();
+    let mut lowpass = vec![0.; source.channels()];
+    for result in results {
+        for (channel, part) in result? {
+            match part? {
+                Part::Finite(value) => finite[channel] = Some(value),
+                Part::Lowpass(value) => lowpass[channel] = value,
+            }
+        }
+    }
+    if cancelled() {
+        return Err("cancelled");
+    }
+    combine_measurements(
+        finite
+            .into_iter()
+            .map(|value| value.expect("every channel measured"))
+            .collect(),
+        lowpass,
+    )
+}
+
+#[cfg(test)]
+mod preview_tests {
+    use super::*;
+    use std::{collections::HashSet, sync::Mutex};
+
+    #[test]
+    fn parallel_preview_preserves_edges_silence_channels_and_failures() {
+        for channels in [1, 2, 6] {
+            for silent in [false, true] {
+                let mut samples = vec![0.; 32771 * channels];
+                if !silent {
+                    for channel in 0..channels {
+                        samples[channel] = (channel + 1) as f32 * 0.13;
+                        samples[32770 * channels + channel] = -0.87;
+                    }
+                }
+                let serial = measure(&samples, channels, || false).unwrap();
+                let parallel = measure_preview_source(
+                    &InterleavedPcm::new(&samples, channels).unwrap(),
+                    &|| false,
+                    4,
+                )
+                .unwrap();
+                assert_eq!(
+                    serde_json::to_value(serial).unwrap(),
+                    serde_json::to_value(parallel).unwrap()
+                );
+            }
+        }
+        for invalid in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+            let mut samples = vec![0.; 32771 * 2];
+            samples[32770 * 2 + 1] = invalid;
+            assert!(measure_preview(&samples, 2, || false).is_err());
+        }
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let checks = AtomicUsize::new(0);
+        let samples = vec![0.1; 96001 * 2];
+        let pcm = InterleavedPcm::new(&samples, 2).unwrap();
+        assert_eq!(
+            measure_preview_source(&pcm, &|| checks.fetch_add(1, Ordering::Relaxed) > 6, 4)
+                .unwrap_err(),
+            "cancelled"
+        );
+        // A cancelled run leaves no poisoned shared state or surviving workers.
+        let serial = measure(&samples, 2, || false).unwrap();
+        let fresh = measure_preview_source(&pcm, &|| false, 4).unwrap();
+        assert_eq!(
+            serde_json::to_value(serial).unwrap(),
+            serde_json::to_value(fresh).unwrap()
+        );
+    }
+
+    #[test]
+    fn preview_parallel_work_preserves_every_peak_fact_with_a_fixed_thread_budget() {
+        struct Observed<'a> {
+            pcm: InterleavedPcm<'a>,
+            threads: Mutex<HashSet<std::thread::ThreadId>>,
+        }
+        impl PcmSource for Observed<'_> {
+            fn frames(&self) -> usize {
+                self.pcm.frames()
+            }
+            fn channels(&self) -> usize {
+                self.pcm.channels()
+            }
+            fn read_channel(
+                &self,
+                channel: usize,
+                start: usize,
+                out: &mut [f64],
+            ) -> Result<(), &'static str> {
+                self.threads
+                    .lock()
+                    .unwrap()
+                    .insert(std::thread::current().id());
+                self.pcm.read_channel(channel, start, out)
+            }
+        }
+        let samples: Vec<f32> = (0..96001 * 2)
+            .map(|i| {
+                if i % 997 == 0 {
+                    1.2
+                } else {
+                    (i as f32 * 0.17).sin() * 0.31
+                }
+            })
+            .collect();
+        let reference = measure(&samples, 2, || false).unwrap();
+        for budget in [2, 4] {
+            let observed = Observed {
+                pcm: InterleavedPcm::new(&samples, 2).unwrap(),
+                threads: Mutex::new(HashSet::new()),
+            };
+            let actual = measure_preview_source(&observed, &|| false, budget).unwrap();
+            assert_eq!(
+                serde_json::to_value(actual).unwrap(),
+                serde_json::to_value(&reference).unwrap()
+            );
+            let workers = observed.threads.lock().unwrap().len();
+            assert!(
+                workers > 1 && workers <= budget,
+                "independent peak work must use the bounded worker budget, observed {workers}"
+            );
+        }
+    }
+}
+
 /// The provider can replay deterministic delivery PCM from bounded scratch.
 /// State is local to this call; only immutable filter plans are shared. Source
 /// facts/results are not cached here, so a second source cannot inherit a peak.
@@ -124,6 +348,13 @@ pub fn measure_source(
         return Err("cancelled");
     }
     let lowpass = lowpass_filter().measure(source, &cancelled)?;
+    combine_measurements(finite, lowpass)
+}
+
+fn combine_measurements(
+    finite: Vec<finite_peak::ChannelPeak>,
+    lowpass: Vec<f64>,
+) -> Result<PeakMeasurement, &'static str> {
     let mut channels = Vec::new();
     channels
         .try_reserve_exact(finite.len())

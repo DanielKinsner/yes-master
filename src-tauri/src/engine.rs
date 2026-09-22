@@ -410,6 +410,14 @@ pub(crate) struct PreparedPreviewAudio {
 }
 
 impl PreparedPreviewAudio {
+    pub(crate) fn device_at_file_rate(&self) -> crate::device_preparation::PreparedDevicePcm {
+        crate::device_preparation::PreparedDevicePcm::from_measured(
+            self.samples.clone(),
+            self.measurements.clone(),
+            self.file_rate,
+            self.channels,
+        )
+    }
     pub(crate) fn raw_pcm(&self) -> &[f32] {
         &self.samples
     }
@@ -532,7 +540,7 @@ pub(crate) fn prepare_preview_audio(
             || cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)),
         )?)
     };
-    let measurements = crate::output_protection::prepare(&samples, rate, channels, cancel)?;
+    let measurements = crate::output_protection::prepare_preview(&samples, rate, channels, cancel)?;
     Ok(PreparedPreviewAudio {
         samples,
         source_samples,

@@ -4970,7 +4970,7 @@ describe("listening follow-through", () => {
     await act(async()=>harness.root.unmount());
   });
 
-  it("keeps requested settings while format changes replace preview preparation and update the loaded master", async () => {
+  it("keeps export edits from cancelling preview preparation or restarting the loaded master", async () => {
     const track=makeTrack("codec-preview","C:/audio/codec-preview.wav");
     mocks.api.importTracks.mockResolvedValue([track]);
     const harness=await renderHookHarness();
@@ -4978,18 +4978,27 @@ describe("listening follow-through", () => {
     await act(async()=>harness.current().setExportLufsPreview(true));
     await waitFor(()=>expect(mocks.api.preparePreviewLevel).toHaveBeenCalled());
     const originalRequest=mocks.api.preparePreviewLevel.mock.calls.at(-1)![0];
+    const preparations=mocks.api.preparePreviewLevel.mock.calls.length;
     const settingsBefore=JSON.stringify(harness.current().selectedSettings);
     await act(async()=>harness.current().exportEncoding.onFormat("mp3"));
-    await waitFor(()=>expect(mocks.api.preparePreviewLevel.mock.calls.at(-1)?.[5]).toEqual({format:"mp3",bitrate_kbps:320}));
-    expect(mocks.api.cancelPreviewPreparation).toHaveBeenCalledWith(originalRequest);
     await act(async()=>{await harness.current().setPlaybackKind("master");});
     await act(async()=>{await harness.current().togglePlay();});
     expect(mocks.api.playMaster.mock.calls.at(-1)?.[6]).toEqual({format:"mp3",bitrate_kbps:320});
     mocks.api.updateChain.mockClear();
+    const plays=mocks.api.playMaster.mock.calls.length;
     await act(async()=>harness.current().exportEncoding.onFormat("m4a"));
-    await waitFor(()=>expect(mocks.api.updateChain.mock.calls.at(-1)?.[3]).toEqual({format:"m4a",bitrate_kbps:256}));
+    await act(async()=>{await new Promise(resolve=>setTimeout(resolve,250));});
+    expect(mocks.api.updateChain).not.toHaveBeenCalled();
     expect(JSON.stringify(harness.current().selectedSettings)).toBe(settingsBefore);
     expect(harness.current().exportEncoding.format).toBe("m4a");
+    await act(async()=>harness.current().setDeliverySampleRate(96000));
+    await act(async()=>harness.current().setDeliveryBitDepth(16));
+    await act(async()=>{await new Promise(resolve=>setTimeout(resolve,250));});
+    expect(mocks.api.preparePreviewLevel).toHaveBeenCalledTimes(preparations);
+    expect(mocks.api.cancelPreviewPreparation).not.toHaveBeenCalledWith(originalRequest);
+    expect(mocks.api.playMaster).toHaveBeenCalledTimes(plays);
+    expect(harness.current().selectedSettings.advanced.target_sample_rate).toBe(96000);
+    expect(harness.current().selectedSettings.advanced.bit_depth).toBe(16);
     await act(async()=>harness.root.unmount());
   });
 

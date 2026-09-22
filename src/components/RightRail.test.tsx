@@ -139,9 +139,9 @@ describe("MasterOutPanel", () => {
     );
 
     expect(container.textContent).toContain("LIVE");
-    expect(container.textContent).toContain("Momentary LUFS");
-    expect(container.textContent).toContain("Since-play LUFS");
-    expect(container.textContent).toContain("Live peak dBFS");
+    expect(container.textContent).toContain("Now LUFS");
+    expect(container.textContent).toContain("Since play LUFS");
+    expect(container.textContent).toContain("Peak dBFS");
     expect(container.textContent).toContain("-9.7");
     expect(container.textContent).toContain("-10.5");
     expect(container.textContent).toContain("-8.5");

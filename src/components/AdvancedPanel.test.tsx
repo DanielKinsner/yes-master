@@ -101,6 +101,15 @@ function readoutWithAutoWidth(effectiveAutoWidth: number): GuardrailReadout {
 }
 
 describe("AdvancedPanel", () => {
+  it("shows the effective custom loudness in the delivery selector", async () => {
+    const { container, root } = await renderPanel({ settings: {
+      ...DEFAULT_SETTINGS, delivery_profile: "custom",
+      advanced: { ...DEFAULT_SETTINGS.advanced, lufs_offset_db: -11 },
+    } });
+    const select = container.querySelector<HTMLSelectElement>('[aria-label="Delivery profile"]')!;
+    expect(select.selectedOptions[0].textContent).toBe("Custom · -11.0 LUFS");
+    await act(async () => root.unmount());
+  });
   it("keeps Auto Width's thumb and identifies the last value during recalculation", async () => {
     const { container, root } = await renderPanel({
       adaptiveReadout: null, autoWidthReadout: { value: 1.09, updating: true },

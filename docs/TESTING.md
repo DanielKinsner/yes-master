@@ -178,14 +178,32 @@ ignored `mastering_quality_streaming_callback_bench` accepts a fresh
 load both converters. Its requested/granted block sizes remain separate facts.
 Run native probes and Cargo suites serially within one target directory on
 Windows; a build-stamp change while the test executable is open can block linking.
-`preview_codec_resolution_preserves_processing_and_requested_intent` checks
-672 format/profile/rate/precision combinations. The preparation-cache regression
-checks rate invalidation, precision-only reuse and direct whole-delivery parity.
+`preview_uses_source_float_pcm_without_changing_export_or_processing` checks
+672 format/profile/rate/precision combinations: all normalize to source-rate float
+preview without changing requested export intent, target, ceiling or coefficients.
+The preparation-cache regressions check format-independent response reuse,
+same-rate immutable-buffer/measurement reuse, rate invalidation and complete PCM parity.
 The ignored `mastering_quality_codec_native_routes` uses test-only mute
 (`YES_MASTER_BENCH_MUTE=1`) and a fresh `YES_MASTER_CODEC_REPORT` path to exercise
-all seven encodings through actual native play/update handlers. It qualifies
-pre-encode PCM routing, not lossy decoded fidelity. The Track hook regression
-covers encoding changes, obsolete prewarm cancellation and retained user settings.
+all seven encodings through actual native play/update handlers, requiring that
+encoding edits retain the source rate and playback generation. The Mastered
+lifecycle probe requires the same generation for playing/paused delivery-rate
+edits, then checks A/B, seek and new/cached target revisions. The Track hook
+regression requires export-only edits to preserve in-flight preparation and saved
+settings. Real processing edits still cancel obsolete responses.
+
+`audio::preview_completion_probe::cold_preset_completion` continues through cold
+measurement, final gain publication and two seconds of subsequent callbacks.
+Supply a hash-bound source/settings investigation JSON in
+`YES_MASTER_COMPLETION_INPUT` and a fresh `YES_MASTER_COMPLETION_OUTPUT` directory.
+It writes captured float PCM and per-callback timing/sample offsets while muting
+only its own output, without changing device preferences. It uses production
+DSP/SRC/gain/meter sources but bypasses AudioPlayer command dispatch; retain the
+separate lifecycle probe. Missed deadlines are reported, never silently treated
+as passing timing. This cannot certify installed listening or every hardware path.
+Preview parallel peak regressions require bit-identical facts versus serial
+measurement and bounded worker counts, including silence, boundaries, multichannel,
+nonfinite and cancellation/retry cases. Export remains serial.
 `cargo run --example limiter_bench` is a deterministic throughput diagnostic;
 wall-clock performance thresholds are deliberately not CI assertions.
 

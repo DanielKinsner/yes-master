@@ -166,7 +166,7 @@ fn mastering_quality_protected_device_whole_files() {
         serde_json::from_slice(&std::fs::read(&manifest).unwrap()).unwrap();
     let mut report = json!({"status":"running", "rows":[], "estimator":peak_meter::VERSION,
         "manifest_sha256":format!("{:x}",Sha256::digest(std::fs::read(manifest).unwrap())),
-        "scope":"whole original source, current compensated DSP -> file SRC -> device SRC -> verified correction -> meter, exact PCM equality to independently traversed prepared buffer; no opened device or listening claim"});
+        "scope":"whole original source, source-rate float preview DSP -> device SRC -> verified correction -> meter, exact PCM equality to independently traversed prepared buffer; no opened device or listening claim"});
     for entry in entries {
         let path = Path::new(entry["source"].as_str().unwrap());
         assert_eq!(
@@ -177,6 +177,8 @@ fn mastering_quality_protected_device_whole_files() {
         assert_eq!(pcm.channels, 2);
         let settings: MasteringSettings =
             serde_json::from_value(entry["settings"].clone()).unwrap();
+        let settings =
+            output_route::preview_settings(&settings, pcm.sample_rate, ExportEncoding::Wav);
         let started = std::time::Instant::now();
         let prepared = crate::engine::prepare_preview_audio(
             &pcm.samples,
@@ -188,7 +190,7 @@ fn mastering_quality_protected_device_whole_files() {
         .unwrap();
         let file = prepared.finish(&settings, None).unwrap();
         let file_prepare_s = started.elapsed().as_secs_f64();
-        for rate in [44100, 96000] {
+        for rate in [44100, 48000, 96000] {
             let started = std::time::Instant::now();
             let device = crate::device_preparation::PreparedDevicePcm::new(
                 prepared.raw_pcm(),

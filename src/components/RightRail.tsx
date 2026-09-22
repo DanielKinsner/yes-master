@@ -380,21 +380,21 @@ export function MasterOutPanel({
         ]
       : [
           {
-            label: "Momentary LUFS",
+            label: "Now LUFS",
             value: momentaryDisplay,
             unit: "",
             title:
               "Short-window live loudness. This is not the selected delivery target.",
           },
           {
-            label: "Since-play LUFS",
+            label: "Since play LUFS",
             value: integratedDisplay,
             unit: "",
             title:
               "Integrated loudness over the current playback run, not the full export measurement.",
           },
           {
-            label: "Live peak dBFS",
+            label: "Peak dBFS",
             value: peakDisplay,
             unit: "",
             title:

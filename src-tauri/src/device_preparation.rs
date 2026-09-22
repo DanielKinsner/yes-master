@@ -1,11 +1,12 @@
 //! Worker-only whole-file facts for final device-rate audition.
-//! The production player must apply this gain AFTER both SRC stages and match
-//! its raw processing revision; file-rate/scalar commutation is not assumed.
+//! The production player applies this gain AFTER conversion to the device and
+//! matches its raw processing revision; rate/scalar commutation is not assumed.
 use crate::{output_protection, sample_rate, types::*};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 pub struct PreparedDevicePcm {
-    samples: Vec<f32>,
+    samples: Arc<Vec<f32>>,
     measurements: output_protection::PreparedMeasurements,
     pub rate: u32,
     pub channels: u16,
@@ -26,6 +27,34 @@ impl PreparedDevicePcm {
         device_rate: u32,
         cancel: Option<&AtomicBool>,
     ) -> CommandResult<Self> {
+        Self::new_with_preparation(
+            file_rate_raw,
+            file_rate,
+            channels,
+            device_rate,
+            cancel,
+            false,
+        )
+    }
+
+    pub(crate) fn new_for_preview(
+        raw: &[f32],
+        source_rate: u32,
+        channels: u16,
+        device_rate: u32,
+        cancel: Option<&AtomicBool>,
+    ) -> CommandResult<Self> {
+        Self::new_with_preparation(raw, source_rate, channels, device_rate, cancel, true)
+    }
+
+    fn new_with_preparation(
+        file_rate_raw: &[f32],
+        file_rate: u32,
+        channels: u16,
+        device_rate: u32,
+        cancel: Option<&AtomicBool>,
+        preview: bool,
+    ) -> CommandResult<Self> {
         check_cancel(cancel)?;
         let samples = sample_rate::convert_interleaved_cancellable(
             file_rate_raw,
@@ -35,13 +64,33 @@ impl PreparedDevicePcm {
             || cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)),
         )?;
         check_cancel(cancel)?;
-        let measurements = output_protection::prepare(&samples, device_rate, channels, cancel)?;
+        let measurements = if preview {
+            output_protection::prepare_preview(&samples, device_rate, channels, cancel)?
+        } else {
+            output_protection::prepare(&samples, device_rate, channels, cancel)?
+        };
         Ok(Self {
-            samples,
+            samples: Arc::new(samples),
             measurements,
             rate: device_rate,
             channels,
         })
+    }
+
+    /// Called only with the exact immutable buffer whose facts were measured.
+    /// No source/file/device rate conversion is permitted on this reuse path.
+    pub(crate) fn from_measured(
+        samples: Arc<Vec<f32>>,
+        measurements: output_protection::PreparedMeasurements,
+        rate: u32,
+        channels: u16,
+    ) -> Self {
+        Self {
+            samples,
+            measurements,
+            rate,
+            channels,
+        }
     }
 
     pub fn pcm_bytes(&self) -> usize {
@@ -55,7 +104,7 @@ impl PreparedDevicePcm {
         cancel: Option<&AtomicBool>,
     ) -> CommandResult<DeviceDelivery> {
         check_cancel(cancel)?;
-        let mut samples = self.samples.clone();
+        let mut samples = self.samples.as_ref().clone();
         let protection = output_protection::finalize_prepared_device_gain(
             &mut samples,
             &self.measurements,
@@ -70,21 +119,23 @@ impl PreparedDevicePcm {
     }
 
     pub fn finish_owned(
-        mut self,
+        self,
         desired_file_gain: f32,
         ceiling_dbtp: f32,
         cancel: Option<&AtomicBool>,
     ) -> CommandResult<DeviceDelivery> {
         check_cancel(cancel)?;
+        let mut samples =
+            Arc::try_unwrap(self.samples).unwrap_or_else(|shared| shared.as_ref().clone());
         let protection = output_protection::finalize_prepared_device_gain(
-            &mut self.samples,
+            &mut samples,
             &self.measurements,
             desired_file_gain,
             ceiling_dbtp,
             cancel,
         )?;
         Ok(DeviceDelivery {
-            samples: self.samples,
+            samples,
             protection,
         })
     }

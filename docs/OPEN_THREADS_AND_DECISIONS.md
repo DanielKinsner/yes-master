@@ -1,5 +1,19 @@
 # YES Master — Open Threads & Owner Decisions
 
+> **2026-09-22 — Source-rate preview optimization implemented locally.**
+> The owner authorized the follow-through below. Preview now keeps source-rate
+> float processing independent of export rate/precision/encoding, reuses exact
+> same-rate measurements, and bounds parallel preview peak work. The supplied
+> source's native cold completion probe drops from 27.110 to 6.707 seconds;
+> AudioPlayer lifecycle, complete PCM identity at three device rates and
+> independent whole-file peak/LUFS checks pass. Loudness controls share names,
+> numeric targets and explicit Custom readouts; live meters regain labels.
+> 719 desktop Rust tests with the real fixture, 913 frontend tests, strict Clippy,
+> iPhone host check/46 tests and Android host/26 tests plus API-29 cross-check pass.
+> See [implementation and precise evidence](reviews/2026-09-22-live-preview-responsiveness.md).
+> The reported hiccup was not reproduced; no new owner listening verdict is
+> claimed. Final UI/build evidence is recorded there. No public push or release.
+
 > **2026-09-22 — Preset preview delay and loudness-control investigation.**
 > The owner's supplied Coat source matches the installed Windows session's
 > frame counts. Three cold 96 kHz preview preparations total 30.6–32.8 seconds

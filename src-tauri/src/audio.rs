@@ -41,6 +41,9 @@ mod listening_bench;
 #[cfg(test)]
 #[path = "native_callback_bench.rs"]
 mod native_callback_bench;
+#[cfg(test)]
+#[path = "audio/preview_completion_probe.rs"]
+mod preview_completion_probe;
 
 /// Local opt-in lifecycle diagnostics mute after source DSP/meters. This hook
 /// is absent from application builds and never changes a system device volume.
@@ -2514,8 +2517,9 @@ fn process_audio_command(
             if let Some(s) = state.as_ref() {
                 settings = output_route::preview_settings(&settings, s.live_sample_rate, encoding);
             }
-            // Converters have a fixed rate. Rebuild from the cached PCM with
-            // the same playhead/fade rules; never briefly resume a paused edit.
+            // Live settings are source-normalized above: export edits do not
+            // enter this fallback. If the internal route rate is inconsistent,
+            // rebuild from cached PCM without briefly resuming a paused edit.
             let rate_edit = state.as_ref().and_then(|s| {
                 if s.live_coeffs_tx.is_none()
                     || s.live_file_rate == settings.effective_sample_rate(s.live_sample_rate)

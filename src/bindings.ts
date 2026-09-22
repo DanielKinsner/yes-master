@@ -95,11 +95,8 @@ export const DELIVERY_PROFILE_DISPLAY: Record<DeliveryProfile, string> = {
   "custom": "Custom",
 };
 
-/// Short profile names for tight surfaces — today only the export receipt's
-/// "Mastering target" chip ("Streaming · -14.0 LUFS"). The Delivery Profile
-/// dropdown keeps `DELIVERY_PROFILE_DISPLAY`, where there is room for the
-/// descriptive name (D11b, 2026-09-01). Key set is pinned to the Rust
-/// fixture by delivery-profile-parity.test.ts.
+/// Shared short names for the target picker, delivery selector and export
+/// receipt. Key set is pinned to Rust by delivery-profile-parity.test.ts.
 export const DELIVERY_PROFILE_SHORT: Record<DeliveryProfile, string> = {
   "streaming-universal": "Streaming",
   "apple-music": "Apple Music",

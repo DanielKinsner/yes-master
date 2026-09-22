@@ -3627,6 +3627,13 @@ button.primary:disabled {
   max-width: none;
 }
 
+.delivery-profile-note {
+  margin: 0.35rem 0 0;
+  color: var(--text-2);
+  font-size: 0.68rem;
+  line-height: 1.3;
+}
+
 .rail-card-body {
   display: flex;
   flex-direction: column;
@@ -4938,7 +4945,12 @@ button.primary:disabled {
   }
 
   .wf-deck-meters .master-out .readout-label {
-    display: none;
+    display: block;
+    font-size: 0.55rem;
+    line-height: 1.25;
+    letter-spacing: 0;
+    text-align: center;
+    white-space: normal;
   }
 
   .wf-deck-meters .master-out .readout-number {
@@ -4947,9 +4959,8 @@ button.primary:disabled {
     letter-spacing: 0;
   }
 
-  .wf-deck-meters .master-out .readout-unit,
-  .wf-deck-meters .master-out .readout-label {
-    font-size: 0.28rem;
+  .wf-deck-meters .master-out .readout-unit {
+    font-size: 0.5rem;
     line-height: 1;
   }
 
@@ -5031,7 +5042,7 @@ button.primary:disabled {
   .knobs-row {
     height: 100%;
     min-height: 0;
-    grid-template-columns: minmax(118px, auto) minmax(210px, auto) minmax(260px, 1fr) minmax(150px, 170px);
+    grid-template-columns: minmax(118px, auto) minmax(210px, auto) minmax(260px, 1fr) minmax(190px, 210px);
     gap: clamp(0.65rem, 1.1vw, 1rem);
     padding: 0.75rem 0.9rem;
     overflow: hidden;
@@ -5283,7 +5294,7 @@ button.primary:disabled {
   }
 
   .knobs-row {
-    grid-template-columns: minmax(104px, auto) minmax(190px, auto) minmax(230px, 1fr) minmax(130px, 150px);
+    grid-template-columns: minmax(104px, auto) minmax(190px, auto) minmax(230px, 1fr) minmax(190px, 200px);
     gap: 0.48rem;
     padding: 0.55rem 0.62rem;
   }
@@ -5331,7 +5342,7 @@ button.primary:disabled {
      knobs overlapped each other (owner screenshot 2026-08-19). Clamp the
      dials and give each block a real minimum column. */
   .knobs-row {
-    grid-template-columns: minmax(112px, auto) minmax(196px, auto) minmax(230px, 1fr) minmax(160px, 190px);
+    grid-template-columns: minmax(112px, auto) minmax(196px, auto) minmax(230px, 1fr) minmax(200px, 220px);
     gap: 0.75rem;
   }
   .intensity-block .knob-vis { max-width: 100px; }

@@ -5,6 +5,7 @@ import type {
   DeliveryProfile,
   MasteringSettings,
 } from "../bindings";
+import { DELIVERY_PROFILE_TARGET_LUFS } from "../bindings";
 import {
   effectiveBitDepth,
   effectiveCeilingDbtp,
@@ -13,6 +14,7 @@ import {
   LOUDNESS_PROFILES,
   loudnessTargetDisplay,
   profileIdForLufs,
+  livePreviewSettings,
 } from "./effective-settings";
 
 // Frontend mirror tests for the `effective_*` accessors. The Rust
@@ -74,6 +76,23 @@ function makeSettings(
 }
 
 describe("effectiveLoudnessTarget", () => {
+  it("normalizes only delivery precision and rate for every live profile without mutating export intent", () => {
+    for (const profile of Object.keys(DELIVERY_PROFILE_TARGET_LUFS) as DeliveryProfile[]) {
+      const requested = makeSettings(profile, { lufs_offset_db: -11, ceiling_dbtp: -0.7, target_sample_rate: 96000, bit_depth: 16 });
+      requested.eq_high_db = 1.3;
+      requested.volume_match = true;
+      const original = structuredClone(requested);
+      const live = livePreviewSettings(requested);
+      expect(live.advanced.lufs_offset_db).toBe(effectiveLoudnessTarget(requested));
+      expect(live.advanced.ceiling_dbtp).toBe(effectiveCeilingDbtp(requested));
+      expect(live.advanced.target_sample_rate).toBeNull();
+      expect(live.advanced.bit_depth).toBe(32);
+      expect(live.eq_high_db).toBe(1.3);
+      expect(live.volume_match).toBe(true);
+      expect(livePreviewSettings(live)).toEqual(live);
+      expect(requested).toEqual(original);
+    }
+  });
   it("returns the profile's target when delivery_profile is non-Custom", () => {
     // Mirrors Rust:
     // effective_target_lufs_profile_overrides_advanced
@@ -192,20 +211,17 @@ describe("export level is independent of Volume Match (non-negotiable)", () => {
 });
 
 describe("LOUDNESS_PROFILES (quick-select dropdown options)", () => {
-  it("exposes the four canonical dropdown entries", () => {
-    // Single source of truth — the rendered <option> list AND the
-    // profileIdForLufs lookup both consume this array.
-    const ids = LOUDNESS_PROFILES.map((p) => p.id);
-    expect(ids).toEqual(["streaming", "loud-streaming", "cd-master", "off"]);
-    const labels = LOUDNESS_PROFILES.map((p) => p.label);
-    expect(labels).toEqual([
-      "Streaming default (-14)",
-      "Spotify Loud (-11)",
-      "Hot master (-9)",
-      "Off / Natural",
-    ]);
-    const lufs = LOUDNESS_PROFILES.map((p) => p.lufs);
-    expect(lufs).toEqual([-14, -11, -9, null]);
+  it("offers every delivery target plus the existing loud, hot and natural choices", () => {
+    const targets = LOUDNESS_PROFILES.map((p) => p.lufs);
+    for (const target of Object.values(DELIVERY_PROFILE_TARGET_LUFS)) {
+      expect(targets).toContain(target);
+    }
+    expect(targets).toContain(-11);
+    expect(targets).toContain(-9);
+    expect(new Set(targets).size).toBe(targets.length);
+    for (const option of LOUDNESS_PROFILES) {
+      if (option.lufs !== null) expect(option.label).toContain(`${option.lufs.toFixed(1)} LUFS`);
+    }
   });
 });
 
@@ -223,7 +239,7 @@ describe("profileIdForLufs", () => {
   it("returns 'custom' for any value outside the canonical set", () => {
     expect(profileIdForLufs(-12)).toBe("custom");
     expect(profileIdForLufs(-6)).toBe("custom");
-    expect(profileIdForLufs(-10.5)).toBe("custom");
+    expect(profileIdForLufs(-10.6)).toBe("custom");
   });
 
   it("matches within ±1e-3 LU tolerance", () => {

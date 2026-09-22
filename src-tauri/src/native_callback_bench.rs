@@ -86,8 +86,15 @@ fn mastering_quality_mastered_rate_lifecycle() {
             let start = Instant::now();
             player.update_chain(settings.clone(), false, false).unwrap();
             let after = wait(
-                &|s| s.play_generation > before.play_generation && s.is_playing != paused,
+                &|s| {
+                    s.requested_output_revision > before.requested_output_revision
+                        && s.is_playing != paused
+                },
                 3,
+            );
+            assert_eq!(
+                after.play_generation, before.play_generation,
+                "export rate must not rebuild the live source"
             );
             assert!(after.position_sec >= before.position_sec - 0.01);
             if paused {
@@ -96,7 +103,8 @@ fn mastering_quality_mastered_rate_lifecycle() {
                 assert!(!player.snapshot().unwrap().is_playing);
             }
             rows.push(json!({"event":"rate_edit","rate":file_rate,"paused":paused,"observed_s":start.elapsed().as_secs_f64(),
-                "before":before.position_sec,"after":after.position_sec}));
+                "before":before.position_sec,"after":after.position_sec,
+                "play_generation":after.play_generation}));
         }
     }
     player.seek(90.).unwrap();

@@ -38,6 +38,7 @@ import {
   resetToStandardManaged as resetToStandardManagedSettings,
 } from "../lib/standard-managed";
 import { standardExportSettings } from "../lib/standard-export";
+import { livePreviewSettings } from "../lib/effective-settings";
 import {
   SEEK_STEP_LARGE_SEC,
   SEEK_STEP_SEC,
@@ -2767,17 +2768,9 @@ export function useTrackMaster() {
     ],
   );
 
-  const previousPreviewEncoding = useRef(previewEncoding);
-  useEffect(() => {
-    if (previousPreviewEncoding.current === previewEncoding) return;
-    previousPreviewEncoding.current = previewEncoding;
-    if (shouldPushLiveChainForSettingsEdit({trackId:selectedTrackId,
-      editingAlbumIntent:mode === "album" && !selectedIsOverriding, loadedTrackId, loadedKindByTrack, overrideAlbum})) {
-      sendUpdateChain(withSourceLufs(selectedTrackId,selectedSettings),effectivePreviewLanding());
-    }
-  },[previewEncoding,selectedTrackId,mode,selectedIsOverriding,loadedTrackId,loadedKindByTrack,overrideAlbum,
-    sendUpdateChain,withSourceLufs,selectedSettings,effectivePreviewLanding]);
-
+  // Delivery edits can replace selectedSettings without changing the audition.
+  // A value key keeps an in-flight preparation alive across those edits.
+  const previewPreparationSettings = JSON.stringify(livePreviewSettings(selectedSettings));
   useEffect(() => {
     const enabled=transport.exportLufsPreview || (forceWysiwyg && !transport.volumeMatch);
     if (!enabled || !selectedTrack || !selectedAnalysis || !api.preparePreviewLevel) {
@@ -2788,7 +2781,7 @@ export function useTrackMaster() {
     const requestId=`preview-${Date.now()}-${Math.random()}`;
     setPreviewPreparing(true);
     const timer=setTimeout(() => {
-      void api.preparePreviewLevel(requestId,selectedTrack.id,selectedTrack.path,selectedSettings,mode === "album",...previewEncodingArgs(previewEncoding))
+      void api.preparePreviewLevel(requestId,selectedTrack.id,selectedTrack.path,JSON.parse(previewPreparationSettings) as MasteringSettings,mode === "album")
         .catch(err => { if(active) console.warn("Preview level preparation failed",err); })
         .finally(() => { if(active) setPreviewPreparing(false); });
     },180);
@@ -2796,7 +2789,7 @@ export function useTrackMaster() {
       active=false; clearTimeout(timer);
       void api.cancelPreviewPreparation?.(requestId).catch(() => {});
     };
-  },[selectedTrack?.id,selectedTrack?.path,selectedAnalysis,selectedSettings,mode,transport.exportLufsPreview,transport.volumeMatch,forceWysiwyg,previewEncoding]);
+  },[selectedTrack?.id,selectedTrack?.path,selectedAnalysis,previewPreparationSettings,mode,transport.exportLufsPreview,transport.volumeMatch,forceWysiwyg]);
 
   const clearError = useCallback(() => setError(null), []);
   const clearProjectFeedback = useCallback(() => setProjectFeedback(null), []);

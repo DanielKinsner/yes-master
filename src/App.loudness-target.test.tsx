@@ -87,6 +87,15 @@ afterEach(() => {
 });
 
 describe("LoudnessTarget component", () => {
+  it.each(["apple-music", "vinyl-premaster", "loud-rock", "broadcast-eu", "broadcast-us"] as const)(
+    "shows %s as a named target instead of an unexplained Custom value", async (profile) => {
+      const { container, root } = await renderLoudnessTarget({ settings: makeSettings(profile), onProfileSelect: vi.fn() });
+      const select = container.querySelector("select")!;
+      expect(select.value).not.toBe("custom");
+      expect(select.selectedOptions[0].textContent).toContain("LUFS");
+      await act(async () => root.unmount());
+    },
+  );
   it("gives the profile select an accessible name (audit A-01)", async () => {
     // The visible "LOUDNESS TARGET" copy is a sibling <span>, not a label —
     // without aria-label a screen reader announces an anonymous combobox.
